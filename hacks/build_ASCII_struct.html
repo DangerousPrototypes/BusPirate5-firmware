@@ -1,0 +1,13 @@
+<style>
+#line-break-and-tab {
+  white-space: pre-wrap;
+}
+</style>
+<div id="line-break-and-tab"></div>
+
+<script>
+var out="";
+
+for(var i=32;i<127;++i) out+="{false, command}, // \"" + String.fromCharCode(i) + "\"\n";
+document.getElementById('line-break-and-tab').innerHTML = out;
+</script>

@@ -1,0 +1,1 @@
+void ui_config_main_menu(struct command_attributes *attributes, struct command_response *response);

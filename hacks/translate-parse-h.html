@@ -1,0 +1,178 @@
+<style>
+#line-break-and-tab {
+  white-space: pre-wrap;
+}
+</style>
+<div id="line-break-and-tab"></div>
+
+<script>
+var trans=`
+//
+#define T_ON "ON"
+#define T_OFF "OFF"
+#define T_GND "GND"
+#define T_MODE_ERROR_NO_EFFECT "ERROR: command has no effect here"
+#define T_MODE_ERROR_NO_EFFECT_HIZ "Command has no effect in HiZ mode, press 'm' to choose a mode"
+#define T_MODE_NO_HELP_AVAILABLE "No help available"
+#define T_PRESS_ANY_KEY_TO_EXIT "Press any key to exit"
+#define T_MODE_MODE "MODE"
+#define T_MODE_INVALID_OPTION "Invalid option!"
+#define T_MODE_CHOOSE_AVAILABLE_PIN "Choose available pin:"
+#define T_MODE_ALL_PINS_IN_USE "All pins in use!"
+#define T_MODE_PULLUP_RESISTORS "Pull-up resistors"
+#define T_MODE_POWER_SUPPLY "Power supply"
+#define T_MODE_DISABLED "Disabled"
+#define T_MODE_ENABLED "Enabled"
+#define T_MODE_BITORDER "Bitorder"
+#define T_MODE_BITORDER_MSB "MSB"
+#define T_MODE_BITORDER_LSB "LSB"
+#define T_MODE_DELAY "Delay"
+#define T_MODE_US "us"
+#define T_MODE_MS "ms"
+#define T_MODE_ADC_VOLTAGE "Volts on"
+#define T_MODE_PWM "Pulse Width Modulator"
+#define T_MODE_PWM_GENERATE_FREQUENCY "Generate frequency"
+#define T_MODE_FREQ_MEASURE_FREQUENCY "Frequency measurement"
+#define T_MODE_FREQ_FREQUENCY "Frequency"
+#define T_MODE_FREQ_DUTY_CYCLE "Duty cycle"
+#define T_HWSPI_SPEED_MENU "SPI speed"
+#define T_HWSPI_SPEED_PROMPT "KHz (100KHz*)"
+#define T_HWSPI_BITS_MENU "Data bits"
+#define T_HWSPI_BITS_PROMPT "4 to 8 (8*)"
+#define T_HWSPI_CLOCK_POLARITY_MENU "Clock polarity\\r\\n 1. Idle LOW*\\r\\n 2. Idle HIGH"
+#define T_HWSPI_CLOCK_POLARITY_PROMPT "Polarity"
+#define T_HWSPI_CLOCK_PHASE_MENU "Clock phase\\r\\n 1. LEADING edge\\r\\n 2. TRAILING edge*"
+#define T_HWSPI_CLOCK_PHASE_PROMPT "Phase"
+#define T_HWSPI_CS_IDLE_MENU "Chip select\\r\\n 1. Active HIGH (CS)\\r\\n 2. Active LOW (!CS)*"
+#define T_HWSPI_CS_IDLE_PROMPT "CS"
+#define T_HWSPI_ACTUAL_SPEED_KHZ "Actual speed"
+#define T_HWSPI_CS_SELECT "CS Select (%d)"
+#define T_HWSPI_CS_DESELECT "CS Deselect (%d)"
+#define T_UART_SPEED_MENU "UART speed"
+#define T_UART_SPEED_PROMPT "Baud (115200*)"
+#define T_UART_PARITY_MENU "Parity\\r\\n 1. None*\\r\\n 2. Even\\r\\n 3. Odd"
+#define T_UART_PARITY_PROMPT "Parity"
+#define T_UART_DATA_BITS_MENU "Data bits"
+#define T_UART_DATA_BITS_PROMPT "5 to 8 bits (8*)"
+#define T_UART_STOP_BITS_MENU "Stop bits\\r\\n 1. 1*\\r\\n 2. 2"
+#define T_UART_STOP_BITS_PROMPT "Bits"
+#define T_UART_BLOCKING_MENU "Use blocking functions?\\r\\n 1. No\\r\\n 2. Yes"
+#define T_UART_BLOCKING_PROMPT "Block"
+#define T_UART_ACTUAL_SPEED_BAUD "Actual speed"
+#define T_UART_BAUD "baud"
+#define T_HWI2C_SPEED_MENU "I2C speed"
+#define T_HWI2C_SPEED_PROMPT "KHz (400KHz*)"
+#define T_HWI2C_DATA_BITS_MENU "Data bits\\r\\n 1. 8*\\r\\n 2. 10"
+#define T_HWI2C_DATA_BITS_PROMPT "Bits"
+#define T_HWLED_DEVICE_MENU "LED type\\r\\n 1. WS2812/SK6812/'NeoPixel' (single wire interface)* \\r\\n 2. APA102/SK9822 (clock and data interface)"
+#define T_HWLED_DEVICE_PROMPT "Type"
+#define T_HWLED_NUM_LEDS_MENU "Number of LEDs in the strip"
+#define T_HWLED_NUM_LEDS_PROMPT "1 to 10000 (1*)"
+#define T_HELP_TITLE "General Commands\\t\\t\\tProtocol Interaction"
+#define T_HELP_BLANK "\\t\\t\\t"
+#define T_HELP_1_2 "Converts X/reverse X\\t"
+#define T_HELP_1_3 "Selftest\\t\\t"
+#define T_HELP_1_4 "Reset the Bus Pirate\\t"
+#define T_HELP_1_5 "Jump to bootloader\\t"
+#define T_HELP_1_6 "Delay 1 us/ms\\t\\t"
+#define T_HELP_1_7 "AUXPIN (low/HI/READ)\\t"
+#define T_HELP_1_8 "-\\t\\t\\t"
+#define T_HELP_1_9 "AUX assignment (aux/CS)\\t"
+#define T_HELP_1_22 "Show volts on IOx (once/CONT)"
+#define T_HELP_1_10 "Show volts all IOs (once/CONT)"
+#define T_HELP_1_11 "Measure freq on IOx (once/CONT)"
+#define T_HELP_1_23 "Monitor freq (off/ON)\\t"
+#define T_HELP_1_12 "Generate frequency (off/ON)"
+#define T_HELP_1_13 "Help (general/PROTOCOL)\\t"
+#define T_HELP_1_14 "Versioninfo/statusinfo\\t"
+#define T_HELP_1_15 "Bitorder (msb/LSB)\\t"
+#define T_HELP_1_16 "Change mode\\t\\t"
+#define T_HELP_1_17 "Set number display format"
+#define T_HELP_1_18 "Pull-up resistors (off/ON)"
+#define T_HELP_1_19 "-\\t\\t\\t"
+#define T_HELP_1_20 "Show volts/states\\t"
+#define T_HELP_1_21 "Power supply (off/ON)\\t"
+#define T_HELP_2_1 "Mode macro x/list all"
+#define T_HELP_2_3 "Start"
+#define T_HELP_2_4 "Stop"
+#define T_HELP_2_5 "Start with read"
+#define T_HELP_2_6 "Stop"
+#define T_HELP_2_7 "Send string"
+#define T_HELP_2_8 ""
+#define T_HELP_2_9 ""
+#define T_HELP_2_10 "Send value"
+#define T_HELP_2_11 "Read"
+#define T_HELP_2_12 "CLK hi"
+#define T_HELP_2_13 "CLK lo"
+#define T_HELP_2_14 "CLK tick"
+#define T_HELP_2_15 "DAT hi"
+#define T_HELP_2_16 "DAT lo"
+#define T_HELP_2_17 "DAT read"
+#define T_HELP_2_18 "Bit read"
+#define T_HELP_2_19 "Repeat e.g. r:10"
+#define T_HELP_2_20 "Bits to read/write e.g. 0x55.2"
+#define T_HELP_2_21 "User macro x/list all"
+#define T_HELP_2_22 "User macro assign x"
+#define T_INFO_FIRMWARE "Firmware"
+#define T_INFO_BOOTLOADER "Bootloader"
+#define T_INFO_WITH "with"
+#define T_INFO_RAM "RAM"
+#define T_INFO_FLASH "FLASH"
+#define T_INFO_SN "S/N"
+#define T_INFO_WEBSITE "https://DangerousPrototypes.com/"
+#define T_INFO_SD_CARD "SD Card"
+#define T_INFO_FILE_SYSTEM "File System"
+#define T_NOT_DETECTED "Not Detected"
+#define T_INFO_AVAILABLE_MODES "Available modes"
+#define T_INFO_CURRENT_MODE "Active mode"
+#define T_INFO_POWER_SUPPLY "Power supply"
+#define T_INFO_CURRENT_LIMIT "Current limit"
+#define T_INFO_PULLUP_RESISTORS "Pull-up resistors"
+#define T_INFO_FREQUENCY_GENERATORS "Frequency generators"
+#define T_INFO_DISPLAY_FORMAT "Display format"
+#define T_INFO_DATA_FORMAT "Data format"
+#define T_INFO_BITS "bits"
+#define T_INFO_BITORDER "bitorder"
+`;
+
+function clean(currentValue, index, arr){
+
+	if(currentValue.substring(0,1)=="#")
+	{
+		return true;
+	}
+}
+
+
+
+function split(currentValue, index, arr){
+	temp=currentValue.replace('#define ','').split(' "');
+	arr[index]=temp;
+}
+
+keys=[];
+values=[];
+
+trans=trans.split(/\r?\n/);
+trans=trans.filter(clean);
+trans.forEach(split);
+
+for(i=0;i<trans.length; i++){
+	trans[i][1]=trans[i][1].substring(0,trans[i][1].length-1);
+}
+
+t_enum="\nenum t_translations{\n";
+t_lang="\nchar const * const english[]={\n";
+for(i=0;i<trans.length; i++){
+	t_enum+="\t" + trans[i][0] + (i==0?"=0,\n":",\n"); 
+	t_lang+="\t[" + trans[i][0] + ']="' + trans[i][1] + "\",\n";
+}
+t_enum+="};\n\n";
+t_lang+="};\n\n";
+console.log(trans);
+document.getElementById('line-break-and-tab').innerHTML = t_enum + t_lang;
+
+
+
+
+</script>

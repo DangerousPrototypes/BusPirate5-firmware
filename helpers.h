@@ -9,6 +9,7 @@ void helpers_show_int_formats(struct command_attributes *attributes, struct comm
 void helpers_show_int_inverse(struct command_attributes *attributes, struct command_response *response);
 
 //mode commands
+void helpers_mode_periodic();
 void helpers_mode_macro(struct command_attributes *attributes, struct command_response *response);
 void helpers_mode_start(struct command_attributes *attributes, struct command_response *response);
 void helpers_mode_stop(struct command_attributes *attributes, struct command_response *response);

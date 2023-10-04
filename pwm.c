@@ -27,6 +27,9 @@ bool pwm_check_pin_is_available(const struct ui_prompt* menu, uint32_t* i)
     //bounds check
     if((*i)>=count_of(bio2bufiopin)) return 0;
     
+    //temp fix for power supply PWM sharing
+    if((*i)==0 || (*i)==1) return 0;
+    
     return ( system_config.pin_labels[(*i)+1]==0 && 
             !(system_config.freq_active & (0b11<<( (uint8_t)( (*i)%2 ? (*i)-1 : (*i) ) ) ) ) &&
             !(system_config.pwm_active & (0b11<<( (uint8_t)( (*i)%2 ? (*i)-1 : (*i) ) ) ) )

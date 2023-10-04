@@ -45,6 +45,7 @@
 #include "tusb.h"
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
+#include "helpers.h"
 
 lock_core_t core;
 
@@ -90,7 +91,7 @@ int main()
     lock_init(&core, next_striped_spin_lock_num());
 
     // configure the defaults for shift register attached hardware
-    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), CURRENT_EN_OVERRIDE);
+    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN|PULLUP_EN), CURRENT_EN_OVERRIDE);
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
     shift_set_clear_wait( 0, DISPLAY_RESET);
     busy_wait_ms(100);
@@ -218,6 +219,7 @@ int main()
                 break;
             
             case BP_SM_GET_INPUT:
+                helpers_mode_periodic();
                 switch(ui_term_get_user_input()) 
                 {
                     case 0x01:// user pressed a key

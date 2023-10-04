@@ -61,7 +61,7 @@ void adc_measure(struct command_attributes *attributes, struct command_response 
 			printf("%s", ui_term_cursor_show()); //show cursor
 		}
 
-		//for single measurement, also adds final \n for continous
+		//for single measurement, also adds final \n for continuous
 		ui_info_print_pin_voltage(false);			
 
 
@@ -78,12 +78,12 @@ void adc_measure(struct command_attributes *attributes, struct command_response 
 
 		if(refresh)
 		{
-			//continous measurement on this pin
+			//continuous measurement on this pin
 			// press any key to continue
             prompt_result result;
 			ui_prompt_any_key_continue(&result, 250, &adc_print, attributes->dot, true);
 		}
-		//single measurement, also adds final \n for continous mode
+		//single measurement, also adds final \n for continuos mode
 		adc_print(attributes->dot,false);
 
 	}

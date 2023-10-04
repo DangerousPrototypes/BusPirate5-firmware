@@ -66,7 +66,7 @@ static char const * const en_us[]={
 	[T_HWSPI_CS_DESELECT]="CS Deselect (%d)",
     //UART
 	[T_UART_SPEED_MENU]="UART speed",
-	[T_UART_SPEED_MENU_1]="1200, 2400, 4800, 19200, 38400, 57600, 115200 etc",	
+	[T_UART_SPEED_MENU_1]="1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 etc",	
 	[T_UART_SPEED_PROMPT]="Baud (%s%d*%s)",
 	[T_UART_PARITY_MENU]="Parity",
 	[T_UART_PARITY_MENU_1]="None",

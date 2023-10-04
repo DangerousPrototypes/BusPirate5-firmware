@@ -2,7 +2,7 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
-#define BP_FIRMWARE_VERSION "v0.1"
+#define BP_FIRMWARE_VERSION "v0.0.3"
 #ifndef BP_FIRMWARE_HASH //this variable is for the current revision GIT hash
 #define BP_FIRMWARE_HASH "unknown"
 #endif
@@ -13,7 +13,7 @@
 // USB VID/PID
 #define		USB_VID		0x1209
 #define		USB_PID		0x7331
-#define		USB_VENDOR	"DangerousPrototypes.com"
+#define		USB_VENDOR	"BusPirate.com"
 #define		USB_PRODUCT	"BusPirate5"
 
 // enable modes

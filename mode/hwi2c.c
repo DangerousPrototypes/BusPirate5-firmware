@@ -16,6 +16,7 @@
 #define M_I2C_SDA BIO0
 #define M_I2C_SCL BIO1
 
+
 static const char pin_labels[][5]={
 	"SDA",
 	"SCL",
@@ -135,6 +136,9 @@ void HWI2C_start(void)
 		modeConfig.error=1;
 	}
 	*/
+	pio_i2c_start(pio, pio_state_machine);
+	printf("I2C START");
+//void pio_i2c_repstart(PIO pio, uint sm);
 }
 
 void HWI2C_stop(void)
@@ -166,9 +170,12 @@ void HWI2C_stop(void)
 		printf("\r\n");
 	}
 
-	printf("I2C STOP");
+
 	i2c_send_stop(BP_I2C);
 	*/
+	pio_i2c_stop(pio, pio_state_machine);
+	printf("I2C STOP");
+
 
 }
 
@@ -222,7 +229,22 @@ uint32_t HWI2C_send(uint32_t d)
 		ack=0;
 	}
 */
-	return (!ack);
+
+    int err = 0;
+
+    pio_i2c_rx_enable(pio, pio_state_machine, false);
+
+    while(pio_sm_is_tx_fifo_full(pio, pio_state_machine));
+
+	pio_i2c_put_or_err(pio, pio_state_machine, d << 1);
+
+    pio_i2c_wait_idle(pio, pio_state_machine);
+    if (pio_i2c_check_error(pio, pio_state_machine)) {
+        err = -1;
+        pio_i2c_resume_after_error(pio, pio_state_machine);
+    }
+    return err;
+
 }
 
 uint32_t HWI2C_read(void)
@@ -249,6 +271,34 @@ uint32_t HWI2C_read(void)
 		returnval=0;
 	}
 */
+
+   int err = 0;
+
+    pio_i2c_rx_enable(pio, pio_state_machine, true);
+	while(pio_sm_is_tx_fifo_full(pio, pio_state_machine));
+    
+	while(!pio_sm_is_rx_fifo_empty(pio, pio_state_machine))
+        (void)pio_i2c_get(pio, pio_state_machine);
+
+    pio_i2c_put16(pio, pio_state_machine, (0xffu << 1));
+
+	while(pio_sm_is_rx_fifo_empty(pio, pio_state_machine));
+
+	returnval = pio_i2c_get(pio, pio_state_machine);
+	/*while(!pio_sm_is_rx_fifo_empty(pio, pio_state_machine))
+	{
+		returnval=pio_sm_get(pio, pio_state_machine);
+		printf("return %d\r\n", returnval);
+	}*/
+	
+    pio_i2c_wait_idle(pio, pio_state_machine);
+    if (pio_i2c_check_error(pio, pio_state_machine)) {
+        err = -1;
+		printf("error\r\n");
+        pio_i2c_resume_after_error(pio, pio_state_machine);
+		return 0xffff;
+    }
+
 	return returnval;
 }
 
@@ -444,7 +494,7 @@ static void I2Csearch(void)
         // returns a negative result NAK'd any time other than the last data
         // byte. Skip over reserved addresses.
         int result;
-        if (reserved_addr(addr))
+        if (reserved_addr(addr)) 
             result = -1;
         else
             result = pio_i2c_read_blocking(pio, pio_state_machine, addr, NULL, 0);

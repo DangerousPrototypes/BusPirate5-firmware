@@ -45,7 +45,7 @@ bool pwm_check_pin_is_active(const struct ui_prompt* menu, uint32_t* i)
 }
 
 //TODO: future feature - g.5/G.5 enable/disable PWM with previous setting, prompt if no previous settings
-void pwm_configure_enable(struct command_attributes *attributes, struct command_response *response)
+void pwm_configure_enable(struct opt_args *args, struct command_result *res)
 {
     uint32_t pin;
 
@@ -70,7 +70,7 @@ void pwm_configure_enable(struct command_attributes *attributes, struct command_
 
     if(result.exit)
     {
-        (*response).error=true;
+        (*res).error=true;
         return;
     }
 
@@ -80,14 +80,14 @@ void pwm_configure_enable(struct command_attributes *attributes, struct command_
         //TODO: instead show channel/slice representation and explain assigned function
         ui_info_print_pin_names();
         ui_info_print_pin_labels();
-        (*response).error=true;
+        (*res).error=true;
         return;
     }
 
     // populate the variables with settings for PWM 
     if(!pwm_get_settings(&system_config.freq_config[pin].period, &system_config.freq_config[pin].dutycycle))//raw return is used for UI display
     {
-        (*response).error=true;
+        (*res).error=true;
         return;
     }
     uint slice_num = pwm_gpio_to_slice_num(bio2bufiopin[(uint8_t)pin]);
@@ -112,26 +112,26 @@ void pwm_configure_enable(struct command_attributes *attributes, struct command_
  
 }
 
-void pwm_configure_disable(struct command_attributes *attributes, struct command_response *response)
+void pwm_configure_disable(struct opt_args *args, struct command_result *res)
 {
     uint32_t pin;
 
     if(system_config.pwm_active == 0) //no pwm active, just exit
     {
         printf("Frequency generation not active on any IO pins!");
-        (*response).error=true;
+        (*res).error=true;
         return;
     } 
-    else if(attributes->has_dot)
+    else if(!args[0].no_value)
     {
         //first make sure the freq is present and available
-        if(attributes->dot >= count_of(bio2bufiopin))
+        if(args[0].i >= count_of(bio2bufiopin))
         {
-            printf("Pin IO%d is invalid!", attributes->dot);
-            (*response).error=true;
+            printf("Pin IO%d is invalid!", args[0].i);
+            (*res).error=true;
             return;
         }
-        pin=attributes->dot;
+        pin=args[0].i;
 
     }//if only one pwm is active, just disable that one
     else if(system_config.pwm_active && !(system_config.pwm_active & (system_config.pwm_active-1)))
@@ -162,7 +162,7 @@ void pwm_configure_disable(struct command_attributes *attributes, struct command
     
         if(result.exit)
         {
-            (*response).error=true;
+            (*res).error=true;
             return;
         }
 
@@ -172,7 +172,7 @@ void pwm_configure_disable(struct command_attributes *attributes, struct command
             //TODO: instead show channel/slice representation and explain assigned function
             ui_info_print_pin_names();
             ui_info_print_pin_labels();
-            (*response).error=true;
+            (*res).error=true;
             return;
         }               
     }
@@ -180,7 +180,7 @@ void pwm_configure_disable(struct command_attributes *attributes, struct command
     //no pwm on this pin!
     if( !(system_config.pwm_active&(0x01<<pin)) ) {
         printf("Error: frequency generator not active on IO%d", pin);
-        (*response).error=true;
+        (*res).error=true;
         return;
     }
 

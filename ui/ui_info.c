@@ -24,12 +24,12 @@ extern bool ejected;
 
 // display ui_info_print_info about the buspirate
 // when not in HiZ mode it dumps info about the pins/voltags etc.
-void ui_info_print_info(struct command_attributes *attributes, struct command_response *response)
+void ui_info_print_info(struct opt_args *args, struct command_result *res)
 {
-	LBA_t	maxsector;
+	/*LBA_t	maxsector;
 	uint32_t sectorsiz;
 	DRESULT	res;
-	uint8_t buffer[512];
+	uint8_t buffer[512];*/
 
 	// ------
 	int i;
@@ -350,7 +350,7 @@ const struct ui_info_help help_protocol[22]={
 
 
 // displays the help
-void ui_info_print_help(struct command_attributes *attributes, struct command_response *response)
+void ui_info_print_help(struct opt_args *args, struct command_result *res)
 {
 	printf("\t%s%s%s\r\n", ui_term_color_info(), t[T_HELP_TITLE], ui_term_color_reset());
 	printf("----------------------------------------------------------------------------\r\n");

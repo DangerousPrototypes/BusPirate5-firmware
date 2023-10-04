@@ -49,6 +49,7 @@ add_executable(bus_pirate
         ui/ui_term.c ui/ui_term.h  ui/ui_statusbar.c ui/ui_statusbar.h
         system_monitor.h system_monitor.c
         mjson/mjson.h mjson/mjson.c 
+        postprocess.c postprocess.h syntax.h syntax.c  syntax_struct.h
         )
    
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)

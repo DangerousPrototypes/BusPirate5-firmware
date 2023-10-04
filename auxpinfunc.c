@@ -6,48 +6,48 @@
 #include "system_config.h"
 #include "ui/ui_term.h"
 
-void auxpinfunc_write(struct command_attributes *attributes, struct command_response *response, bool output, bool level);
+void auxpinfunc_write(struct opt_args *args, struct command_result *res, bool output, bool level);
 
 static const char labels[][5]={"AUXL","AUXH"};
 
-void auxpinfunc_high(struct command_attributes *attributes, struct command_response *response)
+void auxpinfunc_high(struct opt_args *args, struct command_result *res)
 {
-    auxpinfunc_write(attributes, response, true, 1);
+    auxpinfunc_write(args, res, true, 1);
 }
 
-void auxpinfunc_low(struct command_attributes *attributes, struct command_response *response)
+void auxpinfunc_low(struct opt_args *args, struct command_result *res)
 {
-    auxpinfunc_write(attributes, response, true, 0);
+    auxpinfunc_write(args, res, true, 0);
 }
 
-void auxpinfunc_input(struct command_attributes *attributes, struct command_response *response)
+void auxpinfunc_input(struct opt_args *args, struct command_result *res)
 {
-    auxpinfunc_write(attributes, response, false, 0);
+    auxpinfunc_write(args, res, false, 0);
 }
 
-void auxpinfunc_write(struct command_attributes *attributes, struct command_response *response, bool output, bool level)
+void auxpinfunc_write(struct opt_args *args, struct command_result *res, bool output, bool level)
 {
-	if(!attributes->has_dot)
+	if(!args[0].i)
 	{
 		printf("%sError:%s specify an IO pin (a.1, A.5, @.0)", ui_term_color_error(), ui_term_color_reset());
-		response->error=true;
+		res->error=true;
         return;
 	}
 
-    uint32_t pin=attributes->dot;
+    uint32_t pin=args[0].i;
 
     // first make sure the pin is present and available
     if(pin>=count_of(bio2bufiopin))
     {
         printf("%sError:%s pin IO%d is invalid", ui_term_color_error(), ui_term_color_reset(), pin);
-		response->error=true;
+		res->error=true;
         return;
     }	
     // pin is in use for any purposes 
     if(system_config.pin_labels[pin+1]!=0 && !(system_config.aux_active & (0x01<<((uint8_t)pin))))
     {
         printf("%sError:%s IO%d is in use by %s", ui_term_color_error(), ui_term_color_reset(), pin, system_config.pin_labels[pin+1]);
-		response->error=true;
+		res->error=true;
         return;
     }
 

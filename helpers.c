@@ -26,7 +26,7 @@ void helpers_debug(struct command_attributes *attributes, struct command_respons
     //storage_new_file();
 }
 
-void helpers_selftest(struct command_attributes *attributes, struct command_response *response)
+void helpers_selftest(struct opt_args *args, struct command_result *res)
 {
     uint32_t temp1, temp2, fails;
 
@@ -401,7 +401,7 @@ void helpers_numbits(struct command_attributes *attributes, struct command_respo
         
     }
 }
-
+/*
 void helpers_delay_us(struct command_attributes *attributes, struct command_response *response)
 {
     uint32_t repeat=1;
@@ -435,8 +435,8 @@ void helpers_delay_ms(struct command_attributes *attributes, struct command_resp
     );
     delayms(repeat);
 }
-
-void helpers_bit_order_msb(struct command_attributes *attributes, struct command_response *response)
+*/
+void helpers_bit_order_msb(struct opt_args *args, struct command_result *res)
 {
     system_config.bit_order=0;
     printf("%s%s:%s %s 0b%s1%s0000000",
@@ -445,7 +445,7 @@ void helpers_bit_order_msb(struct command_attributes *attributes, struct command
     );
 }
 
-void helpers_bit_order_lsb(struct command_attributes *attributes, struct command_response *response)
+void helpers_bit_order_lsb(struct opt_args *args, struct command_result *res)
 {
     system_config.bit_order=1;
     printf("%s%s:%s %s 0b0000000%s1%s",
@@ -454,23 +454,25 @@ void helpers_bit_order_lsb(struct command_attributes *attributes, struct command
     );    
 }
 
-void helpers_show_int_formats(struct command_attributes *attributes, struct command_response *response)
+void helpers_show_int_formats(struct opt_args *args, struct command_result *res)
 {
-    uint32_t temp;
-    prompt_result result;
-    ui_parse_get_int(&result, &temp);
+    uint32_t temp=args[0].i;
+    //prompt_result result;
+    //ui_parse_get_int(&result, &temp);
     uint32_t temp2=system_config.display_format;		// remember old display_format
     system_config.display_format=df_auto; //TODO: this is still a hack...
-
+    
+    struct command_attributes attributes;
+    
     //determine the effective bits
-    attributes->has_dot=true;
-    attributes->dot=8;
+    attributes.has_dot=true;
+    attributes.dot=8;
     uint32_t mask=0x000000ff;
-    for(uint8_t i=1; i<4; i++) //4 = 32 bit support TODO: wish we could make this more flexable
+    for(uint8_t i=1; i<4; i++) //4 = 32 bit support TODO: wish we could make this more flexible
     {
         if(temp&(mask<<(i*8)))
         {
-            attributes->dot+=8;
+            attributes.dot+=8;
         }
     }
 
@@ -489,8 +491,8 @@ void helpers_show_int_formats(struct command_attributes *attributes, struct comm
                 break;
             default:
                 printf(" %s=", ui_term_color_reset());
-                attributes->number_format=i;
-                ui_format_print_number_2(attributes,&temp);
+                attributes.number_format=i;
+                ui_format_print_number_2(&attributes,&temp);
                 break;
         }
 
@@ -499,11 +501,11 @@ void helpers_show_int_formats(struct command_attributes *attributes, struct comm
     //system_config.num_bits=temp3;
 }
 
-void helpers_show_int_inverse(struct command_attributes *attributes, struct command_response *response)
+void helpers_show_int_inverse(struct opt_args *args, struct command_result *res)
 {
-    uint32_t temp;
-    prompt_result result;
-    ui_parse_get_int(&result, &temp);
+    uint32_t temp=args[0].i;
+    //prompt_result result;
+    //ui_parse_get_int(&result, &temp);
     uint32_t temp2=system_config.display_format;		// remember old display_format
     system_config.bit_order^=1;
     uint32_t temp3=system_config.num_bits;		// remember old numbits
@@ -594,7 +596,7 @@ void helpers_mode_periodic()
     modes[system_config.mode].protocol_periodic();
 }
 
-void helpers_mode_help(struct command_attributes *attributes, struct command_response *response)
+void helpers_mode_help(struct opt_args *args, struct command_result *res)
 {
     modes[system_config.mode].protocol_help();
 }

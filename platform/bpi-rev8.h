@@ -258,13 +258,23 @@ extern uint32_t *hw_pin_voltage_ordered[];
 #define delayus(X) busy_wait_us_32(X)
 
 void hw_adc_sweep(void);
-void hw_jump_to_bootloader(struct command_attributes *attributes, struct command_response *response);
+void hw_jump_to_bootloader(struct opt_args *args, struct command_result *res);
 
+//#define BP_DEBUG_ENABLED 1
 #define BP_DEBUG_UART_0 uart0
 #define BP_DEBUG_UART_0_TX BIO4
 #define BP_DEBUG_UART_0_RX BIO5
 #define BP_DEBUG_UART_1 uart1
 #define BP_DEBUG_UART_1_TX BIO0
-#define BP_DEBUG_UART_1_RX BIO1   
+#define BP_DEBUG_UART_1_RX BIO1 
+
+ /*   #define BP_DEBUG_UART uart0
+    #define BP_DEBUG_UART_TX BIO6
+    #define BP_DEBUG_UART_RX BIO7
+*/
+/*    #define BP_DEBUG_UART uart1
+    #define BP_DEBUG_UART_TX BIO0
+    #define BP_DEBUG_UART_RX BIO1    
+*/
 
 #endif

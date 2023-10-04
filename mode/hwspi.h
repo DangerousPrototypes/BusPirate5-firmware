@@ -1,7 +1,9 @@
 void spi_start(void);
 void spi_startr(void);
+void spi_start_post(void);
 void spi_stop(void);
-void spi_stopr(void);
+void spi_stopr(void); 
+void spi_stop_post(void);
 uint32_t spi_send(uint32_t d);
 uint32_t spi_read(void);
 void spi_macro(uint32_t macro);

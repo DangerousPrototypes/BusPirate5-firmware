@@ -130,7 +130,7 @@ uint32_t psu_set(float volts, float current, bool fuse_en)
 
     //after a delay for inrush, we set the actual limit
     pwm_set_chan_level(slice_num, i_chan_num, (uint16_t)iset);  
-    busy_wait_ms(100);
+    busy_wait_ms(500);
     
     hw_adc_sweep();
 
@@ -168,9 +168,7 @@ uint32_t psu_set(float volts, float current, bool fuse_en)
     return 0;
 }
 
-
-
-void psu_enable(struct command_attributes *attributes, struct command_response *response)
+void psu_enable(struct opt_args *args, struct command_result *res)
 {
     float volts,current;
 
@@ -185,7 +183,7 @@ void psu_enable(struct command_attributes *attributes, struct command_response *
     ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &volts);
     if(result.exit)
     {
-        response->error=true;
+        res->error=true;
         return;
     }
 
@@ -226,7 +224,7 @@ void psu_enable(struct command_attributes *attributes, struct command_response *
         ui_prompt_float(&result, 0.0f, 500.0f, 100.0f, true, &current);
         if(result.exit)
         {
-            response->error=true;
+            res->error=true;
             return;    
         }
 
@@ -275,7 +273,7 @@ void psu_enable(struct command_attributes *attributes, struct command_response *
         {
             ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
             psu_reset();
-            response->error=true;
+            res->error=true;
             return;   
         } 
     }
@@ -287,7 +285,7 @@ void psu_enable(struct command_attributes *attributes, struct command_response *
     {
         ui_term_error_report(T_PSU_SHORT_ERROR);
         psu_reset();
-        response->error=true;
+        res->error=true;
         return;           
     }   
 
@@ -334,13 +332,13 @@ void psu_enable(struct command_attributes *attributes, struct command_response *
     return;
 }
 
-void psu_disable(struct command_attributes *attributes, struct command_response *response)
+void psu_disable(struct opt_args *args, struct command_result *res)
 {
     //we disable it before an error just for good measure
     if( !psu_reset() )
     {
         system_config.psu_error=true;
-        response->error=true;
+        res->error=true;
         return;    
     }
 

@@ -134,9 +134,7 @@ uint32_t spi_setup(void)
 }
 
 uint32_t spi_setup_exc(void)
-{
-
-		
+{		
 	//setup spi
 	mode_config.baudrate_actual=spi_init(M_SPI_PORT, mode_config.baudrate);
 	printf("\r\n%s%s:%s %uKHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
@@ -227,29 +225,37 @@ uint8_t spi_xfer(const uint8_t out)
 
 void spi_start(void)
 {
-	printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
+	//printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
 	spi_set_cs(M_SPI_SELECT);
-
 }
 
 void spi_startr(void)
 {
-	printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
+	//printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
 	spi_set_cs(M_SPI_SELECT);
+}
 
+void spi_start_post(void)
+{
+	printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
 }
 
 void spi_stop(void)
 {
-	printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
+	//printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
 	spi_set_cs(M_SPI_DESELECT);
-
 }
 
 void spi_stopr(void)
 {
-	printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
+	//printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
 	spi_set_cs(M_SPI_DESELECT);
+}
+
+void spi_stop_post(void)
+{
+	printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
+	//spi_set_cs(M_SPI_DESELECT);
 }
 
 uint32_t spi_send(uint32_t d)
@@ -257,7 +263,7 @@ uint32_t spi_send(uint32_t d)
 	uint16_t returnval;
 
 
-	if((system_config.num_bits<4)||(system_config.num_bits>8))
+/*	if((system_config.num_bits<4)||(system_config.num_bits>8))
 	{
 		printf("\r\nOnly 4 to 8 bits are currently allowed");
 		system_config.error=1;
@@ -272,6 +278,27 @@ uint32_t spi_send(uint32_t d)
 	returnval=spi_xfer((uint16_t)d);
 
 	return (uint16_t) returnval;
+	*/
+    // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
+    // is full, PL022 inhibits RX pushes, and sets a sticky flag on
+    // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
+	while (!spi_is_writable(M_SPI_PORT))
+		tight_loop_contents();
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)d;
+
+    // Drain RX FIFO, then wait for shifting to finish (which may be *after*
+    // TX FIFO drains), then drain RX FIFO again
+    while (spi_is_readable(M_SPI_PORT))
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+    while (spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
+        tight_loop_contents();
+    while (spi_is_readable(M_SPI_PORT))
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+
+    // Don't leave overrun flag set
+    spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
+
+    return (int) returnval;
 }
 
 uint32_t spi_read(void)

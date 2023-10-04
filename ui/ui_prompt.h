@@ -36,6 +36,8 @@ typedef struct prompt_result {
 	bool error;
 } prompt_result;
 
+
+
 // takes a menu config struct and shows a time/menu/prompt accepts and validates user input
 bool ui_prompt_uint32(struct prompt_result *result, const struct ui_prompt* menu, uint32_t* value);
 
@@ -54,7 +56,7 @@ bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu);
 
 bool ui_prompt_float(struct prompt_result *result, float minval, float maxval, float defval, bool allow_exit, float* user_value);
 bool ui_prompt_float_units(struct prompt_result *result, const char *menu, float* user_value, uint8_t* user_units);
-bool ui_prompt_any_key_continue(struct prompt_result *result, uint32_t delay, uint32_t (*refresh_func)(uint8_t pin, uint8_t refresh), uint8_t pin, uint8_t refresh);
+bool ui_prompt_any_key_continue(struct prompt_result *result, uint32_t delay, uint32_t (*refresh_func)(uint8_t pin, bool refresh), uint8_t pin, bool refresh);
 bool ui_prompt_vt100_mode(prompt_result *result, uint32_t *value);
 void ui_prompt_invalid_option(void);
 uint32_t ui_prompt_yes_no(void);

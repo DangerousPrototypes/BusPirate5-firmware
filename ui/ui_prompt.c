@@ -264,7 +264,7 @@ bool ui_prompt_float_units(prompt_result *result, const char *menu, float* user_
 	}
 }
 
-bool ui_prompt_any_key_continue(prompt_result *result, uint32_t delay, uint32_t (*refresh_func)(uint8_t pin, uint8_t refresh), uint8_t pin, uint8_t refresh)
+bool ui_prompt_any_key_continue(prompt_result *result, uint32_t delay, uint32_t (*refresh_func)(uint8_t pin, bool refresh), uint8_t pin, bool refresh)
 {
     *result=empty_result;
 	// press any key to continue

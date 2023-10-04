@@ -37,6 +37,8 @@
 //#define		DISPLAY_USE_HD44780	// is always enabled
 //#define		DISPLAY_USE_ST7735
 
+#define OPTARG_STRING_LEN 20
+
 // user command structs
 #include "commands.h"
 

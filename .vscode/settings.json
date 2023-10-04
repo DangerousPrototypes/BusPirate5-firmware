@@ -22,5 +22,35 @@
     "CMAKE_MODULE_PATH": "${env:PICO_INSTALL_PATH}/pico-sdk-tools"
   },
   "cmake.generator": "Ninja",
-  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "files.associations": {
+    "helpers.h": "c",
+    "tusb.h": "c",
+    "ui_prompt.h": "c",
+    "bio.h": "c",
+    "array": "c",
+    "string": "c",
+    "string_view": "c",
+    "ranges": "c",
+    "bit": "c",
+    "*.tcc": "c",
+    "bitset": "c",
+    "chrono": "c",
+    "compare": "c",
+    "exception": "c",
+    "algorithm": "c",
+    "functional": "c",
+    "limits": "c",
+    "numeric": "c",
+    "ratio": "c",
+    "streambuf": "c",
+    "regex": "c",
+    "tuple": "c",
+    "type_traits": "c",
+    "system_config.h": "c",
+    "storage.h": "c",
+    "syntax.h": "c",
+    "postprocess.h": "c",
+    "ui_parse.h": "c"
+  }
 }

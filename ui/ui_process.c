@@ -26,83 +26,114 @@
 #include "pullups.h"
 #include "helpers.h"
 #include "ui/ui_cmdln.h"
+//#include "ui/ui_process.h"
+#include "storage.h"
+#include "string.h"
+#include "syntax.h"
+//#include "postprocess.h"
 
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
-const struct command_attributes attributes_empty;
-const struct command_response response_empty;
-struct command_attributes attributes;
-struct command_response response;
-struct prompt_result result;
-char c;
+static const struct opt_args empty_opt_args;
+static struct opt_args args[5];
 
-// statemachine friendly command parsing/processing function
+bool parse_help(void)
+{
+    char c,d;
+    if(cmdln_try_peek(0,&c) && cmdln_try_peek(1,&d) && c=='-' && d=='h')
+    {
+        return true;
+    }
+    return false;
+}
+
 bool ui_process_commands(void)
 {
+    char c;
+
     if(!cmdln_try_peek(0,&c))
     {
         return false;
     }
 
-    if( c<=' ' || c>'~' )
+    if(c=='[' || c=='>' || c=='{') //first character is { [ or >, process as syntax
     {
-        //out of ascii range
-        cmdln_try_discard(1);
-    } 
-    else if(system_config.mode==HIZ && !commands[(c-0x20)].allow_hiz)
-    {
-        printf(HiZerror());
-        system_config.error=1; 
-        cmdln_try_discard(1);
-    }
-    else
-    {
-        attributes=attributes_empty;
-        response=response_empty;
-
-        attributes.command=c;
-        //if number pre-parse it
-        if(c>='0' && c<='9')
-        {
-            ui_parse_get_int(&result, &attributes.value);
-            if(result.error)
-            {
-                system_config.error=1;
-            }
-            else
-            {
-                attributes.has_value=true;
-                attributes.number_format=result.number_format;
-            }
-
-        }
-        else
-        {   // parsing an int value from the command line sets the pointer to the next value
-            // if it's another command, we need to do that manually now to keep the pointer
-            // where the next parsing function expects it
-            cmdln_try_discard(1);
-        }
-
-        if(!system_config.error)
-        {
-            attributes.has_dot=ui_parse_get_dot(&attributes.dot);
-            attributes.has_colon=ui_parse_get_colon(&attributes.colon);
-            
-            printf("%s", ui_term_color_info()); //TODO: properly color things? maybe only color from here?
-            commands[(c-0x20)].command(&attributes,&response);
-            
-            if(response.error)
-            {		
-                system_config.error=1;                   
-            }
-        }
+       if(syntax_compile(&args[0]))
+       {
+            printf("Syntax compile error\r\n");
+            return true;
+       }
+       if(syntax_run())
+       {
+            printf("Syntax execution error\r\n");
+            return true;
+       }
+       if(syntax_post())
+       {
+            printf("Syntax post process error\r\n");
+            return true;
+       }
+       printf("Bus Syntax: Success\r\n");
+       return false;
     }
     
-    if((c!=' ')&&(c!=0x00)&&(c!=',')) printf("%s\r\n", ui_term_color_reset());
+    //process as a command
 
-    if(system_config.error)	// something went wrong
+    args[0]=empty_opt_args;
+    args[0].max_len=OPTARG_STRING_LEN;
+    ui_parse_get_string(&args[0]);
+    //printf("Command: %s\r\n", args[0].c);
+
+    if(args[0].no_value)
     {
-        return false; //error, tell sm to change states....
+        return false;
     }
 
-    return true;
+    bool cmd_valid=false;
+    uint32_t user_cmd_id=0;
+    for(int i=0; i<count_of_cmd; i++)
+    {  
+        if(strcmp(args[0].c, cmd[i])==0)
+        {
+            user_cmd_id=i;
+            cmd_valid=true;
+            break;
+        }
+    }
+
+    if(!cmd_valid)
+    {
+        printf("Invalid command: %s. Type ? for help.\r\n", args[0].c);
+        return true;
+    }
+    //printf("Found: %s\r\n",cmd[user_cmd_id]);
+
+    //no such command, search SD card for runnable scripts
+
+    //do we have a command? good, get the opt args
+    if(parse_help())
+    {
+        printf("%s\r\n",exec_new[user_cmd_id].help_text);
+        return false;
+    }
+
+    if(system_config.mode==HIZ && !exec_new[user_cmd_id].allow_hiz)
+    {
+        printf("%s\r\n",HiZerror());
+        //printf("\r\n")
+        return true;            
+    }    
+
+    args[0]=empty_opt_args;
+    args[0].max_len=OPTARG_STRING_LEN;
+    if(exec_new[user_cmd_id].opt1_parser)
+        exec_new[user_cmd_id].opt1_parser(&args[0]);
+    //printf("Opt arg: %s\r\n",args[0].c);    
+    //execute the command
+    struct command_result result;
+    exec_new[user_cmd_id].command(&args, &result);
+    
+    printf("%s\r\n", ui_term_color_reset());
+
+    return false;
 }
+

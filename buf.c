@@ -7,6 +7,7 @@
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "tusb.h"
+#include "system_config.h"
 
 void rx_fifo_handler(void);
 
@@ -79,7 +80,9 @@ void tx_fifo_init(void)
 {   
     queue2_init(&tx_fifo, tx_buf, TX_FIFO_LENGTH_IN_BYTES); //buffer size must be 2^n for queue AND DMA rollover
     
-    #ifdef BP_DEBUG_ENABLED
+    //#ifdef BP_DEBUG_ENABLED
+    if(system_config.terminal_uart_enable)
+    {
         // Get a free channel, panic() if there are none
         chan=dma_claim_unused_channel(true);
         chan_sb=dma_claim_unused_channel(true);
@@ -124,7 +127,7 @@ void tx_fifo_init(void)
         // Configure the processor to run dma_handler() when DMA IRQ 0 is asserted
         irq_set_exclusive_handler(DMA_IRQ_0, tx_fifo_handler);
         irq_set_enabled(DMA_IRQ_0, true); 
-    #endif   
+    }//#endif   
 
 }
 
@@ -135,7 +138,9 @@ void tx_fifo_put(char *c)
 
 void tx_sb_start(uint32_t len)
 {
-    #ifdef BP_DEBUG_ENABLED
+    //#ifdef BP_DEBUG_ENABLED
+    if(system_config.terminal_uart_enable)
+    {    
         if( (chan_busy && chan_caller_sb) )
         {
             printf("hum, I was unable to start the status bar..\r\n");
@@ -143,17 +148,18 @@ void tx_sb_start(uint32_t len)
         }
         tx_sb_buf_ready=true;
         tx_sb_buf_cnt=len;
-    #endif
+    }//#endif
 }
 
 void tx_fifo_service(void)
 {
-    #ifdef BP_DEBUG_ENABLED
+    char data[64];
+    //#ifdef BP_DEBUG_ENABLED
+    if(system_config.terminal_uart_enable)
+    {    
         //if busy, return here to avoid the spin lock in the byte check
         if(chan_busy || dma_channel_is_busy(chan) || dma_channel_is_busy(chan_sb)) return;
-    #else
-        char data[64];
-    #endif
+    } //#endif
  
     // RX FIFO has priority here
     // This prevents the status bar from being wiped out by the VT100 setup commands 
@@ -162,14 +168,16 @@ void tx_fifo_service(void)
     
     if(bytes_available)
     {
-        #ifdef BP_DEBUG_ENABLED
+        //#ifdef BP_DEBUG_ENABLED
+        if(system_config.terminal_uart_enable)
+        {           
             chan_busy=true;
             chan_caller_sb=false;
             dma_channel_set_trans_count(chan, bytes_available, true);
             // Wait blocking and update pointer for non-interrupt debugging
             //dma_channel_wait_for_finish_blocking(chan);
             //queue_update_read_pointer(&tx_fifo, &bytes_available);
-        #else
+        }else{ //#else
             uint16_t i=0;
             while(i<1) 
             {
@@ -179,7 +187,7 @@ void tx_fifo_service(void)
 
             tud_cdc_write(&data, i);
             tud_cdc_write_flush();
-        #endif
+        }//#endif
         
         return;
     }
@@ -187,15 +195,15 @@ void tx_fifo_service(void)
 
     if(tx_sb_buf_ready)
     {
-        #ifdef BP_DEBUG_ENABLED
+        //#ifdef BP_DEBUG_ENABLED
+        if(system_config.terminal_uart_enable)
+        {   
             chan_busy=true;
             chan_caller_sb=true;
             dma_channel_set_read_addr(chan_sb, tx_sb_buf, false );
             dma_channel_set_trans_count(chan_sb, tx_sb_buf_cnt, true);       
-        return;
-        #else
-
-        #endif
+            return;
+        }
     }  
     
 
@@ -344,55 +352,58 @@ void rx_fifo_init(void)
 {
     queue2_init(&rx_fifo, rx_buf, RX_FIFO_LENGTH_IN_BYTES); //buffer size must be 2^n for queue AND DMA rollover
     
-    #ifdef BP_DEBUG_ENABLED
-    // setup interrupt on uart
-    uart_set_fifo_enabled(BP_DEBUG_UART, true); //might set to false
+    //#ifdef BP_DEBUG_ENABLED
+    if(system_config.terminal_uart_enable)
+    {   
+        // setup interrupt on uart
+        uart_set_fifo_enabled(BP_DEBUG_UART, true); //might set to false
 
-    int UART_IRQ = BP_DEBUG_UART == uart0 ? UART0_IRQ : UART1_IRQ;
+        int UART_IRQ = BP_DEBUG_UART == uart0 ? UART0_IRQ : UART1_IRQ;
 
-    irq_set_exclusive_handler(UART_IRQ, rx_fifo_handler);
-    irq_set_enabled(UART_IRQ, true);
+        irq_set_exclusive_handler(UART_IRQ, rx_fifo_handler);
+        irq_set_enabled(UART_IRQ, true);
 
-    uart_set_irq_enables(BP_DEBUG_UART, true, false);
-    #else
-
-    #endif
+        uart_set_irq_enables(BP_DEBUG_UART, true, false);
+    }
 
 }
 
 
 void rx_fifo_handler(void)
 {
-    #ifdef BP_DEBUG_ENABLED
-    // while bytes available shove them in the buffer
-    while(uart_is_readable(BP_DEBUG_UART)) {
-        uint8_t c=uart_getc(BP_DEBUG_UART);
-        queue2_add_blocking(&rx_fifo, &c);
-    }    
-    #else
-    if ( tud_cdc_connected() )
-    {
-        // connected and there are data available
-        if ( tud_cdc_available() )
+    //#ifdef BP_DEBUG_ENABLED
+    if(system_config.terminal_uart_enable)
+    {       
+        // while bytes available shove them in the buffer
+        while(uart_is_readable(BP_DEBUG_UART)) 
         {
-            uint8_t buf[64];
-
-            uint32_t count = tud_cdc_read(buf, sizeof(buf));
-
-            // while bytes available shove them in the buffer
-            if(count>0)
+            uint8_t c=uart_getc(BP_DEBUG_UART);
+            queue2_add_blocking(&rx_fifo, &c);
+        }    
+    }else{ //#else
+        if(tud_cdc_connected())
+        {
+            // connected and there are data available
+            if ( tud_cdc_available() )
             {
-                for(uint8_t i=0; i<count; i++) {
-                    uint8_t c=buf[i];
+                uint8_t buf[64];
 
-                    queue2_add_blocking(&rx_fifo, &c);
-                } 
+                uint32_t count = tud_cdc_read(buf, sizeof(buf));
+
+                // while bytes available shove them in the buffer
+                if(count>0)
+                {
+                    for(uint8_t i=0; i<count; i++) {
+                        uint8_t c=buf[i];
+
+                        queue2_add_blocking(&rx_fifo, &c);
+                    } 
+                }
             }
         }
-    }
-    #endif
+    }//#endif
 }
-#ifndef BP_DEBUG_ENABLED
+//#ifndef BP_DEBUG_ENABLED
 // Invoked when CDC interface received data from host
 void tud_cdc_rx_cb(uint8_t itf)
 {
@@ -414,7 +425,7 @@ void tud_cdc_rx_cb(uint8_t itf)
         }
     }
 }
-#endif
+//#endif
 
 void rx_fifo_get_blocking(char *c)
 {

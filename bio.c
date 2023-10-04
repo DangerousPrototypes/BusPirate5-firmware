@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
+#include "system_config.h"
 
 #define BUFDIR_INPUT 0
 #define BUFDIR_OUTPUT 1
@@ -10,9 +11,13 @@ void bio_init(void)
     // setup the buffer IO and DIRection pins
     for(uint8_t i=0;i<BIO_MAX_PINS; i++)
     {
-        #ifdef BP_DEBUG_ENABLED
+        /*#ifdef BP_DEBUG_ENABLED
         if(i==BP_DEBUG_UART_TX || i==BP_DEBUG_UART_RX) continue;
-        #endif
+        #endif*/
+        if(system_config.pin_func[i+1]==BP_PIN_DEBUG)
+        {
+            continue;
+        }        
 
         gpio_set_drive_strength(bio2bufiopin[i], GPIO_DRIVE_STRENGTH_2MA); 
         gpio_set_dir(bio2bufiopin[i], GPIO_IN); 
@@ -24,9 +29,13 @@ void bio_init(void)
     for(uint8_t i=0;i<BIO_MAX_PINS; i++)
     {    
         //don't blow up our debug UART settings
-        #ifdef BP_DEBUG_ENABLED
+        /*#ifdef BP_DEBUG_ENABLED
         if(i==BP_DEBUG_UART_TX || i==BP_DEBUG_UART_RX) continue;
-        #endif
+        #endif*/
+        if(system_config.pin_func[i+1]==BP_PIN_DEBUG)
+        {
+            continue;
+        }            
 
         gpio_put(bio2bufdirpin[i], BUFDIR_INPUT);
         gpio_set_dir(bio2bufdirpin[i], GPIO_OUT);   

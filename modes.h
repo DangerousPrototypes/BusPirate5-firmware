@@ -53,8 +53,10 @@ typedef struct _mode
 {
 	void (*protocol_start)(void);			// start
 	void (*protocol_startR)(void);			// start with read
+	void (*protocol_start_post)(void);			// start post process	
 	void (*protocol_stop)(void);			// stop
 	void (*protocol_stopR)(void);			// stop with read
+	void (*protocol_stop_post)(void);			// stop post process		
 	uint32_t (*protocol_send)(uint32_t);		// send(/read) max 32 bit
 	uint32_t (*protocol_read)(void);		// read max 32 bit
 	void (*protocol_clkh)(void);			// set clk high

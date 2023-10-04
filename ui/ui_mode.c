@@ -17,6 +17,92 @@ bool ui_mode_list(const struct ui_prompt* menu)
 	}
 }
 
+void ui_mode_enable_args(struct opt_args *args, struct command_result *res)
+{
+    uint32_t mode;
+    bool error;
+
+	prompt_result result;
+    ui_parse_get_attributes(&result, &mode, 1);
+
+	if( result.error || result.no_value || result.exit || ((mode)>MAXPROTO) || ((mode)==0) )
+	{
+		if( result.success && (mode)>MAXPROTO )
+		{
+			ui_prompt_invalid_option();
+		}
+		error=true;
+	}
+	else
+	{
+		(mode)--; //adjust down one from user choice
+		error=false;
+	}
+
+	if(error)			// no integer found
+	{
+		static const struct ui_prompt_config cfg={
+			true, //bool allow_prompt_text;
+			false, //bool allow_prompt_defval;
+			false, //bool allow_defval; 
+			true, //bool allow_exit;
+			&ui_mode_list, //bool (*menu_print)(const struct ui_prompt* menu);
+			&ui_prompt_prompt_ordered_list,     //bool (*menu_prompt)(const struct ui_prompt* menu);
+			&ui_prompt_validate_ordered_list //bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
+		};		
+
+		static const struct ui_prompt mode_menu={
+			T_MODE_MODE_SELECTION,
+			0,
+			MAXPROTO,
+			T_MODE_MODE, 
+			0,0,0,
+			0,
+			&cfg
+		};
+
+		prompt_result result;
+        ui_prompt_uint32(&result, &mode_menu, &mode);
+        if(result.exit) //user bailed, stay in current mode
+        {
+            //(*response).error=true;
+            return;
+        }
+        mode--;
+    }
+
+    //ok, start setup dialog
+    if(!modes[mode].protocol_setup()) //user bailed on setup steps
+    {
+        //(*response).error=true;
+        return;
+    }
+
+    modes[system_config.mode].protocol_cleanup();   // switch to HiZ
+    modes[0].protocol_setup_exc();			        // disables power suppy etc.
+    system_config.mode=mode;                        // setup the new mode  
+    modes[system_config.mode].protocol_setup_exc(); // execute the mode setup
+
+    if(system_config.mode==0) //TODO: do something to show the mode (LED? LCD?)
+    {
+        //gpio_clear(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
+    }
+    else
+    {
+        //gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
+    }
+
+	printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_MODE], ui_term_color_reset(), modes[system_config.mode].protocol_name);
+
+}
+
+
+
+
+
+
+
+
 void ui_mode_enable(struct command_attributes *attributes, struct command_response *response)
 {
     uint32_t mode;
@@ -106,7 +192,7 @@ bool int_display_menu(const struct ui_prompt* menu)
 }
 
 // set display mode  (hex, bin, octa, dec) 
-void ui_mode_int_display_format(struct command_attributes *attributes, struct command_response *response)
+void ui_mode_int_display_format(struct opt_args *args, struct command_result *res)
 {
     uint32_t mode;
     bool error;
@@ -154,7 +240,7 @@ void ui_mode_int_display_format(struct command_attributes *attributes, struct co
         ui_prompt_uint32(&result, &mode_menu, &mode);
         if(result.exit) //user bailed
         {
-            (*response).error=true;
+            (*res).error=true;
             return;
         }
         mode--;

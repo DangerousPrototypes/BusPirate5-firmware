@@ -598,7 +598,9 @@ static const BYTE DbcTbl[] = MKCVTBL(TBL_DC, FF_CODE_PAGE);
 #endif
 
 
-
+void get_dir(char *p){
+	p=DirBuf;
+}
 
 /*--------------------------------------------------------------------------
 

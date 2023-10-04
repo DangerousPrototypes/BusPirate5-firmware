@@ -11,6 +11,12 @@ uint64_t mcu_get_unique_id(void)
     return *((uint64_t*)(id.id));
 };
 
+void mcu_reset_args(struct opt_args *args, struct command_result *res)
+{
+ 	watchdog_enable(1, 1);
+	while(1);
+}
+
 void mcu_reset(struct command_attributes *attributes, struct command_response *response)
 {
  	watchdog_enable(1, 1);

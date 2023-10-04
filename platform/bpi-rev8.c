@@ -43,7 +43,7 @@ void hw_adc_sweep(void){
 
 }
 
-void hw_jump_to_bootloader(struct command_attributes *attributes, struct command_response *response)
+void hw_jump_to_bootloader(struct opt_args *args, struct command_result *res)
 {
 	/* \param usb_activity_gpio_pin_mask 0 No pins are used as per a cold boot. Otherwise a single bit set indicating which
 	*                               GPIO pin should be set to output and raised whenever there is mass storage activity

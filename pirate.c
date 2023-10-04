@@ -74,7 +74,7 @@ int main()
     // init shift register pins
     shift_init();
     
-    //init psu pins
+    //init psu pins 
     psu_init();
    
     // LCD pin init
@@ -91,7 +91,7 @@ int main()
     lock_init(&core, next_striped_spin_lock_num());
 
     // configure the defaults for shift register attached hardware
-    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN|PULLUP_EN), CURRENT_EN_OVERRIDE);
+    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), PULLUP_EN|CURRENT_EN_OVERRIDE);
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
     shift_set_clear_wait( 0, DISPLAY_RESET);
     busy_wait_ms(100);
@@ -153,6 +153,15 @@ int main()
     translation_set(system_config.terminal_language); 
     
     multicore_fifo_push_blocking(0); //begin main loop on secondary core
+    
+    //modes[0].protocol_setup_exc();	
+    // turn everything off
+	bio_init();     // make all pins safe
+	psu_reset();    // disable psu and reset pin label
+    psu_cleanup();  // clear any errors
+
+
+
     busy_wait_ms(100);
 
     enum bp_statmachine
@@ -169,6 +178,8 @@ int main()
     struct command_response response;   
     struct prompt_result result; 
     alarm_id_t screensaver;
+    struct opt_args args;
+    struct command_result res;
 
     while(1)
     {
@@ -208,7 +219,7 @@ int main()
                             break;
                     }
                     // show welcome
-                    ui_info_print_info(&attributes, &response);
+                    ui_info_print_info(&args, &res);
                     bp_state=BP_SM_COMMAND_PROMPT;
                 }
                 else if(result.error) // user hit enter but not a valid option
@@ -250,12 +261,9 @@ int main()
                 break;
             
             case BP_SM_PROCESS_COMMAND:
-                if(!ui_process_commands())
-                {
-                    bp_state=BP_SM_COMMAND_PROMPT;
-                }
-                break;
-            
+                system_config.error=ui_process_commands();   
+                bp_state=BP_SM_COMMAND_PROMPT;      
+                break;         
             case BP_SM_COMMAND_PROMPT:
                 if(system_config.subprotocol_name)
                 {

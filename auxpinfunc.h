@@ -1,3 +1,3 @@
-void auxpinfunc_high(struct command_attributes *attributes, struct command_response *response);
-void auxpinfunc_low(struct command_attributes *attributes, struct command_response *response);
-void auxpinfunc_input(struct command_attributes *attributes, struct command_response *response);
+void auxpinfunc_high(struct opt_args *args, struct command_result *res);
+void auxpinfunc_low(struct opt_args *args, struct command_result *res);
+void auxpinfunc_input(struct opt_args *args, struct command_result *res);

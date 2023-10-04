@@ -58,7 +58,7 @@ pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
 pico_set_program_name(bus_pirate "bus_pirate")
 pico_set_program_version(bus_pirate "0.1")
 pico_set_program_description(bus_pirate "Bus Pirate Firmware for RP2040")
-pico_set_program_description(bus_pirate "buspirate.com")
+### pico_set_program_description(bus_pirate "buspirate.com")
 
 pico_enable_stdio_uart(bus_pirate 0)
 pico_enable_stdio_usb(bus_pirate 0)

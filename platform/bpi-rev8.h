@@ -232,6 +232,8 @@ enum adc_mux{
     HW_ADC_MUX_COUNT
 };
 
+#define bufio2adc(x) (7 - x)
+
 //CURRENT SENSE is attached to a separate ADC, not through the mux
 //lets make a define for it (and space in the hw_adc_x arrays) at the end of HW_ADC_MUX_count
 #define HW_ADC_CURRENT_SENSE HW_ADC_MUX_COUNT
@@ -259,6 +261,7 @@ extern uint32_t *hw_pin_voltage_ordered[];
 
 void hw_adc_sweep(void);
 void hw_jump_to_bootloader(struct opt_args *args, struct command_result *res);
+uint32_t hw_adc_bio(uint8_t bio);
 
 //#define BP_DEBUG_ENABLED 1
 #define BP_DEBUG_UART_0 uart0

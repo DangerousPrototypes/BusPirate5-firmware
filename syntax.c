@@ -164,7 +164,7 @@ bool syntax_compile(struct opt_args *args)
                 return true;
             }
 
-            if(pin_func[out[out_cnt].bits]!=BP_PIN_IO)
+            if(out[out_cnt].command!=SYN_ADC && out[out_cnt].bits!=BP_PIN_IO)
             {
                 printf("%sError:%s at position %d IO%d is already in use\r\n", ui_term_color_error(), ui_term_color_reset(), pos, out[out_cnt].bits);
                 //printf("IO%d already in use. Error at position %d\r\n",c,pos);
@@ -252,7 +252,10 @@ bool syntax_run(void)
                 system_bio_claim(false, out[i].bits, BP_PIN_IO, 0);
                 system_set_active(false, out[i].bits, &system_config.aux_active);                
                 break;
-            case SYN_ADC: break;
+            case SYN_ADC: 
+        	    //sweep adc
+	            in[in_cnt].result=hw_adc_bio(out[i].bits);           
+                break;
             case SYN_FREQ: break;                
             default:
                 printf("Unknown internal code %d\r\n", out[i].command);
@@ -317,9 +320,15 @@ bool syntax_post(void)
 		        printf("IO%s%d%s set to%s INPUT: %s%d%s", 
 			    ui_term_color_num_float(), in[i].output.bits, ui_term_color_notice(),ui_term_color_reset(),
 			    ui_term_color_num_float(), in[i].result, ui_term_color_reset());
-                break;    
+                break;   
+            case SYN_ADC:      
+                received = (6600*in[i].result) / 4096;           
+                printf("%s%s IO%d:%s %s%d.%d%sV",
+                    ui_term_color_info(), t[T_MODE_ADC_VOLTAGE], in[i].output.bits, ui_term_color_reset(), ui_term_color_num_float(),
+                    ((received)/1000), (((received)%1000)/100),
+                    ui_term_color_reset()); 
+                break;
             case SYN_WRITE_READ: 
-            case SYN_ADC:
             case SYN_FREQ:                           
             default:
                 printf("Unimplemented command '%c'", in[i].output.command+0x30);

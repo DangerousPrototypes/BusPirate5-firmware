@@ -52,7 +52,7 @@ void shift_adc_select(uint8_t channel)
     
     uint32_t baud=spi_get_baudrate(BP_SPI_PORT);
     
-    spi_set_baudrate(BP_SPI_PORT, 1000 * 1000 * 5); // max 10mhz?
+    spi_set_baudrate(BP_SPI_PORT, 1000 * 1000 * 32); // max 10mhz?
     
     spi_write_blocking(BP_SPI_PORT, shift_out, 2);
     gpio_put(SHIFT_LATCH, 1);

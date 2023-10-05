@@ -30,17 +30,30 @@ void hw_adc_sweep(void){
     mcu_adc_select(AMUX_OUT_ADC);
     for(int i=0; i<HW_ADC_MUX_COUNT; i++)
     {
+        shift_adc_select(15); //to clear any charge from a floating pin
         hw_adc_channel_select(i);
-        busy_wait_us(250);
+        busy_wait_us(1);
         hw_adc_raw[i]=mcu_adc_read();
         hw_adc_voltage[i]=hw_adc_to_volts_x2(i); //these are X2 because a resistor divider /2
     }
 
     mcu_adc_select(CURRENT_SENSE_ADC);
-    busy_wait_us(250);
+    shift_adc_select(15); //to clear any charge from a floating pin
+    busy_wait_us(1);
     hw_adc_raw[HW_ADC_CURRENT_SENSE]=mcu_adc_read();
     hw_adc_voltage[HW_ADC_CURRENT_SENSE]=hw_adc_to_volts_x1(HW_ADC_CURRENT_SENSE); 
 
+}
+
+uint32_t hw_adc_bio(uint8_t bio)
+{    
+    //mcu_adc_select(AMUX_OUT_ADC);
+    adc_select_input(AMUX_OUT_ADC);
+    shift_adc_select(15); //to clear any charge from a floating pin
+    shift_adc_select(7-bio);
+    busy_wait_us(1);
+    return adc_read();
+    //return (6600*mcu_adc_read())/4096;
 }
 
 void hw_jump_to_bootloader(struct opt_args *args, struct command_result *res)

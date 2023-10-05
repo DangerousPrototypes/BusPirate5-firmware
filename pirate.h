@@ -4,7 +4,7 @@
 
 #define BP_FIRMWARE_VERSION "v0.0.3"
 #ifndef BP_FIRMWARE_HASH //this variable is for the current revision GIT hash
-#define BP_FIRMWARE_HASH "unknown"
+#define BP_FIRMWARE_HASH "commit unknown"
 #endif
 
 // UI stuff

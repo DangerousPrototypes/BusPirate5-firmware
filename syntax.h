@@ -25,8 +25,7 @@ enum SYNTAX{
     SYN_STOP,
     SYN_DELAY_US,
     SYN_DELAY_MS,
-    SYN_AUX_LOW,
-    SYN_AUX_HIGH,
+    SYN_AUX_OUTPUT,
     SYN_AUX_INPUT,
     SYN_ADC,
     SYN_FREQ

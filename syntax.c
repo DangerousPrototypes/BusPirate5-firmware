@@ -29,6 +29,7 @@
 #include "storage.h"
 #include "string.h"
 #include "syntax.h"
+#include "bio.h"
 //#include "postprocess.h"
 
 #define SYN_MAX_LENGTH 100
@@ -53,6 +54,14 @@ bool syntax_compile(struct opt_args *args)
 
     out_cnt=0;
 
+    //we need to track pin functions to avoid blowing out any existing pins
+    //if a conflict is found, the compiler can throw an error
+    enum bp_pin_func pin_func[HW_PINS-2];
+    for(int i=1;i<HW_PINS-1; i++)
+    {
+        pin_func[i-1]=system_config.pin_func[i]; //=BP_PIN_IO;
+    }
+    
     while(cmdln_try_peek(0,&c))
     {
         pos++;
@@ -91,7 +100,7 @@ bool syntax_compile(struct opt_args *args)
         }
         else
         {   
-            char cmd;
+            uint8_t cmd;
             
             switch(c)
             {
@@ -101,8 +110,8 @@ bool syntax_compile(struct opt_args *args)
                 case ']': case '}': cmd=SYN_STOP; break; //stop
                 case 'd': cmd=SYN_DELAY_US; break; //delay us
                 case 'D': cmd=SYN_DELAY_MS; break; //delay ms
-                case 'a': cmd=SYN_AUX_LOW; break; //aux low
-                case 'A': cmd=SYN_AUX_HIGH; break; //aux HIGH
+                case 'a': cmd=SYN_AUX_OUTPUT; out[out_cnt].data=0; break; //aux low
+                case 'A': cmd=SYN_AUX_OUTPUT; out[out_cnt].data=1; break; //aux HIGH
                 case '@': cmd=SYN_AUX_INPUT; break; //aux INPUT
                 case 'v': cmd=SYN_ADC; break; //voltage report once
                 case 'f': cmd=SYN_FREQ; break; //measure frequency once
@@ -141,6 +150,31 @@ bool syntax_compile(struct opt_args *args)
             out[out_cnt].repeat=1;
        }
 
+       if(out[out_cnt].command >= SYN_AUX_OUTPUT)
+       {
+            if(out[out_cnt].has_bits==false)
+            {
+                printf("Error: missing IO number for command %c at position %d. Try %c.0[0xff\r\n",c,pos);
+                return true;
+            }
+
+            if(out[out_cnt].bits>=count_of(bio2bufiopin))
+            {
+                printf("%sError:%s pin IO%d is invalid\r\n", ui_term_color_error(), ui_term_color_reset(), out[out_cnt].bits);
+                return true;
+            }
+
+            if(pin_func[out[out_cnt].bits]!=BP_PIN_IO)
+            {
+                printf("%sError:%s at position %d IO%d is already in use\r\n", ui_term_color_error(), ui_term_color_reset(), pos, out[out_cnt].bits);
+                //printf("IO%d already in use. Error at position %d\r\n",c,pos);
+                return true;                
+            }
+
+            //pin_func[out[out_cnt].bits]=cmd;
+            //AUX high and low need to set function until changed to read again...
+       }
+
         out_cnt++;
 
         if(out_cnt>=SYN_MAX_LENGTH)
@@ -173,7 +207,7 @@ struct _syntax_run syn_run[]=
     SYN_FREQ
 }
 */
-
+static const char labels[][5]={"AUXL","AUXH"};
 bool syntax_run(void)
 {
     uint32_t i, received;
@@ -206,9 +240,18 @@ bool syntax_run(void)
             case SYN_DELAY_MS:
                 delayms(out[i].repeat);
                 break;
-            case SYN_AUX_LOW: break;
-            case SYN_AUX_HIGH: break;
-            case SYN_AUX_INPUT: break;
+            case SYN_AUX_OUTPUT: 
+            	bio_output(out[i].bits);
+		        bio_put((uint8_t) out[i].bits,(bool)out[i].data);
+                system_bio_claim(true, out[i].bits, BP_PIN_IO, labels[out[i].data]); //this should be moved to a cleanup function to reduce overhead
+                system_set_active(true, out[i].bits, &system_config.aux_active);                
+                break;
+            case SYN_AUX_INPUT: 
+                bio_input(out[i].bits);
+                in[in_cnt].result=bio_get(out[i].bits);
+                system_bio_claim(false, out[i].bits, BP_PIN_IO, 0);
+                system_set_active(false, out[i].bits, &system_config.aux_active);                
+                break;
             case SYN_ADC: break;
             case SYN_FREQ: break;                
             default:
@@ -232,6 +275,7 @@ bool syntax_run(void)
 
     return false;
 }
+
 
 bool syntax_post(void)
 {
@@ -263,11 +307,18 @@ bool syntax_post(void)
                 break;
             case SYN_STOP: //use mode print function?    
                 modes[system_config.mode].protocol_stop_post();
-                break;                   
-            case SYN_WRITE_READ: 
-            case SYN_AUX_LOW:
-            case SYN_AUX_HIGH:
+                break;   
+            case SYN_AUX_OUTPUT:
+                printf("IO%s%d%s set to%s OUTPUT: %s%d%s", 
+                ui_term_color_num_float(), in[i].output.bits, ui_term_color_notice(),ui_term_color_reset(),
+                ui_term_color_num_float(), (in[i].output.data), ui_term_color_reset());     
+                break;
             case SYN_AUX_INPUT:
+		        printf("IO%s%d%s set to%s INPUT: %s%d%s", 
+			    ui_term_color_num_float(), in[i].output.bits, ui_term_color_notice(),ui_term_color_reset(),
+			    ui_term_color_num_float(), in[i].result, ui_term_color_reset());
+                break;    
+            case SYN_WRITE_READ: 
             case SYN_ADC:
             case SYN_FREQ:                           
             default:

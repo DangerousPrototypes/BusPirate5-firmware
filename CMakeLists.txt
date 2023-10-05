@@ -55,6 +55,8 @@ pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
 
+SET(BP_FIRMWARE_HASH "unknown" CACHE STRING "git hash of this compile")
+
 pico_set_program_name(bus_pirate "bus_pirate")
 pico_set_program_version(bus_pirate "0.0.4")
 pico_set_program_description(bus_pirate "Bus Pirate Firmware for RP2040")

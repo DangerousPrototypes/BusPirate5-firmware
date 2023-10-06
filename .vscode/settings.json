@@ -51,6 +51,8 @@
     "storage.h": "c",
     "syntax.h": "c",
     "postprocess.h": "c",
-    "ui_parse.h": "c"
+    "ui_parse.h": "c",
+    "ff.h": "c",
+    "timer.h": "c"
   }
 }

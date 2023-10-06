@@ -1,0 +1,1 @@
+void dump(struct opt_args *args, struct command_result *res);

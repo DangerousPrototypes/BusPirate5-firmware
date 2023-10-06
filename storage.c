@@ -9,10 +9,8 @@
 #include "bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
-#include "storage.h"
 #include "mjson/mjson.h"
-
-
+#include "storage.h"
 
 FATFS fs;		/* FatFs work area needed for each volume */
 FIL fil;			/* File object needed for each open file */

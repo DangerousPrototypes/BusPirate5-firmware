@@ -134,9 +134,12 @@ bool ui_process_commands(void)
 
         args[0]=empty_opt_args;
         args[0].max_len=OPTARG_STRING_LEN;
+        //if(exec_new[user_cmd_id].parsers[0]->opt_parser)
+            //exec_new[user_cmd_id].parsers[0]->opt_parser(&args[0]);
+
         if(exec_new[user_cmd_id].opt1_parser)
             exec_new[user_cmd_id].opt1_parser(&args[0]);
-        //printf("Opt arg: %s\r\n",args[0].c);    
+        printf("Opt arg: %s\r\n",args[0].c);    
         //execute the command
         struct command_result result=result_blank;
         exec_new[user_cmd_id].command(&args, &result);

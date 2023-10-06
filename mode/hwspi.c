@@ -167,7 +167,7 @@ uint32_t spi_setup_exc(void)
 	system_config.misoport=BP_SPI_MISO_PORT;
 	system_config.mosiport=BP_SPI_MOSI_PORT;
 	system_config.csport=BP_SPI_CS_PORT;
-	system_config.clkport=BP_BP_SPI_CLK_PORT;
+	system_config.clkport=BP_BP_SPI_CLK_PORT; 
 	system_config.misopin=BP_SPI_MISO_PIN;
 	system_config.mosipin=BP_SPI_MOSI_PIN;
 	system_config.cspin=BP_SPI_CS_PIN;
@@ -303,7 +303,8 @@ uint32_t spi_send(uint32_t d)
 
 uint32_t spi_read(void)
 {
-	return (uint16_t) spi_send(0xff);
+	return spi_xfer(0xff);
+	//return (uint16_t) spi_send(0xff);
 }
 
 void spi_macro(uint32_t macro)

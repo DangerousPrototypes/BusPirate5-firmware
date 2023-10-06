@@ -27,6 +27,7 @@
 #include "pullups.h"
 #include "helpers.h"
 #include "storage.h"
+#include "dump.h"
 
 enum E_CMD{
     CMD_LS=0,
@@ -59,7 +60,8 @@ enum E_CMD{
     CMD_SELFTEST, 
     CMD_AUX_IN,
     CMD_AUX_LOW,
-    CMD_AUX_HIGH,      
+    CMD_AUX_HIGH,     
+    CMD_DUMP, 
     CMD_LAST_ITEM_ALWAYS_AT_THE_END
 };
 
@@ -94,7 +96,8 @@ const char *cmd[]={
     [CMD_SELFTEST]="~",
     [CMD_AUX_IN]="@",
     [CMD_AUX_LOW]="a",
-    [CMD_AUX_HIGH]="A"  
+    [CMD_AUX_HIGH]="A",
+    [CMD_DUMP]="dump"    
 };
 static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wrong length");
 
@@ -103,14 +106,25 @@ const uint32_t count_of_cmd=count_of(cmd);
 char ls_help[]="ls {directory} - list files in the current location or {directory} location.";
 char no_help[]="Help not currently available for this command.";
 
+struct _parsers list_dir_parsers[]=
+{
+    {&ui_parse_get_string},{0},{0},{0},{0}
+};
+
 struct _command_parse exec_new[]=
 {
+    /*{
+        true,
+        &list_dir,
+        &list_dir_parsers,
+        &ls_help[0],
+    },*/
     {
         true,
         &list_dir,
         &ui_parse_get_string,
         &ls_help[0],
-    },
+    },    
     {
         true, 
         &change_dir,
@@ -278,18 +292,23 @@ struct _command_parse exec_new[]=
         &auxpinfunc_input,
         &ui_parse_get_int_args,
         &no_help[0]
-    },        // "v"    
+    },        // "@"    
     {
-        true, 
+        false, 
         &auxpinfunc_low,
         &ui_parse_get_int_args,
         &no_help[0]
-    },        // "v"    
+    },        // "a"    
     {
-        true, 
+        false, 
         &auxpinfunc_high,
         &ui_parse_get_int_args,
         &no_help[0]
-    },        // "v"                
-    
+    },        // "A"                
+    {
+        true, 
+        &dump,
+        &ui_parse_get_string,
+        &no_help[0]
+    }        // "dump"        
 };

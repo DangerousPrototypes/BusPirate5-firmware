@@ -274,7 +274,7 @@ bool syntax_run(void)
 
     for(i=0;i<out_cnt;i++)
     {
-        switch(out[i].command)
+        switch(out[i].command) 
         {
             case SYN_WRITE:
                 for(uint16_t j=0; j<out[i].repeat; j++) //pass repeat and move to lower protocol level???

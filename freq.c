@@ -239,7 +239,7 @@ uint32_t freq_measure(int32_t pin, int refresh)
         return 0;
     }
 
-    //now do single or continous measurement on the pin
+    //now do single or continuous measurement on the pin
     if(refresh)
     {
         // press any key to continue
@@ -247,7 +247,7 @@ uint32_t freq_measure(int32_t pin, int refresh)
         ui_prompt_any_key_continue(&result, 250, &freq_print, pin, true);
     }
 
-    // print once (also handles final \n for continous mode)
+    // print once (also handles final \n for continuous mode)
     freq_print(pin, false);
 
     return 1;

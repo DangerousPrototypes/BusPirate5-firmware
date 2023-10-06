@@ -66,23 +66,23 @@ bool ui_process_commands(void)
 
         if(c=='[' || c=='>' || c=='{') //first character is { [ or >, process as syntax
         {
-        if(syntax_compile(&args[0]))
-        {
-                printf("Syntax compile error\r\n");
-                return true;
-        }
-        if(syntax_run())
-        {
-                printf("Syntax execution error\r\n");
-                return true;
-        }
-        if(syntax_post())
-        {
-                printf("Syntax post process error\r\n");
-                return true;
-        }
-        printf("Bus Syntax: Success\r\n");
-        return false;
+            if(syntax_compile(&args[0]))
+            {
+                    printf("Syntax compile error\r\n");
+                    return true;
+            }
+            if(syntax_run())
+            {
+                    printf("Syntax execution error\r\n");
+                    return true;
+            }
+            if(syntax_post())
+            {
+                    printf("Syntax post process error\r\n");
+                    return true;
+            }
+            //printf("Bus Syntax: Success\r\n");
+            return false;
         }
         
         //process as a command

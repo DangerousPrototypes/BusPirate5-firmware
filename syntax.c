@@ -50,14 +50,16 @@ void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *valu
 bool syntax_compile(struct opt_args *args)
 {
     uint32_t pos=0;
+    uint32_t i;
     char c;
+    bool error=false;
 
     out_cnt=0;
 
     //we need to track pin functions to avoid blowing out any existing pins
     //if a conflict is found, the compiler can throw an error
     enum bp_pin_func pin_func[HW_PINS-2];
-    for(int i=1;i<HW_PINS-1; i++)
+    for(i=1;i<HW_PINS-1; i++)
     {
         pin_func[i-1]=system_config.pin_func[i]; //=BP_PIN_IO;
     }
@@ -82,8 +84,50 @@ bool syntax_compile(struct opt_args *args)
                 printf("Error parsing integer at position %d\r\n", pos);
                 return true;
             }
+
+            if(system_config.write_with_read)
+            {
+                out[out_cnt].command=SYN_WRITE_READ;
+            }
             else
             {
+                out[out_cnt].command=SYN_WRITE;
+            }
+            
+            out[out_cnt].number_format=result.number_format;
+
+        }
+        else if(c=='"')
+        {
+            cmdln_try_remove(&c); //remove "
+            // sanity check! is there a terminating "?
+            error=true;
+            i=0;
+            while(cmdln_try_peek(i,&c))
+            {
+                if(c=='"')
+                {
+                    error=false;
+                    break;
+                }
+                i++;
+            }
+
+            if(error)
+            {
+                printf("Error: string missing terminating '\"'");
+                return true;
+            }
+
+            uint8_t k,b_interval;
+            k=b_interval=8;
+
+            //attributes->has_string=true; //show ASCII chars
+            //attributes->number_format=df_hex; //force hex display
+
+            while(i--)
+            {
+                cmdln_try_remove(&c);
                 if(system_config.write_with_read)
                 {
                     out[out_cnt].command=SYN_WRITE_READ;
@@ -92,11 +136,25 @@ bool syntax_compile(struct opt_args *args)
                 {
                     out[out_cnt].command=SYN_WRITE;
                 }
+
+                out[out_cnt].data=c;
+                out[out_cnt].has_repeat=false;
+                out[out_cnt].repeat=1;                
+                out[out_cnt].number_format=df_ascii;  
+                out[out_cnt].bits=system_config.num_bits; 
                 
-                out[out_cnt].number_format=result.number_format;
+                out_cnt++;
+
+                if(out_cnt>=SYN_MAX_LENGTH)
+                {
+                    printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
+                    return true;
+                }                             
 
             }
 
+            cmdln_try_remove(&c); // consume the final "
+            continue;
         }
         else
         {   
@@ -114,7 +172,7 @@ bool syntax_compile(struct opt_args *args)
                 case 'A': cmd=SYN_AUX_OUTPUT; out[out_cnt].data=1; break; //aux HIGH
                 case '@': cmd=SYN_AUX_INPUT; break; //aux INPUT
                 case 'v': cmd=SYN_ADC; break; //voltage report once
-                case 'f': cmd=SYN_FREQ; break; //measure frequency once
+                //case 'f': cmd=SYN_FREQ; break; //measure frequency once
                 default: 
                     printf("Unknown syntax '%c' at position %d\r\n",c,pos);
                     return true;
@@ -164,7 +222,7 @@ bool syntax_compile(struct opt_args *args)
                 return true;
             }
 
-            if(out[out_cnt].command!=SYN_ADC && out[out_cnt].bits!=BP_PIN_IO)
+            if(out[out_cnt].command!=SYN_ADC && pin_func[out[out_cnt].bits]!=BP_PIN_IO)
             {
                 printf("%sError:%s at position %d IO%d is already in use\r\n", ui_term_color_error(), ui_term_color_reset(), pos, out[out_cnt].bits);
                 //printf("IO%d already in use. Error at position %d\r\n",c,pos);
@@ -256,7 +314,7 @@ bool syntax_run(void)
         	    //sweep adc
 	            in[in_cnt].result=hw_adc_bio(out[i].bits);           
                 break;
-            case SYN_FREQ: break;                
+            //case SYN_FREQ: break;                
             default:
                 printf("Unknown internal code %d\r\n", out[i].command);
                 return true;
@@ -328,8 +386,10 @@ bool syntax_post(void)
                     ((received)/1000), (((received)%1000)/100),
                     ui_term_color_reset()); 
                 break;
-            case SYN_WRITE_READ: 
-            case SYN_FREQ:                           
+            //case SYN_FREQ:      
+                
+                //break;
+            case SYN_WRITE_READ:                                  
             default:
                 printf("Unimplemented command '%c'", in[i].output.command+0x30);
                 //return true;
@@ -368,7 +428,7 @@ void postprocess_mode_write(struct _bytecode_result *in)
 
     //TODO:" this is repeated three times, it should be some kind of passed function"
     uint8_t i,b_interval;
-    switch(system_config.display_format)
+    switch(in->output.number_format)
     {
         case df_bin:
             i=b_interval=4;
@@ -423,7 +483,7 @@ void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *valu
     num_bits=in->output.bits;
 
 
-    if(system_config.display_format==df_auto) //AUTO setting!
+    if(system_config.display_format==df_auto || in->output.number_format==df_ascii ) //AUTO setting!
     {
         display_format = in->output.number_format;
     }
@@ -442,7 +502,7 @@ void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *valu
     }
 	d&=mask;
 
-    /*if(display_format==df_ascii || attributes->has_string)
+    if(display_format==df_ascii)
     {
         if((char)d>=' ' && (char)d<='~')
         {
@@ -452,7 +512,7 @@ void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *valu
         {
             printf("''  ");
         } 
-    }*/
+    }
 
     //TODO: move this part to second function/third functions so we can reuse it from other number print places with custom specs that aren't in attributes
 	switch(display_format)

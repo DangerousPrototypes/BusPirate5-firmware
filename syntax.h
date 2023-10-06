@@ -28,7 +28,7 @@ enum SYNTAX{
     SYN_AUX_OUTPUT,
     SYN_AUX_INPUT,
     SYN_ADC,
-    SYN_FREQ
+    //SYN_FREQ
 };
 
 bool syntax_compile(struct opt_args *args);

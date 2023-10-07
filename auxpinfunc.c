@@ -6,26 +6,26 @@
 #include "system_config.h"
 #include "ui/ui_term.h"
 
-void auxpinfunc_write(struct opt_args *args, struct command_result *res, bool output, bool level);
+void auxpinfunc_write(opt_args (*args), struct command_result *res, bool output, bool level);
 
 static const char labels[][5]={"AUXL","AUXH"};
 
-void auxpinfunc_high(struct opt_args *args, struct command_result *res)
+void auxpinfunc_high(opt_args (*args), struct command_result *res)
 {
     auxpinfunc_write(args, res, true, 1);
 }
 
-void auxpinfunc_low(struct opt_args *args, struct command_result *res)
+void auxpinfunc_low(opt_args (*args), struct command_result *res)
 {
     auxpinfunc_write(args, res, true, 0);
 }
 
-void auxpinfunc_input(struct opt_args *args, struct command_result *res)
+void auxpinfunc_input(opt_args (*args), struct command_result *res)
 {
     auxpinfunc_write(args, res, false, 0);
 }
 
-void auxpinfunc_write(struct opt_args *args, struct command_result *res, bool output, bool level)
+void auxpinfunc_write(opt_args (*args), struct command_result *res, bool output, bool level)
 {
 	if(!args[0].i)
 	{

@@ -62,6 +62,7 @@ enum E_CMD{
     CMD_AUX_LOW,
     CMD_AUX_HIGH,     
     CMD_DUMP, 
+    CMD_LOAD,     
     CMD_LAST_ITEM_ALWAYS_AT_THE_END
 };
 
@@ -97,7 +98,8 @@ const char *cmd[]={
     [CMD_AUX_IN]="@",
     [CMD_AUX_LOW]="a",
     [CMD_AUX_HIGH]="A",
-    [CMD_DUMP]="dump"    
+    [CMD_DUMP]="dump",
+    [CMD_LOAD]="load"    
 };
 static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wrong length");
 
@@ -106,59 +108,76 @@ const uint32_t count_of_cmd=count_of(cmd);
 char ls_help[]="ls {directory} - list files in the current location or {directory} location.";
 char no_help[]="Help not currently available for this command.";
 
-struct _parsers list_dir_parsers[]=
+bool nullparse(opt_args *result)
 {
-    {&ui_parse_get_string},{0},{0},{0},{0}
-};
+    busy_wait_at_least_cycles(1);
+    return 0;
+}
 
-struct _command_parse exec_new[]=
+
+const struct _parsers list_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers change_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers make_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers unlink_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers cat_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers m_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers psuen_parsers[]={{NULL},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers show_int_formats_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers show_int_inverse_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers freq_single_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers freq_cont_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers pwmen_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers pwmdis_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers adc_cont_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers adc_single_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers aux_input_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers aux_low_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers aux_high_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers dump_parsers[]={{&ui_parse_get_string},{&ui_parse_get_string},{&ui_parse_get_string},{NULL},{NULL}};
+const struct _parsers load_parsers[]={{&ui_parse_get_string},{&ui_parse_get_string},{&ui_parse_get_string},{NULL},{NULL}};
+
+const struct _command_parse exec_new[]=
 {
-    /*{
-        true,
-        &list_dir,
-        &list_dir_parsers,
-        &ls_help[0],
-    },*/
     {
         true,
         &list_dir,
-        &ui_parse_get_string,
+        &list_dir_parsers[0],
         &ls_help[0],
-    },    
+    }, 
     {
         true, 
         &change_dir,
-        &ui_parse_get_string,
+        &change_dir_parsers[0],
         &no_help[0],
     }, // CMD_CD 
     {
         true, 
         &make_dir,
-        &ui_parse_get_string,
+        &make_dir_parsers[0],
         &no_help[0]
     }, // CMD_MKDIR
     {
         true, 
-        &unlink,
-        &ui_parse_get_string,
+        &storage_unlink,
+        &unlink_dir_parsers[0],
         &no_help[0]
     }, // CMD_RM
     {
         true, 
         &cat,
-        &ui_parse_get_string,
+        &cat_dir_parsers[0],
         &no_help[0]
     }, //CMD_CAT
     {
         true, 
         &ui_mode_enable_args,
-        &ui_parse_get_string,
+        &m_parsers[0],
         &no_help[0]
     },            // "m"    
     {
         false, 
         &psu_enable,
-        &ui_parse_get_string,
+        &psuen_parsers[0],
         &no_help[0]
     },                // "W"    
     {
@@ -176,13 +195,13 @@ struct _command_parse exec_new[]=
     {
         true, 
         &helpers_show_int_formats,
-        &ui_parse_get_int_args,
+        &show_int_formats_parsers[0],
         &no_help[0]
     }, // "="
     {
         true, 
         &helpers_show_int_inverse,
-        &ui_parse_get_int_args,
+        &show_int_inverse_parsers[0],
         &no_help[0]
     }, // "|"   
     {
@@ -200,25 +219,25 @@ struct _command_parse exec_new[]=
     {
         true, 
         &freq_single,
-        &ui_parse_get_int_args,
+        &freq_single_parsers[0],
         &no_help[0]
     },               // "f"    
     {
         true, 
         &freq_cont,
-        &ui_parse_get_int_args,
+        &freq_cont_parsers[0],
         &no_help[0]
     },                 // "F"
     {
         false, 
         &pwm_configure_enable,
-        &ui_parse_get_int_args,
+        &pwmen_parsers[0],
         &no_help[0]
     },     // "G"
     {
         false, 
         &pwm_configure_disable,
-        &ui_parse_get_int_args,
+        &pwmdis_parsers[0],
         &no_help[0]
     },    // "g"    
     {
@@ -272,13 +291,13 @@ struct _command_parse exec_new[]=
     {
         true, 
         &adc_measure_cont,
-        &ui_parse_get_int_args,
+        &adc_cont_parsers[0],
         &no_help[0]
     },          // "V"
     {
         true, 
         &adc_measure_single,
-        &ui_parse_get_int_args,
+        &adc_single_parsers[0],
         &no_help[0]
     },        // "v"    
     {
@@ -290,25 +309,32 @@ struct _command_parse exec_new[]=
     {
         true, 
         &auxpinfunc_input,
-        &ui_parse_get_int_args,
+        &aux_input_parsers[0],
         &no_help[0]
     },        // "@"    
     {
         false, 
         &auxpinfunc_low,
-        &ui_parse_get_int_args,
+        &aux_low_parsers[0],
         &no_help[0]
     },        // "a"    
     {
         false, 
         &auxpinfunc_high,
-        &ui_parse_get_int_args,
+        &aux_high_parsers[0],
         &no_help[0]
     },        // "A"                
     {
         true, 
         &dump,
-        &ui_parse_get_string,
+        &dump_parsers[0],
         &no_help[0]
-    }        // "dump"        
+    },        // "dump"   
+    {
+        true, 
+        &load,
+        &load_parsers[0],
+        &no_help[0]
+    }      // "load"   
+         
 };

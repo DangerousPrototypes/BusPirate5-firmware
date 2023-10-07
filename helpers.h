@@ -1,11 +1,11 @@
-void helpers_selftest(struct opt_args *args, struct command_result *res);
-void helpers_bit_order_msb(struct opt_args *args, struct command_result *res);
-void helpers_bit_order_lsb(struct opt_args *args, struct command_result *res);
-void helpers_show_int_formats(struct opt_args *args, struct command_result *res);
-void helpers_show_int_inverse(struct opt_args *args, struct command_result *res);
+void helpers_selftest(opt_args (*args), struct command_result *res);
+void helpers_bit_order_msb(opt_args (*args), struct command_result *res);
+void helpers_bit_order_lsb(opt_args (*args), struct command_result *res);
+void helpers_show_int_formats(opt_args (*args), struct command_result *res);
+void helpers_show_int_inverse(opt_args (*args), struct command_result *res);
 
 //mode commands
-void helpers_mode_help(struct opt_args *args, struct command_result *res);
+void helpers_mode_help(opt_args (*args), struct command_result *res);
 
 // these are all moved to the syntax processor
 void helpers_delay_us(struct command_attributes *attributes, struct command_response *response);

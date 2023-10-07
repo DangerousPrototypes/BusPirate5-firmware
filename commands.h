@@ -50,11 +50,11 @@ typedef struct command_result {
 	bool error;
 } command_result;
 
-
-struct _command_parse
+/*
+struct _command_parse_old
 {
     bool allow_hiz;
-    void (*command)(struct opt_args *args, struct command_result *res);
+    void (*command)(opt_args (*args), struct command_result *res);
     bool (*opt1_parser)(struct opt_args *args);
     //bool (*opt2_parser)(struct command_attributes *attributes, struct command_response *response);
     //bool (*opt3_parser)(struct command_attributes *attributes, struct command_response *response);
@@ -63,30 +63,23 @@ struct _command_parse
     char (*help_text);
 
 };
-
+*/
 
 struct _parsers
 {
-    bool (*opt_parser)(struct opt_args *args);
+    bool (*opt_parser)(opt_args *args);
 };
 
-struct _command_parse_new
+struct _command_parse
 {
     bool allow_hiz;
-    void (*command)(struct opt_args *args, struct command_result *res);
-    struct _parsers (*parsers)[5];
-    //bool (*opt2_parser)(struct command_attributes *attributes, struct command_response *response);
-    //bool (*opt3_parser)(struct command_attributes *attributes, struct command_response *response);
-    //bool (*opt4_parser)(struct command_attributes *attributes, struct command_response *response);
-    //bool (*opt5_parser)(struct command_attributes *attributes, struct command_response *response);
-    char (*help_text);
+    void (*command)(opt_args *args, struct command_result *res);
+    const struct _parsers (*parsers);
+    const char (*help_text);
 
 };
 
-
-
-
-extern struct _command_parse exec_new[];
+extern const struct _command_parse exec_new[];
 extern const char *cmd[];
 extern const uint32_t count_of_cmd;
 #endif

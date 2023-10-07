@@ -5,4 +5,4 @@
 #define mcu_adc_read() adc_read()
 uint64_t mcu_get_unique_id(void);
 void mcu_reset(struct command_attributes *attributes, struct command_response *response);
-void mcu_reset_args(struct opt_args *args, struct command_result *res);
+void mcu_reset_args(opt_args (*args), struct command_result *res);

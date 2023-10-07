@@ -13,7 +13,7 @@
 #include "usb_tx.h"
 #include "usb_rx.h"
 
-void adc_measure(struct opt_args *args, struct command_result *res, bool refresh);
+void adc_measure(opt_args (*args), struct command_result *res, bool refresh);
 
 uint32_t adc_print(uint8_t bio_pin, bool refresh)
 {
@@ -27,17 +27,17 @@ uint32_t adc_print(uint8_t bio_pin, bool refresh)
     return 1;	
 }
 
-void adc_measure_single(struct opt_args *args, struct command_result *res)
+void adc_measure_single(opt_args (*args), struct command_result *res)
 {
     adc_measure(args, res, false);
 }
 
-void adc_measure_cont(struct opt_args *args, struct command_result *res)
+void adc_measure_cont(opt_args (*args), struct command_result *res)
 {
     adc_measure(args, res, true);
 }
 
-void adc_measure(struct opt_args *args, struct command_result *res, bool refresh)
+void adc_measure(opt_args (*args), struct command_result *res, bool refresh)
 {
 	if(args[0].no_value) //show voltage on all pins
 	{

@@ -56,7 +56,7 @@ uint32_t hw_adc_bio(uint8_t bio)
     //return (6600*mcu_adc_read())/4096;
 }
 
-void hw_jump_to_bootloader(struct opt_args *args, struct command_result *res)
+void hw_jump_to_bootloader(opt_args (*args), struct command_result *res)
 {
 	/* \param usb_activity_gpio_pin_mask 0 No pins are used as per a cold boot. Otherwise a single bit set indicating which
 	*                               GPIO pin should be set to output and raised whenever there is mass storage activity

@@ -168,7 +168,7 @@ uint32_t psu_set(float volts, float current, bool fuse_en)
     return 0;
 }
 
-void psu_enable(struct opt_args *args, struct command_result *res)
+void psu_enable(opt_args (*args), struct command_result *res)
 {
     float volts,current;
 
@@ -332,7 +332,7 @@ void psu_enable(struct opt_args *args, struct command_result *res)
     return;
 }
 
-void psu_disable(struct opt_args *args, struct command_result *res)
+void psu_disable(opt_args (*args), struct command_result *res)
 {
     //we disable it before an error just for good measure
     if( !psu_reset() )

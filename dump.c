@@ -8,7 +8,7 @@
 #include "mode/hwspi.h"
 
 
-void dump2(struct opt_args *args, struct command_result *res)
+void dump(opt_args (*args), struct command_result *res)
 {
     FIL fil;			/* File object needed for each open file */
     FRESULT fr;     /* FatFs return code */
@@ -17,12 +17,6 @@ void dump2(struct opt_args *args, struct command_result *res)
     uint8_t page_size=16;
     uint8_t page=0;
     UINT bw;
-
-
-
-
-
-    
 
     //open file
     fr = f_open(&fil, args[0].c, FA_WRITE | FA_CREATE_ALWAYS);	
@@ -64,12 +58,7 @@ void dump2(struct opt_args *args, struct command_result *res)
 }
 
 
-
-
-
-
-
-void dump(struct opt_args *args, struct command_result *res)
+void load(opt_args (*args), struct command_result *res)
 {
     FIL fil;			/* File object needed for each open file */
     FRESULT fr;     /* FatFs return code */

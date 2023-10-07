@@ -17,7 +17,7 @@ bool ui_mode_list(const struct ui_prompt* menu)
 	}
 }
 
-void ui_mode_enable_args(struct opt_args *args, struct command_result *res)
+void ui_mode_enable_args(opt_args (*args), struct command_result *res)
 {
     uint32_t mode;
     bool error;
@@ -192,7 +192,7 @@ bool int_display_menu(const struct ui_prompt* menu)
 }
 
 // set display mode  (hex, bin, octa, dec) 
-void ui_mode_int_display_format(struct opt_args *args, struct command_result *res)
+void ui_mode_int_display_format(opt_args (*args), struct command_result *res)
 {
     uint32_t mode;
     bool error;

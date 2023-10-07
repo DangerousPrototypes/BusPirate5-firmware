@@ -203,7 +203,7 @@ void file_error(FRESULT res)
     }
 }
 
-void cat(struct opt_args *args, struct command_result *res)
+void cat(opt_args (*args), struct command_result *res)
 {
     char file[512];
 
@@ -235,13 +235,13 @@ void cat(struct opt_args *args, struct command_result *res)
 
 
 
-void make_dir(struct opt_args *args, struct command_result *res)
+void make_dir(opt_args (*args), struct command_result *res)
 {
     FRESULT fr;
     fr = f_mkdir(args[0].c);
     file_error(fr);
 }
-void change_dir(struct opt_args *args, struct command_result *res)
+void change_dir(opt_args (*args), struct command_result *res)
 {
     FRESULT fr;
     fr = f_chdir(args[0].c);
@@ -257,14 +257,14 @@ void change_dir(struct opt_args *args, struct command_result *res)
         printf("%s\r\n",str);
     }
 }
-void unlink(struct opt_args *args, struct command_result *res)
+void storage_unlink(opt_args (*args), struct command_result *res)
 {
     FRESULT fr;
     fr = f_unlink(args[0].c);
     file_error(fr);
 }
 
-void list_dir(struct opt_args *args, struct command_result *res)
+void list_dir(opt_args (*args), struct command_result *res)
 {
     FRESULT fr;
     DIR dir;

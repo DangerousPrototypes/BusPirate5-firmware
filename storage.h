@@ -12,11 +12,11 @@ uint32_t storage_save_config(void);
 struct _mode_config_t { char tag[30]; uint32_t *config;};
 uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t, uint8_t count);
 uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t, uint8_t count);
-void list_dir(struct opt_args *args, struct command_result *res);
-void unlink(struct opt_args *args, struct command_result *res);
-void change_dir(struct opt_args *args, struct command_result *res);
-void make_dir(struct opt_args *args, struct command_result *res);
-void cat(struct opt_args *args, struct command_result *res);
+void list_dir(opt_args (*args), struct command_result *res);
+void storage_unlink(opt_args (*args), struct command_result *res);
+void change_dir(opt_args (*args), struct command_result *res);
+void make_dir(opt_args (*args), struct command_result *res);
+void cat(opt_args (*args), struct command_result *res);
 
 static const char storage_fat_type_labels[][8]=
 {

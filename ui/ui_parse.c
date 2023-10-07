@@ -15,7 +15,7 @@
 static const struct prompt_result empty_result;
 
 //temporary shim to get the parser going with args
-bool ui_parse_get_int_args(struct opt_args *arg)
+bool ui_parse_get_int_args(opt_args *arg)
 {
     struct prompt_result result;
     uint32_t value;
@@ -31,7 +31,7 @@ bool ui_parse_get_int_args(struct opt_args *arg)
 }
 
 
-bool ui_parse_get_string(struct opt_args *result)
+bool ui_parse_get_string(opt_args *result)
 {
     char c;
     bool ok;

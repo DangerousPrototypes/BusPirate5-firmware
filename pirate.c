@@ -219,7 +219,7 @@ int main()
                             break;
                     }
                     // show welcome
-                    ui_info_print_info(&args, &res);
+                    //ui_info_print_info(&args, &res);
                     bp_state=BP_SM_COMMAND_PROMPT;
                 }
                 else if(result.error) // user hit enter but not a valid option

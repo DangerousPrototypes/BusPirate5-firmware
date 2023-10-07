@@ -1,1 +1,2 @@
-void dump(struct opt_args *args, struct command_result *res);
+void dump(opt_args (*args), struct command_result *res);
+void load(opt_args (*args), struct command_result *res);

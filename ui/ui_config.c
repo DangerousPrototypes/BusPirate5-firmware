@@ -153,7 +153,7 @@ bool ui_config_menu(const struct ui_prompt * menu)
     }   
 }
 
-void ui_config_main_menu(struct opt_args *args, struct command_result *res)
+void ui_config_main_menu(opt_args (*args), struct command_result *res)
 {
     while(1)
     {

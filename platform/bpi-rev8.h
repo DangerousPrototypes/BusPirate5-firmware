@@ -260,7 +260,7 @@ extern uint32_t *hw_pin_voltage_ordered[];
 #define delayus(X) busy_wait_us_32(X)
 
 void hw_adc_sweep(void);
-void hw_jump_to_bootloader(struct opt_args *args, struct command_result *res);
+void hw_jump_to_bootloader(opt_args (*args), struct command_result *res);
 uint32_t hw_adc_bio(uint8_t bio);
 
 //#define BP_DEBUG_ENABLED 1

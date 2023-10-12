@@ -256,7 +256,7 @@ uint32_t HWI2C_send(uint32_t d)
 	// and configure the PIO I2C
 	if(mode_config.start_sent)
 	{
-		pio_i2c_rx_enable(pio, pio_state_machine, (d&&0b1));
+		pio_i2c_rx_enable(pio, pio_state_machine, (d&0b1));
 		mode_config.start_sent=false;
 	}
 

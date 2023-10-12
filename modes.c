@@ -178,10 +178,10 @@ struct _mode modes[MAXPROTO]={
 #endif
 #ifdef BP_USE_HWUSART
 {
-    nullfunc1,				// start
-    nullfunc1,				// start with read
-    nullfunc1,				// stop
-    nullfunc1,				// stop with read
+    HWUSART_open,				// start
+    HWUSART_open_read,				// start with read
+    HWUSART_close,				// stop
+    HWUSART_close,				// stop with read
     HWUSART_send,				// send(/read) max 32 bit
     HWUSART_read,				// read max 32 bit
     nullfunc1,				// set clk high
@@ -191,7 +191,7 @@ struct _mode modes[MAXPROTO]={
     nullfunc3,				// toggle dat (?)
     nullfunc1,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
-    noperiodic,				// service to regular poll whether a byte ahs arrived
+    HWUSART_periodic,				// service to regular poll whether a byte ahs arrived
     HWUSART_macro,				// macro
     HWUSART_setup,				// setup UI
     HWUSART_setup_exc,			// real setup

@@ -11,10 +11,10 @@
 #include "storage.h"
 
 #define M_SPI_PORT spi1
-#define M_SPI_CLK BIO4
-#define M_SPI_CDO BIO5
-#define M_SPI_CDI BIO6
-#define M_SPI_CS BIO7
+#define M_SPI_CLK BIO6
+#define M_SPI_CDO BIO7
+#define M_SPI_CDI BIO4
+#define M_SPI_CS BIO5
 
 #define M_SPI_SELECT 0
 #define M_SPI_DESELECT 1

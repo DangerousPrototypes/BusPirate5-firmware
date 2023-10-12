@@ -57,7 +57,8 @@ bitloop:
     out pins, 1         [7] ; On reads, we provide the ACK.
     nop             side 0b1 [7] ; SCL rising edge
     wait 1 pin, 1          [7] ; Allow clock to be stretched, in pins: 0=sda, 1=scl
-    jmp pin do_nack side 0b0 [2] ; Test SDA for ACK=0/NAK=1, fall through if ACK, 1 jump pin defined in init
+    jmp pin do_nack side 0b0 [1] ; Test SDA for ACK=0/NAK=1, fall through if ACK, 1 jump pin defined in init
+    mov isr, null              ; Reset the input bit counter
 
 public entry_point:
 .wrap_target
@@ -120,10 +121,11 @@ static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda,
  
     pio_sm_set_pins_with_mask(pio, sm, buf_pins, buf_pins);//TODO: is this inverted??? is 1 now = 0?????
 
-    // Clear IRQ flag before starting
-    hw_clear_bits(&pio->inte0, 1u << sm);
-    hw_clear_bits(&pio->inte1, 1u << sm);
-    pio->irq = 1u << sm;
+    // Clear IRQ flag before starting, and make sure flag doesn't actually
+    // assert a system-level interrupt (we're using it as a status flag)
+    pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_interrupt_clear(pio, sm);
 
     // Configure and start SM
     pio_sm_init(pio, sm, offset + i2c_offset_entry_point, &c);

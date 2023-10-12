@@ -588,6 +588,12 @@ void helpers_mode_read_bit(struct command_attributes *attributes, struct command
 {
     modes[system_config.mode].protocol_bitr();
 }
+
+void helpers_mode_periodic()
+{
+    modes[system_config.mode].protocol_periodic();
+}
+
 void helpers_mode_help(struct command_attributes *attributes, struct command_response *response)
 {
     modes[system_config.mode].protocol_help();

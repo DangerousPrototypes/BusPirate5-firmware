@@ -8,6 +8,7 @@
 #include "bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
+#include "ui/ui_format.h"
 #include "storage.h"
 
 #define M_UART_PORT uart0
@@ -17,13 +18,39 @@
 #define M_UART_CTS
 
 static const char pin_labels[][5]={
-	"TX->",
+	"TX->", 
 	"RX<-",
 	"RTS",
 	"CTS"
 };
 
 static struct _uart_mode_config mode_config;
+static struct command_attributes periodic_attributes;
+uint32_t HWUSART_periodic(void)
+{
+	if(uart_is_readable(M_UART_PORT) && mode_config.async_print)
+	{
+		//printf("ASYNC: %d\r\n", uart_getc(M_UART_PORT));
+		uint32_t temp = uart_getc(M_UART_PORT);
+
+		ui_format_print_number_2(&periodic_attributes,  &temp);
+	}
+}
+
+
+void HWUSART_open(void)			// start
+{
+	//mode_config.async_print=true;
+
+}
+void HWUSART_open_read(void)	// start with read
+{
+	mode_config.async_print=true;
+}
+void HWUSART_close(void)		// stop
+{
+	mode_config.async_print=false;
+}
 
 uint32_t HWUSART_send(uint32_t d)
 {
@@ -130,6 +157,17 @@ uint32_t HWUSART_setup(void)
 	if(system_config.error)			// go interactive 
 	{
 */
+
+		
+	periodic_attributes.has_value=true;
+    periodic_attributes.has_dot=false;
+    periodic_attributes.has_colon=false;
+    periodic_attributes.has_string=false;
+    periodic_attributes.command=0;    //the actual command called
+    periodic_attributes.number_format=4; //DEC/HEX/BIN
+    periodic_attributes.value=0;     // integer value parsed from command line
+    periodic_attributes.dot=0;       // value after .
+    periodic_attributes.colon=0;     // value after :
 
 		static const struct prompt_item uart_speed_menu[]={{T_UART_SPEED_MENU_1}};
 		static const struct prompt_item uart_parity_menu[]={{T_UART_PARITY_MENU_1},{T_UART_PARITY_MENU_2},{T_UART_PARITY_MENU_3}};		

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # initalize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
-set(PICO_SDK_PATH "C:/pico113/pico-sdk")
+#set(PICO_SDK_PATH "C:/pico113/pico-sdk")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -56,9 +56,8 @@ pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
 
 pico_set_program_name(bus_pirate "bus_pirate")
-pico_set_program_version(bus_pirate "0.1")
+pico_set_program_version(bus_pirate "0.0.4")
 pico_set_program_description(bus_pirate "Bus Pirate Firmware for RP2040")
-### pico_set_program_description(bus_pirate "buspirate.com")
 
 pico_enable_stdio_uart(bus_pirate 0)
 pico_enable_stdio_usb(bus_pirate 0)

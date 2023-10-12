@@ -107,6 +107,7 @@ uint32_t HWI2C_setup_exc(void)
 
 	modeConfig.logicanalyzerperiod=LA_period[speed];
 	*/
+	mode_config.start_sent=false;
 	return 1;
 }
 
@@ -137,13 +138,24 @@ void HWI2C_start(void)
 	}
 	*/
 	pio_i2c_start(pio, pio_state_machine);
-	printf("I2C START");
+	mode_config.start_sent=true;
+	
 //void pio_i2c_repstart(PIO pio, uint sm);
+}
+
+void HWI2C_start_post(void)
+{
+	printf("I2C START");
+}
+
+void HWI2C_stop_post(void)
+{
+	printf("I2C STOP");
 }
 
 void HWI2C_stop(void)
 {
-	uint8_t timeout;
+	//uint8_t timeout;
 
 	/*if(!(I2C_SR2(BP_I2C)&I2C_SR2_TRA))
 	{
@@ -173,10 +185,18 @@ void HWI2C_stop(void)
 
 	i2c_send_stop(BP_I2C);
 	*/
+	uint32_t timeout=10000;
+    while(pio_sm_is_tx_fifo_full(pio, pio_state_machine)) 
+	{
+		timeout--;
+		if(!timeout)
+		{
+			printf("stop timeout\r\n");
+			pio_i2c_resume_after_error(pio, pio_state_machine);
+			return; // 0xffff;
+		}
+    }
 	pio_i2c_stop(pio, pio_state_machine);
-	printf("I2C STOP");
-
-
 }
 
 uint32_t HWI2C_send(uint32_t d)
@@ -232,16 +252,23 @@ uint32_t HWI2C_send(uint32_t d)
 
     int err = 0;
 
-    pio_i2c_rx_enable(pio, pio_state_machine, false);
+	//if a start was just sent, determine if this is a read or write address
+	// and configure the PIO I2C
+	if(mode_config.start_sent)
+	{
+		pio_i2c_rx_enable(pio, pio_state_machine, (d&&0b1));
+		mode_config.start_sent=false;
+	}
 
     while(pio_sm_is_tx_fifo_full(pio, pio_state_machine));
 
-	pio_i2c_put_or_err(pio, pio_state_machine, d << 1);
+	pio_i2c_put_or_err(pio, pio_state_machine, (d << 1)|(1u));
 
     pio_i2c_wait_idle(pio, pio_state_machine);
     if (pio_i2c_check_error(pio, pio_state_machine)) {
         err = -1;
         pio_i2c_resume_after_error(pio, pio_state_machine);
+		printf("I2C Error");
     }
     return err;
 
@@ -273,14 +300,12 @@ uint32_t HWI2C_read(void)
 */
 
    int err = 0;
-
-    pio_i2c_rx_enable(pio, pio_state_machine, true);
 	while(pio_sm_is_tx_fifo_full(pio, pio_state_machine));
     
 	while(!pio_sm_is_rx_fifo_empty(pio, pio_state_machine))
         (void)pio_i2c_get(pio, pio_state_machine);
 
-    pio_i2c_put16(pio, pio_state_machine, (0xffu << 1));
+    pio_i2c_put16(pio, pio_state_machine, (0xffu << 1)); //todo: send final byte and nack
 
 	while(pio_sm_is_rx_fifo_empty(pio, pio_state_machine));
 

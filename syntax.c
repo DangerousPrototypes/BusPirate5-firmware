@@ -51,7 +51,7 @@ struct _output_info{
 };
 
 void postprocess_mode_write(struct _bytecode_result *in, struct _output_info *info);
-void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *value);
+void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *value, bool read);
 
 
 bool syntax_compile(struct opt_args *args)
@@ -69,6 +69,12 @@ bool syntax_compile(struct opt_args *args)
     for(i=1;i<HW_PINS-1; i++)
     {
         pin_func[i-1]=system_config.pin_func[i]; //=BP_PIN_IO;
+    }
+
+    if(cmdln_try_peek(0,&c))
+    {
+        if(c=='>') cmdln_try_discard(1);
+        pos++;
     }
     
     while(cmdln_try_peek(0,&c))
@@ -481,7 +487,7 @@ void postprocess_mode_write(struct _bytecode_result *in, struct _output_info *in
 
     while(repeat--)
     {
-        postprocess_format_print_number(in, &value);
+        postprocess_format_print_number(in, &value, (in->output.command==SYN_READ));
 
         info->row_counter--;
         printf(" ");
@@ -582,7 +588,7 @@ void postprocess_mode_write2(struct _bytecode_result *in, struct _output_info *i
 
 */
 // represent d in the current display mode. If numbits=8 also display the ascii representation 
-void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *value)
+void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *value, bool read)
 {
 	uint32_t mask, i, d, j;
     uint8_t num_bits, num_nibbles, display_format;
@@ -593,7 +599,7 @@ void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *valu
     num_bits=in->output.bits;
 
     //maybe just tell it if we're reading or writing, instead of this convoluted logic pretzel
-    if(in->output.number_format && 
+    if(!read && 
         (system_config.display_format==df_auto || 
         system_config.display_format==df_ascii || 
         in->output.number_format==df_ascii )

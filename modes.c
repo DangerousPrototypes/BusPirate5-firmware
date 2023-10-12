@@ -214,10 +214,10 @@ struct _mode modes[MAXPROTO]={
 {
     HWI2C_start,				// start
     HWI2C_start,				// start with read
-    nullfunc1,              // start post process
+    HWI2C_start_post,              // start post process
     HWI2C_stop,				// stop
     HWI2C_stop,				// stop with read
-    nullfunc1,              // stop post process    
+    HWI2C_stop_post,              // stop post process    
     HWI2C_send,				// send(/read) max 32 bit
     HWI2C_read,				// read max 32 bit
     nullfunc1,				// set clk high

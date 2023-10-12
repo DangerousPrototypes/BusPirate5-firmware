@@ -1,6 +1,8 @@
 
 void HWI2C_start(void);
 void HWI2C_stop(void);
+void HWI2C_start_post(void);
+void HWI2C_stop_post(void);
 uint32_t HWI2C_send(uint32_t d);
 uint32_t HWI2C_read(void);
 void HWI2C_macro(uint32_t macro);
@@ -17,5 +19,7 @@ typedef struct _i2c_mode_config{
 	uint32_t baudrate_actual;
 	uint32_t data_bits;
 	bool ack_pending;
+	bool read;
+	bool start_sent;
 } _i2c_mode_config;
 

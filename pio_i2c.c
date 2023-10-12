@@ -87,10 +87,14 @@ void pio_i2c_repstart(PIO pio, uint sm) {
 }
 
 void pio_i2c_wait_idle(PIO pio, uint sm) {
+    uint32_t timeout=10000;
     // Finished when TX runs dry or SM hits an IRQ
     pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + sm);
-    while (!(pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + sm) || pio_i2c_check_error(pio, sm)))
+    while (!(pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + sm) || pio_i2c_check_error(pio, sm)) && timeout)
+    {
         tight_loop_contents();
+        timeout--;
+    }
 }
 
 int pio_i2c_write_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *txbuf, uint len) {
@@ -107,7 +111,7 @@ int pio_i2c_write_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *txbuf, uint 
     pio_i2c_stop(pio, sm);
     pio_i2c_wait_idle(pio, sm);
     if (pio_i2c_check_error(pio, sm)) {
-        err = -1;
+        err = -1; 
         pio_i2c_resume_after_error(pio, sm);
         pio_i2c_stop(pio, sm);
     }
@@ -117,7 +121,7 @@ int pio_i2c_write_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *txbuf, uint 
 int pio_i2c_read_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *rxbuf, uint len) {
     int err = 0;
     pio_i2c_start(pio, sm);
-    pio_i2c_rx_enable(pio, sm, true);
+    pio_i2c_rx_enable(pio, sm, true); 
     while (!pio_sm_is_rx_fifo_empty(pio, sm))
         (void)pio_i2c_get(pio, sm);
     pio_i2c_put16(pio, sm, (addr << 2) | 3u);

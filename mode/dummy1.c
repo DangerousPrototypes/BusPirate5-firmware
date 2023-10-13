@@ -40,7 +40,7 @@ uint32_t dummy1_send(uint32_t d)
 
 	return d;
 }
-uint32_t dummy1_read(void)
+uint32_t dummy1_read(uint8_t next_command)
 {
 	printf("-DUMMY1- read()=%08X", returnval);
 	return returnval;

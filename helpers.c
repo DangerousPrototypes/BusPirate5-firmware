@@ -600,6 +600,8 @@ void helpers_mode_help(opt_args (*args), struct command_result *res)
 {
     modes[system_config.mode].protocol_help();
 }
+
+/*
 void helpers_mode_read(struct command_attributes *attributes, struct command_response *response)
 {
     uint32_t repeat=1;
@@ -614,29 +616,7 @@ void helpers_mode_read(struct command_attributes *attributes, struct command_res
         attributes->number_format=df_hex; //if auto format mode, force hex display
     }
 
-    /* TODO: this won't work, the parser only parses .nn where nn is a number
-    if(attributes->has_dot)
-    {
-        switch(attributes->dot|0x20) //to lower
-        {
-            case 'a':
-                attributes->number_format=df_ascii;
-            case 'd':
-                attributes->number_format=df_dec;
-                break;
-            case 'x':
-            case 'h':
-                attributes->number_format=df_hex;
-                break;
-            case 'b':
-                attributes->number_format=df_bin;
-                break;
-            default:
-                break;
-        }
-    }*/
-
-    printf("%sRX:%s ", ui_term_color_info(), ui_term_color_reset());
+     printf("%sRX:%s ", ui_term_color_info(), ui_term_color_reset());
 
     uint8_t i,b_interval;
     switch(system_config.display_format)
@@ -668,6 +648,7 @@ void helpers_mode_read(struct command_attributes *attributes, struct command_res
 
     }
 }
+*/
 void helpers_mode_write(struct command_attributes *attributes, struct command_response *response)
 {
     uint32_t repeat=1;

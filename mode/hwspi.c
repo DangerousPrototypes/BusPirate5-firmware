@@ -301,7 +301,7 @@ uint32_t spi_send(uint32_t d)
     return (int) returnval;
 }
 
-uint32_t spi_read(void)
+uint32_t spi_read(uint8_t next_command)
 {
 	return spi_xfer(0xff);
 	//return (uint16_t) spi_send(0xff);

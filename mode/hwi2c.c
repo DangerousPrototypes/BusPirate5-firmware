@@ -139,6 +139,10 @@ void HWI2C_start(void)
 	*/
 	pio_i2c_start(pio, pio_state_machine);
 	mode_config.start_sent=true;
+	//HWI2C_send(0b10100000);
+	//HWI2C_send(0);
+	//pio_i2c_stop(pio, pio_state_machine);
+
 	
 //void pio_i2c_repstart(PIO pio, uint sm);
 }
@@ -185,7 +189,7 @@ void HWI2C_stop(void)
 
 	i2c_send_stop(BP_I2C);
 	*/
-	uint32_t timeout=10000;
+	/*uint32_t timeout=10000;
     while(pio_sm_is_tx_fifo_full(pio, pio_state_machine)) 
 	{
 		timeout--;
@@ -195,7 +199,10 @@ void HWI2C_stop(void)
 			pio_i2c_resume_after_error(pio, pio_state_machine);
 			return; // 0xffff;
 		}
-    }
+    }*/
+
+
+
 	pio_i2c_stop(pio, pio_state_machine);
 }
 
@@ -274,7 +281,7 @@ uint32_t HWI2C_send(uint32_t d)
 
 }
 
-uint32_t HWI2C_read(void)
+uint32_t HWI2C_read(uint8_t next_command)
 {
 	uint32_t returnval;
 	uint8_t timeout;
@@ -304,8 +311,13 @@ uint32_t HWI2C_read(void)
     
 	while(!pio_sm_is_rx_fifo_empty(pio, pio_state_machine))
         (void)pio_i2c_get(pio, pio_state_machine);
-
-    pio_i2c_put16(pio, pio_state_machine, (0xffu << 1)); //todo: send final byte and nack
+	uint16_t nack=0;
+	if(next_command==4)
+	{
+		nack=(1u << 9) | (1u << 0);
+	}
+	printf("%d/%d",next_command, nack);
+    pio_i2c_put16(pio, pio_state_machine, (0xffu << 1) | nack);
 
 	while(pio_sm_is_rx_fifo_empty(pio, pio_state_machine));
 

@@ -4,7 +4,7 @@ void dummy1_startr(void);
 void dummy1_stop(void);
 void dummy1_stopr(void);
 uint32_t dummy1_send(uint32_t d);
-uint32_t dummy1_read(void);
+uint32_t dummy1_read(uint8_t next_command);
 void dummy1_clkh(void);
 void dummy1_clkl(void);
 void dummy1_dath(void);

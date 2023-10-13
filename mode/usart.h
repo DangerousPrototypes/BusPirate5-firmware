@@ -1,5 +1,5 @@
 uint32_t HWUSART_send(uint32_t d);
-uint32_t HWUSART_read(void);
+uint32_t HWUSART_read(uint8_t next_command);
 void HWUSART_macro(uint32_t macro);
 uint32_t HWUSART_setup(void);
 uint32_t HWUSART_setup_exc(void);

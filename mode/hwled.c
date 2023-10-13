@@ -170,7 +170,7 @@ uint32_t HWLED_send(uint32_t d)
 	return 0;
 }
 
-uint32_t HWLED_read(void)
+uint32_t HWLED_read(uint8_t next_command)
 {
 	uint32_t returnval;
 	uint8_t timeout;

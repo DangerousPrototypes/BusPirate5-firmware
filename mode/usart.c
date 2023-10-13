@@ -63,7 +63,7 @@ uint32_t HWUSART_send(uint32_t d)
 
 	return 0;
 }
-uint32_t HWUSART_read(void)
+uint32_t HWUSART_read(uint8_t next_command)
 {
 	uint32_t received;
 

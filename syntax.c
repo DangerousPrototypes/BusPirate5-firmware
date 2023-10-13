@@ -309,7 +309,8 @@ bool syntax_run(void)
                         in[in_cnt].output=out[i];
                         in_cnt++;
                     }
-                    in[in_cnt].result=modes[system_config.mode].protocol_read();
+
+                    in[in_cnt].result=modes[system_config.mode].protocol_read((i+1<out_cnt && j+1==out[i].repeat)?out[i+1].command:0xff);
                 }
                 break;
             case SYN_START:

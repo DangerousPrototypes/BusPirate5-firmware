@@ -75,6 +75,7 @@ uint32_t nullfunc3(void)
 	return 0x0000;
 }
 
+
 void nullfunc4(uint32_t c)
 {	
 	(void) c;
@@ -84,6 +85,13 @@ void nullfunc4(uint32_t c)
 
 const char *nullfunc5(void){
     return t[T_MODE_ERROR_NO_EFFECT];
+}
+
+uint32_t nullfunc6(uint8_t next_command)
+{	
+	printf(t[T_MODE_ERROR_NO_EFFECT]);
+	system_config.error=1;
+	return 0x0000;
 }
 
 void nohelp(void)
@@ -108,7 +116,7 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// stop with read
     nullfunc1,              // stop post process
 	nullfunc2,				// send(/read) max 32 bit
-	nullfunc3,				// read max 32 bit
+	nullfunc6,				// read max 32 bit
 	nullfunc1,				// set clk high
 	nullfunc1,				// set clk low
 	nullfunc1,				// set dat hi
@@ -443,7 +451,7 @@ struct _mode modes[MAXPROTO]={
     HWLED_stop,				// stop with read
     nullfunc1,              // stop post process    
     HWLED_send,				// send(/read) max 32 bit
-    nullfunc3,				// read max 32 bit
+    nullfunc6,				// read max 32 bit
     nullfunc1,				// set clk high
     nullfunc1,				// set clk low
     nullfunc1,				// set dat hi

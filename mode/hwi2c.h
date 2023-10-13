@@ -4,7 +4,7 @@ void HWI2C_stop(void);
 void HWI2C_start_post(void);
 void HWI2C_stop_post(void);
 uint32_t HWI2C_send(uint32_t d);
-uint32_t HWI2C_read(void);
+uint32_t HWI2C_read(uint8_t next_command);
 void HWI2C_macro(uint32_t macro);
 uint32_t HWI2C_setup(void);
 uint32_t HWI2C_setup_exc(void);

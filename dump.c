@@ -37,7 +37,7 @@ void dump(opt_args (*args), struct command_result *res)
     {
         for(UINT i=0; i<16; i++)
         {
-            buffer[i]=spi_read();
+            buffer[i]=spi_read(0xff);
         }
 
         f_write(&fil, buffer, count, &bw);	
@@ -104,7 +104,7 @@ void load(opt_args (*args), struct command_result *res)
         {
             spi_start();
             spi_send(0b00000101);
-            uint8_t temp=spi_read();
+            uint8_t temp=spi_read(0xff);
             spi_stop();
             if(temp && 0b1)
             {
@@ -133,7 +133,7 @@ void load(opt_args (*args), struct command_result *res)
 
         for(UINT i=0; i<count; i++)
         {
-            if(spi_read()!=buffer[i])
+            if(spi_read(0xff)!=buffer[i])
             {
                 printf("mismatch at %d",count*page);
                 res->error=true;

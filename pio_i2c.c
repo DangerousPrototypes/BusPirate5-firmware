@@ -22,11 +22,16 @@ void pio_i2c_resume_after_error(PIO pio, uint sm) {
     pio_interrupt_clear(pio, sm);
 }
 
-void pio_i2c_rx_enable(PIO pio, uint sm, bool en) {
+void pio_i2c_rx_enable(PIO pio, uint sm, bool en) 
+{
     if (en)
+    {
         hw_set_bits(&pio->sm[sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
+    }
     else
+    {
         hw_clear_bits(&pio->sm[sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
+    }
 }
 
 void pio_i2c_put16(PIO pio, uint sm, uint16_t data) {
@@ -61,6 +66,60 @@ void pio_i2c_put_or_err(PIO pio, uint sm, uint16_t data) {
 #endif
 }
 
+static inline uint32_t pio_i2c_wait_idle_timeout(PIO pio, uint sm, uint32_t timeout)
+{
+    //TODO: maybe easier to debug errors if we actually wait for empty
+    //while(pio_sm_is_tx_fifo_full(pio, sm))
+    /*// Finished when TX runs dry or SM hits an IRQ
+    pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + sm);
+    while (!(pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + sm) || pio_i2c_check_error(pio, sm)) && timeout)
+    {
+        tight_loop_contents();
+        timeout--;
+    }*/
+    pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + sm);
+    while(!(pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + sm)))
+    {
+        if(pio_i2c_check_error(pio, sm))
+        {
+            return 1; //TODO: MAKE MODE ERROR CODES
+        }
+
+        timeout--;
+        if(!timeout) return 2;
+    }
+
+    if(pio_i2c_check_error(pio, sm))
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+//put to fifo, wait for slot, wait for empyt
+static inline uint32_t pio_i2c_put_or_timeout(PIO pio, uint sm, uint16_t data, uint32_t timeout) 
+{   
+    uint32_t error;
+
+    error=pio_i2c_wait_idle_timeout(pio, sm, timeout);
+    if(error) return error;
+
+    // some versions of GCC dislike this
+    #ifdef __GNUC__
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+    #endif
+        *(io_rw_16 *)&pio->txf[sm] = data;
+    #ifdef __GNUC__
+    #pragma GCC diagnostic pop
+    #endif
+
+    error=pio_i2c_wait_idle_timeout(pio, sm, timeout);
+
+    return error;
+}
+
 uint8_t pio_i2c_get(PIO pio, uint sm) {
     return (uint8_t)pio_sm_get(pio, sm);
 }
@@ -69,6 +128,81 @@ void pio_i2c_start(PIO pio, uint sm) {
     pio_i2c_put_or_err(pio, sm, 1u << PIO_I2C_ICOUNT_LSB); // Escape code for 2 instruction sequence
     pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);    // We are already in idle state, just pull SDA low
     pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);    // Also pull clock low so we can present data
+}
+
+static inline uint32_t pio_i2c_put_instructions(PIO pio, uint sm, const uint16_t *inst, uint8_t length, uint32_t timeout)    
+{
+    uint32_t error;
+    for(uint8_t i=0; i<length; i++)
+    {
+        error=pio_i2c_put_or_timeout(pio, sm, inst[i], timeout);
+        if(error) return error;
+    }
+    return 0;
+}
+
+uint32_t pio_i2c_start_timeout(PIO pio, uint sm, uint32_t timeout) 
+{
+    const uint16_t start[]=
+    {
+        1u << PIO_I2C_ICOUNT_LSB, // Escape code for 2 instruction sequence
+        set_scl_sda_program_instructions[I2C_SC1_SD0],  // We are already in idle state, just pull SDA low
+        set_scl_sda_program_instructions[I2C_SC0_SD0] // Also pull clock low so we can present data
+    };
+    return pio_i2c_put_instructions(pio, sm, start, sizeof(start), timeout);    
+}
+
+
+uint32_t pio_i2c_stop_timeout(PIO pio, uint sm, uint32_t timeout) 
+{
+    const uint16_t stop[]=
+    {
+        2u << PIO_I2C_ICOUNT_LSB,
+        set_scl_sda_program_instructions[I2C_SC0_SD0],  // SDA is unknown; pull it down
+        set_scl_sda_program_instructions[I2C_SC1_SD0], // Release clock
+        set_scl_sda_program_instructions[I2C_SC1_SD1] // Release SDA to return to idle state 
+    };
+    return pio_i2c_put_instructions(pio, sm, stop, sizeof(stop), timeout);    
+};
+
+uint32_t pio_i2c_write_timeout(PIO pio, uint sm, uint32_t data, uint32_t timeout)
+{
+    uint32_t error;
+
+    error=pio_i2c_wait_idle_timeout(pio, sm, timeout);
+    if(error) return error;
+
+    error=pio_i2c_put_or_timeout(pio, sm, (data << 1)|(1u), timeout);
+    if(error) return error;
+
+    error=pio_i2c_wait_idle_timeout(pio, sm, timeout);
+
+    return error;
+}
+
+uint32_t pio_i2c_read_timeout(PIO pio, uint sm, uint32_t *data, bool ack, uint32_t timeout)
+{
+    uint32_t error;
+
+    error=pio_i2c_wait_idle_timeout(pio, sm, timeout);
+    if(error) return error;
+    
+	while(!pio_sm_is_rx_fifo_empty(pio, sm))
+    {
+        (void)pio_i2c_get(pio, sm);
+    }
+
+    //timeout????
+    pio_i2c_put16(pio, sm, (0xffu << 1) | (ack?0:(1u << 9) | (1u << 0)) );
+
+	//TODO: timeout
+    while(pio_sm_is_rx_fifo_empty(pio, sm));
+
+	(*data) = pio_i2c_get(pio, sm);
+	
+    error=pio_i2c_wait_idle_timeout(pio, sm, timeout);
+    
+    return error;
 }
 
 void pio_i2c_stop(PIO pio, uint sm) {

@@ -1,4 +1,3 @@
-//TODO: add timeout to all I2C stuff that can hang!
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -15,7 +14,6 @@
 #define M_I2C_PIO pio1
 #define M_I2C_SDA BIO0
 #define M_I2C_SCL BIO1
-
 
 static const char pin_labels[][5]={
 	"SDA",
@@ -34,117 +32,90 @@ static void I2Csearch(void);
 uint32_t HWI2C_setup(void)
 {
 	uint32_t temp;
-	// speed
-	/*if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	speed=getint();
-	if((speed>0)&&(speed<=2)) speed-=1;
-	else modeConfig.error=1;
-*/
-	// did the user did it right?
-	//if(modeConfig.error)			// go interactive 
-	//{
-		// menu items options
-		static const struct prompt_item i2c_data_bits_menu[]={{T_HWI2C_DATA_BITS_MENU_1},{T_HWI2C_DATA_BITS_MENU_2}};
-		static const struct prompt_item i2c_speed_menu[]={{T_HWI2C_SPEED_MENU_1}};		
 
-		static const struct ui_prompt i2c_menu[]={
-			{T_HWI2C_SPEED_MENU,i2c_speed_menu,	count_of(i2c_speed_menu),T_HWI2C_SPEED_PROMPT, 1,1000,400,		0,&prompt_int_cfg},
-			{T_HWI2C_DATA_BITS_MENU,i2c_data_bits_menu,	count_of(i2c_data_bits_menu),T_HWI2C_DATA_BITS_PROMPT, 0,0,1, 	0,&prompt_list_cfg}
-		};
+	// menu items options
+	static const struct prompt_item i2c_data_bits_menu[]={{T_HWI2C_DATA_BITS_MENU_1},{T_HWI2C_DATA_BITS_MENU_2}};
+	static const struct prompt_item i2c_speed_menu[]={{T_HWI2C_SPEED_MENU_1}};		
 
-		const char config_file[]="bpi2c.bp";
+	static const struct ui_prompt i2c_menu[]={
+		{T_HWI2C_SPEED_MENU,i2c_speed_menu,	count_of(i2c_speed_menu),T_HWI2C_SPEED_PROMPT, 1,1000,400,		0,&prompt_int_cfg},
+		{T_HWI2C_DATA_BITS_MENU,i2c_data_bits_menu,	count_of(i2c_data_bits_menu),T_HWI2C_DATA_BITS_PROMPT, 0,0,1, 	0,&prompt_list_cfg}
+	};
 
-		struct _mode_config_t config_t[]={
-			{"$.baudrate", &mode_config.baudrate},
-			{"$.data_bits", &mode_config.data_bits}
-		};
+	const char config_file[]="bpi2c.bp";
 
-		if(storage_load_mode(config_file, config_t, count_of(config_t)))
-		{
-			printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-			printf(" %s: %dKHz\r\n", t[T_HWI2C_SPEED_MENU], mode_config.baudrate);			
-			printf(" %s: %s\r\ny/n> ", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[mode_config.data_bits].description]);
-			do{
-				temp=ui_prompt_yes_no();
-			}while(temp>1);
+	struct _mode_config_t config_t[]={
+		{"$.baudrate", &mode_config.baudrate},
+		{"$.data_bits", &mode_config.data_bits}
+	};
 
-			printf("\r\n");
+	if(storage_load_mode(config_file, config_t, count_of(config_t)))
+	{
+		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
+		printf(" %s: %dKHz\r\n", t[T_HWI2C_SPEED_MENU], mode_config.baudrate);			
+		printf(" %s: %s\r\ny/n> ", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[mode_config.data_bits].description]);
+		do{
+			temp=ui_prompt_yes_no();
+		}while(temp>1);
 
-			if(temp==1) return 1;
-		}
+		printf("\r\n");
 
-		prompt_result result;
-        ui_prompt_uint32(&result, &i2c_menu[0], &mode_config.baudrate);
-		if(result.exit) return 0;
-		ui_prompt_uint32(&result, &i2c_menu[1], &temp);
-		if(result.exit) return 0;
-		mode_config.data_bits=(uint8_t)temp-1;
+		if(temp==1) return 1;
+	}
 
-		storage_save_mode(config_file, config_t, count_of(config_t));
+	prompt_result result;
+	ui_prompt_uint32(&result, &i2c_menu[0], &mode_config.baudrate);
+	if(result.exit) return 0;
+	ui_prompt_uint32(&result, &i2c_menu[1], &temp);
+	if(result.exit) return 0;
+	mode_config.data_bits=(uint8_t)temp-1;
 
-
-		
-	//}
-
+	storage_save_mode(config_file, config_t, count_of(config_t));
+	
 	return 1;
-
 }
 
 uint32_t HWI2C_setup_exc(void)
 {
 	pio_loaded_offset = pio_add_program(pio, &i2c_program);
     i2c_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[BIO0], bio2bufiopin[BIO1], bio2bufdirpin[BIO0], bio2bufdirpin[BIO1]);
-
 	system_bio_claim(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
-	/*
-	// update modeConfig pins
-	modeConfig.mosiport=BP_I2C_SDA_PORT;
-	modeConfig.clkport=BP_I2C_SDA_PORT;
-	modeConfig.mosipin=BP_I2C_SDA_PIN;
-	modeConfig.clkpin=BP_I2C_SDA_PIN;
-
-	modeConfig.logicanalyzerperiod=LA_period[speed];
-	*/
 	mode_config.start_sent=false;
 	return 1;
 }
-
 
 void HWI2C_start(void)
 {
 	uint8_t timeout;
 
-/*	if(checkshort())
+	if(checkshort())
 	{
-		printf("no pullup or short");
-		modeConfig.error=1;
-		return;
+		//TODO: enum error codes. Put error messages in translation. Flag error codes in data struct. Write out codes at the end.
+		printf("Warning: no pull-up detected. Use P to enable onboard pull-up resistors.\r\n");
 	}
-
-	printf("I2C START");
-	i2c_send_start(BP_I2C);
-
-	timeout=100; // 1 us enough?
-
-	// wait for start (SB), switched to master (MSL) and a taken bus (BUSY)
-	while ((!((I2C_SR1(BP_I2C)&I2C_SR1_SB)&&(I2C_SR2(BP_I2C)&(I2C_SR2_MSL|I2C_SR2_BUSY))))&&timeout) { timeout--; delayus(1); }
-
-	if(timeout==0)
-	{
-		printf(" TIMEOUT");
-		modeConfig.error=1;
-	}
-	*/
-	pio_i2c_start(pio, pio_state_machine);
-	mode_config.start_sent=true;
-	//HWI2C_send(0b10100000);
-	//HWI2C_send(0);
-	//pio_i2c_stop(pio, pio_state_machine);
-
 	
-//void pio_i2c_repstart(PIO pio, uint sm);
+	uint32_t error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfffff);
+
+	if(error) //TODO: hand back with a result struct for post processing, interrupt syntax
+	{
+		//pio_i2c_resume_after_error(pio, pio_state_machine);
+		printf("Error in start %d\r\n", error);
+	}
+
+	mode_config.start_sent=true;
+	
+}
+
+void HWI2C_stop(void)
+{
+	uint32_t error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xffff);
+
+	if(error) //TODO: hand back with a result struct for post processing, interrupt syntax
+	{
+		pio_i2c_resume_after_error(pio, pio_state_machine);
+		printf("Error in stop %d\r\n", error);
+	}
 }
 
 void HWI2C_start_post(void)
@@ -157,186 +128,41 @@ void HWI2C_stop_post(void)
 	printf("I2C STOP");
 }
 
-void HWI2C_stop(void)
+uint32_t HWI2C_write(uint32_t data)
 {
-	//uint8_t timeout;
-
-	/*if(!(I2C_SR2(BP_I2C)&I2C_SR2_TRA))
-	{
-		printf("!!WARNING: two extra bytes read!!");
-
-	//	i2c_nack_current(BP_I2C);
-		i2c_disable_ack(BP_I2C);
-
-		timeout=100; // 100 us enough?
-
-		// two bytes are buffered :( 
-		while ((!(I2C_SR1(BP_I2C) & I2C_SR1_RxNE))&&timeout) { timeout--; delayus(1); }		// wait until data available
-		(void)i2c_get_data(BP_I2C);
-
-		if(timeout==0) printf(" TIMEOUT");
-
-		timeout=100;
-
-		while ((!(I2C_SR1(BP_I2C) & I2C_SR1_RxNE))&&timeout) { timeout--; delayus(1); }		// wait until data available
-		(void)i2c_get_data(BP_I2C);
-
-		if(timeout==0) printf(" TIMEOUT");
-
-		printf("\r\n");
-	}
-
-
-	i2c_send_stop(BP_I2C);
-	*/
-	/*uint32_t timeout=10000;
-    while(pio_sm_is_tx_fifo_full(pio, pio_state_machine)) 
-	{
-		timeout--;
-		if(!timeout)
-		{
-			printf("stop timeout\r\n");
-			pio_i2c_resume_after_error(pio, pio_state_machine);
-			return; // 0xffff;
-		}
-    }*/
-
-
-
-	pio_i2c_stop(pio, pio_state_machine);
-}
-
-uint32_t HWI2C_send(uint32_t d)
-{
-	uint8_t ack, timeout;
-	uint32_t temp;
-
-//	HWI2C_printI2Cflags();
-
-/*	if(I2C_SR2(BP_I2C)&I2C_SR2_MSL)					// we can only send if master! (please issue a start condition frist)
-	{
-		if((I2C_SR1(BP_I2C)&I2C_SR1_SB)||(I2C_SR2(BP_I2C)&I2C_SR2_TRA))	// writing is only enable after start or during transmisson
-		{
-			temp=(I2C_SR1(BP_I2C)&I2C_SR1_SB); 		// gets destroyed by writing?
-
-			i2c_send_data(BP_I2C, d);
-
-//			HWI2C_printI2Cflags();
-
-			timeout=100;	// 100us enough?
-
-			if (temp) while(((!(I2C_SR1(BP_I2C)&I2C_SR1_ADDR))&&(!(I2C_SR1(BP_I2C)&I2C_SR1_AF)))&&timeout) { timeout--; delayus(1); } // or BTF??
-			else while(((!(I2C_SR1(BP_I2C)&I2C_SR1_BTF))&&(!(I2C_SR1(BP_I2C)&I2C_SR1_AF)))&&timeout) { timeout--; delayus(1); }
-
-//			HWI2C_printI2Cflags();
-
-//			if(I2C_SR2(BP_I2C)&I2C_SR2_MSL)			// are we mastah??
-			ack=!(I2C_SR1(BP_I2C)&I2C_SR1_AF);		// no ack error is ack
-//			else
-//				ack=0;		
-	
-			temp=I2C_SR1(BP_I2C);				// need to read both status registers??
-			temp=I2C_SR2(BP_I2C);
-			I2C_SR1(BP_I2C)=0;				// clear all errors/flags
-			I2C_SR2(BP_I2C)=0;				// clear all errors/flags
-
-			printf(" %s", (ack?"ACK":"NACK"));
-		}
-		else
-		{
-			printf("Not allowed to send (wrong address)");
-			modeConfig.error=1;
-			ack=0;
-		}
-	}
-	else
-	{
-		printf("Not allowed to send (START)");
-		modeConfig.error=1;
-		ack=0;
-	}
-*/
-
-    int err = 0;
-
 	//if a start was just sent, determine if this is a read or write address
 	// and configure the PIO I2C
 	if(mode_config.start_sent)
 	{
-		pio_i2c_rx_enable(pio, pio_state_machine, (d&0b1));
+		pio_i2c_rx_enable(pio, pio_state_machine, (data & 1u));
 		mode_config.start_sent=false;
 	}
+	
+	uint32_t error=pio_i2c_write_timeout(pio, pio_state_machine, data, 0xffff);
 
-    while(pio_sm_is_tx_fifo_full(pio, pio_state_machine));
-
-	pio_i2c_put_or_err(pio, pio_state_machine, (d << 1)|(1u));
-
-    pio_i2c_wait_idle(pio, pio_state_machine);
-    if (pio_i2c_check_error(pio, pio_state_machine)) {
-        err = -1;
+    if(error) 
+	{
         pio_i2c_resume_after_error(pio, pio_state_machine);
-		printf("I2C Error");
+		printf("I2C Error %d", error);
     }
-    return err;
+
+    return error;
 
 }
 
 uint32_t HWI2C_read(uint8_t next_command)
 {
-	uint32_t returnval;
-	uint8_t timeout;
+	uint32_t data;
 
-/*	if(!(I2C_SR2(BP_I2C)&I2C_SR2_TRA))
+	uint32_t error=pio_i2c_read_timeout(pio, pio_state_machine, &data, (next_command!=4), 0xffff);
+
+    if(error) 
 	{
-		i2c_enable_ack(BP_I2C);				// TODO: clever way to nack last byte as per spec
-
-		timeout=100; // 100us enough?
-
-		while ((!(I2C_SR1(BP_I2C) & I2C_SR1_RxNE))&&timeout) { timeout--; delayus(1); };		// wait until data available
-
-		if(timeout==0) printf(" TIMEOUT");
-
-		returnval=i2c_get_data(BP_I2C);
-	}
-	else
-	{
-		printf("Not allowed to read (wrong address)");
-		modeConfig.error=1;
-		returnval=0;
-	}
-*/
-
-   int err = 0;
-	while(pio_sm_is_tx_fifo_full(pio, pio_state_machine));
-    
-	while(!pio_sm_is_rx_fifo_empty(pio, pio_state_machine))
-        (void)pio_i2c_get(pio, pio_state_machine);
-	uint16_t nack=0;
-	if(next_command==4)
-	{
-		nack=(1u << 9) | (1u << 0);
-	}
-	printf("%d/%d",next_command, nack);
-    pio_i2c_put16(pio, pio_state_machine, (0xffu << 1) | nack);
-
-	while(pio_sm_is_rx_fifo_empty(pio, pio_state_machine));
-
-	returnval = pio_i2c_get(pio, pio_state_machine);
-	/*while(!pio_sm_is_rx_fifo_empty(pio, pio_state_machine))
-	{
-		returnval=pio_sm_get(pio, pio_state_machine);
-		printf("return %d\r\n", returnval);
-	}*/
-	
-    pio_i2c_wait_idle(pio, pio_state_machine);
-    if (pio_i2c_check_error(pio, pio_state_machine)) {
-        err = -1;
-		printf("error\r\n");
         pio_i2c_resume_after_error(pio, pio_state_machine);
-		return 0xffff;
+		printf("I2C Error %d", error);
     }
 
-	return returnval;
+    return data;
 }
 
 void HWI2C_macro(uint32_t macro)
@@ -463,8 +289,8 @@ static uint8_t checkshort(void)
 {
 	uint8_t temp;
 
-	//temp=(gpio_get(BP_I2C_SDA_SENSE_PORT, BP_I2C_SDA_SENSE_PIN)==0?1:0);
-	//temp|=(gpio_get(BP_I2C_SCL_SENSE_PORT, BP_I2C_SCL_SENSE_PIN)==0?2:0);
+	temp=(bio_get(M_I2C_SDA)==0?1:0);
+	temp|=(bio_get(M_I2C_SCL)==0?2:0);
 
 	return (temp==3);			// there is only a short when both are 0 otherwise repeated start wont work
 }

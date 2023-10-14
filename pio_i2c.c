@@ -149,7 +149,7 @@ uint32_t pio_i2c_start_timeout(PIO pio, uint sm, uint32_t timeout)
         set_scl_sda_program_instructions[I2C_SC1_SD0],  // We are already in idle state, just pull SDA low
         set_scl_sda_program_instructions[I2C_SC0_SD0] // Also pull clock low so we can present data
     };
-    return pio_i2c_put_instructions(pio, sm, start, sizeof(start), timeout);    
+    return pio_i2c_put_instructions(pio, sm, start, count_of(start), timeout);    
 }
 
 
@@ -162,7 +162,7 @@ uint32_t pio_i2c_stop_timeout(PIO pio, uint sm, uint32_t timeout)
         set_scl_sda_program_instructions[I2C_SC1_SD0], // Release clock
         set_scl_sda_program_instructions[I2C_SC1_SD1] // Release SDA to return to idle state 
     };
-    return pio_i2c_put_instructions(pio, sm, stop, sizeof(stop), timeout);    
+    return pio_i2c_put_instructions(pio, sm, stop, count_of(stop), timeout);    
 };
 
 uint32_t pio_i2c_write_timeout(PIO pio, uint sm, uint32_t data, uint32_t timeout)

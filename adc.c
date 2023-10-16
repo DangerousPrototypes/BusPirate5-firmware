@@ -9,8 +9,6 @@
 #include "ui/ui_info.h"
 #include "system_config.h"
 #include "freq.h"
-//#include "buf.h"
-#include "usb_tx.h"
 #include "usb_rx.h"
 
 void adc_measure(opt_args (*args), struct command_result *res, bool refresh);

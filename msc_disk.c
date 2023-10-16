@@ -23,20 +23,14 @@
  *
  */
 
-#include "fatfs/ff.h"
-#include "fatfs/diskio.h"
-#include "fatfs/tf_card.h"
-
-// what is necessary of
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "ui/ui_term.h"
-#include "storage.h"
-
-#include "bsp/board.h"
+#include "fatfs/ff.h"
+#include "fatfs/diskio.h"
+#include "fatfs/tf_card.h"
 #include "tusb.h"
 
 

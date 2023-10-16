@@ -3,16 +3,11 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "modes.h"
 #include "ui/ui_const.h"
-#include "ui/ui_info.h"
 #include "ui/ui_term.h"
 #include "usb_tx.h"
 #include "freq.h"
-#include "ui/ui_cmdln.h"
-//#include "ui/ui_lcd.h"
 #include "ui/ui_flags.h"
-#include "hardware/timer.h"
 #include "system_monitor.h"
 
 

@@ -2,7 +2,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "hardware/adc.h"
-#include "platform/bpi-rev1.h"
+#include "platform/bpi-rev8.h"
 #include "mcu/rp2040.h"
 #include "shift.h"
 #include "pico/bootrom.h"

@@ -4,11 +4,12 @@
 #include "hardware/uart.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "commands.h"
+#include "opt_args.h"
 #include "mode/usart.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
+#include "command_attributes.h"
 #include "ui/ui_format.h"
 #include "storage.h"
 

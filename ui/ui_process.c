@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
+#include "opt_args.h"
 #include "commands.h"
 #include "modes.h"
 #include "mode/hiz.h"

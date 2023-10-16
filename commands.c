@@ -2,6 +2,8 @@
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
+#include "opt_args.h"
+#include "command_attributes.h"
 #include "commands.h"
 #include "mode/hiz.h"
 #include "auxpinfunc.h"

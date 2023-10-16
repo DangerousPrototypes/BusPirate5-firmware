@@ -2,6 +2,8 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "opt_args.h"
+#include "command_attributes.h"
 #include "commands.h"
 #include "ui/ui_term.h"
 #include "ui/ui_const.h"
@@ -19,16 +21,6 @@
 #include "amux.h"
 #include "mcu/rp2040.h"
 
-
-//this is a debug function attached to the '>' key in commands.c
-//use it to test code or run repeat operations
-void helpers_debug(struct command_attributes *attributes, struct command_response *response)
-{
-    //system_load_config();
-    //storage_load_config();
-    storage_save_config();
-    //storage_new_file();
-}
 
 void helpers_selftest(opt_args (*args), struct command_result *res)
 {
@@ -395,7 +387,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     while(multicore_fifo_pop_blocking()!=0xf1);
 
 }
-
+/*/
 void helpers_numbits(struct command_attributes *attributes, struct command_response *response)
 {
     if(attributes->has_dot)
@@ -404,40 +396,6 @@ void helpers_numbits(struct command_attributes *attributes, struct command_respo
         printf("Default number of bits: %u",system_config.num_bits);
         
     }
-}
-/*
-void helpers_delay_us(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t repeat=1;
-
-    if(attributes->has_colon)
-    {
-        repeat=attributes->colon;
-    }
-
-    printf("%s%s:%s %s%d%s%s",
-        ui_term_color_notice(),t[T_MODE_DELAY], ui_term_color_reset(),
-        ui_term_color_num_float(), repeat, ui_term_color_reset(),
-        t[T_MODE_US]
-    );
-    delayus(repeat);
-}
-
-void helpers_delay_ms(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t repeat=1;
-    
-    if(attributes->has_colon)
-    {
-        repeat=attributes->colon;
-    }
-
-    printf("%s%s:%s %s%d%s%s",
-        ui_term_color_notice(),	t[T_MODE_DELAY], ui_term_color_reset(),
-        ui_term_color_num_float(), repeat, ui_term_color_reset(),
-        t[T_MODE_MS]
-    );
-    delayms(repeat);
 }
 */
 void helpers_bit_order_msb(opt_args (*args), struct command_result *res)
@@ -526,7 +484,7 @@ void helpers_show_int_inverse(opt_args (*args), struct command_result *res)
     system_config.bit_order^=1;
     system_config.num_bits=temp3;
 }
-
+/*/
 void helpers_mode_macro(struct command_attributes *attributes, struct command_response *response)
 {
     uint32_t temp;
@@ -543,56 +501,10 @@ void helpers_mode_macro(struct command_attributes *attributes, struct command_re
         printf(t[T_MODE_ERROR_PARSING_MACRO]);
     }    
 }
-
-void helpers_mode_start(struct command_attributes *attributes, struct command_response *response)
+*/
+void helpers_mode_help(opt_args (*args), struct command_result *res)
 {
-    system_config.write_with_read=0;
-	modes[system_config.mode].protocol_start();
-}
-
-void helpers_mode_stop(struct command_attributes *attributes, struct command_response *response)
-{
-    system_config.write_with_read=0;
-	modes[system_config.mode].protocol_stop();
-
-}
-void helpers_mode_start_with_read(struct command_attributes *attributes, struct command_response *response)
-{
-    system_config.write_with_read=1;
-	modes[system_config.mode].protocol_startR();
-}
-void helpers_mode_stop_with_read(struct command_attributes *attributes, struct command_response *response)
-{
-    system_config.write_with_read=0;
-	modes[system_config.mode].protocol_stopR();
-}
-void helpers_mode_clock_high(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_clkh();
-}
-void helpers_mode_clock_low(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_clkl();
-}
-void helpers_mode_clock_tick(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_clk();
-}
-void helpers_mode_data_high(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_dath();
-}
-void helpers_mode_data_low(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_datl();
-}
-void helpers_mode_data_s(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_dats();
-}
-void helpers_mode_read_bit(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_bitr();
+    modes[system_config.mode].protocol_help();
 }
 
 void helpers_mode_periodic()
@@ -600,126 +512,7 @@ void helpers_mode_periodic()
     modes[system_config.mode].protocol_periodic();
 }
 
-void helpers_mode_help(opt_args (*args), struct command_result *res)
-{
-    modes[system_config.mode].protocol_help();
-}
-
 /*
-void helpers_mode_read(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t repeat=1;
-
-    if(attributes->has_colon)
-    {
-        repeat=attributes->colon;
-    }
-
-    if(system_config.display_format==df_auto)
-    {
-        attributes->number_format=df_hex; //if auto format mode, force hex display
-    }
-
-     printf("%sRX:%s ", ui_term_color_info(), ui_term_color_reset());
-
-    uint8_t i,b_interval;
-    switch(system_config.display_format)
-    {
-        case df_bin:
-            i=b_interval=4;
-            break;
-        default:
-            i=b_interval=8;
-            break;   
-    }
-
-    while(repeat--)
-    {
-        uint32_t received=modes[system_config.mode].protocol_read();
-        ui_format_print_number_2(attributes, &received);
-        
-        i--;
-        if(repeat)
-        {
-            printf(" ");
-            if(!i)
-            {
-                printf("\r\n    ");
-                i=b_interval;
-            } 
-        } 
-
-
-    }
-}
-*/
-void helpers_mode_write(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t repeat=1;
-    uint32_t temp;
-  
-    temp=attributes->value;
-    
-    // sequence is important! TODO: make freeform
-    if(attributes->has_dot)
-    {
-        //system_config.num_bits=attributes->dot;
-    }
-
-    if(attributes->has_colon)
-    {
-        repeat=attributes->colon;
-    }
-
-    if(!system_config.write_with_read)
-    {
-        printf("%sTX:%s ", ui_term_color_info(), ui_term_color_reset());
-    }
-
-    //TODO:" this is repeated three times, it should be some kind of passed function"
-    uint8_t i,b_interval;
-    switch(system_config.display_format)
-    {
-        case df_bin:
-            i=b_interval=4;
-            break;
-        default:
-            i=b_interval=8;
-            break;   
-    }
-
-    while(repeat--)
-    {
-        if(system_config.write_with_read)
-        {
-            printf("%sTX:%s ", ui_term_color_info(), ui_term_color_reset());
-        }
-
-        ui_format_print_number_2(attributes, &attributes->value);
-        uint32_t received=modes[system_config.mode].protocol_send(ui_format_bitorder(temp));		// reshuffle bits if necessary
-        
-        if(system_config.write_with_read) 
-        {
-            printf("%s, RX:%s ", ui_term_color_info(), ui_term_color_reset());
-            ui_format_print_number_2(attributes, &received);
-            if(repeat) printf("\r\n");
-        }
-        else
-        {
-            i--;
-            if(repeat)
-            {
-                printf(" ");
-                if(!i)
-                {
-                    printf("\r\n    ");
-                    i=b_interval;
-                } 
-            } 
-        }
-
-    }
-}
 void helpers_mode_write_string(struct command_attributes *attributes, struct command_response *response)
 {
     uint32_t i=0;
@@ -789,6 +582,7 @@ void helpers_mode_write_string(struct command_attributes *attributes, struct com
 
     cmdln_try_remove(&c); // consume the final "
 }
+*/
 
 
 void helpers_mcu_reset(opt_args (*args), struct command_result *res)

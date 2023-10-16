@@ -4,7 +4,7 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include "pirate.h"
-#include "commands.h"
+#include "opt_args.h"
 #include "hardware/timer.h"
 #include "shift.h"
 #include "system_config.h"

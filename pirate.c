@@ -8,7 +8,7 @@
 #include "ws2812.pio.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "commands.h"
+#include "opt_args.h"
 #include "ui/ui_lcd.h"
 #include "rgb.h"
 #include "shift.h"
@@ -164,12 +164,12 @@ int main()
     
     uint8_t bp_state=0;
     uint32_t value;
-    struct command_attributes attributes;
-    struct command_response response;   
+    //struct command_attributes attributes;
+    //struct command_response response;   
     struct prompt_result result; 
     alarm_id_t screensaver;
-    struct opt_args args;
-    struct command_result res;
+    //struct opt_args args;
+    //struct command_result res;
 
     while(1)
     {

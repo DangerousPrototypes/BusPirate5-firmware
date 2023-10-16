@@ -3,7 +3,9 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "commands.h"
+#include "opt_args.h"
+#include "command_attributes.h"
+#include "bytecode.h"
 #include "modes.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"

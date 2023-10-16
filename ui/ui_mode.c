@@ -2,7 +2,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "commands.h"
+#include "opt_args.h"
 #include "modes.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -99,7 +99,7 @@ void ui_mode_enable_args(opt_args (*args), struct command_result *res)
 
 
 
-
+/*
 
 
 
@@ -181,7 +181,7 @@ void ui_mode_enable(struct command_attributes *attributes, struct command_respon
 
 	printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_MODE], ui_term_color_reset(), modes[system_config.mode].protocol_name);
 
-}
+}*/
 
 bool int_display_menu(const struct ui_prompt* menu)
 {

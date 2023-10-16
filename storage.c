@@ -3,7 +3,7 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "commands.h"
+#include "opt_args.h"
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
 #include "fatfs/tf_card.h"

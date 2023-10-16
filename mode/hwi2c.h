@@ -1,5 +1,5 @@
 
-void HWI2C_start(void);
+void HWI2C_start(struct _bytecode_result *result);
 void HWI2C_stop(void);
 void HWI2C_start_post(void);
 void HWI2C_stop_post(void);

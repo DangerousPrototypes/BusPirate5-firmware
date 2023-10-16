@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-
 #include "system_config.h"
+#include "bytecode.h"
 #include "modes.h"
 
 #include "mode/hiz.h"
@@ -91,7 +91,7 @@ uint32_t nullfunc6(uint8_t next_command)
 {	
 	printf(t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
-	return 0x0000;
+	return 0x0000; 
 }
 
 void nohelp(void)
@@ -104,12 +104,18 @@ uint32_t noperiodic(void)
 	return 0;
 }
 
+void nullfunc1_temp(struct _bytecode_result *result)
+{
+    printf(t[T_MODE_ERROR_NO_EFFECT]);
+    system_config.error=1;
+}
+
 // all modes and their interaction is handled here
 // buspirateNG.h has the conditional defines for modes
 
 struct _mode modes[MAXPROTO]={
 {
-	nullfunc1,				// start
+	nullfunc1_temp,				// start
 	nullfunc1,				// start with read
     nullfunc1,              // start post process
 	nullfunc1,				// stop
@@ -221,7 +227,7 @@ struct _mode modes[MAXPROTO]={
 #ifdef BP_USE_HWI2C
 {
     HWI2C_start,				// start
-    HWI2C_start,				// start with read
+    nullfunc1,				// start with read
     HWI2C_start_post,              // start post process
     HWI2C_stop,				// stop
     HWI2C_stop,				// stop with read

@@ -298,7 +298,7 @@ bool syntax_run(void)
                 }
                 break;
             case SYN_START:
-                modes[system_config.mode].protocol_start();
+                modes[system_config.mode].protocol_start(&in[in_cnt]);
                 break;
             case SYN_STOP:
                 modes[system_config.mode].protocol_stop();

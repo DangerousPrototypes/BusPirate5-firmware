@@ -1,4 +1,4 @@
-#include "pirate.h"
+//#include "pirate.h"
 
 enum
 {
@@ -51,7 +51,7 @@ enum
 
 typedef struct _mode
 {
-	void (*protocol_start)(void);			// start
+	void (*protocol_start)(struct _bytecode_result *result);			// start
 	void (*protocol_startR)(void);			// start with read
 	void (*protocol_start_post)(void);			// start post process	
 	void (*protocol_stop)(void);			// stop

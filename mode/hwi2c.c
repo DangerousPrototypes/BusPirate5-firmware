@@ -4,6 +4,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "opt_args.h"
+#include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
@@ -86,7 +87,7 @@ uint32_t HWI2C_setup_exc(void)
 	return 1;
 }
 
-void HWI2C_start(void)
+void HWI2C_start(struct _bytecode_result *result)
 {
 	uint8_t timeout;
 
@@ -94,6 +95,8 @@ void HWI2C_start(void)
 	{
 		//TODO: enum error codes. Put error messages in translation. Flag error codes in data struct. Write out codes at the end.
 		printf("Warning: no pull-up detected. Use P to enable onboard pull-up resistors.\r\n");
+		result->error=0xff;
+		return;
 	}
 	
 	uint32_t error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfffff);

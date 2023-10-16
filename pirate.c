@@ -29,6 +29,7 @@
 #include "usb_rx.h"
 #include "debug.h"
 #include "ui/ui_cmdln.h"
+#include "bytecode.h"
 #include "modes.h"
 #include "system_monitor.h"
 #include "ui/ui_statusbar.h"

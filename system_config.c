@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
+#include "bytecode.h"
 #include "modes.h"
 #include "pirate.h"
 #include "ui/ui_const.h"

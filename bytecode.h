@@ -6,7 +6,7 @@ struct _bytecode_output{
 	uint32_t repeat; //0-0xffff repeat
 	uint32_t data; //32 data bits
     bool has_repeat;
-    bool has_bits;
+    bool has_bits; 
 };
 
 //need a way to generate multiple results from a single repeated command

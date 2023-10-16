@@ -19,18 +19,18 @@
 // enable modes
 //#define		BP_USE_SW1WIRE
 //#define     BP_USE_HW1WIRE
-#define		BP_USE_HWUSART
+//#define		BP_USE_HWUSART
 #define		BP_USE_HWI2C
 //#define		BP_USE_SWI2C
-#define		BP_USE_HWSPI
+//#define		BP_USE_HWSPI
 //#define		BP_USE_SW2W
 //#define		BP_USE_SW3W
 //#define 	BP_USE_DIO
-#define     BP_USE_HWLED
+//#define     BP_USE_HWLED
 //#define		BP_USE_LCDSPI
 //#define		BP_USE_LCDI2C
 //#define		BP_USE_LA
-#define 	BP_USE_DUMMY1
+//#define 	BP_USE_DUMMY1
 //#define 	BP_USE_DUMMY2
 
 // enable display support
@@ -40,7 +40,7 @@
 #define OPTARG_STRING_LEN 20
 
 // include platform
-#include "platform/bpi-rev8.h"
+#include "platform/bpi-rev9.h"
 
 // include a translation
 //new multilingual system

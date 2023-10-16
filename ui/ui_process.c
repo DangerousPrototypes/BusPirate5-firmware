@@ -5,6 +5,7 @@
 #include "system_config.h"
 #include "opt_args.h"
 #include "commands.h"
+#include "bytecode.h"
 #include "modes.h"
 #include "mode/hiz.h"
 #include "ui/ui_prompt.h"

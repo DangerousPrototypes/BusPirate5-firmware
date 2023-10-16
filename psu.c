@@ -4,6 +4,7 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include "pirate.h"
+#include "commands.h"
 #include "hardware/timer.h"
 #include "shift.h"
 #include "system_config.h"
@@ -12,6 +13,7 @@
 #include "ui/ui_const.h"
 #include "system_monitor.h"
 #include "psu.h"
+#include "amux.h"
 
 #define PWM_TOP 14000 //0x30D3
 
@@ -132,7 +134,7 @@ uint32_t psu_set(float volts, float current, bool fuse_en)
     pwm_set_chan_level(slice_num, i_chan_num, (uint16_t)iset);  
     busy_wait_ms(500);
     
-    hw_adc_sweep();
+    amux_sweep();
 
     // did the fuse blow?
     // error,  close everything down
@@ -265,7 +267,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
         pwm_set_chan_level(slice_num, i_chan_num, (uint16_t)iset);  
         busy_wait_ms(1);
         
-        hw_adc_sweep();
+        amux_sweep();
 
         // did the fuse blow?
         // error,  close everything down
@@ -278,7 +280,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
         } 
     }
     
-    hw_adc_sweep();
+    amux_sweep();
     // TODO: is it within 10%?
     // error,  close everything down
     if( hw_adc_raw[HW_ADC_MUX_VREF_VOUT] < 100 )

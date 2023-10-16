@@ -3,6 +3,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "hardware/uart.h"
 #include "hiz.h"
 #include "bio.h"	

@@ -1,6 +1,3 @@
-#include "pirate.h"
-
-void amux_read(void);
 void amux_init(void);
-float amux_get_voltage(uint8_t channel);
-
+void amux_sweep(void);
+uint32_t hw_adc_bio(uint8_t bio);

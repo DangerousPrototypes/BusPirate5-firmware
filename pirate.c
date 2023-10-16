@@ -8,6 +8,7 @@
 #include "ws2812.pio.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "ui/ui_lcd.h"
 #include "rgb.h"
 #include "shift.h"

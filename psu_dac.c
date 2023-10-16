@@ -287,7 +287,7 @@ void psu_enable(struct command_attributes *attributes, struct command_response *
 
     // is vreg_vout < vref_vout?
     // backflow prevention active
-    hw_adc_sweep();
+    amux_sweep();
     if( hw_adc_raw[HW_ADC_MUX_VREF_VOUT] > (hw_adc_raw[HW_ADC_MUX_VREG_OUT]+100) ) //+100? TODO: fine tuning
     {
         printf("%s\r\nWarning:\r\n\tBackflow prevention circuit is active\r\n\tVout/Vref voltage is higher than the on-board power supply\r\n\tIs an external supply connected to Vout/Vref?\r\n%s", ui_term_color_warning(), ui_term_color_reset());

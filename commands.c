@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
+#include "commands.h"
 #include "mode/hiz.h"
 #include "auxpinfunc.h"
 #include "ui/ui_prompt.h"
@@ -17,6 +18,7 @@
 #include "helpers.h"
 #include "storage.h"
 #include "dump.h"
+#include "mcu/rp2040.h"
 
 enum E_CMD{
     CMD_LS=0,
@@ -171,13 +173,13 @@ const struct _command_parse exec_new[]=
     },                // "W"    
     {
         true, 
-        &mcu_reset_args,
+        &helpers_mcu_reset,
         0,
         &no_help[0]
     }, // "#" 
     {
         true, 
-        &hw_jump_to_bootloader,
+        &helpers_mcu_jump_to_bootloader,
         0,
         &no_help[0]
     },     // "$" 

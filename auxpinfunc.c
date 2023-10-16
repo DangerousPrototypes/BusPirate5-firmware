@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
+#include "commands.h"
 #include "auxpinfunc.h"
 #include "bio.h"
 #include "system_config.h"

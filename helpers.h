@@ -32,3 +32,6 @@ void helpers_numbits(struct command_attributes *attributes, struct command_respo
 
 // debug hook
 void helpers_debug(struct command_attributes *attributes, struct command_response *response);
+
+void helpers_mcu_reset(opt_args (*args), struct command_result *res);
+void helpers_mcu_jump_to_bootloader(opt_args (*args), struct command_result *res);

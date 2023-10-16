@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pirate.h"
+#include "commands.h"
 #include "fatfs/ff.h"
 #include "storage.h"
 #include "mode/hwspi.h"

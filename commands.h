@@ -17,16 +17,7 @@ struct command_attributes
     uint32_t dot;       // value after .
     uint32_t colon;     // value after :
 };
-/*
-struct _command
-{
-    bool allow_hiz;
-    void (*command)( struct command_attributes *attributes, struct command_response *response);
 
-};
-
-extern struct _command commands[];
-*/
 typedef struct opt_args {
     bool no_value;
     bool error;
@@ -49,21 +40,6 @@ typedef struct command_result {
 	bool default_value;
 	bool error;
 } command_result;
-
-/*
-struct _command_parse_old
-{
-    bool allow_hiz;
-    void (*command)(opt_args (*args), struct command_result *res);
-    bool (*opt1_parser)(struct opt_args *args);
-    //bool (*opt2_parser)(struct command_attributes *attributes, struct command_response *response);
-    //bool (*opt3_parser)(struct command_attributes *attributes, struct command_response *response);
-    //bool (*opt4_parser)(struct command_attributes *attributes, struct command_response *response);
-    //bool (*opt5_parser)(struct command_attributes *attributes, struct command_response *response);
-    char (*help_text);
-
-};
-*/
 
 struct _parsers
 {

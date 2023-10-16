@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
 #include "pirate.h"
+#include "commands.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_const.h"
@@ -10,13 +11,14 @@
 #include "system_config.h"
 #include "freq.h"
 #include "usb_rx.h"
+#include "amux.h"
 
 void adc_measure(opt_args (*args), struct command_result *res, bool refresh);
 
 uint32_t adc_print(uint8_t bio_pin, bool refresh)
 {
 	//sweep adc
-	hw_adc_sweep();
+	amux_sweep();
     printf("%s%s IO%d:%s %s%d.%d%sV\r%s",
         ui_term_color_info(), t[T_MODE_ADC_VOLTAGE], bio_pin, ui_term_color_reset(), ui_term_color_num_float(),
 		((*hw_pin_voltage_ordered[bio_pin+1])/1000), (((*hw_pin_voltage_ordered[bio_pin+1])%1000)/100),

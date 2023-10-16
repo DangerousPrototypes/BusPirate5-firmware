@@ -4,6 +4,7 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "mode/hwspi.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"

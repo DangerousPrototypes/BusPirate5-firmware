@@ -3,16 +3,18 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "modes.h"
 #include "ui/ui_term.h"
 #include "storage.h"
 #include "freq.h"
 #include "ui/ui_const.h"
 #include "ui/ui_info.h"
-
+#include "mcu/rp2040.h"
 #include "fatfs/ff.h"
 #include "fatfs/diskio.h"
 #include "fatfs/tf_card.h"
+#include "amux.h"
 
 // todo: move
 extern bool ejected;
@@ -29,7 +31,7 @@ void ui_info_print_info(opt_args (*args), struct command_result *res)
 
 	// ------
 	int i;
-    hw_adc_sweep();
+    amux_sweep();
 
 	// Hardware information
 	printf("\r\nThis device complies with part 15 of the FCC Rules. Operation is subject to the following two conditions: (1) this device may not cause harmful interference, and (2) this device must accept any interference received, including interference that may cause undesired operation.\r\n\r\n");
@@ -242,7 +244,7 @@ void ui_info_print_pin_voltage(bool refresh)
 	// pin voltage
 	// take a reading from all adc channels
 	// updates the values available at hw_pin_voltage_ordered[] pointer array
-	hw_adc_sweep(); 
+	amux_sweep(); 
 	
 	//the Vout pin
 	//HACK: way too hardware dependent. This is getting to be a mess
@@ -491,7 +493,7 @@ void ui_info_print_pin_states(int refresh)
 	// pin voltage
 	// take a reading from all adc channels
 	// updates the values available at hw_pin_voltage_ordered
-	hw_adc_sweep();
+	amux_sweep();
 	// show state of pin
 	for(int i=0; i<HW_PINS-1; i++)
 	{

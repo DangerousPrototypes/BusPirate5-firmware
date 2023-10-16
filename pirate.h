@@ -39,14 +39,8 @@
 
 #define OPTARG_STRING_LEN 20
 
-// user command structs
-#include "commands.h"
-
 // include platform
 #include "platform/bpi-rev8.h"
-
-// include MCU command defines
-#include "mcu/rp2040.h"
 
 // include a translation
 //new multilingual system

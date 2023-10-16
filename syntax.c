@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "modes.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -11,6 +12,7 @@
 #include "ui/ui_cmdln.h"
 #include "syntax.h"
 #include "bio.h"
+#include "amux.h"
 
 #define SYN_MAX_LENGTH 100
 

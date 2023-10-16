@@ -2,8 +2,10 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "shift.h"
 #include "ui/ui_term.h"
+#include "amux.h"
 
 void pullups_enable(opt_args (*args), struct command_result *res)
 {
@@ -11,7 +13,7 @@ void pullups_enable(opt_args (*args), struct command_result *res)
     system_config.pullup_enabled=1; 
     system_config.info_bar_changed=true;
     
-    hw_adc_sweep();
+    amux_sweep();
     
     printf("%s%s:%s %s (%s @ %s%d.%d%sV)\r\n", 
         ui_term_color_notice(), t[T_MODE_PULLUP_RESISTORS],	ui_term_color_reset(), 

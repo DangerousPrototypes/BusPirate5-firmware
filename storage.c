@@ -3,6 +3,7 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
 #include "fatfs/tf_card.h"
@@ -11,6 +12,7 @@
 #include "ui/ui_parse.h"
 #include "mjson/mjson.h"
 #include "storage.h"
+
 
 FATFS fs;		/* FatFs work area needed for each volume */
 FIL fil;			/* File object needed for each open file */

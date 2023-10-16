@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "mode/hwled.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"

@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "commands.h"
 #include "ui/ui_term.h"
 #include "ui/ui_const.h"
 #include "ui/ui_prompt.h"
@@ -15,6 +16,9 @@
 #include "storage.h"
 #include "psu.h"
 #include "bio.h"
+#include "amux.h"
+#include "mcu/rp2040.h"
+
 
 //this is a debug function attached to the '>' key in commands.c
 //use it to test code or run repeat operations
@@ -42,7 +46,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     bio_init();
 
     //USB/VOLTAGE/ADC/AMUX test: read the (USB) power supply
-    hw_adc_sweep();
+    amux_sweep();
 
     printf("ADC SUBSYSTEM: VUSB ");
     if(hw_adc_voltage[HW_ADC_MUX_VUSB]< (4.75 * 1000))
@@ -97,7 +101,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     for(uint8_t pin=0; pin<BIO_MAX_PINS; pin++)
     {
         //read pin input (should be low)
-        hw_adc_sweep();
+        amux_sweep();
         temp1=bio_get(pin);
 
         printf("BIO%d FLOAT: %d/%1.2fV ", pin, temp1, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
@@ -121,7 +125,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         busy_wait_ms(1); //give it some time
 
         //read pin ADC, should be ~3.3v
-        hw_adc_sweep();
+        amux_sweep();
         printf("BIO%d HIGH: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
         if(*hw_pin_voltage_ordered[pin+1]<3*1000)
         {
@@ -163,7 +167,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         busy_wait_ms(1); //give it some time
 
         //read pin ADC, should be ~3.3v
-        hw_adc_sweep();
+        amux_sweep();
         printf("BIO%d LOW: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
         if(*hw_pin_voltage_ordered[pin+1]>200)
         {
@@ -208,7 +212,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
 
 
         //read pin input (should be low)
-        hw_adc_sweep();
+        amux_sweep();
         temp1=bio_get(pin);
 
         printf("BIO%d PU-HIGH: %d/%1.2fV ", pin, temp1, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
@@ -252,7 +256,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         busy_wait_ms(5); //give it some time
 
         //read pin input (should be high)
-        hw_adc_sweep();
+        amux_sweep();
 
         printf("BIO%d PU-LOW: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
 
@@ -317,7 +321,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         uint i;
         for(i=0; i<5; i++)
         {
-            hw_adc_sweep();
+            amux_sweep();
             printf("PPSU CODE %d, ADC: %d, ERROR!\r\n", result, hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT]);
             busy_wait_ms(200);
         }
@@ -330,7 +334,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     
     while(result) //detect the interrupt
     {
-        hw_adc_sweep();
+        amux_sweep();
         if(hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] < 100)
         {
             //success fuse blew
@@ -784,4 +788,15 @@ void helpers_mode_write_string(struct command_attributes *attributes, struct com
     }
 
     cmdln_try_remove(&c); // consume the final "
+}
+
+
+void helpers_mcu_reset(opt_args (*args), struct command_result *res)
+{
+ 	mcu_reset();
+}
+
+void helpers_mcu_jump_to_bootloader(opt_args (*args), struct command_result *res)
+{
+    mcu_jump_to_bootloader();
 }

@@ -94,6 +94,13 @@ static char const * const en_us[]={
 	[T_HWI2C_DATA_BITS_MENU_1]="8",
 	[T_HWI2C_DATA_BITS_MENU_2]="10",
 	[T_HWI2C_DATA_BITS_PROMPT]="Bits",
+	[T_HWI2C_START]="I2C START",
+	[T_HWI2C_STOP]="I2C STOP",
+	[T_HWI2C_ACK]="ACK",
+	[T_HWI2C_NACK]="NACK",
+	[T_HWI2C_NO_PULLUP_DETECTED]="no pull-up detected. Use P to enable onboard pull-up resistors",
+	[T_HWI2C_TIMEOUT]="I2C timeout",
+	[T_HWI2C_I2C_ERROR]="I2C bus error",
     //LEDs
 	[T_HWLED_DEVICE_MENU]="LED type",
 	[T_HWLED_DEVICE_MENU_1]="WS2812/SK6812/'NeoPixel' (single wire interface)",

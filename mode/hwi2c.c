@@ -89,22 +89,29 @@ uint32_t HWI2C_setup_exc(void)
 
 void HWI2C_start(struct _bytecode_result *result)
 {
-	uint8_t timeout;
+	
+	result->message=t[T_HWI2C_START];
 
 	if(checkshort())
 	{
-		//TODO: enum error codes. Put error messages in translation. Flag error codes in data struct. Write out codes at the end.
-		printf("Warning: no pull-up detected. Use P to enable onboard pull-up resistors.\r\n");
-		result->error=0xff;
-		return;
+		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
+		result->error=SRES_WARN; 
 	}
 	
-	uint32_t error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfffff);
+	uint8_t error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfffff);
 
-	if(error) //TODO: hand back with a result struct for post processing, interrupt syntax
+	switch(error)
 	{
-		//pio_i2c_resume_after_error(pio, pio_state_machine);
-		printf("Error in start %d\r\n", error);
+		case 1:
+			result->error_message=t[T_HWI2C_I2C_ERROR];
+			result->error=SRES_ERROR; 
+			return;
+			break;
+		case 2:
+			result->error_message=t[T_HWI2C_TIMEOUT];
+			result->error=SRES_ERROR; 
+			return;
+			break;
 	}
 
 	mode_config.start_sent=true;
@@ -113,6 +120,8 @@ void HWI2C_start(struct _bytecode_result *result)
 
 void HWI2C_stop(void)
 {
+	const char i2cstop[]="I2C STOP";
+
 	uint32_t error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xffff);
 
 	if(error) //TODO: hand back with a result struct for post processing, interrupt syntax
@@ -120,6 +129,8 @@ void HWI2C_stop(void)
 		pio_i2c_resume_after_error(pio, pio_state_machine);
 		printf("Error in stop %d\r\n", error);
 	}
+
+	//result->message=i2cstop;
 }
 
 void HWI2C_start_post(void)

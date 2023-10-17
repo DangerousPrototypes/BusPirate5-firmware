@@ -16,7 +16,7 @@
 #include "bio.h"
 #include "amux.h"
 
-#define SYN_MAX_LENGTH 100
+#define SYN_MAX_LENGTH 256
 
 const struct command_attributes attributes_empty;
 const struct command_response response_empty;
@@ -24,6 +24,8 @@ struct command_attributes attributes;
 struct prompt_result result;
 struct _bytecode_output out[SYN_MAX_LENGTH];
 struct _bytecode_result in[SYN_MAX_LENGTH];
+struct _bytecode_output out_empty;
+struct _bytecode_result in_empty;
 uint32_t out_cnt=0;
 uint32_t in_cnt=0;
 
@@ -46,6 +48,13 @@ bool syntax_compile(struct opt_args *args)
     bool error=false;
 
     out_cnt=0;
+    in_cnt=0;
+
+    for(i=0; i<SYN_MAX_LENGTH; i++)
+    {
+        out[i]=out_empty;
+        in[i]=in_empty;
+    }
 
     //we need to track pin functions to avoid blowing out any existing pins
     //if a conflict is found, the compiler can throw an error
@@ -294,7 +303,7 @@ bool syntax_run(void)
                         in_cnt++;
                     }
 
-                    in[in_cnt].result=modes[system_config.mode].protocol_read((i+1<out_cnt && j+1==out[i].repeat)?out[i+1].command:0xff);
+                    in[in_cnt].data=modes[system_config.mode].protocol_read((i+1<out_cnt && j+1==out[i].repeat)?out[i+1].command:0xff);
                 }
                 break;
             case SYN_START:
@@ -305,7 +314,7 @@ bool syntax_run(void)
                 break;
             case SYN_DELAY_US:
                 delayus(out[i].repeat);
-                break;
+                break; 
             case SYN_DELAY_MS:
                 delayms(out[i].repeat);
                 break;
@@ -317,13 +326,13 @@ bool syntax_run(void)
                 break;
             case SYN_AUX_INPUT: 
                 bio_input(out[i].bits);
-                in[in_cnt].result=bio_get(out[i].bits);
+                in[in_cnt].data=bio_get(out[i].bits);
                 system_bio_claim(false, out[i].bits, BP_PIN_IO, 0);
                 system_set_active(false, out[i].bits, &system_config.aux_active);                
                 break;
             case SYN_ADC: 
         	    //sweep adc
-	            in[in_cnt].result=hw_adc_bio(out[i].bits);           
+	            in[in_cnt].data=hw_adc_bio(out[i].bits);           
                 break;
             //case SYN_FREQ: break;                
             default:
@@ -333,13 +342,19 @@ bool syntax_run(void)
         }
 
         in[in_cnt].output=out[i];
+
+        if(in[in_cnt].error >= SRES_ERROR)
+        {
+            //printf("Error: %s\r\n",in[in_cnt].message);
+            return false; //halt execution, but let the post process show the error.
+        }
         
         in_cnt++;
         
         if(in_cnt>=SYN_MAX_LENGTH)
         {
             printf("Result exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
-            return true;
+            return false;
         }        
     }
 
@@ -379,12 +394,12 @@ bool syntax_post(void)
                 //printf("RX: %d", in[i].result);       
                 postprocess_mode_write(&in[i], &info);
                 break;                 
-            case SYN_START: //use mode print function?
-                printf("\r\n");
-                modes[system_config.mode].protocol_start_post();
+            case SYN_START:
+                printf("\r\n%s", in[i].message);
+                //modes[system_config.mode].protocol_start_post();
                 break;
             case SYN_STOP: //use mode print function?    
-                printf("\r\n");
+                printf("\r\n"); 
                 modes[system_config.mode].protocol_stop_post();
                 break;   
             case SYN_AUX_OUTPUT:
@@ -395,10 +410,10 @@ bool syntax_post(void)
             case SYN_AUX_INPUT:
 		        printf("\r\nIO%s%d%s set to%s INPUT: %s%d%s", 
 			    ui_term_color_num_float(), in[i].output.bits, ui_term_color_notice(),ui_term_color_reset(),
-			    ui_term_color_num_float(), in[i].result, ui_term_color_reset());
+			    ui_term_color_num_float(), in[i].data, ui_term_color_reset());
                 break;   
             case SYN_ADC:      
-                received = (6600*in[i].result) / 4096;           
+                received = (6600*in[i].data) / 4096;           
                 printf("\r\n%s%s IO%d:%s %s%d.%d%sV",
                     ui_term_color_info(), t[T_MODE_ADC_VOLTAGE], in[i].output.bits, ui_term_color_reset(), ui_term_color_num_float(),
                     ((received)/1000), (((received)%1000)/100),
@@ -414,6 +429,11 @@ bool syntax_post(void)
                 break;
         }
         info.previous_command=in[i].output.command;
+
+        if(in[i].error)
+        {
+            printf("\r\n%s",in[i].error_message);
+        }
     }
     printf("\r\n");
     in_cnt=0;
@@ -463,7 +483,7 @@ void postprocess_mode_write(struct _bytecode_result *in, struct _output_info *in
     if(in->output.command==SYN_READ)//(!system_config.write_with_read)
     {
         repeat=1;
-        value=in->result;
+        value=in->data;
         if(new_line)
         {
             printf("\r\n%sRX:%s ", ui_term_color_info(), ui_term_color_reset());

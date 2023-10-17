@@ -68,15 +68,6 @@ void pio_i2c_put_or_err(PIO pio, uint sm, uint16_t data) {
 
 static inline uint32_t pio_i2c_wait_idle_timeout(PIO pio, uint sm, uint32_t timeout)
 {
-    //TODO: maybe easier to debug errors if we actually wait for empty
-    //while(pio_sm_is_tx_fifo_full(pio, sm))
-    /*// Finished when TX runs dry or SM hits an IRQ
-    pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + sm);
-    while (!(pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + sm) || pio_i2c_check_error(pio, sm)) && timeout)
-    {
-        tight_loop_contents();
-        timeout--;
-    }*/
     pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + sm);
     while(!(pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + sm)))
     {
@@ -94,6 +85,27 @@ static inline uint32_t pio_i2c_wait_idle_timeout(PIO pio, uint sm, uint32_t time
         return 1;
     }
 
+    return 0;
+}
+
+
+static inline uint32_t pio_i2c_put16_or_timeout(PIO pio, uint sm, uint16_t data, uint32_t timeout) 
+{
+    while(pio_sm_is_tx_fifo_full(pio, sm))
+    {
+        timeout--;
+        if(!timeout) return 2;
+    }
+    
+    // some versions of GCC dislike this
+    #ifdef __GNUC__
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+    #endif
+        *(io_rw_16 *)&pio->txf[sm] = data;
+    #ifdef __GNUC__
+    #pragma GCC diagnostic pop
+    #endif
     return 0;
 }
 
@@ -192,11 +204,15 @@ uint32_t pio_i2c_read_timeout(PIO pio, uint sm, uint32_t *data, bool ack, uint32
         (void)pio_i2c_get(pio, sm);
     }
 
-    //timeout????
-    pio_i2c_put16(pio, sm, (0xffu << 1) | (ack?0:(1u << 9) | (1u << 0)) );
+    error=pio_i2c_put16_or_timeout(pio, sm, (0xffu << 1) | (ack?0:(1u << 9) | (1u << 0)), timeout);
+    if(error) return error;
 
-	//TODO: timeout
-    while(pio_sm_is_rx_fifo_empty(pio, sm));
+    uint32_t to=timeout;
+    while(pio_sm_is_rx_fifo_empty(pio, sm))
+    {
+        to--;
+        if(!to) return 2;
+    }
 
 	(*data) = pio_i2c_get(pio, sm);
 	

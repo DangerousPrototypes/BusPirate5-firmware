@@ -22,10 +22,9 @@ const struct command_attributes attributes_empty;
 const struct command_response response_empty;
 struct command_attributes attributes;
 struct prompt_result result;
-struct _bytecode_output out[SYN_MAX_LENGTH];
-struct _bytecode_result in[SYN_MAX_LENGTH];
-struct _bytecode_output out_empty;
-struct _bytecode_result in_empty;
+struct _bytecode out[SYN_MAX_LENGTH];
+struct _bytecode in[SYN_MAX_LENGTH];
+const struct _bytecode bytecode_empty;
 uint32_t out_cnt=0;
 uint32_t in_cnt=0;
 
@@ -36,8 +35,8 @@ struct _output_info{
     uint8_t row_counter;    
 };
 
-void postprocess_mode_write(struct _bytecode_result *in, struct _output_info *info);
-void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *value, bool read);
+void postprocess_mode_write(struct _bytecode *in, struct _output_info *info);
+void postprocess_format_print_number(struct _bytecode *in, uint32_t *value, bool read);
 
 
 bool syntax_compile(struct opt_args *args)
@@ -52,8 +51,8 @@ bool syntax_compile(struct opt_args *args)
 
     for(i=0; i<SYN_MAX_LENGTH; i++)
     {
-        out[i]=out_empty;
-        in[i]=in_empty;
+        out[i]=bytecode_empty;
+        in[i]=bytecode_empty;
     }
 
     //we need to track pin functions to avoid blowing out any existing pins
@@ -84,7 +83,7 @@ bool syntax_compile(struct opt_args *args)
         //if number parse it
         if(c>='0' && c<='9')
         {
-            ui_parse_get_int(&result, &out[out_cnt].data);
+            ui_parse_get_int(&result, &out[out_cnt].out_data);
             if(result.error)
             {
                 printf("Error parsing integer at position %d\r\n", pos);
@@ -143,7 +142,7 @@ bool syntax_compile(struct opt_args *args)
                     out[out_cnt].command=SYN_WRITE;
                 }
 
-                out[out_cnt].data=c;
+                out[out_cnt].out_data=c;
                 out[out_cnt].has_repeat=false;
                 out[out_cnt].repeat=1;                
                 out[out_cnt].number_format=df_ascii;  
@@ -174,8 +173,8 @@ bool syntax_compile(struct opt_args *args)
                 case ']': case '}': cmd=SYN_STOP; break; //stop
                 case 'd': cmd=SYN_DELAY_US; break; //delay us
                 case 'D': cmd=SYN_DELAY_MS; break; //delay ms
-                case 'a': cmd=SYN_AUX_OUTPUT; out[out_cnt].data=0; break; //aux low
-                case 'A': cmd=SYN_AUX_OUTPUT; out[out_cnt].data=1; break; //aux HIGH
+                case 'a': cmd=SYN_AUX_OUTPUT; out[out_cnt].out_data=0; break; //aux low
+                case 'A': cmd=SYN_AUX_OUTPUT; out[out_cnt].out_data=1; break; //aux HIGH
                 case '@': cmd=SYN_AUX_INPUT; break; //aux INPUT
                 case 'v': cmd=SYN_ADC; break; //voltage report once
                 //case 'f': cmd=SYN_FREQ; break; //measure frequency once
@@ -278,61 +277,66 @@ bool syntax_run(void)
     
     if(!out_cnt) return true;
 
+    in_cnt=0;
+
     for(i=0;i<out_cnt;i++)
     {
+        in[in_cnt]=out[i];
+
         switch(out[i].command) 
         {
             case SYN_WRITE:
                 for(uint16_t j=0; j<out[i].repeat; j++) //pass repeat and move to lower protocol level???
                 {
-                    modes[system_config.mode].protocol_send(out[i].data);
+                    modes[system_config.mode].protocol_write(&in[in_cnt],NULL);
                 }
                 break;
             case SYN_WRITE_READ: break;
             case SYN_READ:        
                 if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH)
                 {
-                    printf("Result exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
-                    return true;
+                    in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+                    in[in_cnt].error=SRES_ERROR;
+                    return false;
                 }      
                 for(uint16_t j=0; j<out[i].repeat; j++)
                 {
                     if(j>0)
                     {
-                        in[in_cnt].output=out[i];
                         in_cnt++;
+                        in[in_cnt]=out[i];
                     }
 
-                    in[in_cnt].data=modes[system_config.mode].protocol_read((i+1<out_cnt && j+1==out[i].repeat)?out[i+1].command:0xff);
+                    modes[system_config.mode].protocol_read(&in[in_cnt], (i+1<out_cnt && j+1==out[i].repeat)?&out[i+1]:NULL);
                 }
                 break;
             case SYN_START:
-                modes[system_config.mode].protocol_start(&in[in_cnt]);
+                modes[system_config.mode].protocol_start(&in[in_cnt], NULL);
                 break;
             case SYN_STOP:
-                modes[system_config.mode].protocol_stop();
+                modes[system_config.mode].protocol_stop(&in[in_cnt], NULL);
                 break;
             case SYN_DELAY_US:
-                delayus(out[i].repeat);
+                busy_wait_us_32(out[i].repeat);
                 break; 
             case SYN_DELAY_MS:
-                delayms(out[i].repeat);
+                busy_wait_ms(out[i].repeat);
                 break;
             case SYN_AUX_OUTPUT: 
             	bio_output(out[i].bits);
-		        bio_put((uint8_t) out[i].bits,(bool)out[i].data);
-                system_bio_claim(true, out[i].bits, BP_PIN_IO, labels[out[i].data]); //this should be moved to a cleanup function to reduce overhead
+		        bio_put((uint8_t) out[i].bits,(bool)out[i].out_data);
+                system_bio_claim(true, out[i].bits, BP_PIN_IO, labels[out[i].out_data]); //this should be moved to a cleanup function to reduce overhead
                 system_set_active(true, out[i].bits, &system_config.aux_active);                
                 break;
             case SYN_AUX_INPUT: 
                 bio_input(out[i].bits);
-                in[in_cnt].data=bio_get(out[i].bits);
+                in[in_cnt].in_data=bio_get(out[i].bits);
                 system_bio_claim(false, out[i].bits, BP_PIN_IO, 0);
                 system_set_active(false, out[i].bits, &system_config.aux_active);                
                 break;
             case SYN_ADC: 
         	    //sweep adc
-	            in[in_cnt].data=hw_adc_bio(out[i].bits);           
+	            in[in_cnt].in_data=hw_adc_bio(out[i].bits);           
                 break;
             //case SYN_FREQ: break;                
             default:
@@ -340,25 +344,21 @@ bool syntax_run(void)
                 return true;
                 break;
         }
+                
+        if(in_cnt+1>=SYN_MAX_LENGTH)
+        {
+            in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+            in[in_cnt].error=SRES_ERROR;
+            return false;
+        }    
 
-        in[in_cnt].output=out[i];
+        in_cnt++;    
 
         if(in[in_cnt].error >= SRES_ERROR)
         {
-            //printf("Error: %s\r\n",in[in_cnt].message);
             return false; //halt execution, but let the post process show the error.
         }
-        
-        in_cnt++;
-        
-        if(in_cnt>=SYN_MAX_LENGTH)
-        {
-            printf("Result exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
-            return false;
-        }        
     }
-
-    out_cnt=0;
 
     return false;
 }
@@ -376,7 +376,7 @@ bool syntax_post(void)
 
     for(i=0;i<in_cnt;i++)
     {
-        switch(in[i].output.command)
+        switch(in[i].command)
         {
             case SYN_WRITE:
                 postprocess_mode_write(&in[i], &info);
@@ -386,36 +386,33 @@ bool syntax_post(void)
             case SYN_DELAY_MS:            
                 printf("\r\n%s%s:%s %s%d%s%s",
                     ui_term_color_notice(),t[T_MODE_DELAY], ui_term_color_reset(),
-                    ui_term_color_num_float(), in[i].output.repeat, ui_term_color_reset(),
-                    (in[i].output.command==SYN_DELAY_US? t[T_MODE_US] : t[T_MODE_MS])
+                    ui_term_color_num_float(), in[i].repeat, ui_term_color_reset(),
+                    (in[i].command==SYN_DELAY_US? t[T_MODE_US] : t[T_MODE_MS])
                 );
                 break;    
             case SYN_READ:  
-                //printf("RX: %d", in[i].result);       
                 postprocess_mode_write(&in[i], &info);
                 break;                 
             case SYN_START:
-                printf("\r\n%s", in[i].message);
-                //modes[system_config.mode].protocol_start_post();
+                if(in[i].data_message) printf("\r\n%s", in[i].data_message);
                 break;
-            case SYN_STOP: //use mode print function?    
-                printf("\r\n"); 
-                modes[system_config.mode].protocol_stop_post();
+            case SYN_STOP:  
+                if(in[i].data_message) printf("\r\n%s", in[i].data_message);
                 break;   
             case SYN_AUX_OUTPUT:
                 printf("\r\nIO%s%d%s set to%s OUTPUT: %s%d%s", 
-                ui_term_color_num_float(), in[i].output.bits, ui_term_color_notice(),ui_term_color_reset(),
-                ui_term_color_num_float(), (in[i].output.data), ui_term_color_reset());     
+                ui_term_color_num_float(), in[i].bits, ui_term_color_notice(),ui_term_color_reset(),
+                ui_term_color_num_float(), (in[i].out_data), ui_term_color_reset());     
                 break;
             case SYN_AUX_INPUT:
 		        printf("\r\nIO%s%d%s set to%s INPUT: %s%d%s", 
-			    ui_term_color_num_float(), in[i].output.bits, ui_term_color_notice(),ui_term_color_reset(),
-			    ui_term_color_num_float(), in[i].data, ui_term_color_reset());
+			    ui_term_color_num_float(), in[i].bits, ui_term_color_notice(),ui_term_color_reset(),
+			    ui_term_color_num_float(), in[i].in_data, ui_term_color_reset());
                 break;   
             case SYN_ADC:      
-                received = (6600*in[i].data) / 4096;           
+                received = (6600*in[i].in_data) / 4096;           
                 printf("\r\n%s%s IO%d:%s %s%d.%d%sV",
-                    ui_term_color_info(), t[T_MODE_ADC_VOLTAGE], in[i].output.bits, ui_term_color_reset(), ui_term_color_num_float(),
+                    ui_term_color_info(), t[T_MODE_ADC_VOLTAGE], in[i].bits, ui_term_color_reset(), ui_term_color_num_float(),
                     ((received)/1000), (((received)%1000)/100),
                     ui_term_color_reset()); 
                 break;
@@ -424,15 +421,15 @@ bool syntax_post(void)
                 //break;
             case SYN_WRITE_READ:                                  
             default:
-                printf("\r\nUnimplemented command '%c'", in[i].output.command+0x30);
+                printf("\r\nUnimplemented command '%c'", in[i].command+0x30);
                 //return true;
                 break;
         }
-        info.previous_command=in[i].output.command;
+        info.previous_command=in[i].command;
 
         if(in[i].error)
         {
-            printf("\r\n%s",in[i].error_message);
+            printf(" (%s)",in[i].error_message);
         }
     }
     printf("\r\n");
@@ -441,7 +438,7 @@ bool syntax_post(void)
 }
 
 
-void postprocess_mode_write(struct _bytecode_result *in, struct _output_info *info)
+void postprocess_mode_write(struct _bytecode *in, struct _output_info *info)
 {
     uint32_t repeat;
     uint32_t value;
@@ -449,41 +446,37 @@ void postprocess_mode_write(struct _bytecode_result *in, struct _output_info *in
     bool new_line=false;
 
     //how many numbers per row
-    switch(in->output.number_format)
+    row_length=8;
+    if(in->number_format==df_bin || system_config.display_format==df_ascii)
     {
-        case df_bin:
-            row_length=4;
-            break;
-        default:
-            row_length=8;
-            break;   
+        row_length=4;
     }
 
     //if number format changed, make a new row
     if(
-        in->output.number_format!=info->previous_number_format ||
-        in->output.command!=info->previous_command
+        in->number_format!=info->previous_number_format ||
+        in->command!=info->previous_command
         )
     {
         new_line=true;
         info->row_counter=info->row_length=row_length;
-        info->previous_number_format=in->output.number_format;
+        info->previous_number_format=in->number_format;
     }    
 
-    if(in->output.command==SYN_WRITE)//(!system_config.write_with_read)
+    if(in->command==SYN_WRITE)//(!system_config.write_with_read)
     {
-        value=in->output.data;
-        repeat=in->output.repeat;
+        value=in->out_data;
+        repeat=in->repeat;
         if(new_line)
         {
             printf("\r\n%sTX:%s ", ui_term_color_info(), ui_term_color_reset());
         }
     }    
 
-    if(in->output.command==SYN_READ)//(!system_config.write_with_read)
+    if(in->command==SYN_READ)//(!system_config.write_with_read)
     {
         repeat=1;
-        value=in->data;
+        value=in->in_data;
         if(new_line)
         {
             printf("\r\n%sRX:%s ", ui_term_color_info(), ui_term_color_reset());
@@ -492,10 +485,17 @@ void postprocess_mode_write(struct _bytecode_result *in, struct _output_info *in
 
     while(repeat--)
     {
-        postprocess_format_print_number(in, &value, (in->output.command==SYN_READ));
+        postprocess_format_print_number(in, &value, (in->command==SYN_READ));
 
         info->row_counter--;
-        printf(" ");
+        if(in->data_message)
+        {
+            printf(" %s ",in->data_message);
+        }
+        else
+        {
+            printf(" ");
+        }
 
         if(!info->row_counter)
         {
@@ -505,95 +505,8 @@ void postprocess_mode_write(struct _bytecode_result *in, struct _output_info *in
     }    
 }
 
-
-
-/*
-
-void postprocess_mode_write2(struct _bytecode_result *in, struct _output_info *info)
-{
-    uint32_t repeat=1;
-    uint32_t temp;
-  
-    temp= in->output.data;
-    
-    // sequence is important! TODO: make freeform
-    if(attributes->has_dot)
-    {
-        //system_config.num_bits=attributes->dot;
-    }
-
-    //if(attributes->has_colon)
-    //{
-        repeat=in->output.repeat;
-    //}
-
-
-
-    //TODO:" this is repeated three times, it should be some kind of passed function"
-    uint8_t i,row_length;
-    bool new_line=false;
-    switch(in->output.number_format)
-    {
-        case df_bin:
-            i=row_length=4;
-            break;
-        default:
-            i=row_length=8;
-            break;   
-    }
-
-    if(row_length!=info->row_length)
-    {
-        new_line=true;
-        info->row_length=row_length;
-    }
-
-    if(in->output.command!=info->previous_command)
-    {
-        new_line=true;
-    }
-
-    if(in->output.command==SYN_WRITE && new_line)//(!system_config.write_with_read)
-    {
-        printf("\r\n%sTX:%s ", ui_term_color_info(), ui_term_color_reset());
-    }    
-
-    while(repeat--)
-    {
-        if(in->output.command==SYN_WRITE_READ)
-        {
-            printf("%sTX:%s ", ui_term_color_info(), ui_term_color_reset());
-        }
-
-        postprocess_format_print_number(in, &in->output.data);
-       
-        if(in->output.command==SYN_WRITE_READ) 
-        {
-            printf("%s, RX:%s ", ui_term_color_info(), ui_term_color_reset());
-            postprocess_format_print_number(in, &in->result);
-            if(repeat) printf("\r\n");
-        }
-        else
-        {
-            info->repeat--;
-            printf(" ");
-            if(repeat)
-            {
-                
-                if(!info->repeat)
-                {
-                    printf("\r\n    ");
-                    info->repeat=row_length;
-                } 
-            } 
-        }
-
-    }
-}
-
-*/
 // represent d in the current display mode. If numbits=8 also display the ascii representation 
-void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *value, bool read)
+void postprocess_format_print_number(struct _bytecode *in, uint32_t *value, bool read)
 {
 	uint32_t mask, i, d, j;
     uint8_t num_bits, num_nibbles, display_format;
@@ -601,16 +514,16 @@ void postprocess_format_print_number(struct _bytecode_result *in, uint32_t *valu
 
     d=(*value);
     
-    num_bits=in->output.bits;
+    num_bits=in->bits;
 
     //maybe just tell it if we're reading or writing, instead of this convoluted logic pretzel
     if(!read && 
         (system_config.display_format==df_auto || 
         system_config.display_format==df_ascii || 
-        in->output.number_format==df_ascii )
+        in->number_format==df_ascii )
     )
     {
-        display_format = in->output.number_format;
+        display_format = in->number_format;
     }
     else
     {

@@ -87,10 +87,30 @@ uint32_t HWI2C_setup_exc(void)
 	return 1;
 }
 
-void HWI2C_start(struct _bytecode_result *result)
+bool HWI2C_error(uint32_t error, struct _bytecode *result)
 {
-	
-	result->message=t[T_HWI2C_START];
+	switch(error)
+	{
+		case 1:
+			result->error_message=t[T_HWI2C_I2C_ERROR];
+			result->error=SRES_ERROR; 
+			pio_i2c_resume_after_error(pio, pio_state_machine);
+			return true;
+			break;
+		case 2:
+			result->error_message=t[T_HWI2C_TIMEOUT];
+			result->error=SRES_ERROR; 
+			pio_i2c_resume_after_error(pio, pio_state_machine);
+			return true;
+			break;
+		default:
+			return false;
+	}
+}
+
+void HWI2C_start(struct _bytecode *result, struct _bytecode *next)
+{
+	result->data_message=t[T_HWI2C_START];
 
 	if(checkshort())
 	{
@@ -100,84 +120,48 @@ void HWI2C_start(struct _bytecode_result *result)
 	
 	uint8_t error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfffff);
 
-	switch(error)
+	if(!HWI2C_error(error, result))
 	{
-		case 1:
-			result->error_message=t[T_HWI2C_I2C_ERROR];
-			result->error=SRES_ERROR; 
-			return;
-			break;
-		case 2:
-			result->error_message=t[T_HWI2C_TIMEOUT];
-			result->error=SRES_ERROR; 
-			return;
-			break;
+		mode_config.start_sent=true;
 	}
-
-	mode_config.start_sent=true;
-	
 }
 
-void HWI2C_stop(void)
+void HWI2C_stop(struct _bytecode *result, struct _bytecode *next)
 {
-	const char i2cstop[]="I2C STOP";
+	result->data_message=t[T_HWI2C_STOP];
 
 	uint32_t error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xffff);
 
-	if(error) //TODO: hand back with a result struct for post processing, interrupt syntax
-	{
-		pio_i2c_resume_after_error(pio, pio_state_machine);
-		printf("Error in stop %d\r\n", error);
-	}
-
-	//result->message=i2cstop;
+	HWI2C_error(error, result);
 }
 
-void HWI2C_start_post(void)
-{
-	printf("I2C START");
-}
-
-void HWI2C_stop_post(void)
-{
-	printf("I2C STOP");
-}
-
-uint32_t HWI2C_write(uint32_t data)
+void HWI2C_write(struct _bytecode *result, struct _bytecode *next)
 {
 	//if a start was just sent, determine if this is a read or write address
 	// and configure the PIO I2C
 	if(mode_config.start_sent)
 	{
-		pio_i2c_rx_enable(pio, pio_state_machine, (data & 1u));
+		pio_i2c_rx_enable(pio, pio_state_machine, (result->out_data & 1u));
 		mode_config.start_sent=false;
 	}
 	
-	uint32_t error=pio_i2c_write_timeout(pio, pio_state_machine, data, 0xffff);
+	uint32_t error=pio_i2c_write_timeout(pio, pio_state_machine, result->out_data, 0xffff);
 
-    if(error) 
-	{
-        pio_i2c_resume_after_error(pio, pio_state_machine);
-		printf("I2C Error %d", error);
-    }
+	HWI2C_error(error, result);
 
-    return error;
+	result->data_message=(error?t[T_HWI2C_NACK]:t[T_HWI2C_ACK]);
 
 }
 
-uint32_t HWI2C_read(uint8_t next_command)
+void HWI2C_read(struct _bytecode *result, struct _bytecode *next)
 {
-	uint32_t data;
+	bool ack=(next?(next->command!=4):true);
 
-	uint32_t error=pio_i2c_read_timeout(pio, pio_state_machine, &data, (next_command!=4), 0xffff);
+	uint32_t error=pio_i2c_read_timeout(pio, pio_state_machine, &result->in_data, ack, 0xffff);
 
-    if(error) 
-	{
-        pio_i2c_resume_after_error(pio, pio_state_machine);
-		printf("I2C Error %d", error);
-    }
+    HWI2C_error(error, result);
 
-    return data;
+	result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);
 }
 
 void HWI2C_macro(uint32_t macro)

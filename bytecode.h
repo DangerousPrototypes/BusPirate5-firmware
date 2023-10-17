@@ -4,13 +4,13 @@ struct _bytecode{
     uint8_t command; //255 command options, write/write_return
 	uint32_t bits; //0-32 bits?
 	uint32_t repeat; //0-0xffff repeat
-	uint32_t data; //32 data bits
+	uint32_t out_data; //32 data bits
     bool has_repeat;
     bool has_bits; 
 	uint8_t error; //mode flags errors. One bit to halt execution? Other bits for warnings? ccan override the halt from configuration menu?
     const char *error_message;
-	uint32_t data; //up to 32bits results? BUT: how to deal with repeated reads????
-    const char *message;    
+	uint32_t in_data; //up to 32bits results? BUT: how to deal with repeated reads????
+    const char *data_message;    
 };
 
 

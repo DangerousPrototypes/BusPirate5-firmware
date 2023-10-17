@@ -560,7 +560,7 @@ void helpers_mode_write_string(struct command_attributes *attributes, struct com
         
         uint32_t j=(uint32_t)c; //TODO: figure out the correct cast
         ui_format_print_number_2(attributes, &j);
-        uint32_t received=modes[system_config.mode].protocol_send(ui_format_bitorder(c)); // reshuffle bits if necessary
+        uint32_t received=modes[system_config.mode].protocol_write(ui_format_bitorder(c)); // reshuffle bits if necessary
         
         if(system_config.write_with_read) 
         {

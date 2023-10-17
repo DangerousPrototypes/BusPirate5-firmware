@@ -42,7 +42,10 @@ static char const * const en_us[]={
     [T_PSU_CURRENT_LIMIT_ERROR]="Current over limit, power supply disabled",
     [T_PSU_SHORT_ERROR]="Potential short circuit, power supply disabled",
     [T_PSU_ALREADY_DISABLED_ERROR]="Power supply already disabled",
-    //SPI
+    //SYNTAX
+	[T_SYNTAX_EXCEEDS_MAX_SLOTS]="Result exceeds available space (%d slots)",
+	
+	//SPI
 	[T_HWSPI_SPEED_MENU]="SPI speed",
 	[T_HWSPI_SPEED_MENU_1]="1 to 62500KHz",
 	[T_HWSPI_SPEED_PROMPT]="KHz (%s%dKHz*%s)",

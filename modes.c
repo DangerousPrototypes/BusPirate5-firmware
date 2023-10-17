@@ -104,7 +104,7 @@ uint32_t noperiodic(void)
 	return 0;
 }
 
-void nullfunc1_temp(struct _bytecode_result *result)
+void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next)
 {
     printf(t[T_MODE_ERROR_NO_EFFECT]);
     system_config.error=1;
@@ -117,12 +117,10 @@ struct _mode modes[MAXPROTO]={
 {
 	nullfunc1_temp,				// start
 	nullfunc1,				// start with read
-    nullfunc1,              // start post process
-	nullfunc1,				// stop
+	nullfunc1_temp,				// stop
 	nullfunc1,				// stop with read
-    nullfunc1,              // stop post process
-	nullfunc2,				// send(/read) max 32 bit
-	nullfunc6,				// read max 32 bit
+	nullfunc1_temp,				// write(/read) max 32 bit
+	nullfunc1_temp,				// read max 32 bit
 	nullfunc1,				// set clk high
 	nullfunc1,				// set clk low
 	nullfunc1,				// set dat hi
@@ -228,10 +226,8 @@ struct _mode modes[MAXPROTO]={
 {
     HWI2C_start,				// start
     nullfunc1,				// start with read
-    HWI2C_start_post,              // start post process
     HWI2C_stop,				// stop
-    HWI2C_stop,				// stop with read
-    HWI2C_stop_post,              // stop post process    
+    nullfunc1,				// stop with read
     HWI2C_write,				// send(/read) max 32 bit
     HWI2C_read,				// read max 32 bit
     nullfunc1,				// set clk high

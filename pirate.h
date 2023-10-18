@@ -2,7 +2,7 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
-#define BP_FIRMWARE_VERSION "v0.0.3"
+#define BP_FIRMWARE_VERSION "v0.1.0"
 #ifndef BP_FIRMWARE_HASH //this variable is for the current revision GIT hash
 #define BP_FIRMWARE_HASH "unknown"
 #endif
@@ -40,7 +40,7 @@
 #define OPTARG_STRING_LEN 20
 
 // include platform
-#include "platform/bpi-rev9.h"
+#include "platform/bpi-rev8.h"
 
 // include a translation
 //new multilingual system

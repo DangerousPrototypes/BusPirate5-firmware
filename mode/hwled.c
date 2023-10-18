@@ -142,14 +142,14 @@ void hwled_start(struct _bytecode *result, struct _bytecode *next)
 		case M_LED_WS2812:
 		case M_LED_WS2812_ONBOARD:
 			busy_wait_us(50); //50ms delay to reset    
-			//delay message 
+			result->data_message=t[T_HWLED_RESET];  
 			break;
 		case M_LED_APA102:
 			for(uint8_t i=0; i<4; i++)
 			{
 				pio_sm_put_blocking(M_LED_PIO, pio_state_machine, 0x00);
 			}
-			// Start frame (0x00 0x00 0x00 0x00)
+			result->data_message=t[T_HWLED_FRAME_START];
 			break;
 		default:
 			printf("Error: Invalid device type");
@@ -161,14 +161,15 @@ void hwled_stop(struct _bytecode *result, struct _bytecode *next)
 	switch(mode_config.device){
 		case M_LED_WS2812:
 		case M_LED_WS2812_ONBOARD:
-			busy_wait_us(50); //50ms delay to reset     
+			busy_wait_us(50); //50ms delay to reset   
+			result->data_message=t[T_HWLED_RESET];  
 			break;
 		case M_LED_APA102:
 			for(uint8_t i=0; i<4; i++)
 			{
 				pio_sm_put_blocking(M_LED_PIO, pio_state_machine, 0xFF);
 			}
-			//stop frame (0xffffffff)
+			result->data_message=t[T_HWLED_FRAME_STOP];
 			break;
 		default:
 			printf("Error: Invalid device type");

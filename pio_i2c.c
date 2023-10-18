@@ -34,37 +34,6 @@ void pio_i2c_rx_enable(PIO pio, uint sm, bool en)
     }
 }
 
-void pio_i2c_put16(PIO pio, uint sm, uint16_t data) {
-    while (pio_sm_is_tx_fifo_full(pio, sm));
-    // some versions of GCC dislike this
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
-    *(io_rw_16 *)&pio->txf[sm] = data;
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-}
-
-
-// If I2C is ok, block and push data. Otherwise fall straight through.
-void pio_i2c_put_or_err(PIO pio, uint sm, uint16_t data) {
-    while (pio_sm_is_tx_fifo_full(pio, sm))
-        if (pio_i2c_check_error(pio, sm))
-            return;
-    if (pio_i2c_check_error(pio, sm))
-        return;
-    // some versions of GCC dislike this
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
-    *(io_rw_16 *)&pio->txf[sm] = data;
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-}
 
 static inline uint32_t pio_i2c_wait_idle_timeout(PIO pio, uint sm, uint32_t timeout)
 {
@@ -136,12 +105,6 @@ uint8_t pio_i2c_get(PIO pio, uint sm) {
     return (uint8_t)pio_sm_get(pio, sm);
 }
 
-void pio_i2c_start(PIO pio, uint sm) {
-    pio_i2c_put_or_err(pio, sm, 1u << PIO_I2C_ICOUNT_LSB); // Escape code for 2 instruction sequence
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);    // We are already in idle state, just pull SDA low
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);    // Also pull clock low so we can present data
-}
-
 static inline uint32_t pio_i2c_put_instructions(PIO pio, uint sm, const uint16_t *inst, uint8_t length, uint32_t timeout)    
 {
     uint32_t error;
@@ -176,6 +139,21 @@ uint32_t pio_i2c_stop_timeout(PIO pio, uint sm, uint32_t timeout)
     };
     return pio_i2c_put_instructions(pio, sm, stop, count_of(stop), timeout);    
 };
+
+uint32_t pio_i2c_restart_timeout(PIO pio, uint sm, uint32_t timeout) 
+{
+    const uint16_t restart[]=
+    {
+        3u << PIO_I2C_ICOUNT_LSB,
+        set_scl_sda_program_instructions[I2C_SC0_SD1],
+        set_scl_sda_program_instructions[I2C_SC1_SD1],
+        set_scl_sda_program_instructions[I2C_SC1_SD0],
+        set_scl_sda_program_instructions[I2C_SC0_SD0]
+    };
+
+    return pio_i2c_put_instructions(pio, sm, restart, count_of(restart), timeout);    
+}
+
 
 uint32_t pio_i2c_write_timeout(PIO pio, uint sm, uint32_t data, uint32_t timeout)
 {
@@ -221,31 +199,9 @@ uint32_t pio_i2c_read_timeout(PIO pio, uint sm, uint32_t *data, bool ack, uint32
     return error;
 }
 
-void pio_i2c_stop(PIO pio, uint sm) {
-    pio_i2c_put_or_err(pio, sm, 2u << PIO_I2C_ICOUNT_LSB);
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);    // SDA is unknown; pull it down
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);    // Release clock
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD1]);    // Release SDA to return to idle state
-};
 
-void pio_i2c_repstart(PIO pio, uint sm) {
-    pio_i2c_put_or_err(pio, sm, 3u << PIO_I2C_ICOUNT_LSB);
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD1]);
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD1]);
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);
-}
-
-void pio_i2c_wait_idle(PIO pio, uint sm) {
-    uint32_t timeout=10000;
-    // Finished when TX runs dry or SM hits an IRQ
-    pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + sm);
-    while (!(pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + sm) || pio_i2c_check_error(pio, sm)) && timeout)
-    {
-        tight_loop_contents();
-        timeout--;
-    }
-}
+//////////////////////////////////////
+// Full I2C packet functions (no timeout)
 
 int pio_i2c_write_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *txbuf, uint len) {
     int err = 0;
@@ -306,3 +262,73 @@ int pio_i2c_read_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *rxbuf, uint l
     return err;
 }
 
+/////////////////////////////
+// Old functions
+
+
+// If I2C is ok, block and push data. Otherwise fall straight through.
+void pio_i2c_put_or_err(PIO pio, uint sm, uint16_t data) {
+    while (pio_sm_is_tx_fifo_full(pio, sm))
+        if (pio_i2c_check_error(pio, sm))
+            return;
+    if (pio_i2c_check_error(pio, sm))
+        return;
+    // some versions of GCC dislike this
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+    *(io_rw_16 *)&pio->txf[sm] = data;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+}
+
+
+void pio_i2c_put16(PIO pio, uint sm, uint16_t data) {
+    while (pio_sm_is_tx_fifo_full(pio, sm));
+    // some versions of GCC dislike this
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+    *(io_rw_16 *)&pio->txf[sm] = data;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+}
+
+
+void pio_i2c_start(PIO pio, uint sm) {
+    pio_i2c_put_or_err(pio, sm, 1u << PIO_I2C_ICOUNT_LSB); // Escape code for 2 instruction sequence
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);    // We are already in idle state, just pull SDA low
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);    // Also pull clock low so we can present data
+}
+
+void pio_i2c_stop(PIO pio, uint sm) {
+    pio_i2c_put_or_err(pio, sm, 2u << PIO_I2C_ICOUNT_LSB);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);    // SDA is unknown; pull it down
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);    // Release clock
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD1]);    // Release SDA to return to idle state
+};
+
+
+void pio_i2c_repstart(PIO pio, uint sm) {
+    pio_i2c_put_or_err(pio, sm, 3u << PIO_I2C_ICOUNT_LSB);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD1]);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD1]);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);
+}
+
+
+void pio_i2c_wait_idle(PIO pio, uint sm) {
+    uint32_t timeout=10000;
+    // Finished when TX runs dry or SM hits an IRQ
+    pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + sm);
+    while (!(pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + sm) || pio_i2c_check_error(pio, sm)) && timeout)
+    {
+        tight_loop_contents();
+        timeout--;
+    }
+}

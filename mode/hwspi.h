@@ -1,11 +1,9 @@
-void spi_start(void);
+void spi_start(struct _bytecode *result, struct _bytecode *next);
 void spi_startr(void);
-void spi_start_post(void);
-void spi_stop(void);
+void spi_stop(struct _bytecode *result, struct _bytecode *next);
 void spi_stopr(void); 
-void spi_stop_post(void);
-uint32_t spi_send(uint32_t d);
-uint32_t spi_read(uint8_t next_command);
+void spi_write(struct _bytecode *result, struct _bytecode *next);
+void spi_read(struct _bytecode *result, struct _bytecode *next);
 void spi_macro(uint32_t macro);
 uint32_t spi_setup(void);
 uint32_t spi_setup_exc(void);
@@ -24,6 +22,9 @@ void spi_setlsbfirst(uint32_t val);
 void spi_set_cs_idle(uint32_t val);
 void spi_set_cs(uint8_t cs);
 uint8_t spi_xfer(const uint8_t out);
+
+uint32_t spi_read_simple(void);
+void spi_write_simple(uint32_t data);
 
 typedef struct _spi_mode_config{
 	uint32_t baudrate;

@@ -31,7 +31,7 @@ static uint pio_loaded_offset;
 static uint8_t checkshort(void);
 static void I2Csearch(void);
 
-uint32_t HWI2C_setup(void)
+uint32_t hwi2c_setup(void)
 {
 	uint32_t temp;
 
@@ -77,7 +77,7 @@ uint32_t HWI2C_setup(void)
 	return 1;
 }
 
-uint32_t HWI2C_setup_exc(void)
+uint32_t hwi2c_setup_exc(void)
 {
 	pio_loaded_offset = pio_add_program(pio, &i2c_program);
     i2c_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[BIO0], bio2bufiopin[BIO1], bio2bufdirpin[BIO0], bio2bufdirpin[BIO1]);
@@ -87,7 +87,7 @@ uint32_t HWI2C_setup_exc(void)
 	return 1;
 }
 
-bool HWI2C_error(uint32_t error, struct _bytecode *result)
+bool hwi2c_error(uint32_t error, struct _bytecode *result)
 {
 	switch(error)
 	{
@@ -108,7 +108,7 @@ bool HWI2C_error(uint32_t error, struct _bytecode *result)
 	}
 }
 
-void HWI2C_start(struct _bytecode *result, struct _bytecode *next)
+void hwi2c_start(struct _bytecode *result, struct _bytecode *next)
 {
 	result->data_message=t[T_HWI2C_START];
 
@@ -120,22 +120,22 @@ void HWI2C_start(struct _bytecode *result, struct _bytecode *next)
 	
 	uint8_t error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfffff);
 
-	if(!HWI2C_error(error, result))
+	if(!hwi2c_error(error, result))
 	{
 		mode_config.start_sent=true;
 	}
 }
 
-void HWI2C_stop(struct _bytecode *result, struct _bytecode *next)
+void hwi2c_stop(struct _bytecode *result, struct _bytecode *next)
 {
 	result->data_message=t[T_HWI2C_STOP];
 
 	uint32_t error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xffff);
 
-	HWI2C_error(error, result);
+	hwi2c_error(error, result);
 }
 
-void HWI2C_write(struct _bytecode *result, struct _bytecode *next)
+void hwi2c_write(struct _bytecode *result, struct _bytecode *next)
 {
 	//if a start was just sent, determine if this is a read or write address
 	// and configure the PIO I2C
@@ -147,24 +147,24 @@ void HWI2C_write(struct _bytecode *result, struct _bytecode *next)
 	
 	uint32_t error=pio_i2c_write_timeout(pio, pio_state_machine, result->out_data, 0xffff);
 
-	HWI2C_error(error, result);
+	hwi2c_error(error, result);
 
 	result->data_message=(error?t[T_HWI2C_NACK]:t[T_HWI2C_ACK]);
 
 }
 
-void HWI2C_read(struct _bytecode *result, struct _bytecode *next)
+void hwi2c_read(struct _bytecode *result, struct _bytecode *next)
 {
 	bool ack=(next?(next->command!=4):true);
 
 	uint32_t error=pio_i2c_read_timeout(pio, pio_state_machine, &result->in_data, ack, 0xffff);
 
-    HWI2C_error(error, result);
+    hwi2c_error(error, result);
 
 	result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);
 }
 
-void HWI2C_macro(uint32_t macro)
+void hwi2c_macro(uint32_t macro)
 {
 	switch(macro)
 	{
@@ -180,7 +180,7 @@ void HWI2C_macro(uint32_t macro)
 	}
 }
 
-void HWI2C_cleanup(void)
+void hwi2c_cleanup(void)
 {
 	pio_remove_program (pio, &i2c_program, pio_loaded_offset);
 	//pio_clear_instruction_memory(pio);
@@ -207,17 +207,17 @@ void HWI2C_cleanup(void)
 
 }
 
-/*void HWI2C_pins(void)
+/*void hwi2c_pins(void)
 {
 	printf("-\t-\tSCL\tSDA");
 }*/
 
-void HWI2C_settings(void)
+void hwi2c_settings(void)
 {
 	printf("HWI2C (speed)=(%d)", mode_config.baudrate_actual);
 }
 
-void HWI2C_printI2Cflags(void)
+void hwi2c_printI2Cflags(void)
 {
 	uint32_t temp;
 /*
@@ -250,7 +250,7 @@ void HWI2C_printI2Cflags(void)
 	*/
 }
 
-void HWI2C_help(void)
+void hwi2c_help(void)
 {
 	printf("Muli-Master-multi-slave 2 wire protocol using a CLOCK and a bidirectional DATA\r\n");
 	printf("line in opendrain configuration. Standard clock frequencies are 100KHz, 400KHz\r\n");

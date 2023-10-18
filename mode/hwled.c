@@ -5,6 +5,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "opt_args.h"
+#include "bytecode.h"
 #include "mode/hwled.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
@@ -39,8 +40,9 @@ static struct _led_mode_config mode_config;
 static PIO pio = M_LED_PIO;
 static uint pio_state_machine = 0;
 static uint pio_loaded_offset;
+static uint8_t device_cleanup;
 
-uint32_t HWLED_setup(void)
+uint32_t hwled_setup(void)
 {
 	// speed
 	/*if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
@@ -84,8 +86,6 @@ uint32_t HWLED_setup(void)
 			if(temp==1) return 1;
 		}		
 
-
-
         ui_prompt_uint32(&result, &leds_menu[0], &mode_config.device);
 		if(result.exit) return 0;
         mode_config.device--;
@@ -105,7 +105,7 @@ uint32_t HWLED_setup(void)
 	return 1;
 }
 
-uint32_t HWLED_setup_exc(void)
+uint32_t hwled_setup_exc(void)
 {
 	switch(mode_config.device){
 		case M_LED_WS2812:
@@ -131,54 +131,71 @@ uint32_t HWLED_setup_exc(void)
 			return 0;
 
 	}
+	device_cleanup=mode_config.device;
 	system_config.subprotocol_name=led_device_type[mode_config.device];
 }
 
 
-void HWLED_start(void)
+void hwled_start(struct _bytecode *result, struct _bytecode *next)
 {
-	uint8_t timeout;
-
+	switch(mode_config.device){
+		case M_LED_WS2812:
+		case M_LED_WS2812_ONBOARD:
+			busy_wait_us(50); //50ms delay to reset    
+			//delay message 
+			break;
+		case M_LED_APA102:
+			for(uint8_t i=0; i<4; i++)
+			{
+				pio_sm_put_blocking(M_LED_PIO, pio_state_machine, 0x00);
+			}
+			// Start frame (0x00 0x00 0x00 0x00)
+			break;
+		default:
+			printf("Error: Invalid device type");
+	}	
 }
 
-void HWLED_stop(void)
+void hwled_stop(struct _bytecode *result, struct _bytecode *next)
 {
-	uint8_t timeout;
-
+	switch(mode_config.device){
+		case M_LED_WS2812:
+		case M_LED_WS2812_ONBOARD:
+			busy_wait_us(50); //50ms delay to reset     
+			break;
+		case M_LED_APA102:
+			for(uint8_t i=0; i<4; i++)
+			{
+				pio_sm_put_blocking(M_LED_PIO, pio_state_machine, 0xFF);
+			}
+			//stop frame (0xffffffff)
+			break;
+		default:
+			printf("Error: Invalid device type");
+	}	
 }
 
-uint32_t HWLED_send(uint32_t d)
+void hwled_write(struct _bytecode *result, struct _bytecode *next)
 {
 	uint32_t temp;
 
 	switch(mode_config.device){
 		case M_LED_WS2812:
-			//for(int i=0; i<RGB_LEN; i++){
-				pio_sm_put_blocking(M_LED_PIO, pio_state_machine, (d << 8u));        
-			//}
+			pio_sm_put_blocking(M_LED_PIO, pio_state_machine, (result->out_data << 8u));        
 			break;
 		case M_LED_APA102:
-			pio_sm_put_blocking(M_LED_PIO, pio_state_machine, d);     
+			pio_sm_put_blocking(M_LED_PIO, pio_state_machine, result->out_data);     
 			break;
-        case M_LED_WS2812_ONBOARD: //internal LEDs, stop any in-progress stuff
-            rgb_put(d);
+        case M_LED_WS2812_ONBOARD: 
+            rgb_put(result->out_data);
             break;
 		default:
 			printf("Error: Invalid device type");
-			return 0;
-
+			//return 0;
 	}
-	return 0;
 }
 
-uint32_t HWLED_read(uint8_t next_command)
-{
-	uint32_t returnval;
-	uint8_t timeout;
-	return returnval;
-}
-
-void HWLED_macro(uint32_t macro)
+void hwled_macro(uint32_t macro)
 {
 	switch(macro)
 	{
@@ -194,9 +211,9 @@ void HWLED_macro(uint32_t macro)
 	}
 }
 
-void HWLED_cleanup(void)
+void hwled_cleanup(void)
 {
-	switch(mode_config.device){
+	switch(device_cleanup){
 		case M_LED_WS2812:
 			pio_remove_program(pio, &ws2812_program, pio_loaded_offset);
 			break;
@@ -217,12 +234,12 @@ void HWLED_cleanup(void)
 	bio_init();
 }
 
-void HWLED_settings(void)
+void hwled_settings(void)
 {
 	//printf("HWI2C (speed)=(%d)", mode_config.baudrate_actual);
 }
 
-void HWLED_help(void)
+void hwled_help(void)
 {
 	/*printf("Muli-Master-multi-slave 2 wire protocol using a CLOCK and a bidirectional DATA\r\n");
 	printf("line in opendrain mode_configuration. Standard clock frequencies are 100KHz, 400KHz\r\n");

@@ -22,11 +22,11 @@
 //#define		BP_USE_HWUSART
 #define		BP_USE_HWI2C
 //#define		BP_USE_SWI2C
-//#define		BP_USE_HWSPI
+#define		BP_USE_HWSPI
 //#define		BP_USE_SW2W
 //#define		BP_USE_SW3W
 //#define 	BP_USE_DIO
-//#define     BP_USE_HWLED
+#define     BP_USE_HWLED
 //#define		BP_USE_LCDSPI
 //#define		BP_USE_LCDI2C
 //#define		BP_USE_LA

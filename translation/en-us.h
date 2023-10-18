@@ -65,8 +65,8 @@ static char const * const en_us[]={
 	[T_HWSPI_CS_IDLE_MENU_2]="Active LOW (/CS)",
 	[T_HWSPI_CS_IDLE_PROMPT]="CS",
 	[T_HWSPI_ACTUAL_SPEED_KHZ]="Actual speed",
-	[T_HWSPI_CS_SELECT]="CS Select (%d)",
-	[T_HWSPI_CS_DESELECT]="CS Deselect (%d)",
+	[T_HWSPI_CS_SELECT]="CS Enabled",
+	[T_HWSPI_CS_DESELECT]="CS Disabled",
     //UART
 	[T_UART_SPEED_MENU]="UART speed",
 	[T_UART_SPEED_MENU_1]="1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 etc",	
@@ -113,6 +113,9 @@ static char const * const en_us[]={
 	[T_HWLED_NUM_LEDS_MENU]="Number of LEDs in the strip",
 	[T_HWLED_NUM_LEDS_MENU_1]="1 to 10000",
 	[T_HWLED_NUM_LEDS_PROMPT]="LEDs (%s%d*%s)",
+	[T_HWLED_RESET]="RESET",
+	[T_HWLED_FRAME_START]="START FRAME (0x00000000)",
+	[T_HWLED_FRAME_STOP]="STOP FRAME (0xFFFFFFFF)",
 	//HELP
     [T_HELP_TITLE]="General Commands\t\t\tProtocol Interaction",
 	[T_HELP_BLANK]="\t\t\t",

@@ -142,10 +142,8 @@ struct _mode modes[MAXPROTO]={
 {
     ONEWIRE_start,				// start
     ONEWIRE_startr,				// start with read
-    nullfunc1,              // start post process    
-    ONEWIRE_stop,				// stop
+     ONEWIRE_stop,				// stop
     ONEWIRE_stopr,				// stop with read
-    nullfunc1,              // stop post process    
     ONEWIRE_send,				// send(/read) max 32 bit
     ONEWIRE_read,				// read max 32 bit
     ONEWIRE_clkh,				// set clk high
@@ -170,10 +168,8 @@ struct _mode modes[MAXPROTO]={
 {
     ONEWIRE_start,				// start
     ONEWIRE_startr,				// start with read
-    nullfunc1,              // start post process    
-    ONEWIRE_stop,				// stop
+     ONEWIRE_stop,				// stop
     ONEWIRE_stopr,				// stop with read
-    nullfunc1,              // stop post process    
     ONEWIRE_send,				// send(/read) max 32 bit
     ONEWIRE_read,				// read max 32 bit
     ONEWIRE_clkh,				// set clk high
@@ -198,10 +194,8 @@ struct _mode modes[MAXPROTO]={
 {
     HWUSART_open,				// start
     HWUSART_open_read,				// start with read
-    nullfunc1,              // start post process    
-    HWUSART_close,				// stop
+     HWUSART_close,				// stop
     HWUSART_close,				// stop with read
-    nullfunc1,              // stop post process    
     HWUSART_send,				// send(/read) max 32 bit
     HWUSART_read,				// read max 32 bit
     nullfunc1,				// set clk high
@@ -224,12 +218,12 @@ struct _mode modes[MAXPROTO]={
 #endif
 #ifdef BP_USE_HWI2C
 {
-    HWI2C_start,				// start
+    hwi2c_start,				// start
     nullfunc1,				// start with read
-    HWI2C_stop,				// stop
+    hwi2c_stop,				// stop
     nullfunc1,				// stop with read
-    HWI2C_write,				// send(/read) max 32 bit
-    HWI2C_read,				// read max 32 bit
+    hwi2c_write,				// send(/read) max 32 bit
+    hwi2c_read,				// read max 32 bit
     nullfunc1,				// set clk high
     nullfunc1,				// set clk low
     nullfunc1,				// set dat hi
@@ -238,13 +232,13 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
-    HWI2C_macro,				// macro
-    HWI2C_setup,				// setup UI
-    HWI2C_setup_exc,			// real setup
-    HWI2C_cleanup,				// cleanup for HiZ
+    hwi2c_macro,				// macro
+    hwi2c_setup,				// setup UI
+    hwi2c_setup_exc,			// real setup
+    hwi2c_cleanup,				// cleanup for HiZ
     //HWI2C_pins,				// display pin config
-    HWI2C_settings,				// display settings
-    HWI2C_help,				// display small help about the protocol
+    hwi2c_settings,				// display settings
+    hwi2c_help,				// display small help about the protocol
     "I2C",				// friendly name (promptname)
 },
 #endif
@@ -252,10 +246,8 @@ struct _mode modes[MAXPROTO]={
 {
     SWI2C_start,				// start
     SWI2C_start,				// start with read
-    nullfunc1,              // start post process    
-    SWI2C_stop,				// stop
+     SWI2C_stop,				// stop
     SWI2C_stop,				// stop with read
-    nullfunc1,              // stop post process    
     SWI2C_write,				// swrite(/read) max 32 bit
     SWI2C_read,				// read max 32 bit
     nullfunc1,				// set clk high
@@ -280,11 +272,9 @@ struct _mode modes[MAXPROTO]={
 {
 	spi_start,				// start
 	spi_startr,				// start with read
-    spi_start_post,              // start post process    
 	spi_stop,				// stop
 	spi_stopr,				// stop with read
-    spi_stop_post,              // stop post process    
-	spi_send,				// send(/read) max 32 bit
+	spi_write,				// send(/read) max 32 bit
 	spi_read,				// read max 32 bit
 	nullfunc1,				// set clk high
 	nullfunc1,				// set clk low
@@ -308,10 +298,8 @@ struct _mode modes[MAXPROTO]={
 {
 	SW2W_start,				// start
 	SW2W_startr,				// start with read
-    nullfunc1,              // start post process    
-	SW2W_stop,				// stop
+ 	SW2W_stop,				// stop
 	SW2W_stopr,				// stop with read
-    nullfunc1,              // stop post process    
 	SW2W_send,				// send(/read) max 32 bit
 	SW2W_read,				// read max 32 bit
 	SW2W_clkh,				// set clk high
@@ -336,10 +324,8 @@ struct _mode modes[MAXPROTO]={
 {
 	SW3W_start,				// start
 	SW3W_startr,				// start with read
-    nullfunc1,              // start post process    
-	SW3W_stop,				// stop
+ 	SW3W_stop,				// stop
 	SW3W_stopr,				// stop with read
-    nullfunc1,              // stop post process    
 	SW3W_send,				// send(/read) max 32 bit
 	SW3W_read,				// read max 32 bit
 	SW3W_clkh,				// set clk high
@@ -364,10 +350,8 @@ struct _mode modes[MAXPROTO]={
 {
 	nullfunc1,				// start
 	nullfunc1,				// start with read
-    nullfunc1,              // start post process    
-	nullfunc1,				// stop
+ 	nullfunc1,				// stop
 	nullfunc1,				// stop with read
-    nullfunc1,              // stop post process    
 	LCDSPI_send,				// send(/read) max 32 bit
 	LCDSPI_read,				// read max 32 bit
 	nullfunc1,				// set clk high
@@ -392,10 +376,8 @@ struct _mode modes[MAXPROTO]={
 {
 	nullfunc1,				// start
 	nullfunc1,				// start with read
-    nullfunc1,              // start post process    
-	nullfunc1,				// stop
+ 	nullfunc1,				// stop
 	nullfunc1,				// stop with read
-    nullfunc1,              // stop post process    
 	LCDI2C_send,				// send(/read) max 32 bit
 	LCDI2C_read,				// read max 32 bit
 	nullfunc1,				// set clk high
@@ -420,10 +402,8 @@ struct _mode modes[MAXPROTO]={
 {
     nullfunc1,				// start
     nullfunc1,				// start with read
-    nullfunc1,              // start post process    
-    nullfunc1,				// stop
+     nullfunc1,				// stop
     nullfunc1,				// stop with read
-    nullfunc1,              // stop post process    
     DIO_send,				// send(/read) max 32 bit
     DIO_read,				// read max 32 bit
     nullfunc1,				// set clk high
@@ -446,14 +426,12 @@ struct _mode modes[MAXPROTO]={
 #endif
 #ifdef BP_USE_HWLED
 {
-    HWLED_start,				// start
-    HWLED_start,				// start with read
-    nullfunc1,              // start post process    
-    HWLED_stop,				// stop
-    HWLED_stop,				// stop with read
-    nullfunc1,              // stop post process    
-    HWLED_send,				// send(/read) max 32 bit
-    nullfunc6,				// read max 32 bit
+    hwled_start,				// start
+    nullfunc1,				// start with read
+     hwled_stop,				// stop
+    nullfunc1,				// stop with read
+    hwled_write,				// send(/read) max 32 bit
+    nullfunc1_temp,				// read max 32 bit
     nullfunc1,				// set clk high
     nullfunc1,				// set clk low
     nullfunc1,				// set dat hi
@@ -462,13 +440,13 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
-    HWLED_macro,				// macro
-    HWLED_setup,				// setup UI
-    HWLED_setup_exc,			// real setup
-    HWLED_cleanup,				// cleanup for HiZ
+    hwled_macro,				// macro
+    hwled_setup,				// setup UI
+    hwled_setup_exc,			// real setup
+    hwled_cleanup,				// cleanup for HiZ
     //HWLED_pins,				// display pin config
-    HWLED_settings,				// display settings
-    HWLED_help,				// display small help about the protocol
+    hwled_settings,				// display settings
+    hwled_help,				// display small help about the protocol
     "LED",				// friendly name (promptname)
 },
 #endif
@@ -476,10 +454,8 @@ struct _mode modes[MAXPROTO]={
 {
     nullfunc1,				// start
     nullfunc1,				// start with read
-    nullfunc1,              // start post process    
-    nullfunc1,				// stop
+     nullfunc1,				// stop
     nullfunc1,				// stop with read
-    nullfunc1,              // stop post process    
     nullfunc2,				// send(/read) max 32 bit
     nullfunc3,				// read max 32 bit
     nullfunc1,				// set clk high
@@ -504,10 +480,8 @@ struct _mode modes[MAXPROTO]={
 {
     dummy1_start,				// start
     dummy1_startr,				// start with read
-    nullfunc1,              // start post process    
-    dummy1_stop,				// stop
+     dummy1_stop,				// stop
     dummy1_stopr,				// stop with read
-    nullfunc1,              // stop post process    
     dummy1_send,				// send(/read) max 32 bit
     dummy1_read,				// read max 32 bit
     dummy1_clkh,				// set clk high

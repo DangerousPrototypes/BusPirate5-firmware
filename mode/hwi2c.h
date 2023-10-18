@@ -1,16 +1,16 @@
 
-void HWI2C_start(struct _bytecode *result, struct _bytecode *next);
-void HWI2C_stop(struct _bytecode *result, struct _bytecode *next);
-void HWI2C_write(struct _bytecode *result, struct _bytecode *next);
-void HWI2C_read(struct _bytecode *result, struct _bytecode *next);
-void HWI2C_macro(uint32_t macro);
-uint32_t HWI2C_setup(void);
-uint32_t HWI2C_setup_exc(void);
-void HWI2C_cleanup(void);
-//void HWI2C_pins(void);
-void HWI2C_settings(void);
-void HWI2C_printI2Cflags(void);
-void HWI2C_help(void);
+void hwi2c_start(struct _bytecode *result, struct _bytecode *next);
+void hwi2c_stop(struct _bytecode *result, struct _bytecode *next);
+void hwi2c_write(struct _bytecode *result, struct _bytecode *next);
+void hwi2c_read(struct _bytecode *result, struct _bytecode *next);
+void hwi2c_macro(uint32_t macro);
+uint32_t hwi2c_setup(void);
+uint32_t hwi2c_setup_exc(void);
+void hwi2c_cleanup(void);
+//void hwi2c_pins(void);
+void hwi2c_settings(void);
+void hwi2c_printI2Cflags(void);
+void hwi2c_help(void);
 
 typedef struct _i2c_mode_config{
 	uint32_t baudrate;

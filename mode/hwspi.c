@@ -5,6 +5,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "opt_args.h"
+#include "bytecode.h"
 #include "mode/hwspi.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
@@ -224,9 +225,9 @@ uint8_t spi_xfer(const uint8_t out)
 	return spi_in;
 }
 
-void spi_start(void)
+void spi_start(struct _bytecode *result, struct _bytecode *next)
 {
-	//printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
+	result->data_message=t[T_HWSPI_CS_SELECT];
 	spi_set_cs(M_SPI_SELECT);
 }
 
@@ -236,14 +237,9 @@ void spi_startr(void)
 	spi_set_cs(M_SPI_SELECT);
 }
 
-void spi_start_post(void)
+void spi_stop(struct _bytecode *result, struct _bytecode *next)
 {
-	printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
-}
-
-void spi_stop(void)
-{
-	//printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
+	result->data_message=t[T_HWSPI_CS_DESELECT];
 	spi_set_cs(M_SPI_DESELECT);
 }
 
@@ -253,16 +249,8 @@ void spi_stopr(void)
 	spi_set_cs(M_SPI_DESELECT);
 }
 
-void spi_stop_post(void)
+void spi_write(struct _bytecode *result, struct _bytecode *next)
 {
-	printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
-	//spi_set_cs(M_SPI_DESELECT);
-}
-
-uint32_t spi_send(uint32_t d)
-{
-	uint16_t returnval;
-
 
 /*	if((system_config.num_bits<4)||(system_config.num_bits>8))
 	{
@@ -283,29 +271,44 @@ uint32_t spi_send(uint32_t d)
     // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
     // is full, PL022 inhibits RX pushes, and sets a sticky flag on
     // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
-	while (!spi_is_writable(M_SPI_PORT))
+	while(!spi_is_writable(M_SPI_PORT))
+	{
 		tight_loop_contents();
-	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)d;
+	}
+
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)result->out_data;
 
     // Drain RX FIFO, then wait for shifting to finish (which may be *after*
     // TX FIFO drains), then drain RX FIFO again
-    while (spi_is_readable(M_SPI_PORT))
+    while(spi_is_readable(M_SPI_PORT))
+	{
         (void)spi_get_hw(M_SPI_PORT)->dr;
-    while (spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
+	}
+
+    while(spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
+	{
         tight_loop_contents();
-    while (spi_is_readable(M_SPI_PORT))
+	}
+
+    while(spi_is_readable(M_SPI_PORT))
+	{
         (void)spi_get_hw(M_SPI_PORT)->dr;
+	}
 
     // Don't leave overrun flag set
     spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
-
-    return (int) returnval;
 }
 
-uint32_t spi_read(uint8_t next_command)
+void spi_read(struct _bytecode *result, struct _bytecode *next)
 {
-	return spi_xfer(0xff);
-	//return (uint16_t) spi_send(0xff);
+
+	while(!spi_is_writable(M_SPI_PORT));
+	
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)result->out_data;
+
+    while(!spi_is_readable(M_SPI_PORT));
+	
+	result->in_data = (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
 }
 
 void spi_macro(uint32_t macro)
@@ -425,4 +428,48 @@ void spi_set_cs_idle(uint32_t val)
 }
 */
 
+
+void spi_write_simple(uint32_t data)
+{
+    // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
+    // is full, PL022 inhibits RX pushes, and sets a sticky flag on
+    // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
+	while(!spi_is_writable(M_SPI_PORT))
+	{
+		tight_loop_contents();
+	}
+
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)data;
+
+    // Drain RX FIFO, then wait for shifting to finish (which may be *after*
+    // TX FIFO drains), then drain RX FIFO again
+    while(spi_is_readable(M_SPI_PORT))
+	{
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+	}
+
+    while(spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
+	{
+        tight_loop_contents();
+	}
+
+    while(spi_is_readable(M_SPI_PORT))
+	{
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+	}
+
+    // Don't leave overrun flag set
+    spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
+}
+
+uint32_t spi_read_simple(void)
+{
+	while(!spi_is_writable(M_SPI_PORT));
+	
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)0xff;
+
+    while(!spi_is_readable(M_SPI_PORT));
+	
+	return (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
+}
 

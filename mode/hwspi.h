@@ -1,7 +1,7 @@
 void spi_start(struct _bytecode *result, struct _bytecode *next);
-void spi_startr(void);
+void spi_startr(struct _bytecode *result, struct _bytecode *next);
 void spi_stop(struct _bytecode *result, struct _bytecode *next);
-void spi_stopr(void); 
+void spi_stopr(struct _bytecode *result, struct _bytecode *next); 
 void spi_write(struct _bytecode *result, struct _bytecode *next);
 void spi_read(struct _bytecode *result, struct _bytecode *next);
 void spi_macro(uint32_t macro);

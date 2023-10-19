@@ -5,6 +5,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "opt_args.h"
+#include "bytecode.h"
 #include "mode/usart.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
@@ -28,7 +29,7 @@ static const char pin_labels[][5]={
 
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
-uint32_t HWUSART_periodic(void)
+uint32_t hwusart_periodic(void)
 {
 	if(uart_is_readable(M_UART_PORT) && mode_config.async_print)
 	{
@@ -39,47 +40,83 @@ uint32_t HWUSART_periodic(void)
 	}
 }
 
+void hwusart_open(struct _bytecode *result, struct _bytecode *next)			// start
+{	
+	//clear FIFO and enable UART
+	while(uart_is_readable(M_UART_PORT))
+	{
+		uart_getc(M_UART_PORT);
+	}
 
-void HWUSART_open(void)			// start
+	if(system_config.write_with_read)
+	{
+		mode_config.async_print=true;
+		result->data_message=t[T_UART_OPEN_WITH_READ];
+	}
+	else
+	{
+		mode_config.async_print=false;
+		result->data_message=t[T_UART_OPEN];
+	}	
+}
+
+//I think these will no longer be needed
+void hwusart_open_read(struct _bytecode *result, struct _bytecode *next)	// start with read
 {
 	//mode_config.async_print=true;
+	//result->data_message=t[T_UART_OPEN_WITH_READ];
+}
 
-}
-void HWUSART_open_read(void)	// start with read
-{
-	mode_config.async_print=true;
-}
-void HWUSART_close(void)		// stop
+void hwusart_close(struct _bytecode *result, struct _bytecode *next)		// stop
 {
 	mode_config.async_print=false;
+	result->data_message=t[T_UART_CLOSE];
 }
 
-uint32_t HWUSART_send(uint32_t d)
+void hwusart_write(struct _bytecode *result, struct _bytecode *next)
 {
 	if(mode_config.blocking)
-		uart_putc_raw(M_UART_PORT, d);
+	{
+		uart_putc_raw(M_UART_PORT, result->out_data);
+	}
 	else
-		uart_putc_raw(M_UART_PORT, d);
-
-	//HWUSART_printerror();
-
-	return 0;
+	{
+		uart_putc_raw(M_UART_PORT, result->out_data);
+	}
 }
-uint32_t HWUSART_read(uint8_t next_command)
+
+void hwusart_read(struct _bytecode *result, struct _bytecode *next)
 {
-	uint32_t received;
+	uint32_t timeout=0xff;
+
+	//if blocking wait with timeout
+	//if(mode_config.blocking)
+	//{
+		while(!uart_is_readable(M_UART_PORT))
+		{
+			timeout--;
+			if(!timeout)
+			{
+				result->error=SRES_ERROR;
+				result->error_message=t[T_UART_NO_DATA_READ];	
+				return;			
+			}
+		}
+	//}
 
 	if(uart_is_readable(M_UART_PORT))
-		received=uart_getc(M_UART_PORT);
+	{
+		result->in_data=uart_getc(M_UART_PORT);
+	}
 	else
-		received=0xffff;
+	{
+		result->error=SRES_ERROR;
+		result->error_message=t[T_UART_NO_DATA_READ];
+	}
 
-	//HWUSART_printerror();
-
-	return received;
 }
 
-void HWUSART_macro(uint32_t macro)
+void hwusart_macro(uint32_t macro)
 {
 	switch(macro)
 	{
@@ -90,7 +127,7 @@ void HWUSART_macro(uint32_t macro)
 	}
 }
 
-uint32_t HWUSART_setup(void)
+uint32_t hwusart_setup(void)
 {
 	uint32_t temp;
 	// did the user leave us arguments?
@@ -241,7 +278,7 @@ uint32_t HWUSART_setup(void)
 
 
 
-uint32_t HWUSART_setup_exc(void)
+uint32_t hwusart_setup_exc(void)
 {
 	//setup peripheral
 	mode_config.baudrate_actual=uart_init(M_UART_PORT, mode_config.baudrate);
@@ -269,7 +306,7 @@ uint32_t HWUSART_setup_exc(void)
 
 
 
-void HWUSART_cleanup(void)
+void hwusart_cleanup(void)
 {
 	//disable peripheral
 	uart_deinit(M_UART_PORT);
@@ -287,11 +324,11 @@ void HWUSART_cleanup(void)
 	system_config.mosipin=0;
 
 }
-/*void HWUSART_pins(void)
+/*void hwusart_pins(void)
 {
 	printf("-\t-\tRXD\tTXD");
 }*/
-void HWUSART_settings(void)
+void hwusart_settings(void)
 {
 	uint32_t par=0;
 
@@ -307,7 +344,7 @@ void HWUSART_settings(void)
 	//printf("HWUSART (br parity numbits stopbits block)=(%d %d %d %d %d)", br, par, nbits, ((sbits>>12)+1), (block+1));
 }
 
-void HWUSART_printerror(void)
+void hwusart_printerror(void)
 {
 	uint32_t error;
 
@@ -341,7 +378,7 @@ void HWUSART_printerror(void)
 	}*/
 }
 
-void HWUSART_help(void)
+void hwusart_help(void)
 {
 	printf("Peer to peer asynchronous protocol.\r\n");
 	printf("\r\n");

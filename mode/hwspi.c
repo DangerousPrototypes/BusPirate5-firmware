@@ -231,7 +231,7 @@ void spi_start(struct _bytecode *result, struct _bytecode *next)
 	spi_set_cs(M_SPI_SELECT);
 }
 
-void spi_startr(void)
+void spi_startr(struct _bytecode *result, struct _bytecode *next)
 {
 	//printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
 	spi_set_cs(M_SPI_SELECT);
@@ -243,7 +243,7 @@ void spi_stop(struct _bytecode *result, struct _bytecode *next)
 	spi_set_cs(M_SPI_DESELECT);
 }
 
-void spi_stopr(void)
+void spi_stopr(struct _bytecode *result, struct _bytecode *next)
 {
 	//printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
 	spi_set_cs(M_SPI_DESELECT);

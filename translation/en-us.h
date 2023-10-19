@@ -89,6 +89,11 @@ static char const * const en_us[]={
 	[T_UART_BLOCKING_PROMPT]="Block",
 	[T_UART_ACTUAL_SPEED_BAUD]="Actual speed",
 	[T_UART_BAUD]="baud",
+	[T_UART_OPEN]="UART OPEN",
+	[T_UART_OPEN_WITH_READ]="UART OPEN (ASYNC READ)",
+	[T_UART_CLOSE]="UART CLOSE",
+	[T_UART_NO_DATA_READ]="No data to read",
+	[T_UART_NO_DATA_TIMEOUT]="Data read timeout",
     //I2C
 	[T_HWI2C_SPEED_MENU]="I2C speed",
 	[T_HWI2C_SPEED_MENU_1]="1KHz to 1000KHz",

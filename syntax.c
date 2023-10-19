@@ -90,14 +90,14 @@ bool syntax_compile(struct opt_args *args)
                 return true;
             }
 
-            if(system_config.write_with_read)
-            {
-                out[out_cnt].command=SYN_WRITE_READ;
-            }
-            else
-            {
+            //if(system_config.write_with_read)
+            //{
+                //out[out_cnt].command=SYN_WRITE_READ;
+            //}
+            //else
+            //{
                 out[out_cnt].command=SYN_WRITE;
-            }
+            //}
             
             out[out_cnt].number_format=result.number_format;
 
@@ -133,14 +133,14 @@ bool syntax_compile(struct opt_args *args)
             while(i--)
             {
                 cmdln_try_remove(&c);
-                if(system_config.write_with_read)
-                {
-                    out[out_cnt].command=SYN_WRITE_READ;
-                }
-                else
-                {
+                //if(system_config.write_with_read)
+                //{
+                    //out[out_cnt].command=SYN_WRITE_READ;
+                //}
+                //else
+                //{
                     out[out_cnt].command=SYN_WRITE;
-                }
+                //}
 
                 out[out_cnt].out_data=c;
                 out[out_cnt].has_repeat=false;
@@ -286,8 +286,20 @@ bool syntax_run(void)
         switch(out[i].command) 
         {
             case SYN_WRITE:
-                for(uint16_t j=0; j<out[i].repeat; j++) //pass repeat and move to lower protocol level???
+                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH)
                 {
+                    in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+                    in[in_cnt].error=SRES_ERROR;
+                    return false;
+                }                
+                for(uint16_t j=0; j<out[i].repeat; j++) //TODO: generate multiple packets due to ack/nack needs
+                {
+                    if(j>0)
+                    {
+                        in_cnt++;
+                        in[in_cnt]=out[i];
+                    }
+
                     modes[system_config.mode].protocol_write(&in[in_cnt],NULL);
                 }
                 break;
@@ -466,7 +478,7 @@ void postprocess_mode_write(struct _bytecode *in, struct _output_info *info)
     if(in->command==SYN_WRITE)//(!system_config.write_with_read)
     {
         value=in->out_data;
-        repeat=in->repeat;
+        repeat=1;
         if(new_line)
         {
             printf("\r\n%sTX:%s ", ui_term_color_info(), ui_term_color_reset());

@@ -52,9 +52,9 @@ enum
 typedef struct _mode
 {
 	void (*protocol_start)(struct _bytecode *result, struct _bytecode *next);			// start
-	void (*protocol_startR)(void);			// start with read
+	void (*protocol_startR)(struct _bytecode *result, struct _bytecode *next);			// start with read
 	void (*protocol_stop)(struct _bytecode *result, struct _bytecode *next);			// stop
-	void (*protocol_stopR)(void);			// stop with read
+	void (*protocol_stopR)(struct _bytecode *result, struct _bytecode *next);			// stop with read
 	void (*protocol_write)(struct _bytecode *result, struct _bytecode *next);		// send(/read) max 32 bit
 	void (*protocol_read)(struct _bytecode *result, struct _bytecode *next);		// read max 32 bit
 	void (*protocol_clkh)(void);			// set clk high

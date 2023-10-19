@@ -1,17 +1,17 @@
-uint32_t HWUSART_send(uint32_t d);
-uint32_t HWUSART_read(uint8_t next_command);
-void HWUSART_macro(uint32_t macro);
-uint32_t HWUSART_setup(void);
-uint32_t HWUSART_setup_exc(void);
-void HWUSART_cleanup(void);
-void HWUSART_pins(void);
-void HWUSART_settings(void);
-void HWUSART_printerror(void);
-void HWUSART_help(void);
-void HWUSART_open(void);				// start
-void HWUSART_open_read(void);				// start with read
-void HWUSART_close(void);				// stop
-uint32_t HWUSART_periodic(void);
+void hwusart_open(struct _bytecode *result, struct _bytecode *next);				// start
+void hwusart_open_read(struct _bytecode *result, struct _bytecode *next);				// start with read
+void hwusart_close(struct _bytecode *result, struct _bytecode *next);				// stop
+void hwusart_write(struct _bytecode *result, struct _bytecode *next);
+void hwusart_read(struct _bytecode *result, struct _bytecode *next);
+void hwusart_macro(uint32_t macro);
+uint32_t hwusart_setup(void);
+uint32_t hwusart_setup_exc(void);
+void hwusart_cleanup(void);
+void hwusart_pins(void);
+void hwusart_settings(void);
+void hwusart_printerror(void);
+void hwusart_help(void);
+uint32_t hwusart_periodic(void);
 
 typedef struct _uart_mode_config{
 	uint32_t baudrate;

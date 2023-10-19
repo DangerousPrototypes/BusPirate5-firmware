@@ -19,7 +19,7 @@
 // enable modes
 //#define		BP_USE_SW1WIRE
 //#define     BP_USE_HW1WIRE
-//#define		BP_USE_HWUSART
+#define		BP_USE_HWUSART
 #define		BP_USE_HWI2C
 //#define		BP_USE_SWI2C
 #define		BP_USE_HWSPI

@@ -10,6 +10,7 @@
 #include "bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
+#include "ui/ui_term.h"
 #include "mjson/mjson.h"
 #include "storage.h"
 
@@ -201,7 +202,7 @@ void file_error(FRESULT res)
 {
     if(res>0)
     {
-        printf("Error: %s", fresult_msg[res]);
+        printf("%sError:%s %s%s", ui_term_color_error(),ui_term_color_info(), fresult_msg[res], ui_term_color_reset());
     }
 }
 
@@ -280,19 +281,25 @@ void list_dir(opt_args (*args), struct command_result *res)
 
     if (fr == FR_OK) {
         nfile = ndir = 0;
-        for (;;) {
+        for(;;)
+        {
             fr = f_readdir(&dir, &fno);                   /* Read a directory item */
-            if (fr != FR_OK || fno.fname[0] == 0) break;  /* Error or end of dir */
-            if (fno.fattrib & AM_DIR) {            /* Directory */
-                printf("   <DIR>   %s\r\n", fno.fname);
+            if(fr != FR_OK || fno.fname[0] == 0) break;  /* Error or end of dir */
+            
+            if(fno.fattrib & AM_DIR) 
+            {            /* Directory */
+                printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
                 ndir++;
-            } else {                               /* File */
-                printf("%10llu %s\r\n", fno.fsize, fno.fname);
+            }
+            else
+            {                               /* File */
+                printf("%s%10llu %s%s%s\r\n", 
+                ui_term_color_prompt(),fno.fsize, ui_term_color_info(),fno.fname, ui_term_color_reset());
                 nfile++;
             }
         }
         f_closedir(&dir);
-        printf("%d dirs, %d files.\r\n", ndir, nfile);
+        printf("%s%d dirs, %d files%s\r\n", ui_term_color_info(), ndir, nfile, ui_term_color_reset());
     } else {
         //printf("Failed to open \"%s\". (%s)\r\n", args[0].c, fresult_msg[fr]);
         file_error(fr);

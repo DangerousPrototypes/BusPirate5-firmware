@@ -31,6 +31,5 @@ struct _command_parse
     bool allow_hiz;
     void (*command)(opt_args *args, struct command_result *res);
     const struct _parsers (*parsers);
-    const char (*help_text);
-
+    uint32_t help_text;
 };

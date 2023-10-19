@@ -68,6 +68,12 @@ bool ui_process_commands(void)
             //printf("Bus Syntax: Success\r\n");
             return false;
         }
+
+        //MODE macros
+        if(c=='(') //first character is (, mode macro
+        {
+            return false;
+        }       
         
         //process as a command
 
@@ -95,7 +101,9 @@ bool ui_process_commands(void)
 
         if(!cmd_valid)
         {
-            printf("Invalid command: %s. Type ? for help.\r\n", args[0].c);
+            printf("%s", ui_term_color_notice());
+            printf(t[T_CMDLN_INVALID_COMMAND], args[0].c);
+            printf("%s\r\n", ui_term_color_reset());
             return true;
         }
         //printf("Found: %s\r\n",cmd[user_cmd_id]);
@@ -105,7 +113,7 @@ bool ui_process_commands(void)
         //do we have a command? good, get the opt args
         if(parse_help())
         {
-            printf("%s\r\n",exec_new[user_cmd_id].help_text);
+            printf("%s\r\n",t[exec_new[user_cmd_id].help_text]);
             return false;
         }
 

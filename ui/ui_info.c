@@ -295,44 +295,66 @@ typedef struct ui_info_help
 	uint help;
 	const char command[9];
 	uint description;
+	const char command2[9];
+	uint description2;	
 } ui_info_help;
 
-const struct ui_info_help help_commands[22]={
-	{0,"=X/|X",T_HELP_1_2},	
-	{0,"~", T_HELP_1_3},
-	{0,"#", T_HELP_1_4},
-	{0,"$", T_HELP_1_5},
-	{0,"d/D", T_HELP_1_6},
-	{0,"a/A/@.x", T_HELP_1_7},
-	{0,"b", T_HELP_1_8},
-	{0,"c", T_HELP_1_9},
-	{0,"v.x/V.x", T_HELP_1_22},
-	{0,"v/V", T_HELP_1_10},
-	{0,"f.x/F.x", T_HELP_1_11},
-	{0,"f/F", T_HELP_1_23},
-	{0,"g.x/G", T_HELP_1_12},
+const struct ui_info_help help_commands[]={
+	{0,"",		T_HELP_GENERAL_COMMANDS},
+	{1,"", 		T_HELP_BLANK},
+	{0,"~", 	T_HELP_1_3},
+	{0,"#", 	T_HELP_1_4},
+	{0,"$", 	T_HELP_1_5},
+	{0,">",		T_HELP_GREATER_THAN},
+	{0,"= x/| x",T_HELP_1_2},	
+	{0,"a/A/@ x",T_HELP_COMMAND_AUX},
+	{0,"b", 	T_HELP_1_8},
+	{0,"c", 	T_HELP_1_9},
+	{0,"f x/F x", T_HELP_1_11},
+	{0,"f/F", 	T_HELP_1_23},
+	{0,"g x/G", T_HELP_1_12},
 	{0,"h/H/?", T_HELP_1_13},
-	{0,"i", T_HELP_1_14},
-	{0,"l/L", T_HELP_1_15},
-	{0,"m", T_HELP_1_16},
-	{0,"o", T_HELP_1_17},
-	{0,"p/P", T_HELP_1_18},
-	{0,"q", T_HELP_1_19},
-	{0,"s", T_HELP_1_20},
-	{0,"w/W", T_HELP_1_21}
+	{0,"i", 	T_HELP_1_14},
+	{0,"l/L", 	T_HELP_1_15},
+	{0,"m", 	T_HELP_1_16},
+	{0,"o", 	T_HELP_1_17},
+	{0,"p/P", 	T_HELP_1_18},
+	{0,"v x/V x", T_HELP_1_22},
+	{0,"v/V", 	T_HELP_1_10},	
+	{0,"w/W", 	T_HELP_1_21},
+	{0,"(x)/(0)", T_HELP_2_1}
 };
 
-const struct ui_info_help help_protocol[22]={
-	{0,"(x)/(0)", T_HELP_2_1},
+const struct ui_info_help help_protocol[]={
+	{0,"\t", T_HELP_DISK_COMMANDS},
+	{1,"", 		T_HELP_BLANK},	
+	{0,"ls", T_HELP_CMD_LS},
+	{0,"cd", T_HELP_CMD_CD},
+	{0,"mkdir", T_HELP_CMD_MKDIR},
+	{0,"rm", T_HELP_CMD_RM},
+	{0,"cat", T_HELP_CMD_CAT},
+	{0,"", T_HELP_BUS_SYNTAX},
+	{1,"", 		T_HELP_BLANK},		
 	{0,"[", T_HELP_2_3},
-	{0,"]", T_HELP_2_4},
-	{0,"{", T_HELP_2_5},
-	{0,"}", T_HELP_2_6},
-	{0,"\"abc\"", T_HELP_2_7},
+	{0,"{", T_HELP_2_5},	
+	{0,"]/}", T_HELP_2_4},
 	{0,"123", T_HELP_2_8},
 	{0,"0x123", T_HELP_2_9},
 	{0,"0b110", T_HELP_2_10},
+	{0,"\"abc\"", T_HELP_2_7},
 	{0,"r", T_HELP_2_11},
+	{0,":", T_HELP_2_19},
+	{0,".", T_HELP_2_20},	
+	{0,"d/D", T_HELP_1_6},
+	{0,"a/A/@.x", T_HELP_1_7},	
+	{0,"v.x", T_HELP_SYNTAX_ADC},
+	{0,"", T_HELP_BLANK}
+};
+
+static_assert(count_of(help_protocol)==count_of(help_commands), "Help arrays are not equal lengths");
+
+/*
+We no longer use software protocols, so this isn't implemented anywhere
 	{0,"/", T_HELP_2_12},
 	{0,"\\", T_HELP_2_13},
 	{0,"^", T_HELP_2_14},
@@ -344,25 +366,45 @@ const struct ui_info_help help_protocol[22]={
 	{0,".", T_HELP_2_20},
 	{0,"<x>/<0>", T_HELP_2_21},
 	{0,"<x= >", T_HELP_2_22},
-	{0,"",T_HELP_BLANK}
-};
+	*/
 
 
 // displays the help
 void ui_info_print_help(opt_args (*args), struct command_result *res)
 {
-	printf("\t%s%s%s\r\n", ui_term_color_info(), t[T_HELP_TITLE], ui_term_color_reset());
-	printf("----------------------------------------------------------------------------\r\n");
+	//printf("\t%s%s%s\r\n", ui_term_color_info(), t[T_HELP_TITLE], ui_term_color_reset());
+	//printf("----------------------------------------------------------------------------\r\n");
+
+	const char dash_line[]="--------------------------------------";
 	
 	for(uint i=0; i<count_of(help_commands); i++)
 	{
-		printf("%s%s%s\t%s%s%s\t%s%s%s\t%s%s%s\r\n",
-			ui_term_color_prompt(), help_commands[i].command, ui_term_color_reset(),
-			ui_term_color_info(), t[help_commands[i].description], ui_term_color_reset(),
-			ui_term_color_prompt(), help_protocol[i].command, ui_term_color_reset(),
-			ui_term_color_info(), t[help_protocol[i].description], ui_term_color_reset()
-		);
+		if(!help_commands[i].help)
+		{
+			printf("%s%s%s\t%s%s%s\t",
+				ui_term_color_prompt(), help_commands[i].command, ui_term_color_reset(),
+				ui_term_color_info(), t[help_commands[i].description], ui_term_color_reset()
+			);
+		}
+		else
+		{
+			printf("%s%s\t", ui_term_color_reset(), dash_line);
+		}
+
+		if(!help_protocol[i].help)
+		{
+			printf("%s%s%s\t%s%s%s\r\n",
+				ui_term_color_prompt(), help_protocol[i].command, ui_term_color_reset(),
+				ui_term_color_info(),t[help_protocol[i].description], ui_term_color_reset()
+			);		
+		}
+		else
+		{
+			printf("%s%s\t", ui_term_color_reset(), dash_line);
+		}			
 	}
+
+	printf("\r\n%s%s%s\r\n", ui_term_color_info(), t[T_HELP_HINT],ui_term_color_reset());
 
 }
 

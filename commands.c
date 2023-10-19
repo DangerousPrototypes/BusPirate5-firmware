@@ -98,15 +98,11 @@ static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wro
 
 const uint32_t count_of_cmd=count_of(cmd);
 
-char ls_help[]="ls {directory} - list files in the current location or {directory} location.";
-char no_help[]="Help not currently available for this command.";
-
 bool nullparse(opt_args *result)
 {
     busy_wait_at_least_cycles(1);
     return 0;
 }
-
 
 const struct _parsers list_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
 const struct _parsers change_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
@@ -135,199 +131,199 @@ const struct _command_parse exec_new[]=
         true,
         &list_dir,
         &list_dir_parsers[0],
-        &ls_help[0],
+        T_CMDLN_LS
     }, 
     {
         true, 
         &change_dir,
         &change_dir_parsers[0],
-        &no_help[0],
+        T_CMDLN_CD,
     }, // CMD_CD 
     {
         true, 
         &make_dir,
         &make_dir_parsers[0],
-        &no_help[0]
+        T_CMDLN_MKDIR
     }, // CMD_MKDIR
     {
         true, 
         &storage_unlink,
         &unlink_dir_parsers[0],
-        &no_help[0]
+        T_CMDLN_RM
     }, // CMD_RM
     {
         true, 
         &cat,
         &cat_dir_parsers[0],
-        &no_help[0]
+        T_CMDLN_CAT
     }, //CMD_CAT
     {
         true, 
         &ui_mode_enable_args,
         &m_parsers[0],
-        &no_help[0]
+        T_CMDLN_MODE
     },            // "m"    
     {
         false, 
         &psu_enable,
         &psuen_parsers[0],
-        &no_help[0]
+        T_CMDLN_PSU_EN
     },                // "W"    
     {
         true, 
         &helpers_mcu_reset,
         0,
-        &no_help[0]
+        T_CMDLN_RESET
     }, // "#" 
     {
         true, 
         &helpers_mcu_jump_to_bootloader,
         0,
-        &no_help[0]
+        T_CMDLN_BOOTLOAD
     },     // "$" 
     {
         true, 
         &helpers_show_int_formats,
         &show_int_formats_parsers[0],
-        &no_help[0]
+        T_CMDLN_INT_FORMAT
     }, // "="
     {
         true, 
         &helpers_show_int_inverse,
         &show_int_inverse_parsers[0],
-        &no_help[0]
+        T_CMDLN_INT_INVERSE
     }, // "|"   
     {
         true, 
         &ui_info_print_help,
         0,
-        &no_help[0]
+        T_CMDLN_HELP
     },        // "?"
     {
         true, 
         &ui_config_main_menu,
         0,
-        &no_help[0]
+        T_CMDLN_CONFIG_MENU
     },       // "c"
     {
         true, 
         &freq_single,
         &freq_single_parsers[0],
-        &no_help[0]
+        T_CMDLN_FREQ_ONE
     },               // "f"    
     {
         true, 
         &freq_cont,
         &freq_cont_parsers[0],
-        &no_help[0]
+        T_CMDLN_FREQ_CONT
     },                 // "F"
     {
         false, 
         &pwm_configure_enable,
         &pwmen_parsers[0],
-        &no_help[0]
+        T_CMDLN_PWM_CONFIG
     },     // "G"
     {
         false, 
         &pwm_configure_disable,
         &pwmdis_parsers[0],
-        &no_help[0]
+        T_CMDLN_PWM_DIS
     },    // "g"    
     {
         false, 
         &helpers_mode_help,
         0,
-        &no_help[0]
+        T_CMDLN_HELP_MODE
     },         // "h"
     {
         true, 
         &ui_info_print_info,
         0,
-        &no_help[0]
+        T_CMDLN_INFO
     },        // "i"
     {
         true, 
         &helpers_bit_order_msb,
         0,
-        &no_help[0]
+        T_CMDLN_BITORDER_MSB
     },     // "l"    
     {
         true, 
         &helpers_bit_order_lsb,
         0,
-        &no_help[0]
+        T_CMDLN_BITORDER_LSB
     },     // "L"
     {
         true, 
         &ui_mode_int_display_format,
         0,
-        &no_help[0]
+        T_CMDLN_DISPLAY_FORMAT
     }, // "o"
     {
         false, 
         &pullups_enable,
         0,
-        &no_help[0]
+        T_CMDLN_PULLUPS_EN
     },           // "P"    
     {
         false, 
         &pullups_disable,
         0,
-        &no_help[0]
+        T_CMDLN_PULLUPS_DIS
     },          // "p"    
     {
         false, 
         &psu_disable,
         0,
-        &no_help[0]
+        T_CMDLN_PSU_DIS
     },              // "w"    
     {
         true, 
         &adc_measure_cont,
         &adc_cont_parsers[0],
-        &no_help[0]
+        T_CMDLN_ADC_CONT
     },          // "V"
     {
         true, 
         &adc_measure_single,
         &adc_single_parsers[0],
-        &no_help[0]
+        T_CMDLN_ADC_ONE
     },        // "v"    
     {
         true, 
         &helpers_selftest,
         0,
-        &no_help[0]
+        T_CMDLN_SELFTEST
     },           // "~" selftest    
     {
         true, 
         &auxpinfunc_input,
         &aux_input_parsers[0],
-        &no_help[0]
+        T_CMDLN_AUX_IN
     },        // "@"    
     {
         false, 
         &auxpinfunc_low,
         &aux_low_parsers[0],
-        &no_help[0]
+        T_CMDLN_AUX_LOW
     },        // "a"    
     {
         false, 
         &auxpinfunc_high,
         &aux_high_parsers[0],
-        &no_help[0]
+        T_CMDLN_AUX_HIGH
     },        // "A"                
     {
         true, 
         &dump,
         &dump_parsers[0],
-        &no_help[0]
+        T_CMDLN_DUMP
     },        // "dump"   
     {
         true, 
         &load,
         &load_parsers[0],
-        &no_help[0]
+        T_CMDLN_LOAD
     }      // "load"   
          
 };

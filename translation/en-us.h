@@ -32,6 +32,8 @@ static char const * const en_us[]={
 	[T_MODE_MS]="ms",
 	[T_MODE_ADC_VOLTAGE]="Volts on",
 	[T_MODE_ERROR_PARSING_MACRO]="Error parsing macro",
+	[T_MODE_ERROR_NO_MACROS_AVAILABLE]="No macros available",
+	[T_MODE_ERROR_MACRO_NOT_DEFINED]="Macro not defined",
 	//FREQ
 	[T_MODE_PWM_GENERATE_FREQUENCY]="Generate frequency",
     [T_MODE_FREQ_MEASURE_FREQUENCY]="Frequency measurement",

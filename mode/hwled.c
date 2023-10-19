@@ -200,14 +200,9 @@ void hwled_macro(uint32_t macro)
 {
 	switch(macro)
 	{
-		case 0:		printf(" 1. LED strip counter\r\n");
-					printf(" 2. LEDs per meter counter\r\n");
+		case 0:		printf("%s\r\n", t[T_MODE_ERROR_NO_MACROS_AVAILABLE]);
 				break;
-		case 1:		printf("Macro not available");
-				break;
-		case 2:		printf("Macro not available");
-				break;
-		default:	printf("Macro not defined");
+		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
 }

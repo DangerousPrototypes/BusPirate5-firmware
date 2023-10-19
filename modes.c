@@ -56,21 +56,21 @@
 // these are the dummy functions when something ain't used 
 void nullfunc1(void)
 {
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 }
 
 uint32_t nullfunc2(uint32_t c)
 {	
 	(void) c;
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 	return 0x0000;
 }
 
 uint32_t nullfunc3(void)
 {	
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 	return 0x0000;
 }
@@ -79,17 +79,17 @@ uint32_t nullfunc3(void)
 void nullfunc4(uint32_t c)
 {	
 	(void) c;
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 }
 
 const char *nullfunc5(void){
-    return t[T_MODE_ERROR_NO_EFFECT];
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 }
 
 uint32_t nullfunc6(uint8_t next_command)
 {	
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 	return 0x0000; 
 }
@@ -106,7 +106,7 @@ uint32_t noperiodic(void)
 
 void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next)
 {
-    printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
     system_config.error=1;
 }
 

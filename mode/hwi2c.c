@@ -173,9 +173,7 @@ void hwi2c_macro(uint32_t macro)
 				break;
 		case 1:		I2Csearch();
 				break;
-		case 2:		printf("Macro not available");
-				break;
-		default:	printf("Macro not defined");
+		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
 }

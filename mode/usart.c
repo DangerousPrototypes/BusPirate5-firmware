@@ -120,9 +120,9 @@ void hwusart_macro(uint32_t macro)
 {
 	switch(macro)
 	{
-		case 0:		printf("No macros available");
+		case 0:		printf("%s\r\n", t[T_MODE_ERROR_NO_MACROS_AVAILABLE]);
 				break;
-		default:	printf("Macro not defined");
+		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
 }

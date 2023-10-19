@@ -72,7 +72,22 @@ bool ui_process_commands(void)
         //MODE macros
         if(c=='(') //first character is (, mode macro
         {
-            return false;
+            uint32_t temp;
+            prompt_result result;
+
+            cmdln_try_discard(1);
+            ui_parse_get_macro(&result, &temp);   
+            if(result.success)
+            {
+                modes[system_config.mode].protocol_macro(temp);
+            }
+            else
+            {
+                printf("%s\r\n",t[T_MODE_ERROR_PARSING_MACRO]);
+                return true;
+            }  
+
+            return false;  
         }       
         
         //process as a command

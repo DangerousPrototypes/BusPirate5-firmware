@@ -1,0 +1,180 @@
+;
+; Copyright (c) 2021 Stefan Althöfer
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+; 1-Wire is a tradmark of Maxim Integrated
+;
+; Do 1-Wire operation on RP2040 PIO:
+;  - Receive/Transmit 1 to max. 128 bits w.o. ARM activity
+;    (by using FIFO and controlling RX/TX FIFO threshold setting)
+;  - perform reset and presence detect
+;  - control external strong pullp P-channel MOSFET
+;    (as e.g. in the DS2482-100)
+;  - Requires 11 PIO instructions
+
+.program onewire
+.side_set 1 pindirs
+
+; Some Notes:
+;
+; I would have liked to use GPIO_OVERRIDE_INVERT for easier
+; readablility of the code, but with this I wasn't able to avoid a
+; glitch on the 1-Wire GPIO pin when the state machine was
+; configured/enabled. Hence side set 0 disables the output (high level
+; signal by ext. pullup).
+;
+; The is no difference in writing a 1 or reading a bit. Both
+; will be triggered by a 1 bit in the TX FIFO and both return a
+; bit to the RX FIFO.
+; Even writing a 0 will return data in the TX FIFO (undefined bit).
+; This is useless on the one hand, but is done to make bit positions
+; easier predicable if reading and writing is combined and to detect
+; end of write operation easily by checking RX FIFO state.  Shift
+; threshold has to be controlled by the ARM to transfer the desired
+; number of bits.
+;
+; ARM can check for the end of an operation by checking the RX FIFO for
+; availablibilty of data (data transfer or reset).
+; HOWEVER at the time when the data is pushed into the RX FIFO, the
+; execution of the bit timing has not been fully completed. This is no
+; problem if you just want to transmit more bits by pushing new data
+; to the TX FIFO. However, at that time it is not yet possible to:
+;    - change settings (clock-devider or FIFO thresholds)
+;    - trigger a 1-Wire reset
+; If you desire to do such things, you have to check that
+; the state machine has reached the 'waiting' label by polling
+; the PIO program counter.
+;   POSSIBLE TODO:
+;   This is clumsy, but can only be changed by increasing PIO code
+;   size (Probably three instructions):
+;     - first moving pins to x at the sample point
+;     - then finish bit timing (maybe wrapped into the previous)
+;     - then push x to the RX FIFO
+;     - needed for rx-, tx- and reset-branch
+;   This will also impact performance as the change would introduce a
+;   6us gap between all bits.
+;   However that change might be desireable if you wish an interrupt
+;   driven ARM code w.o. any ARM time wasted by polling.
+;
+; 1-Wire Timing (all numbers are us):
+;        ____     ______________  _____________
+; 1-Bit      \___/       S-P                   \___ 
+;            |<6>|<   9  >|           |
+;            |   |<          54      >|<  12  >|
+;        ____|<         60           >|________
+; 0-Bit      \__________________  ____/        \___
+;
+;        ____             _____________________________
+; Reset      \___________/ \\______///                 
+;            |<   490   >|<70>|<      490        >|
+;
+; The PIO code uses highest possible CLKDIV so the timing can be achieved
+; with delay counting only (no looping).
+; Above timings were taken from Maxim AN 126.
+;
+; 1-Wire Presence Detect (5us/column):
+;                 ___             _______  _______
+; Fast Device    /   ____________/
+;                 ____________                 ___
+; Slow Device    /            ___________  ___/
+;                <        60 >
+;                <            75 >
+;                <                        300 >
+;
+; The overlap low time of slow and fast silicon is only 15 us!
+
+
+; The reset-branch asumes 70us instruction timing (CLKDIV = CPU-MHz*70)
+public reset:
+    nop           side 1 [6]     ; (1+6)*70us = 490us low
+    nop           side 0         ; 1*70us = 70us high
+    in pins, 1    side 0 [6]     ; will sample pin state
+                                 ; and (1+6)*70us = 480us high delay
+                                 ; to next operation
+    jmp start     side 0;
+
+; The rx/tx-branch assumes 3us instruction timing (CLKDIV = CPU-MHz*3)
+.wrap_target
+do_0:
+    in pins, 1    side 1 [15]   ; will sample s.th. (value does not care)
+                                ; and provides (1+15)*3us = 48us low
+    jmp get_bit   side 1  [1]   ; (1+1)*3us = 6us low
+do_1:
+    nop           side 0  [2]   ; (1+2)*3us = 9us high
+    in pins, 1    side 0 [14]   ; will sample pin state at samplepoint
+                                ; and provides (1+14)*3us = 45us high
+public start:
+get_bit:
+    mov pins, y   side 0  [2]   ; set pinctlz from y-register. This is
+                                ; to implement strong external pullup
+                                ; transistor from ARM code
+                                ; and provides (1+2)*3us = 9us low between bits
+public waiting:
+    out x, 1      side 0        ; stalls if no data available
+                                ; ARM code checks that this instruction is
+                                ; reached to make sure that everything is
+                                ; done: Therefore, this instruction must not have
+                                ; any delay cycles
+                                ; and provides additional 3us high between
+                                ; bits, more if stalling
+    jmp x-- do_1  side 1  [1]   ; (1+1)*3us = 6us low to start a bit cycle
+.wrap
+
+
+% c-sdk {
+
+/* Configure a PIO/sm for onewire */
+/* Note on pinctlz: GPIO pins have pulldown after reset. This enables
+   the external transistor initially and causes some glitches during
+   pin configuraion. Add external pullup to +3V3 (e.g. 12k). */
+/* TODO: We could implement an option by which pinctlz is disabled.
+   We do not need to change the PIO code, just avoid anything that
+   configures pinctlz in the PIO mapping. */
+void onewire_program_init(
+     PIO pio,       /* pio object (pio0/pio1) */ 
+     uint sm,       /* state machine number */
+     uint offset,   /* onewire code offset in PIO instr. memory */ 
+     uint pin,      /* Pin number for 1-Wire data signal */ 
+     uint pinctlz   /* Pin number for external FET strong pullup */ 
+)
+{
+    uint div;
+
+    pio_sm_config c = onewire_program_get_default_config(offset);
+    sm_config_set_out_pins(&c, pinctlz, 1);
+    sm_config_set_set_pins(&c, pinctlz, 1);
+    sm_config_set_in_pins(&c, pin);
+    sm_config_set_sideset_pins(&c, pin);
+    div = clock_get_hz(clk_sys)/1000000 * 3;
+    sm_config_set_clkdiv_int_frac(&c, div, 0);
+    sm_config_set_out_shift(&c, true, true, 8); 
+    sm_config_set_in_shift(&c, true, true, 8); 
+
+    gpio_init(pin);
+    gpio_set_dir(pin, 0);
+    gpio_pull_up(pin);
+
+    gpio_init(pinctlz);
+    gpio_put(pinctlz, 1);
+    gpio_set_dir(pinctlz, 1);
+
+    //pio_sm_set_pins_with_mask(pio, sm, 1<<pin, 1<<pin);
+    //pio_sm_set_pindirs_with_mask(pio, sm, 1<<pin, 1<<pin);
+
+    pio_gpio_init(pio, pin);
+    //   gpio_set_oeover(pin, GPIO_OVERRIDE_INVERT); // see above
+    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<pin);
+
+    pio_gpio_init(pio, pinctlz);
+    pio_sm_set_pins_with_mask(pio, sm, 1<<pinctlz, 1<<pinctlz);
+    pio_sm_set_pindirs_with_mask(pio, sm, 1<<pinctlz, 1<<pinctlz);
+
+    /* Preload register y with 1 to keep pinctlz = high when
+       state machine starts running */
+    pio_sm_exec(pio, sm, pio_encode_set(pio_y, 1));
+
+    pio_sm_init(pio, sm, offset + onewire_offset_start, &c);
+}
+
+%}

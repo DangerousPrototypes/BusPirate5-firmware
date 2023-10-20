@@ -2,7 +2,7 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
-#define BP_FIRMWARE_VERSION "v0.0.3"
+#define BP_FIRMWARE_VERSION "v0.1.0"
 #ifndef BP_FIRMWARE_HASH //this variable is for the current revision GIT hash
 #define BP_FIRMWARE_HASH "commit unknown"
 #endif
@@ -30,21 +30,17 @@
 //#define		BP_USE_LCDSPI
 //#define		BP_USE_LCDI2C
 //#define		BP_USE_LA
-#define 	BP_USE_DUMMY1
+//#define 	BP_USE_DUMMY1
 //#define 	BP_USE_DUMMY2
 
 // enable display support
 //#define		DISPLAY_USE_HD44780	// is always enabled
 //#define		DISPLAY_USE_ST7735
 
-// user command structs
-#include "commands.h"
+#define OPTARG_STRING_LEN 20
 
 // include platform
 #include "platform/bpi-rev8.h"
-
-// include MCU command defines
-#include "mcu/rp2040.h"
 
 // include a translation
 //new multilingual system

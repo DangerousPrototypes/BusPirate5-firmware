@@ -3,18 +3,10 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "modes.h"
-#include "ui/ui_const.h"
-#include "ui/ui_info.h"
 #include "ui/ui_term.h"
-//#include "buf.h"
 #include "usb_tx.h"
 #include "usb_rx.h"
-#include "freq.h"
 #include "ui/ui_cmdln.h"
-#include "font/font.h"
-#include "ui/ui_lcd.h"
-#include "hardware/timer.h"
 
 //printf("你好小狗");
 // ESC [ ? 3 h       132 column mode

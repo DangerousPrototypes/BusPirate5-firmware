@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
+#include "bytecode.h"
 #include "modes.h"
 #include "pirate.h"
 #include "ui/ui_const.h"
@@ -102,13 +103,13 @@ void system_init(void)
 
 bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label)
 {
-  	#ifdef BP_DEBUG_ENABLED
+  	//#ifdef BP_DEBUG_ENABLED
     	//don't blow up our debug UART settings
 	    if(system_config.pin_func[pin]==BP_PIN_DEBUG)
         {
             return false;
         }
-	#endif	 
+	//#endif	 
 
     if(enable)
     {
@@ -132,12 +133,16 @@ bool system_bio_claim(bool enable, uint8_t bio_pin, enum bp_pin_func func, const
 
 bool system_set_active(bool active, uint8_t bio_pin, uint8_t* function_register)
 {
-    #ifdef BP_DEBUG_ENABLED
+    /*#ifdef BP_DEBUG_ENABLED
 	    if(bio_pin==BP_DEBUG_UART_TX || bio_pin==BP_DEBUG_UART_RX)
         {
             return false;
         }
-	#endif	 
+	#endif	 */
+	if(system_config.pin_func[bio_pin+1]==BP_PIN_DEBUG)
+	{
+		return false;
+	}
     
     if(active)
     {

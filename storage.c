@@ -3,12 +3,17 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "opt_args.h"
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
 #include "fatfs/tf_card.h"
 #include "bio.h"
-#include "storage.h"
+#include "ui/ui_prompt.h"
+#include "ui/ui_parse.h"
+#include "ui/ui_term.h"
 #include "mjson/mjson.h"
+#include "storage.h"
+
 
 FATFS fs;		/* FatFs work area needed for each volume */
 FIL fil;			/* File object needed for each open file */
@@ -21,6 +26,29 @@ uint8_t* buf = (uint8_t*)buf32;
 FRESULT fr;     /* FatFs return code */
 UINT br;
 UINT bw;
+
+const char *fresult_msg[]={
+	[FR_OK]="ok",                               /* (0) Succeeded */
+	[FR_DISK_ERR]="disk error",                 /* (1) A hard error occurred in the low level disk I/O layer */
+	[FR_INT_ERR]="assertion failed",            /* (2) Assertion failed */
+	[FR_NOT_READY]="drive not ready",			/* (3) The physical drive cannot work */
+	[FR_NO_FILE]="file not found",				/* (4) Could not find the file */
+	[FR_NO_PATH]="path not found",				/* (5) Could not find the path */
+	[FR_INVALID_NAME]="invalid path",		/* (6) The path name format is invalid */
+	[FR_DENIED]="access denied",				/* (7) Access denied due to prohibited access or directory full */
+	[FR_EXIST]="access denied",				/* (8) Access denied due to prohibited access */
+	[FR_INVALID_OBJECT]="invalid object",		/* (9) The file/directory object is invalid */
+	[FR_WRITE_PROTECTED]="write prohibited",		/* (10) The physical drive is write protected */
+	[FR_INVALID_DRIVE]="invalid drive",		/* (11) The logical drive number is invalid */
+	[FR_NOT_ENABLED]="drive not enabled",			/* (12) The volume has no work area */
+	[FR_NO_FILESYSTEM]="filesystem not found",		/* (13) There is no valid FAT volume */
+	[FR_MKFS_ABORTED]="format aborted",		/* (14) The f_mkfs() aborted due to any problem */
+	[FR_TIMEOUT]="timeout",				/* (15) Could not get a grant to access the volume within defined period */
+	[FR_LOCKED]="file locked",				/* (16) The operation is rejected according to the file sharing policy */
+	[FR_NOT_ENOUGH_CORE]="buffer full",		/* (17) LFN working buffer could not be allocated */
+	[FR_TOO_MANY_OPEN_FILES]="too many open files",	/* (18) Number of open files > FF_FS_LOCK */
+	[FR_INVALID_PARAMETER]="invalid parameter"	/* (19) Given parameter is invalid */
+};
 
 void storage_init(void)
 {
@@ -169,6 +197,121 @@ uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t
 
     return 1;
 }
+
+void file_error(FRESULT res)
+{
+    if(res>0)
+    {
+        printf("%sError:%s %s%s", ui_term_color_error(),ui_term_color_info(), fresult_msg[res], ui_term_color_reset());
+    }
+}
+
+void cat(opt_args (*args), struct command_result *res)
+{
+    char file[512];
+
+    /*if(system_config.storage_available==0)
+    {
+        return;
+    }*/
+
+    fr = f_open(&fil, args[0].c, FA_READ);	
+    if (fr != FR_OK) {
+        //no config file or SD card
+        file_error(fr);
+        //return (int)fr;
+        return;
+    }
+
+    /* Read every line and display it */
+    while (f_gets(file, sizeof(file), &fil)) {
+        printf(file);
+    }
+
+    printf("\r\n");
+   
+    /* Close the file */
+    f_close(&fil);  
+
+    return;
+}
+
+
+
+void make_dir(opt_args (*args), struct command_result *res)
+{
+    FRESULT fr;
+    fr = f_mkdir(args[0].c);
+    file_error(fr);
+}
+void change_dir(opt_args (*args), struct command_result *res)
+{
+    FRESULT fr;
+    fr = f_chdir(args[0].c);
+
+    if(fr)
+    {
+        file_error(fr);
+    }
+    else
+    {
+        TCHAR str[128];
+        fr = f_getcwd(str, 128);  /* Get current directory path */
+        printf("%s\r\n",str);
+    }
+}
+void storage_unlink(opt_args (*args), struct command_result *res)
+{
+    FRESULT fr;
+    fr = f_unlink(args[0].c);
+    file_error(fr);
+}
+
+void list_dir(opt_args (*args), struct command_result *res)
+{
+    FRESULT fr;
+    DIR dir;
+    FILINFO fno;
+    int nfile, ndir; 
+
+    fr = f_opendir(&dir, args[0].c);                       /* Open the directory */
+    //TCHAR str[128];
+    //fr = f_getcwd(str, 128);  /* Get current directory path */
+    //printf("%s\r\n",str);
+
+    if (fr == FR_OK) {
+        nfile = ndir = 0;
+        for(;;)
+        {
+            fr = f_readdir(&dir, &fno);                   /* Read a directory item */
+            if(fr != FR_OK || fno.fname[0] == 0) break;  /* Error or end of dir */
+            
+            if(fno.fattrib & AM_DIR) 
+            {            /* Directory */
+                printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
+                ndir++;
+            }
+            else
+            {                               /* File */
+                printf("%s%10llu %s%s%s\r\n", 
+                ui_term_color_prompt(),fno.fsize, ui_term_color_info(),fno.fname, ui_term_color_reset());
+                nfile++;
+            }
+        }
+        f_closedir(&dir);
+        printf("%s%d dirs, %d files%s\r\n", ui_term_color_info(), ndir, nfile, ui_term_color_reset());
+    } else {
+        //printf("Failed to open \"%s\". (%s)\r\n", args[0].c, fresult_msg[fr]);
+        file_error(fr);
+    }
+
+
+    return; // (uint32_t) res;
+}
+
+
+
+
 
 uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t, uint8_t count)
 {

@@ -1,22 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/spi.h"
-#include "hardware/i2c.h"
-#include "hardware/dma.h"
-#include "hardware/pio.h"
-#include "hardware/interp.h"
 #include "hardware/timer.h"
-#include "hardware/watchdog.h"
-#include "hardware/clocks.h"
-#include "hardware/adc.h"
 #include "hardware/uart.h"
 #include "ws2812.pio.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "font/font.h"
+#include "opt_args.h"
 #include "ui/ui_lcd.h"
 #include "rgb.h"
 #include "shift.h"
@@ -33,15 +25,14 @@
 #include "storage.h"
 #include "freq.h"
 #include "queue.h"
-//#include "buf.h"
 #include "usb_tx.h"
 #include "usb_rx.h"
 #include "debug.h"
 #include "ui/ui_cmdln.h"
+#include "bytecode.h"
 #include "modes.h"
 #include "system_monitor.h"
 #include "ui/ui_statusbar.h"
-#include "bsp/board.h"
 #include "tusb.h"
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
@@ -74,7 +65,7 @@ int main()
     // init shift register pins
     shift_init();
     
-    //init psu pins
+    //init psu pins 
     psu_init();
    
     // LCD pin init
@@ -91,7 +82,7 @@ int main()
     lock_init(&core, next_striped_spin_lock_num());
 
     // configure the defaults for shift register attached hardware
-    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN|PULLUP_EN), CURRENT_EN_OVERRIDE);
+    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), PULLUP_EN|CURRENT_EN_OVERRIDE);
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
     shift_set_clear_wait( 0, DISPLAY_RESET);
     busy_wait_ms(100);
@@ -153,6 +144,15 @@ int main()
     translation_set(system_config.terminal_language); 
     
     multicore_fifo_push_blocking(0); //begin main loop on secondary core
+    
+    //modes[0].protocol_setup_exc();	
+    // turn everything off
+	bio_init();     // make all pins safe
+	psu_reset();    // disable psu and reset pin label
+    psu_cleanup();  // clear any errors
+
+
+
     busy_wait_ms(100);
 
     enum bp_statmachine
@@ -165,10 +165,12 @@ int main()
     
     uint8_t bp_state=0;
     uint32_t value;
-    struct command_attributes attributes;
-    struct command_response response;   
+    //struct command_attributes attributes;
+    //struct command_response response;   
     struct prompt_result result; 
     alarm_id_t screensaver;
+    //struct opt_args args;
+    //struct command_result res;
 
     while(1)
     {
@@ -208,7 +210,7 @@ int main()
                             break;
                     }
                     // show welcome
-                    ui_info_print_info(&attributes, &response);
+                    //ui_info_print_info(&args, &res);
                     bp_state=BP_SM_COMMAND_PROMPT;
                 }
                 else if(result.error) // user hit enter but not a valid option
@@ -250,12 +252,9 @@ int main()
                 break;
             
             case BP_SM_PROCESS_COMMAND:
-                if(!ui_process_commands())
-                {
-                    bp_state=BP_SM_COMMAND_PROMPT;
-                }
-                break;
-            
+                system_config.error=ui_process_commands();   
+                bp_state=BP_SM_COMMAND_PROMPT;      
+                break;         
             case BP_SM_COMMAND_PROMPT:
                 if(system_config.subprotocol_name)
                 {

@@ -1,3 +1,3 @@
-void pullups_enable(struct command_attributes *attributes, struct command_response *response);
-void pullups_disable(struct command_attributes *attributes, struct command_response *response);
+void pullups_enable(opt_args (*args), struct command_result *res);
+void pullups_disable(opt_args (*args), struct command_result *res);
 void pullups_cleanup(void);

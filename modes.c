@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-
 #include "system_config.h"
+#include "bytecode.h"
 #include "modes.h"
 
 #include "mode/hiz.h"
@@ -56,34 +56,42 @@
 // these are the dummy functions when something ain't used 
 void nullfunc1(void)
 {
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 }
 
 uint32_t nullfunc2(uint32_t c)
 {	
 	(void) c;
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 	return 0x0000;
 }
 
 uint32_t nullfunc3(void)
 {	
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 	return 0x0000;
 }
 
+
 void nullfunc4(uint32_t c)
 {	
 	(void) c;
-	printf(t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 }
 
 const char *nullfunc5(void){
-    return t[T_MODE_ERROR_NO_EFFECT];
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+}
+
+uint32_t nullfunc6(uint8_t next_command)
+{	
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+	system_config.error=1;
+	return 0x0000; 
 }
 
 void nohelp(void)
@@ -96,17 +104,23 @@ uint32_t noperiodic(void)
 	return 0;
 }
 
+void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next)
+{
+    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+    system_config.error=1;
+}
+
 // all modes and their interaction is handled here
 // buspirateNG.h has the conditional defines for modes
 
 struct _mode modes[MAXPROTO]={
 {
-	nullfunc1,				// start
-	nullfunc1,				// start with read
-	nullfunc1,				// stop
-	nullfunc1,				// stop with read
-	nullfunc2,				// send(/read) max 32 bit
-	nullfunc3,				// read max 32 bit
+	nullfunc1_temp,				// start
+	nullfunc1_temp,				// start with read
+	nullfunc1_temp,				// stop
+	nullfunc1_temp,				// stop with read
+	nullfunc1_temp,				// write(/read) max 32 bit
+	nullfunc1_temp,				// read max 32 bit
 	nullfunc1,				// set clk high
 	nullfunc1,				// set clk low
 	nullfunc1,				// set dat hi
@@ -128,7 +142,7 @@ struct _mode modes[MAXPROTO]={
 {
     ONEWIRE_start,				// start
     ONEWIRE_startr,				// start with read
-    ONEWIRE_stop,				// stop
+     ONEWIRE_stop,				// stop
     ONEWIRE_stopr,				// stop with read
     ONEWIRE_send,				// send(/read) max 32 bit
     ONEWIRE_read,				// read max 32 bit
@@ -154,7 +168,7 @@ struct _mode modes[MAXPROTO]={
 {
     ONEWIRE_start,				// start
     ONEWIRE_startr,				// start with read
-    ONEWIRE_stop,				// stop
+     ONEWIRE_stop,				// stop
     ONEWIRE_stopr,				// stop with read
     ONEWIRE_send,				// send(/read) max 32 bit
     ONEWIRE_read,				// read max 32 bit
@@ -178,12 +192,12 @@ struct _mode modes[MAXPROTO]={
 #endif
 #ifdef BP_USE_HWUSART
 {
-    HWUSART_open,				// start
-    HWUSART_open_read,				// start with read
-    HWUSART_close,				// stop
-    HWUSART_close,				// stop with read
-    HWUSART_send,				// send(/read) max 32 bit
-    HWUSART_read,				// read max 32 bit
+    hwusart_open,				// start
+    hwusart_open_read,				// start with read
+    hwusart_close,				// stop
+    hwusart_close,				// stop with read
+    hwusart_write,				// send(/read) max 32 bit
+    hwusart_read,				// read max 32 bit
     nullfunc1,				// set clk high
     nullfunc1,				// set clk low
     nullfunc1,				// set dat hi
@@ -191,25 +205,25 @@ struct _mode modes[MAXPROTO]={
     nullfunc3,				// toggle dat (?)
     nullfunc1,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
-    HWUSART_periodic,				// service to regular poll whether a byte ahs arrived
-    HWUSART_macro,				// macro
-    HWUSART_setup,				// setup UI
-    HWUSART_setup_exc,			// real setup
-    HWUSART_cleanup,			// cleanup for HiZ
+    hwusart_periodic,				// service to regular poll whether a byte ahs arrived
+    hwusart_macro,				// macro
+    hwusart_setup,				// setup UI
+    hwusart_setup_exc,			// real setup
+    hwusart_cleanup,			// cleanup for HiZ
     //HWUSART_pins,				// display pin config
-    HWUSART_settings,			// display settings
-    HWUSART_help,				// display small help about the protocol
+    hwusart_settings,			// display settings
+    hwusart_help,				// display small help about the protocol
     "UART",				// friendly name (promptname)
 },
 #endif
 #ifdef BP_USE_HWI2C
 {
-    HWI2C_start,				// start
-    HWI2C_start,				// start with read
-    HWI2C_stop,				// stop
-    HWI2C_stop,				// stop with read
-    HWI2C_send,				// send(/read) max 32 bit
-    HWI2C_read,				// read max 32 bit
+    hwi2c_start,				// start
+    hwi2c_start,				// start with read
+    hwi2c_stop,				// stop
+    hwi2c_stop,				// stop with read
+    hwi2c_write,				// send(/read) max 32 bit
+    hwi2c_read,				// read max 32 bit
     nullfunc1,				// set clk high
     nullfunc1,				// set clk low
     nullfunc1,				// set dat hi
@@ -218,13 +232,13 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
-    HWI2C_macro,				// macro
-    HWI2C_setup,				// setup UI
-    HWI2C_setup_exc,			// real setup
-    HWI2C_cleanup,				// cleanup for HiZ
+    hwi2c_macro,				// macro
+    hwi2c_setup,				// setup UI
+    hwi2c_setup_exc,			// real setup
+    hwi2c_cleanup,				// cleanup for HiZ
     //HWI2C_pins,				// display pin config
-    HWI2C_settings,				// display settings
-    HWI2C_help,				// display small help about the protocol
+    hwi2c_settings,				// display settings
+    hwi2c_help,				// display small help about the protocol
     "I2C",				// friendly name (promptname)
 },
 #endif
@@ -232,7 +246,7 @@ struct _mode modes[MAXPROTO]={
 {
     SWI2C_start,				// start
     SWI2C_start,				// start with read
-    SWI2C_stop,				// stop
+     SWI2C_stop,				// stop
     SWI2C_stop,				// stop with read
     SWI2C_write,				// swrite(/read) max 32 bit
     SWI2C_read,				// read max 32 bit
@@ -257,10 +271,10 @@ struct _mode modes[MAXPROTO]={
 #ifdef BP_USE_HWSPI
 {
 	spi_start,				// start
-	spi_startr,				// start with read
+	spi_start,				// start with read
 	spi_stop,				// stop
-	spi_stopr,				// stop with read
-	spi_send,				// send(/read) max 32 bit
+	spi_stop,				// stop with read
+	spi_write,				// send(/read) max 32 bit
 	spi_read,				// read max 32 bit
 	nullfunc1,				// set clk high
 	nullfunc1,				// set clk low
@@ -284,7 +298,7 @@ struct _mode modes[MAXPROTO]={
 {
 	SW2W_start,				// start
 	SW2W_startr,				// start with read
-	SW2W_stop,				// stop
+ 	SW2W_stop,				// stop
 	SW2W_stopr,				// stop with read
 	SW2W_send,				// send(/read) max 32 bit
 	SW2W_read,				// read max 32 bit
@@ -310,7 +324,7 @@ struct _mode modes[MAXPROTO]={
 {
 	SW3W_start,				// start
 	SW3W_startr,				// start with read
-	SW3W_stop,				// stop
+ 	SW3W_stop,				// stop
 	SW3W_stopr,				// stop with read
 	SW3W_send,				// send(/read) max 32 bit
 	SW3W_read,				// read max 32 bit
@@ -336,7 +350,7 @@ struct _mode modes[MAXPROTO]={
 {
 	nullfunc1,				// start
 	nullfunc1,				// start with read
-	nullfunc1,				// stop
+ 	nullfunc1,				// stop
 	nullfunc1,				// stop with read
 	LCDSPI_send,				// send(/read) max 32 bit
 	LCDSPI_read,				// read max 32 bit
@@ -362,7 +376,7 @@ struct _mode modes[MAXPROTO]={
 {
 	nullfunc1,				// start
 	nullfunc1,				// start with read
-	nullfunc1,				// stop
+ 	nullfunc1,				// stop
 	nullfunc1,				// stop with read
 	LCDI2C_send,				// send(/read) max 32 bit
 	LCDI2C_read,				// read max 32 bit
@@ -388,7 +402,7 @@ struct _mode modes[MAXPROTO]={
 {
     nullfunc1,				// start
     nullfunc1,				// start with read
-    nullfunc1,				// stop
+     nullfunc1,				// stop
     nullfunc1,				// stop with read
     DIO_send,				// send(/read) max 32 bit
     DIO_read,				// read max 32 bit
@@ -412,12 +426,12 @@ struct _mode modes[MAXPROTO]={
 #endif
 #ifdef BP_USE_HWLED
 {
-    HWLED_start,				// start
-    HWLED_start,				// start with read
-    HWLED_stop,				// stop
-    HWLED_stop,				// stop with read
-    HWLED_send,				// send(/read) max 32 bit
-    nullfunc3,				// read max 32 bit
+    hwled_start,				// start
+    hwled_start,				// start with read
+    hwled_stop,				// stop
+    hwled_stop,				// stop with read
+    hwled_write,				// send(/read) max 32 bit
+    nullfunc1_temp,				// read max 32 bit
     nullfunc1,				// set clk high
     nullfunc1,				// set clk low
     nullfunc1,				// set dat hi
@@ -426,13 +440,13 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
-    HWLED_macro,				// macro
-    HWLED_setup,				// setup UI
-    HWLED_setup_exc,			// real setup
-    HWLED_cleanup,				// cleanup for HiZ
+    hwled_macro,				// macro
+    hwled_setup,				// setup UI
+    hwled_setup_exc,			// real setup
+    hwled_cleanup,				// cleanup for HiZ
     //HWLED_pins,				// display pin config
-    HWLED_settings,				// display settings
-    HWLED_help,				// display small help about the protocol
+    hwled_settings,				// display settings
+    hwled_help,				// display small help about the protocol
     "LED",				// friendly name (promptname)
 },
 #endif
@@ -440,7 +454,7 @@ struct _mode modes[MAXPROTO]={
 {
     nullfunc1,				// start
     nullfunc1,				// start with read
-    nullfunc1,				// stop
+     nullfunc1,				// stop
     nullfunc1,				// stop with read
     nullfunc2,				// send(/read) max 32 bit
     nullfunc3,				// read max 32 bit
@@ -466,7 +480,7 @@ struct _mode modes[MAXPROTO]={
 {
     dummy1_start,				// start
     dummy1_startr,				// start with read
-    dummy1_stop,				// stop
+     dummy1_stop,				// stop
     dummy1_stopr,				// stop with read
     dummy1_send,				// send(/read) max 32 bit
     dummy1_read,				// read max 32 bit

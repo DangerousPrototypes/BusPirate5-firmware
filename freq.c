@@ -6,6 +6,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "bio.h"
+#include "opt_args.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_const.h"
 #include "ui/ui_term.h"
@@ -14,28 +15,28 @@
 #include "freq.h"
 
 
-void freq_single(struct command_attributes *attributes, struct command_response *response)
+void freq_single(opt_args (*args), struct command_result *res)
 {
-    if(!attributes->has_dot) //show config menu
+    if(args[0].no_value) //show config menu
     {
-        if(!freq_configure_disable()) response->error=1;
+        if(!freq_configure_disable()) res->error=1;
     }
     else //single measurement
     {
-        if(!freq_measure(attributes->dot, false)) response->error=1;
+        if(!freq_measure(args[0].i, false)) res->error=1;
     }
 
 }
 
-void freq_cont(struct command_attributes *attributes, struct command_response *response)
+void freq_cont(opt_args (*args), struct command_result *res)
 {
-    if(!attributes->has_dot) //show config menu
+    if(args[0].no_value) //show config menu
     {
-        if(!freq_configure_enable()) response->error=1;
+        if(!freq_configure_enable()) res->error=1;
     }
-    else //continous measurement
+    else //continuous measurement
     {
-        if(!freq_measure(attributes->dot, true)) response->error=1;
+        if(!freq_measure(args[0].i, true)) res->error=1;
     }
 }
 
@@ -63,10 +64,10 @@ bool freq_check_pin_is_active(const struct ui_prompt* menu, uint32_t* i)
     return (system_config.freq_active & (0x01<<((uint8_t)(*i))));
 }
 
-//TODO: use PIO to do measurments/PWM on all A channels, making it fully flexable
-uint32_t freq_print(uint8_t pin, uint8_t refresh)
+//TODO: use PIO to do measurements/PWM on all A channels, making it fully flexible
+uint32_t freq_print(uint8_t pin, bool refresh)
 {
-    //now do single or continous measurement on the pin
+    //now do single or continuous measurement on the pin
     float measured_period=freq_measure_period(bio2bufiopin[pin]);
     float measured_duty_cycle = freq_measure_duty_cycle(bio2bufiopin[pin]);
 
@@ -99,7 +100,7 @@ uint32_t freq_print(uint8_t pin, uint8_t refresh)
     return 1;
 }
 
-// F.null - setup continous frequency measurement on IO pin
+// F.null - setup continuous frequency measurement on IO pin
 uint32_t freq_configure_enable(void)
 {
     uint32_t pin;
@@ -239,7 +240,7 @@ uint32_t freq_measure(int32_t pin, int refresh)
         return 0;
     }
 
-    //now do single or continous measurement on the pin
+    //now do single or continuous measurement on the pin
     if(refresh)
     {
         // press any key to continue
@@ -247,7 +248,7 @@ uint32_t freq_measure(int32_t pin, int refresh)
         ui_prompt_any_key_continue(&result, 250, &freq_print, pin, true);
     }
 
-    // print once (also handles final \n for continous mode)
+    // print once (also handles final \n for continuous mode)
     freq_print(pin, false);
 
     return 1;

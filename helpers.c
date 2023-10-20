@@ -2,6 +2,10 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "opt_args.h"
+#include "command_attributes.h"
+#include "bytecode.h"
+#include "commands.h"
 #include "ui/ui_term.h"
 #include "ui/ui_const.h"
 #include "ui/ui_prompt.h"
@@ -11,22 +15,15 @@
 #include "ui/ui_cmdln.h"
 #include "pico/multicore.h"
 #include "rgb.h"
-#include "usb_tx.h"
+//#include "usb_tx.h"
 #include "storage.h"
 #include "psu.h"
 #include "bio.h"
+#include "amux.h"
+#include "mcu/rp2040.h"
 
-//this is a debug function attached to the '>' key in commands.c
-//use it to test code or run repeat operations
-void helpers_debug(struct command_attributes *attributes, struct command_response *response)
-{
-    //system_load_config();
-    //storage_load_config();
-    storage_save_config();
-    //storage_new_file();
-}
 
-void helpers_selftest(struct command_attributes *attributes, struct command_response *response)
+void helpers_selftest(opt_args (*args), struct command_result *res)
 {
     uint32_t temp1, temp2, fails;
 
@@ -42,7 +39,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
     bio_init();
 
     //USB/VOLTAGE/ADC/AMUX test: read the (USB) power supply
-    hw_adc_sweep();
+    amux_sweep();
 
     printf("ADC SUBSYSTEM: VUSB ");
     if(hw_adc_voltage[HW_ADC_MUX_VUSB]< (4.75 * 1000))
@@ -97,7 +94,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
     for(uint8_t pin=0; pin<BIO_MAX_PINS; pin++)
     {
         //read pin input (should be low)
-        hw_adc_sweep();
+        amux_sweep();
         temp1=bio_get(pin);
 
         printf("BIO%d FLOAT: %d/%1.2fV ", pin, temp1, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
@@ -121,7 +118,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
         busy_wait_ms(1); //give it some time
 
         //read pin ADC, should be ~3.3v
-        hw_adc_sweep();
+        amux_sweep();
         printf("BIO%d HIGH: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
         if(*hw_pin_voltage_ordered[pin+1]<3*1000)
         {
@@ -163,7 +160,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
         busy_wait_ms(1); //give it some time
 
         //read pin ADC, should be ~3.3v
-        hw_adc_sweep();
+        amux_sweep();
         printf("BIO%d LOW: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
         if(*hw_pin_voltage_ordered[pin+1]>200)
         {
@@ -208,7 +205,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
 
 
         //read pin input (should be low)
-        hw_adc_sweep();
+        amux_sweep();
         temp1=bio_get(pin);
 
         printf("BIO%d PU-HIGH: %d/%1.2fV ", pin, temp1, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
@@ -252,7 +249,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
         busy_wait_ms(5); //give it some time
 
         //read pin input (should be high)
-        hw_adc_sweep();
+        amux_sweep();
 
         printf("BIO%d PU-LOW: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
 
@@ -317,7 +314,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
         uint i;
         for(i=0; i<5; i++)
         {
-            hw_adc_sweep();
+            amux_sweep();
             printf("PPSU CODE %d, ADC: %d, ERROR!\r\n", result, hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT]);
             busy_wait_ms(200);
         }
@@ -330,7 +327,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
     
     while(result) //detect the interrupt
     {
-        hw_adc_sweep();
+        amux_sweep();
         if(hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] < 100)
         {
             //success fuse blew
@@ -391,7 +388,7 @@ void helpers_selftest(struct command_attributes *attributes, struct command_resp
     while(multicore_fifo_pop_blocking()!=0xf1);
 
 }
-
+/*/
 void helpers_numbits(struct command_attributes *attributes, struct command_response *response)
 {
     if(attributes->has_dot)
@@ -401,42 +398,8 @@ void helpers_numbits(struct command_attributes *attributes, struct command_respo
         
     }
 }
-
-void helpers_delay_us(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t repeat=1;
-
-    if(attributes->has_colon)
-    {
-        repeat=attributes->colon;
-    }
-
-    printf("%s%s:%s %s%d%s%s",
-        ui_term_color_notice(),t[T_MODE_DELAY], ui_term_color_reset(),
-        ui_term_color_num_float(), repeat, ui_term_color_reset(),
-        t[T_MODE_US]
-    );
-    delayus(repeat);
-}
-
-void helpers_delay_ms(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t repeat=1;
-    
-    if(attributes->has_colon)
-    {
-        repeat=attributes->colon;
-    }
-
-    printf("%s%s:%s %s%d%s%s",
-        ui_term_color_notice(),	t[T_MODE_DELAY], ui_term_color_reset(),
-        ui_term_color_num_float(), repeat, ui_term_color_reset(),
-        t[T_MODE_MS]
-    );
-    delayms(repeat);
-}
-
-void helpers_bit_order_msb(struct command_attributes *attributes, struct command_response *response)
+*/
+void helpers_bit_order_msb(opt_args (*args), struct command_result *res)
 {
     system_config.bit_order=0;
     printf("%s%s:%s %s 0b%s1%s0000000",
@@ -445,7 +408,7 @@ void helpers_bit_order_msb(struct command_attributes *attributes, struct command
     );
 }
 
-void helpers_bit_order_lsb(struct command_attributes *attributes, struct command_response *response)
+void helpers_bit_order_lsb(opt_args (*args), struct command_result *res)
 {
     system_config.bit_order=1;
     printf("%s%s:%s %s 0b0000000%s1%s",
@@ -454,23 +417,25 @@ void helpers_bit_order_lsb(struct command_attributes *attributes, struct command
     );    
 }
 
-void helpers_show_int_formats(struct command_attributes *attributes, struct command_response *response)
+void helpers_show_int_formats(opt_args (*args), struct command_result *res)
 {
-    uint32_t temp;
-    prompt_result result;
-    ui_parse_get_int(&result, &temp);
+    uint32_t temp=args[0].i;
+    //prompt_result result;
+    //ui_parse_get_int(&result, &temp);
     uint32_t temp2=system_config.display_format;		// remember old display_format
     system_config.display_format=df_auto; //TODO: this is still a hack...
-
+    
+    struct command_attributes attributes;
+    
     //determine the effective bits
-    attributes->has_dot=true;
-    attributes->dot=8;
+    attributes.has_dot=true;
+    attributes.dot=8;
     uint32_t mask=0x000000ff;
-    for(uint8_t i=1; i<4; i++) //4 = 32 bit support TODO: wish we could make this more flexable
+    for(uint8_t i=1; i<4; i++) //4 = 32 bit support TODO: wish we could make this more flexible
     {
         if(temp&(mask<<(i*8)))
         {
-            attributes->dot+=8;
+            attributes.dot+=8;
         }
     }
 
@@ -489,8 +454,8 @@ void helpers_show_int_formats(struct command_attributes *attributes, struct comm
                 break;
             default:
                 printf(" %s=", ui_term_color_reset());
-                attributes->number_format=i;
-                ui_format_print_number_2(attributes,&temp);
+                attributes.number_format=i;
+                ui_format_print_number_2(&attributes,&temp);
                 break;
         }
 
@@ -499,11 +464,11 @@ void helpers_show_int_formats(struct command_attributes *attributes, struct comm
     //system_config.num_bits=temp3;
 }
 
-void helpers_show_int_inverse(struct command_attributes *attributes, struct command_response *response)
+void helpers_show_int_inverse(opt_args (*args), struct command_result *res)
 {
-    uint32_t temp;
-    prompt_result result;
-    ui_parse_get_int(&result, &temp);
+    uint32_t temp=args[0].i;
+    //prompt_result result;
+    //ui_parse_get_int(&result, &temp);
     uint32_t temp2=system_config.display_format;		// remember old display_format
     system_config.bit_order^=1;
     uint32_t temp3=system_config.num_bits;		// remember old numbits
@@ -520,7 +485,7 @@ void helpers_show_int_inverse(struct command_attributes *attributes, struct comm
     system_config.bit_order^=1;
     system_config.num_bits=temp3;
 }
-
+/*/
 void helpers_mode_macro(struct command_attributes *attributes, struct command_response *response)
 {
     uint32_t temp;
@@ -537,56 +502,10 @@ void helpers_mode_macro(struct command_attributes *attributes, struct command_re
         printf(t[T_MODE_ERROR_PARSING_MACRO]);
     }    
 }
-
-void helpers_mode_start(struct command_attributes *attributes, struct command_response *response)
+*/
+void helpers_mode_help(opt_args (*args), struct command_result *res)
 {
-    system_config.write_with_read=0;
-	modes[system_config.mode].protocol_start();
-}
-
-void helpers_mode_stop(struct command_attributes *attributes, struct command_response *response)
-{
-    system_config.write_with_read=0;
-	modes[system_config.mode].protocol_stop();
-
-}
-void helpers_mode_start_with_read(struct command_attributes *attributes, struct command_response *response)
-{
-    system_config.write_with_read=1;
-	modes[system_config.mode].protocol_startR();
-}
-void helpers_mode_stop_with_read(struct command_attributes *attributes, struct command_response *response)
-{
-    system_config.write_with_read=0;
-	modes[system_config.mode].protocol_stopR();
-}
-void helpers_mode_clock_high(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_clkh();
-}
-void helpers_mode_clock_low(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_clkl();
-}
-void helpers_mode_clock_tick(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_clk();
-}
-void helpers_mode_data_high(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_dath();
-}
-void helpers_mode_data_low(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_datl();
-}
-void helpers_mode_data_s(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_dats();
-}
-void helpers_mode_read_bit(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_bitr();
+    modes[system_config.mode].protocol_help();
 }
 
 void helpers_mode_periodic()
@@ -594,145 +513,7 @@ void helpers_mode_periodic()
     modes[system_config.mode].protocol_periodic();
 }
 
-void helpers_mode_help(struct command_attributes *attributes, struct command_response *response)
-{
-    modes[system_config.mode].protocol_help();
-}
-void helpers_mode_read(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t repeat=1;
-
-    if(attributes->has_colon)
-    {
-        repeat=attributes->colon;
-    }
-
-    if(system_config.display_format==df_auto)
-    {
-        attributes->number_format=df_hex; //if auto format mode, force hex display
-    }
-
-    /* TODO: this won't work, the parser only parses .nn where nn is a number
-    if(attributes->has_dot)
-    {
-        switch(attributes->dot|0x20) //to lower
-        {
-            case 'a':
-                attributes->number_format=df_ascii;
-            case 'd':
-                attributes->number_format=df_dec;
-                break;
-            case 'x':
-            case 'h':
-                attributes->number_format=df_hex;
-                break;
-            case 'b':
-                attributes->number_format=df_bin;
-                break;
-            default:
-                break;
-        }
-    }*/
-
-    printf("%sRX:%s ", ui_term_color_info(), ui_term_color_reset());
-
-    uint8_t i,b_interval;
-    switch(system_config.display_format)
-    {
-        case df_bin:
-            i=b_interval=4;
-            break;
-        default:
-            i=b_interval=8;
-            break;   
-    }
-
-    while(repeat--)
-    {
-        uint32_t received=modes[system_config.mode].protocol_read();
-        ui_format_print_number_2(attributes, &received);
-        
-        i--;
-        if(repeat)
-        {
-            printf(" ");
-            if(!i)
-            {
-                printf("\r\n    ");
-                i=b_interval;
-            } 
-        } 
-
-
-    }
-}
-void helpers_mode_write(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t repeat=1;
-    uint32_t temp;
-  
-    temp=attributes->value;
-    
-    // sequence is important! TODO: make freeform
-    if(attributes->has_dot)
-    {
-        //system_config.num_bits=attributes->dot;
-    }
-
-    if(attributes->has_colon)
-    {
-        repeat=attributes->colon;
-    }
-
-    if(!system_config.write_with_read)
-    {
-        printf("%sTX:%s ", ui_term_color_info(), ui_term_color_reset());
-    }
-
-    //TODO:" this is repeated three times, it should be some kind of passed function"
-    uint8_t i,b_interval;
-    switch(system_config.display_format)
-    {
-        case df_bin:
-            i=b_interval=4;
-            break;
-        default:
-            i=b_interval=8;
-            break;   
-    }
-
-    while(repeat--)
-    {
-        if(system_config.write_with_read)
-        {
-            printf("%sTX:%s ", ui_term_color_info(), ui_term_color_reset());
-        }
-
-        ui_format_print_number_2(attributes, &attributes->value);
-        uint32_t received=modes[system_config.mode].protocol_send(ui_format_bitorder(temp));		// reshuffle bits if necessary
-        
-        if(system_config.write_with_read) 
-        {
-            printf("%s, RX:%s ", ui_term_color_info(), ui_term_color_reset());
-            ui_format_print_number_2(attributes, &received);
-            if(repeat) printf("\r\n");
-        }
-        else
-        {
-            i--;
-            if(repeat)
-            {
-                printf(" ");
-                if(!i)
-                {
-                    printf("\r\n    ");
-                    i=b_interval;
-                } 
-            } 
-        }
-
-    }
-}
+/*
 void helpers_mode_write_string(struct command_attributes *attributes, struct command_response *response)
 {
     uint32_t i=0;
@@ -779,7 +560,7 @@ void helpers_mode_write_string(struct command_attributes *attributes, struct com
         
         uint32_t j=(uint32_t)c; //TODO: figure out the correct cast
         ui_format_print_number_2(attributes, &j);
-        uint32_t received=modes[system_config.mode].protocol_send(ui_format_bitorder(c)); // reshuffle bits if necessary
+        uint32_t received=modes[system_config.mode].protocol_write(ui_format_bitorder(c)); // reshuffle bits if necessary
         
         if(system_config.write_with_read) 
         {
@@ -801,4 +582,16 @@ void helpers_mode_write_string(struct command_attributes *attributes, struct com
     }
 
     cmdln_try_remove(&c); // consume the final "
+}
+*/
+
+
+void helpers_mcu_reset(opt_args (*args), struct command_result *res)
+{
+ 	mcu_reset();
+}
+
+void helpers_mcu_jump_to_bootloader(opt_args (*args), struct command_result *res)
+{
+    mcu_jump_to_bootloader();
 }

@@ -4,6 +4,8 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
+#include "opt_args.h"
+#include "bytecode.h"
 #include "mode/hwspi.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
@@ -134,9 +136,7 @@ uint32_t spi_setup(void)
 }
 
 uint32_t spi_setup_exc(void)
-{
-
-		
+{		
 	//setup spi
 	mode_config.baudrate_actual=spi_init(M_SPI_PORT, mode_config.baudrate);
 	printf("\r\n%s%s:%s %uKHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
@@ -169,7 +169,7 @@ uint32_t spi_setup_exc(void)
 	system_config.misoport=BP_SPI_MISO_PORT;
 	system_config.mosiport=BP_SPI_MOSI_PORT;
 	system_config.csport=BP_SPI_CS_PORT;
-	system_config.clkport=BP_BP_SPI_CLK_PORT;
+	system_config.clkport=BP_BP_SPI_CLK_PORT; 
 	system_config.misopin=BP_SPI_MISO_PIN;
 	system_config.mosipin=BP_SPI_MOSI_PIN;
 	system_config.cspin=BP_SPI_CS_PIN;
@@ -225,39 +225,34 @@ uint8_t spi_xfer(const uint8_t out)
 	return spi_in;
 }
 
-void spi_start(void)
+void spi_start(struct _bytecode *result, struct _bytecode *next)
 {
-	printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
+	result->data_message=t[T_HWSPI_CS_SELECT];
 	spi_set_cs(M_SPI_SELECT);
-
 }
 
-void spi_startr(void)
+void spi_startr(struct _bytecode *result, struct _bytecode *next)
 {
-	printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
+	//printf(t[T_HWSPI_CS_SELECT], !mode_config.cs_idle);
 	spi_set_cs(M_SPI_SELECT);
-
 }
 
-void spi_stop(void)
+void spi_stop(struct _bytecode *result, struct _bytecode *next)
 {
-	printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
-	spi_set_cs(M_SPI_DESELECT);
-
-}
-
-void spi_stopr(void)
-{
-	printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
+	result->data_message=t[T_HWSPI_CS_DESELECT];
 	spi_set_cs(M_SPI_DESELECT);
 }
 
-uint32_t spi_send(uint32_t d)
+void spi_stopr(struct _bytecode *result, struct _bytecode *next)
 {
-	uint16_t returnval;
+	//printf(t[T_HWSPI_CS_DESELECT], mode_config.cs_idle);
+	spi_set_cs(M_SPI_DESELECT);
+}
 
+void spi_write(struct _bytecode *result, struct _bytecode *next)
+{
 
-	if((system_config.num_bits<4)||(system_config.num_bits>8))
+/*	if((system_config.num_bits<4)||(system_config.num_bits>8))
 	{
 		printf("\r\nOnly 4 to 8 bits are currently allowed");
 		system_config.error=1;
@@ -272,20 +267,57 @@ uint32_t spi_send(uint32_t d)
 	returnval=spi_xfer((uint16_t)d);
 
 	return (uint16_t) returnval;
+	*/
+    // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
+    // is full, PL022 inhibits RX pushes, and sets a sticky flag on
+    // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
+	while(!spi_is_writable(M_SPI_PORT))
+	{
+		tight_loop_contents();
+	}
+
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)result->out_data;
+
+    // Drain RX FIFO, then wait for shifting to finish (which may be *after*
+    // TX FIFO drains), then drain RX FIFO again
+    while(spi_is_readable(M_SPI_PORT))
+	{
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+	}
+
+    while(spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
+	{
+        tight_loop_contents();
+	}
+
+    while(spi_is_readable(M_SPI_PORT))
+	{
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+	}
+
+    // Don't leave overrun flag set
+    spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
 }
 
-uint32_t spi_read(void)
+void spi_read(struct _bytecode *result, struct _bytecode *next)
 {
-	return (uint16_t) spi_send(0xff);
+
+	while(!spi_is_writable(M_SPI_PORT));
+	
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)result->out_data;
+
+    while(!spi_is_readable(M_SPI_PORT));
+	
+	result->in_data = (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
 }
 
 void spi_macro(uint32_t macro)
 {
 	switch(macro)
 	{
-		case 0:		printf("No macros available");
+		case 0:		printf("%s\r\n", t[T_MODE_ERROR_NO_MACROS_AVAILABLE]);
 				break;
-		default:	printf("Macro not defined");
+		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
 }
@@ -396,4 +428,48 @@ void spi_set_cs_idle(uint32_t val)
 }
 */
 
+
+void spi_write_simple(uint32_t data)
+{
+    // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
+    // is full, PL022 inhibits RX pushes, and sets a sticky flag on
+    // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
+	while(!spi_is_writable(M_SPI_PORT))
+	{
+		tight_loop_contents();
+	}
+
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)data;
+
+    // Drain RX FIFO, then wait for shifting to finish (which may be *after*
+    // TX FIFO drains), then drain RX FIFO again
+    while(spi_is_readable(M_SPI_PORT))
+	{
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+	}
+
+    while(spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
+	{
+        tight_loop_contents();
+	}
+
+    while(spi_is_readable(M_SPI_PORT))
+	{
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+	}
+
+    // Don't leave overrun flag set
+    spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
+}
+
+uint32_t spi_read_simple(void)
+{
+	while(!spi_is_writable(M_SPI_PORT));
+	
+	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)0xff;
+
+    while(!spi_is_readable(M_SPI_PORT));
+	
+	return (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
+}
 

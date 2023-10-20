@@ -1,5 +1,5 @@
-void adc_measure_single(struct command_attributes *attributes, struct command_response *response);
-void adc_measure_cont(struct command_attributes *attributes, struct command_response *response);
+void adc_measure_single(opt_args (*args), struct command_result *res);
+void adc_measure_cont(opt_args (*args), struct command_result *res);
 
 
 

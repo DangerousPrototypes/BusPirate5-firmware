@@ -5,7 +5,7 @@
 #include "SWI2C.h"
 #include "cdcacm.h"
 #include "bitbang.h"
-
+ 
 static uint32_t	period;
 static uint8_t	speed;
 static uint8_t ackPending;

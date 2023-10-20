@@ -1,15 +1,16 @@
-void helpers_selftest(struct command_attributes *attributes, struct command_response *response);
-
-
-void helpers_delay_us(struct command_attributes *attributes, struct command_response *response);
-void helpers_delay_ms(struct command_attributes *attributes, struct command_response *response);
-void helpers_bit_order_msb(struct command_attributes *attributes, struct command_response *response);
-void helpers_bit_order_lsb(struct command_attributes *attributes, struct command_response *response);
-void helpers_show_int_formats(struct command_attributes *attributes, struct command_response *response);
-void helpers_show_int_inverse(struct command_attributes *attributes, struct command_response *response);
+void helpers_selftest(opt_args (*args), struct command_result *res);
+void helpers_bit_order_msb(opt_args (*args), struct command_result *res);
+void helpers_bit_order_lsb(opt_args (*args), struct command_result *res);
+void helpers_show_int_formats(opt_args (*args), struct command_result *res);
+void helpers_show_int_inverse(opt_args (*args), struct command_result *res);
 
 //mode commands
+void helpers_mode_help(opt_args (*args), struct command_result *res);
 void helpers_mode_periodic();
+// these are all moved to the syntax processor
+//void helpers_delay_us(struct command_attributes *attributes, struct command_response *response);
+//void helpers_delay_ms(struct command_attributes *attributes, struct command_response *response);
+/*
 void helpers_mode_macro(struct command_attributes *attributes, struct command_response *response);
 void helpers_mode_start(struct command_attributes *attributes, struct command_response *response);
 void helpers_mode_stop(struct command_attributes *attributes, struct command_response *response);
@@ -22,7 +23,7 @@ void helpers_mode_data_high(struct command_attributes *attributes, struct comman
 void helpers_mode_data_low(struct command_attributes *attributes, struct command_response *response);
 void helpers_mode_data_s(struct command_attributes *attributes, struct command_response *response);
 void helpers_mode_read_bit(struct command_attributes *attributes, struct command_response *response);
-void helpers_mode_help(struct command_attributes *attributes, struct command_response *response);
+
 void helpers_mode_read(struct command_attributes *attributes, struct command_response *response);
 void helpers_mode_write(struct command_attributes *attributes, struct command_response *response);
 void helpers_mode_write_string(struct command_attributes *attributes, struct command_response *response);
@@ -31,3 +32,7 @@ void helpers_numbits(struct command_attributes *attributes, struct command_respo
 
 // debug hook
 void helpers_debug(struct command_attributes *attributes, struct command_response *response);
+*/
+
+void helpers_mcu_reset(opt_args (*args), struct command_result *res);
+void helpers_mcu_jump_to_bootloader(opt_args (*args), struct command_result *res);

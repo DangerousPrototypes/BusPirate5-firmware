@@ -3,10 +3,9 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "modes.h"
+#include "opt_args.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
-#include "ui/ui_const.h"
 #include "ui/ui_term.h"
 #include "ui/ui_info.h"
 #include "ui/ui_cmdln.h"
@@ -264,7 +263,7 @@ bool ui_prompt_float_units(prompt_result *result, const char *menu, float* user_
 	}
 }
 
-bool ui_prompt_any_key_continue(prompt_result *result, uint32_t delay, uint32_t (*refresh_func)(uint8_t pin, uint8_t refresh), uint8_t pin, uint8_t refresh)
+bool ui_prompt_any_key_continue(prompt_result *result, uint32_t delay, uint32_t (*refresh_func)(uint8_t pin, bool refresh), uint8_t pin, bool refresh)
 {
     *result=empty_result;
 	// press any key to continue

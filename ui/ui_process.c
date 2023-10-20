@@ -3,106 +3,195 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
+#include "opt_args.h"
+#include "commands.h"
+#include "bytecode.h"
 #include "modes.h"
-#include "hardware/uart.h"
 #include "mode/hiz.h"
-#include "amux.h"
-#include "auxpinfunc.h"
-#include "font/font.h"
-#include "ui/ui_lcd.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
-#include "ui/ui_info.h"
-#include "ui/ui_format.h"
-#include "ui/ui_init.h"
-#include "ui/ui_const.h"
 #include "ui/ui_term.h"
-#include "ui/ui_config.h"
-#include "ui/ui_mode.h"
-#include "pwm.h"
-#include "freq.h"
-#include "adc.h"
-#include "psu.h"
-#include "pullups.h"
-#include "helpers.h"
 #include "ui/ui_cmdln.h"
+#include "string.h"
+#include "syntax.h"
+
 
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
-const struct command_attributes attributes_empty;
-const struct command_response response_empty;
-struct command_attributes attributes;
-struct command_response response;
-struct prompt_result result;
-char c;
+static const struct command_result result_blank;
+static const struct opt_args empty_opt_args;
+static struct opt_args args[5];
 
-// statemachine friendly command parsing/processing function
+bool parse_help(void)
+{
+    char c,d;
+    if(cmdln_try_peek(0,&c) && cmdln_try_peek(1,&d) && c=='-' && d=='h')
+    {
+        return true;
+    }
+    return false;
+}
+
 bool ui_process_commands(void)
 {
+    char c,d;
+
     if(!cmdln_try_peek(0,&c))
     {
         return false;
     }
 
-    if( c<=' ' || c>'~' )
+    while(cmdln_try_peek(0,&c))
     {
-        //out of ascii range
-        cmdln_try_discard(1);
-    } 
-    else if(system_config.mode==HIZ && !commands[(c-0x20)].allow_hiz)
-    {
-        printf(HiZerror());
-        system_config.error=1; 
-        cmdln_try_discard(1);
-    }
-    else
-    {
-        attributes=attributes_empty;
-        response=response_empty;
-
-        attributes.command=c;
-        //if number pre-parse it
-        if(c>='0' && c<='9')
+        if(c==' ') //discard whitespace
         {
-            ui_parse_get_int(&result, &attributes.value);
-            if(result.error)
+            cmdln_try_discard(1);
+            continue;
+        }
+
+        if(c=='[' || c=='>' || c=='{') //first character is { [ or >, process as syntax
+        {
+            if(syntax_compile(&args[0]))
             {
-                system_config.error=1;
+                    printf("Syntax compile error\r\n");
+                    return true;
+            }
+            if(syntax_run())
+            {
+                    printf("Syntax execution error\r\n");
+                    return true;
+            }
+            if(syntax_post())
+            {
+                    printf("Syntax post process error\r\n");
+                    return true;
+            }
+            //printf("Bus Syntax: Success\r\n");
+            return false;
+        }
+
+        //MODE macros
+        if(c=='(') //first character is (, mode macro
+        {
+            uint32_t temp;
+            prompt_result result;
+
+            cmdln_try_discard(1);
+            ui_parse_get_macro(&result, &temp);   
+            if(result.success)
+            {
+                modes[system_config.mode].protocol_macro(temp);
             }
             else
             {
-                attributes.has_value=true;
-                attributes.number_format=result.number_format;
+                printf("%s\r\n",t[T_MODE_ERROR_PARSING_MACRO]);
+                return true;
+            }  
+
+            return false;  
+        }       
+        
+        //process as a command
+
+        args[0]=empty_opt_args;
+        args[0].max_len=OPTARG_STRING_LEN;
+        ui_parse_get_string(&args[0]);
+        //printf("Command: %s\r\n", args[0].c);
+
+        if(args[0].no_value)
+        {
+            return false;
+        }
+
+        bool cmd_valid=false;
+        uint32_t user_cmd_id=0;
+        for(int i=0; i<count_of_cmd; i++)
+        {  
+            if(strcmp(args[0].c, cmd[i])==0)
+            {
+                user_cmd_id=i;
+                cmd_valid=true;
+                break;
+            }
+        }
+
+        if(!cmd_valid)
+        {
+            printf("%s", ui_term_color_notice());
+            printf(t[T_CMDLN_INVALID_COMMAND], args[0].c);
+            printf("%s\r\n", ui_term_color_reset());
+            return true;
+        }
+        //printf("Found: %s\r\n",cmd[user_cmd_id]);
+
+        //no such command, search SD card for runnable scripts
+
+        //do we have a command? good, get the opt args
+        if(parse_help())
+        {
+            printf("%s\r\n",t[exec_new[user_cmd_id].help_text]);
+            return false;
+        }
+
+        if(system_config.mode==HIZ && !exec_new[user_cmd_id].allow_hiz)
+        {
+            printf("%s\r\n",HiZerror());
+            //printf("\r\n")
+            return true;            
+        }    
+
+        if(exec_new[user_cmd_id].parsers)
+        {
+            for(int i=0; i<5;i++)
+            {                
+                if(exec_new[user_cmd_id].parsers[i].opt_parser==NULL)
+                {
+                    break;
+                } 
+                
+                args[i]=empty_opt_args;
+                args[i].max_len=OPTARG_STRING_LEN;
+                exec_new[user_cmd_id].parsers[i].opt_parser(&args[i]);
+            }
+        }
+
+        //printf("Opt arg: %s\r\n",args[0].c);    
+        //execute the command
+        struct command_result result=result_blank;
+        exec_new[user_cmd_id].command(args, &result);
+        
+        printf("%s\r\n", ui_term_color_reset());
+
+        while(cmdln_try_peek(0,&c))
+        {
+            if(c==';') //next command
+            {
+                cmdln_try_discard(1);
+                break;
             }
 
-        }
-        else
-        {   // parsing an int value from the command line sets the pointer to the next value
-            // if it's another command, we need to do that manually now to keep the pointer
-            // where the next parsing function expects it
+            if(!cmdln_try_peek(1,&d))
+            {
+                return false;
+            }
+
+            if(c=='|' && d=='|') //perform next command if last failed
+            {
+                cmdln_try_discard(2);
+                if(!result.error) return false;
+                break;
+
+            }
+            else if(c=='&' && d=='&') // perform next command if previous was successful
+            {
+                cmdln_try_discard(2);
+                if(result.error) return false;
+                break;
+            }
+
             cmdln_try_discard(1);
         }
-
-        if(!system_config.error)
-        {
-            attributes.has_dot=ui_parse_get_dot(&attributes.dot);
-            attributes.has_colon=ui_parse_get_colon(&attributes.colon);
-            
-            printf("%s", ui_term_color_info()); //TODO: properly color things? maybe only color from here?
-            commands[(c-0x20)].command(&attributes,&response);
-            
-            if(response.error)
-            {		
-                system_config.error=1;                   
-            }
-        }
-    }
-    
-    if((c!=' ')&&(c!=0x00)&&(c!=',')) printf("%s\r\n", ui_term_color_reset());
-
-    if(system_config.error)	// something went wrong
-    {
-        return false; //error, tell sm to change states....
     }
 
-    return true;
+    return false;
 }
+

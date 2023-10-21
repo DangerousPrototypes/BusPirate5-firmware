@@ -14,10 +14,12 @@ include(pico_sdk_import.cmake)
 
 set(PICO_BOARD pico)
 
-project(bus_pirate C CXX ASM)
+project(bus_pirate C CXX ASM) 
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
+
+add_compile_definitions(BP_FIRMWARE_HASH=${BP_FIRMWARE_HASH})
 
 # Add executable. Default name is the project name, version 0.1
 add_executable(bus_pirate 

@@ -17,7 +17,7 @@ set(PICO_BOARD pico)
 project(bus_pirate C CXX ASM) 
 
 # Initialise the Raspberry Pi Pico SDK
-pico_sdk_init() 
+pico_sdk_init()  
 
 add_compile_definitions(BP_FIRMWARE_HASH=${BP_FIRMWARE_HASH})
 

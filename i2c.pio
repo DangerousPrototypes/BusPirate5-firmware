@@ -119,7 +119,7 @@ static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda,
     pio_gpio_init(pio, buf_scl);
     gpio_set_outover(buf_scl, GPIO_OVERRIDE_INVERT);  
  
-    pio_sm_set_pins_with_mask(pio, sm, buf_pins, buf_pins);//TODO: is this inverted??? is 1 now = 0?????
+    pio_sm_set_pins_with_mask(pio, sm, buf_pins, buf_pins);
 
     // Clear IRQ flag before starting, and make sure flag doesn't actually
     // assert a system-level interrupt (we're using it as a status flag)

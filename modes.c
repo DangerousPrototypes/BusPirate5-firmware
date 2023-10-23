@@ -10,7 +10,7 @@
     #include "sw1wire.h"
 #endif
 #ifdef	BP_USE_HW1WIRE
-    #include "hw1wire.h"
+    #include "mode/hw1wire.h"
 #endif
 #ifdef	BP_USE_HWUSART
     #include "mode/usart.h"
@@ -166,27 +166,27 @@ struct _mode modes[MAXPROTO]={
 #endif
 #ifdef BP_USE_HW1WIRE
 {
-    ONEWIRE_start,				// start
-    ONEWIRE_startr,				// start with read
-     ONEWIRE_stop,				// stop
-    ONEWIRE_stopr,				// stop with read
-    ONEWIRE_send,				// send(/read) max 32 bit
-    ONEWIRE_read,				// read max 32 bit
-    ONEWIRE_clkh,				// set clk high
-    ONEWIRE_clkl,				// set clk low
-    ONEWIRE_dath,				// set dat hi
-    ONEWIRE_datl,				// set dat lo
-    ONEWIRE_dats,				// toggle dat (?)
-    ONEWIRE_clk,				// toggle clk (?)
-    ONEWIRE_bitr,				// read 1 bit (?)
-    ONEWIRE_period,				// service to regular poll whether a byte ahs arrived
-    ONEWIRE_macro,				// macro
-    ONEWIRE_setup,				// setup UI
-    ONEWIRE_setup_exc,			// real setup
-    ONEWIRE_cleanup,			// cleanup for HiZ
-    ONEWIRE_pins,				// display pin config
-    ONEWIRE_settings,			// display settings
-    nohelp,					// display small help about the protocol
+	nullfunc1_temp,				// start
+	nullfunc1_temp,				// start with read
+	nullfunc1_temp,				// stop
+	nullfunc1_temp,				// stop with read
+	nullfunc1_temp,				// write(/read) max 32 bit
+	nullfunc1_temp,				// read max 32 bit
+	nullfunc1,				// set clk high
+	nullfunc1,				// set clk low
+	nullfunc1,				// set dat hi
+	nullfunc1,				// set dat lo
+	nullfunc3,				// toggle dat (?)
+	nullfunc1,				// toggle clk (?)
+	nullfunc3,				// read 1 bit (?)
+	noperiodic,				// service to regular poll whether a byte ahs arrived
+	nullfunc4,				// macro
+	hw1wire_setup,				// setup UI
+	hw1wire_setup_exc,				// real setup
+	HiZcleanup,				// cleanup for HiZ
+	//HiZpins,				// display pin config
+	HiZsettings,				// display settings 
+	nohelp,					// display small help about the protocol
     "1-WIRE",				// friendly name (promptname)
 },
 #endif

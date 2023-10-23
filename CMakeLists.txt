@@ -33,6 +33,7 @@ add_executable(bus_pirate
         mode/usart.h mode/usart.c mode/hwi2c.c mode/hwi2c.h mode/hwled.c mode/hwled.h
         ui/ui_cmdln.c ui/ui_cmdln.h ui/ui_process.h ui/ui_process.c
         #mode/sw1wire.h mode/sw1wire.c
+        mode/hw1wire.h mode/hw1wire.c
         ui/ui_flags.h
         debug.c debug.h
         ui/ui_parse.c ui/ui_parse.h ui/ui_prompt.h ui/ui_prompt.c  ui/ui_mode.c ui/ui_mode.h
@@ -53,12 +54,13 @@ add_executable(bus_pirate
         mjson/mjson.h mjson/mjson.c 
         postprocess.c postprocess.h syntax.h syntax.c  syntax_struct.h
         dump.c dump.h opt_args.h command_attributes.h bytecode.h
-        lib/minmea/minmea.h lib/minmea/minmea.c 
+        lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c 
         )
    
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
+pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)
 
 pico_set_program_name(bus_pirate "bus_pirate")
 pico_set_program_version(bus_pirate "0.0.4")

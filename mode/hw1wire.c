@@ -1,730 +1,1257 @@
-
-
-// took 1wire implementation from old buspirate
-// fiddled a bit with the timings to make it work on the NG version
-
+#include <stdio.h>
+#include "pico/stdlib.h"
 #include <stdint.h>
-#include <libopencm3/stm32/gpio.h>
-#include "buspirateNG.h"
-#include "1WIRE.h"
-#include "cdcacm.h"
-#include "UI.h"
+#include <string.h>
+#include "pirate.h"
+#include "system_config.h"
+#include "opt_args.h"
+#include "bytecode.h"
+#include "mode/hw1wire.h"
+#include "bio.h"
+#include "ui/ui_prompt.h"
+#include "i2c.pio.h"
+#include "pio_i2c.h"
+#include "storage.h"
+#include "ui/ui_term.h"
+#include "hardware/pio.h"
+#include "pico/binary_info.h"
+#include "hardware/clocks.h"
+#include "build/onewire.pio.h"
 
+#define M_OW_PIO pio1
+#define M_OW_OWD BIO3
 
-//the roster stores the first OW_DEV_ROSTER_SLOTS 1-wire addresses found during a ROM SEARCH command
-//these addresses are available as MACROs for quick address entry
-#define OW_DEV_ROSTER_SLOTS 10 //how many devices max to store addresses as MACROs
-struct _OWID{
-//      unsigned char familyID; //to lazy to do it right, for now...
-        unsigned char id[8];
-//      unsigned char crc;
+static const char pin_labels[][5]={
+	"OWD"
 };
 
-struct _OWIDREG{
-        unsigned char num;
-        struct _OWID dev[OW_DEV_ROSTER_SLOTS];
-} ;
+//static struct _i2c_mode_config mode_config;
 
-struct _OWIDREG OWroster;
+//static PIO pio = M_OW_PIO;//
+//static uint pio_state_machine = 0;
+//static uint pio_loaded_offset;
+
+struct owobj {
+    PIO    pio;       /* pio object (pio0/pio1) */
+    uint   sm;        /* state machine number */
+    uint   offset;    /* onewire code offset in PIO instr. memory */
+    uint   pin;       /* Pin number for 1wire data signal */
+    uint   dir;   /* Pin number for buffer manipulation */
+
+    // Search state global variables
+    unsigned char ROM_NO[8];
+    int LastDiscrepancy;
+    int LastFamilyDiscrepancy;
+    int LastDeviceFlag;
+    unsigned char crc8;
+};
+
+void onewire_test_romsearch(struct owobj *owobj);
+void pio_sm_trace(PIO pio, uint sm, uint usleep);
+void onewire_set_fifo_thresh(struct owobj *owobj, uint thresh);
+int onewire_reset(struct owobj *owobj);
+void onewire_wait_for_idle(struct owobj *owobj);
+void onewire_tx_byte(struct owobj *owobj, uint byte);
+void onewire_tx_byte_spu(struct owobj *owobj, uint byte);
+void onewire_end_spu(struct owobj *owobj);
+uint onewire_rx_byte(struct owobj *owobj);
+void onewire_triplet(
+    struct owobj *owobj,
+    int *id_bit,
+    int *cmp_id_bit,
+    unsigned char *search_direction
+);
+static unsigned char calc_crc8_buf(unsigned char *data, int len);
+int onewire_select(
+    struct owobj  *owobj, 
+    unsigned char *romid
+);
+unsigned char calc_crc8(struct owobj *owobj, unsigned char data);
+int OWSearch(struct owobj *owobj);
+int OWSearchReset(struct owobj *owobj);
+int OWFirst(struct owobj *owobj);
+int OWNext(struct owobj *owobj);
+void onewire_test_ds18b20_scratchpad(struct owobj *owobj);
+void onewire_test_ds18b20_conversion(struct owobj *owobj);
+void onewire_test_spu(struct owobj *owobj);
+void onewire_test_wordlength(struct owobj *owobj);
+void onewire_test_romsearch(struct owobj *owobj);
+void onewire_temp_app(
+    struct owobj *owobj1,
+    struct owobj *owobj2
+);
 
 
-#define TRUE	1
-#define FALSE	0
 
-//because 1wire uses bit times, setting the data line high or low with (_-) has no effect
-//we have to save the desired bus state, and then clock in the proper value during a clock(^)
-static unsigned char DS1wireDataState=0;//data bits are low by default.
+uint32_t hw1wire_setup(void)
+{
+	uint32_t temp;	
+	return 1;
+}
 
-// global search state,
-//these lovely globals are provided courtesy of MAXIM's code
-//need to be put in a struct....
-unsigned char ROM_NO[8];
-unsigned char SearchChar=0xf0; //toggle between ROM and ALARM search types
-unsigned char LastDiscrepancy;
-unsigned char LastFamilyDiscrepancy;
-unsigned char LastDeviceFlag;
-unsigned char crc8;
+/* Try testing with variable number of bits to be transmitted
+   You should see 14 back-to-back high bits on the scope. */
+void onewire_test_init(struct owobj *owobj){
+    int  i;
+    unsigned char buf[9];
+    uint  fiforx;
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint dir =  owobj->dir;
+    
+    onewire_program_init(pio, sm, offset, pin, dir);
+    onewire_set_fifo_thresh(owobj, 8);
+    pio_sm_set_enabled(pio, sm, true);
+
+    //printf("idle\n");
+    //pio_sm_trace(pio, sm);
 
 
+}
 
-void ONEWIRE_start(void)
+uint32_t hw1wire_setup_exc(void)
 {
-	printf("ONEWIRE start()");
-}
-void ONEWIRE_startr(void)
-{
-	printf("ONEWIRE startr()");
-}
-void ONEWIRE_stop(void)
-{
-	printf("ONEWIRE stop()");
-}
-void ONEWIRE_stopr(void)
-{
-	printf("ONEWIRE stopr()");
-}
-uint32_t ONEWIRE_send(uint32_t d)
-{
-	OWWriteByte(d);
+	system_bio_claim(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
 
-	return 0;
-}
-uint32_t ONEWIRE_read(void)
-{
-	return (OWReadByte());
-}
-void ONEWIRE_clkh(void)
-{
-	printf("ONEWIRE clkh()");
-}
-void ONEWIRE_clkl(void)
-{
-	printf("ONEWIRE clkl()");
-}
-void ONEWIRE_dath(void)
-{
-        DS1wireDataState=1;
-	printf(" *next clock (^) will use this value\r\n");
-}
-void ONEWIRE_datl(void)
-{
-	DS1wireDataState=0;
-	printf(" *next clock (^) will use this value\r\n");
-}
-uint32_t ONEWIRE_dats(void)
-{
-	return DS1wireDataState;
-}
-void ONEWIRE_clk(void)
-{
-	OWWriteBit(DS1wireDataState);
-}
-uint32_t ONEWIRE_bitr(void)
-{
-	return(OWReadBit());
-}
-uint32_t ONEWIRE_period(void)
-{
-	return 0;
-}
-void ONEWIRE_macro(uint32_t macro)
-{
-	unsigned char c,j;
-        unsigned int i;
-        unsigned char devID[8];
+    PIO pio = M_OW_PIO;
+    uint offset_1wire;
 
-        if(macro>0 && macro<51)
+    struct owobj owobj1;
+
+    /* Onewire config */
+    offset_1wire = pio_add_program(pio, &onewire_program);
+
+    owobj1.pio = pio;
+    owobj1.sm = 3;
+    owobj1.offset = offset_1wire;
+    owobj1.pin = bio2bufiopin[BIO3];
+    owobj1.dir = bio2bufdirpin[BIO3];
+    HW_BIO_PULLUP_ENABLE();
+
+    //onewire_test_init(&owobj1);
+
+    while (1) {
+        //onewire_test_ds18b20_scratchpad(&owobj1);
+        onewire_test_ds18b20_conversion(&owobj1);
+        //onewire_test_wordlength(&owobj1);
+        //onewire_test_spu(&owobj1);
+        //onewire_test_romsearch(&owobj1);
+        //onewire_test_romsearch(&owobj2);
+        //onewire_temp_app(&owobj1,&owobj2);
+        
+        //gpio_xor_mask(1<<LED_PIN);
+    
+        /*pio->txf[3] = 0xf0;
+        while( pio_sm_get_rx_fifo_level(pio, 3) == 0 );
+        (void) pio_sm_get(pio, 3);   
+        */     
+        sleep_ms(75);
+    }    
+	return 1;
+}
+
+void hw1wire_start(struct _bytecode *result, struct _bytecode *next)
+{
+	/*result->data_message=t[T_hw1wire_START];
+
+	if(checkshort())
 	{
-                macro--;							//adjust down one for roster array index
-                if(macro>=OWroster.num)
-		{								//no device #X on the bus, try ROM SEARCH (0xF0)
-                        printf("No device, try (ALARM) SEARCH macro first\r\n");
-                        return;
+		result->error_message=t[T_hw1wire_NO_PULLUP_DETECTED];
+		result->error=SRES_WARN; 
+	}
+	
+	uint8_t error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfffff);
+
+	if(!hw1wire_error(error, result))
+	{
+		mode_config.start_sent=true;
+	}*/
+}
+
+void hw1wire_stop(struct _bytecode *result, struct _bytecode *next)
+{
+	/*result->data_message=t[T_hw1wire_STOP];
+
+	uint32_t error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xffff);
+
+	hw1wire_error(error, result);*/
+}
+
+void hw1wire_write(struct _bytecode *result, struct _bytecode *next)
+{
+/*	//if a start was just sent, determine if this is a read or write address
+	// and configure the PIO I2C
+	if(mode_config.start_sent)
+	{
+		pio_i2c_rx_enable(pio, pio_state_machine, (result->out_data & 1u));
+		mode_config.start_sent=false;
+	}
+	
+	uint32_t error=pio_i2c_write_timeout(pio, pio_state_machine, result->out_data, 0xffff);
+
+	hw1wire_error(error, result);
+
+	result->data_message=(error?t[T_hw1wire_NACK]:t[T_hw1wire_ACK]);
+    */
+
+}
+
+void hw1wire_read(struct _bytecode *result, struct _bytecode *next)
+{
+    /*
+	bool ack=(next?(next->command!=4):true);
+
+	uint32_t error=pio_i2c_read_timeout(pio, pio_state_machine, &result->in_data, ack, 0xffff);
+
+    hw1wire_error(error, result);
+
+	result->data_message=(ack?t[T_hw1wire_ACK]:t[T_hw1wire_NACK]);
+    */
+}
+
+
+
+
+/* Sample state machine instruction pointer for some time and
+   print for diagnostic purposes */
+void pio_sm_trace(PIO pio, uint sm, uint usleep)
+{
+    int  i;
+    uint tracebuf[128];
+
+    for(i=0; i<128; i++){
+        tracebuf[i] = pio_sm_get_pc(pio, sm);
+        sleep_us(usleep);
+    }
+    
+    for(i=0; i<128; i++){
+        printf("%d ", tracebuf[i]);
+        if( (i+1)%16 == 0 ){
+            printf("\n");
+        }
+    }
+}
+
+void onewire_set_fifo_thresh(struct owobj *owobj, uint thresh) {
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint old, new;
+    uint8_t waiting_addr;
+    uint need_restart;
+    int timeout;
+    
+    if( thresh >= 32 ){
+        thresh = 0;
+    }
+
+    old  = pio->sm[sm].shiftctrl;
+    old &= PIO_SM0_SHIFTCTRL_PUSH_THRESH_BITS |
+        PIO_SM0_SHIFTCTRL_PULL_THRESH_BITS;
+
+    new  = ((thresh & 0x1fu) << PIO_SM0_SHIFTCTRL_PUSH_THRESH_LSB) |
+        ((thresh & 0x1fu) << PIO_SM0_SHIFTCTRL_PULL_THRESH_LSB);
+
+    if( old != new ){
+        need_restart = 0;
+        if( pio->ctrl & (1u<<sm) ){
+            /* If state machine is enabled, it must be disabled
+               and restarted when we change fifo thresholds,
+               or evil things happen */
+
+            /* When we attempt fifo threshold switching, we assume
+               that all fifo operations have been done and hence
+               all bits have been almost processed, but the
+               state machine might not have reached the wating state
+               as it still does some delays to ensure timing for
+               the very last bit (Similar for reset).
+               Just wait for the 'wating' state to be reached */
+            waiting_addr = offset+onewire_offset_waiting;
+            timeout = 2000;
+            while( pio_sm_get_pc(pio, sm) != waiting_addr ){
+                sleep_us(1);
+                if( timeout-- < 0 ){
+                    /* FIXME: do something clever in case of
+                       timeout */
                 }
-                								//write out the address of the device in the macro
-		printf("ADDRESS MACRO %d: ", macro+1);
-                for(j=0;j<8;j++)
-		{
-			printf("%02X ", OWroster.dev[macro].id[j]);
-                        OWWriteByte(OWroster.dev[macro].id[j]);
-                } 								//write address
-                printf("\r\n");
-
-                return;
-        }
-        switch(macro)
-	{
-                case 0:								//menu
-			printf(" 0.Macro menu\r\n");
-			printf("Macro\t1WIRE address\r\n");
-                        //write out roster of devices and macros, or SEARCH ROM NOT RUN, TRY (0xf0)
-                        if(OWroster.num==0)
-			{
-				printf("No device, try (ALARM) SEARCH macro first\r\n");
-                        }
-			else
-			{
-                                for(c=0;c<OWroster.num; c++)
-				{
-					printf(" %d.\t", c+1);
-                                        for(j=0;j<8;j++) printf("%02X ", OWroster.dev[c].id[j]);
-					printf("   *");
-                                        DS1wireID(OWroster.dev[c].id[0]);       //print the device family identity (if known)
-                                }
-                        }
-			printf("1WIRE ROM COMMAND MACROs:\r\n");
-			printf(" 51. READ ROM (0x33) *for single device bus\r\n");
-			printf(" 85. MATCH ROM (0x55) *followed by 64bit address\r\n");
-			printf(" 204.SKIP ROM (0xCC) *followed by command\r\n");
-			printf(" 236.ALARM SEARCH (0xEC)\r\n");
-			printf(" 240.SEARCH ROM (0xF0)\r\n");
-			printf(" 255.reset bus");
-                        break;
-                //1WIRE ROM COMMANDS
-                case 0xec://ALARM SEARCH
-                case 0xf0: //SEARCH ROM
-                        SearchChar=macro;
-                        if(macro==0xec)
-			{
-				printf("ALARM SEARCH (0xEC)\r\n");
-                        }
-			else
-			{							//SEARCH ROM command...
-				printf("SEARCH (0xF0)\r\n");
-                        }
-
-			printf("Macro\t1WIRE address\r\n");
-                        							// find ALL devices
-                        j = 0;
-                        c = OWFirst();
-                        OWroster.num=0;
-                        while (c)
-			{
-				printf(" %d.\t", j);
-                
-                                // print address
-                                for (i = 0; i <8; i++)
-				{
-					printf("%02X ", ROM_NO[i]);
-                                }
-				printf("\t*");
-                                DS1wireID(ROM_NO[0]);   			//print the device family identity (if known)
-                                
-                                //keep the first X number of one wire IDs in a roster
-                                //so we can refer to them by macro, rather than ID
-                                if(j<OW_DEV_ROSTER_SLOTS)
-				{						//only as many as we have room for
-                                        for(i=0;i<8;i++) OWroster.dev[OWroster.num].id[i]=ROM_NO[i];
-                                        OWroster.num++;				//increment the roster count
-                                }
-
-                                j++;    
-                
-                                c = OWNext();
-                        }
-
-			printf("Device IDs are available by MACRO, see (0).\r\n");              
-                        break;
-                case 0x33://READ ROM
-                        DS1wireReset();
-			printf("READ ROM (0x33): ");
-                        OWWriteByte(0x33);
-                        for(i=0; i<8; i++)
-			{
-                                devID[i]=OWReadByte();
-				printf("%02X ", devID[i]);
-                        }
-			printf("\r\n");
-                        DS1wireID(devID[0]);
-                        break;
-                case 0x55://MATCH ROM
-                        DS1wireReset();
-			printf("MATCH ROM (0x55)\r\n");
-                        OWWriteByte(0x55);
-                        break;
-                case 0xcc://SKIP ROM
-                        DS1wireReset();
-			printf("SKIP ROM (0xCC)\r\n");
-                        OWWriteByte(0xCC);
-                        break;
-		case 0xff:
-			DS1wireReset();
-			break;
-		case 0x100:
-			gpio_set(BP_1WIRE_PORT, BP_1WIRE_PIN);
-			break;
-		case 0x101:
-			gpio_clear(BP_1WIRE_PORT, BP_1WIRE_PIN);
-			break;
-                default:
-			printf("No such macro\r\n");
-			modeConfig.error=1;
-        }
-}
-void ONEWIRE_setup(void)
-{
-	printf("ONEWIRE setup()");
-}
-void ONEWIRE_setup_exc(void)
-{
-	modeConfig.oc=1;	//yes, always opencollector
-        OWroster.num=0;		//clear any old 1-wire bus enumeration rosters
-
-	gpio_set_mode(BP_1WIRE_SENSE_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, BP_1WIRE_SENSE_PIN);
-	gpio_set_mode(BP_1WIRE_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, BP_1WIRE_PIN);
-	gpio_set(BP_1WIRE_PORT, BP_1WIRE_PIN);
-	
-}
-void ONEWIRE_cleanup(void)
-{
-	gpio_set_mode(BP_1WIRE_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, BP_1WIRE_PIN);
-	gpio_set_mode(BP_1WIRE_SENSE_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, BP_1WIRE_SENSE_PIN);
-
-}
-void ONEWIRE_pins(void)
-{
-	printf("pin1\tpin2\tpin3\tpin4");
-}
-void ONEWIRE_settings(void)
-{
-	printf("1WIRE ()=()");
-}
-
-
-
-/* ***********************************************************************************
-   Function: OWReset
-   Args[0]: Void
-   Return: Made it mimic the old source.
-		0 = OK
-		1 = Short
-		2 = No device.
-   
-   Desc: OneWire reset bus procedure. See return values for details.
-*********************************************************************************** */
-unsigned char OWReset(void)
-{
-	unsigned int Presence=0;	
-
-	gpio_set(BP_1WIRE_PORT, BP_1WIRE_PIN);
-	gpio_clear(BP_1WIRE_PORT, BP_1WIRE_PIN);	// go low
-
-							//Maxim says a minimum of 480. 
-	delayus(490);	
-
-	gpio_set(BP_1WIRE_PORT, BP_1WIRE_PIN);
-	delayus(65);
-
-	if(gpio_get(BP_1WIRE_SENSE_PORT, BP_1WIRE_SENSE_PIN))						// if lines still high, then no device
-		Presence=2;				// if no device then return 2.
-
-	delayus(500);
-	
-	if(!gpio_get(BP_1WIRE_SENSE_PORT, BP_1WIRE_SENSE_PIN))			// if lines still low; then theres a short
-	{
-		return 1;
-	}
-
-	return Presence;
-}
-
-
-/* ***********************************************************************************
-   Function: OWBit
-   Args[0]: uChar [Bit to send. Logic 1 or 0] - or 1 to recieve
-   Return: Returns bit value on bus
-   
-   Desc: OWBit works as both a sending and reciving of 1 bit value on the OWBus.
-		 To get a bit value send a logical 1 (OWBit 1) This will pulse the line
-		 as needed then release the bus and wait a few US before sampling if the
-		 OW device has sent data.
-*********************************************************************************** */
-unsigned char OWBit(unsigned char OWbit)
-{
-	gpio_set(BP_1WIRE_PORT, BP_1WIRE_PIN);
-	gpio_clear(BP_1WIRE_PORT, BP_1WIRE_PIN);
-
-	delayus(5);	// maxim says 6
-	if(OWbit)
-	{
-		gpio_set(BP_1WIRE_PORT, BP_1WIRE_PIN);
-	}
-
-	delayus(8);	// maxim says 9
-
-	if(OWbit)
-	{										// This is where the magic happens. If a OWbit value of 1 is sent to this function
-		OWbit = (gpio_get(BP_1WIRE_SENSE_PORT, BP_1WIRE_SENSE_PIN)?1:0);	// well thats the same timing needed to get a value (not just send it) so why not
-		delayus(44); //maxim says 45						// perform both? So sending one will not only send 1 bit; it will also read one bit		
-	}
-	else
-	{										// it all depends on what the iDevice is in the mood to do. If its in send mode then
-		delayus(44); // maxim says 45						// it will sends its data, if its in recive mode. Then we will send ours.
-		gpio_set(BP_1WIRE_PORT, BP_1WIRE_PIN);					// magical, i know :)
-	}
-
-	delayus(9); 	// maxim says 9
-
-	return OWbit;
-}
-
-
-
-
-
-
-/* ***********************************************************************************
-   Function: OWByte
-   Args[0]: uChar [Byte to send to bus] - or 0xFF to recieve
-   Return: Returns a byte from the OWBus
-   
-   Desc: Like OWBit; OWByte works for both sending and getting. OWTime slots are the same
-		 for sending and getting; so only one function is needed to perform both tasks.
-
-*********************************************************************************** */
-unsigned char OWByte(unsigned char OWbyte)
-{
-	unsigned char i, t=0;				// nothing much to say about this function. pretty standard; do this 8 times and collect results.
-							// except that sends and GETS data. Sending a value of 0xFF will have the OWBit function return
-	for(i=0;i<8;i++)				// bits; this will collect those returns and spit them out. Same with send. It all depends on
-	{						// what the iDevice is looking for at the time this command is sent.
-		t = OWBit(OWbyte&1);
-		OWbyte>>=1;
-		if(t) { OWbyte |= 0x80; }
-	} 
-	delayus(10);
-	return OWbyte;
-}
-
-
-
-void DS1wireReset(void)
-{
-        unsigned char c;
-
-        c=OWReset();
-	printf("BUS RESET ");
-        if(c==0)
-	{
-		printf(" OK\r\n");
-        }
-	else
-	{
-		printf("Warning: ");
-                if(c&0b1)  printf("*Short or no pull-up \r\n");
-                if(c&0b10) printf("*No device detected \r\n");
-        }
-}
-
-// device list from: http://owfs.sourceforge.net/commands.html
-void DS1wireID(unsigned char famID)
-{
-        switch(famID)
-	{									//check for device type
-		case 0x01:	printf("DS1990A Silicon Serial Number");
-				break;
-		case 0x02:	printf("DS1991 multikey 1153bit secure");
-				break;
-		case 0x04:	printf("DS1994 econoram time chip");
-				break;
-		case 0x05:	printf("Addresable Switch");
-				break;
-		case 0x06:	printf("DS1993 4k memory ibutton");
-				break;
-		case 0x08:	printf("DS1992 1k memory ibutton");
-				break;
-		case 0x09:	printf("DS1982 1k add-only memory");
-				break;
-		case 0x0A:	printf("DS1995 16k memory ibutton");
-				break;
-		case 0x0B:	printf("DS1985 16k add-only memory");
-				break;
-		case 0x0C:	printf("DS1996 64k memory ibutton");
-				break;
-		case 0x0F:	printf("DS1986 64k add-only  memory");
-				break;
-		case 0x10:	printf("DS1920 high precision digital thermometer");
-				break;
-		case 0x12:	printf("dual addressable switch plus 1k memory");
-				break;
-		case 0x14:	printf("DS1971 256 eeprom");
-				break;
-		case 0x1A:	printf("DS1963L 4k Monetary");
-				break;
-		case 0x1C:	printf("4k EEPROM withPIO");
-				break;
-		case 0x1D:	printf("4k ram with counter");
-				break;
-		case 0x1F:	printf("microlan coupler");
-				break;
-		case 0x20:	printf("quad a/d converter");
-				break;
-		case 0x21:	printf("DS1921 Thermachron");
-				break;
-		case 0x22:	printf("Econo Digital Thermometer");
-				break;
-		case 0x23:	printf("4k eeprom");
-				break;
-		case 0x24:	printf("time chip");
-				break;
-		case 0x26:	printf("smart battery monitor");
-				break;
-		case 0x27:	printf("time chip with interrupt");
-				break;
-		case 0x28:	printf("programmable resolution digital thermometer");
-				break;
-		case 0x29:	printf("8-channel addressable switch");
-				break;
-		case 0x2C:	printf("digital potentiometer");
-				break;
-		case 0x2D:	printf("1k eeprom");
-				break;
-		case 0x2E:	printf("battery monitor and charge controller");
-				break;
-		case 0x30:	printf("high-precision li+ battery monitor");
-				break;
-		case 0x31:	printf("efficient addressable single-cell rechargable lithium protection ic");
-				break;
-		case 0x33:	printf("DS1961S 1k protected eeprom with SHA-1");
-				break;
-		case 0x36:	printf("high precision coulomb counter");
-				break;
-		case 0x37:	printf("DS1977 Password protected 32k eeprom");
-				break;
-		case 0x41:	printf("DS1922/3 Temperature Logger 8k mem");
-				break;
-		case 0x51:	printf("multichemistry battery fuel gauge");
-				break;
-		case 0x84:	printf("dual port plus time");
-				break;
-		case 0x89:	printf("DS1982U 48 bit node address chip");
-				break;
-		case 0x8B:	printf("DS1985U 16k add-only uniqueware");
-				break;
-		case 0x8F:	printf("DS1986U 64k add-only uniqueware");
-				break;
-                default:
-			printf("Unknown device");
-
-        }
-	printf("\r\n");
-}
-
-
-//the 1-wire search algo taken from:
-//http://www.maxim-ic.com/appnotes.cfm/appnote_number/187
-//#define TRUE 1 //if !=0
-//#define FALSE 0
-
-//--------------------------------------------------------------------------
-// Find the 'first' devices on the 1-Wire bus
-// Return TRUE  : device found, ROM number in ROM_NO buffer
-//        FALSE : no device present
-//
-unsigned char OWFirst(void)
-{
-   // reset the search state
-   LastDiscrepancy = 0;
-   LastDeviceFlag = FALSE;
-   LastFamilyDiscrepancy = 0;
-
-   return OWSearch();
-}
-
-//--------------------------------------------------------------------------
-// Find the 'next' devices on the 1-Wire bus
-// Return TRUE  : device found, ROM number in ROM_NO buffer
-//        FALSE : device not found, end of search
-//
-unsigned char OWNext(void)
-{
-   // leave the search state alone
-   return OWSearch();
-}
-
-//--------------------------------------------------------------------------
-// Perform the 1-Wire Search Algorithm on the 1-Wire bus using the existing
-// search state.
-// Return TRUE  : device found, ROM number in ROM_NO buffer
-//        FALSE : device not found, end of search
-//
-unsigned char OWSearch(void)
-{
-   unsigned char id_bit_number;
-   unsigned char last_zero, rom_byte_number, search_result;
-   unsigned char id_bit, cmp_id_bit;
-   unsigned char rom_byte_mask, search_direction;
-
-   // initialize for search
-   id_bit_number = 1;
-   last_zero = 0;
-   rom_byte_number = 0;
-   rom_byte_mask = 1;
-   search_result = 0;
-   crc8 = 0;
-
-   // if the last call was not the last one
-   if (!LastDeviceFlag)
-   {
-      // 1-Wire reset
-      if (OWReset())
-      {
-         // reset the search
-         LastDiscrepancy = 0;
-         LastDeviceFlag = FALSE;
-         LastFamilyDiscrepancy = 0;
-         return FALSE;
-      }
-
-      // issue the search command 
-      OWWriteByte(SearchChar);  //!!!!!!!!!!!!!!!
-
-      // loop to do the search
-      do
-      {
-         // read a bit and its complement
-         id_bit = OWReadBit();
-         cmp_id_bit = OWReadBit();
-
-         // check for no devices on 1-wire
-         if ((id_bit == 1) && (cmp_id_bit == 1))
-            break;
-         else
-         {
-            // all devices coupled have 0 or 1
-            if (id_bit != cmp_id_bit)
-               search_direction = id_bit;  // bit write value for search
-            else
-            {
-               // if this discrepancy if before the Last Discrepancy
-               // on a previous next then pick the same as last time
-               if (id_bit_number < LastDiscrepancy)
-                  search_direction = ((ROM_NO[rom_byte_number] & rom_byte_mask) > 0);
-               else
-                  // if equal to last pick 1, if not then pick 0
-                  search_direction = (id_bit_number == LastDiscrepancy);
-
-               // if 0 was picked then record its position in LastZero
-               if (search_direction == 0)
-               {
-                  last_zero = id_bit_number;
-
-                  // check for Last discrepancy in family
-                  if (last_zero < 9)
-                     LastFamilyDiscrepancy = last_zero;
-               }
             }
 
-            // set or clear the bit in the ROM byte rom_byte_number
-            // with mask rom_byte_mask
-            if (search_direction == 1)
-              ROM_NO[rom_byte_number] |= rom_byte_mask;
-            else
-              ROM_NO[rom_byte_number] &= ~rom_byte_mask;
+            pio_sm_set_enabled(pio, sm, false);
+            need_restart = 1;
+        }
 
-            // serial number search direction write bit
-            OWWriteBit(search_direction);
+        hw_write_masked(&pio->sm[sm].shiftctrl, new,
+                        PIO_SM0_SHIFTCTRL_PUSH_THRESH_BITS |
+                        PIO_SM0_SHIFTCTRL_PULL_THRESH_BITS);
 
-            // increment the byte counter id_bit_number
-            // and shift the mask rom_byte_mask
-            id_bit_number++;
-            rom_byte_mask <<= 1;
-
-            // if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
-            if (rom_byte_mask == 0)
-            {
-                docrc8(ROM_NO[rom_byte_number]);  // accumulate the CRC
-                rom_byte_number++;
-                rom_byte_mask = 1;
-            }
-         }
-      }
-      while(rom_byte_number < 8);  // loop until through all ROM bytes 0-7
-
-      // if the search was successful then
-      if (!((id_bit_number < 65) || (crc8 != 0)))
-      {
-         // search successful so set LastDiscrepancy,LastDeviceFlag,search_result
-         LastDiscrepancy = last_zero;
-
-         // check for last device
-         if (LastDiscrepancy == 0)
-            LastDeviceFlag = TRUE;
-         
-         search_result = TRUE;
-      }
-   }
-
-   // if no device found then reset counters so next 'search' will be like a first
-   if (!search_result || !ROM_NO[0])
-   {
-      LastDiscrepancy = 0;
-      LastDeviceFlag = FALSE;
-      LastFamilyDiscrepancy = 0;
-      search_result = FALSE;
-   }
-
-   return search_result;
+        if( need_restart ){
+            pio_sm_restart(pio, sm);
+            pio_sm_set_enabled(pio, sm, true);
+        }
+    }
 }
 
-//--------------------------------------------------------------------------
-// Verify the device with the ROM number in ROM_NO buffer is present.
-// Return TRUE  : device verified present
-//        FALSE : device not present
-//
-unsigned char OWVerify(void)
+int onewire_reset(struct owobj *owobj) {
+    int ret;
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint8_t waiting_addr;
+    int timeout;
+    uint div;
+    
+    /* Switch to slow timing for reset */
+    div = clock_get_hz(clk_sys)/1000000 * 70;
+    pio_sm_set_clkdiv_int_frac(pio, sm, div, 0);
+    pio_sm_clkdiv_restart(pio, sm);
+    onewire_set_fifo_thresh(owobj, 1);
+
+    //onewire_do_reset(pio, sm, offset);
+    pio_sm_exec(pio, sm, pio_encode_jmp(offset + onewire_offset_reset));
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    ret = ((pio_sm_get(pio, sm) & 0x80000000) == 0 );
+    
+    /* when rx fifo has filled we still need to wait for
+       the remaineder of the reset to execute before we
+       can manipulate the clkdiv.
+       Just wait until we reach the waiting state */
+    waiting_addr = offset+onewire_offset_waiting;
+    timeout = 2000;
+    while( pio_sm_get_pc(pio, sm) != waiting_addr ){
+        sleep_us(1);
+        if( timeout-- < 0 ){
+            /* FIXME: do something clever in case of
+               timeout */
+        }
+    }
+
+    /* Restore normal timing */
+    div = clock_get_hz(clk_sys)/1000000 * 3;
+    pio_sm_set_clkdiv_int_frac(pio, sm, div, 0);
+    pio_sm_clkdiv_restart(pio, sm);
+
+    return ret; // 1=detected, 0=not
+}
+
+/* Wait for idle state to be reached. This is only
+   useful when you know that all but the last bit
+   have been processe (after having checked fifos) */
+void onewire_wait_for_idle(struct owobj *owobj) {
+    int ret;
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint8_t waiting_addr;
+    int timeout;
+    
+    /* when rx fifo has filled the bit timing has not
+       fully completed.
+       Just wait until we reach the waiting state */
+    waiting_addr = offset+onewire_offset_waiting;
+    timeout = 2000;
+    while( pio_sm_get_pc(pio, sm) != waiting_addr ){
+        sleep_us(1);
+        if( timeout-- < 0 ){
+            /* FIXME: do something clever in case of
+               timeout */
+        }
+    }
+
+    return;
+}
+
+/* Transmit a byte */
+void onewire_tx_byte(struct owobj *owobj, uint byte){
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+
+    onewire_set_fifo_thresh(owobj, 8);
+    pio->txf[sm] = byte;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    pio_sm_get(pio, sm); /* read to drain RX fifo */
+    return;
+}
+
+/* Transmit a byte and activate strong pullup after
+   last bit has been sent.
+   Note: onewire_tx_byte_spu returns when the rx fifo
+   has been read. This is 50 us prior to the end of the bit
+   and hence 50 us prior to the strong pullup actually
+   activated.
+   Either consider this when controlling the strong
+   pullup time or wait for idle before taking time. */
+void onewire_tx_byte_spu(struct owobj *owobj, uint byte){
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+
+    onewire_set_fifo_thresh(owobj, 7);
+    pio->txf[sm] = byte;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    pio_sm_get(pio, sm); /* read to drain RX fifo */
+
+    onewire_set_fifo_thresh(owobj, 1);
+    pio_sm_exec(pio, sm, pio_encode_set(pio_y, 0));
+    pio->txf[sm] = byte>>7;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    pio_sm_get(pio, sm); /* read to drain RX fifo */
+
+    return;
+}
+
+/* Reset the strong pullup (set dir to high) */
+void onewire_end_spu(struct owobj *owobj){
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+
+    /* Preset y register so no SPU during next bit */
+    pio_sm_exec(pio, sm, pio_encode_set(pio_y, 1));
+    /* Set dir pin to high ! */
+    pio_sm_exec(pio, sm, pio_encode_set(pio_pins, 1));
+}
+
+/* Receive a byte */
+uint onewire_rx_byte(struct owobj *owobj){
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+
+    onewire_set_fifo_thresh(owobj, 8);
+    pio->txf[sm] = 0xff;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    /* Returned byte is in 31..24 of RX fifo! */
+    return (pio_sm_get(pio, sm) >> 24) & 0xff;
+}
+
+/* Do a ROM search triplet.
+   Receive two bits and store the read values to
+   id_bit and cmp_id_bit respectively.
+   Then transmit a bit with this logic:
+     id_bit | cmp_id_bit | tx-bit
+          0 |          1 |      0
+          1 |          0 |      1
+          0 |          0 | search_direction     
+          1 |          1 |      1
+    The actually transmitted bit is returned via search_direction.
+    
+    Refer to MAXIM APPLICATION NOTE 187 "1-Wire Search Algorithm"
+ */
+void onewire_triplet(
+    struct owobj *owobj,
+    int *id_bit,
+    int *cmp_id_bit,
+    unsigned char *search_direction
+)
 {
-   unsigned char rom_backup[8];
-   unsigned char i,rslt,ld_backup,ldf_backup,lfd_backup;
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint fiforx;
 
-   // keep a backup copy of the current state
-   for (i = 0; i < 8; i++)
-      rom_backup[i] = ROM_NO[i];
-   ld_backup = LastDiscrepancy;
-   ldf_backup = LastDeviceFlag;
-   lfd_backup = LastFamilyDiscrepancy;
+    onewire_set_fifo_thresh(owobj, 2);
+    pio->txf[sm] = 0x3;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
 
-   // set search to find the same device
-   LastDiscrepancy = 64;
-   LastDeviceFlag = FALSE;
+    fiforx = pio_sm_get(pio, sm);
+    *id_bit = (fiforx>>30) & 1;
+    *cmp_id_bit = (fiforx>>31) & 1;
+    if( (*id_bit == 0) && (*cmp_id_bit == 1) ){
+        *search_direction = 0;
+    } else if( (*id_bit == 1) && (*cmp_id_bit == 0) ){
+        *search_direction = 1;
+    } else if( (*id_bit == 0) && (*cmp_id_bit == 0) ){
+        /* do not change search direction */
+    } else {
+        *search_direction = 1;
+    }
 
-   if (OWSearch())
-   {
-      // check if same device found
-      rslt = TRUE;
-      for (i = 0; i < 8; i++)
-      {
-         if (rom_backup[i] != ROM_NO[i])
-         {
-            rslt = FALSE;
-            break;
-         }
-      }
-   }
-   else
-     rslt = FALSE;
-
-   // restore the search state 
-   for (i = 0; i < 8; i++)
-      ROM_NO[i] = rom_backup[i];
-   LastDiscrepancy = ld_backup;
-   LastDeviceFlag = ldf_backup;
-   LastFamilyDiscrepancy = lfd_backup;
-
-   // return the result of the verify
-   return rslt;
+    onewire_set_fifo_thresh(owobj, 1);
+    pio->txf[sm] = *search_direction;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    fiforx = pio_sm_get(pio, sm);
+    return;
 }
 
-// TEST BUILD
-static unsigned char dscrc_table[] = {
-        0, 94,188,226, 97, 63,221,131,194,156,126, 32,163,253, 31, 65,
-      157,195, 33,127,252,162, 64, 30, 95,  1,227,189, 62, 96,130,220,
-       35,125,159,193, 66, 28,254,160,225,191, 93,  3,128,222, 60, 98,
-      190,224,  2, 92,223,129, 99, 61,124, 34,192,158, 29, 67,161,255,
-       70, 24,250,164, 39,121,155,197,132,218, 56,102,229,187, 89,  7,
-      219,133,103, 57,186,228,  6, 88, 25, 71,165,251,120, 38,196,154,
-      101, 59,217,135,  4, 90,184,230,167,249, 27, 69,198,152,122, 36,
-      248,166, 68, 26,153,199, 37,123, 58,100,134,216, 91,  5,231,185,
-      140,210, 48,110,237,179, 81, 15, 78, 16,242,172, 47,113,147,205,
-       17, 79,173,243,112, 46,204,146,211,141,111, 49,178,236, 14, 80,
-      175,241, 19, 77,206,144,114, 44,109, 51,209,143, 12, 82,176,238,
-       50,108,142,208, 83, 13,239,177,240,174, 76, 18,145,207, 45,115,
-      202,148,118, 40,171,245, 23, 73,  8, 86,180,234,105, 55,213,139,
-       87,  9,235,181, 54,104,138,212,149,203, 41,119,244,170, 72, 22,
-      233,183, 85, 11,136,214, 52,106, 43,117,151,201, 74, 20,246,168,
-      116, 42,200,150, 21, 75,169,247,182,232, 10, 84,215,137,107, 53};
+static unsigned char calc_crc8_buf(unsigned char *data, int len)
+{
+    int            i,j;
+    unsigned char  crc8;
+
+    // See Application Note 27
+    crc8 = 0;
+    for(j=0; j<len; j++){
+        crc8 = crc8 ^ data[j];
+        for (i = 0; i < 8; ++i)
+        {
+            if (crc8 & 1)
+                crc8 = (crc8 >> 1) ^ 0x8c;
+            else
+                crc8 = (crc8 >> 1);
+        }
+    }
+
+    return crc8;
+}
+
+/* Select a device by ROM ID */
+int onewire_select(
+    struct owobj  *owobj, 
+    unsigned char *romid
+)
+{
+    int    i;
+    
+    if( ! onewire_reset(owobj) ){
+        return 0;
+    }
+    onewire_tx_byte(owobj, 0x55); // Match ROM command
+    for(i=0; i<8; i++){
+        onewire_tx_byte(owobj, romid[i]);
+    }
+    return 1;
+}
+
+/* This is code stolen from MAXIM AN3684, slightly modified
+   to interface to the PIO onewire and to eliminate global
+   variables. */
+
+#define TRUE    1
+#define FALSE   0
+
+typedef unsigned char byte;
 
 //--------------------------------------------------------------------------
 // Calculate the CRC8 of the byte value provided with the current 
 // global 'crc8' value. 
 // Returns current global crc8 value
 //
-unsigned char docrc8(unsigned char value)
+unsigned char calc_crc8(struct owobj *owobj, unsigned char data)
 {
-   // See Application Note 27
-   // TEST BUILD
-   crc8 = dscrc_table[crc8 ^ value];
-   return crc8;
+    int i; 
+
+    // See Application Note 27
+    owobj->crc8 = owobj->crc8 ^ data;
+    for (i = 0; i < 8; ++i)
+    {
+        if (owobj->crc8 & 1)
+            owobj->crc8 = (owobj->crc8 >> 1) ^ 0x8c;
+        else
+            owobj->crc8 = (owobj->crc8 >> 1);
+    }
+
+    return owobj->crc8;
+}
+
+//--------------------------------------------------------------------------
+// The 'OWSearch' function does a general search.  This function
+// continues from the previous search state. The search state
+// can be reset by using the 'OWFirst' function.
+//
+// Returns:   TRUE (1) : when a 1-Wire device was found and its
+//                       Serial Number placed in the global ROM 
+//            FALSE (0): when no new device was found.  Either the
+//                       last search was the last device or there
+//                       are no devices on the 1-Wire Net.
+//
+int OWSearch(struct owobj *owobj)
+{
+    int id_bit_number;
+    int last_zero, rom_byte_number, search_result;
+    int id_bit, cmp_id_bit;
+    unsigned char rom_byte_mask, search_direction, status;
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+
+    // initialize for search
+    id_bit_number = 1;
+    last_zero = 0;
+    rom_byte_number = 0;
+    rom_byte_mask = 1;
+    search_result = FALSE;
+    owobj->crc8 = 0;
+
+    // if the last call was not the last one
+    if (!owobj->LastDeviceFlag)
+    {       
+        // 1-Wire reset
+        if( ! onewire_reset(owobj) )
+        {
+            // reset the search
+            owobj->LastDiscrepancy = 0;
+            owobj->LastDeviceFlag = FALSE;
+            owobj->LastFamilyDiscrepancy = 0;
+            return FALSE;
+        }
+
+        // issue the search command
+        onewire_tx_byte(owobj, 0xf0);
+
+        // loop to do the search
+        do
+        {
+            // if this discrepancy if before the Last Discrepancy
+            // on a previous next then pick the same as last time
+            if (id_bit_number < owobj->LastDiscrepancy)
+            {
+                if ((owobj->ROM_NO[rom_byte_number] & rom_byte_mask) > 0)
+                    search_direction = 1;
+                else
+                    search_direction = 0;
+            }
+            else
+            {
+                // if equal to last pick 1, if not then pick 0
+                if (id_bit_number == owobj->LastDiscrepancy)
+                    search_direction = 1;
+                else
+                    search_direction = 0;
+            }
+
+            // Perform a triple operation on the DS2482 which will perform 2 read bits and 1 write bit
+            onewire_triplet(owobj, &id_bit, &cmp_id_bit, &search_direction);
+
+            // check for no devices on 1-Wire
+            if ((id_bit) && (cmp_id_bit))
+                break;
+            else
+            {
+                if ((!id_bit) && (!cmp_id_bit) && (search_direction == 0))
+                {
+                    last_zero = id_bit_number;
+
+                    // check for Last discrepancy in family
+                    if (last_zero < 9)
+                        owobj->LastFamilyDiscrepancy = last_zero;
+                }
+
+                // set or clear the bit in the ROM byte rom_byte_number
+                // with mask rom_byte_mask
+                if (search_direction == 1)
+                    owobj->ROM_NO[rom_byte_number] |= rom_byte_mask;
+                else
+                    owobj->ROM_NO[rom_byte_number] &= (byte)~rom_byte_mask;
+
+                // increment the byte counter id_bit_number
+                // and shift the mask rom_byte_mask
+                id_bit_number++;
+                rom_byte_mask <<= 1;
+
+                // if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
+                if (rom_byte_mask == 0)
+                {
+                    calc_crc8(owobj, owobj->ROM_NO[rom_byte_number]);  // accumulate the CRC
+                    rom_byte_number++;
+                    rom_byte_mask = 1;
+                }
+            }
+        }
+        while(rom_byte_number < 8);  // loop until through all ROM bytes 0-7
+
+        // if the search was successful then
+        if (!((id_bit_number < 65) || (owobj->crc8 != 0)))
+        {
+            // search successful so set LastDiscrepancy,LastDeviceFlag,search_result
+            owobj->LastDiscrepancy = last_zero;
+
+            // check for last device
+            if (owobj->LastDiscrepancy == 0)
+                owobj->LastDeviceFlag = TRUE;
+
+            search_result = TRUE;
+        }
+    }
+
+    // if no device found then reset counters so next 'search' will be like a first
+    if (!search_result || (owobj->ROM_NO[0] == 0))
+    {
+        owobj->LastDiscrepancy = 0;
+        owobj->LastDeviceFlag = FALSE;
+        owobj->LastFamilyDiscrepancy = 0;
+        search_result = FALSE;
+    }
+
+    return search_result;
+}
+
+int OWSearchReset(struct owobj *owobj)
+{
+    // reset the search state
+    owobj->LastDiscrepancy = 0;
+    owobj->LastDeviceFlag = FALSE;
+    owobj->LastFamilyDiscrepancy = 0;
+}
+
+//--------------------------------------------------------------------------
+// Find the 'first' devices on the 1-Wire network
+// Return TRUE  : device found, ROM number in ROM_NO buffer
+//        FALSE : no device present
+//
+int OWFirst(struct owobj *owobj)
+{
+    // reset the search state
+    owobj->LastDiscrepancy = 0;
+    owobj->LastDeviceFlag = FALSE;
+    owobj->LastFamilyDiscrepancy = 0;
+
+    return OWSearch(owobj);
+}
+
+//--------------------------------------------------------------------------
+// Find the 'next' devices on the 1-Wire network
+// Return TRUE  : device found, ROM number in ROM_NO buffer
+//        FALSE : device not found, end of search
+//
+int OWNext(struct owobj *owobj)
+{
+    // leave the search state alone
+    return OWSearch(owobj);
+}
+
+/* End of MAXIM AN3684 code */
+
+
+/* Simple test with signle DS18B20
+   Write and readback scratchpad register */
+void onewire_test_ds18b20_scratchpad(struct owobj *owobj){
+    int  i;
+    unsigned char buf[9];
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint dir =  owobj->dir;
+    
+    onewire_program_init(pio, sm, offset, pin, dir);
+    pio_sm_set_enabled(pio, sm, true);
+
+    if( ! onewire_reset(owobj) ){
+        printf("No Device\n");
+        return;
+    }
+
+    onewire_tx_byte(owobj, 0xcc); // Skip ROM command
+    onewire_tx_byte(owobj, 0x4e); // Write Scatchpad
+    onewire_tx_byte(owobj, 0xa5); // TH
+    onewire_tx_byte(owobj, 0x83); // TL
+    onewire_tx_byte(owobj, 0x7f); // CONF
+
+    if( ! onewire_reset(owobj) ){
+        printf("No Device\n");
+        return;
+    }
+
+    onewire_tx_byte(owobj, 0xcc); // Skip ROM command
+    onewire_tx_byte(owobj, 0xbe); // Read Scatchpad
+    for(i=0; i<9; i++){
+        buf[i] = onewire_rx_byte(owobj);
+    }
+
+    printf("Rx bytes:");
+    for(i=0; i<9; i++){
+        printf(" %.2x", buf[i]);
+    }
+    printf("\n");
+    if( calc_crc8_buf(buf, 8) != buf[8] ){
+        printf("CRC Fail\n");
+        return;
+    }
+}
+
+/* Simple test with single DS18B20
+   Configure, start conversion and read temperature.
+   Assume phantom power. */
+void  onewire_test_ds18b20_conversion(struct owobj *owobj){
+    int  i;
+    unsigned char buf[9];
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint dir =  owobj->dir;
+    int32_t temp;
+    
+    onewire_program_init(pio, sm, offset, pin, dir);
+    pio_sm_set_enabled(pio, sm, true);
+
+    if( ! onewire_reset(owobj) ){
+        printf("No Device presence\r\n");
+        return;
+    }
+
+    onewire_tx_byte(owobj, 0xcc); // Skip ROM command
+    onewire_tx_byte(owobj, 0x4e); // Write Scatchpad
+    onewire_tx_byte(owobj, 0x00); // TH
+    onewire_tx_byte(owobj, 0x00); // TL
+    onewire_tx_byte(owobj, 0x7f); // CONF (12bit)
+
+    if( ! onewire_reset(owobj) ){
+        printf("No Device skip\r\n");
+        return;
+    }
+
+    onewire_tx_byte(owobj, 0xcc); // Skip ROM command
+    onewire_tx_byte(owobj, 0x44); // Convert T
+    sleep_ms(800);  /* 12bit: 750 ms */
+    //onewire_end_spu(owobj);
+
+    if( ! onewire_reset(owobj) ){
+        printf("No Device skip 2\r\n");
+        return;
+    }
+    
+    onewire_tx_byte(owobj, 0xcc); // Skip ROM command
+    onewire_tx_byte(owobj, 0xbe); // Read Scatchpad
+    for(i=0; i<9; i++){
+        buf[i] = onewire_rx_byte(owobj);
+    }
+    
+    if( calc_crc8_buf(buf, 8) != buf[8] ){
+        printf("CRC Fail\r\n");
+        return;
+    }
+
+    temp = buf[0]|(buf[1]<<8);
+    if( temp & 0x8000 ){
+        temp |= 0xffff0000;
+    }
+    printf("Temperature: %.3f\r\n", (float)temp/16);
+
+    printf("Rx bytes:");
+    for(i=0; i<9; i++){
+        printf(" %.2x", buf[i]);
+    }
+    printf("\r\n");
+}
+
+void onewire_test_spu(struct owobj *owobj){
+    int  i;
+    unsigned char buf[9];
+    uint  fiforx;
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint dir =  owobj->dir;
+    
+    onewire_program_init(pio, sm, offset, pin, dir);
+    onewire_set_fifo_thresh(owobj, 2);
+    pio_sm_set_enabled(pio, sm, true);
+
+    onewire_tx_byte_spu(owobj, 0xff);
+    onewire_wait_for_idle(owobj);
+    sleep_us(150);
+    onewire_end_spu(owobj);
+    sleep_us(100);
+    onewire_tx_byte_spu(owobj, 0x7f);
+    sleep_us(350+50);
+    onewire_end_spu(owobj);
+
+}
+
+/* Try testing with variable number of bits to be transmitted
+   You should see 14 back-to-back high bits on the scope. */
+void onewire_test_wordlength(struct owobj *owobj){
+    int  i;
+    unsigned char buf[9];
+    uint  fiforx;
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint dir =  owobj->dir;
+    
+    onewire_program_init(pio, sm, offset, pin, dir);
+    onewire_set_fifo_thresh(owobj, 2);
+    pio_sm_set_enabled(pio, sm, true);
+
+    //printf("idle\n");
+    //pio_sm_trace(pio, sm);
+    
+    pio->txf[sm] = 0x3;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    fiforx = pio_sm_get(pio, sm);
+
+    onewire_set_fifo_thresh(owobj, 3);
+    pio->txf[sm] = 0x7;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    fiforx = pio_sm_get(pio, sm);
+
+    onewire_set_fifo_thresh(owobj, 4);
+    pio->txf[sm] = 0x00; //0xf;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    fiforx = pio_sm_get(pio, sm);
+
+    onewire_set_fifo_thresh(owobj, 5);
+    pio->txf[sm] = 0x1f;
+    while( pio_sm_get_rx_fifo_level(pio, sm) == 0 )
+        /* wait */;
+    fiforx = pio_sm_get(pio, sm);
+}
+
+/* ROM Search test */
+void onewire_test_romsearch(struct owobj *owobj){
+    int i;
+    int ret;
+    int id_bit, cmp_id_bit;
+    unsigned char search_direction;
+    PIO pio = owobj->pio;
+    uint sm = owobj->sm;
+    uint offset = owobj->offset;
+    uint pin =  owobj->pin;
+    uint dir =  owobj->dir;
+    int devcount;
+    
+    onewire_program_init(pio, sm, offset, pin, dir);
+    pio_sm_set_enabled(pio, sm, true);
+
+#if 0
+    /* Simple test for onewire_triplet */
+    if( ! onewire_reset(owobj) ){
+        printf("No Device\n");
+        return;
+    }
+
+    onewire_tx_byte(owobj, 0xf0); // ROM Search
+    sleep_us(120);
+
+    search_direction = 0;
+    for(i=0; i<64; i++){
+        onewire_triplet(owobj, &id_bit, &cmp_id_bit, &search_direction);
+        printf("%d: %d\n", i, id_bit);
+    }
+#endif
+
+#if 1
+    /* Full flegged romsearch */
+    printf("1Wire ROM search:\n");
+    ret = OWFirst(owobj);
+    devcount = 0;
+    while( ret == TRUE ){
+        devcount++;
+        printf("%d:", devcount);
+        for(i=0; i<8; i++){
+            printf(" %.2x", owobj->ROM_NO[i]);
+        }
+        printf("\n");
+        ret = OWNext(owobj);
+    }
+    if( devcount == 0 ){
+        printf("No devices found\n");
+    }
+#endif
+}
+
+/* onewire_temp_app: Large scale example.
+ *
+ * Assumes: Only DS18B20 (or compatible) sensors on the 1-Wire and
+ * they are using phantom power (external strong pullup via MOSFET).
+ *
+ * Scan all 1-Wire buses for all devices and convert all temperatures
+ * periodically. While scanning temperatures, do a "background" scan
+ * to check for removed are added sensors.
+ *
+ * The code assumes that the T_H register is programmed with a "unique"
+ * 8-bit identification number for each sensor, so sensors can be
+ * distinguished easily (without knowing their actual ROM-ID).
+ * Remember that T_H is backed-up in EEPROM.
+ * 
+ * Output format:
+ * || LOOP || N ||  T-ID ||  T-ID ||
+ * |  1234 |  2 | -99.87 | 103.54 |
+ *
+ * N is the numer of sensors found and is added for convenience to easyly
+ * check sensor setup.
+ */
+
+/* number for 1wire channels for this test */
+#define N_CH       2 
+/* max number of devices for one 1 wire channel */
+#define MAX_TDEV  64  
+
+#define MAX_LINE_LENGTH ((MAX_TDEV)*9+2)
+char hd_buf[MAX_LINE_LENGTH];
+char dt_buf[MAX_LINE_LENGTH];
+int  hd_pos;
+int  dt_pos;
+
+struct tdev {
+    unsigned char rom_id[8];
+    unsigned char dev_id;
+    int32_t       temp;
+    int           fail;     /* 0: ok, 1: invalid temperature */
+};
+
+struct ch_obj {
+    struct tdev tdevs[MAX_TDEV]; /* active devices */
+    struct tdev sdevs[MAX_TDEV]; /* searching devices */
+    int         spos;            /* search position, -1 if search is done */
+};
+
+struct ch_obj ch_objs[N_CH];
+
+void onewire_temp_app(
+    struct owobj *owobj1,
+    struct owobj *owobj2
+){
+    int i;
+    int n;
+    int c;
+    int t;
+    int s_cnt;
+    int s_id;
+    int ret;
+    unsigned char buf[9];
+    int32_t temp;
+    int fail;
+    int num_sensors;
+    int searching;
+    int loop;
+
+    struct owobj * owobjs[N_CH];
+    owobjs[0] = owobj1;
+    owobjs[1] = owobj2;
+
+    /* Init all 1-Wire channels */
+    for(c=0; c<N_CH; c++){
+        onewire_program_init(owobjs[c]->pio, owobjs[c]->sm,
+                             owobjs[c]->offset, owobjs[c]->pin,
+                             owobjs[c]->dir);
+        pio_sm_set_enabled(owobjs[c]->pio, owobjs[c]->sm, true);
+        for(t=0; t<MAX_TDEV; t++){
+            memset(&ch_objs[c].tdevs[t].rom_id[0], 0, 8);
+        }
+    }
+
+    /* Initially scan for devices */
+    for(c=0; c<N_CH; c++){
+        ret = OWFirst(owobjs[c]);
+        t = 0;
+        while( ret == TRUE ){
+            memcpy(ch_objs[c].tdevs[t].rom_id,
+                   owobjs[c]->ROM_NO, 8);
+
+            /* Read sensor ID (stored in T_H byte of all sensors) */
+            onewire_tx_byte(owobjs[c], 0xbe); // Read Scatchpad
+            for(i=0; i<9; i++){
+                buf[i] = onewire_rx_byte(owobjs[c]);
+            }
+            /* FIXME: Should check CRC */
+            ch_objs[c].tdevs[t].dev_id = buf[2];
+
+            t++;
+            ret = OWNext(owobjs[c]);
+        }
+    }
+
+    /* Prepare for background searching of devices */
+    for(c=0; c<N_CH; c++){
+        OWSearchReset(owobjs[c]);
+        ch_objs[c].spos = 0;
+        for(t=0; t<MAX_TDEV; t++){
+            memset(&ch_objs[c].sdevs[t].rom_id[0], 0, 8);
+        }
+    }
+
+#if 0
+    /* Print list of sensors */
+    for(c=0; c<N_CH; c++){
+        for(t=0; t<MAX_TDEV; t++){
+            if( ch_objs[c].tdevs[t].rom_id[0] == 0x28 ){
+                printf("%d,%d:", c, t);
+                for(i=0; i<8; i++){
+                    printf(" %.2x", ch_objs[c].tdevs[t].rom_id[i]);
+                }
+                printf(" (%2d)", ch_objs[c].tdevs[t].dev_id);
+                printf("\n");
+            } else {
+                continue;
+            }
+        }
+    }
+#endif
+
+    /* Scan temperatures forever */
+    loop = 0;
+    while( 1 ){
+        loop++;
+
+        /* Convert temperatures */
+        for(c=0; c<N_CH; c++){
+            if( ! onewire_reset(owobjs[c]) ){
+                break;
+            }
+            onewire_tx_byte(owobjs[c], 0xcc); // Skip ROM command
+            onewire_tx_byte_spu(owobjs[c], 0x44); // Convert T
+        }
+        sleep_ms(760);  /* 12bit: max. 750 ms */
+        for(c=0; c<N_CH; c++){
+            onewire_end_spu(owobjs[c]);
+        }
+
+        /* Read values */
+        num_sensors = 0;
+        for(c=0; c<N_CH; c++){
+            for(t=0; t<MAX_TDEV; t++){
+                if( ch_objs[c].tdevs[t].rom_id[0] != 0x28 ){
+                    continue;
+                }
+
+                num_sensors++;
+                ch_objs[c].tdevs[t].fail = 0;
+                if( onewire_select(owobjs[c],
+                                   ch_objs[c].tdevs[t].rom_id) == 0 )
+                {
+                    ch_objs[c].tdevs[t].fail++;
+                }
+
+                if(ch_objs[c].tdevs[t].fail == 0 ){
+                    onewire_tx_byte(owobjs[c], 0xbe); // Read Scatchpad
+                    for(i=0; i<9; i++){
+                        buf[i] = onewire_rx_byte(owobjs[c]);
+                    }
+                    if( calc_crc8_buf(buf, 8) != buf[8] ){
+                        /* CRC error */
+                        ch_objs[c].tdevs[t].fail++;
+                    } else {
+                        temp = buf[0]|(buf[1]<<8);
+                        if( temp & 0x8000 ){
+                            temp |= 0xffff0000;
+                        }
+                        ch_objs[c].tdevs[t].temp = temp;
+                    }
+                }
+            }
+        }
+
+        /* Print them all with a very brute force sorting */
+        hd_buf[0] = '\0';
+        dt_buf[0] = '\0';
+        hd_pos = 0;
+        dt_pos = 0;
+        s_id = 0;
+        s_cnt = 0;
+        /* Search until we either have found all sensors
+           or have passed the maximum possible sensor id */
+        while( s_cnt<num_sensors && s_id < 256 ){
+            for(c=0; c<N_CH; c++){
+                for(t=0; t<MAX_TDEV; t++){
+                    if( ch_objs[c].tdevs[t].rom_id[0] != 0x28 ){
+                        continue;
+                    }
+                    if( ch_objs[c].tdevs[t].dev_id == s_id ){
+                        /* 9 chars per sensors            123456789 */
+                        hd_pos += sprintf(hd_buf+hd_pos, "||   %3d ", 
+                                          ch_objs[c].tdevs[t].dev_id);
+                        if( ch_objs[c].tdevs[t].fail ){
+                            dt_pos += sprintf(dt_buf+dt_pos, "|    NaN ");
+                        } else {
+                            temp = ch_objs[c].tdevs[t].temp;
+                            dt_pos += sprintf(dt_buf+dt_pos, "| %6.2f ", 
+                                              (float)temp/16);
+                        }
+                        s_cnt++; /* one found */
+                        goto next_search;
+                    }
+                }
+            }
+        next_search:
+            s_id++;
+        }
+
+        /* Print what we have */
+        printf("|| LOOP || N %s ||\n", hd_buf);
+        printf("| %5d |%3d %s |\n", loop & 0xffff, num_sensors, dt_buf);
+
+        /* Now scan 1-Wire to check for change in devices.
+           Note: One ROM search takes about 15 ms.
+           To avoid sacrifying scan time for large sensor counts, we
+           only scan for three devices in one scan loop. */
+        searching = 0; /* set if any device is still in search */
+        for(c=0; c<N_CH; c++){
+            for(n=0; n<3; n++){
+                if( ch_objs[c].spos >= 0 ){
+                    searching++;
+                    ret = OWNext(owobjs[c]);
+                    if( ret == FALSE ){
+                        ch_objs[c].spos = -1;
+                    } else {
+                        memcpy(ch_objs[c].sdevs[ch_objs[c].spos].rom_id,
+                               owobjs[c]->ROM_NO, 8);
+
+                        /* Read sensor ID (stored in T_H byte of all sensors) */
+                        onewire_tx_byte(owobjs[c], 0xbe); // Read Scatchpad
+                        for(i=0; i<9; i++){
+                            buf[i] = onewire_rx_byte(owobjs[c]);
+                        }
+                        /* FIXME: Should check CRC */
+                        ch_objs[c].sdevs[ch_objs[c].spos].dev_id = buf[2];
+
+                        ch_objs[c].spos++;
+                    }
+                }
+            }
+        }
+
+        if( searching == 0 ){
+#if 0
+            /* Print list of found sensors */
+            for(c=0; c<N_CH; c++){
+                for(t=0; t<MAX_TDEV; t++){
+                    if( ch_objs[c].sdevs[t].rom_id[0] == 0x28 ){
+                        printf("%d,%d:", c, t);
+                        for(i=0; i<8; i++){
+                            printf(" %.2x", ch_objs[c].sdevs[t].rom_id[i]);
+                        }
+                        printf(" (%2d)", ch_objs[c].sdevs[t].dev_id);
+                        printf("\n");
+                    } else {
+                        continue;
+                    }
+                }
+            }
+#endif
+
+            /* Copy over from sdevs to tdevs. This is possible as
+               tdevs does not store data which must persist over
+               on scan loop. */
+            for(c=0; c<N_CH; c++){
+                memcpy(ch_objs[c].tdevs,
+                       ch_objs[c].sdevs,
+                       sizeof(ch_objs[c].tdevs));
+            }
+            
+            /* Reset for next background search */
+            for(c=0; c<N_CH; c++){
+                OWSearchReset(owobjs[c]);
+                ch_objs[c].spos = 0;
+                for(t=0; t<MAX_TDEV; t++){
+                    memset(&ch_objs[c].sdevs[t].rom_id[0], 0, 8);
+                }
+            }
+        }
+
+    }
 }
 
 

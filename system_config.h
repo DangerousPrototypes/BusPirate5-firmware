@@ -8,6 +8,7 @@ typedef struct _pwm_config
 typedef struct _system_config
 {
 	bool config_loaded_from_file;
+	uint8_t hardware_revision;
 
 	uint32_t terminal_language;
 

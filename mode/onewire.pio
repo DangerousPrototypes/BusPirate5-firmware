@@ -106,8 +106,8 @@ do_1:
                                 ; and provides (1+14)*3us = 45us high
 public start:
 get_bit:
-    mov pins, y   side 0  [2]   ; set pinctlz from y-register. This is
-                                ; to implement strong external pullup
+    ;mov pins, y   side 0  [2]   ; set pinctlz from y-register. This is
+    nop             side 0 [2]   ; to implement strong external pullup
                                 ; transistor from ARM code
                                 ; and provides (1+2)*3us = 9us low between bits
 public waiting:
@@ -136,43 +136,46 @@ void onewire_program_init(
      uint sm,       /* state machine number */
      uint offset,   /* onewire code offset in PIO instr. memory */ 
      uint pin,      /* Pin number for 1-Wire data signal */ 
-     uint pinctlz   /* Pin number for external FET strong pullup */ 
+     uint dir      /* Pin number for buffer IO direction */
 )
-{
+{ 
     uint div;
 
     pio_sm_config c = onewire_program_get_default_config(offset);
-    sm_config_set_out_pins(&c, pinctlz, 1);
-    sm_config_set_set_pins(&c, pinctlz, 1);
+    
+    sm_config_set_out_pins(&c, dir, 1);
+    sm_config_set_set_pins(&c, dir, 1);
     sm_config_set_in_pins(&c, pin);
-    sm_config_set_sideset_pins(&c, pin);
+    sm_config_set_sideset_pins(&c, dir);
+    
     div = clock_get_hz(clk_sys)/1000000 * 3;
     sm_config_set_clkdiv_int_frac(&c, div, 0);
+    
     sm_config_set_out_shift(&c, true, true, 8); 
     sm_config_set_in_shift(&c, true, true, 8); 
 
     gpio_init(pin);
     gpio_set_dir(pin, 0);
-    gpio_pull_up(pin);
+    gpio_pull_down(pin);
 
-    gpio_init(pinctlz);
-    gpio_put(pinctlz, 1);
-    gpio_set_dir(pinctlz, 1);
+    gpio_init(dir);
+    gpio_put(dir, 1);
+    gpio_set_dir(dir, 1);
 
-    //pio_sm_set_pins_with_mask(pio, sm, 1<<pin, 1<<pin);
-    //pio_sm_set_pindirs_with_mask(pio, sm, 1<<pin, 1<<pin);
-
+    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<pin);
     pio_gpio_init(pio, pin);
     //   gpio_set_oeover(pin, GPIO_OVERRIDE_INVERT); // see above
-    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<pin);
+    
+    pio_sm_set_pindirs_with_mask(pio, sm, 1<<dir, 1<<dir);
+    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<dir);
+    pio_gpio_init(pio, dir);
+    //gpio_set_outover(dir, GPIO_OVERRIDE_INVERT);
 
-    pio_gpio_init(pio, pinctlz);
-    pio_sm_set_pins_with_mask(pio, sm, 1<<pinctlz, 1<<pinctlz);
-    pio_sm_set_pindirs_with_mask(pio, sm, 1<<pinctlz, 1<<pinctlz);
+    pio_sm_set_pins_with_mask(pio, sm, 1<<dir, 1<<dir);
 
     /* Preload register y with 1 to keep pinctlz = high when
        state machine starts running */
-    pio_sm_exec(pio, sm, pio_encode_set(pio_y, 1));
+    /*pio_sm_exec(pio, sm, pio_encode_set(pio_y, 1));*/
 
     pio_sm_init(pio, sm, offset + onewire_offset_start, &c);
 }

@@ -1,25 +1,27 @@
+/*/
+void hw1wire_start(void);
+void hw1wire_startr(void);
+void hw1wire_stop(void);
+void hw1wire_stopr(void);
+uint32_t hw1wire_send(uint32_t d);
+uint32_t hw1wire_read(void);
+void hw1wire_clkh(void);
+void hw1wire_clkl(void);
+void hw1wire_dath(void);
+void hw1wire_datl(void);
+uint32_t hw1wire_dats(void);
+void hw1wire_clk(void);
+uint32_t hw1wire_bitr(void);
+uint32_t hw1wire_period(void);
+void hw1wire_macro(uint32_t macro);
+*/
+uint32_t hw1wire_setup(void);
+uint32_t hw1wire_setup_exc(void);
+void hw1wire_cleanup(void);
+void hw1wire_pins(void);
+void hw1wire_settings(void);
 
-void ONEWIRE_start(void);
-void ONEWIRE_startr(void);
-void ONEWIRE_stop(void);
-void ONEWIRE_stopr(void);
-uint32_t ONEWIRE_send(uint32_t d);
-uint32_t ONEWIRE_read(void);
-void ONEWIRE_clkh(void);
-void ONEWIRE_clkl(void);
-void ONEWIRE_dath(void);
-void ONEWIRE_datl(void);
-uint32_t ONEWIRE_dats(void);
-void ONEWIRE_clk(void);
-uint32_t ONEWIRE_bitr(void);
-uint32_t ONEWIRE_period(void);
-void ONEWIRE_macro(uint32_t macro);
-void ONEWIRE_setup(void);
-void ONEWIRE_setup_exc(void);
-void ONEWIRE_cleanup(void);
-void ONEWIRE_pins(void);
-void ONEWIRE_settings(void);
-
+/*/
 unsigned char OWReset(void);
 unsigned char OWBit(unsigned char c);
 unsigned char OWByte(unsigned char OWbyte);
@@ -35,3 +37,4 @@ unsigned char docrc8(unsigned char value);
 #define OWReadByte() OWByte(0xFF)
 #define OWReadBit() OWBit(1)
 #define OWWriteBit(b) OWBit(b)
+*/

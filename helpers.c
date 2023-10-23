@@ -191,7 +191,15 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     bio_init();
 
     printf("BIO PULL-UP HIGH TEST (SHOULD BE >3.0V)\r\n");
-    HW_BIO_PULLUP_ENABLE();
+    if(system_config.hardware_revision==8)
+    {
+        shift_set_clear_wait(PULLUP_EN,0);
+    }
+    else
+    {
+        shift_set_clear_wait(0,PULLUP_EN);
+        
+    }    
     //start with all pins grounded, then float one by one
     for(uint8_t i=0; i<BIO_MAX_PINS; i++)
     {
@@ -240,7 +248,15 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     bio_init();
 
    printf("BIO PULL-UP LOW TEST (SHOULD BE <0.5V)\r\n");
-    HW_BIO_PULLUP_ENABLE();
+    if(system_config.hardware_revision==8)
+    {
+        shift_set_clear_wait(PULLUP_EN,0);
+    }
+    else
+    {
+        shift_set_clear_wait(0,PULLUP_EN);
+        
+    }    
     //start with all pins floating, then ground one by one
     for(uint8_t pin=0; pin<BIO_MAX_PINS; pin++)
     {
@@ -349,7 +365,14 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     }
     */
 
-    HW_BIO_PULLUP_DISABLE();
+    if(system_config.hardware_revision==8)
+    {
+        shift_set_clear_wait(0,PULLUP_EN);
+    }
+    else
+    {
+        shift_set_clear_wait(PULLUP_EN,0);
+    }    
     bio_init();
     psu_reset();
     psu_cleanup();

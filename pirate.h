@@ -3,9 +3,13 @@
 #define BP_CONFIG
 
 #define BP_FIRMWARE_VERSION "v0.1.0"
-#ifndef BP_FIRMWARE_HASH //this variable is for the current revision GIT hash
+#ifndef BP_FIRMWARE_HASH //this variable is for the current commit GIT hash
 #define BP_FIRMWARE_HASH "commit unknown"
 #endif
+
+//#define XSTR(x) STR(x)
+//#define STR(x) #x
+//#pragma message "BP_FIRMWARE_HASH value:" XSTR(BP_FIRMWARE_HASH)
 
 // UI stuff
 #define UI_CMDBUFFSIZE	512		// must be power of 2
@@ -40,7 +44,7 @@
 #define OPTARG_STRING_LEN 20
 
 // include platform
-#include "platform/bpi-rev8.h"
+#include "platform/bpi-rev9.h"
 
 // include a translation
 //new multilingual system

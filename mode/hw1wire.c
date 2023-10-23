@@ -128,7 +128,14 @@ uint32_t hw1wire_setup_exc(void)
     owobj1.offset = offset_1wire;
     owobj1.pin = bio2bufiopin[BIO3];
     owobj1.dir = bio2bufdirpin[BIO3];
-    HW_BIO_PULLUP_ENABLE();
+    if(system_config.hardware_revision==8)
+    {
+        shift_set_clear_wait(PULLUP_EN,0);
+    }
+    else
+    {
+        shift_set_clear_wait(0,PULLUP_EN);
+    }    
 
     //onewire_test_init(&owobj1);
 

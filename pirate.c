@@ -64,6 +64,22 @@ int main()
 
     // init shift register pins
     shift_init();
+
+    //test for PCB revision
+    gpio_set_function(23, GPIO_FUNC_SIO);
+    gpio_set_dir(23,true);
+    gpio_put(23,true);
+    busy_wait_ms(100);
+    gpio_set_dir(23, false);
+    busy_wait_us(1);
+    if(gpio_get(23))
+    {
+        system_config.hardware_revision=9;
+    }
+    else
+    {
+        system_config.hardware_revision=8;
+    }
     
     //init psu pins 
     psu_init();
@@ -82,7 +98,15 @@ int main()
     lock_init(&core, next_striped_spin_lock_num());
 
     // configure the defaults for shift register attached hardware
-    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), PULLUP_EN|CURRENT_EN_OVERRIDE);
+    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), CURRENT_EN_OVERRIDE);
+    if(system_config.hardware_revision==8)
+    {
+        shift_set_clear_wait(0,PULLUP_EN);
+    }
+    else
+    {
+        shift_set_clear_wait(PULLUP_EN,0);
+    }    
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
     shift_set_clear_wait( 0, DISPLAY_RESET);
     busy_wait_ms(100);

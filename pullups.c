@@ -9,13 +9,21 @@
 
 void pullups_enable(opt_args (*args), struct command_result *res)
 {
-    HW_BIO_PULLUP_ENABLE();
+    if(system_config.hardware_revision==8)
+    {
+        shift_set_clear_wait(PULLUP_EN,0);
+    }
+    else
+    {
+        shift_set_clear_wait(0,PULLUP_EN);
+        
+    }    
     system_config.pullup_enabled=1; 
     system_config.info_bar_changed=true;
     
     amux_sweep();
     
-    printf("%s%s:%s %s (%s @ %s%d.%d%sV)\r\n", 
+    printf("%s%s:%s %s (%s @ %s%d.%d%sV)", 
         ui_term_color_notice(), t[T_MODE_PULLUP_RESISTORS],	ui_term_color_reset(), 
         t[T_MODE_ENABLED], BP_HARDWARE_PULLUP_VALUE, 
         ui_term_color_num_float(), hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]/1000, 
@@ -25,7 +33,7 @@ void pullups_enable(opt_args (*args), struct command_result *res)
     //TODO test outside debug mode
     if(hw_adc_raw[HW_ADC_MUX_VREF_VOUT]<250)//arbitrary
     {
-        printf("Warning: no/low voltage detected. Enable power supply (W) or attached external supply to Vout/Vref");
+        printf("\r\nWarning: no/low voltage detected. Enable power supply (W) or attached external supply to Vout/Vref");
     }
 
 
@@ -33,7 +41,14 @@ void pullups_enable(opt_args (*args), struct command_result *res)
 
 void pullups_cleanup(void)
 {
-    HW_BIO_PULLUP_DISABLE();
+    if(system_config.hardware_revision==8)
+    {
+        shift_set_clear_wait(0,PULLUP_EN);
+    }
+    else
+    {
+        shift_set_clear_wait(PULLUP_EN,0);
+    }    
 	system_config.pullup_enabled=0;
     system_config.info_bar_changed=true;
 }

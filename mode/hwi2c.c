@@ -14,8 +14,8 @@
 #include "ui/ui_term.h"
 
 #define M_I2C_PIO pio1
-#define M_I2C_SDA BIO0
-#define M_I2C_SCL BIO1
+#define M_I2C_SDA BIO6
+#define M_I2C_SCL BIO7
 
 static const char pin_labels[][5]={
 	"SDA",
@@ -80,7 +80,7 @@ uint32_t hwi2c_setup(void)
 uint32_t hwi2c_setup_exc(void)
 {
 	pio_loaded_offset = pio_add_program(pio, &i2c_program);
-    i2c_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[BIO0], bio2bufiopin[BIO1], bio2bufdirpin[BIO0], bio2bufdirpin[BIO1]);
+    i2c_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_I2C_SDA], bio2bufiopin[M_I2C_SCL], bio2bufdirpin[M_I2C_SDA], bio2bufdirpin[M_I2C_SCL]);
 	system_bio_claim(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
 	mode_config.start_sent=false;
@@ -163,19 +163,98 @@ void hwi2c_read(struct _bytecode *result, struct _bytecode *next)
 
 	result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);
 }
+void macro_si7021(void);
 
 void hwi2c_macro(uint32_t macro)
 {
 	switch(macro)
 	{
-		case 0:		printf(" 1. I2C Address search\r\n");
+		case 0:		printf(" 1. I2C Address search\r\n 2. SI7021/HTU21/SHT21/HDC1080\r\n");
 //				printf(" 2. I2C sniffer\r\n";
 				break;
-		case 1:		I2Csearch();
-				break;
+		case 1:		I2Csearch();	break;
+		case 2: 	macro_si7021(); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
+}
+
+void macro_si7021()
+{
+	uint8_t data[4];
+
+	printf("SI7021/HTU21/SHT21/HDC1080\r\n");
+
+	// humidity
+	data[0]=0xf5;
+	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0x80, data, 1, 0xffff))
+	{
+		goto error;
+	}
+	delayms(23);
+	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 2, 0xffff))
+	{
+		goto error;
+	}
+	float f=(float)((float)(125*(data[0]<<8 | data[1]))/65536)-6;
+	printf("Humidity:\r\n [0x80 0xf5] D:23 [0x81 r:2]\r\n %.2f%% (%#04x %#04x)\r\n", f, data[0], data[1]);
+
+	// temperature [0x80 0xe0] [0x81 r:2]
+	
+	data[0]=0xe0;
+	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0x80, data, 1, 0xffff))
+	{
+		goto error;
+	}
+	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 2, 0xffff))
+	{
+		goto error;
+	}
+	f=(float)((float)(175.72*(data[0]<<8 | data[1]))/65536)-46.85;
+	printf("Temperature:\r\n [0x80 0xe0] [0x81 r:2]\r\n %.2fC (%#04x %#04x)\r\n", f, data[0], data[1]);
+
+	//SN
+	data[0]=0xfa;
+	data[1]=0xf0;
+	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, 0xffff))
+	{
+		goto error;
+	}
+	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 4, 0xffff))
+	{
+		goto error;
+	}
+	printf("Serial Number:\r\n [0x80 0xfa 0xf0] [0x81 r:4] [0x80 0xfc 0xc9] [0x81 r:4]\r\n 0x%02x%02x%02x%02x", data[0],data[1],data[2],data[3]);
+	data[0]=0xfc;
+	data[1]=0xc9;
+	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, 0xffff))
+	{
+		goto error;
+	}
+	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 4, 0xffff))
+	{
+		goto error;
+	}
+	printf("%02x%02x%02x%02x\r\n", data[0],data[1],data[2],data[3]);
+
+	//firmware version [0x80 0x84 0xb8] [0x81 r]
+	data[0]=0x84;
+	data[1]=0xb8;
+	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, 0xffff))
+	{
+		goto error;
+	}
+	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 4, 0xffff))
+	{
+		goto error;
+	}
+	printf("Firmware Version:\r\n [0x80 0x84 0xb8] [0x81 r]\r\n %#04x\r\n", data[0]);
+
+	return;
+
+	error:
+		printf("Device not found\r\n");
+
 }
 
 void hwi2c_cleanup(void)

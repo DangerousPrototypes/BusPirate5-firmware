@@ -200,6 +200,79 @@ uint32_t pio_i2c_read_timeout(PIO pio, uint sm, uint32_t *data, bool ack, uint32
 }
 
 
+uint32_t pio_i2c_write_blocking_timeout(PIO pio, uint sm, uint8_t addr, uint8_t *txbuf, uint len, uint32_t timeout) 
+{
+    int err = 0;
+    pio_i2c_start_timeout(pio, sm, timeout);
+    pio_i2c_rx_enable(pio, sm, false);
+    pio_i2c_put16_or_timeout(pio, sm, (addr << 1) | 1u, timeout);
+    while(len && !pio_i2c_check_error(pio, sm))
+    {
+        if(!pio_sm_is_tx_fifo_full(pio, sm)) 
+        {
+            --len;
+            pio_i2c_put_or_timeout(pio, sm, (*txbuf++ << PIO_I2C_DATA_LSB) | ((len == 0) << PIO_I2C_FINAL_LSB) | 1u, timeout);
+        }
+    }
+    pio_i2c_stop_timeout(pio, sm, timeout);
+    pio_i2c_wait_idle_timeout(pio, sm, timeout);
+    if(pio_i2c_check_error(pio, sm)) 
+    {
+        //err = -1; 
+        pio_i2c_resume_after_error(pio, sm);
+        pio_i2c_stop_timeout(pio, sm, timeout);
+        return 1;
+    }
+    return 0;
+}
+
+uint32_t pio_i2c_read_blocking_timeout(PIO pio, uint sm, uint8_t addr, uint8_t *rxbuf, uint len, uint32_t timeout) 
+{
+    int err = 0;
+    pio_i2c_start_timeout(pio, sm, timeout);
+    pio_i2c_rx_enable(pio, sm, true); 
+    while(!pio_sm_is_rx_fifo_empty(pio, sm))
+    {
+        (void)pio_i2c_get(pio, sm); 
+    }
+    pio_i2c_put16_or_timeout(pio, sm, (addr << 1) | 3u, timeout);
+    uint32_t tx_remain = len; // Need to stuff 0xff bytes in to get clocks
+
+    bool first = true;
+
+    while((tx_remain || len) && !pio_i2c_check_error(pio, sm))
+    {
+        if(tx_remain && !pio_sm_is_tx_fifo_full(pio, sm)) 
+        {
+            --tx_remain;
+            pio_i2c_put16_or_timeout(pio, sm, (0xffu << 1) | (tx_remain ? 0 : (1u << PIO_I2C_FINAL_LSB) | (1u << PIO_I2C_NAK_LSB)), timeout);
+        }
+        if(!pio_sm_is_rx_fifo_empty(pio, sm)) 
+        {
+            if(first) 
+            {
+                // Ignore returned address byte
+                (void)pio_i2c_get(pio, sm);
+                first = false;
+            }
+            else 
+            {
+                --len;
+                *rxbuf++ = pio_i2c_get(pio, sm);
+            }
+        }
+    }
+    pio_i2c_stop_timeout(pio, sm, timeout);
+    pio_i2c_wait_idle_timeout(pio, sm, timeout);
+    if(pio_i2c_check_error(pio, sm)) 
+    {
+        pio_i2c_resume_after_error(pio, sm);
+        pio_i2c_stop_timeout(pio, sm, timeout);
+        return 1;
+    }
+    return 0;
+}
+
 //////////////////////////////////////
 // Full I2C packet functions (no timeout)
 

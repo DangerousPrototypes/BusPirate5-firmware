@@ -16,6 +16,7 @@
 #include "lib/minmea/gps.h"
 #include "lib/minmea/minmea.h"
 #include "usb_rx.h"
+#include "usb_tx.h"
 
 #define M_UART_PORT uart0
 #define M_UART_TX BIO4
@@ -123,10 +124,27 @@ void hwusart_macro(uint32_t macro)
 {
 	switch(macro)
 	{
-		case 0:		printf("2. GPS NMEA Decoder\r\n");
+		case 0:		printf("1. Transparent UART bridge\r\n2. GPS NMEA Decoder\r\n");
 				break;
 		case 1:
-				break;
+			printf("%sUART bridge. Press Bus Pirate button to exit.%s\r\n", ui_term_color_notice(), ui_term_color_reset());
+			while(true)
+			{
+				char c;
+				if(rx_fifo_try_get(&c))
+				{
+					uart_putc_raw(M_UART_PORT, c);
+				}
+				if(uart_is_readable(M_UART_PORT))
+				{
+					c=uart_getc(M_UART_PORT);
+					tx_fifo_put(&c);
+				}
+
+				//exit when button pressed.
+    			if(gpio_get(EXT1)) return;   
+			}
+			break;
 		
 		case 2:
 			printf("%s%s%s\r\n%s", ui_term_color_notice(), t[T_PRESS_ANY_KEY_TO_EXIT], ui_term_color_reset(), ui_term_cursor_hide());

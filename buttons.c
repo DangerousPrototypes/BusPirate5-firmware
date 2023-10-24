@@ -80,4 +80,7 @@ void buttons_init(void){
     gpio_set_irq_enabled_with_callback(EXT0, GPIO_IRQ_EDGE_RISE, true, &buttons_irq_callback);
     gpio_set_irq_enabled_with_callback(EXT1, GPIO_IRQ_EDGE_RISE, true, &buttons_irq_callback);
     */
+    gpio_set_function(EXT1, GPIO_FUNC_SIO);
+    gpio_set_dir(EXT1, GPIO_IN);
+    gpio_pull_down(EXT1);
 }

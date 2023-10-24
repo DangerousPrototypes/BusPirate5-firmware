@@ -115,7 +115,7 @@ int main()
 
    
     // input buttons init
-   //buttons_init();
+    buttons_init();
 
     // setup the system_config defaults and the initial pin label references
     system_init();

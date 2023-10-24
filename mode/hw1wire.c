@@ -137,7 +137,7 @@ uint32_t hw1wire_setup_exc(void)
         shift_set_clear_wait(0,PULLUP_EN);
     }    
 
-    //onewire_test_init(&owobj1);
+    onewire_test_init(&owobj1);
 
     while (1) {
         //onewire_test_ds18b20_scratchpad(&owobj1);
@@ -795,8 +795,8 @@ void  onewire_test_ds18b20_conversion(struct owobj *owobj){
     uint dir =  owobj->dir;
     int32_t temp;
     
-    onewire_program_init(pio, sm, offset, pin, dir);
-    pio_sm_set_enabled(pio, sm, true);
+    //onewire_program_init(pio, sm, offset, pin, dir);
+    //pio_sm_set_enabled(pio, sm, true);
 
     if( ! onewire_reset(owobj) ){
         printf("No Device presence\r\n");
@@ -808,6 +808,8 @@ void  onewire_test_ds18b20_conversion(struct owobj *owobj){
     onewire_tx_byte(owobj, 0x00); // TH
     onewire_tx_byte(owobj, 0x00); // TL
     onewire_tx_byte(owobj, 0x7f); // CONF (12bit)
+
+    onewire_wait_for_idle(owobj);
 
     if( ! onewire_reset(owobj) ){
         printf("No Device skip\r\n");

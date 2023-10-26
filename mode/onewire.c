@@ -1,5 +1,9 @@
 /*
  * Copyright (c) 2021 Stefan Althöfer
+ * SPDX-License-Identifier: BSD-3-Clause (as indicated in the PIO file)
+ * https://github.com/stefanalt/RP2040-PIO-1-Wire-Master
+ * 
+ * 1-Wire is a tradmark of Maxim Integrated
  * 2023 Modified by Ian Lesnet for Bus Pirate 5 buffered IO
  *
  * OWxxxx functions might fall under Maxxim copyriht.

@@ -96,12 +96,14 @@ void hw1wire_macro(uint32_t macro)
 	uint32_t result=0;
 	switch(macro)
 	{
-		case 0:		printf(" 1. 1-Wire ROM search\r\n");
+		case 0:		printf(" 1. 1-Wire ROM search\r\n 2. Read Single DS18B20 Temperature\r\n");
 				break;
 		case 1:		onewire_test_romsearch(&owobj);	break;
+        case 2:     result = onewire_test_ds18b20_conversion(&owobj); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
+
 
 	if(result)
 	{
@@ -109,70 +111,3 @@ void hw1wire_macro(uint32_t macro)
 	}
 }
 
-/* Simple test with single DS18B20
-   Configure, start conversion and read temperature.
-   Assume phantom power. */
-void  onewire_ds18b20_conversion(struct owobj *owobj){
-    int  i;
-    unsigned char buf[9];
-    PIO pio = owobj->pio;
-    uint sm = owobj->sm;
-    uint offset = owobj->offset;
-    uint pin =  owobj->pin;
-    uint dir =  owobj->dir;
-    int32_t temp;
-    
-    //onewire_program_init(pio, sm, offset, pin, dir);
-    //pio_sm_set_enabled(pio, sm, true);
-
-    if( ! onewire_reset(owobj) ){
-        printf("No Device\r\n");
-        return;
-    }
-
-    onewire_tx_byte(owobj, 0xcc); // Skip ROM command
-    onewire_tx_byte(owobj, 0x4e); // Write Scatchpad
-    onewire_tx_byte(owobj, 0x00); // TH
-    onewire_tx_byte(owobj, 0x00); // TL
-    onewire_tx_byte(owobj, 0x7f); // CONF (12bit)
-
-    onewire_wait_for_idle(owobj);
-
-    if( ! onewire_reset(owobj) ){
-        printf("No Device\r\n");
-        return;
-    }
-
-    onewire_tx_byte(owobj, 0xcc); // Skip ROM command
-    onewire_tx_byte(owobj, 0x44); // Convert T
-    sleep_ms(800);  /* 12bit: 750 ms */
-    //onewire_end_spu(owobj);
-
-    if( ! onewire_reset(owobj) ){
-        printf("No Device\r\n");
-        return;
-    }
-    
-    onewire_tx_byte(owobj, 0xcc); // Skip ROM command
-    onewire_tx_byte(owobj, 0xbe); // Read Scatchpad
-    for(i=0; i<9; i++){
-        buf[i] = onewire_rx_byte(owobj);
-    }
-    
-    if( calc_crc8_buf(buf, 8) != buf[8] ){
-        printf("CRC Fail\r\n");
-        return;
-    }
-
-    temp = buf[0]|(buf[1]<<8);
-    if( temp & 0x8000 ){
-        temp |= 0xffff0000;
-    }
-    printf("Temperature: %.3f\r\n", (float)temp/16);
-
-    printf("Rx bytes:");
-    for(i=0; i<9; i++){
-        printf(" %.2x", buf[i]);
-    }
-    printf("\r\n");
-}

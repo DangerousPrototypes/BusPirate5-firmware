@@ -49,7 +49,7 @@ int OWSearchReset(struct owobj *owobj);
 int OWFirst(struct owobj *owobj);
 int OWNext(struct owobj *owobj);
 void onewire_test_ds18b20_scratchpad(struct owobj *owobj);
-void onewire_test_ds18b20_conversion(struct owobj *owobj);
+uint32_t onewire_test_ds18b20_conversion(struct owobj *owobj);
 void onewire_test_spu(struct owobj *owobj);
 void onewire_test_wordlength(struct owobj *owobj);
 void onewire_test_romsearch(struct owobj *owobj);

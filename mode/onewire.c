@@ -482,6 +482,100 @@ int OWNext(struct owobj *owobj)
 
 /* End of MAXIM AN3684 code */
 
+
+// device list from: http://owfs.sourceforge.net/commands.html
+void DS1wireID(unsigned char famID)
+{
+    switch(famID)
+	{									//check for device type
+		case 0x01:	printf("DS1990A Silicon Serial Number");
+				break;
+		case 0x02:	printf("DS1991 multikey 1153bit secure");
+				break;
+		case 0x04:	printf("DS1994 econoram time chip");
+				break;
+		case 0x05:	printf("Addressable Switch");
+				break;
+		case 0x06:	printf("DS1993 4K memory ibutton");
+				break;
+		case 0x08:	printf("DS1992 1K memory ibutton");
+				break;
+		case 0x09:	printf("DS1982 1K add-only memory");
+				break;
+		case 0x0A:	printf("DS1995 16K memory ibutton");
+				break;
+		case 0x0B:	printf("DS1985 16K add-only memory");
+				break;
+		case 0x0C:	printf("DS1996 64K memory ibutton");
+				break;
+		case 0x0F:	printf("DS1986 64K add-only memory");
+				break;
+		case 0x10:	printf("DS1920 high precision digital thermometer");
+				break;
+		case 0x12:	printf("Dual switch + 1K RAM");
+				break;
+		case 0x14:	printf("DS1971 256byte EEPROM");
+				break;
+		case 0x1A:	printf("DS1963L 4K Monetary");
+				break;
+		case 0x1C:	printf("4K EEPROM withPIO");
+				break;
+		case 0x1D:	printf("4K RAM with counter");
+				break;
+		case 0x1F:	printf("Microlan coupler");
+				break;
+		case 0x20:	printf("Quad ADC");
+				break;
+		case 0x21:	printf("DS1921 Thermachron");
+				break;
+		case 0x22:	printf("Econo Digital Thermometer");
+				break;
+		case 0x23:	printf("4K EEPROM");
+				break;
+		case 0x24:	printf("Time chip");
+				break;
+		case 0x26:	printf("Smart battery monitor");
+				break;
+		case 0x27:	printf("Time chip with interrupt");
+				break;
+		case 0x28:	printf("DS18B20 digital thermometer");
+				break;
+		case 0x29:	printf("8-channel addressable switch");
+				break;
+		case 0x2C:	printf("Digital potentiometer");
+				break;
+		case 0x2D:	printf("DS2431 1K EEPROM");
+				break;
+		case 0x2E:	printf("battery monitor and charge controller");
+				break;
+		case 0x30:	printf("Precision li+ battery monitor");
+				break;
+		case 0x31:	printf("Rechargable lithium protection IC");
+				break;
+		case 0x33:	printf("DS1961S 1k protected EEPROM with SHA-1");
+				break;
+		case 0x36:	printf("High precision coulomb counter");
+				break;
+		case 0x37:	printf("DS1977 Password protected 32K EEPROM");
+				break;
+		case 0x41:	printf("DS1922/3 Temperature Logger 8K mem");
+				break;
+		case 0x51:	printf("Multichemistry battery fuel gauge");
+				break;
+		case 0x84:	printf("Dual port plus time");
+				break;
+		case 0x89:	printf("DS1982U 48bit node address chip");
+				break;
+		case 0x8B:	printf("DS1985U 16K add-only uniqueware");
+				break;
+		case 0x8F:	printf("DS1986U 64K add-only uniqueware");
+				break;
+                default:
+			printf("Unknown device");
+
+        }
+}
+
 /* ROM Search test */
 void onewire_test_romsearch(struct owobj *owobj){
     int i;
@@ -526,7 +620,9 @@ void onewire_test_romsearch(struct owobj *owobj){
         for(i=0; i<8; i++){
             printf(" %.2x", owobj->ROM_NO[i]);
         }
-        printf("\r\n");
+        printf(" (");
+        DS1wireID(owobj->ROM_NO[0]);
+        printf(")\r\n");
         ret = OWNext(owobj);
     }
     if( devcount == 0 ){
@@ -535,25 +631,20 @@ void onewire_test_romsearch(struct owobj *owobj){
 #endif
 }
 
+
 /* Simple test with single DS18B20
    Configure, start conversion and read temperature.
    Assume phantom power. */
-void  onewire_test_ds18b20_conversion(struct owobj *owobj){
+uint32_t onewire_test_ds18b20_conversion(struct owobj *owobj)
+{
     int  i;
     unsigned char buf[9];
-    PIO pio = owobj->pio;
-    uint sm = owobj->sm;
-    uint offset = owobj->offset;
-    uint pin =  owobj->pin;
-    uint dir =  owobj->dir;
     int32_t temp;
-    
-    //onewire_program_init(pio, sm, offset, pin, dir);
-    //pio_sm_set_enabled(pio, sm, true);
 
-    if( ! onewire_reset(owobj) ){
-        printf("No Device presence\r\n");
-        return;
+
+    if(!onewire_reset(owobj) )
+    {
+        return 1;
     }
 
     onewire_tx_byte(owobj, 0xcc); // Skip ROM command
@@ -561,46 +652,46 @@ void  onewire_test_ds18b20_conversion(struct owobj *owobj){
     onewire_tx_byte(owobj, 0x00); // TH
     onewire_tx_byte(owobj, 0x00); // TL
     onewire_tx_byte(owobj, 0x7f); // CONF (12bit)
+    onewire_wait_for_idle(owobj); // added: need to wait or the transmission isn't done before the reset
 
-    onewire_wait_for_idle(owobj);
-
-    if( ! onewire_reset(owobj) ){
-        printf("No Device skip\r\n");
-        return;
+    if(!onewire_reset(owobj))
+    {
+        return 1;
     }
 
     onewire_tx_byte(owobj, 0xcc); // Skip ROM command
     onewire_tx_byte(owobj, 0x44); // Convert T
     sleep_ms(800);  /* 12bit: 750 ms */
-    //onewire_end_spu(owobj);
 
-    if( ! onewire_reset(owobj) ){
-        printf("No Device skip 2\r\n");
-        return;
+    printf("RX:");
+
+    if(!onewire_reset(owobj))
+    {
+        return 1;
     }
     
     onewire_tx_byte(owobj, 0xcc); // Skip ROM command
     onewire_tx_byte(owobj, 0xbe); // Read Scatchpad
-    for(i=0; i<9; i++){
+    for(i=0; i<9; i++)
+    {
         buf[i] = onewire_rx_byte(owobj);
+        printf(" %.2x", buf[i]);
     }
     
-    if( calc_crc8_buf(buf, 8) != buf[8] ){
-        printf("CRC Fail\r\n");
-        return;
+    if(calc_crc8_buf(buf, 8) != buf[8])
+    {
+        printf("\r\nCRC Fail\r\n");
+        return 0; //return 0 to avoid device not found message
     }
 
     temp = buf[0]|(buf[1]<<8);
-    if( temp & 0x8000 ){
+    if( temp & 0x8000 )
+    {
         temp |= 0xffff0000;
     }
-    printf("Temperature: %.3f\r\n", (float)temp/16);
+    printf("\r\nTemperature: %.3f\r\n", (float)temp/16);
 
-    printf("Rx bytes:");
-    for(i=0; i<9; i++){
-        printf(" %.2x", buf[i]);
-    }
-    printf("\r\n");
+    return 0;
 }
 
 /* onewire_temp_app: Large scale example.

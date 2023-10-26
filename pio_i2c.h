@@ -17,7 +17,7 @@ uint32_t pio_i2c_write_timeout(PIO pio, uint sm, uint32_t data, uint32_t timeout
 uint32_t pio_i2c_read_timeout(PIO pio, uint sm, uint32_t *data, bool ack, uint32_t timeout);
 uint32_t pio_i2c_read_blocking_timeout(PIO pio, uint sm, uint8_t addr, uint8_t *rxbuf, uint len, uint32_t timeout);
 uint32_t pio_i2c_write_blocking_timeout(PIO pio, uint sm, uint8_t addr, uint8_t *txbuf, uint len, uint32_t timeout);
-
+uint32_t pio_i2c_transaction_blocking_timeout(PIO pio, uint sm, uint8_t addr, uint8_t *txbuf, uint txlen, uint8_t *rxbuf, uint rxlen, uint32_t timeout);
 // ----------------------------------------------------------------------------
 // Low-level functions
 

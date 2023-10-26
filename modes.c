@@ -166,12 +166,12 @@ struct _mode modes[MAXPROTO]={
 #endif
 #ifdef BP_USE_HW1WIRE
 {
-	nullfunc1_temp,				// start
-	nullfunc1_temp,				// start with read
+	hw1wire_start,				// start
+	hw1wire_start,				// start with read
 	nullfunc1_temp,				// stop
 	nullfunc1_temp,				// stop with read
-	nullfunc1_temp,				// write(/read) max 32 bit
-	nullfunc1_temp,				// read max 32 bit
+	hw1wire_write,				// write(/read) max 32 bit
+	hw1wire_read,				// read max 32 bit
 	nullfunc1,				// set clk high
 	nullfunc1,				// set clk low
 	nullfunc1,				// set dat hi

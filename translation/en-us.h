@@ -123,6 +123,10 @@ static char const * const en_us[]={
 	[T_HWLED_RESET]="RESET",
 	[T_HWLED_FRAME_START]="START FRAME (0x00000000)",
 	[T_HWLED_FRAME_STOP]="STOP FRAME (0xFFFFFFFF)",
+	// 1-WIRE
+	[T_HW1WIRE_RESET]="1-Wire RESET",
+	[T_HW1WIRE_PRESENCE_DETECT]="Presence detected",
+	[T_HW1WIRE_NO_DEVICE]="No device detected",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",

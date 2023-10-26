@@ -180,10 +180,10 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// toggle clk (?)
 	nullfunc3,				// read 1 bit (?)
 	noperiodic,				// service to regular poll whether a byte ahs arrived
-	nullfunc4,				// macro
+	hw1wire_macro,				// macro
 	hw1wire_setup,				// setup UI
 	hw1wire_setup_exc,				// real setup
-	HiZcleanup,				// cleanup for HiZ
+	hw1wire_cleanup,				// cleanup for HiZ
 	//HiZpins,				// display pin config
 	HiZsettings,				// display settings 
 	nohelp,					// display small help about the protocol

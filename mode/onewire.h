@@ -22,6 +22,7 @@ struct owobj
     unsigned char crc8;
 };
 void onewire_init(struct owobj *owobj);
+void onewire_cleanup(struct owobj *owobj);
 void onewire_test_romsearch(struct owobj *owobj);
 void pio_sm_trace(PIO pio, uint sm, uint usleep);
 void onewire_set_fifo_thresh(struct owobj *owobj, uint thresh);

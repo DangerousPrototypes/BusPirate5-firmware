@@ -23,7 +23,7 @@ void hw1wire_settings(void);
 void hw1wire_start(struct _bytecode *result, struct _bytecode *next);
 void hw1wire_write(struct _bytecode *result, struct _bytecode *next);
 void hw1wire_read(struct _bytecode *result, struct _bytecode *next);
-
+void hw1wire_macro(uint32_t macro);
 /*/
 unsigned char OWReset(void);
 unsigned char OWBit(unsigned char c);

@@ -10,9 +10,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
-#include "hardware/gpio.h"
-#include "hardware/pio.h"
-#include "pico/binary_info.h"
+#include "pirate.h"
+//#include "hardware/gpio.h"
+//#include "hardware/pio.h"
+//#include "pico/binary_info.h"
 #include "hardware/clocks.h"
 #include "build/onewire.pio.h"
 #include "mode/onewire.h"
@@ -22,6 +23,11 @@ void onewire_init(struct owobj *owobj)
     owobj->offset = pio_add_program(owobj->pio, &onewire_program);
     
     onewire_program_init(owobj->pio, owobj->sm, owobj->offset, owobj->pin, owobj->dir);
+}
+
+void onewire_cleanup(struct owobj *owobj)
+{
+    pio_remove_program(owobj->pio, &onewire_program, owobj->offset);
 }
  
 void onewire_set_fifo_thresh(struct owobj *owobj, uint thresh) {
@@ -489,8 +495,8 @@ void onewire_test_romsearch(struct owobj *owobj){
     uint dir =  owobj->dir;
     int devcount;
     
-    onewire_program_init(pio, sm, offset, pin, dir);
-    pio_sm_set_enabled(pio, sm, true);
+    //onewire_program_init(pio, sm, offset, pin, dir);
+    //pio_sm_set_enabled(pio, sm, true);
 
 #if 0
     /* Simple test for onewire_triplet */
@@ -511,7 +517,7 @@ void onewire_test_romsearch(struct owobj *owobj){
 
 #if 1
     /* Full flegged romsearch */
-    printf("1Wire ROM search:\n");
+    printf("1-Wire ROM search:\r\n");
     ret = OWFirst(owobj);
     devcount = 0;
     while( ret == TRUE ){
@@ -520,11 +526,11 @@ void onewire_test_romsearch(struct owobj *owobj){
         for(i=0; i<8; i++){
             printf(" %.2x", owobj->ROM_NO[i]);
         }
-        printf("\n");
+        printf("\r\n");
         ret = OWNext(owobj);
     }
     if( devcount == 0 ){
-        printf("No devices found\n");
+        printf("No devices found\r\n");
     }
 #endif
 }

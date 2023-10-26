@@ -83,7 +83,31 @@ void hw1wire_read(struct _bytecode *result, struct _bytecode *next)
     result->in_data=onewire_rx_byte(&owobj);
 }
 
+void hw1wire_cleanup(void)
+{
+	onewire_cleanup(&owobj);
+	bio_init();
+	system_bio_claim(false, M_OW_OWD, BP_PIN_MODE,0);
+}
+
 // MACROS
+void hw1wire_macro(uint32_t macro)
+{
+	uint32_t result=0;
+	switch(macro)
+	{
+		case 0:		printf(" 1. 1-Wire ROM search\r\n");
+				break;
+		case 1:		onewire_test_romsearch(&owobj);	break;
+		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+				system_config.error=1;
+	}
+
+	if(result)
+	{
+		printf("Device not found\r\n");
+	}
+}
 
 /* Simple test with single DS18B20
    Configure, start conversion and read temperature.

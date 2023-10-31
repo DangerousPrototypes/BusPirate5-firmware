@@ -364,12 +364,13 @@ bool syntax_run(void)
             return false;
         }    
 
-        in_cnt++;    
-
         if(in[in_cnt].error >= SRES_ERROR)
         {
+            in_cnt++;
             return false; //halt execution, but let the post process show the error.
         }
+
+        in_cnt++;    
     }
 
     return false;

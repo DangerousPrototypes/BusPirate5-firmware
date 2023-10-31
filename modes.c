@@ -479,10 +479,10 @@ struct _mode modes[MAXPROTO]={
 #ifdef BP_USE_DUMMY1
 {
     dummy1_start,				// start
-    dummy1_startr,				// start with read
-     dummy1_stop,				// stop
-    dummy1_stopr,				// stop with read
-    dummy1_send,				// send(/read) max 32 bit
+    dummy1_start,				// start with read
+    dummy1_stop,				// stop
+    dummy1_stop,				// stop with read
+    dummy1_write,				// send(/read) max 32 bit
     dummy1_read,				// read max 32 bit
     dummy1_clkh,				// set clk high
     dummy1_clkl,				// set clk low
@@ -491,7 +491,7 @@ struct _mode modes[MAXPROTO]={
     dummy1_dats,				// toggle dat (?)
     dummy1_clk,				// toggle clk (?)
     dummy1_bitr,				// read 1 bit (?)
-    dummy1_period,				// service to regular poll whether a byte ahs arrived
+    dummy1_periodic,				// service to regular poll whether a byte ahs arrived
     dummy1_macro,				// macro
     dummy1_setup,				// setup UI
     dummy1_setup_exc,			// real setup

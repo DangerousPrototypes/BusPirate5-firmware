@@ -98,8 +98,8 @@ void tud_cdc_rx_cb(uint8_t itf)
                     binmode_cnt++;
                     if(binmode_cnt>=20)
                     {   
-                        printf("\r\nScripting mode enabled. Terminal locked.\r\n");
                         system_config.binmode=true;
+                        binmode_cnt=0;
                     }
                 }
                 else

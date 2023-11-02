@@ -73,6 +73,7 @@ Commands:
 00010101 // ADC ....
 00010110 // ADC Stop
 00011000 // XSVF Player
+00011111 // Debug text to terminal display
 // End added JM
 //
 010xxxxx //set input(1)/output(0) pin state (returns pin read)
@@ -246,6 +247,19 @@ void script_mode(void)
                 printf("XSV1");
 		        //jtag();
             } 
+            else if(inByte==0b11111)
+            {   // Send null terminated string to terminal
+                while(true)
+                {
+                    inByte=getRXbyte();
+                    if(inByte==0x00)
+                    {
+                        bin_tx_fifo_put(1);
+                        break;
+                    }
+                    printf("%c", inByte);
+                }
+            }
             else if ((inByte >> 5)&0b010) 
             {   //set pin direction, return read
                 bin_tx_fifo_put(binBBpindirectionset(inByte));

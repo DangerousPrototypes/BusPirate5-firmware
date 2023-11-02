@@ -186,6 +186,7 @@ int main()
         BP_SM_GET_INPUT,
         BP_SM_PROCESS_COMMAND,
         BP_SM_COMMAND_PROMPT,
+        BP_SM_SCRIPT_MODE
     };
     
     uint8_t bp_state=0;
@@ -199,6 +200,13 @@ int main()
 
     while(1)
     {
+
+        if(system_config.binmode) //enter scripting mode
+        {
+            bp_state=BP_SM_SCRIPT_MODE;
+            printf("\r\nScripting mode enabled. Terminal locked.\r\n");
+        }
+
         switch(bp_state)
         {
             case BP_SM_DISPLAY_MODE:
@@ -248,13 +256,6 @@ int main()
             case BP_SM_GET_INPUT:
                 helpers_mode_periodic();
                 
-                // maybe this should go own case? but then we still have to check and change mode
-                if(system_config.binmode) //service scripting mode
-                {
-                    script_mode();
-                    printf("Terminal unlocked.\r\n");
-                }
-
                 switch(ui_term_get_user_input()) 
                 {
                     case 0x01:// user pressed a key
@@ -287,7 +288,10 @@ int main()
             case BP_SM_PROCESS_COMMAND:
                 system_config.error=ui_process_commands();   
                 bp_state=BP_SM_COMMAND_PROMPT;      
-                break;         
+                break;     
+            case BP_SM_SCRIPT_MODE:
+                script_mode();
+                printf("\r\nTerminal unlocked.\r\n");     //fall through to prompt 
             case BP_SM_COMMAND_PROMPT:
                 if(system_config.subprotocol_name)
                 {

@@ -124,36 +124,37 @@ uint32_t psu_set(float volts, float current, bool fuse_en)
     pwm_set_chan_level(slice_num, v_chan_num, (uint16_t)vset);
     pwm_set_chan_level(slice_num, i_chan_num, PWM_TOP);    
     
-    if(!fuse_en)
-    { 
-        shift_set_clear_wait(CURRENT_EN_OVERRIDE,0);
-    }
-
     psu_fuse_reset();
     psu_vreg_enable(true);
     busy_wait_ms(10);
 
-    //after a delay for inrush, we set the actual limit
-    pwm_set_chan_level(slice_num, i_chan_num, (uint16_t)iset);  
-    busy_wait_ms(500);
-    
-    amux_sweep();
-
-    // did the fuse blow?
-    // error,  close everything down
-    if(fuse_en)
+    if(!fuse_en)
+    { 
+        shift_set_clear_wait(CURRENT_EN_OVERRIDE,0);
+    }
+    else
     {
+        //after a delay for inrush, we set the actual limit
+        pwm_set_chan_level(slice_num, i_chan_num, (uint16_t)iset);  
+        busy_wait_ms(500);
+        
+        amux_sweep();
+
+        // did the fuse blow?
+        // error,  close everything down
         if( hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] < 300 )
         {
             psu_reset();
             return 3; 
         } 
     }
-
+    
+    amux_sweep();
     // TODO: is it within 10%?
     // error,  close everything down
     if( hw_adc_raw[HW_ADC_MUX_VREF_VOUT] < 300 )
     {
+        psu_reset();
         return 4;           
     }   
 

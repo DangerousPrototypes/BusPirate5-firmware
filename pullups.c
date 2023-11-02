@@ -7,7 +7,7 @@
 #include "ui/ui_term.h"
 #include "amux.h"
 
-void pullups_enable(opt_args (*args), struct command_result *res)
+void pullups_enable_exc(void)
 {
     if(system_config.hardware_revision==8)
     {
@@ -20,6 +20,11 @@ void pullups_enable(opt_args (*args), struct command_result *res)
     }    
     system_config.pullup_enabled=1; 
     system_config.info_bar_changed=true;
+}
+
+void pullups_enable(opt_args (*args), struct command_result *res)
+{
+    pullups_enable_exc();
     
     amux_sweep();
     

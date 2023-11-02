@@ -25,14 +25,17 @@
 void rx_uart_irq_handler(void);
 
 queue_t rx_fifo;
+queue_t bin_rx_fifo;
 #define RX_FIFO_LENGTH_IN_BITS 7 // 2^n buffer size. 2^3=8, 2^9=512
 #define RX_FIFO_LENGTH_IN_BYTES (0x0001<<RX_FIFO_LENGTH_IN_BITS)
 char rx_buf[RX_FIFO_LENGTH_IN_BYTES]; 
+char bin_rx_buf[RX_FIFO_LENGTH_IN_BYTES]; 
 
 // init buffer (and IRQ for UART debug mode)
 void rx_fifo_init(void)
 {
     queue2_init(&rx_fifo, rx_buf, RX_FIFO_LENGTH_IN_BYTES); //buffer size must be 2^n for queue AND DMA rollover
+    queue2_init(&bin_rx_fifo, bin_rx_buf, RX_FIFO_LENGTH_IN_BYTES);
 }
 
 //enables receive interrupt for ALREADY configured debug uarts (see init in debug.c)
@@ -66,16 +69,52 @@ void rx_usb_init(void)
 void tud_cdc_rx_cb(uint8_t itf)
 {
     char buf[64];
+    static bool binmode=false;
+    static uint8_t binmode_cnt=0;
 
-    if(tud_cdc_available())
+    if(itf==0 && tud_cdc_n_available(0))
     {
-        uint32_t count = tud_cdc_read(buf, 64);
+        uint32_t count = tud_cdc_n_read(0, buf, 64);
 
         // while bytes available shove them in the buffer
         for(uint8_t i=0; i<count; i++) {
             queue2_add_blocking(&rx_fifo, &buf[i]);
         }     
     }
+
+    if(itf==1 && tud_cdc_n_available(1))
+    {
+        uint32_t count = tud_cdc_n_read(1, buf, 64);
+
+        // while bytes available shove them in the buffer
+        for(uint8_t i=0; i<count; i++) 
+        {
+            // I'm going to put the entry to binmode in the usb rx interrupt
+            // This way we can use a global variable to signal any blocking processes in the user terminal (e.g. menus)
+            if(!system_config.binmode)
+            {
+                if(buf[i]==0x00)
+                {
+                    binmode_cnt++;
+                    if(binmode_cnt>=20)
+                    {   
+                        printf("\r\nScripting mode enabled. Terminal locked.\r\n");
+                        system_config.binmode=true;
+                    }
+                }
+                else
+                {
+                    binmode_cnt=0;
+                }
+            }
+            else
+            {
+                queue2_add_blocking(&bin_rx_fifo, &buf[i]);
+            }
+
+            
+        }     
+    }    
 }
 
 #if 0 
@@ -120,4 +159,14 @@ void rx_fifo_peek_blocking(char *c)
 bool rx_fifo_try_peek(char *c)
 {
     return queue2_try_peek(&rx_fifo, c);
+}
+
+void bin_rx_fifo_get_blocking(char *c)
+{
+    queue2_remove_blocking(&bin_rx_fifo, c);
+}
+
+void bin_rx_fifo_available_bytes(uint16_t *cnt)
+{
+    queue_available_bytes(&bin_rx_fifo, cnt);
 }

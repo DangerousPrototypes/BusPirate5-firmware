@@ -57,7 +57,7 @@ tusb_desc_device_t const desc_device =
 
   .idVendor           = USB_VID,
   .idProduct          = USB_PID,
-  .bcdDevice          = 0x0100,
+  .bcdDevice          = 0x0101,
 
   .iManufacturer      = 0x01,
   .iProduct           = 0x02,
@@ -77,11 +77,20 @@ uint8_t const * tud_descriptor_device_cb(void)
 // Configuration Descriptor
 //--------------------------------------------------------------------+
 
+#define USB_TEST 1
+
 enum
 {
+  #ifndef USB_TEST
   ITF_NUM_CDC = 0,
   ITF_NUM_CDC_DATA,
+  #else
+  ITF_NUM_CDC_0 = 0,
+  ITF_NUM_CDC_0_DATA,
+  ITF_NUM_CDC_1,
+  ITF_NUM_CDC_1_DATA,
   ITF_NUM_MSC,
+  #endif
   ITF_NUM_TOTAL
 };
 
@@ -118,26 +127,52 @@ enum
   #define EPNUM_MSC_IN      0x84
 
 #else
+  #ifndef USB_TEST
   #define EPNUM_CDC_NOTIF   0x81
   #define EPNUM_CDC_OUT     0x02
   #define EPNUM_CDC_IN      0x82
 
   #define EPNUM_MSC_OUT     0x03
   #define EPNUM_MSC_IN      0x83
+  #else
+  #define EPNUM_CDC_0_NOTIF   0x81
+  #define EPNUM_CDC_0_OUT     0x02
+  #define EPNUM_CDC_0_IN      0x82
+
+  #define EPNUM_CDC_1_NOTIF   0x83
+  #define EPNUM_CDC_1_OUT     0x04
+  #define EPNUM_CDC_1_IN      0x84
+
+  #define EPNUM_MSC_OUT     0x05
+  #define EPNUM_MSC_IN      0x85
+  #endif
+  
+
 
 #endif
 
+#ifndef USB_TEST
 #define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN)
+#else
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN)
+#endif
 
 // full speed configuration
 uint8_t const desc_fs_configuration[] =
 {
   // Config number, interface count, string index, total length, attribute, power in mA
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
-
+  #ifndef USB_TEST
   // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 64),
+  #else
+  // 1st CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
 
+  // 2nd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 4, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
+
+  #endif
   // Interface number, string index, EP Out & EP In address, EP size
   TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
 };

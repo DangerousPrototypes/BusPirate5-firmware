@@ -25,9 +25,11 @@
 
 // TODO: rework all the TX stuff into a nice struct with clearer naming 
 queue_t tx_fifo;
+queue_t bin_tx_fifo;
 #define TX_FIFO_LENGTH_IN_BITS 10 // 2^n buffer size. 2^3=8, 2^9=512
 #define TX_FIFO_LENGTH_IN_BYTES (0x0001<<TX_FIFO_LENGTH_IN_BITS)
 char tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));
+char bin_tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));
 
 char tx_sb_buf[1024];
 uint16_t tx_sb_buf_cnt=0;
@@ -37,6 +39,7 @@ bool tx_sb_buf_ready=false;
 void tx_fifo_init(void)
 {   
     queue2_init(&tx_fifo, tx_buf, TX_FIFO_LENGTH_IN_BYTES); //buffer size must be 2^n for queue AND DMA rollover
+    queue2_init(&bin_tx_fifo, bin_tx_buf, TX_FIFO_LENGTH_IN_BYTES); //buffer size must be 2^n for queue AND DMA rollover
 }
 
 void tx_sb_start(uint32_t len)
@@ -59,7 +62,7 @@ void tx_fifo_service(void)
 
     if(system_config.terminal_usb_enable)
     {   // is tinyUSB CDC ready?
-        if(tud_cdc_write_available()<64)
+        if(tud_cdc_n_write_available(0)<64)
         {        
             return;
         }
@@ -102,7 +105,7 @@ void tx_fifo_service(void)
             break;
         case STATUSBAR_TX:
             //read out 64 bytes into data at a time until complete
-            //TODO: pass a pointer to the array cause this is ineffecient
+            //TODO: pass a pointer to the array cause this is inefficient
             i=0;
             while(tx_sb_buf_index<tx_sb_buf_cnt) 
             {
@@ -133,8 +136,8 @@ void tx_fifo_service(void)
     //write to terminal usb
     if(system_config.terminal_usb_enable)
     {           
-        tud_cdc_write(&data, i);
-        tud_cdc_write_flush();
+        tud_cdc_n_write(0, &data, i);
+        tud_cdc_n_write_flush(0);
         if(system_config.terminal_uart_enable) tud_task(); //makes it nicer if we service when the UART is enabled
     }
     
@@ -154,6 +157,47 @@ void tx_fifo_put(char *c)
 {
     queue2_add_blocking(&tx_fifo, c);
 }
+
+void bin_tx_fifo_put(const char c)
+{
+    queue2_add_blocking(&bin_tx_fifo, &c);
+}
+
+void bin_tx_fifo_service(void)
+{
+    uint16_t bytes_available;
+    char data[64];
+    uint8_t i=0;
+
+    // is tinyUSB CDC ready?
+    if(tud_cdc_n_write_available(1)<64)
+    {        
+        return;
+    }
+
+    queue_available_bytes(&bin_tx_fifo, &bytes_available);
+    if(bytes_available)
+    {             
+        i=0;
+        while(queue2_try_remove(&bin_tx_fifo, &data[i])) 
+        {
+            i++;
+            if(i>=64) break;
+        } 
+    }
+   
+    tud_cdc_n_write(1, &data, i);
+    tud_cdc_n_write_flush(1);
+}
+
+bool bin_tx_not_empty(void)
+{
+    uint16_t cnt;
+    queue_available_bytes(&bin_tx_fifo, &cnt);
+    return TX_FIFO_LENGTH_IN_BYTES - cnt;
+}
+
+
 
 
 #if 0

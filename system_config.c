@@ -12,6 +12,7 @@ struct _system_config system_config;
 
 void system_init(void)
 {
+	system_config.binmode=false;
 	system_config.terminal_language=0;
 	system_config.config_loaded_from_file=false;
 	system_config.terminal_usb_enable=true; 		//enable USB CDC terminal

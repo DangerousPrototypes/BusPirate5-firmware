@@ -37,6 +37,7 @@
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
 #include "helpers.h"
+#include "mode/binio.h"
 
 lock_core_t core;
 
@@ -246,6 +247,14 @@ int main()
             
             case BP_SM_GET_INPUT:
                 helpers_mode_periodic();
+                
+                // maybe this should go own case? but then we still have to check and change mode
+                if(system_config.binmode) //service scripting mode
+                {
+                    script_mode();
+                    printf("Terminal unlocked.\r\n");
+                }
+
                 switch(ui_term_get_user_input()) 
                 {
                     case 0x01:// user pressed a key
@@ -369,6 +378,7 @@ void core1_entry(void)
 
         //service the terminal TX queue
         tx_fifo_service();
+        bin_tx_fifo_service();
 
         if(system_config.psu==1 && system_config.psu_irq_en==true && hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] < 100 )
         {

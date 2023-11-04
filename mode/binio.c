@@ -225,7 +225,7 @@ void script_mode(void)
                     bin_tx_fifo_put((i >> 8)); //send upper 8 bits
                     bin_tx_fifo_put(i); //send lower 8 bits
 
-                    if(rx_fifo_try_get(&c)) 
+                    if(bin_rx_fifo_try_get(&c)) 
                     {//any key pressed, exit
                         break;
                     }

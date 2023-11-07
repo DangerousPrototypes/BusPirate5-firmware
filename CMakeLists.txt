@@ -57,6 +57,7 @@ add_executable(bus_pirate
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         mode/binio.c mode/binio.h
+        lib/sigrok/pico_sdk_sigrok.c lib/sigrok/sr_device.h
         )
    
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)
@@ -78,6 +79,7 @@ target_include_directories(bus_pirate PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )
 
 # Add any user requested libraries
 target_link_libraries(bus_pirate
+        pico_stdlib
         hardware_spi
         hardware_i2c
         hardware_dma
@@ -88,6 +90,7 @@ target_link_libraries(bus_pirate
         hardware_clocks
         hardware_adc
         hardware_uart
+        hardware_sync
         pico_multicore
         pico_unique_id
         pico_bootrom 

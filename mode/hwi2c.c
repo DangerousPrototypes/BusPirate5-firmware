@@ -191,6 +191,75 @@ void hwi2c_macro(uint32_t macro)
 	}
 }
 
+// From SparkFun TSL2561 library
+// https://github.com/sparkfun/SparkFun_TSL2561_Arduino_Library/blob/master/src/SparkFunTSL2561.cpp
+bool tsl2561_getLux(unsigned char gain, unsigned int CH0, unsigned int CH1, double *lux)
+	// Convert raw data to lux
+	// gain: 0 (1X) or 1 (16X), see setTiming()
+	// ms: integration time in ms, from setTiming() or from manual integration
+	// CH0, CH1: results from getData()
+	// lux will be set to resulting lux calculation
+	// returns true (1) if calculation was successful
+	// RETURNS false (0) AND lux = 0.0 IF EITHER SENSOR WAS SATURATED (0XFFFF)
+{
+	double ratio, d0, d1;
+
+	// Determine if either sensor saturated (0xFFFF)
+	// If so, abandon ship (calculation will not be accurate)
+	if ((CH0 == 0xFFFF) || (CH1 == 0xFFFF))
+	{
+		*lux = 0.0;
+		return(false);
+	}
+
+	// Convert from unsigned integer to floating point
+	d0 = CH0; d1 = CH1;
+
+	// We will need the ratio for subsequent calculations
+	ratio = d1 / d0;
+
+	// Normalize for integration time
+	//d0 *= (402.0/ms);
+	//d1 *= (402.0/ms);
+
+	// Normalize for gain
+	if (!gain)
+	{
+		d0 *= 16;
+		d1 *= 16;
+	}
+
+	// Determine lux per datasheet equations:
+	
+	if (ratio < 0.5)
+	{
+		*lux = 0.0304 * d0 - 0.062 * d0 * pow(ratio,1.4);
+		return(true);
+	}
+
+	if (ratio < 0.61)
+	{
+		*lux = 0.0224 * d0 - 0.031 * d1;
+		return(true);
+	}
+
+	if (ratio < 0.80)
+	{
+		*lux = 0.0128 * d0 - 0.0153 * d1;
+		return(true);
+	}
+
+	if (ratio < 1.30)
+	{
+		*lux = 0.00146 * d0 - 0.00112 * d1;
+		return(true);
+	}
+
+	// if (ratio > 1.30)
+	*lux = 0.0;
+	return(true);
+}
+
 uint32_t macro_tsl2561()
 {
 	//select register [0b01110010 0b11100000]
@@ -223,9 +292,11 @@ uint32_t macro_tsl2561()
 	chan0=data[1]<<8|data[0];
 	chan1=data[3]<<8|data[2];
 
-	uint32_t lux1=a_tsl2561_calculate_lux(0, 2,chan0, chan1);
+	//uint32_t lux1=a_tsl2561_calculate_lux(0, 2,chan0, chan1);
+	double lux1;
+	tsl2561_getLux(0, chan0, chan1, &lux1); // 0 = 1x gain, 402ms integration time
 
-	printf("Chan0: %d Chan1: %d LUX: %d\r\n", chan0, chan1, lux1);
+	printf("Chan0: %d Chan1: %d LUX: %f\r\n", chan0, chan1, lux1);
 
 	return 0;
 }

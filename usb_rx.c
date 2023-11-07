@@ -91,7 +91,7 @@ void tud_cdc_rx_cb(uint8_t itf)
         {
             // I'm going to put the entry to binmode in the usb rx interrupt
             // This way we can use a global variable to signal any blocking processes in the user terminal (e.g. menus)
-            if(!system_config.binmode)
+            /*if(!system_config.binmode)
             {
                 if(buf[i]==0x00)
                 {
@@ -108,9 +108,9 @@ void tud_cdc_rx_cb(uint8_t itf)
                 }
             }
             else
-            {
+            {*/
                 queue2_add_blocking(&bin_rx_fifo, &buf[i]);
-            }
+            //}
 
             
         }     

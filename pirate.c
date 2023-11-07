@@ -38,6 +38,7 @@
 #include "pico/lock_core.h"
 #include "helpers.h"
 #include "mode/binio.h"
+#include "lib/sigrok/pico_sdk_sigrok.h"
 
 lock_core_t core;
 
@@ -198,8 +199,11 @@ int main()
     //struct opt_args args;
     //struct command_result res;
 
+    pico_sdk_sigrok_usb();
+
     while(1)
     {
+         
 
         if(system_config.binmode) //enter scripting mode
         {
@@ -371,6 +375,8 @@ void core1_entry(void)
     {
         rx_uart_init_irq();
     }
+
+    pico_sdk_sigrok_no_usb();
 
     while(1)
     {

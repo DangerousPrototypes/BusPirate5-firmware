@@ -9,7 +9,7 @@
 // number of digital channels
 #define NUM_D_CHAN 8
 // Mask of bits 22:2 to use as inputs -
-#define GPIO_D_MASK 0xF0
+#define GPIO_D_MASK 0xF00
 // Storage size of the DMA buffer.  The buffer is split into two halves so that when the first
 // buffer fills we can send the trace data serially while the other buffer is DMA'd into
 #define DMA_BUF_SIZE 100000
@@ -41,7 +41,7 @@
 // #define SYS_CLK_BOOST_EN 1
 // #define SYS_CLK_BOOST_FREQ 240000
 /*
-int //printf(const char *fmt, ...)
+int printf(const char *fmt, ...)
 {
 
    va_list argptr;
@@ -168,7 +168,7 @@ void tx_init(sr_device_t *d)
    {
       if (((d->d_mask) >> i) & 1)
       {
-         //    //printf("i %d inv %d mask %X\n\r",i,invld,d->d_mask);
+         //    printf("i %d inv %d mask %X\n\r",i,invld,d->d_mask);
          d->d_chan_cnt++;
       }
    }
@@ -208,12 +208,12 @@ int process_char(sr_device_t *d, char charin)
          if ((tmpint >= 5000) && (tmpint <= 120000016))
          { // Add 16 to support cfg_bits
             d->sample_rate = tmpint;
-            // //printf("SMPRATE= %u\n\r",d->sample_rate);
+            // printf("SMPRATE= %u\n\r",d->sample_rate);
             ret = 1;
          }
          else
          {
-            //printf("unsupported smp rate %s\n\r", d->cmdstr);
+            printf("unsupported smp rate %s\n\r", d->cmdstr);
             ret = 0;
          }
          break;
@@ -223,12 +223,12 @@ int process_char(sr_device_t *d, char charin)
          if (tmpint > 0)
          {
             d->num_samples = tmpint;
-            // //printf("NUMSMP=%u\n\r",d->num_samples);
+            // printf("NUMSMP=%u\n\r",d->num_samples);
             ret = 1;
          }
          else
          {
-            //printf("bad num samples %s\n\r", d->cmdstr);
+            printf("bad num samples %s\n\r", d->cmdstr);
             ret = 0;
          }
          break;
@@ -239,17 +239,17 @@ int process_char(sr_device_t *d, char charin)
             // scale and offset are both in integer uVolts
             // separated by x
             sprintf(d->rspstr, "25700x0"); // 3.3/(2^7) and 0V offset
-            // //printf("ASCL%d\n\r",tmpint);
+            // printf("ASCL%d\n\r",tmpint);
             ret = 1;
          }
          else
          {
-            //printf("bad ascale %s\n\r", d->cmdstr);
+            printf("bad ascale %s\n\r", d->cmdstr);
             ret = 1; // this will return a '*' causing the host to fail
          }
          break;
       case 'F': // fixed set of samples
-         //printf("STRT_FIX\n\r");
+         printf("STRT_FIX\n\r");
          tx_init(d);
          d->cont = 0;
          ret = 0;
@@ -257,14 +257,14 @@ int process_char(sr_device_t *d, char charin)
       case 'C': // continous mode
          tx_init(d);
          d->cont = 1;
-         //printf("STRT_CONT\n\r");
+         printf("STRT_CONT\n\r");
          ret = 0;
          break;
       case 't': // trigger -format tvxx where v is value and xx is two digit channel
          /*HW trigger depracated
              tmpint=d->cmdstr[1]-'0';
                   tmpint2=atoi(&(d->cmdstr[2])); //extract channel number which starts at D2
-             ////printf("Trigger input %d val %d\n\r",tmpint2,tmpint);
+             //printf("Trigger input %d val %d\n\r",tmpint2,tmpint);
                   if((tmpint2>=2)&&(tmpint>=0)&&(tmpint<=4)){
                     d->triggered=false;
                     switch(tmpint){
@@ -274,14 +274,14 @@ int process_char(sr_device_t *d, char charin)
                  case 3: d->fallmask|=1<<(tmpint2-2);break;
                  default: d->chgmask|=1<<(tmpint2-2);break;
                }
-                    ////printf("Trigger channel %d val %d 0x%X\n\r",tmpint2,tmpint,d->lvl0mask);
-               ////printf("LVL0mask 0x%X\n\r",d->lvl0mask);
-                    ////printf("LVL1mask 0x%X\n\r",d->lvl1mask);
-                    ////printf("risemask 0x%X\n\r",d->risemask);
-                    ////printf("fallmask 0x%X\n\r",d->fallmask);
-                    ////printf("edgemask 0x%X\n\r",d->chgmask);
+                    //printf("Trigger channel %d val %d 0x%X\n\r",tmpint2,tmpint,d->lvl0mask);
+               //printf("LVL0mask 0x%X\n\r",d->lvl0mask);
+                    //printf("LVL1mask 0x%X\n\r",d->lvl1mask);
+                    //printf("risemask 0x%X\n\r",d->risemask);
+                    //printf("fallmask 0x%X\n\r",d->fallmask);
+                    //printf("edgemask 0x%X\n\r",d->chgmask);
                   }else{
-               //printf("bad trigger channel %d val %d\n\r",tmpint2,tmpint);
+               printf("bad trigger channel %d val %d\n\r",tmpint2,tmpint);
                     d->triggered=true;
                   }
          */
@@ -289,7 +289,7 @@ int process_char(sr_device_t *d, char charin)
          break;
       case 'p': // pretrigger count
          tmpint = atoi(&(d->cmdstr[1]));
-         //printf("Pre-trigger samples %d cmd %s\n\r", tmpint, d->cmdstr);
+         printf("Pre-trigger samples %d cmd %s\n\r", tmpint, d->cmdstr);
          ret = 1;
          break;
       // format is Axyy where x is 0 for disabled, 1 for enabled and yy is channel #
@@ -300,7 +300,7 @@ int process_char(sr_device_t *d, char charin)
          {
             d->a_mask = d->a_mask & ~(1 << tmpint2);
             d->a_mask = d->a_mask | (tmpint << tmpint2);
-            // //printf("A%d EN %d Msk 0x%X\n\r",tmpint2,tmpint,d->a_mask);
+            // printf("A%d EN %d Msk 0x%X\n\r",tmpint2,tmpint,d->a_mask);
             ret = 1;
          }
          else
@@ -316,7 +316,7 @@ int process_char(sr_device_t *d, char charin)
          {
             d->d_mask = d->d_mask & ~(1 << tmpint2);
             d->d_mask = d->d_mask | (tmpint << tmpint2);
-            // //printf("D%d EN %d Msk 0x%X\n\r",tmpint2,tmpint,d->d_mask);
+            // printf("D%d EN %d Msk 0x%X\n\r",tmpint2,tmpint,d->d_mask);
             ret = 1;
          }
          else
@@ -325,10 +325,10 @@ int process_char(sr_device_t *d, char charin)
          }
          break;
       default:
-         //printf("bad command %s\n\r", d->cmdstr);
+         printf("bad command %s\n\r", d->cmdstr);
          ret = 0;
       } // case
-      //        //printf("CmdDone %s\n\r",d->cmdstr);
+      //        printf("CmdDone %s\n\r",d->cmdstr);
       d->cmdstrptr = 0;
    }
    else
@@ -336,7 +336,7 @@ int process_char(sr_device_t *d, char charin)
       if (d->cmdstrptr >= 19)
       {
          d->cmdstr[18] = 0;
-         //printf("Command overflow %s\n\r", d->cmdstr);
+         printf("Command overflow %s\n\r", d->cmdstr);
          d->cmdstrptr = 0;
       }
       d->cmdstr[d->cmdstrptr++] = charin;

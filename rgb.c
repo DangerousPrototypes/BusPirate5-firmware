@@ -39,7 +39,7 @@ struct rgb_program rgb_handlers[RGB_LEN];
 
 static inline void rgb_send(void){  
     for(int i=0; i<RGB_LEN; i++){
-        pio_sm_put_blocking(pio0, 0, ((leds[i]) << 8u));        
+        pio_sm_put_blocking(pio1, 3, ((leds[i]) << 8u));        
     }
 }
 
@@ -248,10 +248,10 @@ bool rgb_timer_callback(struct repeating_timer *t){
 void rgb_init(void)
 {
     // RGB LEDs driven by PIO0
-    gpio_set_function(RGB_CDO, GPIO_FUNC_PIO0);  
+    gpio_set_function(RGB_CDO, GPIO_FUNC_PIO1);  
 
-    PIO pio = pio0;
-    int sm = 0;
+    PIO pio = pio1;
+    int sm = 3;
     uint offset = pio_add_program(pio, &ws2812_program);
 
     ws2812_program_init(pio, sm, offset, RGB_CDO, 800000, false);

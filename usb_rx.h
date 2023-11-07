@@ -10,5 +10,6 @@ void rx_fifo_peek_blocking(char *c);
 
 void bin_rx_fifo_get_blocking(char *c);
 void bin_rx_fifo_available_bytes(uint16_t *cnt);
+bool bin_rx_fifo_try_get(char *c);
 
 

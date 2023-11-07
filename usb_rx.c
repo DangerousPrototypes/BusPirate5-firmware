@@ -170,3 +170,7 @@ void bin_rx_fifo_available_bytes(uint16_t *cnt)
 {
     queue_available_bytes(&bin_rx_fifo, cnt);
 }
+bool bin_rx_fifo_try_get(char *c)
+{
+    return queue2_try_remove(&bin_rx_fifo, c);
+}

@@ -17,6 +17,8 @@
 #include "psu.h"
 #include "sump.h"
 #include "binio_helpers.h"
+#include "lib/gusmanbla/LogicAnalyzer_Structs.h"
+#include "lib/gusmanbla/LogicAnalyzer.h"
 
 //commandset
 //http://www.sump.org/projects/analyzer/protocol/
@@ -152,13 +154,17 @@ bool sump_command(unsigned char inByte)
 					if(sumpRX.command[1] & 0b1000) sumpPadBytes++;
 					break;
 */
-				case SUMP_CNT:
-					sumpSamples=sumpRX.command[2];
+				case SUMP_CNT:		
+					uint32_t sump_read_count = ((((sumpRX.command[2] <<8) | sumpRX.command[1]) +1 ) *4);
+					uint32_t sump_delay_count = ((((sumpRX.command[4] <<8) | sumpRX.command[3]) +1 ) *4);
+					req->preSamples = sump_read_count-sump_delay_count;
+					req->postSamples = sump_delay_count;
+					/*sumpSamples=sumpRX.command[2];
 					sumpSamples<<=8;
 					sumpSamples|=sumpRX.command[1];
 					sumpSamples=(sumpSamples+1)*4;
 					//prevent buffer overruns
-					if(sumpSamples>LA_SAMPLE_SIZE) sumpSamples=LA_SAMPLE_SIZE;
+					if(sumpSamples>LA_SAMPLE_SIZE) sumpSamples=LA_SAMPLE_SIZE;*/
 					break;
 				case SUMP_DIV:
 					l=sumpRX.command[3];
@@ -166,7 +172,7 @@ bool sump_command(unsigned char inByte)
 					l|=sumpRX.command[2];
 					l<<=8;
 					l|=sumpRX.command[1];
-
+					req->frequency = l;
 					//convert from SUMP 100MHz clock to our 16MIPs
 					//l=((l+1)*16)/100;
 					//l=((l+1)*4)/25; 

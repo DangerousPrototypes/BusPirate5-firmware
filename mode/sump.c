@@ -1,11 +1,21 @@
 //
 // SUMP LA
 //
-//#ifdef SUMP_LA
-#include "base.h"
-#include "UART.h"
-#include "busPirateCore.h"
-#include "SUMP.h"
+//#include <stdio.h>
+#include "pico/stdlib.h"
+#include "pirate.h"
+#include "queue.h"
+#include "usb_rx.h"
+#include "usb_tx.h"
+#include "bio.h"
+#include "system_config.h"
+#include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and bytecode stuff to a single helper file
+#include "modes.h"
+#include "mode/binio.h"
+#include "opt_args.h" //needed for same reason as bytecode and needs same fix
+#include "pullups.h"
+#include "psu.h"
+#include "sump.h"
 #include "binio_helpers.h"
 
 //commandset
@@ -22,14 +32,12 @@
 #define SUMP_TRIG	0xc0
 #define SUMP_TRIG_VALS 0xc1
 
-extern struct _bpConfig bpConfig; //holds persistent bus pirate settings (see busPirateCore.h)
-
 static enum _LAstate {
 	LA_IDLE = 0,
 	LA_ARMED,
 } LAstate = LA_IDLE;
 
-#define LA_SAMPLE_SIZE TERMINAL_BUFFER //(see busPirateCore.h)
+#define LA_SAMPLE_SIZE 138000 //(see busPirateCore.h)
 //static unsigned char samples[LA_SAMPLE_SIZE];
 static unsigned char sumpPadBytes;
 static unsigned int sumpSamples;
@@ -39,36 +47,28 @@ void sump_logic_analyzer(void)
 {
 	char c;
 
-	bio_init(); //pins to inputs
+	script_reset(); //reset pins, etc
 
-	SUMPreset();
+	//3.3volt power supply?
 
-	SUMPlogicCommand(SUMP_ID);
+	sump_reset();
+
+	sump_command(SUMP_ID);
 
 	while(1)
 	{
 		if(bin_rx_fifo_try_get(&c))
 		{
-			if(SUMPlogicCommand(c)) return;
+			if(sump_command(c)) return;
 		}
 		
-		if(SUMPlogicService()) return; //exit at end of sampling
+		if(sump_service()) return; //exit at end of sampling
 	}
 }
 
-void SUMPreset(void){
-	BP_LEDMODE=0;//LED
-	CNPU1=0; //pullups off
-	CNPU2=0;
-	CNEN1=0; //all change notice off
-	CNEN2=0;
-	T4CON=0; //stop count
-	IPC4bits.CNIP=0;
-
-	//default speed and samples
-	//setup PR register
-	PR5=0;//most significant word
-	PR4=0x640;//least significant word
+void sump_reset(void)
+{
+	//reset the SUMP state machine
 	sumpSamples=LA_SAMPLE_SIZE;
 	sumpPadBytes=0;
 	LAstate=LA_IDLE;
@@ -81,7 +81,8 @@ void SUMPreset(void){
 //protocol version (41)
 static const char sump_description[]="\01BPv5\00\21\00\00\10\00\23\00\0f\42\40\40\05\41\02\00";	
 
-unsigned char SUMPlogicCommand(unsigned char inByte){
+bool sump_command(unsigned char inByte)
+{
 //	static unsigned char i;
 	static unsigned long l;
 
@@ -100,39 +101,21 @@ unsigned char SUMPlogicCommand(unsigned char inByte){
 	switch(sumpRXstate){ //this is a state machine that grabs the incoming commands one byte at a time
 
 		case C_IDLE:
-
 			switch(inByte){//switch on the current byte
 				case SUMP_RESET://reset
-					SUMPreset();
-					return 1;
+					sump_reset();
 					break;
 				case SUMP_ID://SLA0 or 1 backwards: 1ALS
-					bpWstring("1ALS");
+					script_print("1ALS");
 					break;
-				case SUMP_RUN://arm the triger
-					BP_LEDMODE=1;//ARMED, turn on LED
+				case SUMP_RUN://arm the trigger
+					//BP_LEDMODE=1;//ARMED, turn on LED
 
-					//setup timer
-					T4CON=0;	//make sure the counters are off
-					//timer 4 internal, measures interval
-					TMR5HLD=0x00;
-					TMR4=0x00;
-					T4CON=0b1000; //.T32=1, bit 3
-
-					//setup change notice interrupt
-					//CNEN2=0b111100001; //change notice on all pins
-					//CNEN2=0b100000; //change notice on CS pin
-					IFS1bits.CNIF=0; //clear interrupt flag
-					IEC1bits.CNIE=0; //interrupts DISABLED
-					IPC4bits.CNIP=1; //priority to 0, not actual interupt
 
 					LAstate=LA_ARMED;
 					break;
 				case SUMP_DESC:
-					for(uint8_t i=0; i<sizeof(sump_description); i++)
-					{
-						bin_tx_fifo_put(sump_description[i]);
-					}
+					script_send(sump_description, sizeof(sump_description));
 					break;
 				case SUMP_XON://resume send data
 				//	xflow=1;
@@ -156,11 +139,11 @@ unsigned char SUMPlogicCommand(unsigned char inByte){
 			switch(sumpRX.command[0]){
 
 				case SUMP_TRIG: //set CN on these pins
-					if(sumpRX.command[1] & 0b10000)	CNEN2|=0b1; //AUX
+					/*if(sumpRX.command[1] & 0b10000)	CNEN2|=0b1; //AUX
 					if(sumpRX.command[1] & 0b1000)  CNEN2|=0b100000;
 					if(sumpRX.command[1] & 0b100)   CNEN2|=0b1000000;
 					if(sumpRX.command[1] & 0b10)  	CNEN2|=0b10000000;
-					if(sumpRX.command[1] & 0b1) 	CNEN2|=0b100000000;
+					if(sumpRX.command[1] & 0b1) 	CNEN2|=0b100000000;*/
 /*
 				case SUMP_FLAGS:
 					sumpPadBytes=0;//if user forgot to uncheck chan groups 2,3,4, we can send padding bytes
@@ -186,17 +169,8 @@ unsigned char SUMPlogicCommand(unsigned char inByte){
 
 					//convert from SUMP 100MHz clock to our 16MIPs
 					//l=((l+1)*16)/100;
-					l=((l+1)*4)/25; 
+					//l=((l+1)*4)/25; 
 
-					//adjust downwards a bit
-					if(l>0x10)
-						l-=0x10;
-					else //fast as possible
-						l=1;
-
-					//setup PR register
-					PR5=(l>>16);//most significant word
-					PR4=l;//least significant word
 					break;
 			}
 
@@ -206,20 +180,13 @@ unsigned char SUMPlogicCommand(unsigned char inByte){
 	return 0;
 }
 
-//
-//
-//	To avoid rewriting interrupt vectors with the bootloader,
-//  this firmware currently uses polling to read the trigger and timer
-// 	A final version should use interrupts after lots of testing.
-//
-//
-unsigned char SUMPlogicService(void){
+bool sump_service(void){
 	static unsigned int i;
 //	static unsigned char j;
 
 	switch(LAstate){//dump data
 		case LA_ARMED: //check interrupt flags
-			if(IFS1bits.CNIF==0){//no flags
+			/*if(IFS1bits.CNIF==0){//no flags
 				if(CNEN2) //if no trigger just continue
 					break;
 			}
@@ -240,9 +207,9 @@ unsigned char SUMPlogicService(void){
 			for(i=sumpSamples; i>0; i--){ //send back to SUMP, backwards
 				UART1TX(bpConfig.terminalInput[(i-1)]);
 				//for(j=0; j<sumpPadBytes; j++) UART1TX(0); //add padding if needed
-			}
-
-			SUMPreset();
+			}*/
+			//TODO: after arming and setup, delay 1000ms before allowing to continue the loop
+			sump_reset();
 			return 1;//done, exit SUMP
 			//break;
 		case LA_IDLE:

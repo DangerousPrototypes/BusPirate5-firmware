@@ -1,4 +1,5 @@
-#include <stdio.h>
+//#include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "queue.h"
@@ -11,6 +12,22 @@
 #include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "pullups.h"
 #include "psu.h"
+
+void script_print(const char *str) 
+{
+    for(uint8_t i=0; i<strlen(str); i++)
+    {
+        bin_tx_fifo_put(str[i]);
+    }
+}
+
+void script_send(const char *c, uint32_t len) 
+{
+    for(uint8_t i=0; i<len; i++)
+    {
+        bin_tx_fifo_put(c[i]);
+    }
+}
 
 void script_reset(void) 
 {    

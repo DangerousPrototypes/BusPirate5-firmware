@@ -16,7 +16,7 @@
 
 /* Binary access modes for Bus Pirate scripting */
 
-#include <stdio.h>
+//#include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "queue.h"
@@ -31,6 +31,8 @@
 #include "pullups.h"
 #include "psu.h"
 #include "amux.h"
+#include "sump.h"
+#include "binio_helpers.h"
 
 unsigned char binBBpindirectionset(unsigned char inByte);
 unsigned char binBBpinset(unsigned char inByte);
@@ -80,12 +82,8 @@ Commands:
  */
 void binBBversion(void) 
 {
-    const char version_string[]="BBIO1";
-
-    for(uint8_t i=0; i<sizeof(version_string)-1; i++)
-    {
-        bin_tx_fifo_put(version_string[i]);
-    }
+    //const char version_string[]="BBIO1";
+    script_print("BBIO1");
 }
 
 void script_enabled(void)
@@ -225,7 +223,6 @@ bool script_mode(void)
                 script_disabled();
                 return true;
                 //while(queue_available_bytes()) //old version waits for empty TX before exit
-                return;
                 //self test is only for v2go and v3
             } else if (inByte == 0b10000) {//short self test
                 //binSelfTest(0);

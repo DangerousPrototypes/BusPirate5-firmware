@@ -1,5 +1,5 @@
-void SUMP(void);
-void SUMPreset(void);
-unsigned char SUMPlogicCommand(unsigned char inByte); // N/A JTR SUMP MODE
-unsigned char SUMPlogicService(void);
+void sump_logic_analyzer(void);
+void sump_reset(void);
+bool sump_command(unsigned char inByte); // N/A JTR SUMP MODE
+bool sump_service(void);
 

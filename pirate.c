@@ -369,7 +369,7 @@ void core1_entry(void)
         rx_uart_init_irq();
     }
 
-    while(1); //stall core
+    //while(1); //stall core
 
     while(1)
     {

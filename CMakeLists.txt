@@ -23,6 +23,13 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 add_executable(bus_pirate 
+        lib/gusmanbla/Event_Machine.c lib/gusmanbla/Event_Machine.h
+        lib/gusmanbla/LogicAnalyzer.c lib/gusmanbla/LogicAnalyzer.h
+        lib/gusmanbla/LogicAnalyzer_Board_Settings.h
+        lib/gusmanbla/LogicAnalyzer_Build_Settings.h
+        lib/gusmanbla/LogicAnalyzer_Structs.h
+        lib/gusmanbla/Shared_Buffers.c lib/gusmanbla/Shared_Buffers.h
+
         pirate.c pirate.h platform/bpi-rev8.h platform/bpi-rev8.c commands.h commands.c 
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
         msc_disk.c usb_descriptors.c 
@@ -57,12 +64,15 @@ add_executable(bus_pirate
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         mode/binio.c mode/binio.h
+
+
         )
    
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)
+pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/lib/gusmanbla/LogicAnalyzer.pio)
 
 pico_set_program_name(bus_pirate "bus_pirate")
 pico_set_program_version(bus_pirate "0.0.4")
@@ -86,9 +96,11 @@ target_link_libraries(bus_pirate
         hardware_timer
         hardware_watchdog
         hardware_clocks
+        hardware_flash
         hardware_adc
         hardware_uart
         pico_multicore
+        pico_base_headers
         pico_unique_id
         pico_bootrom 
         hardware_pwm

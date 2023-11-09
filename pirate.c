@@ -38,6 +38,7 @@
 #include "pico/lock_core.h"
 #include "helpers.h"
 #include "mode/binio.h"
+#include "lib/gusmanbla/LogicAnalyzer.h"
 
 lock_core_t core;
 
@@ -140,7 +141,7 @@ int main()
     // RGB LEDs pins, pio, set to black
     //multicore_fifo_push_blocking(0x01);
     //this must be done after the 74hct245 is enabled during shift register setup
-    rgb_init();
+    //rgb_init();
 
     // Read psu DAC resolution and check error
     psu_setup(); //TODO: handle error
@@ -176,8 +177,6 @@ int main()
 	psu_reset();    // disable psu and reset pin label
     psu_cleanup();  // clear any errors
 
-
-
     busy_wait_ms(100);
 
     enum bp_statmachine
@@ -201,10 +200,9 @@ int main()
     while(1)
     {
 
-        if(system_config.binmode) //enter scripting mode
+        if(script_mode()) //enter scripting mode?
         {
-            bp_state=BP_SM_SCRIPT_MODE;
-            printf("\r\nScripting mode enabled. Terminal locked.\r\n");
+            bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
         }
 
         switch(bp_state)
@@ -291,7 +289,6 @@ int main()
                 break;     
             case BP_SM_SCRIPT_MODE:
                 script_mode();
-                printf("\r\nTerminal unlocked.\r\n");     //fall through to prompt 
             case BP_SM_COMMAND_PROMPT:
                 if(system_config.subprotocol_name)
                 {
@@ -364,13 +361,15 @@ void core1_entry(void)
     // wait for main core to signal start
     while(multicore_fifo_pop_blocking()!=0);
 
-    lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
+    //lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
 
     //terminal debug uart enable
     if(system_config.terminal_uart_enable)
     {
         rx_uart_init_irq();
     }
+
+    while(1); //stall core
 
     while(1)
     {

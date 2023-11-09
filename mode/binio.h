@@ -20,7 +20,7 @@
 #define BP_MISO BIO6
 #define BP_CS   BIO7
 
-void script_mode(void);
+bool script_mode(void);
 unsigned char binBBpindirectionset(unsigned char inByte);
 unsigned char binBBpinset(unsigned char inByte);
 

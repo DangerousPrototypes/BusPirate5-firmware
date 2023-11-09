@@ -88,12 +88,67 @@ void binBBversion(void)
     }
 }
 
-void script_mode(void) 
+void script_enabled(void)
+{
+    printf("\r\nScripting mode enabled. Terminal locked.\r\n");
+}
+
+void script_disabled(void)
+{
+    printf("\r\nTerminal unlocked.\r\n");     //fall through to prompt 
+}
+
+bool script_entry(void)
+{
+    static uint8_t binmodecnt=0;
+    char c;
+
+    while(bin_rx_fifo_try_get(&c))
+    {
+        switch(c)
+        {
+            case 0x00:
+                binmodecnt++;
+                if(binmodecnt>=20)
+                {   
+                    system_config.binmode=true;
+                    binmodecnt=0;
+                    return true;
+                }
+                break;                
+            case 0x02: //test for SUMP client
+                if(binmodecnt >= 5) 
+                {
+                    script_enabled();
+                    system_config.binmode=true;
+                    sump_logic_analyzer();
+                    system_config.binmode=false;
+                    script_disabled();
+                } 
+                binmodecnt = 0; //reset counter
+                break;
+            default:
+                binmodecnt = 0;
+                break;
+        }
+    }  
+
+    return false;
+}
+
+bool script_mode(void) 
 {
     static unsigned char inByte;
     unsigned int i;
     char c;
 
+
+    // co-op multitask while checking for the binmode flag
+    // then take over and block the user terminal
+    if(!script_entry()) return false;
+
+    script_enabled();
+ 
     binReset();
     binBBversion(); //send mode name and version
 
@@ -167,6 +222,8 @@ void script_mode(void)
                 system_bio_claim(false, BP_CLK, BP_PIN_MODE, 0);
                 system_bio_claim(false, BP_MISO, BP_PIN_MODE, 0);
                 system_bio_claim(false, BP_CS, BP_PIN_MODE, 0);		
+                script_disabled();
+                return true;
                 //while(queue_available_bytes()) //old version waits for empty TX before exit
                 return;
                 //self test is only for v2go and v3
@@ -308,6 +365,8 @@ void binReset(void)
 	system_bio_claim(true, BP_CS, BP_PIN_MODE, pin_labels[5]);		
 
 }
+
+
 
 unsigned char port_read(unsigned char inByte)
 {

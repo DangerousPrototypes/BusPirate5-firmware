@@ -1,0 +1,1 @@
+void script_reset(void);

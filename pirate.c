@@ -168,16 +168,17 @@ int main()
 
     translation_set(system_config.terminal_language); 
     
-    multicore_fifo_push_blocking(0); //begin main loop on secondary core
-    
     //modes[0].protocol_setup_exc();	
     // turn everything off
 	bio_init();     // make all pins safe
 	psu_reset();    // disable psu and reset pin label
     psu_cleanup();  // clear any errors
 
-
-
+    // begin main loop on secondary core
+    // this will also setup the USB device
+    // we need to have read any config files on the SD card before now
+    multicore_fifo_push_blocking(0); 
+    
     busy_wait_ms(100);
 
     enum bp_statmachine
@@ -355,14 +356,14 @@ void core1_entry(void)
     // input buttons init
     //buttons_init();
 
+    // wait for main core to signal start
+    while(multicore_fifo_pop_blocking()!=0);
+
     // USB init
     if(system_config.terminal_usb_enable)
     {
         tusb_init();
     }
-
-    // wait for main core to signal start
-    while(multicore_fifo_pop_blocking()!=0);
 
     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
 

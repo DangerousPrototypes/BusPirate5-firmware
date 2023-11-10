@@ -40,6 +40,8 @@
 #include "mode/binio.h"
 
 lock_core_t core;
+spin_lock_t *spi_spin_lock;
+uint spi_spin_lock_num;
 
 void core1_entry(void);
 
@@ -96,7 +98,8 @@ int main()
 
     // SPI bus is used from here
     // setup the spinlock for spi arbitration
-    lock_init(&core, next_striped_spin_lock_num());
+    spi_spin_lock_num=spin_lock_claim_unused(true);
+    spi_spin_lock=spin_lock_init(spi_spin_lock_num);
 
     // configure the defaults for shift register attached hardware
     shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), CURRENT_EN_OVERRIDE);
@@ -129,7 +132,7 @@ int main()
     // Now continue after init of all the pins and shift registers
 
     // Mount the SD card file system (and put into SPI mode)
-    // This must be done before any other SPI communicatons
+    // This must be done before any other SPI communications
     storage_mount();
 
     if(storage_load_config())
@@ -486,15 +489,15 @@ void spi_busy_wait(bool enable)
     }
 
     do{
-        uint32_t save = spin_lock_blocking(core.spin_lock);
+        uint32_t save = spin_lock_blocking(spi_spin_lock);
         if(busy)
         {
-            lock_internal_spin_unlock_with_wait(&core, save);
+            spin_unlock(spi_spin_lock, save);
         }
         else
         {
             busy=true;
-            lock_internal_spin_unlock_with_notify(&core, save);
+            spin_unlock(spi_spin_lock, save);
             return;
         }
 

@@ -11,6 +11,8 @@
 #include "diskio.h"
 
 
+static bool spinlock = false;
+
 /*--------------------------------------------------------------------------
 
    Module Private Functions
@@ -63,9 +65,10 @@ static inline uint32_t _millis(void)
 /*-----------------------------------------------------------------------*/
 /* SPI controls (Platform dependent)                                     */
 /*-----------------------------------------------------------------------*/
-
+/*
 static inline void cs_select(uint cs_pin) {
 	spi_busy_wait(true);
+	spinlock = true;
     
 	asm volatile("nop \n nop \n nop"); // FIXME
 	busy_wait_us(10);
@@ -82,7 +85,8 @@ static inline void cs_deselect(uint cs_pin) {
     asm volatile("nop \n nop \n nop"); // FIXME
 	
 	spi_busy_wait(false);
-}
+	spinlock = false;
+}*/
 
 static void FCLK_SLOW(void)
 {
@@ -93,7 +97,7 @@ static void FCLK_FAST(void)
 {
     spi_set_baudrate(BP_SPI_PORT, CLK_FAST);
 }
-
+/*
 static void CS_HIGH(void)
 {
     cs_deselect(SDCARD_CS);
@@ -103,7 +107,7 @@ static void CS_LOW(void)
 {
     cs_select(SDCARD_CS);
 }
-
+*/
 /* Initialize MMC interface */
 static
 void init_spi(void)
@@ -166,8 +170,17 @@ int wait_ready (	/* 1:Ready, 0:Timeout */
 static
 void deselect (void)
 {
-	CS_HIGH();		/* Set CS# high */
+	//CS_HIGH();		/* Set CS# high */
+	asm volatile("nop \n nop \n nop"); // FIXME
+    //busy_wait_us(10);
+	gpio_put(SDCARD_CS, 1);
+	//busy_wait_us(10);
+    asm volatile("nop \n nop \n nop"); // FIXME
+	
+
 	xchg_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
+	spi_busy_wait(false);
+	spinlock = false;
 }
 
 
@@ -179,7 +192,16 @@ void deselect (void)
 static
 int _select (void)	/* 1:OK, 0:Timeout */
 {
-	CS_LOW();		/* Set CS# low */
+	//CS_LOW();		/* Set CS# low */
+	spi_busy_wait(true);
+	spinlock = true;
+    
+	asm volatile("nop \n nop \n nop"); // FIXME
+	//busy_wait_us(10);
+    gpio_put(SDCARD_CS, 0);
+	//busy_wait_us(10);
+    asm volatile("nop \n nop \n nop"); // FIXME
+
 	xchg_spi(0xFF);	/* Dummy clock (force DO enabled) */
 	if (wait_ready(500)) return 1;	/* Wait for card ready */
 
@@ -240,7 +262,7 @@ BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 		deselect();
 		if (!_select()) return 0xFF;
 	}
-
+	if(!spinlock) printf("disk_read: spinlock not set\n");
 	/* Send command packet */
 	xchg_spi(0x40 | cmd);				/* Start + command index */
 	xchg_spi((BYTE)(arg >> 24));		/* Argument[31..24] */
@@ -253,7 +275,7 @@ BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 	xchg_spi(n);
 
 	/* Receive command resp */
-	if (cmd == CMD12) xchg_spi(0xFF);	/* Diacard following one byte when CMD12 */
+	if (cmd == CMD12) xchg_spi(0xFF);	/* Discard following one byte when CMD12 */
 	n = 10;								/* Wait for response (10 bytes max) */
 	do {
 		res = xchg_spi(0xFF);
@@ -289,7 +311,7 @@ DSTATUS disk_initialize (
 	if (Stat & STA_NODISK) return Stat;	/* Is card existing in the soket? */
 
 	FCLK_SLOW();
-	//CS_LOW();
+	
 	for (n = 10; n; n--) xchg_spi(0xFF);	/* Send 80 dummy clocks */
 
 	ty = 0;
@@ -356,6 +378,8 @@ DRESULT disk_read (
 	UINT count		/* Number of sectors to read (1..128) */
 )
 {
+
+
 	if (drv || !count) return RES_PARERR;		/* Check parameter */
 	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
 

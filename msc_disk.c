@@ -118,7 +118,7 @@ uint8_t msc_disk[DISK_BLOCK_NUM][DISK_BLOCK_SIZE] =
   //------------- Block2: Root Directory -------------//
   {
       // first entry is volume label
-      'T' , 'i' , 'n' , 'y' , 'U' , 'S' , 'B' , ' ' , 'M' , 'S' , 'C' , 0x08, 0x00, 0x00, 0x00, 0x00,
+      'B' , 'u' , 's' , ' ' , 'P' , 'i' , 'r' , 'a' , 't' , 'e' , ' ' , 0x08, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4F, 0x6D, 0x65, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       // second entry is readme file
       'R' , 'E' , 'A' , 'D' , 'M' , 'E' , ' ' , ' ' , 'T' , 'X' , 'T' , 0x20, 0x00, 0xC6, 0x52, 0x6D,

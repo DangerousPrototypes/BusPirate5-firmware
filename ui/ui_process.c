@@ -123,7 +123,7 @@ bool ui_process_commands(void)
         }
         //printf("Found: %s\r\n",cmd[user_cmd_id]);
 
-        //no such command, search SD card for runnable scripts
+        //no such command, search TF flash card for runnable scripts
 
         //do we have a command? good, get the opt args
         if(parse_help())

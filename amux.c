@@ -16,7 +16,7 @@ void amux_sweep(void)
     for(int i=0; i<HW_ADC_MUX_COUNT; i++)
     {
         shift_adc_select(15); //to clear any charge from a floating pin
-        hw_adc_channel_select(i);
+        shift_adc_select(i);
         busy_wait_us(1);
         hw_adc_raw[i]=adc_read();
         hw_adc_voltage[i]=hw_adc_to_volts_x2(i); //these are X2 because a resistor divider /2

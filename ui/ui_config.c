@@ -181,7 +181,7 @@ void ui_config_main_menu(opt_args (*args), struct command_result *res)
         printf("\r\n%s %sset to%s %s\r\n", t[sub_prompts[temp].description], ui_term_color_info(), ui_term_color_reset(), t[sub_prompts[temp].menu_items[temp2].description]);
     }
 
-    //if SD card is present, saves configuration settings
+    //if TF flash card is present, saves configuration settings
     //TODO: present as an option to save or not
     if(storage_save_config())
     {

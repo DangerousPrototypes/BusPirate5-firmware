@@ -93,7 +93,7 @@ int main()
     // ADC pin init
     amux_init();
 
-    // SD card CS pin init
+    // TF flash card CS pin init
     storage_init();
 
     // SPI bus is used from here
@@ -116,7 +116,6 @@ int main()
     busy_wait_ms(100);
     shift_set_clear_wait(DISPLAY_RESET,0);
     busy_wait_ms(100);
-
    
     // input buttons init
     buttons_init();
@@ -130,8 +129,7 @@ int main()
     monitor_init();
 
     // Now continue after init of all the pins and shift registers
-
-    // Mount the SD card file system (and put into SPI mode)
+    // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
     storage_mount();
 
@@ -179,7 +177,7 @@ int main()
 
     // begin main loop on secondary core
     // this will also setup the USB device
-    // we need to have read any config files on the SD card before now
+    // we need to have read any config files on the TF flash card before now
     multicore_fifo_push_blocking(0); 
     
     busy_wait_ms(100);
@@ -236,7 +234,6 @@ int main()
                             system_config.terminal_ansi_statusbar=1;
                             ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
                             ui_term_init(); // Initialize VT100 if ANSI terminal
-                            monitor(system_config.psu);
                             ui_statusbar_update(UI_UPDATE_ALL);
                             break;
                         case 'n':
@@ -493,6 +490,7 @@ void spi_busy_wait(bool enable)
         if(busy)
         {
             spin_unlock(spi_spin_lock, save);
+            //printf("Spinlock busy\r\n");
         }
         else
         {

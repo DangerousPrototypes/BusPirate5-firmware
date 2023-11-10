@@ -158,8 +158,8 @@ static const uint8_t bio2bufdirpin[]=
 #define BP_SPI_CLK  18
 #define BP_SPI_CDO 19
 
-// SD card is on the BP_SPI_PORT, define Chip Select
-#define SDCARD_CS 26 //was 24
+// TF flash card is on the BP_SPI_PORT, define Chip Select
+#define TFCARD_CS 26 //was 24
 
 // LCD is on the BP_SPI_PORT, define CS and DP pins
 #define DISPLAY_CS 25

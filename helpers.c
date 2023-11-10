@@ -64,8 +64,8 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     }*/
 
 
-    //SD card check: was SD card detected?
-    printf("SD CARD: ");
+    //TF flash card check: was TF flash card detected?
+    printf("TF FLASH CARD: ");
     if(storage_mount())
     {
         printf("OK\r\n");

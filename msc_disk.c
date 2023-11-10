@@ -45,7 +45,7 @@ bool ejected = false;
 // CFG_EXAMPLE_MSC_READONLY defined
 
 #define README_CONTENTS \
-"SD Card is not inserted. Please insert one and restart the Buspirate\r\n\
+"TF flash card is not inserted. Please insert one and restart the Buspirate\r\n\
 Kind regards,\r\n\
 Ian and Chris\r\n\r\n\
 https://buspirate.com/"
@@ -137,7 +137,7 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
   (void) lun;
 
   const char vid[] = "BusPirate";
-  const char pid[] = "uSD Storage";
+  const char pid[] = "TF Storage";
   const char rev[] = "1.0";
 
   memcpy(vendor_id  , vid, strlen(vid));
@@ -146,7 +146,7 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
 }
 
 // Invoked when received Test Unit Ready command.
-// return true allowing host to read/write this LUN e.g SD card inserted
+// return true allowing host to read/write this LUN e.g TF flash card inserted
 bool tud_msc_test_unit_ready_cb(uint8_t lun)
 {
   (void) lun;
@@ -170,7 +170,7 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_siz
 	if(system_config.storage_available)
 	{
 		if((res=disk_ioctl(0, GET_SECTOR_COUNT, block_count)))
-			printf(" blockcount = unknown (sdcard inserted?) \r\n", *block_count);
+			printf(" blockcount = unknown (tfcard inserted?) \r\n", *block_count);
 	}
 	else
 		*block_count = DISK_BLOCK_NUM;

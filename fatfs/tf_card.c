@@ -6,12 +6,10 @@
 #include "hardware/spi.h"
 #include "hardware/gpio.h"
 #include "pirate.h"
+#include "system_config.h"
 
 #include "ff.h"
 #include "diskio.h"
-
-
-static bool spinlock = false;
 
 /*--------------------------------------------------------------------------
 
@@ -49,7 +47,7 @@ static bool spinlock = false;
 #define CT_BLOCK       0x08            /* Block addressing */
 
 #define CLK_SLOW	(100000)
-#define CLK_FAST	(2000000)
+#define CLK_FAST	(2000000) //(100 * 100 * 32)
 
 static volatile
 DSTATUS Stat = STA_NOINIT;	/* Physical drive status */
@@ -100,12 +98,12 @@ static void FCLK_FAST(void)
 /*
 static void CS_HIGH(void)
 {
-    cs_deselect(SDCARD_CS);
+    cs_deselect(TFCARD_CS);
 }
 
 static void CS_LOW(void)
 {
-    cs_select(SDCARD_CS);
+    cs_select(TFCARD_CS);
 }
 */
 /* Initialize MMC interface */
@@ -113,7 +111,7 @@ static
 void init_spi(void)
 {
 	//dont use CS_HIGH because spinlock isn't setup yet
-	gpio_put(SDCARD_CS, 1);
+	gpio_put(TFCARD_CS, 1);
 }
 
 /* Exchange a byte */
@@ -173,14 +171,12 @@ void deselect (void)
 	//CS_HIGH();		/* Set CS# high */
 	asm volatile("nop \n nop \n nop"); // FIXME
     //busy_wait_us(10);
-	gpio_put(SDCARD_CS, 1);
+	gpio_put(TFCARD_CS, 1);
 	//busy_wait_us(10);
     asm volatile("nop \n nop \n nop"); // FIXME
-	
 
 	xchg_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
-	spi_busy_wait(false);
-	spinlock = false;
+	//spi_busy_wait(false);
 }
 
 
@@ -193,12 +189,11 @@ static
 int _select (void)	/* 1:OK, 0:Timeout */
 {
 	//CS_LOW();		/* Set CS# low */
-	spi_busy_wait(true);
-	spinlock = true;
+	//spi_busy_wait(true);
     
 	asm volatile("nop \n nop \n nop"); // FIXME
 	//busy_wait_us(10);
-    gpio_put(SDCARD_CS, 0);
+    gpio_put(TFCARD_CS, 0);
 	//busy_wait_us(10);
     asm volatile("nop \n nop \n nop"); // FIXME
 
@@ -262,7 +257,7 @@ BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 		deselect();
 		if (!_select()) return 0xFF;
 	}
-	if(!spinlock) printf("disk_read: spinlock not set\n");
+	//if(!spinlock) printf("disk_read: spinlock not set\n");
 	/* Send command packet */
 	xchg_spi(0x40 | cmd);				/* Start + command index */
 	xchg_spi((BYTE)(arg >> 24));		/* Argument[31..24] */
@@ -303,6 +298,7 @@ DSTATUS disk_initialize (
 	const uint32_t timeout = 1000; /* Initialization timeout = 1 sec */
 	uint32_t t;
 
+	spi_busy_wait(true);
 
 	if (drv) return STA_NOINIT;			/* Supports only drive 0 */
 	init_spi();							/* Initialize SPI */
@@ -347,6 +343,8 @@ DSTATUS disk_initialize (
 		Stat = STA_NOINIT;
 	}
 
+	spi_busy_wait(false);
+
 	return Stat;
 }
 
@@ -385,6 +383,8 @@ DRESULT disk_read (
 
 	if (!(CardType & CT_BLOCK)) sector *= 512;	/* LBA ot BA conversion (byte addressing cards) */
 
+	spi_busy_wait(true);
+
 	if (count == 1) {	/* Single sector read */
 		if ((send_cmd(CMD17, sector) == 0)	/* READ_SINGLE_BLOCK */
 			&& rcvr_datablock(buff, 512)) {
@@ -401,7 +401,7 @@ DRESULT disk_read (
 		}
 	}
 	deselect();
-
+	spi_busy_wait(false);
 	return count ? RES_ERROR : RES_OK;	/* Return result */
 }
 
@@ -468,6 +468,8 @@ DRESULT disk_write (
 
 	if (!(CardType & CT_BLOCK)) sector *= 512;	/* LBA ==> BA conversion (byte addressing cards) */
 
+	spi_busy_wait(true);
+
 	if (!_select()) return RES_NOTRDY;
 
 	if (count == 1) {	/* Single sector write */
@@ -487,6 +489,8 @@ DRESULT disk_write (
 		}
 	}
 	deselect();
+
+	spi_busy_wait(false);
 
 	return count ? RES_ERROR : RES_OK;	/* Return result */
 }
@@ -512,6 +516,8 @@ DRESULT disk_ioctl (
 	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
 
 	res = RES_ERROR;
+
+	spi_busy_wait(true);
 
 	switch (cmd) {
 	case CTRL_SYNC :		/* Wait for end of internal write process of the drive */
@@ -572,6 +578,8 @@ DRESULT disk_ioctl (
 	}
 
 	deselect();
+
+	spi_busy_wait(false);
 
 	return res;
 }

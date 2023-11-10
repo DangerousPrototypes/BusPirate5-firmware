@@ -53,21 +53,21 @@ const char *fresult_msg[]={
 void storage_init(void)
 {
     // Output Pins
-    gpio_set_function(SDCARD_CS, GPIO_FUNC_SIO);
-    gpio_put(SDCARD_CS, 1);
-    gpio_set_dir(SDCARD_CS, GPIO_OUT);    
+    gpio_set_function(TFCARD_CS, GPIO_FUNC_SIO);
+    gpio_put(TFCARD_CS, 1);
+    gpio_set_dir(TFCARD_CS, GPIO_OUT);    
 }
 
 bool storage_detect(void)
 {        
-    //SD card detect is measued through the analog mux for lack of IO pins....
+    //TF flash card detect is measued through the analog mux for lack of IO pins....
     //if we have low, storage not previously available, and we didn't error out, try to mount
     if(hw_adc_raw[HW_ADC_MUX_CARD_DETECT]<100 && 
         system_config.storage_available==false && 
         system_config.storage_mount_error==0
     )
     {
-        //show a status message (SD card mounted: XXGB FAT32)
+        //show a status message (TF flash card mounted: XXGB FAT32)
         fr = f_mount(&fs, "", 1);
         if (fr != FR_OK) {
             system_config.storage_available=false;
@@ -79,7 +79,7 @@ bool storage_detect(void)
             system_config.storage_available=true;
             system_config.storage_fat_type=fs.fs_type;
             system_config.storage_size=fs.csize * fs.n_fatent * 512E-9;
-            printf("SD Card mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
+            printf("TF flash card mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
         }        
 
     }
@@ -91,7 +91,7 @@ bool storage_detect(void)
     {
         system_config.storage_available=false;
         system_config.storage_mount_error=0;
-        printf("SD Card removed\r\n");
+        printf("TF flash card removed\r\n");
 
     }
     return true;
@@ -178,7 +178,7 @@ uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t
 
     fr = f_open(&fil, filename, FA_CREATE_ALWAYS | FA_WRITE);	
     if (fr != FR_OK) {
-        //no config file or SD card
+        //no config file or TF flash card
         //printf("File not found: %d\r\n", fr);
         //return (int)fr;
         return 0;
@@ -217,7 +217,7 @@ void cat(opt_args (*args), struct command_result *res)
 
     fr = f_open(&fil, args[0].c, FA_READ);	
     if (fr != FR_OK) {
-        //no config file or SD card
+        //no config file or TF flash card
         file_error(fr);
         //return (int)fr;
         return;
@@ -324,7 +324,7 @@ uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t
 
     fr = f_open(&fil, filename, FA_READ);	
     if (fr != FR_OK) {
-        //no config file or SD card
+        //no config file or TF flash card
         //printf("File not found: %d\r\n", fr);
         //return (int)fr;
         return 0;

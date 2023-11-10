@@ -27,7 +27,7 @@ void core1_entry(void)
     while(1)
     {
 
-        //TODO: interupt and service commmands attached to SPI like pullups, amux, sd card, lcd
+        //TODO: interupt and service commmands attached to SPI like pullups, amux, TF flash card, lcd
         tx_fifo_service();
     }
 

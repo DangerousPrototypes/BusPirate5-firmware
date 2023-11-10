@@ -69,11 +69,11 @@ void ui_info_print_info(opt_args (*args), struct command_result *res)
 	);
 	printf("%s\r\n", t[T_INFO_WEBSITE]);
 
-	// SD Card information
+	// TF flash card information
 	if(system_config.storage_available)
 	{
 		printf("%s: %s%6.2fGB%s (%s %s)\r\n", 
-			t[T_INFO_SD_CARD],
+			t[T_INFO_TF_CARD],
 			ui_term_color_num_float(),
 			system_config.storage_size, 
 			ui_term_color_reset(),
@@ -84,7 +84,7 @@ void ui_info_print_info(opt_args (*args), struct command_result *res)
 	}
 	else
 	{
-		printf("%s: %s\r\n", t[T_INFO_SD_CARD], t[T_NOT_DETECTED]);
+		printf("%s: %s\r\n", t[T_INFO_TF_CARD], t[T_NOT_DETECTED]);
 	}
 
 	//config file loaded

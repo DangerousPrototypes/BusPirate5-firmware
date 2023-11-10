@@ -597,10 +597,11 @@ static const BYTE DbcTbl[] = MKCVTBL(TBL_DC, FF_CODE_PAGE);
 
 #endif
 
-
+#if FF_FS_EXFAT
 void get_dir(char *p){
 	p=DirBuf;
 }
+#endif
 
 /*--------------------------------------------------------------------------
 

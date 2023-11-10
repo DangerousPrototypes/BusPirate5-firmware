@@ -47,7 +47,7 @@
 #define CT_BLOCK       0x08            /* Block addressing */
 
 #define CLK_SLOW	(100000)
-#define CLK_FAST	(2000000) //(100 * 100 * 32)
+#define CLK_FAST	(100 * 100 * 32) //(2000000)
 
 static volatile
 DSTATUS Stat = STA_NOINIT;	/* Physical drive status */

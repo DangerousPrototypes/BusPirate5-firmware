@@ -45,6 +45,7 @@ void queue2_init_with_spinlock(queue_t *q, uint8_t *buf, uint element_count, uin
  */
 static inline void queue2_init(queue_t *q, uint8_t *buf, uint element_count) {
     return queue2_init_with_spinlock(q, buf, element_count, next_striped_spin_lock_num());
+    //return queue2_init_with_spinlock(q, buf, element_count, spin_lock_claim_unused(true));
 }
 
 void queue_available_bytes(queue_t *q, uint16_t* cnt);

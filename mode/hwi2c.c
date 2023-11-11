@@ -15,7 +15,7 @@
 #include "lib/ms5611/ms5611.h"
 #include "lib/tsl2561/driver_tsl2561.h" 
 
-#define M_I2C_PIO pio1
+#define M_I2C_PIO pio0
 #define M_I2C_SDA BIO6
 #define M_I2C_SCL BIO7
 
@@ -27,7 +27,7 @@ static const char pin_labels[][5]={
 static struct _i2c_mode_config mode_config;
 
 static PIO pio = M_I2C_PIO;
-static uint pio_state_machine = 0;
+static uint pio_state_machine = 3;
 static uint pio_loaded_offset;
 
 static uint8_t checkshort(void);

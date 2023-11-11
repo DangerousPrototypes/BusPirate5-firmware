@@ -16,7 +16,7 @@
 #include "storage.h"
 #include "ui/ui_term.h"
 
-#define M_LED_PIO pio1
+#define M_LED_PIO pio0
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 //only used on APA102
 static const char pin_labels[][5]={
@@ -38,7 +38,7 @@ enum M_LED_DEVICE_TYPE{
 static struct _led_mode_config mode_config;
 
 static PIO pio = M_LED_PIO;
-static uint pio_state_machine = 0;
+static uint pio_state_machine = 3;
 static uint pio_loaded_offset;
 static uint8_t device_cleanup;
 

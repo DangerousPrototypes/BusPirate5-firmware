@@ -16,7 +16,7 @@
 #include "hardware/clocks.h"
 #include "mode/onewire.h"
 
-#define M_OW_PIO pio1
+#define M_OW_PIO pio0
 #define M_OW_OWD BIO3
 
 static const char pin_labels[][5]=
@@ -37,7 +37,7 @@ uint32_t hw1wire_setup_exc(void)
 	system_bio_claim(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
 
     owobj.pio = M_OW_PIO;
-    owobj.sm = 3;
+    owobj.sm = 1;
     owobj.pin = bio2bufiopin[BIO3];
     owobj.dir = bio2bufdirpin[BIO3];
 

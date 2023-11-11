@@ -16,7 +16,7 @@
 #include "bio.h"
 #include "amux.h"
 
-#define SYN_MAX_LENGTH 256
+#define SYN_MAX_LENGTH 512
 
 const struct command_attributes attributes_empty;
 const struct command_response response_empty;

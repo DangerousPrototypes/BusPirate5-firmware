@@ -147,6 +147,7 @@ uint32_t spi_setup_exc(void)
 	bio_buf_output(M_SPI_CDO); //tx
 	bio_buf_input(M_SPI_CDI); //rx
 
+	gpio_put(M_SPI_CDO, 1);
 	//assign spi functon to io pins
 	bio_set_function(M_SPI_CLK, GPIO_FUNC_SPI); //sck
 	bio_set_function(M_SPI_CDO, GPIO_FUNC_SPI); //tx

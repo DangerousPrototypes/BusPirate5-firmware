@@ -304,7 +304,7 @@ void spi_read(struct _bytecode *result, struct _bytecode *next)
 
 	while(!spi_is_writable(M_SPI_PORT));
 	
-	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)result->out_data;
+	spi_get_hw(M_SPI_PORT)->dr = 0xff; //(uint32_t)result->out_data;
 
     while(!spi_is_readable(M_SPI_PORT));
 	

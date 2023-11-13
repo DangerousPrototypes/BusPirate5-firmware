@@ -426,51 +426,64 @@ bool reserved_addr(uint8_t addr) {
 
 static void I2Csearch(void)
 {
-	/*int i=0;
 	uint8_t timeout;
 	uint16_t ack;
+	uint32_t error;
+	uint32_t data;
 
 	if(checkshort())
 	{
-		printf("no pullup or short");
-		modeConfig.error=1;
+		printf("No pullup or short\r\n");
+		system_config.error=1;
 		return;
 	}
 
 	printf("Found:\r\n");
 
-	for(i=0; i<256; i++)
+	pio_i2c_rx_enable(pio, pio_state_machine, false);
+
+	for(uint8_t i=0; i<256; i++)
 	{
-		i2c_send_start(BP_I2C);
-
-		timeout=100; // 1 us enough?
-
-		// wait for start (SB), switched to master (MSL) and a taken bus (BUSY)
-		while ((!((I2C_SR1(BP_I2C)&I2C_SR1_SB)&&(I2C_SR2(BP_I2C)&(I2C_SR2_MSL|I2C_SR2_BUSY))))&&timeout) { timeout--; delayus(1); }
-
-		if(timeout==0)
+		error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfff);
+		if(error)
 		{
-				
+			//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
+			//return;
+			pio_i2c_resume_after_error(pio, pio_state_machine);
 		}
+		ack=pio_i2c_write_timeout(pio, pio_state_machine, i, 0xfff);
 
-		i2c_send_data(BP_I2C, i);
+		if(ack)
+		{
+			pio_i2c_resume_after_error(pio, pio_state_machine);
+		}
+		//TODO: if read address then read one and NACK
+		if(!ack && (i&0x1))
+		{
+			error=pio_i2c_read_timeout(pio, pio_state_machine, &data, false, 0xfff);
+			if(error)
+			{
+				//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
+				//return;
+				pio_i2c_resume_after_error(pio, pio_state_machine);
+			}	
+		} 
+		
+		error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xfff);
+		if(error)
+		{
+			//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
+			//return;
+			pio_i2c_resume_after_error(pio, pio_state_machine);
+		}		
 
-		timeout=100;	// 100us enough?
+		if(!ack) printf("0x%02X(%c) ", i, ((i&0x1)?'R':'W'));
 
-		while(((!(I2C_SR1(BP_I2C)&I2C_SR1_ADDR))&&(!(I2C_SR1(BP_I2C)&I2C_SR1_AF)))&&timeout) { timeout--; delayus(1); } // or BTF??
+	}
 
-		ack=!(I2C_SR1(BP_I2C)&I2C_SR1_AF);
 
-		if(ack) printf("0x%02X(%c) ", i, ((i&0x1)?'R':'W'));
-
-		ack=I2C_SR1(BP_I2C);				// need to read both status registers??
-		ack=I2C_SR2(BP_I2C);
-		I2C_SR1(BP_I2C)=0;				// clear all errors/flags
-		I2C_SR2(BP_I2C)=0;				// clear all errors/flags
-
-		i2c_send_stop(BP_I2C);
-	}*/
-
+	/*
+	uint32_t data;
 	printf("\r\nI2C Bus Scan\r\n");
     printf("   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\r\n");
 
@@ -485,11 +498,14 @@ static void I2Csearch(void)
         if (reserved_addr(addr)) 
             result = -1;
         else
-            result = pio_i2c_read_blocking(pio, pio_state_machine, addr, NULL, 0);
+            //result = pio_i2c_read_blocking(pio, pio_state_machine, addr, NULL, 0);
+			//pio_i2c_read_timeout(pio, pio_state_machine, &data, true, 0xffff);
+			result=pio_i2c_read_blocking_timeout(pio, pio_state_machine, addr, &data, 0, 0xffff); 
+
 
         printf(result < 0 ? "." : "@");
         printf(addr % 16 == 15 ? "\r\n" : "  ");
-    }
+    }*/
     printf("Done.\r\n");
 }
 

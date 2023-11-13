@@ -16,12 +16,6 @@ bool pio_i2c_check_error(PIO pio, uint sm) {
     return pio_interrupt_get(pio, sm);
 }
 
-void pio_i2c_resume_after_error(PIO pio, uint sm) {
-    pio_sm_drain_tx_fifo(pio, sm);
-    pio_sm_exec(pio, sm, (pio->sm[sm].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >> PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
-    pio_interrupt_clear(pio, sm);
-}
-
 void pio_i2c_rx_enable(PIO pio, uint sm, bool en) 
 {
     if (en)
@@ -155,6 +149,19 @@ uint32_t pio_i2c_restart_timeout(PIO pio, uint sm, uint32_t timeout)
 }
 
 
+void pio_i2c_resume_after_error(PIO pio, uint sm) {
+    pio_sm_drain_tx_fifo(pio, sm);
+    pio_sm_exec(pio, sm, (pio->sm[sm].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >> PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
+    pio_interrupt_clear(pio, sm);
+    pio_i2c_rx_enable(pio, sm, false); 
+    pio_i2c_stop_timeout(pio, sm, 0xff);
+    pio_i2c_stop_timeout(pio, sm, 0xff);
+    pio_i2c_stop_timeout(pio, sm, 0xff);
+    pio_sm_drain_tx_fifo(pio, sm);
+    pio_sm_exec(pio, sm, (pio->sm[sm].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >> PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
+    pio_interrupt_clear(pio, sm);
+}
+
 uint32_t pio_i2c_write_timeout(PIO pio, uint sm, uint32_t data, uint32_t timeout)
 {
     uint32_t error;
@@ -223,7 +230,7 @@ uint32_t pio_i2c_write_blocking_timeout(PIO pio, uint sm, uint8_t addr, uint8_t 
     {
         //err = -1; 
         pio_i2c_resume_after_error(pio, sm);
-        pio_i2c_stop_timeout(pio, sm, timeout);
+        //pio_i2c_stop_timeout(pio, sm, timeout);
         return 1;
     }
     return 0;
@@ -274,7 +281,7 @@ uint32_t pio_i2c_read_blocking_timeout(PIO pio, uint sm, uint8_t addr, uint8_t *
     if(pio_i2c_check_error(pio, sm)) 
     {
         pio_i2c_resume_after_error(pio, sm);
-        pio_i2c_stop_timeout(pio, sm, timeout);
+        //pio_i2c_stop_timeout(pio, sm, timeout);
         return 1;
     }
     return 0;
@@ -310,7 +317,7 @@ int pio_i2c_write_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *txbuf, uint 
     if (pio_i2c_check_error(pio, sm)) {
         err = -1; 
         pio_i2c_resume_after_error(pio, sm);
-        pio_i2c_stop(pio, sm);
+        //pio_i2c_stop(pio, sm);
     }
     return err;
 }
@@ -348,7 +355,7 @@ int pio_i2c_read_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *rxbuf, uint l
     if (pio_i2c_check_error(pio, sm)) {
         err = -1;
         pio_i2c_resume_after_error(pio, sm);
-        pio_i2c_stop(pio, sm);
+        //pio_i2c_stop(pio, sm);
     }
     return err;
 }

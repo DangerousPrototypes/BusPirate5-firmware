@@ -19,13 +19,13 @@
 
 /* MMC/SD command */
 #define CMD0	(0)			/* GO_IDLE_STATE */
-#define CMD1	(1)			/* SEND_OP_COND (MMC) */
-#define	ACMD41	(0x80+41)	/* SEND_OP_COND (SDC) */
+#define CMD1	(1)			/* SEND_OP_COND (MMC) */ 
+#define	ACMD41	(0x80+41)	/* SEND_OP_COND (SDC) */ //(1)
 #define CMD8	(8)			/* SEND_IF_COND */
 #define CMD9	(9)			/* SEND_CSD */
 #define CMD10	(10)		/* SEND_CID */
 #define CMD12	(12)		/* STOP_TRANSMISSION */
-#define ACMD13	(0x80+13)	/* SD_STATUS (SDC) */
+#define ACMD13	(0x80+13)	/* SD_STATUS (SDC) */ //(9)
 #define CMD16	(16)		/* SET_BLOCKLEN */
 #define CMD17	(17)		/* READ_SINGLE_BLOCK */
 #define CMD18	(18)		/* READ_MULTIPLE_BLOCK */

@@ -9,7 +9,7 @@
 
 #include <stdbool.h>
 
-#include "../modules/spi_nand.h"
+#include "../nand/spi_nand.h"
 
 // public function definitions
 int dhara_nand_is_bad(const struct dhara_nand *n, dhara_block_t b)

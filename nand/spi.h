@@ -19,20 +19,20 @@
 #define SPI_RET_NULL_PTR -2
 
 /// @brief Initializes the spi driver
-void spi_init(void);
+void nand_spi_init(void);
 
 /// @brief Writes data to the bus
 /// @note Caller is expected to drive the chip select line for the relevant device
-int spi_write(const uint8_t *write_buff, size_t write_len, uint32_t timeout_ms);
+int nand_spi_write(const uint8_t *write_buff, size_t write_len, uint32_t timeout_ms);
 
 /// @brief Reads data from the bus
 /// @note Caller is expected to drive the chip select line for the relevant device
 /// @note Transmits 0x00 on the MOSI line during the transaction
-int spi_read(uint8_t *read_buff, size_t read_len, uint32_t timeout_ms);
+int nand_spi_read(uint8_t *read_buff, size_t read_len, uint32_t timeout_ms);
 
 /// @brief Writes/reads data to/from to the bus
 /// @note Caller is expected to drive the chip select line for the relevant device
-int spi_write_read(const uint8_t *write_buff, uint8_t *read_buff, size_t transfer_len,
+int nand_spi_write_read(const uint8_t *write_buff, uint8_t *read_buff, size_t transfer_len,
                    uint32_t timeout_ms);
 
 #endif // __SPI_H

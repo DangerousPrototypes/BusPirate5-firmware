@@ -38,6 +38,7 @@
 #include "pico/lock_core.h"
 #include "helpers.h"
 #include "mode/binio.h"
+#include "nand/nand.h"
 
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
@@ -181,6 +182,10 @@ int main()
     multicore_fifo_push_blocking(0); 
     
     busy_wait_ms(100);
+
+    nand_init();
+    nand_mount();
+    while(1);
 
     enum bp_statmachine
     {

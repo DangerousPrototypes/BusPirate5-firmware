@@ -10,8 +10,8 @@
 #ifndef __NAND_FTL_DISKIO_H
 #define __NAND_FTL_DISKIO_H
 
-#include "../fatfs/diskio.h" // types from the diskio driver
-#include "../fatfs/ff.h"     // BYTE type
+//#include "../fatfs/diskio.h" // types from the diskio driver
+//#include "../fatfs/ff.h"     // BYTE type
 
 DSTATUS nand_ftl_diskio_initialize(void);
 DSTATUS nand_ftl_diskio_status(void);

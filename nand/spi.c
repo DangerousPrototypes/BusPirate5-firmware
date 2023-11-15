@@ -4,69 +4,69 @@
  * @brief		Implementation file of the spi module
  *
  */
+#include <stdint.h>
+#include "pico/stdlib.h"
+#include "pirate.h"
+#include "hardware/spi.h"
+#include "bio.h"
+#include "system_config.h"
+#include "ui/ui_term.h"
 
 #include "spi.h"
 
-#include "../st/ll/stm32l4xx_ll_bus.h"
-#include "../st/ll/stm32l4xx_ll_gpio.h"
-#include "../st/ll/stm32l4xx_ll_spi.h"
+//#include "../st/ll/stm32l4xx_ll_bus.h"
+//#include "../st/ll/stm32l4xx_ll_gpio.h"
+//#include "../st/ll/stm32l4xx_ll_spi.h"
 
 #include "sys_time.h"
 
-// defines
-#define SPI_INSTANCE SPI1
+#define M_SPI_PORT spi1
+#define M_SPI_CLK BIO6
+#define M_SPI_CDO BIO7
+#define M_SPI_CDI BIO4
+#define M_SPI_CS BIO5
 
-#define MOSI_PORT GPIOA
-#define MOSI_PIN  LL_GPIO_PIN_7
-#define MOSI_AF   LL_GPIO_AF_5
-
-#define MISO_PORT GPIOA
-#define MISO_PIN  LL_GPIO_PIN_6
-#define MISO_AF   LL_GPIO_AF_5
-
-#define SCK_PORT GPIOA
-#define SCK_PIN  LL_GPIO_PIN_1
-#define SCK_AF   LL_GPIO_AF_5
+static const char pin_labels[][5]={
+	"SCLK",
+	"CDO",
+	"CDI",
+	"CS"
+};
 
 // public function definitions
-void spi_init(void)
+void nand_spi_init(void)
 {
-    // enable peripheral clocks
-    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
-    if (!LL_AHB2_GRP1_IsEnabledClock(LL_AHB2_GRP1_PERIPH_GPIOA))
-        LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
+    uint64_t baudrate=spi_init(M_SPI_PORT, 1000*1000*64);
+	printf("\r\n%s%s:%s %uMHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(), baudrate/1000000);
+	spi_set_format(M_SPI_PORT,8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
+	
+	//set buffers to correct position
+	bio_buf_output(M_SPI_CLK); //sck
+	bio_buf_output(M_SPI_CDO); //tx
+	bio_buf_input(M_SPI_CDI); //rx
 
-    // configure pins
-    LL_GPIO_SetPinMode(MOSI_PORT, MOSI_PIN, LL_GPIO_MODE_ALTERNATE);
-    LL_GPIO_SetAFPin_0_7(MOSI_PORT, MOSI_PIN, MOSI_AF);
-    LL_GPIO_SetPinSpeed(MOSI_PORT, MOSI_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
-    LL_GPIO_SetPinPull(MOSI_PORT, MOSI_PIN, LL_GPIO_PULL_DOWN);
+	gpio_put(bio2bufiopin[M_SPI_CDO], 1);
+	//assign spi functon to io pins
+	bio_set_function(M_SPI_CLK, GPIO_FUNC_SPI); //sck
+	bio_set_function(M_SPI_CDO, GPIO_FUNC_SPI); //tx
+	bio_set_function(M_SPI_CDI, GPIO_FUNC_SPI); //rx
 
-    LL_GPIO_SetPinMode(MISO_PORT, MISO_PIN, LL_GPIO_MODE_ALTERNATE);
-    LL_GPIO_SetAFPin_0_7(MISO_PORT, MISO_PIN, MISO_AF);
-    LL_GPIO_SetPinSpeed(MISO_PORT, MISO_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
-    LL_GPIO_SetPinPull(MISO_PORT, MISO_PIN, LL_GPIO_PULL_DOWN);
+	//cs
+	bio_set_function(M_SPI_CS, GPIO_FUNC_SIO);
+	bio_output(M_SPI_CS);
+	bio_put(M_SPI_CS, 1); 
 
-    LL_GPIO_SetPinMode(SCK_PORT, SCK_PIN, LL_GPIO_MODE_ALTERNATE);
-    LL_GPIO_SetAFPin_0_7(SCK_PORT, SCK_PIN, SCK_AF);
-    LL_GPIO_SetPinSpeed(SCK_PORT, SCK_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
-    LL_GPIO_SetPinPull(SCK_PORT, SCK_PIN, LL_GPIO_PULL_DOWN);
+	// 8bit and lsb/msb handled in UI.c
+	//dff=SPI_CR1_DFF_8BIT;
+	//lsbfirst=SPI_CR1_MSBFIRST;
+	system_bio_claim(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
+	system_bio_claim(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
+	system_bio_claim(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);
+	system_bio_claim(true, M_SPI_CS, BP_PIN_MODE, pin_labels[3]);
 
-    // configure SPI module
-    LL_SPI_SetBaudRatePrescaler(SPI_INSTANCE, LL_SPI_BAUDRATEPRESCALER_DIV2);
-    LL_SPI_SetTransferDirection(SPI_INSTANCE, LL_SPI_FULL_DUPLEX);
-    LL_SPI_SetClockPolarity(SPI_INSTANCE, LL_SPI_POLARITY_LOW);
-    LL_SPI_SetClockPhase(SPI_INSTANCE, LL_SPI_PHASE_1EDGE);
-
-    LL_SPI_SetDataWidth(SPI_INSTANCE, LL_SPI_DATAWIDTH_8BIT);
-    LL_SPI_SetNSSMode(SPI_INSTANCE, LL_SPI_NSS_SOFT);
-    LL_SPI_SetRxFIFOThreshold(SPI_INSTANCE, LL_SPI_RX_FIFO_TH_QUARTER);
-
-    LL_SPI_SetMode(SPI_INSTANCE, LL_SPI_MODE_MASTER);
-    LL_SPI_Enable(SPI_INSTANCE);
 }
 
-int spi_write(const uint8_t *write_buff, size_t write_len, uint32_t timeout_ms)
+int nand_spi_write(const uint8_t *write_buff, size_t write_len, uint32_t timeout_ms)
 {
     // validate input
     if (!write_buff) return SPI_RET_NULL_PTR;
@@ -75,27 +75,48 @@ int spi_write(const uint8_t *write_buff, size_t write_len, uint32_t timeout_ms)
     uint32_t start_time = sys_time_get_ms();
     for (int i = 0; i < write_len; i++) {
         // block until tx empty or timeout
-        while (!LL_SPI_IsActiveFlag_TXE(SPI_INSTANCE)) {
+        while (!spi_is_writable(M_SPI_PORT)) {
             if (sys_time_is_elapsed(start_time, timeout_ms)) {
                 return SPI_RET_TIMEOUT;
             }
         }
         // transmit data
-        LL_SPI_TransmitData8(SPI_INSTANCE, write_buff[i]);
-        // block until rx not empty
+        //LL_SPI_TransmitData8(SPI_INSTANCE, write_buff[i]);
+        spi_get_hw(M_SPI_PORT)->dr = write_buff[i];
+
+        /*// block until rx not empty
         while (!LL_SPI_IsActiveFlag_RXNE(SPI_INSTANCE)) {
             if (sys_time_is_elapsed(start_time, timeout_ms)) {
                 return SPI_RET_TIMEOUT;
             }
         }
         // read data to clear buffer
-        LL_SPI_ReceiveData8(SPI_INSTANCE);
+        LL_SPI_ReceiveData8(SPI_INSTANCE);*/
+        // Drain RX FIFO, then wait for shifting to finish (which may be *after*
+        // TX FIFO drains), then drain RX FIFO again
+        while(spi_is_readable(M_SPI_PORT))
+        {
+            (void)spi_get_hw(M_SPI_PORT)->dr;
+        }
+
+        while(spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
+        {
+            tight_loop_contents();
+        }
+
+        while(spi_is_readable(M_SPI_PORT))
+        {
+            (void)spi_get_hw(M_SPI_PORT)->dr;
+        }
+
+        // Don't leave overrun flag set
+        spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;        
     }
 
     return SPI_RET_OK;
 }
 
-int spi_read(uint8_t *read_buff, size_t read_len, uint32_t timeout_ms)
+int nand_spi_read(uint8_t *read_buff, size_t read_len, uint32_t timeout_ms)
 {
     // validate input
     if (!read_buff) return SPI_RET_NULL_PTR;
@@ -104,27 +125,29 @@ int spi_read(uint8_t *read_buff, size_t read_len, uint32_t timeout_ms)
     uint32_t start_time = sys_time_get_ms();
     for (int i = 0; i < read_len; i++) {
         // block until tx empty or timeout
-        while (!LL_SPI_IsActiveFlag_TXE(SPI_INSTANCE)) {
+        while (!spi_is_writable(M_SPI_PORT)) {
             if (sys_time_is_elapsed(start_time, timeout_ms)) {
                 return SPI_RET_TIMEOUT;
             }
         }
         // transmit data
-        LL_SPI_TransmitData8(SPI_INSTANCE, 0);
+        //LL_SPI_TransmitData8(SPI_INSTANCE, 0);
+        spi_get_hw(M_SPI_PORT)->dr = 0;
+
         // block until rx not empty
-        while (!LL_SPI_IsActiveFlag_RXNE(SPI_INSTANCE)) {
+        while (!spi_is_readable(M_SPI_PORT)) {
             if (sys_time_is_elapsed(start_time, timeout_ms)) {
                 return SPI_RET_TIMEOUT;
             }
         }
         // read data from buffer
-        read_buff[i] = LL_SPI_ReceiveData8(SPI_INSTANCE);
+        read_buff[i] = (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
     }
 
     return SPI_RET_OK;
 }
 
-int spi_write_read(const uint8_t *write_buff, uint8_t *read_buff, size_t transfer_len,
+int nand_spi_write_read(const uint8_t *write_buff, uint8_t *read_buff, size_t transfer_len,
                    uint32_t timeout_ms)
 {
     // validate input
@@ -134,21 +157,23 @@ int spi_write_read(const uint8_t *write_buff, uint8_t *read_buff, size_t transfe
     uint32_t start_time = sys_time_get_ms();
     for (int i = 0; i < transfer_len; i++) {
         // block until tx empty or timeout
-        while (!LL_SPI_IsActiveFlag_TXE(SPI_INSTANCE)) {
+        while (!spi_is_writable(M_SPI_PORT)) {
             if (sys_time_is_elapsed(start_time, timeout_ms)) {
                 return SPI_RET_TIMEOUT;
             }
         }
         // transmit data
-        LL_SPI_TransmitData8(SPI_INSTANCE, write_buff[i]);
+        //LL_SPI_TransmitData8(SPI_INSTANCE, write_buff[i]);
+        spi_get_hw(M_SPI_PORT)->dr = write_buff[i];
+
         // block until rx not empty
-        while (!LL_SPI_IsActiveFlag_RXNE(SPI_INSTANCE)) {
+        while (!spi_is_readable(M_SPI_PORT)) {
             if (sys_time_is_elapsed(start_time, timeout_ms)) {
                 return SPI_RET_TIMEOUT;
             }
         }
         // read data from buffer
-        read_buff[i] = LL_SPI_ReceiveData8(SPI_INSTANCE);
+        read_buff[i] = spi_get_hw(M_SPI_PORT)->dr;
     }
 
     return SPI_RET_OK;

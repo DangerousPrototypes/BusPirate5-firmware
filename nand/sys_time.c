@@ -4,12 +4,14 @@
  * @brief		Implementation file of the sys time module
  *
  */
-
+#include <stdint.h>
+#include "pico/stdlib.h"
+#include "pirate.h"
+#include "pico/time.h"
 #include "sys_time.h"
-
-#include "../st/ll/stm32l4xx_ll_utils.h"
-#include "../st/stm32l4xx.h"
-#include "../st/system_stm32l4xx.h"
+//#include "../st/ll/stm32l4xx_ll_utils.h"
+//#include "../st/stm32l4xx.h"
+//#include "../st/system_stm32l4xx.h"
 
 // defines
 #define SYSTICK_PREEMPT_PRIORITY 0
@@ -18,22 +20,27 @@
 // private variables
 uint32_t sys_time_ms = 0;
 
+bool _sys_time_increment(repeating_timer_t *mst) 
+{
+    sys_time_ms++;
+    return true;
+}
+
 // public function definitions
 void sys_time_init(void)
 {
     sys_time_ms = 0;
 
     // setup 1 ms sys tick
-    SysTick_Config((SystemCoreClock / 1000) - 1);
-    NVIC_SetPriority(SysTick_IRQn,
-                     NVIC_EncodePriority(NVIC_GetPriorityGrouping(), SYSTICK_PREEMPT_PRIORITY,
-                                         SYSTICK_SUB_PRIORITY));
-}
+    static repeating_timer_t mst;
+    add_repeating_timer_ms(-1, _sys_time_increment, NULL, &mst);
 
+}
+/*
 void _sys_time_increment(void)
 {
     sys_time_ms++;
-}
+}*/
 
 uint32_t sys_time_get_ms(void)
 {

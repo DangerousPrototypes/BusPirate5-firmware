@@ -5,14 +5,19 @@
  *
  */
 
-#include "spi_nand.h"
 
-#include <stdbool.h>
+
+//#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include "pico/stdlib.h"
+#include "pirate.h"
+#include "bio.h"
 
-#include "../st/ll/stm32l4xx_ll_bus.h"
-#include "../st/ll/stm32l4xx_ll_gpio.h"
+#include "spi_nand.h"
+
+//#include "../st/ll/stm32l4xx_ll_bus.h"
+//#include "../st/ll/stm32l4xx_ll_gpio.h"
 
 #include "spi.h"
 #include "sys_time.h"
@@ -67,6 +72,8 @@
 #define ROW_ADDRESS_BLOCK_SHIFT 6
 
 #define BAD_BLOCK_MARK 0
+
+#define M_SPI_CS BIO5
 
 // private types
 typedef union {
@@ -344,7 +351,7 @@ int spi_nand_clear(void)
 // private function definitions
 static void csel_setup(void)
 {
-    // enable peripheral clock
+    /*// enable peripheral clock
     if (!LL_AHB2_GRP1_IsEnabledClock(LL_AHB2_GRP1_PERIPH_GPIOB))
         LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
 
@@ -353,16 +360,22 @@ static void csel_setup(void)
     LL_GPIO_SetPinOutputType(CSEL_PORT, CSEL_PIN, LL_GPIO_OUTPUT_PUSHPULL);
     LL_GPIO_SetPinSpeed(CSEL_PORT, CSEL_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
     LL_GPIO_SetPinPull(CSEL_PORT, CSEL_PIN, LL_GPIO_PULL_NO);
+    */
+    //gpio_set_function(TFCARD_CS, GPIO_FUNC_SIO);
+    //gpio_put(TFCARD_CS, 1);
+    //gpio_set_dir(TFCARD_CS, GPIO_OUT);    
 }
 
 static void csel_deselect(void)
 {
-    LL_GPIO_SetOutputPin(CSEL_PORT, CSEL_PIN);
+    //LL_GPIO_SetOutputPin(CSEL_PORT, CSEL_PIN);
+    bio_put(M_SPI_CS, 1); 
 }
 
 static void csel_select(void)
 {
-    LL_GPIO_ResetOutputPin(CSEL_PORT, CSEL_PIN);
+    //LL_GPIO_ResetOutputPin(CSEL_PORT, CSEL_PIN);
+    bio_put(M_SPI_CS, 0); 
 }
 
 static int reset(void)
@@ -371,7 +384,7 @@ static int reset(void)
     uint8_t tx_data = CMD_RESET; // this is just a one-byte command
     // perform transaction
     csel_select();
-    int ret = spi_write(&tx_data, 1, OP_TIMEOUT);
+    int ret = nand_spi_write(&tx_data, 1, OP_TIMEOUT);
     csel_deselect();
     if (SPI_RET_OK != ret) return SPI_NAND_RET_BAD_SPI;
 
@@ -388,7 +401,7 @@ static int read_id(void)
     tx_data[0] = CMD_READ_ID;
     // perform transaction
     csel_select();
-    int ret = spi_write_read(tx_data, rx_data, READ_ID_TRANS_LEN, OP_TIMEOUT);
+    int ret = nand_spi_write_read(tx_data, rx_data, READ_ID_TRANS_LEN, OP_TIMEOUT);
     csel_deselect();
 
     // check spi return
@@ -418,7 +431,7 @@ static int set_feature(uint8_t reg, uint8_t data, uint32_t timeout)
     tx_data[FEATURE_DATA_INDEX] = data;
     // perform transaction
     csel_select();
-    int ret = spi_write(tx_data, FEATURE_TRANS_LEN, timeout);
+    int ret = nand_spi_write(tx_data, FEATURE_TRANS_LEN, timeout);
     csel_deselect();
 
     return (SPI_RET_OK == ret) ? SPI_NAND_RET_OK : SPI_NAND_RET_BAD_SPI;
@@ -433,7 +446,7 @@ static int get_feature(uint8_t reg, uint8_t *data_out, uint32_t timeout)
     tx_data[FEATURE_REG_INDEX] = reg;
     // perform transaction
     csel_select();
-    int ret = spi_write_read(tx_data, rx_data, FEATURE_TRANS_LEN, timeout);
+    int ret = nand_spi_write_read(tx_data, rx_data, FEATURE_TRANS_LEN, timeout);
     csel_deselect();
 
     // if good return, write data out
@@ -452,7 +465,7 @@ static int write_enable(uint32_t timeout)
     uint8_t cmd = CMD_WRITE_ENABLE;
     // perform transaction
     csel_select();
-    int ret = spi_write(&cmd, sizeof(cmd), timeout);
+    int ret = nand_spi_write(&cmd, sizeof(cmd), timeout);
     csel_deselect();
 
     return (SPI_RET_OK == ret) ? SPI_NAND_RET_OK : SPI_NAND_RET_BAD_SPI;
@@ -472,7 +485,7 @@ static int page_read(row_address_t row, uint32_t timeout)
     tx_data[3] = row.whole;
     // perform transaction
     csel_select();
-    int ret = spi_write(tx_data, PAGE_READ_TRANS_LEN, timeout);
+    int ret = nand_spi_write(tx_data, PAGE_READ_TRANS_LEN, timeout);
     csel_deselect();
     if (SPI_RET_OK != ret) return SPI_NAND_RET_BAD_SPI;
 
@@ -501,10 +514,10 @@ static int read_from_cache(column_address_t column, uint8_t *data_out, size_t re
     tx_data[3] = 0;
     // perform transaction
     csel_select();
-    int ret = spi_write(tx_data, READ_FROM_CACHE_TRANS_LEN, timeout);
+    int ret = nand_spi_write(tx_data, READ_FROM_CACHE_TRANS_LEN, timeout);
     if (SPI_RET_OK == ret) {
         timeout -= sys_time_get_elapsed(start);
-        ret = spi_read(data_out, read_len, timeout);
+        ret = nand_spi_read(data_out, read_len, timeout);
     }
     csel_deselect();
 
@@ -525,10 +538,10 @@ static int program_load(column_address_t column, const uint8_t *data_in, size_t 
     tx_data[2] = column;
     // perform transaction
     csel_select();
-    int ret = spi_write(tx_data, PROGRAM_LOAD_TRANS_LEN, timeout);
+    int ret = nand_spi_write(tx_data, PROGRAM_LOAD_TRANS_LEN, timeout);
     if (SPI_RET_OK == ret) {
         timeout -= sys_time_get_elapsed(start);
-        ret = spi_write(data_in, write_len, timeout);
+        ret = nand_spi_write(data_in, write_len, timeout);
     }
     csel_deselect();
 
@@ -548,10 +561,10 @@ static int program_load_random_data(column_address_t column, uint8_t *data_in, s
     tx_data[2] = column;
     // perform transaction
     csel_select();
-    int ret = spi_write(tx_data, PROGRAM_LOAD_TRANS_LEN, timeout);
+    int ret = nand_spi_write(tx_data, PROGRAM_LOAD_TRANS_LEN, timeout);
     if (SPI_RET_OK == ret) {
         timeout -= sys_time_get_elapsed(start);
-        ret = spi_write(data_in, write_len, timeout);
+        ret = nand_spi_write(data_in, write_len, timeout);
     }
     csel_deselect();
 
@@ -572,7 +585,7 @@ static int program_execute(row_address_t row, uint32_t timeout)
     tx_data[3] = row.whole;
     // perform transaction
     csel_select();
-    int ret = spi_write(tx_data, PAGE_READ_TRANS_LEN, timeout);
+    int ret = nand_spi_write(tx_data, PAGE_READ_TRANS_LEN, timeout);
     csel_deselect();
     if (SPI_RET_OK != ret) return SPI_NAND_RET_BAD_SPI;
 
@@ -605,7 +618,7 @@ static int block_erase(row_address_t row, uint32_t timeout)
     tx_data[3] = row.whole;
     // perform transaction
     csel_select();
-    int ret = spi_write(tx_data, BLOCK_ERASE_TRANS_LEN, timeout);
+    int ret = nand_spi_write(tx_data, BLOCK_ERASE_TRANS_LEN, timeout);
     csel_deselect();
     if (SPI_RET_OK != ret) return SPI_NAND_RET_BAD_SPI;
 

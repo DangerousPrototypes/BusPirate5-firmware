@@ -45,9 +45,11 @@ bool syntax_compile(struct opt_args *args)
     uint32_t i;
     char c;
     bool error=false;
+    uint32_t slot_cnt=0;
 
     out_cnt=0;
     in_cnt=0;
+
 
     for(i=0; i<SYN_MAX_LENGTH; i++)
     {
@@ -150,11 +152,11 @@ bool syntax_compile(struct opt_args *args)
                 
                 out_cnt++;
 
-                if(out_cnt>=SYN_MAX_LENGTH)
+                /*if(out_cnt>=SYN_MAX_LENGTH)
                 {
                     printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
                     return true;
-                }                             
+                } */                            
 
             }
 
@@ -238,13 +240,15 @@ bool syntax_compile(struct opt_args *args)
             //AUX high and low need to set function until changed to read again...
        }
 
-        out_cnt++;
+        slot_cnt+=out[out_cnt].repeat;
 
-        if(out_cnt>=SYN_MAX_LENGTH)
+        if(slot_cnt>=SYN_MAX_LENGTH)
         {
             printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
             return true;
         }
+
+        out_cnt++;
 
     }
 

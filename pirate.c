@@ -367,7 +367,7 @@ void core1_entry(void)
     // USB init
     if(system_config.terminal_usb_enable)
     {
-        tusb_init();
+        //tusb_init();
     }
 
     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
@@ -383,7 +383,7 @@ void core1_entry(void)
         //service (thread safe) tinyusb tasks
         if(system_config.terminal_usb_enable)
         {
-            tud_task(); // tinyusb device task
+            //tud_task(); // tinyusb device task
         }
 
         //service the terminal TX queue

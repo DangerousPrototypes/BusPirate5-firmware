@@ -24,8 +24,8 @@
 #include "nand/sys_time.h"
 //#include "modules/uart.h"
 
-#include "fatfs/nand/ff.h"
-#include "fatfs/nand/ffconf.h"
+#include "fatfs/ff.h"
+#include "fatfs/ffconf.h"
 
 // defines
 //#define STARTUP_LED_DURATION_MS 200
@@ -53,7 +53,7 @@ int nand_init(void)
     //led_set_output(true);
     //sys_time_delay(STARTUP_LED_DURATION_MS);
     //led_set_output(false);
-}
+}  
 
 bool nand_mount(void)
 {

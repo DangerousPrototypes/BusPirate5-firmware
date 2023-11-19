@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
+#include "opt_args.h"
+#include "psu.h"
 
 //#include "st/ll/stm32l4xx_ll_bus.h"
 //#include "st/ll/stm32l4xx_ll_rcc.h"
@@ -46,7 +48,7 @@ int nand_init(void)
     //uart_init();
     //shell_init();
     nand_spi_init();
-
+    uint32_t result=psu_set(3.3,100, false);
     // blink LED to let user know we're on
     //led_set_output(true);
     //sys_time_delay(STARTUP_LED_DURATION_MS);

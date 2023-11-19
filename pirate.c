@@ -132,7 +132,7 @@ int main()
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-    storage_mount();
+    //storage_mount();
 
     if(storage_load_config())
     {

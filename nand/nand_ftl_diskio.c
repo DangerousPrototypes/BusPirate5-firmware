@@ -8,8 +8,8 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 
-#include "../fatfs/ff.h"     // BYTE type
-#include "../fatfs/diskio.h" // types from the diskio driver
+#include "../fatfs/nand/ff.h"     // BYTE type
+#include "../fatfs/nand/diskio.h" // types from the diskio driver
 
 
 #include "nand/nand_ftl_diskio.h"

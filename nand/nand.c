@@ -24,8 +24,8 @@
 #include "nand/sys_time.h"
 //#include "modules/uart.h"
 
-#include "fatfs/ff.h"
-#include "fatfs/ffconf.h"
+#include "fatfs/nand/ff.h"
+#include "fatfs/nand/ffconf.h"
 
 // defines
 //#define STARTUP_LED_DURATION_MS 200
@@ -44,7 +44,7 @@ int nand_init(void)
 
     // init base modules
     //led_init();
-    //sys_time_init();
+    sys_time_init();
     //uart_init();
     //shell_init();
     nand_spi_init();

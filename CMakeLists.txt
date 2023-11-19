@@ -46,7 +46,9 @@ add_executable(bus_pirate
         mcu/rp2040.h mcu/rp2040.c
         printf-4.0.0/printf.c printf-4.0.0/printf.h
         font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
-        fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c fatfs/tf_card.c fatfs/tf_card.h
+        fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 
+        #fatfs/nand/diskio.c fatfs/nand/diskio.h fatfs/nand/ff.c fatfs/nand/ff.h fatfs/nand/ffconf.h fatfs/nand/ffsystem.c fatfs/nand/ffunicode.c 
+        #fatfs/tf_card.c fatfs/tf_card.h
         pio_i2c.c pio_i2c.h
         storage.h storage.c
         ui/ui_term.c ui/ui_term.h  ui/ui_statusbar.c ui/ui_statusbar.h

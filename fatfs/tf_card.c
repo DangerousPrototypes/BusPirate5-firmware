@@ -1,4 +1,4 @@
-#include "tf_card.h"
+#include "fatfs/tf_card.h"
 
 #include "pico.h"
 #include "pico/stdlib.h"
@@ -8,8 +8,8 @@
 #include "pirate.h"
 #include "system_config.h"
 
-#include "ff.h"
-#include "diskio.h"
+#include "fatfs/ff.h"
+#include "fatfs/diskio.h"
 
 /*--------------------------------------------------------------------------
 

@@ -59,7 +59,7 @@ uint32_t sys_time_get_elapsed(uint32_t start)
 //  current time not overlapped, end time overlapped
 //  all above cases when duration is 0
 bool sys_time_is_elapsed(uint32_t start, uint32_t duration_ms)
-{
+ {
     return (sys_time_get_elapsed(start) >= duration_ms);
 }
 

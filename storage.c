@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pirate.h"
@@ -13,6 +14,7 @@
 #include "ui/ui_term.h"
 #include "mjson/mjson.h"
 #include "storage.h"
+#include "nand/mem.h"
 
 
 FATFS fs;		/* FatFs work area needed for each volume */
@@ -58,6 +60,15 @@ void storage_init(void)
     gpio_set_dir(TFCARD_CS, GPIO_OUT);    
 }
 
+
+
+void storage_unmount(void)
+{
+    system_config.storage_available=false;
+    system_config.storage_mount_error=0;
+    printf("Storage removed\r\n");
+}
+
 bool storage_detect(void)
 {        
     //TF flash card detect is measued through the analog mux for lack of IO pins....
@@ -67,21 +78,14 @@ bool storage_detect(void)
         system_config.storage_mount_error==0
     )
     {
-        //show a status message (TF flash card mounted: XXGB FAT32)
-        fr = f_mount(&fs, "", 1);
-        if (fr != FR_OK) {
-            system_config.storage_available=false;
-            system_config.storage_mount_error=fr;
-            printf("Mount error %d\r\n", fr);
+        if(storage_mount())
+        {
+            printf("Storage mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
         }
         else
         {
-            system_config.storage_available=true;
-            system_config.storage_fat_type=fs.fs_type;
-            system_config.storage_size=fs.csize * fs.n_fatent * 512E-9;
-            printf("TF flash card mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
-        }        
-
+            printf("Mount error %d\r\n", system_config.storage_mount_error);
+        }
     }
 
     //card removed, unmount, look for fresh insert next time
@@ -89,19 +93,17 @@ bool storage_detect(void)
         (system_config.storage_available==true || system_config.storage_mount_error!=0)
     )
     {
-        system_config.storage_available=false;
-        system_config.storage_mount_error=0;
-        printf("TF flash card removed\r\n");
+        storage_unmount();
 
     }
     return true;
 }
 
+
 bool storage_mount(void)
 {
     fr = f_mount(&fs, "", 1);
     if (fr != FR_OK) {
-        //printf("Mount error %d\r\n", fr);
         system_config.storage_available=0;
         system_config.storage_mount_error=fr;
         return false;
@@ -110,31 +112,8 @@ bool storage_mount(void)
     {
         system_config.storage_available=1;
         system_config.storage_fat_type=fs.fs_type;
-        system_config.storage_size=fs.csize * fs.n_fatent * 512E-9;
+        system_config.storage_size=fs.csize * fs.n_fatent * 2048E-9; //512E-9;
         return true;
-        /*printf("Mount ok\r\n");
-
-        switch (fs.fs_type) {
-            case FS_FAT12:
-                printf("Type is FAT12\r\n");
-                break;
-            case FS_FAT16:
-                printf("Type is FAT16\r\n");
-                break;
-            case FS_FAT32:
-                printf("Type is FAT32\r\n");
-                break;
-            case FS_EXFAT:
-                printf("Type is EXFAT\r\n");
-                break;
-            default:
-                printf("Type is unknown\r\n");
-                break;
-        }
-
-        printf("Card size: %7.2f GB (GB = 1E9 bytes)\r\n\r\n", fs.csize * fs.n_fatent * 512E-9);
-        */
-        
     }
 
 }
@@ -285,15 +264,15 @@ void list_dir(opt_args (*args), struct command_result *res)
         {
             fr = f_readdir(&dir, &fno);                   /* Read a directory item */
             if(fr != FR_OK || fno.fname[0] == 0) break;  /* Error or end of dir */
-            
+            strlwr(fno.fname);
             if(fno.fattrib & AM_DIR) 
-            {            /* Directory */
+            {   /* Directory */
                 printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
                 ndir++;
             }
             else
-            {                               /* File */
-                printf("%s%10llu %s%s%s\r\n", 
+            {   /* File */
+                printf("%s%10u %s%s%s\r\n", 
                 ui_term_color_prompt(),fno.fsize, ui_term_color_info(),fno.fname, ui_term_color_reset());
                 nfile++;
             }
@@ -309,7 +288,34 @@ void list_dir(opt_args (*args), struct command_result *res)
     return; // (uint32_t) res;
 }
 
+void storage_format(opt_args (*args), struct command_result *res){
 
+        uint8_t *work_buffer = mem_alloc(FF_MAX_SS);
+        if (!work_buffer) {
+            printf("Unable to allocate format work buffer. File system not created.\r\n");
+        }
+        else {
+            // make the file system
+            fr = f_mkfs("", 0, work_buffer, FF_MAX_SS);
+            if (FR_OK != fr) {
+                printf("Format failed, result: %d\r\n", fr); // fs make failure
+            }
+            else {
+                printf("Format succeeded!\r\n"); // fs make success
+                // retry mount
+                if(storage_mount())
+                {
+                    printf("Storage mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
+                }
+                else
+                {
+                    printf("Mount error %d\r\n", system_config.storage_mount_error);
+                }
+            }
+
+            mem_free(work_buffer);
+        }
+}
 
 
 

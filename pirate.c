@@ -132,12 +132,13 @@ int main()
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-    //storage_mount();
+    /*nand_init();
+    storage_mount();
 
     if(storage_load_config())
     {
         system_config.config_loaded_from_file=true;
-    }
+    }*/
 
     // RGB LEDs pins, pio, set to black
     //multicore_fifo_push_blocking(0x01);
@@ -183,9 +184,15 @@ int main()
     
     busy_wait_ms(100);
 
+    //nand_init();
+    //nand_mount();
+
     nand_init();
-    nand_mount();
-    while(1);
+    storage_mount();
+    if(storage_load_config())
+    {
+        system_config.config_loaded_from_file=true;
+    }
 
     enum bp_statmachine
     {
@@ -367,7 +374,7 @@ void core1_entry(void)
     // USB init
     if(system_config.terminal_usb_enable)
     {
-        //tusb_init();
+        tusb_init();
     }
 
     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
@@ -383,7 +390,7 @@ void core1_entry(void)
         //service (thread safe) tinyusb tasks
         if(system_config.terminal_usb_enable)
         {
-            //tud_task(); // tinyusb device task
+            tud_task(); // tinyusb device task
         }
 
         //service the terminal TX queue

@@ -164,10 +164,12 @@ int spi_nand_init(void)
     csel_setup();
 
     // reset
-    sys_time_delay(RESET_DELAY);
+    //sys_time_delay(RESET_DELAY);
+    busy_wait_ms(RESET_DELAY);
     int ret = reset();
     if (SPI_NAND_RET_OK != ret) return ret;
-    sys_time_delay(RESET_DELAY);
+    //sys_time_delay(RESET_DELAY);
+    busy_wait_ms(RESET_DELAY);
 
     // read id
     ret = read_id();

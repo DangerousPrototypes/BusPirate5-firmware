@@ -36,8 +36,8 @@ static const char pin_labels[][5]={
 // public function definitions
 void nand_spi_init(void)
 {
-    uint64_t baudrate=spi_init(M_SPI_PORT, 1000*1000*64);
-	printf("\r\n%s%s:%s %uMHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(), baudrate/1000000);
+    uint64_t baudrate=spi_init(M_SPI_PORT, 1000*1000*1);
+	//printf("\r\n%s%s:%s %uMHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(), baudrate/1000000);
 	spi_set_format(M_SPI_PORT,8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
 	
 	//set buffers to correct position

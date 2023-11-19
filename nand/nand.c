@@ -44,7 +44,7 @@ int nand_init(void)
 
     // init base modules
     //led_init();
-    sys_time_init();
+    //sys_time_init();
     //uart_init();
     //shell_init();
     nand_spi_init();
@@ -75,7 +75,14 @@ bool nand_mount(void)
         }
         else {
             // make the file system
-            res = f_mkfs("", 0, work_buffer, FF_MAX_SS);
+            MKFS_PARM opt;
+            opt.fmt = FM_FAT32;
+            //opt.n_fat = 1;
+            //opt.align = 0;
+            //opt.au_size = 0;
+            //opt.n_root = 0;
+
+            res = f_mkfs("", &opt, work_buffer, FF_MAX_SS);
             if (FR_OK != res) {
                 printf("f_mkfs failed, result: %d.", res); // fs make failure
             }

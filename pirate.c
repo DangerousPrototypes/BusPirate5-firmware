@@ -39,6 +39,9 @@
 #include "helpers.h"
 #include "mode/binio.h"
 #include "nand/nand.h"
+#include "../fatfs/diskio.h" // types from the diskio driver
+#include "../fatfs/ff.h"     // BYTE type
+#include "nand/nand_ftl_diskio.h"
 
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
@@ -132,17 +135,17 @@ int main()
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-    nand_init();
+/*    nand_init();
     storage_mount();
 
     if(storage_load_config())
     {
         system_config.config_loaded_from_file=true;
-    }
+    }*/
 
     // RGB LEDs pins, pio, set to black
     //this must be done after the 74hct245 is enabled during shift register setup
-    rgb_init();
+    //rgb_init();
 
     // Read psu DAC resolution and check error
     psu_setup(); //TODO: handle error
@@ -176,13 +179,21 @@ int main()
 	psu_reset();    // disable psu and reset pin label
     psu_cleanup();  // clear any errors
 
+    nand_init();
+    //nand_ftl_diskio_initialize();
+    storage_mount();
+    //nand_mount();
+    if(storage_load_config())
+    {
+        system_config.config_loaded_from_file=true;
+    }
+
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
     multicore_fifo_push_blocking(0); 
-    
-    busy_wait_ms(100);
-
+    // wait for init to complete  
+    while(multicore_fifo_pop_blocking()!=0xff);
 
     enum bp_statemachine
     {
@@ -358,6 +369,8 @@ void core1_entry(void)
     // input buttons init
     //buttons_init();
 
+    rgb_init();
+
     // wait for main core to signal start
     while(multicore_fifo_pop_blocking()!=0);
 
@@ -374,6 +387,8 @@ void core1_entry(void)
     {
         rx_uart_init_irq();
     }
+
+    multicore_fifo_push_blocking(0xff); 
 
     while(1)
     {
@@ -488,16 +503,18 @@ void spi_busy_wait(bool enable)
     }
 
     do{
-        uint32_t save = spin_lock_blocking(spi_spin_lock);
+        //uint32_t save = spin_lock_unsafe_blocking(spi_spin_lock);
+        spin_lock_unsafe_blocking(spi_spin_lock);
         if(busy)
         {
-            spin_unlock(spi_spin_lock, save);
-            //printf("Spinlock busy\r\n");
+            spin_unlock_unsafe(spi_spin_lock);
+            //spin_unlock(spi_spin_lock, save);
         }
         else
         {
             busy=true;
-            spin_unlock(spi_spin_lock, save);
+            spin_unlock_unsafe(spi_spin_lock);
+            //spin_unlock(spi_spin_lock, save);
             return;
         }
 

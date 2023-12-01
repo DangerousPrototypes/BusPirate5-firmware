@@ -83,6 +83,8 @@ target_link_libraries(bus_pirate pico_stdlib)
 
 target_include_directories(bus_pirate PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )
 
+string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
+
 # Add any user requested libraries
 target_link_libraries(bus_pirate
         hardware_spi

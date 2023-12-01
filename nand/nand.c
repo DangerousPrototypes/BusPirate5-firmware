@@ -18,7 +18,7 @@
 //static void clock_config(void);
 
 // private variables
-//FATFS nand_fs; // file system object
+FATFS nand_fs; // file system object
 
 // application main function
 int nand_init(void)
@@ -27,19 +27,20 @@ int nand_init(void)
     //clock_config();
     sys_time_init();
 }  
-/*
+
 bool nand_mount(void)
 {
     
     // mount file system
     FRESULT res = f_mount(&nand_fs, "", 1);
     if (FR_OK == res) {
-        printf("f_mount succeeded!");
+        //printf("f_mount succeeded!");
     }
     else {
-        printf("f_mount failed, result: %d.", res);
+        //printf("f_mount failed, result: %d.", res);
     }
 
+    #if 0
     // if filesystem mount failed due to no filesystem, attempt to make it
     if (FR_NO_FILESYSTEM == res) {
         printf("No filesystem present. Attempting to make file system..");
@@ -75,6 +76,6 @@ bool nand_mount(void)
             mem_free(work_buffer);
         }
     }
-
-}*/
+    #endif
+}
 

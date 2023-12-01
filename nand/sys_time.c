@@ -66,6 +66,5 @@ bool sys_time_is_elapsed(uint32_t start, uint32_t duration_ms)
 void sys_time_delay(uint32_t duration_ms)
 {
     uint32_t start = sys_time_ms;
-    while (!sys_time_is_elapsed(start, duration_ms))
-        ;
+    while (!sys_time_is_elapsed(start, duration_ms));
 }

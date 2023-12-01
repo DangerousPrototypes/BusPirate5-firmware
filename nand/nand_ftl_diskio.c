@@ -35,14 +35,14 @@ DSTATUS nand_ftl_diskio_initialize(void)
     // init flash management stack
     int ret = spi_nand_init();
     if (SPI_NAND_RET_OK != ret) {
-        printf("spi_nand_init failed, status: %d.", ret);
+        //printf("spi_nand_init failed, status: %d.", ret);
         return STA_NOINIT;
     }
     // init flash translation layer
     dhara_map_init(&map, &nand, page_buffer, 4);
     dhara_error_t err = DHARA_E_NONE;
     ret = dhara_map_resume(&map, &err);
-    printf("dhara resume return: %d, error: %d", ret, err);
+    //printf("dhara resume return: %d, error: %d", ret, err);
     // map_resume will return a bad status in the case of an empty map, however this just
     // means that the file system is empty
 
@@ -68,7 +68,7 @@ DRESULT nand_ftl_diskio_read(BYTE *buff, LBA_t sector, UINT count)
     for (int i = 0; i < count; i++) {
         int ret = dhara_map_read(&map, sector, buff, &err);
         if (ret) {
-            printf("dhara read failed: %d, error: %d", ret, err);
+            //printf("dhara read failed: %d, error: %d", ret, err);
             return RES_ERROR;
         }
         buff += SPI_NAND_PAGE_SIZE; // sector size == page size
@@ -85,7 +85,7 @@ DRESULT nand_ftl_diskio_write(const BYTE *buff, LBA_t sector, UINT count)
     for (int i = 0; i < count; i++) {
         int ret = dhara_map_write(&map, sector, buff, &err);
         if (ret) {
-            printf("dhara write failed: %d, error: %d", ret, err);
+            //printf("dhara write failed: %d, error: %d", ret, err);
             return RES_ERROR;
         }
         buff += SPI_NAND_PAGE_SIZE; // sector size == page size
@@ -104,14 +104,14 @@ DRESULT nand_ftl_diskio_ioctl(BYTE cmd, void *buff)
             ;
             int ret = dhara_map_sync(&map, &err);
             if (ret) {
-                printf("dhara sync failed: %d, error: %d", ret, err);
+                //printf("dhara sync failed: %d, error: %d", ret, err);
                 return RES_ERROR;
             }
             break;
         case GET_SECTOR_COUNT:;
             ;
             dhara_sector_t sector_count = dhara_map_capacity(&map);
-            printf("dhara capacity: %d", sector_count);
+            //printf("dhara capacity: %d", sector_count);
             LBA_t *sector_count_out = (LBA_t *)buff;
             *sector_count_out = sector_count;
             break;
@@ -133,7 +133,7 @@ DRESULT nand_ftl_diskio_ioctl(BYTE cmd, void *buff)
             while (start <= end) {
                 int ret = dhara_map_trim(&map, start, &err);
                 if (ret) {
-                    printf("dhara trim failed: %d, error: %d", ret, err);
+                    //printf("dhara trim failed: %d, error: %d", ret, err);
                     return RES_ERROR;
                 }
                 start++;

@@ -70,7 +70,7 @@ int main()
     shift_init();
 
     //test for PCB revision
-    gpio_set_function(23, GPIO_FUNC_SIO);
+    /*gpio_set_function(23, GPIO_FUNC_SIO);
     gpio_set_dir(23,true);
     gpio_put(23,true);
     busy_wait_ms(100);
@@ -83,8 +83,8 @@ int main()
     else
     {
         system_config.hardware_revision=8;
-    }
-    
+    }*/
+    system_config.hardware_revision=9;
     //init psu pins 
     psu_init();
    
@@ -113,8 +113,8 @@ int main()
         shift_set_clear_wait(PULLUP_EN,0);
     }    
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
-    shift_set_clear_wait( 0, DISPLAY_RESET);
-    busy_wait_ms(100);
+    shift_set_clear_wait(0, DISPLAY_RESET);
+    busy_wait_us(20);
     shift_set_clear_wait(DISPLAY_RESET,0);
     busy_wait_ms(100);
    
@@ -132,16 +132,15 @@ int main()
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-    /*nand_init();
+    nand_init();
     storage_mount();
 
     if(storage_load_config())
     {
         system_config.config_loaded_from_file=true;
-    }*/
+    }
 
     // RGB LEDs pins, pio, set to black
-    //multicore_fifo_push_blocking(0x01);
     //this must be done after the 74hct245 is enabled during shift register setup
     rgb_init();
 
@@ -184,14 +183,8 @@ int main()
     
     busy_wait_ms(100);
 
-    nand_init();
-    storage_mount();
-    if(storage_load_config())
-    {
-        system_config.config_loaded_from_file=true;
-    }
 
-    enum bp_statmachine
+    enum bp_statemachine
     {
         BP_SM_DISPLAY_MODE,
         BP_SM_GET_INPUT,

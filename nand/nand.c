@@ -8,55 +8,29 @@
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "opt_args.h"
-#include "psu.h"
-
-//#include "st/ll/stm32l4xx_ll_bus.h"
-//#include "st/ll/stm32l4xx_ll_rcc.h"
-//#include "st/ll/stm32l4xx_ll_system.h"
-//#include "st/ll/stm32l4xx_ll_utils.h"
-//#include "st/stm32_assert.h"
-
-//#include "modules/led.h"
 #include "nand/mem.h"
-//#include "modules/shell.h"
 #include "nand/spi.h"
 #include "nand/sys_time.h"
-//#include "modules/uart.h"
-
 #include "fatfs/ff.h"
 #include "fatfs/ffconf.h"
-
-// defines
-//#define STARTUP_LED_DURATION_MS 200
 
 // private function prototypes
 //static void clock_config(void);
 
 // private variables
-FATFS nand_fs; // file system object
+//FATFS nand_fs; // file system object
 
 // application main function
 int nand_init(void)
 {
     // setup clock
     //clock_config();
-
-    // init base modules
-    //led_init();
-    //sys_time_init();
-    //uart_init();
-    //shell_init();
-    nand_spi_init();
-    uint32_t result=psu_set(3.3,100, false);
-    // blink LED to let user know we're on
-    //led_set_output(true);
-    //sys_time_delay(STARTUP_LED_DURATION_MS);
-    //led_set_output(false);
+    sys_time_init();
 }  
-
+/*
 bool nand_mount(void)
 {
+    
     // mount file system
     FRESULT res = f_mount(&nand_fs, "", 1);
     if (FR_OK == res) {
@@ -102,5 +76,5 @@ bool nand_mount(void)
         }
     }
 
-}
+}*/
 

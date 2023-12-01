@@ -12,13 +12,7 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "bio.h"
-
 #include "spi_nand.h"
-
-//#include "../st/ll/stm32l4xx_ll_bus.h"
-//#include "../st/ll/stm32l4xx_ll_gpio.h"
-
 #include "spi.h"
 #include "sys_time.h"
 
@@ -73,7 +67,7 @@
 
 #define BAD_BLOCK_MARK 0
 
-#define M_SPI_CS BIO5
+#define M_SPI_CS TFCARD_CS
 
 // private types
 typedef union {
@@ -371,13 +365,15 @@ static void csel_setup(void)
 static void csel_deselect(void)
 {
     //LL_GPIO_SetOutputPin(CSEL_PORT, CSEL_PIN);
-    bio_put(M_SPI_CS, 1); 
+    gpio_put(M_SPI_CS, 1); 
+    spi_busy_wait(false);
 }
 
 static void csel_select(void)
 {
     //LL_GPIO_ResetOutputPin(CSEL_PORT, CSEL_PIN);
-    bio_put(M_SPI_CS, 0); 
+    spi_busy_wait(true);
+    gpio_put(M_SPI_CS, 0); 
 }
 
 static int reset(void)

@@ -11,29 +11,13 @@
 #include "bio.h"
 #include "system_config.h"
 #include "ui/ui_term.h"
-
 #include "spi.h"
-
-//#include "../st/ll/stm32l4xx_ll_bus.h"
-//#include "../st/ll/stm32l4xx_ll_gpio.h"
-//#include "../st/ll/stm32l4xx_ll_spi.h"
-
 #include "sys_time.h"
 
-#define M_SPI_PORT spi1
-#define M_SPI_CLK BIO6
-#define M_SPI_CDO BIO7
-#define M_SPI_CDI BIO4
-#define M_SPI_CS BIO5
-
-static const char pin_labels[][5]={
-	"SCLK",
-	"CDO",
-	"CDI",
-	"CS"
-};
+#define M_SPI_PORT BP_SPI_PORT
 
 // public function definitions
+/*
 void nand_spi_init(void)
 {
     uint64_t baudrate=spi_init(M_SPI_PORT, 1000*1000*1);
@@ -65,6 +49,7 @@ void nand_spi_init(void)
 	system_bio_claim(true, M_SPI_CS, BP_PIN_MODE, pin_labels[3]);
 
 }
+*/
 
 int nand_spi_write(const uint8_t *write_buff, size_t write_len, uint32_t timeout_ms)
 {

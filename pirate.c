@@ -184,9 +184,6 @@ int main()
     
     busy_wait_ms(100);
 
-    //nand_init();
-    //nand_mount();
-
     nand_init();
     storage_mount();
     if(storage_load_config())

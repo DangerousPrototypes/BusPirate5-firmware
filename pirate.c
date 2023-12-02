@@ -179,7 +179,7 @@ int main()
 	psu_reset();    // disable psu and reset pin label
     psu_cleanup();  // clear any errors
 
-    nand_init();
+    //nand_init();
     //nand_ftl_diskio_initialize();
     storage_mount();
     //nand_mount();

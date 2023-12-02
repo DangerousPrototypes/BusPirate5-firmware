@@ -30,7 +30,7 @@
 #include "system_config.h"
 #include "fatfs/ff.h"
 #include "fatfs/diskio.h"
-#include "fatfs/tf_card.h"
+//#include "fatfs/tf_card.h"
 #include "tusb.h"
 
 
@@ -45,7 +45,7 @@ bool ejected = false;
 // CFG_EXAMPLE_MSC_READONLY defined
 
 #define README_CONTENTS \
-"TF flash card is not inserted. Please insert one and restart the Buspirate\r\n\
+"No storage mounted.\r\n\
 Kind regards,\r\n\
 Ian and Chris\r\n\r\n\
 https://buspirate.com/"
@@ -54,9 +54,9 @@ https://buspirate.com/"
 enum
 {
   DISK_BLOCK_NUM  = 16, // 8KB is the smallest size that windows allow to mount
-  DISK_BLOCK_SIZE = 512
+  DISK_BLOCK_SIZE = 2048 //512
 };
-
+#define CFG_EXAMPLE_MSC_READONLY
 #ifdef CFG_EXAMPLE_MSC_READONLY
 const
 #endif
@@ -136,8 +136,8 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
 {
   (void) lun;
 
-  const char vid[] = "BusPirate";
-  const char pid[] = "TF Storage";
+  const char vid[] = "BP5";
+  const char pid[] = "Storage";
   const char rev[] = "1.0";
 
   memcpy(vendor_id  , vid, strlen(vid));
@@ -166,6 +166,7 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_siz
 {
   DRESULT res;
   (void) lun;
+
 
 	if(system_config.storage_available)
 	{
@@ -214,9 +215,10 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
   (void) lun;
 	//printf(" READ lba %d +%d siz %d\r\n", lba, offset, bufsize);
 
+
 	if(system_config.storage_available)
 	{
-		if(res=disk_read(0, buffer, lba, (bufsize/512)))		// assume no offset
+		if(res=disk_read(0, buffer, lba, (bufsize/DISK_BLOCK_SIZE)))		// assume no offset
 		{
 			printf(" READ ERROR %d \r\n", res);
 			bufsize=0;
@@ -224,6 +226,7 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
 	}
 	else
 	{
+
 		uint8_t const* addr = msc_disk[lba] + offset;
 		memcpy(buffer, addr, bufsize);
 	}
@@ -243,7 +246,7 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
 
 	if(system_config.storage_available)
 	{	
-		if(res=disk_write(0, buffer, lba, (bufsize/512)))		// assume no offset
+		if(res=disk_write(0, buffer, lba, (bufsize/DISK_BLOCK_SIZE)))		// assume no offset
 		{
 			printf(" WRITE ERROR %d \r\n", res);
 			bufsize=0;

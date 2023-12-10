@@ -110,6 +110,7 @@ bool ui_process_commands(void)
         }
 
         bool cmd_valid=false;
+        bool mode_cmd=false;
         uint32_t user_cmd_id=0;
         for(int i=0; i<count_of_cmd; i++)
         {  
@@ -121,6 +122,12 @@ bool ui_process_commands(void)
             }
         }
 
+        struct command_result result=result_blank;
+        if(!cmd_valid && modes[system_config.mode].protocol_command)
+        {
+	    if (modes[system_config.mode].protocol_command(&args[0], &result))
+	    	goto cmd_ok;
+        }
         if(!cmd_valid)
         {
             printf("%s", ui_term_color_notice());
@@ -163,9 +170,9 @@ bool ui_process_commands(void)
 
         //printf("Opt arg: %s\r\n",args[0].c);    
         //execute the command
-        struct command_result result=result_blank;
         exec_new[user_cmd_id].command(args, &result);
-        
+       
+cmd_ok:
         printf("%s\r\n", ui_term_color_reset());
 
         while(cmdln_try_peek(0,&c))

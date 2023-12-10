@@ -14,6 +14,10 @@
 #include "ui/ui_lcd.h"
 #include "ui/ui_flags.h"
 #include "system_monitor.h"
+#include "opt_args.h"
+#include "commands.h"
+#include "bytecode.h"
+#include "modes.h"
 
 void lcd_write_string(const FONT_INFO *font, const uint8_t *back_color, const uint8_t *text_color, const char *c, uint16_t fill_length);
 void lcd_write_labels(uint16_t left_margin, uint16_t top_margin, const FONT_INFO *font, const uint8_t *color, const char* c,uint16_t fill_length);
@@ -406,7 +410,12 @@ void lcd_screensaver_enable(void)
 
 void lcd_screensaver_disable(void)
 {
-    ui_lcd_update(UI_UPDATE_ALL);
+    if (modes[system_config.mode].protocol_lcd_update)
+    {
+        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
+    } else {
+        ui_lcd_update(UI_UPDATE_ALL);
+    }
     shift_set_clear_wait( (DISPLAY_BACKLIGHT), 0); 
 }
 

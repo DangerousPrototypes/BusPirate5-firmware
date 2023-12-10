@@ -164,7 +164,12 @@ int main()
     spi_set_baudrate(BP_SPI_PORT, 1000*1000*32);
     lcd_configure();
     monitor(system_config.psu);
-    ui_lcd_update(UI_UPDATE_ALL);
+    if (modes[system_config.mode].protocol_lcd_update)
+    {
+        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
+    } else {
+        ui_lcd_update(UI_UPDATE_ALL);
+    }
     shift_set_clear_wait( (DISPLAY_BACKLIGHT), 0); 
 
     translation_set(system_config.terminal_language); 
@@ -406,7 +411,12 @@ void core1_entry(void)
 
             if(!system_config.lcd_screensaver_active) 
             {
-                ui_lcd_update(update_flags);
+		if (modes[system_config.mode].protocol_lcd_update)
+                {
+		    modes[system_config.mode].protocol_lcd_update(update_flags);
+		} else {
+               	    ui_lcd_update(update_flags);
+		}
             }
             
             if(system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar && system_config.terminal_ansi_statusbar_update)

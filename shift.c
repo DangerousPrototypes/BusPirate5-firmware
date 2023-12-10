@@ -45,6 +45,12 @@ void shift_adc_select(uint8_t channel)
 {
     extern uint8_t shift_out[2];
 
+    {
+        extern uint8_t scope_running;
+	if (scope_running) {
+	    return;
+	}
+    }
     shift_out[1]&=~((uint8_t)(0b1111<<1)); //clear the amux control bits      
     shift_out[1]|=(uint8_t)(channel<<1); //set the amux channel bits
       

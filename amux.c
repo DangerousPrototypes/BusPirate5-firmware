@@ -5,12 +5,22 @@
 
 void amux_init(void)
 {
+    {
+        extern uint8_t scope_running;
+	if (scope_running) 
+	    return;
+    }
     //mcu_adc_init();
 	adc_init(); adc_gpio_init(AMUX_OUT); adc_gpio_init(CURRENT_SENSE);
 }
 
 void amux_sweep(void)
 {
+    {
+        extern uint8_t scope_running;
+	if (scope_running) 
+	    return;
+    }
     
     adc_select_input(AMUX_OUT_ADC);
     for(int i=0; i<HW_ADC_MUX_COUNT; i++)
@@ -33,6 +43,11 @@ void amux_sweep(void)
 
 uint32_t hw_adc_bio(uint8_t bio)
 {    
+    {
+        extern uint8_t scope_running;
+	if (scope_running) 
+	    return 0;
+    }
     //mcu_adc_select(AMUX_OUT_ADC);
     adc_select_input(AMUX_OUT_ADC);
     shift_adc_select(15); //to clear any charge from a floating pin

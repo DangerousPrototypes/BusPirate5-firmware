@@ -3,6 +3,8 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "bytecode.h"
+#include "opt_args.h"
+#include "commands.h"
 #include "modes.h"
 
 #include "mode/hiz.h"
@@ -44,6 +46,9 @@
 #endif
 #ifdef	BP_USE_LA
     #include "LA.h"
+#endif
+#ifdef	BP_USE_SCOPE
+    #include "mode/scope.h"
 #endif
 #ifdef 	BP_USE_DUMMY1
     #include "mode/dummy1.h"
@@ -476,6 +481,34 @@ struct _mode modes[MAXPROTO]={
     "LA",					// friendly name (promptname)
 },
 #endif
+#ifdef BP_USE_SCOPE
+{
+	nullfunc1_temp,			// start
+	nullfunc1_temp,			// start with read
+	nullfunc1_temp,			// stop
+	nullfunc1_temp,			// stop with read
+    nullfunc1_temp,			// write(/read) max 32 bit
+	nullfunc1_temp,			// read max 32 bit
+    nullfunc1,				// set clk high
+    nullfunc1,				// set clk low
+    nullfunc1,				// set dat hi
+    nullfunc1,				// set dat lo
+    nullfunc3,				// toggle dat (?)
+    nullfunc1,				// toggle clk (?)
+    nullfunc3,				// read 1 bit (?)
+    scope_periodic,			// service to regular poll whether a byte ahs arrived
+    scope_macro,			// macro
+    scope_setup,			// setup UI
+    scope_setup_exc,		// real setup
+    scope_cleanup,			// cleanup for HiZ
+    //scope_pins,				// display pin config
+    scope_settings,			// display settings
+    scope_help,				// display small help about the protocol
+    "Scope",				// friendly name (promptname)
+	scope_commands,			// scope specific commands
+	scope_lcd_update,		// scope screen write
+},
+#endif
 #ifdef BP_USE_DUMMY1
 {
     dummy1_start,				// start
@@ -504,8 +537,15 @@ struct _mode modes[MAXPROTO]={
 #endif
 
 };
-
-
-
+/* For Emacs:
+ * Local Variables:
+ * mode:c
+ * indent-tabs-mode:t
+ * tab-width:4
+ * c-basic-offset:4
+ * End:
+ * For VIM:
+ * vim:set softtabstop=4 shiftwidth=4 tabstop=4:
+ */
 
 

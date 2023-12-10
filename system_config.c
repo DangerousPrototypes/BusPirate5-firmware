@@ -2,8 +2,10 @@
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "bytecode.h"
-#include "modes.h"
 #include "pirate.h"
+#include "opt_args.h"
+#include "commands.h"
+#include "modes.h"
 #include "ui/ui_const.h"
 #include "system_config.h"
 #include "mjson/mjson.h"

@@ -25,9 +25,11 @@
 #include "bio.h"
 #include "system_config.h"
 #include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and bytecode stuff to a single helper file
+#include "pirate.h"
+#include "opt_args.h" //needed for same reason as bytecode and needs same fix
+#include "commands.h"
 #include "modes.h"
 #include "mode/binio.h"
-#include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "pullups.h"
 #include "psu.h"
 #include "amux.h"

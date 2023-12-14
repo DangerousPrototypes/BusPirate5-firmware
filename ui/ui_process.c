@@ -8,6 +8,7 @@
 #include "commands.h"
 #include "bytecode.h"
 #include "modes.h"
+#include "displays.h"
 #include "mode/hiz.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -123,13 +124,18 @@ bool ui_process_commands(void)
         }
 
         struct command_result result=result_blank;
-        if(!cmd_valid && modes[system_config.mode].protocol_command)
-        {
-	    if (modes[system_config.mode].protocol_command(&args[0], &result))
-	    	goto cmd_ok;
-        }
         if(!cmd_valid)
         {
+            if(displays[system_config.display].display_command)
+            {
+	        if (displays[system_config.display].display_command(&args[0], &result))
+	    	    goto cmd_ok;
+            }
+            if(modes[system_config.mode].protocol_command)
+            {
+	        if (modes[system_config.mode].protocol_command(&args[0], &result))
+	    	    goto cmd_ok;
+            }
             printf("%s", ui_term_color_notice());
             printf(t[T_CMDLN_INVALID_COMMAND], args[0].c);
             printf("%s\r\n", ui_term_color_reset());

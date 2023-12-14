@@ -125,7 +125,7 @@ bool monitor(bool current_sense)
     //TODO hw_adc helper functions - do conversion on request, and cache it????
     {
         extern uint8_t scope_running;
-	if (scope_running)
+	if (scope_running) 
 	    return 0;
     }
     amux_sweep();

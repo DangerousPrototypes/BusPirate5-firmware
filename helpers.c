@@ -11,6 +11,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
 #include "modes.h"
+#include "displays.h"
 #include "ui/ui_format.h"
 #include "ui/ui_cmdln.h"
 #include "pico/multicore.h"
@@ -533,6 +534,7 @@ void helpers_mode_help(opt_args (*args), struct command_result *res)
 
 void helpers_mode_periodic()
 {
+    displays[system_config.display].display_periodic();
     modes[system_config.mode].protocol_periodic();
 }
 

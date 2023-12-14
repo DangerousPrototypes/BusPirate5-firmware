@@ -26,7 +26,7 @@
 #include "system_config.h"
 #include "opt_args.h"
 #include "hardware/uart.h"
-#include "hiz.h"
+//#include "hiz.h"
 #include "bio.h"	
 #include "psu.h"
 #include "pullups.h"
@@ -50,6 +50,7 @@ extern const FONT_INFO hunter_12ptFontInfo;
 #include "ui/ui_parse.h"
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
+#include "amux.h"
 
 static int convert_trigger_position(int pos);
 
@@ -67,7 +68,6 @@ static int offset =0;
 static uint dma_chan;
 static unsigned char data_ready;
 static unsigned short stop_capture;
-static int int_count=0;
 static uint16_t last_value, trigger_level=24*0x0c05/50+1;
 static int32_t trigger_offset=50;		// offset from start of buffer in samples
 static int32_t trigger_position=100*10;  // trigger_offset in 1uS units
@@ -78,6 +78,7 @@ static uint8_t scope_pin = 0;
 static uint8_t display = 0;
 static uint8_t triggered = 0;
 static uint8_t scope_stopped = 1;
+static uint8_t scope_subsystem_stopped = 1;
 uint8_t scope_running = 0;
 static uint8_t scope_stop_waiting = 0;
 static unsigned char fb[VS*HS/2];
@@ -127,13 +128,6 @@ static void scope_stop(void);
 static void scope_shutdown(int now);
 
 
-
-const char *
-scope_pins(void)
-{
-	return "-\t-\t-\t-\t-\t-\t-\t-";
-}
-
 const char *
 scope_error(void)
 {
@@ -145,7 +139,6 @@ scope_settings(void)
 {
 	printf("Scope ()=()");
 }
-void scope_macro(uint32_t macro) {}
 
 void
 scope_help(void)
@@ -189,7 +182,13 @@ scope_help(void)
 
 void scope_cleanup(void)
 {
-	ui_lcd_update(UI_UPDATE_ALL);
+	if (scope_running) {
+		scope_stopped = 1;
+		scope_shutdown(1);
+	}
+	scope_subsystem_stopped = 1;
+	display=0;
+	amux_sweep();
 }
 
 static unsigned char down=0;
@@ -222,22 +221,12 @@ uint32_t scope_setup(void)
 	return 1;
 }
 
-// this is called duringmode changes; takes care pwm, vpu and psu is turned off, also AUX to input
 uint32_t scope_setup_exc(void)
 {
-	// turn everything off
-	bio_init();     // make all pins safe
-	psu_reset();    // disable psu and reset pin label
-    psu_cleanup();  // clear any errors
-	pullups_cleanup(); //deactivate
+	scope_subsystem_stopped = 0;
 	system_config.freq_active=0;
 	system_config.pwm_active=0;
 	system_config.aux_active=0;
-	for(int i=0;i<count_of(bio2bufiopin);i++)
-	{
-		system_bio_claim(false, i, BP_PIN_IO,0);
-	}
-
 	return 1;
 }
 
@@ -247,8 +236,9 @@ dma_handler(void)
 {
 	int last_offset = offset;
 
-	int_count++;
 	dma_hw->ints0 = 1u << dma_chan;
+	if (scope_subsystem_stopped)
+		return;
 	data_ready++;
 	if (stop_capture) {
 		if (stop_capture == 1) {
@@ -381,9 +371,9 @@ scope_start(int pin)
 	search_rising = trigger_type == TRIGGER_POS;
 	scope_stop_waiting = 0;
 	first_sample = 1;
-	adc_init();
-	adc_gpio_init(CURRENT_SENSE);
-	adc_gpio_init(AMUX_OUT);
+	//adc_init();
+	//adc_gpio_init(CURRENT_SENSE);
+	//adc_gpio_init(AMUX_OUT);
 	adc_select_input(AMUX_OUT_ADC);
 	hw_adc_channel_select(7-pin);
 
@@ -1652,6 +1642,8 @@ auto_wakeup(alarm_id_t id, void *user_data)
 void
 scope_lcd_update(uint32_t flags)
 {
+	if (scope_subsystem_stopped)
+		return;
 	if (!scope_running) {
 		if (scope_stop_waiting) {
 			scope_stop_waiting = 0;

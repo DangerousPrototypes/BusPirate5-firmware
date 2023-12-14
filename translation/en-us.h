@@ -23,6 +23,8 @@ static char const * const en_us[]={
 	[T_MODE_PULLUP_RESISTORS]="Pull-up resistors",
 	[T_MODE_POWER_SUPPLY]="Power supply",
 	[T_MODE_DISABLED]="Disabled",
+ 	[T_MODE_DISPLAY]="Display",
+ 	[T_MODE_DISPLAY_SELECTION]="Display selection",
 	[T_MODE_ENABLED]="Enabled",
 	[T_MODE_BITORDER]="Bitorder",
 	[T_MODE_BITORDER_MSB]="MSB",
@@ -163,6 +165,7 @@ static char const * const en_us[]={
 	[T_CMDLN_AUX_HIGH]="A {IOx} - make pin {IOx} output and high.",
 	[T_CMDLN_DUMP]="dump {file} {device} - dump contents of flash {device} to {file}. Warning: currently a prototype that only works with 25LC020 in SPI mode.",
 	[T_CMDLN_LOAD]="load {file} {device} - load contents of {file} to flash {device}. Warning: currently a prototype that only works with 25LC020 in SPI mode.",	
+	[T_CMDLN_DISPLAY]="d - change display mode, show selection menu.",
 	//HELP
     [T_HELP_TITLE]="General Commands\t\t\tBus Syntax",
 	[T_HELP_GENERAL_COMMANDS]="General Commands",

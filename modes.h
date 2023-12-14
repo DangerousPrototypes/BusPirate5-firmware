@@ -45,9 +45,6 @@ enum
 #ifdef BP_USE_HWLED
 	HWLED,
 #endif
-#ifdef BP_USE_SCOPE
-	SCOPE,
-#endif
 	MAXPROTO
 };
 

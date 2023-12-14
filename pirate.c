@@ -31,6 +31,7 @@
 #include "ui/ui_cmdln.h"
 #include "bytecode.h"
 #include "modes.h"
+#include "displays.h"
 #include "system_monitor.h"
 #include "ui/ui_statusbar.h"
 #include "tusb.h"
@@ -167,8 +168,10 @@ int main()
     if (modes[system_config.mode].protocol_lcd_update)
     {
         modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
-    } else {
-        ui_lcd_update(UI_UPDATE_ALL);
+    } else 
+    if (displays[system_config.display].display_lcd_update)
+    {
+        displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
     shift_set_clear_wait( (DISPLAY_BACKLIGHT), 0); 
 
@@ -414,8 +417,10 @@ void core1_entry(void)
 		if (modes[system_config.mode].protocol_lcd_update)
                 {
 		    modes[system_config.mode].protocol_lcd_update(update_flags);
-		} else {
-               	    ui_lcd_update(update_flags);
+		} else 
+                if (displays[system_config.display].display_lcd_update)
+                {
+                    displays[system_config.display].display_lcd_update(update_flags);
 		}
             }
             

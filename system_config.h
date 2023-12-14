@@ -45,6 +45,7 @@ typedef struct _system_config
 	
 	uint8_t hiz;					// is hiz pin mode?
 	uint8_t mode;					// which mode we are in?
+	uint8_t display;				// which display mode we are in?
 	const char *subprotocol_name;		// can be set if there is a sub protocol
 	
 	uint8_t num_bits;				// number of used bits

@@ -6,7 +6,7 @@
 void amux_init(void)
 {
     {
-        extern uint8_t scope_running;
+        extern volatile uint8_t scope_running;
 	if (scope_running) 
 	    return;
     }
@@ -17,7 +17,7 @@ void amux_init(void)
 void amux_sweep(void)
 {
     {
-        extern uint8_t scope_running;
+        extern volatile uint8_t scope_running;
 	if (scope_running) 
 	    return;
     }
@@ -44,7 +44,7 @@ void amux_sweep(void)
 uint32_t hw_adc_bio(uint8_t bio)
 {    
     {
-        extern uint8_t scope_running;
+        extern volatile uint8_t scope_running;
 	if (scope_running) 
 	    return 0;
     }

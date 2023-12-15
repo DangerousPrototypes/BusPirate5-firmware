@@ -62,12 +62,12 @@ const uint32_t V5 = 0x0c05; // 5V
 
 #define CAPTURE_DEPTH 64
 #define BUFFERS (5*10*2+1)	// 320x10 = standard samples rate (10 samples/pixel) 4x screen width
-static uint32_t sample_first=0, sample_last=BUFFERS*CAPTURE_DEPTH-1;
-static uint16_t buffer[BUFFERS*CAPTURE_DEPTH];
+static volatile uint32_t sample_first=0, sample_last=BUFFERS*CAPTURE_DEPTH-1;
+static volatile uint16_t buffer[BUFFERS*CAPTURE_DEPTH];
 static int offset =0;
 static uint dma_chan;
 static unsigned char data_ready;
-static unsigned short stop_capture;
+static volatile unsigned short stop_capture;
 static uint16_t last_value, trigger_level=24*0x0c05/50+1;
 static int32_t trigger_offset=50;		// offset from start of buffer in samples
 static int32_t trigger_position=100*10;  // trigger_offset in 1uS units
@@ -79,13 +79,13 @@ static uint8_t display = 0;
 static uint8_t triggered = 0;
 static uint8_t scope_stopped = 1;
 static uint8_t scope_subsystem_stopped = 1;
-uint8_t scope_running = 0;
-static uint8_t scope_stop_waiting = 0;
+volatile uint8_t scope_running = 0;
+static volatile uint8_t scope_stop_waiting = 0;
 static unsigned char fb[VS*HS/2];
 typedef enum { SMODE_ONCE, SMODE_NORMAL, SMODE_AUTO } SCOPE_MODE;
-SCOPE_MODE scope_mode=SMODE_ONCE;
+static SCOPE_MODE scope_mode=SMODE_ONCE;
 typedef enum { TRIGGER_POS, TRIGGER_NEG, TRIGGER_NONE, TRIGGER_BOTH } TRIGGER_TYPE;
-TRIGGER_TYPE trigger_type = TRIGGER_POS;
+static TRIGGER_TYPE trigger_type = TRIGGER_POS;
 static uint16_t dy=100;		// Y size in 10mV units
 static uint16_t yoffset=0;  // y offset in dy units
 

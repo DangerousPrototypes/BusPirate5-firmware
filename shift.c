@@ -46,7 +46,7 @@ void shift_adc_select(uint8_t channel)
     extern uint8_t shift_out[2];
 
     {
-        extern uint8_t scope_running;
+        extern volatile uint8_t scope_running;
 	if (scope_running) {
 	    return;
 	}

@@ -26,12 +26,10 @@ void ui_display_enable_args(opt_args (*args), struct command_result *res)
     uint32_t display;
     bool error;
 
-	prompt_result result;
-    ui_parse_get_attributes(&result, &display, 1);
-
-	if( result.error || result.no_value || result.exit || ((display)>MAXDISPLAY) || ((display)==0) )
+	display = args[0].i;
+	if( args[0].error || args[0].no_value || ((display)>MAXDISPLAY) || ((display)==0) )
 	{
-		if( result.success && (display)>MAXDISPLAY )
+		if( args[0].success && (display)>MAXDISPLAY )
 		{
 			ui_prompt_invalid_option();
 		}
@@ -110,6 +108,7 @@ void ui_display_int_display_format(opt_args (*args), struct command_result *res)
 
 	prompt_result result;
     ui_parse_get_attributes(&result, &display, 1);
+printf("result.error=%d result.no_value=%d result.exit=%d display=%d\n", result.error, result.no_value, result.exit, display);
 
 	if( result.error || result.no_value || result.exit || ((display)>count_of(ui_const_display_formats)) || ((display)==0) )
 	{
@@ -161,3 +160,14 @@ void ui_display_int_display_format(opt_args (*args), struct command_result *res)
 
 	printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_DISPLAY], ui_term_color_reset(), ui_const_display_formats[system_config.display_format]);
 }
+
+/* For Emacs:
+ * Local Variables:
+ * mode:c
+ * indent-tabs-mode:t
+ * tab-width:4
+ * c-basic-offset:4
+ * End: 
+ * For VIM:
+ * vim:set softtabstop=4 shiftwidth=4 tabstop=4:
+ */ 

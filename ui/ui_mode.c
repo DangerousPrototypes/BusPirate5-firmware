@@ -24,17 +24,15 @@ void ui_mode_enable_args(opt_args (*args), struct command_result *res)
     uint32_t mode;
     bool error;
 
-	prompt_result result;
-    ui_parse_get_attributes(&result, &mode, 1);
-
-	if( result.error || result.no_value || result.exit || ((mode)>MAXPROTO) || ((mode)==0) )
-	{
-		if( result.success && (mode)>MAXPROTO )
-		{
-			ui_prompt_invalid_option();
-		}
-		error=true;
-	}
+    mode = args[0].i;
+    if( args[0].error || args[0].no_value || ((mode)>MAXPROTO) || ((mode)==0) )
+    {
+        if( args[0].success && (mode)>MAXPROTO )
+        {
+            ui_prompt_invalid_option();
+        }
+        error=true;
+    }
 	else
 	{
 		(mode)--; //adjust down one from user choice
@@ -252,3 +250,14 @@ void ui_mode_int_display_format(opt_args (*args), struct command_result *res)
 
 	printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_MODE], ui_term_color_reset(), ui_const_display_formats[system_config.display_format]);
 }
+
+/* For Emacs:
+ * Local Variables:
+ * mode:c
+ * indent-tabs-mode:t
+ * tab-width:4
+ * c-basic-offset:4
+ * End: 
+ * For VIM:
+ * vim:set softtabstop=4 shiftwidth=4 tabstop=4:
+ */     

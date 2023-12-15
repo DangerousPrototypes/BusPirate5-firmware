@@ -351,6 +351,7 @@ int main()
 
 // refresh interrupt flag, serviced in the loop outside interrupt
 bool lcd_update_request=false;
+bool lcd_update_force=false;
 
 // begin of code execution for the second core (core1)
 void core1_entry(void) 
@@ -407,6 +408,7 @@ void core1_entry(void)
 
             uint32_t update_flags=0;
 
+	    if (lcd_update_force) { lcd_update_force=false;update_flags|= UI_UPDATE_FORCE|UI_UPDATE_ALL;} 
             if(system_config.pin_changed) update_flags|= UI_UPDATE_LABELS; //pin labels
             if(monitor_voltage_changed()) update_flags|= UI_UPDATE_VOLTAGES; //pin voltages
             if(system_config.psu && monitor_current_changed()) update_flags|= UI_UPDATE_CURRENT; //psu current sense
@@ -454,6 +456,11 @@ void core1_entry(void)
                     break;
                 case 0xf1:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
+                    lcd_update_request=true;
+                    break;
+                case 0xf2:
+                    lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
+                    lcd_update_force=true;
                     lcd_update_request=true;
                     break;
                 default:

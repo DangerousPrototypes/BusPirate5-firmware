@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 #include "pirate.h"
 #include "system_config.h"
 #include "opt_args.h"
@@ -55,12 +56,13 @@ uint32_t disp_default_setup(void)
 	return 1;
 }
 
-static bool switching=0;
 uint32_t disp_default_setup_exc(void)
 {
-	switching = 1;
-	ui_lcd_update(UI_UPDATE_ALL|UI_UPDATE_FORCE);
-	switching = 0;
+    multicore_fifo_push_blocking(0xf0);
+    while(multicore_fifo_pop_blocking()!=0xf0);
+
+    multicore_fifo_push_blocking(0xf2);
+    while(multicore_fifo_pop_blocking()!=0xf2);
 	return 1;
 }
 
@@ -74,8 +76,7 @@ disp_default_commands(struct opt_args *args, struct command_result *result)
 void
 disp_default_lcd_update(uint32_t flags)
 {
-	if (!switching)
-		ui_lcd_update(flags);
+	ui_lcd_update(flags);
 }
 
 /* For Emacs:

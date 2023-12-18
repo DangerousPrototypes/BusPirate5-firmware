@@ -418,7 +418,7 @@ scope_start(int pin)
         true           // start 
     );
 	
-	memset(buffer, 0, sizeof(buffer));
+	memset((void *)buffer, 0, sizeof(buffer));
 	scope_running = 1;
 	busy_wait_ms(1);
 	adc_run(true);
@@ -1064,7 +1064,7 @@ static void
 draw_trace(CLR c)
 {
 	unsigned char *p = &fb[0];
-	uint16_t *b = &buffer[0];
+	uint16_t *b = (uint16_t *)&buffer[0]; // only called when not volatile
 	int16_t v1[HS];
 	int16_t v2[HS];
 	int x;
@@ -1113,7 +1113,7 @@ draw_trace(CLR c)
 			offset++;
 			if (offset >= (BUFFERS*CAPTURE_DEPTH)) {
 				offset = 0;
-				b = &buffer[0];
+				b = (uint16_t *)&buffer[0];
 			}
 		}
 		x += zoom;

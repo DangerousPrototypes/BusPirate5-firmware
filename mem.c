@@ -5,14 +5,14 @@
  *
  */
 // Modified by Ian Lesnet 18 Dec 2023 for Bus Pirate 5
-
+#include <stdio.h>
+#include "pico/stdlib.h"
 #include "pirate.h"
 #include "mem.h"
-
 #include <stdlib.h>
 
 // private variables
-static uint8_t mem_buffer[SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE];
+static uint8_t mem_buffer[BIG_BUFFER_SIZE] __attribute__((aligned(32768)));
 static bool allocated = false;
 
 // public function definitions

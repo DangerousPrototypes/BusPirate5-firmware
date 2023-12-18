@@ -442,7 +442,7 @@ static void I2Csearch(void)
 
 	pio_i2c_rx_enable(pio, pio_state_machine, false);
 
-	for(uint8_t i=0; i<256; i++)
+	for(uint16_t i=0; i<256; i++)
 	{
 		error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfff);
 		if(error)

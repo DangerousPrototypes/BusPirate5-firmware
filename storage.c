@@ -71,7 +71,7 @@ void storage_unmount(void)
 
 bool storage_detect(void)
 {        
-    //TF flash card detect is measued through the analog mux for lack of IO pins....
+   /* //TF flash card detect is measued through the analog mux for lack of IO pins....
     //if we have low, storage not previously available, and we didn't error out, try to mount
     if(hw_adc_raw[HW_ADC_MUX_CARD_DETECT]<100 && 
         system_config.storage_available==false && 
@@ -96,6 +96,7 @@ bool storage_detect(void)
         storage_unmount();
 
     }
+    */
     return true;
 }
 

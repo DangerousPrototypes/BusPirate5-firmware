@@ -23,9 +23,9 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 add_executable(bus_pirate 
-        pirate.c pirate.h platform/bpi-rev8.h platform/bpi-rev8.c commands.h commands.c 
+        pirate.c pirate.h platform/bpi-rev10.h platform/bpi-rev10.c commands.h commands.c 
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
-        msc_disk.c usb_descriptors.c 
+        msc_disk.c usb_descriptors.c  
         shift.h shift.c psu.h psu.c amux.h amux.c buttons.c buttons.h
         system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
         pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c

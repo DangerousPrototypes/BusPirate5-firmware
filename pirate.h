@@ -44,7 +44,7 @@
 #define OPTARG_STRING_LEN 20
 
 // include platform
-#include "platform/bpi-rev9.h"
+#include "platform/bpi-rev10.h"
 
 // include a translation
 //new multilingual system

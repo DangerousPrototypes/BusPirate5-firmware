@@ -176,7 +176,7 @@ static const uint8_t bio2bufdirpin[]=
 // Controller data out to SK6812 RGB LEDs
 #define RGB_CDO 17
 // The number of SK6812 LEDs in the string
-#define RGB_LEN 16 
+#define RGB_LEN 18 
 
 // Over current detect pin
 //#define CURRENT_DETECT 25 

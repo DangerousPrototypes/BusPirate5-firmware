@@ -103,7 +103,7 @@ uint32_t color_wheel_div(uint8_t pos) {
 }
 
 
-void rgb_assign_color(uint16_t l, uint32_t color)
+void rgb_assign_color(uint32_t l, uint32_t color)
 {
     for (int i=0;i<RGB_LEN; i++){
         if(l&(1u<<i))
@@ -188,7 +188,7 @@ bool rgb_scanner(void)
 }
 
 bool rgb_timer_callback(struct repeating_timer *t){
-    static uint8_t mode=2;
+    static uint8_t mode=1;
 
     //HSV colors from fastLED, this is eventually what we want to use
     const uint32_t colors[]={
@@ -208,7 +208,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
     switch(mode)
     {
         case 0: //disable
-            rgb_assign_color(0xffff, 0x000000);
+            rgb_assign_color(0xffffffff, 0x000000);
             rgb_send();  
             break;          
         case 1:
@@ -216,7 +216,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
             color_grb=((((colors[system_config.led_color]&0xff0000)/system_config.led_brightness)&0xff0000)>>8);
             color_grb|=((((colors[system_config.led_color]&0x00ff00)/system_config.led_brightness)&0x00ff00)<<8);
             color_grb|=((((colors[system_config.led_color]&0x0000ff)/system_config.led_brightness)&0x0000ff));            
-            rgb_assign_color(0xffff, color_grb);
+            rgb_assign_color(0xffffffff, color_grb);
             rgb_send();
             break;
         case 2:

@@ -44,6 +44,8 @@
 
 #define OPTARG_STRING_LEN 20
 
+#define BIG_BUFFER_SIZE (128 * 1024)
+
 // include platform
 #include "platform/bpi-rev9.h"
 

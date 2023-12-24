@@ -23,6 +23,7 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
+#include "mem.h"
 #include "system_config.h"
 #include "opt_args.h"
 #include "hardware/uart.h"
@@ -62,8 +63,10 @@ const uint32_t V5 = 0x0c05; // 5V
 
 #define CAPTURE_DEPTH 64
 #define BUFFERS (5*10*2+1)	// 320x10 = standard samples rate (10 samples/pixel) 4x screen width
+
+#define MALLOC_SIZE (2*BUFFERS*CAPTURE_DEPTH)+(VS*HS/2)
 static volatile uint32_t sample_first=0, sample_last=BUFFERS*CAPTURE_DEPTH-1;
-static volatile uint16_t buffer[BUFFERS*CAPTURE_DEPTH];
+static volatile uint16_t *buffer=0;
 static int offset =0;
 static uint dma_chan;
 static unsigned char data_ready;
@@ -81,7 +84,7 @@ static uint8_t scope_stopped = 1;
 static uint8_t scope_subsystem_stopped = 1;
 volatile uint8_t scope_running = 0;
 static volatile uint8_t scope_stop_waiting = 0;
-static unsigned char fb[VS*HS/2];
+static unsigned char *fb=0;
 typedef enum { SMODE_ONCE, SMODE_NORMAL, SMODE_AUTO } SCOPE_MODE;
 static SCOPE_MODE scope_mode=SMODE_ONCE;
 typedef enum { TRIGGER_POS, TRIGGER_NEG, TRIGGER_NONE, TRIGGER_BOTH } TRIGGER_TYPE;
@@ -187,6 +190,9 @@ void scope_cleanup(void)
 		scope_shutdown(1);
 	}
 	scope_subsystem_stopped = 1;
+	mem_free(fb);
+	fb = 0;
+	buffer = 0;
 	display=0;
 	amux_sweep();
 }
@@ -217,12 +223,27 @@ uint32_t scope_periodic(void)
 
 uint32_t scope_setup(void)
 {
+	uint8_t *x;
+	
+	x = mem_alloc(MALLOC_SIZE);
+	if (!x) {
+		printf("couldn't allocate %d bytes, scope mode broken\r\n", MALLOC_SIZE);
+		return 0;
+	}
+	mem_free(x);
 	display = 1;
 	return 1;
 }
 
 uint32_t scope_setup_exc(void)
 {
+	uint8_t *x;
+	
+	x = mem_alloc(MALLOC_SIZE);
+	if (!x)
+		return 0;
+	fb = x;
+	buffer = (volatile uint16_t *)&x[VS*HS/2]; // 2 byte aligned
 	scope_subsystem_stopped = 0;
 	system_config.freq_active=0;
 	system_config.pwm_active=0;
@@ -418,7 +439,7 @@ scope_start(int pin)
         true           // start 
     );
 	
-	memset((void *)buffer, 0, sizeof(buffer));
+	//memset((void *)&buffer[0], 0, sizeof(buffer));
 	scope_running = 1;
 	busy_wait_ms(1);
 	adc_run(true);
@@ -942,10 +963,11 @@ do_y:
 		return 0;
 	}
 }
+
 static void
 scope_fb_init() 
 {
-	memset(fb, (BL<<4)|BL, sizeof(fb));
+	memset(&fb[0], (BL<<4)|BL, VS*HS/2);
 }
 
 

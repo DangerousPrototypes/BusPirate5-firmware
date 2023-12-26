@@ -99,7 +99,7 @@ static uint32_t display_timebase = 500000; // fastest possible - displayed timeb
 static uint32_t display_base_timebase = 500000; // fastest possible - sample rate
 static uint32_t timebase = 500000; // fastest possible - captured timebase
 static uint32_t base_timebase = 500000; // fastest possible - sample rate
-static uint32_t trigger_skip;	// 100uS
+static volatile uint32_t trigger_skip;	// 100uS
 static uint16_t display_zoom=1;
 static uint16_t display_samples=1;
 static uint16_t zoom=1;		// pixels/sample at the current timebase

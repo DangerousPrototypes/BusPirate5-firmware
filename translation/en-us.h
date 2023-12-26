@@ -186,6 +186,7 @@ static char const * const en_us[]={
 	[T_HELP_1_6]="Delay 1 us/MS (d:4 to repeat)",
 	[T_HELP_1_7]="Set IO.x state (low/HI/READ)",
 	[T_HELP_COMMAND_AUX]="Set IO x state (low/HI/READ)",
+	[T_HELP_COMMAND_DISPLAY]="Change screen display mode",
 	[T_HELP_1_8]="-\t\t\t",
 	[T_HELP_1_9]="Configuration menu\t",
 	[T_HELP_1_22]="Show volts on IOx (once/CONT)",

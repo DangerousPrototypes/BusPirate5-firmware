@@ -310,6 +310,7 @@ const struct ui_info_help help_commands[]={
 	{0,"a/A/@ x",T_HELP_COMMAND_AUX},
 	{0,"b", 	T_HELP_1_8},
 	{0,"c", 	T_HELP_1_9},
+	{0,"d", 	T_HELP_COMMAND_DISPLAY},
 	{0,"f x/F x", T_HELP_1_11},
 	{0,"f/F", 	T_HELP_1_23},
 	{0,"g x/G", T_HELP_1_12},
@@ -348,6 +349,7 @@ const struct ui_info_help help_protocol[]={
 	{0,"d/D", T_HELP_1_6},
 	{0,"a/A/@.x", T_HELP_1_7},	
 	{0,"v.x", T_HELP_SYNTAX_ADC},
+	{0,"", T_HELP_BLANK},
 	{0,"", T_HELP_BLANK}
 };
 
@@ -400,7 +402,7 @@ void ui_info_print_help(opt_args (*args), struct command_result *res)
 		}
 		else
 		{
-			printf("%s%s\t", ui_term_color_reset(), dash_line);
+			printf("%s%s\r\n", ui_term_color_reset(), dash_line);
 		}			
 	}
 

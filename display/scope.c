@@ -64,12 +64,13 @@ const uint32_t V5 = 0x0c05; // 5V
 #define CAPTURE_DEPTH 64
 #define BUFFERS (5*10*2+1)	// 320x10 = standard samples rate (10 samples/pixel) 4x screen width
 
-#define MALLOC_SIZE (2*BUFFERS*CAPTURE_DEPTH)+(VS*HS/2)
+#define MALLOC_SIZE (2*2*BUFFERS*CAPTURE_DEPTH)+(VS*HS/2)
 static volatile uint32_t sample_first=0, sample_last=BUFFERS*CAPTURE_DEPTH-1;
-static volatile uint16_t *buffer=0;
+static uint32_t display_sample_first=0, display_sample_last=BUFFERS*CAPTURE_DEPTH-1;
+static volatile uint16_t *capture_buffer=0;
+static uint16_t *display_buffer=0;
 static int offset =0;
 static uint dma_chan;
-static unsigned char data_ready;
 static volatile unsigned short stop_capture;
 static uint16_t last_value, trigger_level=24*0x0c05/50+1;
 static int32_t trigger_offset=50;		// offset from start of buffer in samples
@@ -79,6 +80,8 @@ static unsigned char search_rising=1, search_falling=0, search_either=0, first_s
 static uint32_t h_res = 100;	// 100uS
 static uint8_t scope_pin = 0;
 static uint8_t display = 0;
+static uint8_t caught = 0;
+static uint8_t no_switch = 0;
 static uint8_t triggered = 0;
 static uint8_t scope_stopped = 1;
 static uint8_t scope_subsystem_stopped = 1;
@@ -92,9 +95,13 @@ static TRIGGER_TYPE trigger_type = TRIGGER_POS;
 static uint16_t dy=100;		// Y size in 10mV units
 static uint16_t yoffset=0;  // y offset in dy units
 
-static uint32_t timebase = 500000; // fastest possible - displayed timebase
+static uint32_t display_timebase = 500000; // fastest possible - displayed timebase
+static uint32_t display_base_timebase = 500000; // fastest possible - sample rate
+static uint32_t timebase = 500000; // fastest possible - captured timebase
 static uint32_t base_timebase = 500000; // fastest possible - sample rate
 static uint32_t trigger_skip;	// 100uS
+static uint16_t display_zoom=1;
+static uint16_t display_samples=1;
 static uint16_t zoom=1;		// pixels/sample at the current timebase
 static uint16_t samples=1;	// samples/pixel at the current timebase
 static uint16_t xoffset=0;  // x offset in dy units
@@ -129,6 +136,7 @@ G=8,
 static void scope_start(int pin);
 static void scope_stop(void);
 static void scope_shutdown(int now);
+static void switch_buffers(void);
 
 
 const char *
@@ -146,7 +154,7 @@ scope_settings(void)
 void
 scope_help(void)
 {
-		printf("General commands\r\n");
+		printf("General sub commands in all of t,x,y\r\n");
 		printf("	^ up\n");
 		printf("	v down\r\n");
 		printf("	< left\r\n");
@@ -158,9 +166,9 @@ scope_help(void)
 		printf("	a auto\r\n");
 		printf("	s stop\r\n");
 		printf("t - trigger (movement move trigger V/time)\r\n");
-		printf("	a analog pin is the trigger pin\r\n");
-		printf("	0-7 which digital pin is the trigger pin\r\n");
-		printf("	v [0-9].[0-9] voltage level\r\n");
+		//printf("	a analog pin is the trigger pin\r\n");
+		//printf("	0-7 which digital pin is the trigger pin\r\n");
+		//printf("	v [0-9].[0-9] voltage level\r\n");
 		printf("	+-*b  trigger on pos neg none both\r\n");
 		printf("	BME move trigger point to beginning/middle/end\r\n");
 		printf("\r\n");
@@ -192,8 +200,9 @@ void scope_cleanup(void)
 	scope_subsystem_stopped = 1;
 	mem_free(fb);
 	fb = 0;
-	buffer = 0;
-	display=0;
+	capture_buffer = 0;
+	display_buffer = 0;
+	display = 0;
 	amux_sweep();
 }
 
@@ -215,6 +224,7 @@ uint32_t scope_periodic(void)
 			} else {
 				scope_stopped = 1;
 				scope_shutdown(1);
+				display = 1;
 			}
 		}
 	}
@@ -243,11 +253,15 @@ uint32_t scope_setup_exc(void)
 	if (!x)
 		return 0;
 	fb = x;
-	buffer = (volatile uint16_t *)&x[VS*HS/2]; // 2 byte aligned
+	display_buffer =          (uint16_t *)&x[VS*HS/2]; // 2 byte aligned
+	capture_buffer = (volatile uint16_t *)&x[VS*HS/2+2*BUFFERS*CAPTURE_DEPTH]; // 2 byte aligned
+	display_sample_first = 0;
+	display_sample_last = 0;
 	scope_subsystem_stopped = 0;
 	system_config.freq_active=0;
 	system_config.pwm_active=0;
 	system_config.aux_active=0;
+	caught = 0;
 	return 1;
 }
 
@@ -258,32 +272,31 @@ dma_handler(void)
 	int last_offset = offset;
 
 	dma_hw->ints0 = 1u << dma_chan;
-	if (scope_subsystem_stopped)
+	if (scope_subsystem_stopped) {
 		return;
-	data_ready++;
-	if (stop_capture) {
-		if (stop_capture == 1) {
-			irq_set_enabled(DMA_IRQ_0, false);
-			dma_channel_set_irq0_enabled(dma_chan, false);
-			adc_run(false);
-			dma_channel_abort(dma_chan);
-			stop_capture = 0;
-			scope_running = 0;
-			scope_stop_waiting = 1;
-			sample_last = offset + CAPTURE_DEPTH-1;
-			if (sample_last >= (CAPTURE_DEPTH*BUFFERS))
-				sample_last -= (CAPTURE_DEPTH*BUFFERS);
-			return;
-		}
-		stop_capture--;
+	}
+	if (stop_capture == 1) {
+		irq_set_enabled(DMA_IRQ_0, false);
+		dma_channel_set_irq0_enabled(dma_chan, false);
+		adc_run(false);
+		dma_channel_abort(dma_chan);
+		stop_capture = 0;
+		scope_running = 0;
+		scope_stop_waiting = 1;
+		sample_last = offset + CAPTURE_DEPTH-1;
+		if (sample_last >= (CAPTURE_DEPTH*BUFFERS))
+			sample_last -= (CAPTURE_DEPTH*BUFFERS);
+		return;
 	}
 	if (first_sample) {
-		last_value = buffer[0];
+		last_value = capture_buffer[0];
 	}
 	offset += CAPTURE_DEPTH;
 	if (offset >= (CAPTURE_DEPTH*BUFFERS))
 		offset = 0;
-	dma_channel_set_write_addr(dma_chan, &buffer[offset], true);
+	dma_channel_set_write_addr(dma_chan, &capture_buffer[offset], true);
+	if (stop_capture) 
+		stop_capture--;
 	if (!first_sample && offset == sample_first) {
 		sample_first += CAPTURE_DEPTH;
 		if (sample_first >= (CAPTURE_DEPTH*BUFFERS))
@@ -296,7 +309,7 @@ dma_handler(void)
 			return;
 		}
 		if (search_rising) {
-			unsigned short v, *tp = (unsigned short *)&buffer[last_offset];
+			unsigned short v, *tp = (unsigned short *)&capture_buffer[last_offset];
 			for (int i = 0; i < CAPTURE_DEPTH; i++) {
 				v = *tp++;
 				if (last_value <= trigger_level && v > trigger_level) {
@@ -310,7 +323,7 @@ dma_handler(void)
 			}
 		} else 
 		if (search_falling) {
-			unsigned short v, *tp = (unsigned short *)&buffer[last_offset];
+			unsigned short v, *tp = (unsigned short *)&capture_buffer[last_offset];
 			for (int i = 0; i < CAPTURE_DEPTH; i++) {
 				v = *tp++;
 				if (last_value >= trigger_level && v < trigger_level) {
@@ -324,7 +337,7 @@ dma_handler(void)
 			}
 		} else 
 		if (search_either) {
-			unsigned short v, *tp = (unsigned short *)&buffer[last_offset];
+			unsigned short v, *tp = (unsigned short *)&capture_buffer[last_offset];
 			for (int i = 0; i < CAPTURE_DEPTH; i++) {
 				v = *tp++;
 				if (last_value >= trigger_level ? v < trigger_level: v > trigger_level) {
@@ -377,6 +390,7 @@ scope_shutdown(int now)
 		busy_wait_ms(1);
 	}
 	scope_stop();
+	no_switch = 0;
 }
 
 static void
@@ -397,6 +411,7 @@ scope_start(int pin)
 	//adc_gpio_init(AMUX_OUT);
 	adc_select_input(AMUX_OUT_ADC);
 	hw_adc_channel_select(7-pin);
+	timebase = display_timebase;
 
 	adc_fifo_setup(
         true,    // Write each completed conversion to the sample FIFO
@@ -430,16 +445,15 @@ scope_start(int pin)
 	irq_set_enabled(DMA_IRQ_0, true);
 	dma_hw->ints0 = 1u << dma_chan;
 	offset = 0;
-	data_ready = 0;
 	stop_capture = 0;
 	dma_channel_configure(dma_chan, &cfg,
-         &buffer[0],    // dst
+         &capture_buffer[0],    // dst
         &adc_hw->fifo,  // src
         CAPTURE_DEPTH,  // transfer count
         true           // start 
     );
 	
-	//memset((void *)&buffer[0], 0, sizeof(buffer));
+	//memset((void *)&capture_buffer[0], 0, sizeof(capture_buffer));
 	scope_running = 1;
 	busy_wait_ms(1);
 	adc_run(true);
@@ -512,8 +526,8 @@ trigger_down(void)
 static int
 convert_trigger_position(int pos)
 {
-	int s = 10000000/base_timebase; // samples/10uS
-	//int v = pos*zoom/(samples*s);
+	int s = 10000000/display_base_timebase; // samples/10uS
+	//int v = pos*display_zoom/(display_samples*s);
 	int v = pos/s;
 	if (v < 0)
 		return 0;
@@ -525,8 +539,8 @@ convert_trigger_position(int pos)
 static void
 trigger_left(void)
 {
-	int s = 10000000/base_timebase; // samples/10uS
-	trigger_position -= 10*s*samples/zoom;
+	int s = 10000000/display_base_timebase; // samples/10uS
+	trigger_position -= 10*s*display_samples/display_zoom;
 	if (trigger_position < 0) {
 		trigger_offset = 0;
 		trigger_position = 0;
@@ -539,8 +553,8 @@ trigger_left(void)
 static void
 trigger_right(void)
 {
-	int s = 10000000/base_timebase; // samples/10uS
-	trigger_position += 10*s*samples/zoom;
+	int s = 10000000/display_base_timebase; // samples/10uS
+	trigger_position += 10*s*display_samples/display_zoom;
 	trigger_offset = convert_trigger_position(trigger_position);
 	display = 1;
 }
@@ -548,8 +562,8 @@ trigger_right(void)
 void
 trigger_begin(void)
 {
-	int s = 5000000/base_timebase; // samples/10uS
-	trigger_position = 100*s*samples/zoom;
+	int s = 5000000/display_base_timebase; // samples/10uS
+	trigger_position = 100*s*display_samples/display_zoom;
 	trigger_offset = convert_trigger_position(trigger_position);
 	display = 1;
 }
@@ -557,8 +571,8 @@ trigger_begin(void)
 void
 trigger_middle(void)
 {
-	int s = 5000000/base_timebase; // samples/10uS
-	trigger_position = (CAPTURE_DEPTH*(BUFFERS-1))*s*samples/(zoom*2);
+	int s = 5000000/display_base_timebase; // samples/10uS
+	trigger_position = (CAPTURE_DEPTH*(BUFFERS-1))*s*display_samples/(display_zoom*2);
 	trigger_offset = convert_trigger_position(trigger_position);
 	display = 1;
 }
@@ -566,8 +580,8 @@ trigger_middle(void)
 void
 trigger_end(void)
 {
-	int s = 5000000/base_timebase; // samples/10uS
-	trigger_position = (CAPTURE_DEPTH*(BUFFERS-1))*s*samples/zoom-50*s*samples/zoom;
+	int s = 5000000/display_base_timebase; // samples/10uS
+	trigger_position = (CAPTURE_DEPTH*(BUFFERS-1))*s*display_samples/display_zoom-50*s*display_samples/display_zoom;
 	trigger_offset = convert_trigger_position(trigger_position);
 	display = 1;
 }
@@ -608,7 +622,7 @@ scope_left(void)
 static void
 scope_to_trigger(void)
 {
-	int toffset = trigger_offset*zoom/samples-((HS/50)*50)/2;
+	int toffset = trigger_offset*display_zoom/display_samples-((HS/50)*50)/2;
 	xoffset = toffset/50;
 	if (xoffset < 0)
 		xoffset == 0;
@@ -655,13 +669,14 @@ scope_commands(struct opt_args *args, struct command_result *result)
 do_t:
 		in_trigger_mode = 1;
 		display = 1;
-		printf("Trigger: a 0-7 +-*b ^v<>T BME xy rsona> ");
+		printf("Trigger: +-*b ^v<>T BME xy rsona> ");
+		//printf("Trigger: a 0-7 +-*b ^v<>T BME xy rsona> ");
 		while ((c = next_char()) != 0) {
 			switch (c) {
 			case 'x': printf("\r\n"); goto do_x;
 			case 'y': printf("\r\n"); goto do_y;
 			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); break;
+			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
 			case 'r': scope_stopped = 0; scope_start(scope_pin); break;
 			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_start(scope_pin); break;
 			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_start(scope_pin); break;
@@ -680,11 +695,11 @@ do_t:
 				}
 				break;
 			case '=':
-			case '+':	trigger_type = TRIGGER_POS; display=1; break;
+			case '+':	trigger_type = TRIGGER_POS; display = 1; break;
 			case '_':
-			case '-':	trigger_type = TRIGGER_NEG; display=1; break;
-			case '*':	trigger_type = TRIGGER_NONE; display=1; break;
-			case 'b':	trigger_type = TRIGGER_BOTH; display=1; break;
+			case '-':	trigger_type = TRIGGER_NEG; display = 1; break;
+			case '*':	trigger_type = TRIGGER_NONE; display = 1; break;
+			case 'b':	trigger_type = TRIGGER_BOTH; display = 1; break;
 			case 'v':
 			case 'V':	trigger_down(); break;
 			case '^':	trigger_up(); break;
@@ -697,6 +712,7 @@ do_t:
 			case 'e':	trigger_end(); break;
 			}
 		}
+		in_trigger_mode = 0;
 		return 1;
 	} else
 	if (strcmp(args[0].c, "x") == 0)  {
@@ -715,7 +731,7 @@ do_x:
 			case 't': printf("\r\n"); goto do_t;
 			case 'y': printf("\r\n"); goto do_y;
 			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); break;
+			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
 			case 'r': scope_stopped = 0; scope_start(scope_pin); break;
 			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_start(scope_pin); break;
 			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_start(scope_pin); break;
@@ -735,43 +751,43 @@ do_x:
 				break;
 			case '=':
 			case '+':
-				if (timebase == 5000000)
+				if (display_timebase == 5000000)
 					break;
-				switch (timebase) {
-				case 2500000: timebase = 5000000; z = 1; break;  // zoom only
-				case 1000000: timebase = 2500000; z = 0; break;  // zoom only
-				case 500000: timebase = 1000000; z = 1; break;  // zoom only
-				case 250000: timebase = 500000; z = 1; break;	// 1 sample
-				case 100000: timebase = 250000; z = 0; break;	// 2 samples
-				case  50000: timebase = 100000; z = 1; break;	// 5 samples
-				case  25000: timebase = 50000; z = 1; break;	
-				case  10000: timebase = 25000; z = 0; break;
-				case   5000: timebase = 10000; z = 1; break;
-				case   2500: timebase = 5000; z = 1; break;
-				case   1000: timebase = 2500; z = 0; break;
-				case    500: timebase = 1000; z = 1; break;
-				case    250: timebase = 500; z = 1; break;
-				case    100: timebase = 250; z = 0; break;
-				case     50: timebase = 100; z = 1; break;
-				case     25: timebase = 50; z = 1; break;
-				case     10: timebase = 25; z = 0; break;
+				switch (display_timebase) {
+				case 2500000: display_timebase = 5000000; z = 1; break;  // display_zoom only
+				case 1000000: display_timebase = 2500000; z = 0; break;  // display_zoom only
+				case 500000: display_timebase = 1000000; z = 1; break;  // display_zoom only
+				case 250000: display_timebase = 500000; z = 1; break;	// 1 sample
+				case 100000: display_timebase = 250000; z = 0; break;	// 2 samples
+				case  50000: display_timebase = 100000; z = 1; break;	// 5 samples
+				case  25000: display_timebase = 50000; z = 1; break;	
+				case  10000: display_timebase = 25000; z = 0; break;
+				case   5000: display_timebase = 10000; z = 1; break;
+				case   2500: display_timebase = 5000; z = 1; break;
+				case   1000: display_timebase = 2500; z = 0; break;
+				case    500: display_timebase = 1000; z = 1; break;
+				case    250: display_timebase = 500; z = 1; break;
+				case    100: display_timebase = 250; z = 0; break;
+				case     50: display_timebase = 100; z = 1; break;
+				case     25: display_timebase = 50; z = 1; break;
+				case     10: display_timebase = 25; z = 0; break;
 				}
 				if (z) {
-					if (samples != 1) {
-						samples /= 2;
+					if (display_samples != 1) {
+						display_samples /= 2;
 					} else {
-						zoom *= 2;
+						display_zoom *= 2;
 					}
 					xoffset *= 2;
 				} else {
-					if (samples != 1) {
-						samples *= 2;
-						samples /= 5;
-						if (samples == 0)
-							samples = 1;
+					if (display_samples != 1) {
+						display_samples *= 2;
+						display_samples /= 5;
+						if (display_samples == 0)
+							display_samples = 1;
 					} else {
-						zoom *= 5;
-						zoom /= 2;
+						display_zoom *= 5;
+						display_zoom /= 2;
 					}
 					xoffset *= 5;
 					xoffset /= 2;
@@ -781,43 +797,43 @@ do_x:
 				break;
 			case '_':
 			case '-':
-				if (timebase == 10)
+				if (display_timebase == 10)
 					break;
-				switch (timebase) {
-				case 5000000: timebase = 2500000; z = 1; break;
-				case 2500000: timebase = 1000000; z = 0; break;
-				case 1000000: timebase = 500000; z = 1; break;
-				case 500000: timebase = 250000; z = 1; break;
-				case 250000: timebase = 100000; z = 0; break;
-				case 100000: timebase = 50000; z = 1; break;
-				case  50000: timebase = 25000; z = 1; break;
-				case  25000: timebase = 10000; z = 0; break;
-				case  10000: timebase = 5000; z = 1; break;
-				case   5000: timebase = 2500; z = 1; break;
-				case   2500: timebase = 1000; z = 0; break;
-				case   1000: timebase = 500; z = 1; break;
-				case    500: timebase = 250; z = 1; break;
-				case    250: timebase = 100; z = 0; break;
-				case    100: timebase = 50; z = 1; break;
-				case     50: timebase = 25; z = 1; break;
-				case     25: timebase = 10; z = 0; break;
+				switch (display_timebase) {
+				case 5000000: display_timebase = 2500000; z = 1; break;
+				case 2500000: display_timebase = 1000000; z = 0; break;
+				case 1000000: display_timebase = 500000; z = 1; break;
+				case 500000: display_timebase = 250000; z = 1; break;
+				case 250000: display_timebase = 100000; z = 0; break;
+				case 100000: display_timebase = 50000; z = 1; break;
+				case  50000: display_timebase = 25000; z = 1; break;
+				case  25000: display_timebase = 10000; z = 0; break;
+				case  10000: display_timebase = 5000; z = 1; break;
+				case   5000: display_timebase = 2500; z = 1; break;
+				case   2500: display_timebase = 1000; z = 0; break;
+				case   1000: display_timebase = 500; z = 1; break;
+				case    500: display_timebase = 250; z = 1; break;
+				case    250: display_timebase = 100; z = 0; break;
+				case    100: display_timebase = 50; z = 1; break;
+				case     50: display_timebase = 25; z = 1; break;
+				case     25: display_timebase = 10; z = 0; break;
 				}
 				if (z) {
-					if (zoom == 1) {
-						samples *= 2;
+					if (display_zoom == 1) {
+						display_samples *= 2;
 					} else {
-						zoom /= 2;
+						display_zoom /= 2;
 					}
 					xoffset /= 2;
 				} else {
-					if (zoom == 1) {
-						samples *= 5;
-						samples /= 2;
+					if (display_zoom == 1) {
+						display_samples *= 5;
+						display_samples /= 2;
 					} else {
-						zoom *= 2;
-						zoom /= 5;
-						if (zoom == 0)
-							zoom = 1;
+						display_zoom *= 2;
+						display_zoom /= 5;
+						if (display_zoom == 0)
+							display_zoom = 1;
 					}
 					xoffset *= 2;
 					xoffset /= 5;
@@ -849,7 +865,7 @@ do_y:
 			case 't': printf("\r\n"); goto do_t;
 			case 'x': printf("\r\n"); goto do_x;
 			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); break;
+			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
 			case 'r': scope_stopped = 0; scope_start(scope_pin); break;
 			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_start(scope_pin); break;
 			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_start(scope_pin); break;
@@ -950,15 +966,12 @@ do_y:
 		}
 		scope_stopped = 0;
 		scope_start(scope_pin);
-		if (interactive)
-			goto do_x;
 	} else 
 	if (strcmp(args[0].c, "ss") == 0)  {
 		// stop the engine - button if started
 		scope_stopped = 1;
 		scope_shutdown(1);
-		if (interactive)
-			goto do_x;
+		no_switch = 1;
 	} else {
 		return 0;
 	}
@@ -1086,7 +1099,7 @@ static void
 draw_trace(CLR c)
 {
 	unsigned char *p = &fb[0];
-	uint16_t *b = (uint16_t *)&buffer[0]; // only called when not volatile
+	uint16_t *b = (uint16_t *)&display_buffer[0]; // only called when not volatile
 	int16_t v1[HS];
 	int16_t v2[HS];
 	int x;
@@ -1095,20 +1108,20 @@ draw_trace(CLR c)
 	// dy is the number of 10 mv per 
 	// yoffset is the offest from 0 in dy units
 	int df = yoffset*(VS/5);
-	uint32_t offset = sample_first+xoffset*50*samples/zoom;
+	uint32_t offset = display_sample_first+xoffset*50*display_samples/display_zoom;
 	if (offset >= (BUFFERS*CAPTURE_DEPTH))
 		offset -= BUFFERS*CAPTURE_DEPTH;
 	b += offset;
 	int xlast = HS;
-	if (sample_first <= sample_last) {
-		if (offset > sample_last || offset < sample_first)
+	if (display_sample_first <= display_sample_last) {
+		if (offset > display_sample_last || offset < display_sample_first)
 			return;
 	} else {
-		if (offset > sample_last && offset < sample_first)
+		if (offset > display_sample_last && offset < display_sample_first)
 			return;
 	}
 	for (x = 0; x < HS; ) {
-		for (int i=0; i < samples; i++) {
+		for (int i=0; i < display_samples; i++) {
 			uint32_t y = *b++;
 		
 			int d = (y*VS*100/V5/dy)-df;
@@ -1128,27 +1141,27 @@ draw_trace(CLR c)
 				if (d > v2[x])
 					v2[x] = d;
 			}	
-			if (offset == sample_last) {
-				x += zoom;
+			if (offset == display_sample_last) {
+				x += display_zoom;
 				goto xdone;
 			}
 			offset++;
 			if (offset >= (BUFFERS*CAPTURE_DEPTH)) {
 				offset = 0;
-				b = (uint16_t *)&buffer[0];
+				b = (uint16_t *)&display_buffer[0];
 			}
 		}
-		x += zoom;
+		x += display_zoom;
 	}
 xdone:
 	xlast = x;
 	y1 = v1[0];
 	y2 = v2[0];
-	if (v1[zoom] > y2) {
-		y2 = (y2+v1[zoom])/2;
+	if (v1[display_zoom] > y2) {
+		y2 = (y2+v1[display_zoom])/2;
 	} else 
-	if (v2[zoom] < y1) {
-		y1 = (y1+v2[zoom])/2;
+	if (v2[display_zoom] < y1) {
+		y1 = (y1+v2[display_zoom])/2;
 	}
 	if ((y1 >= 0 && y1 < VS) || (y2 >= 0 && y2 < VS)) {
 		if (y1 >= VS) y1 = VS-1; 
@@ -1160,14 +1173,14 @@ xdone:
 			y1 = y2;
 			y2 = t;
 		}
-		if (zoom == 1) {
+		if (display_zoom == 1) {
 			for (int y = y1; y <= y2; y++)
 				p[(HS/2)*y+0] = (p[(HS/2)*y+0]&~0xf)|c;
 		} else {
-			if (y1 > v1[zoom]) {
+			if (y1 > v1[display_zoom]) {
 				int yf = y2;
-				for (x = 0; x < zoom; x++) {
-					int yl = y2-(x+1)*(y2-y1)/zoom;
+				for (x = 0; x < display_zoom; x++) {
+					int yl = y2-(x+1)*(y2-y1)/display_zoom;
 					for (int y = yf; y >= yl; y--)
 					if (x&1) {
 						p[(HS/2)*y+(x>>1)] = (p[(HS/2)*y+(x>>1)]&~0xf0)|(c<<4);
@@ -1178,8 +1191,8 @@ xdone:
 				}
 			} else {
 				int yf = y1;
-				for (x = 0; x < zoom; x++) {
-					int yl = y1+(x+1)*(y2-y1)/zoom;
+				for (x = 0; x < display_zoom; x++) {
+					int yl = y1+(x+1)*(y2-y1)/display_zoom;
 					for (int y = yf; y <= yl; y++)
 					if (x&1) {
 						p[(HS/2)*y+(x>>1)] = (p[(HS/2)*y+(x>>1)]&~0xf0)|(c<<4);
@@ -1191,32 +1204,32 @@ xdone:
 			}
 		}
 	}
-	for (x = zoom; x < (xlast-zoom); x += zoom) {
+	for (x = display_zoom; x < (xlast-display_zoom); x += display_zoom) {
 		y1 = v1[x];
 		y2 = v2[x];
 
-		if (v1[x+zoom] > y2) {
-			if (v1[x-zoom] > v1[x+zoom]) {
-				y2 = (y2+v1[x-zoom]);
+		if (v1[x+display_zoom] > y2) {
+			if (v1[x-display_zoom] > v1[x+display_zoom]) {
+				y2 = (y2+v1[x-display_zoom]);
 			} else {
-				y2 = (y2+v1[x+zoom]);
+				y2 = (y2+v1[x+display_zoom]);
 			}
 		} else
-		if (v1[x-zoom] > y2) {
-			y2 = (y2+v1[x-zoom]);
+		if (v1[x-display_zoom] > y2) {
+			y2 = (y2+v1[x-display_zoom]);
 		} else {
 			y2 = y2<<1;
 		}
 
-		if (v2[x+zoom] < y1) {
-			if (v2[x-zoom] < v2[x+zoom]) {
-				y1 = (y1+v2[x-zoom]);
+		if (v2[x+display_zoom] < y1) {
+			if (v2[x-display_zoom] < v2[x+display_zoom]) {
+				y1 = (y1+v2[x-display_zoom]);
 			} else {
-				y1 = (y1+v2[x+zoom]);
+				y1 = (y1+v2[x+display_zoom]);
 			}
 		} else
-		if (v2[x-zoom] < y1) {
-			y1 = (y1+v2[x-zoom]);
+		if (v2[x-display_zoom] < y1) {
+			y1 = (y1+v2[x-display_zoom]);
 		} else {
 			y1 = y1<<1;
 		} 
@@ -1240,7 +1253,7 @@ xdone:
 		if (y2 < 0) {
 			y2 = 0;
 		} 
-		if (zoom == 1) {
+		if (display_zoom == 1) {
 			for (int y = y1&~1; y <= y2; y+=2)
 			if (x&1) {
 				p[(HS/4)*y+(x>>1)] = (p[(HS/4)*y+(x>>1)]&~0xf0)|(c<<4);
@@ -1248,16 +1261,16 @@ xdone:
 				p[(HS/4)*y+(x>>1)] = (p[(HS/4)*y+(x>>1)]&~0xf)|(c);
 			}
 		} else {
-			int v1a = (v1[x-zoom]<<1);
+			int v1a = (v1[x-display_zoom]<<1);
 			int v1v = (v1[x]<<1);
-			int v1b = (v1[x+zoom]<<1);
+			int v1b = (v1[x+display_zoom]<<1);
 		    if (v1a < v1v && v1b < v1v) {
 				y1 = (v1a+v1v)>>1;
 				y2 = (v1b+v1v)>>1;
 				int yf = y1&~1;
-				int z2 = zoom/2;
-				int z4 = zoom/4;
-				int zr2 = zoom-z2;
+				int z2 = display_zoom/2;
+				int z4 = display_zoom/4;
+				int zr2 = display_zoom-z2;
 				for (int xx = 0; xx < z2; xx++) {
 					int yl = (y1+((xx+1)*(v1v-y1)+z4)/z2)&~1;
 					for (int y = yf; y <= yl; y+=2) 
@@ -1284,9 +1297,9 @@ xdone:
 				y1 = (v1a+v1v)>>1;
 				y2 = (v1b+v1v)>>1;
 				int yf = y1&~1;
-				int z2 = zoom/2;
-				int z4 = zoom/4;
-				int zr2 = zoom-z2;
+				int z2 = display_zoom/2;
+				int z4 = display_zoom/4;
+				int zr2 = display_zoom-z2;
 				for (int xx = 0; xx < z2; xx++) {
 					int yl = (y1-((xx+1)*(y1-v1v)-z4)/z2)&~1;
 					for (int y = yf; y >= yl; y-=2)
@@ -1311,8 +1324,8 @@ xdone:
 			} else
 		    if (v1b < v1v || v1a > v1v){
 				int yf = y2&~1;
-				for (int xx = 0; xx < zoom; xx++) {
-					int yl = (y2-(xx+1)*(y2-y1)/zoom)&~1;
+				for (int xx = 0; xx < display_zoom; xx++) {
+					int yl = (y2-(xx+1)*(y2-y1)/display_zoom)&~1;
 					for (int y = yf; y >= yl; y-=2)
 					if ((x+xx)&1) {
 						p[(HS/4)*y+((x+xx)>>1)] = (p[(HS/4)*y+((x+xx)>>1)]&~0xf0)|(c<<4);
@@ -1323,8 +1336,8 @@ xdone:
 				}
 			} else {
 				int yf = y1&~1;
-				for (int xx = 0; xx < zoom; xx++) {
-					int yl = (y1+(xx+1)*(y2-y1)/zoom)&~1;
+				for (int xx = 0; xx < display_zoom; xx++) {
+					int yl = (y1+(xx+1)*(y2-y1)/display_zoom)&~1;
 					for (int y = yf; y <= yl; y+=2)
 					if ((x+xx)&1) {
 						p[(HS/4)*y+((x+xx)>>1)] = (p[(HS/4)*y+((x+xx)>>1)]&~0xf0)|(c<<4);
@@ -1336,13 +1349,13 @@ xdone:
 			}
 		}
 	}
-	y1 = v1[xlast-zoom];
-	y2 = v2[xlast-zoom];
-	if (v1[xlast-2*zoom] > y2) {
-		y2 = (y2+v1[xlast-2*zoom])/2;
+	y1 = v1[xlast-display_zoom];
+	y2 = v2[xlast-display_zoom];
+	if (v1[xlast-2*display_zoom] > y2) {
+		y2 = (y2+v1[xlast-2*display_zoom])/2;
 	} 
-	if (v2[xlast-2*zoom] < y1) {
-		y1 = (y1+v2[xlast-2*zoom])/2;
+	if (v2[xlast-2*display_zoom] < y1) {
+		y1 = (y1+v2[xlast-2*display_zoom])/2;
 	}
 	if ((y1 >= 0 && y1 < VS) || (y2 >= 0 &&y2 < VS)) {
 		if (y1 >= VS) y1 = VS-1;
@@ -1354,7 +1367,7 @@ xdone:
 			y1 = y2;
 			y2 = t;
 		}
-		if (zoom == 1) {
+		if (display_zoom == 1) {
 			for (int y = y1; y <= y2; y++)
 			if ((xlast-1)&1) {
 				p[(HS/2)*y+((xlast-1)>>1)] = (p[(HS/2)*y+((xlast-1)>>1)]&~0xf0)|(c<<4);
@@ -1362,27 +1375,27 @@ xdone:
 				p[(HS/2)*y+((xlast-1)>>1)] = (p[(HS/2)*y+((xlast-1)>>1)]&~0xf)|(c);
 			}
 		} else {
-			if (v1[xlast-zoom] < v1[xlast-2*zoom]) {
+			if (v1[xlast-display_zoom] < v1[xlast-2*display_zoom]) {
 				int yf = y2;
-				for (x = 0; x < zoom; x++) {
-					int yl = y2-(x+1)*(y2-y1)/zoom;
+				for (x = 0; x < display_zoom; x++) {
+					int yl = y2-(x+1)*(y2-y1)/display_zoom;
 					for (int y = yf; y >= yl; y--)
-					if ((x+xlast-zoom)&1) {
-						p[(HS/2)*y+((x+xlast-zoom)>>1)] = (p[(HS/2)*y+((x+xlast-zoom)>>1)]&~0xf0)|(c<<4);
+					if ((x+xlast-display_zoom)&1) {
+						p[(HS/2)*y+((x+xlast-display_zoom)>>1)] = (p[(HS/2)*y+((x+xlast-display_zoom)>>1)]&~0xf0)|(c<<4);
 					} else {
-						p[(HS/2)*y+((x+xlast-zoom)>>1)] = (p[(HS/2)*y+((x+xlast-zoom)>>1)]&~0xf)|(c);
+						p[(HS/2)*y+((x+xlast-display_zoom)>>1)] = (p[(HS/2)*y+((x+xlast-display_zoom)>>1)]&~0xf)|(c);
 					}
 					yf = yl;
 				}
 			} else {
 				int yf = y1;
-				for (x = 0; x < zoom; x++) {
-					int yl = y1+(x+1)*(y2-y1)/zoom;
+				for (x = 0; x < display_zoom; x++) {
+					int yl = y1+(x+1)*(y2-y1)/display_zoom;
 					for (int y = yf; y <= yl; y++)
-					if ((x+xlast-zoom)&1) {
-						p[(HS/2)*y+((x+xlast-zoom)>>1)] = (p[(HS/2)*y+((x+xlast-zoom)>>1)]&~0xf0)|(c<<4);
+					if ((x+xlast-display_zoom)&1) {
+						p[(HS/2)*y+((x+xlast-display_zoom)>>1)] = (p[(HS/2)*y+((x+xlast-display_zoom)>>1)]&~0xf0)|(c<<4);
 					} else {
-						p[(HS/2)*y+((x+xlast-zoom)>>1)] = (p[(HS/2)*y+((x+xlast-zoom)>>1)]&~0xf)|(c);
+						p[(HS/2)*y+((x+xlast-display_zoom)>>1)] = (p[(HS/2)*y+((x+xlast-display_zoom)>>1)]&~0xf)|(c);
 					}
 					yf = yl;
 				}
@@ -1429,7 +1442,7 @@ draw_triggers(int minimal)
 		}
 	}
 
-	int toffset = trigger_offset*zoom/samples-(xoffset*50);
+	int toffset = trigger_offset*display_zoom/display_samples-(xoffset*50);
 	if (minimal) {
 		if (toffset >= 0 && toffset < HS) 
 			draw_text(toffset < 6 ? 6 : toffset > (HS-6) ? HS-6 : toffset-6, VS-5, &hunter_12ptFontInfo, R, "T");
@@ -1524,7 +1537,7 @@ draw_scope()
 	case 10:  s1="0.1Vx";  break;
 	case 5:   s1="0.05Vx"; break;
 	}	
-	switch (timebase) {
+	switch (display_timebase) {
 	case 5000000: s2 = "10uS"; unit = 1; break;
 	case 2500000: s2 = "20uS"; unit = 2; break;
 	case 1000000: s2 = "50uS"; unit = 5; break;
@@ -1607,10 +1620,10 @@ draw_scope()
 	} else { // 0;
 		unsigned char *cp = &b[0];
 		*cp++ = '0';
-		if (timebase >= 1000000) {
+		if (display_timebase >= 1000000) {
 			*cp++ = 'u';
 		} else
-		if (timebase >= 1000) {
+		if (display_timebase >= 1000) {
 			*cp++ = 'm';
 		} 
 		*cp++ = 'S';
@@ -1626,9 +1639,8 @@ draw_scope()
 	} else {
 		draw_triggers(1);
 	}
-	if (!scope_running) {
+	if (caught)
 		draw_trace(B);
-	}
 }
 
 static
@@ -1661,6 +1673,112 @@ auto_wakeup(alarm_id_t id, void *user_data)
 	return 0;
 }
 
+static void
+switch_buffers(void)\
+{
+	uint16_t *x;
+	if (no_switch) {
+		no_switch = 0;
+	} else {
+		x = display_buffer;
+		display_buffer = (uint16_t *)capture_buffer;
+		capture_buffer = x;
+		display_sample_first = sample_first;
+		display_sample_last = sample_last;
+		display_zoom = zoom;
+		display_samples = samples;
+		int t = timebase;
+		int z;
+		if (t < display_timebase) {		// convert samples/zoom to currently displayed resolution
+			while (t != display_timebase) {
+				if (t == 5000000)
+					break;
+				switch (t) {
+				case 2500000: t = 5000000; z = 1; break;  // display_zoom only
+				case 1000000: t = 2500000; z = 0; break;  // display_zoom only
+				case 500000: t = 1000000; z = 1; break;  // display_zoom only
+				case 250000: t = 500000; z = 1; break;	// 1 sample
+				case 100000: t = 250000; z = 0; break;	// 2 samples
+				case  50000: t = 100000; z = 1; break;	// 5 samples
+				case  25000: t = 50000; z = 1; break;	
+				case  10000: t = 25000; z = 0; break;
+				case   5000: t = 10000; z = 1; break;
+				case   2500: t = 5000; z = 1; break;
+				case   1000: t = 2500; z = 0; break;
+				case    500: t = 1000; z = 1; break;
+				case    250: t = 500; z = 1; break;
+				case    100: t = 250; z = 0; break;
+				case     50: t = 100; z = 1; break;
+				case     25: t = 50; z = 1; break;
+				case     10: t = 25; z = 0; break;
+				}
+				if (z) {
+					if (display_samples != 1) {
+						display_samples /= 2;
+					} else {
+						display_zoom *= 2;
+					}
+				} else {
+					if (display_samples != 1) {
+						display_samples *= 2;
+						display_samples /= 5;
+						if (display_samples == 0)
+							display_samples = 1;
+					} else {
+						display_zoom *= 5;
+						display_zoom /= 2;
+					}
+				}
+			}
+		} else
+		if (t > display_timebase) {
+			while (t != display_timebase) {
+				if (t == 10)
+					break;
+				switch (t) {
+				case 5000000: t = 2500000; z = 1; break;
+				case 2500000: t = 1000000; z = 0; break;
+				case 1000000: t = 500000; z = 1; break;
+				case 500000: t = 250000; z = 1; break;
+				case 250000: t = 100000; z = 0; break;
+				case 100000: t = 50000; z = 1; break;
+				case  50000: t = 25000; z = 1; break;
+				case  25000: t = 10000; z = 0; break;
+				case  10000: t = 5000; z = 1; break;
+				case   5000: t = 2500; z = 1; break;
+				case   2500: t = 1000; z = 0; break;
+				case   1000: t = 500; z = 1; break;
+				case    500: t = 250; z = 1; break;
+				case    250: t = 100; z = 0; break;
+				case    100: t = 50; z = 1; break;
+				case     50: t = 25; z = 1; break;
+				case     25: t = 10; z = 0; break;
+				}
+				if (z) {
+					if (display_zoom == 1) {
+						display_samples *= 2;
+					} else {
+						display_zoom /= 2;
+					}
+				} else {
+					if (display_zoom == 1) {
+						display_samples *= 5;
+						display_samples /= 2;
+					} else {
+						display_zoom *= 2;
+						display_zoom /= 5;
+						if (display_zoom == 0)
+							display_zoom = 1;
+					}
+				}
+			}
+		} 
+		//display_timebase = timebase;
+		display_base_timebase = base_timebase;
+		caught = 1;
+	}
+}
+
 void
 scope_lcd_update(uint32_t flags)
 {
@@ -1670,11 +1788,14 @@ scope_lcd_update(uint32_t flags)
 		if (scope_stop_waiting) {
 			scope_stop_waiting = 0;
 			scope_stop();
+			switch_buffers();
 			display = 1;
 		}
 	} else {
 		if (scope_mode == SMODE_AUTO && auto_wakeup_triggered) {
 			scope_shutdown(1);
+			switch_buffers();
+			display = 1;
 		}
 	}
 	if (!display)

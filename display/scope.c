@@ -72,7 +72,7 @@ static uint16_t *display_buffer=0;
 static int offset =0;
 static uint dma_chan;
 static volatile unsigned short stop_capture;
-static uint16_t last_value, trigger_level=24*0x0c05/50+1;
+static uint16_t last_value, trigger_level=24*V5/50+1;
 static int32_t trigger_offset=50;		// offset from start of buffer in samples
 static int32_t trigger_position=100*10;  // trigger_offset in 1uS units
 static uint32_t trigger_point;		// index of trigger point - saved actual pointer to trigger
@@ -288,9 +288,6 @@ dma_handler(void)
 			sample_last -= (CAPTURE_DEPTH*BUFFERS);
 		return;
 	}
-	if (first_sample) {
-		last_value = capture_buffer[0];
-	}
 	offset += CAPTURE_DEPTH;
 	if (offset >= (CAPTURE_DEPTH*BUFFERS))
 		offset = 0;
@@ -305,7 +302,12 @@ dma_handler(void)
 	first_sample = 0;
 	if (!stop_capture) {
 		if (trigger_skip) {	// let capture buffer fill to at least trigger point
-			trigger_skip--;
+			if (trigger_skip == 1) {
+				trigger_skip = 0;
+				last_value = capture_buffer[last_offset+CAPTURE_DEPTH-1];
+			} else {
+				trigger_skip--;
+			}
 			return;
 		}
 		if (search_rising) {

@@ -73,8 +73,9 @@ static int offset =0;
 static uint dma_chan;
 static volatile unsigned short stop_capture;
 static uint16_t last_value, trigger_level=24*V5/50+1;
-static int32_t trigger_offset=50;		// offset from start of buffer in samples
-static int32_t trigger_position=100*10;  // trigger_offset in 1uS units
+static int32_t display_trigger_offset=50;		// offset from start of buffer in samples
+static int32_t display_trigger_position=100*10;  // trigger_offset in 1uS units
+static int32_t trigger_position, trigger_offset;
 static uint32_t trigger_point;		// index of trigger point - saved actual pointer to trigger
 static unsigned char search_rising=1, search_falling=0, search_either=0, first_sample, in_trigger_mode=0;;
 static uint32_t h_res = 100;	// 100uS
@@ -386,13 +387,21 @@ scope_shutdown(int now)
 {
 	if (!scope_running) 
 		return;
-	stop_capture = (now?1:BUFFERS-5);
+	if (!stop_capture)
+		stop_capture = (now?1:BUFFERS-5);
 	for (int i = 0; i < 10000; i++) {
 		if (!stop_capture) break;
 		busy_wait_ms(1);
 	}
 	scope_stop();
 	no_switch = 0;
+}
+
+static void
+scope_restart(int pin)
+{
+	scope_shutdown(1);
+	scope_start(pin);
 }
 
 static void
@@ -433,7 +442,8 @@ scope_start(int pin)
 	case  50000: samples = 10; adc_set_clkdiv(0); base_timebase=500000; break;
 	default:	 samples = 10; adc_set_clkdiv((5*9600000/10)/timebase - 1); base_timebase = timebase; break;
 	}
-	trigger_offset = convert_trigger_position(trigger_position);
+	trigger_offset = convert_trigger_position(display_trigger_position);
+	trigger_position = display_trigger_position;
 	trigger_skip = trigger_offset/CAPTURE_DEPTH + 2;	
 	
 	dma_chan = dma_claim_unused_channel(true);
@@ -542,12 +552,12 @@ static void
 trigger_left(void)
 {
 	int s = 10000000/display_base_timebase; // samples/10uS
-	trigger_position -= 10*s*display_samples/display_zoom;
-	if (trigger_position < 0) {
-		trigger_offset = 0;
-		trigger_position = 0;
+	display_trigger_position -= 10*s*display_samples/display_zoom;
+	if (display_trigger_position < 0) {
+		display_trigger_offset = 0;
+		display_trigger_position = 0;
 	} else {
-		trigger_offset = convert_trigger_position(trigger_position);
+		display_trigger_offset = convert_trigger_position(display_trigger_position);
 	}
 	display = 1;
 }
@@ -556,8 +566,8 @@ static void
 trigger_right(void)
 {
 	int s = 10000000/display_base_timebase; // samples/10uS
-	trigger_position += 10*s*display_samples/display_zoom;
-	trigger_offset = convert_trigger_position(trigger_position);
+	display_trigger_position += 10*s*display_samples/display_zoom;
+	display_trigger_offset = convert_trigger_position(display_trigger_position);
 	display = 1;
 }
 
@@ -565,8 +575,8 @@ void
 trigger_begin(void)
 {
 	int s = 5000000/display_base_timebase; // samples/10uS
-	trigger_position = 100*s*display_samples/display_zoom;
-	trigger_offset = convert_trigger_position(trigger_position);
+	display_trigger_position = 100*s*display_samples/display_zoom;
+	display_trigger_offset = convert_trigger_position(display_trigger_position);
 	display = 1;
 }
 
@@ -574,8 +584,8 @@ void
 trigger_middle(void)
 {
 	int s = 5000000/display_base_timebase; // samples/10uS
-	trigger_position = (CAPTURE_DEPTH*(BUFFERS-1))*s*display_samples/(display_zoom*2);
-	trigger_offset = convert_trigger_position(trigger_position);
+	display_trigger_position = (CAPTURE_DEPTH*(BUFFERS-1))*s*display_samples/(display_zoom*2);
+	display_trigger_offset = convert_trigger_position(display_trigger_position);
 	display = 1;
 }
 
@@ -583,8 +593,8 @@ void
 trigger_end(void)
 {
 	int s = 5000000/display_base_timebase; // samples/10uS
-	trigger_position = (CAPTURE_DEPTH*(BUFFERS-1))*s*display_samples/display_zoom-50*s*display_samples/display_zoom;
-	trigger_offset = convert_trigger_position(trigger_position);
+	display_trigger_position = (CAPTURE_DEPTH*(BUFFERS-1))*s*display_samples/display_zoom-50*s*display_samples/display_zoom;
+	display_trigger_offset = convert_trigger_position(display_trigger_position);
 	display = 1;
 }
 
@@ -624,7 +634,7 @@ scope_left(void)
 static void
 scope_to_trigger(void)
 {
-	int toffset = trigger_offset*display_zoom/display_samples-((HS/50)*50)/2;
+	int toffset = display_trigger_offset*display_zoom/display_samples-((HS/50)*50)/2;
 	xoffset = toffset/50;
 	if (xoffset < 0)
 		xoffset == 0;
@@ -679,10 +689,10 @@ do_t:
 			case 'y': printf("\r\n"); goto do_y;
 			case '.':
 			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
-			case 'r': scope_stopped = 0; scope_start(scope_pin); break;
-			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_start(scope_pin); break;
-			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_start(scope_pin); break;
-			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_start(scope_pin); break;
+			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
+			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
+			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
+			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
 			case 'T': scope_to_trigger();	break;
 			case 0x1b:
 				c = next_char();
@@ -734,10 +744,10 @@ do_x:
 			case 'y': printf("\r\n"); goto do_y;
 			case '.':
 			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
-			case 'r': scope_stopped = 0; scope_start(scope_pin); break;
-			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_start(scope_pin); break;
-			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_start(scope_pin); break;
-			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_start(scope_pin); break;
+			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
+			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
+			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
+			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
 			case 'T': scope_to_trigger();	break;
 			case 0x1b:
 				c = next_char();
@@ -794,7 +804,7 @@ do_x:
 					xoffset *= 5;
 					xoffset /= 2;
 				}
-				trigger_offset = convert_trigger_position(trigger_position);
+				display_trigger_offset = convert_trigger_position(display_trigger_position);
 				display = 1;
 				break;
 			case '_':
@@ -840,7 +850,7 @@ do_x:
 					xoffset *= 2;
 					xoffset /= 5;
 				}
-				trigger_offset = convert_trigger_position(trigger_position);
+				display_trigger_offset = convert_trigger_position(display_trigger_position);
 				display = 1;
 				break;
 			case 'v':
@@ -868,10 +878,10 @@ do_y:
 			case 'x': printf("\r\n"); goto do_x;
 			case '.':
 			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
-			case 'r': scope_stopped = 0; scope_start(scope_pin); break;
-			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_start(scope_pin); break;
-			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_start(scope_pin); break;
-			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_start(scope_pin); break;
+			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
+			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
+			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
+			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
 			case 'T': scope_to_trigger();	break;
 			case 0x1b:
 				c = next_char();
@@ -967,7 +977,7 @@ do_y:
 			}
 		}
 		scope_stopped = 0;
-		scope_start(scope_pin);
+		scope_restart(scope_pin);
 	} else 
 	if (strcmp(args[0].c, "ss") == 0)  {
 		// stop the engine - button if started
@@ -1444,10 +1454,16 @@ draw_triggers(int minimal)
 		}
 	}
 
-	int toffset = trigger_offset*display_zoom/display_samples-(xoffset*50);
+	int toffset = display_trigger_offset*display_zoom/display_samples-(xoffset*50);
 	if (minimal) {
-		if (toffset >= 0 && toffset < HS) 
-			draw_text(toffset < 6 ? 6 : toffset > (HS-6) ? HS-6 : toffset-6, VS-5, &hunter_12ptFontInfo, R, "T");
+		if (toffset >= 0 && toffset < HS) {
+			draw_v_line(toffset, VS-15, VS-4, R);
+			if (toffset >= 6) 
+				draw_d_line(toffset-6, VS-9, -6, R);
+			if (toffset <= (HS-7)) 
+				draw_d_line(toffset, VS-15, 6, R);
+		}
+			//draw_text(toffset < 6 ? 6 : toffset > (HS-6) ? HS-6 : toffset-6, VS-5, &hunter_12ptFontInfo, R, "T");
 	} else {
 		if (toffset < 0) {
 			draw_h_line(0, 11, VS/2, R);
@@ -1492,7 +1508,7 @@ draw_triggers(int minimal)
 		}
 		*cp++ = 'V';
 		*cp++ = ' ';
-		int t = trigger_position/10;
+		int t = display_trigger_position/10;
 		if (t < 1000) {
 			cp += xnum(cp, t, 1);
 			strcpy(cp, "uS");
@@ -1777,6 +1793,8 @@ switch_buffers(void)\
 		} 
 		//display_timebase = timebase;
 		display_base_timebase = base_timebase;
+		display_trigger_offset = trigger_offset;
+		display_trigger_position = trigger_position;
 		caught = 1;
 	}
 }

@@ -319,7 +319,6 @@ dma_handler(void)
 					triggered = 1;
 					trigger_point = i+last_offset;
 					stop_capture = BUFFERS-1-(trigger_offset+CAPTURE_DEPTH-1)/CAPTURE_DEPTH;
-					scope_running = 0;
 					break;
 				}
 				last_value = v;
@@ -333,7 +332,6 @@ dma_handler(void)
 					triggered = 1;
 					trigger_point = i+last_offset;
 					stop_capture = BUFFERS-1-(trigger_offset+CAPTURE_DEPTH-1)/CAPTURE_DEPTH;
-					scope_running = 0;
 					break;
 				}
 				last_value = v;
@@ -347,7 +345,6 @@ dma_handler(void)
 					triggered = 1;
 					trigger_point = i+last_offset;
 					stop_capture = BUFFERS-1-(trigger_offset+CAPTURE_DEPTH-1)/CAPTURE_DEPTH;
-					scope_running = 0;
 					break;
 				}
 				last_value = v;
@@ -380,6 +377,8 @@ scope_stop(void)
 			sample_first = v;
 		}
 	}
+	amux_sweep();
+	system_config.info_bar_changed = 1;
 }
 
 static void
@@ -469,6 +468,7 @@ scope_start(int pin)
 	scope_running = 1;
 	busy_wait_ms(1);
 	adc_run(true);
+	system_config.info_bar_changed = 1;
 }
 
 static uint8_t interactive;
@@ -688,7 +688,7 @@ do_t:
 			case 'x': printf("\r\n"); goto do_x;
 			case 'y': printf("\r\n"); goto do_y;
 			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
+			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
 			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
 			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
 			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
@@ -743,7 +743,7 @@ do_x:
 			case 't': printf("\r\n"); goto do_t;
 			case 'y': printf("\r\n"); goto do_y;
 			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
+			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
 			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
 			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
 			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
@@ -877,7 +877,7 @@ do_y:
 			case 't': printf("\r\n"); goto do_t;
 			case 'x': printf("\r\n"); goto do_x;
 			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; break;
+			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
 			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
 			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
 			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
@@ -984,6 +984,7 @@ do_y:
 		scope_stopped = 1;
 		scope_shutdown(1);
 		no_switch = 1;
+		system_config.info_bar_changed = 1;
 	} else {
 		return 0;
 	}

@@ -14,6 +14,7 @@
 #include "system_monitor.h"
 #include "psu.h"
 #include "amux.h"
+#include "display/scope.h"
 
 #define PWM_TOP 14000 //0x30D3
 
@@ -178,6 +179,10 @@ void psu_enable(opt_args (*args), struct command_result *res)
 {
     float volts,current;
 
+    if (scope_running) { // scope is using the analog subsystem
+	printf("Can't turn the power supply on when the scope is using the analog subsystem - use the 'ss' command to stop the scope\r\n");
+	return;
+    }
     system_config.psu=0;
     system_config.pin_labels[0]=0;
     system_config.pin_changed=0xff;

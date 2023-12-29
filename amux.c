@@ -2,25 +2,22 @@
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
 #include "pirate.h"
+#include "opt_args.h"
+#include "display/scope.h"
 
 void amux_init(void)
 {
-    {
-        extern volatile uint8_t scope_running;
-	if (scope_running) 
-	    return;
-    }
+    if (scope_running) // scope is using the analog subsystem
+	return;
+
     //mcu_adc_init();
 	adc_init(); adc_gpio_init(AMUX_OUT); adc_gpio_init(CURRENT_SENSE);
 }
 
 void amux_sweep(void)
 {
-    {
-        extern volatile uint8_t scope_running;
-	if (scope_running) 
-	    return;
-    }
+    if (scope_running) // scope is using the analog subsystem
+        return;
     
     adc_select_input(AMUX_OUT_ADC);
     for(int i=0; i<HW_ADC_MUX_COUNT; i++)
@@ -43,11 +40,9 @@ void amux_sweep(void)
 
 uint32_t hw_adc_bio(uint8_t bio)
 {    
-    {
-        extern volatile uint8_t scope_running;
-	if (scope_running) 
-	    return 0;
-    }
+    if (scope_running) // scope is using the analog subsystem
+	return 0;
+
     //mcu_adc_select(AMUX_OUT_ADC);
     adc_select_input(AMUX_OUT_ADC);
     shift_adc_select(15); //to clear any charge from a floating pin

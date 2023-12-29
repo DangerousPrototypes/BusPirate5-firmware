@@ -2,6 +2,8 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pirate.h"
+#include "opt_args.h"
+#include "display/scope.h"
 
 static uint8_t shift_out[2]={0,0};
 
@@ -45,12 +47,9 @@ void shift_adc_select(uint8_t channel)
 {
     extern uint8_t shift_out[2];
 
-    {
-        extern volatile uint8_t scope_running;
-	if (scope_running) {
-	    return;
-	}
-    }
+    if (scope_running) // scope is using the analog subsystem
+       return;
+
     shift_out[1]&=~((uint8_t)(0b1111<<1)); //clear the amux control bits      
     shift_out[1]|=(uint8_t)(channel<<1); //set the amux channel bits
       

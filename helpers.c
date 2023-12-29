@@ -22,6 +22,7 @@
 #include "bio.h"
 #include "amux.h"
 #include "mcu/rp2040.h"
+#include "display/scope.h"
 
 
 void helpers_selftest(opt_args (*args), struct command_result *res)
@@ -30,6 +31,10 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
 
     fails=0;
 
+    if (scope_running) { // scope is using the analog subsystem
+	printf("Can't self test when the scope is using the analog subsystem - use the 'd 1' command to switch to the default display\r\n");
+	return;
+    }
     printf("SELF TEST STARTING\r\nDISABLE IRQ: ");
     multicore_fifo_push_blocking(0xf0);
     while(multicore_fifo_pop_blocking()!=0xf0);

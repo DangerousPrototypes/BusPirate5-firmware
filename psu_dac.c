@@ -10,6 +10,8 @@
 #include "ui/ui_const.h"
 #include "system_monitor.h"
 #include "psu.h"
+#include "opt_args.h"
+#include "display/scope.h"
 
 #define PSU_DAC_VREG_ADJ 0
 #define PSU_DAC_CURRENT_ADJ 1
@@ -190,6 +192,10 @@ void psu_enable(struct command_attributes *attributes, struct command_response *
 {
     float volts,current;
 
+    if (scope_running) { // scope is using the analog subsystem
+	printf("Can't turn the power supply on when the scope is using the analog subsystem - use the 'ss' command to stop the scope\r\n");
+	return;
+    }
     system_config.psu=0;
     system_config.pin_labels[0]=0;
     system_config.pin_changed=0xff;

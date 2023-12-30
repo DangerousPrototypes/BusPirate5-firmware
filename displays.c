@@ -20,7 +20,7 @@ struct _display displays[MAXDISPLAY]={
 	disp_default_setup_exc,	// real setup
 	disp_default_cleanup,	// cleanup for HiZ
 	disp_default_settings,	// display settings 
-	nohelp,					// display small help about the protocol
+	0,					    // display small help about the protocol
 	"Default",				// friendly name (promptname)
 	0,			// scope specific commands
 	disp_default_lcd_update,// screen write

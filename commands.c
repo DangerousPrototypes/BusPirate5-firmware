@@ -42,6 +42,7 @@ enum E_CMD{
     CMD_PWM_CONFIG,
     CMD_PWM_DIS,
     CMD_HELP_MODE,
+    CMD_HELP_DISPLAY,
     CMD_INFO,
     CMD_BITORDER_MSB,
     CMD_BITORDER_LSB,
@@ -80,6 +81,7 @@ const char *cmd[]={
     [CMD_PWM_CONFIG]="G",
     [CMD_PWM_DIS]="g",
     [CMD_HELP_MODE]="h",
+    [CMD_HELP_DISPLAY]="hd",
     [CMD_INFO]="i",
     [CMD_BITORDER_MSB]="l",
     [CMD_BITORDER_LSB]="L",
@@ -239,6 +241,12 @@ const struct _command_parse exec_new[]=
         0,
         T_CMDLN_HELP_MODE
     },         // "h"
+    {
+        true, 
+        &helpers_display_help,
+        0,
+        T_CMDLN_HELP_DISPLAY
+    },         // "hd"
     {
         true, 
         &ui_info_print_info,

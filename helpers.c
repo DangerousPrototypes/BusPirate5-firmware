@@ -537,6 +537,15 @@ void helpers_mode_help(opt_args (*args), struct command_result *res)
     modes[system_config.mode].protocol_help();
 }
 
+void helpers_display_help(opt_args (*args), struct command_result *res)
+{
+    if (displays[system_config.display].display_help) {
+        displays[system_config.display].display_help();
+    } else {
+        printf("No display help available for this display mode\r\n");
+    }
+}
+
 void helpers_mode_periodic()
 {
     displays[system_config.display].display_periodic();

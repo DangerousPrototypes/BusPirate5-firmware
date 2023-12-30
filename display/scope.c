@@ -106,6 +106,7 @@ static uint16_t display_samples=1;
 static uint16_t zoom=1;		// pixels/sample at the current timebase
 static uint16_t samples=1;	// samples/pixel at the current timebase
 static uint16_t xoffset=0;  // x offset in dy units
+static bool auto_wakeup_triggered = 0;
 
 // b0   RRRr rGGG
 // b1   gggB BBbb
@@ -1683,8 +1684,6 @@ void scope_write()
     spi_busy_wait(false);
 }
 
-static bool auto_wakeup_triggered = 0;
-
 static int64_t
 auto_wakeup(alarm_id_t id, void *user_data)
 {
@@ -1794,8 +1793,10 @@ switch_buffers(void)\
 		} 
 		//display_timebase = timebase;
 		display_base_timebase = base_timebase;
-		display_trigger_offset = trigger_offset;
-		display_trigger_position = trigger_position;
+		if (!in_trigger_mode) {
+			display_trigger_offset = trigger_offset;
+			display_trigger_position = trigger_position;
+		}
 		caught = 1;
 	}
 }

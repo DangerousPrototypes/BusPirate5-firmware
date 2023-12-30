@@ -260,9 +260,6 @@ uint32_t scope_setup_exc(void)
 	display_sample_first = 0;
 	display_sample_last = 0;
 	scope_subsystem_stopped = 0;
-	system_config.freq_active=0;
-	system_config.pwm_active=0;
-	system_config.aux_active=0;
 	caught = 0;
 	return 1;
 }

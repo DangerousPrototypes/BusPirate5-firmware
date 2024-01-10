@@ -7,6 +7,7 @@ bool storage_mount(void);
 uint32_t storage_new_file(void);
 uint32_t storage_load_config(void);
 uint32_t storage_save_config(void);
+bool storage_format_base(void);
 //void file_error(FRESULT res);
 
 struct _mode_config_t { char tag[30]; uint32_t *config;};

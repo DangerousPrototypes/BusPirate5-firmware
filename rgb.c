@@ -11,11 +11,15 @@
 #define RGB_DOWN 0b100101001100001
 
 //const uint16_t groups_top_left[]={((1u<<3) | (1u<<4)), ((1u<<6) | (1u<<5)), ((1u<<2) | (1u<<7)), ((1u<<1) | (1u<<8)), ((1u<<9) | (1u<<0) |(1u<<10)), ((1u<<14) | (1u<<11)), ((1u<<13) | (1u<<12)) };
-const uint16_t groups_top_left[]={((1u<<1) | (1u<<2)), ((1u<<0) | (1u<<3)), ((1u<<4) | (1u<<5) | (1u<<15)), ((1u<<6) | (1u<<7) | (1u<<14)), ((1u<<8) | (1u<<13)), ((1u<<9) | (1u<<12)), ((1u<<10) | (1u<<11)) };
 
-const uint16_t groups_center_left[]={(1u<<3)|(1u<<4),(1u<<2)|(1u<<5),(1u<<1)|(1u<<6),(1u<<0)|(1u<<7)|(1u<<8)|(1<<9),(1u<<10)|(1u<<15),(1u<<11)|(1u<<14),(1u<<12)|(1u<<13)};  
-const uint16_t groups_center_clockwise[]={(1u<<13)|(1u<<14),(1u<<15), (1u<<0)|(1u<<1), (1u<<2)|(1u<<3), (1u<<4)|(1u<<5),(1u<<6)|(1u<<7),(1u<<8)|(1u<<9), (1u<<10),(1u<<11)|(1u<<12)};
-const uint16_t groups_top_down[]={0b00011001010011001,0b1100110101100110}; //MSB is last led in string...
+// pairs of LEDs for a top left corner to bottom right corner fade
+// not all LEDs have a pair, they are included with a neighboring LED pair
+//const uint16_t groups_top_left[]={((1u<<1) | (1u<<2)), ((1u<<0) | (1u<<3)), ((1u<<4) | (1u<<5) | (1u<<15)), ((1u<<6) | (1u<<7) | (1u<<14)), ((1u<<8) | (1u<<13)), ((1u<<9) | (1u<<12)), ((1u<<10) | (1u<<11)) };
+const uint32_t groups_top_left[]={((1u<<2) | (1u<<3)), ((1u<<1) | (1u<<4)), ((1u<<0) | (1u<<17) | (1u<<5)), ((1u<<16) | (1u<<6)), ((1u<<15) | (1u<<7)), ((1u<<14) | (1u<<9) | (1u<<8)), ((1u<<13) | (1u<<10) | (1u<<5)), ((1u<<12)|(1u<<11))};
+
+const uint32_t groups_center_left[]={(1u<<4)|(1u<<5),(1u<<3)|(1u<<6),(1u<<2)|(1u<<7),(1u<<1)|(1u<<8), (1u<<0)|(1<<9), (1u<<17)|(1u<<10), (1u<<16)|(1u<<11), (1u<<12)|(1u<<15), (1u<<13)|(1u<<14)};  
+const uint32_t groups_center_clockwise[]={(1u<<14)|(1u<<15),(1u<<16), (1u<<17)|(1u<<0), (1u<<1)|(1u<<2), (1u<<3)|(1u<<4), (1u<<5)|(1u<<6), (1u<<7), (1u<<8)|(1u<<9), (1u<<10)|(1u<<11), (1u<<12)|(1u<<13)};
+const uint32_t groups_top_down[]={0b011001101011001101, 0b100110010100110010}; //MSB is last led in string...
 
 
 uint32_t leds[RGB_LEN];
@@ -114,7 +118,7 @@ void rgb_assign_color(uint32_t l, uint32_t color)
 }
 
 //something like this to cycle, delay, return done
-bool rgb_master(const uint16_t *groups, uint8_t group_count, uint32_t (*color_wheel)(uint8_t color), uint8_t color_count, uint8_t color_increment, uint8_t cycles, uint8_t delay_ms )
+bool rgb_master(const uint32_t *groups, uint8_t group_count, uint32_t (*color_wheel)(uint8_t color), uint8_t color_count, uint8_t color_increment, uint8_t cycles, uint8_t delay_ms )
 {
     static uint8_t color=0;
     static uint16_t c=0;
@@ -145,7 +149,7 @@ struct repeating_timer rgb_timer;
 
 bool rgb_scanner(void)
 {
-    static uint8_t bitmask=0b1000000;
+    static uint16_t bitmask=0b1000000;
     static uint8_t delay=0;
     static uint8_t color=0;
 
@@ -188,7 +192,7 @@ bool rgb_scanner(void)
 }
 
 bool rgb_timer_callback(struct repeating_timer *t){
-    static uint8_t mode=1;
+    static uint8_t mode=2;
 
     //HSV colors from fastLED, this is eventually what we want to use
     const uint32_t colors[]={

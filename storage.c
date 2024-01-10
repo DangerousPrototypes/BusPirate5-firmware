@@ -289,33 +289,42 @@ void list_dir(opt_args (*args), struct command_result *res)
     return; // (uint32_t) res;
 }
 
-void storage_format(opt_args (*args), struct command_result *res){
+void storage_format(opt_args (*args), struct command_result *res)
+{
+    storage_format_base();
+}
 
-        uint8_t *work_buffer = mem_alloc(FF_MAX_SS);
-        if (!work_buffer) {
-            printf("Unable to allocate format work buffer. File system not created.\r\n");
+bool storage_format_base(void)
+{
+
+    uint8_t *work_buffer = mem_alloc(FF_MAX_SS);
+    if (!work_buffer) {
+        printf("Unable to allocate format work buffer. File system not created.\r\n");
+        return false;
+    }
+    else {
+        // make the file system
+        fr = f_mkfs("", 0, work_buffer, FF_MAX_SS);
+        if (FR_OK != fr) {
+            printf("Format failed, result: %d\r\n", fr); // fs make failure
         }
         else {
-            // make the file system
-            fr = f_mkfs("", 0, work_buffer, FF_MAX_SS);
-            if (FR_OK != fr) {
-                printf("Format failed, result: %d\r\n", fr); // fs make failure
+            printf("Format succeeded!\r\n"); // fs make success
+            // retry mount
+            if(storage_mount())
+            {
+                printf("Storage mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
             }
-            else {
-                printf("Format succeeded!\r\n"); // fs make success
-                // retry mount
-                if(storage_mount())
-                {
-                    printf("Storage mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
-                }
-                else
-                {
-                    printf("Mount error %d\r\n", system_config.storage_mount_error);
-                }
+            else
+            {
+                printf("Mount error %d\r\n", system_config.storage_mount_error);
             }
-
-            mem_free(work_buffer);
         }
+
+        mem_free(work_buffer);
+
+        return (FR_OK == fr);
+    }
 }
 
 

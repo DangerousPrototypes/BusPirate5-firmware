@@ -7,6 +7,8 @@ void helpers_show_int_inverse(opt_args (*args), struct command_result *res);
 //mode commands
 void helpers_mode_help(opt_args (*args), struct command_result *res);
 void helpers_mode_periodic();
+
+void helpers_selftest_base(void);
 // these are all moved to the syntax processor
 //void helpers_delay_us(struct command_attributes *attributes, struct command_response *response);
 //void helpers_delay_ms(struct command_attributes *attributes, struct command_response *response);

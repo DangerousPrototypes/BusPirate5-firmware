@@ -87,7 +87,11 @@ int main()
     {
         system_config.hardware_revision=8;
     }*/
-    system_config.hardware_revision=9;
+    #ifdef BP_REV8
+    system_config.hardware_revision=8;
+    #else
+    system_config.hardware_revision=10;
+    #endif
     //init psu pins 
     psu_init();
    
@@ -237,6 +241,8 @@ int main()
                 {
                     ui_prompt_vt100_mode(&result, &value);
                 }
+
+             
 
                 if(result.success)
                 {

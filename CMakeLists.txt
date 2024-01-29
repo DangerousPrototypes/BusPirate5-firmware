@@ -59,11 +59,15 @@ add_executable(bus_pirate
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         mode/binio.c mode/binio.h
+<<<<<<< HEAD
 
         #nand flash management and dhara
         dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
         nand/mem.c nand/mem.h nand/nand.c nand/nand.h nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
         nand/sys_time.c nand/sys_time.h
+=======
+        mem.c mem.h
+>>>>>>> main
         )
    
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)

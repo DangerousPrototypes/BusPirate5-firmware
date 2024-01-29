@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
+#include "pico/multicore.h"
 #include "opt_args.h"
 #include "commands.h"
 #include "bytecode.h"
@@ -55,11 +56,17 @@ bool ui_process_commands(void)
                     printf("Syntax compile error\r\n");
                     return true;
             }
+            multicore_fifo_push_blocking(0xf0);
+            multicore_fifo_pop_blocking();
             if(syntax_run())
             {
+                    multicore_fifo_push_blocking(0xf1);
+                    multicore_fifo_pop_blocking(); 
                     printf("Syntax execution error\r\n");
                     return true;
             }
+            multicore_fifo_push_blocking(0xf1);
+            multicore_fifo_pop_blocking();            
             if(syntax_post())
             {
                     printf("Syntax post process error\r\n");

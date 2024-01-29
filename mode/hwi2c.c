@@ -16,8 +16,8 @@
 #include "lib/tsl2561/driver_tsl2561.h" 
 
 #define M_I2C_PIO pio0
-#define M_I2C_SDA BIO6
-#define M_I2C_SCL BIO7
+#define M_I2C_SDA BIO0
+#define M_I2C_SCL BIO1
 
 static const char pin_labels[][5]={
 	"SDA",

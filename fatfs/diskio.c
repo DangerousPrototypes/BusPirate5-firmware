@@ -7,9 +7,14 @@
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
 
+#include "pirate.h"
 #include "diskio.h" /* Declarations of disk functions */
 
-#include "../nand/nand_ftl_diskio.h"
+#if BP5_REV <= 9
+    #include "fatfs/tf_card.h"
+#else
+    #include "../nand/nand_ftl_diskio.h"
+#endif
 
 // Drive number for spi_nand device
 #define PDRV_NAND_FTL 0

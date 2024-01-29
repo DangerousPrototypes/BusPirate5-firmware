@@ -39,13 +39,6 @@
 #include "helpers.h"
 #include "mode/binio.h"
 
-//NAND flash libraries for REV10+
-#if BP5_REV >= 10
-    #include "nand/nand.h"
-    #include "fatfs/diskio.h" // types from the diskio driver
-    #include "fatfs/ff.h"     // BYTE type
-    #include "nand/nand_ftl_diskio.h"
-#endif
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
 uint spi_spin_lock_num;
@@ -137,8 +130,7 @@ int main()
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-    // mount NAND flash here
-    #if defined(BP_REV8) || defined (BP_REV9)
+    #if BP5_REV <= 9
         storage_mount();
         if(storage_load_config())
         {
@@ -184,7 +176,7 @@ int main()
     psu_cleanup();  // clear any errors
 
     // mount NAND flash here
-    #if ! defined(BP_REV8) && ! defined (BP_REV9)
+    #if BP5_REV >= 10
         storage_mount();
         if(storage_load_config())
         {

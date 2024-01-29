@@ -36,7 +36,7 @@ void helpers_selftest_base(void)
 
     fails=0;
     
-    #ifndef BP_REV8
+    #if BP5_REV >= 10
     uint32_t value;
     struct prompt_result presult;     
     if(!system_config.storage_available)

@@ -13,10 +13,10 @@
 //#include "../fatfs/diskio.h" // types from the diskio driver
 //#include "../fatfs/ff.h"     // BYTE type
 
-DSTATUS nand_ftl_diskio_initialize(void);
-DSTATUS nand_ftl_diskio_status(void);
-DRESULT nand_ftl_diskio_read(BYTE *buff, LBA_t sector, UINT count);
-DRESULT nand_ftl_diskio_write(const BYTE *buff, LBA_t sector, UINT count);
-DRESULT nand_ftl_diskio_ioctl(BYTE cmd, void *buff);
+DSTATUS diskio_initialize(void);
+DSTATUS diskio_status(void);
+DRESULT diskio_read(BYTE *buff, LBA_t sector, UINT count);
+DRESULT diskio_write(const BYTE *buff, LBA_t sector, UINT count);
+DRESULT diskio_ioctl(BYTE cmd, void *buff);
 
 #endif // __NAND_FTL_DISKIO_H

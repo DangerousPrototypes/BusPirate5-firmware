@@ -2,7 +2,7 @@
 
 #include "shift.h"
 
-#define BP_HARDWARE_VERSION "Bus Pirate 5"
+#define BP_HARDWARE_VERSION "Bus Pirate 5 REV8"
 #define BP_HARDWARE_MCU "RP2040"
 #define BP_HARDWARE_RAM "264KB"
 #define BP_HARDWARE_FLASH "128Mbit"
@@ -159,7 +159,7 @@ static const uint8_t bio2bufdirpin[]=
 #define BP_SPI_CDO 19
 
 // TF flash card is on the BP_SPI_PORT, define Chip Select
-#define TFCARD_CS 26 //was 24
+#define FLASH_STORAGE_CS 26 
 
 // LCD is on the BP_SPI_PORT, define CS and DP pins
 #define DISPLAY_CS 23
@@ -173,9 +173,6 @@ static const uint8_t bio2bufdirpin[]=
 #define RGB_CDO 17
 // The number of SK6812 LEDs in the string
 #define RGB_LEN 16 
-
-// Over current detect pin
-//#define CURRENT_DETECT 25 
 
 //PWM based PSU control pins
 #define PSU_PWM_CURRENT_ADJ 24 //4A
@@ -251,6 +248,7 @@ extern uint32_t *hw_pin_voltage_ordered[];
 //convert raw ADC to volts, for pin with no resistor divider (Current sense inputs)
 #define hw_adc_to_volts_x1(X) ((3300*hw_adc_raw[X])/4096);
 
+//how many 595 shift registers are connected
 #define SHIFT_REG_COUNT 2
 
 // hardware platform command abstraction
@@ -267,13 +265,6 @@ extern uint32_t *hw_pin_voltage_ordered[];
 #define BP_DEBUG_UART_1_TX BIO0
 #define BP_DEBUG_UART_1_RX BIO1 
 
- /*   #define BP_DEBUG_UART uart0
-    #define BP_DEBUG_UART_TX BIO6
-    #define BP_DEBUG_UART_RX BIO7
-*/
-/*    #define BP_DEBUG_UART uart1
-    #define BP_DEBUG_UART_TX BIO0
-    #define BP_DEBUG_UART_RX BIO1    
-*/
+#define BP_FLASH_DISK_BLOCK_SIZE 512
 
 #endif

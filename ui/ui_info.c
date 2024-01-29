@@ -12,9 +12,6 @@
 #include "ui/ui_const.h"
 #include "ui/ui_info.h"
 #include "mcu/rp2040.h"
-#include "fatfs/ff.h"
-#include "fatfs/diskio.h"
-#include "fatfs/tf_card.h"
 #include "amux.h"
 
 // todo: move
@@ -37,7 +34,7 @@ void ui_info_print_info(opt_args (*args), struct command_result *res)
 	// Hardware information
 	printf("\r\nThis device complies with part 15 of the FCC Rules. Operation is subject to the following two conditions: (1) this device may not cause harmful interference, and (2) this device must accept any interference received, including interference that may cause undesired operation.\r\n\r\n");
 	
-	printf("\r\n%s REV%d\r\n", BP_HARDWARE_VERSION, system_config.hardware_revision);
+	printf("\r\n%s\r\n", BP_HARDWARE_VERSION);
 	printf("%s %s%s%s (%s%s%s)\r\n", 
 		t[T_INFO_FIRMWARE], 
 		ui_term_color_num_float(),

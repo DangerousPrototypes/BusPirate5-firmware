@@ -110,7 +110,7 @@
 #define CFG_TUD_CDC_EP_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
 
 // MSC Buffer size of Device Mass storage
-#define CFG_TUD_MSC_EP_BUFSIZE   512
+#define CFG_TUD_MSC_EP_BUFSIZE   2048
 
 #ifdef __cplusplus
  }

@@ -17,9 +17,12 @@ void translation_set(uint32_t language)
 {
     switch(language)
     {
-        //case 1:
-        //    t = (char **) &zn_ch;
-        //    break;
+        case 1:
+            t = (char **) &pl_pl;
+            break;        
+        /*case 2:
+            t = (char **) &zn_ch;
+            break;*/
         case 0:
         default:
             t = (char **) &en_us;

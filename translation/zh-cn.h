@@ -150,6 +150,7 @@ static char const * const zn_ch[]={
 	[T_CONFIG_ANSI_TOOLBAR_MODE]="ANSI toolbar mode",
 	[T_CONFIG_LANGUAGE_ENGLISH]="English",
 	[T_CONFIG_LANGUAGE_CHINESE]="Chinese (simplified)",
+	[T_CONFIG_LANGUAGE_POLISH]="Polish",	
 	[T_CONFIG_DISABLE]="Disable",
 	[T_CONFIG_ENABLE]="Enable",
     [T_CONFIG_SCREENSAVER]="LCD screensaver",

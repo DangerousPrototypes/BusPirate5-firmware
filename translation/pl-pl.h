@@ -1,6 +1,6 @@
 // en-us is our base language translation file
 #include "translation/base.h"
-static char const * const en_us[]={
+static char const * const pl_pl[]={
 	[T_ON]="Wł.",
 	[T_OFF]="Wył.",
 	[T_GND]="GND",
@@ -186,7 +186,7 @@ static char const * const en_us[]={
 	[T_HELP_1_9]="Menu konfiguracyjne\t",
 	[T_HELP_1_22]="Pokaż wolty na pinie IOx (jednorazowo/CIĄGLE)",
 	[T_HELP_1_10]="Pokaż wolty na wszystkich pinach IOs (jednorazowo/CIĄGLE)",
-	[T_HELP_1_11]="Zmierz częstotliwość na pinie IOx (jednorazowo/CIĄGLE)"
+	[T_HELP_1_11]="Zmierz częstotliwość na pinie IOx (jednorazowo/CIĄGLE)",
 	[T_HELP_1_23]="Monitoruj częstotliwość (wył./WŁ.)\t",
 	[T_HELP_1_12]="Generuj częstotliwość (wył./WŁ.)",
 	[T_HELP_1_13]="Pomoc (ogólna/PROTOKOŁU)\t",
@@ -249,6 +249,7 @@ static char const * const en_us[]={
 	[T_CONFIG_ANSI_TOOLBAR_MODE]="Tryb ANSI toolbar",
 	[T_CONFIG_LANGUAGE_ENGLISH]="Angielski",
 	[T_CONFIG_LANGUAGE_CHINESE]="Chiński (uproszczony)",
+	[T_CONFIG_LANGUAGE_POLISH]="Polish",	
 	[T_CONFIG_DISABLE]="Wyłącz",
 	[T_CONFIG_ENABLE]="Włącz",
     [T_CONFIG_SCREENSAVER]="Wygaszacz ekranu LCD",

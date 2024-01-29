@@ -26,7 +26,7 @@ DSTATUS disk_status(BYTE pdrv /* Physical drive nmuber to identify the drive */
 )
 {
     if (PDRV_NAND_FTL == pdrv) {
-        return nand_ftl_diskio_status();
+        return disk_status();
     }
     else {
         return STA_NODISK;

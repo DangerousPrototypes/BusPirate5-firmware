@@ -4,6 +4,7 @@
 #include "system_config.h"
 #include "translation/en-us.h"
 //#include "translation/zh-cn.h"
+#include "translation/pl-pl.h"
 
 char **t;
 

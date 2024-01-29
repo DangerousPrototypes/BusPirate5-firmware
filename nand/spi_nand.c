@@ -14,7 +14,7 @@
 #include "pirate.h"
 #include "spi_nand.h"
 #include "spi.h"
-#include "sys_time.h"
+#include "nand/sys_time.h"
 
 // defines
 #define CSEL_PORT GPIOB

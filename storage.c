@@ -7,7 +7,7 @@
 #include "opt_args.h"
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
-#include "fatfs/tf_card.h"
+//#include "fatfs/tf_card.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -114,7 +114,7 @@ bool storage_mount(void)
     {
         system_config.storage_available=1;
         system_config.storage_fat_type=fs.fs_type;
-        system_config.storage_size=fs.csize * fs.n_fatent * 2048E-9; //512E-9;
+        system_config.storage_size=fs.csize * fs.n_fatent * BP_FLASH_DISK_BLOCK_SIZE * 1E-9; // 2048E-9; //512E-9;
         return true;
     }
 

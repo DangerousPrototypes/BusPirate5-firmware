@@ -12,7 +12,7 @@
 #include "system_config.h"
 #include "ui/ui_term.h"
 #include "spi.h"
-#include "sys_time.h"
+#include "nand/sys_time.h"
 
 #define M_SPI_PORT BP_SPI_PORT
 

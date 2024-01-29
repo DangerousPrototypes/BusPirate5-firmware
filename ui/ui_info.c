@@ -12,9 +12,6 @@
 #include "ui/ui_const.h"
 #include "ui/ui_info.h"
 #include "mcu/rp2040.h"
-#include "fatfs/ff.h"
-#include "fatfs/diskio.h"
-#include "fatfs/tf_card.h"
 #include "amux.h"
 
 // todo: move

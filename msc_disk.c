@@ -33,8 +33,6 @@
 //#include "fatfs/tf_card.h"
 #include "tusb.h"
 
-
-
 #if CFG_TUD_MSC
 
 // whether host does safe-eject
@@ -50,17 +48,16 @@ Kind regards,\r\n\
 Ian and Chris\r\n\r\n\
 https://buspirate.com/"
 
-
 enum
 {
-  DISK_BLOCK_NUM  = 16, // 8KB is the smallest size that windows allow to mount
-  DISK_BLOCK_SIZE = 2048 //512
+  MSC_DEMO_DISK_BLOCK_NUM  = 16, // 8KB is the smallest size that windows allow to mount
+  MSC_DEMO_DISK_BLOCK_SIZE = 512 //512
 };
 #define CFG_EXAMPLE_MSC_READONLY
 #ifdef CFG_EXAMPLE_MSC_READONLY
 const
 #endif
-uint8_t msc_disk[DISK_BLOCK_NUM][DISK_BLOCK_SIZE] =
+uint8_t msc_disk[MSC_DEMO_DISK_BLOCK_NUM][MSC_DEMO_DISK_BLOCK_SIZE] =
 {
   //------------- Block0: Boot Sector -------------//
   // byte_per_sector    = DISK_BLOCK_SIZE; fat12_sector_num_16  = DISK_BLOCK_NUM;
@@ -170,14 +167,18 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_siz
 
 	if(system_config.storage_available)
 	{
-		if((res=disk_ioctl(0, GET_SECTOR_COUNT, block_count)))
-			printf(" blockcount = unknown (tfcard inserted?) \r\n", *block_count);
-	}
-	else
-		*block_count = DISK_BLOCK_NUM;
+		if((res=disk_ioctl(0, GET_SECTOR_COUNT, block_count))){
+			//printf(" blockcount = unknown (storage inserted?) \r\n", *block_count);
+	  }
+    *block_size  = BP_FLASH_DISK_BLOCK_SIZE;
+  }
+  else
+  {
+		*block_count = MSC_DEMO_DISK_BLOCK_NUM;
+	  *block_size  = MSC_DEMO_DISK_BLOCK_SIZE;
+  }
 
-	// blocksize is always 512
-	*block_size  = DISK_BLOCK_SIZE;
+
 
 	
 
@@ -218,7 +219,7 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
 
 	if(system_config.storage_available)
 	{
-		if(res=disk_read(0, buffer, lba, (bufsize/DISK_BLOCK_SIZE)))		// assume no offset
+		if(res=disk_read(0, buffer, lba, (bufsize/BP_FLASH_DISK_BLOCK_SIZE)))		// assume no offset
 		{
 			printf(" READ ERROR %d \r\n", res);
 			bufsize=0;
@@ -246,7 +247,7 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
 
 	if(system_config.storage_available)
 	{	
-		if(res=disk_write(0, buffer, lba, (bufsize/DISK_BLOCK_SIZE)))		// assume no offset
+		if(res=disk_write(0, buffer, lba, (bufsize/BP_FLASH_DISK_BLOCK_SIZE)))		// assume no offset
 		{
 			printf(" WRITE ERROR %d \r\n", res);
 			bufsize=0;

@@ -20,11 +20,12 @@ project(bus_pirate C CXX ASM)
 pico_sdk_init()  
 
 #add_compile_definitions(BP_FIRMWARE_HASH=${BP_FIRMWARE_HASH})
-add_compile_definitions(BP5_REV=10) 
+#add_compile_definitions(BP5_REV=8) 
 
 # Add executable. Default name is the project name, version 0.1
-add_executable(bus_pirate 
-        pirate.c pirate.h platform/bpi-rev10.h platform/bpi-rev10.c commands.h commands.c 
+
+set(bp5_common 
+        pirate.c pirate.h commands.h commands.c 
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
         msc_disk.c usb_descriptors.c  
         shift.h shift.c psu.h psu.c amux.h amux.c buttons.c buttons.h
@@ -33,7 +34,6 @@ add_executable(bus_pirate
         mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c mode/hwspi.c mode/hwspi.h
         mode/usart.h mode/usart.c mode/hwi2c.c mode/hwi2c.h mode/hwled.c mode/hwled.h
         ui/ui_cmdln.c ui/ui_cmdln.h ui/ui_process.h ui/ui_process.c
-        #mode/sw1wire.h mode/sw1wire.c
         mode/hw1wire.h mode/hw1wire.c mode/onewire.h mode/onewire.c
         ui/ui_flags.h
         debug.c debug.h
@@ -42,14 +42,11 @@ add_executable(bus_pirate
         ui/ui_const.h ui/ui_const.c ui/ui_config.h ui/ui_config.c 
         translation/base.h translation/base.c translation/en-us.h translation/zh-cn.h
         queue.c queue.h 
-        #buf.c buf.h
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h
         mcu/rp2040.h mcu/rp2040.c
         printf-4.0.0/printf.c printf-4.0.0/printf.h
         font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
         fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 
-        #fatfs/nand/diskio.c fatfs/nand/diskio.h fatfs/nand/ff.c fatfs/nand/ff.h fatfs/nand/ffconf.h fatfs/nand/ffsystem.c fatfs/nand/ffunicode.c 
-        #fatfs/tf_card.c fatfs/tf_card.h
         pio_i2c.c pio_i2c.h
         storage.h storage.c
         ui/ui_term.c ui/ui_term.h  ui/ui_statusbar.c ui/ui_statusbar.h
@@ -60,39 +57,31 @@ add_executable(bus_pirate
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         mode/binio.c mode/binio.h
+        #mem buffer for shared malloc
+        mem.c mem.h
+        )
 
+add_executable(bus_pirate5_rev8
+        ${bp5_common}
+        platform/bpi-rev8.h platform/bpi-rev8.c 
+        #tf card access control
+        fatfs/tf_card.c fatfs/tf_card.h
+        )
+
+target_compile_definitions(bus_pirate5_rev8 PUBLIC BP5_REV=8)
+
+add_executable(bus_pirate5_rev10
+        ${bp5_common}
+        platform/bpi-rev10.h platform/bpi-rev10.c 
         #nand flash management and dhara
-        #nand/mem.c nand/mem.h 
         dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
         nand/nand.c nand/nand.h nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
         nand/sys_time.c nand/sys_time.h
-
-        #mem buffer for shared malloc (resolve with above)
-        mem.c mem.h
-
         )
-   
-pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)
-pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
-pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
-pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)
+target_compile_definitions(bus_pirate5_rev10 PUBLIC BP5_REV=10)
 
-pico_set_program_name(bus_pirate "bus_pirate")
-pico_set_program_version(bus_pirate "0.1.0")
-pico_set_program_description(bus_pirate "Bus Pirate Firmware for RP2040")
-
-pico_enable_stdio_uart(bus_pirate 0)
-pico_enable_stdio_usb(bus_pirate 0)
-
-# Add the standard library to the build
-target_link_libraries(bus_pirate pico_stdlib)
-
-target_include_directories(bus_pirate PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )
-
-string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
-
-# Add any user requested libraries
-target_link_libraries(bus_pirate
+set(stdlibs
+        pico_stdlib
         hardware_spi
         hardware_i2c
         hardware_dma
@@ -109,7 +98,32 @@ target_link_libraries(bus_pirate
         hardware_pwm
         tinyusb_device
         tinyusb_board
+        )        
+
+set(revisions
+        bus_pirate5_rev8  
+        bus_pirate5_rev10
         )
 
-pico_add_extra_outputs(bus_pirate)
+foreach(revision ${revisions})
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)
 
+        pico_set_program_name(${revision} ${revision})
+        pico_set_program_version(${revision} "0.1.0")
+        pico_set_program_description(${revision} "Bus Pirate 5 Firmware for RP2040")
+
+        pico_enable_stdio_uart(${revision} 0)
+        pico_enable_stdio_usb(${revision} 0)
+
+        # Add the standard library to the build
+        target_link_libraries(${revision} ${stdlibs} )
+        target_include_directories(${revision} PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )
+        pico_add_extra_outputs(${revision})
+endforeach()
+
+string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
+
+ 

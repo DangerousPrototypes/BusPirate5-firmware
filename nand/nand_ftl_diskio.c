@@ -30,8 +30,10 @@ static struct dhara_nand nand = {
 };
 
 // public function definitions
-DSTATUS nand_ftl_diskio_initialize(void)
+DSTATUS diskio_initialize(BYTE drv)
 {
+    if (drv) return STA_NOINIT;			/* Supports only drive 0 */
+
     // init flash management stack
     int ret = spi_nand_init();
     if (SPI_NAND_RET_OK != ret) {
@@ -51,8 +53,10 @@ DSTATUS nand_ftl_diskio_initialize(void)
     return 0;
 }
 
-DSTATUS nand_ftl_diskio_status(void)
+DSTATUS diskio_status(BYTE drv)
 {
+   	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
+
     if (!initialized) {
         return STA_NOINIT;
     }
@@ -61,9 +65,12 @@ DSTATUS nand_ftl_diskio_status(void)
     }
 }
 
-DRESULT nand_ftl_diskio_read(BYTE *buff, LBA_t sector, UINT count)
+DRESULT diskio_read(BYTE drv, BYTE *buff, LBA_t sector, UINT count)
 {
     dhara_error_t err;
+
+	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
+
     // read *count* consecutive sectors
     for (int i = 0; i < count; i++) {
         int ret = dhara_map_read(&map, sector, buff, &err);
@@ -78,9 +85,12 @@ DRESULT nand_ftl_diskio_read(BYTE *buff, LBA_t sector, UINT count)
     return RES_OK;
 }
 
-DRESULT nand_ftl_diskio_write(const BYTE *buff, LBA_t sector, UINT count)
+DRESULT diskio_write(BYTE drv, const BYTE *buff, LBA_t sector, UINT count)
 {
     dhara_error_t err;
+
+	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
+
     // write *count* consecutive sectors
     for (int i = 0; i < count; i++) {
         int ret = dhara_map_write(&map, sector, buff, &err);
@@ -95,9 +105,11 @@ DRESULT nand_ftl_diskio_write(const BYTE *buff, LBA_t sector, UINT count)
     return RES_OK;
 }
 
-DRESULT nand_ftl_diskio_ioctl(BYTE cmd, void *buff)
+DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void *buff)
 {
     dhara_error_t err;
+
+   	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
 
     switch (cmd) {
         case CTRL_SYNC:;

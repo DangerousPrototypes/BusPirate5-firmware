@@ -6,7 +6,8 @@
 /* This is an example of glue functions to attach various exsisting      */
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
-
+#include <stdint.h>
+#include "pico/stdlib.h"
 #include "pirate.h"
 #include "diskio.h" /* Declarations of disk functions */
 
@@ -22,30 +23,30 @@
 /*-----------------------------------------------------------------------*/
 /* Get Drive Status                                                      */
 /*-----------------------------------------------------------------------*/
-DSTATUS disk_status(BYTE pdrv /* Physical drive nmuber to identify the drive */
+DSTATUS disk_status(BYTE pdrv /* Physical drive number to identify the drive */
 )
 {
-    if (PDRV_NAND_FTL == pdrv) {
-        return disk_status();
-    }
-    else {
-        return STA_NODISK;
-    }
+    //if (PDRV_NAND_FTL == pdrv) {
+        return diskio_status(pdrv);
+    //}
+    //else {
+    //    return STA_NODISK;
+   // }
 }
 
 /*-----------------------------------------------------------------------*/
-/* Inidialize a Drive                                                    */
+/* Initialize a Drive                                                    */
 /*-----------------------------------------------------------------------*/
 
 DSTATUS disk_initialize(BYTE pdrv /* Physical drive nmuber to identify the drive */
 )
 {
-    if (PDRV_NAND_FTL == pdrv) {
-        return nand_ftl_diskio_initialize();
-    }
-    else {
-        return STA_NODISK;
-    }
+    //if (PDRV_NAND_FTL == pdrv) {
+        return diskio_initialize(pdrv);
+    //}
+    //else {
+    //    return STA_NODISK;
+    //}
 }
 
 /*-----------------------------------------------------------------------*/
@@ -58,12 +59,12 @@ DRESULT disk_read(BYTE pdrv,    /* Physical drive nmuber to identify the drive *
                   UINT count    /* Number of sectors to read */
 )
 {
-    if (PDRV_NAND_FTL == pdrv) {
-        return nand_ftl_diskio_read(buff, sector, count);
-    }
-    else {
-        return STA_NODISK;
-    }
+    //if (PDRV_NAND_FTL == pdrv) {
+        return diskio_read(pdrv, buff, sector, count);
+    //}
+    //else {
+    //    return STA_NODISK;
+    //}
 }
 
 /*-----------------------------------------------------------------------*/
@@ -78,12 +79,12 @@ DRESULT disk_write(BYTE pdrv,        /* Physical drive nmuber to identify the dr
                    UINT count        /* Number of sectors to write */
 )
 {
-    if (PDRV_NAND_FTL == pdrv) {
-        return nand_ftl_diskio_write(buff, sector, count);
-    }
-    else {
-        return STA_NODISK;
-    }
+    //if (PDRV_NAND_FTL == pdrv) {
+        return diskio_write(pdrv, buff, sector, count);
+    //}
+    //else {
+    //    return STA_NODISK;
+    //}
 }
 
 #endif
@@ -92,15 +93,15 @@ DRESULT disk_write(BYTE pdrv,        /* Physical drive nmuber to identify the dr
 /* Miscellaneous Functions                                               */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_ioctl(BYTE pdrv, /* Physical drive nmuber (0..) */
+DRESULT disk_ioctl(BYTE pdrv, /* Physical drive number (0..) */
                    BYTE cmd,  /* Control code */
                    void *buff /* Buffer to send/receive control data */
 )
 {
-    if (PDRV_NAND_FTL == pdrv) {
-        return nand_ftl_diskio_ioctl(cmd, buff);
-    }
-    else {
-        return STA_NODISK;
-    }
+    //if (PDRV_NAND_FTL == pdrv) {
+        return diskio_ioctl(pdrv, cmd, buff);
+    //}
+    //else {
+    //    return STA_NODISK;
+    //}
 }

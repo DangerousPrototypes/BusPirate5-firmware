@@ -1,5 +1,3 @@
-#include "fatfs/tf_card.h"
-
 #include "pico.h"
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
@@ -10,6 +8,7 @@
 
 #include "fatfs/ff.h"
 #include "fatfs/diskio.h"
+#include "fatfs/tf_card.h"
 
 /*--------------------------------------------------------------------------
 
@@ -290,7 +289,7 @@ BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 /* Initialize disk drive                                                 */
 /*-----------------------------------------------------------------------*/
 
-DSTATUS disk_initialize (
+DSTATUS diskio_initialize (
 	BYTE drv		/* Physical drive number (0) */
 )
 {
@@ -354,7 +353,7 @@ DSTATUS disk_initialize (
 /* Get disk status                                                       */
 /*-----------------------------------------------------------------------*/
 
-DSTATUS disk_status (
+DSTATUS diskio_status (
 	BYTE drv		/* Physical drive number (0) */
 )
 {
@@ -369,7 +368,7 @@ DSTATUS disk_status (
 /* Read sector(s)                                                        */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_read (
+DRESULT diskio_read (
 	BYTE drv,		/* Physical drive number (0) */
 	BYTE *buff,		/* Pointer to the data buffer to store read data */
 	LBA_t sector,	/* Start sector number (LBA) */
@@ -405,7 +404,7 @@ DRESULT disk_read (
 	return count ? RES_ERROR : RES_OK;	/* Return result */
 }
 
-
+ 
 
 #if !FF_FS_READONLY && !FF_FS_NORTC
 /* get the current time */
@@ -455,7 +454,7 @@ int xmit_datablock (	/* 1:OK, 0:Error */
 /* Write sector(s)                                                       */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_write (
+DRESULT diskio_write (
 	BYTE drv,			/* Physical drive number (0) */
 	const BYTE *buff,	/* Ponter to the data to write */
 	LBA_t sector,		/* Start sector number (LBA) */
@@ -501,7 +500,7 @@ DRESULT disk_write (
 /* Miscellaneous drive controls other than data read/write               */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_ioctl (
+DRESULT diskio_ioctl (
 	BYTE drv,		/* Physical drive number (0) */
 	BYTE cmd,		/* Control command code */
 	void *buff		/* Pointer to the conrtol data */
@@ -525,9 +524,9 @@ DRESULT disk_ioctl (
 		break;
 	
 	case GET_SECTOR_SIZE:
-		
+		;
 		WORD *sector_size_out = (WORD *)buff;
-		*sector_size_out = 512;
+		*sector_size_out = BP_FLASH_DISK_BLOCK_SIZE;
 		res = RES_OK;
 		break;
 	

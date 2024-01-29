@@ -38,11 +38,14 @@
 #include "pico/lock_core.h"
 #include "helpers.h"
 #include "mode/binio.h"
-#include "nand/nand.h"
-#include "../fatfs/diskio.h" // types from the diskio driver
-#include "../fatfs/ff.h"     // BYTE type
-#include "nand/nand_ftl_diskio.h"
 
+//NAND flash libraries for REV10+
+#if BP5_REV >= 10
+    #include "nand/nand.h"
+    #include "fatfs/diskio.h" // types from the diskio driver
+    #include "fatfs/ff.h"     // BYTE type
+    #include "nand/nand_ftl_diskio.h"
+#endif
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
 uint spi_spin_lock_num;
@@ -87,10 +90,10 @@ int main()
     {
         system_config.hardware_revision=8;
     }*/
-    #ifdef BP_REV8
-    system_config.hardware_revision=8;
+    #ifdef BP5_REV
+        system_config.hardware_revision=BP5_REV;
     #else
-    system_config.hardware_revision=10;
+        #error "No platform revision defined. Check pirate.h."
     #endif
     //init psu pins 
     psu_init();
@@ -111,15 +114,10 @@ int main()
 
     // configure the defaults for shift register attached hardware
     shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), CURRENT_EN_OVERRIDE);
-    if(system_config.hardware_revision==8)
-    {
-        shift_set_clear_wait(0,PULLUP_EN);
-    }
-    else
-    {
-        shift_set_clear_wait(PULLUP_EN,0);
-    }    
+    HW_BIO_PULLUP_DISABLE();   
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
+    
+    //reset the LCD
     shift_set_clear_wait(0, DISPLAY_RESET);
     busy_wait_us(20);
     shift_set_clear_wait(DISPLAY_RESET,0);
@@ -139,16 +137,18 @@ int main()
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-/*    nand_init();
-    storage_mount();
-
-    if(storage_load_config())
-    {
-        system_config.config_loaded_from_file=true;
-    }*/
+    // mount NAND flash here
+    #if defined(BP_REV8) || defined (BP_REV9)
+        storage_mount();
+        if(storage_load_config())
+        {
+            system_config.config_loaded_from_file=true;
+        }
+    #endif
 
     // RGB LEDs pins, pio, set to black
     //this must be done after the 74hct245 is enabled during shift register setup
+    //NOTE: this is now handled on core1 entry
     //rgb_init();
 
     // Read psu DAC resolution and check error
@@ -183,14 +183,14 @@ int main()
 	psu_reset();    // disable psu and reset pin label
     psu_cleanup();  // clear any errors
 
-    //nand_init();
-    //nand_ftl_diskio_initialize();
-    storage_mount();
-    //nand_mount();
-    if(storage_load_config())
-    {
-        system_config.config_loaded_from_file=true;
-    }
+    // mount NAND flash here
+    #if ! defined(BP_REV8) && ! defined (BP_REV9)
+        storage_mount();
+        if(storage_load_config())
+        {
+            system_config.config_loaded_from_file=true;
+        }
+    #endif
 
     // begin main loop on secondary core
     // this will also setup the USB device

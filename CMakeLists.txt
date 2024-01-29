@@ -20,6 +20,7 @@ project(bus_pirate C CXX ASM)
 pico_sdk_init()  
 
 #add_compile_definitions(BP_FIRMWARE_HASH=${BP_FIRMWARE_HASH})
+add_compile_definitions(BP5_REV=10) 
 
 # Add executable. Default name is the project name, version 0.1
 add_executable(bus_pirate 
@@ -61,13 +62,14 @@ add_executable(bus_pirate
         mode/binio.c mode/binio.h
 
         #nand flash management and dhara
+        #nand/mem.c nand/mem.h 
         dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
-        nand/mem.c nand/mem.h nand/nand.c nand/nand.h nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
+        nand/nand.c nand/nand.h nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
         nand/sys_time.c nand/sys_time.h
 
         #mem buffer for shared malloc (resolve with above)
         mem.c mem.h
-        
+
         )
    
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)
@@ -76,7 +78,7 @@ pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
 pico_generate_pio_header(bus_pirate ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)
 
 pico_set_program_name(bus_pirate "bus_pirate")
-pico_set_program_version(bus_pirate "0.0.4")
+pico_set_program_version(bus_pirate "0.1.0")
 pico_set_program_description(bus_pirate "Bus Pirate Firmware for RP2040")
 
 pico_enable_stdio_uart(bus_pirate 0)

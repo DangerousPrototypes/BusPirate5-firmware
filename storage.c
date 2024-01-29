@@ -14,7 +14,7 @@
 #include "ui/ui_term.h"
 #include "mjson/mjson.h"
 #include "storage.h"
-#include "nand/mem.h"
+#include "mem.h"
 
 
 FATFS fs;		/* FatFs work area needed for each volume */
@@ -55,9 +55,9 @@ const char *fresult_msg[]={
 void storage_init(void)
 {
     // Output Pins
-    gpio_set_function(TFCARD_CS, GPIO_FUNC_SIO);
-    gpio_put(TFCARD_CS, 1);
-    gpio_set_dir(TFCARD_CS, GPIO_OUT);    
+    gpio_set_function(FLASH_STORAGE_CS, GPIO_FUNC_SIO);
+    gpio_put(FLASH_STORAGE_CS, 1);
+    gpio_set_dir(FLASH_STORAGE_CS, GPIO_OUT);    
 }
 
 
@@ -71,7 +71,8 @@ void storage_unmount(void)
 
 bool storage_detect(void)
 {        
-   /* //TF flash card detect is measued through the analog mux for lack of IO pins....
+    #if BP5_REV==8 || BP5_REV==9
+    //TF flash card detect is measured through the analog mux for lack of IO pins....
     //if we have low, storage not previously available, and we didn't error out, try to mount
     if(hw_adc_raw[HW_ADC_MUX_CARD_DETECT]<100 && 
         system_config.storage_available==false && 
@@ -96,7 +97,7 @@ bool storage_detect(void)
         storage_unmount();
 
     }
-    */
+    #endif
     return true;
 }
 

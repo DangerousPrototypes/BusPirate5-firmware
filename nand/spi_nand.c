@@ -67,7 +67,7 @@
 
 #define BAD_BLOCK_MARK 0
 
-#define M_SPI_CS TFCARD_CS
+#define M_SPI_CS FLASH_STORAGE_CS
 
 // private types
 typedef union {
@@ -357,9 +357,9 @@ static void csel_setup(void)
     LL_GPIO_SetPinSpeed(CSEL_PORT, CSEL_PIN, LL_GPIO_SPEED_FREQ_VERY_HIGH);
     LL_GPIO_SetPinPull(CSEL_PORT, CSEL_PIN, LL_GPIO_PULL_NO);
     */
-    //gpio_set_function(TFCARD_CS, GPIO_FUNC_SIO);
-    //gpio_put(TFCARD_CS, 1);
-    //gpio_set_dir(TFCARD_CS, GPIO_OUT);    
+    //gpio_set_function(FLASH_STORAGE_CS, GPIO_FUNC_SIO);
+    //gpio_put(FLASH_STORAGE_CS, 1);
+    //gpio_set_dir(FLASH_STORAGE_CS, GPIO_OUT);    
 }
 
 static void csel_deselect(void)

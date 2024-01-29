@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "nand/mem.h"
+#include "mem.h"
 #include "nand/spi.h"
 #include "nand/sys_time.h"
 #include "fatfs/ff.h"

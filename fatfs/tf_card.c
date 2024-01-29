@@ -98,12 +98,12 @@ static void FCLK_FAST(void)
 /*
 static void CS_HIGH(void)
 {
-    cs_deselect(TFCARD_CS);
+    cs_deselect(FLASH_STORAGE_CS);
 }
 
 static void CS_LOW(void)
 {
-    cs_select(TFCARD_CS);
+    cs_select(FLASH_STORAGE_CS);
 }
 */
 /* Initialize MMC interface */
@@ -111,7 +111,7 @@ static
 void init_spi(void)
 {
 	//dont use CS_HIGH because spinlock isn't setup yet
-	gpio_put(TFCARD_CS, 1);
+	gpio_put(FLASH_STORAGE_CS, 1);
 }
 
 /* Exchange a byte */
@@ -171,7 +171,7 @@ void deselect (void)
 	//CS_HIGH();		/* Set CS# high */
 	asm volatile("nop \n nop \n nop"); // FIXME
     //busy_wait_us(10);
-	gpio_put(TFCARD_CS, 1);
+	gpio_put(FLASH_STORAGE_CS, 1);
 	//busy_wait_us(10);
     asm volatile("nop \n nop \n nop"); // FIXME
 
@@ -193,7 +193,7 @@ int _select (void)	/* 1:OK, 0:Timeout */
     
 	asm volatile("nop \n nop \n nop"); // FIXME
 	//busy_wait_us(10);
-    gpio_put(TFCARD_CS, 0);
+    gpio_put(FLASH_STORAGE_CS, 0);
 	//busy_wait_us(10);
     asm volatile("nop \n nop \n nop"); // FIXME
 
@@ -523,7 +523,14 @@ DRESULT disk_ioctl (
 	case CTRL_SYNC :		/* Wait for end of internal write process of the drive */
 		if (_select()) res = RES_OK;
 		break;
-
+	
+	case GET_SECTOR_SIZE:
+		
+		WORD *sector_size_out = (WORD *)buff;
+		*sector_size_out = 512;
+		res = RES_OK;
+		break;
+	
 	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (DWORD) */
 		if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {
 			if ((csd[0] >> 6) == 1) {	/* SDC ver 2.00 */

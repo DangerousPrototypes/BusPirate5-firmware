@@ -48,7 +48,7 @@ with open('base.ht', 'r', encoding="utf8") as file:
 content_with_replacement = content.replace("%%%enum_list%%%", base_h)    
 
 # Write base.h
-with open('base-test.h', 'w', encoding='utf-8') as file:
+with open('base.h', 'w', encoding='utf-8') as file:
     # Write the text to the file
     file.write(content_with_replacement)
 
@@ -96,7 +96,7 @@ for filename in os.listdir(directory):
             content_with_replacement = content_with_replacement.replace("%%%variable_name%%%", file_name_without_extension.replace("-", "_"))   
 
             # Write translation .h file
-            with open(file_name_without_extension+'-test.h', 'w', encoding='utf-8') as output_file:
+            with open(file_name_without_extension+'.h', 'w', encoding='utf-8') as output_file:
                 # Write the text to the file
                 output_file.write(content_with_replacement)
 

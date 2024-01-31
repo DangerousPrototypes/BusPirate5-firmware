@@ -55,8 +55,6 @@ extern const FONT_INFO hunter_12ptFontInfo;
 
 static int convert_trigger_position(int pos);
 
-extern uint lcd_cs, lcd_dp;
-
 #define VS 240
 #define HS 320
 const uint32_t V5 = 0x0c05; // 5V
@@ -1668,8 +1666,8 @@ void scope_write()
     lcd_set_bounding_box(0, VS, 0, HS);
     
     spi_busy_wait(true);
-    gpio_put(lcd_dp, 1);
-    gpio_put(lcd_cs, 0);    
+    gpio_put(DISPLAY_DP, 1);
+    gpio_put(DISPLAY_CS, 0);    
     
     for(uint32_t b=0; b<(HS*VS/2); b+=1){
 		unsigned char x = fb[b];
@@ -1677,7 +1675,7 @@ void scope_write()
         spi_write_blocking(BP_SPI_PORT, (unsigned char *)&clr[(x>>4)&0xf], 2);
     }
     
-    gpio_put(lcd_cs, 1);
+    gpio_put(DISPLAY_CS, 1);
     spi_busy_wait(false);
 }
 

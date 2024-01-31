@@ -70,7 +70,7 @@ int main()
     shift_init();
 
     //test for PCB revision
-    gpio_set_function(23, GPIO_FUNC_SIO);
+    /*gpio_set_function(23, GPIO_FUNC_SIO);
     gpio_set_dir(23,true);
     gpio_put(23,true);
     busy_wait_ms(100);
@@ -83,8 +83,12 @@ int main()
     else
     {
         system_config.hardware_revision=8;
-    }
-    
+    }*/
+    #ifdef BP5_REV
+        system_config.hardware_revision=BP5_REV;
+    #else
+        #error "No platform revision defined. Check pirate.h."
+    #endif
     //init psu pins 
     psu_init();
    
@@ -104,17 +108,12 @@ int main()
 
     // configure the defaults for shift register attached hardware
     shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), CURRENT_EN_OVERRIDE);
-    if(system_config.hardware_revision==8)
-    {
-        shift_set_clear_wait(0,PULLUP_EN);
-    }
-    else
-    {
-        shift_set_clear_wait(PULLUP_EN,0);
-    }    
+    HW_BIO_PULLUP_DISABLE();   
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
-    shift_set_clear_wait( 0, DISPLAY_RESET);
-    busy_wait_ms(100);
+    
+    //reset the LCD
+    shift_set_clear_wait(0, DISPLAY_RESET);
+    busy_wait_us(20);
     shift_set_clear_wait(DISPLAY_RESET,0);
     busy_wait_ms(100);
    
@@ -132,17 +131,18 @@ int main()
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-    storage_mount();
-
-    if(storage_load_config())
-    {
-        system_config.config_loaded_from_file=true;
-    }
+    #if BP5_REV <= 9
+        storage_mount();
+        if(storage_load_config())
+        {
+            system_config.config_loaded_from_file=true;
+        }
+    #endif
 
     // RGB LEDs pins, pio, set to black
-    //multicore_fifo_push_blocking(0x01);
     //this must be done after the 74hct245 is enabled during shift register setup
-    rgb_init();
+    //NOTE: this is now handled on core1 entry
+    //rgb_init();
 
     // Read psu DAC resolution and check error
     psu_setup(); //TODO: handle error
@@ -183,14 +183,23 @@ int main()
 	psu_reset();    // disable psu and reset pin label
     psu_cleanup();  // clear any errors
 
+    // mount NAND flash here
+    #if BP5_REV >= 10
+        storage_mount();
+        if(storage_load_config())
+        {
+            system_config.config_loaded_from_file=true;
+        }
+    #endif
+
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
     multicore_fifo_push_blocking(0); 
-    
-    busy_wait_ms(100);
+    // wait for init to complete  
+    while(multicore_fifo_pop_blocking()!=0xff);
 
-    enum bp_statmachine
+    enum bp_statemachine
     {
         BP_SM_DISPLAY_MODE,
         BP_SM_GET_INPUT,
@@ -232,6 +241,8 @@ int main()
                 {
                     ui_prompt_vt100_mode(&result, &value);
                 }
+
+             
 
                 if(result.success)
                 {
@@ -365,6 +376,8 @@ void core1_entry(void)
     // input buttons init
     //buttons_init();
 
+    rgb_init();
+
     // wait for main core to signal start
     while(multicore_fifo_pop_blocking()!=0);
 
@@ -381,6 +394,8 @@ void core1_entry(void)
     {
         rx_uart_init_irq();
     }
+
+    multicore_fifo_push_blocking(0xff); 
 
     while(1)
     {
@@ -508,16 +523,18 @@ void spi_busy_wait(bool enable)
     }
 
     do{
-        uint32_t save = spin_lock_blocking(spi_spin_lock);
+        //uint32_t save = spin_lock_unsafe_blocking(spi_spin_lock);
+        spin_lock_unsafe_blocking(spi_spin_lock);
         if(busy)
         {
-            spin_unlock(spi_spin_lock, save);
-            //printf("Spinlock busy\r\n");
+            spin_unlock_unsafe(spi_spin_lock);
+            //spin_unlock(spi_spin_lock, save);
         }
         else
         {
             busy=true;
-            spin_unlock(spi_spin_lock, save);
+            spin_unlock_unsafe(spi_spin_lock);
+            //spin_unlock(spi_spin_lock, save);
             return;
         }
 

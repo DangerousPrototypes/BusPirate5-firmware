@@ -1,0 +1,12 @@
+#ifndef _TRANSLATION_BASE
+#define _TRANSLATION_BASE
+void translation_init(void);
+void translation_set(uint32_t language);
+
+extern char **t;
+
+enum T_translations{
+%%%enum_list%%%
+	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
+};
+#endif

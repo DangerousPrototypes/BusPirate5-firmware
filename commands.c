@@ -57,7 +57,8 @@ enum E_CMD{
     CMD_AUX_LOW,
     CMD_AUX_HIGH,     
     CMD_DUMP, 
-    CMD_LOAD,     
+    CMD_LOAD,    
+    CMD_FORMAT, 
     CMD_DISPLAY,
     CMD_LAST_ITEM_ALWAYS_AT_THE_END
 };
@@ -97,7 +98,8 @@ const char *cmd[]={
     [CMD_AUX_HIGH]="A",
     [CMD_DUMP]="dump",
     [CMD_LOAD]="load",
-    [CMD_DISPLAY]="d",
+    [CMD_FORMAT]="format",
+    [CMD_DISPLAY]="d"
 };
 static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wrong length");
 
@@ -339,9 +341,14 @@ const struct _command_parse exec_new[]=
     },      // "load"   
     {
         true, 
+        &storage_format,
+        0,
+        T_CMDLN_NO_HELP
+    },   // "format"
+    {
+        true, 
         &ui_display_enable_args,
         &display_parsers[0],
         T_CMDLN_DISPLAY
     }            // "d"    
-         
 };

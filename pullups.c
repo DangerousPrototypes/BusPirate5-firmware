@@ -9,15 +9,7 @@
 
 void pullups_enable_exc(void)
 {
-    if(system_config.hardware_revision==8)
-    {
-        shift_set_clear_wait(PULLUP_EN,0);
-    }
-    else
-    {
-        shift_set_clear_wait(0,PULLUP_EN);
-        
-    }    
+    HW_BIO_PULLUP_ENABLE();   
     system_config.pullup_enabled=1; 
     system_config.info_bar_changed=true;
 }
@@ -46,14 +38,7 @@ void pullups_enable(opt_args (*args), struct command_result *res)
 
 void pullups_cleanup(void)
 {
-    if(system_config.hardware_revision==8)
-    {
-        shift_set_clear_wait(0,PULLUP_EN);
-    }
-    else
-    {
-        shift_set_clear_wait(PULLUP_EN,0);
-    }    
+    HW_BIO_PULLUP_DISABLE();   
 	system_config.pullup_enabled=0;
     system_config.info_bar_changed=true;
 }

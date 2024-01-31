@@ -4,6 +4,7 @@
 #include "system_config.h"
 #include "opt_args.h"
 #include "command_attributes.h"
+#include "helpers.h"
 #include "bytecode.h"
 #include "commands.h"
 #include "ui/ui_term.h"
@@ -24,12 +25,49 @@
 #include "mcu/rp2040.h"
 #include "display/scope.h"
 
-
 void helpers_selftest(opt_args (*args), struct command_result *res)
 {
+    helpers_selftest_base();
+}
+
+void helpers_selftest_base(void)
+{
+    #define SELF_TEST_LOW_LIMIT 300
     uint32_t temp1, temp2, fails;
 
+
     fails=0;
+    
+    #if BP5_REV >= 10
+    uint32_t value;
+    struct prompt_result presult;     
+    if(!system_config.storage_available)
+    {
+        printf("No file system!\r\nFormat the Bus Pirate NAND flash?\r\nALL DATA WILL BE DESTROYED.\r\n y/n> ");
+        cmdln_next_buf_pos();
+        while(1)
+        {
+            ui_prompt_vt100_mode(&presult, &value);
+            if(presult.success) break;
+        }
+        
+        printf("\r\n\r\n");
+        
+        if(value=='y')
+        {
+
+            if(!storage_format_base())
+            {
+                printf("FORMAT NAND FLASH: ERROR! 不好\r\n\r\n");
+                fails++;                              
+            }
+            else
+            {
+                printf("FORMAT NAND FLASH: OK\r\n\r\n");
+            }
+        }    
+    }
+    #endif    
 
     if (scope_running) { // scope is using the analog subsystem
 	printf("Can't self test when the scope is using the analog subsystem - use the 'd 1' command to switch to the default display\r\n");
@@ -71,7 +109,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
 
 
     //TF flash card check: was TF flash card detected?
-    printf("TF FLASH CARD: ");
+    printf("FLASH STORAGE: ");
     if(storage_mount())
     {
         printf("OK\r\n");
@@ -96,7 +134,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         printf("OK\r\n");
     }
 
-    printf("BIO FLOAT TEST (SHOULD BE 0/<0.2V)\r\n");
+    printf("BIO FLOAT TEST (SHOULD BE 0/<0.%dV)\r\n", SELF_TEST_LOW_LIMIT/10);
     for(uint8_t pin=0; pin<BIO_MAX_PINS; pin++)
     {
         //read pin input (should be low)
@@ -105,7 +143,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
 
         printf("BIO%d FLOAT: %d/%1.2fV ", pin, temp1, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
 
-        if(temp1 || ((*hw_pin_voltage_ordered[pin+1])>200) )
+        if(temp1 || ((*hw_pin_voltage_ordered[pin+1])>SELF_TEST_LOW_LIMIT) )
         {
             printf("ERROR!\r\n");
             fails++;
@@ -116,7 +154,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         }
     }
 
-    printf("BIO HIGH TEST (SHOULD BE >3.0V)\r\n");
+    printf("BIO HIGH TEST (SHOULD BE >3.00V)\r\n");
     for(uint8_t pin=0; pin<BIO_MAX_PINS; pin++)
     {
         bio_output(pin);
@@ -141,7 +179,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         {
             if(pin==i) continue;
             temp1=bio_get(i);
-            if( temp1 || *hw_pin_voltage_ordered[i+1]>200)
+            if( temp1 || *hw_pin_voltage_ordered[i+1]>SELF_TEST_LOW_LIMIT)
             {
                 printf("BIO%d SHORT->BIO%d (%d/%1.2fV): ERROR!\r\n", pin, i, temp1, (float)(*hw_pin_voltage_ordered[i+1]/(float)1000));
                 fails++;
@@ -153,7 +191,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
 
     }
 
-    printf("BIO LOW TEST (SHOULD BE <0.2V)\r\n");
+    printf("BIO LOW TEST (SHOULD BE <0.%dV)\r\n", SELF_TEST_LOW_LIMIT/10);
     //start with all pins high, ground one by one
     for(uint8_t i=0; i<BIO_MAX_PINS; i++)
     {
@@ -168,7 +206,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         //read pin ADC, should be ~3.3v
         amux_sweep();
         printf("BIO%d LOW: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
-        if(*hw_pin_voltage_ordered[pin+1]>200)
+        if(*hw_pin_voltage_ordered[pin+1]>SELF_TEST_LOW_LIMIT)
         {
             printf("ERROR!\r\n");
             fails++;
@@ -196,16 +234,9 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
 
     bio_init();
 
-    printf("BIO PULL-UP HIGH TEST (SHOULD BE >3.0V)\r\n");
-    if(system_config.hardware_revision==8)
-    {
-        shift_set_clear_wait(PULLUP_EN,0);
-    }
-    else
-    {
-        shift_set_clear_wait(0,PULLUP_EN);
-        
-    }    
+    printf("BIO PULL-UP HIGH TEST (SHOULD BE 1/>3.00V)\r\n");
+    HW_BIO_PULLUP_ENABLE();
+
     //start with all pins grounded, then float one by one
     for(uint8_t i=0; i<BIO_MAX_PINS; i++)
     {
@@ -238,7 +269,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
         for(uint8_t i=0; i<BIO_MAX_PINS; i++)
         {
             if(pin==i) continue;
-            if(*hw_pin_voltage_ordered[i+1]>500)
+            if(*hw_pin_voltage_ordered[i+1]>SELF_TEST_LOW_LIMIT)
             {
                 printf("BIO%d SHORT->BIO%d (%1.2fV): ERROR!\r\n", pin, i, (float)(*hw_pin_voltage_ordered[i+1]/(float)1000));
                 fails++;
@@ -253,16 +284,8 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
 
     bio_init();
 
-   printf("BIO PULL-UP LOW TEST (SHOULD BE <0.5V)\r\n");
-    if(system_config.hardware_revision==8)
-    {
-        shift_set_clear_wait(PULLUP_EN,0);
-    }
-    else
-    {
-        shift_set_clear_wait(0,PULLUP_EN);
-        
-    }    
+    printf("BIO PULL-UP LOW TEST (SHOULD BE <0.%dV)\r\n",SELF_TEST_LOW_LIMIT/10);
+    HW_BIO_PULLUP_ENABLE();   
     //start with all pins floating, then ground one by one
     for(uint8_t pin=0; pin<BIO_MAX_PINS; pin++)
     {
@@ -275,7 +298,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
 
         printf("BIO%d PU-LOW: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin+1]/(float)1000));
 
-        if(((*hw_pin_voltage_ordered[pin+1])>500) )
+        if(((*hw_pin_voltage_ordered[pin+1])>SELF_TEST_LOW_LIMIT) )
         {
             printf("ERROR!\r\n");
             fails++;
@@ -371,14 +394,7 @@ void helpers_selftest(opt_args (*args), struct command_result *res)
     }
     */
 
-    if(system_config.hardware_revision==8)
-    {
-        shift_set_clear_wait(0,PULLUP_EN);
-    }
-    else
-    {
-        shift_set_clear_wait(PULLUP_EN,0);
-    }    
+    HW_BIO_PULLUP_DISABLE();   
     bio_init();
     psu_reset();
     psu_cleanup();

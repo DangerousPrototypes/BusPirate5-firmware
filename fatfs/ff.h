@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------/
-/  FatFs - Generic FAT Filesystem module  R0.14b                              /
+/  FatFs - Generic FAT Filesystem module  R0.14                               /
 /-----------------------------------------------------------------------------/
 /
-/ Copyright (C) 2021, ChaN, all right reserved.
+/ Copyright (C) 2019, ChaN, all right reserved.
 /
 / FatFs module is an open source software. Redistribution and use of FatFs in
 / source and binary forms, with or without modification, are permitted provided
@@ -20,7 +20,7 @@
 
 
 #ifndef FF_DEFINED
-#define FF_DEFINED	86631	/* Revision ID */
+#define FF_DEFINED	86606	/* Revision ID */
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,14 +35,10 @@ extern "C" {
 
 /* Integer types used for FatFs API */
 
-#if defined(_WIN32)		/* Windows VC++ (for development only) */
+#if defined(_WIN32)	/* Main development platform */
 #define FF_INTDEF 2
 #include <windows.h>
 typedef unsigned __int64 QWORD;
-#include <float.h>
-#define isnan(v) _isnan(v)
-#define isinf(v) (!_finite(v))
-
 #elif (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || defined(__cplusplus)	/* C99 or later */
 #define FF_INTDEF 2
 #include <stdint.h>
@@ -52,7 +48,6 @@ typedef uint16_t		WORD;	/* 16-bit unsigned integer */
 typedef uint32_t		DWORD;	/* 32-bit unsigned integer */
 typedef uint64_t		QWORD;	/* 64-bit unsigned integer */
 typedef WORD			WCHAR;	/* UTF-16 character type */
-
 #else  	/* Earlier than C99 */
 #define FF_INTDEF 1
 typedef unsigned int	UINT;	/* int must be 16-bit or 32-bit */
@@ -63,29 +58,28 @@ typedef WORD			WCHAR;	/* UTF-16 character type */
 #endif
 
 
-/* Type of file size and LBA variables */
+/* Definitions of volume management */
 
-#if FF_FS_EXFAT
-#if FF_INTDEF != 2
-#error exFAT feature wants C99 or later
+#if FF_MULTI_PARTITION		/* Multiple partition configuration */
+typedef struct {
+	BYTE pd;	/* Physical drive number */
+	BYTE pt;	/* Partition: 0:Auto detect, 1-4:Forced partition) */
+} PARTITION;
+extern PARTITION VolToPart[];	/* Volume - Partition mapping table */
 #endif
-typedef QWORD FSIZE_t;
-#if FF_LBA64
-typedef QWORD LBA_t;
-#else
-typedef DWORD LBA_t;
+
+#if FF_STR_VOLUME_ID
+#ifndef FF_VOLUME_STRS
+extern const char* VolumeStr[FF_VOLUMES];	/* User defied volume ID */
 #endif
-#else
-#if FF_LBA64
-#error exFAT needs to be enabled when enable 64-bit LBA
-#endif
-typedef DWORD FSIZE_t;
-typedef DWORD LBA_t;
 #endif
 
 
 
-/* Type of path name strings on FatFs API (TCHAR) */
+/* Type of path name strings on FatFs API */
+
+#ifndef _INC_TCHAR
+#define _INC_TCHAR
 
 #if FF_USE_LFN && FF_LFN_UNICODE == 1 	/* Unicode in UTF-16 encoding */
 typedef WCHAR TCHAR;
@@ -107,22 +101,28 @@ typedef char TCHAR;
 #define _TEXT(x) x
 #endif
 
-
-
-/* Definitions of volume management */
-
-#if FF_MULTI_PARTITION		/* Multiple partition configuration */
-typedef struct {
-	BYTE pd;	/* Physical drive number */
-	BYTE pt;	/* Partition: 0:Auto detect, 1-4:Forced partition) */
-} PARTITION;
-extern PARTITION VolToPart[];	/* Volume - Partition mapping table */
 #endif
 
-#if FF_STR_VOLUME_ID
-#ifndef FF_VOLUME_STRS
-extern const char* VolumeStr[FF_VOLUMES];	/* User defied volume ID */
+
+
+/* Type of file size and LBA variables */
+
+#if FF_FS_EXFAT
+#if FF_INTDEF != 2
+#error exFAT feature wants C99 or later
 #endif
+typedef QWORD FSIZE_t;
+#if FF_LBA64
+typedef QWORD LBA_t;
+#else
+typedef DWORD LBA_t;
+#endif
+#else
+#if FF_LBA64
+#error exFAT needs to be enabled when enable 64-bit LBA
+#endif
+typedef DWORD FSIZE_t;
+typedef DWORD LBA_t;
 #endif
 
 
@@ -335,7 +335,6 @@ int f_putc (TCHAR c, FIL* fp);										/* Put a character to the file */
 int f_puts (const TCHAR* str, FIL* cp);								/* Put a string to the file */
 int f_printf (FIL* fp, const TCHAR* str, ...);						/* Put a formatted string to the file */
 TCHAR* f_gets (TCHAR* buff, int len, FIL* fp);						/* Get a string from the file */
-void get_dir(char *p);
 
 #define f_eof(fp) ((int)((fp)->fptr == (fp)->obj.objsize))
 #define f_error(fp) ((fp)->err)
@@ -345,6 +344,10 @@ void get_dir(char *p);
 #define f_rewinddir(dp) f_readdir((dp), 0)
 #define f_rmdir(path) f_unlink(path)
 #define f_unmount(path) f_mount(0, path, 0)
+
+#ifndef EOF
+#define EOF (-1)
+#endif
 
 
 

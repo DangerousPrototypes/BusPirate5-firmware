@@ -47,8 +47,19 @@
 #define BIG_BUFFER_SIZE (128 * 1024)
 
 // include platform
-#include "platform/bpi-rev9.h"
-
+#ifndef BP5_REV
+    #error "No /platform/ file included in pirate.h"
+#else
+    #if BP5_REV == 8
+        #include "platform/bpi-rev8.h"
+    #elif BP5_REV == 9
+        #include "platform/bpi-rev9.h"
+    #elif BP5_REV == 10
+        #include "platform/bpi-rev10.h"
+    #else
+        #error "Unknown platform version in pirate.h"
+    #endif
+#endif
 // include a translation
 //new multilingual system
 #include "translation/base.h"

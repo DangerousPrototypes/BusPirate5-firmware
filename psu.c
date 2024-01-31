@@ -28,9 +28,6 @@
 #define PSU_I_HIGH 500 //mA
 #define PSU_I_RANGE ((PSU_I_HIGH*10000) - (PSU_I_LOW*10000))
 
-uint32_t psu_pwm_vreg_adj_pin;
-uint32_t psu_pwm_current_adj_pin;
-
 static void psu_fuse_reset(){
     //reset current trigger
     shift_set_clear_wait(0, CURRENT_RESET); //low to activate the pnp
@@ -54,9 +51,9 @@ bool psu_reset(void)
     psu_vreg_enable(false); 
     //Current adjust is slice 4 channel a
     //voltage adjust is slice 4 channel b
-    uint slice_num = pwm_gpio_to_slice_num(psu_pwm_vreg_adj_pin);
-    uint v_chan_num= pwm_gpio_to_channel(psu_pwm_vreg_adj_pin);
-    uint i_chan_num= pwm_gpio_to_channel(psu_pwm_current_adj_pin);  
+    uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
+    uint v_chan_num= pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
+    uint i_chan_num= pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);  
     // first we start with full current because the inrush will often trip the fuse on low limits
     pwm_set_chan_level(slice_num, v_chan_num, PWM_TOP);
     pwm_set_chan_level(slice_num, i_chan_num, 0);       
@@ -118,9 +115,9 @@ uint32_t psu_set(float volts, float current, bool fuse_en)
 
     //Current adjust is slice 4 channel a
     //voltage adjust is slice 4 channel b
-    uint slice_num = pwm_gpio_to_slice_num(psu_pwm_vreg_adj_pin);
-    uint v_chan_num= pwm_gpio_to_channel(psu_pwm_vreg_adj_pin);
-    uint i_chan_num= pwm_gpio_to_channel(psu_pwm_current_adj_pin);  
+    uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
+    uint v_chan_num= pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
+    uint i_chan_num= pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);  
     // first we start with full current because the inrush will often trip the fuse on low limits
     pwm_set_chan_level(slice_num, v_chan_num, (uint16_t)vset);
     pwm_set_chan_level(slice_num, i_chan_num, PWM_TOP);    
@@ -255,9 +252,9 @@ void psu_enable(opt_args (*args), struct command_result *res)
 
     //Current adjust is slice 4 channel a
     //voltage adjust is slice 4 channel b
-    uint slice_num = pwm_gpio_to_slice_num(psu_pwm_vreg_adj_pin);
-    uint v_chan_num= pwm_gpio_to_channel(psu_pwm_vreg_adj_pin);
-    uint i_chan_num= pwm_gpio_to_channel(psu_pwm_current_adj_pin);  
+    uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
+    uint v_chan_num= pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
+    uint i_chan_num= pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);  
     // first we start with full current because the inrush will often trip the fuse on low limits
     pwm_set_chan_level(slice_num, v_chan_num, (uint16_t)vset);
     pwm_set_chan_level(slice_num, i_chan_num, PWM_TOP);    
@@ -383,9 +380,9 @@ bool psu_setup(void)
 
     //Current adjust is slice 4 channel a
     //voltage adjust is slice 4 channel b
-    uint slice_num = pwm_gpio_to_slice_num(psu_pwm_vreg_adj_pin);
-    uint v_chan_num= pwm_gpio_to_channel(psu_pwm_vreg_adj_pin);
-    uint i_chan_num= pwm_gpio_to_channel(psu_pwm_current_adj_pin);
+    uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
+    uint v_chan_num= pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
+    uint i_chan_num= pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
 
     //10KHz clock, into our 1K + 0.1uF filter
     pwm_set_clkdiv_int_frac(slice_num, 16>>4,16&0b1111);
@@ -398,8 +395,8 @@ bool psu_setup(void)
     pwm_set_chan_level(slice_num, i_chan_num, 0);
 
     //enable output
-    gpio_set_function(psu_pwm_vreg_adj_pin, GPIO_FUNC_PWM);
-    gpio_set_function(psu_pwm_current_adj_pin, GPIO_FUNC_PWM);
+    gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_PWM);
+    gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_PWM);
     pwm_set_enabled(slice_num, true);    
 /*
     //small current limit to avoid fuse being half blown out
@@ -422,23 +419,10 @@ psu_fuse_reset(); //temp
 
 void psu_init(void)
 {
-    if(system_config.hardware_revision==8)
-    {
-        psu_pwm_vreg_adj_pin=PSU_PWM_VREG_ADJ_REV8;
-        psu_pwm_current_adj_pin=PSU_PWM_CURRENT_ADJ_REV8;
-    }
-    else
-    {
-        psu_pwm_vreg_adj_pin=PSU_PWM_VREG_ADJ_REV9;
-        psu_pwm_current_adj_pin=PSU_PWM_CURRENT_ADJ_REV9;
-    }
-
-    gpio_set_function(psu_pwm_current_adj_pin, GPIO_FUNC_SIO);
-    gpio_set_dir(psu_pwm_current_adj_pin, GPIO_OUT);
-    gpio_put(psu_pwm_current_adj_pin, 0);
-    gpio_set_function(psu_pwm_vreg_adj_pin, GPIO_FUNC_SIO);
-    gpio_set_dir(psu_pwm_vreg_adj_pin, GPIO_OUT);
-    gpio_put(psu_pwm_vreg_adj_pin, 1);
-    //gpio_set_function(CURRENT_DETECT, GPIO_FUNC_SIO);
-    //gpio_set_dir(CURRENT_DETECT, GPIO_IN);
+    gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_SIO);
+    gpio_set_dir(PSU_PWM_CURRENT_ADJ, GPIO_OUT);
+    gpio_put(PSU_PWM_CURRENT_ADJ, 0);
+    gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_SIO);
+    gpio_set_dir(PSU_PWM_VREG_ADJ, GPIO_OUT);
+    gpio_put(PSU_PWM_VREG_ADJ, 1);
 }

@@ -238,6 +238,7 @@ static char const * const pl_pl[]={
 	[T_CONFIG_LANGUAGE_ENGLISH]="Angielski",
 	[T_CONFIG_LANGUAGE_CHINESE]="Chiński (uproszczony)",
 	[T_CONFIG_LANGUAGE_POLISH]="Polski",
+	[T_CONFIG_LANGUAGE_BOSNIAN]="Bosnian",
 	[T_CONFIG_DISABLE]="Wyłącz",
 	[T_CONFIG_ENABLE]="Włącz",
 	[T_CONFIG_SCREENSAVER]="Wygaszacz ekranu LCD",

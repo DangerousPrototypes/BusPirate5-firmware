@@ -213,18 +213,18 @@ static const uint8_t bio2bufdirpin[]=
 // ADC connections as they appear on the analog mux pins
 // will be disambiguated in the hw_pin_voltages_ordered'
 enum adc_mux{
-    HW_ADC_MUX_BPIO7,
-    HW_ADC_MUX_BPIO6,
-    HW_ADC_MUX_BPIO5,
-    HW_ADC_MUX_BPIO4,
-    HW_ADC_MUX_BPIO3,
-    HW_ADC_MUX_BPIO2,
-    HW_ADC_MUX_BPIO1,
-    HW_ADC_MUX_BPIO0,
-    HW_ADC_MUX_VUSB,
-    HW_ADC_MUX_CURRENT_DETECT,    
-    HW_ADC_MUX_VREF_VOUT,
-    HW_ADC_MUX_VREG_OUT,
+    HW_ADC_MUX_BPIO7, //0
+    HW_ADC_MUX_BPIO6, //1
+    HW_ADC_MUX_BPIO5, //2
+    HW_ADC_MUX_BPIO4, //3
+    HW_ADC_MUX_BPIO3, //4
+    HW_ADC_MUX_BPIO2, //5
+    HW_ADC_MUX_BPIO1, //6
+    HW_ADC_MUX_BPIO0, //7
+    HW_ADC_MUX_VUSB, //8
+    HW_ADC_MUX_CURRENT_DETECT,    //9
+    HW_ADC_MUX_VREG_OUT, //10
+    HW_ADC_MUX_VREF_VOUT, //11
     HW_ADC_MUX_COUNT
 };
 

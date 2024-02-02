@@ -397,7 +397,7 @@ void ui_info_print_help(opt_args (*args), struct command_result *res)
 		}
 		else
 		{
-			printf("%s%s\t", ui_term_color_reset(), dash_line);
+			printf("%s%s\r\n", ui_term_color_reset(), dash_line);
 		}			
 	}
 

@@ -187,7 +187,6 @@ static const uint8_t bio2bufdirpin[]=
 #define CURRENT_SENSE_ADC (CURRENT_SENSE - 26)
 
 // Two pins for front buttons
-//#define EXT0 26
 #define EXT1 27
 
 // The two 75hc595 shift registers control various hardware on the board

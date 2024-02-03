@@ -5,6 +5,7 @@
 #include "translation/en-us.h"
 //#include "translation/zh-cn.h"
 #include "translation/pl-pl.h"
+#include "translation/bs-ba.h"
 
 char **t;
 
@@ -17,6 +18,9 @@ void translation_set(uint32_t language)
 {
     switch(language)
     {
+        case 2:
+            t = (char **) &bs_ba;
+            break;         
         case 1:
             t = (char **) &pl_pl;
             break;        

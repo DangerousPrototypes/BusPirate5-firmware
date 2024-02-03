@@ -7,7 +7,7 @@ import os
 
 # Define the regular expression pattern
 pattern = r'\[(.*?)\]="(.*?)"'
-
+ 
 # Function to parse key-value pairs from a file
 def parse_key_value_pairs(file_path):
     key_value_pairs = {}
@@ -30,6 +30,11 @@ def parse_key_value_pairs(file_path):
 # Parse key-value pairs from the first file
 base_translation = parse_key_value_pairs('en-us.h')
 
+# Write master_translation to a JSON file
+with open('en-us.json', 'w', encoding='utf-8') as json_file:
+    json.dump(base_translation, json_file, indent=4, ensure_ascii=False)
+
+# Create base.h file with all the translation keys (defines)
 base_h=""
 
 # Iterate over the keys in base_translation

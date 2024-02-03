@@ -78,7 +78,7 @@ add_executable(bus_pirate5_rev10
         platform/bpi-rev10.h platform/bpi-rev10.c 
         #nand flash management and dhara
         dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
-        nand/nand.c nand/nand.h nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
+        nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
         nand/sys_time.c nand/sys_time.h
         )
 target_compile_definitions(bus_pirate5_rev10 PUBLIC BP5_REV=10)

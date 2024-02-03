@@ -9,6 +9,7 @@
 #include "ui/ui_const.h"
 #include "system_config.h"
 #include "mjson/mjson.h"
+#include "mem.h" //defines for buffer owner
 
 struct _system_config system_config;
 
@@ -103,6 +104,8 @@ void system_init(void)
 	system_config.cspin=0;
 	system_config.clkport=0;
 	system_config.clkpin=0;
+
+	system_config.big_buffer_owner=BP_BIG_BUFFER_NONE;
 }
 
 bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label)

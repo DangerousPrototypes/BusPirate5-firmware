@@ -13,6 +13,7 @@
 #include "ui/ui_info.h"
 #include "mcu/rp2040.h"
 #include "amux.h"
+#include "mem.h" //big buffer owner defines
 
 // todo: move
 extern bool ejected;
@@ -86,6 +87,12 @@ void ui_info_print_info(opt_args (*args), struct command_result *res)
 
 	//config file loaded
 	printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), t[T_CONFIG_FILE], ui_term_color_reset(), system_config.config_loaded_from_file?t[T_LOADED]:t[T_NOT_DETECTED]);
+
+	if(system_config.big_buffer_owner!=BP_BIG_BUFFER_NONE)
+	{
+		printf("%sBig buffer allocated to:%s #%d\r\n", ui_term_color_info(), ui_term_color_reset(), system_config.big_buffer_owner);
+	}
+
 
 	// Installed modes
 	printf("%s%s:%s", ui_term_color_info(), t[T_INFO_AVAILABLE_MODES], ui_term_color_reset());

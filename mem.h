@@ -20,11 +20,18 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+enum big_buffer_owners{
+	BP_BIG_BUFFER_NONE=0,
+	BP_BIG_BUFFER_SCOPE,
+	BP_BIG_BUFFER_LA,
+	BP_BIG_BUFFER_DISKFORMAT
+};
+
 /// @brief Attempts to allocate a nand page buffer.
 /// @return Pointer to the buffer if available, NULL if not available
 /// @note Return value should always be checked against null.
 /// @note Max size: SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE
-uint8_t *mem_alloc(size_t size);
+uint8_t *mem_alloc(size_t size, uint32_t owner);
 
 /// @brief Frees the allocated nand page buffer
 /// @param ptr pointer to the nand page buffer

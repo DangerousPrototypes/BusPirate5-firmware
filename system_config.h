@@ -89,8 +89,11 @@ typedef struct _system_config
 	uint32_t clkpin;
 	uint32_t mosiport;				// cs is located on this port/gpio
 	uint32_t mosipin;
-} _system_config;
 
+	uint32_t big_buffer_owner;
+
+
+} _system_config;
 
 extern struct _system_config system_config;
 

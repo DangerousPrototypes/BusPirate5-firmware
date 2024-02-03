@@ -14,6 +14,11 @@
 #include "ui/ui_lcd.h"
 #include "ui/ui_flags.h"
 #include "system_monitor.h"
+#include "opt_args.h"
+#include "commands.h"
+#include "bytecode.h"
+#include "modes.h"
+#include "displays.h"
 
 void lcd_write_string(const FONT_INFO *font, const uint8_t *back_color, const uint8_t *text_color, const char *c, uint16_t fill_length);
 void lcd_write_labels(uint16_t left_margin, uint16_t top_margin, const FONT_INFO *font, const uint8_t *color, const char* c,uint16_t fill_length);
@@ -224,7 +229,6 @@ void lcd_paint_background(void)
 
 void ui_lcd_update(uint32_t update_flags)
 {
-    
     if(update_flags & UI_UPDATE_IMAGE)
     {
         lcd_write_background(layout.image->bitmap);
@@ -251,7 +255,7 @@ void ui_lcd_update(uint32_t update_flags)
         uint16_t top_margin=layout.vout_top_pad;   
         for(int i=0;i<HW_PINS;i++)
         {
-            if(system_config.pin_changed & (1u<<i))
+            if(system_config.pin_changed & (1u<<i) || update_flags&UI_UPDATE_FORCE)
             {
                 lcd_write_labels(left_margin, top_margin, layout.font_default, colors_pallet[layout.io_label_color], system_config.pin_labels[i]==0?"-":(char*)system_config.pin_labels[i], layout.io_col_width_chars);
             }
@@ -271,13 +275,13 @@ void ui_lcd_update(uint32_t update_flags)
         uint16_t top_margin=layout.vout_top_pad;
         for(int i=0;i<HW_PINS-1;i++)
         {
-            if(monitor_get_voltage_char(i, 0, c))
+            if(monitor_get_voltage_char(i, 0, c) || update_flags&UI_UPDATE_FORCE)
             {
                 lcd_write_labels(left_margin, top_margin, layout.font_default, colors_pallet[layout.io_value_color], c, 0);
 
             }
 
-            if(monitor_get_voltage_char(i, 2, c))
+            if(monitor_get_voltage_char(i, 2, c) || update_flags&UI_UPDATE_FORCE)
             {
                 lcd_write_labels(left_margin_skip_two_chars, top_margin, layout.font_default, colors_pallet[layout.io_value_color], c, 0);
             }
@@ -288,12 +292,12 @@ void ui_lcd_update(uint32_t update_flags)
     }
 
     //reset to 000.0 when psu is disabled
-    if((system_config.pin_changed&(1u<<BP_VOUT)) && (system_config.pin_func[BP_VOUT]==BP_PIN_VREF))
+    if(((system_config.pin_changed&(1u<<BP_VOUT))||update_flags&UI_UPDATE_FORCE)  && (system_config.pin_func[BP_VOUT]==BP_PIN_VREF))
     {
         char current_string[]="000.0";    
         lcd_write_labels(layout.current_left_pad, layout.current_top_pad, layout.font_big, colors_pallet[layout.current_color], current_string, 0);
     }
-    else if(update_flags & UI_UPDATE_CURRENT)
+    else if(update_flags & UI_UPDATE_CURRENT || update_flags&UI_UPDATE_FORCE)
     {
         // this is a bit of a hack, the big font is variable width, and the first char (.) is smaller than a number
         // so we go for 3, but thats not really the best way to deal
@@ -304,14 +308,14 @@ void ui_lcd_update(uint32_t update_flags)
         //integers
         for(int i=0; i<3; i++)
         {
-            if(monitor_get_current_char(i, c))
+            if(monitor_get_current_char(i, c) || update_flags&UI_UPDATE_FORCE)
             {
                 lcd_write_labels(left_margin, layout.current_top_pad, layout.font_big, colors_pallet[layout.current_color], c, 0);
             }
             left_margin += font_width;
         }
         //decimal
-        if(monitor_get_current_char(4, c))
+        if(monitor_get_current_char(4, c) || update_flags&UI_UPDATE_FORCE)
         {
             //variable width font, decimal point (0) is smaller
             left_margin +=(layout.font_big->lookup[0].width+layout.font_big->right_padding);
@@ -404,7 +408,14 @@ void lcd_screensaver_enable(void)
 
 void lcd_screensaver_disable(void)
 {
-    ui_lcd_update(UI_UPDATE_ALL);
+    if (modes[system_config.mode].protocol_lcd_update)
+    {
+        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
+    } else 
+    if (displays[system_config.display].display_lcd_update)
+    {
+        displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
+    }
     shift_set_clear_wait( (DISPLAY_BACKLIGHT), 0); 
 }
 

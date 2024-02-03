@@ -12,6 +12,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
 #include "modes.h"
+#include "displays.h"
 #include "ui/ui_format.h"
 #include "ui/ui_cmdln.h"
 #include "pico/multicore.h"
@@ -22,6 +23,7 @@
 #include "bio.h"
 #include "amux.h"
 #include "mcu/rp2040.h"
+#include "display/scope.h"
 
 void helpers_selftest(opt_args (*args), struct command_result *res)
 {
@@ -67,6 +69,10 @@ void helpers_selftest_base(void)
     }
     #endif    
 
+    if (scope_running) { // scope is using the analog subsystem
+	printf("Can't self test when the scope is using the analog subsystem - use the 'd 1' command to switch to the default display\r\n");
+	return;
+    }
     printf("SELF TEST STARTING\r\nDISABLE IRQ: ");
     multicore_fifo_push_blocking(0xf0);
     while(multicore_fifo_pop_blocking()!=0xf0);
@@ -547,8 +553,18 @@ void helpers_mode_help(opt_args (*args), struct command_result *res)
     modes[system_config.mode].protocol_help();
 }
 
+void helpers_display_help(opt_args (*args), struct command_result *res)
+{
+    if (displays[system_config.display].display_help) {
+        displays[system_config.display].display_help();
+    } else {
+        printf("No display help available for this display mode\r\n");
+    }
+}
+
 void helpers_mode_periodic()
 {
+    displays[system_config.display].display_periodic();
     modes[system_config.mode].protocol_periodic();
 }
 

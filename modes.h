@@ -73,6 +73,8 @@ typedef struct _mode
 	void (*protocol_settings)(void);		// display settings 
 	void (*protocol_help)(void);			// display protocol specific help
 	char protocol_name[10];				// friendly name (promptname)
+	uint32_t (*protocol_command)(struct opt_args *args, struct command_result *result); // per mode command parser - ignored if 0
+	void (*protocol_lcd_update)(uint32_t flags);	// replacement for ui_lcd_update if non-0
 } _mode;
 
 extern struct _mode modes[MAXPROTO];

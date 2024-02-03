@@ -10,6 +10,7 @@
 #include "freq.h"
 #include "ui/ui_flags.h"
 #include "system_monitor.h"
+#include "display/scope.h"
 
 
 uint32_t ui_statusbar_info(char *buf)
@@ -47,6 +48,11 @@ uint32_t ui_statusbar_info(char *buf)
            (system_config.psu_voltage)/10000, ((system_config.psu_voltage)%10000)/100,
            (system_config.psu_current_limit)/10000, ((system_config.psu_current_limit)%10000)/100 
         );
+        len+=temp;
+        cnt+=temp;
+    }
+    if (scope_running) { // scope is using the analog subsystem
+        temp=sprintf(&buf[len],"V update slower when scope running");
         len+=temp;
         cnt+=temp;
     }

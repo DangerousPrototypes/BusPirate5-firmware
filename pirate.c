@@ -31,6 +31,7 @@
 #include "ui/ui_cmdln.h"
 #include "bytecode.h"
 #include "modes.h"
+#include "displays.h"
 #include "system_monitor.h"
 #include "ui/ui_statusbar.h"
 #include "tusb.h"
@@ -164,7 +165,14 @@ int main()
     spi_set_baudrate(BP_SPI_PORT, 1000*1000*32);
     lcd_configure();
     monitor(system_config.psu);
-    ui_lcd_update(UI_UPDATE_ALL);
+    if (modes[system_config.mode].protocol_lcd_update)
+    {
+        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
+    } else 
+    if (displays[system_config.display].display_lcd_update)
+    {
+        displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
+    }
     shift_set_clear_wait( (DISPLAY_BACKLIGHT), 0); 
 
     translation_set(system_config.terminal_language); 
@@ -354,6 +362,7 @@ int main()
 
 // refresh interrupt flag, serviced in the loop outside interrupt
 bool lcd_update_request=false;
+bool lcd_update_force=false;
 
 // begin of code execution for the second core (core1)
 void core1_entry(void) 
@@ -414,6 +423,7 @@ void core1_entry(void)
 
             uint32_t update_flags=0;
 
+	    if (lcd_update_force) { lcd_update_force=false;update_flags|= UI_UPDATE_FORCE|UI_UPDATE_ALL;} 
             if(system_config.pin_changed) update_flags|= UI_UPDATE_LABELS; //pin labels
             if(monitor_voltage_changed()) update_flags|= UI_UPDATE_VOLTAGES; //pin voltages
             if(system_config.psu && monitor_current_changed()) update_flags|= UI_UPDATE_CURRENT; //psu current sense
@@ -421,7 +431,14 @@ void core1_entry(void)
 
             if(!system_config.lcd_screensaver_active) 
             {
-                ui_lcd_update(update_flags);
+		if (modes[system_config.mode].protocol_lcd_update)
+                {
+		    modes[system_config.mode].protocol_lcd_update(update_flags);
+		} else 
+                if (displays[system_config.display].display_lcd_update)
+                {
+                    displays[system_config.display].display_lcd_update(update_flags);
+		}
             }
             
             if(system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar && system_config.terminal_ansi_statusbar_update)
@@ -454,6 +471,11 @@ void core1_entry(void)
                     break;
                 case 0xf1:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
+                    lcd_update_request=true;
+                    break;
+                case 0xf2:
+                    lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
+                    lcd_update_force=true;
                     lcd_update_request=true;
                     break;
                 default:

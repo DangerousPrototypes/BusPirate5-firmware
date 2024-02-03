@@ -12,6 +12,7 @@
 #include "ui/ui_info.h"
 #include "ui/ui_config.h"
 #include "ui/ui_mode.h"
+#include "ui/ui_display.h"
 #include "pwm.h"
 #include "freq.h"
 #include "adc.h"
@@ -41,6 +42,7 @@ enum E_CMD{
     CMD_PWM_CONFIG,
     CMD_PWM_DIS,
     CMD_HELP_MODE,
+    CMD_HELP_DISPLAY,
     CMD_INFO,
     CMD_BITORDER_MSB,
     CMD_BITORDER_LSB,
@@ -57,6 +59,7 @@ enum E_CMD{
     CMD_DUMP, 
     CMD_LOAD,    
     CMD_FORMAT, 
+    CMD_DISPLAY,
     CMD_LAST_ITEM_ALWAYS_AT_THE_END
 };
 
@@ -79,6 +82,7 @@ const char *cmd[]={
     [CMD_PWM_CONFIG]="G",
     [CMD_PWM_DIS]="g",
     [CMD_HELP_MODE]="h",
+    [CMD_HELP_DISPLAY]="hd",
     [CMD_INFO]="i",
     [CMD_BITORDER_MSB]="l",
     [CMD_BITORDER_LSB]="L",
@@ -94,7 +98,8 @@ const char *cmd[]={
     [CMD_AUX_HIGH]="A",
     [CMD_DUMP]="dump",
     [CMD_LOAD]="load",
-    [CMD_FORMAT]="format"    
+    [CMD_FORMAT]="format",
+    [CMD_DISPLAY]="d"
 };
 static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wrong length");
 
@@ -111,7 +116,8 @@ const struct _parsers change_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL}
 const struct _parsers make_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
 const struct _parsers unlink_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
 const struct _parsers cat_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers m_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers m_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
+const struct _parsers display_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
 const struct _parsers psuen_parsers[]={{NULL},{NULL},{NULL},{NULL},{NULL}};
 const struct _parsers show_int_formats_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
 const struct _parsers show_int_inverse_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
@@ -239,6 +245,12 @@ const struct _command_parse exec_new[]=
     },         // "h"
     {
         true, 
+        &helpers_display_help,
+        0,
+        T_CMDLN_HELP_DISPLAY
+    },         // "hd"
+    {
+        true, 
         &ui_info_print_info,
         0,
         T_CMDLN_INFO
@@ -332,6 +344,11 @@ const struct _command_parse exec_new[]=
         &storage_format,
         0,
         T_CMDLN_NO_HELP
-    }   // "format"
-        
+    },   // "format"
+    {
+        true, 
+        &ui_display_enable_args,
+        &display_parsers[0],
+        T_CMDLN_DISPLAY
+    }            // "d"    
 };

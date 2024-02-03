@@ -2,8 +2,10 @@
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "bytecode.h"
-#include "modes.h"
 #include "pirate.h"
+#include "opt_args.h"
+#include "commands.h"
+#include "modes.h"
 #include "ui/ui_const.h"
 #include "system_config.h"
 #include "mjson/mjson.h"
@@ -47,6 +49,7 @@ void system_init(void)
 
 	system_config.hiz=1;
  	system_config.mode=0;
+ 	system_config.display=0;
 	system_config.subprotocol_name=0;
 	for(int i=0;i<HW_PINS;i++)
 	{

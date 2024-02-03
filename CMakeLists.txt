@@ -27,7 +27,8 @@ pico_sdk_init()
 set(bp5_common 
         pirate.c pirate.h commands.h commands.c 
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
-        msc_disk.c usb_descriptors.c  
+	msc_disk.c usb_descriptors.c
+	displays.c displays.h display/default.c display/default.h
         shift.h shift.c psu.h psu.c amux.h amux.c buttons.c buttons.h
         system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
         pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c
@@ -35,9 +36,11 @@ set(bp5_common
         mode/usart.h mode/usart.c mode/hwi2c.c mode/hwi2c.h mode/hwled.c mode/hwled.h
         ui/ui_cmdln.c ui/ui_cmdln.h ui/ui_process.h ui/ui_process.c
         mode/hw1wire.h mode/hw1wire.c mode/onewire.h mode/onewire.c
+	display/scope.h display/scope.c
         ui/ui_flags.h
         debug.c debug.h
         ui/ui_parse.c ui/ui_parse.h ui/ui_prompt.h ui/ui_prompt.c  ui/ui_mode.c ui/ui_mode.h
+	ui/ui_display.c ui/ui_display.h
         ui/ui_info.h ui/ui_info.c ui/ui_format.c ui/ui_format.c ui/ui_init.c ui/ui_init.h
         ui/ui_const.h ui/ui_const.c ui/ui_config.h ui/ui_config.c 
         translation/base.h translation/base.c translation/en-us.h translation/zh-cn.h translation/pl-pl.h

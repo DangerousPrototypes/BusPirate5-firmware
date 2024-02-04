@@ -74,13 +74,17 @@ void ui_display_enable_args(opt_args (*args), struct command_result *res)
     }
 
     //ok, start setup dialog
+    displays[system_config.display].display_cleanup();   // switch to HiZ
     if(!displays[display].display_setup()) //user bailed on setup steps
     {
+		system_config.display=0; // switch to default
+		displays[system_config.display].display_setup();
+		displays[system_config.display].display_setup_exc();
         //(*response).error=true;
+		printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_DISPLAY], ui_term_color_reset(), displays[system_config.display].display_name);
         return;
     }
 
-    displays[system_config.display].display_cleanup();   // switch to HiZ
     system_config.display=display;                        // setup the new mode  
     displays[system_config.display].display_setup_exc(); // execute the mode setup
 

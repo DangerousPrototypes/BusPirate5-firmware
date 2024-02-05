@@ -39,6 +39,7 @@
 #include "pico/lock_core.h"
 #include "helpers.h"
 #include "mode/binio.h"
+#include "lib/gusmanbla/LogicAnalyzer_Structs.h"
 #include "lib/gusmanbla/LogicAnalyzer.h"
 
 lock_core_t core;

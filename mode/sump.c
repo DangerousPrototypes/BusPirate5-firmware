@@ -10,9 +10,10 @@
 #include "bio.h"
 #include "system_config.h"
 #include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and bytecode stuff to a single helper file
+#include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "modes.h"
 #include "mode/binio.h"
-#include "opt_args.h" //needed for same reason as bytecode and needs same fix
+#include "hardware/clocks.h"
 #include "pullups.h"
 #include "psu.h"
 #include "sump.h"
@@ -39,8 +40,6 @@ static enum _LAstate {
 	LA_ARMED,
 } LAstate = LA_IDLE;
 
-#define LA_SAMPLE_SIZE 138000 //(see busPirateCore.h)
-//static unsigned char samples[LA_SAMPLE_SIZE];
 static unsigned char sumpPadBytes;
 static unsigned int sumpSamples;
 
@@ -57,10 +56,15 @@ void sump_logic_analyzer(void)
 
 	sump_command(SUMP_ID);
 
+	uint32_t sysclk = clock_get_hz(clk_sys) / 4; //SAMPLING_DIVIDER; 
+
+	//printf("%.8x ", sysclk);
+
 	while(1)
 	{
 		if(bin_rx_fifo_try_get(&c))
 		{
+			//printf("%.2x ", c);
 			if(sump_command(c)) return;
 		}
 		
@@ -71,17 +75,18 @@ void sump_logic_analyzer(void)
 void sump_reset(void)
 {
 	//reset the SUMP state machine
-	sumpSamples=LA_SAMPLE_SIZE;
+	sumpSamples=BIG_BUFFER_SIZE;
 	sumpPadBytes=0;
 	LAstate=LA_IDLE;
 }
 
 // device name string
-//sample memory (21)
-//sample rate (23)
+//sample memory (21) 0x1000 = 4096, 0x2 00 00 = 131072
+//sample rate (23) sysclk = clock_get_hz(clk_sys) / 4; //SAMPLING_DIVIDER; 1dc d650
 //number of probes (40)
 //protocol version (41)
-static const char sump_description[]="\01BPv5\00\21\00\00\10\00\23\00\0f\42\40\40\05\41\02\00";	
+//http://dangerousprototypes.com/docs/The_Logic_Sniffer%27s_extended_SUMP_protocol
+static const char sump_description[]={0x01,'B','P','v','5',0x00, 0x21, 0x00, 0x02, 0x00, 0x00, 0x23, 0x07, 0x73, 0x59, 0x40, 0x40, 0x08, 0x41, 0x02, 0x00};	
 
 bool sump_command(unsigned char inByte)
 {
@@ -118,6 +123,25 @@ bool sump_command(unsigned char inByte)
 					break;
 				case SUMP_DESC:
 					script_send(sump_description, sizeof(sump_description));
+					//script_print()"\01BPv5\00\21\00\00\10\00\23\00\0f\42\40\20\00\00\00\08\41\02\00";
+					/*bin_tx_fifo_put(0x01);	//1
+					script_print("BPv5"); //5
+					bin_tx_fifo_put(0x00);	//6
+					bin_tx_fifo_put(0x21); //7
+					bin_tx_fifo_put(0x00); 
+					bin_tx_fifo_put(0x00);
+					bin_tx_fifo_put(0x10);
+					bin_tx_fifo_put(0x00);
+					bin_tx_fifo_put(0x23);
+					bin_tx_fifo_put(0x00);
+					bin_tx_fifo_put(0x0f);
+					bin_tx_fifo_put(0x42);
+					bin_tx_fifo_put(0x40);
+					bin_tx_fifo_put(0x40);	
+					bin_tx_fifo_put(0x08);	
+					bin_tx_fifo_put(0x42);	
+					bin_tx_fifo_put(0x02);	
+					bin_tx_fifo_put(0x00);	*/
 					break;
 				case SUMP_XON://resume send data
 				//	xflow=1;
@@ -155,10 +179,9 @@ bool sump_command(unsigned char inByte)
 					break;
 */
 				case SUMP_CNT:		
-					uint32_t sump_read_count = ((((sumpRX.command[2] <<8) | sumpRX.command[1]) +1 ) *4);
-					uint32_t sump_delay_count = ((((sumpRX.command[4] <<8) | sumpRX.command[3]) +1 ) *4);
-					req->preSamples = sump_read_count-sump_delay_count;
-					req->postSamples = sump_delay_count;
+					req->postSamples = ((((sumpRX.command[4] <<8) | sumpRX.command[3]) +1 ) *4);
+					req->preSamples = ((((sumpRX.command[2] <<8) | sumpRX.command[1]) +1 ) *4)-req->postSamples;
+					printf("%.4x",req->postSamples );
 					/*sumpSamples=sumpRX.command[2];
 					sumpSamples<<=8;
 					sumpSamples|=sumpRX.command[1];

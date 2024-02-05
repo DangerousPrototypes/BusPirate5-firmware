@@ -105,6 +105,7 @@ bool script_entry(void)
 
     while(bin_rx_fifo_try_get(&c))
     {
+
         switch(c)
         {
             case 0x00:
@@ -131,6 +132,7 @@ bool script_entry(void)
                 binmodecnt = 0;
                 break;
         }
+
     }  
 
     return false;

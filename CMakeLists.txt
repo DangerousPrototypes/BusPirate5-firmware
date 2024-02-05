@@ -23,9 +23,15 @@ pico_sdk_init()
 #add_compile_definitions(BP5_REV=8) 
 
 # Add executable. Default name is the project name, version 0.1
-
 set(bp5_common 
         pirate.c pirate.h commands.h commands.c 
+        lib/gusmanbla/Event_Machine.c lib/gusmanbla/Event_Machine.h
+        lib/gusmanbla/LogicAnalyzer.c lib/gusmanbla/LogicAnalyzer.h
+        lib/gusmanbla/LogicAnalyzer_Board_Settings.h
+        lib/gusmanbla/LogicAnalyzer_Build_Settings.h
+        lib/gusmanbla/LogicAnalyzer_Structs.h
+        lib/gusmanbla/Shared_Buffers.c lib/gusmanbla/Shared_Buffers.h
+        mode/sump.c mode/sump.h        
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
 	msc_disk.c usb_descriptors.c
 	displays.c displays.h display/default.c display/default.h
@@ -59,7 +65,7 @@ set(bp5_common
         dump.c dump.h opt_args.h command_attributes.h bytecode.h
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
-        mode/binio.c mode/binio.h
+        mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
         #mem buffer for shared malloc
         mem.c mem.h
         )
@@ -93,9 +99,11 @@ set(stdlibs
         hardware_timer
         hardware_watchdog
         hardware_clocks
+        hardware_flash
         hardware_adc
         hardware_uart
         pico_multicore
+        pico_base_headers
         pico_unique_id
         pico_bootrom 
         hardware_pwm

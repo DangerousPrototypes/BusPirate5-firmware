@@ -39,6 +39,7 @@
 #include "pico/lock_core.h"
 #include "helpers.h"
 #include "mode/binio.h"
+#include "lib/gusmanbla/LogicAnalyzer.h"
 
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
@@ -220,10 +221,9 @@ int main()
     while(1)
     {
 
-        if(system_config.binmode) //enter scripting mode
+        if(script_mode()) //enter scripting mode?
         {
-            bp_state=BP_SM_SCRIPT_MODE;
-            printf("\r\nScripting mode enabled. Terminal locked.\r\n");
+            bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
         }
 
         switch(bp_state)
@@ -311,7 +311,6 @@ int main()
                 break;     
             case BP_SM_SCRIPT_MODE:
                 script_mode();
-                printf("\r\nTerminal unlocked.\r\n");     //fall through to prompt 
             case BP_SM_COMMAND_PROMPT:
                 if(system_config.subprotocol_name)
                 {
@@ -431,14 +430,14 @@ void core1_entry(void)
 
             if(!system_config.lcd_screensaver_active) 
             {
-		if (modes[system_config.mode].protocol_lcd_update)
+                if (modes[system_config.mode].protocol_lcd_update)
                 {
-		    modes[system_config.mode].protocol_lcd_update(update_flags);
-		} else 
-                if (displays[system_config.display].display_lcd_update)
+                    modes[system_config.mode].protocol_lcd_update(update_flags);
+                } 
+                else if (displays[system_config.display].display_lcd_update)
                 {
                     displays[system_config.display].display_lcd_update(update_flags);
-		}
+                }
             }
             
             if(system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar && system_config.terminal_ansi_statusbar_update)
@@ -446,11 +445,13 @@ void core1_entry(void)
                 ui_statusbar_update(update_flags);
             }
 
-            //TODO: where to put storage class text and systemconfig stuff???
-            if(storage_detect())
-            {
+            //remains for legacy REV8 support of TF flash
+            #if BP5_REV>10
+                if(storage_detect())
+                {
 
-            }
+                }
+            #endif
             
             freq_measure_period_irq(); //update frequency periodically
             

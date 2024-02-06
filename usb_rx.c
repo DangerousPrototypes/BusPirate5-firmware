@@ -82,6 +82,7 @@ void tud_cdc_rx_cb(uint8_t itf)
         }     
     }
 
+#if(0)
     if(itf==1 && tud_cdc_n_available(1))
     {
         uint32_t count = tud_cdc_n_read(1, buf, 64);
@@ -119,6 +120,7 @@ void tud_cdc_rx_cb(uint8_t itf)
             
         }     
     }    
+#endif
 }
 
 #if 0 

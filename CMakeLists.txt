@@ -25,12 +25,6 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 set(bp5_common 
         pirate.c pirate.h commands.h commands.c 
-        lib/gusmanbla/Event_Machine.c lib/gusmanbla/Event_Machine.h
-        lib/gusmanbla/LogicAnalyzer.c lib/gusmanbla/LogicAnalyzer.h
-        lib/gusmanbla/LogicAnalyzer_Board_Settings.h
-        lib/gusmanbla/LogicAnalyzer_Build_Settings.h
-        lib/gusmanbla/LogicAnalyzer_Structs.h
-        lib/gusmanbla/Shared_Buffers.c lib/gusmanbla/Shared_Buffers.h
         mode/sump.c mode/sump.h        
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
 	msc_disk.c usb_descriptors.c

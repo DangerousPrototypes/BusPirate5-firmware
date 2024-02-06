@@ -39,8 +39,6 @@
 #include "pico/lock_core.h"
 #include "helpers.h"
 #include "mode/binio.h"
-#include "lib/gusmanbla/LogicAnalyzer_Structs.h"
-#include "lib/gusmanbla/LogicAnalyzer.h"
 
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
@@ -407,7 +405,7 @@ void core1_entry(void)
 
         //service the terminal TX queue
         tx_fifo_service();
-        bin_tx_fifo_service();
+        //bin_tx_fifo_service();
 
         if(system_config.psu==1 && system_config.psu_irq_en==true && hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] < 100 )
         {

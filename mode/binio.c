@@ -35,6 +35,7 @@
 #include "amux.h"
 #include "sump.h"
 #include "binio_helpers.h"
+#include "tusb.h"
 
 unsigned char binBBpindirectionset(unsigned char inByte);
 unsigned char binBBpinset(unsigned char inByte);
@@ -103,12 +104,17 @@ bool script_entry(void)
     static uint8_t binmodecnt=0;
     char c;
 
-    while(bin_rx_fifo_try_get(&c))
+    while(tud_cdc_n_available(1))
     {
 
         switch(c)
         {
             case 0x00:
+                    script_enabled();
+                    system_config.binmode=true;
+                    sump_logic_analyzer();
+                    system_config.binmode=false;
+                    script_disabled();            
                 binmodecnt++;
                 if(binmodecnt>=20)
                 {   

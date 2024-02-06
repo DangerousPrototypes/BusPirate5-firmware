@@ -110,5 +110,7 @@ void cdc_sump_init(void);
 void cdc_sump_task(void);
 //void cdc_sump_line_coding(cdc_line_coding_t const* line_coding);
 
+void sump_logic_analyzer(void);
+
 #endif /* SUMP_H_ */
 

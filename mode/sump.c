@@ -49,8 +49,8 @@
 #include "pullups.h"
 #include "psu.h"
 #include "binio_helpers.h"
-#include "lib/gusmanbla/LogicAnalyzer_Structs.h"
-#include "lib/gusmanbla/LogicAnalyzer.h"
+
+#include "tusb.h"
 
 #define CDC_INTF		1
 
@@ -68,7 +68,7 @@
 #error "Correct sampling width (8 or 16 bits)"
 #endif
 
-#define SAMPLING_PIO		pio1
+#define SAMPLING_PIO		pio0
 #define SAMPLING_PIO_SM		0u
 
 #define SAMPLING_DMA_IRQ	DMA_IRQ_1
@@ -259,7 +259,7 @@ sump_calc_sysclk_divider()
                     clock_get_hz(clk_sys), sump.divider, v, (float)v / 256.0);
     return v;
 }
-/*
+
 static void
 sump_pio_program(void)
 {
@@ -299,7 +299,7 @@ sump_pio_init(void)
     printf("%s(): pc=0x%02x [0x%02x], gpio=%u\n", __func__,
                     off, sump.pio_prog_offset, gpio);
 }
-
+/*
 static uint32_t
 sump_pwm_slice_init(uint gpio, uint clock, bool swap_levels)
 {
@@ -332,11 +332,12 @@ sump_pwm_slice_init(uint gpio, uint clock, bool swap_levels)
                     (float)clksys / (float)clkdiv / (float)top / 1000000.0,
                     (float)clock / 1000000.0);
     return 1u << slice;
-}
+}*/
 
 static uint32_t
 sump_calib_init(void)
 {
+	/*
     uint32_t clksys = clock_get_hz(clk_sys), clkdiv, slice;
     const uint32_t clock = 5 * ONE_MHZ;
     const uint16_t top = 10, level_a = 5;
@@ -359,12 +360,14 @@ sump_calib_init(void)
                     (float)clksys / (float)clkdiv / (float)top / 1000000.0,
                     (float)clock / 1000000.0);
     return 1u << slice;
+	*/
+return 1u;
 }
 
 static uint32_t
 sump_test_init(void)
 {
-    // Initialize test PWMs
+ /*   // Initialize test PWMs
     const uint32_t gpio = SAMPLING_GPIO_FIRST;
     uint32_t mask;
     // 10Mhz PWM
@@ -378,12 +381,13 @@ sump_test_init(void)
     mask |= sump_pwm_slice_init(gpio + 8, 1000, true);
 #endif
     return mask;
+	*/
 }
 
 static void
 sump_test_done(void)
 {
-    const uint32_t gpio = SAMPLING_GPIO_FIRST;
+    /*const uint32_t gpio = SAMPLING_GPIO_FIRST;
     uint32_t i;
 
     pwm_set_enabled(pwm_gpio_to_slice_num(gpio), false);
@@ -396,6 +400,7 @@ sump_test_done(void)
         gpio_set_function(i, GPIO_FUNC_NULL);
     // test pin
     pwm_set_enabled(SAMPLING_GPIO_TEST, false);
+	*/
 }
 
 
@@ -466,12 +471,12 @@ sump_dma_init(uint8_t state)
 
     sump_pio_init();
 
-    pwm_mask = sump_calib_init();
-    if (sump.flags & SUMP_FLAG1_EXT_TEST) {
-        pwm_mask |= sump_test_init();
-    } else {
+    //pwm_mask = sump_calib_init();
+    //if (sump.flags & SUMP_FLAG1_EXT_TEST) {
+    //    pwm_mask |= sump_test_init();
+    //} else {
         sump_test_done();
-    }
+    //}
 
     // limit chunk size for slow sampling
     sump_set_chunk_size();
@@ -482,8 +487,8 @@ sump_dma_init(uint8_t state)
     // let's go
     irq_state = save_and_disable_interrupts();
     pio_sm_set_enabled(SAMPLING_PIO, SAMPLING_PIO_SM, true);
-    if (pwm_mask)
-        pwm_set_mask_enabled(pwm_mask);
+    //if (pwm_mask)
+        //pwm_set_mask_enabled(pwm_mask);
     dma_channel_start(SUMP_DMA_CH_FIRST);
     irq_set_enabled(SAMPLING_DMA_IRQ, true);
     sump.timestamp_start = time_us_64();
@@ -676,7 +681,7 @@ __retry:
     goto __retry;
 	
 }
-*/
+
 static void
 sump_do_run(void)
 {
@@ -701,7 +706,7 @@ sump_do_run(void)
         state = SUMP_STATE_SAMPLING;
     }
 
-    //sump_dma_init(state);
+    sump_dma_init(state);
 }
 
 static void
@@ -709,7 +714,7 @@ sump_do_finish(void)
 {
     if (sump.state == SUMP_STATE_TRIGGER || sump.state == SUMP_STATE_SAMPLING) {
         sump.state = SUMP_STATE_DUMP;
-        //sump_dma_done();
+        sump_dma_done();
         return;
     }
 }
@@ -722,7 +727,7 @@ sump_do_stop(void)
     if (sump.state == SUMP_STATE_INIT)
         return;
     // IRQ and PIO fast stop
-    /*irq_set_enabled(SAMPLING_DMA_IRQ, false);
+    irq_set_enabled(SAMPLING_DMA_IRQ, false);
     pio_sm_set_enabled(SAMPLING_PIO, SAMPLING_PIO_SM, false);
     // DMA abort
     for (i = SUMP_DMA_CH_FIRST; i <= SUMP_DMA_CH_LAST; i++)
@@ -733,8 +738,8 @@ sump_do_stop(void)
     pio_sm_clear_fifos(SAMPLING_PIO, SAMPLING_PIO_SM);
     pio_sm_restart(SAMPLING_PIO, SAMPLING_PIO_SM);
     // test
-    //sump_test_done();
-    // protocol state*/
+    sump_test_done();
+    // protocol state
     sump.state = SUMP_STATE_INIT;
 }
 
@@ -1108,9 +1113,9 @@ cdc_sump_init_connect(void)
 {
     uint32_t pio_off;
 
-    //pio_off = sump.pio_prog_offset;
+    pio_off = sump.pio_prog_offset;
     memset(&sump, 0, sizeof(sump));
-    //sump.pio_prog_offset = pio_off;
+    sump.pio_prog_offset = pio_off;
     sump.width = 1;
     sump.divider = 1000;		// a safe value
     sump.read_count = 256;
@@ -1123,7 +1128,7 @@ void
 cdc_sump_init(void)
 {
     uint i;
-/*
+
     // claim DMA channels
     dma_claim_mask(SUMP_DMA_MASK);
 
@@ -1143,15 +1148,15 @@ cdc_sump_init(void)
     }
 
     // test GPIO pin
-    gpio_set_dir(SAMPLING_GPIO_TEST, true);
-    gpio_put(SAMPLING_GPIO_TEST, true);
-    gpio_set_function(SAMPLING_GPIO_TEST, GPIO_FUNC_PWM);
+    //gpio_set_dir(SAMPLING_GPIO_TEST, true);
+    //gpio_put(SAMPLING_GPIO_TEST, true);
+    //gpio_set_function(SAMPLING_GPIO_TEST, GPIO_FUNC_PWM);
 
     // set exclusive interrupt handler
     irq_set_enabled(SAMPLING_DMA_IRQ, false);
     irq_set_exclusive_handler(SAMPLING_DMA_IRQ, sump_dma_irq_handler);
     sump_dma_set_irq_channel_mask_enabled(SUMP_DMA_MASK, true);
-*/
+
     cdc_sump_init_connect();
 
     printf("%s()\n", __func__);
@@ -1175,20 +1180,36 @@ cdc_sump_task(void)
                 tud_cdc_n_write_flush(CDC_INTF);
             }
         }
-	if (tud_cdc_n_available(CDC_INTF)) {
-	    uint cmd_len = tud_cdc_n_read(CDC_INTF, buf, sizeof(buf));
-	    sump_rx(buf, cmd_len);
-	}
-	if (sump.state == SUMP_STATE_TRIGGER || sump.state == SUMP_STATE_SAMPLING){
-            //led_signal_activity(1);
-    } else if (!sump.cdc_connected) {
+		if (tud_cdc_n_available(CDC_INTF)) {
+			uint cmd_len = tud_cdc_n_read(CDC_INTF, buf, sizeof(buf));
+			sump_rx(buf, cmd_len);
+		}
+		//if (sump.state == SUMP_STATE_TRIGGER || sump.state == SUMP_STATE_SAMPLING){
+				//led_signal_activity(1);
+    } else if (!sump.cdc_connected) { 
         sump.cdc_connected = false;
         sump_do_reset();
     }
 }
 
+/*
 void
 cdc_sump_line_coding(cdc_line_coding_t const *line_coding)
 {
     picoprobe_info("Sump new baud rate %d\n", line_coding->bit_rate);
+}
+*/
+
+void sump_logic_analyzer(void){
+#if TURBO_200MHZ
+    set_sys_clock_khz(200000, true);
+#endif
+
+    cdc_sump_init();
+
+
+    while (1) {
+        //tud_task(); // tinyusb device task
+        cdc_sump_task();
+    }
 }

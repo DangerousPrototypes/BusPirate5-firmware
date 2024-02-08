@@ -1,0 +1,50 @@
+;
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+
+.program wavegen
+
+; Repeatedly get one word of data from the TX FIFO, stalling when the FIFO is
+; empty. Write the least significant bit to the OUT pin group.
+
+.wrap_target
+    out pins, 8
+.wrap    
+
+;loop:
+;    pull
+;    out pins, 2
+;    jmp loop
+
+% c-sdk {
+static inline void wavegen_program_init(PIO pio, uint sm, uint offset, uint pin) {
+    pio_sm_set_enabled(pio, sm, false);
+    pio_sm_clear_fifos(pio, sm);
+    pio_sm_restart(pio, sm);    
+    
+    pio_sm_config c = wavegen_program_get_default_config(offset);
+
+    // Map the state machine's OUT pin group to one pin, namely the `pin`
+    // parameter to this function.
+    sm_config_set_out_pins(&c, pin, 8);
+    // Set this pin's GPIO function (connect PIO to the pad)
+    for(uint8_t i=0; i<8; i++)
+        pio_gpio_init(pio, pin+i);
+        
+    // Set the pin direction to output at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, true);
+
+    //sm_config_set_out_shift(&c, false, true, 8);
+    sm_config_set_out_shift(&c, true, true, 8);
+
+    sm_config_set_clkdiv(&c, 1);
+
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, offset, &c);
+    // Set the state machine running
+    pio_sm_set_enabled(pio, sm, true);
+
+}
+%}

@@ -14,7 +14,6 @@
 
 #include "freq.h"
 
-
 void freq_single(opt_args (*args), struct command_result *res)
 {
     if(args[0].no_value) //show config menu

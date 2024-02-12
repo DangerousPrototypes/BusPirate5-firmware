@@ -22,6 +22,7 @@
 #include "storage.h"
 #include "dump.h"
 #include "mcu/rp2040.h"
+#include "mode/logicanalyzer.h"
 
 enum E_CMD{
     CMD_LS=0,
@@ -60,7 +61,7 @@ enum E_CMD{
     CMD_LOAD,    
     CMD_FORMAT, 
     CMD_DISPLAY,
-    CMD_WAVEGEN,
+    CMD_LA_TEST,
     CMD_LAST_ITEM_ALWAYS_AT_THE_END
 };
 
@@ -101,7 +102,7 @@ const char *cmd[]={
     [CMD_LOAD]="load",
     [CMD_FORMAT]="format",
     [CMD_DISPLAY]="d",
-    [CMD_WAVEGEN]="wavegen"
+    [CMD_LA_TEST]="la_test",
 };
 static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wrong length");
 
@@ -355,8 +356,8 @@ const struct _command_parse exec_new[]=
     },            // "d"  
     {
         true, 
-        &wavegen_args,
+        &la_test_args,
         0,
         T_CMDLN_NO_HELP
-    }            // "d"         
+    }            // "la_test"         
 };

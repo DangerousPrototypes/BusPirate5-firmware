@@ -25,7 +25,7 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 set(bp5_common 
         pirate.c pirate.h commands.h commands.c 
-        mode/sump.c mode/sump.h        
+        #mode/sump.c mode/sump.h        
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
 	msc_disk.c usb_descriptors.c
 	displays.c displays.h display/default.c display/default.h
@@ -62,6 +62,7 @@ set(bp5_common
         mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
         #mem buffer for shared malloc
         mem.c mem.h
+        mode/logicanalyzer.h mode/logicanalyzer.c
         )
 
 add_executable(bus_pirate5_rev8
@@ -103,6 +104,7 @@ set(stdlibs
         hardware_pwm
         tinyusb_device
         tinyusb_board
+        hardware_structs
         )        
 
 set(revisions
@@ -115,7 +117,7 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)
-        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/wavegen.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/logicanalyzer.pio)
 
         pico_set_program_name(${revision} ${revision})
         pico_set_program_version(${revision} "0.1.0")

@@ -110,11 +110,12 @@ bool script_entry(void)
         switch(c)
         {
             case 0x00:
-                    script_enabled();
+                    /*script_enabled();
                     system_config.binmode=true;
                     sump_logic_analyzer();
                     system_config.binmode=false;
-                    script_disabled();            
+                    script_disabled();  
+                    */          
                 binmodecnt++;
                 if(binmodecnt>=20)
                 {   
@@ -128,7 +129,7 @@ bool script_entry(void)
                 {
                     script_enabled();
                     system_config.binmode=true;
-                    sump_logic_analyzer();
+                    //sump_logic_analyzer();
                     system_config.binmode=false;
                     script_disabled();
                 } 

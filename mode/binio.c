@@ -104,18 +104,20 @@ bool script_entry(void)
     static uint8_t binmodecnt=0;
     char c;
 
+    if(tud_cdc_n_available(1)) return true; else return false;
+
     while(tud_cdc_n_available(1))
     {
 
         switch(c)
         {
             case 0x00:
-                    /*script_enabled();
+                    script_enabled();
                     system_config.binmode=true;
                     sump_logic_analyzer();
                     system_config.binmode=false;
                     script_disabled();  
-                    */          
+                              
                 binmodecnt++;
                 if(binmodecnt>=20)
                 {   
@@ -129,7 +131,7 @@ bool script_entry(void)
                 {
                     script_enabled();
                     system_config.binmode=true;
-                    //sump_logic_analyzer();
+                    sump_logic_analyzer();
                     system_config.binmode=false;
                     script_disabled();
                 } 
@@ -151,10 +153,14 @@ bool script_mode(void)
     unsigned int i;
     char c;
 
+    system_config.binmode=true;
+    sump_logic_analyzer();
+    system_config.binmode=false;
+    return false;
 
     // co-op multitask while checking for the binmode flag
     // then take over and block the user terminal
-    if(!script_entry()) return false;
+    //if(!script_entry()) return false;
 
     script_enabled();
  

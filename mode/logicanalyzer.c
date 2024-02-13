@@ -11,26 +11,51 @@
 #include "hardware/pio.h"
 #include "build/logicanalyzer.pio.h"
 #include "mem.h"
+#include "hardware/structs/bus_ctrl.h"
+
+#define DMA_COUNT 32768
+#define LA_DMA_COUNT 4
+
+uint8_t *la_buf;
 
 void la_test_args(opt_args (*args), struct command_result *res)
+{
+}
+
+int logicanalyzer_status(void)
+{
+    return 1; //idle, armed, sampling, done   .
+
+}
+
+uint8_t logicanalyzer_dump(uint8_t *txbuf)
+{
+    static uint32_t ptr=0;
+    *txbuf=la_buf[ptr];
+    ptr++;
+    if(ptr>=DMA_COUNT*LA_DMA_COUNT) ptr=0;
+    return 1;
+}
+
+bool logicanalyzer_setup(void)
 {
     PIO pio = pio0;
 	uint sm = 0; 
     static uint offset=0;
-    #define DMA_COUNT 32768
-    #define LA_DMA_COUNT 4
     int la_dma[LA_DMA_COUNT];
     dma_channel_config la_dma_config[LA_DMA_COUNT];
 
-    uint8_t *buf=mem_alloc(DMA_COUNT*4, 0);
-    if(!buf)
+    la_buf=mem_alloc(DMA_COUNT*LA_DMA_COUNT, 0);
+    if(!la_buf)
     {
-        printf("Failed to allocate buffer. Is the scope running?\r\n");
-        return;
+        //printf("Failed to allocate buffer. Is the scope running?\r\n");
+        return false;
     }
 
     offset=pio_add_program(pio, &logicanalyzer_program);
 
+    // high bus priority to the DMA
+    bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
     
     for(uint8_t i=0; i<count_of(la_dma); i++)
     {
@@ -49,14 +74,14 @@ void la_test_args(opt_args (*args), struct command_result *res)
         int la_dma_next = (i+1 < count_of(la_dma))? la_dma[i+1] : la_dma[0];
         channel_config_set_chain_to(&la_dma_config[i], la_dma_next); // chain to next DMA
 
-        dma_channel_configure(la_dma[i], &la_dma_config[i], (volatile uint8_t *)&buf[DMA_COUNT * i], &pio->rxf[sm], DMA_COUNT, false); 
+        dma_channel_configure(la_dma[i], &la_dma_config[i], (volatile uint8_t *)&la_buf[DMA_COUNT * i], &pio->rxf[sm], DMA_COUNT, false); 
 
     }
 
     logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], 125000000);
     //start the first channel, will pause for data from PIO
     dma_channel_start(la_dma[0]);
-
+/*
     uint8_t val = 31;
     while(true)
     {
@@ -92,6 +117,7 @@ void la_test_args(opt_args (*args), struct command_result *res)
         
         busy_wait_ms(1000);
     }    
+    */
 
-
+   return true;
 }

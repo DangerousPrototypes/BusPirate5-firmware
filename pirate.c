@@ -220,7 +220,7 @@ int main()
     while(1)
     {
 
-        if(script_mode()) //enter scripting mode?
+        if(script_entry()) //enter scripting mode?
         {
             bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
         }
@@ -232,16 +232,20 @@ int main()
                 if(system_config.terminal_ansi_color) //config file option loaded, wait for any key
                 {
                     char c;
-                    while(!rx_fifo_try_get(&c));
-                    value='y';
-                    result.success=true;
+                    result.error=false;
+                    result.success=false;
+
+                    if(rx_fifo_try_get(&c))
+                    {
+                        value='y';
+                        result.success=true;
+                    }
+                    
                 }
                 else
                 {
                     ui_prompt_vt100_mode(&result, &value);
                 }
-
-             
 
                 if(result.success)
                 {

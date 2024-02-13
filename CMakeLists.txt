@@ -25,7 +25,7 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 set(bp5_common 
         pirate.c pirate.h commands.h commands.c 
-        #mode/sump.c mode/sump.h        
+        mode/sump.c mode/sump.h        
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
 	msc_disk.c usb_descriptors.c
 	displays.c displays.h display/default.c display/default.h

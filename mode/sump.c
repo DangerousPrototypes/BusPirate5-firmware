@@ -50,6 +50,7 @@
 #include "psu.h"
 #include "binio_helpers.h"
 #include "mode/logicanalyzer.h"
+#include "rgb.h"
 
 #include "tusb.h"
 
@@ -221,6 +222,10 @@ static void sump_do_run(void)
     {
         sump.state = SUMP_STATE_SAMPLING;
     }
+    rgb_irq_enable(false);
+    busy_wait_ms(5);
+    rgb_set_all(0xff,0,0);
+    logic_analyzer_arm(sump.delay_count, 0);
 /*
     uint32_t len=100;
     uint8_t buf[64];
@@ -485,6 +490,7 @@ static uint sump_fill_tx(uint8_t *buf, uint len)
     assert((len & 3) == 0);
     if (sump.read_count == 0) {
         sump.state = SUMP_STATE_CONFIG;
+        rgb_irq_enable(true);
         return 0;
     }
     if (sump.state == SUMP_STATE_DUMP) {
@@ -498,8 +504,10 @@ static uint sump_fill_tx(uint8_t *buf, uint len)
         // invalid or error
         ret = sump_tx_empty(buf, len);
     }
-    if (ret == 0)
+    if (ret == 0){
         sump.state = SUMP_STATE_CONFIG;
+        rgb_irq_enable(true);
+    }
     return ret;
 }
 
@@ -540,16 +548,16 @@ void cdc_sump_task(void)
                 tud_cdc_n_write(CDC_INTF, buf, tx_len);
                 tud_cdc_n_write_flush(CDC_INTF);
             }
-            tud_cdc_n_write_flush(CDC_INTF);
+            //tud_cdc_n_write_flush(CDC_INTF);
         }
 		if (tud_cdc_n_available(CDC_INTF)) {
 			uint cmd_len = tud_cdc_n_read(CDC_INTF, buf, sizeof(buf));
 			sump_rx(buf, cmd_len);
 		}
 		if (sump.state == SUMP_STATE_TRIGGER || sump.state == SUMP_STATE_SAMPLING){
-            if(logicanalyzer_status()==1) //get status from logic analyzer, move to cancel or dump
+            if(logic_analyzer_is_done()) //get status from logic analyzer, move to cancel or dump
             {
-                //sump.read_count = 64;
+                rgb_set_all(0xff,0,0xff);
                 sump.state=SUMP_STATE_DUMP;
             }
         } //else if (!sump.cdc_connected) { 

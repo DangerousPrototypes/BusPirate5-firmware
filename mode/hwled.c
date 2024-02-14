@@ -125,6 +125,7 @@ uint32_t hwled_setup_exc(void)
 			break;
         case M_LED_WS2812_ONBOARD: //internal LEDs, stop any in-progress stuff
 			rgb_irq_enable(false);
+			rgb_set_all(0,0,0);
             break;
 		default:
 			printf("\r\nError: Invalid device type");

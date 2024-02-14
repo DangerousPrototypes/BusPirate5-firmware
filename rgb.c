@@ -281,9 +281,14 @@ void rgb_irq_enable(bool enable)
     else
     {
         bool cancelled = cancel_repeating_timer(&rgb_timer);
-        rgb_assign_color(0xffff, 0x000000);
-        rgb_send();  
     }
+}
+
+void rgb_set_all(uint8_t r, uint8_t g, uint8_t b)
+{
+    uint32_t color= ((g/system_config.led_brightness)<<16) | ((r/system_config.led_brightness)<<8) | (b/system_config.led_brightness);
+    rgb_assign_color(0xffffffff, color);
+    rgb_send();
 }
 
 //function to control LED from led mode onboard demo

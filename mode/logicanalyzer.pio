@@ -5,42 +5,58 @@
 ; SPDX-License-Identifier: BSD-3-Clause
 ;
 
+.program logicanalyzer_no_trigger
+; get post trigger sample count
+    pull block
+    mov x, osr
+; count down the samples
+capture:
+    in pins, 8
+    jmp x-- capture
+    irq 0
+; done, forever loop
+done:
+    jmp done
+
 .program logicanalyzer
+; get post trigger sample count
+    pull block
+    mov x, osr
+; sample and loop for trigger
 .wrap_target
     in pins, 8
-    set x, 0b11111
-decr:
-    in x, 8
-    jmp x-- decr
-.wrap    
+    jmp pin capture
+.wrap
+; count down the samples
+capture:
+    in pins, 8
+    jmp x-- capture
+    irq 0
+; done, forever loop
+done:
+    jmp done
 
-;.wrap_target
-    ;in pins, 8
-;    set x, 0b11111
-;decr:
-;    in x, 8
-;    jmp x-- decr
-;.wrap    
 
 % c-sdk {
-static inline void logicanalyzer_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
+static inline void logicanalyzer_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq) {
     pio_sm_set_enabled(pio, sm, false);
     pio_sm_clear_fifos(pio, sm);
     pio_sm_restart(pio, sm);    
     
     pio_sm_config c = logicanalyzer_program_get_default_config(offset);
 
-    // Map the state machine's OUT pin group to one pin, namely the `pin`
-    // parameter to this function.
     sm_config_set_in_pins(&c, pin);
     // Set this pin's GPIO function (connect PIO to the pad)
     for(uint8_t i=0; i<8; i++)
         pio_gpio_init(pio, pin+i);
         
-    // Set the pin direction to output at the PIO
+    // Set the pin direction to input at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
 
-    //sm_config_set_out_shift(&c, false, true, 8);
+    // trigger pin as jump pin
+    sm_config_set_jmp_pin(&c, trigger);
+
+    sm_config_set_out_shift(&c, false, true, 32);
     sm_config_set_in_shift(&c, false, true, 8);
 
 	//float div = clock_get_hz(clk_sys) / freq ;  
@@ -48,8 +64,36 @@ static inline void logicanalyzer_program_init(PIO pio, uint sm, uint offset, uin
 
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, offset, &c);
-    // Set the state machine running
-    pio_sm_set_enabled(pio, sm, true);
-
+ 
 }
+
+static inline void logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
+    pio_sm_set_enabled(pio, sm, false);
+    pio_sm_clear_fifos(pio, sm);
+    pio_sm_restart(pio, sm);    
+    
+    pio_sm_config c = logicanalyzer_no_trigger_program_get_default_config(offset);
+
+    sm_config_set_in_pins(&c, pin);
+    // Set this pin's GPIO function (connect PIO to the pad)
+    //for(uint8_t i=0; i<8; i++)
+        //pio_gpio_init(pio, pin+i);
+        
+    // Set the pin direction to input at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
+
+    // trigger pin as jump pin
+    //sm_config_set_jmp_pin(&c, trigger);
+
+    sm_config_set_out_shift(&c, false, true, 32);
+    sm_config_set_in_shift(&c, false, true, 8);
+
+	//float div = clock_get_hz(clk_sys) / freq ;  
+	sm_config_set_clkdiv(&c, 1);
+
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, offset, &c);
+ 
+}
+
 %}

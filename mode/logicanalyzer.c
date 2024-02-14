@@ -16,7 +16,14 @@
 #define DMA_COUNT 32768
 #define LA_DMA_COUNT 4
 
+int la_dma[LA_DMA_COUNT];
+
 uint8_t *la_buf;
+PIO pio = pio0;
+uint sm = 0; 
+static uint offset=0;
+bool la_done;
+uint32_t la_ptr=0;
 
 void la_test_args(opt_args (*args), struct command_result *res)
 {
@@ -30,19 +37,95 @@ int logicanalyzer_status(void)
 
 uint8_t logicanalyzer_dump(uint8_t *txbuf)
 {
-    static uint32_t ptr=0;
-    *txbuf=la_buf[ptr];
-    ptr++;
-    if(ptr>=DMA_COUNT*LA_DMA_COUNT) ptr=0;
+    *txbuf=la_buf[la_ptr];
+
+    if(la_ptr==0)
+        la_ptr=DMA_COUNT*LA_DMA_COUNT;
+    else
+        la_ptr--;
+        
     return 1;
+}
+
+void logic_analyser_done(void)
+{
+    la_done=true;
+
+    //turn off stuff!
+    pio_interrupt_clear(pio, 0);
+    irq_set_enabled(PIO0_IRQ_0, false);
+    irq_set_enabled(pio_get_dreq(pio, sm, false), false);
+    irq_remove_handler(PIO0_IRQ_0, logic_analyser_done);
+    pio_sm_set_enabled(pio, sm, false);
+    pio_clear_instruction_memory(pio);
+
+    busy_wait_ms(1);
+
+    int tail_dma = -1;
+    uint32_t tail_offset;
+
+    //find the final sample
+    for(uint8_t i=0; i<count_of(la_dma); i++)
+    {
+        if(dma_channel_is_busy(la_dma[i]))
+        {
+            tail_dma=i;
+            break;
+        }
+    }
+    //error, return
+    if(tail_dma==-1) return;
+    
+    //transfer count is the words remaining in the stalled transfer, dma deincrements on start (-1)
+    int32_t tail = DMA_COUNT - dma_channel_hw_addr(la_dma[tail_dma])->transfer_count - 1;
+
+    //add the preceding chunks of DMA to find the location in the array
+    //ready to dump
+    la_ptr = ( (DMA_COUNT * tail_dma) + tail);
+
+}
+
+bool logic_analyzer_is_done(void)
+{
+    return la_done;
+}
+
+bool logic_analyzer_arm(uint32_t samples, int trigger_pin)
+{
+    for(uint8_t i=0; i<BIO_MAX_PINS; i++)
+    {
+        bio_input(BIO0+i);
+    }
+
+    pio_clear_instruction_memory(pio);
+    if(trigger_pin)
+    {
+        offset=pio_add_program(pio, &logicanalyzer_program);
+        logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], trigger_pin, 125000000);
+    }
+    else
+    {
+       offset=pio_add_program(pio, &logicanalyzer_no_trigger_program); 
+       logicanalyzer_no_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], 125000000);
+    }
+    
+
+    // interrupt on done notification
+    pio_interrupt_clear(pio, 0);
+    pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
+    irq_set_exclusive_handler(PIO0_IRQ_0, logic_analyser_done);
+    irq_set_enabled(PIO0_IRQ_0, true);
+    irq_set_enabled(pio_get_dreq(pio, sm, false), true);
+    irq_clear(pio_get_dreq(pio, sm, false));
+    la_done=false;
+    //write sample count and enable sampling
+    pio_sm_put_blocking(pio, sm, samples - 1);
+    pio_sm_set_enabled(pio, sm, true);
+    
 }
 
 bool logicanalyzer_setup(void)
 {
-    PIO pio = pio0;
-	uint sm = 0; 
-    static uint offset=0;
-    int la_dma[LA_DMA_COUNT];
     dma_channel_config la_dma_config[LA_DMA_COUNT];
 
     la_buf=mem_alloc(DMA_COUNT*LA_DMA_COUNT, 0);
@@ -51,8 +134,6 @@ bool logicanalyzer_setup(void)
         //printf("Failed to allocate buffer. Is the scope running?\r\n");
         return false;
     }
-
-    offset=pio_add_program(pio, &logicanalyzer_program);
 
     // high bus priority to the DMA
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
@@ -78,7 +159,6 @@ bool logicanalyzer_setup(void)
 
     }
 
-    logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], 125000000);
     //start the first channel, will pause for data from PIO
     dma_channel_start(la_dma[0]);
 /*

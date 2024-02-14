@@ -6,14 +6,21 @@
 ;
 
 .program logicanalyzer
-
 .wrap_target
-    ;in pins, 8
+    in pins, 8
     set x, 0b11111
 decr:
     in x, 8
     jmp x-- decr
 .wrap    
+
+;.wrap_target
+    ;in pins, 8
+;    set x, 0b11111
+;decr:
+;    in x, 8
+;    jmp x-- decr
+;.wrap    
 
 % c-sdk {
 static inline void logicanalyzer_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {

@@ -457,7 +457,7 @@ static void I2Csearch(void)
 		{
 			pio_i2c_resume_after_error(pio, pio_state_machine);
 		}
-		//TODO: if read address then read one and NACK
+		//if read address then read one and NACK
 		if(!ack && (i&0x1))
 		{
 			error=pio_i2c_read_timeout(pio, pio_state_machine, &data, false, 0xfff);
@@ -477,7 +477,7 @@ static void I2Csearch(void)
 			pio_i2c_resume_after_error(pio, pio_state_machine);
 		}		
 
-		if(!ack) printf("0x%02X(%c) ", i, ((i&0x1)?'R':'W'));
+		if(!ack) printf("0x%02X(0x%02X %c) ", i, i>>1, ((i&0x1)?'R':'W'));
 
 	}
 

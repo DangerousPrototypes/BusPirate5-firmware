@@ -250,9 +250,9 @@ uint32_t macro_ms5611()
 
 uint32_t macro_si7021()
 {
-	uint8_t data[4];
+	uint8_t data[8];
 
-	printf("SI7021/HTU21/SHT21/HDC1080 Temp & Humidity sensor\r\n");
+	printf("SI7021/HTU21/SHT21 Temp & Humidity sensor\r\n");
 
 	// humidity
 	data[0]=0xf5;
@@ -270,38 +270,45 @@ uint32_t macro_si7021()
 
 	// temperature [0x80 0xe0] [0x81 r:2]
 	
-	data[0]=0xe0;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0x80, data, 1, data, 2, 0xffff))
+	data[0]=0xf3;
+	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0x80, data, 1, 0xffff))
 	{
 		return 1;
-	} 
+	}
+	delayms(100); //delay for max conversion time
+	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 2, 0xffff))
+	{
+		return 1;
+	}
 	f=(float)((float)(175.72*(data[0]<<8 | data[1]))/65536)-46.85;
-	printf("Temperature:\r\n [0x80 0xe0] [0x81 r:2]\r\n %.2fC (%#04x %#04x)\r\n", f, data[0], data[1]);
+	printf("Temperature:\r\n [0x80 0xf3] D:100 [0x81 r:2]\r\n %.2fC (%#04x %#04x)\r\n", f, data[0], data[1]);
 
 	//SN
 	data[0]=0xfa;
 	data[1]=0xf0;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, data, 4, 0xffff))
+	uint8_t sn[8];
+	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, data, 8, 0xffff))
 	{
 		return 1;
 	} 
-	printf("Serial Number:\r\n [0x80 0xfa 0xf0] [0x81 r:4] [0x80 0xfc 0xc9] [0x81 r:4]\r\n 0x%02x%02x%02x%02x", data[0],data[1],data[2],data[3]);
+	sn[2]=data[6];
+	sn[3]=data[4];
+	sn[4]=data[2];
+	sn[5]=data[0];
+
 	data[0]=0xfc;
 	data[1]=0xc9;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, data, 4, 0xffff))
+	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, data, 6, 0xffff))
 	{
 		return 1;
-	} 	
-	printf("%02x%02x%02x%02x\r\n", data[0],data[1],data[2],data[3]);
+	}
+	sn[0]=data[1];
+	sn[1]=data[0];
+	sn[6]=data[4];
+	sn[7]=data[3]; 	
+	printf("Serial Number:\r\n [0x80 0xfa 0xf0] [0x81 r:8] [0x80 0xfc 0xc9] [0x81 r:6]\r\n");
+	printf("0x%02x%02x%02x%02x%02x%02x%02x%02x\r\n", sn[7],sn[6],sn[5],sn[4],sn[3],sn[2],sn[1],sn[0]);
 
-	//firmware version [0x80 0x84 0xb8] [0x81 r]
-	data[0]=0x84;
-	data[1]=0xb8;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, data, 1, 0xffff))
-	{
-		return 1;
-	} 
-	printf("Firmware Version:\r\n [0x80 0x84 0xb8] [0x81 r]\r\n %#04x\r\n", data[0]);
 
 	return 0;
 }

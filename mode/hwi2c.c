@@ -437,6 +437,10 @@ static void I2Csearch(void)
 	uint16_t ack;
 	uint32_t error;
 	uint32_t data;
+	int last_address = -1;
+	bool color = true;
+	uint16_t device_count=0;
+	uint16_t device_pairs=0;
 
 	if(checkshort())
 	{
@@ -445,7 +449,9 @@ static void I2Csearch(void)
 		return;
 	}
 
-	printf("Found:\r\n");
+	printf("I2C address search:\r\n");
+
+	ui_term_color_text_background(hw_pin_label_ordered_color[0][0],hw_pin_label_ordered_color[0][1]);
 
 	pio_i2c_rx_enable(pio, pio_state_machine, false);
 
@@ -484,36 +490,41 @@ static void I2Csearch(void)
 			pio_i2c_resume_after_error(pio, pio_state_machine);
 		}		
 
-		if(!ack) printf("0x%02X(0x%02X %c) ", i, i>>1, ((i&0x1)?'R':'W'));
+
+		if(!ack)
+		{
+			device_count++;
+
+			if(last_address!=-1)
+			{
+				if(i>>1 == last_address>>1) //read write pair?
+				{
+					device_pairs++;
+				}
+				else //flip color or whatever
+				{
+					color=!color;
+					if(color)
+					{
+						printf("\r\n");
+						ui_term_color_text_background(hw_pin_label_ordered_color[0][0],hw_pin_label_ordered_color[0][1]);
+					}
+					else
+					{
+						printf("%s\r\n", ui_term_color_reset());
+					}		
+				}
+			}
+
+			printf("0x%02X(0x%02X %c) ",i, i>>1, ((i&0x1)?'R':'W'));
+			last_address=i;
+		}
 
 	}
 
+	
 
-	/*
-	uint32_t data;
-	printf("\r\nI2C Bus Scan\r\n");
-    printf("   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\r\n");
-
-    for (int addr = 0; addr < (1 << 7); ++addr) {
-        if (addr % 16 == 0) {
-            printf("%02x ", addr);
-        }
-        // Perform a 0-byte read from the probe address. The read function
-        // returns a negative result NAK'd any time other than the last data
-        // byte. Skip over reserved addresses.
-        int result;
-        if (reserved_addr(addr)) 
-            result = -1;
-        else
-            //result = pio_i2c_read_blocking(pio, pio_state_machine, addr, NULL, 0);
-			//pio_i2c_read_timeout(pio, pio_state_machine, &data, true, 0xffff);
-			result=pio_i2c_read_blocking_timeout(pio, pio_state_machine, addr, &data, 0, 0xffff); 
-
-
-        printf(result < 0 ? "." : "@");
-        printf(addr % 16 == 15 ? "\r\n" : "  ");
-    }*/
-    printf("Done.\r\n");
+    printf("%s\r\nFound %d addresses, %d W/R pairs.\r\n",ui_term_color_reset(), device_count, device_pairs);
 }
 
 

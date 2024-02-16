@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/dma.h"
 #include "hardware/clocks.h"
@@ -13,17 +14,19 @@
 #include "mem.h"
 #include "hardware/structs/bus_ctrl.h"
 
-#define DMA_COUNT 32768
+#define DMA_BYTES_PER_CHUNK 32768
 #define LA_DMA_COUNT 4
 
 int la_dma[LA_DMA_COUNT];
-
 uint8_t *la_buf;
+uint32_t la_ptr=0;
+bool la_done;
+
 PIO pio = pio0;
 uint sm = 0; 
 static uint offset=0;
-bool la_done;
-uint32_t la_ptr=0;
+
+
 
 void la_test_args(opt_args (*args), struct command_result *res)
 {
@@ -40,7 +43,7 @@ uint8_t logicanalyzer_dump(uint8_t *txbuf)
     *txbuf=la_buf[la_ptr];
 
     if(la_ptr==0)
-        la_ptr=DMA_COUNT*LA_DMA_COUNT;
+        la_ptr=(DMA_BYTES_PER_CHUNK*LA_DMA_COUNT)-1;
     else
         la_ptr--;
         
@@ -74,14 +77,17 @@ void logic_analyser_done(void)
         }
     }
     //error, return
-    if(tail_dma==-1) return;
+    if(tail_dma==-1) 
+    {
+        return;
+    }
     
     //transfer count is the words remaining in the stalled transfer, dma deincrements on start (-1)
-    int32_t tail = DMA_COUNT - dma_channel_hw_addr(la_dma[tail_dma])->transfer_count - 1;
+    int32_t tail = DMA_BYTES_PER_CHUNK - dma_channel_hw_addr(la_dma[tail_dma])->transfer_count - 1;
 
     //add the preceding chunks of DMA to find the location in the array
     //ready to dump
-    la_ptr = ( (DMA_COUNT * tail_dma) + tail);
+    la_ptr = ( (DMA_BYTES_PER_CHUNK * tail_dma) + tail);
 
 }
 
@@ -90,23 +96,27 @@ bool logic_analyzer_is_done(void)
     return la_done;
 }
 
-bool logic_analyzer_arm(uint32_t samples, int trigger_pin)
+bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction)
 {
+    memset(la_buf, 0, sizeof(la_buf));
+
     for(uint8_t i=0; i<BIO_MAX_PINS; i++)
     {
         bio_input(BIO0+i);
     }
 
     pio_clear_instruction_memory(pio);
-    if(trigger_pin)
+    if(trigger_mask)
     {
+        uint8_t trigger_pin = 0; //TODO: ensure single pin and determine high or low
         offset=pio_add_program(pio, &logicanalyzer_program);
-        logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], trigger_pin, 125000000);
+        logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], trigger_pin, freq);
     }
     else
     {
+
        offset=pio_add_program(pio, &logicanalyzer_no_trigger_program); 
-       logicanalyzer_no_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], 125000000);
+       logicanalyzer_no_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], freq);
     }
     
 
@@ -128,7 +138,7 @@ bool logicanalyzer_setup(void)
 {
     dma_channel_config la_dma_config[LA_DMA_COUNT];
 
-    la_buf=mem_alloc(DMA_COUNT*LA_DMA_COUNT, 0);
+    la_buf=mem_alloc(DMA_BYTES_PER_CHUNK*LA_DMA_COUNT, 0);
     if(!la_buf)
     {
         //printf("Failed to allocate buffer. Is the scope running?\r\n");
@@ -155,7 +165,7 @@ bool logicanalyzer_setup(void)
         int la_dma_next = (i+1 < count_of(la_dma))? la_dma[i+1] : la_dma[0];
         channel_config_set_chain_to(&la_dma_config[i], la_dma_next); // chain to next DMA
 
-        dma_channel_configure(la_dma[i], &la_dma_config[i], (volatile uint8_t *)&la_buf[DMA_COUNT * i], &pio->rxf[sm], DMA_COUNT, false); 
+        dma_channel_configure(la_dma[i], &la_dma_config[i], (volatile uint8_t *)&la_buf[DMA_BYTES_PER_CHUNK * i], &pio->rxf[sm], DMA_BYTES_PER_CHUNK, false); 
 
     }
 

@@ -56,7 +56,7 @@
 
 #define CDC_INTF		1
 
-#define SAMPLING_DIVIDER	4	// minimal sysclk sampling divider
+#define SAMPLING_DIVIDER	2	// minimal sysclk sampling divider. For Bus Pirate with PIO max speed is /2
 #define SAMPLING_BITS		8
 #define SAMPLING_BYTES		((SAMPLING_BITS+7)/8)
 #define SUMP_MEMORY_SIZE	32768 * 4	// 100kB
@@ -101,12 +101,12 @@ static struct _sump {
     struct _trigger trigger[4];
 
     /* DMA buffer */
-    uint32_t chunk_size;	// in bytes
+    /*uint32_t chunk_size;	// in bytes
     uint32_t dma_start;
     uint32_t dma_count;
     uint32_t dma_curr_idx;	// current DMA channel (index)
     uint32_t dma_pos;
-    uint32_t next_count;
+    uint32_t next_count;*/
     //uint8_t  buffer[SUMP_MEMORY_SIZE];
 
 } sump;
@@ -225,7 +225,8 @@ static void sump_do_run(void)
     rgb_irq_enable(false);
     busy_wait_ms(5);
     rgb_set_all(0xff,0,0);
-    logic_analyzer_arm(sump.delay_count, 0);
+    float freq = (100 * ONE_MHZ)/(sump.divider); //already added +1 when we rx the value...
+    logic_analyzer_arm(freq, sump.delay_count, 0, 0);
 /*
     uint32_t len=100;
     uint8_t buf[64];

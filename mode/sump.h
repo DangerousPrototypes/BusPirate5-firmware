@@ -85,21 +85,21 @@
 /*
  *  Flag defines
  */
-#define SUMP_FLAG1_DDR			0x0001	/* demux mode */
+#define SUMP_FLAG1_DDR			    0x0001	/* demux mode */
 #define SUMP_FLAG1_NOISE_FILTER		0x0002
 #define SUMP_FLAG1_GR0_DISABLE		0x0004
 #define SUMP_FLAG1_GR1_DISABLE		0x0008
 #define SUMP_FLAG1_GR2_DISABLE		0x0010
 #define SUMP_FLAG1_GR3_DISABLE		0x0020
-#define SUMP_FLAG1_GR_MASK		0x003C
-#define SUMP_FLAG1_GR_SHIFT		2
+#define SUMP_FLAG1_GR_MASK		    0x003C
+#define SUMP_FLAG1_GR_SHIFT		    2
 #define SUMP_FLAG1_GR_DISABLE(x)	(1 << (x+SUMP_FLAG1_GR_SHIFT))
 #define SUMP_FLAG1_EXT_CLOCK		0x0040
 #define SUMP_FLAG1_INV_EXT_CLOCK	0x0080	/* capture on falling edge */
 #define SUMP_FLAG1_ENABLE_RLE		0x0100
-#define SUMP_FLAG1_SWAP16		0x0200	/* swap upper/lower 16 bits */
-#define SUMP_FLAG1_EXT_TEST		0x0400	/* output pattern on bits 31:16 */
-#define SUMP_FLAG1_INT_TEST		0x0800	/* internal test pattern */
+#define SUMP_FLAG1_SWAP16		    0x0200	/* swap upper/lower 16 bits */
+#define SUMP_FLAG1_EXT_TEST		    0x0400	/* output pattern on bits 31:16 */
+#define SUMP_FLAG1_INT_TEST		    0x0800	/* internal test pattern */
 #define SUMP_FLAG1_RLE_MODE_MASK	0xc000
 #define SUMP_FLAG1_RLE_MODE0		0x0000	/* issue <value> & <rle-count> as pairs */
 #define SUMP_FLAG1_RLE_MODE1		0x4000	/* issue <value> & <rle-count> as pairs */	

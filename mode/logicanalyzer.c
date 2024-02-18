@@ -93,7 +93,11 @@ void la_redraw(uint32_t start_pos)
                 //}
                 //else
                 //{
-                    printf("%s\u2550", ui_term_color_prompt());
+                    //printf("%s\u2B1B", ui_term_color_prompt());
+                    //ui_term_color_text_background(hw_pin_label_ordered_color[pins+1][0],hw_pin_label_ordered_color[pins+1][1]);
+                    //printf(" %s",ui_term_color_reset());
+                    ui_term_color_text(hw_pin_label_ordered_color[pins+1][1]);
+                    printf("\u2500");
                 //}
             }
             else
@@ -104,6 +108,7 @@ void la_redraw(uint32_t start_pos)
                 //}
                 //else
                 //{
+                    
                     printf("%s_", ui_term_color_error());
                 //}                
 

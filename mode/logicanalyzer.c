@@ -36,7 +36,7 @@ void la_print_row(char c, uint8_t count)
 void la_redraw(uint32_t start_pos)
 {
     //draw timing marks
-    printf("%s\e[3A\r\u2551 \u2551\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d", ui_term_color_reset(), la_ptr, la_ptr+10, la_ptr+20, la_ptr+30, la_ptr+40);
+    printf("%s\e[3A\r\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d", ui_term_color_reset(), la_ptr, la_ptr+10, la_ptr+20, la_ptr+30, la_ptr+40);
     
     //back to line graph
     printf("\e[3B\r\e[3C"); //move to top, right three
@@ -90,28 +90,28 @@ void la_test_args(opt_args (*args), struct command_result *res)
     //80 characters wide box outline
     //box top and corners
     system_config.terminal_hide_cursor=true; //prevent the status bar from showing the cursor again
-    printf("\e[?25l\e[13A\r\u2554\u2550\u252c"); //move to top, left
-    for(int i=0; i<76; i++) printf("\u2550");
-    printf("\u2557");
+    printf("\e[?25l\e[13A\r\u253C"); //move to top, left
+    for(int i=0; i<78; i++) printf("\u2500");
+    printf("\u253c");
 
     //time display ticks
-    printf("\e[1B\r\u2551 \u2551\t0000\t\t1000\t\t2000\t\t4000\t\t5000");
-    printf("\e[1B\r\u2551 \u2551\t\u2502\t\t\u2502\t\t\u2502\t\t\u2502\t\t\u2502");
-    printf("\e[1B\r\u251c\u2550\u253c"); 
-    for(int i=0; i<76; i++) printf("\u2550");
-    printf("\u2557");
+    printf("\e[1B\r   \t0000\t\t1000\t\t2000\t\t4000\t\t5000");
+    printf("\e[1B\r   \t\u2502\t\t\u2502\t\t\u2502\t\t\u2502\t\t\u2502");
+    printf("\e[1B\r\u250c\u2500\u252c"); 
+    for(int i=0; i<76; i++) printf("\u2500");
+    printf("\u2510");
 
     //box left and right
     for(int i=0; i<8; i++)
-    {   printf("\e[1B\r\u2551");//box left and right
+    {   printf("\e[1B\r\u2502");//box left and right
         ui_term_color_text_background(hw_pin_label_ordered_color[i+1][0],hw_pin_label_ordered_color[i+1][1]);
-        printf("%d%s\u2502\e[79C\u2551", i, ui_term_color_reset());
+        printf("%d%s\u2502\e[79C\u2502", i, ui_term_color_reset());
     }
     
     //box bottom and corners
-    printf("\e[1B\r\u255a\u2550\u2569");
-    for(int i=0; i<76; i++) printf("\u2550");
-    printf("\u255d");
+    printf("\e[1B\r\u2514\u2500\u2534");
+    for(int i=0; i<76; i++) printf("\u2500");
+    printf("\u2518");
     printf("\e[8A\r\e[3C"); //move to top, right three
     la_redraw(32);
 

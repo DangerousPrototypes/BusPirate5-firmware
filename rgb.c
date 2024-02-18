@@ -195,12 +195,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
     static uint8_t mode=2;
 
     //shortened list of HSV colors from fastLED
-    const uint32_t colors[]={
-    0xFF0000, 0xD52A00, 0xAB7F00,
-    0x00FF00, 
-    0x0000FF, 
-    0x5500AB, 0xAB0055
-    };
+    const uint32_t colors[]={0xFF0000, 0xD52A00, 0xAB7F00,0x00FF00, 0x0000FF, 0x5500AB, 0xAB0055};
 
 
     uint32_t color_grb;

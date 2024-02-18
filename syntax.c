@@ -16,7 +16,7 @@
 #include "bio.h"
 #include "amux.h"
 
-#define SYN_MAX_LENGTH 512
+#define SYN_MAX_LENGTH 1024
 
 const struct command_attributes attributes_empty;
 const struct command_response response_empty;
@@ -240,7 +240,14 @@ bool syntax_compile(struct opt_args *args)
             //AUX high and low need to set function until changed to read again...
        }
 
-        slot_cnt+=out[out_cnt].repeat;
+        if(out[out_cnt].command==SYN_DELAY_US || out[out_cnt].command==SYN_DELAY_MS) //delays repeat but don't take up slots
+        {
+            slot_cnt+=1;
+        }
+        else
+        {
+            slot_cnt+=out[out_cnt].repeat;
+        }
 
         if(slot_cnt>=SYN_MAX_LENGTH)
         {

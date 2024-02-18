@@ -15,6 +15,7 @@
 #include "hardware/structs/bus_ctrl.h"
 #include "ui/ui_term.h"
 #include "usb_rx.h"
+#include "storage.h"
 
 #define DMA_BYTES_PER_CHUNK 32768
 #define LA_DMA_COUNT 4
@@ -35,17 +36,53 @@ void la_print_row(char c, uint8_t count)
 
 void la_redraw(uint32_t start_pos)
 {
+ 
+    if(start_pos+76>1000)//no more samples to show on screen
+    {
+        start_pos=1000-76;
+    }
+
+    //find the start point
+    uint32_t sample_ptr; //number of samples, make variable
+    if(la_ptr<1000) //wrapped
+    {
+        sample_ptr=(((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT))-(1000-la_ptr))-1;
+        if(sample_ptr+start_pos>=((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT)-1)) //wrapped
+        {
+            sample_ptr=start_pos-(((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT))-(sample_ptr))-1;
+        }
+        else
+        {
+            sample_ptr+=start_pos;
+        }
+    }
+    else
+    {
+        sample_ptr=la_ptr-1000;
+        sample_ptr+=start_pos;
+    }
+
     //draw timing marks
-    printf("%s\e[3A\r\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d", ui_term_color_reset(), la_ptr, la_ptr+10, la_ptr+20, la_ptr+30, la_ptr+40);
+    printf("%s\e[3A\r\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d", ui_term_color_reset(), start_pos+6, start_pos+6+(16*1), start_pos+6+(16*2), start_pos+6+(16*3), start_pos+6+(16*4));
     
     //back to line graph
     printf("\e[3B\r\e[3C"); //move to top, right three
+
+
+    
+
+
     for(int i=0; i<76; i++)
     {
         uint8_t sample, previous_sample;
-
-        logicanalyzer_dump(&sample);
         
+        sample=la_buf[sample_ptr];
+        
+        if(sample_ptr>=((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT)-1))
+            sample_ptr=0;
+        else
+            sample_ptr++;          
+
         for(int pins=0; pins<8; pins++)
         {
             if(sample & (0b1<<pins))
@@ -81,7 +118,9 @@ void la_redraw(uint32_t start_pos)
 void la_test_args(opt_args (*args), struct command_result *res)
 {
 
-    printf("Commands: (r)un, e(x)it, arrow keys to navigate\r\n");
+    uint32_t sample_position=0;
+
+    printf("Commands: (r)un, (s)ave, e(x)it, arrow keys to navigate\r\n");
     printf("Sampling...\n\n\n\n\n\n\n\n\n\n\n\n\n\r"); //free screen space for graph
     logicanalyzer_setup();
     logic_analyzer_arm(1000000, 1000, 0x00, 0x00);
@@ -113,7 +152,7 @@ void la_test_args(opt_args (*args), struct command_result *res)
     for(int i=0; i<76; i++) printf("\u2500");
     printf("\u2518");
     printf("\e[8A\r\e[3C"); //move to top, right three
-    la_redraw(32);
+    la_redraw(sample_position);
 
     while(true)
     {
@@ -123,10 +162,14 @@ void la_test_args(opt_args (*args), struct command_result *res)
         {
            switch(c)
            {
+                case 's'://TODO: need to handle wrap...
+                    storage_save_binary_blob(&la_buf[la_ptr], 1000);
+                    break;
                 case 'r':
                     logic_analyzer_arm(1000000, 1000, 0x00, 0x00);
-                    while(!logic_analyzer_is_done());
-                    la_redraw(32);
+                    sample_position=0;
+                    while(!logic_analyzer_is_done()); //TODO: provide some way to escape...
+                    la_redraw(sample_position);
                     break;
                 case 'x':
                     system_config.terminal_hide_cursor=false;
@@ -143,10 +186,26 @@ void la_test_args(opt_args (*args), struct command_result *res)
                             switch(c)
                             {
                                 case 'D': //left
-                                la_redraw(32);
+                                if(sample_position<64)
+                                {
+                                    sample_position=0;
+                                }
+                                else
+                                {
+                                    sample_position-=64;
+                                }
+                                la_redraw(sample_position);
                                 break;
                                 case 'C': //right
-                                la_redraw(32);
+                                if(sample_position>1000-76) //samples - columns
+                                {
+                                    sample_position=1000-76;
+                                }
+                                else
+                                {
+                                    sample_position+=64;
+                                }                                
+                                la_redraw(sample_position);
                                 break;
                             }
                             break;

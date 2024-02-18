@@ -120,6 +120,21 @@ bool storage_mount(void)
 
 }
 
+bool storage_save_binary_blob(char *data, uint32_t size)
+{
+
+    fr = f_open(&fil, "la.bin", FA_WRITE | FA_CREATE_ALWAYS);	
+    if (fr == FR_OK) {
+        f_write(&fil, data, size, &bw);	
+        fr = f_close(&fil);							
+        if (fr == FR_OK && bw == 11) {		
+            return true;
+        }else{
+            return false;
+        }
+    }
+}
+
 uint32_t storage_new_file(void){
 
     fr = f_open(&fil, "newfile.txt", FA_WRITE | FA_CREATE_ALWAYS);	

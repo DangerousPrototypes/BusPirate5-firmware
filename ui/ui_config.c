@@ -38,7 +38,7 @@ uint32_t ui_config_action_led_effect(uint32_t a, uint32_t b)
 // LED color (?) Rainbow short, rainbow long, ROYGBIV
 static const struct prompt_item menu_items_led_color[]=
 {
-    {T_CONFIG_LEDS_COLOR_RAINBOW},{T_CONFIG_LEDS_COLOR_RED},{T_CONFIG_LEDS_COLOR_ORANGE},{T_CONFIG_LEDS_COLOR_YELLOW},{T_CONFIG_LEDS_COLOR_GREEN},{T_CONFIG_LEDS_COLOR_BLUE},{T_CONFIG_LEDS_COLOR_PURPLE},{T_CONFIG_LEDS_COLOR_PINK}
+    {T_CONFIG_LEDS_COLOR_RED},{T_CONFIG_LEDS_COLOR_ORANGE},{T_CONFIG_LEDS_COLOR_YELLOW},{T_CONFIG_LEDS_COLOR_GREEN},{T_CONFIG_LEDS_COLOR_BLUE},{T_CONFIG_LEDS_COLOR_PURPLE},{T_CONFIG_LEDS_COLOR_PINK}
 };
 
 uint32_t ui_config_action_led_color(uint32_t a, uint32_t b)

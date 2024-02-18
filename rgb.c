@@ -152,14 +152,14 @@ bool rgb_scanner(void)
     static uint16_t bitmask=0b1000000;
     static uint8_t delay=0;
     static uint8_t color=0;
-
-    //HSV colors from fastLED, this is eventually what we want to use
+    
     const uint32_t colors[]={
     0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
     0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
     0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
     0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B
     };
+
     if(delay){
         delay--;
         return false;
@@ -194,13 +194,15 @@ bool rgb_scanner(void)
 bool rgb_timer_callback(struct repeating_timer *t){
     static uint8_t mode=2;
 
-    //HSV colors from fastLED, this is eventually what we want to use
+    //shortened list of HSV colors from fastLED
     const uint32_t colors[]={
-    0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
-    0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
-    0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
-    0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B
+    0xFF0000, 0xD52A00, 0xAB7F00,
+    0x00FF00, 
+    0x0000FF, 
+    0x5500AB, 0xAB0055
     };
+
+
     uint32_t color_grb;
     bool next=false;
 

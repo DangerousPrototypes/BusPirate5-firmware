@@ -39,6 +39,7 @@ void system_init(void)
 	system_config.terminal_ansi_statusbar_update=false;
 	system_config.terminal_ansi_color=0;
 	system_config.terminal_update=0;
+	system_config.terminal_hide_cursor=false;
 
 	system_config.storage_available=0;
 	system_config.storage_mount_error=3;

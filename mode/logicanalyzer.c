@@ -13,6 +13,8 @@
 #include "build/logicanalyzer.pio.h"
 #include "mem.h"
 #include "hardware/structs/bus_ctrl.h"
+#include "ui/ui_term.h"
+#include "usb_rx.h"
 
 #define DMA_BYTES_PER_CHUNK 32768
 #define LA_DMA_COUNT 4
@@ -26,10 +28,137 @@ PIO pio = pio0;
 uint sm = 0; 
 static uint offset=0;
 
+void la_print_row(char c, uint8_t count)
+{
+    for(int i=0; i<count; i++) printf("%c",c);
+}
 
+void la_redraw(uint32_t start_pos)
+{
+    //draw timing marks
+    printf("%s\e[3A\r\u2551 \u2551\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d", ui_term_color_reset(), la_ptr, la_ptr+10, la_ptr+20, la_ptr+30, la_ptr+40);
+    
+    //back to line graph
+    printf("\e[3B\r\e[3C"); //move to top, right three
+    for(int i=0; i<76; i++)
+    {
+        uint8_t sample, previous_sample;
+
+        logicanalyzer_dump(&sample);
+        
+        for(int pins=0; pins<8; pins++)
+        {
+            if(sample & (0b1<<pins))
+            {
+                //if(!(previous_sample & (0b1<<pins))) //rising edge 
+                //{
+                    //printf("%s\u250C", ui_term_color_prompt());
+                //}
+                //else
+                //{
+                    printf("%s\u2550", ui_term_color_prompt());
+                //}
+            }
+            else
+            {
+                //if((previous_sample & (0b1<<pins))) //falling edge 
+                //{
+                //    printf("%s\u2510", ui_term_color_error());
+                //}
+                //else
+                //{
+                    printf("%s_", ui_term_color_error());
+                //}                
+
+            }
+                printf("\e[1B\e[1D"); //move one line down, one position left
+        }
+        previous_sample=sample;
+        printf("\e[8A\e[1C"); //move to top, right one
+    }
+}
 
 void la_test_args(opt_args (*args), struct command_result *res)
 {
+
+    printf("Commands: (r)un, e(x)it, arrow keys to navigate\r\n");
+    printf("Sampling...\n\n\n\n\n\n\n\n\n\n\n\n\n\r"); //free screen space for graph
+    logicanalyzer_setup();
+    logic_analyzer_arm(1000000, 1000, 0x00, 0x00);
+    while(!logic_analyzer_is_done());
+    
+    //80 characters wide box outline
+    //box top and corners
+    system_config.terminal_hide_cursor=true; //prevent the status bar from showing the cursor again
+    printf("\e[?25l\e[13A\r\u2554\u2550\u252c"); //move to top, left
+    for(int i=0; i<76; i++) printf("\u2550");
+    printf("\u2557");
+
+    //time display ticks
+    printf("\e[1B\r\u2551 \u2551\t0000\t\t1000\t\t2000\t\t4000\t\t5000");
+    printf("\e[1B\r\u2551 \u2551\t\u2502\t\t\u2502\t\t\u2502\t\t\u2502\t\t\u2502");
+    printf("\e[1B\r\u251c\u2550\u253c"); 
+    for(int i=0; i<76; i++) printf("\u2550");
+    printf("\u2557");
+
+    //box left and right
+    for(int i=0; i<8; i++)
+    {   printf("\e[1B\r\u2551");//box left and right
+        ui_term_color_text_background(hw_pin_label_ordered_color[i+1][0],hw_pin_label_ordered_color[i+1][1]);
+        printf("%d%s\u2502\e[79C\u2551", i, ui_term_color_reset());
+    }
+    
+    //box bottom and corners
+    printf("\e[1B\r\u255a\u2550\u2569");
+    for(int i=0; i<76; i++) printf("\u2550");
+    printf("\u255d");
+    printf("\e[8A\r\e[3C"); //move to top, right three
+    la_redraw(32);
+
+    while(true)
+    {
+        char c;
+
+        if(rx_fifo_try_get(&c))
+        {
+           switch(c)
+           {
+                case 'r':
+                    logic_analyzer_arm(1000000, 1000, 0x00, 0x00);
+                    while(!logic_analyzer_is_done());
+                    la_redraw(32);
+                    break;
+                case 'x':
+                    system_config.terminal_hide_cursor=false;
+                    printf("\e[?25h\e[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); //back to bottom
+                    logic_analyzer_cleanup();
+                    return;
+                    break;
+                case '\x1B': // escape commands	
+                    rx_fifo_get_blocking(&c);
+                    switch(c)
+                    {
+                        case '[': // arrow keys
+                            rx_fifo_get_blocking(&c);
+                            switch(c)
+                            {
+                                case 'D': //left
+                                la_redraw(32);
+                                break;
+                                case 'C': //right
+                                la_redraw(32);
+                                break;
+                            }
+                            break;
+                    }
+                    break;
+           }
+        }
+    }
+
+
+
+
 }
 
 int logicanalyzer_status(void)
@@ -134,6 +263,20 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     
 }
 
+bool logic_analyzer_cleanup(void)
+{
+    
+    for(uint8_t i=0; i<count_of(la_dma); i++)
+    {
+        dma_channel_cleanup(la_dma[i]);
+        dma_channel_unclaim(la_dma[i]);
+    }
+    pio_clear_instruction_memory(pio);
+
+    mem_free(la_buf);
+
+}
+
 bool logicanalyzer_setup(void)
 {
     dma_channel_config la_dma_config[LA_DMA_COUNT];
@@ -171,43 +314,5 @@ bool logicanalyzer_setup(void)
 
     //start the first channel, will pause for data from PIO
     dma_channel_start(la_dma[0]);
-/*
-    uint8_t val = 31;
-    while(true)
-    {
-        
-        for(uint32_t i=0; i<4; i++)
-        {
-            printf("Block %i:\r\n", i);
-            bool error=false;
-            for(uint32_t b=0; b<256; b++)
-            {
-                if(val!=buf[b+ (i*256)])
-                {
-                    printf("%02x != %02x @ %i ", val, buf[b+ (i*256)], b);
-                    error=true;
-                }
-                if(val==0) 
-                    val=31;
-                else
-                    val--;        
-
-            }
-            if(error) printf("\r\nError!\r\n"); else printf("OK\r\n");
-        }
-
-        for(uint8_t i=0; i<count_of(la_dma); i++)
-        {
-            if(dma_channel_is_busy(la_dma[i]))
-            {
-                printf("DMA %i Busy!\r\n", i);
-            }
-
-        }
-        
-        busy_wait_ms(1000);
-    }    
-    */
-
-   return true;
+    return true;
 }

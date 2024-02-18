@@ -231,7 +231,7 @@ char* ui_term_cursor_hide(void){
     return system_config.terminal_ansi_color?"\e[?25l":"";
 }
 char* ui_term_cursor_show(void){
-    return system_config.terminal_ansi_color?"\e[?25h":"";
+    return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color?"\e[?25h":"";
 }
 
 void ui_term_error_report(uint32_t error_text)

@@ -277,7 +277,11 @@ void ui_statusbar_update(uint32_t update_flags)
     }
 
     //restore cursor, show cursor
-    len+=sprintf(&tx_sb_buf[len],"\e8\e[?25h"); 
+    len+=sprintf(&tx_sb_buf[len],"\e8"); 
+    if(!system_config.terminal_hide_cursor)
+    {
+        len+=sprintf(&tx_sb_buf[len],"\e[?25h"); 
+    }
     
     tx_sb_start(len);
 

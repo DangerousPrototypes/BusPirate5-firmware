@@ -443,13 +443,14 @@ void core1_entry(void)
                 }
             }
             
-            if(system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar && system_config.terminal_ansi_statusbar_update)
+            if(system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar 
+                && system_config.terminal_ansi_statusbar_update && !system_config.terminal_ansi_statusbar_pause)
             {
                 ui_statusbar_update(update_flags);
             }
 
             //remains for legacy REV8 support of TF flash
-            #if BP5_REV>10
+            #if BP5_REV<10
                 if(storage_detect())
                 {
 
@@ -481,6 +482,12 @@ void core1_entry(void)
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_force=true;
                     lcd_update_request=true;
+                    break;
+                case 0xf3:
+                    rgb_irq_enable(false);
+                    break;
+                case 0xf4:
+                    rgb_irq_enable(true);
                     break;
                 default:
                     break;

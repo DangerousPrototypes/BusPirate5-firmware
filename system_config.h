@@ -35,6 +35,7 @@ typedef struct _system_config
 	uint32_t terminal_ansi_statusbar;
 	bool terminal_ansi_statusbar_update;
 	bool terminal_hide_cursor;
+	bool terminal_ansi_statusbar_pause;
 	uint8_t terminal_update;
 
 	uint8_t storage_available;

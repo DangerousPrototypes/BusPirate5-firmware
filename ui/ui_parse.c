@@ -16,6 +16,7 @@ bool ui_parse_get_int_args(opt_args *arg)
 {
     struct prompt_result result;
     uint32_t value;
+    ui_parse_consume_whitespace();
     bool temp=ui_parse_get_int(&result, &value);
 
     arg->error=result.error;
@@ -144,7 +145,6 @@ bool ui_parse_get_dec(struct prompt_result *result, uint32_t *value)
 // XXXXXX integer
 // 0xXXXX hexadecimal
 // 0bXXXX bin
-// TODO: return format of number in struct
 bool ui_parse_get_int(struct prompt_result *result, uint32_t *value)
 {
     bool r1,r2;

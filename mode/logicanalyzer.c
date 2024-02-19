@@ -16,6 +16,8 @@
 #include "ui/ui_term.h"
 #include "usb_rx.h"
 #include "storage.h"
+#include "rgb.h"
+#include "pico/multicore.h"
 
 #define DMA_BYTES_PER_CHUNK 32768
 #define LA_DMA_COUNT 4
@@ -34,19 +36,19 @@ void la_print_row(char c, uint8_t count)
     for(int i=0; i<count; i++) printf("%c",c);
 }
 
-void la_redraw(uint32_t start_pos)
+void la_redraw(uint32_t start_pos, uint32_t la_samples)
 {
  
-    if(start_pos+76>1000)//no more samples to show on screen
+    if(start_pos+76>la_samples)//no more samples to show on screen
     {
-        start_pos=1000-76;
+        start_pos=la_samples-76;
     }
 
     //find the start point
     uint32_t sample_ptr; //number of samples, make variable
-    if(la_ptr<1000) //wrapped
+    if(la_ptr<la_samples) //wrapped
     {
-        sample_ptr=(((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT))-(1000-la_ptr))-1;
+        sample_ptr=(((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT))-(la_samples-la_ptr))-1;
         if(sample_ptr+start_pos>=((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT)-1)) //wrapped
         {
             sample_ptr=start_pos-(((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT))-(sample_ptr))-1;
@@ -58,19 +60,17 @@ void la_redraw(uint32_t start_pos)
     }
     else
     {
-        sample_ptr=la_ptr-1000;
+        sample_ptr=la_ptr-la_samples;
         sample_ptr+=start_pos;
     }
+
+    system_config.terminal_ansi_statusbar_pause=true;
 
     //draw timing marks
     printf("%s\e[3A\r\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d", ui_term_color_reset(), start_pos+6, start_pos+6+(16*1), start_pos+6+(16*2), start_pos+6+(16*3), start_pos+6+(16*4));
     
     //back to line graph
-    printf("\e[3B\r\e[3C"); //move to top, right three
-
-
-    
-
+    printf("\e[3B\r\e[3C"); //move to top, right three  
 
     for(int i=0; i<76; i++)
     {
@@ -118,21 +118,52 @@ void la_redraw(uint32_t start_pos)
         previous_sample=sample;
         printf("\e[8A\e[1C"); //move to top, right one
     }
+     system_config.terminal_ansi_statusbar_pause=false;
 }
 
 void la_test_args(opt_args (*args), struct command_result *res)
 {
-
+    uint32_t la_freq=1000, la_samples=1000;
+    uint32_t la_trigger_pin=0, la_trigger_level=0;
     uint32_t sample_position=0;
 
-    printf("Commands: (r)un, (s)ave, e(x)it, arrow keys to navigate\r\n");
+    if(!args[0].no_value) //freq in khz
+    {
+        la_freq=args[0].i;
+    }
+    printf("Freq: %dkHz ", la_freq);
+
+    if(!args[1].no_value) //samples
+    {
+        la_samples=args[1].i;
+    }
+    printf("Samples: %d ",la_samples);
+
+    if(!args[2].no_value) //trigger pin (or none)
+    {
+        if(args[2].i >=0 && args[2].i<=7)
+        {
+            la_trigger_pin=1u<<args[2].i;
+            printf("Trigger pin: IO%d ",args[2].i);
+            if(!args[3].no_value>0) //trigger level
+            {
+                la_trigger_level=args[3].i?1u<<args[3].i:0;
+                printf("Trigger level: %d \r\n",args[3].i);
+            }            
+        }
+        else
+        {
+            printf("Trigger pin: range error!");
+        }
+    }
+
+    printf("\r\nCommands: (r)un, (s)ave, e(x)it, arrow keys to navigate\r\n");
     printf("Sampling...\n\n\n\n\n\n\n\n\n\n\n\n\n\r"); //free screen space for graph
     logicanalyzer_setup();
-    logic_analyzer_arm(1000000, 1000, 0x00, 0x00);
-    while(!logic_analyzer_is_done());
     
     //80 characters wide box outline
     //box top and corners
+    system_config.terminal_ansi_statusbar_pause=true;
     system_config.terminal_hide_cursor=true; //prevent the status bar from showing the cursor again
     printf("\e[?25l\e[13A\r\u253C"); //move to top, left
     for(int i=0; i<78; i++) printf("\u2500");
@@ -146,10 +177,12 @@ void la_test_args(opt_args (*args), struct command_result *res)
     printf("\u2510");
 
     //box left and right
-    for(int i=0; i<8; i++)
-    {   printf("\e[1B\r\u2502");//box left and right
+    for(int i=0; i<8; i++)          
+    {   
         ui_term_color_text_background(hw_pin_label_ordered_color[i+1][0],hw_pin_label_ordered_color[i+1][1]);
-        printf("%d%s\u2502\e[79C\u2502", i, ui_term_color_reset());
+        printf("\e[1B\r\u2502");//box left and right
+
+        printf("%d\u2502%s\e[79C\u2502", i, ui_term_color_reset());
     }
     
     //box bottom and corners
@@ -157,7 +190,8 @@ void la_test_args(opt_args (*args), struct command_result *res)
     for(int i=0; i<76; i++) printf("\u2500");
     printf("\u2518");
     printf("\e[8A\r\e[3C"); //move to top, right three
-    la_redraw(sample_position);
+
+    goto la_sample;
 
     while(true)
     {
@@ -168,15 +202,29 @@ void la_test_args(opt_args (*args), struct command_result *res)
            switch(c)
            {
                 case 's'://TODO: need to handle wrap...
-                    storage_save_binary_blob(&la_buf[la_ptr], 1000);
+                    storage_save_binary_blob(&la_buf[la_ptr], la_samples);
                     break;
                 case 'r':
-                    logic_analyzer_arm(1000000, 1000, 0x00, 0x00);
+la_sample:                
+                    logic_analyzer_arm((float)(la_freq*1000), la_samples, la_trigger_pin, la_trigger_level);
                     sample_position=0;
-                    while(!logic_analyzer_is_done()); //TODO: provide some way to escape...
-                    la_redraw(sample_position);
+                    while(!logic_analyzer_is_done())
+                    {
+                        char c;
+                        if(rx_fifo_try_get(&c))
+                        {
+                            if(c=='x')
+                            {
+                                printf("Canceled!\r\n");
+                                goto la_x;
+                            }
+                        }
+                    }
+                    la_redraw(sample_position, la_samples);
+                    logicanalyzer_reset_led();
                     break;
                 case 'x':
+la_x:
                     system_config.terminal_hide_cursor=false;
                     printf("\e[?25h\e[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); //back to bottom
                     logic_analyzer_cleanup();
@@ -199,18 +247,18 @@ void la_test_args(opt_args (*args), struct command_result *res)
                                 {
                                     sample_position-=64;
                                 }
-                                la_redraw(sample_position);
+                                la_redraw(sample_position, la_samples);
                                 break;
                                 case 'C': //right
-                                if(sample_position>1000-76) //samples - columns
+                                if(sample_position>la_samples-76) //samples - columns
                                 {
-                                    sample_position=1000-76;
+                                    sample_position=la_samples-76;
                                 }
                                 else
                                 {
                                     sample_position+=64;
                                 }                                
-                                la_redraw(sample_position);
+                                la_redraw(sample_position, la_samples);
                                 break;
                             }
                             break;
@@ -230,6 +278,13 @@ int logicanalyzer_status(void)
     return 1; //idle, armed, sampling, done   .
 
 }
+
+void logicanalyzer_reset_led(void)
+{
+    multicore_fifo_push_blocking(0xf4);
+    multicore_fifo_pop_blocking();
+}
+
 
 uint8_t logicanalyzer_dump(uint8_t *txbuf)
 {
@@ -282,6 +337,7 @@ void logic_analyser_done(void)
     //ready to dump
     la_ptr = ( (DMA_BYTES_PER_CHUNK * tail_dma) + tail);
 
+    rgb_set_all(0xff,0,0xff);
 }
 
 bool logic_analyzer_is_done(void)
@@ -299,15 +355,37 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     }
 
     pio_clear_instruction_memory(pio);
+    
+    uint8_t trigger_pin = 0;
+    bool trigger_ok=false;
     if(trigger_mask)
     {
-        uint8_t trigger_pin = 0; //TODO: ensure single pin and determine high or low
-        offset=pio_add_program(pio, &logicanalyzer_program);
-        logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], trigger_pin, freq);
+        for(uint8_t i=0; i<8; i++)
+        {
+            if(trigger_mask & 1u<<i)
+            {
+                trigger_pin=bio2bufiopin[i];
+                trigger_ok=true;
+                break; //use first masked pin
+            }
+        }
     }
-    else
-    {
 
+    if(trigger_ok)
+    {
+        if(trigger_direction & 1u<<trigger_pin) //high level trigger program
+        {
+            offset=pio_add_program(pio, &logicanalyzer_program);
+            logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], trigger_pin, freq);
+        }
+        else //low level trigger program
+        {
+            offset=pio_add_program(pio, &logicanalyzer_program);
+            logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], trigger_pin, freq);           
+        }
+    }
+    else    //else no trigger program
+    {
        offset=pio_add_program(pio, &logicanalyzer_no_trigger_program); 
        logicanalyzer_no_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], freq);
     }
@@ -321,6 +399,11 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     irq_set_enabled(pio_get_dreq(pio, sm, false), true);
     irq_clear(pio_get_dreq(pio, sm, false));
     la_done=false;
+    multicore_fifo_push_blocking(0xf3);
+    multicore_fifo_pop_blocking();
+    //rgb_irq_enable(false);
+    busy_wait_ms(5);
+    rgb_set_all(0xff,0,0);
     //write sample count and enable sampling
     pio_sm_put_blocking(pio, sm, samples - 1);
     pio_sm_set_enabled(pio, sm, true);
@@ -338,6 +421,8 @@ bool logic_analyzer_cleanup(void)
     pio_clear_instruction_memory(pio);
 
     mem_free(la_buf);
+
+    logicanalyzer_reset_led();
 
 }
 

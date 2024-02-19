@@ -246,6 +246,22 @@ bool rgb_timer_callback(struct repeating_timer *t){
     return true;
 }
 
+
+void rgb_irq_enable(bool enable)
+{
+    static bool enabled=false;
+    if(enable && !enabled)
+    {
+        add_repeating_timer_ms(-10, rgb_timer_callback, NULL, &rgb_timer);
+        enabled=true;
+    }
+    else if(!enable && enabled)
+    {
+        cancel_repeating_timer(&rgb_timer);
+        enabled = false;
+    }
+}
+
 void rgb_init(void)
 {
     // RGB LEDs driven by PIO0
@@ -266,20 +282,9 @@ void rgb_init(void)
     // start of the call to the last callback
     // Negative delay so means we will call repeating_timer_callback, and call it again
     // 500ms later regardless of how long the callback took to execute
-    add_repeating_timer_ms(-10, rgb_timer_callback, NULL, &rgb_timer);
+    rgb_irq_enable(true);
 };
 
-void rgb_irq_enable(bool enable)
-{
-    if(enable)
-    {
-        add_repeating_timer_ms(-10, rgb_timer_callback, NULL, &rgb_timer);
-    }
-    else
-    {
-        bool cancelled = cancel_repeating_timer(&rgb_timer);
-    }
-}
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b)
 {

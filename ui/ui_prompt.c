@@ -117,7 +117,7 @@ bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu)
 }
 
 // used internally in ui_prompt
-// gets user input untill <enter> or return false if system error
+// gets user input until <enter> or return false if system error
 bool ui_prompt_user_input(void)
 {
     cmdln_next_buf_pos();   // flush all input

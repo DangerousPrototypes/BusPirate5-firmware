@@ -50,7 +50,6 @@
 #include "psu.h"
 #include "binio_helpers.h"
 #include "mode/logicanalyzer.h"
-#include "rgb.h"
 
 #include "tusb.h"
 
@@ -222,9 +221,9 @@ static void sump_do_run(void)
     {
         sump.state = SUMP_STATE_SAMPLING;
     }
-    rgb_irq_enable(false);
-    busy_wait_ms(5);
-    rgb_set_all(0xff,0,0);
+    //rgb_irq_enable(false);
+    //busy_wait_ms(5);
+    //rgb_set_all(0xff,0,0);
     float freq = (100 * ONE_MHZ)/(sump.divider); //already added +1 when we rx the value...
     logic_analyzer_arm(freq, sump.delay_count, 0, 0);
 /*
@@ -491,7 +490,8 @@ static uint sump_fill_tx(uint8_t *buf, uint len)
     assert((len & 3) == 0);
     if (sump.read_count == 0) {
         sump.state = SUMP_STATE_CONFIG;
-        rgb_irq_enable(true);
+        //rgb_irq_enable(true);
+        logicanalyzer_reset_led();
         return 0;
     }
     if (sump.state == SUMP_STATE_DUMP) {
@@ -507,7 +507,8 @@ static uint sump_fill_tx(uint8_t *buf, uint len)
     }
     if (ret == 0){
         sump.state = SUMP_STATE_CONFIG;
-        rgb_irq_enable(true);
+        //rgb_irq_enable(true);
+        logicanalyzer_reset_led();
     }
     return ret;
 }
@@ -558,7 +559,7 @@ void cdc_sump_task(void)
 		if (sump.state == SUMP_STATE_TRIGGER || sump.state == SUMP_STATE_SAMPLING){
             if(logic_analyzer_is_done()) //get status from logic analyzer, move to cancel or dump
             {
-                rgb_set_all(0xff,0,0xff);
+                //rgb_set_all(0xff,0,0xff);
                 sump.state=SUMP_STATE_DUMP;
             }
         } //else if (!sump.cdc_connected) { 

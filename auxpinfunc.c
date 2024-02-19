@@ -28,9 +28,9 @@ void auxpinfunc_input(opt_args (*args), struct command_result *res)
 
 void auxpinfunc_write(opt_args (*args), struct command_result *res, bool output, bool level)
 {
-	if(!args[0].i)
+	if(args[0].no_value)
 	{
-		printf("%sError:%s specify an IO pin (a.1, A.5, @.0)", ui_term_color_error(), ui_term_color_reset());
+		printf("%sError:%s specify an IO pin (a 1, A 5, @ 0)", ui_term_color_error(), ui_term_color_reset());
 		res->error=true;
         return;
 	}

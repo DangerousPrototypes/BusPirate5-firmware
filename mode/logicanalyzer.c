@@ -19,13 +19,21 @@
 #include "rgb.h"
 #include "pico/multicore.h"
 
+enum logicanalyzer_status
+{
+    LA_IDLE=0,
+    LA_ARMED_INIT,
+    LA_ARMED,
+    LA_CAPTURE
+};
+
 #define DMA_BYTES_PER_CHUNK 32768
 #define LA_DMA_COUNT 4
 
 int la_dma[LA_DMA_COUNT];
 uint8_t *la_buf;
 uint32_t la_ptr=0;
-bool la_done;
+uint8_t la_status=LA_IDLE;
 
 PIO pio = pio0;
 uint sm = 0; 
@@ -260,12 +268,6 @@ la_x:
 
 }
 
-int logicanalyzer_status(void)
-{
-    return 1; //idle, armed, sampling, done   .
-
-}
-
 void logicanalyzer_reset_led(void)
 {
     multicore_fifo_push_blocking(0xf4);
@@ -320,14 +322,51 @@ void logic_analyser_done(void)
     //ready to dump
     la_ptr = ( (DMA_BYTES_PER_CHUNK * tail_dma) + tail);
 
-    rgb_set_all(0xff,0,0xff);
+    rgb_set_all(0x00,0xff,0);//,0x00FF00 green for dump
 
-    la_done=true;
+    la_status=LA_IDLE;
+}
+
+uint32_t logic_analyzer_get_dma_tail(void)
+{
+    uint8_t tail_dma=0xff;
+    for(uint8_t i=0; i<count_of(la_dma); i++)
+    {
+        if(dma_channel_is_busy(la_dma[i]))
+        {
+            tail_dma=i;
+            break;
+        }
+    }
+
+    if(tail_dma>count_of(la_dma))
+    {
+        //hum
+        return 0;
+    }
+    
+    return dma_channel_hw_addr(la_dma[tail_dma])->transfer_count;
 }
 
 bool logic_analyzer_is_done(void)
 {
-    return la_done;
+    static int32_t tail;
+    uint8_t tail_dma=0xff;
+
+    if(la_status==LA_ARMED_INIT)
+    {
+        tail=logic_analyzer_get_dma_tail();
+        la_status=LA_ARMED;
+    }
+
+    if(la_status==LA_ARMED && tail!=logic_analyzer_get_dma_tail())
+    {
+        la_status=LA_CAPTURE;
+        rgb_set_all(0xab,0x7f,0);//0xAB7F00 yellow for capture in progress.
+
+    }
+
+    return (la_status==LA_IDLE);
 }
 
 bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction)
@@ -383,12 +422,12 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     irq_set_enabled(PIO0_IRQ_0, true);
     irq_set_enabled(pio_get_dreq(pio, sm, false), true);
     irq_clear(pio_get_dreq(pio, sm, false));
-    la_done=false;
+    la_status=LA_ARMED_INIT;
     multicore_fifo_push_blocking(0xf3);
     multicore_fifo_pop_blocking();
     //rgb_irq_enable(false);
     busy_wait_ms(5);
-    rgb_set_all(0xff,0,0);
+    rgb_set_all(0xff,0,0); //RED LEDs for armed
     //write sample count and enable sampling
     pio_sm_put_blocking(pio, sm, samples - 1);
     pio_sm_set_enabled(pio, sm, true);

@@ -158,6 +158,7 @@ static char const * const pl_pl[]={
 	[T_CMDLN_LOAD]="load {plik} {urządzenie} - wczytuje zawartość {pliku} do pamięci flash {urządzenia}. Uwaga: aktualnie eksperymentalna funkcja, która działa tylko z 25LC020 w trybie SPI.",
 	[T_CMDLN_DISPLAY]="d - change display mode, show selection menu.",
 	[T_CMDLN_LOGIC]="logic {frequency in kHz} {samples} {trigger pin} {trigger level} - logic analyzer. {frequency} 1kHz-62500kHz, {trigger pin} 0:7, {trigger level} 0:1.",
+	[T_CMDLN_HEX]="hex {file} - print contents of {file} in HEX",
 	[T_HELP_TITLE]="General Commands\t\t\tBus Syntax",
 	[T_HELP_GENERAL_COMMANDS]="General Commands",
 	[T_HELP_BUS_SYNTAX]="Bus Syntax",

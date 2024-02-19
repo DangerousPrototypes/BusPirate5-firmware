@@ -45,25 +45,9 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
     }
 
     //find the start point
-    uint32_t sample_ptr; //number of samples, make variable
-    if(la_ptr<la_samples) //wrapped
-    {
-        sample_ptr=(((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT))-(la_samples-la_ptr))-1;
-        if(sample_ptr+start_pos>=((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT)-1)) //wrapped
-        {
-            sample_ptr=start_pos-(((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT))-(sample_ptr))-1;
-        }
-        else
-        {
-            sample_ptr+=start_pos;
-        }
-    }
-    else
-    {
-        sample_ptr=la_ptr-la_samples;
-        sample_ptr+=start_pos;
-    }
-
+    uint32_t sample_ptr; //number of samples 
+    sample_ptr = (la_ptr-la_samples) & 0x1ffff;
+    sample_ptr = (sample_ptr+start_pos) & 0x1ffff;
     system_config.terminal_ansi_statusbar_pause=true;
 
     //draw timing marks
@@ -77,11 +61,9 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
         uint8_t sample, previous_sample;
         
         sample=la_buf[sample_ptr];
-        
-        if(sample_ptr>=((DMA_BYTES_PER_CHUNK*LA_DMA_COUNT)-1))
-            sample_ptr=0;
-        else
-            sample_ptr++;          
+            
+        sample_ptr++;
+        sample_ptr &= 0x1ffff;
 
         for(int pins=0; pins<8; pins++)
         {
@@ -153,13 +135,16 @@ void la_test_args(opt_args (*args), struct command_result *res)
         }
         else
         {
-            printf("Trigger pin: range error!");
+            printf("Trigger pin: range error! Using none.");
         }
     }
 
     printf("\r\nCommands: (r)un, (s)ave, e(x)it, arrow keys to navigate\r\n");
     printf("Sampling...\n\n\n\n\n\n\n\n\n\n\n\n\n\r"); //free screen space for graph
-    logicanalyzer_setup();
+    if(!logicanalyzer_setup())
+    {
+        printf("Failed to allocate buffer. Is the scope running?\r\n");
+    }
     
     //80 characters wide box outline
     //box top and corners
@@ -202,7 +187,8 @@ void la_test_args(opt_args (*args), struct command_result *res)
            switch(c)
            {
                 case 's'://TODO: need to handle wrap...
-                    storage_save_binary_blob(&la_buf[la_ptr], la_samples);
+                    //storage_save_binary_blob_rollover();
+                    storage_save_binary_blob_rollover(la_buf, (la_ptr-la_samples) & 0x1ffff, la_samples, 0x1ffff);
                     break;
                 case 'r':
 la_sample:                
@@ -290,11 +276,9 @@ uint8_t logicanalyzer_dump(uint8_t *txbuf)
 {
     *txbuf=la_buf[la_ptr];
 
-    if(la_ptr==0)
-        la_ptr=(DMA_BYTES_PER_CHUNK*LA_DMA_COUNT)-1;
-    else
-        la_ptr--;
-        
+    la_ptr--;
+    la_ptr&=0x1ffff;
+       
     return 1;
 }
 
@@ -364,7 +348,7 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
         {
             if(trigger_mask & 1u<<i)
             {
-                trigger_pin=bio2bufiopin[i];
+                trigger_pin=i;
                 trigger_ok=true;
                 break; //use first masked pin
             }
@@ -375,13 +359,13 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     {
         if(trigger_direction & 1u<<trigger_pin) //high level trigger program
         {
-            offset=pio_add_program(pio, &logicanalyzer_program);
-            logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], trigger_pin, freq);
+            offset=pio_add_program(pio, &logicanalyzer_high_trigger_program);
+            logicanalyzer_high_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq);
         }
         else //low level trigger program
         {
-            offset=pio_add_program(pio, &logicanalyzer_program);
-            logicanalyzer_program_init(pio, sm, offset, bio2bufiopin[BIO0], trigger_pin, freq);           
+            offset=pio_add_program(pio, &logicanalyzer_low_trigger_program);
+            logicanalyzer_low_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq);           
         }
     }
     else    //else no trigger program

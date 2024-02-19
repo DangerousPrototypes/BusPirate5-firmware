@@ -62,6 +62,7 @@ enum E_CMD{
     CMD_FORMAT, 
     CMD_DISPLAY,
     CMD_LOGIC,
+    CMD_HEX,
     CMD_LAST_ITEM_ALWAYS_AT_THE_END
 };
 
@@ -103,6 +104,7 @@ const char *cmd[]={
     [CMD_FORMAT]="format",
     [CMD_DISPLAY]="d",
     [CMD_LOGIC]="logic",
+    [CMD_HEX]="hex"
 };
 static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wrong length");
 
@@ -136,6 +138,7 @@ const struct _parsers aux_high_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL}
 const struct _parsers dump_parsers[]={{&ui_parse_get_string},{&ui_parse_get_string},{&ui_parse_get_string},{NULL},{NULL}};
 const struct _parsers load_parsers[]={{&ui_parse_get_string},{&ui_parse_get_string},{&ui_parse_get_string},{NULL},{NULL}};
 const struct _parsers logic_parsers[]={{&ui_parse_get_int_args},{&ui_parse_get_int_args},{&ui_parse_get_int_args},{&ui_parse_get_int_args},{NULL}};
+const struct _parsers hex_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
 
 const struct _command_parse exec_new[]=
 {
@@ -360,5 +363,11 @@ const struct _command_parse exec_new[]=
         &la_test_args,
         &logic_parsers[0],
         T_CMDLN_LOGIC
-    }            // "la_test"         
+    },           // "logic"         
+    {
+        true, 
+        &hex,
+        &hex_parsers[0],
+        T_CMDLN_HEX
+    }            // "hex"  
 };

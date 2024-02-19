@@ -158,6 +158,7 @@ static char const * const bs_ba[]={
 	[T_CMDLN_LOAD]="load {datoteka} {uređaj} - učitajte saržaj {datoteka} na flash {uređaj}. Upozorenje: trenutno radi kao prototip sa 25LC020 u SPI modu.",
 	[T_CMDLN_DISPLAY]="d - change display mode, show selection menu.",
 	[T_CMDLN_LOGIC]="logic {frequency in kHz} {samples} {trigger pin} {trigger level} - logic analyzer. {frequency} 1kHz-62500kHz, {trigger pin} 0:7, {trigger level} 0:1.",
+	[T_CMDLN_HEX]="hex {file} - print contents of {file} in HEX",
 	[T_HELP_TITLE]="Opšte naredbe\t\t\tBus sintaksa",
 	[T_HELP_GENERAL_COMMANDS]="Opšte naredbe",
 	[T_HELP_BUS_SYNTAX]="Bus sintaksa",

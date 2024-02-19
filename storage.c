@@ -120,12 +120,24 @@ bool storage_mount(void)
 
 }
 
-bool storage_save_binary_blob(char *data, uint32_t size)
+bool storage_save_binary_blob_rollover(char *data, uint32_t ptr,uint32_t size, uint32_t rollover)
 {
 
     fr = f_open(&fil, "la.bin", FA_WRITE | FA_CREATE_ALWAYS);	
     if (fr == FR_OK) {
-        f_write(&fil, data, size, &bw);	
+        
+        //middle to end
+        if(ptr+size<=rollover)
+        {     
+            f_write(&fil, &data[ptr], size, &bw);	
+        }
+        else
+        {
+            f_write(&fil, &data[ptr], rollover-ptr, &bw);	
+            f_write(&fil, &data[0], size-(rollover-ptr), &bw);	
+        }
+        
+        
         fr = f_close(&fil);							
         if (fr == FR_OK && bw == 11) {		
             return true;
@@ -202,6 +214,58 @@ void file_error(FRESULT res)
     }
 }
 
+void hex(opt_args (*args), struct command_result *res)
+{
+    char file[512];
+
+    /*if(system_config.storage_available==0)
+    {
+        return;
+    }*/
+
+    fr = f_open(&fil, args[0].c, FA_READ);	
+    if (fr != FR_OK) {
+        //no config file or TF flash card
+        file_error(fr);
+        //return (int)fr;
+        return;
+    }
+
+    uint8_t grouping=0;
+    while(true)
+    {
+        UINT bytes_read;
+        f_read(&fil, &file, sizeof(file),&bytes_read);
+        if(bytes_read)
+        {
+            for(uint16_t i=0; i<bytes_read; i++)
+            {
+                printf(" 0x%02u ", file[i]);
+                grouping++;
+                if(grouping>=8)
+                {
+                    grouping=0;
+                    printf("\r\n");
+                }
+            }
+
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    printf("\r\n");
+   
+    /* Close the file */
+    f_close(&fil);  
+
+    return;
+}
+
+
+
 void cat(opt_args (*args), struct command_result *res)
 {
     char file[512];
@@ -222,6 +286,7 @@ void cat(opt_args (*args), struct command_result *res)
     /* Read every line and display it */
     while (f_gets(file, sizeof(file), &fil)) {
         printf(file);
+        printf("\r"); //usually this comes first, but hopefully makes text files display better
     }
 
     printf("\r\n");
@@ -231,7 +296,6 @@ void cat(opt_args (*args), struct command_result *res)
 
     return;
 }
-
 
 
 void make_dir(opt_args (*args), struct command_result *res)

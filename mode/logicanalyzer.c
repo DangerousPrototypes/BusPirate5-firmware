@@ -209,6 +209,7 @@ la_sample:
                     la_redraw(sample_position, la_samples);
                     logicanalyzer_reset_led();
                     break;
+                case 'q':
                 case 'x':
 la_x:
                     system_config.terminal_hide_cursor=false;
@@ -284,8 +285,6 @@ uint8_t logicanalyzer_dump(uint8_t *txbuf)
 
 void logic_analyser_done(void)
 {
-    la_done=true;
-
     //turn off stuff!
     pio_interrupt_clear(pio, 0);
     irq_set_enabled(PIO0_IRQ_0, false);
@@ -322,6 +321,8 @@ void logic_analyser_done(void)
     la_ptr = ( (DMA_BYTES_PER_CHUNK * tail_dma) + tail);
 
     rgb_set_all(0xff,0,0xff);
+
+    la_done=true;
 }
 
 bool logic_analyzer_is_done(void)

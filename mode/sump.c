@@ -164,7 +164,7 @@ static void sump_do_id(void)
     tud_cdc_n_write_str(CDC_INTF, "1ALS");
     tud_cdc_n_write_flush(CDC_INTF);
 }
-
+/*
 static uint32_t sump_calc_sysclk_divider()
 {
     uint32_t divider = sump.divider, v;
@@ -190,7 +190,7 @@ static uint32_t sump_calc_sysclk_divider()
         v = 256;
     //printf("%s(): %u %u -> %u (%.4f)\n", __func__, clock_get_hz(clk_sys), sump.divider, v, (float)v / 256.0);
     return v;
-}
+}*/
 
 
 static void sump_do_run(void)
@@ -208,48 +208,24 @@ static void sump_do_run(void)
 
     for (i = 0; i < count_of(sump.trigger); i++) 
     {
-        tstart |= sump.trigger[i].start;
-        tmask |= sump.trigger[i].mask;
+        tstart |= sump.trigger[i].start; //is one group of trigger channels enabled
+        tmask |= sump.trigger[i].mask; //is a value actually masked?
     }
+
+    float freq = (100 * ONE_MHZ)/(sump.divider); //already added +1 when we rx the value...
 
     if (tstart && tmask) 
     {
 	    sump.state = SUMP_STATE_TRIGGER;
-	    sump.trigger_index = 0;
+	    //sump.trigger_index = 0;    
     } 
     else 
     {
         sump.state = SUMP_STATE_SAMPLING;
     }
-    //rgb_irq_enable(false);
-    //busy_wait_ms(5);
-    //rgb_set_all(0xff,0,0);
-    float freq = (100 * ONE_MHZ)/(sump.divider); //already added +1 when we rx the value...
-    logic_analyzer_arm(freq, sump.delay_count, 0, 0);
-/*
-    uint32_t len=100;
-    uint8_t buf[64];
-    uint32_t tx_len;
-    static uint8_t val=255;
-    for(uint16_t i =0; i<64; i++)
-    {
-        buf[i]=val;
-    }
-    val--;
-    while(true)
-    {
-        if (tud_cdc_n_write_available(CDC_INTF) >= sizeof(buf)) {
-            if(len>64) tx_len=64; else tx_len=len;
-            tud_cdc_n_write(CDC_INTF, buf, tx_len);
-            tud_cdc_n_write_flush(CDC_INTF);
-            len-=tx_len;
-            if(len==0) break;
-        }    
-    }
-    sump.state = SUMP_STATE_CONFIG;
-    //sump_dma_init(state);
-    //logicanalyzer_arm();
-    */
+
+    logic_analyzer_arm(freq, sump.delay_count, sump.trigger[0].mask, sump.trigger[0].value);   
+
     return;
 }
 
@@ -270,6 +246,7 @@ static void sump_do_stop(void)
         return;
     // protocol state
     sump.state = SUMP_STATE_INIT;
+    logicanalyzer_reset_led();
 }
 
 static void sump_do_reset(void)
@@ -576,9 +553,12 @@ void sump_logic_analyzer(void){
 
     cdc_sump_init();
     cdc_sump_init_connect();
+    psu_set(3.3,100, true);
 
     while (1) {
         //tud_task(); // tinyusb device task
         cdc_sump_task();
     }
+    logic_analyzer_cleanup();
+    psu_reset();
 }

@@ -43,6 +43,7 @@ set(bp5_common
 	ui/ui_display.c ui/ui_display.h
         ui/ui_info.h ui/ui_info.c ui/ui_format.c ui/ui_format.c ui/ui_init.c ui/ui_init.h
         ui/ui_const.h ui/ui_const.c ui/ui_config.h ui/ui_config.c 
+        ui/ui_help.c ui/ui_help.h
         translation/base.h translation/base.c translation/en-us.h translation/zh-cn.h translation/pl-pl.h
         queue.c queue.h 
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h

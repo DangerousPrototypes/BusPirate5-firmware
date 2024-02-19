@@ -10,6 +10,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
 #include "ui/ui_info.h"
+#include "ui/ui_help.h"
 #include "ui/ui_config.h"
 #include "ui/ui_mode.h"
 #include "ui/ui_display.h"
@@ -210,7 +211,7 @@ const struct _command_parse exec_new[]=
     }, // "|"   
     {
         true, 
-        &ui_info_print_help,
+        &ui_help_print_args,
         0,
         T_CMDLN_HELP
     },        // "?"

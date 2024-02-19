@@ -293,7 +293,7 @@ void ui_info_print_pin_voltage(bool refresh)
 	printf("%s\r%s",t[T_GND],!refresh?"\n":""); //TODO: pin type struct and handle things like this automatically 
 	
 }
-
+/*
 typedef struct ui_info_help
 {
 	uint help;
@@ -358,7 +358,7 @@ const struct ui_info_help help_protocol[]={
 };
 
 static_assert(count_of(help_protocol)==count_of(help_commands), "Help arrays are not equal lengths");
-
+*/
 /*
 We no longer use software protocols, so this isn't implemented anywhere
 	{0,"/", T_HELP_2_12},
@@ -374,7 +374,7 @@ We no longer use software protocols, so this isn't implemented anywhere
 	{0,"<x= >", T_HELP_2_22},
 	*/
 
-
+/*
 // displays the help
 void ui_info_print_help(opt_args (*args), struct command_result *res)
 {
@@ -413,7 +413,7 @@ void ui_info_print_help(opt_args (*args), struct command_result *res)
 	printf("\r\n%s%s%s\r\n", ui_term_color_info(), t[T_HELP_HINT],ui_term_color_reset());
 
 }
-
+*/
 void ui_info_print_error(uint32_t error)
 {
 	printf("\x07\r\n%sError:%s %s\r\n",ui_term_color_error(), ui_term_color_reset(), t[error]);

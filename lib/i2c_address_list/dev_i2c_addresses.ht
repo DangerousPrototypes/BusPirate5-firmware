@@ -1,0 +1,14 @@
+enum DEV_I2C_LIST{
+    DEV_I2C_LIST_NONE=0,
+%%%enum_list%%%
+};
+
+static char const * const dev_i2c_addresses_text[]={
+    [DEV_I2C_LIST_NONE]="",
+%%%array_data%%%
+};
+
+static const * char dev_i2c_addresses[]={
+    &dev_i2c_addresses_text[DEV_I2C_LIST_NONE],
+%%%pointer_array%%%
+};

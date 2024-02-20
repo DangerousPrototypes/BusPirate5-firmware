@@ -278,6 +278,7 @@ int main()
             
             case BP_SM_GET_INPUT:
                 helpers_mode_periodic();
+                //it seems like we need an array where we can add our function for periodic service?
                 
                 switch(ui_term_get_user_input()) 
                 {

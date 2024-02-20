@@ -39,11 +39,6 @@ PIO pio = pio0;
 uint sm = 0; 
 static uint offset=0;
 
-void la_print_row(char c, uint8_t count)
-{
-    for(int i=0; i<count; i++) printf("%c",c);
-}
-
 void la_redraw(uint32_t start_pos, uint32_t la_samples)
 {
  
@@ -57,12 +52,19 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
     sample_ptr = (la_ptr-la_samples) & 0x1ffff;
     sample_ptr = (sample_ptr+start_pos) & 0x1ffff;
     system_config.terminal_ansi_statusbar_pause=true;
-
+    busy_wait_ms(1);
+    system_config.terminal_hide_cursor=true; //prevent the status bar from showing the cursor again
+    printf("%s",ui_term_cursor_hide());    
+    //save cursor
+    printf("\e7");
     //draw timing marks
-    printf("%s\e[3A\r\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d", ui_term_color_reset(), start_pos+6, start_pos+6+(16*1), start_pos+6+(16*2), start_pos+6+(16*3), start_pos+6+(16*4));
-    
+    //printf("%s\e[3A\r\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d\t\t\e[8X%d", ui_term_color_reset(), start_pos+6, start_pos+6+(16*1), start_pos+6+(16*2), start_pos+6+(16*3), start_pos+6+(16*4));
+
+    printf("%s\e[%d;0H\e[K   \t%d\t\t%d\t\t%d\t\t%d\t\t%d", ui_term_color_reset(), system_config.terminal_ansi_rows-(12), start_pos+6, start_pos+6+(16*1), start_pos+6+(16*2), start_pos+6+(16*3), start_pos+6+(16*4));
+
     //back to line graph
-    printf("\e[3B\r\e[3C"); //move to top, right three  
+    //printf("\e[3B\r\e[3C"); //move to top, right three  
+    printf("\e[%d;3H\e[K",system_config.terminal_ansi_rows-(11)); //line graph top, right two places 
 
     for(int i=0; i<76; i++)
     {
@@ -108,14 +110,94 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
         previous_sample=sample;
         printf("\e[8A\e[1C"); //move to top, right one
     }
-     system_config.terminal_ansi_statusbar_pause=false;
+    printf("\e8"); //restore cursor
+    system_config.terminal_ansi_statusbar_pause=false;
+    system_config.terminal_hide_cursor=false;
+    printf("%s",ui_term_cursor_show());
+}
+
+void la_draw_frame(void)
+{  
+    //printf("\r\nCommands: (r)un, (s)ave, e(x)it, arrow keys to navigate\r\n");
+    //80 characters wide box outline
+    //box top and corners
+    system_config.terminal_ansi_statusbar_pause=true;
+    busy_wait_ms(1);
+    system_config.terminal_hide_cursor=true; //prevent the status bar from showing the cursor again
+    printf("%s",ui_term_cursor_hide());
+    
+    for(uint8_t i=0; i<10; i++)
+    {
+        printf("\r\n"); //make space!
+    }
+
+    //set scroll region, disable line wrap
+    printf("\e[%d;%dr\e[7l", 1, system_config.terminal_ansi_rows-14);
+    #if false
+    //time display ticks 
+    printf("\e[1B\r   \t\u2502\t\t\u2502\t\t\u2502\t\t\u2502\t\t\u2502");
+    printf("\e[1B\r\u250c\u2500\u252c"); 
+    for(int i=0; i<76; i++) printf("\u2500");
+    printf("\u2510");
+    #endif
+    
+    //a little header thing?
+    printf("\e[%d;0H\e[K\u253C", system_config.terminal_ansi_rows-(13)); //row 10 of LA
+    for(int i=0; i<78; i++) printf("\u2500");
+    printf("\u253c");
+
+    //sample numbers, row 9 of LA
+    printf("\e[%d;0H\e[K   \t0000\t\t1000\t\t2000\t\t4000\t\t5000", system_config.terminal_ansi_rows-(12));
+
+    //box left and right
+    //8 bars start at monitor area (+3)
+    //todo: lower if monitor bar disabled?
+    for(int i=0; i<8; i++) //row 8 to 1 of LA         
+    {   
+        printf("\e[%d;0H\e[K",system_config.terminal_ansi_rows-(11-i));
+        ui_term_color_text_background(hw_pin_label_ordered_color[i+1][0],hw_pin_label_ordered_color[i+1][1]);
+        printf(" %d%s\e[76C", i, ui_term_color_reset());
+        ui_term_color_text_background(hw_pin_label_ordered_color[i+1][0],hw_pin_label_ordered_color[i+1][1]);
+        printf("%d %s",i,ui_term_color_reset());
+    }
+
+    printf("\e[%d;0H\e[K", system_config.terminal_ansi_rows-(14)); //return to non-scroll area
+    system_config.terminal_hide_cursor=false;
+    printf("%s",ui_term_cursor_show());
+    //box bottom and corners
+    //printf("\e[1B\r\u2514\u2500\u2534");
+    //for(int i=0; i<76; i++) printf("\u2500");
+    //printf("\u2518");
+    //printf("\e[8A\r\e[3C"); //move to top, right three
+}
+
+uint32_t la_freq=1000, la_samples=1000;
+uint32_t la_trigger_pin=0, la_trigger_level=0;
+
+bool la_active=false;
+
+void la_periodic(void)
+{
+    if(la_active && la_status==LA_IDLE)
+    {
+        la_redraw(0, la_samples);
+        logic_analyzer_arm((float)(la_freq*1000), la_samples, la_trigger_pin, la_trigger_level);
+    }
+
 }
 
 void la_test_args(opt_args (*args), struct command_result *res)
 {
-    uint32_t la_freq=1000, la_samples=1000;
-    uint32_t la_trigger_pin=0, la_trigger_level=0;
+
     uint32_t sample_position=0;
+
+    if(!la_active)
+    {
+        if(!logicanalyzer_setup())
+        {
+            printf("Failed to allocate buffer. Is the scope running?\r\n");
+        }
+    }
 
     if(!args[0].no_value) //freq in khz
     {
@@ -147,44 +229,14 @@ void la_test_args(opt_args (*args), struct command_result *res)
         }
     }
 
-    printf("\r\nCommands: (r)un, (s)ave, e(x)it, arrow keys to navigate\r\n");
-    printf("Sampling...\n\n\n\n\n\n\n\n\n\n\n\n\n\r"); //free screen space for graph
-    if(!logicanalyzer_setup())
+    if(!la_active)
     {
-        printf("Failed to allocate buffer. Is the scope running?\r\n");
+        la_draw_frame();
+        la_active=true;
+        return;
     }
-    
-    //80 characters wide box outline
-    //box top and corners
-    system_config.terminal_ansi_statusbar_pause=true;
-    system_config.terminal_hide_cursor=true; //prevent the status bar from showing the cursor again
-    printf("\e[?25l\e[13A\r\u253C"); //move to top, left
-    for(int i=0; i<78; i++) printf("\u2500");
-    printf("\u253c");
 
-    //time display ticks
-    printf("\e[1B\r   \t0000\t\t1000\t\t2000\t\t4000\t\t5000");
-    printf("\e[1B\r   \t\u2502\t\t\u2502\t\t\u2502\t\t\u2502\t\t\u2502");
-    printf("\e[1B\r\u250c\u2500\u252c"); 
-    for(int i=0; i<76; i++) printf("\u2500");
-    printf("\u2510");
-
-    //box left and right
-    for(int i=0; i<8; i++)          
-    {   
-        ui_term_color_text_background(hw_pin_label_ordered_color[i+1][0],hw_pin_label_ordered_color[i+1][1]);
-        printf("\e[1B\r\u2502");//box left and right
-
-        printf("%d\u2502%s\e[79C\u2502", i, ui_term_color_reset());
-    }
-    
-    //box bottom and corners
-    printf("\e[1B\r\u2514\u2500\u2534");
-    for(int i=0; i<76; i++) printf("\u2500");
-    printf("\u2518");
-    printf("\e[8A\r\e[3C"); //move to top, right three
-
-    goto la_sample;
+    //goto la_sample;
 
     while(true)
     {
@@ -373,10 +425,10 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
 {
     memset(la_buf, 0, sizeof(la_buf));
 
-    for(uint8_t i=0; i<BIO_MAX_PINS; i++)
+    /*for(uint8_t i=0; i<BIO_MAX_PINS; i++)
     {
         bio_input(BIO0+i);
-    }
+    }*/
 
     pio_clear_instruction_memory(pio);
     

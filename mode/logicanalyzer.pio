@@ -64,8 +64,8 @@ static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uin
 
     sm_config_set_in_pins(&c, pin);
     // Set this pin's GPIO function (connect PIO to the pad)
-    for(uint8_t i=0; i<8; i++)
-        pio_gpio_init(pio, pin+i);
+    //for(uint8_t i=0; i<8; i++)
+        //pio_gpio_init(pio, pin+i);
         
     // Set the pin direction to input at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
@@ -93,8 +93,8 @@ static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint
 
     sm_config_set_in_pins(&c, pin);
     // Set this pin's GPIO function (connect PIO to the pad)
-    for(uint8_t i=0; i<8; i++)
-        pio_gpio_init(pio, pin+i);
+    //for(uint8_t i=0; i<8; i++)
+        //pio_gpio_init(pio, pin+i);
         
     // Set the pin direction to input at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);

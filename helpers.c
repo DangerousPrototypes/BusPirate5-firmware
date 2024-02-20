@@ -134,6 +134,35 @@ void helpers_selftest_base(void)
         printf("OK\r\n");
     }
 
+    //detect REV10 failure of op-amp
+    printf("VREG==VOUT: ");
+    amux_sweep();
+    //at 3.3v, the VREGout should be close  to VOUT/VREF
+    if(hw_adc_voltage[HW_ADC_MUX_VREG_OUT]>hw_adc_voltage[HW_ADC_MUX_VREF_VOUT])
+    {
+        if(hw_adc_voltage[HW_ADC_MUX_VREG_OUT]-hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] > 100)
+        {
+            printf(" %d > %d ERROR!!\r\n",hw_adc_voltage[HW_ADC_MUX_VREG_OUT], hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] );
+            fails++;
+        }  
+        else
+        {
+            printf(" %d = %d OK\r\n",hw_adc_voltage[HW_ADC_MUX_VREG_OUT], hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] );
+        } 
+    }
+    else
+    {
+        if(hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]-hw_adc_voltage[HW_ADC_MUX_VREG_OUT] > 100)
+        {
+            printf(" %d < %d ERROR!!\r\n",hw_adc_voltage[HW_ADC_MUX_VREG_OUT], hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] );
+            fails++;
+        }    
+        else
+        {
+            printf(" %d = %d OK\r\n",hw_adc_voltage[HW_ADC_MUX_VREG_OUT], hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] );
+        }      
+    }
+
     printf("BIO FLOAT TEST (SHOULD BE 0/<0.%dV)\r\n", SELF_TEST_LOW_LIMIT/10);
     for(uint8_t pin=0; pin<BIO_MAX_PINS; pin++)
     {

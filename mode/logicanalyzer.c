@@ -42,7 +42,7 @@ static const struct pio_program *pio_program_active;
 
 void la_redraw(uint32_t start_pos, uint32_t la_samples)
 {
- 
+
     if(start_pos+76>la_samples)//no more samples to show on screen
     {
         start_pos=la_samples-76;
@@ -63,10 +63,6 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
 
     printf("%s\e[%d;0H\e[K   \t%d\t\t%d\t\t%d\t\t%d\t\t%d", ui_term_color_reset(), system_config.terminal_ansi_rows-(12), start_pos+6, start_pos+6+(16*1), start_pos+6+(16*2), start_pos+6+(16*3), start_pos+6+(16*4));
 
-    //back to line graph
-    //printf("\e[3B\r\e[3C"); //move to top, right three  
-    printf("\e[%d;3H\e[K",system_config.terminal_ansi_rows-(11)); //line graph top, right two places 
-
     for(int i=0; i<76; i++)
     {
         uint8_t sample, previous_sample;
@@ -76,8 +72,7 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
         sample_ptr++;
         sample_ptr &= 0x1ffff;
 
-        //printf("\e[8A\e[1C"); //move to top, right one
-        printf("\e[%d;%dH\e[K",system_config.terminal_ansi_rows-(11), i+3); //line graph top, beginning position
+        printf("\e[%d;%dH",system_config.terminal_ansi_rows-(11), i+3); //line graph top, current position
 
         for(int pins=0; pins<8; pins++)
         {

@@ -176,6 +176,7 @@
     "T_HELP_CMD_CD": "Change directory",
     "T_HELP_CMD_MKDIR": "Make directory",
     "T_HELP_CMD_RM": "Remove file/directory",
+    "T_HELP_CMD_FORMAT": "Format storage disk (FAT16)",
     "T_HELP_CMD_CAT": "Print file contents as text",
     "T_HELP_CMD_HEX": "Print file contents in HEX",
     "T_HELP_CAPTURE_SCOPE": "Oscilloscope interface",

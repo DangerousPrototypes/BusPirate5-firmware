@@ -178,6 +178,7 @@ static char const * const bs_ba[]={
 	[T_HELP_CMD_CD]="Promjeni direktorij",
 	[T_HELP_CMD_MKDIR]="Napravi direktorij",
 	[T_HELP_CMD_RM]="Ukloni datoteku/Direktorij",
+	[T_HELP_CMD_FORMAT]="Format storage disk (FAT16)",
 	[T_HELP_CMD_CAT]="Ispiši sadržaj datoteke",
 	[T_HELP_CMD_HEX]="Print file contents in HEX",
 	[T_HELP_CAPTURE_SCOPE]="Oscilloscope interface",

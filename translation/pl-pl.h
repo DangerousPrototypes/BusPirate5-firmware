@@ -178,6 +178,7 @@ static char const * const pl_pl[]={
 	[T_HELP_CMD_CD]="Zmień katalog",
 	[T_HELP_CMD_MKDIR]="Twórz katalog",
 	[T_HELP_CMD_RM]="Usuń plik/katalog",
+	[T_HELP_CMD_FORMAT]="Format storage disk (FAT16)",
 	[T_HELP_CMD_CAT]="Pokaż zawartość pliku",
 	[T_HELP_CMD_HEX]="Print file contents in HEX",
 	[T_HELP_CAPTURE_SCOPE]="Oscilloscope interface",

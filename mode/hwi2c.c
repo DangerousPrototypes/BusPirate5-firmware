@@ -32,7 +32,7 @@ static uint pio_state_machine = 3;
 static uint pio_loaded_offset;
 
 static uint8_t checkshort(void);
-static void I2Csearch(bool verbose);
+static void i2c_search_addr(bool verbose);
 
 uint32_t hwi2c_setup(void)
 {
@@ -178,11 +178,11 @@ void hwi2c_macro(uint32_t macro)
 		case 0:		printf(" 1. I2C Address search\r\n 2. SI7021/HTU21/SHT21/HDC1080\r\n 3. MS5611\r\n 4. TSL2561\r\n");
 //				printf(" 2. I2C sniffer\r\n";
 				break;
-		case 1:		I2Csearch(false);	break;
+		case 1:		i2c_search_addr(false);	break;
 		case 2: 	result=macro_si7021(); break;
 		case 3:		result=macro_ms5611(); break;
 		case 4:		result=macro_tsl2561(); break;
-		case 5:		I2Csearch(true);
+		case 5:		i2c_search_addr(true); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
@@ -474,7 +474,7 @@ bool i2c_search_check_addr(uint8_t address)
 	return (!ack);	
 }
 
-static void I2Csearch(bool verbose)
+static void i2c_search_addr(bool verbose)
 {
 	bool color = false;
 	uint16_t device_count=0;

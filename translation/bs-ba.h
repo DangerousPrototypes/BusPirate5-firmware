@@ -9,6 +9,7 @@ static char const * const bs_ba[]={
 	[T_EXIT]="Izlaz",
 	[T_LOADED]="Učitano",
 	[T_SAVED]="Spremljeno",
+	[T_WARN_VOUT_VREF_LOW]="VOUT/VREF pin is not powered. Use W to enable power, or attach an external supply",
 	[T_USE_PREVIOUS_SETTINGS]="Koristi prethodne postavke?",
 	[T_MODE_ERROR_NO_EFFECT]="GREŠKA: naredba nema efekta ovdje",
 	[T_MODE_ERROR_NO_EFFECT_HIZ]="Naredba nema efekta u HiZ modu, pritisnite 'm' za izabir moda",

@@ -18,6 +18,7 @@
 #include "storage.h"
 #include "rgb.h"
 #include "pico/multicore.h"
+#include "amux.h"
 
 enum logicanalyzer_status
 {
@@ -132,13 +133,6 @@ void la_draw_frame(void)
 
     //set scroll region, disable line wrap
     printf("\e[%d;%dr\e[7l", 1, system_config.terminal_ansi_rows-14);
-    #if false
-    //time display ticks 
-    printf("\e[1B\r   \t\u2502\t\t\u2502\t\t\u2502\t\t\u2502\t\t\u2502");
-    printf("\e[1B\r\u250c\u2500\u252c"); 
-    for(int i=0; i<76; i++) printf("\u2500");
-    printf("\u2510");
-    #endif
     
     //a little header thing?
     printf("\e[%d;0H\e[K\u253C", system_config.terminal_ansi_rows-(13)); //row 10 of LA
@@ -163,11 +157,6 @@ void la_draw_frame(void)
     printf("\e[%d;0H\e[K", system_config.terminal_ansi_rows-(14)); //return to non-scroll area
     system_config.terminal_hide_cursor=false;
     printf("%s",ui_term_cursor_show());
-    //box bottom and corners
-    //printf("\e[1B\r\u2514\u2500\u2534");
-    //for(int i=0; i<76; i++) printf("\u2500");
-    //printf("\u2518");
-    //printf("\e[8A\r\e[3C"); //move to top, right three
 }
 
 uint32_t la_freq=1000, la_samples=1000;
@@ -232,6 +221,11 @@ void la_test_args(opt_args (*args), struct command_result *res)
     {
         la_draw_frame();
         la_active=true;
+        amux_sweep();
+        if(hw_adc_voltage[HW_ADC_MUX_VREG_OUT]<100)
+        {
+            printf("%s", t[T_WARN_VOUT_VREF_LOW]);
+        }
         return;
     }
 

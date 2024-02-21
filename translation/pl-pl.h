@@ -9,6 +9,7 @@ static char const * const pl_pl[]={
 	[T_EXIT]="Wyjście",
 	[T_LOADED]="Załadowano",
 	[T_SAVED]="Zapisano",
+	[T_WARN_VOUT_VREF_LOW]="VOUT/VREF pin is not powered. Use W to enable power, or attach an external supply",
 	[T_USE_PREVIOUS_SETTINGS]="Użyć poprzednich ustawień?",
 	[T_MODE_ERROR_NO_EFFECT]="BŁĄD: polecenie nie ma tutaj efektu",
 	[T_MODE_ERROR_NO_EFFECT_HIZ]="Polecenienie ma efektu w trybie HiZ, naciśnij 'm' aby wybrać tryb",

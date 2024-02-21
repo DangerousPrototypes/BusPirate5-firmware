@@ -9,6 +9,7 @@ static char const * const en_us[]={
 	[T_EXIT]="Exit",
 	[T_LOADED]="Loaded",
 	[T_SAVED]="Saved",
+	[T_WARN_VOUT_VREF_LOW]="VOUT/VREF pin is not powered. Use W to enable power, or attach an external supply",
 	[T_USE_PREVIOUS_SETTINGS]="Use previous settings?",
 	[T_MODE_ERROR_NO_EFFECT]="ERROR: command has no effect here",
 	[T_MODE_ERROR_NO_EFFECT_HIZ]="Command has no effect in HiZ mode, press 'm' to choose a mode",

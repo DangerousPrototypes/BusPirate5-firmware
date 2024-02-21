@@ -9,6 +9,7 @@ static char const * const zh_cn[]={
 	[T_EXIT]="Exit",
 	[T_LOADED]="Loaded",
 	[T_SAVED]="Saved",
+	[T_WARN_VOUT_VREF_LOW]="VOUT/VREF pin is not powered. Use W to enable power, or attach an external supply",
 	[T_USE_PREVIOUS_SETTINGS]="Use previous settings?",
 	[T_MODE_ERROR_NO_EFFECT]="错误：该指令在当前模式无效",
 	[T_MODE_ERROR_NO_EFFECT_HIZ]="该指令在当前HiZ模式无效，请按m键选择模式",

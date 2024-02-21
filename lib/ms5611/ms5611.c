@@ -15,7 +15,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "i2c.pio.h"
-#include "pio_i2c.h"
+#include "../../mode/pio_i2c.h"
 #include "lib/ms5611/ms5611.h"
 
 // Constants

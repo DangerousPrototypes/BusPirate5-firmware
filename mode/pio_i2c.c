@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "pio_i2c.h"
+#include "mode/pio_i2c.h"
 
 const int PIO_I2C_ICOUNT_LSB = 10;
 const int PIO_I2C_FINAL_LSB  = 9;

@@ -38,6 +38,7 @@ uint8_t la_status=LA_IDLE;
 PIO pio = pio0;
 uint sm = 0; 
 static uint offset=0;
+static const struct pio_program *pio_program_active;
 
 void la_redraw(uint32_t start_pos, uint32_t la_samples)
 {
@@ -75,6 +76,9 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
         sample_ptr++;
         sample_ptr &= 0x1ffff;
 
+        //printf("\e[8A\e[1C"); //move to top, right one
+        printf("\e[%d;%dH\e[K",system_config.terminal_ansi_rows-(11), i+3); //line graph top, beginning position
+
         for(int pins=0; pins<8; pins++)
         {
             if(sample & (0b1<<pins))
@@ -86,10 +90,10 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
                 //else
                 //{
                     //printf("%s\u2B1B", ui_term_color_prompt());
-                    //ui_term_color_text_background(hw_pin_label_ordered_color[pins+1][0],hw_pin_label_ordered_color[pins+1][1]);
-                    //printf(" %s",ui_term_color_reset());
-                    ui_term_color_text(hw_pin_label_ordered_color[pins+1][1]);
-                    printf("\u2500");
+                    ui_term_color_text_background(hw_pin_label_ordered_color[pins+1][0],hw_pin_label_ordered_color[pins+1][1]);
+                    printf(" %s",ui_term_color_reset());
+                    //ui_term_color_text(hw_pin_label_ordered_color[pins+1][1]);
+                    //printf("\u2500");
                 //}
             }
             else
@@ -105,10 +109,10 @@ void la_redraw(uint32_t start_pos, uint32_t la_samples)
                 //}                
 
             }
-                printf("\e[1B\e[1D"); //move one line down, one position left
+            printf("\e[1B\e[1D"); //move one line down, one position left
         }
         previous_sample=sample;
-        printf("\e[8A\e[1C"); //move to top, right one
+        
     }
     printf("\e8"); //restore cursor
     system_config.terminal_ansi_statusbar_pause=false;
@@ -345,7 +349,11 @@ void logic_analyser_done(void)
     irq_set_enabled(pio_get_dreq(pio, sm, false), false);
     irq_remove_handler(PIO0_IRQ_0, logic_analyser_done);
     pio_sm_set_enabled(pio, sm, false);
-    pio_clear_instruction_memory(pio);
+    //pio_clear_instruction_memory(pio);
+    if(pio_program_active){
+        pio_remove_program(pio, pio_program_active, offset);
+        pio_program_active=0;
+    }
 
     busy_wait_ms(1);
 
@@ -430,7 +438,11 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
         bio_input(BIO0+i);
     }*/
 
-    pio_clear_instruction_memory(pio);
+    //pio_clear_instruction_memory(pio);
+    if(pio_program_active){
+        pio_remove_program(pio, pio_program_active, offset);
+        pio_program_active=0;
+    }
     
     uint8_t trigger_pin = 0;
     bool trigger_ok=false;
@@ -452,17 +464,20 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
         if(trigger_direction & 1u<<trigger_pin) //high level trigger program
         {
             offset=pio_add_program(pio, &logicanalyzer_high_trigger_program);
+            pio_program_active=&logicanalyzer_high_trigger_program;
             logicanalyzer_high_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq);
         }
         else //low level trigger program
         {
             offset=pio_add_program(pio, &logicanalyzer_low_trigger_program);
+            pio_program_active=&logicanalyzer_low_trigger_program;
             logicanalyzer_low_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq);           
         }
     }
     else    //else no trigger program
     {
        offset=pio_add_program(pio, &logicanalyzer_no_trigger_program); 
+       pio_program_active=&logicanalyzer_no_trigger_program;
        logicanalyzer_no_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], freq);
     }
     
@@ -494,7 +509,12 @@ bool logic_analyzer_cleanup(void)
         dma_channel_cleanup(la_dma[i]);
         dma_channel_unclaim(la_dma[i]);
     }
-    pio_clear_instruction_memory(pio);
+
+    //pio_clear_instruction_memory(pio);
+    if(pio_program_active){
+        pio_remove_program(pio, pio_program_active, offset);
+        pio_program_active=0;
+    }
 
     mem_free(la_buf);
 

@@ -107,8 +107,8 @@ static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda,
     //io pins to inputs
     pio_sm_set_pindirs_with_mask(pio, sm, 0, pin_pins); //read pins to input (0, mask)    
     //pio_sm_set_pins_with_mask(pio, sm, both_pins, both_pins); //inputs, don't care I think
-    pio_gpio_init(pio, pin_sda);
-    pio_gpio_init(pio, pin_scl);
+    //pio_gpio_init(pio, pin_sda);
+    //pio_gpio_init(pio, pin_scl);
 
     //buffer pins to outputs and initial states
     //always confirm the GPIO pin is an input/off before messing with the buffer

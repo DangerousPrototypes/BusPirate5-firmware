@@ -33,7 +33,9 @@ set(bp5_common
         system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
         pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c
         mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c mode/hwspi.c mode/hwspi.h
-        mode/usart.h mode/usart.c mode/hwi2c.c mode/hwi2c.h mode/hwled.c mode/hwled.h
+        mode/usart.h mode/usart.c 
+        mode/hwi2c.c mode/hwi2c.h lib/i2c_address_list/dev_i2c_addresses.h mode/pio_i2c.c mode/pio_i2c.h
+        mode/hwled.c mode/hwled.h
         ui/ui_cmdln.c ui/ui_cmdln.h ui/ui_process.h ui/ui_process.c
         mode/hw1wire.h mode/hw1wire.c mode/onewire.h mode/onewire.c
 	display/scope.h display/scope.c
@@ -51,7 +53,7 @@ set(bp5_common
         printf-4.0.0/printf.c printf-4.0.0/printf.h
         font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
         fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 
-        pio_i2c.c pio_i2c.h
+
         storage.h storage.c
         ui/ui_term.c ui/ui_term.h  ui/ui_statusbar.c ui/ui_statusbar.h
         system_monitor.h system_monitor.c
@@ -114,7 +116,7 @@ set(revisions
         )
 
 foreach(revision ${revisions})
-        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/i2c.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/i2c.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)

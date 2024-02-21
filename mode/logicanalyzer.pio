@@ -64,8 +64,8 @@ static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uin
 
     sm_config_set_in_pins(&c, pin);
     // Set this pin's GPIO function (connect PIO to the pad)
-    for(uint8_t i=0; i<8; i++)
-        pio_gpio_init(pio, pin+i);
+    //for(uint8_t i=0; i<8; i++)
+        //pio_gpio_init(pio, pin+i);
         
     // Set the pin direction to input at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
@@ -78,6 +78,9 @@ static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uin
 
 	float div = clock_get_hz(clk_sys) / (freq * 2); //2 instructions per sample, run twice as fast as requested sampling rate  
 	sm_config_set_clkdiv(&c, div);
+
+    pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
 
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, offset, &c);
@@ -93,8 +96,8 @@ static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint
 
     sm_config_set_in_pins(&c, pin);
     // Set this pin's GPIO function (connect PIO to the pad)
-    for(uint8_t i=0; i<8; i++)
-        pio_gpio_init(pio, pin+i);
+    //for(uint8_t i=0; i<8; i++)
+        //pio_gpio_init(pio, pin+i);
         
     // Set the pin direction to input at the PIO
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);

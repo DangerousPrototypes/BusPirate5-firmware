@@ -9,11 +9,12 @@
 #include "bio.h"
 #include "ui/ui_prompt.h"
 #include "i2c.pio.h"
-#include "pio_i2c.h"
+#include "mode/pio_i2c.h"
 #include "storage.h"
 #include "ui/ui_term.h"
 #include "lib/ms5611/ms5611.h"
 #include "lib/tsl2561/driver_tsl2561.h" 
+#include "lib/i2c_address_list/dev_i2c_addresses.h"
 
 #define M_I2C_PIO pio0
 #define M_I2C_SDA BIO0
@@ -31,7 +32,7 @@ static uint pio_state_machine = 3;
 static uint pio_loaded_offset;
 
 static uint8_t checkshort(void);
-static void I2Csearch(void);
+static void i2c_search_addr(bool verbose);
 
 uint32_t hwi2c_setup(void)
 {
@@ -177,10 +178,11 @@ void hwi2c_macro(uint32_t macro)
 		case 0:		printf(" 1. I2C Address search\r\n 2. SI7021/HTU21/SHT21/HDC1080\r\n 3. MS5611\r\n 4. TSL2561\r\n");
 //				printf(" 2. I2C sniffer\r\n";
 				break;
-		case 1:		I2Csearch();	break;
+		case 1:		i2c_search_addr(false);	break;
 		case 2: 	result=macro_si7021(); break;
 		case 3:		result=macro_ms5611(); break;
 		case 4:		result=macro_tsl2561(); break;
+		case 5:		i2c_search_addr(true); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
@@ -431,14 +433,45 @@ bool reserved_addr(uint8_t addr) {
     return (addr & 0x78) == 0 || (addr & 0x78) == 0x78;
 }
 
-static void I2Csearch(void)
+bool i2c_search_check_addr(uint8_t address)
 {
-	uint8_t timeout;
 	uint16_t ack;
 	uint32_t error;
-	uint32_t data;
-	int last_address = -1;
-	bool color = true;
+
+	error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfff);
+	if(error)
+	{
+		pio_i2c_resume_after_error(pio, pio_state_machine);
+	}
+	ack=pio_i2c_write_timeout(pio, pio_state_machine, address, 0xfff);
+
+	if(ack)
+	{
+		pio_i2c_resume_after_error(pio, pio_state_machine);
+	}
+
+	//if read address then read one and NACK
+	if(!ack && (address&0x1))
+	{
+		error=pio_i2c_read_timeout(pio, pio_state_machine, &error, false, 0xfff);
+		if(error)
+		{
+			pio_i2c_resume_after_error(pio, pio_state_machine);
+		}	
+	} 
+	
+	error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xfff);
+	if(error)
+	{
+		pio_i2c_resume_after_error(pio, pio_state_machine);
+	}	
+	
+	return (!ack);	
+}
+
+static void i2c_search_addr(bool verbose)
+{
+	bool color = false;
 	uint16_t device_count=0;
 	uint16_t device_pairs=0;
 
@@ -451,78 +484,38 @@ static void I2Csearch(void)
 
 	printf("I2C address search:\r\n");
 
-	ui_term_color_text_background(hw_pin_label_ordered_color[0][0],hw_pin_label_ordered_color[0][1]);
-
 	pio_i2c_rx_enable(pio, pio_state_machine, false);
 
-	for(uint16_t i=0; i<256; i++)
+	for(uint16_t i=0; i<256; i=i+2)
 	{
-		error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfff);
-		if(error)
-		{
-			//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
-			//return;
-			pio_i2c_resume_after_error(pio, pio_state_machine);
-		}
-		ack=pio_i2c_write_timeout(pio, pio_state_machine, i, 0xfff);
 
-		if(ack)
+		bool i2c_w=i2c_search_check_addr(i);
+		bool i2c_r=i2c_search_check_addr(i+1);
+
+		if(i2c_w||i2c_r)
 		{
-			pio_i2c_resume_after_error(pio, pio_state_machine);
-		}
-		//if read address then read one and NACK
-		if(!ack && (i&0x1))
-		{
-			error=pio_i2c_read_timeout(pio, pio_state_machine, &data, false, 0xfff);
-			if(error)
-			{
-				//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
-				//return;
-				pio_i2c_resume_after_error(pio, pio_state_machine);
-			}	
-		} 
+			device_count+=(i2c_w+i2c_r); //add any new devices
+			if(i2c_w&&i2c_r) device_pairs++;
 		
-		error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xfff);
-		if(error)
-		{
-			//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
-			//return;
-			pio_i2c_resume_after_error(pio, pio_state_machine);
-		}		
+			color=!color;
+			if(color||verbose)
+					ui_term_color_text_background(hw_pin_label_ordered_color[0][0],hw_pin_label_ordered_color[0][1]);
 
-
-		if(!ack)
-		{
-			device_count++;
-
-			if(last_address!=-1)
+			printf("0x%02X",i>>1);
+			if(i2c_w) printf(" (0x%02X W)",i);
+			if(i2c_r) printf(" (0x%02X R)",i+1);
+			if(color||verbose)
 			{
-				if(i>>1 == last_address>>1) //read write pair?
-				{
-					device_pairs++;
-				}
-				else //flip color or whatever
-				{
-					color=!color;
-					if(color)
-					{
-						printf("\r\n");
-						ui_term_color_text_background(hw_pin_label_ordered_color[0][0],hw_pin_label_ordered_color[0][1]);
-					}
-					else
-					{
-						printf("%s\r\n", ui_term_color_reset());
-					}		
-				}
-			}
-
-			printf("0x%02X(0x%02X %c) ",i, i>>1, ((i&0x1)?'R':'W'));
-			last_address=i;
+				printf("%s", ui_term_color_reset());
+			}	
+			printf("\r\n");	
+			if(verbose)
+			{
+				printf("%s\r\n", dev_i2c_addresses[i>>1]);
+			}			
 		}
 
-	}
-
-	
+	}	
 
     printf("%s\r\nFound %d addresses, %d W/R pairs.\r\n",ui_term_color_reset(), device_count, device_pairs);
 }

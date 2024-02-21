@@ -24,6 +24,7 @@
 #include "amux.h"
 #include "mcu/rp2040.h"
 #include "display/scope.h"
+#include "mode/logicanalyzer.h"
 
 void helpers_selftest(opt_args (*args), struct command_result *res)
 {
@@ -595,6 +596,8 @@ void helpers_mode_periodic()
 {
     displays[system_config.display].display_periodic();
     modes[system_config.mode].protocol_periodic();
+    //we need an array with claim/unclaim slots in an array of active utilities
+    la_periodic();
 }
 
 /*

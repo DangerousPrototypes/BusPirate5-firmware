@@ -441,8 +441,6 @@ bool i2c_search_check_addr(uint8_t address)
 	error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfff);
 	if(error)
 	{
-		//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
-		//return;
 		pio_i2c_resume_after_error(pio, pio_state_machine);
 	}
 	ack=pio_i2c_write_timeout(pio, pio_state_machine, address, 0xfff);
@@ -451,14 +449,13 @@ bool i2c_search_check_addr(uint8_t address)
 	{
 		pio_i2c_resume_after_error(pio, pio_state_machine);
 	}
+
 	//if read address then read one and NACK
 	if(!ack && (address&0x1))
 	{
 		error=pio_i2c_read_timeout(pio, pio_state_machine, &error, false, 0xfff);
 		if(error)
 		{
-			//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
-			//return;
 			pio_i2c_resume_after_error(pio, pio_state_machine);
 		}	
 	} 
@@ -466,8 +463,6 @@ bool i2c_search_check_addr(uint8_t address)
 	error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xfff);
 	if(error)
 	{
-		//printf("I2C Bus Error, check power (W) and pull-ups (P)\r\n");
-		//return;
 		pio_i2c_resume_after_error(pio, pio_state_machine);
 	}	
 	
@@ -512,7 +507,6 @@ static void i2c_search_addr(bool verbose)
 			if(color||verbose)
 			{
 				printf("%s", ui_term_color_reset());
-				//if(verbose) printf("%s\r\n", dev_i2c_addresses[i>>1]);
 			}	
 			printf("\r\n");	
 			if(verbose)

@@ -218,7 +218,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
     //override the current set system
     //TODO: make i limit optional 
     uint32_t isense_en=0;
-    printf("Set current limit?\r\n");
+    printf("Set current limit?\r\n y/n>");
     do{
         isense_en=ui_prompt_yes_no();
     }while(isense_en>1);

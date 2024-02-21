@@ -15,6 +15,7 @@
 #include "mjson/mjson.h"
 #include "storage.h"
 #include "mem.h"
+#include "ui/ui_cmdln.h"
 
 
 FATFS fs;		/* FatFs work area needed for each volume */
@@ -369,8 +370,26 @@ void list_dir(opt_args (*args), struct command_result *res)
     return; // (uint32_t) res;
 }
 
+bool storage_format_confirm(void)
+{
+    uint32_t confirm;
+    do{
+        confirm=ui_prompt_yes_no();
+    }while(confirm>1);
+
+    return confirm;
+}
+
 void storage_format(opt_args (*args), struct command_result *res)
 {
+    cmdln_next_buf_pos();
+    printf("Erase the internal storage?\r\ny/n> ");
+    if(storage_format_confirm()==false) return;
+
+    printf("\r\nAre you sure?\r\ny/n> ");
+    if(storage_format_confirm()==false) return;
+    printf("\r\n\r\nFormatting...\r\n");
+
     storage_format_base();
 }
 

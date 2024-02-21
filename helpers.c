@@ -25,6 +25,7 @@
 #include "mcu/rp2040.h"
 #include "display/scope.h"
 #include "mode/logicanalyzer.h"
+#include "usb_rx.h"
 
 void helpers_selftest(opt_args (*args), struct command_result *res)
 {
@@ -590,6 +591,16 @@ void helpers_display_help(opt_args (*args), struct command_result *res)
     } else {
         printf("No display help available for this display mode\r\n");
     }
+}
+
+void helpers_pause_args(opt_args (*args), struct command_result *res)
+{
+    char c;
+    printf("%s\r\n", t[T_PRESS_ANY_KEY]);
+    while(!rx_fifo_try_get(&c) && !system_config.error)
+    {
+        busy_wait_ms(1);
+    }   
 }
 
 void helpers_mode_periodic()

@@ -3,6 +3,7 @@ void helpers_bit_order_msb(opt_args (*args), struct command_result *res);
 void helpers_bit_order_lsb(opt_args (*args), struct command_result *res);
 void helpers_show_int_formats(opt_args (*args), struct command_result *res);
 void helpers_show_int_inverse(opt_args (*args), struct command_result *res);
+void helpers_pause_args(opt_args (*args), struct command_result *res);
 
 //mode commands
 void helpers_mode_help(opt_args (*args), struct command_result *res);

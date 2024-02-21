@@ -56,6 +56,7 @@ const struct ui_info_help help_commands[]=
 	{0,"rm", T_HELP_CMD_RM},
 	{0,"cat", T_HELP_CMD_CAT},
     {0,"hex",T_HELP_CMD_HEX},//     Print HEX file contents
+	{0,"pause", T_HELP_CMD_PAUSE},
 	{0, "format", T_HELP_CMD_FORMAT},
 
 // enter a mode to use protocols

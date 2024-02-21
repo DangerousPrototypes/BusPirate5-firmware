@@ -31,7 +31,7 @@ for file_name in file_names:
                 #print(device_name)
                 device_dict[current_address].append(device_name)
 
-print("Device Dictionary:")
+#print("Device Dictionary:")
 #print(device_dict)
 
 
@@ -42,14 +42,14 @@ consolidated_device_dict = {}
 # Iterate through the original dictionary
 for address, devices_list in device_dict.items():
     # Join the list of devices into a single string
-    consolidated_text = ', '.join(devices_list)
+    consolidated_text = '\\r\\n'.join(devices_list)
     # Assign the consolidated text to the address key in the new dictionary
     consolidated_device_dict[address] = consolidated_text
 
 #print(consolidated_device_dict)
 # Print the consolidated device dictionary
 #for address, consolidated_text in consolidated_device_dict.items():
-#    print(f"{address}: {consolidated_text}")
+    #print(f"{address}: {consolidated_text}")
 
 lookup = {}
 base = {}
@@ -63,59 +63,40 @@ for i in range(0, 128):
         else:
             char_arr[idx]=consolidated_device_dict[i]      
             base[i]=idx
-            char_arr[idx]=consolidated_device_dict[i]
+            #char_arr[idx]=consolidated_device_dict[i]
             idx=idx+1
     else:
         base[i]=None
 
-
-
-#c_char_array = "[" + ", ".join(output) + "]"
-#print(c_char_array)
-
+#print(char_arr)
 #print(base)
-#quit()
-output2 = []
-for id, device_str_idx in char_arr.items():
-    if device_str_idx is not None:
-        output2.append(f"DEV_I2C_LIST_{id}")
- 
 
-#c_char_array = "[" + ", ".join(output) + "\n]"
-#print(c_char_array)
-
-# Create base.h file with all the translation keys (defines)
-base_h=""
-
-# Iterate over the keys in base_translation
-for index, key in enumerate(output2):
-        base_h += "\t" + key + ",\n"
-
-output3 = []
-for id, device_str_idx in base.items():
-    if device_str_idx is not None:
-        output3.append(f"DEV_I2C_LIST_{device_str_idx}")
-    else:
-        output3.append(f"DEV_I2C_LIST_NONE")   
-
+enum_h=""
 ptr_h=""
-for index, key in enumerate(output3):
-        ptr_h += "\t&dev_i2c_addresses_text[" + key + "],\n"
+const_h=""
+i=0
+for index, value in base.items():
+    if value is not None:
+        ptr_h += "\tdev_i2c_addresses_text[DEV_I2C_LIST_" + str(value) + "], //0x"+format(int(index), '02x')+"\n"
+    else:
+        ptr_h += "\tdev_i2c_addresses_text[DEV_I2C_LIST_NONE], //0x"+format(int(index), '02x')+"\n"
 
-translated_h=""
+for index, value in char_arr.items():
+    enum_h+="\tDEV_I2C_LIST_" + str(index) + ",\n"
+    const_h+="\t[DEV_I2C_LIST_" + str(index) + "]=\""+value+"\",\n"
 
-# Iterate over the keys in output_translation
-for id, device_str in char_arr.items():
-    translated_h += "\t[DEV_I2C_LIST_" + str(id) + "]=\""+device_str+"\",\n"
+#print(ptr_h)
+#print(enum_h)
+#print(const_h)
 
 # Read the content of the file
 with open('dev_i2c_addresses.ht', 'r', encoding="utf8") as file:
     content = file.read()    
 
 # Replace the tag with the value
-content = content.replace("%%%enum_list%%%", base_h)    
+content = content.replace("%%%enum_list%%%", enum_h)    
 # Replace the tag with the value
-content = content.replace("%%%array_data%%%", translated_h)    
+content = content.replace("%%%array_data%%%", const_h)    
 content = content.replace("%%%pointer_array%%%", ptr_h)
 
 # Write translation .h file

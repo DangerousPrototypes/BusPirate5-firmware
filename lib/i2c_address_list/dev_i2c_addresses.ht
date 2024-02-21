@@ -8,7 +8,6 @@ static char const * const dev_i2c_addresses_text[]={
 %%%array_data%%%
 };
 
-static const * char dev_i2c_addresses[]={
-    &dev_i2c_addresses_text[DEV_I2C_LIST_NONE],
+static const char *dev_i2c_addresses[]={
 %%%pointer_array%%%
 };

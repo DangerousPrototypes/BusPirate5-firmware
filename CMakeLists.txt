@@ -33,7 +33,9 @@ set(bp5_common
         system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
         pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c
         mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c mode/hwspi.c mode/hwspi.h
-        mode/usart.h mode/usart.c mode/hwi2c.c mode/hwi2c.h mode/hwled.c mode/hwled.h
+        mode/usart.h mode/usart.c 
+        mode/hwi2c.c mode/hwi2c.h lib/i2c_address_list/dev_i2c_addresses.h
+        mode/hwled.c mode/hwled.h
         ui/ui_cmdln.c ui/ui_cmdln.h ui/ui_process.h ui/ui_process.c
         mode/hw1wire.h mode/hw1wire.c mode/onewire.h mode/onewire.c
 	display/scope.h display/scope.c

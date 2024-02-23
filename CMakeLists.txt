@@ -32,7 +32,8 @@ set(bp5_common
         shift.h shift.c psu.h psu.c amux.h amux.c buttons.c buttons.h
         system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
         pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c
-        mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c mode/hwspi.c mode/hwspi.h
+        mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c 
+        mode/hwspi.c mode/hwspi.h mode/spiflash.h mode/spiflash.c
         mode/usart.h mode/usart.c 
         mode/hwi2c.c mode/hwi2c.h lib/i2c_address_list/dev_i2c_addresses.h mode/pio_i2c.c mode/pio_i2c.h
         mode/hwled.c mode/hwled.h

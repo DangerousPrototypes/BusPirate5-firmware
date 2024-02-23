@@ -1,0 +1,1 @@
+void flash_probe(void);

@@ -11,6 +11,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "storage.h"
+#include "mode/spiflash.h"
 
 #define M_SPI_PORT spi1
 #define M_SPI_CLK BIO6
@@ -317,6 +318,8 @@ void spi_macro(uint32_t macro)
 	switch(macro)
 	{
 		case 0:		printf("%s\r\n", t[T_MODE_ERROR_NO_MACROS_AVAILABLE]);
+				break;
+		case 1:	flash_probe();
 				break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;

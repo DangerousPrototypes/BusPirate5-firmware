@@ -240,7 +240,7 @@ void flash_probe()
 
         uint8_t ptp_id = ptp_rec->id;
         #define PTP_JEDEC 0
-        printf(" Type: %s (%02x)\r\n",ptp_id==PTP_JEDEC?ptp_manuf:ptp_manuf, ptp_id); //table of manuf IDs?
+        printf(" Type: %s (%02x)\r\n",ptp_id==PTP_JEDEC?ptp_jedec:ptp_manuf, ptp_id); //table of manuf IDs?
         printf(" Version: %d.%d\r\n", ptp_rec->revision_major, ptp_rec->revision_minor);
         uint8_t ptp_length=ptp_rec->length_dwords * 4;
         printf(" Length: %d bytes\r\n",ptp_length);

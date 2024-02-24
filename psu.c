@@ -188,7 +188,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
     //prompt voltage (float)
     printf("%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());  
     prompt_result result;
-    ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &volts);
+    ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &volts, false);
     if(result.exit)
     {
         res->error=true;
@@ -216,25 +216,19 @@ void psu_enable(opt_args (*args), struct command_result *res)
 
     //prompt current (float) or none
     //override the current set system
-    //TODO: make i limit optional 
-    uint32_t isense_en=0;
-    printf("Set current limit?\r\n y/n>");
-    do{
-        isense_en=ui_prompt_yes_no();
-    }while(isense_en>1);
-
-    printf("\r\n");
-
     float iset=(float)PWM_TOP;
-    if(isense_en==1)
-    {   
-        printf("\r\n%sMaximum current (0mA-500mA)%s", ui_term_color_info(), ui_term_color_reset());
-        ui_prompt_float(&result, 0.0f, 500.0f, 100.0f, true, &current);
-        if(result.exit)
-        {
-            res->error=true;
-            return;    
-        }
+    bool isense_en=false;
+    printf("%sMaximum current (0mA-500mA), <enter> for none%s", ui_term_color_info(), ui_term_color_reset());
+    ui_prompt_float(&result, 0.0f, 500.0f, 100.0f, true, &current, true);
+    if(result.exit)
+    {
+        res->error=true;
+        return;    
+    }
+
+    if(!result.default_value) //enter for none...
+    {
+        isense_en=true;
 
         float psu_i_per_bit= ((float)(PSU_I_RANGE)/(float)PWM_TOP);
         iset= (float)((float)current * 10000);
@@ -246,6 +240,15 @@ void psu_enable(opt_args (*args), struct command_result *res)
             ui_term_color_num_float(), current, ui_term_color_reset(), ui_term_color_info(),
             ui_term_color_num_float(), iact, ui_term_color_reset()    
         );
+    }
+    else
+    {
+        printf("%s%s:%s%s\r\n",
+        ui_term_color_notice(),
+        t[T_INFO_CURRENT_LIMIT],
+        ui_term_color_reset(),
+        t[T_MODE_DISABLED]
+    );
     }
 
     system_config.psu_error=true;
@@ -321,7 +324,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
     
     // print voltage and current
     uint32_t isense=((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000)/4095));
-    printf("%s\r\nVreg output: %s%d.%d%sV%s, Vref/Vout pin: %s%d.%d%sV%s, Current sense: %s%d.%d%smA%s\r\n%s", 
+    printf("%sVreg output: %s%d.%d%sV%s, Vref/Vout pin: %s%d.%d%sV%s, Current sense: %s%d.%d%smA%s\r\n%s", 
     ui_term_color_notice(), 
     ui_term_color_num_float(), ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT])/1000), (((hw_adc_voltage[HW_ADC_MUX_VREG_OUT])%1000)/100), ui_term_color_reset(), ui_term_color_notice(),
     ui_term_color_num_float(), ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT])/1000), (((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT])%1000)/100), ui_term_color_reset(), ui_term_color_notice(),

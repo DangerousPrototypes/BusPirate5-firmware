@@ -54,7 +54,7 @@ bool ui_prompt_validate_int(const struct ui_prompt* menu, uint32_t* value);
 bool ui_prompt_menu_bio_pin(const struct ui_prompt* menu);
 bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu);
 
-bool ui_prompt_float(struct prompt_result *result, float minval, float maxval, float defval, bool allow_exit, float* user_value);
+bool ui_prompt_float(struct prompt_result *result, float minval, float maxval, float defval, bool allow_exit, float* user_value, bool none);
 bool ui_prompt_float_units(struct prompt_result *result, const char *menu, float* user_value, uint8_t* user_units);
 bool ui_prompt_any_key_continue(struct prompt_result *result, uint32_t delay, uint32_t (*refresh_func)(uint8_t pin, bool refresh), uint8_t pin, bool refresh);
 bool ui_prompt_vt100_mode(prompt_result *result, uint32_t *value);

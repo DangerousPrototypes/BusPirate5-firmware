@@ -188,11 +188,14 @@ bool ui_prompt_uint32(prompt_result *result, const struct ui_prompt* menu, uint3
 }
 
 // keep the user asking the menu until it falls between minval and maxval, enter returns the default value, x optionally exits
-bool ui_prompt_float(prompt_result *result, float minval, float maxval, float defval, bool allow_exit, float* user_value)
+bool ui_prompt_float(prompt_result *result, float minval, float maxval, float defval, bool allow_exit, float* user_value, bool none)
 {
 	while(true)
 	{
-		printf("\r\n%s%s (%1.2f) >%s ",ui_term_color_prompt(), (allow_exit?"x to exit":""), defval, ui_term_color_reset());
+		printf("\r\n%s%s ",ui_term_color_prompt(), (allow_exit?"x to exit":""));
+		if(!none) printf("(%1.2f)", defval);
+		else printf("(none)");
+		printf(" >%s ", ui_term_color_reset());
 
 		if(!ui_prompt_user_input())
         {

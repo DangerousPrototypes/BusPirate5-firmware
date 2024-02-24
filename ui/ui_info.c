@@ -228,7 +228,7 @@ void ui_info_print_pin_labels(void)
     uint8_t j=0;
 	// pin function
     
-    //TODO: combine this with the version above in seperate function
+    //TODO: combine this with the version above in separate function
     if(system_config.psu)
     {
         uint32_t isense=((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000)/4095));

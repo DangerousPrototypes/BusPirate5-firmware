@@ -85,12 +85,9 @@ void system_init(void)
 	system_config.aux_active=0;
 
 	system_config.psu=0;
-    system_config.psu_dac_bits_mask=0;
-    system_config.psu_dat_bits_readable=0;
-	//system_config.psu_dac_v_set=0xff;
-	//system_config.psu_dac_i_set=0x50;
-    //system_config.psu_voltage=0;               
-    //system_config.psu_current_limit=0;  
+    system_config.psu_current_limit_en=false;     
+    system_config.psu_voltage=0;               
+    system_config.psu_current_limit=0;  
     system_config.psu_current_error=false;
     system_config.psu_error=false;   
 	system_config.psu_irq_en=false;   

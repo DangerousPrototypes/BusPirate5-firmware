@@ -70,11 +70,12 @@ typedef struct _system_config
 	uint8_t aux_active;				//user controlled auc pins are outputs, resets when input
 
 	uint8_t psu;					// psu (0=off, 1=on)
-    uint8_t psu_dat_bits_readable;  // dac bits in human readable format
-    uint16_t psu_dac_bits_mask;          // 8/10/12 bit psu dac possible, this is the bitmask 0xff 0x3ff or 0x7ff
+    //uint8_t psu_dat_bits_readable;  // dac bits in human readable format
+    //uint16_t psu_dac_bits_mask;          // 8/10/12 bit psu dac possible, this is the bitmask 0xff 0x3ff or 0x7ff
 	uint16_t psu_dac_v_set;			// psu voltage adjust DAC setting
 	uint16_t psu_dac_i_set;			// psu current limit DAC setting
     uint32_t psu_voltage;               // psu voltage output setting in decimal * 10000
+	bool psu_current_limit_en;
     uint32_t psu_current_limit;         // psu current limit in decimal * 10000
     bool psu_current_error;             // psu over current limit fuse tripped
     bool psu_error;                     //error, usually with the dac

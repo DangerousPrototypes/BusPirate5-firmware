@@ -217,7 +217,6 @@ void psu_enable(opt_args (*args), struct command_result *res)
     //prompt current (float) or none
     //override the current set system
     float iset=(float)PWM_TOP;
-    bool isense_en=false;
     printf("%sMaximum current (0mA-500mA), <enter> for none%s", ui_term_color_info(), ui_term_color_reset());
     ui_prompt_float(&result, 0.0f, 500.0f, 100.0f, true, &current, true);
     if(result.exit)
@@ -228,7 +227,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
 
     if(!result.default_value) //enter for none...
     {
-        isense_en=true;
+        system_config.psu_current_limit_en=true;
 
         float psu_i_per_bit= ((float)(PSU_I_RANGE)/(float)PWM_TOP);
         iset= (float)((float)current * 10000);
@@ -243,6 +242,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
     }
     else
     {
+        system_config.psu_current_limit_en=false;
         printf("%s%s:%s%s\r\n",
         ui_term_color_notice(),
         t[T_INFO_CURRENT_LIMIT],
@@ -266,7 +266,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
     psu_vreg_enable(true);
     busy_wait_ms(10);
 
-    if(isense_en==0)
+    if(!system_config.psu_current_limit_en)
     { 
         shift_set_clear_wait(CURRENT_EN_OVERRIDE,0);
     }
@@ -335,7 +335,7 @@ void psu_enable(opt_args (*args), struct command_result *res)
     //gpio_set_irq_enabled_with_callback(CURRENT_DETECT, 0b0001, true, &psu_irq_callback);
     //since we dont have any more pins, the over current detect system is read through the 
     //4067 and ADC. It will be picked up in the second core loop
-    if(isense_en==1)
+    if(system_config.psu_current_limit_en)
     {
         system_config.psu_irq_en=true;
     }

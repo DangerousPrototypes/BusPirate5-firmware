@@ -23,10 +23,20 @@ uint32_t ui_statusbar_info(char *buf)
     
     if(system_config.psu)
     {
-        temp=sprintf(&buf[len],"Vout: %u.%uV/%u.%umA max | ",
-           (system_config.psu_voltage)/10000, ((system_config.psu_voltage)%10000)/100,
-           (system_config.psu_current_limit)/10000, ((system_config.psu_current_limit)%10000)/100 
+        temp=sprintf(&buf[len],"Vout: %u.%uV",
+           (system_config.psu_voltage)/10000, ((system_config.psu_voltage)%10000)/100
         );
+        len+=temp;
+        cnt+=temp;
+        if(system_config.psu_current_limit_en)
+        {
+            temp=sprintf(&buf[len],"/%u.%umA max",
+                (system_config.psu_current_limit)/10000, ((system_config.psu_current_limit)%10000)/100 
+            );
+            len+=temp;
+            cnt+=temp;           
+        }
+        temp=sprintf(&buf[len]," | ");
         len+=temp;
         cnt+=temp;
     }

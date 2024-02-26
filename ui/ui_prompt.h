@@ -60,6 +60,7 @@ bool ui_prompt_any_key_continue(struct prompt_result *result, uint32_t delay, ui
 bool ui_prompt_vt100_mode(prompt_result *result, uint32_t *value);
 void ui_prompt_invalid_option(void);
 uint32_t ui_prompt_yes_no(void);
+bool ui_prompt_bool(prompt_result *result, bool defval_show, bool defval, bool allow_exit, bool *user_value);
 
 // default prompt configurations for general purpose mode setup
 extern const struct ui_prompt_config prompt_int_cfg;

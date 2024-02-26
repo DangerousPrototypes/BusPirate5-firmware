@@ -277,6 +277,40 @@ bool ui_parse_get_attributes(struct prompt_result *result, uint32_t* attr, uint8
 	return true;
 }
 
+bool ui_parse_get_bool(struct prompt_result *result, bool* value){
+ 
+    bool r;
+    char c;
+
+	*result = empty_result; // initialize result with empty result
+
+    r=cmdln_try_peek(0,&c);
+    if(!r || c==0x00) // user pressed enter only
+	{
+		result->no_value=true;
+	}
+	else if( r && ((c|0x20)=='x') ) // exit
+	{
+		result->exit=true;
+	}
+	else if(((c|0x20)=='y'))// yes or no
+    {
+        result->success=true;
+        (*value)=true;
+    }
+    else if(((c|0x20)=='n'))
+    {
+        result->success=true;
+        (*value)=false;        
+    }
+    else // bad result (not number)
+    { 
+        result->error=true;
+    }
+    cmdln_try_discard(1); //discard
+	return true;
+}
+
 // get a float from user input
 bool ui_parse_get_float(struct prompt_result *result, float* value)
 {

@@ -34,14 +34,14 @@ set(bp5_common
         pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c
         mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c 
         mode/hwspi.c mode/hwspi.h mode/spiflash.h mode/spiflash.c
-        mode/usart.h mode/usart.c 
+        lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c        mode/usart.h mode/usart.c 
         mode/hwi2c.c mode/hwi2c.h lib/i2c_address_list/dev_i2c_addresses.h mode/pio_i2c.c mode/pio_i2c.h
         mode/hwled.c mode/hwled.h
         ui/ui_cmdln.c ui/ui_cmdln.h ui/ui_process.h ui/ui_process.c
         mode/hw1wire.h mode/hw1wire.c mode/onewire.h mode/onewire.c
 	display/scope.h display/scope.c
         ui/ui_flags.h
-        debug.c debug.h
+        debug.c debug.h  
         ui/ui_parse.c ui/ui_parse.h ui/ui_prompt.h ui/ui_prompt.c  ui/ui_mode.c ui/ui_mode.h
 	ui/ui_display.c ui/ui_display.h
         ui/ui_info.h ui/ui_info.c ui/ui_format.c ui/ui_format.c ui/ui_init.c ui/ui_init.h

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "hardware/spi.h"
@@ -10,6 +11,8 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "storage.h"
+#include "../lib/sfud/inc/sfud.h"
+#include "../lib/sfud/inc/sfud_def.h"
 
 #define M_SPI_PORT spi1
 #define M_SPI_CLK BIO6
@@ -31,6 +34,98 @@ void flash_not_found()
 {
     printf("not found\r\n");
 }
+
+
+
+#define SFUD_DEMO_TEST_BUFFER_SIZE                     1024
+
+static void sfud_demo(uint32_t addr, size_t size, uint8_t *data);
+
+static uint8_t sfud_demo_test_buf[SFUD_DEMO_TEST_BUFFER_SIZE];
+
+void sfud_test(void)
+{
+    /* SFUD initialize */
+    if (sfud_init() == SFUD_SUCCESS) {
+        printf("Success!\r\n");
+        sfud_demo(0, sizeof(sfud_demo_test_buf), sfud_demo_test_buf);
+    }
+    else
+    {
+        printf("Failed!\r\n");
+    }
+}
+
+/**
+ * SFUD demo for the first flash device test.
+ *
+ * @param addr flash start address
+ * @param size test flash size
+ * @param size test flash data buffer
+ */
+static void sfud_demo(uint32_t addr, size_t size, uint8_t *data) {
+    sfud_err result = SFUD_SUCCESS;
+    const sfud_flash *flash = sfud_get_device_table() + 0;
+    size_t i;
+    /* prepare write data */
+    for (i = 0; i < size; i++) {
+        data[i] = i;
+    }
+    /* erase test */
+    result = sfud_erase(flash, addr, size);
+    if (result == SFUD_SUCCESS) {
+        printf("Erase the %s flash data finish. Start from 0x%08X, size is %ld.\r\n", flash->name, addr,
+                size);
+    } else {
+        printf("Erase the %s flash data failed.\r\n", flash->name);
+        return;
+    }
+    /* write test */
+    result = sfud_write(flash, addr, size, data);
+    if (result == SFUD_SUCCESS) {
+        printf("Write the %s flash data finish. Start from 0x%08X, size is %ld.\r\n", flash->name, addr,
+                size);
+    } else {
+        printf("Write the %s flash data failed.\r\n", flash->name);
+        return;
+    }
+    /* read test */
+    result = sfud_read(flash, addr, size, data);
+    if (result == SFUD_SUCCESS) {
+        printf("Read the %s flash data success. Start from 0x%08X, size is %ld. The data is:\r\n", flash->name, addr,
+                size);
+        printf("Offset (h) 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n");
+        for (i = 0; i < size; i++) {
+            if (i % 16 == 0) {
+                printf("[%08X] ", addr + i);
+            }
+            printf("%02X ", data[i]);
+            if (((i + 1) % 16 == 0) || i == size - 1) {
+                printf("\r\n");
+            }
+        }
+        printf("\r\n");
+    } else {
+        printf("Read the %s flash data failed.\r\n", flash->name);
+    }
+    /* data check */
+    for (i = 0; i < size; i++) {
+        if (data[i] != i % 256) {
+            printf("Read and check write data has an error. Write the %s flash data failed.\r\n", flash->name);
+			break;
+        }
+    }
+    if (i == size) {
+        printf("The %s flash test is success.\r\n", flash->name);
+    }
+}
+
+
+
+
+
+
+
 
 typedef struct __attribute__((packed)) ptp_head_struct {
     uint32_t signature:32;
@@ -134,9 +229,20 @@ typedef struct __attribute__((packed)) ptp_manuf_struct {
         uint32_t unused_5:32;
     } ptp_manuf_t;
 
-void flash_probe()
+uint32_t flash_erase_size(uint32_t size, char *unit)
 {
-    printf("Probing:\r\n Resume ID (0xAB): ");  
+    uint32_t erase_size=pow(2,size);
+    *unit ='B';
+    if(erase_size>=1024)
+    {
+        erase_size=erase_size/1024;
+        *unit='K';
+    }
+    return erase_size;
+}
+
+bool flash_read_resid(uint8_t *res_id)
+{
     //DP 0xB9: deep power down and then RDP 0xAB, 3 dummy bytes, 1 RES ID byte (release and read ID)
     //deep sleep command
     flash_start();
@@ -146,57 +252,83 @@ void flash_probe()
     busy_wait_ms(10);
     flash_start();
     flash_write_32(0xab000000, 4);
-    uint8_t RESID = flash_read();
+    *res_id = flash_read();
     flash_stop();
-
-    if(RESID!=0x00 && RESID!=0xff)
+    if(*res_id==0x00 || *res_id==0xff)
     {
-        printf("%02x\r\n", RESID);
+        return false;
     }
-    else
-    {
-        flash_not_found();
-    }
+    return true;
+}
 
-    printf(" REMS ID (0x90): ");
+bool flash_read_remsid(uint8_t *remsid_manuf, uint8_t *remsid_dev)
+{
     //0x90: REMS  Read Electronic Manufacturer ID & Device ID (REMS)
     // 0x90, 0x00:3, 1 Manuf ID, 1 Device ID
     flash_start();
     flash_write_32(0x90000000,4);
-    uint8_t REMS_MANUFID=flash_read();
-    uint8_t REMS_DEVID=flash_read();
+    *remsid_manuf = flash_read();
+    *remsid_dev = flash_read();
     flash_stop();
-    if(REMS_MANUFID!=0x00 && REMS_MANUFID!=0xff) //TODO: manuf ID has a checksum bit or something, list of man and dev ids?
+    if(*remsid_manuf==0x00 || *remsid_manuf==0xff) //TODO: manuf ID has a checksum bit or something, list of man and dev ids?    
     {
-        printf(" Manufacturer ID: %02x, Device ID: %02x\r\n", REMS_MANUFID, REMS_DEVID);
+        return false;
     }
-    else
-    {
-        flash_not_found();
-    }
+    return true;
+}
 
-    printf(" Read ID (0x9f): ");
+bool flash_read_rdid(uint8_t *rdid_manuf, uint8_t *rdid_type, uint8_t *rdid_capacity)
+{
     //0x9f: RDID  Read Identification (RDID)
     // 0x9f, 1 manuf ID, 1 memory type, 1 capacity
     flash_start();
     flash_write(0x9f);
-    uint8_t RDID_MANUFID=flash_read();
-    uint8_t RDID_MEMTYPE=flash_read();
-    uint8_t RDID_MEMCAP=flash_read();
+    *rdid_manuf=flash_read();
+    *rdid_type=flash_read();
+    *rdid_capacity=flash_read();
     flash_stop();
-    if(RDID_MANUFID!=0x00 && RDID_MANUFID!=0xff)//TODO: is there a standard coding?
+    if(*rdid_manuf==0x00 || *rdid_manuf==0xff)//TODO: is there a standard coding?
     {
-        printf(" Manufacturer ID: %02x, Type: %02x, Capacity: %02x\r\n", RDID_MANUFID, RDID_MEMTYPE, RDID_MEMCAP);
+        return false;
     }
-    else
-    {
-        flash_not_found();
-    }
-    
+    return true;
+}
+
+void flash_probe()
+{
+    //sfud_test();
+    //return;
+    //printf("Probing:\r\n\t\tRESID (0xAB)\tREMSID (0x90)\tRDID (0x9F)\r\n");  
+
+    uint8_t resid;
+    bool has_resid=flash_read_resid(&resid);
+    uint8_t remsid_manuf, remsid_dev;
+    bool has_remsid =flash_read_remsid(&remsid_manuf, &remsid_dev);
+    uint8_t rdid_manuf, rdid_type, rdid_capacity;
+    bool has_rdid = flash_read_rdid(&rdid_manuf, &rdid_type, &rdid_capacity);
+    printf("Probing:\r\n\t\tDevice ID\tManuf ID\tType ID\t\tCapacity ID\r\n");  
+    printf("RESID (0xAB)\t");
+    if(has_resid) printf("0x%02x", resid); else printf("--");
+    printf("\r\nREMSID (0x90)\t");   
+    if(has_remsid) printf("0x%02x\t\t0x%02x", remsid_dev, remsid_manuf); else printf("--\t\t--");
+    printf("\r\nRDID (0x9F)\t");
+    if(has_rdid) printf("\t\t0x%02x\t\t0x%02x\t\t0x%02x", rdid_manuf, rdid_type, rdid_capacity); else printf("\t\t--\t\t--\t\t--");   
+
+/*    printf("Device ID\t");
+    if(has_resid) printf("0x%02x\t\t", resid); else printf("--\t\t");
+    if(has_remsid) printf("0x%02x", remsid_dev); else printf("--");
+    printf("\r\nManuf ID\t\t\t");
+    if(has_remsid) printf("0x%02x\t\t", remsid_manuf); else printf("--\t\t");
+    if(has_rdid) printf("0x%02x", rdid_manuf); else printf("--");   
+    printf("\r\nType ID\t\t\t\t\t\t");
+    if(has_rdid) printf("0x%02x", rdid_type); else printf("--");   
+    printf("\r\nCapacity ID\t\t\t\t\t");            
+    if(has_rdid) printf("0x%02x", rdid_capacity); else printf("--");   
+    printf("\r\n\r\n");*/
 
     //now grab Serial Flash Discoverable Parameter (SFDP)
     // 0x5a 3 byte address, dummy byte, read first 24bytes
-    printf(" Read SFDP (0x5a): ");
+    printf("\r\n\r\nSFDP (0x5A): ");
     flash_start();
     flash_write_32(0x5a000000, 4);
     flash_write(0xff); //dummy byte
@@ -210,7 +342,7 @@ void flash_probe()
     //check code
     if(ptp_head->signature == 0x50444653)
     {
-        printf("found 0x50444653\r\n");
+        printf("found 0x50444653 \"PDFS\"\r\n");
     }
     else
     {
@@ -221,12 +353,12 @@ void flash_probe()
     printf(" Version: %d.%d\r\n", ptp_head->revision_major, ptp_head->revision_minor);
  
     uint8_t param_table_pointers=ptp_head->headers_count+1;
-    printf(" Number of headers: %d\r\n\r\n", param_table_pointers); //n+1 parameter headers
+    printf(" Headers: %d\r\n", param_table_pointers); //n+1 parameter headers
 
     //loop over table pointers, usually 2?
     for(uint8_t i=0; i<param_table_pointers; i++)
     {
-        printf("**Param Table %d**\r\n", i);
+        printf("\r\n**Param Table %d**\r\n", i);
         flash_start();
         uint32_t address=0x5a000000 + 8 + (i*8);
         flash_write_32(address, 4);
@@ -234,19 +366,16 @@ void flash_probe()
         flash_read_n(sfdp,8);
         flash_stop();
         const char ptp_jedec[]="JEDEC";
-        const char ptp_manuf[]="manufacturer";
+        const char ptp_manuf[]="manuf";
         ptp_record_t *ptp_rec;
         ptp_rec = (ptp_record_t *)&sfdp;
 
         uint8_t ptp_id = ptp_rec->id;
+        uint8_t ptp_length=ptp_rec->length_dwords * 4;  
+        uint32_t ptp_address=ptp_rec->address;     
         #define PTP_JEDEC 0
-        printf(" Type: %s (%02x)\r\n",ptp_id==PTP_JEDEC?ptp_jedec:ptp_manuf, ptp_id); //table of manuf IDs?
-        printf(" Version: %d.%d\r\n", ptp_rec->revision_major, ptp_rec->revision_minor);
-        uint8_t ptp_length=ptp_rec->length_dwords * 4;
-        printf(" Length: %d bytes\r\n",ptp_length);
-        uint32_t ptp_address=ptp_rec->address;
-        printf(" Address: 0x%06x\r\n",ptp_address);
-        printf(" Fetching table...\r\n");  
+        printf("\t\tType\t\tVer.\tLength\tAddress\r\n");
+        printf("Table %d\t\t%s (0x%02x)\t%d.%d\t%d\t0x%06x\r\n", i, ptp_id==PTP_JEDEC?ptp_jedec:ptp_manuf, ptp_id, ptp_rec->revision_major, ptp_rec->revision_minor, ptp_length, ptp_address );
 
         if(ptp_length>count_of(sfdp))
         {
@@ -260,79 +389,84 @@ void flash_probe()
         flash_read_n(sfdp,ptp_length);
         flash_stop();
 
-
-
-
+        /* print JEDEC basic flash parameter table info */
+        printf("\r\nMSB-LSB  3    2    1    0\r\n");
+        for (uint8_t j = 0; j < ptp_length/4; j++) {
+            printf("[%04d] 0x%02X 0x%02X 0x%02X 0x%02X\r\n", j + 1, sfdp[j * 4 + 3], sfdp[j * 4 + 2], sfdp[j * 4 + 1], sfdp[j * 4]);
+        }
 
         switch(ptp_id)
         {
             case PTP_JEDEC:
-                for(uint i=0; i<ptp_length; i++) printf("%02x ", sfdp[i]);
                 printf("\r\n");
                 ptp_jedec_t *ptp_j;
                 ptp_j = (ptp_jedec_t *)&sfdp;
-                printf("Block/sector 4K erase: %d\r\n", ptp_j->erase_size);
-                printf("4K erase instruction: %02x\r\n", ptp_j->erase_instruction_4k);
-                printf("Address bytes: %d\r\n", ptp_j->address_bytes);
-                printf("Density: %d\r\n", ptp_j->density); //todo: math
-                printf("1-1-2 fast read: %d\r\n", ptp_j->fast_read_112);
-                if(ptp_j->fast_read_112)
+                printf("Density: %dB\r\nAddress bytes: ", ptp_j->density); //todo: math   
+                switch(ptp_j->address_bytes)
                 {
-                    printf("1-1-2 fast read instruction: %02x\r\n", ptp_j->fast_read_112_read_instruction);
-                }
-                printf("1-2-2 fast read: %d\r\n", ptp_j->fast_read_122);
-                if(ptp_j->fast_read_122)
-                {
-                    printf("1-2-2 fast read instruction: %02x\r\n", ptp_j->fast_read_122_read_instruction);
-                }
-                printf("1-4-4 fast read: %d\r\n", ptp_j->fast_read_144);
-                if(ptp_j->fast_read_144)
-                {
-                    printf("1-4-4 fast read instruction: %02x\r\n", ptp_j->fast_read_144_read_instruction);
-                }
-                printf("1-1-4 fast read: %d\r\n", ptp_j->fast_read_114);
-                if(ptp_j->fast_read_114)
-                {
-                    printf("1-1-4 fast read instruction: %02x\r\n", ptp_j->fast_read_114_read_instruction);
-                }           
-                printf("2-2-2 fast read: %d\r\n", ptp_j->fast_read_222);
-                if(ptp_j->fast_read_222)
-                {
-                    printf("2-2-2 fast read instruction: %02x\r\n", ptp_j->fast_read_222_read_instruction);
-                }    
-                printf("4-4-4 fast read: %d\r\n", ptp_j->fast_read_444);
-                if(ptp_j->fast_read_444)
-                {
-                    printf("4-4-4 fast read instruction: %02x\r\n", ptp_j->fast_read_444_read_instruction);
-                }     
-
-                printf("Erase 1 size: %d\r\n", ptp_j->erase_1_size); //todo: math
-                printf("Erase 1 instruction: %02x\r\n", ptp_j->erase_1_instruction);     
-                printf("Erase 2 size: %d\r\n", ptp_j->erase_2_size); //todo: math
-                printf("Erase 2 instruction: %02x\r\n", ptp_j->erase_2_instruction);   
-                printf("Erase 3 size: %d\r\n", ptp_j->erase_3_size); //todo: math
-                printf("Erase 3 instruction: %02x\r\n", ptp_j->erase_3_instruction);   
-                printf("Erase 4 size: %d\r\n", ptp_j->erase_4_size); //todo: math
-                printf("Erase 4 instruction: %02x\r\n", ptp_j->erase_4_instruction);                                                                                                                  
+                    case 0:
+                        printf("3");
+                        break;
+                    case 1:
+                        printf("3 or 4");
+                        break;
+                    case 2:
+                        printf("4");
+                        break;
+                }            
+                printf("\r\nWrite granularity:");
+                if(!ptp_j->write_granularity) printf("1B"); else printf(">=64B");
+                printf("\r\nWrite Enable Volatile: %d\r\nWrite Enable instruction: 0x%02x\r\n", ptp_j->volatile_status_register_block_protect_bits, (ptp_j->volatile_status_register_write_enable_instruction_select)?0x6:0x50);
+                printf("4K erase instruction: ");
+                if(ptp_j->erase_size==0b01) printf("0x%02x", ptp_j->erase_instruction_4k); else printf("--");
 
 
+                printf("\r\n\r\nFast read:\t1-1-2\t1-1-4\t1-2-2\t1-4-4\t2-2-2\t4-4-4\r\n");
+                printf("Instruction:");
+                if(ptp_j->fast_read_112) printf("\t0x%02x",ptp_j->fast_read_112_read_instruction); else printf("\t--");
+                if(ptp_j->fast_read_114) printf("\t0x%02x",ptp_j->fast_read_114_read_instruction); else printf("\t--");
+                if(ptp_j->fast_read_122) printf("\t0x%02x",ptp_j->fast_read_122_read_instruction); else printf("\t--");
+                if(ptp_j->fast_read_144) printf("\t0x%02x",ptp_j->fast_read_144_read_instruction); else printf("\t--");
+                if(ptp_j->fast_read_222) printf("\t0x%02x",ptp_j->fast_read_222_read_instruction); else printf("\t--");
+                if(ptp_j->fast_read_444) printf("\t0x%02x",ptp_j->fast_read_444_read_instruction); else printf("\t--");
+                printf("\r\nWait states:\t%d\t%d\t%d\t%d\t%d\t%d",
+                    ptp_j->fast_read_112_wait_states, ptp_j->fast_read_114_wait_states, ptp_j->fast_read_122_wait_states,
+                    ptp_j->fast_read_144_wait_states, ptp_j->fast_read_222_wait_states, ptp_j->fast_read_444_wait_states 
+                );
+                printf("\r\nMode clocks:\t%d\t%d\t%d\t%d\t%d\t%d",               
+                    ptp_j->fast_read_112_mode_clocks, ptp_j->fast_read_114_mode_clocks, ptp_j->fast_read_122_mode_clocks,
+                    ptp_j->fast_read_144_mode_clocks, ptp_j->fast_read_222_mode_clocks, ptp_j->fast_read_444_mode_clocks
+                );
+
+                printf("\r\n\r\nErase:\t\t1\t2\t3\t4\r\n");
+                printf("Instruction:\t0x%02x\t0x%02x\t0x%02x\t0x%02x\r\n", ptp_j->erase_1_instruction, ptp_j->erase_2_instruction, ptp_j->erase_3_instruction, ptp_j->erase_4_instruction);
+                
+                uint32_t erase_size;
+                char unit;
+                erase_size=flash_erase_size(ptp_j->erase_1_size, &unit);
+                printf("Size:\t\t%d%c",erase_size, unit);
+                erase_size=flash_erase_size(ptp_j->erase_2_size, &unit);
+                printf("\t%d%c",erase_size, unit);
+                erase_size=flash_erase_size(ptp_j->erase_3_size, &unit);
+                printf("\t%d%c",erase_size, unit);
+                erase_size=flash_erase_size(ptp_j->erase_4_size, &unit);
+                printf("\t%d%c\r\n",erase_size, unit);                                
                 break;
             default:
-                for(uint i=0; i<ptp_length; i++) printf("%02x ", sfdp[i]);
-                printf("\r\n");  
+                printf("\r\n");
                 ptp_manuf_t *ptp;  
                 ptp = (ptp_manuf_t *)&sfdp;
 
-                printf(" Vcc: max %04xmV, min %04xmV\r\n", ptp->vcc_max, ptp->vcc_min);
-                printf(" HW pins: #Reset %d, #Hold %d\r\n", ptp->reset_pin, ptp->hold_pin);
-                printf(" Deep Power Down (DPDM): %d\r\n", ptp->deep_power_down_mode);
-                printf(" SW reset: %d, opcode %02x\r\n", ptp->sw_reset, ptp->sw_reset_instruction);
-                printf(" Suspend/Resume: Program %d, Erase %d\r\n", ptp->program_suspend_resume, ptp->erase_suspend_resume);
-                printf(" Wrap Read mode: %d, opcode %02x, length %02x\r\n", ptp->wrap_read_mode, ptp->wrap_read_instruction, ptp->wrap_read_length);
-                printf(" Individual block lock: %d, nonvolatile %d, opcode %02x, volatile default UNprotected %d\r\n", ptp->individual_block_lock, ptp->individual_block_lock_volatile, ptp->individual_block_lock_instruction, ptp->individual_block_lock_volatile_default);
-                printf(" Secured OTP: %d\r\n", ptp->secured_otp);
-                printf(" Read lock: %d\r\n", ptp->read_lock);
-                printf(" Permanent lock: %d\r\n", ptp->permanent_lock);
+                printf("VCC min: %04xmV\r\nVCC max: %04xmV\r\n", ptp->vcc_min, ptp->vcc_max);
+                printf("/Reset pin: %d\r\n/Hold pin: %d\r\n", ptp->reset_pin, ptp->hold_pin);
+                printf("Deep Power Down (DPDM): %d\r\n", ptp->deep_power_down_mode);
+                printf("SW reset: %d (instruction 0x%02x)\r\n", ptp->sw_reset, ptp->sw_reset_instruction);
+                printf("Suspend/Resume program %d\r\nSuspend/Resume erase %d\r\n", ptp->program_suspend_resume, ptp->erase_suspend_resume);
+                printf("Wrap Read mode: %d (instruction 0x%02x, length %d)\r\n", ptp->wrap_read_mode, ptp->wrap_read_instruction, ptp->wrap_read_length);
+                printf("Individual block lock: %d (nonvolatile %d, instruction 0x%02x, default %d)\r\n", ptp->individual_block_lock, ptp->individual_block_lock_volatile, ptp->individual_block_lock_instruction, ptp->individual_block_lock_volatile_default);
+                printf("Secured OTP: %d\r\n", ptp->secured_otp);
+                printf("Read lock: %d\r\n", ptp->read_lock);
+                printf("Permanent lock: %d\r\n", ptp->permanent_lock);
 
                 break;
         }

@@ -321,10 +321,11 @@ void spi_macro(uint32_t macro)
 {
 	switch(macro)
 	{
-		case 0:		printf("%s\r\n", t[T_MODE_ERROR_NO_MACROS_AVAILABLE]);
+		case 0:		printf(" 0. This menu\r\n 1. Query flash chip ID\r\n");
 				break;
 		case 1:	flash_probe();
 				break;
+		case 2: ui_term_detect(); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}

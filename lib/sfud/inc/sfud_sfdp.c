@@ -172,7 +172,7 @@ static bool read_basic_header(const sfud_flash *flash, sfdp_para_header *basic_h
         return false;
     }
     printf("\t\tType\t\tVer.\tLength\tAddress\r\n");
-    printf("Table %d\t\tJEDEC (0x%02x)\t%d.%d\t%dB\t0x%06x\r\n", basic_header->id, basic_header->major_rev,
+    printf("Table %d\t\tJEDEC (0x%02x)\t%d.%d\t%dB\t0x%06x\r\n", basic_header->id, basic_header->id, basic_header->major_rev,
             basic_header->minor_rev, basic_header->len*4, basic_header->ptp );
 
     return true;

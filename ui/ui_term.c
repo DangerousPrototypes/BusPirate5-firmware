@@ -101,6 +101,10 @@ void ui_term_detect(void)
     }
     
 	//printf("Terminal: %d rows, %d cols\r\n", row, col);
+    if(system_config.terminal_ansi_rows!=row || system_config.terminal_ansi_columns!=col)
+    {
+        printf("Screen Resolution changed\r\n");
+    }
     if(row==0||col==0)
     {
         //non-detection fallback
@@ -225,6 +229,10 @@ char* ui_term_color_error(void){
 
 char* ui_term_color_num_float(void){
     return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT(BP_COLOR_NUM_FLOAT_TEXT):"";
+}
+
+char* ui_term_color_pacman(void){
+    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT("255;238;00"):"";
 }
 
 char* ui_term_cursor_hide(void){

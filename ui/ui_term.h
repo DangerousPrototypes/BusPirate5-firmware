@@ -12,6 +12,7 @@ char* ui_term_color_notice(void);
 char* ui_term_color_warning(void);
 char* ui_term_color_error(void);
 char* ui_term_color_num_float(void);
+char* ui_term_color_pacman(void);
 char* ui_term_cursor_show(void);
 char* ui_term_cursor_hide(void);
 

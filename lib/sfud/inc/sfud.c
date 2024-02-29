@@ -25,7 +25,8 @@
  * Function: serial flash operate functions by SFUD lib.
  * Created on: 2016-04-23
  */
-
+#include "pico/stdlib.h"
+#include "pirate.h"
 #include "sfud.h"
 #include "sfud_cfg.h"
 #include <string.h>
@@ -326,7 +327,7 @@ static sfud_err hardware_init(sfud_flash *flash) {
 
     if (flash->chip.capacity == 0 || flash->chip.write_mode == 0 || flash->chip.erase_gran == 0
             || flash->chip.erase_gran_cmd == 0) {
-        SFUD_INFO("Warning: This flash device is not found or not supported.");
+        printf("Error: Flash device not found\r\n");
         return SFUD_ERR_NOT_FOUND;
     } else {
         const char *flash_mf_name = NULL;
@@ -338,14 +339,9 @@ static sfud_err hardware_init(sfud_flash *flash) {
             }
         }
         /* print manufacturer and flash chip name */
-        if (flash_mf_name && flash->chip.name) {
-            SFUD_INFO("Found a %s %s flash chip. Size is %ld bytes.", flash_mf_name, flash->chip.name,
-                    flash->chip.capacity);
-        } else if (flash_mf_name) {
-            SFUD_INFO("Found a %s flash chip. Size is %ld bytes.", flash_mf_name, flash->chip.capacity);
-        } else {
-            SFUD_INFO("Found a flash chip. Size is %ld bytes.", flash->chip.capacity);
-        }
+        printf("Found a %s %s flash chip (%ld bytes)\r\n", flash_mf_name?flash_mf_name:"", (flash->chip.name)?flash->chip.name:"",
+                flash->chip.capacity);
+
     }
 
     /* reset flash device */
@@ -845,7 +841,7 @@ static sfud_err reset(const sfud_flash *flash) {
     if (result == SFUD_SUCCESS) {
         result = wait_busy(flash);
     } else {
-        SFUD_INFO("Error: Flash device reset failed.");
+        printf("Error: Flash device reset failed\r\n");
         return result;
     }
 
@@ -857,9 +853,9 @@ static sfud_err reset(const sfud_flash *flash) {
     }
 
     if (result == SFUD_SUCCESS) {
-        SFUD_DEBUG("Flash device reset success.");
+        printf("Flash device reset success\r\n");
     } else {
-        SFUD_INFO("Error: Flash device reset failed.");
+        printf("Error: Flash device reset failed\r\n");
     }
 
     return result;
@@ -878,10 +874,10 @@ static sfud_err read_jedec_id(sfud_flash *flash) {
         flash->chip.mf_id = recv_data[0];
         flash->chip.type_id = recv_data[1];
         flash->chip.capacity_id = recv_data[2];
-        SFUD_DEBUG("The flash device manufacturer ID is 0x%02X, memory type ID is 0x%02X, capacity ID is 0x%02X.",
+        printf("Flash device manufacturer ID 0x%02X, type ID 0x%02X, capacity ID 0x%02X\r\n",
                 flash->chip.mf_id, flash->chip.type_id, flash->chip.capacity_id);
     } else {
-        SFUD_INFO("Error: Read flash device JEDEC ID error.");
+        printf("Error: Read flash device JEDEC ID error\r\n");
     }
 
     return result;

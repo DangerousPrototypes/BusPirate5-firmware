@@ -30,6 +30,8 @@
  * Created on: 2016-05-26
  */
 
+#include "pico/stdlib.h"
+#include "pirate.h"
 #include "sfud.h"
 
 /**
@@ -85,7 +87,7 @@ bool sfud_read_sfdp(sfud_flash *flash) {
     if (read_sfdp_header(flash) && read_basic_header(flash, &basic_header)) {
         return read_basic_table(flash, &basic_header);
     } else {
-        SFUD_INFO("Warning: Read SFDP parameter header information failed. The %s does not support JEDEC SFDP.", flash->name);
+        printf("Warning: Read SFDP parameter header information failed. The %s does not support JEDEC SFDP.", flash->name);
         return false;
     }
 }
@@ -111,7 +113,7 @@ static bool read_sfdp_header(sfud_flash *flash) {
     sfdp->available = false;
     /* read SFDP header */
     if (read_sfdp_data(flash, header_addr, header, sizeof(header)) != SFUD_SUCCESS) {
-        SFUD_INFO("Error: Can't read SFDP header.");
+        printf("Error: Can't read SFDP header\r\n");
         return false;
     }
     /* check SFDP header */
@@ -119,17 +121,16 @@ static bool read_sfdp_header(sfud_flash *flash) {
           header[1] == 'F' &&
           header[2] == 'D' &&
           header[3] == 'P')) {
-        SFUD_DEBUG("Error: Check SFDP signature error. It's must be 50444653h('S' 'F' 'D' 'P').");
+        printf("Error: SFDP signature error. It must be 0x50444653 'SFDP'\r\n");
         return false;
     }
     sfdp->minor_rev = header[4];
     sfdp->major_rev = header[5];
     if (sfdp->major_rev > SUPPORT_MAX_SFDP_MAJOR_REV) {
-        SFUD_INFO("Error: This reversion(V%d.%d) of SFDP is not supported.", sfdp->major_rev, sfdp->minor_rev);
+        printf("Error: V%d.%d SFDP is not supported\r\n", sfdp->major_rev, sfdp->minor_rev);
         return false;
     }
-    SFUD_DEBUG("Check SFDP header is OK. The reversion is V%d.%d, NPN is %d.", sfdp->major_rev, sfdp->minor_rev,
-            header[6]);
+    printf("SFDP V%d.%d, %d parameter headers\r\n", sfdp->major_rev, sfdp->minor_rev, header[6]);
 
     return true;
 }
@@ -152,7 +153,7 @@ static bool read_basic_header(const sfud_flash *flash, sfdp_para_header *basic_h
 
     /* read JEDEC basic flash parameter header */
     if (read_sfdp_data(flash, header_addr, header, sizeof(header)) != SFUD_SUCCESS) {
-        SFUD_INFO("Error: Can't read JEDEC basic flash parameter header.");
+        printf("Error: Can't read JEDEC basic flash parameter header\r\n");
         return false;
     }
     basic_header->id        = header[0];
@@ -162,17 +163,17 @@ static bool read_basic_header(const sfud_flash *flash, sfdp_para_header *basic_h
     basic_header->ptp       = (long)header[4] | (long)header[5] << 8 | (long)header[6] << 16;
     /* check JEDEC basic flash parameter header */
     if (basic_header->major_rev > SUPPORT_MAX_SFDP_MAJOR_REV) {
-        SFUD_INFO("Error: This reversion(V%d.%d) of JEDEC basic flash parameter header is not supported.",
+        printf("Error: V%d.%d JEDEC parameter header is not supported\r\n",
                 basic_header->major_rev, basic_header->minor_rev);
         return false;
     }
     if (basic_header->len < BASIC_TABLE_LEN) {
-        SFUD_INFO("Error: The JEDEC basic flash parameter table length (now is %d) error.", basic_header->len);
+        printf("Error: Parameter table length (%d) error\r\n", basic_header->len);
         return false;
     }
-    SFUD_DEBUG("Check JEDEC basic flash parameter header is OK. The table id is %d, reversion is V%d.%d,"
-            " length is %d, parameter table pointer is 0x%06lX.", basic_header->id, basic_header->major_rev,
-            basic_header->minor_rev, basic_header->len, basic_header->ptp);
+    printf("\t\tType\t\tVer.\tLength\tAddress\r\n");
+    printf("Table %d\t\tJEDEC (0x%02x)\t%d.%d\t%dB\t0x%06x\r\n", basic_header->id, basic_header->major_rev,
+            basic_header->minor_rev, basic_header->len*4, basic_header->ptp );
 
     return true;
 }
@@ -196,14 +197,14 @@ static bool read_basic_table(sfud_flash *flash, sfdp_para_header *basic_header) 
 
     /* read JEDEC basic flash parameter table */
     if (read_sfdp_data(flash, table_addr, table, sizeof(table)) != SFUD_SUCCESS) {
-        SFUD_INFO("Warning: Can't read JEDEC basic flash parameter table.");
+        printf("Error: Can't read JEDEC basic flash parameter table\r\n");
         return false;
     }
     /* print JEDEC basic flash parameter table info */
-    SFUD_DEBUG("JEDEC basic flash parameter table info:");
-    SFUD_DEBUG("MSB-LSB  3    2    1    0");
+    printf("JEDEC basic flash parameter table info:\r\n");
+    printf("MSB-LSB  3    2    1    0\r\n");
     for (i = 0; i < BASIC_TABLE_LEN; i++) {
-        SFUD_DEBUG("[%04d] 0x%02X 0x%02X 0x%02X 0x%02X", i + 1, table[i * 4 + 3], table[i * 4 + 2], table[i * 4 + 1],
+        printf("[%04d] 0x%02X 0x%02X 0x%02X 0x%02X\r\n", i + 1, table[i * 4 + 3], table[i * 4 + 2], table[i * 4 + 1],
                 table[i * 4]);
     }
 
@@ -212,14 +213,14 @@ static bool read_basic_table(sfud_flash *flash, sfdp_para_header *basic_header) 
     switch (table[0] & 0x03) {
     case 1:
         sfdp->erase_4k = true;
-        SFUD_DEBUG("4 KB Erase is supported throughout the device. Command is 0x%02X.", sfdp->erase_4k_cmd);
+        printf("4 KB Erase is supported throughout the device (instruction 0x%02X)\r\n", sfdp->erase_4k_cmd);
         break;
     case 3:
         sfdp->erase_4k = false;
-        SFUD_DEBUG("Uniform 4 KB erase is unavailable for this device.");
+        printf("Uniform 4 KB erase is unavailable for this device\r\n");
         break;
     default:
-        SFUD_INFO("Error: Uniform 4 KB erase supported information error.");
+        printf("Error: Uniform 4 KB erase unknown value\r\n");
         return false;
     }
     /* get write granularity */
@@ -227,11 +228,11 @@ static bool read_basic_table(sfud_flash *flash, sfdp_para_header *basic_header) 
     switch ((table[0] & (0x01 << 2)) >> 2) {
     case 0:
         sfdp->write_gran = 1;
-        SFUD_DEBUG("Write granularity is 1 byte.");
+        printf("Write granularity is 1 byte\r\n");
         break;
     case 1:
         sfdp->write_gran = 256;
-        SFUD_DEBUG("Write granularity is 64 bytes or larger.");
+        printf("Write granularity is 64 bytes or larger\r\n");
         break;
     }
     /* volatile status register block protect bits */
@@ -242,23 +243,23 @@ static bool read_basic_table(sfud_flash *flash, sfdp_para_header *basic_header) 
          * using the 06h instruction for write enable.
          */
         sfdp->sr_is_non_vola = true;
-        SFUD_DEBUG("Target flash status register is non-volatile.");
+        printf("Flash status register is non-volatile\r\n");
         break;
     case 1:
         /* block protect bits in device's status register are solely volatile. */
         sfdp->sr_is_non_vola = false;
-        SFUD_DEBUG("Block Protect bits in device's status register are solely volatile.");
+        printf("Block Protect bits in device's status register are solely volatile\r\n");
         /* write enable instruction select for writing to volatile status register */
         switch ((table[0] & (0x01 << 4)) >> 4) {
         case 0:
             sfdp->vola_sr_we_cmd = SFUD_VOLATILE_SR_WRITE_ENABLE;
-            SFUD_DEBUG("Flash device requires instruction 50h as the write enable prior "
-                    "to performing a volatile write to the status register.");
+            printf("Flash device requires instruction 50h as the write enable prior "
+                    "to performing a volatile write to the status register\r\n");
             break;
         case 1:
             sfdp->vola_sr_we_cmd = SFUD_CMD_WRITE_ENABLE;
-            SFUD_DEBUG("Flash device requires instruction 06h as the write enable prior "
-                    "to performing a volatile write to the status register.");
+            printf("Flash device requires instruction 06h as the write enable prior "
+                    "to performing a volatile write to the status register\r\n");
             break;
         }
         break;
@@ -268,22 +269,22 @@ static bool read_basic_table(sfud_flash *flash, sfdp_para_header *basic_header) 
     case 0:
         sfdp->addr_3_byte = true;
         sfdp->addr_4_byte = false;
-        SFUD_DEBUG("3-Byte only addressing.");
+        printf("3-Byte only addressing\r\n");
         break;
     case 1:
         sfdp->addr_3_byte = true;
         sfdp->addr_4_byte = true;
-        SFUD_DEBUG("3- or 4-Byte addressing.");
+        printf("3- or 4-Byte addressing\r\n");
         break;
     case 2:
         sfdp->addr_3_byte = false;
         sfdp->addr_4_byte = true;
-        SFUD_DEBUG("4-Byte only addressing.");
+        printf("4-Byte only addressing\r\n");
         break;
     default:
         sfdp->addr_3_byte = false;
         sfdp->addr_4_byte = false;
-        SFUD_INFO("Error: Read address bytes error!");
+        printf("Error: Read address unknown value!\r\n");
         return false;
     }
     /* get flash memory capacity */
@@ -296,20 +297,20 @@ static bool read_basic_table(sfud_flash *flash, sfdp_para_header *basic_header) 
         table2_temp &= 0x7FFFFFFF;
         if (table2_temp > sizeof(sfdp->capacity) * 8 + 3) {
             sfdp->capacity = 0;
-            SFUD_INFO("Error: The flash capacity is grater than 32 Gb/ 4 GB! Not Supported.");
+            printf("Error: The flash capacity is grater than 32 Gb/ 4 GB! Not Supported.\r\n");
             return false;
         }
         sfdp->capacity = 1L << (table2_temp - 3);
         break;
     }
-    SFUD_DEBUG("Capacity is %ld Bytes.", sfdp->capacity);
+    printf("Capacity is %ld Bytes\r\n", sfdp->capacity);
     /* get erase size and erase command  */
     for (i = 0, j = 0; i < SFUD_SFDP_ERASE_TYPE_MAX_NUM; i++) {
         if (table[28 + 2 * i] != 0x00) {
             sfdp->eraser[j].size = 1L << table[28 + 2 * i];
             sfdp->eraser[j].cmd = table[28 + 2 * i + 1];
-            SFUD_DEBUG("Flash device supports %ldKB block erase. Command is 0x%02X.", sfdp->eraser[j].size / 1024,
-                    sfdp->eraser[j].cmd);
+            printf("Flash device supports %ld%sB block erase (instruction 0x%02X)\r\n", (sfdp->eraser[j].size>=1024)?sfdp->eraser[j].size / 1024:sfdp->eraser[j].size,
+                    sfdp->eraser[j].size>=1024?"K":"", sfdp->eraser[j].cmd);
             j++;
         }
     }

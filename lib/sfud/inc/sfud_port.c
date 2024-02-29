@@ -173,8 +173,8 @@ sfud_err sfud_spi_port_init(sfud_flash *flash) {
      *    flash->retry.delay = null;
      *    flash->retry.times = 10000; //Required
      */
-    switch (flash->index) {
-        case SFUD_SST25_DEVICE_INDEX: {
+    //switch (flash->index) {
+        //case SFUD_SST25_DEVICE_INDEX: {
             flash->spi.wr = spi_write_read;
             //flash->spi.lock = spi_lock;
             //flash->spi.unlock = spi_unlock;
@@ -184,9 +184,8 @@ sfud_err sfud_spi_port_init(sfud_flash *flash) {
             /* adout 60 seconds timeout */
             flash->retry.times = 60 * 10000;
 
-            break;
-        }
-    }    
+            //break;
+        //}
 
     return result;
 }

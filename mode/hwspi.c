@@ -325,7 +325,8 @@ void spi_macro(uint32_t macro)
 				break;
 		case 1:	flash_probe();
 				break;
-		case 2: ui_term_detect(); break;
+		case 2: sfud_test(); break;
+		case 3: ui_term_detect(); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}

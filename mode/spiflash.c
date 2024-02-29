@@ -43,18 +43,150 @@ static void sfud_demo(uint32_t addr, size_t size, uint8_t *data);
 
 static uint8_t sfud_demo_test_buf[SFUD_DEMO_TEST_BUFFER_SIZE];
 
+void progress_bar(uint32_t current, uint32_t total)
+{
+    uint32_t pct = (current*20)/(total);
+    printf("\r%s[", ui_term_color_prompt());
+    for(int8_t i=0; i<20; i++)
+    {
+        if(pct<i) if(i%2) printf(" "); else printf("o");
+        else if(pct==i) printf("%sc", ui_term_color_notice());
+        else if(pct>i) printf("-");
+    }
+    printf("%s]\r\e[1C",ui_term_color_prompt());
+}
+
+void progress_bar_draw(void)
+{
+    system_config.terminal_hide_cursor=true;
+    busy_wait_ms(1);
+    printf("%s\r%s[%s", ui_term_cursor_hide(), ui_term_color_prompt(), ui_term_color_reset());
+    for(int8_t i=0; i<20; i++)
+    {
+        if(i%2) printf(" "); else printf("o");
+    }
+    printf("%s]\r\e[1C",ui_term_color_prompt());
+}
+
+void progress_bar_update(uint32_t current, uint32_t total, uint8_t *previous_pct)
+{
+    uint32_t pct = (current*20)/(total);
+    static uint8_t progress_cnt;
+    static bool pacman_size;
+    
+    system_config.terminal_ansi_statusbar_pause=true;
+    if((pct-*previous_pct) > 0)
+    {
+        for(uint8_t i = 0; i<(pct-*previous_pct); i++) //advance this many positions
+        {
+            printf("%s-", ui_term_color_prompt());
+        }
+    }
+    
+    if((progress_cnt>600) || ((pct-*previous_pct) > 0)) //gone 5 loops without an advance
+    {
+        printf("%s%c\e[1D", ui_term_color_pacman(), (pacman_size)?'C':'c'); //C and reset the cursor
+        if(progress_cnt>600) progress_cnt=0;
+        pacman_size=!pacman_size;
+        *previous_pct=pct;
+    }
+    system_config.terminal_ansi_statusbar_pause=false;
+    progress_cnt++;
+}
+
+
 void sfud_test(void)
 {
+
+    sfud_flash flash_table[]={[0] = {.name = "SPI_FLASH", .spi.name = "SPI1"}};
+    sfud_err cur_flash_result = SFUD_SUCCESS;
+    size_t i;
+    flash_table[0].index = 0;
+    cur_flash_result = sfud_device_init(&flash_table[0]);
+
+    if (cur_flash_result != SFUD_SUCCESS) {
+        printf("Error: device not detected\r\n");
+        return;
+    }
+
+    if(sfud_chip_erase(&flash_table[0])!=SFUD_SUCCESS)
+    {
+        printf("Error: erase failed\r\n");
+    }
+    printf("Erase OK\r\n");
+
+    printf("Verify erase:\r\n");
+    //printf("[ o o o o o o o o o o ]\r");
+ 
+
+    //verify blank
+    uint8_t data[256];
+    uint32_t count=flash_table[0].sfdp.capacity; //TODO: handle capacity in the flashtable when we pass from command line
+    uint32_t address=0;
+    uint8_t previous_pct=0;
+
+
+    progress_bar_draw(); 
+
+    while(true)
+    {
+        uint32_t read_count;
+
+        progress_bar_update(address, count, &previous_pct);
+
+
+        if(count>=(address+sizeof(data)))
+        {
+            read_count=sizeof(read_count);
+        }
+        else
+        {
+            read_count=count-address;
+        }
+
+        if(sfud_read(&flash_table[0], address, read_count, data)!=SFUD_SUCCESS)
+        {
+            printf("Error: read failed\r\n");
+            return;
+        }
+
+        for(uint32_t i=0; i<read_count; i++)
+        {
+            if(data[i]!=0xff)
+            {
+                printf("Error: erase failed at %06x\r\n", address+i);
+                return;
+            }
+        }
+
+
+        address+=read_count;
+        
+        if(address==count) break;//done!
+    }
+
+    system_config.terminal_hide_cursor=false;
+    printf("%s%s\r\nErase verified\r\n", ui_term_color_reset(), ui_term_cursor_show());
+
+    //write test data
+
+    //verify test data
+    
+    return;
+
     /* SFUD initialize */
     if (sfud_init() == SFUD_SUCCESS) {
         printf("Success!\r\n");
-        sfud_demo(0, sizeof(sfud_demo_test_buf), sfud_demo_test_buf);
+        //sfud_demo(0, sizeof(sfud_demo_test_buf), sfud_demo_test_buf);
     }
     else
     {
         printf("Failed!\r\n");
     }
+
 }
+
+
 
 /**
  * SFUD demo for the first flash device test.
@@ -119,12 +251,6 @@ static void sfud_demo(uint32_t addr, size_t size, uint8_t *data) {
         printf("The %s flash test is success.\r\n", flash->name);
     }
 }
-
-
-
-
-
-
 
 
 typedef struct __attribute__((packed)) ptp_head_struct {
@@ -296,10 +422,6 @@ bool flash_read_rdid(uint8_t *rdid_manuf, uint8_t *rdid_type, uint8_t *rdid_capa
 
 void flash_probe()
 {
-    //sfud_test();
-    //return;
-    //printf("Probing:\r\n\t\tRESID (0xAB)\tREMSID (0x90)\tRDID (0x9F)\r\n");  
-
     uint8_t resid;
     bool has_resid=flash_read_resid(&resid);
     uint8_t remsid_manuf, remsid_dev;
@@ -401,7 +523,7 @@ void flash_probe()
                 printf("\r\n");
                 ptp_jedec_t *ptp_j;
                 ptp_j = (ptp_jedec_t *)&sfdp;
-                printf("Density: %dB\r\nAddress bytes: ", ptp_j->density); //todo: math   
+                printf("Density: %dbits ( %dBytes)\r\nAddress bytes: ", ptp_j->density, ptp_j->density/1024);  
                 switch(ptp_j->address_bytes)
                 {
                     case 0:
@@ -458,15 +580,16 @@ void flash_probe()
                 ptp = (ptp_manuf_t *)&sfdp;
 
                 printf("VCC min: %04xmV\r\nVCC max: %04xmV\r\n", ptp->vcc_min, ptp->vcc_max);
-                printf("/Reset pin: %d\r\n/Hold pin: %d\r\n", ptp->reset_pin, ptp->hold_pin);
-                printf("Deep Power Down (DPDM): %d\r\n", ptp->deep_power_down_mode);
-                printf("SW reset: %d (instruction 0x%02x)\r\n", ptp->sw_reset, ptp->sw_reset_instruction);
-                printf("Suspend/Resume program %d\r\nSuspend/Resume erase %d\r\n", ptp->program_suspend_resume, ptp->erase_suspend_resume);
-                printf("Wrap Read mode: %d (instruction 0x%02x, length %d)\r\n", ptp->wrap_read_mode, ptp->wrap_read_instruction, ptp->wrap_read_length);
-                printf("Individual block lock: %d (nonvolatile %d, instruction 0x%02x, default %d)\r\n", ptp->individual_block_lock, ptp->individual_block_lock_volatile, ptp->individual_block_lock_instruction, ptp->individual_block_lock_volatile_default);
-                printf("Secured OTP: %d\r\n", ptp->secured_otp);
-                printf("Read lock: %d\r\n", ptp->read_lock);
-                printf("Permanent lock: %d\r\n", ptp->permanent_lock);
+                printf("/Reset pin: %c\r\n", ptp->reset_pin?'Y':'-');
+                printf("/Hold pin: %c\r\n", ptp->hold_pin?'Y':'-');
+                printf("Deep Power Down (DPDM): %c\r\n", ptp->deep_power_down_mode?'Y':'-');
+                printf("SW reset: %c (instruction 0x%02x)\r\n", ptp->sw_reset?'Y':'-', ptp->sw_reset_instruction);
+                printf("Suspend/Resume program %c\r\nSuspend/Resume erase %c\r\n", ptp->program_suspend_resume?'Y':'-', ptp->erase_suspend_resume?'Y':'-');
+                printf("Wrap Read mode: %c (instruction 0x%02x, length %d)\r\n", ptp->wrap_read_mode?'Y':'-', ptp->wrap_read_instruction, ptp->wrap_read_length);
+                printf("Individual block lock: %c (nonvolatile %c, instruction 0x%02x, default %d)\r\n", ptp->individual_block_lock?'Y':'-', ptp->individual_block_lock_volatile?'Y':'-', ptp->individual_block_lock_instruction, ptp->individual_block_lock_volatile_default);
+                printf("Secured OTP: %c\r\n", ptp->secured_otp?'Y':'-');
+                printf("Read lock: %c\r\n", ptp->read_lock?'Y':'-');
+                printf("Permanent lock: %c\r\n", ptp->permanent_lock?'Y':'-');
 
                 break;
         }

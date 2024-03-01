@@ -13,6 +13,9 @@
 #include "storage.h"
 #include "../lib/sfud/inc/sfud.h"
 #include "../lib/sfud/inc/sfud_def.h"
+#include "mem.h"
+#include "fatfs/ff.h"
+
 
 #define M_SPI_PORT spi1
 #define M_SPI_CLK BIO6
@@ -43,6 +46,9 @@ static void sfud_demo(uint32_t addr, size_t size, uint8_t *data);
 
 static uint8_t sfud_demo_test_buf[SFUD_DEMO_TEST_BUFFER_SIZE];
 
+
+
+
 void progress_bar(uint32_t current, uint32_t total)
 {
     uint32_t pct = (current*20)/(total);
@@ -72,7 +78,7 @@ void progress_bar_update(uint32_t current, uint32_t total, uint8_t *previous_pct
 {
     uint32_t pct = (current*20)/(total);
     static uint8_t progress_cnt;
-    static bool pacman_size;
+    static bool pacman_size=1;
     
     system_config.terminal_ansi_statusbar_pause=true;
     if((pct-*previous_pct) > 0)
@@ -95,6 +101,7 @@ void progress_bar_update(uint32_t current, uint32_t total, uint8_t *previous_pct
 }
 
 
+
 void sfud_test(void)
 {
 
@@ -109,6 +116,7 @@ void sfud_test(void)
         return;
     }
 
+
     if(sfud_chip_erase(&flash_table[0])!=SFUD_SUCCESS)
     {
         printf("Error: erase failed\r\n");
@@ -117,7 +125,7 @@ void sfud_test(void)
 
     printf("Verify erase:\r\n");
     //printf("[ o o o o o o o o o o ]\r");
- 
+
 
     //verify blank
     uint8_t data[256];
@@ -125,28 +133,21 @@ void sfud_test(void)
     uint32_t address=0;
     uint8_t previous_pct=0;
 
-
     progress_bar_draw(); 
 
-    while(true)
-    {
+    while(true){
         uint32_t read_count;
 
         progress_bar_update(address, count, &previous_pct);
-
-
-        if(count>=(address+sizeof(data)))
-        {
+        if(count>=(address+sizeof(data))){
             read_count=sizeof(read_count);
-        }
-        else
-        {
+        }else{
             read_count=count-address;
         }
 
         if(sfud_read(&flash_table[0], address, read_count, data)!=SFUD_SUCCESS)
         {
-            printf("Error: read failed\r\n");
+            printf("\r\nError: read failed\r\n");
             return;
         }
 
@@ -154,7 +155,7 @@ void sfud_test(void)
         {
             if(data[i]!=0xff)
             {
-                printf("Error: erase failed at %06x\r\n", address+i);
+                printf("\r\nError: erase failed at %06x\r\n", address+i);
                 return;
             }
         }
@@ -169,9 +170,166 @@ void sfud_test(void)
     printf("%s%s\r\nErase verified\r\n", ui_term_color_reset(), ui_term_cursor_show());
 
     //write test data
+    printf("Writing test data:\r\n");
+    progress_bar_draw(); 
+    address=0;
+    previous_pct=0;
 
+    for(uint32_t i=0; i<sizeof(data); i++)
+    {
+        data[i]=i;
+    }
+
+    while(true)
+    {
+        uint32_t write_count;
+
+        progress_bar_update(address, count, &previous_pct);
+
+
+        if(count>=(address+sizeof(data)))
+        {
+            write_count=sizeof(data);
+        }
+        else
+        {
+            write_count=count-address;
+        }
+
+        if(sfud_write(&flash_table[0], address, write_count, data)!=SFUD_SUCCESS)
+        {
+            printf("\r\nError: write failed\r\n");
+            return;
+        }
+        address+=write_count;
+        
+        if(address==count) break;//done!
+    }
+
+    system_config.terminal_hide_cursor=false;
+    printf("%s%s\r\nWrite complete\r\n", ui_term_color_reset(), ui_term_cursor_show());
     //verify test data
-    
+
+
+    /*for(uint32_t i=0; i<sizeof(data); i++)
+    {
+        data[i]=i;
+    }
+
+    flash_start();
+    flash_write_32(0x03000000, 4);
+    for(uint32_t i=0; i<count; i++)
+    {
+        if(flash_read()!=i%256)
+        {
+            printf("\r\nError: verify failed at %06x\r\n", i);
+        }
+    }
+    flash_stop();
+    printf("\r\nVerify success\r\n");
+*/
+
+    printf("Verifying write data:\r\n");
+    progress_bar_draw(); 
+    address=0;
+    previous_pct=0;
+
+    while(true){
+        uint32_t read_count;
+
+        progress_bar_update(address, count, &previous_pct);
+        if(count>=(address+sizeof(data)))
+        {
+            read_count=sizeof(data);
+        }
+        else
+        {
+            read_count=count-address;
+        }
+
+        if(sfud_read(&flash_table[0], address, read_count, data)!=SFUD_SUCCESS)
+        {
+            printf("\r\nError: read failed\r\n");
+            return;
+        }
+
+        for(uint32_t i=0; i<read_count; i++)
+        {
+            if(data[i]!=(uint8_t)(i&0xff))
+            {
+                printf("\r\nError: verify failed at %06x [%02x != %02x]\r\n", address+i, i, data[i]);
+                return;
+            }
+        }
+
+        address+=read_count;
+        
+        if(address==count) break;//done!
+    }    
+
+    system_config.terminal_hide_cursor=false;
+    printf("%s%s\r\nVerify OK\r\n", ui_term_color_reset(), ui_term_cursor_show());
+
+
+
+    FIL fil;			/* File object needed for each open file */
+    FRESULT fr;     /* FatFs return code */
+    uint8_t buffer[16]; //TODO: lookup page size...
+    //UINT count;
+    uint8_t page_size=16;
+    uint8_t page=0;
+    UINT bw;
+
+
+    printf("Dumping...");
+
+    //open file
+    fr = f_open(&fil, "dump.bin", FA_WRITE | FA_CREATE_ALWAYS);	
+    if (fr != FR_OK) {
+        printf("File error %d", fr);
+        return;
+    }
+
+
+    progress_bar_draw(); 
+    address=0;
+    previous_pct=0;
+
+    while(true){
+        uint32_t read_count;
+
+        progress_bar_update(address, count, &previous_pct);
+        if(count>=(address+sizeof(data)))
+        {
+            read_count=sizeof(data);
+        }
+        else
+        {
+            read_count=count-address;
+        }
+
+        if(sfud_read(&flash_table[0], address, read_count, data)!=SFUD_SUCCESS)
+        {
+            printf("\r\nError: read failed\r\n");
+            return;
+        }
+
+        f_write(&fil, data, read_count, &bw);	
+
+        if(fr != FR_OK || bw!=read_count)
+        {
+            printf("Disk access error\r\n");
+            return;
+        }
+
+        address+=read_count;
+        
+        if(address==count) break;//done!
+    }    
+    f_close(&fil);
+
+    system_config.terminal_hide_cursor=false;
+    printf("%s%s\r\nRead OK\r\n", ui_term_color_reset(), ui_term_cursor_show());   
     return;
 
     /* SFUD initialize */

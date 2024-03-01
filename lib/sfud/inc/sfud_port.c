@@ -78,9 +78,18 @@ static sfud_err spi_write_read(const sfud_spi *spi, const uint8_t *write_buf, si
             send_data = SFUD_DUMMY_DATA;
         }
 
+        while(!spi_is_writable(M_SPI_PORT));
+	
+        spi_get_hw(M_SPI_PORT)->dr = (uint32_t)send_data;
+
+        while(!spi_is_readable(M_SPI_PORT));
+        
+        read_data= (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
+
         // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
         // is full, PL022 inhibits RX pushes, and sets a sticky flag on
         // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
+        /*
         while(!spi_is_writable(M_SPI_PORT))
         {
             tight_loop_contents();
@@ -107,6 +116,7 @@ static sfud_err spi_write_read(const sfud_spi *spi, const uint8_t *write_buf, si
 
         // Don't leave overrun flag set
         spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
+        */
 
 /*
         retry_times = 1000;
@@ -156,6 +166,11 @@ static sfud_err qspi_read(const struct __sfud_spi *spi, uint32_t addr, sfud_qspi
 }
 #endif /* SFUD_USING_QSPI */
 
+void delay_100us(void)
+{
+    busy_wait_us(100);
+}
+
 sfud_err sfud_spi_port_init(sfud_flash *flash) {
     sfud_err result = SFUD_SUCCESS;
 
@@ -180,7 +195,7 @@ sfud_err sfud_spi_port_init(sfud_flash *flash) {
             //flash->spi.unlock = spi_unlock;
             //flash->spi.user_data = &spi1;
             /* about 100 microsecond delay */
-            flash->retry.delay = NULL;
+            flash->retry.delay = &delay_100us;
             /* adout 60 seconds timeout */
             flash->retry.times = 60 * 10000;
 

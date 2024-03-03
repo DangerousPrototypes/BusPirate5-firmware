@@ -16,7 +16,7 @@ const char *HiZpins(void)
 	return "-\t-\t-\t-\t-\t-\t-\t-";
 }
 
-const char *HiZerror(void){
+const char *hiz_error(void){
 	return t[T_MODE_ERROR_NO_EFFECT_HIZ];
 }
 

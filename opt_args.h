@@ -26,10 +26,10 @@ struct _parsers
     bool (*opt_parser)(opt_args *args);
 };
 
-struct _command_parse
+struct _command_struct
 {
+    char command[9];
     bool allow_hiz;
-    void (*command)(opt_args *args, struct command_result *res);
-    const struct _parsers (*parsers);
+    void (*func)(opt_args *args, struct command_result *res);
     uint32_t help_text;
 };

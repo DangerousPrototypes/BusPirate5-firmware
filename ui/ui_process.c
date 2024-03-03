@@ -113,9 +113,9 @@ bool ui_process_commands(void)
         bool cmd_valid=false;
         bool mode_cmd=false;
         uint32_t user_cmd_id=0;
-        for(int i=0; i<count_of_cmd; i++)
+        for(int i=0; i<commands_count; i++)
         {  
-            if(strcmp(args[0].c, cmd[i])==0)
+            if(strcmp(args[0].c, commands[i].command)==0)
             {
                 user_cmd_id=i;
                 cmd_valid=true;
@@ -148,35 +148,19 @@ bool ui_process_commands(void)
         //do we have a command? good, get the opt args
         if(parse_help())
         {
-            printf("%s\r\n",t[exec_new[user_cmd_id].help_text]);
+            printf("%s\r\n",t[commands[user_cmd_id].help_text]);
             return false;
         }
 
-        if(system_config.mode==HIZ && !exec_new[user_cmd_id].allow_hiz)
+        if(system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz)
         {
-            printf("%s\r\n",HiZerror());
+            printf("%s\r\n",hiz_error());
             //printf("\r\n")
             return true;            
         }    
 
-/*        if(exec_new[user_cmd_id].parsers)
-        {
-            for(int i=0; i<5;i++)
-            {                
-                if(exec_new[user_cmd_id].parsers[i].opt_parser==NULL)
-                {
-                    break;
-                } 
-                
-                args[i]=empty_opt_args;
-                args[i].max_len=OPTARG_STRING_LEN;
-                exec_new[user_cmd_id].parsers[i].opt_parser(&args[i]);
-            }
-        }
-*/
-        //printf("Opt arg: %s\r\n",args[0].c);    
         //execute the command
-        exec_new[user_cmd_id].command(args, &result);
+        commands[user_cmd_id].func(args, &result);
        
 cmd_ok:
         printf("%s\r\n", ui_term_color_reset());

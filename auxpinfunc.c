@@ -26,6 +26,7 @@ void auxpinfunc_input(opt_args (*args), struct command_result *res)
     auxpinfunc_write(args, res, false, 0);
 }
 
+//TODO: binary format puts to all available pins
 void auxpinfunc_write(opt_args (*args), struct command_result *res, bool output, bool level)
 {
 	if(args[0].no_value)

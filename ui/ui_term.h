@@ -15,6 +15,19 @@ char* ui_term_color_num_float(void);
 char* ui_term_color_pacman(void);
 char* ui_term_cursor_show(void);
 char* ui_term_cursor_hide(void);
+#ifndef UI_TERM_STRUCT
+typedef struct ui_term_progress_bar_struct {
+    uint8_t previous_pct;
+    uint8_t progress_cnt;
+    bool indicator_state;
+} ui_term_progress_bar_t;
+#define UI_TERM_STRUCT
+#endif
+void ui_term_progress_bar_draw(ui_term_progress_bar_t *pb);
+void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progress_bar_t *pb);
+void ui_term_progress_bar_cleanup(ui_term_progress_bar_t *pb);
+
+
 
 void ui_term_error_report(uint32_t error_text);
 

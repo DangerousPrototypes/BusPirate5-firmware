@@ -159,7 +159,7 @@ bool ui_process_commands(void)
             return true;            
         }    
 
-        if(exec_new[user_cmd_id].parsers)
+/*        if(exec_new[user_cmd_id].parsers)
         {
             for(int i=0; i<5;i++)
             {                
@@ -173,7 +173,7 @@ bool ui_process_commands(void)
                 exec_new[user_cmd_id].parsers[i].opt_parser(&args[i]);
             }
         }
-
+*/
         //printf("Opt arg: %s\r\n",args[0].c);    
         //execute the command
         exec_new[user_cmd_id].command(args, &result);

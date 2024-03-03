@@ -97,10 +97,10 @@ sfud_err sfud_device_init(sfud_flash *flash) {
     }
     if (result == SFUD_SUCCESS) {
         flash->init_ok = true;
-        SFUD_INFO("%s flash device initialized successfully.", flash->name);
+        //SFUD_INFO("%s flash device initialized successfully.", flash->name);
     } else {
         flash->init_ok = false;
-        SFUD_INFO("Error: %s flash device initialization failed.", flash->name);
+        //SFUD_INFO("Error: %s flash device initialization failed.", flash->name);
     }
 
     return result;

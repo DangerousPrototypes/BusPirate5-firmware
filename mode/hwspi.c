@@ -11,6 +11,8 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "storage.h"
+#include "../lib/sfud/inc/sfud.h"
+#include "../lib/sfud/inc/sfud_def.h"
 #include "mode/spiflash.h"
 
 #define M_SPI_PORT spi1
@@ -323,9 +325,8 @@ void spi_macro(uint32_t macro)
 	{
 		case 0:		printf(" 0. This menu\r\n 1. Query flash chip ID\r\n");
 				break;
-		case 1:	flash_probe();
+		case 1:	spiflash_probe();
 				break;
-		case 2: sfud_test(); break;
 		case 3: ui_term_detect(); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;

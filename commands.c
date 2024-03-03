@@ -65,6 +65,7 @@ enum E_CMD{
     CMD_LOGIC,
     CMD_HEX,
     CMD_PAUSE,
+    CMD_FLASH,
     CMD_LAST_ITEM_ALWAYS_AT_THE_END
 };
 
@@ -107,7 +108,8 @@ const char *cmd[]={
     [CMD_DISPLAY]="d",
     [CMD_LOGIC]="logic",
     [CMD_HEX]="hex",
-    [CMD_PAUSE]="pause"
+    [CMD_PAUSE]="pause",
+    [CMD_FLASH]="flash",
 };
 static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wrong length");
 

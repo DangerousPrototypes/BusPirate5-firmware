@@ -3,10 +3,6 @@
 //gets all number accepted formats
 bool ui_parse_get_int(struct prompt_result *result, uint32_t *value);
 
-bool ui_parse_get_string(struct opt_args *result);
-
-bool ui_parse_get_int_args(struct opt_args *arg);
-
 // get DEC (base 10) with eXit option
 bool ui_parse_get_uint32(struct prompt_result *result, uint32_t* value);
 

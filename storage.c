@@ -216,7 +216,7 @@ void file_error(FRESULT res)
     }
 }
 
-void hex(opt_args (*args), struct command_result *res)
+void hex(struct command_result *res)
 {
     char file[512];
 
@@ -271,7 +271,7 @@ void hex(opt_args (*args), struct command_result *res)
 
 
 
-void cat(opt_args (*args), struct command_result *res)
+void cat(struct command_result *res)
 {
     char file[512];
 
@@ -306,7 +306,7 @@ void cat(opt_args (*args), struct command_result *res)
 }
 
 
-void make_dir(opt_args (*args), struct command_result *res)
+void make_dir(struct command_result *res)
 {
     FRESULT fr;
     
@@ -317,7 +317,7 @@ void make_dir(opt_args (*args), struct command_result *res)
     fr = f_mkdir(location);
     file_error(fr);
 }
-void change_dir(opt_args (*args), struct command_result *res)
+void change_dir(struct command_result *res)
 {
     FRESULT fr;
     
@@ -338,7 +338,7 @@ void change_dir(opt_args (*args), struct command_result *res)
         printf("%s\r\n",str);
     }
 }
-void storage_unlink(opt_args (*args), struct command_result *res)
+void storage_unlink(struct command_result *res)
 {
     FRESULT fr;
     arg_var_t arg;
@@ -348,7 +348,7 @@ void storage_unlink(opt_args (*args), struct command_result *res)
     file_error(fr);
 }
 
-void list_dir(opt_args (*args), struct command_result *res)
+void list_dir(struct command_result *res)
 {
     FRESULT fr;
     DIR dir;
@@ -403,7 +403,7 @@ bool storage_format_confirm(void)
     return confirm;
 }
 
-void storage_format(opt_args (*args), struct command_result *res)
+void storage_format(struct command_result *res)
 {
     cmdln_next_buf_pos();
     printf("Erase the internal storage?\r\ny/n> ");

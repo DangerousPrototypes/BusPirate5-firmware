@@ -28,7 +28,7 @@
 #include "usb_rx.h"
 #include "ui/ui_args.h"
 
-void helpers_selftest(opt_args (*args), struct command_result *res)
+void helpers_selftest(struct command_result *res)
 {
     helpers_selftest_base();
 }
@@ -476,7 +476,7 @@ void helpers_numbits(struct command_attributes *attributes, struct command_respo
     }
 }
 */
-void helpers_bit_order_msb(opt_args (*args), struct command_result *res)
+void helpers_bit_order_msb(struct command_result *res)
 {
     system_config.bit_order=0;
     printf("%s%s:%s %s 0b%s1%s0000000",
@@ -485,7 +485,7 @@ void helpers_bit_order_msb(opt_args (*args), struct command_result *res)
     );
 }
 
-void helpers_bit_order_lsb(opt_args (*args), struct command_result *res)
+void helpers_bit_order_lsb(struct command_result *res)
 {
     system_config.bit_order=1;
     printf("%s%s:%s %s 0b0000000%s1%s",
@@ -494,7 +494,7 @@ void helpers_bit_order_lsb(opt_args (*args), struct command_result *res)
     );    
 }
 
-void helpers_show_int_formats(opt_args (*args), struct command_result *res)
+void helpers_show_int_formats(struct command_result *res)
 {
     uint32_t temp;
     arg_var_t arg;
@@ -545,7 +545,7 @@ void helpers_show_int_formats(opt_args (*args), struct command_result *res)
     //system_config.num_bits=temp3;
 }
 
-void helpers_show_int_inverse(opt_args (*args), struct command_result *res)
+void helpers_show_int_inverse(struct command_result *res)
 {
     uint32_t temp;
     arg_var_t arg;
@@ -586,12 +586,12 @@ void helpers_mode_macro(struct command_attributes *attributes, struct command_re
     }    
 }
 */
-void helpers_mode_help(opt_args (*args), struct command_result *res)
+void helpers_mode_help(struct command_result *res)
 {
     modes[system_config.mode].protocol_help();
 }
 
-void helpers_display_help(opt_args (*args), struct command_result *res)
+void helpers_display_help(struct command_result *res)
 {
     if (displays[system_config.display].display_help) {
         displays[system_config.display].display_help();
@@ -600,7 +600,7 @@ void helpers_display_help(opt_args (*args), struct command_result *res)
     }
 }
 
-void helpers_pause_args(opt_args (*args), struct command_result *res)
+void helpers_pause_args(struct command_result *res)
 {
     char c;
     printf("%s\r\n", t[T_PRESS_ANY_KEY]);
@@ -691,12 +691,12 @@ void helpers_mode_write_string(struct command_attributes *attributes, struct com
 */
 
 
-void helpers_mcu_reset(opt_args (*args), struct command_result *res)
+void helpers_mcu_reset(struct command_result *res)
 {
  	mcu_reset();
 }
 
-void helpers_mcu_jump_to_bootloader(opt_args (*args), struct command_result *res)
+void helpers_mcu_jump_to_bootloader(struct command_result *res)
 {
     mcu_jump_to_bootloader();
 }

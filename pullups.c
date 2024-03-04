@@ -14,7 +14,7 @@ void pullups_enable_exc(void)
     system_config.info_bar_changed=true;
 }
 
-void pullups_enable(opt_args (*args), struct command_result *res)
+void pullups_enable(struct command_result *res)
 {
     pullups_enable_exc();
     
@@ -43,7 +43,7 @@ void pullups_cleanup(void)
     system_config.info_bar_changed=true;
 }
 
-void pullups_disable(opt_args (*args), struct command_result *res)
+void pullups_disable(struct command_result *res)
 {
     pullups_cleanup();
 

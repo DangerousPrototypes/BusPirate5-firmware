@@ -1,1 +1,1 @@
-void ui_config_main_menu(opt_args (*args), struct command_result *res);
+void ui_config_main_menu(struct command_result *res);

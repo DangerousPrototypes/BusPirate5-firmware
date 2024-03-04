@@ -14,7 +14,7 @@
 #include "amux.h"
 #include "ui/ui_args.h"
 
-void adc_measure(opt_args (*args), struct command_result *res, bool refresh);
+void adc_measure(struct command_result *res, bool refresh);
 
 uint32_t adc_print(uint8_t bio_pin, bool refresh)
 {
@@ -28,17 +28,17 @@ uint32_t adc_print(uint8_t bio_pin, bool refresh)
     return 1;	
 }
 
-void adc_measure_single(opt_args (*args), struct command_result *res)
+void adc_measure_single(struct command_result *res)
 {
-    adc_measure(args, res, false);
+    adc_measure(res, false);
 }
 
-void adc_measure_cont(opt_args (*args), struct command_result *res)
+void adc_measure_cont(struct command_result *res)
 {
-    adc_measure(args, res, true);
+    adc_measure(res, true);
 }
 
-void adc_measure(opt_args (*args), struct command_result *res, bool refresh)
+void adc_measure(struct command_result *res, bool refresh)
 {
 	uint32_t temp;
 	arg_var_t arg;

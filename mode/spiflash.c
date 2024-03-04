@@ -554,7 +554,7 @@ void spiflash_probe(void)
                 printf("/Hold pin: %c\r\n", ptp->hold_pin?'Y':'-');
                 printf("Deep Power Down (DPDM): %c\r\n", ptp->deep_power_down_mode?'Y':'-');
                 printf("SW reset: %c (instruction 0x%02x)\r\n", ptp->sw_reset?'Y':'-', ptp->sw_reset_instruction);
-                printf("Suspend/Resume program %c\r\nSuspend/Resume erase %c\r\n", ptp->program_suspend_resume?'Y':'-', ptp->erase_suspend_resume?'Y':'-');
+                printf("Suspend/Resume program: %c\r\nSuspend/Resume erase: %c\r\n", ptp->program_suspend_resume?'Y':'-', ptp->erase_suspend_resume?'Y':'-');
                 printf("Wrap Read mode: %c (instruction 0x%02x, length %d)\r\n", ptp->wrap_read_mode?'Y':'-', ptp->wrap_read_instruction, ptp->wrap_read_length);
                 printf("Individual block lock: %c (nonvolatile %c, instruction 0x%02x, default %d)\r\n", ptp->individual_block_lock?'Y':'-', ptp->individual_block_lock_volatile?'Y':'-', ptp->individual_block_lock_instruction, ptp->individual_block_lock_volatile_default);
                 printf("Secured OTP: %c\r\n", ptp->secured_otp?'Y':'-');

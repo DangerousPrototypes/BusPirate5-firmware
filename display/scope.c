@@ -52,6 +52,7 @@ extern const FONT_INFO hunter_12ptFontInfo;
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
 #include "amux.h"
+#include "ui/ui_args.h"
 
 static int convert_trigger_position(int pos);
 
@@ -638,7 +639,7 @@ scope_to_trigger(void)
 }
 
 uint32_t
-scope_commands(struct opt_args *args, struct command_result *result)
+scope_commands(struct command_result *result)
 {
 	char c;
 	
@@ -652,6 +653,11 @@ scope_commands(struct opt_args *args, struct command_result *result)
 //  ss - stop 
 //	
 //
+
+	char args[3];
+	arg_var_t arg;
+	ui_args_find_string(&arg, sizeof(args), args);
+
 	last = 0;
 	for (;;) {
 		interactive = !cmdln_try_peek(0,&c);
@@ -664,7 +670,7 @@ scope_commands(struct opt_args *args, struct command_result *result)
 		break;
 	}
 	
-	if (strcmp(args[0].c, "t") == 0)  {
+	if (strcmp(args, "t") == 0)  {
 		// trigger
 		// a 0-7 which is the trigger pin
 		// v [0-9].[0-9] voltage level
@@ -723,7 +729,7 @@ do_t:
 		in_trigger_mode = 0;
 		return 1;
 	} else
-	if (strcmp(args[0].c, "x") == 0)  {
+	if (strcmp(args, "x") == 0)  {
 		int z;
 		// x - timebase
 		// < move left
@@ -858,7 +864,7 @@ do_x:
 		}
 		return 1;
 	} else
-	if (strcmp(args[0].c, "y") == 0)  {
+	if (strcmp(args, "y") == 0)  {
 		// y - y scale
 		// + increase scale
 		// - decrease scale
@@ -928,7 +934,7 @@ do_y:
 		}
 		return 1;
 	} else
-	if (strcmp(args[0].c, "sr") == 0)  {
+	if (strcmp(args, "sr") == 0)  {
 		// start 
 		// <> same as last - button if stopped
 		// 0-7 - pin
@@ -975,7 +981,7 @@ do_y:
 		scope_stopped = 0;
 		scope_restart(scope_pin);
 	} else 
-	if (strcmp(args[0].c, "ss") == 0)  {
+	if (strcmp(args, "ss") == 0)  {
 		// stop the engine - button if started
 		scope_stopped = 1;
 		scope_shutdown(1);

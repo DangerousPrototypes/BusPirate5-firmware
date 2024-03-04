@@ -16,22 +16,11 @@
 #include "ui/ui_cmdln.h"
 #include "string.h"
 #include "syntax.h"
+#include "ui/ui_args.h"
 
 
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
 static const struct command_result result_blank;
-static const struct opt_args empty_opt_args;
-static struct opt_args args[5];
-
-bool parse_help(void)
-{
-    char c,d;
-    if(cmdln_try_peek(0,&c) && cmdln_try_peek(1,&d) && c=='-' && d=='h')
-    {
-        return true;
-    }
-    return false;
-}
 
 bool ui_process_commands(void)
 {
@@ -52,7 +41,7 @@ bool ui_process_commands(void)
 
         if(c=='[' || c=='>' || c=='{') //first character is { [ or >, process as syntax
         {
-            if(syntax_compile(&args[0]))
+            if(syntax_compile())
             {
                     printf("Syntax compile error\r\n");
                     return true;
@@ -82,7 +71,6 @@ bool ui_process_commands(void)
         {
             uint32_t temp;
             prompt_result result;
-
             cmdln_try_discard(1);
             ui_parse_get_macro(&result, &temp);   
             if(result.success)
@@ -94,18 +82,14 @@ bool ui_process_commands(void)
                 printf("%s\r\n",t[T_MODE_ERROR_PARSING_MACRO]);
                 return true;
             }  
-
             return false;  
         }       
         
         //process as a command
-
-        args[0]=empty_opt_args;
-        args[0].max_len=OPTARG_STRING_LEN;
-        ui_parse_get_string(&args[0]);
-        //printf("Command: %s\r\n", args[0].c);
-
-        if(args[0].no_value)
+        char command_string[MAX_COMMAND_LENGTH];
+        arg_var_t arg;
+        ui_args_find_string_discard(&arg, true, sizeof(command_string), command_string);
+        if(!arg.has_value)
         {
             return false;
         }
@@ -115,7 +99,7 @@ bool ui_process_commands(void)
         uint32_t user_cmd_id=0;
         for(int i=0; i<commands_count; i++)
         {  
-            if(strcmp(args[0].c, commands[i].command)==0)
+            if(strcmp(command_string, commands[i].command)==0)
             {
                 user_cmd_id=i;
                 cmd_valid=true;
@@ -128,25 +112,24 @@ bool ui_process_commands(void)
         {
             if(displays[system_config.display].display_command)
             {
-	        if (displays[system_config.display].display_command(&args[0], &result))
+	        if (displays[system_config.display].display_command(&result))
 	    	    goto cmd_ok;
             }
             if(modes[system_config.mode].protocol_command)
             {
-	        if (modes[system_config.mode].protocol_command(&args[0], &result))
+	        if (modes[system_config.mode].protocol_command(&result))
 	    	    goto cmd_ok;
             }
             printf("%s", ui_term_color_notice());
-            printf(t[T_CMDLN_INVALID_COMMAND], args[0].c);
+            printf(t[T_CMDLN_INVALID_COMMAND], command_string);
             printf("%s\r\n", ui_term_color_reset());
             return true;
         }
-        //printf("Found: %s\r\n",cmd[user_cmd_id]);
-
         //no such command, search TF flash card for runnable scripts
 
-        //do we have a command? good, get the opt args
-        if(parse_help())
+        //global help handler TODO: make optional
+        ui_args_find_flag_novalue('h', &arg);
+        if(arg.has_arg && (commands[user_cmd_id].help_text!=0x00))
         {
             printf("%s\r\n",t[commands[user_cmd_id].help_text]);
             return false;
@@ -155,12 +138,11 @@ bool ui_process_commands(void)
         if(system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz)
         {
             printf("%s\r\n",hiz_error());
-            //printf("\r\n")
             return true;            
         }    
 
         //execute the command
-        commands[user_cmd_id].func(args, &result);
+        commands[user_cmd_id].func(&result);
        
 cmd_ok:
         printf("%s\r\n", ui_term_color_reset());

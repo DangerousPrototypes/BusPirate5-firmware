@@ -6,6 +6,11 @@ struct _command_line {
     char buf[UI_CMDBUFFSIZE];
 };
 
+struct _command_pointer {
+    uint32_t wptr;
+    uint32_t rptr;
+};
+
 // update a command line buffer pointer with rollover
 uint32_t cmdln_pu(uint32_t i); 
 // try to add a byte to the command line buffer, return false if buffer full
@@ -25,5 +30,8 @@ bool cmdln_try_discard(uint32_t i);
 bool cmdln_next_buf_pos(void);
 
 void cmdln_init(void);
+
+bool cmdln_try_peek_pointer(struct _command_pointer *cp, uint32_t i, char *c);
+void cmdln_get_command_pointer(struct _command_pointer *cp);
 
 extern struct _command_line cmdln;

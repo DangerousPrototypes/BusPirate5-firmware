@@ -15,7 +15,7 @@
 
 #include "freq.h"
 
-void freq_single(opt_args (*args), struct command_result *res)
+void freq_single(struct command_result *res)
 {
     uint32_t temp;
     arg_var_t arg;
@@ -31,7 +31,7 @@ void freq_single(opt_args (*args), struct command_result *res)
 
 }
 
-void freq_cont(opt_args (*args), struct command_result *res)
+void freq_cont(struct command_result *res)
 {
     uint32_t temp;
     arg_var_t arg;

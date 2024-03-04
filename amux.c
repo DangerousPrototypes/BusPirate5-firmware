@@ -52,3 +52,19 @@ uint32_t hw_adc_bio(uint8_t bio)
     //return (6600*mcu_adc_read())/4096;
 }
 
+bool amux_check_vout_vref(void)
+{
+    if (scope_running) // scope is using the analog subsystem
+        return false;
+
+    amux_sweep();
+    if(hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]<1200)
+    {
+        printf("Error: No voltage detected on VOUT/VREF pin\r\nHint: Use W to enable the PSU or attach an external supply\r\n");
+        return false;
+    }    
+    return true;
+}
+
+
+

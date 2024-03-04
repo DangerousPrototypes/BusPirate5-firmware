@@ -60,7 +60,7 @@ set(bp5_common
         system_monitor.h system_monitor.c
         mjson/mjson.h mjson/mjson.c 
         postprocess.c postprocess.h syntax.h syntax.c  syntax_struct.h
-        dump.c dump.h 
+        flash.c flash.h 
         opt_args.h ui/ui_args.c ui/ui_args.h
         command_attributes.h bytecode.h
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h

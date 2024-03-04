@@ -1,3 +1,3 @@
-bool syntax_compile(struct opt_args *args);
+bool syntax_compile(void);
 bool syntax_run(void);
 bool syntax_post(void);

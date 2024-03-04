@@ -21,7 +21,7 @@
 #include "pullups.h"
 #include "helpers.h"
 #include "storage.h"
-#include "dump.h"
+#include "flash.h"
 #include "mcu/rp2040.h"
 #include "mode/logicanalyzer.h"
 
@@ -65,29 +65,7 @@ const struct _command_struct commands[]=
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
     {"hex", true, &hex, T_CMDLN_HEX },                                // "hex"
     {"pause", true, &helpers_pause_args, T_HELP_CMD_PAUSE },             // "pause"
-    {"flash", true, &flash, T_CMDLN_DUMP },                              // "dump"
+    {"flash", true, &flash, 0x00 },                              // "dump"
 };
 
 const uint32_t commands_count=count_of(commands);
-
-const struct _parsers list_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers change_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers make_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers unlink_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers cat_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers m_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers display_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers psuen_parsers[]={{NULL},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers show_int_formats_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers show_int_inverse_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers freq_single_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers freq_cont_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers pwmen_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers pwmdis_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers adc_cont_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers adc_single_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers aux_input_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers aux_low_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers aux_high_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers logic_parsers[]={{&ui_parse_get_int_args},{&ui_parse_get_int_args},{&ui_parse_get_int_args},{&ui_parse_get_int_args},{NULL}};
-const struct _parsers hex_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};

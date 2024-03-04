@@ -11,56 +11,6 @@
 
 static const struct prompt_result empty_result;
 
-//temporary shim to get the parser going with args
-bool ui_parse_get_int_args(opt_args *arg)
-{
-    struct prompt_result result;
-    uint32_t value;
-    ui_parse_consume_whitespace();
-    bool temp=ui_parse_get_int(&result, &value);
-
-    arg->error=result.error;
-    arg->no_value=result.no_value;
-    arg->number_format=result.number_format;
-    arg->success=result.success;
-    arg->i=value;
-
-    return temp;
-}
-
-
-bool ui_parse_get_string(opt_args *result)
-{
-    char c;
-    bool ok;
-    result->no_value=true;
-
-    for(result->len=0; result->len<result->max_len; result->len++)
-    {
-        //take a byte, if no byte break
-        ok=cmdln_try_peek(0,&c);
-        if(!ok || c==0x00 || c==0x20)
-        {
-            result->c[result->len]=0x00;
-            cmdln_try_discard(1);
-            if(result->len==0)
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
-        result->no_value=false;
-        result->c[result->len]=c;
-        cmdln_try_discard(1);
-    }
-    result->c[result->max_len]=0x00;
-    result->success=true; //really we should detect too long/incomplete string and return notice
-    return true; 
-}
-
 bool ui_parse_get_hex(struct prompt_result *result, uint32_t *value)
 {
     char c;

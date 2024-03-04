@@ -7,6 +7,6 @@ typedef struct ui_info_help
 	uint description; //translation key
 } ui_info_help;
 
-void ui_help_print_args(opt_args (*args), struct command_result *res);
-void ui_help_print(const struct ui_info_help (*ui_info_help), uint32_t count);
-
+void ui_help_print_args(struct command_result *res);
+void ui_help_options(const struct ui_info_help (*help), uint32_t count);
+void ui_help_usage(const char * const flash_usage[], uint32_t count);

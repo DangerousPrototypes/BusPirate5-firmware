@@ -1,2 +1,2 @@
-void flash_init(void);
-void flash_read_id(void);
+void flash(struct command_result *res);
+void load(struct command_result *res);

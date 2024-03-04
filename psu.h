@@ -1,6 +1,6 @@
 void psu_init(void);
-void psu_enable(opt_args (*args), struct command_result *res);
-void psu_disable(opt_args (*args), struct command_result *res);
+void psu_enable(struct command_result *res);
+void psu_disable(struct command_result *res);
 bool psu_setup(void);
 bool psu_reset(void);
 void psu_cleanup(void);

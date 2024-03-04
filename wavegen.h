@@ -1,1 +1,1 @@
-void wavegen_args (opt_args (*args), struct command_result *res);
+void wavegen_args (struct command_result *res);

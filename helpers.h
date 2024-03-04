@@ -1,14 +1,14 @@
-void helpers_selftest(opt_args (*args), struct command_result *res);
-void helpers_bit_order_msb(opt_args (*args), struct command_result *res);
-void helpers_bit_order_lsb(opt_args (*args), struct command_result *res);
-void helpers_show_int_formats(opt_args (*args), struct command_result *res);
-void helpers_show_int_inverse(opt_args (*args), struct command_result *res);
-void helpers_pause_args(opt_args (*args), struct command_result *res);
+void helpers_selftest(struct command_result *res);
+void helpers_bit_order_msb(struct command_result *res);
+void helpers_bit_order_lsb(struct command_result *res);
+void helpers_show_int_formats(struct command_result *res);
+void helpers_show_int_inverse(struct command_result *res);
+void helpers_pause_args(struct command_result *res);
 
 //mode commands
-void helpers_mode_help(opt_args (*args), struct command_result *res);
+void helpers_mode_help(struct command_result *res);
 void helpers_mode_periodic();
-void helpers_display_help(opt_args (*args), struct command_result *res);
+void helpers_display_help(struct command_result *res);
 
 void helpers_selftest_base(void);
 // these are all moved to the syntax processor
@@ -38,5 +38,5 @@ void helpers_numbits(struct command_attributes *attributes, struct command_respo
 void helpers_debug(struct command_attributes *attributes, struct command_response *response);
 */
 
-void helpers_mcu_reset(opt_args (*args), struct command_result *res);
-void helpers_mcu_jump_to_bootloader(opt_args (*args), struct command_result *res);
+void helpers_mcu_reset(struct command_result *res);
+void helpers_mcu_jump_to_bootloader(struct command_result *res);

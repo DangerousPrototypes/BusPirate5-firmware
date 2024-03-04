@@ -58,7 +58,7 @@ uint8_t  sine_wave[256] = {
 
 
 
-void wavegen_args(opt_args (*args), struct command_result *res)
+void wavegen_args(struct command_result *res)
 {
     //all pins to output
     for(uint8_t i=0; i<8; i++)

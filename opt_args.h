@@ -1,4 +1,6 @@
-typedef struct opt_args {
+#define MAX_COMMAND_LENGTH 9
+
+/*typedef struct opt_args {
     bool no_value;
     bool error;
     bool type;
@@ -11,7 +13,7 @@ typedef struct opt_args {
     uint16_t max_len;    
 	char c[OPTARG_STRING_LEN+1];
 } opt_args;
-
+*/
 typedef struct command_result {
 	uint8_t number_format;
     bool success;
@@ -21,15 +23,10 @@ typedef struct command_result {
 	bool error;
 } command_result;
 
-struct _parsers
-{
-    bool (*opt_parser)(opt_args *args);
-};
-
 struct _command_struct
 {
-    char command[9];
+    char command[MAX_COMMAND_LENGTH];
     bool allow_hiz;
-    void (*func)(opt_args *args, struct command_result *res);
+    void (*func)(struct command_result *res);
     uint32_t help_text;
 };

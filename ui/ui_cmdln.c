@@ -22,6 +22,12 @@ uint32_t cmdln_pu(uint32_t i)
     return ((i)&(UI_CMDBUFFSIZE-1));
 }
 
+void cmdln_get_command_pointer(struct _command_pointer *cp)
+{
+    cp->wptr=cmdln.wptr;
+    cp->rptr=cmdln.rptr;
+}
+
 bool cmdln_try_add(char *c)
 {
     //TODO: leave one space for 0x00 command seperator????
@@ -54,6 +60,17 @@ bool cmdln_try_peek(uint32_t i, char *c)
     }
 
     (*c)=cmdln.buf[cmdln_pu(cmdln.rptr+i)]; 
+    return true;
+}
+
+bool cmdln_try_peek_pointer(struct _command_pointer *cp, uint32_t i, char *c)
+{
+    if(cmdln_pu(cp->rptr+i)==cmdln_pu(cp->wptr))
+    {
+        return false;
+    }
+
+    (*c)=cmdln.buf[cmdln_pu(cp->rptr+i)]; 
     return true;
 }
 

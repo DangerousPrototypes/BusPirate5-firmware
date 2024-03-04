@@ -83,7 +83,7 @@ const struct ui_info_help help_commands[]=
 	{0,">",	T_HELP_GREATER_THAN},    
 
 //Get more help  
- {1,"",T_HELP_SECTION_HELP}, 
+{1,"",T_HELP_SECTION_HELP}, 
 	{0,"?",    T_HELP_HELP_GENERAL},
     {0,"h",    T_HELP_HELP_MODE},
     {0,"hd",    T_HELP_HELP_DISPLAY},
@@ -92,30 +92,30 @@ const struct ui_info_help help_commands[]=
 {1,"",T_HELP_HINT}
 };
 
-void ui_help_print_args(opt_args (*args), struct command_result *res)
+void ui_help_print_args(struct command_result *res)
 {
-    ui_help_print(&help_commands[0],count_of(help_commands));
+    ui_help_options(&help_commands[0],count_of(help_commands));
 }
 
 // displays the help
-void ui_help_print(const struct ui_info_help (*ui_info_help), uint32_t count)
+void ui_help_options(const struct ui_info_help (*help), uint32_t count)
 {
 	
 	for(uint i=0; i<count; i++)
 	{
-		switch(help_commands[i].help)
+		switch(help[i].help)
 		{
             case 1: //heading
                 printf("\r\n%s%s%s\r\n", 
                     ui_term_color_info(), 
-                    t[help_commands[i].description], 
+                    t[help[i].description], 
                     ui_term_color_reset()
                 );
                 break;
             case 0: //help item
                 printf("%s%s%s\t%s%s%s\r\n",
-                    ui_term_color_prompt(), help_commands[i].command, ui_term_color_reset(),
-                    ui_term_color_info(), t[help_commands[i].description], ui_term_color_reset()
+                    ui_term_color_prompt(), help[i].command, ui_term_color_reset(),
+                    ui_term_color_info(), t[help[i].description], ui_term_color_reset()
                 );
                 break;
             case '\n':
@@ -125,5 +125,18 @@ void ui_help_print(const struct ui_info_help (*ui_info_help), uint32_t count)
                 break;
 		}
 	
+	}
+}
+
+void ui_help_usage(const char * const flash_usage[], uint32_t count)
+{
+	printf("usage:\r\n");
+	for(uint32_t i=0; i<count; i++)
+	{
+		printf("%s%s%s\r\n", 
+			ui_term_color_info(), 
+			flash_usage[i], 
+			ui_term_color_reset()
+		);
 	}
 }

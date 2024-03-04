@@ -22,7 +22,7 @@ bool ui_display_list(const struct ui_prompt* menu)
 	}
 }
 
-void ui_display_enable_args(opt_args (*args), struct command_result *res)
+void ui_display_enable_args(struct command_result *res)
 {
     uint32_t display;
     bool error;
@@ -109,7 +109,7 @@ void ui_display_enable_args(opt_args (*args), struct command_result *res)
 extern bool int_display_menu(const struct ui_prompt* menu);
 
 // set display mode  (hex, bin, octa, dec) 
-void ui_display_int_display_format(opt_args (*args), struct command_result *res)
+void ui_display_int_display_format(struct command_result *res)
 {
     uint32_t display;
     bool error;

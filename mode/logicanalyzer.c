@@ -175,7 +175,7 @@ void la_periodic(void)
 
 }
 
-void la_test_args(opt_args (*args), struct command_result *res)
+void la_test_args(struct command_result *res)
 {
 
     uint32_t sample_position=0;

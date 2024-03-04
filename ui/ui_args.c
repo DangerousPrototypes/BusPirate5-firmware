@@ -59,36 +59,23 @@ bool ui_args_find_arg(char flag, arg_var_t *arg)
     return false;
 }
 
-bool ui_args_get_string(uint32_t start_pos, uint32_t max_len, char *string)
+bool ui_args_get_string(uint32_t start_pos, uint32_t *end_pos, uint32_t max_len, char *string)
 {
     char c;
-    bool ok;
-    //result->no_value=true;
-
     for(uint32_t i=0; i<max_len; i++)
     {
         //take a byte, if no byte break
-        ok=cmdln_try_peek(start_pos,&c);
-        if(!ok || c==0x00 || c==0x20)
+        bool ok=cmdln_try_peek(start_pos,&c);
+        if(!ok || c==0x00 || c==0x20 || i==(max_len-1))
         {
             string[i]=0x00;
-            if(i==0)
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
+            *end_pos=start_pos;
+            if(i==0) return false;
+            else return true;
         }
-        //result->no_value=false;
-        //result->c[result->len]=c;
         string[i]=c;
         start_pos++;
     }
-    string[max_len]=0x00;
-    //result->success=true; //really we should detect too long/incomplete string and return notice
-    return true; 
 }
 
 /*
@@ -238,7 +225,8 @@ bool ui_args_find_flag_string(char flag, arg_var_t *arg, uint32_t max_len, char 
 
     if(arg->has_value)
     {
-        if(!ui_args_get_string(arg->value_pos, max_len, value))
+        uint32_t end_pos;
+        if(!ui_args_get_string(arg->value_pos, &end_pos, max_len, value))
         {
             arg->error=true;
             return false;
@@ -253,29 +241,35 @@ bool ui_args_find_flag_novalue(char flag, arg_var_t *arg)
     return true;
 }
 
-bool ui_args_find_string(arg_var_t *arg, uint32_t max_len, char *value)
+bool ui_args_find_string_discard(arg_var_t *arg, bool discard, uint32_t max_len, char *value)
 {
     uint32_t i=0;
     char c;
     arg->error=false;
     arg->has_value=false;
     value[0]=0x00; //null terminate for those who need it
+
     //the read pointer should be at the end of the command
     //next we consume 1 or more spaces,
     //then copy text to the buffer until space or - or 0x00
     while(cmdln_try_peek(i, &c))
     {
-        if(c=='-'||c==0x00)
+        if(c=='-'||c==0x00||c==';'||c=='&'||c=='|')
         {
             return false;
         }
 
         if(c!=' ')
         {
-            if(ui_args_get_string(i, max_len, value))
+            uint32_t end_pos;
+            if(ui_args_get_string(i, &end_pos, max_len, value))
             {
                 arg->has_value=true;
                 arg->value_pos=i;
+                if(discard)
+                {
+                    if(!cmdln_try_discard(end_pos)) printf("Error discarding in ui_args.c\r\n");
+                }
                 return true;
             }
             else
@@ -290,7 +284,10 @@ bool ui_args_find_string(arg_var_t *arg, uint32_t max_len, char *value)
     return false;
 }
 
-
+bool ui_args_find_string(arg_var_t *arg, uint32_t max_len, char *value)
+{
+    return ui_args_find_string_discard(arg, false, max_len, value);
+}
 
 bool ui_args_find_uint32(arg_var_t *arg, uint32_t *value)
 {

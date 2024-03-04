@@ -49,7 +49,7 @@ bool pwm_check_pin_is_active(const struct ui_prompt* menu, uint32_t* i)
 }
 
 //TODO: future feature - g.5/G.5 enable/disable PWM with previous setting, prompt if no previous settings
-void pwm_configure_enable(opt_args (*args), struct command_result *res)
+void pwm_configure_enable(struct command_result *res)
 {
     uint32_t pin;
 
@@ -116,7 +116,7 @@ void pwm_configure_enable(opt_args (*args), struct command_result *res)
  
 }
 
-void pwm_configure_disable(opt_args (*args), struct command_result *res)
+void pwm_configure_disable(struct command_result *res)
 {
     uint32_t pin;
     uint32_t temp;

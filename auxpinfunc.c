@@ -8,27 +8,27 @@
 #include "ui/ui_term.h"
 #include "ui/ui_args.h"
 
-void auxpinfunc_write(opt_args (*args), struct command_result *res, bool output, bool level);
+void auxpinfunc_write(struct command_result *res, bool output, bool level);
 
 static const char labels[][5]={"AUXL","AUXH"};
 
-void auxpinfunc_high(opt_args (*args), struct command_result *res)
+void auxpinfunc_high(struct command_result *res)
 {
-    auxpinfunc_write(args, res, true, 1);
+    auxpinfunc_write(res, true, 1);
 }
 
-void auxpinfunc_low(opt_args (*args), struct command_result *res)
+void auxpinfunc_low(struct command_result *res)
 {
-    auxpinfunc_write(args, res, true, 0);
+    auxpinfunc_write(res, true, 0);
 }
 
-void auxpinfunc_input(opt_args (*args), struct command_result *res)
+void auxpinfunc_input(struct command_result *res)
 {
-    auxpinfunc_write(args, res, false, 0);
+    auxpinfunc_write(res, false, 0);
 }
 
 //TODO: binary format puts to all available pins
-void auxpinfunc_write(opt_args (*args), struct command_result *res, bool output, bool level)
+void auxpinfunc_write(struct command_result *res, bool output, bool level)
 {
 	uint32_t temp;
 	arg_var_t arg;

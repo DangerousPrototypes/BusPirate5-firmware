@@ -68,7 +68,7 @@ uint32_t disp_default_setup_exc(void)
 
 
 uint32_t
-disp_default_commands(struct opt_args *args, struct command_result *result)
+disp_default_commands(struct command_result *result)
 {
 	return 0;
 }

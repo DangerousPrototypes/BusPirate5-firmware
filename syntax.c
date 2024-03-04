@@ -39,7 +39,7 @@ void postprocess_mode_write(struct _bytecode *in, struct _output_info *info);
 void postprocess_format_print_number(struct _bytecode *in, uint32_t *value, bool read);
 
 
-bool syntax_compile(struct opt_args *args)
+bool syntax_compile(void)
 {
     uint32_t pos=0;
     uint32_t i;

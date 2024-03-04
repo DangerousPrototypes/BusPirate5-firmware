@@ -245,7 +245,16 @@ static char const * const en_us[]={
 	[T_HELP_2_21]="User macro x/list all",
 	[T_HELP_2_22]="User macro assign x",
 	[T_HELP_HINT]="Chain multiple commands with ; || &&.",
-    //INFO
+    //FLASH command help
+	[T_HELP_FLASH]="read, write and erase flash chips using SFDP info if available",
+	[T_HELP_FLASH_ERASE]="Erase flash chip",
+	[T_HELP_FLASH_WRITE]="Write file to flash chip -w {file}",
+	[T_HELP_FLASH_READ]="Read flash chip to file -r {file}",
+	[T_HELP_FLASH_VERIFY]="Verify flash chip erase or write",
+	[T_HELP_FLASH_TEST]="Erase and write full chip with dummy data, verify",
+	[T_HELP_FLASH_PROBE]="Probe flash chip for ID and SFDP info",
+	[T_HELP_FLASH_INIT]="Reset and initialize flash chip. Default if no options given.",
+	//INFO
 	[T_INFO_FIRMWARE]="Firmware",
 	[T_INFO_BOOTLOADER]="Bootloader",
 	[T_INFO_WITH]="with",

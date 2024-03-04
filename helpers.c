@@ -26,6 +26,7 @@
 #include "display/scope.h"
 #include "mode/logicanalyzer.h"
 #include "usb_rx.h"
+#include "ui/ui_args.h"
 
 void helpers_selftest(opt_args (*args), struct command_result *res)
 {
@@ -495,7 +496,11 @@ void helpers_bit_order_lsb(opt_args (*args), struct command_result *res)
 
 void helpers_show_int_formats(opt_args (*args), struct command_result *res)
 {
-    uint32_t temp=args[0].i;
+    uint32_t temp;
+    arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &temp);
+
+
     //prompt_result result;
     //ui_parse_get_int(&result, &temp);
     uint32_t temp2=system_config.display_format;		// remember old display_format
@@ -542,7 +547,9 @@ void helpers_show_int_formats(opt_args (*args), struct command_result *res)
 
 void helpers_show_int_inverse(opt_args (*args), struct command_result *res)
 {
-    uint32_t temp=args[0].i;
+    uint32_t temp;
+    arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &temp);
     //prompt_result result;
     //ui_parse_get_int(&result, &temp);
     uint32_t temp2=system_config.display_format;		// remember old display_format

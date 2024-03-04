@@ -6,6 +6,7 @@
 #include "bio.h"
 #include "system_config.h"
 #include "ui/ui_term.h"
+#include "ui/ui_args.h"
 
 void auxpinfunc_write(opt_args (*args), struct command_result *res, bool output, bool level);
 
@@ -29,14 +30,18 @@ void auxpinfunc_input(opt_args (*args), struct command_result *res)
 //TODO: binary format puts to all available pins
 void auxpinfunc_write(opt_args (*args), struct command_result *res, bool output, bool level)
 {
-	if(args[0].no_value)
+	uint32_t temp;
+	arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &temp);
+
+	if(!has_value)
 	{
 		printf("%sError:%s specify an IO pin (a 1, A 5, @ 0)", ui_term_color_error(), ui_term_color_reset());
 		res->error=true;
         return;
 	}
 
-    uint32_t pin=args[0].i;
+    uint32_t pin=temp;
 
     // first make sure the pin is present and available
     if(pin>=count_of(bio2bufiopin))

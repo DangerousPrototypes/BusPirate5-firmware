@@ -19,6 +19,7 @@
 #include "rgb.h"
 #include "pico/multicore.h"
 #include "amux.h"
+#include "ui/ui_args.h"
 
 enum logicanalyzer_status
 {
@@ -187,28 +188,33 @@ void la_test_args(opt_args (*args), struct command_result *res)
         }
     }
 
-    if(!args[0].no_value) //freq in khz
+    uint32_t temp;
+    arg_var_t arg;
+    ui_args_find_flag_uint32('f', &arg, &temp);
+    if(arg.has_value) //freq in khz
     {
-        la_freq=args[0].i;
+        la_freq=temp;
     }
     printf("Freq: %dkHz ", la_freq);
-
-    if(!args[1].no_value) //samples
+    ui_args_find_flag_uint32('s', &arg, &temp);
+    if(arg.has_value) //samples
     {
-        la_samples=args[1].i;
+        la_samples=temp;
     }
     printf("Samples: %d ",la_samples);
 
-    if(!args[2].no_value) //trigger pin (or none)
+    ui_args_find_flag_uint32('t', &arg, &temp);   
+    if(arg.has_value) //trigger pin (or none)
     {
-        if(args[2].i >=0 && args[2].i<=7)
+        if(temp >=0 && temp<=7)
         {
-            la_trigger_pin=1u<<args[2].i;
-            printf("Trigger pin: IO%d ",args[2].i);
-            if(!args[3].no_value>0) //trigger level
+            la_trigger_pin=1u<<temp;
+            printf("Trigger pin: IO%d ",temp);
+            ui_args_find_flag_uint32('l', &arg, &temp); 
+            if(arg.has_value) //trigger level
             {
-                la_trigger_level=args[3].i?1u<<args[3].i:0;
-                printf("Trigger level: %d \r\n",args[3].i);
+                la_trigger_level=temp?1u<<temp:0;
+                printf("Trigger level: %d \r\n",temp);
             }            
         }
         else

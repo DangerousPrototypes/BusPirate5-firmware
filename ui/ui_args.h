@@ -5,6 +5,8 @@ typedef struct arg_var_struct {
     bool error;
 } arg_var_t;
 
-bool ui_args_find_novalue(char flag, arg_var_t *arg);
-bool ui_args_find_string(char flag, arg_var_t *arg, uint32_t max_len, char *value);
-bool ui_args_find_uint32(char flag, arg_var_t *arg, uint32_t *value);
+bool ui_args_find_flag_novalue(char flag, arg_var_t *arg);
+bool ui_args_find_flag_string(char flag, arg_var_t *arg, uint32_t max_len, char *value);
+bool ui_args_find_flag_uint32(char flag, arg_var_t *arg, uint32_t *value);
+bool ui_args_find_string(arg_var_t *arg, uint32_t max_len, char *value);
+bool ui_args_find_uint32(arg_var_t *arg, uint32_t *value);

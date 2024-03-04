@@ -215,7 +215,7 @@ bool ui_args_get_int(uint32_t start_pos, struct prompt_result *result, uint32_t 
 	return result->success;
 }
 
-bool ui_args_find_uint32(char flag, arg_var_t *arg, uint32_t *value)
+bool ui_args_find_flag_uint32(char flag, arg_var_t *arg, uint32_t *value)
 {
     struct prompt_result result;
 
@@ -232,7 +232,7 @@ bool ui_args_find_uint32(char flag, arg_var_t *arg, uint32_t *value)
     return true;
 }
 
-bool ui_args_find_string(char flag, arg_var_t *arg, uint32_t max_len, char *value)
+bool ui_args_find_flag_string(char flag, arg_var_t *arg, uint32_t max_len, char *value)
 {
     if(!ui_args_find_arg(flag, arg)) return false;
 
@@ -247,8 +247,84 @@ bool ui_args_find_string(char flag, arg_var_t *arg, uint32_t max_len, char *valu
     return true;
 }
 
-bool ui_args_find_novalue(char flag, arg_var_t *arg)
+bool ui_args_find_flag_novalue(char flag, arg_var_t *arg)
 {
     if(!ui_args_find_arg(flag, arg)) return false;
     return true;
+}
+
+bool ui_args_find_string(arg_var_t *arg, uint32_t max_len, char *value)
+{
+    uint32_t i=0;
+    char c;
+    arg->error=false;
+    arg->has_value=false;
+    value[0]=0x00; //null terminate for those who need it
+    //the read pointer should be at the end of the command
+    //next we consume 1 or more spaces,
+    //then copy text to the buffer until space or - or 0x00
+    while(cmdln_try_peek(i, &c))
+    {
+        if(c=='-'||c==0x00)
+        {
+            return false;
+        }
+
+        if(c!=' ')
+        {
+            if(ui_args_get_string(i, max_len, value))
+            {
+                arg->has_value=true;
+                arg->value_pos=i;
+                return true;
+            }
+            else
+            {
+                value[0]=0x00;
+                return false;
+            }
+        }
+
+        i++;
+    }
+    return false;
+}
+
+
+
+bool ui_args_find_uint32(arg_var_t *arg, uint32_t *value)
+{
+    struct prompt_result result;
+    uint32_t i=0;
+    char c;
+    arg->error=false;
+    arg->has_value=false;
+
+    //the read pointer should be at the end of the command
+    //next we consume 1 or more spaces,
+    //then copy text to the buffer until space or - or 0x00
+    while(cmdln_try_peek(i, &c))
+    {
+        if(c=='-'||c==0x00)
+        {
+            return false;
+        }
+
+        if(c!=' ')
+        {
+            if(ui_args_get_int(i, &result, value))
+            {
+                arg->has_value=true;
+                arg->value_pos=i;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        i++;
+    }
+    return false;
 }

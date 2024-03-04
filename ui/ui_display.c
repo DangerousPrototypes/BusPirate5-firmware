@@ -11,6 +11,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_const.h"
 #include "ui/ui_display.h"
+#include "ui/ui_args.h"
 
 
 bool ui_display_list(const struct ui_prompt* menu)
@@ -25,11 +26,14 @@ void ui_display_enable_args(opt_args (*args), struct command_result *res)
 {
     uint32_t display;
     bool error;
+	uint32_t temp;
+	arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &temp);	
 
-	display = args[0].i;
-	if( args[0].error || args[0].no_value || ((display)>MAXDISPLAY) || ((display)==0) )
+	display = temp;
+	if( arg.error || !arg.has_value || ((display)>MAXDISPLAY) || ((display)==0) )
 	{
-		if( args[0].success && (display)>MAXDISPLAY )
+		if( arg.has_value && (display)>MAXDISPLAY )
 		{
 			ui_prompt_invalid_option();
 		}

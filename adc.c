@@ -12,6 +12,7 @@
 #include "freq.h"
 #include "usb_rx.h"
 #include "amux.h"
+#include "ui/ui_args.h"
 
 void adc_measure(opt_args (*args), struct command_result *res, bool refresh);
 
@@ -39,7 +40,11 @@ void adc_measure_cont(opt_args (*args), struct command_result *res)
 
 void adc_measure(opt_args (*args), struct command_result *res, bool refresh)
 {
-	if(args[0].no_value) //show voltage on all pins
+	uint32_t temp;
+	arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &temp);
+
+	if(!has_value) //show voltage on all pins
 	{
 		if(refresh)
 		{
@@ -69,9 +74,9 @@ void adc_measure(opt_args (*args), struct command_result *res, bool refresh)
 	else //single pin measurement
 	{
 		//pin bounds check
-		if(args[0].i>=count_of(bio2bufiopin))
+		if(temp>=count_of(bio2bufiopin))
 		{
-			printf("Error: Pin IO%d is invalid", args[0].i);
+			printf("Error: Pin IO%d is invalid", temp);
             res->error=true;
 			return;
 		}
@@ -81,10 +86,10 @@ void adc_measure(opt_args (*args), struct command_result *res, bool refresh)
 			//continuous measurement on this pin
 			// press any key to continue
             prompt_result result;
-			ui_prompt_any_key_continue(&result, 250, &adc_print, args[0].i, true);
+			ui_prompt_any_key_continue(&result, 250, &adc_print, temp, true);
 		}
 		//single measurement, also adds final \n for cont mode
-		adc_print(args[0].i,false);
+		adc_print(temp,false);
 
 	}
 }

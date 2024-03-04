@@ -9,6 +9,7 @@
 #include "ui/ui_parse.h"
 #include "ui/ui_term.h"
 #include "ui/ui_const.h"
+#include "ui/ui_args.h"
 
 
 bool ui_mode_list(const struct ui_prompt* menu)
@@ -24,10 +25,13 @@ void ui_mode_enable_args(opt_args (*args), struct command_result *res)
     uint32_t mode;
     bool error;
 
-    mode = args[0].i;
-    if( args[0].error || args[0].no_value || ((mode)>MAXPROTO) || ((mode)==0) )
+    //mode = args[0].i;
+	arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &mode);
+
+    if( !arg.has_value || arg.error || ((mode)>MAXPROTO) || ((mode)==0) )
     {
-        if( args[0].success && (mode)>MAXPROTO )
+        if( arg.has_value && (mode)>MAXPROTO )
         {
             ui_prompt_invalid_option();
         }

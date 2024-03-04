@@ -17,25 +17,6 @@
 
 void flash(opt_args (*args), struct command_result *res)
 {
- /*   sfud_flash flash_info= {.name = "SPI_FLASH", .spi.name = "SPI1"};
-    uint8_t data[256];
-    uint32_t start_address=0;
-
-    if(!spiflash_init(&flash_info)) return;
-    uint32_t end_address=flash_info.sfdp.capacity; //TODO: handle capacity in the flashtable when we pass from command line
-
-    if(!spiflash_erase(&flash_info)) return;
-    if(!spiflash_erase_verify(start_address, end_address, sizeof(data), data, &flash_info)) return;
-    if(!spiflash_write_test(start_address, end_address, sizeof(data), data, &flash_info)) return;
-    if(!spiflash_write_verify(start_address, end_address, sizeof(data), data, &flash_info)) return;
-    const char file_name[]="dump_t.bin";
-    if(!spiflash_dump(start_address, end_address, sizeof(data), data, &flash_info, file_name)) return;
-    return;
-    */
-}
-
-void dump(opt_args (*args), struct command_result *res)
-{
     arg_var_t arg;
     char file_name[13];
     uint32_t value;
@@ -61,11 +42,11 @@ void dump(opt_args (*args), struct command_result *res)
     };
 
     //erase chip?
-    bool erase = ui_args_find_novalue('e'|0x20, &arg);
+    bool erase = ui_args_find_flag_novalue('e'|0x20, &arg);
     //verify chip?
-    bool verify = ui_args_find_novalue('v'|0x20, &arg);
+    bool verify = ui_args_find_flag_novalue('v'|0x20, &arg);
     //read?
-    bool read = ui_args_find_string('r'|0x20, &arg, sizeof(file_name), file_name);
+    bool read = ui_args_find_flag_string('r'|0x20, &arg, sizeof(file_name), file_name);
     //to file?
     if(read && !arg.has_value)
     {
@@ -74,7 +55,7 @@ void dump(opt_args (*args), struct command_result *res)
     }
     //write
     //from file?
-    bool write = ui_args_find_string('w'|0x20, &arg, sizeof(file_name), file_name);
+    bool write = ui_args_find_flag_string('w'|0x20, &arg, sizeof(file_name), file_name);
     if(write && !arg.has_value)
     {
         printf("Missing load file name\r\n");
@@ -118,70 +99,6 @@ void dump(opt_args (*args), struct command_result *res)
         if(!spiflash_write_verify(start_address, end_address, sizeof(data), data, &flash_info)) return;
     }
     return;
-
-    char c='e';
-    if(ui_args_find_string(c|0x20, &arg, sizeof(file_name), file_name))
-    {
-        if(arg.error) printf("Error parsing argument %c\r\n", c);
-        else printf("Found string -%c: %s\r\n", c, file_name);
-    }
-    if(arg.error) printf("Error parsing argument %c\r\n", c);
-    c='s';
-    if(ui_args_find_uint32(c|0x20, &arg, &value))
-    {
-        if(arg.error) printf("Error parsing argument %c\r\n", c);
-        else printf("Found uint32_t -%c: %06x", c, value);
-    } 
-    if(arg.error) printf("Error parsing argument %c\r\n", c);
-    return; 
-
-
-
-    FIL fil;			/* File object needed for each open file */
-    FRESULT fr;     /* FatFs return code */
-    uint8_t buffer[16]; //TODO: lookup page size...
-    UINT count;
-    uint8_t page_size=16;
-    uint8_t page=0;
-    UINT bw;
-
-    //open file
-    fr = f_open(&fil, args[0].c, FA_WRITE | FA_CREATE_ALWAYS);	
-    if (fr != FR_OK) {
-        printf("File error %d", fr);
-        res->error=true;
-        return;
-    }
-
-    printf("Reading...");
-     //read from eeprom
-    spi_set_cs(0);
-    spi_write_simple(0b00000011);
-    spi_write_simple(0);
-    page=0;
-    count=16;
-    for(uint8_t j=0;j<16;j++)
-    {
-        for(UINT i=0; i<16; i++)
-        {
-            buffer[i]=spi_read_simple();
-        }
-
-        f_write(&fil, buffer, count, &bw);	
-
-        if(fr != FR_OK || bw!=count)
-        {
-            printf("Disk access error");
-            res->error=true;
-            return;
-        }
-        page++;
-    }
-    spi_set_cs(1);
-    printf("%d bytes OK", page*page_size);
-
-    /* Close open files */
-    f_close(&fil);
 }
 
 

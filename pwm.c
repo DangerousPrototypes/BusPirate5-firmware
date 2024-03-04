@@ -12,9 +12,10 @@
 #include "ui/ui_term.h"
 #include "ui/ui_info.h"
 
+
 #include "pwd.h"
 #include "freq.h"
-
+#include "ui/ui_args.h"
 
 uint32_t pwm_get_settings(float* pwm_hz_actual, float* duty_user_value);
 uint8_t pwm_freq_find(float* freq_hz_value, float* pwm_hz_actual, float* pwm_ns_actual, uint32_t* pwm_divider, uint32_t* pwm_top);
@@ -118,6 +119,9 @@ void pwm_configure_enable(opt_args (*args), struct command_result *res)
 void pwm_configure_disable(opt_args (*args), struct command_result *res)
 {
     uint32_t pin;
+    uint32_t temp;
+    arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &temp);
 
     if(system_config.pwm_active == 0) //no pwm active, just exit
     {
@@ -125,16 +129,16 @@ void pwm_configure_disable(opt_args (*args), struct command_result *res)
         (*res).error=true;
         return;
     } 
-    else if(!args[0].no_value)
+    else if(has_value)
     {
         //first make sure the freq is present and available
-        if(args[0].i >= count_of(bio2bufiopin))
+        if(temp >= count_of(bio2bufiopin))
         {
-            printf("Pin IO%d is invalid!", args[0].i);
+            printf("Pin IO%d is invalid!", temp);
             (*res).error=true;
             return;
         }
-        pin=args[0].i;
+        pin=temp;
 
     }//if only one pwm is active, just disable that one
     else if(system_config.pwm_active && !(system_config.pwm_active & (system_config.pwm_active-1)))

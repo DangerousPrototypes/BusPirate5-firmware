@@ -33,7 +33,7 @@ const struct _command_struct commands[]=
     {"mkdir", true, &make_dir, T_CMDLN_MKDIR},//mkdir
     {"rm", true, &storage_unlink, T_CMDLN_RM}, //rm
     {"cat", true, &cat, T_CMDLN_CAT}, //cat
-    {"m", true, &ui_mode_enable_args, T_CMDLN_MODE},            // "m"      
+    {"m", true, &ui_mode_enable_args, T_CMDLN_MODE},            // "m"   //needs trailing int32   
     {"W", false, &psu_enable, T_CMDLN_PSU_EN},// "W"    
     {"#", true, &helpers_mcu_reset, T_CMDLN_RESET},// "#" 
     {"$", true, &helpers_mcu_jump_to_bootloader, T_CMDLN_BOOTLOAD},     // "$" 
@@ -43,6 +43,7 @@ const struct _command_struct commands[]=
     {"c", true, &ui_config_main_menu, T_CMDLN_CONFIG_MENU},       // "c"
     {"f", true, &freq_single, T_CMDLN_FREQ_ONE},               // "f"    
     {"F", true, &freq_cont, T_CMDLN_FREQ_CONT}, // "F"
+    {"G", false, &pwm_configure_enable, T_CMDLN_PWM_CONFIG}, //G
     {"g", false, &pwm_configure_disable, T_CMDLN_PWM_DIS },       // "g"
     {"h", false, &helpers_mode_help, T_CMDLN_HELP_MODE },         // "h"
     {"hd", true, &helpers_display_help, T_CMDLN_HELP_DISPLAY },     // "hd"
@@ -59,13 +60,12 @@ const struct _command_struct commands[]=
     {"@", true, &auxpinfunc_input, T_CMDLN_AUX_IN },               // "@"
     {"a", false, &auxpinfunc_low, T_CMDLN_AUX_LOW },               // "a"
     {"A", false, &auxpinfunc_high, T_CMDLN_AUX_HIGH },             // "A"
-    {"dump", true, &dump, T_CMDLN_DUMP },                              // "dump"
-    {"load", true, &load, T_CMDLN_LOAD },                              // "load"
     {"format", true, &storage_format, T_HELP_CMD_FORMAT },               // "format"
-    {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d"
-    {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic"
+    {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d" 
+    {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
     {"hex", true, &hex, T_CMDLN_HEX },                                // "hex"
     {"pause", true, &helpers_pause_args, T_HELP_CMD_PAUSE },             // "pause"
+    {"flash", true, &flash, T_CMDLN_DUMP },                              // "dump"
 };
 
 const uint32_t commands_count=count_of(commands);
@@ -89,8 +89,5 @@ const struct _parsers adc_single_parsers[]={{&ui_parse_get_int_args},{NULL},{NUL
 const struct _parsers aux_input_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
 const struct _parsers aux_low_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
 const struct _parsers aux_high_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers dump_parsers[]={{&ui_parse_get_string},{&ui_parse_get_string},{&ui_parse_get_string},{NULL},{NULL}};
-const struct _parsers load_parsers[]={{&ui_parse_get_string},{&ui_parse_get_string},{&ui_parse_get_string},{NULL},{NULL}};
 const struct _parsers logic_parsers[]={{&ui_parse_get_int_args},{&ui_parse_get_int_args},{&ui_parse_get_int_args},{&ui_parse_get_int_args},{NULL}};
 const struct _parsers hex_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers pause_parsers[]={{NULL},{NULL},{NULL},{NULL},{NULL}};

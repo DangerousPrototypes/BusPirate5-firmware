@@ -16,6 +16,7 @@
 #include "storage.h"
 #include "mem.h"
 #include "ui/ui_cmdln.h"
+#include "ui/ui_args.h"
 
 
 FATFS fs;		/* FatFs work area needed for each volume */
@@ -223,8 +224,11 @@ void hex(opt_args (*args), struct command_result *res)
     {
         return;
     }*/
+    arg_var_t arg;
+    char location[32];
+    ui_args_find_string(&arg, sizeof(location), location);    
 
-    fr = f_open(&fil, args[0].c, FA_READ);	
+    fr = f_open(&fil, location, FA_READ);	
     if (fr != FR_OK) {
         //no config file or TF flash card
         file_error(fr);
@@ -275,8 +279,11 @@ void cat(opt_args (*args), struct command_result *res)
     {
         return;
     }*/
+    arg_var_t arg;
+    char location[32];
+    ui_args_find_string(&arg, sizeof(location), location);    
 
-    fr = f_open(&fil, args[0].c, FA_READ);	
+    fr = f_open(&fil, location, FA_READ);	
     if (fr != FR_OK) {
         //no config file or TF flash card
         file_error(fr);
@@ -302,13 +309,23 @@ void cat(opt_args (*args), struct command_result *res)
 void make_dir(opt_args (*args), struct command_result *res)
 {
     FRESULT fr;
-    fr = f_mkdir(args[0].c);
+    
+    arg_var_t arg;
+    char location[32];
+    ui_args_find_string(&arg, sizeof(location), location);
+
+    fr = f_mkdir(location);
     file_error(fr);
 }
 void change_dir(opt_args (*args), struct command_result *res)
 {
     FRESULT fr;
-    fr = f_chdir(args[0].c);
+    
+    arg_var_t arg;
+    char location[32];
+    ui_args_find_string(&arg, sizeof(location), location);
+
+    fr = f_chdir(location);
 
     if(fr)
     {
@@ -324,7 +341,10 @@ void change_dir(opt_args (*args), struct command_result *res)
 void storage_unlink(opt_args (*args), struct command_result *res)
 {
     FRESULT fr;
-    fr = f_unlink(args[0].c);
+    arg_var_t arg;
+    char location[32];
+    ui_args_find_string(&arg, sizeof(location), location);    
+    fr = f_unlink(location);
     file_error(fr);
 }
 
@@ -335,7 +355,10 @@ void list_dir(opt_args (*args), struct command_result *res)
     FILINFO fno;
     int nfile, ndir; 
 
-    fr = f_opendir(&dir, args[0].c);                       /* Open the directory */
+    arg_var_t arg;
+    char location[32];
+    ui_args_find_string(&arg, sizeof(location), location);
+    fr = f_opendir(&dir, location);                       /* Open the directory */
     //TCHAR str[128];
     //fr = f_getcwd(str, 128);  /* Get current directory path */
     //printf("%s\r\n",str);

@@ -11,31 +11,39 @@
 #include "ui/ui_const.h"
 #include "ui/ui_term.h"
 #include "ui/ui_info.h"
+#include "ui/ui_args.h"
 
 #include "freq.h"
 
 void freq_single(opt_args (*args), struct command_result *res)
 {
-    if(args[0].no_value) //show config menu
+    uint32_t temp;
+    arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &temp);
+    if(!has_value) //show config menu
     {
         if(!freq_configure_disable()) res->error=1;
     }
     else //single measurement
     {
-        if(!freq_measure(args[0].i, false)) res->error=1;
+        if(!freq_measure(temp, false)) res->error=1;
     }
 
 }
 
 void freq_cont(opt_args (*args), struct command_result *res)
 {
-    if(args[0].no_value) //show config menu
+    uint32_t temp;
+    arg_var_t arg;
+	bool has_value=ui_args_find_uint32(&arg, &temp);
+
+    if(!has_value) //show config menu
     {
         if(!freq_configure_enable()) res->error=1;
     }
     else //continuous measurement
     {
-        if(!freq_measure(args[0].i, true)) res->error=1;
+        if(!freq_measure(temp, true)) res->error=1;
     }
 }
 

@@ -10,6 +10,7 @@ uint32_t storage_save_config(void);
 bool storage_format_base(void);
 //void file_error(FRESULT res);
 bool storage_save_binary_blob_rollover(char *data, uint32_t ptr,uint32_t size, uint32_t rollover);
+void storage_file_error(uint8_t res);
 
 struct _mode_config_t { char tag[30]; uint32_t *config;};
 uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t, uint8_t count);

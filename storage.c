@@ -208,6 +208,14 @@ uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t
     return 1;
 }
 
+void storage_file_error(uint8_t res)
+{
+    if(res>0)
+    {
+        printf("%sError:%s %s%s", ui_term_color_error(),ui_term_color_info(), fresult_msg[res], ui_term_color_reset());
+    }
+}
+
 void file_error(FRESULT res)
 {
     if(res>0)

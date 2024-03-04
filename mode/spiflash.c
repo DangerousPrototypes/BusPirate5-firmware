@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -203,7 +204,7 @@ spiflash_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, u
     //open file
     fr = f_open(&fil, file_name, FA_WRITE | FA_CREATE_ALWAYS);	
     if (fr != FR_OK) {
-        printf("File error %d", fr);
+        storage_file_error(fr);
         return false;
     }
 
@@ -222,7 +223,7 @@ spiflash_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, u
         if(fr != FR_OK || bw!=read_count)
         {
             ui_term_progress_bar_cleanup(&progress_bar);
-            printf("Disk access error\r\n");
+            storage_file_error(fr);
             return false;
         }       
         current_address+=read_count;         
@@ -232,6 +233,141 @@ spiflash_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, u
 
     ui_term_progress_bar_cleanup(&progress_bar);
     printf("Dump OK\r\n"); 
+    return true;  
+}
+
+bool 
+spiflash_load(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info, const char *file_name)
+{
+    uint32_t bytes_total=(end_address-start_address);
+    uint32_t current_address=start_address;
+    FIL fil;			/* File object needed for each open file */
+    FRESULT fr;     /* FatFs return code */
+    UINT bw;
+
+    printf("Loading from %s...\r\n", file_name);
+
+    //open file
+    fr = f_open(&fil, file_name, FA_READ);	
+    if (fr != FR_OK) {
+        storage_file_error(fr);
+        return false;
+    }
+
+    //match file size to chip capacity
+    uint32_t file_size=f_size(&fil);
+    printf("File size: %d, chip size: %d\r\n", file_size, end_address-start_address);    
+    if(file_size>(end_address-start_address)){
+        printf("Warning: file too large, writing first %d bytes\r\n", end_address-start_address);
+    }else if(file_size<(end_address-start_address)){
+        printf("Warning: file smaller than chip capacity, writing first %d bytes\r\n", file_size);
+    }else{
+        printf("File size matches chip capacity, writing %d bytes\r\n", file_size);
+    }
+
+    ui_term_progress_bar_t progress_bar;
+    ui_term_progress_bar_draw(&progress_bar); 
+    while(true){
+        ui_term_progress_bar_update(bytes_total - (end_address-current_address), bytes_total, &progress_bar);
+        uint32_t write_count=spiflash_next_count(current_address, end_address, buf_size);
+        size_t file_read_count;
+        fr = f_read(&fil, buf, write_count, &file_read_count); /* Read a chunk of data from the source file */
+        if (file_read_count == 0)
+        {
+            ui_term_progress_bar_cleanup(&progress_bar);
+            printf("Warning: end of file, aborting");
+            break; /* error or eof */
+        }
+
+        //zero out rest of array if file is smaller than buffer
+        if(file_read_count<write_count)
+        {
+            memset(buf+file_read_count, 0xff, write_count-file_read_count);
+        }
+
+        if(sfud_write(flash_info, current_address, write_count, buf)!=SFUD_SUCCESS)
+        {
+            ui_term_progress_bar_cleanup(&progress_bar);
+            printf("\r\nError: write failed\r\n");
+            return false;
+        }
+        current_address+=write_count;     
+        if(current_address==end_address) break;//done!
+    }    
+    f_close(&fil);
+
+    ui_term_progress_bar_cleanup(&progress_bar);
+    printf("Program OK\r\n"); 
+    return true;  
+}
+
+bool 
+spiflash_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, uint8_t *buf2, sfud_flash *flash_info, const char *file_name)
+{
+    uint32_t bytes_total=(end_address-start_address);
+    uint32_t current_address=start_address;
+    FIL fil;			/* File object needed for each open file */
+    FRESULT fr;     /* FatFs return code */
+    UINT bw;
+
+    printf("Verifying from %s...\r\n", file_name);
+    //match file size to chip capacity
+    uint32_t file_size=f_size(&fil);
+    printf("File size: %d, chip size:%d\r\n", file_size, end_address-start_address);
+    if(file_size>(end_address-start_address)){
+        printf("Warning: file larger than chip, verifying first %d bytes\r\n", end_address-start_address);
+    }else if(file_size<(end_address-start_address)){
+        printf("Warning: file smaller than chip capacity, verifying first %d bytes\r\n", file_size);
+    }else{
+        printf("File size matches chip capacity, verifying %d bytes\r\n", file_size);
+    }    
+
+    //open file
+    fr = f_open(&fil, file_name, FA_READ);	
+    if (fr != FR_OK) {
+        //printf("File error %d", fr);
+        storage_file_error(fr);
+        return false;
+    }
+    //match file size to chip capacity
+
+    ui_term_progress_bar_t progress_bar;
+    ui_term_progress_bar_draw(&progress_bar); 
+    while(true){
+        ui_term_progress_bar_update(bytes_total - (end_address-current_address), bytes_total, &progress_bar);
+        uint32_t read_count=spiflash_next_count(current_address, end_address, buf_size);
+        size_t file_read_count;
+        fr = f_read(&fil, buf, read_count, &file_read_count); /* Read a chunk of data from the source file */
+        if (file_read_count == 0)
+        {
+            ui_term_progress_bar_cleanup(&progress_bar);
+            printf("Warning: end of file, aborting");
+            break; /* error or eof */
+        }
+
+        if(sfud_read(flash_info, current_address, read_count, buf2)!=SFUD_SUCCESS)
+        {
+            ui_term_progress_bar_cleanup(&progress_bar);  
+            printf("\r\nError: read failed\r\n");
+            return false;
+        }
+
+        for(uint32_t i=0; i<file_read_count; i++)
+        {
+            if(buf[i]!=buf2[i])
+            {
+                ui_term_progress_bar_cleanup(&progress_bar);
+                printf("\r\nError: verify failed at %06x [%02x != %02x]\r\n", (current_address)+i, buf[i], buf2[i]);
+                return false;
+            }
+        }
+        current_address+=read_count;     
+        if(current_address==end_address) break;//done!
+    }    
+    f_close(&fil);
+
+    ui_term_progress_bar_cleanup(&progress_bar);
+    printf("Verify OK\r\n"); 
     return true;  
 }
 

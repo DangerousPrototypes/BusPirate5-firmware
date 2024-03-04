@@ -145,102 +145,18 @@ void flash(struct command_result *res)
         if(!spiflash_write_verify(start_address, end_address, sizeof(data), data, &flash_info)) return;
     }
 
+    if(!test && write)
+    {
+        if(!spiflash_load(start_address, end_address, sizeof(data), data, &flash_info, write_file)) return;
+        if(verify)
+        {
+            uint8_t data2[256];
+            if(!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, write_file)) return;
+        }
+    }
+
     if(read)
     {
         if(!spiflash_dump(start_address, end_address, sizeof(data), data, &flash_info, read_file)) return;
     }    
-}
-
-
-void load(struct command_result *res)
-{
-    FIL fil;			/* File object needed for each open file */
-    FRESULT fr;     /* FatFs return code */
-    uint8_t buffer[16]; //TODO: lookup page size...
-    UINT count;
-    uint8_t page_size=16;
-    uint8_t page=0;
-
-    //open file
-    fr = f_open(&fil, buffer, FA_READ);	
-    if (fr != FR_OK) {
-        printf("File error %d", fr);
-        res->error=true;
-        return;
-    }
-    printf("Writing...");
-    //write bytes to eeprom
-    for (;;) {
-        //setup eeprom write
-        //WREN 0b0000110
-        spi_set_cs(0);
-        spi_write_simple(0b00000110);
-        spi_set_cs(1);
-        //read file
-        fr = f_read(&fil, buffer, sizeof buffer, &count); /* Read a chunk of data from the source file */
-        if (count == 0) break; /* error or eof */
-        
-        //write buffer to EEPROM page
-        spi_set_cs(0);
-        spi_write_simple(0b00000010);
-        spi_write_simple(page_size*page);
-        for(UINT i=0; i<count; i++)
-        {
-            //printf("%c",buffer[i]);
-            spi_write_simple(buffer[i]);
-        }
-        spi_set_cs(1);
-        page++;
-
-        //poll status register for write bit
-        //0b00000001
-        while(true)
-        {
-            spi_set_cs(0);
-            spi_write_simple(0b00000101);
-            uint8_t temp=spi_read_simple();
-            spi_set_cs(1);
-            if(temp && 0b1)
-            {
-                //printf("WIP\r\n");
-                continue;
-            }
-            break;        
-        }
-        
-    }    
-
-    printf(" %d bytes. OK\r\nVerifying...", page*page_size);
-
-    //verify write
-    f_lseek(&fil, 0);
-
-    //read from eeprom
-    spi_set_cs(0);
-    spi_write_simple(0b00000011);
-    spi_write_simple(0);
-    page=0;
-    for(;;)
-    {
-        fr = f_read(&fil, buffer, sizeof buffer, &count); /* Read a chunk of data from the source file */
-        if (count == 0) break; /* error or eof */
-
-        for(UINT i=0; i<count; i++)
-        {
-            if(spi_read_simple()!=buffer[i])
-            {
-                printf("mismatch at %d",count*page);
-                res->error=true;
-                return;
-            };
-        }
-        page++;
-    }
-    spi_set_cs(1);
-    printf("%d bytes OK", page*page_size);
-
-    /* Close open files */
-    f_close(&fil);
-
-
 }

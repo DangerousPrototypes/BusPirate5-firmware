@@ -44,6 +44,7 @@ void flash(struct command_result *res)
     arg_var_t arg;
     char read_file[13];
     char write_file[13];
+    char verify_file[13];
     uint32_t value;
 
     enum arg_types {
@@ -93,7 +94,7 @@ void flash(struct command_result *res)
     //erase chip?
     bool erase = ui_args_find_flag_novalue('e'|0x20, &arg);
     //verify chip?
-    bool verify = ui_args_find_flag_novalue('v'|0x20, &arg);
+    bool verify = ui_args_find_flag_string('v'|0x20, &arg, sizeof(verify_file), verify_file);
     //read?
     bool read = ui_args_find_flag_string('r'|0x20, &arg, sizeof(read_file), read_file);
     //to file?
@@ -158,5 +159,10 @@ void flash(struct command_result *res)
     if(read)
     {
         if(!spiflash_dump(start_address, end_address, sizeof(data), data, &flash_info, read_file)) return;
-    }    
+    }  
+
+    if(!test && verify && verify_file[0]!=0)
+    {
+        if(!spiflash_verify(start_address, end_address, sizeof(data), data, data, &flash_info, verify_file)) return; 
+    }  
 }

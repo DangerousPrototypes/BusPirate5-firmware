@@ -310,18 +310,6 @@ spiflash_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size,
     FRESULT fr;     /* FatFs return code */
     UINT bw;
 
-    printf("Verifying from %s...\r\n", file_name);
-    //match file size to chip capacity
-    uint32_t file_size=f_size(&fil);
-    printf("File size: %d, chip size:%d\r\n", file_size, end_address-start_address);
-    if(file_size>(end_address-start_address)){
-        printf("Warning: file larger than chip, verifying first %d bytes\r\n", end_address-start_address);
-    }else if(file_size<(end_address-start_address)){
-        printf("Warning: file smaller than chip capacity, verifying first %d bytes\r\n", file_size);
-    }else{
-        printf("File size matches chip capacity, verifying %d bytes\r\n", file_size);
-    }    
-
     //open file
     fr = f_open(&fil, file_name, FA_READ);	
     if (fr != FR_OK) {
@@ -330,6 +318,19 @@ spiflash_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size,
         return false;
     }
     //match file size to chip capacity
+
+    printf("Verifying from %s...\r\n", file_name);
+    //match file size to chip capacity
+    uint32_t file_size=f_size(&fil);
+    printf("File size: %d, chip size:%d\r\n", file_size, end_address-start_address);
+    if(file_size>(end_address-start_address)){
+        printf("Warning: file larger than chip, verifying first %d bytes\r\n", end_address-start_address);
+    }else if(file_size<(end_address-start_address)){
+        printf("Warning: file smaller than chip capacity, verifying first %d bytes\r\n", file_size);
+        //TODO: adjust bytes total and end address so progress indicators work
+    }else{
+        printf("File size matches chip capacity, verifying %d bytes\r\n", file_size);
+    }    
 
     ui_term_progress_bar_t progress_bar;
     ui_term_progress_bar_draw(&progress_bar); 

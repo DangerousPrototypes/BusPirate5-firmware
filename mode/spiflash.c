@@ -561,7 +561,7 @@ void spiflash_probe(void)
     flash_start();
     flash_write_32(0x5a000000, 4);
     flash_write(0xff); //dummy byte
-    uint8_t sfdp[36];
+    uint8_t sfdp[128];
     flash_read_n(sfdp,8);
     flash_stop();
 

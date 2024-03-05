@@ -25,9 +25,9 @@
 #define M_SPI_DESELECT 1
 
 static const char pin_labels[][5]={
-	"SCLK",
-	"CDO",
-	"CDI",
+	"CLK",
+	"MOSI",
+	"MISO",
 	"CS"
 };
 

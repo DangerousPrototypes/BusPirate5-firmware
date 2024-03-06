@@ -630,7 +630,25 @@ void spiflash_probe(void)
                 printf("\r\n");
                 ptp_jedec_t *ptp_j;
                 ptp_j = (ptp_jedec_t *)&sfdp;
-                printf("Density: %dbits ( %dBytes)\r\nAddress bytes: ", ptp_j->density, ptp_j->density/1024);  
+
+                uint32_t capacity;
+                if(!((ptp_j->density>>31) & 0b1)) 
+                {
+                        capacity = 1 + (ptp_j->density >> 3);
+                }
+                else
+                {
+                    capacity = ptp_j->density & 0x7FFFFFFF;
+                    if (capacity > 4U * 8 + 3) {
+                        printf("Error: The flash capacity is grater than 32 Gb/ 4 GB! Not Supported.\r\n");
+                        capacity=0;
+                    }
+                    else
+                    {
+                        capacity = 1L << (capacity - 3);
+                    }
+                }
+                printf("Density: %d bytes\r\nAddress bytes: ", capacity);  
                 switch(ptp_j->address_bytes)
                 {
                     case 0:

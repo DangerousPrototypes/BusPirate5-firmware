@@ -38,6 +38,11 @@ void helpers_selftest_base(void)
     #define SELF_TEST_LOW_LIMIT 300
     uint32_t temp1, temp2, fails;
 
+    if(system_config.mode!=0) //only allow selftest in HiZ mode
+    {
+        printf("Selftest only available in HiZ mode\r\n");
+        return;
+    }
 
     fails=0;
     

@@ -11,6 +11,19 @@ struct _command_pointer {
     uint32_t rptr;
 };
 
+struct _command_info_t {
+    uint32_t rptr;
+    uint32_t wptr;
+    uint32_t startptr;
+    uint32_t endptr;
+    uint32_t nextptr;
+    char delimiter;
+    char command[9];
+};
+bool cmdln_args_string_by_position(struct _command_info_t *cp, uint32_t pos);
+bool cmdln_find_next_command(struct _command_info_t *cp);
+bool cmdln_info(void);
+
 // update a command line buffer pointer with rollover
 uint32_t cmdln_pu(uint32_t i); 
 // try to add a byte to the command line buffer, return false if buffer full

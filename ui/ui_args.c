@@ -18,6 +18,9 @@
 //TODO: parsing based on position is so much better than dancing around 
 // a global unknown pointer in the cmdln code
 // combine these parsing functions with the ui_parse functions....
+//TODO: inline function to check for end of current command
+//TODO: cmdln function scans through to mark end of current command and manages it for us?
+
 
 static const struct prompt_result empty_result;
 

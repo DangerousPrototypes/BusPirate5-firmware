@@ -26,6 +26,9 @@ bool ui_process_commands(void)
 {
     char c,d;
 
+    cmdln_info();
+    return;
+
     if(!cmdln_try_peek(0,&c))
     {
         return false;

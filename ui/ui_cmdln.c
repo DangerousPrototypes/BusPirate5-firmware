@@ -4,10 +4,13 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
+
+#include "ui/ui_args.h"
 #include "ui/ui_cmdln.h"
 
 // the command line struct with buffer and several pointers
-struct _command_line cmdln;
+struct _command_line cmdln; //everything the user entered before <enter>
+struct _command_info_t command_info; //the current command and position in the buffer
 
 void cmdln_init(void)
 {
@@ -146,42 +149,79 @@ bool cmdln_find_next_command(void)
 }
 #endif
 
-bool cmdln_args_string_by_position(struct _command_info_t *cp, uint32_t pos)
+bool cmdln_consume_white_space(uint32_t *rptr)
+{
+    //consume white space
+    while(true)
+    {
+        char c;
+        //no more characters
+        if(!(command_info.endptr>=command_info.startptr+(*rptr) && cmdln_try_peek(command_info.startptr+(*rptr), &c)))
+        {
+            return false;
+        }
+        if(c==' '){ //consume white space
+            //printf("Whitespace at %d\r\n", cp->startptr+rptr);  
+            (*rptr)++;
+        }else{
+            break;
+        }
+    }
+    return true;
+}
+
+// internal function to take copy string from start position to next space or end of buffer
+bool cmdln_args_get_string(uint32_t start_pos, uint32_t max_len, char *string)
+{
+    char c;
+    uint32_t rptr=start_pos;
+
+    for(uint32_t i=0; i<max_len; i++)
+    {
+        //no more characters
+        if((!(command_info.endptr>=command_info.startptr+rptr && cmdln_try_peek(command_info.startptr+rptr, &c)))
+            || c==' ' || i==(max_len-1))
+        {
+            string[i]=0x00;
+            if(i==0) return false;
+            else return true;
+        }
+        string[i]=c;
+        start_pos++;
+    }
+    
+}
+
+bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char *str)
 {
     char c;
     uint32_t rptr=0;
-    memset(cp->command, 0x00, 9);
+    memset(str, 0x00, max_len);
     //start at beginning of command range
+    #ifdef UI_CMDLN_ARGS_DEBUG
     printf("Looking for string in pos %d\r\n", pos);
+    #endif
     for(uint32_t i=0; i<pos+1; i++)
     {
         //consume white space
-        while(true)
+        if(!cmdln_consume_white_space(&rptr))
         {
-            //no more characters
-            if(!(cp->endptr>=cp->startptr+rptr && cmdln_try_peek(cp->startptr+rptr, &c)))
-            {
-                return false;
-            }
-            if(c==' '){ //consume white space
-                //printf("Whitespace at %d\r\n", cp->startptr+rptr);  
-                rptr++;
-            }else{
-                break;
-            }
+            return false;
         }
-
         //consume non-white space
         uint32_t charcnt=0;
         while(true)
         {
             //no more characters
-            if(!(cp->endptr>=cp->startptr+rptr && cmdln_try_peek(cp->startptr+rptr, &c)))
+            if(!(command_info.endptr>=command_info.startptr+rptr && cmdln_try_peek(command_info.startptr+rptr, &c)))
             {
                 // is this the position we're after?
                 // do we have any characters??
                 if(i==pos && charcnt>0){
+                    #ifdef UI_CMDLN_ARGS_DEBUG
                     printf("Found pos %d\r\n", i);
+                    #endif
+                    str[charcnt]=0x00;
                     return true;
                 }else{                
                     return false;
@@ -190,10 +230,10 @@ bool cmdln_args_string_by_position(struct _command_info_t *cp, uint32_t pos)
 
             //not a space so consume it
             if(c!=' '){
-                if((i==pos) && charcnt<8)
+                if((i==pos) && charcnt<(max_len-1))
                 {
                     //printf("Char at %d: %c\r\n", cp->startptr+rptr, c);
-                    cp->command[charcnt]=c;
+                    str[charcnt]=c;
                     charcnt++;
                 }
                 rptr++;
@@ -201,7 +241,10 @@ bool cmdln_args_string_by_position(struct _command_info_t *cp, uint32_t pos)
                 // is this the position we're after?
                 if(i==pos)
                 {
+                    #ifdef UI_CMDLN_ARGS_DEBUG
                     printf("Found pos %d\r\n", i);
+                    #endif
+                    str[charcnt]=0x00;
                     return true;
                 }                    
                 break;
@@ -221,7 +264,9 @@ bool cmdln_find_next_command(struct _command_info_t *cp)
     char c,d;
     if(!cmdln_try_peek(cp->endptr, &c))
     {
+        #ifdef UI_CMDLN_ARGS_DEBUG
         printf("End of command line input at %d\r\n", cp->endptr);
+        #endif
         cp->delimiter=false; //0 = end of command input
         return false;
     }
@@ -232,43 +277,49 @@ bool cmdln_find_next_command(struct _command_info_t *cp)
         bool got_pos2=cmdln_try_peek(cp->endptr+1, &d);
         if(!got_pos1)
         {
+            #ifdef UI_CMDLN_ARGS_DEBUG
             printf("Last/only command line input: pos1=%d, c=%d\r\n", got_pos1, c);
+            #endif
             cp->delimiter=false; //0 = end of command input
             cp->nextptr=cp->endptr;
-            return true;
+            goto cmdln_find_next_command_success;
         }
         else if(c==';')
         {
+            #ifdef UI_CMDLN_ARGS_DEBUG
             printf("Got end of command: ; position: %d, \r\n", cp->endptr);
+            #endif
             cp->delimiter=';';
             cp->nextptr=cp->endptr+1;
-            return true;
+            goto cmdln_find_next_command_success;
         }
-        else if(got_pos2 && (c=='|' && d=='|'))
+        else if(got_pos2 && ((c=='|' && d=='|')||(c=='&' && d=='&')))
         {
-            printf("Got end of command: || position: %d, \r\n", cp->endptr);
-            cp->delimiter='|';
+            #ifdef UI_CMDLN_ARGS_DEBUG
+            printf("Got end of command: %c position: %d, \r\n", c, cp->endptr);
+            #endif
+            cp->delimiter=c;
             cp->nextptr=cp->endptr+2;
-            return true;
-        }
-        else if(got_pos2 && (c=='&' && d=='&'))
-        {
-            printf("Got end of command: && position: %d, \r\n", cp->endptr);
-            cp->nextptr=cp->endptr+2;
-            cp->delimiter='&';
-            return true;
+            goto cmdln_find_next_command_success;
         }else if(i<8)
         {
             cp->command[i]=c;
+            if(c==' ') i=8; //stop at space if possible
             i++;
         }
         cp->endptr++;
-
     }
+cmdln_find_next_command_success:
+    cp->endptr--;    
+    command_info.startptr=cp->startptr;
+    command_info.endptr = cp->endptr;
+    return true;
 }
 
 
-bool cmdln_info(void)
+//function for debugging the command line arguments parsers
+// shows all commands and all detected positions
+/*bool cmdln_info(void)
 {
     //start and end point?
     printf("Input start: %d, end %d\r\n",cmdln.rptr, cmdln.wptr);
@@ -286,10 +337,64 @@ bool cmdln_info(void)
             printf("String pos: %d, value: %s\r\n", pos, cp.command);
             pos++;
         }
-
-        
     }
+}*/
 
+
+bool cmdln_args_find_arg(char flag, command_var_t *arg)
+{
+    uint32_t rptr=0;
+    char flag_c, dash_c;
+    arg->error=false;
+    arg->has_arg=false;
+    while(command_info.endptr>=(command_info.startptr+rptr+1) && cmdln_try_peek(rptr, &dash_c) && cmdln_try_peek(rptr+1, &flag_c))
+    {
+        if(dash_c=='-' && flag_c==flag)
+        {
+            arg->has_arg=true;
+
+            if( (!cmdln_consume_white_space(&rptr))
+                || (!(command_info.endptr>=(command_info.startptr+rptr))) //end of buffer, no value
+                || (cmdln_try_peek(rptr, &dash_c) && dash_c!='-')) //next argument, no value
+            { 
+                arg->has_value=false;
+                return true;
+            } 
+            arg->has_value=true; 
+            arg->value_pos=rptr;
+            return true; 
+        }
+        rptr++;
+    }
+    return false;
+}
+
+
+
+//check if a flag is present and get the string value
+// returns true if flag is present AND has a string value
+// check arg to see if a flag was present with no string value
+bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len, char *value)
+{
+    if(!cmdln_args_find_arg(flag, arg)) return false;
+
+    if(arg->has_value)
+    {
+        if(!cmdln_args_get_string(arg->value_pos, max_len, value))
+        {
+            arg->error=true;
+            return false;
+        }
+    }
+    return true;
+}
+
+// check if a -f(lag) is present. Value is don't care.
+// returns true if flag is present
+bool cmdln_find_flag(char flag, command_var_t *arg)
+{
+    if(!cmdln_args_find_arg(flag, arg)) return false;
+    return true;
 }
 
 

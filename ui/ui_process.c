@@ -22,83 +22,87 @@
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
 static const struct command_result result_blank;
 
+bool ui_process_syntax(void)
+{
+    if(syntax_compile())
+    {
+            printf("Syntax compile error\r\n");
+            return true;
+    }
+    multicore_fifo_push_blocking(0xf0);
+    multicore_fifo_pop_blocking();
+    if(syntax_run())
+    {
+            multicore_fifo_push_blocking(0xf1);
+            multicore_fifo_pop_blocking(); 
+            printf("Syntax execution error\r\n");
+            return true;
+    }
+    multicore_fifo_push_blocking(0xf1);
+    multicore_fifo_pop_blocking();            
+    if(syntax_post())
+    {
+            printf("Syntax post process error\r\n");
+            return true;
+    }
+    //printf("Bus Syntax: Success\r\n");
+    return false;
+}
+
+bool ui_process_macro(void)
+{
+    uint32_t temp;
+    prompt_result result;
+    cmdln_try_discard(1);
+    ui_parse_get_macro(&result, &temp);   
+    if(result.success)
+    {
+        modes[system_config.mode].protocol_macro(temp);
+    }
+    else
+    {
+        printf("%s\r\n",t[T_MODE_ERROR_PARSING_MACRO]);
+        return true;
+    }  
+    return false;  
+}
+
 bool ui_process_commands(void)
 {
     char c,d;
 
-    cmdln_info();
-    return;
-
-    if(!cmdln_try_peek(0,&c))
+    struct _command_info_t cp;
+    cp.nextptr=0;
+    
+    while(true)
     {
-        return false;
-    }
-
-    while(cmdln_try_peek(0,&c))
-    {
-        if(c==' ') //discard whitespace
-        {
-            cmdln_try_discard(1);
-            continue;
-        }
-
-        if(c=='[' || c=='>' || c=='{') //first character is { [ or >, process as syntax
-        {
-            if(syntax_compile())
-            {
-                    printf("Syntax compile error\r\n");
-                    return true;
-            }
-            multicore_fifo_push_blocking(0xf0);
-            multicore_fifo_pop_blocking();
-            if(syntax_run())
-            {
-                    multicore_fifo_push_blocking(0xf1);
-                    multicore_fifo_pop_blocking(); 
-                    printf("Syntax execution error\r\n");
-                    return true;
-            }
-            multicore_fifo_push_blocking(0xf1);
-            multicore_fifo_pop_blocking();            
-            if(syntax_post())
-            {
-                    printf("Syntax post process error\r\n");
-                    return true;
-            }
-            //printf("Bus Syntax: Success\r\n");
-            return false;
-        }
-
-        //MODE macros
-        if(c=='(') //first character is (, mode macro
-        {
-            uint32_t temp;
-            prompt_result result;
-            cmdln_try_discard(1);
-            ui_parse_get_macro(&result, &temp);   
-            if(result.success)
-            {
-                modes[system_config.mode].protocol_macro(temp);
-            }
-            else
-            {
-                printf("%s\r\n",t[T_MODE_ERROR_PARSING_MACRO]);
-                return true;
-            }  
-            return false;  
-        }       
+        if(!cmdln_find_next_command(&cp)) return false;
         
+        switch(cp.command[0])
+        {
+            case '[':
+            case '>':
+            case '{':
+            case ']':
+            case '}':
+                return ui_process_syntax(); //first character is { [ or >, process as syntax
+                break;
+            case '(':
+                return ui_process_macro(); //first character is (, mode macro
+                break;
+
+        }
         //process as a command
         char command_string[MAX_COMMAND_LENGTH];
-        arg_var_t arg;
-        ui_args_find_string_discard(&arg, true, sizeof(command_string), command_string);
-        if(!arg.has_value)
+ 
+        //string 0 is the command
+        // continue if we don't get anything? could be an empty chained command? should that be error?
+        if(!cmdln_args_string_by_position(0, sizeof(command_string), command_string))
         {
-            return false;
-        }
+            continue;
+        }   
 
-        bool cmd_valid=false;
-        bool mode_cmd=false;
+        bool mode_cmd, cmd_valid =false;
         uint32_t user_cmd_id=0;
         for(int i=0; i<commands_count; i++)
         {  
@@ -130,10 +134,12 @@ bool ui_process_commands(void)
         }
         //no such command, search TF flash card for runnable scripts
 
-        //global help handler TODO: make optional
-        ui_args_find_flag_novalue('h', &arg);
+        //global help handler (optional, set config in commands.c)
+        //ui_args_find_flag_novalue('h', &arg);
+        command_var_t arg;
+        cmdln_find_flag('h', &arg );
         if(arg.has_arg && (commands[user_cmd_id].help_text!=0x00))
-        {
+        { 
             printf("%s\r\n",t[commands[user_cmd_id].help_text]);
             return false;
         }
@@ -150,37 +156,14 @@ bool ui_process_commands(void)
 cmd_ok:
         printf("%s\r\n", ui_term_color_reset());
 
-        while(cmdln_try_peek(0,&c))
+        switch(cp.delimiter) //next action based on the command delimiter
         {
-            if(c==';') //next command
-            {
-                cmdln_try_discard(1);
-                break;
-            }
-
-            if(!cmdln_try_peek(1,&d))
-            {
-                return false;
-            }
-
-            if(c=='|' && d=='|') //perform next command if last failed
-            {
-                cmdln_try_discard(2);
-                if(!result.error) return false;
-                break;
-
-            }
-            else if(c=='&' && d=='&') // perform next command if previous was successful
-            {
-                cmdln_try_discard(2);
-                if(result.error) return false;
-                break;
-            }
-
-            cmdln_try_discard(1);
+            case 0: return false; //done
+            case ';': break; //next command
+            case '|': if(!result.error) return false; break; //perform next command if last failed
+            case '&': if(result.error) return false; break; //perform next if last success
         }
     }
-
     return false;
 }
 

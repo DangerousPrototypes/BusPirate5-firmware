@@ -20,9 +20,20 @@ struct _command_info_t {
     char delimiter;
     char command[9];
 };
-bool cmdln_args_string_by_position(struct _command_info_t *cp, uint32_t pos);
+
+typedef struct command_var_struct {
+    bool has_arg;
+    bool has_value;
+    uint32_t value_pos;
+    bool error;
+    uint8_t number_format;
+} command_var_t;
+
+bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len, char *value);
+bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char *str);
 bool cmdln_find_next_command(struct _command_info_t *cp);
 bool cmdln_info(void);
+bool cmdln_find_flag(char flag, command_var_t *arg);
 
 // update a command line buffer pointer with rollover
 uint32_t cmdln_pu(uint32_t i); 

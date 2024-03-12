@@ -89,6 +89,7 @@ void flash(struct command_result *res)
 
     //init chip? (default action)
     //bool init = ui_args_find_flag_novalue('i'|0x20, &arg);
+    command_var_t cmd_args;
     //probe chip? 
     bool probe = ui_args_find_flag_novalue('p'|0x20, &arg);
     //erase chip?
@@ -96,7 +97,7 @@ void flash(struct command_result *res)
     //verify chip?
     bool verify = ui_args_find_flag_string('v'|0x20, &arg, sizeof(verify_file), verify_file);
     //read?
-    bool read = ui_args_find_flag_string('r'|0x20, &arg, sizeof(read_file), read_file);
+    bool read = cmdln_args_find_flag_string('r'|0x20, &cmd_args, sizeof(read_file), read_file);
     //to file?
     if(read && !arg.has_value)
     {

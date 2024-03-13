@@ -7,7 +7,6 @@
 #include "opt_args.h"
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
-//#include "fatfs/tf_card.h"
 #include "bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -16,8 +15,6 @@
 #include "storage.h"
 #include "mem.h"
 #include "ui/ui_cmdln.h"
-#include "ui/ui_args.h"
-
 
 FATFS fs;		/* FatFs work area needed for each volume */
 FIL fil;			/* File object needed for each open file */
@@ -232,9 +229,8 @@ void hex(struct command_result *res)
     {
         return;
     }*/
-    arg_var_t arg;
     char location[32];
-    ui_args_find_string(&arg, sizeof(location), location);    
+    cmdln_args_string_by_position(1, sizeof(location), location);
 
     fr = f_open(&fil, location, FA_READ);	
     if (fr != FR_OK) {
@@ -287,9 +283,8 @@ void cat(struct command_result *res)
     {
         return;
     }*/
-    arg_var_t arg;
     char location[32];
-    ui_args_find_string(&arg, sizeof(location), location);    
+    cmdln_args_string_by_position(1, sizeof(location), location);    
 
     fr = f_open(&fil, location, FA_READ);	
     if (fr != FR_OK) {
@@ -318,9 +313,8 @@ void make_dir(struct command_result *res)
 {
     FRESULT fr;
     
-    arg_var_t arg;
     char location[32];
-    ui_args_find_string(&arg, sizeof(location), location);
+    cmdln_args_string_by_position(1, sizeof(location), location);  
 
     fr = f_mkdir(location);
     file_error(fr);
@@ -329,9 +323,8 @@ void change_dir(struct command_result *res)
 {
     FRESULT fr;
     
-    arg_var_t arg;
     char location[32];
-    ui_args_find_string(&arg, sizeof(location), location);
+    cmdln_args_string_by_position(1, sizeof(location), location);  
 
     fr = f_chdir(location);
 
@@ -349,9 +342,8 @@ void change_dir(struct command_result *res)
 void storage_unlink(struct command_result *res)
 {
     FRESULT fr;
-    arg_var_t arg;
     char location[32];
-    ui_args_find_string(&arg, sizeof(location), location);    
+    cmdln_args_string_by_position(1, sizeof(location), location);  
     fr = f_unlink(location);
     file_error(fr);
 }
@@ -363,9 +355,8 @@ void list_dir(struct command_result *res)
     FILINFO fno;
     int nfile, ndir; 
 
-    arg_var_t arg;
     char location[32];
-    ui_args_find_string(&arg, sizeof(location), location);
+    cmdln_args_string_by_position(1, sizeof(location), location);  
     fr = f_opendir(&dir, location);                       /* Open the directory */
     //TCHAR str[128];
     //fr = f_getcwd(str, 128);  /* Get current directory path */

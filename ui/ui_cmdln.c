@@ -6,17 +6,14 @@
 #include "system_config.h"
 #include "ui/ui_const.h"
 #include "ui/ui_prompt.h"
-#include "ui/ui_args.h"
 #include "ui/ui_cmdln.h"
-
 
 // the command line struct with buffer and several pointers
 struct _command_line cmdln; //everything the user entered before <enter>
 struct _command_info_t command_info; //the current command and position in the buffer
 static const struct prompt_result empty_result;
 
-void cmdln_init(void)
-{
+void cmdln_init(void){
 	for(uint32_t i=0; i<UI_CMDBUFFSIZE; i++) cmdln.buf[i]=0x00;
 	cmdln.wptr=0;
     cmdln.rptr=0;
@@ -24,22 +21,18 @@ void cmdln_init(void)
     cmdln.cursptr=0;  
 }
 //pointer update, rolls over
-uint32_t cmdln_pu(uint32_t i)
-{
+uint32_t cmdln_pu(uint32_t i){
     return ((i)&(UI_CMDBUFFSIZE-1));
 }
 
-void cmdln_get_command_pointer(struct _command_pointer *cp)
-{
+void cmdln_get_command_pointer(struct _command_pointer *cp){
     cp->wptr=cmdln.wptr;
     cp->rptr=cmdln.rptr;
 }
 
-bool cmdln_try_add(char *c)
-{
+bool cmdln_try_add(char *c){
     //TODO: leave one space for 0x00 command seperator????
-    if(cmdln_pu(cmdln.wptr+1)==cmdln_pu(cmdln.rptr)) 
-    {
+    if(cmdln_pu(cmdln.wptr+1)==cmdln_pu(cmdln.rptr)) {
         return false;
     }
     cmdln.buf[cmdln.wptr]=(*c); 
@@ -47,10 +40,8 @@ bool cmdln_try_add(char *c)
     return true;
 }
 
-bool cmdln_try_remove(char *c)
-{
-    if(cmdln_pu(cmdln.rptr) == cmdln_pu(cmdln.wptr))
-    {
+bool cmdln_try_remove(char *c){
+    if(cmdln_pu(cmdln.rptr) == cmdln_pu(cmdln.wptr)){
         return false;
     }
 
@@ -59,10 +50,8 @@ bool cmdln_try_remove(char *c)
     return true;
 }
 
-bool cmdln_try_peek(uint32_t i, char *c)
-{
-    if(cmdln_pu(cmdln.rptr+i)==cmdln_pu(cmdln.wptr))
-    {
+bool cmdln_try_peek(uint32_t i, char *c){
+    if(cmdln_pu(cmdln.rptr+i)==cmdln_pu(cmdln.wptr)){
         return false;
     }
 
@@ -73,10 +62,8 @@ bool cmdln_try_peek(uint32_t i, char *c)
     return true;
 }
 
-bool cmdln_try_peek_pointer(struct _command_pointer *cp, uint32_t i, char *c)
-{
-    if(cmdln_pu(cp->rptr+i)==cmdln_pu(cp->wptr))
-    {
+bool cmdln_try_peek_pointer(struct _command_pointer *cp, uint32_t i, char *c){
+    if(cmdln_pu(cp->rptr+i)==cmdln_pu(cp->wptr)){
         return false;
     }
 
@@ -84,8 +71,7 @@ bool cmdln_try_peek_pointer(struct _command_pointer *cp, uint32_t i, char *c)
     return true;
 }
 
-bool cmdln_try_discard(uint32_t i)
-{
+bool cmdln_try_discard(uint32_t i){
     //this isn't very effective, maybe just not use it??
     //if(cmdln_pu(cmdln.rptr+i) == cmdln_pu(cmdln.wprt))
     //{
@@ -95,8 +81,7 @@ bool cmdln_try_discard(uint32_t i)
     return true;
 }
 
-bool cmdln_next_buf_pos(void)
-{
+bool cmdln_next_buf_pos(void){
     cmdln.rptr=cmdln.wptr; 
     cmdln.cursptr=cmdln.wptr; 
     cmdln.histptr=0;
@@ -106,22 +91,17 @@ bool cmdln_next_buf_pos(void)
 // Isolate the next command between the current read pointer and 0x00, (?test?) end of pointer, ; || && (next commmand)
 // functions to move within the single command range
 
-uint32_t cmdln_get_length_pointer(struct _command_line *cp)
-{
-    if(cp->rptr>cp->wptr)
-    {
+uint32_t cmdln_get_length_pointer(struct _command_line *cp){
+    if(cp->rptr>cp->wptr){
         return (UI_CMDBUFFSIZE - cp->rptr)+cp->wptr;
-    }
-    else
-    {
+    }else{
         return cp->wptr - cp->rptr;
     }
 }
 
 //consume white space (0x20, space)
 // non_white_space = true, consume non-white space characters (not space)
-bool cmdln_consume_white_space(uint32_t *rptr, bool non_white_space)
-{
+bool cmdln_consume_white_space(uint32_t *rptr, bool non_white_space){
     //consume white space
     while(true){
         char c;
@@ -211,8 +191,7 @@ bool cmdln_args_get_bin(uint32_t rptr, struct prompt_result *result, uint32_t *v
 
 //parse a decimal value from the first digit
 //notice, we do not pass rptr by reference, so it is not updated
-bool cmdln_args_get_dec(uint32_t rptr, struct prompt_result *result, uint32_t *value)
-{
+bool cmdln_args_get_dec(uint32_t rptr, struct prompt_result *result, uint32_t *value){
     char c;
     *result=empty_result;    
     result->no_value=true; 
@@ -265,21 +244,19 @@ bool cmdln_args_get_int(uint32_t rptr, struct prompt_result *result, uint32_t *v
 	return result->success;
 }
 
-bool cmdln_args_find_flag_internal(char flag, command_var_t *arg)
-{
+bool cmdln_args_find_flag_internal(char flag, command_var_t *arg){
     uint32_t rptr=0;
     char flag_c, dash_c, space_c;
     arg->error=false;
     arg->has_arg=false;
-    while(command_info.endptr>=(command_info.startptr+rptr+2) 
+    while(command_info.endptr>=(command_info.startptr+rptr+1) 
         && cmdln_try_peek(rptr, &dash_c) 
-        && cmdln_try_peek(rptr+1, &flag_c)
-        && cmdln_try_peek(rptr+2, &space_c))
+        && cmdln_try_peek(rptr+1, &flag_c))
     {
-        if(dash_c=='-' && flag_c==flag && space_c==' '){
+        if(dash_c=='-' && flag_c==flag){
             arg->has_arg=true;
-            rptr=rptr+2;
-            if( (!cmdln_consume_white_space(&rptr, false)) //end of buffer, no value
+            if( (!cmdln_consume_white_space(&rptr, true)) //move past the flag characters
+                || (!cmdln_consume_white_space(&rptr, false)) //move past spaces. @end of buffer, next flag, or value
                 || (cmdln_try_peek(rptr, &dash_c) && dash_c=='-')) //next argument, no value
             { 
                 //printf("No value for flag %c\r\n", flag);
@@ -316,12 +293,11 @@ bool cmdln_args_find_flag_uint32(char flag, command_var_t *arg, uint32_t *value)
 //check if a flag is present and get the integer value
 // returns true if flag is present AND has a integer value
 // use cmdln_args_find_flag to see if a flag was present with no integer value
-bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len, char *value)
-{
+bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len, char *str){
     if(!cmdln_args_find_flag_internal(flag, arg)) return false;
 
     if(arg->has_value){
-        if(!cmdln_args_get_string(arg->value_pos, max_len, value)){
+        if(!cmdln_args_get_string(arg->value_pos, max_len, str)){
             arg->error=true;
             return false;
         }
@@ -331,8 +307,7 @@ bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len
 
 // check if a -f(lag) is present. Value is don't care.
 // returns true if flag is present
-bool cmdln_args_find_flag(char flag, command_var_t *arg)
-{
+bool cmdln_args_find_flag(char flag, command_var_t *arg){
     if(!cmdln_args_find_flag_internal(flag, arg)) return false;
     return true;
 }

@@ -132,7 +132,7 @@ bool ui_process_commands(void){
 
         //global help handler (optional, set config in commands.c)
         command_var_t arg;
-        cmdln_find_flag('h', &arg );
+        cmdln_args_find_flag('h', &arg );
         if(arg.has_arg && (commands[user_cmd_id].help_text!=0x00)){ 
             printf("%s\r\n",t[commands[user_cmd_id].help_text]);
             return false;

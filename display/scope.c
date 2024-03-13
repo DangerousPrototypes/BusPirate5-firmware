@@ -52,7 +52,6 @@ extern const FONT_INFO hunter_12ptFontInfo;
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
 #include "amux.h"
-#include "ui/ui_args.h"
 
 static int convert_trigger_position(int pos);
 
@@ -655,8 +654,7 @@ scope_commands(struct command_result *result)
 //
 
 	char args[3];
-	arg_var_t arg;
-	ui_args_find_string(&arg, sizeof(args), args);
+	cmdln_args_string_by_position(1, sizeof(args), args);
 
 	last = 0;
 	for (;;) {

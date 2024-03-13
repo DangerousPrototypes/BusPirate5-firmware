@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pirate.h"
@@ -11,42 +12,53 @@
 #include "../lib/sfud/inc/sfud_def.h"
 #include "mode/spiflash.h"
 #include "ui/ui_cmdln.h"
-#include "ui/ui_prompt.h"
-#include "ui/ui_const.h"
-#include "ui/ui_args.h"
+//#include "ui/ui_prompt.h"
+//#include "ui/ui_const.h"
 #include "ui/ui_help.h"
 #include "system_config.h"
 #include "amux.h"
 
 const char * const flash_usage[]= 
 {
-    "flash [-i] [-p] [-e] [-w <file>] [-r <file>] [-v] [-t] [-h]",
-    "Initialize and probe: flash -i -p ",
-    "Erase and program, with verify: flash -e -w example.bin -v",
-    "Read to file: flash -r example.bin",
-    "Test chip: flash -t"
+    "flash [init|probe|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
+    "Initialize and probe: flash probe",
+    "Erase and program, with verify: flash write -f example.bin -e -v",
+    "Read to file: flash read -f example.bin",
+    "Verify with file: flash verify -f example.bin",    
+    "Test chip (full erase/write/verify): flash test"
 };
 
 const struct ui_info_help help_flash[]= 
 {
 {1,"", T_HELP_FLASH}, //flash command help
-    {0,"-i", T_HELP_FLASH_INIT}, //init
-    {0,"-p", T_HELP_FLASH_PROBE}, //probe
-    {0,"-e", T_HELP_FLASH_ERASE}, //erase
-    {0,"-w", T_HELP_FLASH_WRITE}, //write
-    {0,"-r",T_HELP_FLASH_READ}, //read
-    {0,"-v",T_HELP_FLASH_VERIFY}, //verify   
-    {0,"-t",T_HELP_FLASH_TEST}, //verify     
+    {0,"init", T_HELP_FLASH_INIT}, //init
+    {0,"probe", T_HELP_FLASH_PROBE}, //probe
+    {0,"erase", T_HELP_FLASH_ERASE}, //erase
+    {0,"write", T_HELP_FLASH_WRITE}, //write
+    {0,"read",T_HELP_FLASH_READ}, //read
+    {0,"verify",T_HELP_FLASH_VERIFY}, //verify   
+    {0,"test",T_HELP_FLASH_TEST}, //test
+    {0,"-f",T_HELP_FLASH_FILE_FLAG}, //file to read/write/verify    
+    {0,"-e",T_HELP_FLASH_ERASE_FLAG}, //with erase (before write)
+    {0,"-v",T_HELP_FLASH_VERIFY_FLAG},//with verify (after write)
+};
+
+enum flash_actions {
+    FLASH_INIT=0,
+    FLASH_PROBE,
+    FLASH_ERASE,
+    FLASH_WRITE,
+    FLASH_READ,
+    FLASH_VERIFY,
+    FLASH_TEST
 };
 
 void flash(struct command_result *res)
 {
-    arg_var_t arg;
-    char read_file[13];
-    char write_file[13];
-    char verify_file[13];
     uint32_t value;
+    char file[13];
 
+/* Some notes on automating the command line parsing a bit more
     enum arg_types {
         ARG_NONE=0,
         ARG_STRING,
@@ -66,10 +78,9 @@ void flash(struct command_result *res)
         {'e', ARG_NONE, false, false, 0}, //erase
         {'v', ARG_NONE, false, false, 0}, //verify
     };
-
-    bool help = ui_args_find_flag_novalue('h'|0x20, &arg);
-
-    if(arg.has_arg)
+*/
+    command_var_t arg;
+    if(cmdln_args_find_flag('h'|0x20, &arg))
     {
         ui_help_usage(flash_usage,count_of(flash_usage));
         ui_help_options(&help_flash[0],count_of(help_flash));
@@ -87,84 +98,67 @@ void flash(struct command_result *res)
         return;
     }
 
-    //init chip? (default action)
-    //bool init = ui_args_find_flag_novalue('i'|0x20, &arg);
-    command_var_t cmd_args;
-    //probe chip? 
-    bool probe = ui_args_find_flag_novalue('p'|0x20, &arg);
-    //erase chip?
-    bool erase = ui_args_find_flag_novalue('e'|0x20, &arg);
-    //verify chip?
-    bool verify = ui_args_find_flag_string('v'|0x20, &arg, sizeof(verify_file), verify_file);
-    //read?
-    bool read = cmdln_args_find_flag_string('r'|0x20, &cmd_args, sizeof(read_file), read_file);
-    //to file?
-    if(read && !arg.has_value)
-    {
-        printf("Missing dump file name\r\n");
+    char action_str[9];
+    bool init=false, probe=false, erase=false, verify=false, read=false, write=false, test=false;
+    //action is the first argument (read/write/probe/erase/etc)
+    if(cmdln_args_string_by_position(1, sizeof(action_str), action_str)){
+        if(strcmp(action_str, "init")==0) init=true;
+        if(strcmp(action_str, "probe")==0) probe=true;
+        if(strcmp(action_str, "erase")==0) erase=true;  
+        if(strcmp(action_str, "verify")==0) verify=true;    
+        if(strcmp(action_str, "read")==0) read=true;    
+        if(strcmp(action_str, "write")==0) write=true;
+        if(strcmp(action_str, "test")==0) test=true;
+    }
+
+    //erase_flag
+    bool erase_flag = cmdln_args_find_flag('e'|0x20, &arg);
+    //verify_flag
+    bool verify_flag = cmdln_args_find_flag('v'|0x20, &arg);
+    //file to read/write/verify
+    bool file_flag = cmdln_args_find_flag_string('f'|0x20, &arg, sizeof(file), file);
+    if( (read||write||verify) && !file_flag ){
+        printf("Missing file name (-f)\r\n");
         return;
     }
-    printf("Read file: %s\r\n", read_file);
-    //write
-    //from file?
-    bool write = ui_args_find_flag_string('w'|0x20, &arg, sizeof(write_file), write_file);
-    if(write && !arg.has_value)
-    {
-        printf("Missing load file name\r\n");
-        return;
-    }    
-
-    //test chip? erase, write, verify
-    bool test = ui_args_find_flag_novalue('t'|0x20, &arg);
 
     //start and end rage? bytes to write/dump???
-
     sfud_flash flash_info= {.name = "SPI_FLASH", .spi.name = "SPI1"};
     uint8_t data[256];
     uint32_t start_address=0;
 
     if(!spiflash_init(&flash_info)) return;
     uint32_t end_address=flash_info.sfdp.capacity; //TODO: handle capacity in the flashtable when we pass from command line
-
-    if(probe)
-    {
+    if(probe){
         spiflash_probe();
         return;
     }
 
-
-    if(erase||test)
-    {
+    if(erase||erase_flag||test){
         if(!spiflash_erase(&flash_info)) return;
-        if(verify||test)
-        {
+        if(verify_flag||test){
             if(!spiflash_erase_verify(start_address, end_address, sizeof(data), data, &flash_info)) return;
         }
     }
 
-    if(test)
-    {
+    if(test){
         if(!spiflash_write_test(start_address, end_address, sizeof(data), data, &flash_info)) return;
         if(!spiflash_write_verify(start_address, end_address, sizeof(data), data, &flash_info)) return;
     }
 
-    if(!test && write)
-    {
-        if(!spiflash_load(start_address, end_address, sizeof(data), data, &flash_info, write_file)) return;
-        if(verify)
-        {
+    if(write){
+        if(!spiflash_load(start_address, end_address, sizeof(data), data, &flash_info, file)) return;
+        if(verify_flag){
             uint8_t data2[256];
-            if(!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, write_file)) return;
+            if(!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, file)) return;
         }
     }
 
-    if(read)
-    {
-        if(!spiflash_dump(start_address, end_address, sizeof(data), data, &flash_info, read_file)) return;
+    if(read){
+        if(!spiflash_dump(start_address, end_address, sizeof(data), data, &flash_info, file)) return;
     }  
 
-    if(!test && verify && verify_file[0]!=0)
-    {
-        if(!spiflash_verify(start_address, end_address, sizeof(data), data, data, &flash_info, verify_file)) return; 
+    if(verify){
+        if(!spiflash_verify(start_address, end_address, sizeof(data), data, data, &flash_info, file)) return; 
     }  
 }

@@ -29,13 +29,13 @@ typedef struct command_var_struct {
     uint8_t number_format;
 } command_var_t;
 
+bool cmdln_args_find_flag(char flag, command_var_t *arg);
 bool cmdln_args_find_flag_uint32(char flag, command_var_t *arg, uint32_t *value);
-bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len, char *value);
+bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len, char *str);
+bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t *value);
 bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char *str);
 bool cmdln_find_next_command(struct _command_info_t *cp);
 bool cmdln_info(void);
-bool cmdln_find_flag(char flag, command_var_t *arg);
-bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t *value);
 bool cmdln_info_uint32(void);
 
 // update a command line buffer pointer with rollover

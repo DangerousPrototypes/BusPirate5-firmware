@@ -104,6 +104,7 @@ void flash(struct command_result *res)
         printf("Missing dump file name\r\n");
         return;
     }
+    printf("Read file: %s\r\n", read_file);
     //write
     //from file?
     bool write = ui_args_find_flag_string('w'|0x20, &arg, sizeof(write_file), write_file);

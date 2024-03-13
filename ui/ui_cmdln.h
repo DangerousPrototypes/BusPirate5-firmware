@@ -34,6 +34,8 @@ bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char *str);
 bool cmdln_find_next_command(struct _command_info_t *cp);
 bool cmdln_info(void);
 bool cmdln_find_flag(char flag, command_var_t *arg);
+bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t *value);
+bool cmdln_info_uint32(void);
 
 // update a command line buffer pointer with rollover
 uint32_t cmdln_pu(uint32_t i); 

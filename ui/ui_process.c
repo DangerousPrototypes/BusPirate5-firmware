@@ -73,6 +73,10 @@ bool ui_process_commands(void)
 
     struct _command_info_t cp;
     cp.nextptr=0;
+
+    //cmdln_info();
+    cmdln_info_uint32();
+    return false;
     
     while(true)
     {
@@ -94,6 +98,13 @@ bool ui_process_commands(void)
         }
         //process as a command
         char command_string[MAX_COMMAND_LENGTH];
+        /*command_var_t arg;
+        if(!cmdln_args_find_flag_string('t', &arg, sizeof(command_string), command_string))
+        {
+            return true;
+        }   
+        printf("Command: %s\r\n", command_string);
+        return false;*/
  
         //string 0 is the command
         // continue if we don't get anything? could be an empty chained command? should that be error?
@@ -132,10 +143,9 @@ bool ui_process_commands(void)
             printf("%s\r\n", ui_term_color_reset());
             return true;
         }
-        //no such command, search TF flash card for runnable scripts
+        //no such command, search TF flash card for runnable scripts?
 
         //global help handler (optional, set config in commands.c)
-        //ui_args_find_flag_novalue('h', &arg);
         command_var_t arg;
         cmdln_find_flag('h', &arg );
         if(arg.has_arg && (commands[user_cmd_id].help_text!=0x00))

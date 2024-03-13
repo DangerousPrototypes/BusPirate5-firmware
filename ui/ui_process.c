@@ -67,23 +67,22 @@ bool ui_process_macro(void)
     return false;  
 }
 
-bool ui_process_commands(void)
-{
+bool ui_process_commands(void){
     char c,d;
-
     struct _command_info_t cp;
     cp.nextptr=0;
 
-    //cmdln_info();
+/*    cmdln_info();
     cmdln_info_uint32();
-    return false;
-    
-    while(true)
-    {
+    command_var_t arg;
+    uint32_t value;
+    if(cmdln_args_find_flag_uint32('t', &arg, &value)) printf("Value -t: %d\r\n", value);
+
+    return false;*/    
+    while(true){
         if(!cmdln_find_next_command(&cp)) return false;
         
-        switch(cp.command[0])
-        {
+        switch(cp.command[0]){
             case '[':
             case '>':
             case '{':
@@ -98,27 +97,16 @@ bool ui_process_commands(void)
         }
         //process as a command
         char command_string[MAX_COMMAND_LENGTH];
-        /*command_var_t arg;
-        if(!cmdln_args_find_flag_string('t', &arg, sizeof(command_string), command_string))
-        {
-            return true;
-        }   
-        printf("Command: %s\r\n", command_string);
-        return false;*/
- 
         //string 0 is the command
         // continue if we don't get anything? could be an empty chained command? should that be error?
-        if(!cmdln_args_string_by_position(0, sizeof(command_string), command_string))
-        {
+        if(!cmdln_args_string_by_position(0, sizeof(command_string), command_string)){
             continue;
         }   
 
         bool mode_cmd, cmd_valid =false;
         uint32_t user_cmd_id=0;
-        for(int i=0; i<commands_count; i++)
-        {  
-            if(strcmp(command_string, commands[i].command)==0)
-            {
+        for(int i=0; i<commands_count; i++){  
+            if(strcmp(command_string, commands[i].command)==0){
                 user_cmd_id=i;
                 cmd_valid=true;
                 break;
@@ -126,17 +114,14 @@ bool ui_process_commands(void)
         }
 
         struct command_result result=result_blank;
-        if(!cmd_valid)
-        {
-            if(displays[system_config.display].display_command)
-            {
-	        if (displays[system_config.display].display_command(&result))
-	    	    goto cmd_ok;
+        if(!cmd_valid){
+            if(displays[system_config.display].display_command){
+                if (displays[system_config.display].display_command(&result))
+                    goto cmd_ok;
             }
-            if(modes[system_config.mode].protocol_command)
-            {
-	        if (modes[system_config.mode].protocol_command(&result))
-	    	    goto cmd_ok;
+            if(modes[system_config.mode].protocol_command){
+                if (modes[system_config.mode].protocol_command(&result))
+                    goto cmd_ok;
             }
             printf("%s", ui_term_color_notice());
             printf(t[T_CMDLN_INVALID_COMMAND], command_string);
@@ -148,14 +133,12 @@ bool ui_process_commands(void)
         //global help handler (optional, set config in commands.c)
         command_var_t arg;
         cmdln_find_flag('h', &arg );
-        if(arg.has_arg && (commands[user_cmd_id].help_text!=0x00))
-        { 
+        if(arg.has_arg && (commands[user_cmd_id].help_text!=0x00)){ 
             printf("%s\r\n",t[commands[user_cmd_id].help_text]);
             return false;
         }
 
-        if(system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz)
-        {
+        if(system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz){
             printf("%s\r\n",hiz_error());
             return true;            
         }    

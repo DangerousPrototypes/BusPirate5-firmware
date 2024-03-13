@@ -53,27 +53,24 @@ uint32_t hwi2c_setup(void)
 		{"$.baudrate", &mode_config.baudrate},
 		{"$.data_bits", &mode_config.data_bits}
 	};
+	prompt_result result;
 
 	if(storage_load_mode(config_file, config_t, count_of(config_t)))
 	{
 		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
 		printf(" %s: %dKHz\r\n", t[T_HWI2C_SPEED_MENU], mode_config.baudrate);			
-		printf(" %s: %s\r\ny/n> ", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[mode_config.data_bits].description]);
-		do{
-			temp=ui_prompt_yes_no();
-		}while(temp>1);
-
-		printf("\r\n");
-
-		if(temp==1) return 1;
+		//printf(" %s: %s\r\n", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[mode_config.data_bits].description]);
+		
+		bool user_value;
+		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
+		if(user_value) return 1; //user said yes, use the saved settings
 	}
-
-	prompt_result result;
 	ui_prompt_uint32(&result, &i2c_menu[0], &mode_config.baudrate);
 	if(result.exit) return 0;
-	ui_prompt_uint32(&result, &i2c_menu[1], &temp);
-	if(result.exit) return 0;
-	mode_config.data_bits=(uint8_t)temp-1;
+	//printf("Result: %d\r\n", mode_config.baudrate);
+	//ui_prompt_uint32(&result, &i2c_menu[1], &temp);
+	//if(result.exit) return 0;
+	//mode_config.data_bits=(uint8_t)temp-1;
 
 	storage_save_mode(config_file, config_t, count_of(config_t));
 	
@@ -83,7 +80,7 @@ uint32_t hwi2c_setup(void)
 uint32_t hwi2c_setup_exc(void)
 {
 	pio_loaded_offset = pio_add_program(pio, &i2c_program);
-    i2c_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_I2C_SDA], bio2bufiopin[M_I2C_SCL], bio2bufdirpin[M_I2C_SDA], bio2bufdirpin[M_I2C_SCL]);
+    i2c_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_I2C_SDA], bio2bufiopin[M_I2C_SCL], bio2bufdirpin[M_I2C_SDA], bio2bufdirpin[M_I2C_SCL], mode_config.baudrate);
 	system_bio_claim(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
 	mode_config.start_sent=false;

@@ -300,14 +300,11 @@ uint32_t hwusart_setup(void)
 			printf(" %s: %d %s\r\n", t[T_UART_SPEED_MENU], mode_config.baudrate, t[T_UART_BAUD]);			
 			printf(" %s: %d\r\n", t[T_UART_DATA_BITS_MENU], mode_config.data_bits);
 			printf(" %s: %s\r\n", t[T_UART_PARITY_MENU], t[uart_parity_menu[mode_config.parity].description]);
-			printf(" %s: %d\r\ny/n>", t[T_UART_STOP_BITS_MENU], mode_config.stop_bits);
-			do{
-				temp=ui_prompt_yes_no();
-			}while(temp>1);
-
-			printf("\r\n");
-
-			if(temp==1) return 1;
+			printf(" %s: %d\r\n", t[T_UART_STOP_BITS_MENU], mode_config.stop_bits);
+			
+			bool user_value;
+			if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
+			if(user_value) return 1; //user said yes, use the saved settings
 		}
 
         ui_prompt_uint32(&result, &uart_menu[0], &mode_config.baudrate);

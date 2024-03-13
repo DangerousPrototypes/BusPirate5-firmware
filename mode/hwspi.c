@@ -94,25 +94,17 @@ uint32_t spi_setup(void)
 			{"$.cs_idle", &mode_config.cs_idle}
 		};
 
-		if(storage_load_mode(config_file, config_t, count_of(config_t)))
-		{
+		if(storage_load_mode(config_file, config_t, count_of(config_t))){
 			printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
 			printf(" %s%s:%s %d KHz\r\n",ui_term_color_info(), t[T_HWSPI_SPEED_MENU], ui_term_color_reset(),mode_config.baudrate/1000);			
 			printf(" %s%s:%s %d\r\n", ui_term_color_info(), t[T_HWSPI_BITS_MENU], ui_term_color_reset(), mode_config.data_bits);
 			printf(" %s%s:%s %s\r\n", ui_term_color_info(), t[T_HWSPI_CLOCK_POLARITY_MENU], ui_term_color_reset(), t[spi_polarity_menu[mode_config.clock_polarity].description]);
 			printf(" %s%s:%s %s\r\n", ui_term_color_info(), t[T_HWSPI_CLOCK_PHASE_MENU], ui_term_color_reset(), t[spi_phase_menu[mode_config.clock_phase].description]);
-			//printf(" %s%s:%s %s\r\ny/n>", ui_term_color_info(), t[T_HWSPI_CS_IDLE_MENU], ui_term_color_reset(), t[spi_idle_menu[mode_config.cs_idle].description]);
+			printf(" %s%s:%s %s\r\n", ui_term_color_info(), t[T_HWSPI_CS_IDLE_MENU], ui_term_color_reset(), t[spi_idle_menu[mode_config.cs_idle].description]);
 
 			bool user_value;
-			if(!ui_prompt_bool(&result, true, true, true, &user_value))
-			{
-				return 0;
-			}
-			
-			if(user_value)
-			{
-				return 1; //user said yes, use the saved settings
-			}
+			if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
+			if(user_value) return 1; //user said yes, use the saved settings
 		}
 
         ui_prompt_uint32(&result, &spi_menu[0], &temp);

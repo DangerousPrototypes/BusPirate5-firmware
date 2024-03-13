@@ -77,7 +77,7 @@ do_exec:
 #include "hardware/gpio.h"
 
 
-static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda, uint pin_scl, uint buf_sda, uint buf_scl) {
+static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda, uint pin_scl, uint buf_sda, uint buf_scl, uint32_t freq) {
     assert(pin_scl == pin_sda + 1); //wait uses pin ordered inputs, need to be consecutive
     //assert(buf_scl == buf_sda + 1); //doesn't use wait, don't think they need to be consecutive
     pio_sm_config c = i2c_program_get_default_config(offset);
@@ -92,8 +92,13 @@ static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda,
     sm_config_set_out_shift(&c, false, true, 16);
     sm_config_set_in_shift(&c, false, true, 8);
 
-    float div = (float)clock_get_hz(clk_sys) / (32 * 100000);
-    sm_config_set_clkdiv(&c, div);
+    //with delays, there are 32 instructions per bit IO
+    //we should maybe reduce this to have more accuracy around 1MHz
+	float div = clock_get_hz(clk_sys) / (32 * 1000 * (float)freq); 
+	sm_config_set_clkdiv(&c, div);
+
+    //float div = (float)clock_get_hz(clk_sys) / (32 * 100000);
+    //sm_config_set_clkdiv(&c, div);
 
     // Try to avoid glitching the bus while connecting the IOs. Get things set
     // up so that pin is driven down when PIO asserts OE low, and pulled up

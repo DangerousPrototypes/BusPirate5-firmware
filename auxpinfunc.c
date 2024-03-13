@@ -6,7 +6,7 @@
 #include "bio.h"
 #include "system_config.h"
 #include "ui/ui_term.h"
-#include "ui/ui_args.h"
+#include "ui/ui_cmdln.h"
 
 void auxpinfunc_write(struct command_result *res, bool output, bool level);
 
@@ -31,9 +31,7 @@ void auxpinfunc_input(struct command_result *res)
 void auxpinfunc_write(struct command_result *res, bool output, bool level)
 {
 	uint32_t temp;
-	arg_var_t arg;
-	bool has_value=ui_args_find_uint32(&arg, &temp);
-
+	bool has_value = cmdln_args_uint32_by_position(1, &temp);
 	if(!has_value)
 	{
 		printf("%sError:%s specify an IO pin (a 1, A 5, @ 0)", ui_term_color_error(), ui_term_color_reset());

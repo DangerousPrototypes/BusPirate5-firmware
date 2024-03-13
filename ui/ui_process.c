@@ -16,8 +16,6 @@
 #include "ui/ui_cmdln.h"
 #include "string.h"
 #include "syntax.h"
-#include "ui/ui_args.h"
-
 
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
 static const struct command_result result_blank;
@@ -131,9 +129,7 @@ bool ui_process_commands(void){
         //no such command, search TF flash card for runnable scripts?
 
         //global help handler (optional, set config in commands.c)
-        command_var_t arg;
-        cmdln_args_find_flag('h', &arg );
-        if(arg.has_arg && (commands[user_cmd_id].help_text!=0x00)){ 
+        if(cmdln_args_find_flag('h') && (commands[user_cmd_id].help_text!=0x00)){ 
             printf("%s\r\n",t[commands[user_cmd_id].help_text]);
             return false;
         }

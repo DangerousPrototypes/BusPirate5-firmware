@@ -26,7 +26,6 @@
 #include "display/scope.h"
 #include "mode/logicanalyzer.h"
 #include "usb_rx.h"
-#include "ui/ui_args.h"
 
 void helpers_selftest(struct command_result *res)
 {
@@ -501,13 +500,8 @@ void helpers_bit_order_lsb(struct command_result *res)
 
 void helpers_show_int_formats(struct command_result *res)
 {
-    uint32_t temp;
-    arg_var_t arg;
-	bool has_value=ui_args_find_uint32(&arg, &temp);
-
-
-    //prompt_result result;
-    //ui_parse_get_int(&result, &temp);
+    uint32_t temp=0;
+	bool has_value = cmdln_args_uint32_by_position(1, &temp);
     uint32_t temp2=system_config.display_format;		// remember old display_format
     system_config.display_format=df_auto; //TODO: this is still a hack...
     
@@ -552,11 +546,8 @@ void helpers_show_int_formats(struct command_result *res)
 
 void helpers_show_int_inverse(struct command_result *res)
 {
-    uint32_t temp;
-    arg_var_t arg;
-	bool has_value=ui_args_find_uint32(&arg, &temp);
-    //prompt_result result;
-    //ui_parse_get_int(&result, &temp);
+    uint32_t temp=0;
+	bool has_value = cmdln_args_uint32_by_position(1, &temp);
     uint32_t temp2=system_config.display_format;		// remember old display_format
     system_config.bit_order^=1;
     uint32_t temp3=system_config.num_bits;		// remember old numbits

@@ -307,8 +307,9 @@ bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len
 
 // check if a -f(lag) is present. Value is don't care.
 // returns true if flag is present
-bool cmdln_args_find_flag(char flag, command_var_t *arg){
-    if(!cmdln_args_find_flag_internal(flag, arg)) return false;
+bool cmdln_args_find_flag(char flag){
+    command_var_t arg;
+    if(!cmdln_args_find_flag_internal(flag, &arg)) return false;
     return true;
 }
 

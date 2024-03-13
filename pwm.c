@@ -15,7 +15,7 @@
 
 #include "pwd.h"
 #include "freq.h"
-#include "ui/ui_args.h"
+#include "ui/ui_cmdln.h"
 
 uint32_t pwm_get_settings(float* pwm_hz_actual, float* duty_user_value);
 uint8_t pwm_freq_find(float* freq_hz_value, float* pwm_hz_actual, float* pwm_ns_actual, uint32_t* pwm_divider, uint32_t* pwm_top);
@@ -116,13 +116,10 @@ void pwm_configure_enable(struct command_result *res)
  
 }
 
-void pwm_configure_disable(struct command_result *res)
-{
+void pwm_configure_disable(struct command_result *res){
     uint32_t pin;
     uint32_t temp;
-    arg_var_t arg;
-	bool has_value=ui_args_find_uint32(&arg, &temp);
-
+	bool has_value = cmdln_args_uint32_by_position(1, &temp);
     if(system_config.pwm_active == 0) //no pwm active, just exit
     {
         printf("Frequency generation not active on any IO pins!");

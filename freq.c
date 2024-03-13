@@ -11,15 +11,13 @@
 #include "ui/ui_const.h"
 #include "ui/ui_term.h"
 #include "ui/ui_info.h"
-#include "ui/ui_args.h"
+#include "ui/ui_cmdln.h"
 
 #include "freq.h"
 
-void freq_single(struct command_result *res)
-{
+void freq_single(struct command_result *res){
     uint32_t temp;
-    arg_var_t arg;
-	bool has_value=ui_args_find_uint32(&arg, &temp);
+	bool has_value = cmdln_args_uint32_by_position(1, &temp);
     if(!has_value) //show config menu
     {
         if(!freq_configure_disable()) res->error=1;
@@ -31,12 +29,9 @@ void freq_single(struct command_result *res)
 
 }
 
-void freq_cont(struct command_result *res)
-{
+void freq_cont(struct command_result *res){
     uint32_t temp;
-    arg_var_t arg;
-	bool has_value=ui_args_find_uint32(&arg, &temp);
-
+	bool has_value=cmdln_args_uint32_by_position(1, &temp);
     if(!has_value) //show config menu
     {
         if(!freq_configure_enable()) res->error=1;

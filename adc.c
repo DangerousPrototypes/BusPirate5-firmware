@@ -12,7 +12,7 @@
 #include "freq.h"
 #include "usb_rx.h"
 #include "amux.h"
-#include "ui/ui_args.h"
+#include "ui/ui_cmdln.h"
 
 void adc_measure(struct command_result *res, bool refresh);
 
@@ -41,8 +41,7 @@ void adc_measure_cont(struct command_result *res)
 void adc_measure(struct command_result *res, bool refresh)
 {
 	uint32_t temp;
-	arg_var_t arg;
-	bool has_value=ui_args_find_uint32(&arg, &temp);
+	bool has_value=cmdln_args_uint32_by_position(1, &temp);
 
 	if(!has_value) //show voltage on all pins
 	{

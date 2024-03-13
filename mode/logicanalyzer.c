@@ -19,7 +19,7 @@
 #include "rgb.h"
 #include "pico/multicore.h"
 #include "amux.h"
-#include "ui/ui_args.h"
+#include "ui/ui_cmdln.h"
 
 enum logicanalyzer_status
 {
@@ -187,30 +187,29 @@ void la_test_args(struct command_result *res)
             printf("Failed to allocate buffer. Is the scope running?\r\n");
         }
     }
-
+    command_var_t arg;
     uint32_t temp;
-    arg_var_t arg;
-    ui_args_find_flag_uint32('f', &arg, &temp);
+    cmdln_args_find_flag_uint32('f', &arg, &temp);
     if(arg.has_value) //freq in khz
     {
         la_freq=temp;
     }
     printf("Freq: %dkHz ", la_freq);
-    ui_args_find_flag_uint32('s', &arg, &temp);
+    cmdln_args_find_flag_uint32('s', &arg, &temp);
     if(arg.has_value) //samples
     {
         la_samples=temp;
     }
     printf("Samples: %d ",la_samples);
 
-    ui_args_find_flag_uint32('t', &arg, &temp);   
+    cmdln_args_find_flag_uint32('t', &arg, &temp);   
     if(arg.has_value) //trigger pin (or none)
     {
         if(temp >=0 && temp<=7)
         {
             la_trigger_pin=1u<<temp;
             printf("Trigger pin: IO%d ",temp);
-            ui_args_find_flag_uint32('l', &arg, &temp); 
+            cmdln_args_find_flag_uint32('l', &arg, &temp); 
             if(arg.has_value) //trigger level
             {
                 la_trigger_level=temp?1u<<temp:0;

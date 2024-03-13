@@ -79,8 +79,7 @@ void flash(struct command_result *res)
         {'v', ARG_NONE, false, false, 0}, //verify
     };
 */
-    command_var_t arg;
-    if(cmdln_args_find_flag('h'|0x20, &arg))
+    if(cmdln_args_find_flag('h'|0x20))
     {
         ui_help_usage(flash_usage,count_of(flash_usage));
         ui_help_options(&help_flash[0],count_of(help_flash));
@@ -112,10 +111,11 @@ void flash(struct command_result *res)
     }
 
     //erase_flag
-    bool erase_flag = cmdln_args_find_flag('e'|0x20, &arg);
+    bool erase_flag = cmdln_args_find_flag('e'|0x20);
     //verify_flag
-    bool verify_flag = cmdln_args_find_flag('v'|0x20, &arg);
+    bool verify_flag = cmdln_args_find_flag('v'|0x20);
     //file to read/write/verify
+    command_var_t arg;
     bool file_flag = cmdln_args_find_flag_string('f'|0x20, &arg, sizeof(file), file);
     if( (read||write||verify) && !file_flag ){
         printf("Missing file name (-f)\r\n");

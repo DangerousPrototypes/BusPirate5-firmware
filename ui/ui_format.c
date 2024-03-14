@@ -35,6 +35,32 @@ uint32_t ui_format_bitorder(uint32_t d)
 		return result>>(32-system_config.num_bits);
 	}
 }
+// customize bitorder and bits
+uint32_t ui_format_bitorder_manual(uint32_t d, uint8_t num_bits, bool bit_order)
+{
+	uint32_t result, mask;
+	int i;
+
+	if(!bit_order)			// 0=MSB
+		return d;
+	else
+	{
+		mask=0x80000000;
+		result=0;	
+
+		for(i=0; i<32; i++)
+		{
+			if(d&mask)
+			{
+				result|=(1<<(i));	
+			}
+			mask>>=1;
+		}
+
+		return (result>>(32-num_bits));
+	}
+}
+
 
 // represent d in the current display mode. If numbits=8 also display the ascii representation 
 void ui_format_print_number_2(struct command_attributes *attributes, uint32_t *value)

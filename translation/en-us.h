@@ -317,8 +317,15 @@ static char const * const en_us[]={
     [T_CONFIG_LEDS_BRIGHTNESS_30]="30%",
     [T_CONFIG_LEDS_BRIGHTNESS_40]="40%",
     [T_CONFIG_LEDS_BRIGHTNESS_50]="50%",
-    [T_CONFIG_LEDS_BRIGHTNESS_100]="100% ***WARNING: will damage USB port without external power supply***"
-
+    [T_CONFIG_LEDS_BRIGHTNESS_100]="100% ***WARNING: will damage USB port without external power supply***",
+	//DUMMY example command
+	[T_HELP_DUMMY_COMMANDS]="Dummy commands valid in position 1",
+	[T_HELP_DUMMY_INIT]="Dummy init command",
+	[T_HELP_DUMMY_TEST]="Dummy test command",
+	[T_HELP_DUMMY_FLAGS]="Dummy flags",
+	[T_HELP_DUMMY_B_FLAG]="-b require Bus Pirate button to be pushed. Takes no parameters",
+	[T_HELP_DUMMY_I_FLAG]="-i {integer}. Requires integer number parameter",
+	[T_HELP_DUMMY_FILE_FLAG]="-f {file}. Create/write/read {file}. Requires file string parameter"
 };
 
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

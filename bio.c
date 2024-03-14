@@ -74,6 +74,7 @@ void bio_input(uint8_t bio)
     //now set buffer to input
     gpio_put(bio2bufdirpin[bio], BUFDIR_INPUT);
 }
+//TODO: track buffer state, and manipulate it as needed
 void bio_put(uint8_t bio, bool value)
 {
     gpio_put(bio2bufiopin[bio], value);

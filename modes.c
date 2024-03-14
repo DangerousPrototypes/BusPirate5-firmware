@@ -26,6 +26,9 @@
 #ifdef	BP_USE_HWSPI
     #include "mode/hwspi.h"
 #endif
+#ifdef	BP_USE_HW2WIRE
+    #include "mode/hw2wire.h"
+#endif
 #ifdef	BP_USE_SW2W
     #include "SW2W.h"
 #endif
@@ -294,6 +297,32 @@ struct _mode modes[MAXPROTO]={
 	spi_settings,				// display settings 
 	spi_help,				// display small help about the protocol
 	"SPI",				// friendly name (promptname)
+},
+#endif
+#ifdef BP_USE_HW2WIRE
+{
+    hw2wire_start,				// start
+    hw2wire_start,				// start with read
+    hw2wire_stop,				// stop
+    hw2wire_stop,				// stop with read
+    hw2wire_write,				// send(/read) max 32 bit
+    hw2wire_read,				// read max 32 bit
+    nullfunc1,				// set clk high
+    nullfunc1,				// set clk low
+    nullfunc1,				// set dat hi
+    nullfunc1,				// set dat lo
+    nullfunc3,				// toggle dat (?)
+    nullfunc1,				// toggle clk (?)
+    nullfunc3,				// read 1 bit (?)
+    noperiodic,				// service to regular poll whether a byte ahs arrived
+    hw2wire_macro,				// macro
+    hw2wire_setup,				// setup UI
+    hw2wire_setup_exc,			// real setup
+    hw2wire_cleanup,				// cleanup for HiZ
+    //HWI2C_pins,				// display pin config
+    hw2wire_settings,				// display settings
+    hw2wire_help,				// display small help about the protocol
+    "2WIRE",				// friendly name (promptname)
 },
 #endif
 #ifdef BP_USE_SW2W

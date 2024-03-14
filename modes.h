@@ -21,6 +21,9 @@ enum
 #ifdef BP_USE_LA
 	LA,
 #endif
+#ifdef BP_USE_HW2WIRE
+	HW2WIRE,
+#endif
 #ifdef BP_USE_SW2W
 	SW2W,
 #endif

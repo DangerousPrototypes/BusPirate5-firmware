@@ -69,6 +69,8 @@ set(bp5_common
         #mem buffer for shared malloc
         mem.c mem.h
         mode/logicanalyzer.h mode/logicanalyzer.c
+        mode/hw2wire.h mode/hw2wire.c mode/hw2wire_pio.h mode/hw2wire_pio.c
+        dummy.c dummy.h
         )
 
 add_executable(bus_pirate5_rev8
@@ -119,6 +121,7 @@ set(revisions
         )
 
 foreach(revision ${revisions})
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/hw2wire.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/i2c.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)

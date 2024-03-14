@@ -143,7 +143,7 @@ bool cmdln_args_get_string(uint32_t rptr, uint32_t max_len, char *string){
 bool cmdln_args_get_hex(uint32_t rptr, struct prompt_result *result, uint32_t *value){
     char c;
 
-    *result=empty_result;
+    //*result=empty_result;
     result->no_value=true;
     (*value)=0;
 
@@ -169,7 +169,7 @@ bool cmdln_args_get_hex(uint32_t rptr, struct prompt_result *result, uint32_t *v
 //notice, we do not pass rptr by reference, so it is not updated
 bool cmdln_args_get_bin(uint32_t rptr, struct prompt_result *result, uint32_t *value){
     char c;
-    *result=empty_result;
+    //*result=empty_result;
     result->no_value=true;
     (*value)=0;
 
@@ -193,7 +193,7 @@ bool cmdln_args_get_bin(uint32_t rptr, struct prompt_result *result, uint32_t *v
 //notice, we do not pass rptr by reference, so it is not updated
 bool cmdln_args_get_dec(uint32_t rptr, struct prompt_result *result, uint32_t *value){
     char c;
-    *result=empty_result;    
+    //*result=empty_result;    
     result->no_value=true; 
     (*value)=0;
 
@@ -274,19 +274,22 @@ bool cmdln_args_find_flag_internal(char flag, command_var_t *arg){
     return false;
 }
 
-//check if a flag is present and get the string value
+//check if a flag is present and get the integer value
 // returns true if flag is present AND has a string value
 // use cmdln_args_find_flag to see if a flag was present with no string value
 bool cmdln_args_find_flag_uint32(char flag, command_var_t *arg, uint32_t *value){
     if(!cmdln_args_find_flag_internal(flag, arg)) return false;
 
-    if(arg->has_value){
-        struct prompt_result result;
-        if(!cmdln_args_get_int(arg->value_pos, &result, value)){
-            arg->error=true;
-            return false;
-        }
+    if(!arg->has_value){
+        return false;
     }
+
+    struct prompt_result result;
+    if(!cmdln_args_get_int(arg->value_pos, &result, value)){
+        arg->error=true;
+        return false;
+    }
+
     return true;
 }
 
@@ -296,12 +299,15 @@ bool cmdln_args_find_flag_uint32(char flag, command_var_t *arg, uint32_t *value)
 bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len, char *str){
     if(!cmdln_args_find_flag_internal(flag, arg)) return false;
 
-    if(arg->has_value){
-        if(!cmdln_args_get_string(arg->value_pos, max_len, str)){
-            arg->error=true;
-            return false;
-        }
+    if(!arg->has_value){
+        return false;
     }
+
+    if(!cmdln_args_get_string(arg->value_pos, max_len, str)){
+        arg->error=true;
+        return false;
+    }
+
     return true;
 }
 

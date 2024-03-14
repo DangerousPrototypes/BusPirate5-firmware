@@ -1,0 +1,1 @@
+void dummy_func(struct command_result *res);

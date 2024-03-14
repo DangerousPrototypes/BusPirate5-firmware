@@ -1,0 +1,181 @@
+;
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+; 1 side set pin 0b1, direct control - not direction control (pindirs)
+.program hw2wire
+.side_set 1 opt 
+; TX Encoding:
+; | 15:10 | 9     | 8:1  | 0   |
+; | Instr | Final | Data | NAK |
+;
+; If Instr has a value n > 0, then this FIFO word has no
+; data payload, and the next n + 1 words will be executed as instructions.
+; Otherwise, shift out the 8 data bits, followed by the ACK bit.
+;
+; The Instr mechanism allows stop/start/repstart sequences to be programmed
+; by the processor, and then carried out by the state machine at defined points
+; in the datastream.
+;
+; The "Final" field should be set for the final byte in a transfer.
+; This tells the state machine to ignore a NAK: if this field is not
+; set, then any NAK will cause the state machine to halt and interrupt.
+;
+; Autopull should be enabled, with a threshold of 16.
+; Autopush should be enabled, with a threshold of 8.
+; The TX FIFO should be accessed with halfword writes, to ensure
+; the data is immediately available in the OSR.
+;
+; Pin mapping:
+; - Input pin 0 is SDA, 1 is SCL (if clock stretching used)
+; - Jump pin is SDA
+; - Side-set pin 0 is SCL
+; - Set pin 0 is SDA
+; - OUT pin 0 is SDA
+; - SCL must be SDA + 1 (for wait mapping)
+;
+; The OE outputs should be inverted in the system IO controls!
+; (It's possible for the inversion to be done in this program,
+; but costs 2 instructions: 1 for inversion, and one to cope
+; with the side effect of the MOV on TX shift counter.)
+
+;do_nack:
+;    jmp y-- entry_point        ; Continue if NAK was expected
+;    irq wait 0 rel             ; Otherwise stop, ask for help
+
+;.wrap_target
+;public entry_point:
+;    out x, 6                   ; Unpack Instr count
+;    out y, 1                   ; Unpack the NAK ignore bit
+;    ;jmp !x do_byte             ; Instr == 0, this is a data record.
+;    set x, 7                   ; Loop 8 times
+;    nop             side 0b0 ; ensure clock low to start
+;bitloop:
+;    out pins, 1         [7] ; Serialise write data (all-ones if reading)
+;    nop             side 0b1 [6] ; SCL rising edge (was 2)
+;    in pins, 1             [7] ; Sample read data in middle of SCL pulse
+;    jmp x-- bitloop side 0b0 [7] ; SCL falling edge
+;    out null, 1             ; Empty osr
+;    mov isr, null              ; Reset the input bit counter
+;.wrap
+
+
+;do_nack:
+;    jmp y-- entry_point        ; Continue if NAK was expected
+;    irq wait 0 rel             ; Otherwise stop, ask for help
+
+do_byte:
+    set x, 7                   ; Loop 8 times
+bitloop:
+    out pins, 1         [7] ; Serialise write data (all-ones if reading)
+    nop             side 0b1 [6] ; SCL rising edge (was 2)
+    ;wait              [4] ; 
+    in pins, 1             [7] ; Sample read data in middle of SCL pulse
+    jmp x-- bitloop side 0b0 [7] ; SCL falling edge
+    out null, 1             ; not dealing with ACK yet.
+    ; Handle ACK pulse
+;    out pins, 1         [7] ; On reads, we provide the ACK.
+;    nop             side 0b1 [7] ; SCL rising edge
+;    wait 1 pin, 1          [7] ; Allow clock to be stretched, in pins: 0=sda, 1=scl
+;    jmp pin do_nack side 0b0 [1] ; Test SDA for ACK=0/NAK=1, fall through if ACK, 1 jump pin defined in init
+    mov isr, null              ; Reset the input bit counter
+
+public entry_point:
+.wrap_target
+    out x, 6                   ; Unpack Instr count
+    out y, 1                   ; Unpack the NAK ignore bit
+    jmp !x do_byte             ; Instr == 0, this is a data record.
+    out null, 32               ; Instr > 0, remainder of this OSR is invalid
+do_exec:
+    out exec, 16               ; Execute one instruction per FIFO word
+    jmp x-- do_exec            ; Repeat n + 1 times
+.wrap
+
+
+
+
+% c-sdk {
+
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+
+static inline void hw2wire_program_init(PIO pio, uint sm, uint offset, uint pin_sda, uint pin_scl, uint buf_sda, uint buf_scl, uint32_t freq) {
+    assert(pin_scl == pin_sda + 1); //wait uses pin ordered inputs, need to be consecutive
+    //assert(buf_scl == buf_sda + 1); //doesn't use wait, don't think they need to be consecutive
+    pio_sm_config c = hw2wire_program_get_default_config(offset);
+
+    // IO mapping
+    sm_config_set_out_pins(&c, buf_sda, 1);
+    sm_config_set_set_pins(&c, buf_sda, 1);
+    sm_config_set_in_pins(&c, pin_sda);
+    sm_config_set_sideset_pins(&c, buf_scl);
+    sm_config_set_jmp_pin(&c, pin_sda);
+
+    sm_config_set_out_shift(&c, false, true, 16);
+    sm_config_set_in_shift(&c, false, true, 8);
+
+    //with delays, there are 32 instructions per bit IO
+    //we should maybe reduce this to have more accuracy around 1MHz
+	float div = clock_get_hz(clk_sys) / (32 * 1000 * (float)freq); 
+	sm_config_set_clkdiv(&c, div);
+
+    // Try to avoid glitching the bus while connecting the IOs. Get things set
+    // up so that pin is driven down when PIO asserts OE low, and pulled up
+    // otherwise.
+    gpio_pull_down(pin_scl); //we pull down so we can output 0 when the buffer is an output without manipulating the actual scl/sda pin directions
+    gpio_pull_down(pin_sda);
+
+    uint32_t pin_pins = (1u << pin_sda) | (1u << pin_scl);
+    uint32_t buf_pins = (1u << buf_sda) | (1u << buf_scl);
+
+    //io pins to inputs
+    pio_sm_set_pindirs_with_mask(pio, sm, 0, pin_pins); //read pins to input (0, mask)    
+
+    //buffer pins to outputs and initial states
+    //always confirm the GPIO pin is an input/off before messing with the buffer
+    pio_sm_set_pindirs_with_mask(pio, sm, buf_pins, buf_pins); //buf pins to output (pins, mask)    
+    pio_sm_set_pins_with_mask(pio, sm, 0, buf_pins); //buf dir to 0, buffer input/HiZ on the bus
+    pio_gpio_init(pio, buf_sda);
+    gpio_set_outover(buf_sda, GPIO_OVERRIDE_INVERT);
+    pio_gpio_init(pio, buf_scl);
+    gpio_set_outover(buf_scl, GPIO_OVERRIDE_INVERT);  
+ 
+    pio_sm_set_pins_with_mask(pio, sm, buf_pins, buf_pins);
+
+    // Clear IRQ flag before starting, and make sure flag doesn't actually
+    // assert a system-level interrupt (we're using it as a status flag)
+    pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_interrupt_clear(pio, sm);
+
+    // Configure and start SM
+    pio_sm_init(pio, sm, offset + hw2wire_offset_entry_point, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+%}
+
+
+.program set_scl_sda
+.side_set 1 opt
+
+; Assemble a table of instructions which software can select from, and pass
+; into the FIFO, to issue START/STOP/RSTART. This isn't intended to be run as
+; a complete program.
+
+    set pins, 0 side 0 [7] ; SCL = 0, SDA = 0
+    set pins, 1 side 0 [7] ; SCL = 0, SDA = 1
+    set pins, 0 side 1 [7] ; SCL = 1, SDA = 0
+    set pins, 1 side 1 [7] ; SCL = 1, SDA = 1
+
+% c-sdk {
+// Define order of our instruction table
+enum {
+    I2C_SC0_SD0 = 0,
+    I2C_SC0_SD1,
+    I2C_SC1_SD0,
+    I2C_SC1_SD1
+};
+%}

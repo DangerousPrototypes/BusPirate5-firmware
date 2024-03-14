@@ -242,7 +242,7 @@ static char const * const bs_ba[]={
 	[T_HELP_FLASH_TEST]="Erase and write full chip with dummy data, verify. flash test",
 	[T_HELP_FLASH_PROBE]="Probe flash chip for ID and SFDP info. flash probe",
 	[T_HELP_FLASH_INIT]="Reset and initialize flash chip. Default if no options given. flash",
-	[T_HELP_FLASH_FILE_FLAG]="File flag. File to use with write, read and verify. flash verify -f {file}",
+	[T_HELP_FLASH_FILE_FLAG]="File flag. File to write, read or verify. flash verify -f {file}",
 	[T_HELP_FLASH_ERASE_FLAG]="Erase flag. Add erase before write. flash write -f {file} -e",
 	[T_HELP_FLASH_VERIFY_FLAG]="Verify flag. Add verify after write or erase. flash write -f {file} -v",
 	[T_INFO_FIRMWARE]="Firmware",
@@ -304,6 +304,13 @@ static char const * const bs_ba[]={
 	[T_CONFIG_LEDS_BRIGHTNESS_40]="40%",
 	[T_CONFIG_LEDS_BRIGHTNESS_50]="50%",
 	[T_CONFIG_LEDS_BRIGHTNESS_100]="100% ***UPOZORENJE: doći će do oštećenja bez vanjskog USB napajanja***",
+	[T_HELP_DUMMY_COMMANDS]="Dummy commands valid in position 1",
+	[T_HELP_DUMMY_INIT]="Dummy init command",
+	[T_HELP_DUMMY_TEST]="Dummy test command",
+	[T_HELP_DUMMY_FLAGS]="Dummy flags",
+	[T_HELP_DUMMY_B_FLAG]="-b require Bus Pirate button to be pushed. Takes no parameters",
+	[T_HELP_DUMMY_I_FLAG]="-i {integer}. Requires integer number parameter",
+	[T_HELP_DUMMY_FILE_FLAG]="-f {file}. Create/write/read {file}. Requires file string parameter",
 
 };
 

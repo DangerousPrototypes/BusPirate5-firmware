@@ -27,6 +27,7 @@
 #define		BP_USE_HWI2C
 //#define		BP_USE_SWI2C
 #define		BP_USE_HWSPI
+#define		BP_USE_HW2WIRE
 //#define		BP_USE_SW2W
 //#define		BP_USE_SW3W
 //#define 	BP_USE_DIO

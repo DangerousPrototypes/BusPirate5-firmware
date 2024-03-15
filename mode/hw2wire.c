@@ -179,23 +179,23 @@ void hw2wire_read(struct _bytecode *result, struct _bytecode *next)
 	//result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);
 }
 
-	typedef struct __attribute__((packed)) sle44xx_atr_struct {
-		uint16_t protocol_type:4;
-		uint16_t rfu1:1;
-		uint16_t structure_identifier:3;
-		uint16_t read_with_defined_length:1;
-		uint16_t data_units:4;
-		uint16_t data_units_bits:3;
-	} sle44xx_atr_t;
-
 void hw2wire_macro(uint32_t macro)
 {
-
+	
+	typedef struct __attribute__((packed)) sle44xx_atr_struct {
+		uint8_t structure_identifier:3;
+		bool rfu1:1;
+		uint8_t protocol_type:4;
+		uint8_t data_units_bits:3;
+		uint8_t data_units:4;
+		bool read_with_defined_length:1;
+		uint16_t rfu2:16;
+	} sle44xx_atr_t;	
 
 	uint32_t result=0;
 	switch(macro)
 	{
-		case 0:		printf(" 1. ISO/IEC 7816 Answer to Reset\r\n");
+		case 0:		printf(" 1. ISO/IEC 7816-3 Answer to Reset\r\n");
 				break;
 		case 1:
 				//>a.2 D:1 @.2 [ d:10 a.2 r:4
@@ -221,10 +221,14 @@ void hw2wire_macro(uint32_t macro)
 				for(uint i =0; i<4; i++)
 				{
 					pio_hw2wire_get16(pio, pio_state_machine, &temp);
-					atr[i]=(uint8_t)ui_format_bitorder_manual(temp, 8, 1);
+					atr[i]=(uint8_t) ui_format_bitorder_manual(temp, 8, 1);
 					printf("0x%02x ", atr[i] );
 				}
 				printf("\r\n");	
+				//atr[0]=0xa2;
+				//atr[1]=0x13;
+				//atr[2]=0x10;
+				//atr[3]=0x91;
 				if(atr[0]==0x00 || atr[0]==0xFF)
 				{
 					result=1;
@@ -233,31 +237,15 @@ void hw2wire_macro(uint32_t macro)
 				sle44xx_atr_t *atr_head;
     			atr_head = (sle44xx_atr_t *)&atr;
 				//lets try to decode that
-				printf("SLE44xx decoder:\r\n");
-				printf("Protocol Type: %s\r\n", (atr[0]>>4)==0b1010?"S":"unknown");
-				temp=atr[0]&0b111;
-				printf("Structure Identifier: %s\r\n", (temp&0b11==0b000?"ISO Reserved": (temp==0b010)?"General Purpose (Structure 1)":(temp==0b110)?"Proprietary":"Special Application"));
-				printf("Read: %s\r\n", ((atr[1]&0b10000000)?"Defined Length":"Read to end"));
-				temp = atr[1];
-				temp=temp>>3;
-				temp=(temp&0b1111);
-
-				printf("Data Units: ");
-				if(temp==0b0000) printf("Undefined\r\n");
-				else printf("%ld, %d\r\n", pow(2,temp+6), temp);
-				printf("Data Units Bits: %d, %d\r\n", pow(2, (atr[1]&0b00000111)), (atr[1]&0b00000111));		
-				break;
-				//no idea why this isn't working...
-				#if 0
-				printf("SLE44xx decoder:\r\n");
+				printf("--SLE44xx decoder--\r\n");
 				printf("Protocol Type: %s %d\r\n", (atr_head->protocol_type==0b1010?"S":"unknown"), atr_head->protocol_type);
 				printf("Structure Identifier: %s\r\n", (atr_head->structure_identifier&0b11==0b000?"ISO Reserved": (atr_head->structure_identifier==0b010)?"General Purpose (Structure 1)":(atr_head->structure_identifier==0b110)?"Proprietary":"Special Application"));
 				printf("Read: %s\r\n", (atr_head->read_with_defined_length?"Defined Length":"Read to end"));
-				printf("Data Units: %d ", atr_head->data_units);
+				printf("Data Units: ");
 				if(atr_head->data_units==0b0000) printf("Undefined\r\n");
-				else printf("%ld\r\n", pow(2,atr_head->data_units+6));
-				printf("Data Units Bits: %d, %d\r\n", pow(2, atr_head->data_units_bits), atr_head->data_units_bits);		
-				#endif
+				else printf("%.0f\r\n", pow(2,atr_head->data_units+6));
+				printf("Data Units Bits: %.0f\r\n", pow(2, atr_head->data_units_bits));		
+
 				break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;

@@ -78,109 +78,55 @@ uint32_t hw2wire_setup(void)
 	return 1;
 }
 
-uint32_t hw2wire_setup_exc(void)
-{
+uint32_t hw2wire_setup_exc(void){
 	pio_loaded_offset = pio_add_program(pio, &hw2wire_program);
     hw2wire_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_I2C_SDA], bio2bufiopin[M_I2C_SCL], bio2bufdirpin[M_I2C_SDA], bio2bufdirpin[M_I2C_SCL], mode_config.baudrate);
+	
 	system_bio_claim(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
-	mode_config.start_sent=false;
+
 	pio_hw2wire_rx_enable(pio, pio_state_machine, false);
+	mode_config.read=false;
 	pio_hw2wire_reset(pio, pio_state_machine);
+	
 	printf("PLEASE: feel free to test this mode, but no bug reports.\r\nThis is a work in progress and I am aware of the issues.\r\n");	return 1;
 }
 
-bool hw2wire_error(uint32_t error, struct _bytecode *result)
-{
-/*	switch(error)
-	{
-		case 1:
-			result->error_message=t[T_HWI2C_I2C_ERROR];
-			result->error=SRES_ERROR; 
-			pio_hw2wire_resume_after_error(pio, pio_state_machine);
-			return true;
-			break;
-		case 2:
-			result->error_message=t[T_HWI2C_TIMEOUT];
-			result->error=SRES_ERROR; 
-			pio_hw2wire_resume_after_error(pio, pio_state_machine);
-			return true;
-			break;
-		default:
-			return false;
-	}*/
-}
-
-void hw2wire_start(struct _bytecode *result, struct _bytecode *next)
-{
+void hw2wire_start(struct _bytecode *result, struct _bytecode *next){
 	result->data_message=t[T_HWI2C_START];
-
-	if(checkshort())
-	{
+	if(checkshort()){
 		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
 		result->error=SRES_WARN; 
 	}
-	
-	pio_hw2wire_clock_tick(pio, pio_state_machine);
-	#if 0
-	uint8_t error=pio_hw2wire_start_timeout(pio, pio_state_machine, 0xfffff);
-
-	if(!hw2wire_error(error, result))
-	{
-		mode_config.start_sent=true;
-	}
-	#endif
+	pio_hw2wire_start(pio, pio_state_machine);
 }
 
-void hw2wire_stop(struct _bytecode *result, struct _bytecode *next)
-{
+void hw2wire_stop(struct _bytecode *result, struct _bytecode *next){
 	result->data_message=t[T_HWI2C_STOP];
-
-	uint32_t error=pio_hw2wire_stop_timeout(pio, pio_state_machine, 0xffff);
-
-	hw2wire_error(error, result);
+	pio_hw2wire_stop(pio, pio_state_machine);
 }
 
-void hw2wire_write(struct _bytecode *result, struct _bytecode *next)
-{
-	//if a start was just sent, determine if this is a read or write address
-	// and configure the PIO I2C
-	#if 0
-	if(mode_config.start_sent)
-	{
-		pio_hw2wire_rx_enable(pio, pio_state_machine, (result->out_data & 1u));
-		mode_config.start_sent=false;
+void hw2wire_write(struct _bytecode *result, struct _bytecode *next){
+	if(mode_config.read){
+		pio_hw2wire_rx_enable(pio, pio_state_machine, false);
+		mode_config.read=false;
 	}
-	#endif
-
- 
-	pio_hw2wire_rx_enable(pio, pio_state_machine, false);
-	//uint32_t error=pio_hw2wire_write_timeout(pio, pio_state_machine, result->out_data, 0xffff);
 	pio_hw2wire_put_or_err(pio, pio_state_machine, (result->out_data << 1)|(1u));
-
-	printf("Wrote: %d\r\n", result->out_data);
-
-	//hw2wire_error(error, result);
-
-	//result->data_message=(error?t[T_HWI2C_NACK]:t[T_HWI2C_ACK]);
-
 }
 
-void hw2wire_read(struct _bytecode *result, struct _bytecode *next)
-{
-	bool ack=(next?(next->command!=4):true);
-
-	pio_hw2wire_rx_enable(pio, pio_state_machine, true);
-
-	//uint32_t error=pio_hw2wire_read_timeout(pio, pio_state_machine, &result->in_data, ack, 0xffff);
-    //hw2wire_error(error, result);
+void hw2wire_read(struct _bytecode *result, struct _bytecode *next){
+	if(!mode_config.read){
+		pio_hw2wire_rx_enable(pio, pio_state_machine, true);
+		mode_config.read=true;
+	}
 	pio_hw2wire_get16(pio, pio_state_machine, &result->in_data); 
+} 
 
-	//result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);
+void hw2wire_tick_clock(struct _bytecode *result, struct _bytecode *next){
+	pio_hw2wire_clock_tick(pio, pio_state_machine);
 }
 
-void hw2wire_macro(uint32_t macro)
-{
+void hw2wire_macro(uint32_t macro){
 	
 	typedef struct __attribute__((packed)) sle44xx_atr_struct {
 		uint8_t structure_identifier:3;
@@ -222,13 +168,9 @@ void hw2wire_macro(uint32_t macro)
 				{
 					pio_hw2wire_get16(pio, pio_state_machine, &temp);
 					atr[i]=(uint8_t) ui_format_bitorder_manual(temp, 8, 1);
-					printf("0x%02x ", atr[i] );
+					printf("0x%02x ", atr[i]);
 				}
 				printf("\r\n");	
-				//atr[0]=0xa2;
-				//atr[1]=0x13;
-				//atr[2]=0x10;
-				//atr[3]=0x91;
 				if(atr[0]==0x00 || atr[0]==0xFF)
 				{
 					result=1;
@@ -257,58 +199,23 @@ void hw2wire_macro(uint32_t macro)
 	}
 }
 
-void hw2wire_cleanup(void)
-{
+void hw2wire_cleanup(void){
 	pio_remove_program (pio, &hw2wire_program, pio_loaded_offset);
-	//pio_clear_instruction_memory(pio);
-
 	bio_init();
-
 	system_bio_claim(false, M_I2C_SDA, BP_PIN_MODE,0);
 	system_bio_claim(false, M_I2C_SCL, BP_PIN_MODE,0);
 }
 
-/*void hw2wire_pins(void)
-{
+/*void hw2wire_pins(void){
 	printf("-\t-\tSCL\tSDA");
 }*/
 
-void hw2wire_settings(void)
-{
+void hw2wire_settings(void){
 	printf("HWI2C (speed)=(%d)", mode_config.baudrate_actual);
 }
 
-void hw2wire_printI2Cflags(void)
-{
+void hw2wire_printI2Cflags(void){
 	uint32_t temp;
-/*
-	temp=I2C_SR1(BP_I2C);
-
-	if(temp&I2C_SR1_SMBALERT) printf(" SMBALERT");
-	if(temp&I2C_SR1_TIMEOUT) printf(" TIMEOUT");
-	if(temp&I2C_SR1_PECERR) printf(" PECERR");
-	if(temp&I2C_SR1_OVR) printf(" OVR");
-	if(temp&I2C_SR1_AF) printf(" AF");
-	if(temp&I2C_SR1_ARLO) printf(" ARLO");
-	if(temp&I2C_SR1_BERR) printf(" BERR");
-	if(temp&I2C_SR1_TxE) printf(" TxE");
-	if(temp&I2C_SR1_RxNE) printf(" RxNE");
-	if(temp&I2C_SR1_STOPF) printf(" STOPF");
-	if(temp&I2C_SR1_ADD10) printf(" ADD10");
-	if(temp&I2C_SR1_BTF) printf(" BTF");
-	if(temp&I2C_SR1_ADDR) printf(" ADDR");
-	if(temp&I2C_SR1_SB) printf(" SB");
-
-	temp=I2C_SR2(BP_I2C);
-
-	if(temp&I2C_SR2_DUALF) printf(" DUALF");
-	if(temp&I2C_SR2_SMBHOST) printf(" SMBHOST");
-	if(temp&I2C_SR2_SMBDEFAULT) printf(" SMBDEFAULT");
-	if(temp&I2C_SR2_GENCALL) printf(" GENCALL");
-	if(temp&I2C_SR2_TRA) printf(" TRA");
-	if(temp&I2C_SR2_BUSY) printf(" BUSY");
-	if(temp&I2C_SR2_MSL) printf(" MSL");
-	*/
 }
 
 void hw2wire_help(void)
@@ -316,6 +223,7 @@ void hw2wire_help(void)
 	printf("Muli-Master-multi-slave 2 wire protocol using a CLOCK and a bidirectional DATA\r\n");
 	printf("line in opendrain configuration. Standard clock frequencies are 100KHz, 400KHz\r\n");
 	printf("and 1MHz.\r\n");
+	#if 0
 	printf("\r\n");
 	printf("More info: https://en.wikipedia.org/wiki/I2C\r\n");
 	printf("\r\n");
@@ -341,18 +249,14 @@ void hw2wire_help(void)
 	printf("\t\t  | |\r\n");
 	printf("\tSDA \t--+-|------------- SDA\r\n");
 	printf("{BP}\tSCL\t----+------------- SCL  {DUT}\r\n");
-	printf("\tGND\t------------------ GND\r\n");			
+	printf("\tGND\t------------------ GND\r\n");	
+	#endif		
 }
 
 
-static uint8_t checkshort(void)
-{
+static uint8_t checkshort(void){
 	uint8_t temp;
-
 	temp=(bio_get(M_I2C_SDA)==0?1:0);
 	temp|=(bio_get(M_I2C_SCL)==0?2:0);
-
 	return (temp==3);			// there is only a short when both are 0 otherwise repeated start wont work
 }
-
-

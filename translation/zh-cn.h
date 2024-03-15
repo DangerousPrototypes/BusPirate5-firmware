@@ -38,6 +38,7 @@ static char const * const zh_cn[]={
 	[T_MODE_ERROR_PARSING_MACRO]="Error parsing macro",
 	[T_MODE_ERROR_NO_MACROS_AVAILABLE]="No macros available",
 	[T_MODE_ERROR_MACRO_NOT_DEFINED]="Macro not defined",
+	[T_MODE_TICK_CLOCK]="Clock tick",
 	[T_MODE_PWM_GENERATE_FREQUENCY]="生成频率",
 	[T_MODE_FREQ_MEASURE_FREQUENCY]="频率测试",
 	[T_MODE_FREQ_FREQUENCY]="频率",

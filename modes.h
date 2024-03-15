@@ -65,7 +65,7 @@ typedef struct _mode
 	void (*protocol_dath)(void);			// set dat hi
 	void (*protocol_datl)(void);			// set dat lo
 	uint32_t (*protocol_dats)(void);		// toglle dat (?)
-	void (*protocol_clk)(void);			// toggle clk (?)
+	void (*protocol_tick_clock)(struct _bytecode *result, struct _bytecode *next);			// toggle clk (?)
 	uint32_t (*protocol_bitr)(void);		// read 1 bit (?)
 	uint32_t (*protocol_periodic)(void);		// service to regular poll whether a byte has arrived or something interesting has happened
 	void (*protocol_macro)(uint32_t);		// macro

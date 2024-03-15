@@ -2,6 +2,7 @@ void hw2wire_start(struct _bytecode *result, struct _bytecode *next);
 void hw2wire_stop(struct _bytecode *result, struct _bytecode *next);
 void hw2wire_write(struct _bytecode *result, struct _bytecode *next);
 void hw2wire_read(struct _bytecode *result, struct _bytecode *next);
+void hw2wire_tick_clock(struct _bytecode *result, struct _bytecode *next);
 void hw2wire_macro(uint32_t macro);
 uint32_t hw2wire_setup(void);
 uint32_t hw2wire_setup_exc(void);

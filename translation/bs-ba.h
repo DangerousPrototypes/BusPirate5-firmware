@@ -38,6 +38,7 @@ static char const * const bs_ba[]={
 	[T_MODE_ERROR_PARSING_MACRO]="Greška u parsiranju makroa",
 	[T_MODE_ERROR_NO_MACROS_AVAILABLE]="Nema dostupnih makroa",
 	[T_MODE_ERROR_MACRO_NOT_DEFINED]="Makro nije definisan",
+	[T_MODE_TICK_CLOCK]="Clock tick",
 	[T_MODE_PWM_GENERATE_FREQUENCY]="Generiši frekvenciju",
 	[T_MODE_FREQ_MEASURE_FREQUENCY]="Mjerenje frekvencije",
 	[T_MODE_FREQ_FREQUENCY]="Frekvencija",

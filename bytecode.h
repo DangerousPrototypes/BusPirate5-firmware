@@ -49,10 +49,12 @@ enum SYNTAX{
     SYN_READ,
     SYN_START,
     SYN_STOP,
+    SYN_TICK_CLOCK,
     SYN_DELAY_US,
     SYN_DELAY_MS,
     SYN_AUX_OUTPUT,
     SYN_AUX_INPUT,
     SYN_ADC,
+
     //SYN_FREQ
 };

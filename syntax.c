@@ -175,6 +175,7 @@ bool syntax_compile(void)
                 case ']': case '}': cmd=SYN_STOP; break; //stop
                 case 'd': cmd=SYN_DELAY_US; break; //delay us
                 case 'D': cmd=SYN_DELAY_MS; break; //delay ms
+                case '^': cmd=SYN_TICK_CLOCK; break; //tick clock                
                 case 'a': cmd=SYN_AUX_OUTPUT; out[out_cnt].out_data=0; break; //aux low
                 case 'A': cmd=SYN_AUX_OUTPUT; out[out_cnt].out_data=1; break; //aux HIGH
                 case '@': cmd=SYN_AUX_INPUT; break; //aux INPUT
@@ -361,7 +362,10 @@ bool syntax_run(void)
         	    //sweep adc
 	            in[in_cnt].in_data=hw_adc_bio(out[i].bits);           
                 break;
-            //case SYN_FREQ: break;                
+            //case SYN_FREQ: break;   
+            case SYN_TICK_CLOCK:
+                modes[system_config.mode].protocol_tick_clock(&in[in_cnt], NULL);
+                break;             
             default:
                 printf("Unknown internal code %d\r\n", out[i].command);
                 return true;
@@ -443,6 +447,11 @@ bool syntax_post(void)
             //case SYN_FREQ:      
                 
                 //break;
+            case SYN_TICK_CLOCK:
+                printf("\r\n%s%s:%s %s%d%s", 
+                    ui_term_color_notice(), t[T_MODE_TICK_CLOCK], ui_term_color_reset(),
+                    ui_term_color_num_float(), in[i].repeat, ui_term_color_reset());
+                break;
             case SYN_WRITE_READ:                                  
             default:
                 printf("\r\nUnimplemented command '%c'", in[i].command+0x30);

@@ -131,7 +131,7 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// set dat hi
 	nullfunc1,				// set dat lo
 	nullfunc3,				// toggle dat (?)
-	nullfunc1,				// toggle clk (?)
+	nullfunc1_temp,				// toggle clk (?)
 	nullfunc3,				// read 1 bit (?)
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	nullfunc4,				// macro
@@ -182,7 +182,7 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// set dat hi
 	nullfunc1,				// set dat lo
 	nullfunc3,				// toggle dat (?)
-	nullfunc1,				// toggle clk (?)
+	nullfunc1_temp,				// toggle clk (?)
 	nullfunc3,				// read 1 bit (?)
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	hw1wire_macro,				// macro
@@ -208,7 +208,7 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// set dat hi
     nullfunc1,				// set dat lo
     nullfunc3,				// toggle dat (?)
-    nullfunc1,				// toggle clk (?)
+    nullfunc1_temp,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     hwusart_periodic,				// service to regular poll whether a byte ahs arrived
     hwusart_macro,				// macro
@@ -234,7 +234,7 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// set dat hi
     nullfunc1,				// set dat lo
     nullfunc3,				// toggle dat (?)
-    nullfunc1,				// toggle clk (?)
+    nullfunc1_temp,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
     hwi2c_macro,				// macro
@@ -260,7 +260,7 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// set dat hi
     nullfunc1,				// set dat lo
     nullfunc3,				// toggle dat (?)
-    nullfunc1,				// toggle clk (?)
+    nullfunc1_temp,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
     SWI2C_macro,				// macro
@@ -286,7 +286,7 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// set dat hi
 	nullfunc1,				// set dat lo
 	nullfunc3,				// toggle dat (?)
-	nullfunc1,				// toggle clk (?)
+	nullfunc1_temp,				// toggle clk (?)
 	nullfunc3,				// read 1 bit (?)
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	spi_macro,				// macro
@@ -312,7 +312,7 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// set dat hi
     nullfunc1,				// set dat lo
     nullfunc3,				// toggle dat (?)
-    nullfunc1,				// toggle clk (?)
+    hw2wire_tick_clock,			// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
     hw2wire_macro,				// macro
@@ -390,7 +390,7 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// set dat hi
 	nullfunc1,				// set dat lo
 	nullfunc3,				// toggle dat (?)
-	nullfunc1,				// toggle clk (?)
+	nullfunc1_temp,				// toggle clk (?)
 	nullfunc3,				// read 1 bit (?)
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	LCDSPI_macro,				// macro
@@ -416,7 +416,7 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// set dat hi
 	nullfunc1,				// set dat lo
 	nullfunc3,				// toggle dat (?)
-	nullfunc1,				// toggle clk (?)
+	nullfunc1_temp,				// toggle clk (?)
 	nullfunc3,				// read 1 bit (?)
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	LCDI2C_macro,				// macro
@@ -441,7 +441,7 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// set clk low
     nullfunc1,				// set dat hi
     nullfunc1,				// set dat lo
-    nullfunc3,				// toggle dat (?)
+    nullfunc1_temp,				// toggle dat (?)
     nullfunc1,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
@@ -468,7 +468,7 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// set dat hi
     nullfunc1,				// set dat lo
     nullfunc3,				// toggle dat (?)
-    nullfunc1,				// toggle clk (?)
+    nullfunc1_temp,				// toggle clk (?)
     nullfunc3,				// read 1 bit (?)
     noperiodic,				// service to regular poll whether a byte ahs arrived
     hwled_macro,				// macro

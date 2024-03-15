@@ -38,6 +38,7 @@ static char const * const pl_pl[]={
 	[T_MODE_ERROR_PARSING_MACRO]="Błąd parsowania makra",
 	[T_MODE_ERROR_NO_MACROS_AVAILABLE]="Brak dostępnych makr",
 	[T_MODE_ERROR_MACRO_NOT_DEFINED]="Makro nie zdefiniowane",
+	[T_MODE_TICK_CLOCK]="Clock tick",
 	[T_MODE_PWM_GENERATE_FREQUENCY]="Wygeneruj częstotliwość",
 	[T_MODE_FREQ_MEASURE_FREQUENCY]="Pomiar częstotliwości",
 	[T_MODE_FREQ_FREQUENCY]="Częstotliwość",

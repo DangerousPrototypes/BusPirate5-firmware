@@ -111,7 +111,7 @@ void hw2wire_write(struct _bytecode *result, struct _bytecode *next){
 		pio_hw2wire_rx_enable(pio, pio_state_machine, false);
 		mode_config.read=false;
 	}
-	uint32_t temp=0;
+	uint32_t temp=result->out_data;
 	ui_format_bitorder_manual(&temp, result->bits, system_config.bit_order);
 	pio_hw2wire_put16(pio, pio_state_machine, (temp<< 1)|(1u));
 }

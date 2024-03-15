@@ -544,25 +544,25 @@ void helpers_show_int_formats(struct command_result *res)
     //system_config.num_bits=temp3;
 }
 
-void helpers_show_int_inverse(struct command_result *res)
-{
+// TODO: revamp all this so functions are cleanly separated and we don't need to mess with globals
+// yuck, this is what we did in super constrained 16bit chips...
+void helpers_show_int_inverse(struct command_result *res){
     uint32_t temp=0;
 	bool has_value = cmdln_args_uint32_by_position(1, &temp);
+    ui_format_bitorder_manual(&temp, system_config.num_bits, 1);
     uint32_t temp2=system_config.display_format;		// remember old display_format
-    system_config.bit_order^=1;
-    uint32_t temp3=system_config.num_bits;		// remember old numbits
-    system_config.num_bits=32;
+    //uint32_t temp3=system_config.num_bits;		// remember old numbits
+    //system_config.num_bits=32;
     for(uint8_t i=0; i<count_of(ui_const_display_formats); i++)
     {
         if(i==df_ascii||i==df_auto) continue;
         
         printf("|");
         system_config.display_format=i;
-        ui_format_print_number(ui_format_bitorder(temp));
+        ui_format_print_number(temp);
     }
     system_config.display_format=temp2;
-    system_config.bit_order^=1;
-    system_config.num_bits=temp3;
+    //system_config.num_bits=temp3;
 }
 /*/
 void helpers_mode_macro(struct command_attributes *attributes, struct command_response *response)

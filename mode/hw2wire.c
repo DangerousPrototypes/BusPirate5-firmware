@@ -111,7 +111,9 @@ void hw2wire_write(struct _bytecode *result, struct _bytecode *next){
 		pio_hw2wire_rx_enable(pio, pio_state_machine, false);
 		mode_config.read=false;
 	}
-	pio_hw2wire_put16(pio, pio_state_machine, (result->out_data << 1)|(1u));
+	uint32_t temp=0;
+	ui_format_bitorder_manual(&temp, result->bits, system_config.bit_order);
+	pio_hw2wire_put16(pio, pio_state_machine, (temp<< 1)|(1u));
 }
 
 void hw2wire_read(struct _bytecode *result, struct _bytecode *next){
@@ -119,7 +121,10 @@ void hw2wire_read(struct _bytecode *result, struct _bytecode *next){
 		pio_hw2wire_rx_enable(pio, pio_state_machine, true);
 		mode_config.read=true;
 	}
-	pio_hw2wire_get16(pio, pio_state_machine, &result->in_data); 
+	uint32_t temp;
+	pio_hw2wire_get16(pio, pio_state_machine, &temp); 
+	ui_format_bitorder_manual(&temp, result->bits, system_config.bit_order);
+	result->in_data=temp;;
 } 
 
 void hw2wire_tick_clock(struct _bytecode *result, struct _bytecode *next){
@@ -167,12 +172,13 @@ void hw2wire_macro(uint32_t macro){
 				for(uint i =0; i<4; i++)
 				{
 					pio_hw2wire_get16(pio, pio_state_machine, &temp);
-					atr[i]=(uint8_t) ui_format_bitorder_manual(temp, 8, 1);
+					ui_format_bitorder_manual(&temp, 8, 1);
+					atr[i]=(uint8_t) temp;
 					printf("0x%02x ", atr[i]);
 				}
 				printf("\r\n");	
 				if(atr[0]==0x00 || atr[0]==0xFF)
-				{
+				{ 
 					result=1;
 					break;
 				}

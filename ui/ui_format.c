@@ -36,29 +36,21 @@ uint32_t ui_format_bitorder(uint32_t d)
 	}
 }
 // customize bitorder and bits
-uint32_t ui_format_bitorder_manual(uint32_t d, uint8_t num_bits, bool bit_order)
-{
+void ui_format_bitorder_manual(uint32_t *d, uint8_t num_bits, bool bit_order){
 	uint32_t result, mask;
 	int i;
-
-	if(!bit_order)			// 0=MSB
-		return d;
-	else
-	{
-		mask=0x80000000;
-		result=0;	
-
-		for(i=0; i<32; i++)
-		{
-			if(d&mask)
-			{
-				result|=(1<<(i));	
-			}
-			mask>>=1;
+	
+	if(!bit_order) return; // 0=MSB
+	
+	mask=0x80000000;
+	result=0;	
+	for(i=0; i<32; i++){
+		if((*d)&mask){
+			result|=(1<<(i));	
 		}
-
-		return (result>>(32-num_bits));
+		mask>>=1;
 	}
+	(*d) = (result>>(32-num_bits));
 }
 
 
@@ -190,25 +182,16 @@ void ui_format_print_number(uint32_t d)
 
 	switch(system_config.display_format)
 	{
-		case 0:	if(system_config.num_bits<=8)
-				printf("%3u", d);
+		case 2:	if(system_config.num_bits<=8) //DEC
+				printf("%3d", d);
 			else if(system_config.num_bits<=16)
-				printf("%5u", d);
+				printf("%5d", d);
 			else if(system_config.num_bits<=24)
-				printf("%8u", d);
+				printf("%8d", d);
 			else if(system_config.num_bits<=32)
-				printf("%10u", d);
+				printf("%10d", d);
 			break;
-		case 1:	if(system_config.num_bits<=8)
-				printf("0x%02X", d);
-			else if(system_config.num_bits<=16)
-				printf("0x%04X", d);
-			else if(system_config.num_bits<=24)
-				printf("0x%06X", d);
-			else if(system_config.num_bits<=32)
-				printf("0x%08X", d);
-			break;
-		case 2:	if(system_config.num_bits<=6)
+		/*case 2:	if(system_config.num_bits<=6)
 				printf("0%02o", d);
 			else if(system_config.num_bits<=12)
 				printf("0%04o", d);
@@ -220,8 +203,8 @@ void ui_format_print_number(uint32_t d)
 				printf("0%010o", d);
 			else if(system_config.num_bits<=32)
 				printf("0%012o", d);
-			break;
-		case 3:	printf("0b");
+			break;*/
+		case 3:	printf("0b"); //binary
 			for(i=0; i<system_config.num_bits; i++)
 			{
 				mask=1<<(system_config.num_bits-i-1);
@@ -230,6 +213,16 @@ void ui_format_print_number(uint32_t d)
 				else
 					printf("0");
 			}
+			break;
+		case 1: //hex
+		default: if(system_config.num_bits<=8)
+				printf("0x%02X", d);
+			else if(system_config.num_bits<=16)
+				printf("0x%04X", d);
+			else if(system_config.num_bits<=24)
+				printf("0x%06X", d);
+			else if(system_config.num_bits<=32)
+				printf("0x%08X", d);
 			break;
 	}
 	if(system_config.num_bits!=8) printf(".%d", system_config.num_bits);

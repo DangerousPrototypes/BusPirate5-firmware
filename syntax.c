@@ -298,39 +298,31 @@ bool syntax_run(void)
         switch(out[i].command) 
         {
             case SYN_WRITE:
-                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH)
-                {
+                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH) {
                     in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
                     in[in_cnt].error=SRES_ERROR;
                     return false;
                 }                
-                for(uint16_t j=0; j<out[i].repeat; j++) //TODO: generate multiple packets due to ack/nack needs
-                {
-                    if(j>0)
-                    {
+                for(uint16_t j=0; j<out[i].repeat; j++){ 
+                    if(j>0){
                         in_cnt++;
                         in[in_cnt]=out[i];
                     }
-
                     modes[system_config.mode].protocol_write(&in[in_cnt],NULL);
                 }
                 break;
             case SYN_WRITE_READ: break;
             case SYN_READ:        
-                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH)
-                {
+                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH){
                     in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
                     in[in_cnt].error=SRES_ERROR;
                     return false;
                 }      
-                for(uint16_t j=0; j<out[i].repeat; j++)
-                {
-                    if(j>0)
-                    {
+                for(uint16_t j=0; j<out[i].repeat; j++){
+                    if(j>0){
                         in_cnt++;
                         in[in_cnt]=out[i];
                     }
-
                     modes[system_config.mode].protocol_read(&in[in_cnt], (i+1<out_cnt && j+1==out[i].repeat)?&out[i+1]:NULL);
                 }
                 break;
@@ -364,7 +356,9 @@ bool syntax_run(void)
                 break;
             //case SYN_FREQ: break;   
             case SYN_TICK_CLOCK:
-                modes[system_config.mode].protocol_tick_clock(&in[in_cnt], NULL);
+                for(uint16_t j=0; j<out[i].repeat; j++){
+                    modes[system_config.mode].protocol_tick_clock(&in[in_cnt], NULL);
+                }
                 break;             
             default:
                 printf("Unknown internal code %d\r\n", out[i].command);

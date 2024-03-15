@@ -21,7 +21,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
-#include "buttons.h"
+#include "button.h"
 #include "storage.h"
 #include "freq.h"
 #include "queue.h"
@@ -117,8 +117,8 @@ int main()
     shift_set_clear_wait(DISPLAY_RESET,0);
     busy_wait_ms(100);
    
-    // input buttons init
-    buttons_init();
+    // input button init
+    button_init();
 
     // setup the system_config defaults and the initial pin label references
     system_init();

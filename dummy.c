@@ -17,6 +17,7 @@
 #include "ui/ui_help.h" // Functions to display help in a standardized way
 #include "system_config.h" // Stores current Bus Pirate system configuration
 #include "amux.h"   // Analog voltage measurement functions
+#include "button.h" // Button press functions
 
 // This array of strings is used to display help USAGE examples for the dummy command
 const char * const dummy_usage_help[]= 
@@ -120,13 +121,8 @@ void dummy_func(struct command_result *res)
     printf("Flag -b is %s\r\n", (b_flag?"set":"not set"));
     if(b_flag){ //press bus pirate button to continue
         printf("Press Bus Pirate button to continue\r\n");
-        // there's not currently a working button library
-        // it would be simple, maybe you'd like to try?
-        // let's just use the PICO commands for now
-        gpio_set_function(EXT1, GPIO_FUNC_SIO);
-        gpio_set_dir(EXT1, GPIO_IN);
-        gpio_pull_down(EXT1);
-        while(!gpio_get(EXT1))
+        // using the polling method to wait for the button press
+        while(!button_get(0))
         {
             tight_loop_contents();
         }
@@ -260,6 +256,7 @@ void dummy_func(struct command_result *res)
     // vreg (voltage/current)
     // LEDs
     // buffered IO pins
+    //prompt and parse/menus
 
     printf("dummy command complete\r\n");
 }

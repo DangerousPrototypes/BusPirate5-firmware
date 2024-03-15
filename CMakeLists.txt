@@ -29,7 +29,7 @@ set(bp5_common
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
 	msc_disk.c usb_descriptors.c
 	displays.c displays.h display/default.c display/default.h
-        shift.h shift.c psu.h psu.c amux.h amux.c buttons.c buttons.h
+        shift.h shift.c psu.h psu.c amux.h amux.c button.c button.h
         system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
         pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c
         mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c 

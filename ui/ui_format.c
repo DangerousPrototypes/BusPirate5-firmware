@@ -36,21 +36,22 @@ uint32_t ui_format_bitorder(uint32_t d)
 	}
 }
 // customize bitorder and bits
-void ui_format_bitorder_manual(uint32_t *d, uint8_t num_bits, bool bit_order){
+uint32_t ui_format_lsb(uint32_t d, uint8_t num_bits){
 	uint32_t result, mask;
-	int i;
-	
-	if(!bit_order) return; // 0=MSB
 	
 	mask=0x80000000;
 	result=0;	
-	for(i=0; i<32; i++){
-		if((*d)&mask){
+	for(uint32_t i=0; i<32; i++){
+		if((d)&mask){
 			result|=(1<<(i));	
 		}
 		mask>>=1;
 	}
-	(*d) = (result>>(32-num_bits));
+	return (result>>(32-num_bits));
+}
+void ui_format_bitorder_manual(uint32_t *d, uint8_t num_bits, bool bit_order){
+	if(!bit_order) return; // 0=MSB
+	(*d) = ui_format_lsb(*d, num_bits);
 }
 
 
@@ -226,5 +227,6 @@ void ui_format_print_number(uint32_t d)
 			break;
 	}
 	if(system_config.num_bits!=8) printf(".%d", system_config.num_bits);
-		else printf(" (\'%c\')", ((d>=0x20)&&(d<0x7E)?d:0x20));
+	if(system_config.num_bits==8 && d>= ' ' && d<='~' ) //ASCII
+		printf(" (\'%c\')", ((d>=0x20)&&(d<0x7E)?d:0x20));
 }

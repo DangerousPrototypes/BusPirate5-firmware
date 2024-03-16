@@ -75,6 +75,8 @@ typedef struct _mode
 	//const char*(*protocol_pins)(void);			// display pin config
 	void (*protocol_settings)(void);		// display settings 
 	void (*protocol_help)(void);			// display protocol specific help
+	const struct _command_struct (*mode_commands);		// mode specific commands //ignored if 0x00
+	const uint32_t (*mode_commands_count);		// mode specific commands count ignored if 0x00
 	char protocol_name[10];				// friendly name (promptname)
 	uint32_t (*protocol_command)(struct command_result *result); // per mode command parser - ignored if 0
 	void (*protocol_lcd_update)(uint32_t flags);	// replacement for ui_lcd_update if non-0

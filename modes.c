@@ -141,6 +141,8 @@ struct _mode modes[MAXPROTO]={
 	//HiZpins,				// display pin config
 	HiZsettings,				// display settings 
 	nohelp,					// display small help about the protocol
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
 	"HiZ",					// friendly name (promptname)
 },
 #ifdef BP_USE_SW1WIRE
@@ -166,6 +168,8 @@ struct _mode modes[MAXPROTO]={
     ONEWIRE_pins,				// display pin config
     ONEWIRE_settings,			// display settings
     nohelp,					// display small help about the protocol
+        NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
     "1-WIRE",				// friendly name (promptname)
 },
 #endif
@@ -192,6 +196,8 @@ struct _mode modes[MAXPROTO]={
 	//HiZpins,				// display pin config
 	HiZsettings,				// display settings 
 	nohelp,					// display small help about the protocol
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count    
     "1-WIRE",				// friendly name (promptname)
 },
 #endif
@@ -218,6 +224,8 @@ struct _mode modes[MAXPROTO]={
     //HWUSART_pins,				// display pin config
     hwusart_settings,			// display settings
     hwusart_help,				// display small help about the protocol
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count    
     "UART",				// friendly name (promptname)
 },
 #endif
@@ -244,6 +252,8 @@ struct _mode modes[MAXPROTO]={
     //HWI2C_pins,				// display pin config
     hwi2c_settings,				// display settings
     hwi2c_help,				// display small help about the protocol
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count    
     "I2C",				// friendly name (promptname)
 },
 #endif
@@ -270,6 +280,8 @@ struct _mode modes[MAXPROTO]={
     SWI2C_pins,				// display pin config
     SWI2C_settings,				// display settings
     SWI2C_help,				// display small help about the protocol	
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
     "I2C",				// friendly name (promptname)
 },
 #endif
@@ -296,6 +308,8 @@ struct _mode modes[MAXPROTO]={
 	//spi_pins,				// display pin config
 	spi_settings,				// display settings 
 	spi_help,				// display small help about the protocol
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
 	"SPI",				// friendly name (promptname)
 },
 #endif
@@ -322,6 +336,8 @@ struct _mode modes[MAXPROTO]={
     //HWI2C_pins,				// display pin config
     hw2wire_settings,			// display settings
     hw2wire_help,				// display small help about the protocol
+    hw2wire_commands,            // mode specific commands
+    &hw2wire_commands_count,      // mode specific commands count
     "2WIRE",				    // friendly name (promptname)
 },
 #endif
@@ -348,6 +364,8 @@ struct _mode modes[MAXPROTO]={
 	SW2W_pins,				// display pin config
 	SW2W_settings,				// display settings 
 	nohelp,					// display small help about the protocol
+        NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
 	"2WIRE",					// friendly name (promptname)
 },
 #endif
@@ -374,6 +392,8 @@ struct _mode modes[MAXPROTO]={
 	SW3W_pins,				// display pin config
 	SW3W_settings,				// display settings 
 	SW3W_help,				// display small help about the protocol
+        NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
 	"3WIRE",					// friendly name (promptname)
 },
 #endif
@@ -400,6 +420,8 @@ struct _mode modes[MAXPROTO]={
 	LCDSPI_pins,				// display pin config
 	LCDSPI_settings,			// display settings 
 	nohelp,					// display small help about the protocol
+        NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
 	"LCDSPI",				// friendly name (promptname)
 },
 #endif
@@ -426,6 +448,8 @@ struct _mode modes[MAXPROTO]={
 	LCDI2C_pins,				// display pin config
 	LCDI2C_settings,			// display settings 
 	nohelp,					// display small help about the protocol
+        NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
 	"LCDI2C",				// friendly name (promptname)
 },
 #endif
@@ -452,6 +476,8 @@ struct _mode modes[MAXPROTO]={
     DIO_pins,				// display pin config
     DIO_settings,				// display settings
     DIO_help,				// display small help about the protocol
+        NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count
     "DIO",					// friendly name (promptname)
 },
 #endif
@@ -478,6 +504,8 @@ struct _mode modes[MAXPROTO]={
     //HWLED_pins,				// display pin config
     hwled_settings,				// display settings
     hwled_help,				// display small help about the protocol
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count    
     "LED",				// friendly name (promptname)
 },
 #endif
@@ -504,6 +532,8 @@ struct _mode modes[MAXPROTO]={
     LA_pins,				// display pin config
     LA_settings,				// display settings
     nohelp,					// display small help about the protocol
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count    
     "LA",					// friendly name (promptname)
 },
 #endif
@@ -530,6 +560,8 @@ struct _mode modes[MAXPROTO]={
     //dummy1_pins,				// display pin config
     dummy1_settings,			// display settings
     nohelp,					// display small help about the protocol
+    NULL,                   // mode specific commands
+    NULL,                   // mode specific commands count    
     "DUMMY1",				// friendly name (promptname)
 }
 #endif

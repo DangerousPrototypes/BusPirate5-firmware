@@ -95,24 +95,66 @@ bool ui_process_commands(void){
         }
         //process as a command
         char command_string[MAX_COMMAND_LENGTH];
+        struct command_result result=result_blank;
         //string 0 is the command
         // continue if we don't get anything? could be an empty chained command? should that be error?
         if(!cmdln_args_string_by_position(0, sizeof(command_string), command_string)){
             continue;
         }   
+        
 
-        bool mode_cmd, cmd_valid =false;
+        enum COMMAND_TYPE {
+            NONE=0,
+            GLOBAL,
+            MODE,
+            DISPLAY 
+        };
+
+        // first search global commands
         uint32_t user_cmd_id=0;
+        uint32_t command_type=NONE;
         for(int i=0; i<commands_count; i++){  
             if(strcmp(command_string, commands[i].command)==0){
                 user_cmd_id=i;
-                cmd_valid=true;
-                break;
+                command_type=GLOBAL;
+                //global help handler (optional, set config in commands.c)
+                if(cmdln_args_find_flag('h') && (commands[user_cmd_id].help_text!=0x00)){ 
+                    printf("%s\r\n",t[commands[user_cmd_id].help_text]);
+                    return false;
+                }
+
+                if(command_type==GLOBAL && system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz){
+                    printf("%s\r\n",hiz_error());
+                    return true;            
+                }
+                commands[user_cmd_id].func(&result);
+                goto cmd_ok;
             }
         }
 
-        struct command_result result=result_blank;
-        if(!cmd_valid){
+        // if not global, search mode specific commands
+        if(!command_type){
+            if(modes[system_config.mode].mode_commands_count){
+                for(int i=0; i< *modes[system_config.mode].mode_commands_count; i++){
+                    if(strcmp(command_string, modes[system_config.mode].mode_commands[i].command)==0){
+                        user_cmd_id=i;
+                        command_type=MODE;
+                        //mode help handler (optional, set config in modes command struct)
+                        if(cmdln_args_find_flag('h') && (modes[system_config.mode].mode_commands[user_cmd_id].help_text!=0x00)){ 
+                            printf("%s\r\n",t[modes[system_config.mode].mode_commands[user_cmd_id].help_text]);
+                            return false;
+                        }
+                        modes[system_config.mode].mode_commands[user_cmd_id].func(&result);
+                        goto cmd_ok;
+                    }
+                }
+            }
+        }
+        
+        //no such command, search storage for runnable scripts?
+        
+        // if nothing so far, hand off to mode parser
+        if(!command_type){
             if(displays[system_config.display].display_command){
                 if (displays[system_config.display].display_command(&result))
                     goto cmd_ok;
@@ -121,27 +163,14 @@ bool ui_process_commands(void){
                 if (modes[system_config.mode].protocol_command(&result))
                     goto cmd_ok;
             }
-            printf("%s", ui_term_color_notice());
-            printf(t[T_CMDLN_INVALID_COMMAND], command_string);
-            printf("%s\r\n", ui_term_color_reset());
-            return true;
-        }
-        //no such command, search TF flash card for runnable scripts?
-
-        //global help handler (optional, set config in commands.c)
-        if(cmdln_args_find_flag('h') && (commands[user_cmd_id].help_text!=0x00)){ 
-            printf("%s\r\n",t[commands[user_cmd_id].help_text]);
-            return false;
         }
 
-        if(system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz){
-            printf("%s\r\n",hiz_error());
-            return true;            
-        }    
-
-        //execute the command
-        commands[user_cmd_id].func(&result);
-       
+        // error no such command
+        printf("%s", ui_term_color_notice());
+        printf(t[T_CMDLN_INVALID_COMMAND], command_string);
+        printf("%s\r\n", ui_term_color_reset());
+        return true;
+        
 cmd_ok:
         printf("%s\r\n", ui_term_color_reset());
 

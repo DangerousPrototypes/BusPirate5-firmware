@@ -21,6 +21,20 @@
 #define M_2WIRE_SDA BIO0
 #define M_2WIRE_SCL BIO1
 #define M_2WIRE_RST BIO2
+
+void sle4442(struct command_result *res){
+	printf("sle4442\r\n");
+}
+
+// command configuration
+const struct _command_struct hw2wire_commands[]=
+{   //HiZ? Function Help
+    {"sle4442",true,&sle4442,T_CMDLN_LS}, //ls
+};
+const uint32_t hw2wire_commands_count=count_of(hw2wire_commands);
+
+
+
 //TODO: RST pin optional
 // controlled by {}, and also used by ATR SIM card stuff
 // add all bitwise operators
@@ -62,7 +76,7 @@ uint32_t hw2wire_setup(void)
 
 	if(storage_load_mode(config_file, config_t, count_of(config_t)))
 	{
-		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
+		printf("\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
 		printf(" %s: %dKHz\r\n", t[T_HW2WIRE_SPEED_MENU], mode_config.baudrate);			
 		//printf(" %s: %s\r\n", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[mode_config.data_bits].description]);
 		

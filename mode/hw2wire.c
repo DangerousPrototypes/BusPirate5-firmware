@@ -149,12 +149,56 @@ void sle4442(struct command_result *res){
 				printf("0x%02x ", secmem[i]);
 			}
 			if(secmem[0]<=7){
-				printf("\r\nRemaining attempts: %d (0x%1X)\r\n", (secmem[0]&0b100?1:0)+(secmem[0]&0b010?1:0)+(secmem[0]&0b001?1:0), secmem[0]);
+				printf("\r\nRemaining attempts: %d (0x%1X)\r\n", (secmem[0]&0b100?1:0)+(secmem[0]&0b010?1:0)+(secmem[0]&0b001?1:0), secmem[0]);			
 			}
 		}
 	}
 	else if(strcmp(action, "dump")==0){
-		//dump
+		uint32_t temp;
+		uint8_t secmem[4]; 
+		printf("Security memory: ");
+		//[0x31 0 0] r:4
+		// I2C start, 0x31, 0x00, 0x00, I2C stop
+		pio_hw2wire_start(pio, pio_state_machine);
+		pio_hw2wire_put16(pio, pio_state_machine, (ui_format_lsb(0x31, 8)<< 1)|(1u));
+		pio_hw2wire_put16(pio, pio_state_machine, 0x00);
+		pio_hw2wire_put16(pio, pio_state_machine, 0x00);
+		pio_hw2wire_stop(pio, pio_state_machine);
+		pio_hw2wire_rx_enable(pio, pio_state_machine, true);
+		for(uint i =0; i<4; i++){
+			pio_hw2wire_get16(pio, pio_state_machine, &temp);
+			secmem[i]=(uint8_t) ui_format_lsb(temp, 8);
+			printf("0x%02x ", secmem[i]);
+		}
+		if(secmem[0]<=7){
+			printf("\r\nRemaining attempts: %d (0x%1X)\r\n", (secmem[0]&0b100?1:0)+(secmem[0]&0b010?1:0)+(secmem[0]&0b001?1:0), secmem[0]);			
+		}else{
+			return;
+		}
+		printf("Protection memory:");
+		pio_hw2wire_start(pio, pio_state_machine);
+		pio_hw2wire_put16(pio, pio_state_machine, (ui_format_lsb(0x34, 8)<< 1)|(1u));
+		pio_hw2wire_put16(pio, pio_state_machine, 0x00);
+		pio_hw2wire_put16(pio, pio_state_machine, 0x00);
+		pio_hw2wire_stop(pio, pio_state_machine);
+		pio_hw2wire_rx_enable(pio, pio_state_machine, true);
+		for(uint i =0; i<4; i++){
+			pio_hw2wire_get16(pio, pio_state_machine, &temp);
+			printf("0x%02x ", (uint8_t) ui_format_lsb(temp, 8));
+		}
+		printf("\r\nMemory:\r\n");
+		pio_hw2wire_start(pio, pio_state_machine);
+		pio_hw2wire_put16(pio, pio_state_machine, (ui_format_lsb(0x30, 8)<< 1)|(1u));
+		pio_hw2wire_put16(pio, pio_state_machine, 0x00);
+		pio_hw2wire_put16(pio, pio_state_machine, 0x00);
+		pio_hw2wire_stop(pio, pio_state_machine);
+		pio_hw2wire_rx_enable(pio, pio_state_machine, true);
+		for(uint i =0; i<256; i++){
+			pio_hw2wire_get16(pio, pio_state_machine, &temp);
+			printf("0x%02x ", (uint8_t) ui_format_lsb(temp, 8));
+		}
+		printf("\r\n");
+
 	}
 	else if(strcmp(action, "write")==0){
 		//write
@@ -167,9 +211,6 @@ void sle4442(struct command_result *res){
 	}
 	else if(strcmp(action, "protect")==0){
 		//protect
-	}
-	else if(strcmp(action, "unprotect")==0){
-		//unprotect
 	}
 	else if(strcmp(action, "verify")==0){
 		//verify

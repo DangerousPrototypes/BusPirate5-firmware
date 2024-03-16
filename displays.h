@@ -14,7 +14,7 @@ enum
 
 typedef struct _display
 {
-	uint32_t (*display_periodic)(void);		// service to regular poll whether a byte has arrived or something interesting has happened
+	void (*display_periodic)(void);		// service to regular poll whether a byte has arrived or something interesting has happened
 	uint32_t (*display_setup)(void);			// setup UI
 	uint32_t (*display_setup_exc)(void);		// real setup
 	void (*display_cleanup)(void);			// cleanup for HiZ
@@ -33,5 +33,5 @@ uint32_t nullfunc3(void);
 void nullfunc4(uint32_t c);
 const char *nullfunc5(void);
 void nohelp(void);
-uint32_t noperiodic(void);
+void noperiodic(void);
 #endif

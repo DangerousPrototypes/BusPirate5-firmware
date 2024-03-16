@@ -11,7 +11,7 @@ void hwusart_pins(void);
 void hwusart_settings(void);
 void hwusart_printerror(void);
 void hwusart_help(void);
-uint32_t hwusart_periodic(void);
+void hwusart_periodic(void);
 
 typedef struct _uart_mode_config{
 	uint32_t baudrate;

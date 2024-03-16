@@ -170,6 +170,7 @@ static inline void hw2wire_program_init(PIO pio, uint sm, uint offset, uint pin_
     set pins, 0 side 1 [7] ; SCL = 1, SDA = 0
     set pins, 1 side 1 [7] ; SCL = 1, SDA = 1
 
+
 % c-sdk {
 // Define order of our instruction table
 enum {

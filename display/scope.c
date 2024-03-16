@@ -207,7 +207,7 @@ void scope_cleanup(void)
 }
 
 static unsigned char down=0;
-uint32_t scope_periodic(void)
+void scope_periodic(void)
 {
 	if (gpio_get(EXT1)) {
 		if (!down) {

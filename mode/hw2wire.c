@@ -17,23 +17,27 @@
 #include "ui/ui_command.h"
 #include "ui/ui_format.h"
 
-#define M_I2C_PIO pio0
-#define M_I2C_SDA BIO0
-#define M_I2C_SCL BIO1
-
+#define M_2WIRE_PIO pio0
+#define M_2WIRE_SDA BIO0
+#define M_2WIRE_SCL BIO1
+#define M_2WIRE_RST BIO2
+//TODO: RST pin optional
+// controlled by {}, and also used by ATR SIM card stuff
+// add all bitwise operators
+// use own .json settings file
 static const char pin_labels[][5]={
 	"SDA",
 	"SCL",
+	"RST"
 };
 
 static struct _hw2wire_mode_config mode_config;
 
-static PIO pio = M_I2C_PIO;
+static PIO pio = M_2WIRE_PIO;
 static uint pio_state_machine = 3;
 static uint pio_loaded_offset;
 
 static uint8_t checkshort(void);
-static void i2c_search_addr(bool verbose);
 
 uint32_t hw2wire_setup(void)
 {
@@ -44,11 +48,11 @@ uint32_t hw2wire_setup(void)
 	static const struct prompt_item i2c_speed_menu[]={{T_HWI2C_SPEED_MENU_1}};		
 
 	static const struct ui_prompt i2c_menu[]={
-		{T_HWI2C_SPEED_MENU,i2c_speed_menu,	count_of(i2c_speed_menu),T_HWI2C_SPEED_PROMPT, 1,1000,400,		0,&prompt_int_cfg},
+		{T_HW2WIRE_SPEED_MENU,i2c_speed_menu,	count_of(i2c_speed_menu),T_HWI2C_SPEED_PROMPT, 1,1000,400,		0,&prompt_int_cfg},
 		{T_HWI2C_DATA_BITS_MENU,i2c_data_bits_menu,	count_of(i2c_data_bits_menu),T_HWI2C_DATA_BITS_PROMPT, 0,0,1, 	0,&prompt_list_cfg}
 	};
 
-	const char config_file[]="bpi2c.bp";
+	const char config_file[]="bp2wire.bp";
 
 	struct _mode_config_t config_t[]={
 		{"$.baudrate", &mode_config.baudrate},
@@ -59,7 +63,7 @@ uint32_t hw2wire_setup(void)
 	if(storage_load_mode(config_file, config_t, count_of(config_t)))
 	{
 		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-		printf(" %s: %dKHz\r\n", t[T_HWI2C_SPEED_MENU], mode_config.baudrate);			
+		printf(" %s: %dKHz\r\n", t[T_HW2WIRE_SPEED_MENU], mode_config.baudrate);			
 		//printf(" %s: %s\r\n", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[mode_config.data_bits].description]);
 		
 		bool user_value;
@@ -80,16 +84,17 @@ uint32_t hw2wire_setup(void)
 
 uint32_t hw2wire_setup_exc(void){
 	pio_loaded_offset = pio_add_program(pio, &hw2wire_program);
-    hw2wire_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_I2C_SDA], bio2bufiopin[M_I2C_SCL], bio2bufdirpin[M_I2C_SDA], bio2bufdirpin[M_I2C_SCL], mode_config.baudrate);
+    hw2wire_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_2WIRE_SDA], bio2bufiopin[M_2WIRE_SCL], bio2bufdirpin[M_2WIRE_SDA], bio2bufdirpin[M_2WIRE_SCL], mode_config.baudrate);
 	
-	system_bio_claim(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
-	system_bio_claim(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
+	system_bio_claim(true, M_2WIRE_SDA, BP_PIN_MODE, pin_labels[0]);
+	system_bio_claim(true, M_2WIRE_SCL, BP_PIN_MODE, pin_labels[1]);
+	system_bio_claim(true, M_2WIRE_RST, BP_PIN_MODE, pin_labels[2]);
 
 	pio_hw2wire_rx_enable(pio, pio_state_machine, false);
 	mode_config.read=false;
 	pio_hw2wire_reset(pio, pio_state_machine);
-	
-	printf("PLEASE: feel free to test this mode, but no bug reports.\r\nThis is a work in progress and I am aware of the issues.\r\n");	return 1;
+
+	bio_put(M_2WIRE_RST, 0); //preload the RST pin to be 0 when output	
 }
 
 void hw2wire_start(struct _bytecode *result, struct _bytecode *next){
@@ -101,9 +106,19 @@ void hw2wire_start(struct _bytecode *result, struct _bytecode *next){
 	pio_hw2wire_start(pio, pio_state_machine);
 }
 
+void hw2wire_start_alt(struct _bytecode *result, struct _bytecode *next){
+	result->data_message=t[T_HW2WIRE_RST_HIGH];
+	bio_input(M_2WIRE_RST);
+}
+
 void hw2wire_stop(struct _bytecode *result, struct _bytecode *next){
 	result->data_message=t[T_HWI2C_STOP];
 	pio_hw2wire_stop(pio, pio_state_machine);
+}
+
+void hw2wire_stop_alt(struct _bytecode *result, struct _bytecode *next){
+	result->data_message=t[T_HW2WIRE_RST_LOW];
+	bio_output(M_2WIRE_RST);
 }
 
 void hw2wire_write(struct _bytecode *result, struct _bytecode *next){
@@ -124,12 +139,33 @@ void hw2wire_read(struct _bytecode *result, struct _bytecode *next){
 	uint32_t temp;
 	pio_hw2wire_get16(pio, pio_state_machine, &temp); 
 	ui_format_bitorder_manual(&temp, result->bits, system_config.bit_order);
-	result->in_data=temp;;
+	result->in_data=temp;
 } 
 
 void hw2wire_tick_clock(struct _bytecode *result, struct _bytecode *next){
 	pio_hw2wire_clock_tick(pio, pio_state_machine);
 }
+
+void hw2wire_set_clk_high(struct _bytecode *result, struct _bytecode *next){
+	pio_hw2wire_set_mask(pio, pio_state_machine, 1<<M_2WIRE_SCL, 1<<M_2WIRE_SCL);
+}
+
+void hw2wire_set_clk_low(struct _bytecode *result, struct _bytecode *next){
+	pio_hw2wire_set_mask(pio, pio_state_machine, 1<<M_2WIRE_SCL, 0);
+}
+
+void hw2wire_set_dat_high(struct _bytecode *result, struct _bytecode *next){
+	pio_hw2wire_set_mask(pio, pio_state_machine, 1<<M_2WIRE_SDA, 1<<M_2WIRE_SDA);
+}
+
+void hw2wire_set_dat_low(struct _bytecode *result, struct _bytecode *next){
+	pio_hw2wire_set_mask(pio, pio_state_machine, 1<<M_2WIRE_SDA, 0);
+}
+
+void hw2wire_read_bit(struct _bytecode *result, struct _bytecode *next){
+	result->in_data=bio_get(M_2WIRE_SDA);
+}	
+
 
 void hw2wire_macro(uint32_t macro){
 	
@@ -208,8 +244,9 @@ void hw2wire_macro(uint32_t macro){
 void hw2wire_cleanup(void){
 	pio_remove_program (pio, &hw2wire_program, pio_loaded_offset);
 	bio_init();
-	system_bio_claim(false, M_I2C_SDA, BP_PIN_MODE,0);
-	system_bio_claim(false, M_I2C_SCL, BP_PIN_MODE,0);
+	system_bio_claim(false, M_2WIRE_SDA, BP_PIN_MODE,0);
+	system_bio_claim(false, M_2WIRE_SCL, BP_PIN_MODE,0);
+	system_bio_claim(false, M_2WIRE_RST, BP_PIN_MODE,0);
 }
 
 /*void hw2wire_pins(void){
@@ -217,7 +254,7 @@ void hw2wire_cleanup(void){
 }*/
 
 void hw2wire_settings(void){
-	printf("HWI2C (speed)=(%d)", mode_config.baudrate_actual);
+	printf("HW2WIRE (speed)=(%d)", mode_config.baudrate_actual);
 }
 
 void hw2wire_printI2Cflags(void){
@@ -228,7 +265,7 @@ void hw2wire_help(void)
 {
 	printf("Muli-Master-multi-slave 2 wire protocol using a CLOCK and a bidirectional DATA\r\n");
 	printf("line in opendrain configuration. Standard clock frequencies are 100KHz, 400KHz\r\n");
-	printf("and 1MHz.\r\n");
+	printf("and 1MHz. Includes RST pin commonly used with 2 wire protocols, controlled with { & }.\r\n");
 	#if 0
 	printf("\r\n");
 	printf("More info: https://en.wikipedia.org/wiki/I2C\r\n");
@@ -262,7 +299,7 @@ void hw2wire_help(void)
 
 static uint8_t checkshort(void){
 	uint8_t temp;
-	temp=(bio_get(M_I2C_SDA)==0?1:0);
-	temp|=(bio_get(M_I2C_SCL)==0?2:0);
+	temp=(bio_get(M_2WIRE_SDA)==0?1:0);
+	temp|=(bio_get(M_2WIRE_SCL)==0?2:0);
 	return (temp==3);			// there is only a short when both are 0 otherwise repeated start wont work
 }

@@ -33,7 +33,7 @@ static const char pin_labels[][5]={
 
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
-uint32_t hwusart_periodic(void)
+void hwusart_periodic(void)
 {
 	if(uart_is_readable(M_UART_PORT) && mode_config.async_print)
 	{

@@ -104,9 +104,9 @@ void nohelp(void)
 	printf(t[T_MODE_NO_HELP_AVAILABLE]);
 }
 
-uint32_t noperiodic(void)
+void noperiodic(void)
 {
-	return 0;
+	return;
 }
 
 void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next)
@@ -121,18 +121,18 @@ void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next)
 struct _mode modes[MAXPROTO]={
 {
 	nullfunc1_temp,				// start
-	nullfunc1_temp,				// start with read
+	nullfunc1_temp,				// start alternate
 	nullfunc1_temp,				// stop
-	nullfunc1_temp,				// stop with read
+	nullfunc1_temp,				// stop alternate
 	nullfunc1_temp,				// write(/read) max 32 bit
 	nullfunc1_temp,				// read max 32 bit
-	nullfunc1,				// set clk high
-	nullfunc1,				// set clk low
-	nullfunc1,				// set dat hi
-	nullfunc1,				// set dat lo
-	nullfunc3,				// toggle dat (?)
-	nullfunc1_temp,				// toggle clk (?)
-	nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	nullfunc4,				// macro
 	HiZsetup,				// setup UI
@@ -177,13 +177,13 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1_temp,				// stop with read
 	hw1wire_write,				// write(/read) max 32 bit
 	hw1wire_read,				// read max 32 bit
-	nullfunc1,				// set clk high
-	nullfunc1,				// set clk low
-	nullfunc1,				// set dat hi
-	nullfunc1,				// set dat lo
-	nullfunc3,				// toggle dat (?)
-	nullfunc1_temp,				// toggle clk (?)
-	nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	hw1wire_macro,				// macro
 	hw1wire_setup,				// setup UI
@@ -203,13 +203,13 @@ struct _mode modes[MAXPROTO]={
     hwusart_close,				// stop with read
     hwusart_write,				// send(/read) max 32 bit
     hwusart_read,				// read max 32 bit
-    nullfunc1,				// set clk high
-    nullfunc1,				// set clk low
-    nullfunc1,				// set dat hi
-    nullfunc1,				// set dat lo
-    nullfunc3,				// toggle dat (?)
-    nullfunc1_temp,				// toggle clk (?)
-    nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
     hwusart_periodic,				// service to regular poll whether a byte ahs arrived
     hwusart_macro,				// macro
     hwusart_setup,				// setup UI
@@ -229,13 +229,13 @@ struct _mode modes[MAXPROTO]={
     hwi2c_stop,				// stop with read
     hwi2c_write,				// send(/read) max 32 bit
     hwi2c_read,				// read max 32 bit
-    nullfunc1,				// set clk high
-    nullfunc1,				// set clk low
-    nullfunc1,				// set dat hi
-    nullfunc1,				// set dat lo
-    nullfunc3,				// toggle dat (?)
-    nullfunc1_temp,				// toggle clk (?)
-    nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
     noperiodic,				// service to regular poll whether a byte ahs arrived
     hwi2c_macro,				// macro
     hwi2c_setup,				// setup UI
@@ -255,13 +255,13 @@ struct _mode modes[MAXPROTO]={
     SWI2C_stop,				// stop with read
     SWI2C_write,				// swrite(/read) max 32 bit
     SWI2C_read,				// read max 32 bit
-    nullfunc1,				// set clk high
-    nullfunc1,				// set clk low
-    nullfunc1,				// set dat hi
-    nullfunc1,				// set dat lo
-    nullfunc3,				// toggle dat (?)
-    nullfunc1_temp,				// toggle clk (?)
-    nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
     noperiodic,				// service to regular poll whether a byte ahs arrived
     SWI2C_macro,				// macro
     SWI2C_setup,				// setup UI
@@ -281,13 +281,13 @@ struct _mode modes[MAXPROTO]={
 	spi_stop,				// stop with read
 	spi_write,				// send(/read) max 32 bit
 	spi_read,				// read max 32 bit
-	nullfunc1,				// set clk high
-	nullfunc1,				// set clk low
-	nullfunc1,				// set dat hi
-	nullfunc1,				// set dat lo
-	nullfunc3,				// toggle dat (?)
-	nullfunc1_temp,				// toggle clk (?)
-	nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	spi_macro,				// macro
 	spi_setup,				// setup UI
@@ -302,27 +302,27 @@ struct _mode modes[MAXPROTO]={
 #ifdef BP_USE_HW2WIRE
 {
     hw2wire_start,				// start
-    hw2wire_start,				// start with read
+    hw2wire_start_alt,			// start alternate
     hw2wire_stop,				// stop
-    hw2wire_stop,				// stop with read
+    hw2wire_stop_alt,				// stop alternate
     hw2wire_write,				// send(/read) max 32 bit
     hw2wire_read,				// read max 32 bit
-    nullfunc1,				// set clk high
-    nullfunc1,				// set clk low
-    nullfunc1,				// set dat hi
-    nullfunc1,				// set dat lo
-    nullfunc3,				// toggle dat (?)
+    hw2wire_set_clk_high,		// set clk high
+    hw2wire_set_clk_low,		// set clk low
+    hw2wire_set_dat_high,		// set dat hi
+    hw2wire_set_dat_low,		// set dat lo
+    nullfunc1_temp,				    // toggle dat (?)
     hw2wire_tick_clock,			// toggle clk (?)
-    nullfunc3,				// read 1 bit (?)
-    noperiodic,				// service to regular poll whether a byte ahs arrived
+    hw2wire_read_bit,			// read 1 bit (?)
+    noperiodic,				    // service to regular poll whether a byte ahs arrived
     hw2wire_macro,				// macro
     hw2wire_setup,				// setup UI
     hw2wire_setup_exc,			// real setup
-    hw2wire_cleanup,				// cleanup for HiZ
+    hw2wire_cleanup,			// cleanup for HiZ
     //HWI2C_pins,				// display pin config
-    hw2wire_settings,				// display settings
+    hw2wire_settings,			// display settings
     hw2wire_help,				// display small help about the protocol
-    "2WIRE",				// friendly name (promptname)
+    "2WIRE",				    // friendly name (promptname)
 },
 #endif
 #ifdef BP_USE_SW2W
@@ -385,13 +385,13 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// stop with read
 	LCDSPI_send,				// send(/read) max 32 bit
 	LCDSPI_read,				// read max 32 bit
-	nullfunc1,				// set clk high
-	nullfunc1,				// set clk low
-	nullfunc1,				// set dat hi
-	nullfunc1,				// set dat lo
-	nullfunc3,				// toggle dat (?)
-	nullfunc1_temp,				// toggle clk (?)
-	nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	LCDSPI_macro,				// macro
 	LCDSPI_setup,				// setup UI
@@ -411,13 +411,13 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1,				// stop with read
 	LCDI2C_send,				// send(/read) max 32 bit
 	LCDI2C_read,				// read max 32 bit
-	nullfunc1,				// set clk high
-	nullfunc1,				// set clk low
-	nullfunc1,				// set dat hi
-	nullfunc1,				// set dat lo
-	nullfunc3,				// toggle dat (?)
-	nullfunc1_temp,				// toggle clk (?)
-	nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	LCDI2C_macro,				// macro
 	LCDI2C_setup,				// setup UI
@@ -437,13 +437,13 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// stop with read
     DIO_send,				// send(/read) max 32 bit
     DIO_read,				// read max 32 bit
-    nullfunc1,				// set clk high
-    nullfunc1,				// set clk low
-    nullfunc1,				// set dat hi
-    nullfunc1,				// set dat lo
-    nullfunc1_temp,				// toggle dat (?)
-    nullfunc1,				// toggle clk (?)
-    nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
     noperiodic,				// service to regular poll whether a byte ahs arrived
     DIO_macro,				// macro
     DIO_setup,				// setup UI
@@ -463,13 +463,13 @@ struct _mode modes[MAXPROTO]={
     hwled_stop,				// stop with read
     hwled_write,				// send(/read) max 32 bit
     nullfunc1_temp,				// read max 32 bit
-    nullfunc1,				// set clk high
-    nullfunc1,				// set clk low
-    nullfunc1,				// set dat hi
-    nullfunc1,				// set dat lo
-    nullfunc3,				// toggle dat (?)
-    nullfunc1_temp,				// toggle clk (?)
-    nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
     noperiodic,				// service to regular poll whether a byte ahs arrived
     hwled_macro,				// macro
     hwled_setup,				// setup UI
@@ -489,13 +489,13 @@ struct _mode modes[MAXPROTO]={
     nullfunc1,				// stop with read
     nullfunc2,				// send(/read) max 32 bit
     nullfunc3,				// read max 32 bit
-    nullfunc1,				// set clk high
-    nullfunc1,				// set clk low
-    nullfunc1,				// set dat hi
-    nullfunc1,				// set dat lo
-    nullfunc3,				// toggle dat (?)
-    nullfunc1,				// toggle clk (?)
-    nullfunc3,				// read 1 bit (?)
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
     noperiodic,				// service to regular poll whether a byte ahs arrived
     LA_macro,				// macro
     LA_setup,				// setup UI

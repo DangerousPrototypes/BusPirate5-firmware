@@ -59,6 +59,10 @@ const struct ui_info_help help_commands[]=
 	{0,"pause", T_HELP_CMD_PAUSE},
 	{0, "format", T_HELP_CMD_FORMAT},
 
+//useful command and mini programs
+{1,"",T_HELP_SECTION_PROGRAMS},
+	{0,"flash", T_HELP_CMD_FLASH},
+
 // enter a mode to use protocols
 {1,"",T_HELP_SECTION_MODE},
 	{0,"m", 	T_HELP_1_16},
@@ -67,14 +71,19 @@ const struct ui_info_help help_commands[]=
 
 //send and receive data in modes using bus syntax
 {1,"",T_HELP_SECTION_SYNTAX},
-	{0,"[", T_HELP_2_3},
-	{0,"{", T_HELP_2_5},	
+	{0,"[/{", T_HELP_2_3},
 	{0,"]/}", T_HELP_2_4},
 	{0,"123", T_HELP_2_8},
 	{0,"0x123", T_HELP_2_9},
 	{0,"0b110", T_HELP_2_10},
 	{0,"\"abc\"", T_HELP_2_7},
 	{0,"r", T_HELP_2_11},
+	{0,"/", T_HELP_SYN_CLOCK_HIGH},
+	{0,"\\", T_HELP_SYN_CLOCK_LOW},
+	{0,"^", T_HELP_SYN_CLOCK_TICK},
+	{0,"-", T_HELP_SYN_DATA_HIGH},
+	{0,"_", T_HELP_SYN_DATA_LOW},
+	{0,".", T_HELP_SYN_DATA_READ},
 	{0,":", T_HELP_2_19},
 	{0,".", T_HELP_2_20},	
 	{0,"d/D", T_HELP_1_6},

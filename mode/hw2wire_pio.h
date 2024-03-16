@@ -11,6 +11,7 @@
 // Low-level functions
 void pio_hw2wire_reset(PIO pio, uint sm);
 void pio_hw2wire_clock_tick(PIO pio, uint sm);
+void pio_hw2wire_set_mask(PIO pio, uint sm, uint32_t pin_mask, uint32_t pin_value);
 void pio_hw2wire_start(PIO pio, uint sm);
 void pio_hw2wire_stop(PIO pio, uint sm);
 void pio_hw2wire_repstart(PIO pio, uint sm);

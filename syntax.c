@@ -247,7 +247,7 @@ bool syntax_compile(void)
             //AUX high and low need to set function until changed to read again...
        }
 
-        if(out[out_cnt].command==SYN_DELAY_US || out[out_cnt].command==SYN_DELAY_MS) //delays repeat but don't take up slots
+        if(out[out_cnt].command==SYN_DELAY_US || out[out_cnt].command==SYN_DELAY_MS || out[out_cnt].command==SYN_TICK_CLOCK) //delays repeat but don't take up slots
         {
             slot_cnt+=1;
         }

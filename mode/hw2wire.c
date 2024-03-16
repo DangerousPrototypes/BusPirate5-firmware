@@ -17,6 +17,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_command.h"
 #include "ui/ui_format.h"
+#include "ui/ui_help.h"
 
 #define M_2WIRE_PIO pio0
 #define M_2WIRE_SDA BIO0
@@ -53,12 +54,9 @@ typedef struct __attribute__((packed)) sle44xx_atr_struct {
 
 const char * const sle4442_usage[]= 
 {
-    "flash [init|probe|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
-    "Initialize and probe: flash probe",
-    "Erase and program, with verify: flash write -f example.bin -e -v",
-    "Read to file: flash read -f example.bin",
-    "Verify with file: flash verify -f example.bin",    
-    "Test chip (full erase/write/verify): flash test"
+    "sle4442 [init|dump]\r\n\t[-h(elp)]",
+    "Initialize and probe: sle4442 init",
+    "Dump contents: sle4442 dump",
 };
 #if 0
 const struct ui_info_help sle4442_help[]= 
@@ -77,6 +75,12 @@ const struct ui_info_help sle4442_help[]=
 };
 #endif
 void sle4442(struct command_result *res){
+	
+	if(cmdln_args_find_flag('h')){
+		ui_help_usage(sle4442_usage, count_of(sle4442_usage));
+		return;
+	}
+	
 	//parse command line
 	// init, dump, write, read, erase, protect, unprotect, verify, lock, unlock, reset
 	char action[9];
@@ -234,7 +238,7 @@ void sle4442(struct command_result *res){
 // command configuration
 const struct _command_struct hw2wire_commands[]=
 {   //HiZ? Function Help
-    {"sle4442",true,&sle4442,T_CMDLN_LS}, //ls
+    {"sle4442",true,&sle4442,NULL}, //ls
 };
 const uint32_t hw2wire_commands_count=count_of(hw2wire_commands);
 

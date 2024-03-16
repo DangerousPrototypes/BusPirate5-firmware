@@ -79,7 +79,7 @@ void flash(struct command_result *res)
         {'v', ARG_NONE, false, false, 0}, //verify
     };
 */
-    if(cmdln_args_find_flag('h'|0x20))
+    if(cmdln_args_find_flag('h'))
     {
         ui_help_usage(flash_usage,count_of(flash_usage));
         ui_help_options(&help_flash[0],count_of(help_flash));

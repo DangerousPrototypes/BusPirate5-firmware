@@ -140,7 +140,9 @@ bool ui_process_commands(void){
                         user_cmd_id=i;
                         command_type=MODE;
                         //mode help handler (optional, set config in modes command struct)
-                        if(cmdln_args_find_flag('h') && (modes[system_config.mode].mode_commands[user_cmd_id].help_text!=0x00)){ 
+                        if(cmdln_args_find_flag('h') 
+                            && modes[system_config.mode].mode_commands[user_cmd_id].allow_hiz
+                            && (modes[system_config.mode].mode_commands[user_cmd_id].help_text!=0x00)){ 
                             printf("%s\r\n",t[modes[system_config.mode].mode_commands[user_cmd_id].help_text]);
                             return false;
                         }

@@ -37,7 +37,8 @@ static uint8_t checkshort(void);
 // command configuration
 const struct _command_struct hw2wire_commands[]=
 {   //HiZ? Function Help
-    {"sle4442",true,&sle4442,0x00}, //ls
+// note: for now the allow_hiz flag controls if the mode provides it's own help
+    {"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
 };
 const uint32_t hw2wire_commands_count=count_of(hw2wire_commands);
 
@@ -193,9 +194,16 @@ void hw2wire_printI2Cflags(void){
 
 void hw2wire_help(void)
 {
-	printf("Muli-Master-multi-slave 2 wire protocol using a CLOCK and a bidirectional DATA\r\n");
-	printf("line in opendrain configuration. Standard clock frequencies are 100KHz, 400KHz\r\n");
-	printf("and 1MHz. Includes RST pin commonly used with 2 wire protocols, controlled with { & }.\r\n");
+	printf("%s2 wire open drain bus with CLOCK and bidirectional DATA\r\n", ui_term_color_info());
+	printf("Open drain bus, requires pull-up resistors (try the P command)");
+	printf("[ & ] create an I2C START & STOP sequence\r\n");
+	printf("{ & } Toggle the RST pin HIGH and LOW.\r\n");
+	printf("\r\nAvailable mode apps:\r\n");
+	for(uint32_t i=0;i<hw2wire_commands_count;i++)
+	{
+		printf("%s%s%s\t%s%s\r\n", ui_term_color_prompt(), hw2wire_commands[i].command, 
+			ui_term_color_info(), hw2wire_commands[i].help_text?t[hw2wire_commands[i].help_text]:"Unavailable", ui_term_color_reset());
+	}
 	#if 0
 	printf("\r\n");
 	printf("More info: https://en.wikipedia.org/wiki/I2C\r\n");

@@ -1,3 +1,8 @@
+#define M_2WIRE_PIO pio0  
+#define M_2WIRE_SDA BIO0
+#define M_2WIRE_SCL BIO1
+#define M_2WIRE_RST BIO2
+
 void hw2wire_start(struct _bytecode *result, struct _bytecode *next);
 void hw2wire_start_alt(struct _bytecode *result, struct _bytecode *next);
 void hw2wire_stop(struct _bytecode *result, struct _bytecode *next);
@@ -30,4 +35,4 @@ typedef struct _hw2wire_mode_config{
 
 extern const struct _command_struct hw2wire_commands[];
 extern const uint32_t hw2wire_commands_count;
-
+extern struct _hw2wire_mode_config hw2wire_mode_config;

@@ -65,6 +65,7 @@ set(bp5_common
         command_attributes.h bytecode.h
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
+        lib/sle4442/sle4442.c lib/sle4442/sle4442.h
         mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
         #mem buffer for shared malloc
         mem.c mem.h

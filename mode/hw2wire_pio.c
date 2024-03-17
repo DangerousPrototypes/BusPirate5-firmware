@@ -3,19 +3,33 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "mode/hw2wire_pio.h"
 #include "hardware/structs/iobank0.h"
 #include "hardware/regs/io_bank0.h"
 #include "pirate.h"
+
+#define PIO_PIN_0 1u<<0
+#define PIO_SIDE_0 1u<<11
 
 const int PIO_HW2WIRE_ICOUNT_LSB = 10;
 const int PIO_HW2WIRE_FINAL_LSB  = 9;
 const int PIO_HW2WIRE_DATA_LSB   = 1;
 const int PIO_HW2WIRE_NAK_LSB    = 0;
 
-#define PIO_PIN_0 1u<<0
-#define PIO_SIDE_0 1u<<11
+static PIO hw2wire_pio;
+static uint hw2wire_pio_state_machine;
+static uint hw2wire_pio_loaded_offset;
+
+void pio_hw2wire_init(PIO pio, uint sm, uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate){
+    hw2wire_pio=pio;
+    hw2wire_pio_state_machine=sm;
+    hw2wire_pio_loaded_offset = pio_add_program(pio, &hw2wire_program);
+    hw2wire_program_init(pio, hw2wire_pio_state_machine, hw2wire_pio_loaded_offset, sda, scl, dir_sda, dir_scl, baudrate);
+}
+
+void pio_hw2wire_cleanup(void){
+    pio_remove_program(hw2wire_pio, &hw2wire_program, hw2wire_pio_loaded_offset);
+}
 
 bool pio_hw2wire_check_error(PIO pio, uint sm) {
     return pio_interrupt_get(pio, sm);
@@ -35,8 +49,7 @@ uint8_t pio_hw2wire_get(PIO pio, uint sm) {
     return (uint8_t)pio_sm_get(pio, sm);
 }
 
-// put data and block until idle
-void pio_hw2wire_put16(PIO pio, uint sm, uint16_t data) {
+void pio_hw2wire_put(PIO pio, uint sm, uint16_t data) {
     while (pio_sm_is_tx_fifo_full(pio, sm));
     // some versions of GCC dislike this
 #ifdef __GNUC__
@@ -50,32 +63,41 @@ void pio_hw2wire_put16(PIO pio, uint sm, uint16_t data) {
     pio_hw2wire_wait_idle(pio, sm); //blocking function
 }
 
+// put data and block until idle
+void pio_hw2wire_put16(uint16_t data) {
+    pio_hw2wire_rx_enable(hw2wire_pio, hw2wire_pio_state_machine, false);
+    pio_hw2wire_put(hw2wire_pio, hw2wire_pio_state_machine, data&0xff);
+    pio_hw2wire_wait_idle(hw2wire_pio, hw2wire_pio_state_machine); //blocking function
+}
+
 // put 0xff, wait for read to complete
-void pio_hw2wire_get16(PIO pio, uint sm, uint32_t *data) {
-	while(!pio_sm_is_rx_fifo_empty(pio, sm)) {
-        (void)pio_hw2wire_get(pio, sm);
+void pio_hw2wire_get16(uint8_t *data) {
+    pio_hw2wire_rx_enable(hw2wire_pio, hw2wire_pio_state_machine, true);
+	while(!pio_sm_is_rx_fifo_empty(hw2wire_pio, hw2wire_pio_state_machine)) {
+        (void)pio_hw2wire_get(hw2wire_pio, hw2wire_pio_state_machine);
     }
-    pio_hw2wire_put16(pio, sm, (0xffu << 1) | (0?0:(1u << 9) | (1u << 0)));
-    while(pio_sm_is_rx_fifo_empty(pio, sm));
-	(*data) = pio_hw2wire_get(pio, sm);
+    pio_hw2wire_put(hw2wire_pio, hw2wire_pio_state_machine, (0b111111111));
+    while(pio_sm_is_rx_fifo_empty(hw2wire_pio, hw2wire_pio_state_machine));
+	(*data) = pio_hw2wire_get(hw2wire_pio, hw2wire_pio_state_machine);
 }
 
-static inline void pio_hw2wire_put_instructions(PIO pio, uint sm, const uint16_t *inst, uint8_t length) {
+static inline void pio_hw2wire_put_instructions(const uint16_t *inst, uint8_t length) {
+    pio_hw2wire_rx_enable(hw2wire_pio, hw2wire_pio_state_machine, false);
     for(uint8_t i=0; i<length; i++){
-        pio_hw2wire_put16(pio, sm, inst[i]);
+        pio_hw2wire_put(hw2wire_pio, hw2wire_pio_state_machine, inst[i]);
     }
 }
 
-void pio_hw2wire_reset(PIO pio, uint sm) {
+void pio_hw2wire_reset(void) {
     const uint16_t start[]= {
         1u << PIO_HW2WIRE_ICOUNT_LSB, // Escape code for 2 instruction sequence
         set_scl_sda_program_instructions[I2C_SC1_SD1],  // reset to high to release
         set_scl_sda_program_instructions[I2C_SC0_SD0]   // pull both low so clock goes high on first tick
     };
-    pio_hw2wire_put_instructions(pio, sm, start, count_of(start));    
+    pio_hw2wire_put_instructions(start, count_of(start));    
 }
 
-void pio_hw2wire_set_mask(PIO pio, uint sm, uint32_t pin_mask, uint32_t pin_value) {
+void pio_hw2wire_set_mask(uint32_t pin_mask, uint32_t pin_value) {
     //build instruction on the fly...
     //get the current PIO output state from OUTTOPAD register bit
     //set the same state in instruction
@@ -118,17 +140,10 @@ void pio_hw2wire_set_mask(PIO pio, uint sm, uint32_t pin_mask, uint32_t pin_valu
         0xa042, //NOP padding
         instruction 
     };
-
-    pio_hw2wire_put_instructions(pio, sm, set, count_of(set));    
+    pio_hw2wire_put_instructions(set, count_of(set));    
 } 
 
-void pio_hw2wire_clock_tick(PIO pio, uint sm) {
-    //printf("SDA: %s\r\n", iobank0_hw->io[0].status&(1u<<IO_BANK0_GPIO0_STATUS_OUTTOPAD_MSB)?"0":"1");  
-    //build instruction on the fly...
-    //get the current PIO output state from OUTTOPAD register bit
-    //set the same state in instruction
-    //set the bit pattern for the pin we're changing
-    //execute without changing the existing state of other pins
+void pio_hw2wire_clock_tick(void) {
     uint32_t instruction = 0xf700;
     if(!(iobank0_hw->io[0].status&(1u<<IO_BANK0_GPIO0_STATUS_OUTTOPAD_MSB))) {
         instruction |= PIO_PIN_0;
@@ -139,29 +154,29 @@ void pio_hw2wire_clock_tick(PIO pio, uint sm) {
         instruction|PIO_SIDE_0, // Release clock
         instruction // lower clock 
     };
-    pio_hw2wire_put_instructions(pio, sm, tick_clock, count_of(tick_clock));    
+    pio_hw2wire_put_instructions(tick_clock, count_of(tick_clock));    
 } 
 
-void pio_hw2wire_start(PIO pio, uint sm) {
+void pio_hw2wire_start(void) {
     const uint16_t start[]= {
         1u << PIO_HW2WIRE_ICOUNT_LSB, // Escape code for 2 instruction sequence
         set_scl_sda_program_instructions[I2C_SC1_SD0],  // We are already in idle state, just pull SDA low
         set_scl_sda_program_instructions[I2C_SC0_SD0] // Also pull clock low so we can present data
     };
-    pio_hw2wire_put_instructions(pio, sm, start, count_of(start));    
+    pio_hw2wire_put_instructions(start, count_of(start));    
 }
 
-void pio_hw2wire_stop(PIO pio, uint sm) {
+void pio_hw2wire_stop(void) {
     const uint16_t stop[]= {
         2u << PIO_HW2WIRE_ICOUNT_LSB,
         set_scl_sda_program_instructions[I2C_SC0_SD0],  // SDA is unknown; pull it down
         set_scl_sda_program_instructions[I2C_SC1_SD0], // Release clock
         set_scl_sda_program_instructions[I2C_SC1_SD1] // Release SDA to return to idle state
     };
-    pio_hw2wire_put_instructions(pio, sm, stop, count_of(stop));    
+    pio_hw2wire_put_instructions(stop, count_of(stop));    
 } 
 
-void pio_hw2wire_restart(PIO pio, uint sm)  {
+void pio_hw2wire_restart(void)  {
     const uint16_t restart[]= {
         3u << PIO_HW2WIRE_ICOUNT_LSB,
         set_scl_sda_program_instructions[I2C_SC0_SD1],
@@ -169,5 +184,5 @@ void pio_hw2wire_restart(PIO pio, uint sm)  {
         set_scl_sda_program_instructions[I2C_SC1_SD0],
         set_scl_sda_program_instructions[I2C_SC0_SD0]
     };
-    pio_hw2wire_put_instructions(pio, sm, restart, count_of(restart));    
+    pio_hw2wire_put_instructions(restart, count_of(restart));    
 }

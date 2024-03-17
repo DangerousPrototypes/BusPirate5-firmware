@@ -7,8 +7,8 @@
 .program hw2wire
 .side_set 1 opt 
 ; TX Encoding:
-; | 15:10 | 9     | 8:1  | 0   |
-; | Instr | Final | Data | NAK |
+; | 15:10 | 9     | 7:0  | 
+; | Instr | X | Data | 
 ;
 ; If Instr has a value n > 0, then this FIFO word has no
 ; data payload, and the next n + 1 words will be executed as instructions.
@@ -70,21 +70,14 @@ do_byte:
 bitloop:
     out pins, 1         [7] ; Serialise write data (all-ones if reading)
     nop             side 0b1 [6] ; SCL rising edge (was 2)
-    ;wait              [4] ; 
     in pins, 1             [7] ; Sample read data in middle of SCL pulse
     jmp x-- bitloop side 0b0 [7] ; SCL falling edge
-    out null, 1             ; not dealing with ACK yet.
-    ; Handle ACK pulse
-;    out pins, 1         [7] ; On reads, we provide the ACK.
-;    nop             side 0b1 [7] ; SCL rising edge
-;    wait 1 pin, 1          [7] ; Allow clock to be stretched, in pins: 0=sda, 1=scl
-;    jmp pin do_nack side 0b0 [1] ; Test SDA for ACK=0/NAK=1, fall through if ACK, 1 jump pin defined in init
+    ;out null, 1             ; not dealing with ACK yet.
     mov isr, null              ; Reset the input bit counter
-
 public entry_point:
 .wrap_target
     out x, 6                   ; Unpack Instr count
-    out y, 1                   ; Unpack the NAK ignore bit
+    out y, 2                   ; Unpack the NAK ignore bit
     jmp !x do_byte             ; Instr == 0, this is a data record.
     out null, 32               ; Instr > 0, remainder of this OSR is invalid
 do_exec:
@@ -92,14 +85,9 @@ do_exec:
     jmp x-- do_exec            ; Repeat n + 1 times
 .wrap
 
-
-
-
 % c-sdk {
-
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
-
 
 static inline void hw2wire_program_init(PIO pio, uint sm, uint offset, uint pin_sda, uint pin_scl, uint buf_sda, uint buf_scl, uint32_t freq) {
     assert(pin_scl == pin_sda + 1); //wait uses pin ordered inputs, need to be consecutive

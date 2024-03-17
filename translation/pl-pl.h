@@ -318,6 +318,17 @@ static char const * const pl_pl[]={
 	[T_HELP_DUMMY_B_FLAG]="-b require Bus Pirate button to be pushed. Takes no parameters",
 	[T_HELP_DUMMY_I_FLAG]="-i {integer}. Requires integer number parameter",
 	[T_HELP_DUMMY_FILE_FLAG]="-f {file}. Create/write/read {file}. Requires file string parameter",
+	[T_HELP_SLE4442]="SLE4442 smart card interface",
+	[T_HELP_SLE4442_INIT]="Initialize card with ISO7816-3 ATR. Default action",
+	[T_HELP_SLE4442_DUMP]="Display main, security and protect memory",
+	[T_HELP_SLE4442_UNLOCK]="Unlock card with Programmable Security Code (PSC)",
+	[T_HELP_SLE4442_WRITE]="Write data to card (requires unlock)",
+	[T_HELP_SLE4442_ERASE]="Erase data from range 0x32-0x255 (requires unlock)",
+	[T_HELP_SLE4442_PSC]="Change Programmable Security Code (PSC)",
+	[T_HELP_SLE4442_ADDRESS_FLAG]="Write address flag",
+	[T_HELP_SLE4442_VALUE_FLAG]="Write value flag",
+	[T_HELP_SLE4442_CURRENT_PSC_FLAG]="Current Programmable Security Code (PSC) flag",
+	[T_HELP_SLE4442_NEW_PSC_FLAG]="New Programmable Security Code (PSC) flag",
 
 };
 

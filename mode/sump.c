@@ -46,7 +46,6 @@
 #include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "modes.h"
 #include "mode/binio.h"
-#include "pullups.h"
 #include "pirate/psu.h"
 #include "binio_helpers.h"
 #include "mode/logicanalyzer.h"

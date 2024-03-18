@@ -11,9 +11,6 @@
 #include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "modes.h"
 
-#include "pullups.h"
-
-
 void script_print(const char *str) 
 {
     for(uint8_t i=0; i<strlen(str); i++)

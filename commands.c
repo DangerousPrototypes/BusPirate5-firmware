@@ -17,12 +17,16 @@
 #include "pwm.h"
 #include "freq.h"
 #include "adc.h"
-#include "commands/global/w_psu.h"
-#include "pullups.h"
+
 #include "helpers.h"
 #include "storage.h"
 #include "flash.h"
-#include "mcu/rp2040.h"
+#include "commands/global/w_psu.h"
+#include "commands/global/p_pullups.h"
+#include "commands/global/cmd_mcu.h"
+#include "commands/global/l_bitorder.h"
+#include "commands/global/cmd_convert.h"
+#include "commands/global/pause.h"
 #include "mode/logicanalyzer.h"
 #include "dummy.h"
 
@@ -35,11 +39,11 @@ const struct _command_struct commands[]=
     {"rm", true, &storage_unlink, T_CMDLN_RM}, //rm
     {"cat", true, &cat, T_CMDLN_CAT}, //cat
     {"m", true, &ui_mode_enable_args, T_CMDLN_MODE},            // "m"   //needs trailing int32   
-    {"W", false, &psucmd_enable, 0x00},// "W"   T_CMDLN_PSU_EN  //TOD0: more flexability on help handling and also a general deescription
-    {"#", true, &helpers_mcu_reset, T_CMDLN_RESET},// "#" 
-    {"$", true, &helpers_mcu_jump_to_bootloader, T_CMDLN_BOOTLOAD},     // "$" 
-    {"=", true, &helpers_show_int_formats, T_CMDLN_INT_FORMAT}, // "="
-    {"|", true, &helpers_show_int_inverse, T_CMDLN_INT_INVERSE}, // "|"   
+    {"W", false, &psucmd_enable_handler, 0x00},// "W"   T_CMDLN_PSU_EN  //TOD0: more flexability on help handling and also a general deescription
+    {"#", true, &cmd_mcu_reset_handler, T_CMDLN_RESET},// "#" 
+    {"$", true, &cmd_mcu_jump_to_bootloader_handler,0x00 },     // "$" T_CMDLN_BOOTLOAD
+    {"=", true, &cmd_convert_base_handler, T_CMDLN_INT_FORMAT}, // "="
+    {"|", true, &cmd_convert_inverse_handler, T_CMDLN_INT_INVERSE}, // "|"   
     {"?", true, &ui_help_print_args, T_CMDLN_HELP},        // "?"
     {"c", true, &ui_config_main_menu, T_CMDLN_CONFIG_MENU},       // "c"
     {"f", true, &freq_single, T_CMDLN_FREQ_ONE},               // "f"    
@@ -49,12 +53,12 @@ const struct _command_struct commands[]=
     {"h", false, &helpers_mode_help, T_CMDLN_HELP_MODE },         // "h"
     {"hd", true, &helpers_display_help, T_CMDLN_HELP_DISPLAY },     // "hd"
     {"i", true, &ui_info_print_info, T_CMDLN_INFO },               // "i"
-    {"l", true, &helpers_bit_order_msb, T_CMDLN_BITORDER_MSB },    // "l"
-    {"L", true, &helpers_bit_order_lsb, T_CMDLN_BITORDER_LSB },    // "L"
+    {"l", true, &bitorder_msb_handler, T_CMDLN_BITORDER_MSB },    // "l"
+    {"L", true, &bitorder_lsb_handler, T_CMDLN_BITORDER_LSB },    // "L"
     {"o", true, &ui_mode_int_display_format, T_CMDLN_DISPLAY_FORMAT }, // "o"
-    {"P", false, &pullups_enable, T_CMDLN_PULLUPS_EN },            // "P"
-    {"p", false, &pullups_disable, T_CMDLN_PULLUPS_DIS },          // "p"
-    {"w", false, &psucmd_disable, 0x00 },                  // "w" T_CMDLN_PSU_DIS
+    {"P", false, &pullups_enable_handler, 0x00 },            // "P" //T_CMDLN_PULLUPS_EN
+    {"p", false, &pullups_disable_handler, 0x00 },          // "p" //T_CMDLN_PULLUPS_DIS
+    {"w", false, &psucmd_disable_handler, 0x00 },                  // "w" T_CMDLN_PSU_DIS
     {"V", true, &adc_measure_cont, T_CMDLN_ADC_CONT },             // "V"
     {"v", true, &adc_measure_single, T_CMDLN_ADC_ONE },            // "v"
     {"~", true, &helpers_selftest, T_CMDLN_SELFTEST },             // "~" selftest
@@ -65,7 +69,7 @@ const struct _command_struct commands[]=
     {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d" 
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
     {"hex", true, &hex, T_CMDLN_HEX },                                // "hex"
-    {"pause", true, &helpers_pause_args, T_HELP_CMD_PAUSE },             // "pause"
+    {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
     {"flash", true, &flash, 0x00 },                              // "dump"
     {"dummy", true, &dummy_func, 0x00 }                              // "dummy"
 };

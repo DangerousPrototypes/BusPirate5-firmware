@@ -30,7 +30,7 @@
 #include "commands.h"
 #include "modes.h"
 #include "mode/binio.h"
-#include "pullups.h"
+#include "pirate/pullup.h"
 #include "pirate/psu.h"
 #include "amux.h"
 #include "sump.h"
@@ -434,11 +434,15 @@ unsigned char binBBpinset(unsigned char inByte)
 
     if(inByte & 0b100000)
     {
-        pullups_enable_exc(); //pullups on
+        pullup_enable(); //pullups on //todo: move back to useing the p_oullup commands
+        system_config.pullup_enabled=0;
+        system_config.info_bar_changed=true;
     }
     else
     {
-        pullups_cleanup();
+        pullups_disable();
+        system_config.pullup_enabled=1;
+        system_config.info_bar_changed=true;
     }
 
     //set pin high/low

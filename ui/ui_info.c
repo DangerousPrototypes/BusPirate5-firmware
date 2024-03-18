@@ -11,7 +11,7 @@
 #include "freq.h"
 #include "ui/ui_const.h"
 #include "ui/ui_info.h"
-#include "mcu/rp2040.h"
+#include "pirate/mcu.h"
 #include "amux.h"
 #include "mem.h" //big buffer owner defines
 

@@ -39,6 +39,7 @@
 #include "pico/lock_core.h"
 #include "helpers.h"
 #include "mode/binio.h"
+#include "commands/global/p_pullups.h"
 
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
@@ -108,7 +109,7 @@ int main()
 
     // configure the defaults for shift register attached hardware
     shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), CURRENT_EN_OVERRIDE);
-    HW_BIO_PULLUP_DISABLE();   
+    pullups_init(); //uses shift register internally  
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
     
     //reset the LCD
@@ -177,7 +178,7 @@ int main()
     //modes[0].protocol_setup_exc();	
     // turn everything off
 	bio_init();     // make all pins safe
-	psucmd_cleanup();    // disable psu and reset pin label, clear any errors
+	psucmd_disable();    // disable psu and reset pin label, clear any errors
 
     // mount NAND flash here
     #if BP5_REV >= 10

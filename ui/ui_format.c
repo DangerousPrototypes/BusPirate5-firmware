@@ -54,6 +54,71 @@ void ui_format_bitorder_manual(uint32_t *d, uint8_t num_bits, bool bit_order){
 	(*d) = ui_format_lsb(*d, num_bits);
 }
 
+// format can be set
+void ui_format_print_number_3(uint32_t value, uint32_t num_bits, uint32_t display_format){
+	uint32_t mask, i, d, j;
+    uint8_t num_nibbles;
+    bool color_flip;
+
+ 	if (num_bits<32){
+        mask=((1<<num_bits)-1);
+    }else{
+        mask=0xFFFFFFFF;
+    }
+	value&=mask;
+
+ 	switch(display_format){
+        case df_ascii: //drop through and show hex
+
+		case df_hex:
+            num_nibbles=num_bits/4;
+            if(num_bits%4) num_nibbles++;
+            if(num_nibbles&0b1) num_nibbles++;
+            color_flip=true;
+            printf("%s0x%s", "","");
+            for(i=num_nibbles*4; i>0; i-=8){
+                printf("%s", (color_flip?ui_term_color_num_float():ui_term_color_reset()));          
+                color_flip=!color_flip;
+                printf("%c", ascii_hex[((value >> (i-4)) & 0x0F)]);
+                printf("%c", ascii_hex[((value >> (i-8)) & 0x0F)]);
+            }
+            printf("%s", ui_term_color_reset());
+			break;
+		case df_dec:
+            printf("%d", value);	
+			break;
+		case df_bin:	
+            j=num_bits%4;
+            if(j==0) j=4;
+            color_flip=false;
+            printf("%s0b%s", "", ui_term_color_num_float());
+			for(i=0; i<num_bits; i++){
+                if(!j){
+                    if(color_flip){
+                        color_flip=!color_flip;
+                        printf("%s", ui_term_color_num_float());
+                    }else{
+                        color_flip=!color_flip;
+                        printf("%s", ui_term_color_reset());
+                    }
+                    j=4;
+                }
+                j--;
+				mask=1<<(num_bits-i-1);
+				if(value&mask)
+					printf("1");
+				else
+					printf("0");
+			}
+            printf("%s", ui_term_color_reset());
+			break;
+	}
+	
+    if(num_bits!=8){
+        printf(".%d", num_bits);
+    }
+}
+
 
 // represent d in the current display mode. If numbits=8 also display the ascii representation 
 void ui_format_print_number_2(struct command_attributes *attributes, uint32_t *value)

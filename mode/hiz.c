@@ -8,7 +8,7 @@
 #include "hiz.h"
 #include "bio.h"	
 #include "commands/global/w_psu.h"
-#include "pullups.h"
+#include "commands/global/p_pullups.h"
 
 
 const char *HiZpins(void)
@@ -40,8 +40,8 @@ uint32_t HiZsetup_exc(void)
 {
 	// turn everything off
 	bio_init();     // make all pins safe
-	psucmd_cleanup(); //turn off power supply
-	pullups_cleanup(); //deactivate
+	psucmd_disable(); //turn off power supply
+	pullups_disable(); //deactivate
 	system_config.freq_active=0;
 	system_config.pwm_active=0;
 	system_config.aux_active=0;

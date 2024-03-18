@@ -28,15 +28,21 @@ set(bp5_common
         mode/sump.c mode/sump.h  
         #apps
         commands/global/w_psu.h commands/global/w_psu.c  
+        commands/global/p_pullups.h commands/global/p_pullups.c
+        commands/global/cmd_mcu.h commands/global/cmd_mcu.c
+        commands/global/l_bitorder.h commands/global/l_bitorder.c 
+        commands/global/cmd_convert.h commands/global/cmd_convert.c 
+        commands/global/pause.h commands/global/pause.c
         #pirate lib    
-        pirate/psu.h pirate/psu.c
+        pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
+        pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
         #to be adapted
-        ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
+        ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c 
 	msc_disk.c usb_descriptors.c
 	displays.c displays.h display/default.c display/default.h
         shift.h shift.c  amux.h amux.c button.c button.h
         system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
-        pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c
+        pwm.c pwm.h freq.c freq.h adc.c adc.h helpers.h helpers.c
 
         mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c 
         mode/hwspi.c mode/hwspi.h mode/spiflash.h mode/spiflash.c
@@ -56,7 +62,7 @@ set(bp5_common
         translation/base.h translation/base.c translation/en-us.h translation/zh-cn.h translation/pl-pl.h
         queue.c queue.h 
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h
-        mcu/rp2040.h mcu/rp2040.c
+
         printf-4.0.0/printf.c printf-4.0.0/printf.h
         font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
         fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 

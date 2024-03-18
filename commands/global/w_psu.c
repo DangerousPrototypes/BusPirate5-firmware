@@ -29,8 +29,6 @@ const struct ui_help_options psucmd_options[]={
     {0,"<i>", T_HELP_GCMD_W_CURRENT_LIMIT},
 };
 
-
-
 // current limit fuse tripped
 void psucmd_irq_callback(void){
     psu_disable(); //also sets system_config.psu=0
@@ -42,7 +40,45 @@ void psucmd_irq_callback(void){
     system_pin_claim(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[5]);
 }
 
-void psucmd_enable(struct command_result *res){
+//zero return code = success
+uint32_t psucmd_enable(float volts, float current, bool current_limit_override){
+    /*system_config.psu=0;
+    system_config.pin_labels[0]=0;
+    system_config.pin_changed=0xff;
+    system_pin_claim(false, BP_VOUT, 0, 0);*/
+
+    uint32_t psu_result=psu_enable(volts, current, current_limit_override);
+
+    // any error codes starting the PSU?
+    if(psu_result!=PSU_OK){
+        psucmd_disable();
+        return psu_result;
+    }
+
+    system_config.psu_voltage=psu_status.voltage_actual_i;  
+    system_config.psu_current_limit_en=current_limit_override; 
+    if(!current_limit_override){
+        system_config.psu_current_limit=psu_status.current_actual_i;
+    }    
+    
+    //todo: consistent interface to each label of toolbar and LCD, including vref/vout
+    system_config.psu=1;
+    system_config.psu_error=false;
+    system_config.psu_current_error=false;
+    system_config.info_bar_changed=true;
+    system_pin_claim(true, BP_VOUT, BP_PIN_VOUT, ui_const_pin_states[1]);
+    monitor_clear_current(); //reset current so the LCD gets all characters
+    
+    //since we dont have any more pins, the over current detect system is read through the 
+    //4067 and ADC. It will be picked up in the second core loop
+    if(system_config.psu_current_limit_en){
+        system_config.psu_irq_en=true;
+    }
+
+    return psu_result; //should be PSU OK
+}
+
+void psucmd_enable_handler(struct command_result *res){
     float volts,current;
     bool current_limit_override=false;
 
@@ -54,11 +90,6 @@ void psucmd_enable(struct command_result *res){
 	    printf("Can't turn the power supply on when the scope is using the analog subsystem - use the 'ss' command to stop the scope\r\n");
 	    return;
     }
-
-    system_config.psu=0;
-    system_config.pin_labels[0]=0;
-    system_config.pin_changed=0xff;
-    system_pin_claim(false, BP_VOUT, 0, 0);
 
     bool has_volts = cmdln_args_float_by_position(1, &volts);
     bool has_current = cmdln_args_float_by_position(2, &current);
@@ -87,7 +118,7 @@ void psucmd_enable(struct command_result *res){
         }   
     }
 
-    uint32_t psu_result=psu_enable(volts, current, current_limit_override);
+    uint32_t psu_result=psucmd_enable(volts, current, current_limit_override);
 
     // any error codes starting the PSU?
     if(psu_result!=PSU_OK){
@@ -107,14 +138,12 @@ void psucmd_enable(struct command_result *res){
     }  
 
     // x.xV requested, closest value: x.xV
-    system_config.psu_voltage=psu_status.voltage_actual_i;
     printf("%s%1.2f%sV%s requested, closest value: %s%1.2f%sV\r\n", 
         ui_term_color_num_float(), psu_status.voltage_requested, ui_term_color_reset(), ui_term_color_info(),
         ui_term_color_num_float(), psu_status.voltage_actual, ui_term_color_reset());
     
     if(current_limit_override){
         // current limit disabled
-        system_config.psu_current_limit_en=false;
         printf("%s%s:%s%s\r\n",
         ui_term_color_notice(),
         t[T_INFO_CURRENT_LIMIT],
@@ -122,20 +151,10 @@ void psucmd_enable(struct command_result *res){
         t[T_MODE_DISABLED]);
     }else{
         // x.xmA requested, closest value: x.xmA
-        system_config.psu_current_limit_en=true;
-        system_config.psu_current_limit=psu_status.current_actual_i;
         printf("%s%1.1f%smA%s requested, closest value: %s%3.1f%smA\r\n", 
             ui_term_color_num_float(), psu_status.current_requested, ui_term_color_reset(), ui_term_color_info(),
             ui_term_color_num_float(), psu_status.current_actual, ui_term_color_reset());    
     }    
-    
-    //todo: consistent interface to each label of toolbar and LCD, including vref/vout
-    system_config.psu=1;
-    system_config.psu_error=false;
-    system_config.psu_current_error=false;
-    system_config.info_bar_changed=true;
-    system_pin_claim(true, BP_VOUT, BP_PIN_VOUT, ui_const_pin_states[1]);
-    monitor_clear_current(); //reset current so the LCD gets all characters
     
     // power supply: enabled
     printf("\r\n%s%s:%s%s\r\n",
@@ -154,16 +173,10 @@ void psucmd_enable(struct command_result *res){
     ui_term_color_num_float(), ((vout)/1000), (((vout)%1000)/100), ui_term_color_reset(), ui_term_color_notice(),
     ui_term_color_num_float(), (isense/1000), ((isense%1000)/100),ui_term_color_reset(), ui_term_color_notice(),
     ui_term_color_reset());
-
-    //since we dont have any more pins, the over current detect system is read through the 
-    //4067 and ADC. It will be picked up in the second core loop
-    if(system_config.psu_current_limit_en){
-        system_config.psu_irq_en=true;
-    }
 }
 
 //cleanup on mode exit, etc
-void psucmd_cleanup(void){
+void psucmd_disable(void){
     psu_disable();
     system_config.psu_error=false;
     system_config.psu=0;
@@ -171,14 +184,13 @@ void psucmd_cleanup(void){
     system_config.info_bar_changed=true;
     monitor_clear_current(); //reset current so the LCD gets all characters next time
     system_pin_claim(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[0]); //change back to vref type pin
-
 }
 
-void psucmd_disable(struct command_result *res){
+void psucmd_disable_handler(struct command_result *res){
     //check help
     if(ui_help_show(res->help_flag,psucmd_usage,count_of(psucmd_usage), &psucmd_options[0],count_of(psucmd_options) )) return;
 
-    psucmd_cleanup();
+    psucmd_disable();
     printf("%s%s: %s%s\r\n",
         ui_term_color_notice(),
         t[T_MODE_POWER_SUPPLY],

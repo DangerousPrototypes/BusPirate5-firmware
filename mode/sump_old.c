@@ -14,7 +14,6 @@
 #include "modes.h"
 #include "mode/binio.h"
 #include "hardware/clocks.h"
-#include "pullups.h"
 #include "psu.h"
 #include "sump.h"
 #include "binio_helpers.h"

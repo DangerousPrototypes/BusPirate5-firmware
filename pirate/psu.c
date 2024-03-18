@@ -3,7 +3,6 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include "pirate.h"
-//#include "hardware/timer.h"
 #include "shift.h"
 #include "pirate/psu.h"
 #include "amux.h"
@@ -106,9 +105,9 @@ uint32_t psu_measure_vout(void){
 }
 */
 
-void psu_measure(uint32_t *vout, uint32_t *i, uint32_t *vreg, bool *fuse){
+void psu_measure(uint32_t *vout, uint32_t *isense, uint32_t *vreg, bool *fuse){
     amux_sweep();
-    *i = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000)/4095));
+    *isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000)/4095));
     *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
     *vout = ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]));
     *fuse = (hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] > 300);
@@ -131,6 +130,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override){
         psu_status.current_dac_value=PWM_TOP; //override, set to 100% current
     }
 
+    //printf("V dac: 0x%04X I dac: 0x%04X\r\n",psu_status.voltage_dac_value, psu_status.current_dac_value);
     //start with override engaged because the inrush will often trip the fuse on low limits
     psu_current_limit_override(true);
     psu_dac_set(psu_status.voltage_dac_value, psu_status.current_dac_value);
@@ -189,6 +189,8 @@ void psu_init(void){
     pwm_set_chan_level(slice_num, i_chan_num, 0);
 
     //enable output
+    gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_PWM);
+    gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_PWM);
     pwm_set_enabled(slice_num, true);    
     
     psu_fuse_reset(); 

@@ -26,6 +26,8 @@ pico_sdk_init()
 set(bp5_common 
         pirate.c pirate.h commands.h commands.c 
         mode/sump.c mode/sump.h  
+        #apps
+        commands/global/w_psu.h commands/global/w_psu.c  
         #pirate lib    
         pirate/psu.h pirate/psu.c
         #to be adapted

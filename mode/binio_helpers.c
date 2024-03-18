@@ -12,7 +12,7 @@
 #include "modes.h"
 
 #include "pullups.h"
-#include "psu.h"
+
 
 void script_print(const char *str) 
 {

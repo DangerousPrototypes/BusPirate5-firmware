@@ -7,7 +7,7 @@
 #include "hardware/uart.h"
 #include "hiz.h"
 #include "bio.h"	
-#include "psu.h"
+#include "commands/global/w_psu.h"
 #include "pullups.h"
 
 
@@ -40,8 +40,7 @@ uint32_t HiZsetup_exc(void)
 {
 	// turn everything off
 	bio_init();     // make all pins safe
-	psu_reset();    // disable psu and reset pin label
-    psu_cleanup();  // clear any errors
+	psucmd_cleanup(); //turn off power supply
 	pullups_cleanup(); //deactivate
 	system_config.freq_active=0;
 	system_config.pwm_active=0;

@@ -19,7 +19,7 @@
 #include "rgb.h"
 //#include "usb_tx.h"
 #include "storage.h"
-#include "psu.h"
+#include "pirate/psu.h"
 #include "bio.h"
 #include "amux.h"
 #include "mcu/rp2040.h"
@@ -130,7 +130,7 @@ void helpers_selftest_base(void)
     //psu test
     //psu to 1.8, 2.5, 3.3, 5.0 volt test
     printf("PSU ENABLE: ");
-    uint32_t result=psu_set(3.3,100, true);
+    uint32_t result=psu_enable(3.3,100, true);
     if(result)
     {
         printf("PSU ERROR CODE %d\r\n", result);
@@ -363,7 +363,7 @@ void helpers_selftest_base(void)
 
     //1. Test with current override
     printf("CURRENT OVERRIDE: ");
-    result=psu_set(3.3,0, false);
+    result=psu_enable(3.3,0, false);
     if(result==0)
     {
         printf("OK\r\n");
@@ -373,8 +373,7 @@ void helpers_selftest_base(void)
         printf("PPSU CODE %d, ERROR!\r\n", result);
         fails++;
     }
-    psu_reset();
-    psu_cleanup();
+    psu_disable();
 
     //use pullups to trigger current limit, set and reset 
     printf("CURRENT LIMIT TEST: ");
@@ -384,7 +383,7 @@ void helpers_selftest_base(void)
         bio_put(pin,0);
     }
     //2. Enable wth 0 limit and check the return error code of the PSU
-    result=psu_set(3.3,0, true);
+    result=psu_enable(3.3,0, true);
 
     if(result==3)
     {
@@ -432,9 +431,7 @@ void helpers_selftest_base(void)
 
     HW_BIO_PULLUP_DISABLE();   
     bio_init();
-    psu_reset();
-    psu_cleanup();
-
+    psu_disable();
 
     //prompt to push button
     gpio_set_function(EXT1, GPIO_FUNC_SIO);

@@ -12,7 +12,7 @@
 #include "ui/ui_lcd.h"
 #include "rgb.h"
 #include "shift.h"
-#include "psu.h"
+#include "commands/global/w_psu.h"
 #include "bio.h"
 #include "amux.h"
 #include "ui/ui_init.h"
@@ -90,7 +90,7 @@ int main()
         #error "No platform revision defined. Check pirate.h."
     #endif
     //init psu pins 
-    psu_init();
+    psucmd_init();
    
     // LCD pin init
     lcd_init();
@@ -177,8 +177,7 @@ int main()
     //modes[0].protocol_setup_exc();	
     // turn everything off
 	bio_init();     // make all pins safe
-	psu_reset();    // disable psu and reset pin label
-    psu_cleanup();  // clear any errors
+	psucmd_cleanup();    // disable psu and reset pin label, clear any errors
 
     // mount NAND flash here
     #if BP5_REV >= 10
@@ -412,7 +411,7 @@ void core1_entry(void)
         if(system_config.psu==1 && system_config.psu_irq_en==true && hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] < 100 )
         {
             system_config.psu_irq_en=false;
-            psu_irq_callback();
+            psucmd_irq_callback();
             //ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
             //psu_reset();
         } 

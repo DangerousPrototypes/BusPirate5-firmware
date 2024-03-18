@@ -47,7 +47,7 @@
 #include "modes.h"
 #include "mode/binio.h"
 #include "pullups.h"
-#include "psu.h"
+#include "pirate/psu.h"
 #include "binio_helpers.h"
 #include "mode/logicanalyzer.h"
 
@@ -553,12 +553,12 @@ void sump_logic_analyzer(void){
 
     cdc_sump_init();
     cdc_sump_init_connect();
-    psu_set(3.3,100, true);
+    psu_enable(3.3,100, true);
 
     while (1) {
         //tud_task(); // tinyusb device task
         cdc_sump_task();
     }
     logic_analyzer_cleanup();
-    psu_reset();
+    psu_disable();
 }

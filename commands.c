@@ -17,7 +17,7 @@
 #include "pwm.h"
 #include "freq.h"
 #include "adc.h"
-#include "psu.h"
+#include "commands/global/w_psu.h"
 #include "pullups.h"
 #include "helpers.h"
 #include "storage.h"
@@ -35,7 +35,7 @@ const struct _command_struct commands[]=
     {"rm", true, &storage_unlink, T_CMDLN_RM}, //rm
     {"cat", true, &cat, T_CMDLN_CAT}, //cat
     {"m", true, &ui_mode_enable_args, T_CMDLN_MODE},            // "m"   //needs trailing int32   
-    {"W", false, &psu_enable, T_CMDLN_PSU_EN},// "W"    
+    {"W", false, &psucmd_enable, 0x00},// "W"   T_CMDLN_PSU_EN  //TOD0: more flexability on help handling and also a general deescription
     {"#", true, &helpers_mcu_reset, T_CMDLN_RESET},// "#" 
     {"$", true, &helpers_mcu_jump_to_bootloader, T_CMDLN_BOOTLOAD},     // "$" 
     {"=", true, &helpers_show_int_formats, T_CMDLN_INT_FORMAT}, // "="
@@ -54,7 +54,7 @@ const struct _command_struct commands[]=
     {"o", true, &ui_mode_int_display_format, T_CMDLN_DISPLAY_FORMAT }, // "o"
     {"P", false, &pullups_enable, T_CMDLN_PULLUPS_EN },            // "P"
     {"p", false, &pullups_disable, T_CMDLN_PULLUPS_DIS },          // "p"
-    {"w", false, &psu_disable, T_CMDLN_PSU_DIS },                  // "w"
+    {"w", false, &psucmd_disable, 0x00 },                  // "w" T_CMDLN_PSU_DIS
     {"V", true, &adc_measure_cont, T_CMDLN_ADC_CONT },             // "V"
     {"v", true, &adc_measure_single, T_CMDLN_ADC_ONE },            // "v"
     {"~", true, &helpers_selftest, T_CMDLN_SELFTEST },             // "~" selftest

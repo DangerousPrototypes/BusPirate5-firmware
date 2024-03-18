@@ -8,7 +8,6 @@
 #include "hardware/uart.h"
 //#include "hiz.h"
 #include "bio.h"	
-#include "psu.h"
 #include "pullups.h"
 #include "pico/stdlib.h"
 #include "hardware/pio.h"

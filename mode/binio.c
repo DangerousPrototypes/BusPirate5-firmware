@@ -31,7 +31,7 @@
 #include "modes.h"
 #include "mode/binio.h"
 #include "pullups.h"
-#include "psu.h"
+#include "pirate/psu.h"
 #include "amux.h"
 #include "sump.h"
 #include "binio_helpers.h"
@@ -425,11 +425,11 @@ unsigned char binBBpinset(unsigned char inByte)
 
     if(inByte & 0b1000000) 
     {
-        psu_set(3.3f, 500, false);
+        psu_enable(3.3f, 500, false);
     }
     else 
     {
-        psu_reset(); //power off
+        psu_disable(); //power off
     }
 
     if(inByte & 0b100000)

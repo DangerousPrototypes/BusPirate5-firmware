@@ -406,7 +406,7 @@ bool cmdln_args_float_by_position(uint32_t pos, float *value){
                 if(!cmdln_args_get_int(&rptr, &result, &ipart)){
                     return false;
                 }
-                printf("ipart: %d\r\n", ipart);
+                //printf("ipart: %d\r\n", ipart);
             }      
 
             uint32_t dpart_len=0;
@@ -416,16 +416,15 @@ bool cmdln_args_float_by_position(uint32_t pos, float *value){
                     dpart_len=rptr; //track digits
                     struct prompt_result result;
                     if(!cmdln_args_get_int(&rptr, &result, &dpart)){
-                        printf("No decimal part found\r\n");
+                        //printf("No decimal part found\r\n");
                     }
                     dpart_len=rptr-dpart_len;
-                    printf("dpart: %d, dpart_len: %d\r\n", dpart, dpart_len);
+                    //printf("dpart: %d, dpart_len: %d\r\n", dpart, dpart_len);
                 }
-            }
-            // TODO: j++;//track digits so we can find the proper divider later...      
+            }   
 		    (*value)=(float)ipart;
 		    (*value)+=( (float)dpart / (float)pow(10,dpart_len) );
-            printf("value: %f\r\n", *value);
+            //printf("value: %f\r\n", *value);
             return true;
         }
     }

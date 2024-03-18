@@ -101,7 +101,6 @@ bool ui_process_commands(void){
         if(!cmdln_args_string_by_position(0, sizeof(command_string), command_string)){
             continue;
         }   
-        
 
         enum COMMAND_TYPE {
             NONE=0,
@@ -118,12 +117,16 @@ bool ui_process_commands(void){
                 user_cmd_id=i;
                 command_type=GLOBAL;
                 //global help handler (optional, set config in commands.c)
-                if(cmdln_args_find_flag('h') && (commands[user_cmd_id].help_text!=0x00)){ 
-                    printf("%s\r\n",t[commands[user_cmd_id].help_text]);
-                    return false;
+                if(cmdln_args_find_flag('h')){
+                    if(commands[user_cmd_id].help_text!=0x00){ 
+                        printf("%s\r\n",t[commands[user_cmd_id].help_text]);
+                        return false;
+                    }else{ // let app know we requested help
+                        result.help_flag=true;
+                    }
                 }
 
-                if(command_type==GLOBAL && system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz){
+                if(command_type==GLOBAL && system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz && !result.help_flag){
                     printf("%s\r\n",hiz_error());
                     return true;            
                 }
@@ -140,11 +143,15 @@ bool ui_process_commands(void){
                         user_cmd_id=i;
                         command_type=MODE;
                         //mode help handler (optional, set config in modes command struct)
-                        if(cmdln_args_find_flag('h') 
-                            && modes[system_config.mode].mode_commands[user_cmd_id].allow_hiz
+                        if(cmdln_args_find_flag('h')){ 
+                            //show auto short help
+                            if( modes[system_config.mode].mode_commands[user_cmd_id].allow_hiz
                             && (modes[system_config.mode].mode_commands[user_cmd_id].help_text!=0x00)){ 
-                            printf("%s\r\n",t[modes[system_config.mode].mode_commands[user_cmd_id].help_text]);
-                            return false;
+                                printf("%s\r\n",t[modes[system_config.mode].mode_commands[user_cmd_id].help_text]);
+                                return false;
+                            }else{ // let app know we requested help
+                                result.help_flag=true;
+                            }
                         }
                         modes[system_config.mode].mode_commands[user_cmd_id].func(&result);
                         goto cmd_ok;

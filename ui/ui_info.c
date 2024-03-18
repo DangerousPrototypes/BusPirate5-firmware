@@ -294,16 +294,16 @@ void ui_info_print_pin_voltage(bool refresh)
 	
 }
 /*
-typedef struct ui_info_help
+typedef struct ui_help_options
 {
 	uint help;
 	const char command[9];
 	uint description;
 	const char command2[9];
 	uint description2;	
-} ui_info_help;
+} ui_help_options;
 
-const struct ui_info_help help_commands[]={
+const struct ui_help_options help_commands[]={
 	{0,"",		T_HELP_GENERAL_COMMANDS},
 	{1,"", 		T_HELP_BLANK},
 	{0,"~", 	T_HELP_1_3},
@@ -330,7 +330,7 @@ const struct ui_info_help help_commands[]={
 	{0,"(x)/(0)", T_HELP_2_1}
 };
 
-const struct ui_info_help help_protocol[]={
+const struct ui_help_options help_protocol[]={
 	{0,"\t", T_HELP_DISK_COMMANDS},
 	{1,"", 		T_HELP_BLANK},	
 	{0,"ls", T_HELP_CMD_LS},

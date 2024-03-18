@@ -40,7 +40,7 @@ const char * const dummy_usage_help[]=
 //      2. add a T_ tag and the help text
 //      3. Run json2h.py, which will rebuild the translation files, adding defaults where translations are missing values
 //      4. Use the new T_ constant in the help text for the command
-const struct ui_info_help dummy_command_help[]= 
+const struct ui_help_options dummy_command_help[]= 
 {
 {1,"", T_HELP_DUMMY_COMMANDS}, //section heading
     {0,"init", T_HELP_DUMMY_INIT}, //init is an example we'll find by position

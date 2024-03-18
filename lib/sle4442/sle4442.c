@@ -43,7 +43,7 @@ const char * const sle4442_usage[]=
     "Update PSC: sle4442 psc -p 0xffffff -n 0x000000"
 };
 
-const struct ui_info_help sle4442_help[]= 
+const struct ui_help_options sle4442_help[]= 
 {
 {1,"", T_HELP_SLE4442}, //command help
     {0,"init",T_HELP_SLE4442_INIT }, 

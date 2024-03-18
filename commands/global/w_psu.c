@@ -13,7 +13,6 @@
 #include "pirate/psu.h"
 #include "ui/ui_help.h"
 
-
 const char * const psucmd_usage[]={
     "w|W\t<v> <i>",  
     "Disable: w", 
@@ -22,13 +21,15 @@ const char * const psucmd_usage[]={
     "Enable 3.3v, no limit: W 3.3",
 };
 
-const struct ui_info_help psucmd_help[]={
+const struct ui_help_options psucmd_options[]={
 {1,"", T_HELP_GCMD_W}, //command help
     {0,"w",T_HELP_GCMD_W_DISABLE }, 
     {0,"W",T_HELP_GCMD_W_ENABLE }, 
     {0,"<v>", T_HELP_GCMD_W_VOLTS}, 
     {0,"<i>", T_HELP_GCMD_W_CURRENT_LIMIT},
 };
+
+
 
 // current limit fuse tripped
 void psucmd_irq_callback(void){
@@ -46,11 +47,7 @@ void psucmd_enable(struct command_result *res){
     bool current_limit_override=false;
 
     //check help
-	if(cmdln_args_find_flag('h')){
-		ui_help_usage(psucmd_usage, count_of(psucmd_usage));
-        ui_help_options(&psucmd_help[0],count_of(psucmd_help));
-		return;
-	}
+    if(ui_help_show(res->help_flag,psucmd_usage,count_of(psucmd_usage), &psucmd_options[0],count_of(psucmd_options) )) return;
 
     //todo: add to system config?
     if (scope_running) { // scope is using the analog subsystem
@@ -178,6 +175,9 @@ void psucmd_cleanup(void){
 }
 
 void psucmd_disable(struct command_result *res){
+    //check help
+    if(ui_help_show(res->help_flag,psucmd_usage,count_of(psucmd_usage), &psucmd_options[0],count_of(psucmd_options) )) return;
+
     psucmd_cleanup();
     printf("%s%s: %s%s\r\n",
         ui_term_color_notice(),

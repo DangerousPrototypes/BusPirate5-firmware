@@ -21,6 +21,7 @@ typedef struct command_result {
 	bool no_value;
 	bool default_value;
 	bool error;
+    bool help_flag;
 } command_result;
 
 struct _command_struct

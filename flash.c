@@ -28,7 +28,7 @@ const char * const flash_usage[]=
     "Test chip (full erase/write/verify): flash test"
 };
 
-const struct ui_info_help help_flash[]= 
+const struct ui_help_options help_flash[]= 
 {
 {1,"", T_HELP_FLASH}, //flash command help
     {0,"init", T_HELP_FLASH_INIT}, //init

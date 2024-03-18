@@ -17,7 +17,7 @@
 
 
 
-const struct ui_info_help help_commands[]=
+const struct ui_help_options help_commands[]=
 {
 {1,"", T_HELP_SECTION_IO}, //work with pins, input, output measurement
     {0,"w/W", 	T_HELP_1_21}, //note that pin functions need power on the buffer
@@ -107,7 +107,7 @@ void ui_help_print_args(struct command_result *res)
 }
 
 // displays the help
-void ui_help_options(const struct ui_info_help (*help), uint32_t count)
+void ui_help_options(const struct ui_help_options (*help), uint32_t count)
 {
 	
 	for(uint i=0; i<count; i++)
@@ -148,4 +148,13 @@ void ui_help_usage(const char * const flash_usage[], uint32_t count)
 			ui_term_color_reset()
 		);
 	}
+}
+
+bool ui_help_show(bool help_flag, const char * const usage[], uint32_t count_of_usage, const struct ui_help_options *options, uint32_t count_of_options){
+    if(help_flag){
+        ui_help_usage(usage, count_of_usage);
+        ui_help_options(&options[0],count_of_options);
+        return true;
+    }   
+    return false;
 }

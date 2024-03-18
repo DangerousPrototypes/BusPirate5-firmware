@@ -15,6 +15,7 @@
 #include "psu.h"
 #include "amux.h"
 #include "display/scope.h"
+#include "ui/ui_cmdln.h"
 
 #define PWM_TOP 14000 //0x30D3
 
@@ -175,6 +176,11 @@ uint32_t psu_set(float volts, float current, bool fuse_en)
 void psu_enable(struct command_result *res)
 {
     float volts,current;
+
+    if(cmdln_args_float_by_position(1, &volts))
+    {
+        printf("Found %f\r\n", volts);
+    }
 
     if (scope_running) { // scope is using the analog subsystem
 	printf("Can't turn the power supply on when the scope is using the analog subsystem - use the 'ss' command to stop the scope\r\n");

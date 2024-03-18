@@ -143,9 +143,6 @@ int main()
     //this must be done after the 74hct245 is enabled during shift register setup
     //NOTE: this is now handled on core1 entry
     //rgb_init();
-
-    // Read psu DAC resolution and check error
-    psu_setup(); //TODO: handle error
    
     //uart
     //duplicate the terminal output on a debug uart on IO pins

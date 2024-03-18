@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
@@ -140,14 +141,14 @@ bool cmdln_args_get_string(uint32_t rptr, uint32_t max_len, char *string){
 
 //parse a hex value from the first digit
 //notice, we do not pass rptr by reference, so it is not updated
-bool cmdln_args_get_hex(uint32_t rptr, struct prompt_result *result, uint32_t *value){
+bool cmdln_args_get_hex(uint32_t *rptr, struct prompt_result *result, uint32_t *value){
     char c;
 
     //*result=empty_result;
     result->no_value=true;
     (*value)=0;
 
-    while(command_info.endptr>=command_info.startptr+rptr && cmdln_try_peek(command_info.startptr+rptr, &c)){ //peek at next char
+    while(command_info.endptr>=command_info.startptr+(*rptr) && cmdln_try_peek(command_info.startptr+(*rptr), &c)){ //peek at next char
         if(((c>='0')&&(c<='9')) ){
             (*value)<<=4;
             (*value)+=(c-0x30);
@@ -158,7 +159,7 @@ bool cmdln_args_get_hex(uint32_t rptr, struct prompt_result *result, uint32_t *v
         }else{
             break;
         }
-        rptr++;
+        (*rptr)++;
         result->success=true;
         result->no_value=false;  
     }
@@ -167,21 +168,21 @@ bool cmdln_args_get_hex(uint32_t rptr, struct prompt_result *result, uint32_t *v
 
 //parse a bin value from the first digit
 //notice, we do not pass rptr by reference, so it is not updated
-bool cmdln_args_get_bin(uint32_t rptr, struct prompt_result *result, uint32_t *value){
+bool cmdln_args_get_bin(uint32_t *rptr, struct prompt_result *result, uint32_t *value){
     char c;
     //*result=empty_result;
     result->no_value=true;
     (*value)=0;
 
-    while(command_info.endptr>=command_info.startptr+rptr 
-        && cmdln_try_peek(command_info.startptr+rptr, &c))
+    while(command_info.endptr>=command_info.startptr+(*rptr) 
+        && cmdln_try_peek(command_info.startptr+(*rptr), &c))
     {
         if( (c<'0')||(c>'1') ){
             break;
         }
         (*value)<<=1;
         (*value)+=c-0x30;
-        rptr++;
+        (*rptr)++;
         result->success=true;
         result->no_value=false;   
     }
@@ -191,14 +192,14 @@ bool cmdln_args_get_bin(uint32_t rptr, struct prompt_result *result, uint32_t *v
 
 //parse a decimal value from the first digit
 //notice, we do not pass rptr by reference, so it is not updated
-bool cmdln_args_get_dec(uint32_t rptr, struct prompt_result *result, uint32_t *value){
+bool cmdln_args_get_dec(uint32_t *rptr, struct prompt_result *result, uint32_t *value){
     char c;
     //*result=empty_result;    
     result->no_value=true; 
     (*value)=0;
 
-    while(command_info.endptr>=command_info.startptr+rptr 
-        && cmdln_try_peek(command_info.startptr+rptr, &c)) //peek at next char
+    while(command_info.endptr>=command_info.startptr+(*rptr) 
+        && cmdln_try_peek(command_info.startptr+(*rptr), &c)) //peek at next char
     {
         if( (c<'0') || (c>'9') ) //if there is a char, and it is in range
         {
@@ -206,7 +207,7 @@ bool cmdln_args_get_dec(uint32_t rptr, struct prompt_result *result, uint32_t *v
         }
         (*value)*=10;
         (*value)+=(c-0x30);    
-        (rptr)++;          
+        (*rptr)++;          
         result->success=true;
         result->no_value=false;
     }
@@ -217,20 +218,20 @@ bool cmdln_args_get_dec(uint32_t rptr, struct prompt_result *result, uint32_t *v
 // XXXXXX integer
 // 0xXXXX hexadecimal
 // 0bXXXX bin
-bool cmdln_args_get_int(uint32_t rptr, struct prompt_result *result, uint32_t *value){
+bool cmdln_args_get_int(uint32_t *rptr, struct prompt_result *result, uint32_t *value){
     bool r1,r2;
     char p1,p2;
 
     *result=empty_result;
-    r1=cmdln_try_peek(command_info.startptr+(rptr),&p1);
-    r2=cmdln_try_peek(command_info.startptr+(rptr)+1,&p2);
+    r1=cmdln_try_peek(command_info.startptr+(*rptr),&p1);
+    r2=cmdln_try_peek(command_info.startptr+(*rptr)+1,&p2);
     if( !r1 || (p1==0x00) ){// no data, end of data, or no value entered on prompt
         result->no_value=true;
         return false;
     }
 
     if( r2 && (p2|0x20)=='x'){ // HEX
-        (rptr)+=2;
+        (*rptr)+=2;
         cmdln_args_get_hex(rptr, result, value);
         result->number_format=df_hex;// whatever from ui_const
     }else if( r2 && (p2|0x20)=='b' ){ // BIN
@@ -285,7 +286,7 @@ bool cmdln_args_find_flag_uint32(char flag, command_var_t *arg, uint32_t *value)
     }
 
     struct prompt_result result;
-    if(!cmdln_args_get_int(arg->value_pos, &result, value)){
+    if(!cmdln_args_get_int(&arg->value_pos, &result, value)){
         arg->error=true;
         return false;
     }
@@ -368,11 +369,64 @@ bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t *value){
             }
         }else{
             struct prompt_result result;
-            if(cmdln_args_get_int(rptr, &result, value)){
+            if(cmdln_args_get_int(&rptr, &result, value)){
                 return true;
             }else{
                 return false;
             }
+        }
+    }
+    return false;
+}
+
+bool cmdln_args_float_by_position(uint32_t pos, float *value){
+    char c;
+    uint32_t rptr=0;
+    uint32_t ipart=0, dpart=0;
+    //start at beginning of command range
+    #ifdef UI_CMDLN_ARGS_DEBUG
+    printf("Looking for uint in pos %d\r\n", pos);
+    #endif
+    for(uint32_t i=0; i<pos+1; i++){
+        //consume white space
+        if(!cmdln_consume_white_space(&rptr, false)){
+            return false;
+        }
+        //consume non-white space
+        if(i!=pos){
+            if(!cmdln_consume_white_space(&rptr, true)){ //consume non-white space
+                return false;
+            }
+        }else{
+            //before decimal
+            if(!cmdln_try_peek(rptr, &c)) return false;
+            if((c>='0') && (c<='9')) //first part of decimal
+            {
+                struct prompt_result result;
+                if(!cmdln_args_get_int(&rptr, &result, &ipart)){
+                    return false;
+                }
+                printf("ipart: %d\r\n", ipart);
+            }      
+
+            uint32_t dpart_len=0;
+            if(cmdln_try_peek(rptr, &c)){               
+                if(c=='.' || c==','){ //second part of decimal
+                    rptr++; //discard
+                    dpart_len=rptr; //track digits
+                    struct prompt_result result;
+                    if(!cmdln_args_get_int(&rptr, &result, &dpart)){
+                        printf("No decimal part found\r\n");
+                    }
+                    dpart_len=rptr-dpart_len;
+                    printf("dpart: %d, dpart_len: %d\r\n", dpart, dpart_len);
+                }
+            }
+            // TODO: j++;//track digits so we can find the proper divider later...      
+		    (*value)=(float)ipart;
+		    (*value)+=( (float)dpart / (float)pow(10,dpart_len) );
+            printf("value: %f\r\n", *value);
+            return true;
         }
     }
     return false;

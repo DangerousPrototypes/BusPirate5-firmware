@@ -25,13 +25,17 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 set(bp5_common 
         pirate.c pirate.h commands.h commands.c 
-        mode/sump.c mode/sump.h        
+        mode/sump.c mode/sump.h  
+        #pirate lib    
+        pirate/psu.h pirate/psu.c
+        #to be adapted
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c
 	msc_disk.c usb_descriptors.c
 	displays.c displays.h display/default.c display/default.h
-        shift.h shift.c psu.h psu.c amux.h amux.c button.c button.h
+        shift.h shift.c  amux.h amux.c button.c button.h
         system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
         pwm.c pwm.h freq.c freq.h adc.c adc.h pullups.c pullups.h helpers.h helpers.c
+
         mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c 
         mode/hwspi.c mode/hwspi.h mode/spiflash.h mode/spiflash.c
         lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c        mode/usart.h mode/usart.c 

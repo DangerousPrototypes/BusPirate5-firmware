@@ -195,7 +195,7 @@ void hw2wire_printI2Cflags(void){
 void hw2wire_help(void)
 {
 	printf("%s2 wire open drain bus with CLOCK and bidirectional DATA\r\n", ui_term_color_info());
-	printf("Open drain bus, requires pull-up resistors (try the P command)");
+	printf("Open drain bus, requires pull-up resistors (use 'P' to enable pull-ups)\r\n");
 	printf("[ & ] create an I2C START & STOP sequence\r\n");
 	printf("{ & } Toggle the RST pin HIGH and LOW.\r\n");
 	printf("\r\nAvailable mode apps:\r\n");

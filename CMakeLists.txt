@@ -34,6 +34,7 @@ set(bp5_common
         commands/global/cmd_convert.h commands/global/cmd_convert.c 
         commands/global/pause.h commands/global/pause.c
         commands/global/h_help.h commands/global/h_help.c
+        commands/global/cmd_selftest.h commands/global/cmd_selftest.c 
         #pirate lib    
         pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h

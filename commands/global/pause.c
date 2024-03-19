@@ -8,7 +8,7 @@
 #include "usb_rx.h"
 #include "pirate/pause.h"
 
-const char * const usage[]={
+static const char * const usage[]={
     "pause",  
     "pause and wait for any key", 
 };

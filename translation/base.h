@@ -216,7 +216,6 @@ enum T_translations{
 	T_HELP_1_12,
 	T_HELP_HELP_GENERAL,
 	T_HELP_HELP_DISPLAY,
-	T_HELP_HELP_MODE,
 	T_HELP_HELP_COMMAND,
 	T_HELP_1_14,
 	T_HELP_1_15,
@@ -345,6 +344,9 @@ enum T_translations{
 	T_HELP_SYS_GLOBAL,
 	T_HELP_SYS_MODE,
 	T_HELP_SYS_HELP,
+	T_HELP_GCMD_SELFTEST,
+	T_HELP_GCMD_SELFTEST_CMD,
+	T_HELP_GCMD_SELFTEST_H_FLAG,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

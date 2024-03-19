@@ -209,9 +209,8 @@ static char const * const bs_ba[]={
 	[T_HELP_1_11]="Izmjeri frekvenciju na IOx (jednom/CONT)",
 	[T_HELP_1_23]="Prati frekvenciju (off/ON)\t",
 	[T_HELP_1_12]="Generiši frekvenciju (off/ON)",
-	[T_HELP_HELP_GENERAL]="General help (you're reading me!)",
+	[T_HELP_HELP_GENERAL]="Global and mode help. Try 'h mode'",
 	[T_HELP_HELP_DISPLAY]="Help with a display mode such as the scope",
-	[T_HELP_HELP_MODE]="Help specific to a protocol mode such as I2C",
 	[T_HELP_HELP_COMMAND]="Add -h for command help: ls -h",
 	[T_HELP_1_14]="Versioninfo/statusinfo\t",
 	[T_HELP_1_15]="Bitorder (msb/LSB)\t",
@@ -340,6 +339,9 @@ static char const * const bs_ba[]={
 	[T_HELP_SYS_GLOBAL]="Show global command list, default option",
 	[T_HELP_SYS_MODE]="Show mode specific commands and help",
 	[T_HELP_SYS_HELP]="How to use the help system",
+	[T_HELP_GCMD_SELFTEST]="run a complete system self-test",
+	[T_HELP_GCMD_SELFTEST_CMD]="Run self-test",
+	[T_HELP_GCMD_SELFTEST_H_FLAG]="Self-test help",
 
 };
 

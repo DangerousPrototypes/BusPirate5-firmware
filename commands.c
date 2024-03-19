@@ -17,7 +17,6 @@
 #include "pwm.h"
 #include "freq.h"
 #include "adc.h"
-
 #include "helpers.h"
 #include "storage.h"
 #include "flash.h"
@@ -28,6 +27,7 @@
 #include "commands/global/cmd_convert.h"
 #include "commands/global/pause.h"
 #include "commands/global/h_help.h"
+#include "commands/global/cmd_selftest.h"
 #include "mode/logicanalyzer.h"
 #include "dummy.h"
 
@@ -62,7 +62,7 @@ const struct _command_struct commands[]=
     {"w", false, &psucmd_disable_handler, 0x00 },                  // "w" T_CMDLN_PSU_DIS
     {"V", true, &adc_measure_cont, T_CMDLN_ADC_CONT },             // "V"
     {"v", true, &adc_measure_single, T_CMDLN_ADC_ONE },            // "v"
-    {"~", true, &helpers_selftest, T_CMDLN_SELFTEST },             // "~" selftest
+    {"~", true, &cmd_selftest_handler, 0x00},             // "~" selftest T_CMDLN_SELFTEST 
     {"@", true, &auxpinfunc_input, T_CMDLN_AUX_IN },               // "@"
     {"a", false, &auxpinfunc_low, T_CMDLN_AUX_LOW },               // "a"
     {"A", false, &auxpinfunc_high, T_CMDLN_AUX_HIGH },             // "A"

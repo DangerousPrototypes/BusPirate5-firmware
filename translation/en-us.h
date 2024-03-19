@@ -221,7 +221,7 @@ static char const * const en_us[]={
 	[T_HELP_1_11]="Measure freq on IOx (once/CONT)",
 	[T_HELP_1_23]="Monitor freq (off/ON)",
 	[T_HELP_1_12]="Generate frequency (off/ON)",
-	[T_HELP_HELP_GENERAL]="Global and mode help. Try \"h mode\"",
+	[T_HELP_HELP_GENERAL]="Global and mode help. Try 'h mode'",
 	[T_HELP_HELP_DISPLAY]="Help with a display mode such as the scope",
 	[T_HELP_HELP_COMMAND]="Add -h for command help: ls -h",
 	[T_HELP_1_14]="Bus Pirate version and status info",
@@ -356,6 +356,9 @@ static char const * const en_us[]={
 	[T_HELP_SYS_GLOBAL]="Show global command list, default option",
 	[T_HELP_SYS_MODE]="Show mode specific commands and help",
 	[T_HELP_SYS_HELP]="How to use the help system",
+	[T_HELP_GCMD_SELFTEST]="run a complete system self-test",
+	[T_HELP_GCMD_SELFTEST_CMD]="Run self-test",
+	[T_HELP_GCMD_SELFTEST_H_FLAG]="Self-test help",
 };
 
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

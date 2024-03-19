@@ -33,9 +33,11 @@ set(bp5_common
         commands/global/l_bitorder.h commands/global/l_bitorder.c 
         commands/global/cmd_convert.h commands/global/cmd_convert.c 
         commands/global/pause.h commands/global/pause.c
+        commands/global/h_help.h commands/global/h_help.c
         #pirate lib    
         pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
+        pirate/pause.h pirate/pause.c
         #to be adapted
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c 
 	msc_disk.c usb_descriptors.c

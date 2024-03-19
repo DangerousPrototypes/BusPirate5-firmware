@@ -440,7 +440,7 @@ unsigned char binBBpinset(unsigned char inByte)
     }
     else
     {
-        pullups_disable();
+        pullup_disable();
         system_config.pullup_enabled=1;
         system_config.info_bar_changed=true;
     }

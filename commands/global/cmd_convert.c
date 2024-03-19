@@ -38,12 +38,12 @@ void cmd_convert_base(uint32_t value, uint32_t num_bits){
 }
 
 void cmd_convert_base_handler(struct command_result *res){
-    uint32_t temp=0, num_bits=0;
+    uint32_t temp=0, num_bits=32;
 	bool has_value = cmdln_args_uint32_by_position(1, &temp);
-    uint32_t mask=0x000000ff;
-    for(uint8_t i=1; i<4; i++){ //4 = 32 bit support TODO: this really isn't doing what we need...
-        if(temp&(mask<<(i*8))){
-            num_bits+=8;
+    uint32_t mask=0xff000000;
+    for(uint8_t i=0; i<3; i++){ //4 = 32 bit support TODO: this really isn't doing what we need...
+        if(!(temp&(mask>>(i*8)))){
+            num_bits-=8;
         }
     }
     cmd_convert_base(temp, num_bits);

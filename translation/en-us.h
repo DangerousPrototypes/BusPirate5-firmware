@@ -221,9 +221,8 @@ static char const * const en_us[]={
 	[T_HELP_1_11]="Measure freq on IOx (once/CONT)",
 	[T_HELP_1_23]="Monitor freq (off/ON)",
 	[T_HELP_1_12]="Generate frequency (off/ON)",
-	[T_HELP_HELP_GENERAL]="General help (you're reading me!)",
+	[T_HELP_HELP_GENERAL]="Global and mode help. Try \"h mode\"",
 	[T_HELP_HELP_DISPLAY]="Help with a display mode such as the scope",
-	[T_HELP_HELP_MODE]="Help specific to a protocol mode such as I2C",
 	[T_HELP_HELP_COMMAND]="Add -h for command help: ls -h",
 	[T_HELP_1_14]="Bus Pirate version and status info",
 	[T_HELP_1_15]="Bitorder (msb/LSB)",
@@ -349,10 +348,14 @@ static char const * const en_us[]={
 	[T_HELP_GCMD_W]="onboard power supply with programmable fuse",
 	[T_HELP_GCMD_W_DISABLE]="Disable onboard power supply",
 	[T_HELP_GCMD_W_ENABLE]="Enable onboard power supply, show configuration menu",
-	[T_HELP_GCMD_W_VOLTS]="Voltage, 0.8-5.0",
-	[T_HELP_GCMD_W_CURRENT_LIMIT]="Current limit, 0-500",
+	[T_HELP_GCMD_W_VOLTS]="Voltage, 0.8-5.0volts",
+	[T_HELP_GCMD_W_CURRENT_LIMIT]="Current limit, 0-500mA",
 	[T_HELP_GCMD_P]="onboard pull-up resistors",
-
+	[T_HELP_HELP]="help for Bus Pirate commands and modes",
+	[T_HELP_SYS_COMMAND]="Commands to access the help system",
+	[T_HELP_SYS_GLOBAL]="Show global command list, default option",
+	[T_HELP_SYS_MODE]="Show mode specific commands and help",
+	[T_HELP_SYS_HELP]="How to use the help system",
 };
 
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

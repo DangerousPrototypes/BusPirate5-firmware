@@ -18,5 +18,5 @@ uint32_t lsb_convert(uint32_t d, uint8_t num_bits){
 // bit_order: 0=MSB, 1=LSB
 void lsb_get(uint32_t *d, uint8_t num_bits, bool bit_order){
 	if(!bit_order) return; // 0=MSB
-	(*d) = ui_format_lsb(*d, num_bits);
+	(*d) = lsb_convert(*d, num_bits);
 }

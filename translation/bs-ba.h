@@ -332,9 +332,14 @@ static char const * const bs_ba[]={
 	[T_HELP_GCMD_W]="onboard power supply with programmable fuse",
 	[T_HELP_GCMD_W_DISABLE]="Disable onboard power supply",
 	[T_HELP_GCMD_W_ENABLE]="Enable onboard power supply, show configuration menu",
-	[T_HELP_GCMD_W_VOLTS]="Voltage, 0.8-5.0",
-	[T_HELP_GCMD_W_CURRENT_LIMIT]="Current limit, 0-500",
+	[T_HELP_GCMD_W_VOLTS]="Voltage, 0.8-5.0volts",
+	[T_HELP_GCMD_W_CURRENT_LIMIT]="Current limit, 0-500mA",
 	[T_HELP_GCMD_P]="onboard pull-up resistors",
+	[T_HELP_HELP]="help for Bus Pirate commands and modes",
+	[T_HELP_SYS_COMMAND]="Commands to access the help system",
+	[T_HELP_SYS_GLOBAL]="Show global command list, default option",
+	[T_HELP_SYS_MODE]="Show mode specific commands and help",
+	[T_HELP_SYS_HELP]="How to use the help system",
 
 };
 

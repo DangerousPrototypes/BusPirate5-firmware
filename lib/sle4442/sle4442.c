@@ -58,7 +58,6 @@ const struct ui_help_options sle4442_help[]=
     {0,"-n",T_HELP_SLE4442_NEW_PSC_FLAG},
 };
 
-
 uint32_t sle4442_ticks(void){
 	for(uint32_t i=0; i<0x100; i++){
 		pio_hw2wire_clock_tick();

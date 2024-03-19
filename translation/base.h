@@ -340,6 +340,11 @@ enum T_translations{
 	T_HELP_GCMD_W_VOLTS,
 	T_HELP_GCMD_W_CURRENT_LIMIT,
 	T_HELP_GCMD_P,
+	T_HELP_HELP,
+	T_HELP_SYS_COMMAND,
+	T_HELP_SYS_GLOBAL,
+	T_HELP_SYS_MODE,
+	T_HELP_SYS_HELP,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

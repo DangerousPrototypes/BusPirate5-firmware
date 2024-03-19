@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
@@ -6,8 +7,12 @@
 #include "ui/ui_const.h"
 #include "opt_args.h"
 #include "ui/ui_help.h"
+#include "bytecode.h"
+#include "modes.h"
+#include "system_config.h"
+#include "ui/ui_cmdln.h"
 
-const struct ui_help_options help_commands[]={
+const struct ui_help_options global_commands[]={
 {1,"", T_HELP_SECTION_IO}, //work with pins, input, output measurement
     {0,"w/W", 	T_HELP_1_21}, //note that pin functions need power on the buffer
     {0,"a/A/@ x",T_HELP_COMMAND_AUX},
@@ -82,30 +87,48 @@ const struct ui_help_options help_commands[]={
 
 //Get more help  
 {1,"",T_HELP_SECTION_HELP}, 
-	{0,"?",    T_HELP_HELP_GENERAL},
-    {0,"h",    T_HELP_HELP_MODE},
+	{0,"?/help",T_HELP_HELP_GENERAL},
     {0,"hd",    T_HELP_HELP_DISPLAY},
-    {0,"", T_HELP_HELP_COMMAND},
+    {0,"-h", T_HELP_HELP_COMMAND},
 
 {1,"",T_HELP_HINT}
 };
 
+
+const char * const help_usage[]= 
+{
+    "?|h|help [global|mode] [-h(elp)]",   
+    "Show global commands: ?",
+    "Show help and commands for current mode: ? mode",
+};
+
+const struct ui_help_options help_options[]={
+{1,"", T_HELP_HELP}, //command help
+    {0,"?/help",T_HELP_SYS_COMMAND }, 
+    {0,"global", T_HELP_SYS_GLOBAL}, 
+	{0,"mode",T_HELP_SYS_MODE }, 
+	{0,"-h", T_HELP_SYS_HELP},
+};
+
 void help_mode(void){
-    ui_help_options(&help_commands[0],count_of(help_commands));
+    //ui_help_options(&help_commands[0],count_of(help_commands));
+	modes[system_config.mode].protocol_help();
 }
 
 void help_global(void){
-    ui_help_options(&help_commands[0],count_of(help_commands));
+    ui_help_options(&global_commands[0],count_of(global_commands));
 }
 
 void help_handler(struct command_result *res){
-    if(res->help_flag){
-        ui_help_usage(help_commands,count_of(help_commands));
-        return;
-    }
-    // h/? (all?)
-    // h/? mode
-    // h/? display
-    // h/? -h
-    ui_help_options(&help_commands[0],count_of(help_commands));
+    //check help
+    if(ui_help_show(res->help_flag,help_usage,count_of(help_usage), &help_options[0],count_of(help_options) )) return;
+	//check mode|global|display
+	char action[9];
+	cmdln_args_string_by_position(1, sizeof(action), action);
+    bool mode = (strcmp(action, "mode")==0);
+	if(!mode){
+    	ui_help_options(&global_commands[0],count_of(global_commands));
+	}else{
+		help_mode();
+	}
 }

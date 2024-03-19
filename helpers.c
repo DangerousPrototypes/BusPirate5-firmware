@@ -494,10 +494,12 @@ void helpers_mode_macro(struct command_attributes *attributes, struct command_re
     }    
 }
 */
+/*
 void helpers_mode_help(struct command_result *res)
 {
     modes[system_config.mode].protocol_help();
 }
+*/
 
 void helpers_display_help(struct command_result *res)
 {

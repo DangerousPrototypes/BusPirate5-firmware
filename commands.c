@@ -27,6 +27,7 @@
 #include "commands/global/l_bitorder.h"
 #include "commands/global/cmd_convert.h"
 #include "commands/global/pause.h"
+#include "commands/global/h_help.h"
 #include "mode/logicanalyzer.h"
 #include "dummy.h"
 
@@ -44,13 +45,13 @@ const struct _command_struct commands[]=
     {"$", true, &cmd_mcu_jump_to_bootloader_handler,0x00 },     // "$" T_CMDLN_BOOTLOAD
     {"=", true, &cmd_convert_base_handler, T_CMDLN_INT_FORMAT}, // "="
     {"|", true, &cmd_convert_inverse_handler, T_CMDLN_INT_INVERSE}, // "|"   
-    {"?", true, &ui_help_print_args, T_CMDLN_HELP},        // "?"
+    {"?", true, &help_handler, 0x00},        // "?" T_CMDLN_HELP
     {"c", true, &ui_config_main_menu, T_CMDLN_CONFIG_MENU},       // "c"
     {"f", true, &freq_single, T_CMDLN_FREQ_ONE},               // "f"    
     {"F", true, &freq_cont, T_CMDLN_FREQ_CONT}, // "F"
     {"G", false, &pwm_configure_enable, T_CMDLN_PWM_CONFIG}, //G
     {"g", false, &pwm_configure_disable, T_CMDLN_PWM_DIS },       // "g"
-    {"h", false, &helpers_mode_help, T_CMDLN_HELP_MODE },         // "h"
+    {"h", true, &help_handler, 0x00 },         // "h" T_CMDLN_HELP_MODE
     {"hd", true, &helpers_display_help, T_CMDLN_HELP_DISPLAY },     // "hd"
     {"i", true, &ui_info_print_info, T_CMDLN_INFO },               // "i"
     {"l", true, &bitorder_msb_handler, T_CMDLN_BITORDER_MSB },    // "l"
@@ -71,7 +72,8 @@ const struct _command_struct commands[]=
     {"hex", true, &hex, T_CMDLN_HEX },                                // "hex"
     {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
     {"flash", true, &flash, 0x00 },                              // "dump"
-    {"dummy", true, &dummy_func, 0x00 }                              // "dummy"
+    {"dummy", true, &dummy_func, 0x00 },                              // "dummy"
+    {"help", true, &help_handler, 0x00},
 };
 
 const uint32_t commands_count=count_of(commands);

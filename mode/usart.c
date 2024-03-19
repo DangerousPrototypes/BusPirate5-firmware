@@ -7,7 +7,7 @@
 #include "opt_args.h"
 #include "bytecode.h"
 #include "mode/usart.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "command_attributes.h"

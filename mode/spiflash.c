@@ -8,7 +8,7 @@
 #include "system_config.h"
 #include "opt_args.h"
 #include "bytecode.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "storage.h"

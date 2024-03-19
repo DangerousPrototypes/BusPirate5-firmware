@@ -7,7 +7,7 @@
 #include "opt_args.h"
 #include "bytecode.h"
 #include "mode/hwled.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "hardware/pio.h"
 #include "ws2812.pio.h"

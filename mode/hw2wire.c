@@ -8,7 +8,7 @@
 #include "opt_args.h"
 #include "bytecode.h"
 #include "mode/hw2wire.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_cmdln.h"
 #include "hw2wire.pio.h"

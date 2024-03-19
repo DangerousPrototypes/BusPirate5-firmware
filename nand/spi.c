@@ -8,7 +8,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "hardware/spi.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "system_config.h"
 #include "ui/ui_term.h"
 #include "spi.h"

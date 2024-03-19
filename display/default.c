@@ -7,7 +7,7 @@
 #include "opt_args.h"
 #include "hardware/uart.h"
 //#include "hiz.h"
-#include "bio.h"	
+#include "pirate/bio.h"	
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/dma.h"

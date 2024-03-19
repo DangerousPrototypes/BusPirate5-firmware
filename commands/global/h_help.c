@@ -95,14 +95,14 @@ const struct ui_help_options global_commands[]={
 };
 
 
-const char * const help_usage[]= 
+static const char * const help_usage[]= 
 {
     "?|h|help [global|mode] [-h(elp)]",   
     "Show global commands: ?",
     "Show help and commands for current mode: ? mode",
 };
 
-const struct ui_help_options help_options[]={
+static const struct ui_help_options help_options[]={
 {1,"", T_HELP_HELP}, //command help
     {0,"?/help",T_HELP_SYS_COMMAND }, 
     {0,"global", T_HELP_SYS_GLOBAL}, 

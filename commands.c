@@ -6,7 +6,6 @@
 #include "command_attributes.h"
 #include "commands.h"
 #include "mode/hiz.h"
-#include "auxpinfunc.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
 #include "ui/ui_info.h"
@@ -28,6 +27,7 @@
 #include "commands/global/pause.h"
 #include "commands/global/h_help.h"
 #include "commands/global/cmd_selftest.h"
+#include "commands/global/a_auxio.h"
 #include "mode/logicanalyzer.h"
 #include "dummy.h"
 
@@ -63,9 +63,9 @@ const struct _command_struct commands[]=
     {"V", true, &adc_measure_cont, T_CMDLN_ADC_CONT },             // "V"
     {"v", true, &adc_measure_single, T_CMDLN_ADC_ONE },            // "v"
     {"~", true, &cmd_selftest_handler, 0x00},             // "~" selftest T_CMDLN_SELFTEST 
-    {"@", true, &auxpinfunc_input, T_CMDLN_AUX_IN },               // "@"
-    {"a", false, &auxpinfunc_low, T_CMDLN_AUX_LOW },               // "a"
-    {"A", false, &auxpinfunc_high, T_CMDLN_AUX_HIGH },             // "A"
+    {"@", true, &auxio_input_handler,0x00},               // "@" T_CMDLN_AUX_IN
+    {"a", false, &auxio_low_handler, 0x00},               // "a" T_CMDLN_AUX_LOW
+    {"A", false, &auxio_high_handler,0x00},             // "A"T_CMDLN_AUX_HIGH
     {"format", true, &storage_format, T_HELP_CMD_FORMAT },               // "format"
     {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d" 
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 

@@ -347,6 +347,11 @@ enum T_translations{
 	T_HELP_GCMD_SELFTEST,
 	T_HELP_GCMD_SELFTEST_CMD,
 	T_HELP_GCMD_SELFTEST_H_FLAG,
+	T_HELP_AUXIO,
+	T_HELP_AUXIO_LOW,
+	T_HELP_AUXIO_HIGH,
+	T_HELP_AUXIO_INPUT,
+	T_HELP_AUXIO_IO,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

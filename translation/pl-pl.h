@@ -342,6 +342,11 @@ static char const * const pl_pl[]={
 	[T_HELP_GCMD_SELFTEST]="run a complete system self-test",
 	[T_HELP_GCMD_SELFTEST_CMD]="Run self-test",
 	[T_HELP_GCMD_SELFTEST_H_FLAG]="Self-test help",
+	[T_HELP_AUXIO]="set IO pin state, read input pins",
+	[T_HELP_AUXIO_LOW]="Output, low/0. Reserves pin for output",
+	[T_HELP_AUXIO_HIGH]="Output, high/1. Reserves pin for output",
+	[T_HELP_AUXIO_INPUT]="Input, read state. Releases reserved pin",
+	[T_HELP_AUXIO_IO]="IO pin number, 0-7",
 
 };
 

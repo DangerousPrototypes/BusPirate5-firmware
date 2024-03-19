@@ -3,7 +3,7 @@
 #include "hardware/adc.h"
 #include "pirate.h"
 #include "opt_args.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_const.h"
 #include "ui/ui_term.h"

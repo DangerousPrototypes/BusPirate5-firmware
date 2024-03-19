@@ -9,7 +9,7 @@
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "tusb.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "system_config.h"
 #include "debug.h"
 

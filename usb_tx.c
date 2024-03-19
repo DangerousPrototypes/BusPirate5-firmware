@@ -9,7 +9,7 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "tusb.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "system_config.h"
 #include "debug.h"
 

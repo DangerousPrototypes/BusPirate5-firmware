@@ -13,7 +13,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_cmdln.h"
 #include "syntax.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "amux.h"
 
 #define SYN_MAX_LENGTH 1024

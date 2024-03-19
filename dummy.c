@@ -17,7 +17,7 @@
 #include "ui/ui_help.h" // Functions to display help in a standardized way
 #include "system_config.h" // Stores current Bus Pirate system configuration
 #include "amux.h"   // Analog voltage measurement functions
-#include "button.h" // Button press functions
+#include "pirate/button.h" // Button press functions
 
 // This array of strings is used to display help USAGE examples for the dummy command
 const char * const dummy_usage_help[]= 

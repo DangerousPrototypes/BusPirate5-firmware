@@ -135,12 +135,12 @@ struct _mode modes[MAXPROTO]={
 	nullfunc1_temp,				// read dat
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	nullfunc4,				// macro
-	HiZsetup,				// setup UI
-	HiZsetup_exc,				// real setup
-	HiZcleanup,				// cleanup for HiZ
-	//HiZpins,				// display pin config
-	HiZsettings,				// display settings 
-	nohelp,					// display small help about the protocol
+	hiz_setup,				// setup UI
+	hiz_setup_exec,				// real setup
+	hiz_cleanup,				// cleanup for HiZ
+	//hiz_pins,				// display pin config
+	hiz_settings,				// display settings 
+	hiz_help,					// display small help about the protocol
     NULL,                   // mode specific commands
     NULL,                   // mode specific commands count
 	"HiZ",					// friendly name (promptname)
@@ -193,8 +193,8 @@ struct _mode modes[MAXPROTO]={
 	hw1wire_setup,				// setup UI
 	hw1wire_setup_exc,				// real setup
 	hw1wire_cleanup,				// cleanup for HiZ
-	//HiZpins,				// display pin config
-	HiZsettings,				// display settings 
+	//hiz_pins,				// display pin config
+	hiz_settings,				// display settings 
 	nohelp,					// display small help about the protocol
     NULL,                   // mode specific commands
     NULL,                   // mode specific commands count    

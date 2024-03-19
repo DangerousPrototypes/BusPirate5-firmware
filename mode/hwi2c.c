@@ -6,7 +6,7 @@
 #include "opt_args.h"
 #include "bytecode.h"
 #include "mode/hwi2c.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "i2c.pio.h"
 #include "mode/pio_i2c.h"

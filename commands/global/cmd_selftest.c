@@ -10,11 +10,13 @@
 #include "ui/ui_help.h"
 #include "pico/multicore.h"
 #include "storage.h"
+#include "pirate/pullup.h"
+#include "pirate/button.h"
 #include "pirate/psu.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "amux.h"
 #include "display/scope.h"
-#include "pirate/pullup.h"
+
 
 #define SELF_TEST_LOW_LIMIT 300
 
@@ -300,11 +302,8 @@ bool selftest_current_limit(void){
 
 bool selftest_button(void){
     //prompt to push button
-    gpio_set_function(EXT1, GPIO_FUNC_SIO);
-    gpio_set_dir(EXT1, GPIO_IN);
-    gpio_pull_down(EXT1);
     printf("PUSH BUTTON TO COMPLETE: ");
-    while(!gpio_get(EXT1));
+    while(!button_get(0));
     printf("OK\r\n");
     return false;
 }

@@ -35,7 +35,7 @@
 #include "pirate.h"
 #include <stdarg.h>
 #include "sfud.h"
-#include "bio.h"
+#include "pirate/bio.h"
 
 #define M_SPI_PORT spi1
 #define M_SPI_CLK BIO6

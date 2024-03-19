@@ -15,7 +15,7 @@
 #include "system_config.h" 
 #include "bytecode.h" // Bytecode structure for data IO
 #include "dummy1.h"
-#include "bio.h" // Buffered pin IO functions
+#include "pirate/bio.h" // Buffered pin IO functions
 static uint32_t returnval;
 
 // Pin labels shown on the display and in the terminal status bar

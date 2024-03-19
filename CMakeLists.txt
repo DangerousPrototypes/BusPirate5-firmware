@@ -35,16 +35,18 @@ set(bp5_common
         commands/global/pause.h commands/global/pause.c
         commands/global/h_help.h commands/global/h_help.c
         commands/global/cmd_selftest.h commands/global/cmd_selftest.c 
+        commands/global/a_auxio.h commands/global/a_auxio.c
         #pirate lib    
         pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
-        pirate/pause.h pirate/pause.c
+        pirate/bio.h pirate/bio.c
+        pirate/button.h pirate/button.c
         #to be adapted
-        ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h bio.h bio.c 
+        ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h
 	msc_disk.c usb_descriptors.c
 	displays.c displays.h display/default.c display/default.h
-        shift.h shift.c  amux.h amux.c button.c button.h
-        system_config.h system_config.c modes.c modes.h auxpinfunc.h auxpinfunc.c
+        shift.h shift.c  amux.h amux.c 
+        system_config.h system_config.c modes.c modes.h
         pwm.c pwm.h freq.c freq.h adc.c adc.h helpers.h helpers.c
 
         mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c 

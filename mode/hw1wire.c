@@ -7,7 +7,7 @@
 #include "opt_args.h"
 #include "bytecode.h"
 #include "mode/hw1wire.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "storage.h"
 #include "ui/ui_term.h"

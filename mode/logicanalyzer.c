@@ -6,7 +6,7 @@
 #include "hardware/clocks.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "opt_args.h"
 #include "logicanalyzer.h"
 #include "hardware/pio.h"

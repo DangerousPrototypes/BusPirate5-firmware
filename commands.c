@@ -29,7 +29,7 @@
 #include "commands/global/cmd_selftest.h"
 #include "commands/global/a_auxio.h"
 #include "mode/logicanalyzer.h"
-#include "dummy.h"
+#include "commands/global/dummy.h"
 
 // command configuration
 const struct _command_struct commands[]=
@@ -72,7 +72,7 @@ const struct _command_struct commands[]=
     {"hex", true, &hex, T_CMDLN_HEX },                                // "hex"
     {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
     {"flash", true, &flash, 0x00 },                              // "dump"
-    {"dummy", true, &dummy_func, 0x00 },                              // "dummy"
+    {"dummy", true, &dummy_handler, 0x00 },                              // "dummy"
     {"help", true, &help_handler, 0x00},
 };
 

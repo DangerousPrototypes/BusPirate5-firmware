@@ -1,3 +1,4 @@
+// TODO: BIO use, pullups, psu
 /*
     Welcome to dummy.c, a growing demonstration of how to add commands to the Bus Pirate firmware.
     You can also use this file as the basis for your own commands.
@@ -20,7 +21,7 @@
 #include "pirate/button.h" // Button press functions
 
 // This array of strings is used to display help USAGE examples for the dummy command
-const char * const dummy_usage_help[]= 
+static const char * const usage[]= 
 {
     "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
     "Initialize: dummy init",
@@ -40,7 +41,7 @@ const char * const dummy_usage_help[]=
 //      2. add a T_ tag and the help text
 //      3. Run json2h.py, which will rebuild the translation files, adding defaults where translations are missing values
 //      4. Use the new T_ constant in the help text for the command
-const struct ui_help_options dummy_command_help[]= 
+static const struct ui_help_options options[]= 
 {
 {1,"", T_HELP_DUMMY_COMMANDS}, //section heading
     {0,"init", T_HELP_DUMMY_INIT}, //init is an example we'll find by position
@@ -51,27 +52,24 @@ const struct ui_help_options dummy_command_help[]=
     {0,"-f",T_HELP_DUMMY_FILE_FLAG}, //-f flag, a file name string    
 };
 
-void dummy_func(struct command_result *res)
+void dummy_handler(struct command_result *res)
 {
     uint32_t value; //somewhere to keep an integer value
     char file[13]; //somewhere to keep a string value (8.3 filename + 0x00 = 13 characters max)
 
     // the help -h flag can be serviced from inside a command, or handled by the command line parser
-    // 1. a single T_ constant help entry assigned in the commands[] struct in commands.c
+    // 1. a single T_ constant help entry assigned in the commands[] struct in commands.c can be shown automatically
     // 2. if the help assignment in commands[] struct is 0x00, it can be handled here (or ignored)
-    // cmdln_args_find_flag('h') will return true if the -h flag is present
-    if(cmdln_args_find_flag('h'))
-    {
-        //using the help system to print the help text we configured above
-        ui_help_usage(dummy_usage_help,count_of(dummy_usage_help)); //usage info is always first (git style)
-        ui_help_options(&dummy_command_help[0],count_of(dummy_command_help)); //options info is always second (git style)
-        return; //we're done, don't process any more of this command if -h is set
-    }
+    // res.help_flag is set by the command line parser if the user enters -h
+    // we can use the ui_help_show function to display the help text we configured above
+   	if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
 
     //if we only want to run this command in a certain mode
     // we can use the system_config variable to determine the mode
     // modes are the menu option number minus 1
     // the best way to prevent a command from running in HiZ mode is configure the commands[] struct in commands.c
+    // NOTE: mode commands are a better way to do this now.
+    // mode commands are registered in a mode and are only accessible from there
     /*if(system_config.mode!=4)
     {
         printf("dummy command is currently only available in SPI mode\r\n");

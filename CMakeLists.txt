@@ -36,6 +36,7 @@ set(bp5_common
         commands/global/h_help.h commands/global/h_help.c
         commands/global/cmd_selftest.h commands/global/cmd_selftest.c 
         commands/global/a_auxio.h commands/global/a_auxio.c
+        commands/global/dummy.c commands/global/dummy.h
         #pirate lib    
         pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
@@ -88,7 +89,6 @@ set(bp5_common
         mem.c mem.h
         mode/logicanalyzer.h mode/logicanalyzer.c
         mode/hw2wire.h mode/hw2wire.c mode/hw2wire_pio.h mode/hw2wire_pio.c
-        dummy.c dummy.h
         )
 
 add_executable(bus_pirate5_rev8

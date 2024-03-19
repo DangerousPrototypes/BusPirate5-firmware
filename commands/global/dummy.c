@@ -11,7 +11,7 @@
 #include "pirate.h"
 #include "opt_args.h" // File system related
 #include "fatfs/ff.h" // File system related
-#include "storage.h" // File system related
+#include "pirate/storage.h" // File system related
 #include "ui/ui_cmdln.h" // This file is needed for the command line parsing functions
 //#include "ui/ui_prompt.h" // User prompts and menu system
 //#include "ui/ui_const.h"  // Constants and strings
@@ -57,8 +57,9 @@ void dummy_handler(struct command_result *res)
     uint32_t value; //somewhere to keep an integer value
     char file[13]; //somewhere to keep a string value (8.3 filename + 0x00 = 13 characters max)
 
-    // the help -h flag can be serviced from inside a command, or handled by the command line parser
-    // 1. a single T_ constant help entry assigned in the commands[] struct in commands.c can be shown automatically
+    // the help -h flag can be serviced by the command line parser automatically, or from within the command
+    // the action taken is set by the help_text variable of the command struct entry for this command
+    // 1. a single T_ constant help entry assigned in the commands[] struct in commands.c will be shown automatically
     // 2. if the help assignment in commands[] struct is 0x00, it can be handled here (or ignored)
     // res.help_flag is set by the command line parser if the user enters -h
     // we can use the ui_help_show function to display the help text we configured above

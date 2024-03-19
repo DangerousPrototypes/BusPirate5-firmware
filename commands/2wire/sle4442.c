@@ -32,8 +32,7 @@ typedef struct __attribute__((packed)) sle44xx_atr_struct {
 	uint16_t rfu2:16;
 } sle44xx_atr_t;	
 
-const char * const sle4442_usage[]= 
-{
+static const char * const usage[]= {
     "sle4442 [init|dump|unlock|write|erase|psc]\r\n\t[-a <address>] [-v <value>] [-p <current psc>] [-n <new psc>] [-h(elp)]",   
     "Initialize and probe: sle4442 init",
     "Dump contents: sle4442 dump",
@@ -43,8 +42,7 @@ const char * const sle4442_usage[]=
     "Update PSC: sle4442 psc -p 0xffffff -n 0x000000"
 };
 
-const struct ui_help_options sle4442_help[]= 
-{
+static const struct ui_help_options options[]= {
 {1,"", T_HELP_SLE4442}, //command help
     {0,"init",T_HELP_SLE4442_INIT }, 
     {0,"dump", T_HELP_SLE4442_DUMP}, 
@@ -168,11 +166,8 @@ bool sle4442_update_psc(uint32_t new_psc, char *data){
 
 void sle4442(struct command_result *res){
 	//check help
-	if(cmdln_args_find_flag('h')){
-		ui_help_usage(sle4442_usage, count_of(sle4442_usage));
-        ui_help_options(&sle4442_help[0],count_of(sle4442_help));
-		return;
-	}
+    if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
+
 	//parse command line
 	char action[9];
 	cmdln_args_string_by_position(1, sizeof(action), action);

@@ -347,6 +347,21 @@ static char const * const zh_cn[]={
 	[T_HELP_AUXIO_HIGH]="Output, high/1. Reserves pin for output",
 	[T_HELP_AUXIO_INPUT]="Input, read state. Releases reserved pin",
 	[T_HELP_AUXIO_IO]="IO pin number, 0-7",
+	[T_HELP_DISK_HEX]="print file contents in HEX format",
+	[T_HELP_DISK_HEX_FILE]="Name of file in 8.3 format (example1.bin)",
+	[T_HELP_DISK_CAT]="print file contents as text",
+	[T_HELP_DISK_CAT_FILE]="Name of file in 8.3 format (example1.txt)",
+	[T_HELP_DISK_MKDIR]="create directory on internal storage",
+	[T_HELP_DISK_MKDIR_DIR]="Directory name, 8 characters max",
+	[T_HELP_DISK_CD]="change to a directory on local storage",
+	[T_HELP_DISK_CD_DIR]="Directory name, 8 characters max",
+	[T_HELP_DISK_RM]="delete file or directory on local storage",
+	[T_HELP_DISK_RM_FILE]="Name of file to delete, 8.3 format",
+	[T_HELP_DISK_RM_DIR]="Name of directory to delete, 8 characters max",
+	[T_HELP_DISK_LS]="list files and directories on local storage",
+	[T_HELP_DISK_LS_DIR]="List contents of this directory, optional",
+	[T_HELP_DISK_FORMAT]="erase and format internal storage in FAT16 format",
+	[T_HELP_DISK_FORMAT_CMD]="All data will be lost, answer 'y' twice to continue",
 
 };
 

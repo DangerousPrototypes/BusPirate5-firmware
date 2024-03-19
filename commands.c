@@ -17,8 +17,9 @@
 #include "freq.h"
 #include "adc.h"
 #include "helpers.h"
-#include "storage.h"
+//#include "pirate/storage.h"
 #include "flash.h"
+#include "mode/logicanalyzer.h"
 #include "commands/global/w_psu.h"
 #include "commands/global/p_pullups.h"
 #include "commands/global/cmd_mcu.h"
@@ -28,17 +29,17 @@
 #include "commands/global/h_help.h"
 #include "commands/global/cmd_selftest.h"
 #include "commands/global/a_auxio.h"
-#include "mode/logicanalyzer.h"
 #include "commands/global/dummy.h"
+#include "commands/global/disk.h"
 
 // command configuration
 const struct _command_struct commands[]=
 {   //HiZ? Function Help
-    {"ls",true,&list_dir,T_CMDLN_LS}, //ls
-    {"cd", true, &change_dir,T_CMDLN_CD},//cd
-    {"mkdir", true, &make_dir, T_CMDLN_MKDIR},//mkdir
-    {"rm", true, &storage_unlink, T_CMDLN_RM}, //rm
-    {"cat", true, &cat, T_CMDLN_CAT}, //cat
+    {"ls",true,&disk_ls_handler,0x00}, //ls T_CMDLN_LS
+    {"cd", true, &disk_cd_handler,0x00},//cd T_CMDLN_CD
+    {"mkdir", true, &disk_mkdir_handler,0x00},//mkdir T_CMDLN_MKDIR
+    {"rm", true, &disk_rm_handler,0x00}, //rm T_CMDLN_RM
+    {"cat", true, &disk_cat_handler,0x00}, //cat T_CMDLN_CAT
     {"m", true, &ui_mode_enable_args, T_CMDLN_MODE},            // "m"   //needs trailing int32   
     {"W", false, &psucmd_enable_handler, 0x00},// "W"   T_CMDLN_PSU_EN  //TOD0: more flexability on help handling and also a general deescription
     {"#", true, &cmd_mcu_reset_handler, T_CMDLN_RESET},// "#" 
@@ -66,10 +67,10 @@ const struct _command_struct commands[]=
     {"@", true, &auxio_input_handler,0x00},               // "@" T_CMDLN_AUX_IN
     {"a", false, &auxio_low_handler, 0x00},               // "a" T_CMDLN_AUX_LOW
     {"A", false, &auxio_high_handler,0x00},             // "A"T_CMDLN_AUX_HIGH
-    {"format", true, &storage_format, T_HELP_CMD_FORMAT },               // "format"
+    {"format", true, &disk_format_handler, 0x00 },               // "format" T_HELP_CMD_FORMAT
     {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d" 
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
-    {"hex", true, &hex, T_CMDLN_HEX },                                // "hex"
+    {"hex", true, &disk_hex_handler,0x00},                                // "hex"  T_CMDLN_HEX 
     {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
     {"flash", true, &flash, 0x00 },                              // "dump"
     {"dummy", true, &dummy_handler, 0x00 },                              // "dummy"

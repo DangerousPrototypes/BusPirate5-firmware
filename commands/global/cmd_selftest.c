@@ -9,14 +9,13 @@
 #include "ui/ui_cmdln.h"
 #include "ui/ui_help.h"
 #include "pico/multicore.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "pirate/pullup.h"
 #include "pirate/button.h"
 #include "pirate/psu.h"
 #include "pirate/bio.h"
 #include "amux.h"
 #include "display/scope.h"
-
 
 #define SELF_TEST_LOW_LIMIT 300
 
@@ -32,7 +31,9 @@ bool selftest_format_nand(void){
         }
         printf("\r\n\r\n");
         if(value=='y'){
-            if(!storage_format_base()){
+            uint8_t fr = storage_format();
+            if(fr){
+                storage_file_error(fr);
                 printf("FORMAT NAND FLASH: ERROR! 不好\r\n\r\n");
                 return true;                              
             }else{
@@ -61,7 +62,7 @@ bool selftest_adc(void){
 bool selftest_flash(void){
     //TF flash card check: was TF flash card detected?
     printf("FLASH STORAGE: ");
-    if(storage_mount()){
+    if(storage_mount()==0){
         printf("OK\r\n");
     }else{
         printf("NOT DETECTED. ERROR!\r\n");

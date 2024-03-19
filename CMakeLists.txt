@@ -26,7 +26,12 @@ pico_sdk_init()
 set(bp5_common 
         pirate.c pirate.h commands.h commands.c 
         mode/sump.c mode/sump.h  
-        #apps
+        #pirate lib    
+        pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
+        pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
+        pirate/bio.h pirate/bio.c pirate/storage.h pirate/storage.c
+        pirate/button.h pirate/button.c
+        #commands
         commands/global/w_psu.h commands/global/w_psu.c  
         commands/global/p_pullups.h commands/global/p_pullups.c
         commands/global/cmd_mcu.h commands/global/cmd_mcu.c
@@ -37,11 +42,9 @@ set(bp5_common
         commands/global/cmd_selftest.h commands/global/cmd_selftest.c 
         commands/global/a_auxio.h commands/global/a_auxio.c
         commands/global/dummy.c commands/global/dummy.h
-        #pirate lib    
-        pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
-        pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
-        pirate/bio.h pirate/bio.c
-        pirate/button.h pirate/button.c
+        commands/global/disk.c commands/global/disk.h
+        commands/2wire/sle4442.c commands/2wire/sle4442.h
+
         #to be adapted
         ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h
 	msc_disk.c usb_descriptors.c
@@ -73,17 +76,17 @@ set(bp5_common
         font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
         fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 
 
-        storage.h storage.c
+        
         ui/ui_term.c ui/ui_term.h  ui/ui_statusbar.c ui/ui_statusbar.h
         system_monitor.h system_monitor.c
         mjson/mjson.h mjson/mjson.c 
-        postprocess.c postprocess.h syntax.h syntax.c  syntax_struct.h
+        syntax.h syntax.c  syntax_struct.h
         flash.c flash.h 
-        opt_args.h ui/ui_args.c ui/ui_args.h
+        opt_args.h 
         command_attributes.h bytecode.h
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
-        lib/sle4442/sle4442.c lib/sle4442/sle4442.h
+
         mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
         #mem buffer for shared malloc
         mem.c mem.h

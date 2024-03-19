@@ -10,7 +10,7 @@
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "../lib/sfud/inc/sfud.h"
 #include "../lib/sfud/inc/sfud_def.h"
 #include "mode/spiflash.h"

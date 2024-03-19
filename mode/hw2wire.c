@@ -13,12 +13,12 @@
 #include "ui/ui_cmdln.h"
 #include "hw2wire.pio.h"
 #include "mode/hw2wire_pio.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "ui/ui_command.h"
 #include "ui/ui_format.h"
 #include "ui/ui_help.h"
-#include "lib/sle4442/sle4442.h"   
+#include "commands/2wire/sle4442.h"   
 
 
 

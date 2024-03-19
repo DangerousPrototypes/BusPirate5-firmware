@@ -12,7 +12,7 @@
 #include "ui/ui_term.h"
 #include "command_attributes.h"
 #include "ui/ui_format.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "lib/minmea/gps.h"
 #include "lib/minmea/minmea.h"
 #include "usb_rx.h"

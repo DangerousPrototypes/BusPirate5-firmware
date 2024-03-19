@@ -13,7 +13,7 @@
 #include "ws2812.pio.h"
 #include "apa102.pio.h"
 #include "rgb.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "ui/ui_term.h"
 
 #define M_LED_PIO pio0

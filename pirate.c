@@ -22,7 +22,7 @@
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
 #include "pirate/button.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "freq.h"
 #include "queue.h"
 #include "usb_tx.h"

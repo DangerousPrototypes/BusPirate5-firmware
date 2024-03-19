@@ -119,7 +119,7 @@ bool ui_process_commands(void){
                 //global help handler (optional, set config in commands.c)
                 if(cmdln_args_find_flag('h')){
                     if(commands[user_cmd_id].help_text!=0x00){ 
-                        printf("%s\r\n",t[commands[user_cmd_id].help_text]);
+                        printf("%s%s%s\r\n",ui_term_color_info(), t[commands[user_cmd_id].help_text], ui_term_color_reset());
                         return false;
                     }else{ // let app know we requested help
                         result.help_flag=true;
@@ -147,7 +147,7 @@ bool ui_process_commands(void){
                             //show auto short help
                             if( modes[system_config.mode].mode_commands[user_cmd_id].allow_hiz
                             && (modes[system_config.mode].mode_commands[user_cmd_id].help_text!=0x00)){ 
-                                printf("%s\r\n",t[modes[system_config.mode].mode_commands[user_cmd_id].help_text]);
+                                printf("%s%s%s\r\n",ui_term_color_info(), t[modes[system_config.mode].mode_commands[user_cmd_id].help_text], ui_term_color_reset());
                                 return false;
                             }else{ // let app know we requested help
                                 result.help_flag=true;

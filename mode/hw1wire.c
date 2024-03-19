@@ -9,7 +9,7 @@
 #include "mode/hw1wire.h"
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "hardware/pio.h"
 #include "pico/binary_info.h"

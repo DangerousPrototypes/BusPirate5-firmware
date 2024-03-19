@@ -5,7 +5,7 @@
 #include "pirate.h"
 #include "opt_args.h"
 #include "fatfs/ff.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "bytecode.h"
 #include "mode/hwspi.h"
 #include "../lib/sfud/inc/sfud.h"

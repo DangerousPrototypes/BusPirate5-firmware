@@ -9,7 +9,7 @@
 #include "ui/ui_const.h"
 #include "system_config.h"
 #include "mjson/mjson.h"
-#include "mem.h" //defines for buffer owner
+#include "pirate/mem.h" //defines for buffer owner
 
 struct _system_config system_config;
 

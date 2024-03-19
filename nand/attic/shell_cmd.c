@@ -11,7 +11,7 @@
 #include <string.h>
 
 #include "../fatfs/ff.h"
-#include "mem.h"
+#include "pirate/mem.h"
 #include "shell.h"
 #include "spi_nand.h"
 

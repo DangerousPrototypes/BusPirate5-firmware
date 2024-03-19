@@ -13,7 +13,7 @@
 #include "ui/ui_term.h"
 #include "mjson/mjson.h"
 #include "pirate/storage.h"
-#include "mem.h"
+#include "pirate/mem.h"
 #include "ui/ui_cmdln.h"
 
 FATFS fs;		/* FatFs work area needed for each volume */

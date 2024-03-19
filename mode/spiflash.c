@@ -15,7 +15,7 @@
 #include "../lib/sfud/inc/sfud.h"
 #include "../lib/sfud/inc/sfud_def.h"
 #include "mode/spiflash.h"
-#include "mem.h"
+#include "pirate/mem.h"
 #include "fatfs/ff.h"
 
 #define M_SPI_PORT spi1

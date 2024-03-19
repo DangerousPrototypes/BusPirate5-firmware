@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "mem.h"
+#include "pirate/mem.h"
 #include <stdlib.h>
 #include "system_config.h"
 

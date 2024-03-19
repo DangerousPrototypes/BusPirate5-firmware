@@ -11,7 +11,7 @@
 #include "logicanalyzer.h"
 #include "hardware/pio.h"
 #include "build/logicanalyzer.pio.h"
-#include "mem.h"
+#include "pirate/mem.h"
 #include "hardware/structs/bus_ctrl.h"
 #include "ui/ui_term.h"
 #include "usb_rx.h"

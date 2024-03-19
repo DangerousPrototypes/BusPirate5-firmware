@@ -1,3 +1,23 @@
+//TODO: move to /pirate
+// individual functions in files for each shift register pin
+// (same for ADC)
+/*
+#define AMUX_EN             (1u<<0)
+#define AMUX_S0             (1u<<1)
+#define AMUX_S1             (1u<<2)
+#define AMUX_S2             (1u<<3)
+#define AMUX_S3             (1u<<4)
+#define DISPLAY_BACKLIGHT   (1u<<5)
+#define DISPLAY_RESET       (1u<<6)
+#define PULLUP_EN           (1u<<7)
+//#define                   (1u<<8) 
+#define CURRENT_EN          (1u<<9)
+//#define                   (1u<<10)
+#define CURRENT_RESET       (1u<<11)
+#define DAC_CS              (1u<<12)
+#define CURRENT_EN_OVERRIDE (1u<<13)
+*/
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"

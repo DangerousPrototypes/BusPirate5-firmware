@@ -30,7 +30,7 @@ set(bp5_common
         pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
         pirate/bio.h pirate/bio.c pirate/storage.h pirate/storage.c
-        pirate/button.h pirate/button.c
+        pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h 
         #commands
         commands/global/w_psu.h commands/global/w_psu.c  
         commands/global/p_pullups.h commands/global/p_pullups.c
@@ -88,8 +88,6 @@ set(bp5_common
         lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
 
         mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
-        #mem buffer for shared malloc
-        mem.c mem.h
         mode/logicanalyzer.h mode/logicanalyzer.c
         mode/hw2wire.h mode/hw2wire.c mode/hw2wire_pio.h mode/hw2wire_pio.c
         )

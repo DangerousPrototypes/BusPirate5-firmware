@@ -10,7 +10,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "pirate/storage.h"
-#include "mem.h"
+#include "pirate/mem.h"
 #include "ui/ui_cmdln.h"
 
 static const char * const hex_usage[]= {

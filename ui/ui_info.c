@@ -13,27 +13,17 @@
 #include "ui/ui_info.h"
 #include "pirate/mcu.h"
 #include "amux.h"
-#include "mem.h" //big buffer owner defines
-
-// todo: move
-extern bool ejected;
-
+#include "pirate/mem.h" //big buffer owner defines
 
 // display ui_info_print_info about the buspirate
 // when not in HiZ mode it dumps info about the pins/voltags etc.
-void ui_info_print_info(struct command_result *res)
-{
-	/*LBA_t	maxsector;
-	uint32_t sectorsiz;
-	DRESULT	res;
-	uint8_t buffer[512];*/
+void ui_info_print_info(struct command_result *res){
 
-	// ------
 	int i;
     amux_sweep();
 
 	// Hardware information
-	printf("\r\nThis device complies with part 15 of the FCC Rules. Operation is subject to the following two conditions: (1) this device may not cause harmful interference, and (2) this device must accept any interference received, including interference that may cause undesired operation.\r\n\r\n");
+	printf("\r\n%sThis device complies with part 15 of the FCC Rules. Operation is subject to the following two conditions: (1) this device may not cause harmful interference, and (2) this device must accept any interference received, including interference that may cause undesired operation.%s\r\n\r\n", ui_term_color_info(), ui_term_color_reset());
 	
 	printf("\r\n%s\r\n", BP_HARDWARE_VERSION);
 	printf("%s %s%s%s (%s%s%s)\r\n", 
@@ -189,31 +179,17 @@ void ui_info_print_info(struct command_result *res)
 
 		// Pin settings information
 		// Only print if the toolbar is disabled to avoid redundancy
-		if(system_config.terminal_ansi_statusbar==0)
-		{
+		if(system_config.terminal_ansi_statusbar==0){
             printf("\r\n");
 			ui_info_print_pin_names();
 			ui_info_print_pin_labels();
 			ui_info_print_pin_voltage(false);
 		}
 	}
-	
-	// sjaak 
-	#if 0
-	printf("-------Sjaak-\r\n");
-
-	
-	if(ejected)
-		printf(" Card in use by BP\r\n");
-	else
-		printf(" Card in use by USB\r\n");
-	#endif
-
 }
 
 // show voltages/pinstates
-void ui_info_print_pin_names(void)
-{
+void ui_info_print_pin_names(void){
 	// pin list
 	for(int i=0; i<HW_PINS; i++)
 	{
@@ -223,8 +199,7 @@ void ui_info_print_pin_names(void)
 	printf("%s\r\n", ui_term_color_reset());
 }
 
-void ui_info_print_pin_labels(void)
-{
+void ui_info_print_pin_labels(void){
     uint8_t j=0;
 	// pin function
     
@@ -293,269 +268,7 @@ void ui_info_print_pin_voltage(bool refresh)
 	printf("%s\r%s",t[T_GND],!refresh?"\n":""); //TODO: pin type struct and handle things like this automatically 
 	
 }
-/*
-typedef struct ui_help_options
-{
-	uint help;
-	const char command[9];
-	uint description;
-	const char command2[9];
-	uint description2;	
-} ui_help_options;
 
-const struct ui_help_options help_commands[]={
-	{0,"",		T_HELP_GENERAL_COMMANDS},
-	{1,"", 		T_HELP_BLANK},
-	{0,"~", 	T_HELP_1_3},
-	{0,"#", 	T_HELP_1_4},
-	{0,"$", 	T_HELP_1_5},
-	{0,">",		T_HELP_GREATER_THAN},
-	{0,"= x/| x",T_HELP_1_2},	
-	{0,"a/A/@ x",T_HELP_COMMAND_AUX},
-	{0,"b", 	T_HELP_1_8},
-	{0,"c", 	T_HELP_1_9},
-	{0,"d", 	T_HELP_COMMAND_DISPLAY},
-	{0,"f x/F x", T_HELP_1_11},
-	{0,"f/F", 	T_HELP_1_23},
-	{0,"g x/G",     T_HELP_1_12},
-	{0,"h/hd/?",    T_HELP_1_13},
-	{0,"i", 	T_HELP_1_14},
-	{0,"l/L", 	T_HELP_1_15},
-	{0,"m", 	T_HELP_1_16},
-	{0,"o", 	T_HELP_1_17},
-	{0,"p/P", 	T_HELP_1_18},
-	{0,"v x/V x", T_HELP_1_22},
-	{0,"v/V", 	T_HELP_1_10},	
-	{0,"w/W", 	T_HELP_1_21},
-	{0,"(x)/(0)", T_HELP_2_1}
-};
-
-const struct ui_help_options help_protocol[]={
-	{0,"\t", T_HELP_DISK_COMMANDS},
-	{1,"", 		T_HELP_BLANK},	
-	{0,"ls", T_HELP_CMD_LS},
-	{0,"cd", T_HELP_CMD_CD},
-	{0,"mkdir", T_HELP_CMD_MKDIR},
-	{0,"rm", T_HELP_CMD_RM},
-	{0,"cat", T_HELP_CMD_CAT},
-	{0,"", T_HELP_BUS_SYNTAX},
-	{1,"", 		T_HELP_BLANK},		
-	{0,"[", T_HELP_2_3},
-	{0,"{", T_HELP_2_5},	
-	{0,"]/}", T_HELP_2_4},
-	{0,"123", T_HELP_2_8},
-	{0,"0x123", T_HELP_2_9},
-	{0,"0b110", T_HELP_2_10},
-	{0,"\"abc\"", T_HELP_2_7},
-	{0,"r", T_HELP_2_11},
-	{0,":", T_HELP_2_19},
-	{0,".", T_HELP_2_20},	
-	{0,"d/D", T_HELP_1_6},
-	{0,"a/A/@.x", T_HELP_1_7},	
-	{0,"v.x", T_HELP_SYNTAX_ADC},
-	{0,"", T_HELP_BLANK},
-	{0,"", T_HELP_BLANK}
-};
-
-static_assert(count_of(help_protocol)==count_of(help_commands), "Help arrays are not equal lengths");
-*/
-/*
-We no longer use software protocols, so this isn't implemented anywhere
-	{0,"/", T_HELP_2_12},
-	{0,"\\", T_HELP_2_13},
-	{0,"^", T_HELP_2_14},
-	{0,"-", T_HELP_2_15},
-	{0,"_", T_HELP_2_16},
-	{0,".", T_HELP_2_17},
-	{0,"!", T_HELP_2_18},
-	{0,":", T_HELP_2_19},
-	{0,".", T_HELP_2_20},
-	{0,"<x>/<0>", T_HELP_2_21},
-	{0,"<x= >", T_HELP_2_22},
-	*/
-
-/*
-// displays the help
-void ui_info_print_help(struct command_result *res)
-{
-	//printf("\t%s%s%s\r\n", ui_term_color_info(), t[T_HELP_TITLE], ui_term_color_reset());
-	//printf("----------------------------------------------------------------------------\r\n");
-
-	const char dash_line[]="--------------------------------------";
-	
-	for(uint i=0; i<count_of(help_commands); i++)
-	{
-		if(!help_commands[i].help)
-		{
-			printf("%s%s%s\t%s%s%s\t",
-				ui_term_color_prompt(), help_commands[i].command, ui_term_color_reset(),
-				ui_term_color_info(), t[help_commands[i].description], ui_term_color_reset()
-			);
-		}
-		else
-		{
-			printf("%s%s\t", ui_term_color_reset(), dash_line);
-		}
-
-		if(!help_protocol[i].help)
-		{
-			printf("%s%s%s\t%s%s%s\r\n",
-				ui_term_color_prompt(), help_protocol[i].command, ui_term_color_reset(),
-				ui_term_color_info(),t[help_protocol[i].description], ui_term_color_reset()
-			);		
-		}
-		else
-		{
-			printf("%s%s\r\n", ui_term_color_reset(), dash_line);
-		}			
-	}
-
-	printf("\r\n%s%s%s\r\n", ui_term_color_info(), t[T_HELP_HINT],ui_term_color_reset());
-
-}
-*/
-void ui_info_print_error(uint32_t error)
-{
+void ui_info_print_error(uint32_t error){
 	printf("\x07\r\n%sError:%s %s\r\n",ui_term_color_error(), ui_term_color_reset(), t[error]);
 }
-
-
-#if(0)
-const char pinstates[][4] = {
-"0\0",
-"1\0",
-"N/A\0"
-};
-
-const char pinmodes[][5] ={
-"ANA.\0",		// analogue
-"I-FL\0",		// input float
-"I-UD\0",		// input pullup/down
-"???\0",		// illegal
-"O-PP\0",		// output pushpull
-"O-OD\0",		// output opendrain
-"O PP\0",		// output pushpull peripheral
-"O OD\0",		// output opendrain peripheral
-"----\0"		// pin is not used 	
-};
-
-
-uint8_t ui_info_get_pin_mode(uint32_t port, uint16_t pin)
-{
-	uint32_t crl, crh;
-	uint8_t pinmode, crpin, i;
-
-	//crl = GPIO_CRL(port);
-	//crh = GPIO_CRH(port);
-	crpin=0;
-
-	for(i=0; i<16; i++)
-	{
-		if((pin>>i)&0x0001)
-		{
-			crpin=(i<8?(crl>>(i*4)):(crh>>((i-8)*4)));
-			crpin&=0x000f;
-		}
-	}
-
-	pinmode=crpin>>2;
-
-	if(crpin&0x03)		// >1 is output
-	{
-		pinmode+=4;
-	}
-
-	return pinmode;
-}
-
-
-
-// show voltages/pinstates
-void ui_info_print_pin_states(int refresh)
-{
-	uint8_t auxstate, csstate, misostate, clkstate, mosistate;
-	uint8_t auxmode, csmode, misomode, clkmode, mosimode;
-
-	if(!refresh)
-	{
-		// pin list
-		for(int i=0; i<HW_PINS; i++)
-		{
-			ui_term_color_text_background(hw_pin_label_ordered_color[i][0],hw_pin_label_ordered_color[i][1]);
-			printf("%d.%s%s", i+1,hw_pin_label_ordered[i], (i<HW_PINS-1?"\t":ui_term_color_reset()));
-		}
-		printf("\r\n");
-	
-		// pin function
-		for(int i=0; i<HW_PINS; i++){
-			printf("%s%s", system_config.pin_labels[i]==0?"-   ":(char*)system_config.pin_labels[i], (i<HW_PINS-1?"\t":"\r\n"));
-		}
-		
-/*
-		// pin states (loop through)
-		// read pindirection
-		//auxmode=ui_info_get_pin_mode(BP_AUX_PORT, BP_AUX_PIN);
-		if(system_config.csport)
-			csmode=ui_info_get_pin_mode(system_config.csport, system_config.cspin);
-		else
-			csmode=9;
-
-		if(system_config.misoport)
-			misomode=ui_info_get_pin_mode(system_config.misoport, system_config.misopin);
-		else
-			misomode=9;
-
-		if(system_config.clkport)
-			clkmode=ui_info_get_pin_mode(system_config.clkport, system_config.clkpin);
-		else
-			clkmode=9;
-		if(system_config.mosiport)
-			mosimode=ui_info_get_pin_mode(system_config.mosiport, system_config.mosipin);
-		else
-			mosimode=9;
-
-		//printf("PWR\tPWR\tPWR\tPWR\tAN\t%s\t%s\t%s\t%s\t%s\r\n", pinmodes[auxmode], pinmodes[csmode], pinmodes[misomode], pinmodes[clkmode], pinmodes[mosimode]);
-
-		// pinstates
-		auxstate=(gpio_get(BP_AUX_PORT, BP_AUX_PIN)?1:0);
-		if(system_config.csport)
-			csstate=(gpio_get(system_config.csport, system_config.cspin)?1:0);
-		else
-			csstate=2;
-
-		if(system_config.misoport)
-			misostate=(gpio_get(system_config.misoport, system_config.misopin)?1:0);
-		else
-			misostate=2;
-
-		if(system_config.clkport)
-			clkstate=(gpio_get(system_config.clkport, system_config.clkpin)?1:0);
-		else
-			clkstate=2;
-		if(system_config.mosiport)
-			mosistate=(gpio_get(system_config.mosiport, system_config.mosipin)?1:0);
-		else
-			mosistate=2;
-	*/
-	}
-	
-	// pin voltage
-	// take a reading from all adc channels
-	// updates the values available at hw_pin_voltage_ordered
-	amux_sweep();
-	// show state of pin
-	for(int i=0; i<HW_PINS-1; i++)
-	{
-		//TODO: global function for integer division
-		printf("%s%d.%d%sV\t", 
-			ui_term_color_num_float(), 
-			(*hw_pin_voltage_ordered[i])/1000,
-			((*hw_pin_voltage_ordered[i])%1000)/100,
-			ui_term_color_reset()
-		);
-
-	}
-	printf("%s\r%s",T_GND,!refresh?"\n":""); //TODO: pin type struct and handle things like this automatically 
-	
-}
-#endif

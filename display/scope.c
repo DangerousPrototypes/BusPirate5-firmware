@@ -23,7 +23,7 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "mem.h"
+#include "pirate/mem.h"
 #include "system_config.h"
 #include "opt_args.h"
 #include "hardware/uart.h"

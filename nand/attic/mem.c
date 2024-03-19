@@ -5,7 +5,7 @@
  *
  */
 
-#include "mem.h"
+#include "pirate/mem.h"
 
 #include <stdlib.h>
 

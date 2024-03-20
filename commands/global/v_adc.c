@@ -13,6 +13,22 @@
 #include "usb_rx.h"
 #include "pirate/amux.h"
 #include "ui/ui_cmdln.h"
+#include "ui/ui_help.h"
+
+static const char * const usage[]={
+    "v/V <io> [-h(elp)]",   
+    "Measure pin 0 voltage: v 0",
+    "Continuous measurement pin 0: V 0",
+	"Measure voltage on all pins: v",
+	"Continuous measurement on all pins: V",
+};
+
+static const struct ui_help_options options[]={
+{1,"", T_HELP_VADC}, //command help
+    {0,"v",T_HELP_VADC_SINGLE}, 
+	{0,"V", T_HELP_VADC_CONTINUOUS},
+	{0,"<io>", T_HELP_VADC_IO},
+};    
 
 void adc_measure(struct command_result *res, bool refresh);
 
@@ -35,6 +51,7 @@ void adc_measure_cont(struct command_result *res){
 }
 
 void adc_measure(struct command_result *res, bool refresh){
+	if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
 	uint32_t temp;
 	bool has_value=cmdln_args_uint32_by_position(1, &temp);
 

@@ -364,6 +364,10 @@ static char const * const bs_ba[]={
 	[T_HELP_DISK_LS_DIR]="List contents of this directory, optional",
 	[T_HELP_DISK_FORMAT]="erase and format internal storage in FAT16 format",
 	[T_HELP_DISK_FORMAT_CMD]="All data will be lost, answer 'y' twice to continue",
+	[T_HELP_VADC]="measure voltage on IO pins",
+	[T_HELP_VADC_SINGLE]="Single measurement",
+	[T_HELP_VADC_CONTINUOUS]="Continuous measurement",
+	[T_HELP_VADC_IO]="IO pin number, 0-7",
 
 };
 

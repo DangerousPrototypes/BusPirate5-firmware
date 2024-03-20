@@ -51,6 +51,7 @@ set(bp5_common
         commands/global/dummy.c commands/global/dummy.h
         commands/global/disk.c commands/global/disk.h
         commands/global/v_adc.c commands/global/v_adc.h
+        commands/global/i_info.c commands/global/i_info.h
          
         commands/spi/flash.c commands/spi/flash.h commands/spi/spiflash.h commands/spi/spiflash.c
         commands/2wire/sle4442.c commands/2wire/sle4442.h

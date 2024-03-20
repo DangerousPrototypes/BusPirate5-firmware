@@ -381,6 +381,10 @@ static char const * const en_us[]={
 	[T_HELP_DISK_LS_DIR]="List contents of this directory, optional",	
 	[T_HELP_DISK_FORMAT]="erase and format internal storage in FAT16 format",
 	[T_HELP_DISK_FORMAT_CMD]="All data will be lost, answer 'y' twice to continue",
+	[T_HELP_VADC]="measure voltage on IO pins",
+	[T_HELP_VADC_SINGLE]="Single measurement",
+	[T_HELP_VADC_CONTINUOUS]="Continuous measurement",
+	[T_HELP_VADC_IO]="IO pin number, 0-7",
 };
 
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

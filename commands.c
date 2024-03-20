@@ -28,6 +28,7 @@
 #include "commands/global/a_auxio.h"
 #include "commands/global/dummy.h"
 #include "commands/global/disk.h"
+#include "commands/global/i_info.h"
 #include "mode/logicanalyzer.h"
 
 // command configuration
@@ -52,15 +53,15 @@ const struct _command_struct commands[]=
     {"g", false, &pwm_configure_disable, T_CMDLN_PWM_DIS },       // "g"
     {"h", true, &help_handler, 0x00 },         // "h" T_CMDLN_HELP_MODE
     //{"hd", true, &helpers_display_help, T_CMDLN_HELP_DISPLAY },     // "hd"
-    {"i", true, &ui_info_print_info, T_CMDLN_INFO },               // "i"
+    {"i", true, &i_info_handler, T_CMDLN_INFO },               // "i"
     {"l", true, &bitorder_msb_handler, T_CMDLN_BITORDER_MSB },    // "l"
     {"L", true, &bitorder_lsb_handler, T_CMDLN_BITORDER_LSB },    // "L"
     {"o", true, &ui_mode_int_display_format, T_CMDLN_DISPLAY_FORMAT }, // "o"
     {"P", false, &pullups_enable_handler, 0x00 },            // "P" //T_CMDLN_PULLUPS_EN
     {"p", false, &pullups_disable_handler, 0x00 },          // "p" //T_CMDLN_PULLUPS_DIS
     {"w", false, &psucmd_disable_handler, 0x00 },                  // "w" T_CMDLN_PSU_DIS
-    {"V", true, &adc_measure_cont, T_CMDLN_ADC_CONT },             // "V"
-    {"v", true, &adc_measure_single, T_CMDLN_ADC_ONE },            // "v"
+    {"V", true, &adc_measure_cont,  0x00},             // "V" T_CMDLN_ADC_CONT
+    {"v", true, &adc_measure_single, 0x00 },            // "v" T_CMDLN_ADC_ONE
     {"~", true, &cmd_selftest_handler, 0x00},             // "~" selftest T_CMDLN_SELFTEST 
     {"@", true, &auxio_input_handler,0x00},               // "@" T_CMDLN_AUX_IN
     {"a", false, &auxio_low_handler, 0x00},               // "a" T_CMDLN_AUX_LOW

@@ -133,7 +133,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override){
     //printf("V dac: 0x%04X I dac: 0x%04X\r\n",psu_status.voltage_dac_value, psu_status.current_dac_value);
     //start with override engaged because the inrush will often trip the fuse on low limits
     psu_current_limit_override(true);
-    psu_dac_set(psu_status.voltage_dac_value, psu_status.current_dac_value);
+    psu_dac_set(psu_status.voltage_dac_value, PWM_TOP);
     psu_fuse_reset();
     psu_vreg_enable(true);
     busy_wait_ms(10);
@@ -141,7 +141,8 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override){
     //after some settling time, engage the current limit system
     if(!current_limit_override){
         psu_current_limit_override(false);
-        busy_wait_ms(5);
+        psu_dac_set(psu_status.voltage_dac_value, psu_status.current_dac_value);
+        busy_wait_ms(50);
         if(!psu_fuse_ok()){// did the fuse blow?
             psu_disable();
             return PSU_ERROR_FUSE_TRIPPED;

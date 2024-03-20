@@ -69,27 +69,19 @@ int main()
 
     // init shift register pins
     shift_init();
-
-    //test for PCB revision
-    /*gpio_set_function(23, GPIO_FUNC_SIO);
-    gpio_set_dir(23,true);
-    gpio_put(23,true);
-    busy_wait_ms(100);
-    gpio_set_dir(23, false);
-    busy_wait_us(1);
-    if(gpio_get(23))
-    {
-        system_config.hardware_revision=9;
-    }
-    else
-    {
-        system_config.hardware_revision=8;
-    }*/
+    
     #ifdef BP5_REV
         system_config.hardware_revision=BP5_REV;
     #else
         #error "No platform revision defined. Check pirate.h."
     #endif
+
+    //test for PCB revision
+    /*uint8_t bp_rev=mcu_detect_revision();
+    if(bp_rev!=BP5_REV){
+        //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP5_REV, mcu_detect_revision());
+    }*/
+
     //init psu pins 
     psucmd_init();
    

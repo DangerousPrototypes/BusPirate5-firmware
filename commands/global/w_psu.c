@@ -42,10 +42,10 @@ void psucmd_irq_callback(void){
 
 //zero return code = success
 uint32_t psucmd_enable(float volts, float current, bool current_limit_override){
-    /*system_config.psu=0;
+    system_config.psu=0;
     system_config.pin_labels[0]=0;
     system_config.pin_changed=0xff;
-    system_pin_claim(false, BP_VOUT, 0, 0);*/
+    system_pin_claim(false, BP_VOUT, 0, 0);
 
     uint32_t psu_result=psu_enable(volts, current, current_limit_override);
 
@@ -56,7 +56,7 @@ uint32_t psucmd_enable(float volts, float current, bool current_limit_override){
     }
 
     system_config.psu_voltage=psu_status.voltage_actual_i;  
-    system_config.psu_current_limit_en=current_limit_override; 
+    system_config.psu_current_limit_en=!current_limit_override; 
     if(!current_limit_override){
         system_config.psu_current_limit=psu_status.current_actual_i;
     }    
@@ -104,6 +104,7 @@ void psucmd_enable_handler(struct command_result *res){
         if(result.exit){
             res->error=true;
             return;
+
         }
 
         //prompt current (float)

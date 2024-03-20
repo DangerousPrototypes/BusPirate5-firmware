@@ -18,7 +18,7 @@
 #include "pirate/storage.h"
 #include "rgb.h"
 #include "pico/multicore.h"
-#include "amux.h"
+#include "pirate/amux.h"
 #include "ui/ui_cmdln.h"
 
 enum logicanalyzer_status

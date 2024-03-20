@@ -49,7 +49,7 @@ extern const FONT_INFO hunter_12ptFontInfo;
 #include "ui/ui_parse.h"
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
-#include "amux.h"
+#include "pirate/amux.h"
 
 static int convert_trigger_position(int pos);
 
@@ -414,7 +414,7 @@ scope_start(int pin)
 	//adc_gpio_init(CURRENT_SENSE);
 	//adc_gpio_init(AMUX_OUT);
 	adc_select_input(AMUX_OUT_ADC);
-	hw_adc_channel_select(7-pin);
+	amux_select_bio(pin);
 	timebase = display_timebase;
 
 	adc_fifo_setup(

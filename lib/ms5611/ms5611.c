@@ -107,7 +107,7 @@ uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_mac
 		}		
 	}
 
-	delayms(4); //2.8ms reload time after reset
+	busy_wait_ms(4); //2.8ms reload time after reset
 	
 	// If first time adc is requested, get EEPROM coefficients
 	//PROM calibration data is at 0xa0-0xae
@@ -127,7 +127,7 @@ uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_mac
 	{
 		return 1;
 	}
-	delayms(10); //conversion time
+	busy_wait_ms(10); //conversion time
 	data[0]= MS5611_READ_ADC;
 	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0b11101110, data, 1, data, 3, 0xffff))
 	{
@@ -142,7 +142,7 @@ uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_mac
 	{
 		return 1;
 	}
-	delayms(10); //conversion time	
+	busy_wait_ms(10); //conversion time	
 	data[0]= MS5611_READ_ADC;
 	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0b11101110, data, 1, data, 3, 0xffff))
 	{

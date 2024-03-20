@@ -12,7 +12,7 @@
 #include "ui/ui_const.h"
 #include "ui/ui_info.h"
 #include "pirate/mcu.h"
-#include "amux.h"
+#include "pirate/amux.h"
 #include "pirate/mem.h" //big buffer owner defines
 
 // display ui_info_print_info about the buspirate

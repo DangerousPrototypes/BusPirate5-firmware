@@ -6,7 +6,7 @@
 
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
-#include "amux.h"
+#include "pirate/amux.h"
 #include "pirate/pullup.h"
 
 const char * const p_usage[]={

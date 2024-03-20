@@ -42,6 +42,8 @@ static char const * const en_us[]={
 	[T_MODE_SET_CLK]="Set clock",
 	[T_MODE_SET_DAT]="Set data",
 	[T_MODE_READ_DAT]="Read data",
+	[T_MODE_NO_VOUT_VREF_ERROR]="No voltage detected on VOUT/VREF pin",
+	[T_MODE_NO_VOUT_VREF_HINT]="Hint: Use W to enable power, or attach an external supply",
 	//FREQ
 	[T_MODE_PWM_GENERATE_FREQUENCY]="Generate frequency",
     [T_MODE_FREQ_MEASURE_FREQUENCY]="Frequency measurement",

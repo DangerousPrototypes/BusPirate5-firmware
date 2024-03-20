@@ -15,11 +15,8 @@
 #include "ui/ui_display.h"
 #include "pwm.h"
 #include "freq.h"
-#include "adc.h"
-#include "helpers.h"
-//#include "pirate/storage.h"
-#include "flash.h"
-#include "mode/logicanalyzer.h"
+#include "commands/global/a_auxio.h"
+#include "commands/global/v_adc.h"
 #include "commands/global/w_psu.h"
 #include "commands/global/p_pullups.h"
 #include "commands/global/cmd_mcu.h"
@@ -31,6 +28,8 @@
 #include "commands/global/a_auxio.h"
 #include "commands/global/dummy.h"
 #include "commands/global/disk.h"
+#include "flash.h"
+#include "mode/logicanalyzer.h"
 
 // command configuration
 const struct _command_struct commands[]=

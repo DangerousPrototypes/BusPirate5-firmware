@@ -313,7 +313,7 @@ void ST7735_sendinitseq(const uint8_t *addr )
 		{
 			ms=*(addr++);			// Read post-command delay time (ms)
 			if(ms == 255) ms = 500;		// If 255, delay for 500 ms
-			delayms(ms);
+			busy_wait_ms(ms);
 		}
 	}
 }

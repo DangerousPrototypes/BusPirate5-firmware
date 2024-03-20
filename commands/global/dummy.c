@@ -17,7 +17,7 @@
 //#include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h" // Functions to display help in a standardized way
 #include "system_config.h" // Stores current Bus Pirate system configuration
-#include "amux.h"   // Analog voltage measurement functions
+#include "pirate/amux.h"   // Analog voltage measurement functions
 #include "pirate/button.h" // Button press functions
 
 // This array of strings is used to display help USAGE examples for the dummy command
@@ -79,17 +79,17 @@ void dummy_handler(struct command_result *res)
     // to make things easier we'll comment the above lines out and just print the mode ID
     printf("Current mode: %d\r\n", system_config.mode); //print the current mode
 
-    // amux_check_vout_vref() checks for a valid voltage on the Vout pin
+    // ui_help_check_vout_vref() checks for a valid voltage on the Vout pin
     // if the voltage is too low, the command print an error message and return false
     // checking for a voltage, if needed, and issuing an error or reminder saves a lot of frustration for everyone
     /*
-    if(!amux_check_vout_vref())
+    if(!ui_help_check_vout_vref())
     {
         return;
     }
     */
     //to make things easier we'll just print the status of the Vout pin
-    if(!amux_check_vout_vref()){
+    if(!ui_help_check_vout_vref()){
         printf("Waring: Vout pin is not connected to a valid voltage source\r\n");
     }else{
         printf("Vout pin is connected to a valid voltage source\r\n");

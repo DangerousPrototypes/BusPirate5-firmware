@@ -14,7 +14,7 @@
 #include "pirate/button.h"
 #include "pirate/psu.h"
 #include "pirate/bio.h"
-#include "amux.h"
+#include "pirate/amux.h"
 #include "display/scope.h"
 
 #define SELF_TEST_LOW_LIMIT 300

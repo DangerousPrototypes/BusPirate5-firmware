@@ -14,7 +14,7 @@
 #include "ui/ui_cmdln.h"
 #include "syntax.h"
 #include "pirate/bio.h"
-#include "amux.h"
+#include "pirate/amux.h"
 
 #define SYN_MAX_LENGTH 1024
 
@@ -363,7 +363,7 @@ bool syntax_run(void)
                 break;
             case SYN_ADC: 
         	    //sweep adc
-	            in[in_cnt].in_data=hw_adc_bio(out[i].bits);           
+	            in[in_cnt].in_data=amux_read_bio(out[i].bits);           
                 break;
             //case SYN_FREQ: break;   
             case SYN_TICK_CLOCK:

@@ -16,7 +16,7 @@
 #include "pirate/button.h"
 #include "pirate/storage.h"
 #include "pirate/lcd.h"
-#include "amux.h"
+#include "pirate/amux.h"
 #include "ui/ui_init.h"
 #include "ui/ui_info.h"
 #include "ui/ui_term.h"
@@ -103,9 +103,9 @@ int main()
     spi_spin_lock=spin_lock_init(spi_spin_lock_num);
 
     // configure the defaults for shift register attached hardware
-    shift_set_clear_wait( (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN), CURRENT_EN_OVERRIDE);
+    shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN));
     pullups_init(); //uses shift register internally  
-    shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
+    shift_output_enable(true); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
     
     //reset the LCD
     lcd_reset();

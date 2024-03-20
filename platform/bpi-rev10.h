@@ -226,7 +226,9 @@ enum adc_mux{
     HW_ADC_MUX_COUNT
 };
 
-#define bufio2adc(x) (7 - x)
+#define HW_ADC_MUX_GND 15
+
+#define bufio2amux(x) (7 - x)
 
 //CURRENT SENSE is attached to a separate ADC, not through the mux
 //lets make a define for it (and space in the hw_adc_x arrays) at the end of HW_ADC_MUX_count
@@ -237,8 +239,6 @@ enum adc_mux{
 extern uint16_t hw_adc_raw[];
 extern uint32_t hw_adc_voltage[];
 extern uint32_t *hw_pin_voltage_ordered[];
-
-#define hw_adc_channel_select(x) shift_adc_select(x)
 
 //convert raw ADC to volts, for pin with a /2 resistor divider (MUX inputs)
 #define hw_adc_to_volts_x2(X) ((6600*hw_adc_raw[X])/4096);

@@ -16,7 +16,7 @@
 //#include "ui/ui_const.h"
 #include "ui/ui_help.h"
 #include "system_config.h"
-#include "amux.h"
+#include "pirate/amux.h"
 
 const char * const flash_usage[]= 
 {
@@ -53,8 +53,7 @@ enum flash_actions {
     FLASH_TEST
 };
 
-void flash(struct command_result *res)
-{
+void flash(struct command_result *res){
     uint32_t value;
     char file[13];
 
@@ -79,21 +78,18 @@ void flash(struct command_result *res)
         {'v', ARG_NONE, false, false, 0}, //verify
     };
 */
-    if(cmdln_args_find_flag('h'))
-    {
+    if(cmdln_args_find_flag('h')){
         ui_help_usage(flash_usage,count_of(flash_usage));
         ui_help_options(&help_flash[0],count_of(help_flash));
         return;
     }
 
-    if(system_config.mode!=4)
-    {
+    if(system_config.mode!=4){
         printf("flash command is currently only available in SPI mode\r\n");
         return;
     }
 
-    if(!amux_check_vout_vref())
-    {
+    if(!ui_help_check_vout_vref()){
         return;
     }
 

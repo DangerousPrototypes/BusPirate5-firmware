@@ -32,7 +32,7 @@
 #include "mode/binio.h"
 #include "pirate/pullup.h"
 #include "pirate/psu.h"
-#include "amux.h"
+#include "pirate/amux.h"
 #include "sump.h"
 #include "binio_helpers.h"
 #include "tusb.h"
@@ -282,7 +282,7 @@ bool script_mode(void)
             } 
             else if (inByte == 0b10100) 
             {   //ADC reading (x/1024)*6.6volts
-                i = hw_adc_bio(BP_ADC_PROBE); //take measurement
+                i = amux_read_bio(BP_ADC_PROBE); //take measurement
                 i=i>>2; //remove 2 bit of resolution to match old PIC 10 bit resolution
                 bin_tx_fifo_put((i >> 8)); //send upper 8 bits
                 bin_tx_fifo_put(i); //send lower 8 bits
@@ -291,7 +291,7 @@ bool script_mode(void)
             {   //ADC reading (x/1024)*6.6volts
                 while (1) 
                 {
-                    i = hw_adc_bio(BP_ADC_PROBE); //take measurement
+                    i = amux_read_bio(BP_ADC_PROBE); //take measurement
                     while(bin_tx_not_empty()); //this doesn't work as well with the USB stack
                     bin_tx_fifo_put((i >> 8)); //send upper 8 bits
                     bin_tx_fifo_put(i); //send lower 8 bits

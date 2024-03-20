@@ -210,7 +210,7 @@ uint32_t macro_tsl2561()
 	// start device [0b01110010 3]
 	data[0]=3;
 	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0b01110010, data, 1, 0xffff)) return 1;
-	delayms(500);
+	busy_wait_ms(500);
 	// select ID register [0b01110010 0b11101010]
 	// read ID register [0b01110011 r] 7:4 0101 = TSL2561T 3:0 0 = revision
 	data[0]=0b11101010;
@@ -259,7 +259,7 @@ uint32_t macro_si7021()
 	{
 		return 1;
 	}
-	delayms(23); //delay for max conversion time
+	busy_wait_ms(23); //delay for max conversion time
 	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 2, 0xffff))
 	{
 		return 1;
@@ -274,7 +274,7 @@ uint32_t macro_si7021()
 	{
 		return 1;
 	}
-	delayms(100); //delay for max conversion time
+	busy_wait_ms(100); //delay for max conversion time
 	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 2, 0xffff))
 	{
 		return 1;

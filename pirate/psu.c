@@ -5,7 +5,7 @@
 #include "pirate.h"
 #include "pirate/shift.h"
 #include "pirate/psu.h"
-#include "amux.h"
+#include "pirate/amux.h"
 
 #define PWM_TOP 14000 //0x30D3
 
@@ -23,19 +23,19 @@ struct psu_status_t psu_status;
 
 static void psu_fuse_reset(void){
     //reset current trigger
-    shift_set_clear_wait(0, CURRENT_RESET); //low to activate the pnp
+    shift_clear_set_wait(CURRENT_RESET,0); //low to activate the pnp
     busy_wait_ms(1);
-    shift_set_clear_wait(CURRENT_RESET, 0); //high to disable  
+    shift_clear_set_wait(0, CURRENT_RESET); //high to disable  
 }
 
 static void psu_vreg_enable(bool enable){
-    if(enable) shift_set_clear_wait(0,CURRENT_EN); //low is on (PNP)
-    else shift_set_clear_wait(CURRENT_EN,0); //high is off
+    if(enable) shift_clear_set_wait(CURRENT_EN,0); //low is on (PNP)
+    else shift_clear_set_wait(0,CURRENT_EN); //high is off
 }
 
 void psu_current_limit_override(bool enable){
-    if(enable) shift_set_clear_wait(CURRENT_EN_OVERRIDE,0);
-    else shift_set_clear_wait(0,CURRENT_EN_OVERRIDE);
+    if(enable) shift_clear_set_wait(0, CURRENT_EN_OVERRIDE);
+    else shift_clear_set_wait(CURRENT_EN_OVERRIDE,0);
 }
 
 void psu_set_v(float volts, struct psu_status_t *psu){
@@ -75,35 +75,28 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac){
 }
 
 bool psu_fuse_ok(void){
-    amux_sweep();
-    return (hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] > 300);
+    return (amux_read(HW_ADC_MUX_CURRENT_DETECT) > 300);
 }
 
 bool psu_vout_ok(struct psu_status_t *psu){
-    amux_sweep();
-    return (hw_adc_raw[HW_ADC_MUX_VREF_VOUT] > 100); //todo calculate an actual voltage to 10%
+    return (amux_read(HW_ADC_MUX_VREF_VOUT) > 100); //todo calculate an actual voltage to 10%
 }
 
 bool psu_backflow_ok(struct psu_status_t *psu){
-    amux_sweep();
-    return (hw_adc_raw[HW_ADC_MUX_VREF_VOUT] < (hw_adc_raw[HW_ADC_MUX_VREG_OUT]+100)); //+100? TODO: fine tuning
+    return (amux_read(HW_ADC_MUX_VREF_VOUT) < (amux_read(HW_ADC_MUX_VREG_OUT)+100)); //+100? TODO: fine tuning
 }
-/*
+
 uint32_t psu_measure_current(void){
-    amux_sweep();
-    return ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000)/4095));
+    return (amux_read_current() * ((500 * 1000)/4095));
 }
 
 uint32_t psu_measure_vreg(void){
-    amux_sweep();
-    return ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
+    return hw_adc_to_volts_x2(amux_read(HW_ADC_MUX_VREG_OUT));
 }
 
 uint32_t psu_measure_vout(void){
-    amux_sweep();
-    return ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]));
+    return hw_adc_to_volts_x2(amux_read(HW_ADC_MUX_VREF_VOUT));
 }
-*/
 
 void psu_measure(uint32_t *vout, uint32_t *isense, uint32_t *vreg, bool *fuse){
     amux_sweep();

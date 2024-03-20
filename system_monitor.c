@@ -2,7 +2,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "amux.h"
+#include "pirate/amux.h"
 #include "opt_args.h"
 #include "display/scope.h"
 

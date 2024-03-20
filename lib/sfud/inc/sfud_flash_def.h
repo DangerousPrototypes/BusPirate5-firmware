@@ -126,15 +126,28 @@ typedef struct {
 #define SFUD_FLASH_CHIP_TABLE                                                                                       \
 {                                                                                                                   \
     {"AT45DB161E", SFUD_MF_ID_ATMEL, 0x26, 0x00, 2L*1024L*1024L, SFUD_WM_BYTE|SFUD_WM_DUAL_BUFFER, 512, 0x81},      \
-    {"W25Q40BV", SFUD_MF_ID_WINBOND, 0x40, 0x13, 512L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
     {"W25X40CL", SFUD_MF_ID_WINBOND, 0x30, 0x13, 512L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
+    {"W25X80CL", SFUD_MF_ID_WINBOND, 0x30, 0x14, 1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                       \
     {"W25X16AV", SFUD_MF_ID_WINBOND, 0x30, 0x15, 2L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
-    {"W25Q16BV", SFUD_MF_ID_WINBOND, 0x40, 0x15, 2L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
-    {"W25Q32BV", SFUD_MF_ID_WINBOND, 0x40, 0x16, 4L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
-    {"W25Q64CV", SFUD_MF_ID_WINBOND, 0x40, 0x17, 8L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
-    {"W25Q64DW", SFUD_MF_ID_WINBOND, 0x60, 0x17, 8L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
-    {"W25Q128BV", SFUD_MF_ID_WINBOND, 0x40, 0x18, 16L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                  \
-    {"W25Q256FV", SFUD_MF_ID_WINBOND, 0x40, 0x19, 32L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                  \
+    {"W25Q40JV", SFUD_MF_ID_WINBOND, 0x40, 0x13, 512L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
+    {"W25Q80JV", SFUD_MF_ID_WINBOND, 0x40, 0x14, 1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                       \
+    {"W25Q16JV", SFUD_MF_ID_WINBOND, 0x40, 0x15, 2L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q32JV", SFUD_MF_ID_WINBOND, 0x40, 0x16, 4L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q64JV", SFUD_MF_ID_WINBOND, 0x40, 0x17, 8L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q128JV", SFUD_MF_ID_WINBOND, 0x40, 0x18, 16L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                  \
+    {"W25Q256JV", SFUD_MF_ID_WINBOND, 0x40, 0x19, 32L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                  \
+    {"W25Q40BV", SFUD_MF_ID_WINBOND, 0x50, 0x13, 512L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
+    {"W25Q80BV", SFUD_MF_ID_WINBOND, 0x50, 0x14, 1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                       \
+    {"W25Q16BV", SFUD_MF_ID_WINBOND, 0x50, 0x15, 2L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q32BV", SFUD_MF_ID_WINBOND, 0x50, 0x16, 4L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q64BV", SFUD_MF_ID_WINBOND, 0x50, 0x17, 8L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q128BV", SFUD_MF_ID_WINBOND, 0x50, 0x18, 16L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                  \
+    {"W25Q256BV", SFUD_MF_ID_WINBOND, 0x50, 0x19, 32L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                  \
+    {"W25Q16xW", SFUD_MF_ID_WINBOND, 0x60, 0x15, 2L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q32xW", SFUD_MF_ID_WINBOND, 0x60, 0x16, 4L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q64xW", SFUD_MF_ID_WINBOND, 0x60, 0x17, 8L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"W25Q128xW", SFUD_MF_ID_WINBOND, 0x60, 0x18, 16L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                  \
+    {"W25Q256xW", SFUD_MF_ID_WINBOND, 0x60, 0x19, 32L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                  \
     {"SST25VF080B", SFUD_MF_ID_SST, 0x25, 0x8E, 1L*1024L*1024L, SFUD_WM_BYTE|SFUD_WM_AAI, 4096, 0x20},              \
     {"SST25VF016B", SFUD_MF_ID_SST, 0x25, 0x41, 2L*1024L*1024L, SFUD_WM_BYTE|SFUD_WM_AAI, 4096, 0x20},              \
     {"M25P32", SFUD_MF_ID_MICRON, 0x20, 0x16, 4L*1024L*1024L, SFUD_WM_PAGE_256B, 64L*1024L, 0xD8},                  \
@@ -155,6 +168,14 @@ typedef struct {
     {"P25D20H", SFUD_MF_ID_PUYA, 0x60, 0x11, 2L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
     {"P25D40H", SFUD_MF_ID_PUYA, 0x60, 0x10, 4L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
     {"P25Q80H", SFUD_MF_ID_PUYA, 0x30, 0x14, 8L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
+    {"MX25L512", SFUD_MF_ID_MACRONIX, 0x20, 0x10, 64L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
+    {"MX25L1006E", SFUD_MF_ID_MACRONIX, 0x20, 0x11, 128L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                     \
+    {"MX25L2006E", SFUD_MF_ID_MACRONIX, 0x20, 0x12, 256L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                     \
+    {"MX25L4006E", SFUD_MF_ID_MACRONIX, 0x20, 0x13, 512L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                     \
+    {"MX25L8006E", SFUD_MF_ID_MACRONIX, 0x20, 0x14, 1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                    \
+    {"MX25L1606E", SFUD_MF_ID_MACRONIX, 0x20, 0x15, 2L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                 \
+    {"MX25L3206E", SFUD_MF_ID_MACRONIX, 0x20, 0x16, 4L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                 \
+    {"MX25L6406E", SFUD_MF_ID_MACRONIX, 0x20, 0x17, 8L*1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                 \
 }
 #endif /* SFUD_USING_FLASH_INFO_TABLE */
 

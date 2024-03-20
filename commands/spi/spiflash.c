@@ -12,9 +12,9 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "pirate/storage.h"
-#include "../lib/sfud/inc/sfud.h"
-#include "../lib/sfud/inc/sfud_def.h"
-#include "mode/spiflash.h"
+#include "lib/sfud/inc/sfud.h"
+#include "lib/sfud/inc/sfud_def.h"
+#include "spiflash.h"
 #include "pirate/mem.h"
 #include "fatfs/ff.h"
 
@@ -40,20 +40,15 @@ void flash_not_found()
 }
 
 static inline uint32_t 
-spiflash_next_count(uint32_t current_address, uint32_t end_address, uint32_t buff_cnt)
-{       
-    if((end_address)>=((current_address)+buff_cnt))
-    {
+spiflash_next_count(uint32_t current_address, uint32_t end_address, uint32_t buff_cnt){       
+    if((end_address)>=((current_address)+buff_cnt)){
         return buff_cnt;
-    }
-    else
-    {
+    }else{
         return (end_address)-(current_address);
     }
 }
 
-bool 
-spiflash_init(sfud_flash *flash_info){
+bool spiflash_init(sfud_flash *flash_info){
     flash_info->index = 0;
     sfud_err cur_flash_result = sfud_device_init(flash_info);
     if(cur_flash_result != SFUD_SUCCESS){
@@ -63,11 +58,9 @@ spiflash_init(sfud_flash *flash_info){
     return true;
 }
 
-bool spiflash_erase(sfud_flash *flash_info)
-{
+bool spiflash_erase(sfud_flash *flash_info){
     printf("Erasing flash...\r\n");
-    if(sfud_chip_erase(flash_info)!=SFUD_SUCCESS)
-    {
+    if(sfud_chip_erase(flash_info)!=SFUD_SUCCESS){
         printf("Error: erase failed\r\n");
         return false;
     }
@@ -75,8 +68,7 @@ bool spiflash_erase(sfud_flash *flash_info)
     return true;
 }
 
-bool spiflash_erase_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info)
-{
+bool spiflash_erase_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info){
     uint32_t bytes_total=(end_address-start_address);
     uint32_t current_address=start_address;
     ui_term_progress_bar_t progress_bar;
@@ -86,17 +78,14 @@ bool spiflash_erase_verify(uint32_t start_address, uint32_t end_address, uint32_
     while(true){
         ui_term_progress_bar_update(bytes_total - (end_address-current_address), bytes_total, &progress_bar);
         uint32_t read_count=spiflash_next_count(current_address, end_address, buf_size);
-        if(sfud_read(flash_info, current_address, read_count, buf)!=SFUD_SUCCESS)
-        {
+        if(sfud_read(flash_info, current_address, read_count, buf)!=SFUD_SUCCESS){
             ui_term_progress_bar_cleanup(&progress_bar);
             printf("Error: read failed\r\n");
             return false;
         }
 
-        for(uint32_t i=0; i<read_count; i++)
-        {
-            if(buf[i]!=0xff)
-            {
+        for(uint32_t i=0; i<read_count; i++){
+            if(buf[i]!=0xff){
                 ui_term_progress_bar_cleanup(&progress_bar);
                 printf("Error: erase failed at 0x%06x\r\n", (current_address+i));
                 return false;
@@ -112,8 +101,7 @@ bool spiflash_erase_verify(uint32_t start_address, uint32_t end_address, uint32_
 }
 
 // function to fill flash with the same data on each page for testing, typically 0...255
-bool
-spiflash_write_test(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info)
+bool spiflash_write_test(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info)
 {
     uint32_t bytes_total=(end_address-start_address);
     uint32_t current_address=start_address;
@@ -132,8 +120,7 @@ spiflash_write_test(uint32_t start_address, uint32_t end_address, uint32_t buf_s
     while(true){
         ui_term_progress_bar_update(bytes_total - (end_address-current_address), bytes_total, &progress_bar);
         uint32_t write_count=spiflash_next_count(current_address, end_address,buf_size);
-        if(sfud_write(flash_info, current_address, write_count, buf)!=SFUD_SUCCESS)
-        {
+        if(sfud_write(flash_info, current_address, write_count, buf)!=SFUD_SUCCESS){
             ui_term_progress_bar_cleanup(&progress_bar);
             printf("Error: write failed\r\n");
             return false;
@@ -147,15 +134,12 @@ spiflash_write_test(uint32_t start_address, uint32_t end_address, uint32_t buf_s
     return true;
 }
 
-bool
-spiflash_write_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info)
-{
+bool spiflash_write_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info){
     uint32_t bytes_total=(end_address-start_address);
     uint32_t current_address=start_address;
     //verify test data
     printf("Verifying write data:\r\n");
-    if(buf_size<256)
-    {
+    if(buf_size<256){
         printf("Read buffer too small (%d), aborting\r\n", buf_size);
         return false;
     }
@@ -164,17 +148,14 @@ spiflash_write_verify(uint32_t start_address, uint32_t end_address, uint32_t buf
     while(true){
         ui_term_progress_bar_update(bytes_total - (end_address-current_address), bytes_total, &progress_bar);
         uint32_t read_count=spiflash_next_count(current_address, end_address, buf_size);
-        if(sfud_read(flash_info, current_address, read_count, buf)!=SFUD_SUCCESS)
-        {
+        if(sfud_read(flash_info, current_address, read_count, buf)!=SFUD_SUCCESS){
             ui_term_progress_bar_cleanup(&progress_bar);
             printf("\r\nError: read failed\r\n");
             return false;
         }
 
-        for(uint32_t i=0; i<read_count; i++)
-        {
-            if(buf[i]!=(uint8_t)(i&0xff))
-            {
+        for(uint32_t i=0; i<read_count; i++){
+            if(buf[i]!=(uint8_t)(i&0xff)){
                 ui_term_progress_bar_cleanup(&progress_bar);
                 printf("\r\nError: verify failed at %06x [%02x != %02x]\r\n", (current_address)+i, i, buf[i]);
                 return false;
@@ -189,9 +170,7 @@ spiflash_write_verify(uint32_t start_address, uint32_t end_address, uint32_t buf
     return true;
 }
 
-bool 
-spiflash_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info, const char *file_name)
-{
+bool spiflash_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info, const char *file_name){
     uint32_t bytes_total=(end_address-start_address);
     uint32_t current_address=start_address;
     FIL fil;			/* File object needed for each open file */
@@ -212,15 +191,13 @@ spiflash_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, u
     while(true){
         ui_term_progress_bar_update(bytes_total - (end_address-current_address), bytes_total, &progress_bar);
         uint32_t read_count=spiflash_next_count(current_address, end_address, buf_size);
-        if(sfud_read(flash_info, current_address, read_count, buf)!=SFUD_SUCCESS)
-        {
+        if(sfud_read(flash_info, current_address, read_count, buf)!=SFUD_SUCCESS){
             ui_term_progress_bar_cleanup(&progress_bar);
             printf("\r\nError: read failed\r\n");
             return false;
         }
         f_write(&fil, buf, read_count, &bw);	
-        if(fr != FR_OK || bw!=read_count)
-        {
+        if(fr != FR_OK || bw!=read_count){
             ui_term_progress_bar_cleanup(&progress_bar);
             storage_file_error(fr);
             return false;
@@ -235,9 +212,7 @@ spiflash_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, u
     return true;  
 }
 
-bool 
-spiflash_load(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info, const char *file_name)
-{
+bool spiflash_load(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info, const char *file_name){
     uint32_t bytes_total=(end_address-start_address);
     uint32_t current_address=start_address;
     FIL fil;			/* File object needed for each open file */
@@ -271,21 +246,18 @@ spiflash_load(uint32_t start_address, uint32_t end_address, uint32_t buf_size, u
         uint32_t write_count=spiflash_next_count(current_address, end_address, buf_size);
         size_t file_read_count;
         fr = f_read(&fil, buf, write_count, &file_read_count); /* Read a chunk of data from the source file */
-        if (file_read_count == 0)
-        {
+        if (file_read_count == 0){
             ui_term_progress_bar_cleanup(&progress_bar);
             printf("Warning: end of file, aborting");
             break; /* error or eof */
         }
 
         //zero out rest of array if file is smaller than buffer
-        if(file_read_count<write_count)
-        {
+        if(file_read_count<write_count){
             memset(buf+file_read_count, 0xff, write_count-file_read_count);
         }
 
-        if(sfud_write(flash_info, current_address, write_count, buf)!=SFUD_SUCCESS)
-        {
+        if(sfud_write(flash_info, current_address, write_count, buf)!=SFUD_SUCCESS){
             ui_term_progress_bar_cleanup(&progress_bar);
             printf("\r\nError: write failed\r\n");
             return false;
@@ -300,8 +272,7 @@ spiflash_load(uint32_t start_address, uint32_t end_address, uint32_t buf_size, u
     return true;  
 }
 
-bool 
-spiflash_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, uint8_t *buf2, sfud_flash *flash_info, const char *file_name)
+bool spiflash_verify(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, uint8_t *buf2, sfud_flash *flash_info, const char *file_name)
 {
     uint32_t bytes_total=(end_address-start_address);
     uint32_t current_address=start_address;
@@ -473,8 +444,7 @@ typedef struct __attribute__((packed)) ptp_manuf_struct {
         uint32_t unused_5:32;
     } ptp_manuf_t;
 
-uint32_t flash_erase_size(uint32_t size, char *unit)
-{
+uint32_t flash_erase_size(uint32_t size, char *unit){
     uint32_t erase_size=pow(2,size);
     *unit ='B';
     if(erase_size>=1024)
@@ -485,8 +455,7 @@ uint32_t flash_erase_size(uint32_t size, char *unit)
     return erase_size;
 }
 
-bool flash_read_resid(uint8_t *res_id)
-{
+bool flash_read_resid(uint8_t *res_id){
     //DP 0xB9: deep power down and then RDP 0xAB, 3 dummy bytes, 1 RES ID byte (release and read ID)
     //deep sleep command
     flash_start();
@@ -498,15 +467,13 @@ bool flash_read_resid(uint8_t *res_id)
     flash_write_32(0xab000000, 4);
     *res_id = flash_read();
     flash_stop();
-    if(*res_id==0x00 || *res_id==0xff)
-    {
+    if(*res_id==0x00 || *res_id==0xff){
         return false;
     }
     return true;
 }
 
-bool flash_read_remsid(uint8_t *remsid_manuf, uint8_t *remsid_dev)
-{
+bool flash_read_remsid(uint8_t *remsid_manuf, uint8_t *remsid_dev){
     //0x90: REMS  Read Electronic Manufacturer ID & Device ID (REMS)
     // 0x90, 0x00:3, 1 Manuf ID, 1 Device ID
     flash_start();
@@ -514,15 +481,13 @@ bool flash_read_remsid(uint8_t *remsid_manuf, uint8_t *remsid_dev)
     *remsid_manuf = flash_read();
     *remsid_dev = flash_read();
     flash_stop();
-    if(*remsid_manuf==0x00 || *remsid_manuf==0xff) //TODO: manuf ID has a checksum bit or something, list of man and dev ids?    
-    {
+    if(*remsid_manuf==0x00 || *remsid_manuf==0xff) {//TODO: manuf ID has a checksum bit or something, list of man and dev ids?    {
         return false;
     }
     return true;
 }
 
-bool flash_read_rdid(uint8_t *rdid_manuf, uint8_t *rdid_type, uint8_t *rdid_capacity)
-{
+bool flash_read_rdid(uint8_t *rdid_manuf, uint8_t *rdid_type, uint8_t *rdid_capacity){
     //0x9f: RDID  Read Identification (RDID)
     // 0x9f, 1 manuf ID, 1 memory type, 1 capacity
     flash_start();
@@ -531,15 +496,13 @@ bool flash_read_rdid(uint8_t *rdid_manuf, uint8_t *rdid_type, uint8_t *rdid_capa
     *rdid_type=flash_read();
     *rdid_capacity=flash_read();
     flash_stop();
-    if(*rdid_manuf==0x00 || *rdid_manuf==0xff)//TODO: is there a standard coding?
-    {
+    if(*rdid_manuf==0x00 || *rdid_manuf==0xff){//TODO: is there a standard coding?
         return false;
     }
     return true;
 }
 
-void spiflash_probe(void)
-{
+void spiflash_probe(void){
     uint8_t resid;
     bool has_resid=flash_read_resid(&resid);
     uint8_t remsid_manuf, remsid_dev;
@@ -568,12 +531,9 @@ void spiflash_probe(void)
     ptp_head = (ptp_head_t *)&sfdp;
                
     //check code
-    if(ptp_head->signature == 0x50444653)
-    {
+    if(ptp_head->signature == 0x50444653){
         printf("found 0x50444653 \"PDFS\"\r\n");
-    }
-    else
-    {
+    }else{
         flash_not_found();
         return;
     }
@@ -584,8 +544,7 @@ void spiflash_probe(void)
     printf(" Headers: %d\r\n", param_table_pointers); //n+1 parameter headers
 
     //loop over table pointers, usually 2?
-    for(uint8_t i=0; i<param_table_pointers; i++)
-    {
+    for(uint8_t i=0; i<param_table_pointers; i++){
         printf("\r\n**Param Table %d**\r\n", i);
         flash_start();
         uint32_t address=0x5a000000 + 8 + (i*8);
@@ -605,8 +564,7 @@ void spiflash_probe(void)
         printf("\t\tType\t\tVer.\tLength\tAddress\r\n");
         printf("Table %d\t\t%s (0x%02x)\t%d.%d\t%d\t0x%06x\r\n", i, ptp_id==PTP_JEDEC?ptp_jedec:ptp_manuf, ptp_id, ptp_rec->revision_major, ptp_rec->revision_minor, ptp_length, ptp_address );
 
-        if(ptp_length>count_of(sfdp))
-        {
+        if(ptp_length>count_of(sfdp)){
             printf(" Error: record too long to fetch! Skipping...\r\n");
             continue;
         }    
@@ -623,33 +581,26 @@ void spiflash_probe(void)
             printf("[%04d] 0x%02X 0x%02X 0x%02X 0x%02X\r\n", j + 1, sfdp[j * 4 + 3], sfdp[j * 4 + 2], sfdp[j * 4 + 1], sfdp[j * 4]);
         }
 
-        switch(ptp_id)
-        {
+        switch(ptp_id){
             case PTP_JEDEC:
                 printf("\r\n");
                 ptp_jedec_t *ptp_j;
                 ptp_j = (ptp_jedec_t *)&sfdp;
 
                 uint32_t capacity;
-                if(!((ptp_j->density>>31) & 0b1)) 
-                {
+                if(!((ptp_j->density>>31) & 0b1)) {
                         capacity = 1 + (ptp_j->density >> 3);
-                }
-                else
-                {
+                }else{
                     capacity = ptp_j->density & 0x7FFFFFFF;
                     if (capacity > 4U * 8 + 3) {
                         printf("Error: The flash capacity is grater than 32 Gb/ 4 GB! Not Supported.\r\n");
                         capacity=0;
-                    }
-                    else
-                    {
+                    }else{
                         capacity = 1L << (capacity - 3);
                     }
                 }
                 printf("Density: %d bytes\r\nAddress bytes: ", capacity);  
-                switch(ptp_j->address_bytes)
-                {
+                switch(ptp_j->address_bytes){
                     case 0:
                         printf("3");
                         break;

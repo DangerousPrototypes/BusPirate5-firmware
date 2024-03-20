@@ -53,6 +53,19 @@ bool ui_help_show(bool help_flag, const char * const usage[], uint32_t count_of_
     return false;
 }
 
+void ui_help_mode_commands(const struct _command_struct *commands, uint32_t count){
+    printf("\r\nAvailable mode commands:\r\n");
+    for(uint32_t i=0; i<count; i++){
+        printf("%s%s%s\t%s%s\r\n", 
+            ui_term_color_prompt(), 
+            commands[i].command, 
+            ui_term_color_info(), 
+            commands[i].help_text?t[commands[i].help_text]:"Unavailable", 
+            ui_term_color_reset()
+        );
+    }
+}
+
 //true if there is a voltage on out/vref pin
 bool ui_help_check_vout_vref(void){
     if (scope_running) // scope is using the analog subsystem

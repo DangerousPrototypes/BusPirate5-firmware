@@ -24,6 +24,9 @@ void hw1wire_start(struct _bytecode *result, struct _bytecode *next);
 void hw1wire_write(struct _bytecode *result, struct _bytecode *next);
 void hw1wire_read(struct _bytecode *result, struct _bytecode *next);
 void hw1wire_macro(uint32_t macro);
+
+extern const struct _command_struct hw1wire_commands[];
+extern const uint32_t hw1wire_commands_count;
 /*/
 unsigned char OWReset(void);
 unsigned char OWBit(unsigned char c);

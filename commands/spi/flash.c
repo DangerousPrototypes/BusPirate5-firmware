@@ -8,9 +8,9 @@
 #include "pirate/storage.h"
 #include "bytecode.h"
 #include "mode/hwspi.h"
-#include "../lib/sfud/inc/sfud.h"
-#include "../lib/sfud/inc/sfud_def.h"
-#include "mode/spiflash.h"
+#include "lib/sfud/inc/sfud.h"
+#include "lib/sfud/inc/sfud_def.h"
+#include "spiflash.h"
 #include "ui/ui_cmdln.h"
 //#include "ui/ui_prompt.h"
 //#include "ui/ui_const.h"
@@ -18,8 +18,7 @@
 #include "system_config.h"
 #include "pirate/amux.h"
 
-const char * const flash_usage[]= 
-{
+static const char * const usage[]= {
     "flash [init|probe|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
     "Initialize and probe: flash probe",
     "Erase and program, with verify: flash write -f example.bin -e -v",
@@ -28,8 +27,7 @@ const char * const flash_usage[]=
     "Test chip (full erase/write/verify): flash test"
 };
 
-const struct ui_help_options help_flash[]= 
-{
+static const struct ui_help_options options[]= {
 {1,"", T_HELP_FLASH}, //flash command help
     {0,"init", T_HELP_FLASH_INIT}, //init
     {0,"probe", T_HELP_FLASH_PROBE}, //probe
@@ -78,11 +76,7 @@ void flash(struct command_result *res){
         {'v', ARG_NONE, false, false, 0}, //verify
     };
 */
-    if(cmdln_args_find_flag('h')){
-        ui_help_usage(flash_usage,count_of(flash_usage));
-        ui_help_options(&help_flash[0],count_of(help_flash));
-        return;
-    }
+    if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
 
     if(system_config.mode!=4){
         printf("flash command is currently only available in SPI mode\r\n");

@@ -17,12 +17,20 @@
 #include "lib/minmea/minmea.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
+#include "ui/ui_help.h"
 
 #define M_UART_PORT uart0
 #define M_UART_TX BIO4
 #define M_UART_RX BIO5
 #define M_UART_RTS
 #define M_UART_CTS
+
+// command configuration
+const struct _command_struct usart_commands[]={   //Function Help
+// note: for now the allow_hiz flag controls if the mode provides it's own help
+    //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+};
+const uint32_t usart_commands_count=count_of(usart_commands);
 
 static const char pin_labels[][5]={
 	"TX->", 
@@ -463,6 +471,8 @@ void hwusart_help(void)
 	printf("\tTXD\t------------------ RXD\r\n");
 	printf("{BP}\tRXD\t------------------ TXD\t{DUT}\r\n");
 	printf("\tGND\t------------------ GND\r\n");
+
+	ui_help_mode_commands(usart_commands, usart_commands_count);
 }
 
 

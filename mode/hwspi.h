@@ -35,3 +35,6 @@ typedef struct _spi_mode_config{
 	uint32_t cs_idle; 
 	uint32_t dff; 
 }_spi_mode_config;
+
+extern const struct _command_struct hwspi_commands[];
+extern const uint32_t hwspi_commands_count;

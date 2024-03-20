@@ -10,13 +10,14 @@
 #include "system_config.h"
 #include "opt_args.h"
 #include "ui/ui_lcd.h"
-#include "rgb.h"
+#include "pirate/rgb.h"
 #include "pirate/shift.h"
 #include "pirate/bio.h"
 #include "pirate/button.h"
 #include "pirate/storage.h"
 #include "pirate/lcd.h"
 #include "pirate/amux.h"
+#include "pirate/mcu.h"
 #include "ui/ui_init.h"
 #include "ui/ui_info.h"
 #include "ui/ui_term.h"
@@ -40,6 +41,7 @@
 //#include "helpers.h"
 #include "mode/binio.h"
 #include "commands/global/p_pullups.h"
+#include "pirate/psu.h"
 #include "commands/global/w_psu.h"
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
@@ -50,20 +52,20 @@ uint spi_spin_lock_num;
 
 void core1_entry(void);
 
-int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data)
-{
+int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
     system_config.lcd_screensaver_active=true;
     lcd_screensaver_enable();
     return 0;
 }
 
-int main()
-{
+int main(){
     char c;
+    
+    uint8_t bp_rev=mcu_detect_revision();
 
     //init buffered IO pins
     bio_init(); 
-    
+
     // setup SPI0 for on board peripherals
     uint baud=spi_init(BP_SPI_PORT, 1000 * 1000);
     gpio_set_function(BP_SPI_CDI, GPIO_FUNC_SPI);
@@ -78,12 +80,6 @@ int main()
     #else
         #error "No platform revision defined. Check pirate.h."
     #endif
-
-    //test for PCB revision
-    /*uint8_t bp_rev=mcu_detect_revision();
-    if(bp_rev!=BP5_REV){
-        //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP5_REV, mcu_detect_revision());
-    }*/
 
     //init psu pins 
     psucmd_init();
@@ -106,7 +102,7 @@ int main()
     shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN));
     pullups_init(); //uses shift register internally  
     shift_output_enable(true); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
-    
+       
     //reset the LCD
     lcd_reset();
    
@@ -128,8 +124,7 @@ int main()
     // This must be done before any other SPI communications
     #if BP5_REV <= 9
         storage_mount();
-        if(storage_load_config())
-        {
+        if(storage_load_config()){
             system_config.config_loaded_from_file=true;
         }
     #endif
@@ -141,13 +136,11 @@ int main()
    
     //uart
     //duplicate the terminal output on a debug uart on IO pins
-    if(system_config.terminal_uart_enable)
-    {
+    if(system_config.terminal_uart_enable){
         debug_uart_init(system_config.terminal_uart_number, true, true, true);
     }
     //a transmit only uart for developers to debug (on IO pins)
-    if(system_config.debug_uart_enable)
-    {
+    if(system_config.debug_uart_enable){
         debug_uart_init(system_config.debug_uart_number, true, true, false);
     }
  
@@ -157,12 +150,9 @@ int main()
     spi_set_baudrate(BP_SPI_PORT, 1000*1000*32);
     lcd_configure();
     monitor(system_config.psu);
-    if (modes[system_config.mode].protocol_lcd_update)
-    {
+    if (modes[system_config.mode].protocol_lcd_update){
         modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
-    } else 
-    if (displays[system_config.display].display_lcd_update)
-    {
+    } else if (displays[system_config.display].display_lcd_update){
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
     lcd_backlight_enable(true);
@@ -188,8 +178,21 @@ int main()
     // wait for init to complete  
     while(multicore_fifo_pop_blocking()!=0xff);
 
-    enum bp_statemachine
-    {
+    //test for PCB revision
+    //must be done after shift register setup
+    // if firmware mismatch, turn all LEDs red
+    if(bp_rev!=BP5_REV){ //
+        //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP5_REV, mcu_detect_revision());
+        rgb_irq_enable(false);
+        while(true){ 
+            rgb_set_all(0xff, 0, 0);
+            busy_wait_ms(500);
+            rgb_set_all(0, 0, 0);
+            busy_wait_ms(500);
+        }
+    }    
+
+    enum bp_statemachine{
         BP_SM_DISPLAY_MODE,
         BP_SM_GET_INPUT,
         BP_SM_PROCESS_COMMAND,
@@ -199,47 +202,33 @@ int main()
     
     uint8_t bp_state=0;
     uint32_t value;
-    //struct command_attributes attributes;
-    //struct command_response response;   
     struct prompt_result result; 
     alarm_id_t screensaver;
-    //struct opt_args args;
-    //struct command_result res;
 
-    while(1)
-    {
+    while(1){
 
-        if(script_entry()) //enter scripting mode?
-        {
+        if(script_entry()){ //enter scripting mode?
             bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
         }
 
-        switch(bp_state)
-        {
+        switch(bp_state){
             case BP_SM_DISPLAY_MODE:
                 
-                if(system_config.terminal_ansi_color) //config file option loaded, wait for any key
-                {
+                if(system_config.terminal_ansi_color){ //config file option loaded, wait for any key
                     char c;
                     result.error=false;
                     result.success=false;
 
-                    if(rx_fifo_try_get(&c))
-                    {
+                    if(rx_fifo_try_get(&c)){
                         value='y';
                         result.success=true;
-                    }
-                    
-                }
-                else
-                {
+                    } 
+                }else{
                     ui_prompt_vt100_mode(&result, &value);
                 }
 
-                if(result.success)
-                {
-                    switch(value)
-                    {
+                if(result.success){
+                    switch(value){
                         case 'y':
                             system_config.terminal_ansi_color=1;
                             system_config.terminal_ansi_statusbar=1;
@@ -257,9 +246,7 @@ int main()
                     // show welcome
                     //ui_info_print_info(&args, &res);
                     bp_state=BP_SM_COMMAND_PROMPT;
-                }
-                else if(result.error) // user hit enter but not a valid option
-                {
+                }else if(result.error){ // user hit enter but not a valid option
                     printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
                 }
                 //printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
@@ -272,18 +259,13 @@ int main()
                 modes[system_config.mode].protocol_periodic();
                 la_periodic();
 
-                switch(ui_term_get_user_input()) 
-                {
+                switch(ui_term_get_user_input()){
                     case 0x01:// user pressed a key
-                        if(system_config.lcd_timeout) 
-                        {
-                            if(system_config.lcd_screensaver_active)
-                            {
+                        if(system_config.lcd_timeout){
+                            if(system_config.lcd_screensaver_active){
                                 lcd_screensaver_disable();
                                 system_config.lcd_screensaver_active=false;
-                            }
-                            else
-                            {
+                            }else{
                                 cancel_alarm(screensaver);
                             }
                             //TODO: figure out how to just reset the timer instead...
@@ -291,8 +273,7 @@ int main()
                         }
                         break;
                     case 0xff: //user pressed enter
-                        if(system_config.lcd_timeout) 
-                        {
+                        if(system_config.lcd_timeout){
                             cancel_alarm(screensaver);
                         }
                         printf("\r\n");
@@ -308,22 +289,15 @@ int main()
             case BP_SM_SCRIPT_MODE:
                 script_mode();
             case BP_SM_COMMAND_PROMPT:
-                if(system_config.subprotocol_name)
-                {
+                if(system_config.subprotocol_name){
                     printf("%s%s-(%s)>%s ", ui_term_color_prompt(), modes[system_config.mode].protocol_name, system_config.subprotocol_name, ui_term_color_reset());
-                }
-                else
-                {
+                }else{
                     printf("%s%s>%s ", ui_term_color_prompt(), modes[system_config.mode].protocol_name, ui_term_color_reset());
                 }
-                
                 cmdln_next_buf_pos();
-
-                if(system_config.lcd_timeout)
-                {
+                if(system_config.lcd_timeout){
                     screensaver = add_alarm_in_ms(system_config.lcd_timeout*300000, ui_term_screensaver_enable, NULL, false);
                 }
-
                 bp_state=BP_SM_GET_INPUT;
                 break;
             
@@ -334,19 +308,9 @@ int main()
 
         // shared multitasking stuff
         // system error, over current error, etc
-        if(system_config.error)
-        {
+        if(system_config.error){
             printf("\x07");		// bell!
-
-            if(system_config.psu_current_error)
-            {
-                printf("\x1b[?5h\r\n");
-                ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
-                busy_wait_ms(500);
-                printf("\x1b[?5l");
-                system_config.psu_current_error=0;
-            }
-
+            psucmd_over_current(); //check for PSU error, reset and show warning
             system_config.error=0;
             bp_state=BP_SM_COMMAND_PROMPT;
         }
@@ -360,16 +324,12 @@ bool lcd_update_request=false;
 bool lcd_update_force=false;
 
 // begin of code execution for the second core (core1)
-void core1_entry(void) 
-{ 
+void core1_entry(void){ 
     char c;
     uint32_t temp;
 
     tx_fifo_init();
     rx_fifo_init();
-
-    // input buttons init
-    //buttons_init();
 
     rgb_init();
 
@@ -377,26 +337,22 @@ void core1_entry(void)
     while(multicore_fifo_pop_blocking()!=0);
 
     // USB init
-    if(system_config.terminal_usb_enable)
-    {
+    if(system_config.terminal_usb_enable){
         tusb_init();
     }
 
     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
 
     //terminal debug uart enable
-    if(system_config.terminal_uart_enable)
-    {
+    if(system_config.terminal_uart_enable){
         rx_uart_init_irq();
     }
 
     multicore_fifo_push_blocking(0xff); 
 
-    while(1)
-    {
+    while(1){
         //service (thread safe) tinyusb tasks
-        if(system_config.terminal_usb_enable)
-        {
+        if(system_config.terminal_usb_enable){
             tud_task(); // tinyusb device task
         }
 
@@ -404,41 +360,30 @@ void core1_entry(void)
         tx_fifo_service();
         //bin_tx_fifo_service();
 
-        if(system_config.psu==1 && system_config.psu_irq_en==true && hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] < 100 )
-        {
+        if(system_config.psu==1 && system_config.psu_irq_en==true && !psu_fuse_ok()){
             system_config.psu_irq_en=false;
             psucmd_irq_callback();
-            //ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
-            //psu_reset();
         } 
 
-        if(lcd_update_request)
-        {
+        if(lcd_update_request){
             monitor(system_config.psu); //TODO: fix monitor to return bool up_volts and up_current
-
             uint32_t update_flags=0;
-
-	    if (lcd_update_force) { lcd_update_force=false;update_flags|= UI_UPDATE_FORCE|UI_UPDATE_ALL;} 
+	        if (lcd_update_force) { lcd_update_force=false;update_flags|= UI_UPDATE_FORCE|UI_UPDATE_ALL;} 
             if(system_config.pin_changed) update_flags|= UI_UPDATE_LABELS; //pin labels
             if(monitor_voltage_changed()) update_flags|= UI_UPDATE_VOLTAGES; //pin voltages
             if(system_config.psu && monitor_current_changed()) update_flags|= UI_UPDATE_CURRENT; //psu current sense
             if(system_config.info_bar_changed) update_flags|=UI_UPDATE_INFOBAR; //info bar
 
-            if(!system_config.lcd_screensaver_active) 
-            {
-                if (modes[system_config.mode].protocol_lcd_update)
-                {
+            if(!system_config.lcd_screensaver_active){
+                if (modes[system_config.mode].protocol_lcd_update){
                     modes[system_config.mode].protocol_lcd_update(update_flags);
-                } 
-                else if (displays[system_config.display].display_lcd_update)
-                {
+                }else if (displays[system_config.display].display_lcd_update){
                     displays[system_config.display].display_lcd_update(update_flags);
                 }
             }
             
             if(system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar 
-                && system_config.terminal_ansi_statusbar_update && !system_config.terminal_ansi_statusbar_pause)
-            {
+                && system_config.terminal_ansi_statusbar_update && !system_config.terminal_ansi_statusbar_pause){
                 ui_statusbar_update(update_flags);
             }
 
@@ -451,18 +396,14 @@ void core1_entry(void)
             #endif
             
             freq_measure_period_irq(); //update frequency periodically
-            
             monitor_reset();
-            
             lcd_update_request=false;
         }   
         
         // service any requests with priority
-        while(multicore_fifo_rvalid())
-        {
+        while(multicore_fifo_rvalid()){
             temp=multicore_fifo_pop_blocking();
-            switch(temp)
-            {
+            switch(temp){
                 case 0xf0:
                     lcd_irq_disable();
                     lcd_update_request=false;
@@ -494,19 +435,16 @@ void core1_entry(void)
 
 struct repeating_timer lcd_timer;
 
-bool lcd_timer_callback(struct repeating_timer *t) 
-{
+bool lcd_timer_callback(struct repeating_timer *t) {
     lcd_update_request=true;
     return true;
 }
 
-void lcd_irq_disable(void)
-{
+void lcd_irq_disable(void){
     bool cancelled = cancel_repeating_timer(&lcd_timer);
 }
 
-void lcd_irq_enable(int16_t repeat_interval)
-{
+void lcd_irq_enable(int16_t repeat_interval){
     // Create a repeating timer that calls repeating_timer_callback.
     // If the delay is negative (see below) then the next call to the callback will be exactly 500ms after the
     // start of the call to the last callback
@@ -516,26 +454,20 @@ void lcd_irq_enable(int16_t repeat_interval)
 }
 
 //gives protected access to spi (core safe)
-void spi_busy_wait(bool enable)
-{
+void spi_busy_wait(bool enable){
     static bool busy=false;
 
-    if(!enable)
-    {
+    if(!enable){
         busy=false;
         return;
     }
-
     do{
         //uint32_t save = spin_lock_unsafe_blocking(spi_spin_lock);
         spin_lock_unsafe_blocking(spi_spin_lock);
-        if(busy)
-        {
+        if(busy){
             spin_unlock_unsafe(spi_spin_lock);
             //spin_unlock(spi_spin_lock, save);
-        }
-        else
-        {
+        }else{
             busy=true;
             spin_unlock_unsafe(spi_spin_lock);
             //spin_unlock(spi_spin_lock, save);
@@ -543,5 +475,4 @@ void spi_busy_wait(bool enable)
         }
 
     }while(true);
-
 }

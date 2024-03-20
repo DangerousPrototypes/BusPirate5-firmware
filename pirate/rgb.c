@@ -107,35 +107,29 @@ uint32_t color_wheel_div(uint8_t pos) {
 }
 
 
-void rgb_assign_color(uint32_t l, uint32_t color)
-{
+void rgb_assign_color(uint32_t l, uint32_t color){
     for (int i=0;i<RGB_LEN; i++){
-        if(l&(1u<<i))
-        {
+        if(l&(1u<<i)) {
             leds[i]=color;
         }
     }
 }
 
 //something like this to cycle, delay, return done
-bool rgb_master(const uint32_t *groups, uint8_t group_count, uint32_t (*color_wheel)(uint8_t color), uint8_t color_count, uint8_t color_increment, uint8_t cycles, uint8_t delay_ms )
-{
+bool rgb_master(const uint32_t *groups, uint8_t group_count, uint32_t (*color_wheel)(uint8_t color), uint8_t color_count, uint8_t color_increment, uint8_t cycles, uint8_t delay_ms ){
     static uint8_t color=0;
     static uint16_t c=0;
 
-    for(int i=0; i< group_count; i++)
-    {
+    for(int i=0; i< group_count; i++){
         rgb_assign_color(groups[i], color_wheel( (color+(i*color_increment))) );
     }
     rgb_send();
 
     //finished one complete cycle
-    if((color==color_count))
-    {
+    if((color==color_count)){
         color=0;
         c++;
-        if(c==cycles)
-        {
+        if(c==cycles){
             c=0;
             return true;
         }        
@@ -147,8 +141,7 @@ bool rgb_master(const uint32_t *groups, uint8_t group_count, uint32_t (*color_wh
 
 struct repeating_timer rgb_timer;
 
-bool rgb_scanner(void)
-{
+bool rgb_scanner(void){
     static uint16_t bitmask=0b1000000;
     static uint8_t delay=0;
     static uint8_t color=0;
@@ -167,19 +160,16 @@ bool rgb_scanner(void)
     uint32_t color_grb=((((colors[color]&0xff0000)/system_config.led_brightness)&0xff0000)>>8);
     color_grb|=((((colors[color]&0x00ff00)/system_config.led_brightness)&0x00ff00)<<8);
     color_grb|=((((colors[color]&0x0000ff)/system_config.led_brightness)&0x0000ff));
-    for(int i=0; i< count_of(groups_center_left); i++)
-    {
+    for(int i=0; i< count_of(groups_center_left); i++){
         rgb_assign_color(groups_center_left[i], (bitmask & (1u<<i))?color_grb:0x0a0a0a);
     }   
     rgb_send();
     
-    if(bitmask & 0b1)
-    {
+    if(bitmask & 0b1){
         delay=0xF0;
         bitmask=(0x01 << (count_of(groups_center_left)));
         color++;
-        if(color==count_of(colors))
-        {
+        if(color==count_of(colors)){
             color=0;
             bitmask=bitmask>>1;
             return true;
@@ -201,13 +191,11 @@ bool rgb_timer_callback(struct repeating_timer *t){
     uint32_t color_grb;
     bool next=false;
 
-    if(system_config.led_effect<7)
-    {
+    if(system_config.led_effect<7) {
         mode = system_config.led_effect;
     }
     
-    switch(mode)
-    {
+    switch(mode) {
         case 0: //disable
             rgb_assign_color(0xffffffff, 0x000000);
             rgb_send();  
@@ -237,8 +225,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
             break;
     }
 
-    if(system_config.led_effect==7 && next)
-    {
+    if(system_config.led_effect==7 && next){
         mode++;
         if(mode>6) mode=2;
     }
@@ -247,8 +234,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
 }
 
 
-void rgb_irq_enable(bool enable)
-{
+void rgb_irq_enable(bool enable){
     static bool enabled=false;
     if(enable && !enabled)
     {
@@ -286,8 +272,7 @@ void rgb_init(void)
 };
 
 
-void rgb_set_all(uint8_t r, uint8_t g, uint8_t b)
-{
+void rgb_set_all(uint8_t r, uint8_t g, uint8_t b){
     uint32_t color= ((g/system_config.led_brightness)<<16) | ((r/system_config.led_brightness)<<8) | (b/system_config.led_brightness);
     rgb_assign_color(0xffffffff, color);
     rgb_send();

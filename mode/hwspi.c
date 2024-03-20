@@ -11,9 +11,10 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "pirate/storage.h"
-#include "../lib/sfud/inc/sfud.h"
-#include "../lib/sfud/inc/sfud_def.h"
-#include "mode/spiflash.h"
+#include "lib/sfud/inc/sfud.h"
+#include "lib/sfud/inc/sfud_def.h"
+#include "commands/spi/flash.h"
+#include "ui/ui_help.h"
 
 #define M_SPI_PORT spi1
 #define M_SPI_CLK BIO6
@@ -23,6 +24,13 @@
 
 #define M_SPI_SELECT 0
 #define M_SPI_DESELECT 1
+
+// command configuration
+const struct _command_struct hwspi_commands[]={   //Function Help
+// note: for now the allow_hiz flag controls if the mode provides it's own help
+    {"flash",0x00,&flash,0x00}, // the help is shown in the -h *and* the list of mode apps
+};
+const uint32_t hwspi_commands_count=count_of(hwspi_commands);
 
 static const char pin_labels[][5]={
 	"CLK",
@@ -315,10 +323,9 @@ void spi_macro(uint32_t macro)
 {
 	switch(macro)
 	{
-		case 0:		printf(" 0. This menu\r\n 1. Query flash chip ID\r\n");
+		case 0:		printf(" 0. This menu\r\n");
 				break;
-		case 1:	spiflash_probe();
-				break;
+		case 1:	break;
 		case 3: ui_term_detect(); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
@@ -395,6 +402,8 @@ void spi_help(void)
 	printf("{BP}\tCLK\t------------------ CLK\t{DUT}\r\n");
 	printf("\tCS\t------------------ CS\r\n");
 	printf("\tGND\t------------------ GND\r\n");
+
+	ui_help_mode_commands(hwspi_commands, hwspi_commands_count);
 }
 
 

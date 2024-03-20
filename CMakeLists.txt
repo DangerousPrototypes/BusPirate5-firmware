@@ -35,7 +35,7 @@ set(bp5_common
         pirate/bio.h pirate/bio.c pirate/storage.h pirate/storage.c
         pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h 
         pirate/lcd.h pirate/lcd.c pirate/shift.h pirate/shift.c
-        pirate/amux.h pirate/amux.c
+        pirate/amux.h pirate/amux.c pirate/rgb.h pirate/rgb.c
 
         #commands
         commands.h commands.c
@@ -51,11 +51,12 @@ set(bp5_common
         commands/global/dummy.c commands/global/dummy.h
         commands/global/disk.c commands/global/disk.h
         commands/global/v_adc.c commands/global/v_adc.h
-        
+         
+        commands/spi/flash.c commands/spi/flash.h commands/spi/spiflash.h commands/spi/spiflash.c
         commands/2wire/sle4442.c commands/2wire/sle4442.h
-
+ 
         #to be adapted
-        rgb.c rgb.h pwm.c pwm.h freq.c freq.h
+        pwm.c pwm.h freq.c freq.h
 
         #HiZ
         mode/hiz.h mode/hiz.c 
@@ -69,7 +70,6 @@ set(bp5_common
         lib/ms5611/ms5611.c lib/ms5611/ms5611.h lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         #SPI
         mode/hwspi.c mode/hwspi.h 
-        flash.c flash.h  mode/spiflash.h mode/spiflash.c
         lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h 
         lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c         
         #2WIRE

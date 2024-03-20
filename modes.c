@@ -59,30 +59,25 @@
 
 // nulfuncs
 // these are the dummy functions when something ain't used 
-void nullfunc1(void)
-{
+void nullfunc1(void){
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 }
 
-uint32_t nullfunc2(uint32_t c)
-{	
+uint32_t nullfunc2(uint32_t c){	
 	(void) c;
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 	return 0x0000;
 }
 
-uint32_t nullfunc3(void)
-{	
+uint32_t nullfunc3(void){	
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 	return 0x0000;
 }
 
-
-void nullfunc4(uint32_t c)
-{	
+void nullfunc4(uint32_t c){	
 	(void) c;
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
@@ -92,25 +87,21 @@ const char *nullfunc5(void){
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 }
 
-uint32_t nullfunc6(uint8_t next_command)
-{	
+uint32_t nullfunc6(uint8_t next_command){	
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
 	return 0x0000; 
 }
 
-void nohelp(void)
-{
+void nohelp(void){
 	printf(t[T_MODE_NO_HELP_AVAILABLE]);
 }
 
-void noperiodic(void)
-{
+void noperiodic(void){
 	return;
 }
 
-void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next)
-{
+void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next){
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
     system_config.error=1;
 }
@@ -118,8 +109,7 @@ void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next)
 // all modes and their interaction is handled here
 // buspirateNG.h has the conditional defines for modes
 
-struct _mode modes[MAXPROTO]={
-{
+struct _mode modes[MAXPROTO]={{
 	nullfunc1_temp,				// start
 	nullfunc1_temp,				// start alternate
 	nullfunc1_temp,				// stop
@@ -196,8 +186,8 @@ struct _mode modes[MAXPROTO]={
 	//hiz_pins,				// display pin config
 	hiz_settings,				// display settings 
 	nohelp,					// display small help about the protocol
-    NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count    
+    hw1wire_commands,                   // mode specific commands
+    &hw1wire_commands_count,                   // mode specific commands count    
     "1-WIRE",				// friendly name (promptname)
 },
 #endif
@@ -224,8 +214,8 @@ struct _mode modes[MAXPROTO]={
     //HWUSART_pins,				// display pin config
     hwusart_settings,			// display settings
     hwusart_help,				// display small help about the protocol
-    NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count    
+    usart_commands,               // mode specific commands
+    &usart_commands_count,       // mode specific commands count    
     "UART",				// friendly name (promptname)
 },
 #endif
@@ -252,8 +242,8 @@ struct _mode modes[MAXPROTO]={
     //HWI2C_pins,				// display pin config
     hwi2c_settings,				// display settings
     hwi2c_help,				// display small help about the protocol
-    NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count    
+    hwi2c_commands,                   // mode specific commands
+    &hwi2c_commands_count,                   // mode specific commands count    
     "I2C",				// friendly name (promptname)
 },
 #endif
@@ -308,8 +298,8 @@ struct _mode modes[MAXPROTO]={
 	//spi_pins,				// display pin config
 	spi_settings,				// display settings 
 	spi_help,				// display small help about the protocol
-    NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count
+    hwspi_commands,                   // mode specific commands
+    &hwspi_commands_count,                   // mode specific commands count
 	"SPI",				// friendly name (promptname)
 },
 #endif
@@ -504,8 +494,8 @@ struct _mode modes[MAXPROTO]={
     //HWLED_pins,				// display pin config
     hwled_settings,				// display settings
     hwled_help,				// display small help about the protocol
-    NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count    
+    hwled_commands,                   // mode specific commands
+    &hwled_commands_count,                   // mode specific commands count    
     "LED",				// friendly name (promptname)
 },
 #endif
@@ -559,9 +549,9 @@ struct _mode modes[MAXPROTO]={
     dummy1_cleanup,				// cleanup for HiZ
     //dummy1_pins,				// display pin config
     dummy1_settings,			// display settings
-    nohelp,					// display small help about the protocol
-    NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count    
+    dummy1_help,				// display small help about the protocol
+    dummy1_commands,             // mode specific commands
+    &dummy1_commands_count,      // mode specific commands count    
     "DUMMY1",				// friendly name (promptname)
 }
 #endif

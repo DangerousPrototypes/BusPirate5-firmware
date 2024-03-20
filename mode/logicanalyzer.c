@@ -16,7 +16,7 @@
 #include "ui/ui_term.h"
 #include "usb_rx.h"
 #include "pirate/storage.h"
-#include "rgb.h"
+#include "pirate/rgb.h"
 #include "pico/multicore.h"
 #include "pirate/amux.h"
 #include "ui/ui_cmdln.h"

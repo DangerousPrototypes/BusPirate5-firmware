@@ -28,7 +28,6 @@
 #include "commands/global/a_auxio.h"
 #include "commands/global/dummy.h"
 #include "commands/global/disk.h"
-#include "flash.h"
 #include "mode/logicanalyzer.h"
 
 // command configuration
@@ -71,7 +70,7 @@ const struct _command_struct commands[]=
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
     {"hex", true, &disk_hex_handler,0x00},                                // "hex"  T_CMDLN_HEX 
     {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
-    {"flash", true, &flash, 0x00 },                              // "dump"
+    //{"flash", true, &flash, 0x00 },                              // "dump"
     {"dummy", true, &dummy_handler, 0x00 },                              // "dummy"
     {"help", true, &help_handler, 0x00},
 };

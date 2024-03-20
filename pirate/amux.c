@@ -20,7 +20,7 @@
 #include "opt_args.h"
 #include "display/scope.h"
 
-static uint8_t amux_current_channel=0;
+static uint8_t amux_current_channel=0xff;
 
 void amux_init(void){
     if (scope_running) // scope is using the analog subsystem
@@ -33,10 +33,10 @@ void amux_init(void){
 
 // select AMUX input source, use the channel defines from the platform header
 // only effects the 4067CD analog mux, you cannot get the current measurement from here
-bool amux_select_input(uint8_t channel){
+bool amux_select_input(uint16_t channel){
     if (scope_running) return false;// scope is using the analog subsystem
     //clear the amux control bits, set the amux channel bits
-    shift_clear_set((0b1111<<1), (channel<<1), true);  
+    shift_clear_set((0b1111<<1), (channel<<1)&0b11110, true);  
     return true;
 }
 
@@ -52,12 +52,12 @@ uint32_t amux_read(uint8_t channel){
 	return 0;
 
     adc_select_input(AMUX_OUT_ADC);
-    if(channel!=amux_current_channel){
+    //if(channel!=amux_current_channel){
         amux_select_input(HW_ADC_MUX_GND); //to clear any charge from a floating pin
-        amux_select_input(channel);
+        amux_select_input((uint16_t)channel);
         amux_current_channel=channel;
         busy_wait_us(60);
-    }
+    //}
     return adc_read();
 }
 
@@ -89,8 +89,9 @@ void amux_sweep(void){
         amux_select_input(i);
         busy_wait_us(60);
         hw_adc_raw[i]=adc_read();
-        hw_adc_voltage[i]=hw_adc_to_volts_x2(i); //these are X2 because a resistor divider /2
+        hw_adc_voltage[i]=hw_adc_to_volts_x2(i); //these are X2 because a resistor divider /2        
     }
+    amux_current_channel=HW_ADC_MUX_COUNT-1;
     
     amux_select_input(HW_ADC_MUX_GND); //to clear any charge from a floating pin
     adc_select_input(CURRENT_SENSE_ADC);

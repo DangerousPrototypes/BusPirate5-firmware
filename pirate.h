@@ -61,15 +61,11 @@
         #error "Unknown platform version in pirate.h"
     #endif
 #endif
-// include a translation
-//new multilingual system
-#include "translation/base.h"
 
+#include "translation/base.h"
 #include "printf-4.0.0/printf.h"
 
 void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);
-
 void spi_busy_wait(bool enable);
-
 #endif

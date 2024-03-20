@@ -22,3 +22,6 @@ typedef struct _uart_mode_config{
     uint32_t blocking;
 	bool async_print;
 }_uart_mode_config;
+
+extern const struct _command_struct usart_commands[];
+extern const uint32_t usart_commands_count;

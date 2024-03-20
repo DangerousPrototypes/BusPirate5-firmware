@@ -198,12 +198,13 @@ void hw2wire_help(void)
 	printf("Open drain bus, requires pull-up resistors (use 'P' to enable pull-ups)\r\n");
 	printf("[ & ] create an I2C START & STOP sequence\r\n");
 	printf("{ & } Toggle the RST pin HIGH and LOW.\r\n");
-	printf("\r\nAvailable mode apps:\r\n");
+	ui_help_mode_commands(hw2wire_commands, hw2wire_commands_count);
+	/*printf("\r\nAvailable mode commands:\r\n");
 	for(uint32_t i=0;i<hw2wire_commands_count;i++)
 	{
 		printf("%s%s%s\t%s%s\r\n", ui_term_color_prompt(), hw2wire_commands[i].command, 
 			ui_term_color_info(), hw2wire_commands[i].help_text?t[hw2wire_commands[i].help_text]:"Unavailable", ui_term_color_reset());
-	}
+	}*/
 	#if 0
 	printf("\r\n");
 	printf("More info: https://en.wikipedia.org/wiki/I2C\r\n");

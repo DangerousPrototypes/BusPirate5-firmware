@@ -9,3 +9,4 @@ void ui_help_options(const struct ui_help_options (*help), uint32_t count);
 void ui_help_usage(const char * const flash_usage[], uint32_t count);
 bool ui_help_show(bool help_flag, const char * const usage[], uint32_t count_of_usage, const struct ui_help_options *options, uint32_t count_of_options);
 bool ui_help_check_vout_vref(void);
+void ui_help_mode_commands(const struct _command_struct *commands, uint32_t count);

@@ -12,13 +12,22 @@
 #include "hardware/pio.h"
 #include "ws2812.pio.h"
 #include "apa102.pio.h"
-#include "rgb.h"
+#include "pirate/rgb.h"
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
+#include "ui/ui_help.h"
 
 #define M_LED_PIO pio0
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 //only used on APA102
+
+// command configuration
+const struct _command_struct hwled_commands[]={   //Function Help
+// note: for now the allow_hiz flag controls if the mode provides it's own help
+    //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+};
+const uint32_t hwled_commands_count=count_of(hwled_commands);
+
 static const char pin_labels[][5]={
 	"SDO",
 	"SCL",
@@ -101,8 +110,7 @@ uint32_t hwled_setup(void)
 	return 1;
 }
 
-uint32_t hwled_setup_exc(void)
-{
+uint32_t hwled_setup_exc(void){
 	switch(mode_config.device){
 		case M_LED_WS2812:
 			bio_buf_output(M_LED_SDO);
@@ -133,8 +141,7 @@ uint32_t hwled_setup_exc(void)
 }
 
 
-void hwled_start(struct _bytecode *result, struct _bytecode *next)
-{
+void hwled_start(struct _bytecode *result, struct _bytecode *next){
 	switch(mode_config.device){
 		case M_LED_WS2812:
 		case M_LED_WS2812_ONBOARD:
@@ -153,8 +160,7 @@ void hwled_start(struct _bytecode *result, struct _bytecode *next)
 	}	
 }
 
-void hwled_stop(struct _bytecode *result, struct _bytecode *next)
-{
+void hwled_stop(struct _bytecode *result, struct _bytecode *next){
 	switch(mode_config.device){
 		case M_LED_WS2812:
 		case M_LED_WS2812_ONBOARD:
@@ -173,8 +179,7 @@ void hwled_stop(struct _bytecode *result, struct _bytecode *next)
 	}	
 }
 
-void hwled_write(struct _bytecode *result, struct _bytecode *next)
-{
+void hwled_write(struct _bytecode *result, struct _bytecode *next){
 	uint32_t temp;
 
 	switch(mode_config.device){
@@ -193,10 +198,8 @@ void hwled_write(struct _bytecode *result, struct _bytecode *next)
 	}
 }
 
-void hwled_macro(uint32_t macro)
-{
-	switch(macro)
-	{
+void hwled_macro(uint32_t macro){
+	switch(macro){
 		case 0:		printf("%s\r\n", t[T_MODE_ERROR_NO_MACROS_AVAILABLE]);
 				break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
@@ -204,8 +207,7 @@ void hwled_macro(uint32_t macro)
 	}
 }
 
-void hwled_cleanup(void)
-{
+void hwled_cleanup(void){
 	switch(device_cleanup){
 		case M_LED_WS2812:
 			pio_remove_program(pio, &ws2812_program, pio_loaded_offset);
@@ -216,51 +218,18 @@ void hwled_cleanup(void)
 		case M_LED_WS2812_ONBOARD:
 			rgb_irq_enable(true);
 			break;
-	}
-	
+	}	
 	//pio_clear_instruction_memory(pio);
 	system_config.subprotocol_name=0x00;
 	system_bio_claim(false, M_LED_SDO, BP_PIN_MODE,0);
 	system_bio_claim(false, M_LED_SCL, BP_PIN_MODE,0);
-
-
 	bio_init();
 }
 
-void hwled_settings(void)
-{
+void hwled_settings(void){
 	//printf("HWI2C (speed)=(%d)", mode_config.baudrate_actual);
 }
 
-void hwled_help(void)
-{
-	/*printf("Muli-Master-multi-slave 2 wire protocol using a CLOCK and a bidirectional DATA\r\n");
-	printf("line in opendrain mode_configuration. Standard clock frequencies are 100KHz, 400KHz\r\n");
-	printf("and 1MHz.\r\n");
-	printf("\r\n");
-	printf("More info: https://en.wikipedia.org/wiki/I2C\r\n");
-	printf("\r\n");
-	printf("Electrical:\r\n");
-	printf("\r\n");
-	printf("BPCMD\t   { |            ADDRES(7bits+R/!W bit)             |\r\n");
-	printf("CMD\tSTART| A6  | A5  | A4  | A3  | A2  | A1  | A0  | R/!W| ACK* \r\n");
-	printf("\t-----|-----|-----|-----|-----|-----|-----|-----|-----|-----\r\n");
-	printf("SDA\t\"\"___|_###_|_###_|_###_|_###_|_###_|_###_|_###_|_###_|_###_ ..\r\n");
-	printf("SCL\t\"\"\"\"\"|__\"__|__\"__|__\"__|__\"__|__\"__|__\"__|__\"__|__\"__|__\"__ ..\r\n");
-	printf("\r\n");
-	printf("BPCMD\t   |                      DATA (8bit)              |     |  ]  |\r\n");
-	printf("CMD\t.. | D7  | D6  | D5  | D4  | D3  | D2  | D1  | D0  | ACK*| STOP|  \r\n");
-	printf("\t  -|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|\r\n");
-	printf("SDA\t.. |_###_|_###_|_###_|_###_|_###_|_###_|_###_|_###_|_###_|___\"\"|\r\n");
-	printf("SCL\t.. |__\"__|__\"__|__\"__|__\"__|__\"__|__\"__|__\"__|__\"__|__\"__|\"\"\"\"\"|\r\n");
-	printf("\r\n");
-	printf("* Receiver needs to pull SDA down when address/byte is received correctly\r\n");
-	printf("\r\n");
-	printf("Connection:\r\n");
-	printf("\t\t  +--[2k]---+--- +3V3 or +5V0\r\n");
-	printf("\t\t  | +-[2k]--|\r\n");
-	printf("\t\t  | |\r\n");
-	printf("\tSDA \t--+-|------------- SDA\r\n");
-	printf("{BP}\tSCL\t----+------------- SCL  {DUT}\r\n");
-	printf("\tGND\t------------------ GND\r\n");*/			
+void hwled_help(void){
+	ui_help_mode_commands(hwled_commands, hwled_commands_count);
 }

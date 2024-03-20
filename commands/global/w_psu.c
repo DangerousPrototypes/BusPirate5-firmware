@@ -71,9 +71,7 @@ uint32_t psucmd_enable(float volts, float current, bool current_limit_override){
     
     //since we dont have any more pins, the over current detect system is read through the 
     //4067 and ADC. It will be picked up in the second core loop
-    if(system_config.psu_current_limit_en){
-        system_config.psu_irq_en=true;
-    }
+    system_config.psu_irq_en=system_config.psu_current_limit_en;
 
     return psu_result; //should be PSU OK
 }
@@ -121,23 +119,6 @@ void psucmd_enable_handler(struct command_result *res){
 
     uint32_t psu_result=psucmd_enable(volts, current, current_limit_override);
 
-    // any error codes starting the PSU?
-    if(psu_result!=PSU_OK){
-        switch(psu_result){
-            case PSU_ERROR_FUSE_TRIPPED:
-                ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
-                break;
-            case PSU_ERROR_VOUT_LOW:
-                ui_term_error_report(T_PSU_SHORT_ERROR);
-                break;
-            case PSU_ERROR_BACKFLOW:
-                printf("%s\r\nError: Vout > on-board power supply. Backflow prevention activated\r\n\tIs an external voltage connected to Vout/Vref pin?\r\n%s", ui_term_color_warning(), ui_term_color_reset());
-                break;
-        }
-        res->error=true;
-        return;
-    }  
-
     // x.xV requested, closest value: x.xV
     printf("%s%1.2f%sV%s requested, closest value: %s%1.2f%sV\r\n", 
         ui_term_color_num_float(), psu_status.voltage_requested, ui_term_color_reset(), ui_term_color_info(),
@@ -163,6 +144,23 @@ void psucmd_enable_handler(struct command_result *res){
         t[T_MODE_POWER_SUPPLY],
         ui_term_color_reset(),
         t[T_MODE_ENABLED]);
+
+    // any error codes starting the PSU?
+    if(psu_result!=PSU_OK){
+        switch(psu_result){
+            case PSU_ERROR_FUSE_TRIPPED:
+                ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
+                break;
+            case PSU_ERROR_VOUT_LOW:
+                ui_term_error_report(T_PSU_SHORT_ERROR);
+                break;
+            case PSU_ERROR_BACKFLOW:
+                printf("%s\r\nError: Vout > on-board power supply. Backflow prevention activated\r\n\tIs an external voltage connected to Vout/Vref pin?\r\n%s", ui_term_color_warning(), ui_term_color_reset());
+                break;
+        }
+        res->error=true;
+        return;
+    }          
     
     // Vreg output: x.xV, Vref/Vout pin: x.xV, Current sense: x.xmA
     uint32_t vout, isense, vreg;
@@ -180,6 +178,7 @@ void psucmd_enable_handler(struct command_result *res){
 void psucmd_disable(void){
     psu_disable();
     system_config.psu_error=false;
+    system_config.psu_current_error=false;
     system_config.psu=0;
     system_config.psu_irq_en=false;
     system_config.info_bar_changed=true;
@@ -205,5 +204,15 @@ bool psucmd_init(void){
     psu_init();
     system_config.psu_error=false;
     return true;
+}
+
+void psucmd_over_current(void){
+    if(system_config.psu_current_error){
+        printf("\x1b[?5h\r\n");
+        ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
+        busy_wait_ms(500);
+        printf("\x1b[?5l");
+        system_config.psu_current_error=0;
+    }
 }
 

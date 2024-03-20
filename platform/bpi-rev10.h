@@ -1,6 +1,5 @@
 #ifndef BP_HARDWARE_VERSION
 
-#include "shift.h"
 
 #define BP_HARDWARE_VERSION "Bus Pirate 5 REV10"
 #define BP_HARDWARE_MCU "RP2040"
@@ -248,12 +247,6 @@ extern uint32_t *hw_pin_voltage_ordered[];
 
 //how many 595 shift registers are connected
 #define SHIFT_REG_COUNT 2
-
-// hardware platform command abstraction
-//#define HW_BIO_PULLUP_ENABLE() shift_set_clear_wait(0,PULLUP_EN)    
-//#define HW_BIO_PULLUP_DISABLE() shift_set_clear_wait(PULLUP_EN,0)
-//#define delayms(X) busy_wait_ms(X)
-//#define delayus(X) busy_wait_us_32(X)
 
 #define BP_DEBUG_UART_0 uart0
 #define BP_DEBUG_UART_0_TX BIO4

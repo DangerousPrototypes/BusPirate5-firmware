@@ -11,9 +11,11 @@
 #include "opt_args.h"
 #include "ui/ui_lcd.h"
 #include "rgb.h"
-#include "shift.h"
-#include "commands/global/w_psu.h"
+#include "pirate/shift.h"
 #include "pirate/bio.h"
+#include "pirate/button.h"
+#include "pirate/storage.h"
+#include "pirate/lcd.h"
 #include "amux.h"
 #include "ui/ui_init.h"
 #include "ui/ui_info.h"
@@ -21,8 +23,6 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
-#include "pirate/button.h"
-#include "pirate/storage.h"
 #include "freq.h"
 #include "queue.h"
 #include "usb_tx.h"
@@ -37,9 +37,12 @@
 #include "tusb.h"
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
-#include "helpers.h"
+//#include "helpers.h"
 #include "mode/binio.h"
 #include "commands/global/p_pullups.h"
+#include "commands/global/w_psu.h"
+//#include "display/scope.h"
+#include "mode/logicanalyzer.h"
 
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
@@ -105,10 +108,7 @@ int main()
     shift_output_enable(); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
     
     //reset the LCD
-    shift_set_clear_wait(0, DISPLAY_RESET);
-    busy_wait_us(20);
-    shift_set_clear_wait(DISPLAY_RESET,0);
-    busy_wait_ms(100);
+    lcd_reset();
    
     // input button init
     button_init();
@@ -119,6 +119,8 @@ int main()
     //setup the UI command buffers
     ui_init();
 
+    //voltage and current monitor for toolbar and display
+    //highly optimized to only update changed characters
     monitor_init();
 
     // Now continue after init of all the pins and shift registers
@@ -163,11 +165,10 @@ int main()
     {
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
-    shift_set_clear_wait( (DISPLAY_BACKLIGHT), 0); 
+    lcd_backlight_enable(true);
 
     translation_set(system_config.terminal_language); 
     
-    //modes[0].protocol_setup_exc();	
     // turn everything off
 	bio_init();     // make all pins safe
 	psucmd_disable();    // disable psu and reset pin label, clear any errors
@@ -175,8 +176,7 @@ int main()
     // mount NAND flash here
     #if BP5_REV >= 10
         storage_mount();
-        if(storage_load_config())
-        {
+        if(storage_load_config()){
             system_config.config_loaded_from_file=true;
         }
     #endif
@@ -266,9 +266,12 @@ int main()
                 break;
             
             case BP_SM_GET_INPUT:
-                helpers_mode_periodic();
+                //helpers_mode_periodic();
                 //it seems like we need an array where we can add our function for periodic service?
-                
+                displays[system_config.display].display_periodic();
+                modes[system_config.mode].protocol_periodic();
+                la_periodic();
+
                 switch(ui_term_get_user_input()) 
                 {
                     case 0x01:// user pressed a key

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "shift.h"
+#include "pirate/shift.h"
 
 void pullup_enable(void){
     #if BP5_REV <= 8

@@ -53,7 +53,7 @@ const struct _command_struct commands[]=
     {"G", false, &pwm_configure_enable, T_CMDLN_PWM_CONFIG}, //G
     {"g", false, &pwm_configure_disable, T_CMDLN_PWM_DIS },       // "g"
     {"h", true, &help_handler, 0x00 },         // "h" T_CMDLN_HELP_MODE
-    {"hd", true, &helpers_display_help, T_CMDLN_HELP_DISPLAY },     // "hd"
+    //{"hd", true, &helpers_display_help, T_CMDLN_HELP_DISPLAY },     // "hd"
     {"i", true, &ui_info_print_info, T_CMDLN_INFO },               // "i"
     {"l", true, &bitorder_msb_handler, T_CMDLN_BITORDER_MSB },    // "l"
     {"L", true, &bitorder_lsb_handler, T_CMDLN_BITORDER_LSB },    // "L"

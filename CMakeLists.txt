@@ -24,14 +24,21 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 set(bp5_common 
-        pirate.c pirate.h commands.h commands.c 
-        mode/sump.c mode/sump.h  
+        #main loop and printf
+        pirate.c pirate.h printf-4.0.0/printf.c printf-4.0.0/printf.h 
+        modes.c modes.h system_config.h system_config.c 
+        system_monitor.h system_monitor.c
+
         #pirate lib    
         pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
         pirate/bio.h pirate/bio.c pirate/storage.h pirate/storage.c
         pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h 
+        pirate/lcd.h pirate/lcd.c pirate/shift.h pirate/shift.c
+        pirate/amux.h pirate/amux.c
+
         #commands
+        commands.h commands.c
         commands/global/w_psu.h commands/global/w_psu.c  
         commands/global/p_pullups.h commands/global/p_pullups.c
         commands/global/cmd_mcu.h commands/global/cmd_mcu.c
@@ -43,53 +50,75 @@ set(bp5_common
         commands/global/a_auxio.h commands/global/a_auxio.c
         commands/global/dummy.c commands/global/dummy.h
         commands/global/disk.c commands/global/disk.h
+        commands/global/v_adc.c commands/global/v_adc.h
+        
         commands/2wire/sle4442.c commands/2wire/sle4442.h
 
         #to be adapted
-        ui/ui_lcd.c ui/ui_lcd.h rgb.c rgb.h
-	msc_disk.c usb_descriptors.c
-	displays.c displays.h display/default.c display/default.h
-        shift.h shift.c  amux.h amux.c 
-        system_config.h system_config.c modes.c modes.h
-        pwm.c pwm.h freq.c freq.h adc.c adc.h helpers.h helpers.c
+        rgb.c rgb.h pwm.c pwm.h freq.c freq.h
 
-        mode/dummy1.c mode/dummy1.h mode/hiz.h mode/hiz.c 
-        mode/hwspi.c mode/hwspi.h mode/spiflash.h mode/spiflash.c
-        lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c        mode/usart.h mode/usart.c 
-        mode/hwi2c.c mode/hwi2c.h lib/i2c_address_list/dev_i2c_addresses.h mode/pio_i2c.c mode/pio_i2c.h
-        mode/hwled.c mode/hwled.h
-        ui/ui_cmdln.c ui/ui_cmdln.h ui/ui_process.h ui/ui_process.c
+        #HiZ
+        mode/hiz.h mode/hiz.c 
+        #1Wire
         mode/hw1wire.h mode/hw1wire.c mode/onewire.h mode/onewire.c
-	display/scope.h display/scope.c
+        #UART
+        mode/usart.h mode/usart.c
+        lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
+        #I2C
+        mode/hwi2c.c mode/hwi2c.h lib/i2c_address_list/dev_i2c_addresses.h mode/pio_i2c.c mode/pio_i2c.h
+        lib/ms5611/ms5611.c lib/ms5611/ms5611.h lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
+        #SPI
+        mode/hwspi.c mode/hwspi.h 
+        flash.c flash.h  mode/spiflash.h mode/spiflash.c
+        lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h 
+        lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c         
+        #2WIRE
+        mode/hw2wire.h mode/hw2wire.c mode/hw2wire_pio.h mode/hw2wire_pio.c
+        #LED
+        mode/hwled.c mode/hwled.h
+        #DUMMY MODE
+        mode/dummy1.c mode/dummy1.h 
+  
+        #UI
+        ui/ui_cmdln.c ui/ui_cmdln.h 
+        ui/ui_process.h ui/ui_process.c
         ui/ui_flags.h
-        debug.c debug.h  
-        ui/ui_parse.c ui/ui_parse.h ui/ui_prompt.h ui/ui_prompt.c  ui/ui_mode.c ui/ui_mode.h
+        ui/ui_parse.c ui/ui_parse.h 
+        ui/ui_prompt.h ui/ui_prompt.c  
+        ui/ui_mode.c ui/ui_mode.h
 	ui/ui_display.c ui/ui_display.h
-        ui/ui_info.h ui/ui_info.c ui/ui_format.c ui/ui_format.c ui/ui_init.c ui/ui_init.h
-        ui/ui_const.h ui/ui_const.c ui/ui_config.h ui/ui_config.c 
-        ui/ui_help.c ui/ui_help.h
-        translation/base.h translation/base.c translation/en-us.h translation/zh-cn.h translation/pl-pl.h
-        queue.c queue.h 
-        usb_tx.c usb_tx.h usb_rx.c usb_rx.h
-
-        printf-4.0.0/printf.c printf-4.0.0/printf.h
-        font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
-        fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 
-
-        
-        ui/ui_term.c ui/ui_term.h  ui/ui_statusbar.c ui/ui_statusbar.h
-        system_monitor.h system_monitor.c
+        ui/ui_info.h ui/ui_info.c 
+        ui/ui_format.c ui/ui_format.c 
+        ui/ui_init.c ui/ui_init.h
+        ui/ui_const.h ui/ui_const.c 
+        ui/ui_config.h ui/ui_config.c 
+        ui/ui_help.c ui/ui_help.h  
+        ui/ui_term.c ui/ui_term.h  
+        ui/ui_statusbar.c ui/ui_statusbar.h
+        debug.c debug.h  
+        #JSON parser for saved settings
         mjson/mjson.h mjson/mjson.c 
+        #syntax and commands
         syntax.h syntax.c  syntax_struct.h
-        flash.c flash.h 
         opt_args.h 
         command_attributes.h bytecode.h
-        lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c lib/ms5611/ms5611.c lib/ms5611/ms5611.h
-        lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
-
+        #FATfs
+        fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 
+        #translations
+        translation/base.h translation/base.c 
+        translation/en-us.h translation/zh-cn.h translation/pl-pl.h
+        #binary mode
         mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
-        mode/logicanalyzer.h mode/logicanalyzer.c
-        mode/hw2wire.h mode/hw2wire.c mode/hw2wire_pio.h mode/hw2wire_pio.c
+        mode/logicanalyzer.h mode/logicanalyzer.c mode/sump.c mode/sump.h        
+        #displays
+        displays.c displays.h display/default.c display/default.h
+        ui/ui_lcd.c ui/ui_lcd.h display/scope.h display/scope.c 
+        font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h 
+        font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
+        #USB
+        queue.c queue.h 
+        usb_tx.c usb_tx.h usb_rx.c usb_rx.h
+        msc_disk.c usb_descriptors.c 
         )
 
 add_executable(bus_pirate5_rev8

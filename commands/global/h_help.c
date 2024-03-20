@@ -11,6 +11,7 @@
 #include "modes.h"
 #include "system_config.h"
 #include "ui/ui_cmdln.h"
+#include "displays.h"
 
 const struct ui_help_options global_commands[]={
 {1,"", T_HELP_SECTION_IO}, //work with pins, input, output measurement
@@ -88,7 +89,7 @@ const struct ui_help_options global_commands[]={
 //Get more help  
 {1,"",T_HELP_SECTION_HELP}, 
 	{0,"?/help",T_HELP_HELP_GENERAL},
-    {0,"hd",    T_HELP_HELP_DISPLAY},
+    //{0,"hd",    T_HELP_HELP_DISPLAY},
     {0,"-h", T_HELP_HELP_COMMAND},
 
 {1,"",T_HELP_HINT}
@@ -97,18 +98,27 @@ const struct ui_help_options global_commands[]={
 
 static const char * const help_usage[]= 
 {
-    "?|h|help [global|mode] [-h(elp)]",   
+    "?|help [mode|display] [-h(elp)]",   
     "Show global commands: ?",
     "Show help and commands for current mode: ? mode",
+	"Show help and commands for current display mode: ? display",
 };
 
 static const struct ui_help_options help_options[]={
 {1,"", T_HELP_HELP}, //command help
     {0,"?/help",T_HELP_SYS_COMMAND }, 
-    {0,"global", T_HELP_SYS_GLOBAL}, 
 	{0,"mode",T_HELP_SYS_MODE }, 
+    {0,"display", T_HELP_SYS_GLOBAL}, 
 	{0,"-h", T_HELP_SYS_HELP},
 };
+
+void help_display(void){
+	if (displays[system_config.display].display_help) {
+		displays[system_config.display].display_help();
+	} else {
+		printf("No display help available for this display mode\r\n");
+	}
+}
 
 void help_mode(void){
     //ui_help_options(&help_commands[0],count_of(help_commands));
@@ -126,9 +136,12 @@ void help_handler(struct command_result *res){
 	char action[9];
 	cmdln_args_string_by_position(1, sizeof(action), action);
     bool mode = (strcmp(action, "mode")==0);
-	if(!mode){
-    	ui_help_options(&global_commands[0],count_of(global_commands));
+	bool display = (strcmp(action, "display")==0);
+	if(mode){
+    	help_mode();
+	}else if(display){
+		help_display();
 	}else{
-		help_mode();
+		help_global();
 	}
 }

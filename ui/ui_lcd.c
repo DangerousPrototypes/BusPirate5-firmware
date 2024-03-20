@@ -3,7 +3,6 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "shift.h"
 #include "font/font.h"
 #include "font/hunter-23pt-24h24w.h"
 #include "font/hunter-20pt-21h21w.h"
@@ -19,6 +18,7 @@
 #include "bytecode.h"
 #include "modes.h"
 #include "displays.h"
+#include "pirate/lcd.h"
 
 void lcd_write_string(const FONT_INFO *font, const uint8_t *back_color, const uint8_t *text_color, const char *c, uint16_t fill_length);
 void lcd_write_labels(uint16_t left_margin, uint16_t top_margin, const FONT_INFO *font, const uint8_t *color, const char* c,uint16_t fill_length);
@@ -336,8 +336,7 @@ void lcd_write_labels(uint16_t left_margin, uint16_t top_margin, const FONT_INFO
 
 }
 
-void lcd_clear(void)
-{
+void lcd_clear(void){
     uint16_t x,y;
 
     lcd_set_bounding_box(0, 240, 0, 320);
@@ -400,27 +399,21 @@ void lcd_enable(void){
     lcd_write_command(0x29);
 }
 
-void lcd_screensaver_enable(void)
-{
-    shift_set_clear_wait( 0, (DISPLAY_BACKLIGHT)); 
+void lcd_screensaver_enable(void){
+    lcd_backlight_enable(false);
     lcd_clear();
 }
 
-void lcd_screensaver_disable(void)
-{
-    if (modes[system_config.mode].protocol_lcd_update)
-    {
+void lcd_screensaver_disable(void){
+    if (modes[system_config.mode].protocol_lcd_update){
         modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
-    } else 
-    if (displays[system_config.display].display_lcd_update)
-    {
+    } else if (displays[system_config.display].display_lcd_update) {
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
-    shift_set_clear_wait( (DISPLAY_BACKLIGHT), 0); 
+    lcd_backlight_enable(true);
 }
 
-void lcd_init(void)
-{
+void lcd_init(void){
     gpio_set_function(DISPLAY_CS, GPIO_FUNC_SIO);
     gpio_put(DISPLAY_CS, 1);
     gpio_set_dir(DISPLAY_CS, GPIO_OUT);

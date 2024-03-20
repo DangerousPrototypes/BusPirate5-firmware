@@ -3,7 +3,7 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include "pirate.h"
-#include "shift.h"
+#include "pirate/shift.h"
 #include "pirate/psu.h"
 #include "amux.h"
 
@@ -33,6 +33,11 @@ static void psu_vreg_enable(bool enable){
     else shift_set_clear_wait(CURRENT_EN,0); //high is off
 }
 
+void psu_current_limit_override(bool enable){
+    if(enable) shift_set_clear_wait(CURRENT_EN_OVERRIDE,0);
+    else shift_set_clear_wait(0,CURRENT_EN_OVERRIDE);
+}
+
 void psu_set_v(float volts, struct psu_status_t *psu){
     uint32_t psu_v_per_bit=((PSU_V_RANGE)/PWM_TOP);
     uint32_t vset=(uint32_t)((float)volts * 10000);
@@ -57,11 +62,6 @@ void psu_set_i(float current, struct psu_status_t *psu){
     psu->current_requested=current;
     psu->current_actual_i=(uint32_t)((float)iset*(float)psu_i_per_bit);
     psu->current_actual=iact;
-}
-
-void psu_current_limit_override(bool enable){
-    if(enable) shift_set_clear_wait(CURRENT_EN_OVERRIDE,0);
-    else shift_set_clear_wait(0,CURRENT_EN_OVERRIDE);
 }
 
 void psu_dac_set(uint16_t v_dac, uint16_t i_dac){

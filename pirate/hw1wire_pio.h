@@ -46,6 +46,5 @@ int OWSearchReset(struct owobj *search_owobj);
 int OWFirst(struct owobj *search_owobj);
 int OWNext(struct owobj *search_owobj);
 void onewire_test_ds18b20_scratchpad(void);
-uint32_t onewire_test_ds18b20_conversion(void);
 void onewire_test_spu(void);
 void onewire_test_wordlength(void);

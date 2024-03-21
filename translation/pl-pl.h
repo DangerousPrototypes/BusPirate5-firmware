@@ -375,6 +375,7 @@ static char const * const pl_pl[]={
 	[T_HELP_I2C_MS5611]="Read temperature and pressure from MS5611 sensor",
 	[T_HELP_I2C_TSL2561]="Read light intensity (LUX) from TSL2561 sensor",
 	[T_HELP_1WIRE_SCAN]="scan for 1-Wire devices",
+	[T_HELP_1WIRE_DS18B20]="Query DS18B20 temperature sensor",
 
 };
 

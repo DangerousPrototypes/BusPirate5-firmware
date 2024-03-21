@@ -525,6 +525,7 @@ void onewire_test_romsearch(void){
 /* Simple test with single DS18B20
    Configure, start conversion and read temperature.
    Assume phantom power. */
+#if 0 // This is now in the commands/1wire/demos.c
 uint32_t onewire_test_ds18b20_conversion(void){
     int  i;
     unsigned char buf[9];
@@ -576,7 +577,7 @@ uint32_t onewire_test_ds18b20_conversion(void){
 
     return 0;
 }
-
+#endif
 /* onewire_temp_app: Large scale example.
  *
  * Assumes: Only DS18B20 (or compatible) sensors on the 1-Wire and

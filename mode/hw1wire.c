@@ -14,7 +14,7 @@
 #include "hardware/pio.h"
 #include "pico/binary_info.h"
 #include "hardware/clocks.h"
-#include "mode/onewire.h"
+#include "pirate/hw1wire_pio.h"
 #include "ui/ui_help.h"
 
 // command configuration
@@ -31,8 +31,6 @@ static const char pin_labels[][5]={
 	"OWD"
 };
 
-struct owobj owobj;
-
 uint32_t hw1wire_setup(void){
 	uint32_t temp;	
 	return 1;
@@ -40,13 +38,7 @@ uint32_t hw1wire_setup(void){
 
 uint32_t hw1wire_setup_exc(void){
 	system_bio_claim(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
-    owobj.pio = M_OW_PIO;
-    owobj.sm = 1;
-    owobj.pin = bio2bufiopin[BIO3];
-    owobj.dir = bio2bufdirpin[BIO3];
-    onewire_init(&owobj);
-    onewire_set_fifo_thresh(&owobj, 8);
-    pio_sm_set_enabled(owobj.pio, owobj.sm, true);
+	onewire_init(M_OW_PIO, 1, bio2bufiopin[BIO3], bio2bufdirpin[BIO3]);
     return 1;
 }
 
@@ -58,7 +50,7 @@ void hw1wire_start(struct _bytecode *result, struct _bytecode *next){
 		result->error=SRES_WARN; 
 	}
 	
-	uint8_t device_detect=onewire_reset(&owobj);
+	uint8_t device_detect=onewire_reset();
 
 	if(device_detect){
         //result->error_message=t[T_HW1WIRE_PRESENCE_DETECT];
@@ -70,16 +62,16 @@ void hw1wire_start(struct _bytecode *result, struct _bytecode *next){
 }
 
 void hw1wire_write(struct _bytecode *result, struct _bytecode *next){
-    onewire_tx_byte(&owobj, result->out_data);
-    onewire_wait_for_idle(&owobj);
+    onewire_tx_byte(result->out_data);
+    onewire_wait_for_idle();
 }
 
 void hw1wire_read(struct _bytecode *result, struct _bytecode *next){
-    result->in_data=onewire_rx_byte(&owobj);
+    result->in_data=onewire_rx_byte();
 }
 
 void hw1wire_cleanup(void){
-	onewire_cleanup(&owobj);
+	onewire_cleanup();
 	bio_init();
 	system_bio_claim(false, M_OW_OWD, BP_PIN_MODE,0);
 }
@@ -90,8 +82,8 @@ void hw1wire_macro(uint32_t macro){
 	switch(macro){
 		case 0:		printf(" 1. 1-Wire ROM search\r\n 2. Read Single DS18B20 Temperature\r\n");
 				break;
-		case 1:		onewire_test_romsearch(&owobj);	break;
-        case 2:     result = onewire_test_ds18b20_conversion(&owobj); break;
+		case 1:		onewire_test_romsearch();	break;
+        case 2:     result = onewire_test_ds18b20_conversion(); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}

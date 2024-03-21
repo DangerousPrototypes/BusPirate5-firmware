@@ -185,7 +185,7 @@ struct _mode modes[MAXPROTO]={{
 	hw1wire_cleanup,				// cleanup for HiZ
 	//hiz_pins,				// display pin config
 	hiz_settings,				// display settings 
-	nohelp,					// display small help about the protocol
+	&hw1wire_help,					// display small help about the protocol
     hw1wire_commands,                   // mode specific commands
     &hw1wire_commands_count,                   // mode specific commands count    
     "1-WIRE",				// friendly name (promptname)

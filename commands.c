@@ -52,7 +52,6 @@ const struct _command_struct commands[]=
     {"G", false, &pwm_configure_enable, T_CMDLN_PWM_CONFIG}, //G
     {"g", false, &pwm_configure_disable, T_CMDLN_PWM_DIS },       // "g"
     {"h", true, &help_handler, 0x00 },         // "h" T_CMDLN_HELP_MODE
-    //{"hd", true, &helpers_display_help, T_CMDLN_HELP_DISPLAY },     // "hd"
     {"i", true, &i_info_handler, T_CMDLN_INFO },               // "i"
     {"l", true, &bitorder_msb_handler, T_CMDLN_BITORDER_MSB },    // "l"
     {"L", true, &bitorder_lsb_handler, T_CMDLN_BITORDER_LSB },    // "L"
@@ -71,7 +70,6 @@ const struct _command_struct commands[]=
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
     {"hex", true, &disk_hex_handler,0x00},                                // "hex"  T_CMDLN_HEX 
     {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
-    //{"flash", true, &flash, 0x00 },                              // "dump"
     {"dummy", true, &dummy_handler, 0x00 },                              // "dummy"
     {"help", true, &help_handler, 0x00},
 };

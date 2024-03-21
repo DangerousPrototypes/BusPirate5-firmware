@@ -2,9 +2,9 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
-#define BP_FIRMWARE_VERSION "v0.1.0"
+#define BP_FIRMWARE_VERSION "main branch"
 #ifndef BP_FIRMWARE_HASH //this variable is for the current commit GIT hash
-#define BP_FIRMWARE_HASH "commit unknown"
+#define BP_FIRMWARE_HASH _TIMEZ_
 #endif
 
 //#define XSTR(x) STR(x)

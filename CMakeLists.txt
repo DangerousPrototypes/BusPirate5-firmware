@@ -21,6 +21,17 @@ pico_sdk_init()
 
 #add_compile_definitions(BP_FIRMWARE_HASH=${BP_FIRMWARE_HASH})
 #add_compile_definitions(BP5_REV=8) 
+# build time in UTC ISO 8601
+FILE (WRITE ${CMAKE_BINARY_DIR}/timestamp.cmake "STRING(TIMESTAMP TIMEZ UTC)\n")
+FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(WRITE timestamp.h \"#ifndef TIMESTAMP_H\\n\")\n")
+FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(APPEND timestamp.h \"#define TIMESTAMP_H\\n\\n\")\n")
+FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(APPEND timestamp.h \"#define _TIMEZ_ \\\"\${TIMEZ}\\\"\\n\\n\")\n")
+FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(APPEND timestamp.h \"#endif // TIMESTAMP_H\\n\")\n")
+ADD_CUSTOM_TARGET (
+    timestamp
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/timestamp.cmake
+    ADD_DEPENDENCIES ${CMAKE_BINARY_DIR}/timestamp.cmake)
+
 
 # Add executable. Default name is the project name, version 0.1
 set(bp5_common 
@@ -52,9 +63,6 @@ set(bp5_common
         commands/global/disk.c commands/global/disk.h
         commands/global/v_adc.c commands/global/v_adc.h
         commands/global/i_info.c commands/global/i_info.h
-         
-        commands/spi/flash.c commands/spi/flash.h commands/spi/spiflash.h commands/spi/spiflash.c
-        commands/2wire/sle4442.c commands/2wire/sle4442.h
  
         #to be adapted
         pwm.c pwm.h freq.c freq.h
@@ -62,7 +70,8 @@ set(bp5_common
         #HiZ
         mode/hiz.h mode/hiz.c 
         #1Wire
-        mode/hw1wire.h mode/hw1wire.c mode/onewire.h mode/onewire.c
+        mode/hw1wire.h mode/hw1wire.c 
+        pirate/hw1wire_pio.h pirate/hw1wire_pio.c
         #UART
         mode/usart.h mode/usart.c
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
@@ -75,11 +84,13 @@ set(bp5_common
         lib/ms5611/ms5611.c lib/ms5611/ms5611.h lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         #SPI
         mode/hwspi.c mode/hwspi.h 
+        commands/spi/flash.c commands/spi/flash.h commands/spi/spiflash.h commands/spi/spiflash.c
         lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h 
         lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c         
         #2WIRE
         mode/hw2wire.h mode/hw2wire.c 
         pirate/hw2wire_pio.h pirate/hw2wire_pio.c
+        commands/2wire/sle4442.c commands/2wire/sle4442.h
         #LED
         mode/hwled.c mode/hwled.h
         #DUMMY MODE
@@ -173,13 +184,14 @@ set(revisions
         bus_pirate5_rev8  
         bus_pirate5_rev10
         )
- 
+        ADD_DEPENDENCIES (bus_pirate5_rev10 timestamp)
+
 foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw2wire.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwi2c.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
-        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw1wire.pio) 
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/logicanalyzer.pio)
 
         pico_set_program_name(${revision} ${revision})

@@ -74,10 +74,10 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac){
     pwm_set_chan_level(slice_num, i_chan_num, i_dac);    
 }
 
-bool psu_fuse_ok(void){
+bool psu_fuse_ok(void){ 
     uint32_t fuse=amux_read(HW_ADC_MUX_CURRENT_DETECT);
-    printf("Fuse: %d\r\n",fuse);
-    return (fuse > 100);
+    //printf("Fuse: %d\r\n",fuse);
+    return (fuse > 300);
 }
 
 bool psu_vout_ok(struct psu_status_t *psu){
@@ -127,8 +127,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override){
 
     printf("V dac: 0x%04X I dac: 0x%04X\r\n",psu_status.voltage_dac_value, psu_status.current_dac_value);
     //start with override engaged because the inrush will often trip the fuse on low limits
-    //psu_current_limit_override(true);//???
-    psu_current_limit_override(false);
+    psu_current_limit_override(true);
     psu_dac_set(psu_status.voltage_dac_value, PWM_TOP);
     psu_fuse_reset();
     psu_vreg_enable(true);
@@ -138,7 +137,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override){
     if(!current_limit_override){
         psu_current_limit_override(false);
         psu_dac_set(psu_status.voltage_dac_value, psu_status.current_dac_value);
-        busy_wait_ms(500);
+        busy_wait_ms(5);
         if(!psu_fuse_ok()){// did the fuse blow?
             psu_disable();
             return PSU_ERROR_FUSE_TRIPPED;

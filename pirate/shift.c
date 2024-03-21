@@ -38,8 +38,7 @@ void shift_clear_set(uint16_t clear_bits, uint16_t set_bits,  bool busy_wait){
     if(busy_wait) spi_busy_wait(false);
 }
 
-void shift_clear_set_wait(uint16_t clear_bits, uint16_t set_bits)
-{
+void shift_clear_set_wait(uint16_t clear_bits, uint16_t set_bits){
     shift_clear_set(clear_bits, set_bits, true);
 }
 #if 0

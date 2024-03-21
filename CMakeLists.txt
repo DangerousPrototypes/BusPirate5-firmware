@@ -184,9 +184,10 @@ set(revisions
         bus_pirate5_rev8  
         bus_pirate5_rev10
         )
-        ADD_DEPENDENCIES (bus_pirate5_rev10 timestamp)
+        
 
 foreach(revision ${revisions})
+        ADD_DEPENDENCIES (${revision} timestamp)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw2wire.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwi2c.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)

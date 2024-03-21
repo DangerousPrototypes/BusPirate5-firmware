@@ -12,10 +12,8 @@
 #include "pirate/hwi2c_pio.h"
 #include "pirate/storage.h"
 #include "commands/i2c/scan.h"
+#include "commands/i2c/demos.h"
 #include "ui/ui_term.h"
-#include "lib/ms5611/ms5611.h"
-#include "lib/tsl2561/driver_tsl2561.h" 
-#include "lib/i2c_address_list/dev_i2c_addresses.h"
 #include "ui/ui_help.h"
 
 #define M_I2C_PIO pio0
@@ -36,6 +34,9 @@ static uint pio_state_machine = 3;
 const struct _command_struct hwi2c_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
     {"scan",0x00,&i2c_search_addr,T_HELP_I2C_SCAN}, // the help is shown in the -h *and* the list of mode apps
+	{"si7021",0x00,&demo_si7021,T_HELP_I2C_SI7021},
+	{"ms5611",0x00,&demo_ms5611,T_HELP_I2C_MS5611},
+	{"tsl2561",0x00,&demo_tsl2561,T_HELP_I2C_TSL2561},
 };
 const uint32_t hwi2c_commands_count=count_of(hwi2c_commands);
 
@@ -142,151 +143,17 @@ void hwi2c_read(struct _bytecode *result, struct _bytecode *next){
     hwi2c_error(error, result);
 	result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);
 }
-uint32_t macro_si7021(void);
-uint32_t macro_ms5611(void);
-uint32_t macro_tsl2561(void);
-unsigned int CalculateLux(unsigned int iGain, unsigned int tInt, unsigned int ch0, unsigned int ch1, int iType);
+
 void hwi2c_macro(uint32_t macro){
 	uint32_t result=0;
 	switch(macro){
-		case 0:		printf(" 1. I2C Address search\r\n 2. SI7021/HTU21/SHT21/HDC1080\r\n 3. MS5611\r\n 4. TSL2561\r\n");
-//				printf(" 2. I2C sniffer\r\n";
+		case 0:		printf(" 0. Macro menu\r\n");
 				break;
-		case 1:		break;
-		case 2: 	result=macro_si7021(); break;
-		case 3:		result=macro_ms5611(); break;
-		case 4:		result=macro_tsl2561(); break;
-		case 5:		break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
-
-	if(result){
-		printf("Device not found\r\n");
-	}
 }
 
-uint32_t macro_tsl2561()
-{
-	//select register [0b01110010 0b11100000]
-	// start device [0b01110010 3]
-	//confirm start [0b01110011 r]
-	// select ID register [0b01110010 0b11101010]
-	// read ID register [0b01110011 r] 7:4 0101 = TSL2561T 3:0 0 = revision
-	// select ADC register [0b01110010 0b11101100]
-	//0b11011100
-	uint16_t chan0, chan1;
-	char data[4];
-
-	printf("TSL2561 LUX sensor\r\n");
-
-	//select register [0b01110010 0b11100000]
-	data[0]=0b11100000;
-	if(pio_i2c_write_blocking_timeout( 0b01110010, data, 1, 0xffff)) return 1;
-	// start device [0b01110010 3]
-	data[0]=3;
-	if(pio_i2c_write_blocking_timeout( 0b01110010, data, 1, 0xffff)) return 1;
-	busy_wait_ms(500);
-	// select ID register [0b01110010 0b11101010]
-	// read ID register [0b01110011 r] 7:4 0101 = TSL2561T 3:0 0 = revision
-	data[0]=0b11101010;
-	if(pio_i2c_transaction_blocking_timeout( 0b01110010, data, 1, data, 1, 0xffff)) return 1;	
-	printf("ID: %d REV: %d\r\n", data[0]>>4, data[0]&0b1111);
-	// select ADC register [0b01110010 0b11101100]	
-	data[0]=0b11101100;
-	if(pio_i2c_transaction_blocking_timeout( 0b01110010, data, 1, data, 4, 0xffff)) return 1;	
-	chan0=data[1]<<8|data[0];
-	chan1=data[3]<<8|data[2];
-
-	uint32_t lux1=a_tsl2561_calculate_lux(0, 2,chan0, chan1);
-
-	printf("Chan0: %d Chan1: %d LUX: %d\r\n", chan0, chan1, lux1);
-
-	return 0;
-}
-
-uint32_t macro_ms5611()
-{
-	//PS high, CSB low
-	//reset [0b11101110 0b00011110]
-	//PROM read [0b11101110 0b10100110] [0b11101111 r:2]
-	//start conversion [0b11101110 0b01001000]
-	//ADC read [0b11101110 0] [0b11101111 r:3]
-	float temperature;
-	float pressure;
-	printf("MS5611 Temp & Pressure sensor\r\n");
-	if(ms5611_read_temperature_and_pressure_simple( &temperature, &pressure))
-	{
-		return 1;
-	}
-	printf("Temperature: %f\r\nPressure: %f\r\n", temperature, pressure);
-	return 0;
-}
-
-uint32_t macro_si7021()
-{
-	uint8_t data[8];
-
-	printf("SI7021/HTU21/SHT21 Temp & Humidity sensor\r\n");
-
-	// humidity
-	data[0]=0xf5;
-	if(pio_i2c_write_blocking_timeout( 0x80, data, 1, 0xffff))
-	{
-		return 1;
-	}
-	busy_wait_ms(23); //delay for max conversion time
-	if(pio_i2c_read_blocking_timeout( 0x81, data, 2, 0xffff))
-	{
-		return 1;
-	}
-	float f=(float)((float)(125*(data[0]<<8 | data[1]))/65536)-6;
-	printf("Humidity:\r\n [0x80 0xf5] D:23 [0x81 r:2]\r\n %.2f%% (%#04x %#04x)\r\n", f, data[0], data[1]);
-
-	// temperature [0x80 0xe0] [0x81 r:2]
-	
-	data[0]=0xf3;
-	if(pio_i2c_write_blocking_timeout( 0x80, data, 1, 0xffff))
-	{
-		return 1;
-	}
-	busy_wait_ms(100); //delay for max conversion time
-	if(pio_i2c_read_blocking_timeout( 0x81, data, 2, 0xffff))
-	{
-		return 1;
-	}
-	f=(float)((float)(175.72*(data[0]<<8 | data[1]))/65536)-46.85;
-	printf("Temperature:\r\n [0x80 0xf3] D:100 [0x81 r:2]\r\n %.2fC (%#04x %#04x)\r\n", f, data[0], data[1]);
-
-	//SN
-	data[0]=0xfa;
-	data[1]=0xf0;
-	uint8_t sn[8];
-	if(pio_i2c_transaction_blocking_timeout( 0x80, data, 2, data, 8, 0xffff))
-	{
-		return 1;
-	} 
-	sn[2]=data[6];
-	sn[3]=data[4];
-	sn[4]=data[2];
-	sn[5]=data[0];
-
-	data[0]=0xfc;
-	data[1]=0xc9;
-	if(pio_i2c_transaction_blocking_timeout( 0x80, data, 2, data, 6, 0xffff))
-	{
-		return 1;
-	}
-	sn[0]=data[1];
-	sn[1]=data[0];
-	sn[6]=data[4];
-	sn[7]=data[3]; 	
-	printf("Serial Number:\r\n [0x80 0xfa 0xf0] [0x81 r:8] [0x80 0xfc 0xc9] [0x81 r:6]\r\n");
-	printf("0x%02x%02x%02x%02x%02x%02x%02x%02x\r\n", sn[7],sn[6],sn[5],sn[4],sn[3],sn[2],sn[1],sn[0]);
-
-
-	return 0;
-}
 
 void hwi2c_cleanup(void){
 	pio_i2c_cleanup();
@@ -332,7 +199,7 @@ void hwi2c_help(void){
 	printf("\t\t  | |\r\n");
 	printf("\tSDA \t--+-|------------- SDA\r\n");
 	printf("{BP}\tSCL\t----+------------- SCL  {DUT}\r\n");
-	printf("\tGND\t------------------ GND\r\n");	
+	printf("\tGND\t------------------ GND\r\n\r\n");	
 
 	ui_help_mode_commands(hwi2c_commands, hwi2c_commands_count);			
 }

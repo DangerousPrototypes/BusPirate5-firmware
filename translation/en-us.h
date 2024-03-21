@@ -387,7 +387,10 @@ static char const * const en_us[]={
 	[T_HELP_VADC_IO]="IO pin number, 0-7",
 	[T_HELP_I2C_SCAN]="scan I2C addresses, with optional part number",
 	[T_HELP_I2C_SCAN_VERBOSE]="Verbose mode, print potential part numbers",
-	[T_HELP_FLAG]="Get additional help"
+	[T_HELP_FLAG]="Get additional help",
+	[T_HELP_I2C_SI7021]="Read temperature and humidity from SI7021/HTU21/SHT21 sensor",
+	[T_HELP_I2C_MS5611]="Read temperature and pressure from MS5611 sensor",
+	[T_HELP_I2C_TSL2561]="Read light intensity (LUX) from TSL2561 sensor",
 };
 
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

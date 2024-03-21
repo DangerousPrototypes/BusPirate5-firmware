@@ -1,1 +1,1 @@
-void i2c_search_addr(bool verbose);
+void i2c_search_addr(struct command_result *res);

@@ -111,7 +111,7 @@ static char const * const zh_cn[]={
 	[T_HWI2C_STOP]="I2C STOP",
 	[T_HWI2C_ACK]="ACK",
 	[T_HWI2C_NACK]="NACK",
-	[T_HWI2C_NO_PULLUP_DETECTED]="no pull-up detected. Use P to enable onboard pull-up resistors",
+	[T_HWI2C_NO_PULLUP_DETECTED]="no pull-up. Enable power (W) and pull-up resistors (P)",
 	[T_HWI2C_TIMEOUT]="I2C timeout",
 	[T_HWI2C_I2C_ERROR]="I2C bus error",
 	[T_HW2WIRE_SPEED_MENU]="2WIRE speed",
@@ -371,6 +371,9 @@ static char const * const zh_cn[]={
 	[T_HELP_I2C_SCAN]="scan I2C addresses, with optional part number",
 	[T_HELP_I2C_SCAN_VERBOSE]="Verbose mode, print potential part numbers",
 	[T_HELP_FLAG]="Get additional help",
+	[T_HELP_I2C_SI7021]="Read temperature and humidity from SI7021/HTU21/SHT21 sensor",
+	[T_HELP_I2C_MS5611]="Read temperature and pressure from MS5611 sensor",
+	[T_HELP_I2C_TSL2561]="Read light intensity (LUX) from TSL2561 sensor",
 
 };
 

@@ -70,6 +70,7 @@ set(bp5_common
         mode/hwi2c.c mode/hwi2c.h 
         pirate/hwi2c_pio.c pirate/hwi2c_pio.h
         commands/i2c/scan.h commands/i2c/scan.c
+        commands/i2c/demos.h commands/i2c/demos.c
         lib/i2c_address_list/dev_i2c_addresses.h 
         lib/ms5611/ms5611.c lib/ms5611/ms5611.h lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         #SPI

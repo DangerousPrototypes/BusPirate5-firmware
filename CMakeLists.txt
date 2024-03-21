@@ -72,6 +72,7 @@ set(bp5_common
         #1Wire
         mode/hw1wire.h mode/hw1wire.c 
         pirate/hw1wire_pio.h pirate/hw1wire_pio.c
+        commands/1wire/scan.h commands/1wire/scan.c
         #UART
         mode/usart.h mode/usart.c
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c

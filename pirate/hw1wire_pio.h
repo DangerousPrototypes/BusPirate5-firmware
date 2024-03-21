@@ -23,7 +23,6 @@ struct owobj
 };
 void onewire_init(PIO pio, uint sm, uint pin, uint dir);
 void onewire_cleanup(void);
-void onewire_test_romsearch(void);
 void pio_sm_trace(PIO pio, uint sm, uint usleep);
 void onewire_set_fifo_thresh(uint thresh);
 int onewire_reset(void);
@@ -44,10 +43,9 @@ int onewire_select(
 unsigned char calc_crc8(unsigned char data);
 int OWSearch(void);
 int OWSearchReset(void);
-int OWFirst(void);
-int OWNext(void);
+int OWFirst(char *romno);
+int OWNext(char *romno);
 void onewire_test_ds18b20_scratchpad(void);
 uint32_t onewire_test_ds18b20_conversion(void);
 void onewire_test_spu(void);
 void onewire_test_wordlength(void);
-void onewire_test_romsearch(void);

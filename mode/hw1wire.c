@@ -16,11 +16,12 @@
 #include "hardware/clocks.h"
 #include "pirate/hw1wire_pio.h"
 #include "ui/ui_help.h"
+#include "commands/1wire/scan.h"
 
 // command configuration
 const struct _command_struct hw1wire_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
-    //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+    {"scan",false,&onewire_test_romsearch,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
 };
 const uint32_t hw1wire_commands_count=count_of(hw1wire_commands);
 
@@ -80,10 +81,8 @@ void hw1wire_cleanup(void){
 void hw1wire_macro(uint32_t macro){
 	uint32_t result=0;
 	switch(macro){
-		case 0:		printf(" 1. 1-Wire ROM search\r\n 2. Read Single DS18B20 Temperature\r\n");
+		case 0:		printf(" 0. Macro list\r\n");
 				break;
-		case 1:		onewire_test_romsearch();	break;
-        case 2:     result = onewire_test_ds18b20_conversion(); break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}

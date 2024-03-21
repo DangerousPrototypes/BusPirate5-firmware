@@ -448,12 +448,12 @@ int OWSearchReset(void){
 // Return TRUE  : device found, ROM number in ROM_NO buffer
 //        FALSE : no device present
 //
-int OWFirst(void){
+int OWFirst(char *romno){
     // reset the search state
     owobj.LastDiscrepancy = 0;
     owobj.LastDeviceFlag = FALSE;
     owobj.LastFamilyDiscrepancy = 0;
-
+    romno=owobj.ROM_NO;
     return OWSearch();
 }
 
@@ -462,107 +462,17 @@ int OWFirst(void){
 // Return TRUE  : device found, ROM number in ROM_NO buffer
 //        FALSE : device not found, end of search
 //
-int OWNext(void){
+int OWNext(char *romno){
     // leave the search state alone
+    romno=owobj.ROM_NO;
     return OWSearch();
 }
 
 /* End of MAXIM AN3684 code */
 
-
-// device list from: http://owfs.sourceforge.net/commands.html
-void DS1wireID(unsigned char famID){
-    switch(famID){									
-        //check for device type
-		case 0x01:	printf("DS1990A Silicon Serial Number");
-				break;
-		case 0x02:	printf("DS1991 multikey 1153bit secure");
-				break;
-		case 0x04:	printf("DS1994 econoram time chip");
-				break;
-		case 0x05:	printf("Addressable Switch");
-				break;
-		case 0x06:	printf("DS1993 4K memory ibutton");
-				break;
-		case 0x08:	printf("DS1992 1K memory ibutton");
-				break;
-		case 0x09:	printf("DS1982 1K add-only memory");
-				break;
-		case 0x0A:	printf("DS1995 16K memory ibutton");
-				break;
-		case 0x0B:	printf("DS1985 16K add-only memory");
-				break;
-		case 0x0C:	printf("DS1996 64K memory ibutton");
-				break;
-		case 0x0F:	printf("DS1986 64K add-only memory");
-				break;
-		case 0x10:	printf("DS1920 high precision digital thermometer");
-				break;
-		case 0x12:	printf("Dual switch + 1K RAM");
-				break;
-		case 0x14:	printf("DS1971 256byte EEPROM");
-				break;
-		case 0x1A:	printf("DS1963L 4K Monetary");
-				break;
-		case 0x1C:	printf("4K EEPROM withPIO");
-				break;
-		case 0x1D:	printf("4K RAM with counter");
-				break;
-		case 0x1F:	printf("Microlan coupler");
-				break;
-		case 0x20:	printf("Quad ADC");
-				break;
-		case 0x21:	printf("DS1921 Thermachron");
-				break;
-		case 0x22:	printf("Econo Digital Thermometer");
-				break;
-		case 0x23:	printf("4K EEPROM");
-				break;
-		case 0x24:	printf("Time chip");
-				break;
-		case 0x26:	printf("Smart battery monitor");
-				break;
-		case 0x27:	printf("Time chip with interrupt");
-				break;
-		case 0x28:	printf("DS18B20 digital thermometer");
-				break;
-		case 0x29:	printf("8-channel addressable switch");
-				break;
-		case 0x2C:	printf("Digital potentiometer");
-				break;
-		case 0x2D:	printf("DS2431 1K EEPROM");
-				break;
-		case 0x2E:	printf("battery monitor and charge controller");
-				break;
-		case 0x30:	printf("Precision li+ battery monitor");
-				break;
-		case 0x31:	printf("Rechargable lithium protection IC");
-				break;
-		case 0x33:	printf("DS1961S 1k protected EEPROM with SHA-1");
-				break;
-		case 0x36:	printf("High precision coulomb counter");
-				break;
-		case 0x37:	printf("DS1977 Password protected 32K EEPROM");
-				break;
-		case 0x41:	printf("DS1922/3 Temperature Logger 8K mem");
-				break;
-		case 0x51:	printf("Multichemistry battery fuel gauge");
-				break;
-		case 0x84:	printf("Dual port plus time");
-				break;
-		case 0x89:	printf("DS1982U 48bit node address chip");
-				break;
-		case 0x8B:	printf("DS1985U 16K add-only uniqueware");
-				break;
-		case 0x8F:	printf("DS1986U 64K add-only uniqueware");
-				break;
-                default:
-			printf("Unknown device");
-
-        }
-}
-
 /* ROM Search test */
+// This is now in the commands/1wire/scan.c
+#if 0 
 void onewire_test_romsearch(void){
     int i;
     int ret;
@@ -616,7 +526,7 @@ void onewire_test_romsearch(void){
     }
 #endif
 }
-
+#endif
 
 /* Simple test with single DS18B20
    Configure, start conversion and read temperature.

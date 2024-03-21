@@ -368,6 +368,9 @@ static char const * const pl_pl[]={
 	[T_HELP_VADC_SINGLE]="Single measurement",
 	[T_HELP_VADC_CONTINUOUS]="Continuous measurement",
 	[T_HELP_VADC_IO]="IO pin number, 0-7",
+	[T_HELP_I2C_SCAN]="scan I2C addresses, with optional part number",
+	[T_HELP_I2C_SCAN_VERBOSE]="Verbose mode, print potential part numbers",
+	[T_HELP_FLAG]="Get additional help",
 
 };
 

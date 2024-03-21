@@ -1,73 +1,58 @@
-
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
-#include "i2c.pio.h"
-#include "mode/pio_i2c.h"
+#include "pirate/hwi2c_pio.h"
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
+#include "system_config.h"
+#include "opt_args.h"
+#include "bytecode.h"
+#include "mode/hwi2c.h"
 #include "lib/i2c_address_list/dev_i2c_addresses.h"
+#include "ui/ui_help.h"
+#include "ui/ui_cmdln.h"
 
-bool reserved_addr(uint8_t addr) {
-    return (addr & 0x78) == 0 || (addr & 0x78) == 0x78;
-}
+static const char * const usage[]= {
+    "scan\t[-v(erbose)] [-h(elp)]",   
+    "Scan I2C address space: scan",
+    "Scan, list possible part numbers: scan -v",
+};
 
-bool i2c_search_check_addr(uint8_t address){
-	uint16_t ack;
-	uint32_t error;
+static const struct ui_help_options options[]= {
+{1,"", T_HELP_I2C_SCAN}, //command help
+    {0,"-v",T_HELP_I2C_SCAN_VERBOSE}, //verbose
+    {0,"-h",T_HELP_FLAG}, //help
+};
 
-	error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfff);
-	if(error){
-		pio_i2c_resume_after_error(pio, pio_state_machine);
-	}
-	ack=pio_i2c_write_timeout(pio, pio_state_machine, address, 0xfff);
+bool i2c_search_check_addr(uint8_t address);
 
-	if(ack){
-		pio_i2c_resume_after_error(pio, pio_state_machine);
-	}
+void i2c_search_addr(struct command_result *res){
+    //check help
+    if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
 
-	//if read address then read one and NACK
-	if(!ack && (address&0x1)){
-		error=pio_i2c_read_timeout(pio, pio_state_machine, &error, false, 0xfff);
-		if(error)
-		{
-			pio_i2c_resume_after_error(pio, pio_state_machine);
-		}	
-	} 
-	
-	error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xfff);
-	if(error){
-		pio_i2c_resume_after_error(pio, pio_state_machine);
-	}	
-	
-	return (!ack);	
-}
-
-static void i2c_search_addr(bool verbose){
+    bool verbose=cmdln_args_find_flag('v');
 	bool color = false;
 	uint16_t device_count=0;
 	uint16_t device_pairs=0;
 
-	/*if(checkshort()){
-		printf("No pullup or short\r\n");
+	if(hwi2c_checkshort()){
+        ui_help_error(T_HWI2C_NO_PULLUP_DETECTED);
+		//printf("No pull-up or short circuit. Enable power (W) and pull-up resistors (P)\r\n");
 		system_config.error=1;
+        res->error=true;
 		return;
-	}*/
-
+	}
 	printf("I2C address search:\r\n");
-
-	pio_i2c_rx_enable(pio, pio_state_machine, false);
-
+	pio_i2c_rx_enable( false);
 	for(uint16_t i=0; i<256; i=i+2){
-
 		bool i2c_w=i2c_search_check_addr(i);
 		bool i2c_r=i2c_search_check_addr(i+1);
-
-		if(i2c_w||i2c_r){
+		
+        if(i2c_w||i2c_r){
 			device_count+=(i2c_w+i2c_r); //add any new devices
 			if(i2c_w&&i2c_r) device_pairs++;
-		
+	
 			color=!color;
 			if(color||verbose)
 					ui_term_color_text_background(hw_pin_label_ordered_color[0][0],hw_pin_label_ordered_color[0][1]);
@@ -86,4 +71,35 @@ static void i2c_search_addr(bool verbose){
 	}	
 
     printf("%s\r\nFound %d addresses, %d W/R pairs.\r\n",ui_term_color_reset(), device_count, device_pairs);
+}
+
+bool i2c_search_check_addr(uint8_t address){
+	uint16_t ack;
+	uint32_t error;
+
+	error=pio_i2c_start_timeout( 0xfff);
+	if(error){
+		pio_i2c_resume_after_error();
+	}
+	ack=pio_i2c_write_timeout( address, 0xfff);
+
+	if(ack){
+		pio_i2c_resume_after_error();
+	}
+
+	//if read address then read one and NACK
+	if(!ack && (address&0x1)){
+		error=pio_i2c_read_timeout( &error, false, 0xfff);
+		if(error)
+		{
+			pio_i2c_resume_after_error();
+		}	
+	} 
+	
+	error=pio_i2c_stop_timeout( 0xfff);
+	if(error){
+		pio_i2c_resume_after_error();
+	}	
+	
+	return (!ack);	
 }

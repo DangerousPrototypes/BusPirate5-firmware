@@ -10,12 +10,12 @@
 #include "ui/ui_info.h"
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
+#include "ui_help.h"
 
 static const struct prompt_result empty_result;
 
-void ui_prompt_invalid_option(void)
-{
-	ui_info_print_error(T_MODE_INVALID_OPTION);
+void ui_prompt_invalid_option(void){
+	ui_help_error(T_MODE_INVALID_OPTION);
 }
 
 // INTEGER 

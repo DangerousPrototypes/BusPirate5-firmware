@@ -8,9 +8,10 @@
 #include "mode/hwi2c.h"
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
-#include "i2c.pio.h"
-#include "mode/pio_i2c.h"
+#include "hwi2c.pio.h"
+#include "pirate/hwi2c_pio.h"
 #include "pirate/storage.h"
+#include "commands/i2c/scan.h"
 #include "ui/ui_term.h"
 #include "lib/ms5611/ms5611.h"
 #include "lib/tsl2561/driver_tsl2561.h" 
@@ -30,16 +31,11 @@ static struct _i2c_mode_config mode_config;
 
 static PIO pio = M_I2C_PIO;
 static uint pio_state_machine = 3;
-static uint pio_loaded_offset;
-
-static void i2c_search_addr(bool verbose);
-
-static uint8_t checkshort(void);
 
 // command configuration
 const struct _command_struct hwi2c_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
-    //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+    {"scan",0x00,&i2c_search_addr,T_HELP_I2C_SCAN}, // the help is shown in the -h *and* the list of mode apps
 };
 const uint32_t hwi2c_commands_count=count_of(hwi2c_commands);
 
@@ -84,8 +80,7 @@ uint32_t hwi2c_setup(void){
 }
 
 uint32_t hwi2c_setup_exc(void){
-	pio_loaded_offset = pio_add_program(pio, &i2c_program);
-    i2c_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_I2C_SDA], bio2bufiopin[M_I2C_SCL], bio2bufdirpin[M_I2C_SDA], bio2bufdirpin[M_I2C_SCL], mode_config.baudrate);
+	pio_i2c_init(pio, pio_state_machine, bio2bufiopin[M_I2C_SDA], bio2bufiopin[M_I2C_SCL], bio2bufdirpin[M_I2C_SDA], bio2bufdirpin[M_I2C_SCL], mode_config.baudrate);
 	system_bio_claim(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
 	mode_config.start_sent=false;
@@ -97,13 +92,13 @@ bool hwi2c_error(uint32_t error, struct _bytecode *result){
 		case 1:
 			result->error_message=t[T_HWI2C_I2C_ERROR];
 			result->error=SRES_ERROR; 
-			pio_i2c_resume_after_error(pio, pio_state_machine);
+			pio_i2c_resume_after_error();
 			return true;
 			break;
 		case 2:
 			result->error_message=t[T_HWI2C_TIMEOUT];
 			result->error=SRES_ERROR; 
-			pio_i2c_resume_after_error(pio, pio_state_machine);
+			pio_i2c_resume_after_error();
 			return true;
 			break;
 		default:
@@ -113,11 +108,11 @@ bool hwi2c_error(uint32_t error, struct _bytecode *result){
 
 void hwi2c_start(struct _bytecode *result, struct _bytecode *next){
 	result->data_message=t[T_HWI2C_START];
-	if(checkshort()){
+	if(hwi2c_checkshort()){
 		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
 		result->error=SRES_WARN; 
 	}
-	uint8_t error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfffff);
+	uint8_t error=pio_i2c_start_timeout(0xfffff);
 	if(!hwi2c_error(error, result)){
 		mode_config.start_sent=true;
 	}
@@ -125,7 +120,7 @@ void hwi2c_start(struct _bytecode *result, struct _bytecode *next){
 
 void hwi2c_stop(struct _bytecode *result, struct _bytecode *next){
 	result->data_message=t[T_HWI2C_STOP];
-	uint32_t error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xffff);
+	uint32_t error=pio_i2c_stop_timeout( 0xffff);
 	hwi2c_error(error, result);
 }
 
@@ -133,17 +128,17 @@ void hwi2c_write(struct _bytecode *result, struct _bytecode *next){
 	//if a start was just sent, determine if this is a read or write address
 	// and configure the PIO I2C
 	if(mode_config.start_sent){
-		pio_i2c_rx_enable(pio, pio_state_machine, (result->out_data & 1u));
+		pio_i2c_rx_enable( (result->out_data & 1u));
 		mode_config.start_sent=false;
 	}
-	uint32_t error=pio_i2c_write_timeout(pio, pio_state_machine, result->out_data, 0xffff);
+	uint32_t error=pio_i2c_write_timeout( result->out_data, 0xffff);
 	hwi2c_error(error, result);
 	result->data_message=(error?t[T_HWI2C_NACK]:t[T_HWI2C_ACK]);
 }
 
 void hwi2c_read(struct _bytecode *result, struct _bytecode *next){
 	bool ack=(next?(next->command!=4):true);
-	uint32_t error=pio_i2c_read_timeout(pio, pio_state_machine, &result->in_data, ack, 0xffff);
+	uint32_t error=pio_i2c_read_timeout( &result->in_data, ack, 0xffff);
     hwi2c_error(error, result);
 	result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);
 }
@@ -151,25 +146,22 @@ uint32_t macro_si7021(void);
 uint32_t macro_ms5611(void);
 uint32_t macro_tsl2561(void);
 unsigned int CalculateLux(unsigned int iGain, unsigned int tInt, unsigned int ch0, unsigned int ch1, int iType);
-void hwi2c_macro(uint32_t macro)
-{
+void hwi2c_macro(uint32_t macro){
 	uint32_t result=0;
-	switch(macro)
-	{
+	switch(macro){
 		case 0:		printf(" 1. I2C Address search\r\n 2. SI7021/HTU21/SHT21/HDC1080\r\n 3. MS5611\r\n 4. TSL2561\r\n");
 //				printf(" 2. I2C sniffer\r\n";
 				break;
-		case 1:		i2c_search_addr(false);	break;
+		case 1:		break;
 		case 2: 	result=macro_si7021(); break;
 		case 3:		result=macro_ms5611(); break;
 		case 4:		result=macro_tsl2561(); break;
-		case 5:		i2c_search_addr(true); break;
+		case 5:		break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
 
-	if(result)
-	{
+	if(result){
 		printf("Device not found\r\n");
 	}
 }
@@ -190,19 +182,19 @@ uint32_t macro_tsl2561()
 
 	//select register [0b01110010 0b11100000]
 	data[0]=0b11100000;
-	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0b01110010, data, 1, 0xffff)) return 1;
+	if(pio_i2c_write_blocking_timeout( 0b01110010, data, 1, 0xffff)) return 1;
 	// start device [0b01110010 3]
 	data[0]=3;
-	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0b01110010, data, 1, 0xffff)) return 1;
+	if(pio_i2c_write_blocking_timeout( 0b01110010, data, 1, 0xffff)) return 1;
 	busy_wait_ms(500);
 	// select ID register [0b01110010 0b11101010]
 	// read ID register [0b01110011 r] 7:4 0101 = TSL2561T 3:0 0 = revision
 	data[0]=0b11101010;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0b01110010, data, 1, data, 1, 0xffff)) return 1;	
+	if(pio_i2c_transaction_blocking_timeout( 0b01110010, data, 1, data, 1, 0xffff)) return 1;	
 	printf("ID: %d REV: %d\r\n", data[0]>>4, data[0]&0b1111);
 	// select ADC register [0b01110010 0b11101100]	
 	data[0]=0b11101100;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0b01110010, data, 1, data, 4, 0xffff)) return 1;	
+	if(pio_i2c_transaction_blocking_timeout( 0b01110010, data, 1, data, 4, 0xffff)) return 1;	
 	chan0=data[1]<<8|data[0];
 	chan1=data[3]<<8|data[2];
 
@@ -223,7 +215,7 @@ uint32_t macro_ms5611()
 	float temperature;
 	float pressure;
 	printf("MS5611 Temp & Pressure sensor\r\n");
-	if(ms5611_read_temperature_and_pressure_simple(pio, pio_state_machine, &temperature, &pressure))
+	if(ms5611_read_temperature_and_pressure_simple( &temperature, &pressure))
 	{
 		return 1;
 	}
@@ -239,12 +231,12 @@ uint32_t macro_si7021()
 
 	// humidity
 	data[0]=0xf5;
-	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0x80, data, 1, 0xffff))
+	if(pio_i2c_write_blocking_timeout( 0x80, data, 1, 0xffff))
 	{
 		return 1;
 	}
 	busy_wait_ms(23); //delay for max conversion time
-	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 2, 0xffff))
+	if(pio_i2c_read_blocking_timeout( 0x81, data, 2, 0xffff))
 	{
 		return 1;
 	}
@@ -254,12 +246,12 @@ uint32_t macro_si7021()
 	// temperature [0x80 0xe0] [0x81 r:2]
 	
 	data[0]=0xf3;
-	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine, 0x80, data, 1, 0xffff))
+	if(pio_i2c_write_blocking_timeout( 0x80, data, 1, 0xffff))
 	{
 		return 1;
 	}
 	busy_wait_ms(100); //delay for max conversion time
-	if(pio_i2c_read_blocking_timeout(pio, pio_state_machine, 0x81, data, 2, 0xffff))
+	if(pio_i2c_read_blocking_timeout( 0x81, data, 2, 0xffff))
 	{
 		return 1;
 	}
@@ -270,7 +262,7 @@ uint32_t macro_si7021()
 	data[0]=0xfa;
 	data[1]=0xf0;
 	uint8_t sn[8];
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, data, 8, 0xffff))
+	if(pio_i2c_transaction_blocking_timeout( 0x80, data, 2, data, 8, 0xffff))
 	{
 		return 1;
 	} 
@@ -281,7 +273,7 @@ uint32_t macro_si7021()
 
 	data[0]=0xfc;
 	data[1]=0xc9;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0x80, data, 2, data, 6, 0xffff))
+	if(pio_i2c_transaction_blocking_timeout( 0x80, data, 2, data, 6, 0xffff))
 	{
 		return 1;
 	}
@@ -297,7 +289,7 @@ uint32_t macro_si7021()
 }
 
 void hwi2c_cleanup(void){
-	pio_remove_program (pio, &i2c_program, pio_loaded_offset);
+	pio_i2c_cleanup();
 	bio_init();
 	system_bio_claim(false, M_I2C_SDA, BP_PIN_MODE,0);
 	system_bio_claim(false, M_I2C_SCL, BP_PIN_MODE,0);
@@ -345,90 +337,11 @@ void hwi2c_help(void){
 	ui_help_mode_commands(hwi2c_commands, hwi2c_commands_count);			
 }
 
-static uint8_t checkshort(void){
+uint8_t hwi2c_checkshort(void){
 	uint8_t temp;
 	temp=(bio_get(M_I2C_SDA)==0?1:0);
 	temp|=(bio_get(M_I2C_SCL)==0?2:0);
 	return (temp==3);			// there is only a short when both are 0 otherwise repeated start wont work
 }
 
-
-bool reserved_addr(uint8_t addr) {
-    return (addr & 0x78) == 0 || (addr & 0x78) == 0x78;
-}
-
-bool i2c_search_check_addr(uint8_t address){
-	uint16_t ack;
-	uint32_t error;
-
-	error=pio_i2c_start_timeout(pio, pio_state_machine, 0xfff);
-	if(error){
-		pio_i2c_resume_after_error(pio, pio_state_machine);
-	}
-	ack=pio_i2c_write_timeout(pio, pio_state_machine, address, 0xfff);
-
-	if(ack){
-		pio_i2c_resume_after_error(pio, pio_state_machine);
-	}
-
-	//if read address then read one and NACK
-	if(!ack && (address&0x1)){
-		error=pio_i2c_read_timeout(pio, pio_state_machine, &error, false, 0xfff);
-		if(error)
-		{
-			pio_i2c_resume_after_error(pio, pio_state_machine);
-		}	
-	} 
-	
-	error=pio_i2c_stop_timeout(pio, pio_state_machine, 0xfff);
-	if(error){
-		pio_i2c_resume_after_error(pio, pio_state_machine);
-	}	
-	
-	return (!ack);	
-}
-
-static void i2c_search_addr(bool verbose){
-	bool color = false;
-	uint16_t device_count=0;
-	uint16_t device_pairs=0;
-
-	if(checkshort()){
-		printf("No pullup or short\r\n");
-		system_config.error=1;
-		return;
-	}
-
-	printf("I2C address search:\r\n");
-
-	pio_i2c_rx_enable(pio, pio_state_machine, false);
-
-	for(uint16_t i=0; i<256; i=i+2){
-
-		bool i2c_w=i2c_search_check_addr(i);
-		bool i2c_r=i2c_search_check_addr(i+1);
-
-		if(i2c_w||i2c_r){
-			device_count+=(i2c_w+i2c_r); //add any new devices
-			if(i2c_w&&i2c_r) device_pairs++;
-		
-			color=!color;
-			if(color||verbose)
-					ui_term_color_text_background(hw_pin_label_ordered_color[0][0],hw_pin_label_ordered_color[0][1]);
-
-			printf("0x%02X",i>>1);
-			if(i2c_w) printf(" (0x%02X W)",i);
-			if(i2c_r) printf(" (0x%02X R)",i+1);
-			if(color||verbose){
-				printf("%s", ui_term_color_reset());
-			}	
-			printf("\r\n");	
-			if(verbose){
-				printf("%s\r\n", dev_i2c_addresses[i>>1]);
-			}			
-		}
-	}	
-
-    printf("%s\r\nFound %d addresses, %d W/R pairs.\r\n",ui_term_color_reset(), device_count, device_pairs);
-}
 

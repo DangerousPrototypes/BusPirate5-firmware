@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-#include "mode/hw2wire_pio.h"
+#include "hw2wire_pio.h"
 #include "hardware/structs/iobank0.h"
 #include "hardware/regs/io_bank0.h"
 #include "pirate.h"

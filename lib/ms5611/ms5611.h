@@ -37,7 +37,7 @@ enum ms5611_status {
 };
 	
 // Functions
-uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_machine, float *temperature, float *pressure);
+uint32_t ms5611_read_temperature_and_pressure_simple(float *temperature, float *pressure);
 
 /**
  * \brief Configures the SERCOM I2C master to be used with the ms5611 device.

@@ -27,10 +27,6 @@ void ui_term_progress_bar_draw(ui_term_progress_bar_t *pb);
 void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progress_bar_t *pb);
 void ui_term_progress_bar_cleanup(ui_term_progress_bar_t *pb);
 
-
-
-void ui_term_error_report(uint32_t error_text);
-
 uint32_t ui_term_get_user_input(void);
 bool ui_term_cmdln_char_insert(char *c);
 bool ui_term_cmdln_char_backspace(void);

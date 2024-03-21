@@ -12,7 +12,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_cmdln.h"
 #include "hw2wire.pio.h"
-#include "mode/hw2wire_pio.h"
+#include "pirate/hw2wire_pio.h"
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "ui/ui_command.h"
@@ -20,12 +20,6 @@
 #include "ui/ui_help.h"
 #include "commands/2wire/sle4442.h"   
 
-
-
-//TODO: RST pin optional
-// controlled by {}, and also used by ATR SIM card stuff
-// add all bitwise operators
-// use own .json settings file
 static const char pin_labels[][5]={
 	"SDA",
 	"SCL",
@@ -36,7 +30,7 @@ static uint8_t checkshort(void);
 
 // command configuration
 const struct _command_struct hw2wire_commands[]=
-{   //HiZ? Function Help
+{   
 // note: for now the allow_hiz flag controls if the mode provides it's own help
     {"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
 };

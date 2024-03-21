@@ -95,7 +95,4 @@ void ui_info_print_pin_voltage(bool refresh)
 	printf("%s\r%s",t[T_GND],!refresh?"\n":""); //TODO: pin type struct and handle things like this automatically 
 	
 }
-//move to help?
-void ui_info_print_error(uint32_t error){
-	printf("\x07\r\n%sError:%s %s\r\n",ui_term_color_error(), ui_term_color_reset(), t[error]);
-}
+

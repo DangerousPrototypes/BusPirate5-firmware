@@ -118,7 +118,7 @@ static char const * const en_us[]={
 	[T_HWI2C_STOP]="I2C STOP",
 	[T_HWI2C_ACK]="ACK",
 	[T_HWI2C_NACK]="NACK",
-	[T_HWI2C_NO_PULLUP_DETECTED]="no pull-up detected. Use P to enable onboard pull-up resistors",
+	[T_HWI2C_NO_PULLUP_DETECTED]="no pull-up. Enable power (W) and pull-up resistors (P)",
 	[T_HWI2C_TIMEOUT]="I2C timeout",
 	[T_HWI2C_I2C_ERROR]="I2C bus error",
 	//2WIRE
@@ -385,6 +385,9 @@ static char const * const en_us[]={
 	[T_HELP_VADC_SINGLE]="Single measurement",
 	[T_HELP_VADC_CONTINUOUS]="Continuous measurement",
 	[T_HELP_VADC_IO]="IO pin number, 0-7",
+	[T_HELP_I2C_SCAN]="scan I2C addresses, with optional part number",
+	[T_HELP_I2C_SCAN_VERBOSE]="Verbose mode, print potential part numbers",
+	[T_HELP_FLAG]="Get additional help"
 };
 
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

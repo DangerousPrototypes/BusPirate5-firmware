@@ -243,10 +243,6 @@ char* ui_term_cursor_show(void){
     return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color?"\e[?25h":"";
 }
 
-void ui_term_error_report(uint32_t error_text)
-{
-    printf("%sError:%s %s%s\r\n", ui_term_color_error(), ui_term_color_info(), t[error_text], ui_term_color_reset());
-}
 
 // handles the user input 
 uint32_t ui_term_get_user_input(void)

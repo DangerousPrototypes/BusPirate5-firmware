@@ -1,0 +1,1 @@
+void i2c_search_addr(bool verbose);

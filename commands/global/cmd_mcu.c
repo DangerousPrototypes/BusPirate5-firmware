@@ -29,7 +29,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result *res){
 	if(res->help_flag){
 		return;
 	}
-    printf("See ya!");
+    printf("Later Alligator!");
     busy_wait_ms(200);
     cmd_mcu_jump_to_bootloader();
 }

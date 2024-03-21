@@ -72,9 +72,14 @@ bool ui_help_check_vout_vref(void){
         return true; //can't check, just skip
 
     if(amux_read(HW_ADC_MUX_VREF_VOUT)<1200){
-        ui_term_error_report(T_MODE_NO_VOUT_VREF_ERROR);
+        ui_help_error(T_MODE_NO_VOUT_VREF_ERROR);
         printf("%s%s%s\r\n", ui_term_color_info(), t[T_MODE_NO_VOUT_VREF_HINT], ui_term_color_reset());
         return false;
     }    
     return true;
+}
+
+//move to help?
+void ui_help_error(uint32_t error){
+	printf("\x07\r\n%sError:%s %s\r\n",ui_term_color_error(), ui_term_color_reset(), t[error]);
 }

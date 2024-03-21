@@ -14,8 +14,8 @@
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
-#include "i2c.pio.h"
-#include "../../mode/pio_i2c.h"
+//#include "i2c.pio.h"
+#include "pirate/hwi2c_pio.h"
 #include "lib/ms5611/ms5611.h"
 
 // Constants
@@ -89,7 +89,7 @@ bool ms5611_coeff_read = false;
  *       - ms5611_status_no_i2c_acknowledge : I2C did not acknowledge
  *       - ms5611_status_crc_error : CRC check error on the coefficients
  */
-uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_machine, float *temperature, float *pressure)
+uint32_t ms5611_read_temperature_and_pressure_simple(float *temperature, float *pressure)
 {
 	uint32_t adc_temperature, adc_pressure;
 	int32_t dT, TEMP;
@@ -101,7 +101,7 @@ uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_mac
 	for(uint8_t i=0; i<5; i++)
 	{
 		data[0]= MS5611_RESET_COMMAND;
-		if(!pio_i2c_write_blocking_timeout(pio, pio_state_machine,0b11101110, data, 1, 0xffff))
+		if(!pio_i2c_write_blocking_timeout(0b11101110, data, 1, 0xffff))
 		{
 			break;
 		}		
@@ -114,7 +114,7 @@ uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_mac
 	for( uint8_t i=0 ; i< MS5611_COEFFICIENT_NUMBERS ; i++)
 	{
 		data[0]= MS5611_PROM_ADDRESS_READ_ADDRESS_0 + i*2;
-		if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0b11101110, data, 1, data, 2, 0xffff))
+		if(pio_i2c_transaction_blocking_timeout( 0b11101110, data, 1, data, 2, 0xffff))
 		{
 			return 1;
 		} 			
@@ -123,13 +123,13 @@ uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_mac
 	
 	// First read temperature 0x50 + resolution = 0x58 4096 over sampling
 	data[0]= MS5611_START_TEMPERATURE_ADC_CONVERSION + 0x08;
-	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine,0b11101110, data, 1, 0xffff))
+	if(pio_i2c_write_blocking_timeout(0b11101110, data, 1, 0xffff))
 	{
 		return 1;
 	}
 	busy_wait_ms(10); //conversion time
 	data[0]= MS5611_READ_ADC;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0b11101110, data, 1, data, 3, 0xffff))
+	if(pio_i2c_transaction_blocking_timeout(0b11101110, data, 1, data, 3, 0xffff))
 	{
 		return 1;
 	}	
@@ -138,13 +138,13 @@ uint32_t ms5611_read_temperature_and_pressure_simple(PIO pio, uint pio_state_mac
 
 	// Now read pressure 0x40 + resolution = 0x48 4096 over sampling
 	data[0]= MS5611_START_PRESSURE_ADC_CONVERSION + 0x08;
-	if(pio_i2c_write_blocking_timeout(pio, pio_state_machine,0b11101110, data, 1, 0xffff))
+	if(pio_i2c_write_blocking_timeout(0b11101110, data, 1, 0xffff))
 	{
 		return 1;
 	}
 	busy_wait_ms(10); //conversion time	
 	data[0]= MS5611_READ_ADC;
-	if(pio_i2c_transaction_blocking_timeout(pio, pio_state_machine, 0b11101110, data, 1, data, 3, 0xffff))
+	if(pio_i2c_transaction_blocking_timeout( 0b11101110, data, 1, data, 3, 0xffff))
 	{
 		return 1;
 	}		

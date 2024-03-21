@@ -67,14 +67,18 @@ set(bp5_common
         mode/usart.h mode/usart.c
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
         #I2C
-        mode/hwi2c.c mode/hwi2c.h lib/i2c_address_list/dev_i2c_addresses.h mode/pio_i2c.c mode/pio_i2c.h
+        mode/hwi2c.c mode/hwi2c.h 
+        pirate/hwi2c_pio.c pirate/hwi2c_pio.h
+        commands/i2c/scan.h commands/i2c/scan.c
+        lib/i2c_address_list/dev_i2c_addresses.h 
         lib/ms5611/ms5611.c lib/ms5611/ms5611.h lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         #SPI
         mode/hwspi.c mode/hwspi.h 
         lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h 
         lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c         
         #2WIRE
-        mode/hw2wire.h mode/hw2wire.c mode/hw2wire_pio.h mode/hw2wire_pio.c
+        mode/hw2wire.h mode/hw2wire.c 
+        pirate/hw2wire_pio.h pirate/hw2wire_pio.c
         #LED
         mode/hwled.c mode/hwled.h
         #DUMMY MODE
@@ -119,7 +123,7 @@ set(bp5_common
         #USB
         queue.c queue.h 
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h
-        msc_disk.c usb_descriptors.c 
+        msc_disk.c usb_descriptors.c  
         )
 
 add_executable(bus_pirate5_rev8
@@ -168,10 +172,10 @@ set(revisions
         bus_pirate5_rev8  
         bus_pirate5_rev10
         )
-
+ 
 foreach(revision ${revisions})
-        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/hw2wire.pio)
-        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/i2c.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw2wire.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwi2c.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/apa102.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/onewire.pio)

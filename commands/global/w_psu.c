@@ -149,10 +149,10 @@ void psucmd_enable_handler(struct command_result *res){
     if(psu_result!=PSU_OK){
         switch(psu_result){
             case PSU_ERROR_FUSE_TRIPPED:
-                ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
+                ui_help_error(T_PSU_CURRENT_LIMIT_ERROR);
                 break;
             case PSU_ERROR_VOUT_LOW:
-                ui_term_error_report(T_PSU_SHORT_ERROR);
+                ui_help_error(T_PSU_SHORT_ERROR);
                 break;
             case PSU_ERROR_BACKFLOW:
                 printf("%s\r\nError: Vout > on-board power supply. Backflow prevention activated\r\n\tIs an external voltage connected to Vout/Vref pin?\r\n%s", ui_term_color_warning(), ui_term_color_reset());
@@ -209,7 +209,7 @@ bool psucmd_init(void){
 void psucmd_over_current(void){
     if(system_config.psu_current_error){
         printf("\x1b[?5h\r\n");
-        ui_term_error_report(T_PSU_CURRENT_LIMIT_ERROR);
+        ui_help_error(T_PSU_CURRENT_LIMIT_ERROR);
         busy_wait_ms(500);
         printf("\x1b[?5l");
         system_config.psu_current_error=0;

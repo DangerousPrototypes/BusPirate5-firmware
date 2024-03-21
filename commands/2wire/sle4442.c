@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "opt_args.h"
-#include "mode/hw2wire_pio.h"
+#include "pirate/hw2wire_pio.h"
 #include "pirate/bio.h"
 #include "ui/ui_cmdln.h"
 #include "ui/ui_help.h"

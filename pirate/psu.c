@@ -125,7 +125,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override){
         psu_status.current_dac_value=PWM_TOP; //override, set to 100% current
     }
 
-    printf("V dac: 0x%04X I dac: 0x%04X\r\n",psu_status.voltage_dac_value, psu_status.current_dac_value);
+    //printf("V dac: 0x%04X I dac: 0x%04X\r\n",psu_status.voltage_dac_value, psu_status.current_dac_value);
     //start with override engaged because the inrush will often trip the fuse on low limits
     psu_current_limit_override(true);
     psu_dac_set(psu_status.voltage_dac_value, PWM_TOP);

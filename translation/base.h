@@ -379,6 +379,7 @@ enum T_translations{
 	T_HELP_I2C_SI7021,
 	T_HELP_I2C_MS5611,
 	T_HELP_I2C_TSL2561,
+	T_HELP_1WIRE_SCAN,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

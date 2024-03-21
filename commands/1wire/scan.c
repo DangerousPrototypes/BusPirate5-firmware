@@ -21,14 +21,12 @@
 #include "ui/ui_help.h"
 
 static const char * const usage[]= {
-    "scan\t[-v(erbose)] [-h(elp)]",   
+    "scan\t[-h(elp)]",   
     "Scan 1-Wire address space: scan",
-    "Scan, list possible part numbers: scan -v",
 };
 
 static const struct ui_help_options options[]= {
-{1,"", T_HELP_I2C_SCAN}, //command help
-    {0,"-v",T_HELP_I2C_SCAN_VERBOSE}, //verbose
+{1,"", T_HELP_1WIRE_SCAN}, //command help
     {0,"-h",T_HELP_FLAG}, //help
 };
 
@@ -128,25 +126,29 @@ void ds1wire_id(unsigned char famID){
 #define TRUE    1
 #define FALSE   0
 void onewire_test_romsearch(struct command_result *res){
+    //check help
+    if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
+
     int i;
     int ret;
     int devcount;
+    struct owobj search_owobj;
 
     /* Full  romsearch */
     printf("1-Wire ROM search:\r\n");
     char *romno;
-    ret = OWFirst(romno);
+    ret = OWFirst(&search_owobj);
     devcount = 0;
     while( ret == TRUE ){
         devcount++;
         printf("%d:", devcount);
         for(i=0; i<8; i++){
-            printf(" %.2x", romno[i]);
+            printf(" %.2x", search_owobj.ROM_NO[i]);
         }
         printf(" (");
-        ds1wire_id( romno[0]);
+        ds1wire_id( search_owobj.ROM_NO[0]);
         printf(")\r\n");
-        ret = OWNext(romno);
+        ret = OWNext(&search_owobj);
     }
     if( devcount == 0 ){
         printf("No devices found\r\n");

@@ -21,7 +21,7 @@
 // command configuration
 const struct _command_struct hw1wire_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
-    {"scan",false,&onewire_test_romsearch,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+    {"scan",false,&onewire_test_romsearch,T_HELP_1WIRE_SCAN}, // the help is shown in the -h *and* the list of mode apps
 };
 const uint32_t hw1wire_commands_count=count_of(hw1wire_commands);
 

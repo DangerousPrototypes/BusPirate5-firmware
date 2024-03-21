@@ -41,10 +41,10 @@ int onewire_select(
     unsigned char *romid
 );
 unsigned char calc_crc8(unsigned char data);
-int OWSearch(void);
-int OWSearchReset(void);
-int OWFirst(char *romno);
-int OWNext(char *romno);
+int OWSearch(struct owobj *search_owobj);
+int OWSearchReset(struct owobj *search_owobj);
+int OWFirst(struct owobj *search_owobj);
+int OWNext(struct owobj *search_owobj);
 void onewire_test_ds18b20_scratchpad(void);
 uint32_t onewire_test_ds18b20_conversion(void);
 void onewire_test_spu(void);

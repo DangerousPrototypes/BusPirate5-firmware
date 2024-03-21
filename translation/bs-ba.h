@@ -374,6 +374,7 @@ static char const * const bs_ba[]={
 	[T_HELP_I2C_SI7021]="Read temperature and humidity from SI7021/HTU21/SHT21 sensor",
 	[T_HELP_I2C_MS5611]="Read temperature and pressure from MS5611 sensor",
 	[T_HELP_I2C_TSL2561]="Read light intensity (LUX) from TSL2561 sensor",
+	[T_HELP_1WIRE_SCAN]="scan for 1-Wire devices",
 
 };
 

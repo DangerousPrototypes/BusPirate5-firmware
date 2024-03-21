@@ -138,7 +138,7 @@ static char const * const zh_cn[]={
 	[T_CMDLN_MKDIR]="mkdir {directory} - create {directory}.",
 	[T_CMDLN_RM]="rm {file/directory} - remove file or (empty) directory.",
 	[T_CMDLN_CAT]="cat {file} - print the contents of {file}.",
-	[T_CMDLN_MODE]="m - change protocol mode, show selection menu.",
+	[T_CMDLN_MODE]="m - change protocol mode. m <mode number> to skip the menu.",
 	[T_CMDLN_PSU_EN]="W - enable onboard power supply, show configuration menu.",
 	[T_CMDLN_RESET]="# - reset and restart the Bus Pirate.",
 	[T_CMDLN_BOOTLOAD]="$ - reset and enter bootloader mode for updates.",
@@ -374,6 +374,7 @@ static char const * const zh_cn[]={
 	[T_HELP_I2C_SI7021]="Read temperature and humidity from SI7021/HTU21/SHT21 sensor",
 	[T_HELP_I2C_MS5611]="Read temperature and pressure from MS5611 sensor",
 	[T_HELP_I2C_TSL2561]="Read light intensity (LUX) from TSL2561 sensor",
+	[T_HELP_1WIRE_SCAN]="scan for 1-Wire devices",
 
 };
 

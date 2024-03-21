@@ -325,15 +325,11 @@ unsigned char calc_crc8(unsigned char data){
 //                       last search was the last device or there
 //                       are no devices on the 1-Wire Net.
 //
-int OWSearch(void){
+int OWSearch(struct owobj *search_owobj){
     int id_bit_number;
     int last_zero, rom_byte_number, search_result;
     int id_bit, cmp_id_bit;
     unsigned char rom_byte_mask, search_direction, status;
-    PIO pio = owobj.pio;
-    uint sm = owobj.sm;
-    uint offset = owobj.offset;
-    uint pin =  owobj.pin;
 
     // initialize for search
     id_bit_number = 1;
@@ -341,16 +337,16 @@ int OWSearch(void){
     rom_byte_number = 0;
     rom_byte_mask = 1;
     search_result = FALSE;
-    owobj.crc8 = 0;
+    search_owobj->crc8 = 0;
 
     // if the last call was not the last one
-    if (! owobj.LastDeviceFlag){       
+    if (! search_owobj->LastDeviceFlag){       
         // 1-Wire reset
         if( ! onewire_reset() ){
             // reset the search
-            owobj.LastDiscrepancy = 0;
-            owobj.LastDeviceFlag = FALSE;
-            owobj.LastFamilyDiscrepancy = 0;
+            search_owobj->LastDiscrepancy = 0;
+            search_owobj->LastDeviceFlag = FALSE;
+            search_owobj->LastFamilyDiscrepancy = 0;
             return FALSE;
         }
 
@@ -361,14 +357,14 @@ int OWSearch(void){
         do{
             // if this discrepancy if before the Last Discrepancy
             // on a previous next then pick the same as last time
-            if (id_bit_number < owobj.LastDiscrepancy){
-                if (( owobj.ROM_NO[rom_byte_number] & rom_byte_mask) > 0)
+            if (id_bit_number < search_owobj->LastDiscrepancy){
+                if (( search_owobj->ROM_NO[rom_byte_number] & rom_byte_mask) > 0)
                     search_direction = 1;
                 else
                     search_direction = 0;
             }else{
                 // if equal to last pick 1, if not then pick 0
-                if (id_bit_number == owobj.LastDiscrepancy)
+                if (id_bit_number == search_owobj->LastDiscrepancy)
                     search_direction = 1;
                 else
                     search_direction = 0;
@@ -386,15 +382,15 @@ int OWSearch(void){
 
                     // check for Last discrepancy in family
                     if (last_zero < 9)
-                        owobj.LastFamilyDiscrepancy = last_zero;
+                        search_owobj->LastFamilyDiscrepancy = last_zero;
                 }
 
                 // set or clear the bit in the ROM byte rom_byte_number
                 // with mask rom_byte_mask
                 if (search_direction == 1)
-                    owobj.ROM_NO[rom_byte_number] |= rom_byte_mask;
+                    search_owobj->ROM_NO[rom_byte_number] |= rom_byte_mask;
                 else
-                    owobj.ROM_NO[rom_byte_number] &= (byte)~rom_byte_mask;
+                    search_owobj->ROM_NO[rom_byte_number] &= (byte)~rom_byte_mask;
 
                 // increment the byte counter id_bit_number
                 // and shift the mask rom_byte_mask
@@ -404,7 +400,7 @@ int OWSearch(void){
                 // if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
                 if (rom_byte_mask == 0)
                 {
-                    calc_crc8( owobj.ROM_NO[rom_byte_number]);  // accumulate the CRC
+                    calc_crc8( search_owobj->ROM_NO[rom_byte_number]);  // accumulate the CRC
                     rom_byte_number++;
                     rom_byte_mask = 1;
                 }
@@ -413,34 +409,34 @@ int OWSearch(void){
         while(rom_byte_number < 8);  // loop until through all ROM bytes 0-7
 
         // if the search was successful then
-        if (!((id_bit_number < 65) || ( owobj.crc8 != 0))){
+        if (!((id_bit_number < 65) || ( search_owobj->crc8 != 0))){
             // search successful so set LastDiscrepancy,LastDeviceFlag,search_result
-            owobj.LastDiscrepancy = last_zero;
+            search_owobj->LastDiscrepancy = last_zero;
 
             // check for last device
-            if ( owobj.LastDiscrepancy == 0)
-                owobj.LastDeviceFlag = TRUE;
+            if ( search_owobj->LastDiscrepancy == 0)
+                search_owobj->LastDeviceFlag = TRUE;
 
             search_result = TRUE;
         }
     }
 
     // if no device found then reset counters so next 'search' will be like a first
-    if (!search_result || ( owobj.ROM_NO[0] == 0)){
-        owobj.LastDiscrepancy = 0;
-        owobj.LastDeviceFlag = FALSE;
-        owobj.LastFamilyDiscrepancy = 0;
+    if (!search_result || ( search_owobj->ROM_NO[0] == 0)){
+        search_owobj->LastDiscrepancy = 0;
+        search_owobj->LastDeviceFlag = FALSE;
+        search_owobj->LastFamilyDiscrepancy = 0;
         search_result = FALSE;
     }
 
     return search_result;
 }
 
-int OWSearchReset(void){
+int OWSearchReset(struct owobj *search_owobj){
     // reset the search state
-    owobj.LastDiscrepancy = 0;
-    owobj.LastDeviceFlag = FALSE;
-    owobj.LastFamilyDiscrepancy = 0;
+    search_owobj->LastDiscrepancy = 0;
+    search_owobj->LastDeviceFlag = FALSE;
+    search_owobj->LastFamilyDiscrepancy = 0;
 }
 
 //--------------------------------------------------------------------------
@@ -448,13 +444,12 @@ int OWSearchReset(void){
 // Return TRUE  : device found, ROM number in ROM_NO buffer
 //        FALSE : no device present
 //
-int OWFirst(char *romno){
+int OWFirst(struct owobj *search_owobj){
     // reset the search state
-    owobj.LastDiscrepancy = 0;
-    owobj.LastDeviceFlag = FALSE;
-    owobj.LastFamilyDiscrepancy = 0;
-    romno=owobj.ROM_NO;
-    return OWSearch();
+    search_owobj->LastDiscrepancy = 0;
+    search_owobj->LastDeviceFlag = FALSE;
+    search_owobj->LastFamilyDiscrepancy = 0;
+    return OWSearch(search_owobj);
 }
 
 //--------------------------------------------------------------------------
@@ -462,10 +457,9 @@ int OWFirst(char *romno){
 // Return TRUE  : device found, ROM number in ROM_NO buffer
 //        FALSE : device not found, end of search
 //
-int OWNext(char *romno){
+int OWNext(struct owobj *search_owobj){
     // leave the search state alone
-    romno=owobj.ROM_NO;
-    return OWSearch();
+    return OWSearch(search_owobj);
 }
 
 /* End of MAXIM AN3684 code */

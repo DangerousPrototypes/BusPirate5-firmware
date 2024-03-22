@@ -12,8 +12,8 @@ enum
 #ifdef BP_USE_HWSPI
 	HWSPI,
 #endif
-#ifdef BP_USE_HWUSART
-	HWUSART,
+#ifdef BP_USE_HWUART
+	HWUART,
 #endif
 #ifdef BP_USE_HWI2C
 	HWI2C,

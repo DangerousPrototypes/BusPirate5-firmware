@@ -39,20 +39,15 @@ void postprocess_mode_write(struct _bytecode *in, struct _output_info *info);
 void postprocess_format_print_number(struct _bytecode *in, uint32_t *value, bool read);
 
 
-bool syntax_compile(void)
-{
+bool syntax_compile(void){
     uint32_t pos=0;
     uint32_t i;
     char c;
     bool error=false;
     uint32_t slot_cnt=0;
-
     out_cnt=0;
     in_cnt=0;
-
-
-    for(i=0; i<SYN_MAX_LENGTH; i++)
-    {
+    for(i=0; i<SYN_MAX_LENGTH; i++){
         out[i]=bytecode_empty;
         in[i]=bytecode_empty;
     }
@@ -60,38 +55,31 @@ bool syntax_compile(void)
     //we need to track pin functions to avoid blowing out any existing pins
     //if a conflict is found, the compiler can throw an error
     enum bp_pin_func pin_func[HW_PINS-2];
-    for(i=1;i<HW_PINS-1; i++)
-    {
+    for(i=1;i<HW_PINS-1; i++){
         pin_func[i-1]=system_config.pin_func[i]; //=BP_PIN_IO;
     }
 
-    if(cmdln_try_peek(0,&c))
-    {
+    if(cmdln_try_peek(0,&c)){
         if(c=='>') cmdln_try_discard(1);
         pos++;
     }
     
-    while(cmdln_try_peek(0,&c))
-    {
+    while(cmdln_try_peek(0,&c)){
         pos++;
 
-        if( c<=' ' || c>'~' )
-        {
+        if( c<=' ' || c>'~' ){
             //out of ascii range
             cmdln_try_discard(1);
             continue;
         } 
        
         //if number parse it
-        if(c>='0' && c<='9')
-        {
+        if(c>='0' && c<='9'){
             ui_parse_get_int(&result, &out[out_cnt].out_data);
-            if(result.error)
-            {
+            if(result.error)            {
                 printf("Error parsing integer at position %d\r\n", pos);
                 return true;
             }
-
             //if(system_config.write_with_read)
             //{
                 //out[out_cnt].command=SYN_START_ALT;
@@ -103,25 +91,20 @@ bool syntax_compile(void)
             
             out[out_cnt].number_format=result.number_format;
 
-        }
-        else if(c=='"')
-        {
+        }else if(c=='"'){
             cmdln_try_remove(&c); //remove "
             // sanity check! is there a terminating "?
             error=true;
             i=0;
-            while(cmdln_try_peek(i,&c))
-            {
-                if(c=='"')
-                {
+            while(cmdln_try_peek(i,&c)){
+                if(c=='"'){
                     error=false;
                     break;
                 }
                 i++;
             }
 
-            if(error)
-            {
+            if(error){
                 printf("Error: string missing terminating '\"'");
                 return true;
             }
@@ -132,8 +115,7 @@ bool syntax_compile(void)
             //attributes->has_string=true; //show ASCII chars
             //attributes->number_format=df_hex; //force hex display
 
-            while(i--)
-            {
+            while(i--){
                 cmdln_try_remove(&c);
                 //if(system_config.write_with_read)
                 //{
@@ -162,9 +144,7 @@ bool syntax_compile(void)
 
             cmdln_try_remove(&c); // consume the final "
             continue;
-        }
-        else
-        {   
+        }else{   
             uint8_t cmd;
             
             switch(c)
@@ -202,42 +182,32 @@ bool syntax_compile(void)
 
         }
 
-       if(ui_parse_get_dot(&out[out_cnt].bits))
-       {
+       if(ui_parse_get_dot(&out[out_cnt].bits)){
             out[out_cnt].has_bits=true;
-       }
-       else
-       {
+       }else{
             out[out_cnt].has_bits=false;
             out[out_cnt].bits=system_config.num_bits;
        }
 
-       if(ui_parse_get_colon(&out[out_cnt].repeat))
-       {
+       if(ui_parse_get_colon(&out[out_cnt].repeat)){
             out[out_cnt].has_repeat=true;
-       }
-       else
-       {
+       }else{
             out[out_cnt].has_repeat=false;
             out[out_cnt].repeat=1;
        }
 
-       if(out[out_cnt].command >= SYN_AUX_OUTPUT)
-       {
-            if(out[out_cnt].has_bits==false)
-            {
+       if(out[out_cnt].command >= SYN_AUX_OUTPUT){
+            if(out[out_cnt].has_bits==false){
                 printf("Error: missing IO number for command %c at position %d. Try %c.0[0xff\r\n",c,pos);
                 return true;
             }
 
-            if(out[out_cnt].bits>=count_of(bio2bufiopin))
-            {
+            if(out[out_cnt].bits>=count_of(bio2bufiopin)){
                 printf("%sError:%s pin IO%d is invalid\r\n", ui_term_color_error(), ui_term_color_reset(), out[out_cnt].bits);
                 return true;
             }
 
-            if(out[out_cnt].command!=SYN_ADC && pin_func[out[out_cnt].bits]!=BP_PIN_IO)
-            {
+            if(out[out_cnt].command!=SYN_ADC && pin_func[out[out_cnt].bits]!=BP_PIN_IO){
                 printf("%sError:%s at position %d IO%d is already in use\r\n", ui_term_color_error(), ui_term_color_reset(), pos, out[out_cnt].bits);
                 //printf("IO%d already in use. Error at position %d\r\n",c,pos);
                 return true;                
@@ -250,24 +220,19 @@ bool syntax_compile(void)
         if(out[out_cnt].command==SYN_DELAY_US || out[out_cnt].command==SYN_DELAY_MS || out[out_cnt].command==SYN_TICK_CLOCK) //delays repeat but don't take up slots
         {
             slot_cnt+=1;
-        }
-        else
-        {
+        }else{
             slot_cnt+=out[out_cnt].repeat;
         }
 
-        if(slot_cnt>=SYN_MAX_LENGTH)
-        {
+        if(slot_cnt>=SYN_MAX_LENGTH){
             printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
             return true;
         }
 
         out_cnt++;
-
     }
 
     in_cnt=0;
-
     return false;    
 }
 

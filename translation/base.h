@@ -343,7 +343,7 @@ enum T_translations{
 	T_HELP_GCMD_P,
 	T_HELP_HELP,
 	T_HELP_SYS_COMMAND,
-	T_HELP_SYS_GLOBAL,
+	T_HELP_SYS_DISPLAY,
 	T_HELP_SYS_MODE,
 	T_HELP_SYS_HELP,
 	T_HELP_GCMD_SELFTEST,
@@ -381,6 +381,8 @@ enum T_translations{
 	T_HELP_I2C_TSL2561,
 	T_HELP_1WIRE_SCAN,
 	T_HELP_1WIRE_DS18B20,
+	T_HELP_UART_BRIDGE,
+	T_HELP_UART_NMEA,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

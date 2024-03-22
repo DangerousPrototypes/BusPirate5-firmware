@@ -75,7 +75,9 @@ set(bp5_common
         commands/1wire/scan.h commands/1wire/scan.c
         commands/1wire/demos.h commands/1wire/demos.c
         #UART 
-        mode/usart.h mode/usart.c
+        mode/hwuart.h mode/hwuart.c 
+        commands/uart/nmea.c commands/uart/nmea.h
+        commands/uart/bridge.h commands/uart/bridge.c
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
         #I2C
         mode/hwi2c.c mode/hwi2c.h 

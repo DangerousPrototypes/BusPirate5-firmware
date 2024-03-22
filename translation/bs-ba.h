@@ -338,7 +338,7 @@ static char const * const bs_ba[]={
 	[T_HELP_GCMD_P]="onboard pull-up resistors",
 	[T_HELP_HELP]="help for Bus Pirate commands and modes",
 	[T_HELP_SYS_COMMAND]="Commands to access the help system",
-	[T_HELP_SYS_GLOBAL]="Show global command list, default option",
+	[T_HELP_SYS_DISPLAY]="Show display mode help (such as oscilloscope)",
 	[T_HELP_SYS_MODE]="Show mode specific commands and help",
 	[T_HELP_SYS_HELP]="How to use the help system",
 	[T_HELP_GCMD_SELFTEST]="run a complete system self-test",
@@ -376,6 +376,8 @@ static char const * const bs_ba[]={
 	[T_HELP_I2C_TSL2561]="Read light intensity (LUX) from TSL2561 sensor",
 	[T_HELP_1WIRE_SCAN]="scan for 1-Wire devices",
 	[T_HELP_1WIRE_DS18B20]="Query DS18B20 temperature sensor",
+	[T_HELP_UART_BRIDGE]="open UART with raw data IO, usb to serial bridge",
+	[T_HELP_UART_NMEA]="parse NMEA GPS data",
 
 };
 

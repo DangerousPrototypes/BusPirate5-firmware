@@ -108,7 +108,7 @@ static const struct ui_help_options help_options[]={
 {1,"", T_HELP_HELP}, //command help
     {0,"?/help",T_HELP_SYS_COMMAND }, 
 	{0,"mode",T_HELP_SYS_MODE }, 
-    {0,"display", T_HELP_SYS_GLOBAL}, 
+    {0,"display", T_HELP_SYS_DISPLAY}, 
 	{0,"-h", T_HELP_SYS_HELP},
 };
 

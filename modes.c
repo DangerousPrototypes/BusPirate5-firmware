@@ -14,8 +14,8 @@
 #ifdef	BP_USE_HW1WIRE
     #include "mode/hw1wire.h"
 #endif
-#ifdef	BP_USE_HWUSART
-    #include "mode/usart.h"
+#ifdef	BP_USE_HWUART
+    #include "mode/hwuart.h"
 #endif
 #ifdef	BP_USE_HWI2C
     #include "mode/hwi2c.h"
@@ -191,14 +191,14 @@ struct _mode modes[MAXPROTO]={{
     "1-WIRE",				// friendly name (promptname)
 },
 #endif
-#ifdef BP_USE_HWUSART
+#ifdef BP_USE_HWUART
 {
-    hwusart_open,				// start
-    hwusart_open_read,				// start with read
-    hwusart_close,				// stop
-    hwusart_close,				// stop with read
-    hwusart_write,				// send(/read) max 32 bit
-    hwusart_read,				// read max 32 bit
+    hwuart_open,				// start
+    hwuart_open_read,			// start with read
+    hwuart_close,				// stop
+    hwuart_close,				// stop with read
+    hwuart_write,				// send(/read) max 32 bit
+    hwuart_read,				// read max 32 bit
 	nullfunc1_temp,				// set clk high
 	nullfunc1_temp,				// set clk low
 	nullfunc1_temp,				// set dat hi
@@ -206,16 +206,16 @@ struct _mode modes[MAXPROTO]={{
 	nullfunc1_temp,				// toggle dat (remove?)
 	nullfunc1_temp,				// tick clk
 	nullfunc1_temp,				// read dat
-    hwusart_periodic,				// service to regular poll whether a byte ahs arrived
-    hwusart_macro,				// macro
-    hwusart_setup,				// setup UI
-    hwusart_setup_exc,			// real setup
-    hwusart_cleanup,			// cleanup for HiZ
-    //HWUSART_pins,				// display pin config
-    hwusart_settings,			// display settings
-    hwusart_help,				// display small help about the protocol
-    usart_commands,               // mode specific commands
-    &usart_commands_count,       // mode specific commands count    
+    hwuart_periodic,				// service to regular poll whether a byte ahs arrived
+    hwuart_macro,				// macro
+    hwuart_setup,				// setup UI
+    hwuart_setup_exc,			// real setup
+    hwuart_cleanup,			// cleanup for HiZ
+    //hwuart_pins,				// display pin config
+    hwuart_settings,			// display settings
+    hwuart_help,				// display small help about the protocol
+    hwuart_commands,               // mode specific commands
+    &hwuart_commands_count,       // mode specific commands count    
     "UART",				// friendly name (promptname)
 },
 #endif

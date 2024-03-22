@@ -650,9 +650,19 @@ scope_commands(struct command_result *result)
 //  ss - stop 
 //	
 //
+	//hack to discard the command
+	char args[5];
+	cmdln_args_string_by_position(0, sizeof(args), args);
+	if(!(args[0]=='x'||args[0]=='y'||args[0]=='t'|| (args[0]=='s'&&args[1]=='r')||(args[0]=='s'&&args[1]=='s')))
+	{
+		return 0;
+	}
 
-	char args[3];
-	cmdln_args_string_by_position(1, sizeof(args), args);
+	if (args[0]) {
+		cmdln_try_discard(1);
+		if(args[1])
+			cmdln_try_discard(1);
+	}
 
 	last = 0;
 	for (;;) {

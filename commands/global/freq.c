@@ -13,7 +13,7 @@
 #include "ui/ui_info.h"
 #include "ui/ui_cmdln.h"
 
-#include "freq.h"
+#include "commands/global/freq.h"
 
 void freq_single(struct command_result *res){
     uint32_t temp;

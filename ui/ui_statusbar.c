@@ -7,7 +7,7 @@
 #include "ui/ui_const.h"
 #include "ui/ui_term.h"
 #include "usb_tx.h"
-#include "freq.h"
+#include "commands/global/freq.h"
 #include "ui/ui_flags.h"
 #include "system_monitor.h"
 #include "display/scope.h"

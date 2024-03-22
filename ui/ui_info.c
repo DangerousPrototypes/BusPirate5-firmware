@@ -8,7 +8,7 @@
 #include "modes.h"
 #include "ui/ui_term.h"
 #include "pirate/storage.h"
-#include "freq.h"
+#include "commands/global/freq.h"
 #include "ui/ui_const.h"
 #include "ui/ui_info.h"
 #include "pirate/mcu.h"

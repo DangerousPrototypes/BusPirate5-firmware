@@ -63,9 +63,8 @@ set(bp5_common
         commands/global/disk.c commands/global/disk.h
         commands/global/v_adc.c commands/global/v_adc.h
         commands/global/i_info.c commands/global/i_info.h
- 
-        #to be adapted
-        pwm.c pwm.h freq.c freq.h
+        commands/global/pwm.c commands/global/pwm.h
+        commands/global/freq.c commands/global/freq.h
 
         #HiZ
         mode/hiz.h mode/hiz.c 
@@ -121,8 +120,7 @@ set(bp5_common
         mjson/mjson.h mjson/mjson.c 
         #syntax and commands
         syntax.h syntax.c  syntax_struct.h
-        opt_args.h 
-        command_attributes.h bytecode.h
+        opt_args.h command_attributes.h bytecode.h
         #FATfs
         fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 
         #translations

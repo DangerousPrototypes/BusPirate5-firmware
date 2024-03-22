@@ -24,7 +24,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
-#include "freq.h"
+#include "commands/global/freq.h"
 #include "queue.h"
 #include "usb_tx.h"
 #include "usb_rx.h"

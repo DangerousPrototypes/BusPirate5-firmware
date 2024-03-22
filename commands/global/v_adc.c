@@ -9,7 +9,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_info.h"
 #include "system_config.h"
-#include "freq.h"
+#include "commands/global/freq.h"
 #include "usb_rx.h"
 #include "pirate/amux.h"
 #include "ui/ui_cmdln.h"

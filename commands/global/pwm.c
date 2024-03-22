@@ -14,7 +14,7 @@
 
 
 #include "pwd.h"
-#include "freq.h"
+#include "commands/global/freq.h"
 #include "ui/ui_cmdln.h"
 
 uint32_t pwm_get_settings(float* pwm_hz_actual, float* duty_user_value);

@@ -50,6 +50,9 @@ extern const FONT_INFO hunter_12ptFontInfo;
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
 #include "pirate/amux.h"
+#include "displays.h"
+#include "ui/ui_term.h"
+
 
 static int convert_trigger_position(int pos);
 
@@ -152,6 +155,54 @@ scope_settings(void)
 void
 scope_help(void)
 {
+
+	#if 0
+	static const struct ui_help_options options[]= {
+	{1,"", T_HELP_I2C_SCAN}, //command help
+		{0,"^",T_HELP_I2C_SCAN_VERBOSE}, //verbose
+		{0,"<",T_HELP_FLAG}, //help
+		{0,">",T_HELP_FLAG}, //help
+		{0,"T",T_HELP_FLAG}, //help
+		{0,"r",T_HELP_FLAG}, //help
+		{0,"o",T_HELP_FLAG}, //help
+		{0,"n",T_HELP_FLAG}, //help
+		{0,"a",T_HELP_FLAG}, //help
+		{0,"s",T_HELP_FLAG}, //help
+	{1,"", T_HELP_I2C_SCAN}, //command help
+		printf("t - trigger (movement move trigger V/time)\r\n");
+		//printf("	a analog pin is the trigger pin\r\n");
+		//printf("	0-7 which digital pin is the trigger pin\r\n");
+		//printf("	v [0-9].[0-9] voltage level\r\n");
+		printf("	+-*b  trigger on pos neg none both\r\n");
+		printf("	BME move trigger point to beginning/middle/end\r\n");
+		{0,"+-*b",T_HELP_FLAG}, //help
+		{0,"BME",T_HELP_FLAG}, //help
+		printf("\r\n");
+		printf("x - timebase\r\n");
+		{0,"+",T_HELP_FLAG}, //help
+		{0,"-",T_HELP_FLAG}, //help
+		printf("	+ faster\r\n");
+		printf("	- slower\r\n");
+		printf("\r\n");
+		printf("y - y scale\r\n");
+
+		{0,"+",T_HELP_FLAG}, //help
+		{0,"-",T_HELP_FLAG}, //help
+		printf("	+ increase scale\r\n");		
+		printf("	- decrease scale\r\n");
+		printf("\r\n");
+		printf("sr - run\r\n");
+
+		printf("	'' - same as last - button if stopped\r\n");
+		printf("	0-7 - input pin\r\n");
+		printf("	o - once\r\n");
+		printf("	n - normal\r\n");
+		printf("	a - auto\r\n");
+		printf("\r\n");
+		printf("ss - stop - button if running\r\n");	
+
+	};
+	#endif
 		printf("General sub commands in all of t,x,y\r\n");
 		printf("	^ up\n");
 		printf("	v down\r\n");
@@ -187,7 +238,6 @@ scope_help(void)
 		printf("\r\n");
 		printf("ss - stop - button if running\r\n");
 }
-
 
 void scope_cleanup(void)
 {
@@ -635,6 +685,351 @@ scope_to_trigger(void)
 	display = 1;
 }
 
+
+
+
+
+
+// trigger
+// a 0-7 which is the trigger pin
+// v [0-9].[0-9] voltage level
+// +-*b  trigger on pos neg none both
+// ^ voltage up 0.1
+// v voltage down 0.1
+// < move trigger towards start
+// > move trigger towards end
+// p [0-1024] - trigger position
+uint8_t scope_trigger_interactive(bool interactive){
+	char c;
+	in_trigger_mode = 1;
+	display = 1;
+	printf("Trigger: +-*b ^v<>T BME xy rsona> ");
+	//printf("Trigger: a 0-7 +-*b ^v<>T BME xy rsona> ");
+	while ((c = next_char()) != 0) {
+		switch (c) {
+		case 'x': printf("\r\n"); return 'x';
+		case 'y': printf("\r\n"); return 'y';
+		case '.':
+		case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
+		case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
+		case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
+		case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
+		case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
+		case 'T': scope_to_trigger();	break;
+		case 0x1b:
+			c = next_char();
+			if (c != '[')
+				break;
+			c = next_char();
+			switch (c) {
+			case 'A': trigger_up();	break;
+			case 'B': trigger_down();	break;
+			case 'C': trigger_right();break;
+			case 'D': trigger_left();	break;
+			}
+			break;
+		case '=':
+		case '+':	trigger_type = TRIGGER_POS; display = 1; break;
+		case '_':
+		case '-':	trigger_type = TRIGGER_NEG; display = 1; break;
+		case '*':	trigger_type = TRIGGER_NONE; display = 1; break;
+		case 'b':	trigger_type = TRIGGER_BOTH; display = 1; break;
+		case 'v':
+		case 'V':	trigger_down(); break;
+		case '^':	trigger_up(); break;
+		case '<':	trigger_left(); break;
+		case '>':	trigger_right(); break;
+		case 'B':	trigger_begin(); break;
+		case 'M':
+		case 'm':	trigger_middle(); break;
+		case 'E':
+		case 'e':	trigger_end(); break;
+		}
+	}
+	in_trigger_mode = 0;
+	return 0;
+}
+
+// x - timebase
+// < move left
+// > move right
+// + faster
+// - slower
+uint8_t scope_x_interactive(bool interactive){
+	int z;
+	char c;
+	in_trigger_mode = 0;
+	display = 1;
+	printf("Timebase: +- ^v<>T ty rsona> ");
+	while ((c = next_char()) != 0) {
+		switch (c) {
+		case 't': printf("\r\n"); return 't';
+		case 'y': printf("\r\n"); return 'y';
+		case '.':
+		case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
+		case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
+		case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
+		case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
+		case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
+		case 'T': scope_to_trigger();	break;
+		case 0x1b:
+			c = next_char();
+			if (c != '[')
+				break;
+			c = next_char();
+			switch (c) {
+			case 'A': scope_up();	break;
+			case 'B': scope_down();	break;
+			case 'C': scope_right();break;
+			case 'D': scope_left();	break;
+			}
+			break;
+		case '=':
+		case '+':
+			if (display_timebase == 5000000)
+				break;
+			switch (display_timebase) {
+			case 2500000: display_timebase = 5000000; z = 1; break;  // display_zoom only
+			case 1000000: display_timebase = 2500000; z = 0; break;  // display_zoom only
+			case 500000: display_timebase = 1000000; z = 1; break;  // display_zoom only
+			case 250000: display_timebase = 500000; z = 1; break;	// 1 sample
+			case 100000: display_timebase = 250000; z = 0; break;	// 2 samples
+			case  50000: display_timebase = 100000; z = 1; break;	// 5 samples
+			case  25000: display_timebase = 50000; z = 1; break;	
+			case  10000: display_timebase = 25000; z = 0; break;
+			case   5000: display_timebase = 10000; z = 1; break;
+			case   2500: display_timebase = 5000; z = 1; break;
+			case   1000: display_timebase = 2500; z = 0; break;
+			case    500: display_timebase = 1000; z = 1; break;
+			case    250: display_timebase = 500; z = 1; break;
+			case    100: display_timebase = 250; z = 0; break;
+			case     50: display_timebase = 100; z = 1; break;
+			case     25: display_timebase = 50; z = 1; break;
+			case     10: display_timebase = 25; z = 0; break;
+			}
+			if (z) {
+				if (display_samples != 1) {
+					display_samples /= 2;
+				} else {
+					display_zoom *= 2;
+				}
+				xoffset *= 2;
+			} else {
+				if (display_samples != 1) {
+					display_samples *= 2;
+					display_samples /= 5;
+					if (display_samples == 0)
+						display_samples = 1;
+				} else {
+					display_zoom *= 5;
+					display_zoom /= 2;
+				}
+				xoffset *= 5;
+				xoffset /= 2;
+			}
+			display_trigger_offset = convert_trigger_position(display_trigger_position);
+			display = 1;
+			break;
+		case '_':
+		case '-':
+			if (display_timebase == 10)
+				break;
+			switch (display_timebase) {
+			case 5000000: display_timebase = 2500000; z = 1; break;
+			case 2500000: display_timebase = 1000000; z = 0; break;
+			case 1000000: display_timebase = 500000; z = 1; break;
+			case 500000: display_timebase = 250000; z = 1; break;
+			case 250000: display_timebase = 100000; z = 0; break;
+			case 100000: display_timebase = 50000; z = 1; break;
+			case  50000: display_timebase = 25000; z = 1; break;
+			case  25000: display_timebase = 10000; z = 0; break;
+			case  10000: display_timebase = 5000; z = 1; break;
+			case   5000: display_timebase = 2500; z = 1; break;
+			case   2500: display_timebase = 1000; z = 0; break;
+			case   1000: display_timebase = 500; z = 1; break;
+			case    500: display_timebase = 250; z = 1; break;
+			case    250: display_timebase = 100; z = 0; break;
+			case    100: display_timebase = 50; z = 1; break;
+			case     50: display_timebase = 25; z = 1; break;
+			case     25: display_timebase = 10; z = 0; break;
+			}
+			if (z) {
+				if (display_zoom == 1) {
+					display_samples *= 2;
+				} else {
+					display_zoom /= 2;
+				}
+				xoffset /= 2;
+			} else {
+				if (display_zoom == 1) {
+					display_samples *= 5;
+					display_samples /= 2;
+				} else {
+					display_zoom *= 2;
+					display_zoom /= 5;
+					if (display_zoom == 0)
+						display_zoom = 1;
+				}
+				xoffset *= 2;
+				xoffset /= 5;
+			}
+			display_trigger_offset = convert_trigger_position(display_trigger_position);
+			display = 1;
+			break;
+		case 'v':
+		case 'V':	scope_down(); break;
+		case '^':	scope_up(); break;
+		case '<':	scope_left(); break;
+		case '>':	scope_right(); break;
+		}
+	}
+	return 0;
+}
+
+// y - y scale
+// + increase scale
+// - decrease scale
+// ^ move up
+// v move down
+uint8_t scope_y_interactive(bool interactive){
+	char c;
+	in_trigger_mode = 0;
+	display = 1;
+	printf("Voltage scale: +- ^v<>T tx rsona> ");
+	while ((c = next_char()) != 0) {
+		switch (c) {
+		case 't': printf("\r\n"); return 't';
+		case 'x': printf("\r\n"); return 'x';
+		case '.':
+		case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
+		case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
+		case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
+		case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
+		case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
+		case 'T': scope_to_trigger();	break;
+		case 0x1b:
+			c = next_char();
+			if (c != '[')
+				break;
+			c = next_char();
+			switch (c) {
+			case 'A': scope_up();	break;
+			case 'B': scope_down();	break;
+			case 'C': scope_right();break;
+			case 'D': scope_left();	break;
+			}
+			break;
+		case '=':
+		case '+':	if (dy > 5) {
+						switch (dy) {
+						case 100: dy = 50; yoffset = 2*yoffset; break;
+						case 50: dy = 20; yoffset = 5*yoffset/2; break;
+						case 20: dy = 10; yoffset = 2*yoffset; break;
+						case 10: dy = 5; yoffset = 2*yoffset; break;
+						}
+						if ((yoffset+5)*dy >= 500) {
+							yoffset = 500/dy-5;
+						}  
+						display = 1;
+					}
+					break;
+		case '_':
+		case '-':	if (dy < 100) {
+						switch (dy) {
+						case 50: dy = 100; yoffset /= 2; break;
+						case 20: dy = 50; yoffset = yoffset*2/5; break;
+						case 10: dy = 20; yoffset = yoffset/2; break;
+						case 5: dy = 10; yoffset = yoffset/2; break;
+						}
+						if ((yoffset+5)*dy >= 500) {
+							yoffset = 500/dy-5;
+						}  
+						display = 1;
+					}
+					break;
+		case 'v':
+		case 'V':	scope_down(); break;
+		case '^':	scope_up(); break;
+		case '<':	scope_left(); break;
+		case '>':	scope_right(); break;
+		}
+	}
+	return 0;
+}
+
+// start 
+// <> same as last - button if stopped
+// 0-7 - pin
+// o - once
+// n - normal
+// a - auto
+uint8_t scope_run_interactive(bool interactive){
+	for (;;) {
+		char c;
+		if (!cmdln_try_peek(0, &c))
+			break;
+		cmdln_try_discard(1);
+		if (c == 0)
+			break;
+		switch (c) {
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+			scope_pin = c-'0';
+			break;
+		case 'o':
+		case 'O':
+			scope_mode = SMODE_ONCE;
+			break;
+		case 'n':
+		case 'N':
+			scope_mode = SMODE_NORMAL;
+			break;
+		case 'a':
+		case 'A':
+			scope_mode = SMODE_AUTO;
+			break;
+		case ' ':
+			break;
+		default:
+			printf("invalid start mode '%c'\r\n", c);
+			return 1;
+		}
+	}
+	scope_stopped = 0;
+	scope_restart(scope_pin);
+	return 0;
+}
+
+uint8_t scope_stop_interactive(bool interactive){
+	// stop the engine - button if started
+	scope_stopped = 1;
+	scope_shutdown(1);
+	no_switch = 1;
+	system_config.info_bar_changed = 1;
+	return 0;
+}
+
+
+bool scope_interactive_loop(bool interactive, uint8_t action){	
+	while(true){
+		switch(action){
+			case 0: return 1; //this is inverted and it drives me crazy, but here we are...
+			case 'x': action=scope_x_interactive(interactive); break;
+			case 'y': action=scope_y_interactive(interactive); break;
+			case 't': action=scope_trigger_interactive(interactive); break;
+			case 'r': action=scope_run_interactive(interactive); break;
+			case 's': action=scope_stop_interactive(interactive); break;
+			default: return 0; //return error state
+		}
+	}
+}
+
 uint32_t
 scope_commands(struct command_result *result)
 {
@@ -653,15 +1048,18 @@ scope_commands(struct command_result *result)
 	//hack to discard the command
 	char args[5];
 	cmdln_args_string_by_position(0, sizeof(args), args);
-	if(!(args[0]=='x'||args[0]=='y'||args[0]=='t'|| (args[0]=='s'&&args[1]=='r')||(args[0]=='s'&&args[1]=='s')))
-	{
-		return 0;
-	}
-
-	if (args[0]) {
+	char action=0;
+	if((args[0]=='x'||args[0]=='y'||args[0]=='t')){
+		action = args[0];	
 		cmdln_try_discard(1);
-		if(args[1])
-			cmdln_try_discard(1);
+	}else if(strcmp(args, "sr") == 0){
+		action='r';
+		cmdln_try_discard(2);
+	}else if(strcmp(args, "ss") == 0){
+		action='s';
+		cmdln_try_discard(2);
+	}else{
+		return 0;
 	}
 
 	last = 0;
@@ -675,335 +1073,16 @@ scope_commands(struct command_result *result)
 		}
 		break;
 	}
-	
-	if (strcmp(args, "t") == 0)  {
-		// trigger
-		// a 0-7 which is the trigger pin
-		// v [0-9].[0-9] voltage level
-		// +-*b  trigger on pos neg none both
-		// ^ voltage up 0.1
-		// v voltage down 0.1
-		// < move trigger towards start
-		// > move trigger towards end
-		// p [0-1024] - trigger position
-do_t:
-		in_trigger_mode = 1;
-		display = 1;
-		printf("Trigger: +-*b ^v<>T BME xy rsona> ");
-		//printf("Trigger: a 0-7 +-*b ^v<>T BME xy rsona> ");
-		while ((c = next_char()) != 0) {
-			switch (c) {
-			case 'x': printf("\r\n"); goto do_x;
-			case 'y': printf("\r\n"); goto do_y;
-			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
-			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
-			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
-			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
-			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
-			case 'T': scope_to_trigger();	break;
-			case 0x1b:
-				c = next_char();
-				if (c != '[')
-					break;
-				c = next_char();
-				switch (c) {
-				case 'A': trigger_up();	break;
-				case 'B': trigger_down();	break;
-				case 'C': trigger_right();break;
-				case 'D': trigger_left();	break;
-				}
-				break;
-			case '=':
-			case '+':	trigger_type = TRIGGER_POS; display = 1; break;
-			case '_':
-			case '-':	trigger_type = TRIGGER_NEG; display = 1; break;
-			case '*':	trigger_type = TRIGGER_NONE; display = 1; break;
-			case 'b':	trigger_type = TRIGGER_BOTH; display = 1; break;
-			case 'v':
-			case 'V':	trigger_down(); break;
-			case '^':	trigger_up(); break;
-			case '<':	trigger_left(); break;
-			case '>':	trigger_right(); break;
-			case 'B':	trigger_begin(); break;
-			case 'M':
-			case 'm':	trigger_middle(); break;
-			case 'E':
-			case 'e':	trigger_end(); break;
-			}
-		}
-		in_trigger_mode = 0;
-		return 1;
-	} else
-	if (strcmp(args, "x") == 0)  {
-		int z;
-		// x - timebase
-		// < move left
-		// > move right
-		// + faster
-		// - slower
-do_x:
-		in_trigger_mode = 0;
-		display = 1;
-		printf("Timebase: +- ^v<>T ty rsona> ");
-		while ((c = next_char()) != 0) {
-			switch (c) {
-			case 't': printf("\r\n"); goto do_t;
-			case 'y': printf("\r\n"); goto do_y;
-			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
-			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
-			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
-			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
-			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
-			case 'T': scope_to_trigger();	break;
-			case 0x1b:
-				c = next_char();
-				if (c != '[')
-					break;
-				c = next_char();
-				switch (c) {
-				case 'A': scope_up();	break;
-				case 'B': scope_down();	break;
-				case 'C': scope_right();break;
-				case 'D': scope_left();	break;
-				}
-				break;
-			case '=':
-			case '+':
-				if (display_timebase == 5000000)
-					break;
-				switch (display_timebase) {
-				case 2500000: display_timebase = 5000000; z = 1; break;  // display_zoom only
-				case 1000000: display_timebase = 2500000; z = 0; break;  // display_zoom only
-				case 500000: display_timebase = 1000000; z = 1; break;  // display_zoom only
-				case 250000: display_timebase = 500000; z = 1; break;	// 1 sample
-				case 100000: display_timebase = 250000; z = 0; break;	// 2 samples
-				case  50000: display_timebase = 100000; z = 1; break;	// 5 samples
-				case  25000: display_timebase = 50000; z = 1; break;	
-				case  10000: display_timebase = 25000; z = 0; break;
-				case   5000: display_timebase = 10000; z = 1; break;
-				case   2500: display_timebase = 5000; z = 1; break;
-				case   1000: display_timebase = 2500; z = 0; break;
-				case    500: display_timebase = 1000; z = 1; break;
-				case    250: display_timebase = 500; z = 1; break;
-				case    100: display_timebase = 250; z = 0; break;
-				case     50: display_timebase = 100; z = 1; break;
-				case     25: display_timebase = 50; z = 1; break;
-				case     10: display_timebase = 25; z = 0; break;
-				}
-				if (z) {
-					if (display_samples != 1) {
-						display_samples /= 2;
-					} else {
-						display_zoom *= 2;
-					}
-					xoffset *= 2;
-				} else {
-					if (display_samples != 1) {
-						display_samples *= 2;
-						display_samples /= 5;
-						if (display_samples == 0)
-							display_samples = 1;
-					} else {
-						display_zoom *= 5;
-						display_zoom /= 2;
-					}
-					xoffset *= 5;
-					xoffset /= 2;
-				}
-				display_trigger_offset = convert_trigger_position(display_trigger_position);
-				display = 1;
-				break;
-			case '_':
-			case '-':
-				if (display_timebase == 10)
-					break;
-				switch (display_timebase) {
-				case 5000000: display_timebase = 2500000; z = 1; break;
-				case 2500000: display_timebase = 1000000; z = 0; break;
-				case 1000000: display_timebase = 500000; z = 1; break;
-				case 500000: display_timebase = 250000; z = 1; break;
-				case 250000: display_timebase = 100000; z = 0; break;
-				case 100000: display_timebase = 50000; z = 1; break;
-				case  50000: display_timebase = 25000; z = 1; break;
-				case  25000: display_timebase = 10000; z = 0; break;
-				case  10000: display_timebase = 5000; z = 1; break;
-				case   5000: display_timebase = 2500; z = 1; break;
-				case   2500: display_timebase = 1000; z = 0; break;
-				case   1000: display_timebase = 500; z = 1; break;
-				case    500: display_timebase = 250; z = 1; break;
-				case    250: display_timebase = 100; z = 0; break;
-				case    100: display_timebase = 50; z = 1; break;
-				case     50: display_timebase = 25; z = 1; break;
-				case     25: display_timebase = 10; z = 0; break;
-				}
-				if (z) {
-					if (display_zoom == 1) {
-						display_samples *= 2;
-					} else {
-						display_zoom /= 2;
-					}
-					xoffset /= 2;
-				} else {
-					if (display_zoom == 1) {
-						display_samples *= 5;
-						display_samples /= 2;
-					} else {
-						display_zoom *= 2;
-						display_zoom /= 5;
-						if (display_zoom == 0)
-							display_zoom = 1;
-					}
-					xoffset *= 2;
-					xoffset /= 5;
-				}
-				display_trigger_offset = convert_trigger_position(display_trigger_position);
-				display = 1;
-				break;
-			case 'v':
-			case 'V':	scope_down(); break;
-			case '^':	scope_up(); break;
-			case '<':	scope_left(); break;
-			case '>':	scope_right(); break;
-			}
-		}
-		return 1;
-	} else
-	if (strcmp(args, "y") == 0)  {
-		// y - y scale
-		// + increase scale
-		// - decrease scale
-		// ^ move up
-		// v move down
-do_y:
-		in_trigger_mode = 0;
-		display = 1;
-		printf("Voltage scale: +- ^v<>T tx rsona> ");
-		while ((c = next_char()) != 0) {
-			switch (c) {
-			case 't': printf("\r\n"); goto do_t;
-			case 'x': printf("\r\n"); goto do_x;
-			case '.':
-			case 's': scope_stopped = 1; scope_shutdown(1); no_switch = 1; system_config.info_bar_changed = 1;; break;
-			case 'r': scope_stopped = 0; scope_restart(scope_pin); break;
-			case 'o': scope_stopped = 0; scope_mode = SMODE_ONCE; scope_restart(scope_pin); break;
-			case 'n': scope_stopped = 0; scope_mode = SMODE_NORMAL; scope_restart(scope_pin); break;
-			case 'a': scope_stopped = 0; scope_mode = SMODE_AUTO; scope_restart(scope_pin); break;
-			case 'T': scope_to_trigger();	break;
-			case 0x1b:
-				c = next_char();
-				if (c != '[')
-					break;
-				c = next_char();
-				switch (c) {
-				case 'A': scope_up();	break;
-				case 'B': scope_down();	break;
-				case 'C': scope_right();break;
-				case 'D': scope_left();	break;
-				}
-				break;
-			case '=':
-			case '+':	if (dy > 5) {
-							switch (dy) {
-							case 100: dy = 50; yoffset = 2*yoffset; break;
-							case 50: dy = 20; yoffset = 5*yoffset/2; break;
-							case 20: dy = 10; yoffset = 2*yoffset; break;
-							case 10: dy = 5; yoffset = 2*yoffset; break;
-							}
-							if ((yoffset+5)*dy >= 500) {
-								yoffset = 500/dy-5;
-							}  
-							display = 1;
-						}
-						break;
-			case '_':
-			case '-':	if (dy < 100) {
-							switch (dy) {
-							case 50: dy = 100; yoffset /= 2; break;
-							case 20: dy = 50; yoffset = yoffset*2/5; break;
-							case 10: dy = 20; yoffset = yoffset/2; break;
-							case 5: dy = 10; yoffset = yoffset/2; break;
-							}
-							if ((yoffset+5)*dy >= 500) {
-								yoffset = 500/dy-5;
-							}  
-							display = 1;
-						}
-						break;
-			case 'v':
-			case 'V':	scope_down(); break;
-			case '^':	scope_up(); break;
-			case '<':	scope_left(); break;
-			case '>':	scope_right(); break;
-			}
-		}
-		return 1;
-	} else
-	if (strcmp(args, "sr") == 0)  {
-		// start 
-		// <> same as last - button if stopped
-		// 0-7 - pin
-		// o - once
-		// n - normal
-		// a - auto
-		for (;;) {
-			char c;
-			if (!cmdln_try_peek(0, &c))
-				break;
-			cmdln_try_discard(1);
-			if (c == 0)
-				break;
-			switch (c) {
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-				scope_pin = c-'0';
-				break;
-			case 'o':
-			case 'O':
-				scope_mode = SMODE_ONCE;
-				break;
-			case 'n':
-			case 'N':
-				scope_mode = SMODE_NORMAL;
-				break;
-			case 'a':
-			case 'A':
-				scope_mode = SMODE_AUTO;
-				break;
-			case ' ':
-				break;
-			default:
-				printf("invalid start mode '%c'\r\n", c);
-				return 0;
-			}
-		}
-		scope_stopped = 0;
-		scope_restart(scope_pin);
-	} else 
-	if (strcmp(args, "ss") == 0)  {
-		// stop the engine - button if started
-		scope_stopped = 1;
-		scope_shutdown(1);
-		no_switch = 1;
-		system_config.info_bar_changed = 1;
-	} else {
-		return 0;
-	}
+
+	return scope_interactive_loop(interactive, action);
 }
+
 
 static void
 scope_fb_init() 
 {
 	memset(&fb[0], (BL<<4)|BL, VS*HS/2);
 }
-
 
 static void
 draw_h_line(int x1, int x2, int y1, CLR c)
@@ -1699,7 +1778,7 @@ auto_wakeup(alarm_id_t id, void *user_data)
 }
 
 static void
-switch_buffers(void)\
+switch_buffers(void)
 {
 	uint16_t *x;
 	if (no_switch) {
@@ -1840,6 +1919,86 @@ scope_lcd_update(uint32_t flags)
 		if (scope_mode == SMODE_AUTO)
 			(void)add_alarm_in_ms(1000, auto_wakeup, NULL, false);
 	}
+}
+
+void scope_handler(struct command_result *res){
+	char args[9];
+	cmdln_args_string_by_position(1, sizeof(args), args);
+
+	if(strcmp("run", args) == 0){
+		// if not in scope mode, switch to scope mode
+		if(system_config.display!=1){
+			displays[system_config.display].display_cleanup();   // switch to HiZ
+			if(!displays[1].display_setup()){ //user bailed on setup steps
+				system_config.display=0; // switch to default
+				displays[system_config.display].display_setup();
+				displays[system_config.display].display_setup_exc();
+				//(*response).error=true;
+				printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_DISPLAY], ui_term_color_reset(), displays[system_config.display].display_name);
+				return;
+			}
+			system_config.display=1;                        // setup the new mode  
+			displays[system_config.display].display_setup_exc(); // execute the mode setup
+		}
+		//TODO: discard scope, discard whitespace, discard run
+		cmdln_try_discard(9); // discard the command 
+		if(!scope_interactive_loop(interactive, 'r')){
+			res->error=true;
+		}
+		return;
+	}else if(strcmp(args, "stop") == 0){
+		// stop
+		if(system_config.display!=1){ // if not in HiZ mode
+			printf("Error: Not in scope mode\r\n");
+			res->error=true;
+			return;
+		}
+		displays[system_config.display].display_cleanup(); 
+		system_config.display=0;
+		displays[system_config.display].display_setup();
+		displays[system_config.display].display_setup_exc();
+		cmdln_try_discard(11); // discard the command
+		if(!scope_interactive_loop(interactive, 's')){
+			res->error=true;
+		}		
+		return;
+	}else if(strcmp(args, "t") == 0){
+		// trigger
+		// a 0-7 which is the trigger pin
+		// v [0-9].[0-9] voltage level
+		// +-*b  trigger on pos neg none both
+		// ^ voltage up 0.1
+		// v voltage down 0.1
+		// < move trigger towards start
+		// > move trigger towards end
+		// p [0-1024] - trigger position
+		cmdln_try_discard(7); // discard the command
+		if(!scope_interactive_loop(interactive, 't')){
+			res->error=true;
+		}
+		return;
+	}else if(strcmp(args, "x") == 0){
+		// timebase
+		// + faster
+		// - slower
+		cmdln_try_discard(7); // discard the command
+		if(!scope_interactive_loop(interactive, 'x')){
+			res->error=true;
+		}
+		return;
+	}else if(strcmp(args, "y") == 0){
+		// y scale
+		// + increase scale
+		// - decrease scale
+		cmdln_try_discard(7); // discard the command
+		if(!scope_interactive_loop(interactive, 'y')){
+			res->error=true;
+		}
+		return;
+	}else{
+		printf("Invalid command\r\n");
+	}
+
 }
 
 /* For Emacs:

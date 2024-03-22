@@ -9,6 +9,7 @@ uint32_t scope_commands(struct command_result *result);
 void scope_periodic(void);
 void scope_lcd_update(uint32_t flags);
 extern volatile uint8_t scope_running;
+void scope_handler(struct command_result *res);
 
 #endif
 

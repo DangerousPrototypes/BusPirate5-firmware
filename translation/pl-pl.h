@@ -211,7 +211,7 @@ static char const * const pl_pl[]={
 	[T_HELP_1_11]="Zmierz częstotliwość na pinie IOx (jednorazowo/CIĄGLE)",
 	[T_HELP_1_23]="Monitoruj częstotliwość (wył./WŁ.)\t",
 	[T_HELP_1_12]="Generuj częstotliwość (wył./WŁ.)",
-	[T_HELP_HELP_GENERAL]="Global and mode help. Try 'h mode'",
+	[T_HELP_HELP_GENERAL]="Global, mode and display help. Try '?', '? mode' and '? display'",
 	[T_HELP_HELP_DISPLAY]="Help with a display mode such as the scope",
 	[T_HELP_HELP_COMMAND]="Add -h for command help: ls -h",
 	[T_HELP_1_14]="Wersja/Status\t",
@@ -376,7 +376,7 @@ static char const * const pl_pl[]={
 	[T_HELP_I2C_TSL2561]="Read light intensity (LUX) from TSL2561 sensor",
 	[T_HELP_1WIRE_SCAN]="scan for 1-Wire devices",
 	[T_HELP_1WIRE_DS18B20]="Query DS18B20 temperature sensor",
-	[T_HELP_UART_BRIDGE]="open UART with raw data IO, usb to serial bridge",
+	[T_HELP_UART_BRIDGE]="open UART with raw data IO, usb to serial bridge mode",
 	[T_HELP_UART_NMEA]="parse NMEA GPS data",
 
 };

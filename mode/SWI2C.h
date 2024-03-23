@@ -14,7 +14,7 @@ void SWI2C_settings(void);
 void SWI2C_help(void);
 void I2C_search(void);
 
-#define SWI2CSPEEDMENU	"\r\nSpeed\r\n 1. 100KHz\r\n 2. 400Khz\r\nspeed> "
+#define SWI2CSPEEDMENU	"\r\nSpeed\r\n 1. 100kHz\r\n 2. 400Khz\r\nspeed> "
 
 #define LA_SWI2C_PERIOD_100KHZ (((100000000/100)/4)/(10000000/72000))/10
 #define LA_SWI2C_PERIOD_400KHZ (((100000000/400)/4)/(10000000/72000))/10

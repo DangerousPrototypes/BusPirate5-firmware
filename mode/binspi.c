@@ -211,7 +211,7 @@ void SPIsetup(void) {
     {
         cmderror = 0; // reset errorflag because of no cmdlineinput
 
-        //bpWstring("Set speed:\x0D\x0A 1. 30KHz\x0D\x0A 2. 125KHz\x0D\x0A 3. 250KHz\x0D\x0A 4. 1MHz\x0D\x0A");
+        //bpWstring("Set speed:\x0D\x0A 1. 30kHz\x0D\x0A 2. 125kHz\x0D\x0A 3. 250kHz\x0D\x0A 4. 1MHz\x0D\x0A");
         //bpWline(OUMSG_SPI_SPEED);
         BPMSG1187;
         //modeConfig.speed=(bpUserNumberPrompt(1, 4, 1)-1);

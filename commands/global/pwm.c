@@ -257,7 +257,7 @@ uint8_t pwm_freq_find(float* freq_hz_value, float* pwm_hz_actual, float* pwm_ns_
 
 //1000MHZ = 1ns(p)
 // 1MHz = 1us(p)
-// 1KHz = 1ms(p)
+// 1kHz = 1ms(p)
 // 1Hz = 1000ms(p)
 // f=1/t
 // 1s = 1 000ms
@@ -266,7 +266,7 @@ uint8_t pwm_freq_find(float* freq_hz_value, float* pwm_hz_actual, float* pwm_ns_
 // f=1/1ms
 // f=1/.001s = 1000hz
 // t=1/f
-// t=1/1KHz
+// t=1/1kHz
 // t=1/1000Hz = .001s = 1ms
 void t_to_hz(float* t, uint8_t t_units, float* hz)
 {
@@ -298,7 +298,7 @@ uint32_t pwm_get_settings(float* pwm_hz_actual, float* duty_user_value)
     {
         //prompt user for frequency
         prompt_result result;
-        ui_prompt_float_units(&result, "Period or frequency (ns, us, ms, Hz, KHz or Mhz)", &freq_user_value, &freq_user_units);
+        ui_prompt_float_units(&result, "Period or frequency (ns, us, ms, Hz, kHz or Mhz)", &freq_user_value, &freq_user_units);
 
         if(result.exit)
         {

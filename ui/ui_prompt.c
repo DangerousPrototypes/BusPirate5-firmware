@@ -302,7 +302,7 @@ bool ui_prompt_float_units(prompt_result *result, const char *menu, float* user_
 
 		ui_prompt_invalid_option();
 		//TODO: loop these out from the units const array...
-		printf("%sError:%s Unknown units '%s'\r\n%sValid units: ns, us, ms, Hz, KHz, MHz, %%%s\r\n", 
+		printf("%sError:%s Unknown units '%s'\r\n%sValid units: ns, us, ms, Hz, kHz, MHz, %%%s\r\n", 
 				ui_term_color_error(), ui_term_color_reset(), units, ui_term_color_info(), ui_term_color_reset()
 			);
 	}

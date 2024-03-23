@@ -96,7 +96,7 @@ uint32_t spi_setup(void)
 
 		if(storage_load_mode(config_file, config_t, count_of(config_t))){
 			printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-			printf(" %s%s:%s %d KHz\r\n",ui_term_color_info(), t[T_HWSPI_SPEED_MENU], ui_term_color_reset(),mode_config.baudrate/1000);			
+			printf(" %s%s:%s %d kHz\r\n",ui_term_color_info(), t[T_HWSPI_SPEED_MENU], ui_term_color_reset(),mode_config.baudrate/1000);			
 			printf(" %s%s:%s %d\r\n", ui_term_color_info(), t[T_HWSPI_BITS_MENU], ui_term_color_reset(), mode_config.data_bits);
 			printf(" %s%s:%s %s\r\n", ui_term_color_info(), t[T_HWSPI_CLOCK_POLARITY_MENU], ui_term_color_reset(), t[spi_polarity_menu[mode_config.clock_polarity].description]);
 			printf(" %s%s:%s %s\r\n", ui_term_color_info(), t[T_HWSPI_CLOCK_PHASE_MENU], ui_term_color_reset(), t[spi_phase_menu[mode_config.clock_phase].description]);
@@ -233,7 +233,7 @@ void spi_pins(void)
 */
 
 void spi_settings(void){
-	printf("spi (baudrate, clock polarity, clock phase, cs)=(%dKHz, %d, %d, %d)", (mode_config.baudrate_actual/1000), (mode_config.clock_polarity>>1)+1, mode_config.clock_phase+1, mode_config.cs_idle+1);
+	printf("spi (baudrate, clock polarity, clock phase, cs)=(%dkHz, %d, %d, %d)", (mode_config.baudrate_actual/1000), (mode_config.clock_polarity>>1)+1, mode_config.clock_phase+1, mode_config.cs_idle+1);
 }
 
 void spi_printSPIflags(void){

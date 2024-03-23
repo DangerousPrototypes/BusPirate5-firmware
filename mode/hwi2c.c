@@ -63,7 +63,7 @@ uint32_t hwi2c_setup(void){
 
 	if(storage_load_mode(config_file, config_t, count_of(config_t))){
 		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-		printf(" %s: %dKHz\r\n", t[T_HWI2C_SPEED_MENU], mode_config.baudrate);			
+		printf(" %s: %dkHz\r\n", t[T_HWI2C_SPEED_MENU], mode_config.baudrate);			
 		//printf(" %s: %s\r\n", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[mode_config.data_bits].description]);
 		
 		bool user_value;
@@ -172,7 +172,7 @@ void hwi2c_printI2Cflags(void){
 
 void hwi2c_help(void){
 	printf("Muli-Master-multi-slave 2 wire protocol using a CLOCK and a bidirectional DATA\r\n");
-	printf("line in opendrain configuration. Standard clock frequencies are 100KHz, 400KHz\r\n");
+	printf("line in opendrain configuration. Standard clock frequencies are 100kHz, 400kHz\r\n");
 	printf("and 1MHz.\r\n");
 	printf("\r\n");
 	printf("More info: https://en.wikipedia.org/wiki/I2C\r\n");

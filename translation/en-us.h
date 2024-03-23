@@ -59,8 +59,8 @@ static char const * const en_us[]={
 	
 	//SPI
 	[T_HWSPI_SPEED_MENU]="SPI speed",
-	[T_HWSPI_SPEED_MENU_1]="1 to 62500KHz",
-	[T_HWSPI_SPEED_PROMPT]="KHz (%s%dKHz*%s)",
+	[T_HWSPI_SPEED_MENU_1]="1 to 62500kHz",
+	[T_HWSPI_SPEED_PROMPT]="kHz (%s%dkHz*%s)",
 	[T_HWSPI_BITS_MENU]="Data bits",
 	[T_HWSPI_BITS_MENU_1]="4 to 8 bits",
 	[T_HWSPI_BITS_PROMPT]="Bits (%s%d*%s)",
@@ -108,8 +108,8 @@ static char const * const en_us[]={
 	[T_UART_NO_DATA_TIMEOUT]="Data read timeout",
     //I2C
 	[T_HWI2C_SPEED_MENU]="I2C speed",
-	[T_HWI2C_SPEED_MENU_1]="1KHz to 1000KHz",
-	[T_HWI2C_SPEED_PROMPT]="KHz (%s%dKHz*%s)",
+	[T_HWI2C_SPEED_MENU_1]="1kHz to 1000kHz",
+	[T_HWI2C_SPEED_PROMPT]="kHz (%s%dkHz*%s)",
 	[T_HWI2C_DATA_BITS_MENU]="Data bits",
 	[T_HWI2C_DATA_BITS_MENU_1]="8",
 	[T_HWI2C_DATA_BITS_MENU_2]="10",

@@ -17,10 +17,6 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 
-#define M_LED_PIO pio0
-#define M_LED_SDO BIO0
-#define M_LED_SCL BIO1 //only used on APA102
-
 // command configuration
 const struct _command_struct hwled_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
@@ -47,7 +43,7 @@ enum M_LED_DEVICE_TYPE{
 static struct _led_mode_config mode_config;
 
 static PIO pio = M_LED_PIO;
-static uint pio_state_machine = 3;
+static uint pio_state_machine = M_LED_PIO_SM;
 static uint pio_loaded_offset;
 static uint8_t device_cleanup;
 

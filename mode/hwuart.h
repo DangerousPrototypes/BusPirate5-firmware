@@ -1,9 +1,3 @@
-#define M_UART_PORT uart0
-#define M_UART_TX BIO4
-#define M_UART_RX BIO5
-#define M_UART_RTS
-#define M_UART_CTS
-
 void hwuart_open(struct _bytecode *result, struct _bytecode *next);				// start
 void hwuart_open_read(struct _bytecode *result, struct _bytecode *next);				// start with read
 void hwuart_close(struct _bytecode *result, struct _bytecode *next);				// stop

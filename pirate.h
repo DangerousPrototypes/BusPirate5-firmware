@@ -68,4 +68,45 @@
 void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);
 void spi_busy_wait(bool enable);
+
+// 1wire settings
+#define M_OW_PIO pio0
+#define M_OW_PIO_SM 3
+#define M_OW_OWD BIO3
+
+// UART settings
+#define M_UART_PORT uart0
+#define M_UART_TX BIO4
+#define M_UART_RX BIO5
+#define M_UART_RTS
+#define M_UART_CTS
+
+// i2c settings
+#define M_I2C_PIO pio0
+#define M_I2C_PIO_SM 3
+#define M_I2C_SDA BIO0
+#define M_I2C_SCL BIO1
+
+// SPI settings
+#define M_SPI_PORT spi1
+#define M_SPI_CLK BIO6
+#define M_SPI_CDO BIO7
+#define M_SPI_CDI BIO4
+#define M_SPI_CS BIO5
+#define M_SPI_SELECT 0
+#define M_SPI_DESELECT 1
+
+#define M_2WIRE_PIO pio0
+#define M_2WIRE_PIO_SM 3  
+#define M_2WIRE_SDA BIO0
+#define M_2WIRE_SCL BIO1
+#define M_2WIRE_RST BIO2
+
+// LED settings
+#define M_LED_PIO pio0
+#define M_LED_PIO_SM 3
+#define M_LED_SDO BIO0
+#define M_LED_SCL BIO1 //only used on APA102
+
+
 #endif

@@ -27,8 +27,6 @@ const struct _command_struct hw1wire_commands[]={   //Function Help
 };
 const uint32_t hw1wire_commands_count=count_of(hw1wire_commands);
 
-#define M_OW_PIO pio0
-#define M_OW_OWD BIO3
 
 static const char pin_labels[][5]={
 	"OWD"
@@ -41,7 +39,7 @@ uint32_t hw1wire_setup(void){
 
 uint32_t hw1wire_setup_exc(void){
 	system_bio_claim(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
-	onewire_init(M_OW_PIO, 1, bio2bufiopin[BIO3], bio2bufdirpin[BIO3]);
+	onewire_init(M_OW_PIO, M_OW_PIO_SM, bio2bufiopin[BIO3], bio2bufdirpin[BIO3]);
     return 1;
 }
 

@@ -18,15 +18,6 @@
 #include "pirate/mem.h"
 #include "fatfs/ff.h"
 
-#define M_SPI_PORT spi1
-#define M_SPI_CLK BIO6
-#define M_SPI_CDO BIO7
-#define M_SPI_CDI BIO4
-#define M_SPI_CS BIO5
-
-#define M_SPI_SELECT 0
-#define M_SPI_DESELECT 1
-
 uint32_t flash_read(void);
 void flash_write_32(const uint32_t data, uint8_t count);
 void flash_write(const uint32_t data);

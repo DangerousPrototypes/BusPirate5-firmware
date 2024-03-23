@@ -15,7 +15,7 @@
 #include "lib/sfud/inc/sfud_def.h"
 #include "commands/spi/flash.h"
 #include "ui/ui_help.h"
-
+#include "pirate/hwspi.h"
 
 // command configuration
 const struct _command_struct hwspi_commands[]={   //Function Help
@@ -33,8 +33,7 @@ static const char pin_labels[][5]={
 
 static struct _spi_mode_config mode_config;
 
-uint32_t spi_setup(void)
-{
+uint32_t spi_setup(void){
 	uint32_t temp;
 	// did the user leave us arguments?
 	// baudrate
@@ -138,19 +137,7 @@ uint32_t spi_setup_exc(void){
 	//setup spi
 	mode_config.baudrate_actual=spi_init(M_SPI_PORT, mode_config.baudrate);
 	printf("\r\n%s%s:%s %ukHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
-	spi_set_format(M_SPI_PORT,mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase, SPI_MSB_FIRST);
-	//set buffers to correct position
-	bio_buf_output(M_SPI_CLK); //sck
-	bio_buf_output(M_SPI_CDO); //tx
-	bio_buf_input(M_SPI_CDI); //rx
-	//assign spi functon to io pins
-	bio_set_function(M_SPI_CLK, GPIO_FUNC_SPI); //sck
-	bio_set_function(M_SPI_CDO, GPIO_FUNC_SPI); //tx
-	bio_set_function(M_SPI_CDI, GPIO_FUNC_SPI); //rx
-	//cs
-	bio_set_function(M_SPI_CS, GPIO_FUNC_SIO);
-	bio_output(M_SPI_CS);
-	spi_set_cs(M_SPI_DESELECT);
+	hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
 	system_bio_claim(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
 	system_bio_claim(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);
@@ -159,13 +146,12 @@ uint32_t spi_setup_exc(void){
 
 void spi_cleanup(void){
 	// disable peripheral
-	spi_deinit(M_SPI_PORT);
+	hwspi_deinit();
+	//release pin claims
 	system_bio_claim(false, M_SPI_CLK, BP_PIN_MODE,0);
 	system_bio_claim(false, M_SPI_CDO, BP_PIN_MODE,0);
 	system_bio_claim(false, M_SPI_CDI, BP_PIN_MODE,0);
 	system_bio_claim(false, M_SPI_CS, BP_PIN_MODE,0);	
-	// reset all pins to safe mode (done before mode change, but we do it here to be safe)
-	bio_init();
 	// update system_config pins
 	system_config.misoport=0;
 	system_config.mosiport=0;

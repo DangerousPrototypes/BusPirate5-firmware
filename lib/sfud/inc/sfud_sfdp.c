@@ -87,7 +87,7 @@ bool sfud_read_sfdp(sfud_flash *flash) {
     if (read_sfdp_header(flash) && read_basic_header(flash, &basic_header)) {
         return read_basic_table(flash, &basic_header);
     } else {
-        printf("Warning: Read SFDP parameter header information failed. The %s does not support JEDEC SFDP.\r\n", flash->name);
+        printf("Warning: Read SFDP parameter header information failed.\r\nWarning: The chip does not support JEDEC SFDP.\r\n");
         return false;
     }
 }

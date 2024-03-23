@@ -59,7 +59,7 @@ uint32_t hw2wire_setup(void){
 	if(storage_load_mode(config_file, config_t, count_of(config_t)))
 	{
 		printf("\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-		printf(" %s: %dKHz\r\n", t[T_HW2WIRE_SPEED_MENU], hw2wire_mode_config.baudrate);			
+		printf(" %s: %dkHz\r\n", t[T_HW2WIRE_SPEED_MENU], hw2wire_mode_config.baudrate);			
 		//printf(" %s: %s\r\n", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[hw2wire_mode_config.data_bits].description]);
 		
 		bool user_value;

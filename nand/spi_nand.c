@@ -67,8 +67,6 @@
 
 #define BAD_BLOCK_MARK 0
 
-#define M_SPI_CS FLASH_STORAGE_CS
-
 // private types
 typedef union {
     uint8_t whole;
@@ -365,7 +363,7 @@ static void csel_setup(void)
 static void csel_deselect(void)
 {
     //LL_GPIO_SetOutputPin(CSEL_PORT, CSEL_PIN);
-    gpio_put(M_SPI_CS, 1); 
+    gpio_put(FLASH_STORAGE_CS, 1); 
     spi_busy_wait(false);
 }
 
@@ -373,7 +371,7 @@ static void csel_select(void)
 {
     //LL_GPIO_ResetOutputPin(CSEL_PORT, CSEL_PIN);
     spi_busy_wait(true);
-    gpio_put(M_SPI_CS, 0); 
+    gpio_put(FLASH_STORAGE_CS, 0); 
 }
 
 static int reset(void)

@@ -79,6 +79,7 @@ typedef struct {
 #define SFUD_MF_ID_FUJITSU                             0x04
 #define SFUD_MF_ID_EON                                 0x1C
 #define SFUD_MF_ID_ATMEL                               0x1F
+#define SFUD_MF_ID_ADESTO                               0x1F //adesto/renasis
 #define SFUD_MF_ID_MICRON                              0x20
 #define SFUD_MF_ID_AMIC                                0x37
 #define SFUD_MF_ID_NOR_MEM                             0x52
@@ -101,6 +102,7 @@ typedef struct {
     {"Fujitsu",    SFUD_MF_ID_FUJITSU},                   \
     {"EON",        SFUD_MF_ID_EON},                       \
     {"Atmel",      SFUD_MF_ID_ATMEL},                     \
+    {"Adesto",      SFUD_MF_ID_ATMEL},                     \
     {"Micron",     SFUD_MF_ID_MICRON},                    \
     {"AMIC",       SFUD_MF_ID_AMIC},                      \
     {"Sanyo",      SFUD_MF_ID_SANYO},                     \
@@ -124,7 +126,8 @@ typedef struct {
  * | name | mf_id | type_id | capacity_id | capacity | write_mode | erase_gran | erase_gran_cmd |
  */
 #define SFUD_FLASH_CHIP_TABLE                                                                                       \
-{                                                                                                                   \
+{                                                                                                                    \
+    {"AT25SF321", SFUD_MF_ID_ADESTO, 0x87, 0x01, 4L*1024L*1024L, SFUD_WM_BYTE|SFUD_WM_PAGE_256B, 4096, 0x20},      \
     {"AT45DB161E", SFUD_MF_ID_ATMEL, 0x26, 0x00, 2L*1024L*1024L, SFUD_WM_BYTE|SFUD_WM_DUAL_BUFFER, 512, 0x81},      \
     {"W25X40CL", SFUD_MF_ID_WINBOND, 0x30, 0x13, 512L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                        \
     {"W25X80CL", SFUD_MF_ID_WINBOND, 0x30, 0x14, 1024L*1024L, SFUD_WM_PAGE_256B, 4096, 0x20},                       \

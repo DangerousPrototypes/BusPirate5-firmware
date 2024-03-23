@@ -36,15 +36,7 @@
 #include <stdarg.h>
 #include "sfud.h"
 #include "pirate/bio.h"
-
-#define M_SPI_PORT spi1
-#define M_SPI_CLK BIO6
-#define M_SPI_CDO BIO7
-#define M_SPI_CDI BIO4
-#define M_SPI_CS BIO5
-
-#define M_SPI_SELECT 0
-#define M_SPI_DESELECT 1
+#include "pirate/hwspi.h"
 
 static char log_buf[256];
 
@@ -70,7 +62,8 @@ static sfud_err spi_write_read(const sfud_spi *spi, const uint8_t *write_buf, si
     }
 
     //CS low
-    bio_put(M_SPI_CS, 0);
+    //bio_put(M_SPI_CS, 0);
+    hwspi_select();
     for (size_t i = 0, retry_times; i < write_size + read_size; i++) {
         if (i < write_size) {
             send_data = *write_buf++;
@@ -78,65 +71,12 @@ static sfud_err spi_write_read(const sfud_spi *spi, const uint8_t *write_buf, si
             send_data = SFUD_DUMMY_DATA;
         }
 
-        while(!spi_is_writable(M_SPI_PORT));
-	
-        spi_get_hw(M_SPI_PORT)->dr = (uint32_t)send_data;
-
-        while(!spi_is_readable(M_SPI_PORT));
-        
-        read_data= (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
-
-        // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
-        // is full, PL022 inhibits RX pushes, and sets a sticky flag on
-        // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
-        /*
-        while(!spi_is_writable(M_SPI_PORT))
-        {
-            tight_loop_contents();
-        }
-
-        spi_get_hw(M_SPI_PORT)->dr = (uint32_t)send_data;
-
-        // Drain RX FIFO, then wait for shifting to finish (which may be *after*
-        // TX FIFO drains), then drain RX FIFO again
-        while(spi_is_readable(M_SPI_PORT))
-        {
-            (void)spi_get_hw(M_SPI_PORT)->dr;
-        }
-
-        while(spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
-        {
-            tight_loop_contents();
-        }
-
-        while(spi_is_readable(M_SPI_PORT))
-        {
-            read_data=spi_get_hw(M_SPI_PORT)->dr;
-        }
-
-        // Don't leave overrun flag set
-        spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
-        */
-
-/*
-        retry_times = 1000;
-        while (SPI_I2S_GetFlagStatus(spi_dev->spix, SPI_I2S_FLAG_TXE) == RESET) {
-            SFUD_RETRY_PROCESS(NULL, retry_times, result);
-        }
-        if (result != SFUD_SUCCESS) {
-            goto exit;
-        }
-        SPI_I2S_SendData(spi_dev->spix, send_data);
-
-        retry_times = 1000;
-        while (SPI_I2S_GetFlagStatus(spi_dev->spix, SPI_I2S_FLAG_RXNE) == RESET) {
-            SFUD_RETRY_PROCESS(NULL, retry_times, result);
-        }
-        if (result != SFUD_SUCCESS) {
-            goto exit;
-        }
-        read_data = SPI_I2S_ReceiveData(spi_dev->spix);
-*/
+        //TODO: use pirate hwspi lib
+        //while(!spi_is_writable(M_SPI_PORT));
+        //spi_get_hw(M_SPI_PORT)->dr = (uint32_t)send_data;
+        //while(!spi_is_readable(M_SPI_PORT));
+        //read_data= (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
+        read_data=hwspi_write_read(send_data);
 
         if (i >= write_size) {
             *read_buf++ = read_data;
@@ -145,7 +85,8 @@ static sfud_err spi_write_read(const sfud_spi *spi, const uint8_t *write_buf, si
 
 exit:
     //CS High
-    bio_put(M_SPI_CS, 1);
+    //bio_put(M_SPI_CS, 1);
+    hwspi_deselect();
 
     return result;
 }

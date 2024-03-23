@@ -304,6 +304,7 @@ static sfud_err hardware_init(sfud_flash *flash) {
 #endif
 
 #ifdef SFUD_USING_FLASH_INFO_TABLE
+            printf("Searching flash chip database for 0x%02X 0x%02X 0x%02X\r\n", flash->chip.mf_id, flash->chip.type_id, flash->chip.capacity_id);
             /* read SFDP parameters failed then using SFUD library provided static parameter */
             for (i = 0; i < sizeof(flash_chip_table) / sizeof(sfud_flash_chip); i++) {
                 if ((flash_chip_table[i].mf_id == flash->chip.mf_id)

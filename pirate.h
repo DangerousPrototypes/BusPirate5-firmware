@@ -96,6 +96,7 @@ void spi_busy_wait(bool enable);
 #define M_SPI_SELECT 0
 #define M_SPI_DESELECT 1
 
+// 2wire settings
 #define M_2WIRE_PIO pio0
 #define M_2WIRE_PIO_SM 3  
 #define M_2WIRE_SDA BIO0

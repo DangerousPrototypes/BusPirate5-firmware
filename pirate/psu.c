@@ -174,7 +174,7 @@ void psu_init(void){
     uint v_chan_num= pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
     uint i_chan_num= pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
 
-    //10KHz clock, into our 1K + 0.1uF filter
+    //10kHz clock, into our 1K + 0.1uF filter
     pwm_set_clkdiv_int_frac(slice_num, 16>>4,16&0b1111);
     pwm_set_wrap(slice_num,PWM_TOP);
 

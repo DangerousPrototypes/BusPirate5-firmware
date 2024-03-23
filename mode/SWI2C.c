@@ -156,7 +156,7 @@ void SWI2C_settings(void)
 void SWI2C_help(void)
 {
     printf("Muli-Master-multi-slave 2 wire protocol using a CLOCK and an bidirectional DATA\r\n");
-    printf("line in opendrain configuration. Standard clock frequencies are 100KHz, 400KHz\r\n");
+    printf("line in opendrain configuration. Standard clock frequencies are 100kHz, 400kHz\r\n");
     printf("and 1MHz.\r\n");
     printf("\r\n");
     printf("More info: https://en.wikipedia.org/wiki/I2C\r\n");

@@ -16,17 +16,11 @@
 #include "lib/sfud/inc/sfud_def.h"
 #include "spiflash.h"
 #include "pirate/mem.h"
+#include "pirate/hwspi.h"
 #include "fatfs/ff.h"
 
-uint32_t flash_read(void);
-void flash_write_32(const uint32_t data, uint8_t count);
-void flash_write(const uint32_t data);
-void flash_start(void);
-void flash_stop(void);
-void flash_read_n(uint8_t *data, uint8_t count);
 
-void flash_not_found()
-{
+void flash_not_found(){
     printf("not found\r\n");
 }
 
@@ -438,8 +432,7 @@ typedef struct __attribute__((packed)) ptp_manuf_struct {
 uint32_t flash_erase_size(uint32_t size, char *unit){
     uint32_t erase_size=pow(2,size);
     *unit ='B';
-    if(erase_size>=1024)
-    {
+    if(erase_size>=1024){
         erase_size=erase_size/1024;
         *unit='K';
     }
@@ -449,15 +442,15 @@ uint32_t flash_erase_size(uint32_t size, char *unit){
 bool flash_read_resid(uint8_t *res_id){
     //DP 0xB9: deep power down and then RDP 0xAB, 3 dummy bytes, 1 RES ID byte (release and read ID)
     //deep sleep command
-    flash_start();
-    flash_write(0xab);
-    flash_stop();
+    hwspi_select();
+    hwspi_write(0xab);
+    hwspi_deselect();
     //resume and read ID
     busy_wait_ms(10);
-    flash_start();
-    flash_write_32(0xab000000, 4);
-    *res_id = flash_read();
-    flash_stop();
+    hwspi_select();
+    hwspi_write_32(0xab000000, 4);
+    *res_id = hwspi_read();
+    hwspi_deselect();
     if(*res_id==0x00 || *res_id==0xff){
         return false;
     }
@@ -467,11 +460,11 @@ bool flash_read_resid(uint8_t *res_id){
 bool flash_read_remsid(uint8_t *remsid_manuf, uint8_t *remsid_dev){
     //0x90: REMS  Read Electronic Manufacturer ID & Device ID (REMS)
     // 0x90, 0x00:3, 1 Manuf ID, 1 Device ID
-    flash_start();
-    flash_write_32(0x90000000,4);
-    *remsid_manuf = flash_read();
-    *remsid_dev = flash_read();
-    flash_stop();
+    hwspi_select();
+    hwspi_write_32(0x90000000,4);
+    *remsid_manuf = hwspi_read();
+    *remsid_dev = hwspi_read();
+    hwspi_deselect();
     if(*remsid_manuf==0x00 || *remsid_manuf==0xff) {//TODO: manuf ID has a checksum bit or something, list of man and dev ids?    {
         return false;
     }
@@ -481,12 +474,12 @@ bool flash_read_remsid(uint8_t *remsid_manuf, uint8_t *remsid_dev){
 bool flash_read_rdid(uint8_t *rdid_manuf, uint8_t *rdid_type, uint8_t *rdid_capacity){
     //0x9f: RDID  Read Identification (RDID)
     // 0x9f, 1 manuf ID, 1 memory type, 1 capacity
-    flash_start();
-    flash_write(0x9f);
-    *rdid_manuf=flash_read();
-    *rdid_type=flash_read();
-    *rdid_capacity=flash_read();
-    flash_stop();
+    hwspi_select();
+    hwspi_write(0x9f);
+    *rdid_manuf=hwspi_read();
+    *rdid_type=hwspi_read();
+    *rdid_capacity=hwspi_read();
+    hwspi_deselect();
     if(*rdid_manuf==0x00 || *rdid_manuf==0xff){//TODO: is there a standard coding?
         return false;
     }
@@ -511,12 +504,12 @@ void spiflash_probe(void){
     //now grab Serial Flash Discoverable Parameter (SFDP)
     // 0x5a 3 byte address, dummy byte, read first 24bytes
     printf("\r\n\r\nSFDP (0x5A): ");
-    flash_start();
-    flash_write_32(0x5a000000, 4);
-    flash_write(0xff); //dummy byte
+    hwspi_select();
+    hwspi_write_32(0x5a000000, 4);
+    hwspi_write(0xff); //dummy byte
     uint8_t sfdp[128];
-    flash_read_n(sfdp,8);
-    flash_stop();
+    hwspi_read_n(sfdp,8);
+    hwspi_deselect();
 
     ptp_head_t *ptp_head;
     ptp_head = (ptp_head_t *)&sfdp;
@@ -537,12 +530,12 @@ void spiflash_probe(void){
     //loop over table pointers, usually 2?
     for(uint8_t i=0; i<param_table_pointers; i++){
         printf("\r\n**Param Table %d**\r\n", i);
-        flash_start();
+        hwspi_select();
         uint32_t address=0x5a000000 + 8 + (i*8);
-        flash_write_32(address, 4);
-        flash_write(0xff); //dummy byte
-        flash_read_n(sfdp,8);
-        flash_stop();
+        hwspi_write_32(address, 4);
+        hwspi_write(0xff); //dummy byte
+        hwspi_read_n(sfdp,8);
+        hwspi_deselect();
         const char ptp_jedec[]="JEDEC";
         const char ptp_manuf[]="manuf";
         ptp_record_t *ptp_rec;
@@ -560,11 +553,11 @@ void spiflash_probe(void){
             continue;
         }    
           
-        flash_start();
-        flash_write_32(0x5a000000 + ptp_address, 4);
-        flash_write(0xff); //dummy byte
-        flash_read_n(sfdp,ptp_length);
-        flash_stop();
+        hwspi_select();
+        hwspi_write_32(0x5a000000 + ptp_address, 4);
+        hwspi_write(0xff); //dummy byte
+        hwspi_read_n(sfdp,ptp_length);
+        hwspi_deselect();
 
         /* print JEDEC basic flash parameter table info */
         printf("\r\nMSB-LSB  3    2    1    0\r\n");
@@ -661,100 +654,3 @@ void spiflash_probe(void){
         }    
     }
 }
-
-void flash_set_cs(uint8_t cs)
-{
-
-	if(cs==M_SPI_SELECT) // 'start'
-	{
-		if(true) bio_put(M_SPI_CS, 0);
-			else bio_put(M_SPI_CS, 1);
-	}
-	else			// 'stop' 
-	{
-		if(true) bio_put(M_SPI_CS, 1);
-			else bio_put(M_SPI_CS, 0);
-	}
-}
-
-uint8_t flash_xfer(const uint8_t out)
-{
-	uint8_t spi_in;
-	spi_write_read_blocking(M_SPI_PORT, &out,&spi_in, 1);
-	return spi_in;
-}
-
-void flash_start(void)
-{
-	flash_set_cs(M_SPI_SELECT);
-}
-
-void flash_stop(void)
-{
-
-	flash_set_cs(M_SPI_DESELECT);
-}
-
-void flash_write_32(const uint32_t data, uint8_t count)
-{
-    uint8_t sent=0;
-    for(uint8_t i=4; i>0; i--)
-    {
-        flash_write(data>>(8*(i-1)));
-        sent++;
-        if(sent==count) return;
-    }
-}
-
-void flash_write(uint32_t data)
-{
-    // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
-    // is full, PL022 inhibits RX pushes, and sets a sticky flag on
-    // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
-	while(!spi_is_writable(M_SPI_PORT))
-	{
-		tight_loop_contents();
-	}
-
-	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)data;
-
-    // Drain RX FIFO, then wait for shifting to finish (which may be *after*
-    // TX FIFO drains), then drain RX FIFO again
-    while(spi_is_readable(M_SPI_PORT))
-	{
-        (void)spi_get_hw(M_SPI_PORT)->dr;
-	}
-
-    while(spi_get_hw(M_SPI_PORT)->sr & SPI_SSPSR_BSY_BITS)
-	{
-        tight_loop_contents();
-	}
-
-    while(spi_is_readable(M_SPI_PORT))
-	{
-        (void)spi_get_hw(M_SPI_PORT)->dr;
-	}
-
-    // Don't leave overrun flag set
-    spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
-}
-
-void flash_read_n(uint8_t *data, uint8_t count)
-{
-    for(uint8_t i=0; i<count; i++)
-    {
-        data[i]=flash_read();
-    }
-}
-
-uint32_t flash_read(void)
-{
-	while(!spi_is_writable(M_SPI_PORT));
-	
-	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)0xff;
-
-    while(!spi_is_readable(M_SPI_PORT));
-	
-	return (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
-}
-

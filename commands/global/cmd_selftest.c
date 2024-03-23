@@ -266,6 +266,7 @@ bool selftest_pullup_low(void){
 
 bool selftest_current_override(void){
     //1. Test with current override
+    pullup_enable(); 
     printf("CURRENT OVERRIDE: ");
     uint32_t result=psu_enable(3.3,0, true);
     if(result==0){

@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 # initalize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
 #set(PICO_SDK_PATH "C:/pico113/pico-sdk")
-
+ 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
@@ -87,6 +87,7 @@ set(bp5_common
         lib/ms5611/ms5611.c lib/ms5611/ms5611.h lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
         #SPI
         mode/hwspi.c mode/hwspi.h 
+        pirate/hwspi.c pirate/hwspi.h
         commands/spi/flash.c commands/spi/flash.h commands/spi/spiflash.h commands/spi/spiflash.c
         lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h 
         lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c         

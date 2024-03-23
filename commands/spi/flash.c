@@ -118,7 +118,7 @@ void flash(struct command_result *res){
     uint32_t start_address=0;
 
     if(!probe && !spiflash_init(&flash_info)) return;
-    uint32_t end_address=flash_info.sfdp.capacity; //TODO: handle capacity in the flashtable when we pass from command line
+    uint32_t end_address=flash_info.chip.capacity; //TODO: handle capacity in the flashtable when we pass from command line
     if(probe){
         spiflash_probe();
         return;

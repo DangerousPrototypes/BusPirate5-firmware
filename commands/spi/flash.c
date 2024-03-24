@@ -77,12 +77,6 @@ void flash(struct command_result *res){
     };
 */
     if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
-
-    if(system_config.mode!=4){
-        printf("flash command is currently only available in SPI mode\r\n");
-        return;
-    }
-
     if(!ui_help_check_vout_vref()){
         return;
     }

@@ -60,7 +60,7 @@ void ui_help_mode_commands(const struct _command_struct *commands, uint32_t coun
             ui_term_color_prompt(), 
             commands[i].command, 
             ui_term_color_info(), 
-            commands[i].help_text?t[commands[i].help_text]:"Unavailable", 
+            commands[i].help_text?t[commands[i].help_text]:"Description not set. Try -h for command help", 
             ui_term_color_reset()
         );
     }

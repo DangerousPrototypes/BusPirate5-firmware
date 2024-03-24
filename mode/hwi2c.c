@@ -16,10 +16,6 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 
-#define M_I2C_PIO pio0
-#define M_I2C_SDA BIO0
-#define M_I2C_SCL BIO1
-
 static const char pin_labels[][5]={
 	"SDA",
 	"SCL",

@@ -75,9 +75,13 @@ set(bp5_common
         commands/1wire/demos.h commands/1wire/demos.c
         #UART 
         mode/hwuart.h mode/hwuart.c 
+        pirate/hwuart_pio.h pirate/hwuart_pio.c 
         commands/uart/nmea.c commands/uart/nmea.h
         commands/uart/bridge.h commands/uart/bridge.c
+        commands/uart/simcard.h commands/uart/simcard.c 
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
+        #Half duplex UART
+        mode/hwhduart.h mode/hwhduart.c
         #I2C
         mode/hwi2c.c mode/hwi2c.h 
         pirate/hwi2c_pio.c pirate/hwi2c_pio.h
@@ -196,6 +200,7 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/ws2812.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/apa102.pio) 
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw1wire.pio) 
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwuart.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/logicanalyzer.pio)
 
         pico_set_program_name(${revision} ${revision})

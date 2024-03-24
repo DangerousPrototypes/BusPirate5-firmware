@@ -24,6 +24,7 @@
 //#define		BP_USE_SW1WIRE
 #define     BP_USE_HW1WIRE
 #define		BP_USE_HWUART
+#define     BP_USE_HWHDUART
 #define		BP_USE_HWI2C
 //#define		BP_USE_SWI2C
 #define		BP_USE_HWSPI
@@ -80,6 +81,9 @@ void spi_busy_wait(bool enable);
 #define M_UART_RX BIO5
 #define M_UART_RTS
 #define M_UART_CTS
+#define M_UART_PIO pio0
+#define M_UART_PIO_SM 3
+#define M_UART_RXTX BIO0
 
 // i2c settings
 #define M_I2C_PIO pio0

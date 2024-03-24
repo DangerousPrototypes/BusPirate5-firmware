@@ -15,6 +15,9 @@ enum
 #ifdef BP_USE_HWUART
 	HWUART,
 #endif
+#ifdef BP_USE_HWHDUART
+	HWHDUART,
+#endif
 #ifdef BP_USE_HWI2C
 	HWI2C,
 #endif

@@ -17,6 +17,9 @@
 #ifdef	BP_USE_HWUART
     #include "mode/hwuart.h"
 #endif
+#ifdef	BP_USE_HWHDUART
+    #include "mode/hwhduart.h"
+#endif
 #ifdef	BP_USE_HWI2C
     #include "mode/hwi2c.h"
 #endif
@@ -217,6 +220,34 @@ struct _mode modes[MAXPROTO]={{
     hwuart_commands,               // mode specific commands
     &hwuart_commands_count,       // mode specific commands count    
     "UART",				// friendly name (promptname)
+},
+#endif
+#ifdef BP_USE_HWHDUART
+{
+    hwhduart_open,				// start
+    hwhduart_open_read,			// start with read
+    hwhduart_close,				// stop
+    hwhduart_close,				// stop with read
+    hwhduart_write,				// send(/read) max 32 bit
+    hwhduart_read,				// read max 32 bit
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
+    hwhduart_periodic,				// service to regular poll whether a byte ahs arrived
+    hwhduart_macro,				// macro
+    hwhduart_setup,				// setup UI
+    hwhduart_setup_exc,			// real setup
+    hwhduart_cleanup,			// cleanup for HiZ
+    //hwuart_pins,				// display pin config
+    hwhduart_settings,			// display settings
+    hwhduart_help,				// display small help about the protocol
+    hwhduart_commands,               // mode specific commands
+    &hwhduart_commands_count,       // mode specific commands count    
+    "HDPLXUART",				// friendly name (promptname)
 },
 #endif
 #ifdef BP_USE_HWI2C

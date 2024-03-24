@@ -137,7 +137,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override){
     if(!current_limit_override){
         psu_current_limit_override(false);
         psu_dac_set(psu_status.voltage_dac_value, psu_status.current_dac_value);
-        busy_wait_ms(100);
+        busy_wait_ms(200);
         if(!psu_fuse_ok()){// did the fuse blow?
             psu_disable();
             return PSU_ERROR_FUSE_TRIPPED;

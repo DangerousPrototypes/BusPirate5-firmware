@@ -225,9 +225,9 @@ struct _mode modes[MAXPROTO]={{
 #ifdef BP_USE_HWHDUART
 {
     hwhduart_open,				// start
-    hwhduart_open_read,			// start with read
+    hwhduart_start_alt,			// start with read
     hwhduart_close,				// stop
-    hwhduart_close,				// stop with read
+    hwhduart_stop_alt,				// stop with read
     hwhduart_write,				// send(/read) max 32 bit
     hwhduart_read,				// read max 32 bit
 	nullfunc1_temp,				// set clk high

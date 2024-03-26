@@ -1,5 +1,7 @@
 void hwhduart_open(struct _bytecode *result, struct _bytecode *next);				// start
-void hwhduart_open_read(struct _bytecode *result, struct _bytecode *next);				// start with read
+void hwhduart_open_read(struct _bytecode *result, struct _bytecode *next);
+void hwhduart_stop_alt(struct _bytecode *result, struct _bytecode *next);
+void hwhduart_start_alt(struct _bytecode *result, struct _bytecode *next);				// start with read
 void hwhduart_close(struct _bytecode *result, struct _bytecode *next);				// stop
 void hwhduart_write(struct _bytecode *result, struct _bytecode *next);
 void hwhduart_read(struct _bytecode *result, struct _bytecode *next);

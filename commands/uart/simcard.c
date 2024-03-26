@@ -34,7 +34,7 @@ void simcard_handler(struct command_result *res){
     if(!ui_help_check_vout_vref()) return;
 
     pio_loaded_offset = pio_add_program(M_I2C_PIO, &uart_rx_program);
-    uart_rx_program_init(M_I2C_PIO, M_I2C_PIO_SM, pio_loaded_offset, bio2bufiopin[BIO0], 9600);
+    //uart_rx_program_init(M_I2C_PIO, M_I2C_PIO_SM, pio_loaded_offset, bio2bufiopin[BIO0], 9600);
 
     pio_remove_program(M_I2C_PIO, &uart_rx_program, pio_loaded_offset);
 }

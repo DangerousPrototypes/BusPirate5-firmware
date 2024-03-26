@@ -13,7 +13,7 @@
 start:
     wait 0 pin 0        ; Stall until start bit is asserted
                         ; was 7 (8 bits) but we need to skip the parity bit before the stop bit
-    set x, 8    [10]    ; Preload bit counter, then delay until halfway through
+    mov x, y    [10]    ; Preload bit counter, then delay until halfway through
 bitloop:                ; the first data bit (12 cycles incl wait, set).
     in pins, 1          ; Shift data bit into ISR
     jmp x-- bitloop [6] ; Loop 8 times, each loop iteration is 8 cycles
@@ -30,10 +30,10 @@ good_stop:              ; No delay before returning to start; a little slack is
 % c-sdk {
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
-static inline void uart_rx_program_init(PIO pio, uint sm, uint offset, uint pin, uint baud) {
+static inline void uart_rx_program_init(PIO pio, uint sm, uint offset, uint pin, uint bits, uint baud) {
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
     pio_gpio_init(pio, pin);
-    gpio_pull_up(pin);
+    gpio_pull_down(pin);
 
     pio_sm_config c = uart_rx_program_get_default_config(offset);
     sm_config_set_in_pins(&c, pin); // for WAIT, IN
@@ -47,6 +47,11 @@ static inline void uart_rx_program_init(PIO pio, uint sm, uint offset, uint pin,
     sm_config_set_clkdiv(&c, div);
     
     pio_sm_init(pio, sm, offset, &c);
+    
+    pio_sm_set_enabled(pio, sm, false);
+    //load the number of bits to send into the y register
+    pio_sm_exec(pio, sm, pio_encode_set(pio_y, bits));
+        
     pio_sm_set_enabled(pio, sm, true);
 }
 
@@ -69,23 +74,28 @@ bool uart_rx_program_getc(PIO pio, uint sm, uint32_t *value) {
 ; Add parity bit and 2 stop bits
                             
     pull       side 1 [7]  ; Assert stop bit, or stall with line in idle state
-    nop               [7]  ; change this to 7 +8 = 15 for 2 stop bits
-                           ; change 7 bits to 8 bits for parity bit
-    set x, 8   side 0 [7]  ; Preload bit counter, assert start bit for 8 clocks
-bitloop:                   ; This loop will run 8 times (8E2 UART)
+                            ; how many bits to send, excluding the final stop bit
+    mov x, y   side 0 [7]  ; Preload bit counter, assert start bit for 8 clocks
+    ;set x, 7   side 0 [7]
+bitloop:                   ; This loop will run y times 
     out pins, 1            ; Shift 1 bit from OSR to the first OUT pin
     jmp x-- bitloop   [6]  ; Each loop iteration is 8 cycles.
 
 
 % c-sdk {
-#include "hardware/clocks.h"
+//#include "hardware/clocks.h"
 
-static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_tx, uint baud) {
+static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_tx, uint bits, uint baud) {
     // Tell PIO to initially drive output-high on the selected pin, then map PIO
     // onto that pin with the IO muxes.
+    gpio_set_function(pin_tx, GPIO_FUNC_SIO);
     pio_sm_set_pins_with_mask(pio, sm, 1u << pin_tx, 1u << pin_tx);
     pio_sm_set_pindirs_with_mask(pio, sm, 1u << pin_tx, 1u << pin_tx);
     pio_gpio_init(pio, pin_tx);
+
+    iobank0_hw->io[pin_tx].ctrl
+    = (((pio==pio0)?GPIO_FUNC_PIO0:GPIO_FUNC_PIO1) << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB)
+    | (GPIO_OVERRIDE_INVERT << IO_BANK0_GPIO0_CTRL_OEOVER_LSB);
 
     pio_sm_config c = uart_tx_program_get_default_config(offset);
 
@@ -106,6 +116,11 @@ static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_
     sm_config_set_clkdiv(&c, div);
 
     pio_sm_init(pio, sm, offset, &c);
+
+    pio_sm_set_enabled(pio, sm, false);
+    //load the number of bits to send into the y register
+    pio_sm_exec(pio, sm, pio_encode_set(pio_y, bits));
+
     pio_sm_set_enabled(pio, sm, true);
 }
 

@@ -34,8 +34,10 @@ const struct _command_struct hwhduart_commands[]={   //Function Help
 const uint32_t hwhduart_commands_count=count_of(hwhduart_commands);
 
 static const char pin_labels[][5]={
-	"RXTX", 
+	"RXTX",
+    "RST", //TODO: support reset like 2 wire mode 
 	"CTS",
+    "RTS",
 };
 
 uint32_t hwhduart_setup(void){
@@ -115,7 +117,7 @@ uint32_t hwhduart_setup(void){
 uint32_t hwhduart_setup_exc(void){
 	//setup peripheral
 	//half duplex
-	hwuart_pio_init(mode_config.baudrate);
+	hwuart_pio_init(8, 'e', 2, mode_config.baudrate);
 	system_bio_claim(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
 
     printf("\r\nHalf Duplex UART is a work in progress.\r\nPlease reserve bug reports for later.\r\n");
@@ -126,7 +128,7 @@ void hwhduart_periodic(void){
 	uint32_t raw;
 	uint8_t cooked;
 	if(hwuart_pio_read(&raw, &cooked)){
-		//printf("PIO: %d\r\n", cooked);
+		//printf("PIO: 0x%04X ", raw);
 		printf("0x%02x ", cooked);
 		//ui_format_print_number_2(&periodic_attributes,  &cooked);
 	}
@@ -138,8 +140,8 @@ void hwhduart_open(struct _bytecode *result, struct _bytecode *next){
 	//	uart_getc(M_UART_PORT);
 	//}
 
-    mode_config.async_print=false;
-    result->data_message=t[T_UART_OPEN];
+    mode_config.async_print=true;
+    result->data_message=t[T_UART_OPEN_WITH_READ];
 }
 
 void hwhduart_open_read(struct _bytecode *result, struct _bytecode *next){    // start with read
@@ -152,12 +154,23 @@ void hwhduart_close(struct _bytecode *result, struct _bytecode *next){
 	result->data_message=t[T_UART_CLOSE];
 }
 
+void hwhduart_start_alt(struct _bytecode *result, struct _bytecode *next){
+	result->data_message=t[T_HW2WIRE_RST_HIGH];
+	bio_input(M_2WIRE_RST);
+}
+
+void hwhduart_stop_alt(struct _bytecode *result, struct _bytecode *next){
+	result->data_message=t[T_HW2WIRE_RST_LOW];
+	bio_output(M_2WIRE_RST);
+}
+
 void hwhduart_write(struct _bytecode *result, struct _bytecode *next){
 	if(mode_config.blocking){
 		//uart_putc_raw(M_UART_PORT, result->out_data);
 	}else{
 		//uart_putc_raw(M_UART_PORT, result->out_data);
 	}
+	hwuart_pio_write(result->out_data);
 }
 
 void hwhduart_read(struct _bytecode *result, struct _bytecode *next){

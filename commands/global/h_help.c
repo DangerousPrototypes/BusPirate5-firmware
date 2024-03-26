@@ -25,9 +25,9 @@ const struct ui_help_options global_commands[]={
     {0,"v/V", 	T_HELP_1_10},
 
 //measure analog and digital signals
-{1,"",T_HELP_SECTION_CAPTURE},
-    {0,"scope",T_HELP_CAPTURE_SCOPE},
-    {0,"logic",T_HELP_CAPTURE_LA},
+//{1,"",T_HELP_SECTION_CAPTURE},
+//    {0,"scope",T_HELP_CAPTURE_SCOPE},
+//    {0,"logic",T_HELP_CAPTURE_LA},
 
 //configure the terminal, LEDs, display and mode
 {1,"",T_HELP_SECTION_CONFIGURE},
@@ -55,8 +55,8 @@ const struct ui_help_options global_commands[]={
 	{0, "format", T_HELP_CMD_FORMAT},
 
 //useful command and mini programs
-{1,"",T_HELP_SECTION_PROGRAMS},
-	{0,"flash", T_HELP_CMD_FLASH},
+//{1,"",T_HELP_SECTION_PROGRAMS},
+	//{0,"flash", T_HELP_CMD_FLASH},
 
 // enter a mode to use protocols
 {1,"",T_HELP_SECTION_MODE},

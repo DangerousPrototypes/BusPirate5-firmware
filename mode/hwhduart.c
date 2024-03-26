@@ -72,7 +72,7 @@ uint32_t hwhduart_setup(void){
 
 	struct _mode_config_t config_t[]={
 		{"$.baudrate", &mode_config.baudrate},
-		//{"$.data_bits", &mode_config.data_bits},
+		{"$.data_bits", &mode_config.data_bits},
 		{"$.stop_bits", &mode_config.stop_bits},
 		{"$.parity", &mode_config.parity}
 	};
@@ -80,7 +80,7 @@ uint32_t hwhduart_setup(void){
 	if(storage_load_mode(config_file, config_t, count_of(config_t))){
 		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
 		printf(" %s: %d %s\r\n", t[T_UART_SPEED_MENU], mode_config.baudrate, t[T_UART_BAUD]);			
-		//printf(" %s: %d\r\n", t[T_UART_DATA_BITS_MENU], mode_config.data_bits);
+		printf(" %s: %d\r\n", t[T_UART_DATA_BITS_MENU], mode_config.data_bits);
 		printf(" %s: %s\r\n", t[T_UART_PARITY_MENU], t[uart_parity_menu[mode_config.parity].description]);
 		printf(" %s: %d\r\n", t[T_UART_STOP_BITS_MENU], mode_config.stop_bits);
 		bool user_value;
@@ -91,9 +91,9 @@ uint32_t hwhduart_setup(void){
 	ui_prompt_uint32(&result, &uart_menu[0], &mode_config.baudrate);
 	if(result.exit) return 0;
 
-	//ui_prompt_uint32(&result, &uart_menu[2], &temp);
-	//if(result.exit) return 0;
-	//mode_config.data_bits=(uint8_t)temp;
+	ui_prompt_uint32(&result, &uart_menu[2], &temp);
+	if(result.exit) return 0;
+	mode_config.data_bits=(uint8_t)temp;
 
 	ui_prompt_uint32(&result, &uart_menu[1], &temp); //could also just subtract one...
 	if(result.exit) return 0;
@@ -117,7 +117,7 @@ uint32_t hwhduart_setup(void){
 uint32_t hwhduart_setup_exc(void){
 	//setup peripheral
 	//half duplex
-	hwuart_pio_init(8, 'e', 2, mode_config.baudrate);
+	hwuart_pio_init(mode_config.data_bits, mode_config.parity, mode_config.stop_bits, mode_config.baudrate);
 	system_bio_claim(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
 
     printf("\r\nHalf Duplex UART is a work in progress.\r\nPlease reserve bug reports for later.\r\n");
@@ -175,8 +175,10 @@ void hwhduart_write(struct _bytecode *result, struct _bytecode *next){
 
 void hwhduart_read(struct _bytecode *result, struct _bytecode *next){
 	uint32_t timeout=0xfff;
-    #if 0
-	while(!uart_is_readable(M_UART_PORT)){
+	uint32_t raw;
+	uint8_t cooked;
+
+	while(!hwuart_pio_read(&raw, &cooked)){
 		timeout--;
 		if(!timeout){
 			result->error=SRES_ERROR;
@@ -184,14 +186,7 @@ void hwhduart_read(struct _bytecode *result, struct _bytecode *next){
 			return;			
 		}
 	}
-
-	if(uart_is_readable(M_UART_PORT)){
-		result->in_data=uart_getc(M_UART_PORT);
-	}else{
-		result->error=SRES_ERROR;
-		result->error_message=t[T_UART_NO_DATA_READ];
-	}
-    #endif
+	result->in_data=cooked;
 }
 
 void hwhduart_macro(uint32_t macro){

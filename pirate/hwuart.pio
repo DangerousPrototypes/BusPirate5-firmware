@@ -92,11 +92,14 @@ static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_
     pio_sm_set_pins_with_mask(pio, sm, 1u << pin_tx, 1u << pin_tx);
     pio_sm_set_pindirs_with_mask(pio, sm, 1u << pin_tx, 1u << pin_tx);
     pio_gpio_init(pio, pin_tx);
+    //gpio_set_oeover(pin_tx, GPIO_OVERRIDE_INVERT);
+    gpio_set_outover(pin_tx, GPIO_OVERRIDE_INVERT);  
 
-    iobank0_hw->io[pin_tx].ctrl
+
+    /*iobank0_hw->io[pin_tx].ctrl
     = (((pio==pio0)?GPIO_FUNC_PIO0:GPIO_FUNC_PIO1) << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB)
     | (GPIO_OVERRIDE_INVERT << IO_BANK0_GPIO0_CTRL_OEOVER_LSB);
-
+*/
     pio_sm_config c = uart_tx_program_get_default_config(offset);
 
     // OUT shifts to right, no autopull

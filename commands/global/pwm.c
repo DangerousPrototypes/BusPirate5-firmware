@@ -34,7 +34,7 @@ bool pwm_check_pin_is_available(const struct ui_prompt* menu, uint32_t* i)
     //temp fix for power supply PWM sharing
     #if BP5_REV <= 8
     if((*i)==0 || (*i)==1) return 0;
-    #endif
+    #endif 
     
     return ( system_config.pin_labels[(*i)+1]==0 && 
             !(system_config.freq_active & (0b11<<( (uint8_t)( (*i)%2 ? (*i)-1 : (*i) ) ) ) ) &&

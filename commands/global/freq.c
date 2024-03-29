@@ -53,7 +53,9 @@ bool freq_check_pin_is_available(const struct ui_prompt* menu, uint32_t* i)
     if((*i)>=count_of(bio2bufiopin)) return 0;
 
     //temp fix for power supply PWM sharing
+    #if BP5_REV <= 8
     if((*i)==0 || (*i)==1) return 0;
+    #endif
     
     return ( pwm_gpio_to_channel(bio2bufiopin[(*i)])==PWM_CHAN_B && 
             system_config.pin_labels[(*i)+1]==0 && 

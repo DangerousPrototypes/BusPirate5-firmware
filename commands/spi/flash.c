@@ -24,7 +24,8 @@ static const char * const usage[]= {
     "Erase and program, with verify: flash write -f example.bin -e -v",
     "Read to file: flash read -f example.bin",
     "Verify with file: flash verify -f example.bin",    
-    "Test chip (full erase/write/verify): flash test"
+    "Test chip (full erase/write/verify): flash test",
+    "Force dump: flash read -o -b <bytes> -f <file>"
 };
 
 static const struct ui_help_options options[]= {
@@ -105,18 +106,32 @@ void flash(struct command_result *res){
         printf("Missing file name (-f)\r\n");
         return;
     }
+    bool override_flag = cmdln_args_find_flag('o'|0x20);
 
     //start and end rage? bytes to write/dump???
     sfud_flash flash_info= {.name = "SPI_FLASH", .spi.name = "SPI1"};
     uint8_t data[256];
     uint32_t start_address=0;
+    uint32_t end_address;
 
-    if(!probe && !spiflash_init(&flash_info)) return;
-    uint32_t end_address=flash_info.chip.capacity; //TODO: handle capacity in the flashtable when we pass from command line
-    if(probe){
-        spiflash_probe();
+    spiflash_probe(); //always do by default
+    printf("\r\nInitializing SPI flash...\r\n");
+    if(spiflash_init(&flash_info) && !override_flag){
+        end_address=flash_info.chip.capacity;
+    }else if(read && override_flag){
+        command_var_t arg;	
+		if(!cmdln_args_find_flag_uint32('b',&arg, &end_address)){
+			printf("Specify read length with the -b flag (-b 0x00ffff)\r\n");
+			return;
+		}      
+        printf("Force read of unknown flash chip\r\n");
+        printf("Using command 0x03, reading %d bytes\r\n", end_address-start_address);
+        spiflash_force_dump(start_address, end_address, sizeof(data), data, &flash_info, file);
+        return;
+    }else{
         return;
     }
+
 
     if(erase||erase_flag||test){
         if(!spiflash_erase(&flash_info)) return;

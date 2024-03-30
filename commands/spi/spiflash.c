@@ -155,6 +155,61 @@ bool spiflash_write_verify(uint32_t start_address, uint32_t end_address, uint32_
     return true;
 }
 
+
+bool spiflash_force_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info, const char *file_name){
+    uint32_t bytes_total=(end_address-start_address);
+    uint32_t current_address=start_address;
+    FIL fil;			/* File object needed for each open file */
+    FRESULT fr;     /* FatFs return code */
+    UINT bw;
+
+    printf("Dumping to %s...\r\n", file_name);
+
+    //open file
+    fr = f_open(&fil, file_name, FA_WRITE | FA_CREATE_ALWAYS);	
+    if (fr != FR_OK) {
+        storage_file_error(fr);
+        return false;
+    }
+
+    ui_term_progress_bar_t progress_bar;
+    ui_term_progress_bar_draw(&progress_bar); 
+    //cs high
+    hwspi_deselect();
+    //delay
+    busy_wait_ms(10);
+    //cs low
+    hwspi_select();
+    //send command 0x03, plus 3 address bytes
+    hwspi_write_32(0x03000000, 4);
+    while(true){
+        ui_term_progress_bar_update(bytes_total - (end_address-current_address), bytes_total, &progress_bar);
+        uint32_t read_count=spiflash_next_count(current_address, end_address, buf_size);
+        
+        // force the length read using command 0x03        
+        hwspi_read_n(buf, read_count);
+
+        f_write(&fil, buf, read_count, &bw);	
+        if(fr != FR_OK || bw!=read_count){
+            ui_term_progress_bar_cleanup(&progress_bar);
+            storage_file_error(fr);
+            return false;
+        }       
+        current_address+=read_count;         
+        if(current_address>=end_address) break;//done!
+    }    
+    hwspi_deselect();
+    f_close(&fil);
+
+    ui_term_progress_bar_cleanup(&progress_bar);
+    printf("Dump OK\r\n"); 
+    return true;  
+}
+
+
+
+
+
 bool spiflash_dump(uint32_t start_address, uint32_t end_address, uint32_t buf_size, uint8_t *buf, sfud_flash *flash_info, const char *file_name){
     uint32_t bytes_total=(end_address-start_address);
     uint32_t current_address=start_address;

@@ -93,8 +93,8 @@ uint32_t hwspi_read(void){
 	hwspi_write_read(0xff);
 }
 
-void hwspi_read_n(uint8_t *data, uint8_t count){
-    for(uint8_t i=0; i<count; i++){
+void hwspi_read_n(uint8_t *data, uint32_t count){
+    for(uint32_t i=0; i<count; i++){
         data[i]=hwspi_write_read(0xff);
     }
 }

@@ -13,6 +13,8 @@
 #include "ui/ui_format.h"
 #include "bytecode.h"
 #include "mode/hw2wire.h"
+#include "pirate/psu.h"
+#include "usb_rx.h"
 
 #define SLE_CMD_READ_MEM 0x30
 #define SLE_CMD_WRITE_MEM 0x38
@@ -147,6 +149,54 @@ bool sle4442_read_prtmem(char *prtmem){
     return true;
 }
 
+bool sle4442_unlock(uint32_t psc){
+    char data[5];
+
+    sle4442_read_secmem(data);
+
+    printf("Unlocking with PSC: 0x%06X\r\n", psc);
+    /*if(data[0]==0){ //should still have secmem from init
+        printf("Card cannot be unlocked. Remaining attempts: 0\r\n");
+        return false;
+    }*/
+
+    uint32_t security_bit = 0b100;
+    if(data[0]&0b100) security_bit=0b011;
+    else if(data[0]&0b010) security_bit=0b101;
+    else if(data[0]&0b001) security_bit=0b110;
+    else {
+        printf("Card cannot be unlocked. Remaining attempts: 0\r\n");
+        return false;
+    }
+    printf("Using free security bit: 0x%02X\r\n", security_bit);
+
+    uint32_t ticks[5];
+    //update security memory
+    sle4442_write(SLE_CMD_WRITE_SECMEM,0,security_bit);
+    ticks[0]=sle4442_ticks();
+    //passcode
+    sle4442_write(SLE_CMD_COMPARE_VERIFICATION_DATA,1,(psc>>16) & 0xff);
+    ticks[1]=sle4442_ticks();
+    sle4442_write(SLE_CMD_COMPARE_VERIFICATION_DATA,2,(psc>>8) & 0xff);	
+    ticks[2]=sle4442_ticks();
+    sle4442_write(SLE_CMD_COMPARE_VERIFICATION_DATA,3,psc & 0xff);
+    ticks[3]=sle4442_ticks();
+    //reset passcode attempts
+    sle4442_write(SLE_CMD_WRITE_SECMEM,0,0xff);
+    ticks[4]=sle4442_ticks();
+    //printf("DEBUG Ticks: %d %d %d %d %d\r\n", ticks[0], ticks[1], ticks[2], ticks[3], ticks[4]);
+    
+    sle4442_read_secmem(data);
+    if(data[0]!=7){
+        printf("Failed to unlock card\r\n");
+        sle4442_decode_secmem(data);
+        return false;
+    }
+    printf("Card unlocked, security bits reset\r\n");
+    sle4442_decode_secmem(data);
+    return true;
+}
+
 bool sle4442_update_psc(uint32_t new_psc, char *data){
     //update security memory //TODO: use ticks to determine success or error...
     sle4442_write(SLE_CMD_WRITE_SECMEM,1,new_psc>>16);
@@ -157,7 +207,7 @@ bool sle4442_update_psc(uint32_t new_psc, char *data){
     ticks=sle4442_ticks();
     //verify security memory
     sle4442_read_secmem(data);
-    if(data[1]==(new_psc>>16) && data[2]==(new_psc>>8) && data[3]==new_psc){
+    if(data[1]==(uint8_t)(new_psc>>16) && data[2]==(uint8_t)(new_psc>>8) && data[3]==(uint8_t)new_psc){
         return true;
     } else {
         return false;
@@ -178,6 +228,8 @@ void sle4442(struct command_result *res){
     bool erase = (strcmp(action, "erase")==0);
     bool protect = (strcmp(action, "protect")==0);
     bool update_psc = (strcmp(action, "psc")==0);
+
+    bool glitch=(strcmp(action, "glitch")==0);
 
     if(hw2wire_mode_config.baudrate>(51)){
         printf("Whoa there! %dkHz is probably too fast. Try 50kHz\r\n", hw2wire_mode_config.baudrate);
@@ -200,6 +252,45 @@ void sle4442(struct command_result *res){
         return; 
     }
     sle4442_decode_secmem(data);
+
+    if(glitch){
+        //unlock card, reset password attempts
+        uint32_t psc;
+		command_var_t arg;	
+		if(!cmdln_args_find_flag_uint32('p',&arg, &psc)){
+			printf("Specify a 24 bit PSC with the -p flag (-p 0xffffff)\r\n");
+			return;
+		}
+
+        if(!sle4442_unlock(psc)){
+            return;
+        }
+        char c;
+        //disable any current system control
+        psu_vreg_enable(false); //actually controls the current limit system interaction with PSU
+        while(true){
+            //power cycle
+            printf("Power cycle\r\n");
+            psu_current_limit_override(false);
+            busy_wait_ms(1000);
+            psu_current_limit_override(true);
+            busy_wait_ms(1000);
+            printf("Any key for bad attempt, x to exit\r\n");
+            while(!rx_fifo_try_get(&c)); //pause for keypress
+            if(c=='x') break;
+            //wrong passcode
+            sle4442_unlock(psc-1);
+            //pause
+            printf("Any key to clear attempts, x to exit\r\n");
+            while(!rx_fifo_try_get(&c)); //pause for keypress
+            if(c=='x') break;            
+            //correct passcode
+            if(!sle4442_unlock(psc)){
+                printf("Glitch failed to unlock card\r\n");
+                return;
+            } 
+        }
+    }
     
 	if(dump){
         sle4442_read_prtmem(data);
@@ -225,10 +316,10 @@ void sle4442(struct command_result *res){
 			return;
 		}
 		printf("Unlocking with PSC: 0x%06X\r\n", psc);
-        if(data[0]==0){ //should still have secmem from init
-            printf("Card cannot be unlocked. Remaining attempts: 0\r\n");
+        //if(data[0]==0){ //should still have secmem from init
+            //printf("Card cannot be unlocked. Remaining attempts: 0\r\n");
             //return;
-        }
+        //}
 
         uint32_t security_bit = 0b100;
         if(data[0]&0b100) security_bit=0b011;
@@ -278,13 +369,8 @@ void sle4442(struct command_result *res){
         //update security memory
         if(!sle4442_update_psc(new_psc, data)){
             sle4442_decode_secmem(data);
-            printf("Failed to update PSC\r\nAttempting to write 0xffffff\r\n");
-            new_psc=0xffffff;
-            if(!sle4442_update_psc(new_psc, data)){
-                sle4442_decode_secmem(data);
-                printf("Failed to update PSC\r\n");
-                return;
-            }
+            printf("Failed to update PSC\r\n");
+            return;
         }
         sle4442_write(SLE_CMD_WRITE_SECMEM,0,0xff);
         sle4442_ticks();

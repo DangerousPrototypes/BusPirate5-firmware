@@ -27,3 +27,5 @@ uint32_t psu_measure_vout(void);
 uint32_t psu_measure_vreg(void);
 uint32_t psu_measure_current(void);
 bool psu_fuse_ok(void);
+void psu_vreg_enable(bool enable);
+void psu_current_limit_override(bool enable);

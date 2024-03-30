@@ -28,7 +28,8 @@ static void psu_fuse_reset(void){
     shift_clear_set_wait(0, CURRENT_RESET); //high to disable  
 }
 
-static void psu_vreg_enable(bool enable){
+//TODO: rename this function, it actually controls if the current limit circuit is connected to the VREG
+void psu_vreg_enable(bool enable){
     if(enable) shift_clear_set_wait(CURRENT_EN,0); //low is on (PNP)
     else shift_clear_set_wait(0,CURRENT_EN); //high is off
 }

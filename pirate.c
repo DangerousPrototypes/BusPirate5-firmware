@@ -67,7 +67,7 @@ int main(){
     bio_init(); 
 
     // setup SPI0 for on board peripherals
-    uint baud=spi_init(BP_SPI_PORT, 1000 * 1000);
+    uint baud=spi_init(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
     gpio_set_function(BP_SPI_CDI, GPIO_FUNC_SPI);
     gpio_set_function(BP_SPI_CLK, GPIO_FUNC_SPI);
     gpio_set_function(BP_SPI_CDO, GPIO_FUNC_SPI);
@@ -123,10 +123,12 @@ int main(){
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
     #if BP5_REV <= 9
+        spi_set_baudrate(BP_SPI_PORT, BP_SPI_START_SPEED);
         storage_mount();
         if(storage_load_config()){
             system_config.config_loaded_from_file=true;
         }
+        spi_set_baudrate(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
     #endif
 
     // RGB LEDs pins, pio, set to black
@@ -147,7 +149,6 @@ int main(){
     multicore_launch_core1(core1_entry);
 
     // LCD setup
-    spi_set_baudrate(BP_SPI_PORT, 1000*1000*32);
     lcd_configure();
     monitor(system_config.psu);
     if (modes[system_config.mode].protocol_lcd_update){

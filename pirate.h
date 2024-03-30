@@ -7,6 +7,9 @@
 #define BP_FIRMWARE_HASH _TIMEZ_
 #endif
 
+#define BP_SPI_START_SPEED 1000 * 1000
+#define BP_SPI_HIGH_SPEED 1000*1000*32
+#define BP_SPI_SHIFT_SPEED 1000*1000*16
 //#define XSTR(x) STR(x)
 //#define STR(x) #x
 //#pragma message "BP_FIRMWARE_HASH value:" XSTR(BP_FIRMWARE_HASH)

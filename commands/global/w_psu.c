@@ -176,11 +176,11 @@ void psucmd_enable_handler(struct command_result *res){
 
 //cleanup on mode exit, etc
 void psucmd_disable(void){
+    system_config.psu_irq_en=false;
     psu_disable();
     system_config.psu_error=false;
     system_config.psu_current_error=false;
     system_config.psu=0;
-    system_config.psu_irq_en=false;
     system_config.info_bar_changed=true;
     monitor_clear_current(); //reset current so the LCD gets all characters next time
     system_pin_claim(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[0]); //change back to vref type pin

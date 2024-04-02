@@ -309,9 +309,9 @@ struct _mode modes[MAXPROTO]={{
 #ifdef BP_USE_HWSPI
 {
 	spi_start,				// start
-	spi_start,				// start with read
+	spi_startr,				// start with read
 	spi_stop,				// stop
-	spi_stop,				// stop with read
+	spi_stopr,				// stop with read
 	spi_write,				// send(/read) max 32 bit
 	spi_read,				// read max 32 bit
 	nullfunc1_temp,				// set clk high

@@ -11,9 +11,8 @@ struct _bytecode{
     const char *error_message;
 	uint32_t in_data; //up to 32bits results? BUT: how to deal with repeated reads????
     const char *data_message;    
+    bool read_with_write;
 };
-
-
 
 struct _bytecode_output{    
 	uint8_t number_format;

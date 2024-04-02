@@ -530,6 +530,11 @@ void postprocess_mode_write(struct _bytecode *in, struct _output_info *info)
     while(repeat--)
     {
         postprocess_format_print_number(in, &value, (in->command==SYN_READ));
+        if(in->read_with_write){
+            printf("(");
+            postprocess_format_print_number(in, &in->in_data, false);
+            printf(")");
+        }
 
         info->row_counter--;
         if(in->data_message)

@@ -129,12 +129,13 @@ uint32_t spi_setup(void){
 
 	storage_save_mode(config_file, config_t, count_of(config_t));
 	//}
-
+	
 	return 1;
 }
 
 uint32_t spi_setup_exc(void){		
 	//setup spi
+	mode_config.read_with_write=false;
 	mode_config.baudrate_actual=spi_init(M_SPI_PORT, mode_config.baudrate);
 	printf("\r\n%s%s:%s %ukHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
 	hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
@@ -174,27 +175,33 @@ void spi_set_cs(uint8_t cs){
 }
 
 void spi_start(struct _bytecode *result, struct _bytecode *next){
+	mode_config.read_with_write=false;
 	result->data_message=t[T_HWSPI_CS_SELECT];
 	spi_set_cs(M_SPI_SELECT);
 }
 
 void spi_startr(struct _bytecode *result, struct _bytecode *next){
+	mode_config.read_with_write=true;
 	result->data_message=t[T_HWSPI_CS_SELECT];
 	spi_set_cs(M_SPI_SELECT);
 }
 
 void spi_stop(struct _bytecode *result, struct _bytecode *next){
+	mode_config.read_with_write=false;
 	result->data_message=t[T_HWSPI_CS_DESELECT];
 	spi_set_cs(M_SPI_DESELECT);
 }
 
 void spi_stopr(struct _bytecode *result, struct _bytecode *next){
+	mode_config.read_with_write=false;
 	result->data_message=t[T_HWSPI_CS_DESELECT];
 	spi_set_cs(M_SPI_DESELECT);
 }
 
 void spi_write(struct _bytecode *result, struct _bytecode *next){
-	hwspi_write((uint32_t)result->out_data);
+	//hwspi_write((uint32_t)result->out_data);
+	result->in_data=hwspi_write_read((uint8_t)result->out_data);
+	result->read_with_write=mode_config.read_with_write;
 }
 
 void spi_read(struct _bytecode *result, struct _bytecode *next){

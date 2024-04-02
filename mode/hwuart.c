@@ -25,8 +25,8 @@ static struct command_attributes periodic_attributes;
 // command configuration
 const struct _command_struct hwuart_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
-    {"gps",false,&nmea_decode_handler,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
-    {"bridge",false,&uart_bridge_handler,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+    {"gps",false,&nmea_decode_handler,T_HELP_UART_NMEA}, // the help is shown in the -h *and* the list of mode apps
+    {"bridge",false,&uart_bridge_handler,T_HELP_UART_BRIDGE}, // the help is shown in the -h *and* the list of mode apps
 };
 const uint32_t hwuart_commands_count=count_of(hwuart_commands);
 

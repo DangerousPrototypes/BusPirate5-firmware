@@ -90,7 +90,7 @@ uint32_t hwspi_write_read(uint8_t data){
 }
 
 uint32_t hwspi_read(void){
-	hwspi_write_read(0xff);
+	return hwspi_write_read(0xff);
 }
 
 void hwspi_read_n(uint8_t *data, uint32_t count){

@@ -44,19 +44,19 @@ uint32_t hiz_setup_exec(void){
 }
 
 // command configuration
-static const struct _command_struct commands[]={   //HiZ? Function Help
+const struct _command_struct hiz_commands[]={   //HiZ? Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
     //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
 };
-static const uint32_t commands_count=count_of(commands);
+const uint32_t hiz_commands_count=count_of(hiz_commands);
 
 void hiz_help(void){
 	printf("%sHiZ is a safe mode.\r\nIO pins, power and pull-ups are disabled.\r\n", ui_term_color_info());
 	printf("To enter an active mode type 'm' and press enter.\r\n");
 	printf("\r\nAvailable mode commands:\r\n");
-	for(uint32_t i=0;i<commands_count;i++)
+	for(uint32_t i=0;i<hiz_commands_count;i++)
 	{
-		printf("%s%s%s\t%s%s\r\n", ui_term_color_prompt(), commands[i].command, 
-			ui_term_color_info(), commands[i].help_text?t[commands[i].help_text]:"Unavailable", ui_term_color_reset());
+		printf("%s%s%s\t%s%s\r\n", ui_term_color_prompt(), hiz_commands[i].command, 
+			ui_term_color_info(), hiz_commands[i].help_text?t[hiz_commands[i].help_text]:"Unavailable", ui_term_color_reset());
 	}
 }

@@ -85,7 +85,9 @@ const struct ui_help_options global_commands[]={
 	{0,"a/A/@.x", T_HELP_1_7},	
 	{0,"v.x", T_HELP_SYNTAX_ADC},
 	{0,">",	T_HELP_GREATER_THAN},    
+};
 
+const struct ui_help_options global_commands_more_help[]={
 //Get more help  
 {1,"",T_HELP_SECTION_HELP}, 
 	{0,"?/help",T_HELP_HELP_GENERAL},
@@ -126,7 +128,19 @@ void help_mode(void){
 }
 
 void help_global(void){
+	//global commands help list
     ui_help_options(&global_commands[0],count_of(global_commands));
+
+	//loop through modes and display available commands
+	for(uint32_t i=0; i<count_of(modes); i++){
+		if((*modes[i].mode_commands_count)>0){
+			//ui_help_mode_commands(modes[i].mode_commands, *modes[i].mode_commands_count);
+			//printf("%d\r\n", *modes[i].mode_commands_count);
+			ui_help_mode_commands_exec(modes[i].mode_commands, *modes[i].mode_commands_count, modes[i].protocol_name);
+		}
+	}
+	//show more help last
+	ui_help_options(&global_commands_more_help[0],count_of(global_commands_more_help));
 }
 
 void help_handler(struct command_result *res){

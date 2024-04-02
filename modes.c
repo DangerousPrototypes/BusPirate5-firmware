@@ -134,8 +134,8 @@ struct _mode modes[MAXPROTO]={{
 	//hiz_pins,				// display pin config
 	hiz_settings,				// display settings 
 	hiz_help,					// display small help about the protocol
-    NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count
+    hiz_commands,                   // mode specific commands
+    &hiz_commands_count,                   // mode specific commands count
 	"HiZ",					// friendly name (promptname)
 },
 #ifdef BP_USE_SW1WIRE

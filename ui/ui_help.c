@@ -7,6 +7,9 @@
 #include "opt_args.h" //remove?
 #include "ui/ui_help.h" 
 #include "display/scope.h" 
+#include "system_config.h"
+#include "bytecode.h"
+#include "modes.h"
 
 // displays the help
 void ui_help_options(const struct ui_help_options (*help), uint32_t count){
@@ -53,8 +56,9 @@ bool ui_help_show(bool help_flag, const char * const usage[], uint32_t count_of_
     return false;
 }
 
-void ui_help_mode_commands(const struct _command_struct *commands, uint32_t count){
-    printf("\r\nAvailable mode commands:\r\n");
+void ui_help_mode_commands_exec(const struct _command_struct *commands, uint32_t count, const char *mode){
+    //printf("\r\nAvailable mode commands:\r\n");
+    printf("\r\n%s%s%s mode commands:%s\r\n", ui_term_color_prompt(), mode, ui_term_color_info(), ui_term_color_reset());
     for(uint32_t i=0; i<count; i++){
         printf("%s%s%s\t%s%s\r\n", 
             ui_term_color_prompt(), 
@@ -65,6 +69,12 @@ void ui_help_mode_commands(const struct _command_struct *commands, uint32_t coun
         );
     }
 }
+
+void ui_help_mode_commands(const struct _command_struct *commands, uint32_t count){
+    ui_help_mode_commands_exec(commands, count, modes[system_config.mode].protocol_name);
+}
+
+
 
 //true if there is a voltage on out/vref pin
 bool ui_help_check_vout_vref(void){

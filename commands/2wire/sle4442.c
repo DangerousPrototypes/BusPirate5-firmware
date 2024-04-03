@@ -130,6 +130,7 @@ bool sle4442_read_secmem(char *secmem){
         pio_hw2wire_get16(&secmem[i]);
         secmem[i]=ui_format_lsb(secmem[i], 8);
     }
+    //printf("Security memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", secmem[0], secmem[1], secmem[2], secmem[3]);
     if(secmem[0]<=7) return true;
     return false;
 }

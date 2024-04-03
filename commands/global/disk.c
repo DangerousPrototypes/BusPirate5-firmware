@@ -45,7 +45,7 @@ void disk_hex_handler(struct command_result *res){
             break;
         }
         for(uint16_t i=0; i<bytes_read; i++){
-            printf(" 0x%02u ", file[i]);
+            printf(" 0x%02x ", file[i]);
             grouping++;
             if(grouping>=8){
                 grouping=0;

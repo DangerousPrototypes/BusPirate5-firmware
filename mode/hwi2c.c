@@ -134,7 +134,18 @@ void hwi2c_write(struct _bytecode *result, struct _bytecode *next){
 }
 
 void hwi2c_read(struct _bytecode *result, struct _bytecode *next){
-	bool ack=(next?(next->command!=4):true);
+	//if next is start, stop, startr or stopr, then NACK
+	bool ack=true;
+	if(next){
+		switch(next->command){
+			case SYN_START_ALT:
+			case SYN_STOP_ALT:
+			case SYN_START:
+			case SYN_STOP:
+				ack=false;
+				break;
+		}	
+	}
 	uint32_t error=pio_i2c_read_timeout( &result->in_data, ack, 0xffff);
     hwi2c_error(error, result);
 	result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);

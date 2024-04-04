@@ -8,9 +8,12 @@ Can't get a chip to work? Is it the circuit, code, bad part or a burned out pin?
 
 ## Resources
 
+- [Download the latest build](https://forum.buspirate.com/t/bus-pirate-5-auto-build-main-branch/20/99999)
+- [Get help and chat in the forum](https://forum.buspirate.com/)
 - [Firmware documentation](https://firmware.buspirate.com/) ([source](https://github.com/DangerousPrototypes/BusPirate5-docs-firmware))
 - [Hardware documentation](https://hardware.buspirate.com/) ([source](https://github.com/DangerousPrototypes/BusPirate5-docs-hardware))
-- [Get help and chat in the forum](https://forum.buspirate.com/)
+- [Hardware repo](https://github.com/DangerousPrototypes/BusPirate5-hardware)
+- [Firmware repo](https://github.com/DangerousPrototypes/BusPirate5-firmware)
 
 ## VT100 terminal interface
 

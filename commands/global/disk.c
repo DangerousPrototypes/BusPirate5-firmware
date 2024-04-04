@@ -17,12 +17,15 @@
 #define PRINTABLE(_c)   (_c>0x1f && _c<0x7f ? _c : '.')
 
 static const char * const hex_usage[]= {
-    "hex <file> [-d(address)] [-a(ascii)] [-s <row size>]",
-    "Print file contents in HEX: hex example.bin",
+    "hex <file> [-d(address)] [-a(ascii)] [-s <size>]",
+    "Print file contents in HEX: hex example.bin -d -a -s 8",
 };
 static const struct ui_help_options hex_options[]= {
 {1,"", T_HELP_DISK_HEX}, //section heading
-    {0,"<file>", T_HELP_DISK_HEX_FILE}, 
+    {0,"<file>", T_HELP_DISK_HEX_FILE},
+    {0,"-d", T_HELP_DISK_HEX_ADDR},
+    {0,"-a", T_HELP_DISK_HEX_ASCII},
+    {0,"-s <size>", T_HELP_DISK_HEX_SIZE},
 };
 void disk_hex_handler(struct command_result *res){
     //check help

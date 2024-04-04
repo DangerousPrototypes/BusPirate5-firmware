@@ -13,8 +13,11 @@
 #include "pirate/mem.h"
 #include "ui/ui_cmdln.h"
 
+#define DEF_ROW_SIZE    8
+#define PRINTABLE(_c)   (_c>0x1f && _c<0x7f ? _c : '.')
+
 static const char * const hex_usage[]= {
-    "hex <file>",
+    "hex <file> [-d(address)] [-a(ascii)] [-s <row size>]",
     "Print file contents in HEX: hex example.bin",
 };
 static const struct ui_help_options hex_options[]= {
@@ -22,40 +25,74 @@ static const struct ui_help_options hex_options[]= {
     {0,"<file>", T_HELP_DISK_HEX_FILE}, 
 };
 void disk_hex_handler(struct command_result *res){
-   	//check help
+    //check help
     if(ui_help_show(res->help_flag,hex_usage,count_of(hex_usage), &hex_options[0],count_of(hex_options) )) return;
 
-    FIL fil;		/* File object needed for each open file */
+    FIL fil;        /* File object needed for each open file */
     FRESULT fr;     /* FatFs return code */
     char file[512];
     char location[32];
+    uint32_t off = 0;
+    uint32_t tmp_off = 0;
+    uint32_t row_size = DEF_ROW_SIZE;
+    bool flag_addr = false;
+    bool flag_ascii = false;
+    command_var_t arg;
+
     cmdln_args_string_by_position(1, sizeof(location), location);
-    fr = f_open(&fil, location, FA_READ);	
+    fr = f_open(&fil, location, FA_READ);
     if (fr != FR_OK) {
         storage_file_error(fr);
         res->error=true;
         return;
     }
 
-    uint8_t grouping=0;
-    while(true){
+    flag_addr = cmdln_args_find_flag('d'|0x20);
+    flag_ascii = cmdln_args_find_flag('a'|0x20);
+    if (!cmdln_args_find_flag_uint32('s'|0x20, &arg, &row_size))
+        row_size = DEF_ROW_SIZE;
+
+    printf("\r\n");
+    if (flag_addr)
+        printf("%04x  ", off);
+    while (true) {
         UINT bytes_read;
         f_read(&fil, &file, sizeof(file),&bytes_read);
-        if(!bytes_read){
+        if (!bytes_read) {
+            // Flush last line
+            if (flag_ascii) {
+                uint8_t rem = off % row_size;
+                if (rem) {
+                    for (uint8_t j=0; j<row_size-rem; j++)
+                        printf("   ");
+                    printf(" |");
+                    for (uint8_t j=0; j<rem; j++)
+                        printf("%c", PRINTABLE(file[tmp_off+j]));
+                    printf("|");
+                }
+            }
             break;
         }
-        for(uint16_t i=0; i<bytes_read; i++){
-            printf(" 0x%02x ", file[i]);
-            grouping++;
-            if(grouping>=8){
-                grouping=0;
+        for (uint16_t i=0; i<bytes_read; i++) {
+            printf("%02x ", file[i]);
+            off++;
+            if (!(off % row_size)) {
+                if (flag_ascii) {
+                    printf(" |");
+                    for (uint8_t j=0; j<row_size; j++)
+                        printf("%c", PRINTABLE(file[tmp_off+j]));
+                    printf("|");
+                }
                 printf("\r\n");
+                if (flag_addr)
+                    printf("%04x  ", off);
+                tmp_off = off;
             }
         }
     }
     printf("\r\n");
     /* Close the file */
-    f_close(&fil);  
+    f_close(&fil);
 }
 
 static const char * const cat_usage[]= {

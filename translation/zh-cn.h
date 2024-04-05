@@ -282,6 +282,7 @@ static char const * const zh_cn[]={
 	[T_CONFIG_LANGUAGE_CHINESE]="Chinese (simplified)",
 	[T_CONFIG_LANGUAGE_POLISH]="Polish",
 	[T_CONFIG_LANGUAGE_BOSNIAN]="Bosnian",
+	[T_CONFIG_LANGUAGE_ITALIAN]="Italian",
 	[T_CONFIG_DISABLE]="Disable",
 	[T_CONFIG_ENABLE]="Enable",
 	[T_CONFIG_SCREENSAVER]="LCD screensaver",

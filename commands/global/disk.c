@@ -204,6 +204,95 @@ void disk_rm_handler(struct command_result *res){
     }
 }
 
+void disk_show_macro_file(const char *location)
+{
+    FIL fil;
+    FRESULT fr;
+    char line[512] = "\0";
+
+    fr = f_open(&fil, location, FA_READ);
+    if (fr != FR_OK) {
+        return;
+    }
+    while (f_gets(line, sizeof(line), &fil)) {
+        uint8_t line_len = strlen(line);
+        // Remove trailing '\n' if present
+        if (line_len>1 && line[line_len-1]=='\n')
+            line[line_len-1] = '\0';
+        // Show only usage and macros
+        if (line[0]=='#' && line[1]=='!' && line[2])
+            printf(".- %s\r\n", line+3); // TODO: pretty print comment in VT100
+        else if ((uint8_t)strtol(line, NULL, 10) > 0)
+            printf("%s\r\n\r\n", line); // TODO: pretty print macro in VT100
+    }
+    f_close(&fil);
+}
+
+void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len)
+{
+    FIL fil;
+    FRESULT fr;
+
+    *line = '\0';
+
+    fr = f_open(&fil, location, FA_READ);
+    if (fr != FR_OK) {
+        return;
+    }
+    while (f_gets(line, max_len, &fil)) {
+        if ((uint8_t)strtol(line, NULL, 10) == id) {
+            uint8_t line_len = strlen(line);
+            if (line_len>1 && line[line_len-1]=='\n')
+                line[line_len-1] = '\0';
+            break;
+        }
+    }
+    f_close(&fil);
+}
+
+bool disk_ls(const char *location, const char *ext)
+{
+    FRESULT fr;
+    DIR dir;
+    FILINFO fno;
+    int nfile, ndir;
+
+    fr = f_opendir(&dir, location);                       /* Open the directory */
+    if (fr != FR_OK) {
+        return false;
+    }
+
+    nfile = ndir = 0;
+    for(;;) {
+        fr = f_readdir(&dir, &fno);                   /* Read a directory item */
+        if (fr != FR_OK || fno.fname[0] == 0)
+            break;  /* Error or end of dir */
+        strlwr(fno.fname); //FAT16 is only UPPERCASE, make it lower to be easy on the eyes...
+        if (ext) {
+            int fname_len = strlen(fno.fname);
+            int ext_len = strlen(ext);
+            if (fname_len > ext_len+1) {
+                if (memcmp(fno.fname+fname_len-ext_len, ext, ext_len)) {
+                    continue;
+                }
+            }
+
+        }
+        if (fno.fattrib & AM_DIR) {   /* Directory */
+            printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
+            ndir++;
+        }
+        else {   /* File */
+            printf("%s%10u %s%s%s\r\n",
+            ui_term_color_prompt(),fno.fsize, ui_term_color_info(), fno.fname, ui_term_color_reset());
+            nfile++;
+        }
+    }
+    f_closedir(&dir);
+    printf("%s%d dirs, %d files%s\r\n", ui_term_color_info(), ndir, nfile, ui_term_color_reset());
+    return true;
+}
+
 static const char * const ls_usage[]= {
     "ls <dir>",
     "Show current directory contents: ls",

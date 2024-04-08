@@ -6,3 +6,6 @@ void disk_rm_handler(struct command_result *res);
 void disk_ls_handler(struct command_result *res);
 uint8_t disk_format(void);
 void disk_format_handler(struct command_result *res);
+bool disk_ls(const char *location, const char *ext);
+void disk_show_macro_file(const char *location);
+void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len);

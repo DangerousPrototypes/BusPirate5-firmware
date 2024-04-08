@@ -133,6 +133,32 @@ bool ui_parse_get_int(struct prompt_result *result, uint32_t *value)
 	return result->success;
 }
 
+bool ui_parse_get_string(struct prompt_result *result, char *str, uint8_t *size)
+{
+    char c;
+    uint8_t max_size = *size;
+
+    *result = empty_result;
+    result->no_value = true;
+    *size = 0;
+
+    while (max_size-- && cmdln_try_peek(0, &c)) {
+        if (c <= ' ') { break;
+        }
+        else if (c <= '~') {
+            *str++ = c;
+            (*size)++;
+        }
+        cmdln_try_remove(&c);
+        result->success = true;
+        result->no_value = false;
+    }
+    // Terminate string
+    *str = '\0';
+
+    return result->success;
+}
+
 // eats up the spaces and comma's from the cmdline
 void ui_parse_consume_whitespace(void)
 {
@@ -159,6 +185,21 @@ bool ui_parse_get_macro(struct prompt_result *result, uint32_t* value)
         result->error=true;
     }
 	return result->success;
+}
+
+bool ui_parse_get_macro_file(struct prompt_result *result, char *fname, uint8_t max_size)
+{
+    ui_parse_get_string(result, fname, &max_size);
+    // At this point the final ')' has alredy been consumed by ui_parse_get_string()
+    if (max_size && fname[max_size-1]==')') {
+        fname[max_size-1] = '\0'; // Remove trailing ')' from string
+        result->success = true;
+    }
+    else {
+        result->success = false;
+        result->error = true;
+    }
+    return result->success;
 }
 
 // get the repeat from the commandline (if any) XX:repeat

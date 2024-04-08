@@ -52,7 +52,7 @@ bool ui_process_macro(void)
     uint32_t temp;
     prompt_result result;
     cmdln_try_discard(1);
-    ui_parse_get_macro(&result, &temp);   
+    ui_parse_get_macro(&result, &temp);
     if(result.success)
     {
         modes[system_config.mode].protocol_macro(temp);
@@ -61,8 +61,88 @@ bool ui_process_macro(void)
     {
         printf("%s\r\n",t[T_MODE_ERROR_PARSING_MACRO]);
         return true;
-    }  
-    return false;  
+    }
+    return false;
+}
+
+#include "commands/global/disk.h"
+#define MACRO_FNAME_LEN  32
+static char macro_file[MACRO_FNAME_LEN];
+static bool exec_macro_id(uint8_t id)
+{
+    char line[512];
+    printf("Exec macro id: %u\r\n", id);
+
+    disk_get_line_id(macro_file, id, line, sizeof(line));
+    if (!line[0]) {
+        printf("Macro not fund\r\n");
+        return true;
+    }
+
+    char *m = line;
+    // Skip id and separator
+    // 123:MACRO
+    while (*m && *m!=':')
+        m++;
+    if (*m != ':') {
+        printf("Wrong macro line format\r\n");
+        return true;
+    }
+    m++;
+
+    // FIXME: injecting the bus syntax into cmd line (i.e. simulating
+    // user input) is probably not the best solution... :-/
+    //printf("Inject cmd\r\n");
+    char c;
+    while (cmdln_try_remove(&c)) ;
+    while (*m && cmdln_try_add(m))
+        m++;
+    cmdln_try_add('\0');
+    //printf("Process syntax\r\n");
+    return ui_process_syntax();
+}
+
+// Must return true in case of error
+#include <stdlib.h>
+bool ui_process_macro_file(void)
+{
+    char arg[MACRO_FNAME_LEN];
+    char c;
+    prompt_result result = { 0 };
+
+    cmdln_try_remove(&c); // remove '('
+    cmdln_try_remove(&c); // remove ':'
+    ui_parse_get_macro_file(&result, arg, sizeof(arg));
+
+    if (result.success) {
+        if (arg[0] == '\0') {
+            printf("Macro files list:\r\n");
+            disk_ls("", "mcr");
+        }
+        else {
+            // Command stars with a number, exec macro id
+            if (arg[0]>='0' && arg[0]<='9') {
+                uint8_t id = (uint8_t)strtol(arg, NULL, 10);
+                if (!id) {
+                    printf("'%s' available macros:\r\n\r\n", macro_file);
+                    disk_show_macro_file(macro_file); // TODO: manage errors
+                }
+                else {
+                    return exec_macro_id(id);
+                }
+            }
+            // Command is a string, use as macro file name
+            else {
+                strncpy(macro_file, arg, sizeof(macro_file));
+                printf("Set current file macro to: '%s'\r\n", macro_file);
+            }
+        }
+    }
+    else {
+        printf("%s\r\n", "Error parsing file name");
+        return true;
+    }
+    return false;
 }
 
 bool ui_process_commands(void){
@@ -89,9 +169,15 @@ bool ui_process_commands(void){
                 return ui_process_syntax(); //first character is { [ or >, process as syntax
                 break;
             case '(':
-                return ui_process_macro(); //first character is (, mode macro
+                if (cp.command[1] == ':') { // 2nd char is ':', file macro
+                    return ui_process_macro_file();
+                }
+                else {
+                    return ui_process_macro(); //first character is (, mode macro
+                }
                 break;
-
+            default:
+                break;
         }
         //process as a command
         char command_string[MAX_COMMAND_LENGTH];

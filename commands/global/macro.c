@@ -12,12 +12,75 @@
 #include "system_config.h" // Stores current Bus Pirate system configuration
 #include "pirate/amux.h"   // Analog voltage measurement functions
 #include "pirate/button.h" // Button press functions
+#include "ui/ui_term.h"    // Terminal functions
+#include "ui/ui_process.h"
 
+static bool exec_macro_id(uint8_t id);
+void disk_show_macro_file(const char *location);
+void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len);
+bool disk_ls(const char *location, const char *ext);
 
+static const char * const usage[]= {
+    "macro <#>\r\n\t[-f <file>] [-a] [-l] [-h(elp)]",
+    "Load macros: macro -f <file>",
+    "List macros: macro -l",
+    "Run macro 1: macro 1",
+    "Macro 1 help: macro 1 -h",
+    "Macro system help: macro -h",
+    "List macro files: macro -a",
+};
 
-#include "commands/global/disk.h"
-#define MACRO_FNAME_LEN  32
+static const struct ui_help_options options[]= {
+{1,"", T_HELP_FLASH}, //flash command help
+    {0,"-f",T_HELP_FLASH_FILE_FLAG}, //file to read/write/verify    
+};
+
+#define MACRO_FNAME_LEN  13
 static char macro_file[MACRO_FNAME_LEN];
+
+void macro_handler(struct command_result *res){
+    uint32_t value;
+    //char file[13];
+
+    if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
+
+    //list of mcr files
+    if(cmdln_args_find_flag('a'|0x20)){
+        printf("Available macro files:\r\n");
+        disk_ls("", "mcr"); //disk ls should be integrated with existing list function???
+        return;
+    }
+
+    //file to load?
+    command_var_t arg;
+    bool file_flag = cmdln_args_find_flag_string('f'|0x20, &arg, sizeof(macro_file), macro_file);
+    if(file_flag ){
+        printf("Set current file macro to: '%s'\r\n", macro_file);
+        return;
+    }
+
+    //list macros
+    bool list_flag = cmdln_args_find_flag('l'|0x20);
+    if (list_flag){
+        //is a macro file loaded? 
+        //list macros
+        printf("'%s' available macros:\r\n\r\n", macro_file);
+        disk_show_macro_file(macro_file); // TODO: manage errors
+        return;  
+    }    
+    
+    //run macro
+    
+    if(cmdln_args_uint32_by_position(1, &value)){
+        //is a macro file loaded?
+        //does this macro exist?
+        exec_macro_id((uint8_t)value); //has return value to flag error
+        return;
+    }
+
+    printf("Nothing to do. Use -h for help.\r\n");
+}
+
 static bool exec_macro_id(uint8_t id)
 {
     char line[512];
@@ -43,59 +106,17 @@ static bool exec_macro_id(uint8_t id)
     // FIXME: injecting the bus syntax into cmd line (i.e. simulating
     // user input) is probably not the best solution... :-/
     //printf("Inject cmd\r\n");
+    // TODO: there is a way to advance through the cmdln queue that leaves a history pointer so up and down work
+    // I think instead of of reading to end, we need to advance to the next buffer position
     char c;
     while (cmdln_try_remove(&c)) ;
     while (*m && cmdln_try_add(m))
         m++;
     cmdln_try_add('\0');
     //printf("Process syntax\r\n");
-    return ui_process_syntax();
+    return ui_process_syntax(); //I think we're going to run into issues with the ui_process loop if &&||; are used....
 }
-
-// Must return true in case of error
 #include <stdlib.h>
-bool ui_process_macro_file(void)
-{
-    char arg[MACRO_FNAME_LEN];
-    char c;
-    prompt_result result = { 0 };
-
-    cmdln_try_remove(&c); // remove '('
-    cmdln_try_remove(&c); // remove ':'
-    ui_parse_get_macro_file(&result, arg, sizeof(arg));
-
-    if (result.success) {
-        if (arg[0] == '\0') {
-            printf("Macro files list:\r\n");
-            disk_ls("", "mcr");
-        }
-        else {
-            // Command stars with a number, exec macro id
-            if (arg[0]>='0' && arg[0]<='9') {
-                uint8_t id = (uint8_t)strtol(arg, NULL, 10);
-                if (!id) {
-                    printf("'%s' available macros:\r\n\r\n", macro_file);
-                    disk_show_macro_file(macro_file); // TODO: manage errors
-                }
-                else {
-                    return exec_macro_id(id);
-                }
-            }
-            // Command is a string, use as macro file name
-            else {
-                strncpy(macro_file, arg, sizeof(macro_file));
-                printf("Set current file macro to: '%s'\r\n", macro_file);
-            }
-        }
-    }
-    else {
-        printf("%s\r\n", "Error parsing file name");
-        return true;
-    }
-    return false;
-}
-
-
 void disk_show_macro_file(const char *location)
 {
     FIL fil;
@@ -142,6 +163,7 @@ void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len)
     f_close(&fil);
 }
 
+//TODO: move to pirate/storage? Integrate with disk.h ls command, extend to support extensions?
 bool disk_ls(const char *location, const char *ext)
 {
     FRESULT fr;

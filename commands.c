@@ -29,6 +29,7 @@
 #include "commands/global/dummy.h"
 #include "commands/global/disk.h"
 #include "commands/global/i_info.h"
+#include "commands/global/macro.h"
 #include "mode/logicanalyzer.h"
 
 // command configuration

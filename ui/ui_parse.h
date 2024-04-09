@@ -6,6 +6,8 @@ bool ui_parse_get_int(struct prompt_result *result, uint32_t *value);
 // get DEC (base 10) with eXit option
 bool ui_parse_get_uint32(struct prompt_result *result, uint32_t* value);
 
+bool ui_parse_get_string(struct prompt_result *result, char *str, uint8_t *size);
+
 // get float with eXit option
 bool ui_parse_get_float(struct prompt_result *result, float* value);
 bool ui_parse_get_delimited_sequence(struct prompt_result *result, char delimiter, uint32_t* value);

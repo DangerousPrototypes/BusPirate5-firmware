@@ -67,11 +67,11 @@ void tutorial_handler(struct command_result *res){
             }
             for(uint32_t i=0; i<sizeof(file); i++){
                 if(file[i]=='\r' || file[i]=='\n' || file[i]=='\0') break;
-                //rx_fifo_add(&file[i]); 
-                cmdln_try_add(&file[i]);
-                tx_fifo_put(&file[i]);
+                rx_fifo_add(&file[i]); 
+                //cmdln_try_add(&file[i]);
+                //tx_fifo_put(&file[i]);
             }
-            cmdln_try_add('\0');
+            //cmdln_try_add('\0');
             //printf("Process syntax\r\n");
             //TODO: first time show instructions
             //printf("<enter> to continue, x to exit\r\n");

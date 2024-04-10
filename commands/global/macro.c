@@ -57,7 +57,7 @@ void macro_handler(struct command_result *res){
     //list of mcr files
     if(cmdln_args_find_flag('a'|0x20)){
         printf("Available macro files:\r\n");
-        storage_ls("", "mcr"); //disk ls should be integrated with existing list function???
+        storage_ls("", "mcr", LS_FILES /*| LS_SIZE*/); //disk ls should be integrated with existing list function???
         return;
     }
 

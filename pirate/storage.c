@@ -204,7 +204,7 @@ uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t
     return 1;
 }
 
-bool storage_ls(const char *location, const char *ext)
+bool storage_ls(const char *location, const char *ext, const uint8_t flags)
 {
     FRESULT fr;
     DIR dir;
@@ -233,17 +233,21 @@ bool storage_ls(const char *location, const char *ext)
 
         }
         if (fno.fattrib & AM_DIR) {   /* Directory */
-            printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
+            if (flags & LS_DIRS)
+                printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
             ndir++;
         }
         else {   /* File */
-            printf("%s%10u %s%s%s\r\n",
-            ui_term_color_prompt(),fno.fsize, ui_term_color_info(), fno.fname, ui_term_color_reset());
+            if (flags & LS_FILES)
+                if (flags & LS_SIZE)
+                    printf("%s%10u ", ui_term_color_prompt(), fno.fsize);
+                printf("%s%s%s\r\n", ui_term_color_info(), fno.fname, ui_term_color_reset());
             nfile++;
         }
     }
     f_closedir(&dir);
-    printf("%s%d dirs, %d files%s\r\n", ui_term_color_info(), ndir, nfile, ui_term_color_reset());
+    if (flags & LS_SUMM)
+        printf("%s%d dirs, %d files%s\r\n", ui_term_color_info(), ndir, nfile, ui_term_color_reset());
     return true;
 }
 

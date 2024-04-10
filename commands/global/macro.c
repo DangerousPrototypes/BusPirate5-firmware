@@ -29,6 +29,16 @@ static const char * const usage[]= {
     "Macro 1 help: macro 1 -h",
     "Macro system help: macro -h",
     "List macro files: macro -a",
+    "",
+    "Macro files:",
+    " Macros are stored in text files with the .mcr extension",
+    " Lines starting with '#' are comments",
+    " Lines starting with '#!' are macro usage instructions",
+    " Every macro line includes an id (>0), a separator ':', and bus syntax",
+    "Example:",
+    " # This is my example macro file",
+    " #! Read 5 bytes from an I2C EEPROM",
+    " 1:[0xa0 0][0xa1 r:5]",
 };
 
 static const struct ui_help_options options[]= {

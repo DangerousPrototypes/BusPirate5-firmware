@@ -30,6 +30,7 @@
 #include "commands/global/disk.h"
 #include "commands/global/i_info.h"
 #include "commands/global/macro.h"
+#include "commands/global/script.h"
 #include "commands/global/tutorial.h"
 #include "mode/logicanalyzer.h"
 
@@ -76,6 +77,7 @@ const struct _command_struct commands[]=
     {"help", true, &help_handler, 0x00},
     {"macro", true, &macro_handler, 0x00},
     {"tutorial", true, &tutorial_handler, 0x00},
+    {"script", true, &script_handler, 0x00},    
 };
 
 const uint32_t commands_count=count_of(commands);

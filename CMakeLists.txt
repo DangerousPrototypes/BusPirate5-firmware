@@ -66,6 +66,7 @@ set(bp5_common
         commands/global/pwm.c commands/global/pwm.h
         commands/global/freq.c commands/global/freq.h
         commands/global/macro.c commands/global/macro.h
+        commands/global/tutorial.c commands/global/tutorial.h
 
         #HiZ
         mode/hiz.h mode/hiz.c 

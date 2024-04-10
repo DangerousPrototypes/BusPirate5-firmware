@@ -145,6 +145,11 @@ void rx_fifo_service(void)
 }
 #endif
 
+//insert a byte into the queue
+void rx_fifo_add(char *c){
+    queue2_add_blocking(&rx_fifo, c);
+}
+
 // functions to access the ring buffer from other code
 // block until a byte is available, remove from buffer
 void rx_fifo_get_blocking(char *c)

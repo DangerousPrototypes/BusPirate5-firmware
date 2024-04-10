@@ -282,6 +282,7 @@ static char const * const bs_ba[]={
 	[T_CONFIG_LANGUAGE_CHINESE]="Kineski",
 	[T_CONFIG_LANGUAGE_POLISH]="Poljski",
 	[T_CONFIG_LANGUAGE_BOSNIAN]="Bosnian",
+	[T_CONFIG_LANGUAGE_ITALIAN]="Italian",
 	[T_CONFIG_DISABLE]="Onemogući",
 	[T_CONFIG_ENABLE]="Omogući",
 	[T_CONFIG_SCREENSAVER]="LCD screensaver",

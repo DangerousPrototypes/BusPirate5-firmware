@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "opt_args.h" // File system related
@@ -116,7 +117,7 @@ static bool exec_macro_id(uint8_t id)
     //printf("Process syntax\r\n");
     return ui_process_syntax(); //I think we're going to run into issues with the ui_process loop if &&||; are used....
 }
-#include <stdlib.h>
+
 void disk_show_macro_file(const char *location)
 {
     FIL fil;
@@ -134,9 +135,9 @@ void disk_show_macro_file(const char *location)
             line[line_len-1] = '\0';
         // Show only usage and macros
         if (line[0]=='#' && line[1]=='!' && line[2])
-            printf(".- %s\r\n", line+3); // TODO: pretty print comment in VT100
+            printf("%s.-%s %s%s\r\n", ui_term_color_prompt(), ui_term_color_info(), line+3, ui_term_color_reset()); // TODO: pretty print comment in VT100
         else if ((uint8_t)strtol(line, NULL, 10) > 0)
-            printf("%s\r\n\r\n", line); // TODO: pretty print macro in VT100
+            printf("%s%s%s\r\n\r\n",ui_term_color_prompt(), line, ui_term_color_reset()); // TODO: pretty print macro in VT100
     }
     f_close(&fil);
 }

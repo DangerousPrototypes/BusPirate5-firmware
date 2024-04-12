@@ -96,12 +96,13 @@ set(bp5_common
         mode/hwspi.c mode/hwspi.h 
         pirate/hwspi.c pirate/hwspi.h
         commands/spi/flash.c commands/spi/flash.h commands/spi/spiflash.h commands/spi/spiflash.c
+        commands/spi/sniff.c commands/spi/sniff.h
         lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h 
         lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c         
         #2WIRE
         mode/hw2wire.h mode/hw2wire.c 
         pirate/hw2wire_pio.h pirate/hw2wire_pio.c
-        commands/2wire/sle4442.c commands/2wire/sle4442.h
+        commands/2wire/sle4442.c commands/2wire/sle4442.h 
         #LED
         mode/hwled.c mode/hwled.h
         #DUMMY MODE
@@ -204,6 +205,7 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/apa102.pio) 
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw1wire.pio) 
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwuart.pio)  
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/spisnif.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/logicanalyzer.pio)
 
         pico_set_program_name(${revision} ${revision})

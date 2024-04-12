@@ -1,0 +1,1 @@
+void sniff_handler(struct command_result *res);

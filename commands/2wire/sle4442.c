@@ -15,6 +15,8 @@
 #include "mode/hw2wire.h"
 #include "pirate/psu.h"
 #include "usb_rx.h"
+#include "fatfs/ff.h"
+#include "pirate/storage.h"
 
 #define SLE_CMD_READ_MEM 0x30
 #define SLE_CMD_WRITE_MEM 0x38
@@ -293,7 +295,7 @@ void sle4442(struct command_result *res){
         }
     }
     
-	if(dump){
+/*	if(dump){
         sle4442_read_prtmem(data);
         printf("Protection memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", data[0], data[1], data[2], data[3]);
 
@@ -305,6 +307,57 @@ void sle4442(struct command_result *res){
 			printf("0x%02x ", (uint8_t) ui_format_lsb(temp, 8));
 		}
 		printf("\r\n");
+
+	}*/
+
+    if(dump){
+        //new file
+        FIL fil;		/* File object needed for each open file */
+        FRESULT fr;     /* FatFs return code */
+        UINT bw;
+
+        //file to read/write/verify
+        char file[13];
+        command_var_t arg;
+        bool file_flag = cmdln_args_find_flag_string('f'|0x20, &arg, sizeof(file), file);
+        if(!file_flag ){
+            printf("Missing file name (-f)\r\n");
+            return;
+        }
+
+        printf("Dumping to %s...\r\n", file);
+
+        //open file
+        fr = f_open(&fil, file, FA_WRITE | FA_CREATE_ALWAYS);	
+        if (fr != FR_OK) {
+            storage_file_error(fr);
+            res->error=true;
+            return;
+        }
+        char buf[256+4+4];
+		sle4442_write(SLE_CMD_READ_MEM, 0, 0);
+		for(uint i =0; i<256; i++){
+            uint8_t temp;
+			pio_hw2wire_get16(&temp);
+			buf[i]=(uint8_t)ui_format_lsb(temp, 8);
+		}
+        sle4442_read_secmem(&buf[256]);
+        sle4442_read_prtmem(&buf[256+4]);
+        //write to file
+        fr = f_write(&fil, buf, sizeof(buf), &bw);
+        if (fr != FR_OK|| bw != sizeof(buf)) {
+            storage_file_error(fr);
+            res->error=true;
+            return;
+        }
+        //close file
+        fr = f_close(&fil);
+        if (fr != FR_OK) {
+            storage_file_error(fr);
+            res->error=true;
+            return;
+        }
+        printf("Dump complete\r\n");
 
 	}
 	

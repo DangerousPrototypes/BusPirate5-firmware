@@ -204,6 +204,53 @@ uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t
     return 1;
 }
 
+bool storage_ls(const char *location, const char *ext, const uint8_t flags)
+{
+    FRESULT fr;
+    DIR dir;
+    FILINFO fno;
+    int nfile, ndir;
+
+    fr = f_opendir(&dir, location);                       /* Open the directory */
+    if (fr != FR_OK) {
+        return false;
+    }
+
+    nfile = ndir = 0;
+    for(;;) {
+        fr = f_readdir(&dir, &fno);                   /* Read a directory item */
+        if (fr != FR_OK || fno.fname[0] == 0)
+            break;  /* Error or end of dir */
+        strlwr(fno.fname); //FAT16 is only UPPERCASE, make it lower to be easy on the eyes...
+        if (ext) {
+            int fname_len = strlen(fno.fname);
+            int ext_len = strlen(ext);
+            if (fname_len > ext_len+1) {
+                if (memcmp(fno.fname+fname_len-ext_len, ext, ext_len)) {
+                    continue;
+                }
+            }
+
+        }
+        if (fno.fattrib & AM_DIR) {   /* Directory */
+            if (flags & LS_DIRS)
+                printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
+            ndir++;
+        }
+        else {   /* File */
+            if (flags & LS_FILES)
+                if (flags & LS_SIZE)
+                    printf("%s%10u ", ui_term_color_prompt(), fno.fsize);
+                printf("%s%s%s\r\n", ui_term_color_info(), fno.fname, ui_term_color_reset());
+            nfile++;
+        }
+    }
+    f_closedir(&dir);
+    if (flags & LS_SUMM)
+        printf("%s%d dirs, %d files%s\r\n", ui_term_color_info(), ndir, nfile, ui_term_color_reset());
+    return true;
+}
+
 const char system_config_file[]="bpconfig.bp";
 
 struct _mode_config_t system_config_json[]={

@@ -19,7 +19,6 @@
 static bool exec_macro_id(uint8_t id);
 void disk_show_macro_file(const char *location);
 void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len);
-bool disk_ls(const char *location, const char *ext);
 
 static const char * const usage[]= {
     "macro <#>\r\n\t[-f <file>] [-a] [-l] [-h(elp)]",
@@ -58,7 +57,7 @@ void macro_handler(struct command_result *res){
     //list of mcr files
     if(cmdln_args_find_flag('a'|0x20)){
         printf("Available macro files:\r\n");
-        disk_ls("", "mcr"); //disk ls should be integrated with existing list function???
+        storage_ls("", "mcr", LS_FILES /*| LS_SIZE*/); //disk ls should be integrated with existing list function???
         return;
     }
 
@@ -174,46 +173,3 @@ void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len)
     f_close(&fil);
 }
 
-//TODO: move to pirate/storage? Integrate with disk.h ls command, extend to support extensions?
-bool disk_ls(const char *location, const char *ext)
-{
-    FRESULT fr;
-    DIR dir;
-    FILINFO fno;
-    int nfile, ndir;
-
-    fr = f_opendir(&dir, location);                       /* Open the directory */
-    if (fr != FR_OK) {
-        return false;
-    }
-
-    nfile = ndir = 0;
-    for(;;) {
-        fr = f_readdir(&dir, &fno);                   /* Read a directory item */
-        if (fr != FR_OK || fno.fname[0] == 0)
-            break;  /* Error or end of dir */
-        strlwr(fno.fname); //FAT16 is only UPPERCASE, make it lower to be easy on the eyes...
-        if (ext) {
-            int fname_len = strlen(fno.fname);
-            int ext_len = strlen(ext);
-            if (fname_len > ext_len+1) {
-                if (memcmp(fno.fname+fname_len-ext_len, ext, ext_len)) {
-                    continue;
-                }
-            }
-
-        }
-        if (fno.fattrib & AM_DIR) {   /* Directory */
-            printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
-            ndir++;
-        }
-        else {   /* File */
-            printf("%s%10u %s%s%s\r\n",
-            ui_term_color_prompt(),fno.fsize, ui_term_color_info(), fno.fname, ui_term_color_reset());
-            nfile++;
-        }
-    }
-    f_closedir(&dir);
-    printf("%s%d dirs, %d files%s\r\n", ui_term_color_info(), ndir, nfile, ui_term_color_reset());
-    return true;
-}

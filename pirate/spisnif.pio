@@ -7,6 +7,7 @@
 no_data:
     mov isr, null       ; bad data, empty ISR
     jmp is_cs_low       ; check if CS is low
+public entry_point:
 .wrap_target
 data_in:
     wait 0 pin 1        ; wait for clock to go low
@@ -47,7 +48,7 @@ static inline void spisnif_program_init(PIO pio, uint sm, uint offset, uint pin_
 
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
     // Configure and start SM
-    pio_sm_init(pio, sm, offset + offset, &c);
+    pio_sm_init(pio, sm, offset + spisnif_offset_entry_point, &c);
     pio_sm_set_enabled(pio, sm, true);
 }
 

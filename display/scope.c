@@ -90,7 +90,7 @@ static SCOPE_MODE scope_mode=SMODE_ONCE;
 typedef enum { TRIGGER_POS, TRIGGER_NEG, TRIGGER_NONE, TRIGGER_BOTH } TRIGGER_TYPE;
 static TRIGGER_TYPE trigger_type = TRIGGER_POS;
 static uint16_t dy=100;		// Y size in 10mV units
-static uint16_t yoffset=0;  // y offset in dy units
+static int16_t yoffset=0;  // y offset in dy units
 
 static uint32_t display_timebase = 500000; // fastest possible - displayed timebase
 static uint32_t display_base_timebase = 500000; // fastest possible - sample rate
@@ -117,6 +117,7 @@ unsigned short clr[] =
 	0x1f00, // bright blue
 	0x00f0, // red
 	0xe007, // green
+	0xa041, // pale yellow
 };
 
 typedef enum {
@@ -129,6 +130,7 @@ GY=5,
 BB=6,
 R=7,
 G=8,
+PY=9,
 } CLR;
 
 static void scope_start(int pin);
@@ -604,7 +606,7 @@ scope_up(void)
 static void
 scope_down(void)
 {
-	if (yoffset > 0) {
+	if (yoffset > -1) {
 		yoffset--;
 		display = 1;
 	}
@@ -1555,7 +1557,7 @@ draw_scope()
 	char b[40];
 	char *s1, *s2;	
 	int unit;
-	draw_grid(Y);
+	draw_grid(PY);
 	
 	switch (dy) {
 	case 100: s1="1Vx";    break;
@@ -1587,7 +1589,7 @@ draw_scope()
 	strcpy(b, s1);	
 	strcat(b, s2);
 	draw_text(HS-12-(strlen(b)*12), VS-5, &hunter_12ptFontInfo, GY, &b[0]);
-	int v = dy*yoffset;
+	int v = (yoffset < 0)? 0 : dy*yoffset;
 	b[0] = v/100+'0';
 	int off = 1;
 	v = v%100;
@@ -1600,7 +1602,7 @@ draw_scope()
 	}
 	b[off++] = 'V';
 	b[off] = 0;
-	draw_text(5, 15, &hunter_12ptFontInfo, GY, &b[0]);
+	draw_text(5, 15 + ((yoffset < 0)? -yoffset*(VS/5) : 0), &hunter_12ptFontInfo, GY, &b[0]);
 	unit = unit*xoffset;
 	if (unit >= 100000) {
 		int v = unit/100000;

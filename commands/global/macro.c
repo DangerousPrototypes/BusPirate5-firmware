@@ -16,9 +16,9 @@
 #include "ui/ui_term.h"    // Terminal functions
 #include "ui/ui_process.h"
 
-static bool exec_macro_id(uint8_t id);
+static bool exec_macro_id(const char *id);
 void disk_show_macro_file(const char *location);
-void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len);
+void disk_get_line_id(const char *location, const char *id, char *line, int max_len);
 
 static const char * const usage[]= {
     "macro <#>\r\n\t[-f <file>] [-a] [-l] [-h(elp)]",
@@ -46,11 +46,11 @@ static const struct ui_help_options options[]= {
 };
 
 #define MACRO_FNAME_LEN  13
+#define ID_MAX_LEN       32
 static char macro_file[MACRO_FNAME_LEN];
 
 void macro_handler(struct command_result *res){
-    uint32_t value;
-    //char file[13];
+    char value[ID_MAX_LEN];
 
     if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
 
@@ -81,20 +81,20 @@ void macro_handler(struct command_result *res){
     
     //run macro
     
-    if(cmdln_args_uint32_by_position(1, &value)){
+    if(cmdln_args_string_by_position(1, ID_MAX_LEN, value)){
         //is a macro file loaded?
         //does this macro exist?
-        exec_macro_id((uint8_t)value); //has return value to flag error
+        exec_macro_id(value); //has return value to flag error
         return;
     }
 
     printf("Nothing to do. Use -h for help.\r\n");
 }
 
-static bool exec_macro_id(uint8_t id)
+static bool exec_macro_id(const char *id)
 {
     char line[512];
-    printf("Exec macro id: %u\r\n", id);
+    printf("Exec macro id: %s\r\n", id);
 
     disk_get_line_id(macro_file, id, line, sizeof(line));
     if (!line[0]) {
@@ -144,14 +144,14 @@ void disk_show_macro_file(const char *location)
             line[line_len-1] = '\0';
         // Show only usage and macros
         if (line[0]=='#' && line[1]=='!' && line[2])
-            printf("%s.-%s %s%s\r\n", ui_term_color_prompt(), ui_term_color_info(), line+3, ui_term_color_reset()); // TODO: pretty print comment in VT100
-        else if ((uint8_t)strtol(line, NULL, 10) > 0)
-            printf("%s%s%s\r\n\r\n",ui_term_color_prompt(), line, ui_term_color_reset()); // TODO: pretty print macro in VT100
+            printf("%s.-%s %s%s\r\n", ui_term_color_prompt(), ui_term_color_info(), line+3, ui_term_color_reset());
+        else if (strchr(line, ':'))
+            printf("%s%s%s\r\n\r\n",ui_term_color_prompt(), line, ui_term_color_reset());
     }
     f_close(&fil);
 }
 
-void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len)
+void disk_get_line_id(const char *location, const char *id, char *line, int max_len)
 {
     FIL fil;
     FRESULT fr;
@@ -163,8 +163,9 @@ void disk_get_line_id(const char *location, uint8_t id, char *line, int max_len)
         return;
     }
     while (f_gets(line, max_len, &fil)) {
-        if ((uint8_t)strtol(line, NULL, 10) == id) {
-            uint8_t line_len = strlen(line);
+        uint8_t line_len = strlen(line);
+        uint8_t cmp_len = MIN(strlen(id), line_len);
+        if (!strncmp(line, id, cmp_len)) {
             if (line_len>1 && line[line_len-1]=='\n')
                 line[line_len-1] = '\0';
             break;

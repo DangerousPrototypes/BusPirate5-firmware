@@ -105,6 +105,8 @@ set(bp5_common
         commands/2wire/sle4442.c commands/2wire/sle4442.h 
         #LED
         mode/hwled.c mode/hwled.h
+        #DIO
+        mode/dio.h mode/dio.c
         #DUMMY MODE
         mode/dummy1.c mode/dummy1.h 
   

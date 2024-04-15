@@ -55,7 +55,7 @@ void i2c_search_addr(struct command_result *res){
 	
 			color=!color;
 			if(color||verbose)
-					ui_term_color_text_background(hw_pin_label_ordered_color[0][0],hw_pin_label_ordered_color[0][1]);
+					ui_term_color_text_background(hw_pin_label_ordered_color[7][0],hw_pin_label_ordered_color[7][1]);
 
 			printf("0x%02X",i>>1);
 			if(i2c_w) printf(" (0x%02X W)",i);

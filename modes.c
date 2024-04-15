@@ -497,8 +497,8 @@ struct _mode modes[MAXPROTO]={{
     //dio_pins,				// display pin config
     dio_settings,				// display settings
     dio_help,				// display small help about the protocol
-    NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count
+    dio_commands,                   // mode specific commands
+    &dio_commands_count,                   // mode specific commands count
     "DIO",					// friendly name (promptname)
 },
 #endif

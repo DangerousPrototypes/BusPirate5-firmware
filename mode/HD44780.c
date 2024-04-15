@@ -141,15 +141,15 @@ void HD44780_reset(void)
 	spi_xfer(0x00);
 	spi_setcs(1);
 	spi_setcs(0);
-	delayms(15);
+	busy_wait_ms(15);
 	HD44780_writenibble(0, 0x03);
-	delayms(15);
+	busy_wait_ms(15);
 	HD44780_writenibble(0, 0x03);
-	delayms(15);
+	busy_wait_ms(15);
 	HD44780_writenibble(0, 0x03);
-	delayms(15);
+	busy_wait_ms(15);
 	HD44780_writenibble(0, 0x02);
-	delayms(15);
+	busy_wait_ms(15);
 }
 
 void HD44780_init(uint8_t lines)
@@ -158,13 +158,13 @@ void HD44780_init(uint8_t lines)
 		HD44780_send(0, 0x20);
 	else
 		HD44780_send(0, 0x28);
-	delayms(15);
+	busy_wait_ms(15);
 	HD44780_send(0, 0x08);
-	delayms(15);
+	busy_wait_ms(15);
 	HD44780_send(0, 0x01);
-	delayms(15);
+	busy_wait_ms(15);
 	HD44780_send(0, 0x0f);
-	delayms(15);
+	busy_wait_ms(15);
 
 }
 

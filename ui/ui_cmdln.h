@@ -6,6 +6,39 @@ struct _command_line {
     char buf[UI_CMDBUFFSIZE];
 };
 
+struct _command_pointer {
+    uint32_t wptr;
+    uint32_t rptr;
+};
+
+struct _command_info_t {
+    uint32_t rptr;
+    uint32_t wptr;
+    uint32_t startptr;
+    uint32_t endptr;
+    uint32_t nextptr;
+    char delimiter;
+    char command[9];
+};
+
+typedef struct command_var_struct {
+    bool has_arg;
+    bool has_value;
+    uint32_t value_pos;
+    bool error;
+    uint8_t number_format;
+} command_var_t;
+
+bool cmdln_args_find_flag(char flag);
+bool cmdln_args_find_flag_uint32(char flag, command_var_t *arg, uint32_t *value);
+bool cmdln_args_find_flag_string(char flag, command_var_t *arg, uint32_t max_len, char *str);
+bool cmdln_args_float_by_position(uint32_t pos, float *value);
+bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t *value);
+bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char *str);
+bool cmdln_find_next_command(struct _command_info_t *cp);
+bool cmdln_info(void);
+bool cmdln_info_uint32(void);
+
 // update a command line buffer pointer with rollover
 uint32_t cmdln_pu(uint32_t i); 
 // try to add a byte to the command line buffer, return false if buffer full
@@ -25,5 +58,8 @@ bool cmdln_try_discard(uint32_t i);
 bool cmdln_next_buf_pos(void);
 
 void cmdln_init(void);
+
+bool cmdln_try_peek_pointer(struct _command_pointer *cp, uint32_t i, char *c);
+void cmdln_get_command_pointer(struct _command_pointer *cp);
 
 extern struct _command_line cmdln;

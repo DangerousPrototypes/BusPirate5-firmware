@@ -11,6 +11,7 @@ void hwi2c_cleanup(void);
 void hwi2c_settings(void);
 void hwi2c_printI2Cflags(void);
 void hwi2c_help(void);
+uint8_t hwi2c_checkshort(void);
 
 typedef struct _i2c_mode_config{
 	uint32_t baudrate;
@@ -21,3 +22,6 @@ typedef struct _i2c_mode_config{
 	bool start_sent;
 } _i2c_mode_config;
 
+
+extern const struct _command_struct hwi2c_commands[];
+extern const uint32_t hwi2c_commands_count;

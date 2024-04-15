@@ -9,6 +9,7 @@
 #include "ui/ui_parse.h"
 #include "ui/ui_term.h"
 #include "ui/ui_const.h"
+#include "ui/ui_cmdln.h"
 
 
 bool ui_mode_list(const struct ui_prompt* menu)
@@ -19,24 +20,16 @@ bool ui_mode_list(const struct ui_prompt* menu)
 	}
 }
 
-void ui_mode_enable_args(opt_args (*args), struct command_result *res)
-{
+void ui_mode_enable_args(struct command_result *res){
     uint32_t mode;
     bool error;
 
-	prompt_result result;
-    ui_parse_get_attributes(&result, &mode, 1);
+	bool has_value=cmdln_args_uint32_by_position(1, &mode);
 
-	if( result.error || result.no_value || result.exit || ((mode)>MAXPROTO) || ((mode)==0) )
-	{
-		if( result.success && (mode)>MAXPROTO )
-		{
-			ui_prompt_invalid_option();
-		}
-		error=true;
-	}
-	else
-	{
+    if( !has_value || ((mode)>MAXPROTO) || ((mode)==0) ){
+        if(has_value && (mode)>MAXPROTO ) ui_prompt_invalid_option();
+        error=true;
+    }else{
 		(mode)--; //adjust down one from user choice
 		error=false;
 	}
@@ -194,7 +187,7 @@ bool int_display_menu(const struct ui_prompt* menu)
 }
 
 // set display mode  (hex, bin, octa, dec) 
-void ui_mode_int_display_format(opt_args (*args), struct command_result *res)
+void ui_mode_int_display_format(struct command_result *res)
 {
     uint32_t mode;
     bool error;
@@ -252,3 +245,14 @@ void ui_mode_int_display_format(opt_args (*args), struct command_result *res)
 
 	printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_MODE], ui_term_color_reset(), ui_const_display_formats[system_config.display_format]);
 }
+
+/* For Emacs:
+ * Local Variables:
+ * mode:c
+ * indent-tabs-mode:t
+ * tab-width:4
+ * c-basic-offset:4
+ * End: 
+ * For VIM:
+ * vim:set softtabstop=4 shiftwidth=4 tabstop=4:
+ */     

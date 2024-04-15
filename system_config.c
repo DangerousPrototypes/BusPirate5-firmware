@@ -2,11 +2,14 @@
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "bytecode.h"
-#include "modes.h"
 #include "pirate.h"
+#include "opt_args.h"
+#include "commands.h"
+#include "modes.h"
 #include "ui/ui_const.h"
 #include "system_config.h"
 #include "mjson/mjson.h"
+#include "pirate/mem.h" //defines for buffer owner
 
 struct _system_config system_config;
 
@@ -36,6 +39,8 @@ void system_init(void)
 	system_config.terminal_ansi_statusbar_update=false;
 	system_config.terminal_ansi_color=0;
 	system_config.terminal_update=0;
+	system_config.terminal_hide_cursor=false;
+	system_config.terminal_ansi_statusbar_pause=false;
 
 	system_config.storage_available=0;
 	system_config.storage_mount_error=3;
@@ -47,6 +52,7 @@ void system_init(void)
 
 	system_config.hiz=1;
  	system_config.mode=0;
+ 	system_config.display=0;
 	system_config.subprotocol_name=0;
 	for(int i=0;i<HW_PINS;i++)
 	{
@@ -79,12 +85,9 @@ void system_init(void)
 	system_config.aux_active=0;
 
 	system_config.psu=0;
-    system_config.psu_dac_bits_mask=0;
-    system_config.psu_dat_bits_readable=0;
-	//system_config.psu_dac_v_set=0xff;
-	//system_config.psu_dac_i_set=0x50;
-    //system_config.psu_voltage=0;               
-    //system_config.psu_current_limit=0;  
+    system_config.psu_current_limit_en=false;     
+    system_config.psu_voltage=0;               
+    system_config.psu_current_limit=0;  
     system_config.psu_current_error=false;
     system_config.psu_error=false;   
 	system_config.psu_irq_en=false;   
@@ -100,6 +103,8 @@ void system_init(void)
 	system_config.cspin=0;
 	system_config.clkport=0;
 	system_config.clkpin=0;
+
+	system_config.big_buffer_owner=BP_BIG_BUFFER_NONE;
 }
 
 bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label)

@@ -16,3 +16,6 @@ typedef struct _led_mode_config{
 	uint32_t num_leds;
 	uint32_t device;
 } _led_mode_config;
+
+extern const struct _command_struct hwled_commands[];
+extern const uint32_t hwled_commands_count;

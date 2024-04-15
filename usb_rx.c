@@ -9,7 +9,7 @@
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "tusb.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "system_config.h"
 #include "debug.h"
 
@@ -82,6 +82,7 @@ void tud_cdc_rx_cb(uint8_t itf)
         }     
     }
 
+#if(0)
     if(itf==1 && tud_cdc_n_available(1))
     {
         uint32_t count = tud_cdc_n_read(1, buf, 64);
@@ -91,6 +92,7 @@ void tud_cdc_rx_cb(uint8_t itf)
         {
             // I'm going to put the entry to binmode in the usb rx interrupt
             // This way we can use a global variable to signal any blocking processes in the user terminal (e.g. menus)
+            #ifdef BINMODE_IN_RX
             if(!system_config.binmode)
             {
                 if(buf[i]==0x00)
@@ -111,10 +113,14 @@ void tud_cdc_rx_cb(uint8_t itf)
             {
                 queue2_add_blocking(&bin_rx_fifo, &buf[i]);
             }
+            #else
+            queue2_add_blocking(&bin_rx_fifo, &buf[i]);
+            #endif
 
             
         }     
     }    
+#endif
 }
 
 #if 0 
@@ -138,6 +144,11 @@ void rx_fifo_service(void)
     //}
 }
 #endif
+
+//insert a byte into the queue
+void rx_fifo_add(char *c){
+    queue2_add_blocking(&rx_fifo, c);
+}
 
 // functions to access the ring buffer from other code
 // block until a byte is available, remove from buffer
@@ -172,5 +183,7 @@ void bin_rx_fifo_available_bytes(uint16_t *cnt)
 }
 bool bin_rx_fifo_try_get(char *c)
 {
-    return queue2_try_remove(&bin_rx_fifo, c);
+    bool result= queue2_try_remove(&bin_rx_fifo, c);
+    //if(result) printf("%.2x ", (*c));
+    return result;
 }

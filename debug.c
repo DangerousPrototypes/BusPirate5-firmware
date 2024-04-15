@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "system_config.h"

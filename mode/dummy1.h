@@ -33,4 +33,7 @@ uint32_t dummy1_dats(void);
 void dummy1_clk(void);
 uint32_t dummy1_bitr(void);
 
+void dummy1_help(void);
 
+extern const struct _command_struct dummy1_commands[];
+extern const uint32_t dummy1_commands_count;

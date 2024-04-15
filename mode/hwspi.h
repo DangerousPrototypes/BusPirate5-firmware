@@ -34,4 +34,8 @@ typedef struct _spi_mode_config{
 	uint32_t clock_phase;
 	uint32_t cs_idle; 
 	uint32_t dff; 
+	bool read_with_write;
 }_spi_mode_config;
+
+extern const struct _command_struct hwspi_commands[];
+extern const uint32_t hwspi_commands_count;

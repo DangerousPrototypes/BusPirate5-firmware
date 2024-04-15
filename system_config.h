@@ -34,6 +34,8 @@ typedef struct _system_config
 	uint32_t terminal_ansi_color;
 	uint32_t terminal_ansi_statusbar;
 	bool terminal_ansi_statusbar_update;
+	bool terminal_hide_cursor;
+	bool terminal_ansi_statusbar_pause;
 	uint8_t terminal_update;
 
 	uint8_t storage_available;
@@ -45,6 +47,7 @@ typedef struct _system_config
 	
 	uint8_t hiz;					// is hiz pin mode?
 	uint8_t mode;					// which mode we are in?
+	uint8_t display;				// which display mode we are in?
 	const char *subprotocol_name;		// can be set if there is a sub protocol
 	
 	uint8_t num_bits;				// number of used bits
@@ -67,11 +70,12 @@ typedef struct _system_config
 	uint8_t aux_active;				//user controlled auc pins are outputs, resets when input
 
 	uint8_t psu;					// psu (0=off, 1=on)
-    uint8_t psu_dat_bits_readable;  // dac bits in human readable format
-    uint16_t psu_dac_bits_mask;          // 8/10/12 bit psu dac possible, this is the bitmask 0xff 0x3ff or 0x7ff
+    //uint8_t psu_dat_bits_readable;  // dac bits in human readable format
+    //uint16_t psu_dac_bits_mask;          // 8/10/12 bit psu dac possible, this is the bitmask 0xff 0x3ff or 0x7ff
 	uint16_t psu_dac_v_set;			// psu voltage adjust DAC setting
 	uint16_t psu_dac_i_set;			// psu current limit DAC setting
     uint32_t psu_voltage;               // psu voltage output setting in decimal * 10000
+	bool psu_current_limit_en;
     uint32_t psu_current_limit;         // psu current limit in decimal * 10000
     bool psu_current_error;             // psu over current limit fuse tripped
     bool psu_error;                     //error, usually with the dac
@@ -88,8 +92,11 @@ typedef struct _system_config
 	uint32_t clkpin;
 	uint32_t mosiport;				// cs is located on this port/gpio
 	uint32_t mosipin;
-} _system_config;
 
+	uint32_t big_buffer_owner;
+
+
+} _system_config;
 
 extern struct _system_config system_config;
 

@@ -16,21 +16,26 @@
 
 /* Binary access modes for Bus Pirate scripting */
 
-#include <stdio.h>
+//#include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "queue.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
-#include "bio.h"
+#include "pirate/bio.h"
 #include "system_config.h"
 #include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and bytecode stuff to a single helper file
+#include "pirate.h"
+#include "opt_args.h" //needed for same reason as bytecode and needs same fix
+#include "commands.h"
 #include "modes.h"
 #include "mode/binio.h"
-#include "opt_args.h" //needed for same reason as bytecode and needs same fix
-#include "pullups.h"
-#include "psu.h"
-#include "amux.h"
+#include "pirate/pullup.h"
+#include "pirate/psu.h"
+#include "pirate/amux.h"
+#include "sump.h"
+#include "binio_helpers.h"
+#include "tusb.h"
 
 unsigned char binBBpindirectionset(unsigned char inByte);
 unsigned char binBBpinset(unsigned char inByte);
@@ -80,20 +85,85 @@ Commands:
  */
 void binBBversion(void) 
 {
-    const char version_string[]="BBIO1";
-
-    for(uint8_t i=0; i<sizeof(version_string)-1; i++)
-    {
-        bin_tx_fifo_put(version_string[i]);
-    }
+    //const char version_string[]="BBIO1";
+    script_print("BBIO1");
 }
 
-void script_mode(void) 
+void script_enabled(void)
+{
+    printf("\r\nScripting mode enabled. Terminal locked.\r\n");
+}
+
+void script_disabled(void)
+{
+    printf("\r\nTerminal unlocked.\r\n");     //fall through to prompt 
+}
+
+bool script_entry(void)
+{
+    static uint8_t binmodecnt=0;
+    char c;
+
+    if(tud_cdc_n_available(1)) return true; else return false;
+
+    while(tud_cdc_n_available(1))
+    {
+
+        switch(c)
+        {
+            case 0x00:
+                    script_enabled();
+                    system_config.binmode=true;
+                    sump_logic_analyzer();
+                    system_config.binmode=false;
+                    script_disabled();  
+                              
+                binmodecnt++;
+                if(binmodecnt>=20)
+                {   
+                    system_config.binmode=true;
+                    binmodecnt=0;
+                    return true;
+                }
+                break;                
+            case 0x02: //test for SUMP client
+                if(binmodecnt >= 5) 
+                {
+                    script_enabled();
+                    system_config.binmode=true;
+                    sump_logic_analyzer();
+                    system_config.binmode=false;
+                    script_disabled();
+                } 
+                binmodecnt = 0; //reset counter
+                break;
+            default:
+                binmodecnt = 0;
+                break;
+        }
+
+    }  
+
+    return false;
+}
+
+bool script_mode(void) 
 {
     static unsigned char inByte;
     unsigned int i;
     char c;
 
+    system_config.binmode=true;
+    sump_logic_analyzer();
+    system_config.binmode=false;
+    return false;
+
+    // co-op multitask while checking for the binmode flag
+    // then take over and block the user terminal
+    //if(!script_entry()) return false;
+
+    script_enabled();
+ 
     binReset();
     binBBversion(); //send mode name and version
 
@@ -167,8 +237,9 @@ void script_mode(void)
                 system_bio_claim(false, BP_CLK, BP_PIN_MODE, 0);
                 system_bio_claim(false, BP_MISO, BP_PIN_MODE, 0);
                 system_bio_claim(false, BP_CS, BP_PIN_MODE, 0);		
+                script_disabled();
+                return true;
                 //while(queue_available_bytes()) //old version waits for empty TX before exit
-                return;
                 //self test is only for v2go and v3
             } else if (inByte == 0b10000) {//short self test
                 //binSelfTest(0);
@@ -211,7 +282,7 @@ void script_mode(void)
             } 
             else if (inByte == 0b10100) 
             {   //ADC reading (x/1024)*6.6volts
-                i = hw_adc_bio(BP_ADC_PROBE); //take measurement
+                i = amux_read_bio(BP_ADC_PROBE); //take measurement
                 i=i>>2; //remove 2 bit of resolution to match old PIC 10 bit resolution
                 bin_tx_fifo_put((i >> 8)); //send upper 8 bits
                 bin_tx_fifo_put(i); //send lower 8 bits
@@ -220,7 +291,7 @@ void script_mode(void)
             {   //ADC reading (x/1024)*6.6volts
                 while (1) 
                 {
-                    i = hw_adc_bio(BP_ADC_PROBE); //take measurement
+                    i = amux_read_bio(BP_ADC_PROBE); //take measurement
                     while(bin_tx_not_empty()); //this doesn't work as well with the USB stack
                     bin_tx_fifo_put((i >> 8)); //send upper 8 bits
                     bin_tx_fifo_put(i); //send lower 8 bits
@@ -309,6 +380,8 @@ void binReset(void)
 
 }
 
+
+
 unsigned char port_read(unsigned char inByte)
 {
     inByte &= (~0b00011111);
@@ -352,20 +425,24 @@ unsigned char binBBpinset(unsigned char inByte)
 
     if(inByte & 0b1000000) 
     {
-        psu_set(3.3f, 500, false);
+        psu_enable(3.3f, 500, false);
     }
     else 
     {
-        psu_reset(); //power off
+        psu_disable(); //power off
     }
 
     if(inByte & 0b100000)
     {
-        pullups_enable_exc(); //pullups on
+        pullup_enable(); //pullups on //todo: move back to useing the p_oullup commands
+        system_config.pullup_enabled=0;
+        system_config.info_bar_changed=true;
     }
     else
     {
-        pullups_cleanup();
+        pullup_disable();
+        system_config.pullup_enabled=1;
+        system_config.info_bar_changed=true;
     }
 
     //set pin high/low

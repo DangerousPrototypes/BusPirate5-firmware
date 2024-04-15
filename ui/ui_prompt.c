@@ -10,12 +10,12 @@
 #include "ui/ui_info.h"
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
+#include "ui_help.h"
 
 static const struct prompt_result empty_result;
 
-void ui_prompt_invalid_option(void)
-{
-	ui_info_print_error(T_MODE_INVALID_OPTION);
+void ui_prompt_invalid_option(void){
+	ui_help_error(T_MODE_INVALID_OPTION);
 }
 
 // INTEGER 
@@ -117,7 +117,7 @@ bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu)
 }
 
 // used internally in ui_prompt
-// gets user input untill <enter> or return false if system error
+// gets user input until <enter> or return false if system error
 bool ui_prompt_user_input(void)
 {
     cmdln_next_buf_pos();   // flush all input
@@ -130,6 +130,48 @@ bool ui_prompt_user_input(void)
     }while(ui_term_get_user_input()!=0xff);
     ui_parse_consume_whitespace();
     return true;
+}
+
+// a glorious yes or no prompt, with xit and enter for default
+bool ui_prompt_bool(prompt_result *result, bool defval_show, bool defval, bool allow_exit, bool *user_value)
+{
+	while(true)
+	{
+		printf("\r\n%sy/n%s ",ui_term_color_prompt(), (allow_exit?", x to exit":""));
+		if(defval_show) printf("(%c)", defval?'Y':'N');
+		printf(" >%s ", ui_term_color_reset());
+
+		if(!ui_prompt_user_input())
+        {
+            result->exit=true; // a little hackish, but we do want to exit right?
+            return false;
+        }
+
+		ui_parse_get_bool(result, user_value);
+
+		printf("\r\n");
+
+		if(allow_exit && result->exit)
+		{
+			return false;
+		}
+
+		if(result->no_value && defval_show) // assume user pressed enter
+		{
+			(*user_value)=defval;
+			result->default_value=true;
+			return true;
+		}
+		else if( result->success )
+		{
+			return true;
+		}
+		else
+		{
+			ui_prompt_invalid_option();
+		}
+	}
+
 }
 
 // ask user for integer until it falls between minval and maxval, enter returns the default value, x exits
@@ -188,11 +230,14 @@ bool ui_prompt_uint32(prompt_result *result, const struct ui_prompt* menu, uint3
 }
 
 // keep the user asking the menu until it falls between minval and maxval, enter returns the default value, x optionally exits
-bool ui_prompt_float(prompt_result *result, float minval, float maxval, float defval, bool allow_exit, float* user_value)
+bool ui_prompt_float(prompt_result *result, float minval, float maxval, float defval, bool allow_exit, float* user_value, bool none)
 {
 	while(true)
 	{
-		printf("\r\n%s%s (%1.2f) >%s ",ui_term_color_prompt(), (allow_exit?"x to exit":""), defval, ui_term_color_reset());
+		printf("\r\n%s%s ",ui_term_color_prompt(), (allow_exit?"x to exit":""));
+		if(!none) printf("(%1.2f)", defval);
+		else printf("(none)");
+		printf(" >%s ", ui_term_color_reset());
 
 		if(!ui_prompt_user_input())
         {
@@ -257,7 +302,7 @@ bool ui_prompt_float_units(prompt_result *result, const char *menu, float* user_
 
 		ui_prompt_invalid_option();
 		//TODO: loop these out from the units const array...
-		printf("%sError:%s Unknown units '%s'\r\n%sValid units: ns, us, ms, Hz, KHz, MHz, %%%s\r\n", 
+		printf("%sError:%s Unknown units '%s'\r\n%sValid units: ns, us, ms, Hz, kHz, MHz, %%%s\r\n", 
 				ui_term_color_error(), ui_term_color_reset(), units, ui_term_color_info(), ui_term_color_reset()
 			);
 	}

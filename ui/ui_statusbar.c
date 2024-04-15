@@ -7,9 +7,10 @@
 #include "ui/ui_const.h"
 #include "ui/ui_term.h"
 #include "usb_tx.h"
-#include "freq.h"
+#include "commands/global/freq.h"
 #include "ui/ui_flags.h"
 #include "system_monitor.h"
+#include "display/scope.h"
 
 
 uint32_t ui_statusbar_info(char *buf)
@@ -22,10 +23,20 @@ uint32_t ui_statusbar_info(char *buf)
     
     if(system_config.psu)
     {
-        temp=sprintf(&buf[len],"Vout: %u.%uV/%u.%umA max | ",
-           (system_config.psu_voltage)/10000, ((system_config.psu_voltage)%10000)/100,
-           (system_config.psu_current_limit)/10000, ((system_config.psu_current_limit)%10000)/100 
+        temp=sprintf(&buf[len],"Vout: %u.%uV",
+           (system_config.psu_voltage)/10000, ((system_config.psu_voltage)%10000)/100
         );
+        len+=temp;
+        cnt+=temp;
+        if(system_config.psu_current_limit_en)
+        {
+            temp=sprintf(&buf[len],"/%u.%umA max",
+                (system_config.psu_current_limit)/10000, ((system_config.psu_current_limit)%10000)/100 
+            );
+            len+=temp;
+            cnt+=temp;           
+        }
+        temp=sprintf(&buf[len]," | ");
         len+=temp;
         cnt+=temp;
     }
@@ -47,6 +58,11 @@ uint32_t ui_statusbar_info(char *buf)
            (system_config.psu_voltage)/10000, ((system_config.psu_voltage)%10000)/100,
            (system_config.psu_current_limit)/10000, ((system_config.psu_current_limit)%10000)/100 
         );
+        len+=temp;
+        cnt+=temp;
+    }
+    if (scope_running) { // scope is using the analog subsystem
+        temp=sprintf(&buf[len],"V update slower when scope running");
         len+=temp;
         cnt+=temp;
     }
@@ -271,7 +287,11 @@ void ui_statusbar_update(uint32_t update_flags)
     }
 
     //restore cursor, show cursor
-    len+=sprintf(&tx_sb_buf[len],"\e8\e[?25h"); 
+    len+=sprintf(&tx_sb_buf[len],"\e8"); 
+    if(!system_config.terminal_hide_cursor)
+    {
+        len+=sprintf(&tx_sb_buf[len],"\e[?25h"); 
+    }
     
     tx_sb_start(len);
 

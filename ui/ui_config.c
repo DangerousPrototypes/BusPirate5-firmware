@@ -8,7 +8,7 @@
 #include "modes.h"
 #include "hardware/uart.h"
 #include "ui/ui_term.h"
-#include "storage.h"
+#include "pirate/storage.h"
 #include "ui/ui_const.h"
 #include "ui/ui_info.h"
 #include "ui/ui_term.h"
@@ -38,7 +38,7 @@ uint32_t ui_config_action_led_effect(uint32_t a, uint32_t b)
 // LED color (?) Rainbow short, rainbow long, ROYGBIV
 static const struct prompt_item menu_items_led_color[]=
 {
-    {T_CONFIG_LEDS_COLOR_RAINBOW},{T_CONFIG_LEDS_COLOR_RED},{T_CONFIG_LEDS_COLOR_ORANGE},{T_CONFIG_LEDS_COLOR_YELLOW},{T_CONFIG_LEDS_COLOR_GREEN},{T_CONFIG_LEDS_COLOR_BLUE},{T_CONFIG_LEDS_COLOR_PURPLE},{T_CONFIG_LEDS_COLOR_PINK}
+    {T_CONFIG_LEDS_COLOR_RED},{T_CONFIG_LEDS_COLOR_ORANGE},{T_CONFIG_LEDS_COLOR_YELLOW},{T_CONFIG_LEDS_COLOR_GREEN},{T_CONFIG_LEDS_COLOR_BLUE},{T_CONFIG_LEDS_COLOR_PURPLE},{T_CONFIG_LEDS_COLOR_PINK}
 };
 
 uint32_t ui_config_action_led_color(uint32_t a, uint32_t b)
@@ -98,7 +98,11 @@ uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b)
 
 static const struct prompt_item menu_items_language[]=
 {
-    {T_CONFIG_LANGUAGE_ENGLISH},{T_CONFIG_LANGUAGE_CHINESE}
+    { T_CONFIG_LANGUAGE_ENGLISH },
+    { T_CONFIG_LANGUAGE_POLISH },
+    { T_CONFIG_LANGUAGE_BOSNIAN },
+    { T_CONFIG_LANGUAGE_ITALIAN },
+    //{ T_CONFIG_LANGUAGE_CHINESE }
 };
 
 uint32_t ui_config_action_language(uint32_t a, uint32_t b)
@@ -155,7 +159,7 @@ bool ui_config_menu(const struct ui_prompt * menu)
     }   
 }
 
-void ui_config_main_menu(opt_args (*args), struct command_result *res)
+void ui_config_main_menu(struct command_result *res)
 {
     while(1)
     {

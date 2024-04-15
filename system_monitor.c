@@ -2,7 +2,9 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "amux.h"
+#include "pirate/amux.h"
+#include "opt_args.h"
+#include "display/scope.h"
 
 static char voltages_value[HW_PINS-1][4];
 static uint32_t voltages_update_mask[3]; 
@@ -123,6 +125,9 @@ bool monitor(bool current_sense)
     char c;
 
     //TODO hw_adc helper functions - do conversion on request, and cache it????
+    if (scope_running) // scope is using the analog subsystem
+        return 0;
+    
     amux_sweep();
 
     for(uint8_t i=0; i<count_of(voltages_value); i++)

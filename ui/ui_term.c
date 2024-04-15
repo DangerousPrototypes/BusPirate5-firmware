@@ -8,6 +8,7 @@
 #include "usb_rx.h"
 #include "ui/ui_cmdln.h"
 
+
 //printf("你好小狗");
 // ESC [ ? 3 h       132 column mode
 //  ESC [ ? 3 l       80 column mode
@@ -101,6 +102,10 @@ void ui_term_detect(void)
     }
     
 	//printf("Terminal: %d rows, %d cols\r\n", row, col);
+    if(system_config.terminal_ansi_rows!=row || system_config.terminal_ansi_columns!=col)
+    {
+        printf("Screen Resolution changed\r\n");
+    }
     if(row==0||col==0)
     {
         //non-detection fallback
@@ -227,17 +232,17 @@ char* ui_term_color_num_float(void){
     return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT(BP_COLOR_NUM_FLOAT_TEXT):"";
 }
 
+char* ui_term_color_pacman(void){
+    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT("255;238;00"):"";
+}
+
 char* ui_term_cursor_hide(void){
     return system_config.terminal_ansi_color?"\e[?25l":"";
 }
 char* ui_term_cursor_show(void){
-    return system_config.terminal_ansi_color?"\e[?25h":"";
+    return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color?"\e[?25h":"";
 }
 
-void ui_term_error_report(uint32_t error_text)
-{
-    printf("%sError:%s %s%s\r\n", ui_term_color_error(), ui_term_color_info(), t[error_text], ui_term_color_reset());
-}
 
 // handles the user input 
 uint32_t ui_term_get_user_input(void)
@@ -368,7 +373,7 @@ bool ui_term_cmdln_char_backspace(void)
         }
         printf(" "); //get rid of trailing final character
         cmdln.buf[cmdln.wptr]=0x00;
-        cmdln.wptr=cmdln_pu(cmdln.wptr-1); //move write and cursor positons back one space
+        cmdln.wptr=cmdln_pu(cmdln.wptr-1); //move write and cursor positions back one space
         cmdln.cursptr=cmdln_pu(cmdln.cursptr-1);
         printf("\x1B[%dD", cmdln_pu(cmdln.wptr-cmdln.cursptr+1));
     }
@@ -541,3 +546,64 @@ int ui_term_cmdln_history(int ptr)
 
 	return (!ptr);
 }
+
+void ui_term_progress_bar(uint32_t current, uint32_t total)
+{
+    uint32_t pct = (current*20)/(total);
+    printf("\r%s[", ui_term_color_prompt());
+    for(int8_t i=0; i<20; i++)
+    {
+        if(pct<i) if(i%2) printf(" "); else printf("o");
+        else if(pct==i) printf("%sc", ui_term_color_notice());
+        else if(pct>i) printf("-");
+    }
+    printf("%s]\r\e[1C",ui_term_color_prompt());
+}
+
+void ui_term_progress_bar_draw(ui_term_progress_bar_t *pb)
+{
+    system_config.terminal_hide_cursor=true;
+    busy_wait_ms(1);
+    printf("%s\r%s[%s", ui_term_cursor_hide(), ui_term_color_prompt(), ui_term_color_reset());
+    for(int8_t i=0; i<20; i++)
+    {
+        if(i%2) printf(" "); else printf("o");
+    }
+    printf("%s]\r\e[1C",ui_term_color_prompt());
+    pb->indicator_state=1;
+    pb->previous_pct=0;
+    pb->progress_cnt=0;
+}
+
+void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progress_bar_t *pb)
+{
+    uint32_t pct = ((current)*20)/(total);
+    uint32_t previous_pct=pct-pb->previous_pct;
+    
+    system_config.terminal_ansi_statusbar_pause=true;
+    if((previous_pct) > 0)
+    {
+        for(uint8_t i = 0; i<(previous_pct); i++) //advance this many positions
+        {
+            printf("%s-", ui_term_color_prompt());
+        }
+    }
+    
+    if((pb->progress_cnt>600) || ((previous_pct) > 0)) //gone 5 loops without an advance
+    {
+        printf("%s%c\e[1D", ui_term_color_pacman(), (pb->indicator_state)?'C':'c'); //C and reset the cursor
+        if(pb->progress_cnt>600) pb->progress_cnt=0;
+        pb->indicator_state=!pb->indicator_state;
+        pb->previous_pct=pct;
+    }
+    system_config.terminal_ansi_statusbar_pause=false;
+    pb->progress_cnt++;
+}
+
+void ui_term_progress_bar_cleanup(ui_term_progress_bar_t *pb)
+{
+    system_config.terminal_hide_cursor=false;
+    printf("%s%s\r\n", ui_term_color_reset(), ui_term_cursor_show());
+
+}
+

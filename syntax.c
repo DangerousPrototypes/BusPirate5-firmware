@@ -13,10 +13,10 @@
 #include "ui/ui_term.h"
 #include "ui/ui_cmdln.h"
 #include "syntax.h"
-#include "bio.h"
-#include "amux.h"
+#include "pirate/bio.h"
+#include "pirate/amux.h"
 
-#define SYN_MAX_LENGTH 512
+#define SYN_MAX_LENGTH 1024
 
 const struct command_attributes attributes_empty;
 const struct command_response response_empty;
@@ -39,20 +39,15 @@ void postprocess_mode_write(struct _bytecode *in, struct _output_info *info);
 void postprocess_format_print_number(struct _bytecode *in, uint32_t *value, bool read);
 
 
-bool syntax_compile(struct opt_args *args)
-{
+bool syntax_compile(void){
     uint32_t pos=0;
     uint32_t i;
     char c;
     bool error=false;
     uint32_t slot_cnt=0;
-
     out_cnt=0;
     in_cnt=0;
-
-
-    for(i=0; i<SYN_MAX_LENGTH; i++)
-    {
+    for(i=0; i<SYN_MAX_LENGTH; i++){
         out[i]=bytecode_empty;
         in[i]=bytecode_empty;
     }
@@ -60,41 +55,34 @@ bool syntax_compile(struct opt_args *args)
     //we need to track pin functions to avoid blowing out any existing pins
     //if a conflict is found, the compiler can throw an error
     enum bp_pin_func pin_func[HW_PINS-2];
-    for(i=1;i<HW_PINS-1; i++)
-    {
+    for(i=1;i<HW_PINS-1; i++){
         pin_func[i-1]=system_config.pin_func[i]; //=BP_PIN_IO;
     }
 
-    if(cmdln_try_peek(0,&c))
-    {
+    if(cmdln_try_peek(0,&c)){
         if(c=='>') cmdln_try_discard(1);
         pos++;
     }
     
-    while(cmdln_try_peek(0,&c))
-    {
+    while(cmdln_try_peek(0,&c)){
         pos++;
 
-        if( c<=' ' || c>'~' )
-        {
+        if( c<=' ' || c>'~' ){
             //out of ascii range
             cmdln_try_discard(1);
             continue;
         } 
        
         //if number parse it
-        if(c>='0' && c<='9')
-        {
+        if(c>='0' && c<='9'){
             ui_parse_get_int(&result, &out[out_cnt].out_data);
-            if(result.error)
-            {
+            if(result.error)            {
                 printf("Error parsing integer at position %d\r\n", pos);
                 return true;
             }
-
             //if(system_config.write_with_read)
             //{
-                //out[out_cnt].command=SYN_WRITE_READ;
+                //out[out_cnt].command=SYN_START_ALT;
             //}
             //else
             //{
@@ -103,25 +91,20 @@ bool syntax_compile(struct opt_args *args)
             
             out[out_cnt].number_format=result.number_format;
 
-        }
-        else if(c=='"')
-        {
+        }else if(c=='"'){
             cmdln_try_remove(&c); //remove "
             // sanity check! is there a terminating "?
             error=true;
             i=0;
-            while(cmdln_try_peek(i,&c))
-            {
-                if(c=='"')
-                {
+            while(cmdln_try_peek(i,&c)){
+                if(c=='"'){
                     error=false;
                     break;
                 }
                 i++;
             }
 
-            if(error)
-            {
+            if(error){
                 printf("Error: string missing terminating '\"'");
                 return true;
             }
@@ -132,12 +115,11 @@ bool syntax_compile(struct opt_args *args)
             //attributes->has_string=true; //show ASCII chars
             //attributes->number_format=df_hex; //force hex display
 
-            while(i--)
-            {
+            while(i--){
                 cmdln_try_remove(&c);
                 //if(system_config.write_with_read)
                 //{
-                    //out[out_cnt].command=SYN_WRITE_READ;
+                    //out[out_cnt].command=SYN_START_ALT;
                 //}
                 //else
                 //{
@@ -162,19 +144,24 @@ bool syntax_compile(struct opt_args *args)
 
             cmdln_try_remove(&c); // consume the final "
             continue;
-        }
-        else
-        {   
+        }else{   
             uint8_t cmd;
             
             switch(c)
             {
                 case 'r': cmd=SYN_READ; break; //read
-                case '[': cmd=SYN_START; system_config.write_with_read=false; break; //start
-                case '{': cmd=SYN_START; system_config.write_with_read=true; break; //start with read write
-                case ']': case '}': cmd=SYN_STOP; break; //stop
+                case '[': cmd=SYN_START; break; //start //system_config.write_with_read=false;
+                case '{': cmd=SYN_START_ALT; break; //start with read write //system_config.write_with_read=true; 
+                case ']': cmd=SYN_STOP; break; //stop
+                case '}': cmd=SYN_STOP_ALT; break; //stop
                 case 'd': cmd=SYN_DELAY_US; break; //delay us
                 case 'D': cmd=SYN_DELAY_MS; break; //delay ms
+                case '^': cmd=SYN_TICK_CLOCK; break; //tick clock     
+                case '/': cmd=SYN_SET_CLK_HIGH; break; //set clk high
+                case '\\': cmd=SYN_SET_CLK_LOW; break; //set clk low   
+                case '_': cmd=SYN_SET_DAT_LOW; break; //set dat low   
+                case '-': cmd=SYN_SET_DAT_HIGH; break; //set dat high    
+                case '.': cmd=SYN_READ_DAT; break; //read bit 
                 case 'a': cmd=SYN_AUX_OUTPUT; out[out_cnt].out_data=0; break; //aux low
                 case 'A': cmd=SYN_AUX_OUTPUT; out[out_cnt].out_data=1; break; //aux HIGH
                 case '@': cmd=SYN_AUX_INPUT; break; //aux INPUT
@@ -195,42 +182,32 @@ bool syntax_compile(struct opt_args *args)
 
         }
 
-       if(ui_parse_get_dot(&out[out_cnt].bits))
-       {
+       if(ui_parse_get_dot(&out[out_cnt].bits)){
             out[out_cnt].has_bits=true;
-       }
-       else
-       {
+       }else{
             out[out_cnt].has_bits=false;
             out[out_cnt].bits=system_config.num_bits;
        }
 
-       if(ui_parse_get_colon(&out[out_cnt].repeat))
-       {
+       if(ui_parse_get_colon(&out[out_cnt].repeat)){
             out[out_cnt].has_repeat=true;
-       }
-       else
-       {
+       }else{
             out[out_cnt].has_repeat=false;
             out[out_cnt].repeat=1;
        }
 
-       if(out[out_cnt].command >= SYN_AUX_OUTPUT)
-       {
-            if(out[out_cnt].has_bits==false)
-            {
+       if(out[out_cnt].command >= SYN_AUX_OUTPUT){
+            if(out[out_cnt].has_bits==false){
                 printf("Error: missing IO number for command %c at position %d. Try %c.0[0xff\r\n",c,pos);
                 return true;
             }
 
-            if(out[out_cnt].bits>=count_of(bio2bufiopin))
-            {
+            if(out[out_cnt].bits>=count_of(bio2bufiopin)){
                 printf("%sError:%s pin IO%d is invalid\r\n", ui_term_color_error(), ui_term_color_reset(), out[out_cnt].bits);
                 return true;
             }
 
-            if(out[out_cnt].command!=SYN_ADC && pin_func[out[out_cnt].bits]!=BP_PIN_IO)
-            {
+            if(out[out_cnt].command!=SYN_ADC && pin_func[out[out_cnt].bits]!=BP_PIN_IO){
                 printf("%sError:%s at position %d IO%d is already in use\r\n", ui_term_color_error(), ui_term_color_reset(), pos, out[out_cnt].bits);
                 //printf("IO%d already in use. Error at position %d\r\n",c,pos);
                 return true;                
@@ -240,20 +217,22 @@ bool syntax_compile(struct opt_args *args)
             //AUX high and low need to set function until changed to read again...
        }
 
-        slot_cnt+=out[out_cnt].repeat;
-
-        if(slot_cnt>=SYN_MAX_LENGTH)
+        if(out[out_cnt].command==SYN_DELAY_US || out[out_cnt].command==SYN_DELAY_MS || out[out_cnt].command==SYN_TICK_CLOCK) //delays repeat but don't take up slots
         {
+            slot_cnt+=1;
+        }else{
+            slot_cnt+=out[out_cnt].repeat;
+        }
+
+        if(slot_cnt>=SYN_MAX_LENGTH){
             printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
             return true;
         }
 
         out_cnt++;
-
     }
 
     in_cnt=0;
-
     return false;    
 }
 
@@ -261,7 +240,7 @@ bool syntax_compile(struct opt_args *args)
 struct _syntax_run syn_run[]=
 {
     SYN_WRITE=0,
-    SYN_WRITE_READ,
+    SYN_START_ALT,
     SYN_READ,
     SYN_START,
     SYN_STOP,
@@ -290,47 +269,44 @@ bool syntax_run(void)
         switch(out[i].command) 
         {
             case SYN_WRITE:
-                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH)
-                {
+                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH) {
                     in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
                     in[in_cnt].error=SRES_ERROR;
                     return false;
                 }                
-                for(uint16_t j=0; j<out[i].repeat; j++) //TODO: generate multiple packets due to ack/nack needs
-                {
-                    if(j>0)
-                    {
+                for(uint16_t j=0; j<out[i].repeat; j++){ 
+                    if(j>0){
                         in_cnt++;
                         in[in_cnt]=out[i];
                     }
-
                     modes[system_config.mode].protocol_write(&in[in_cnt],NULL);
                 }
                 break;
-            case SYN_WRITE_READ: break;
             case SYN_READ:        
-                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH)
-                {
+                if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH){
                     in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
                     in[in_cnt].error=SRES_ERROR;
                     return false;
                 }      
-                for(uint16_t j=0; j<out[i].repeat; j++)
-                {
-                    if(j>0)
-                    {
+                for(uint16_t j=0; j<out[i].repeat; j++){
+                    if(j>0){
                         in_cnt++;
                         in[in_cnt]=out[i];
                     }
-
                     modes[system_config.mode].protocol_read(&in[in_cnt], (i+1<out_cnt && j+1==out[i].repeat)?&out[i+1]:NULL);
                 }
                 break;
             case SYN_START:
                 modes[system_config.mode].protocol_start(&in[in_cnt], NULL);
                 break;
+            case SYN_START_ALT:
+                modes[system_config.mode].protocol_start_alt(&in[in_cnt], NULL);
+                break;
             case SYN_STOP:
                 modes[system_config.mode].protocol_stop(&in[in_cnt], NULL);
+                break;
+            case SYN_STOP_ALT:
+                modes[system_config.mode].protocol_stop_alt(&in[in_cnt], NULL);
                 break;
             case SYN_DELAY_US:
                 busy_wait_us_32(out[i].repeat);
@@ -352,9 +328,31 @@ bool syntax_run(void)
                 break;
             case SYN_ADC: 
         	    //sweep adc
-	            in[in_cnt].in_data=hw_adc_bio(out[i].bits);           
+	            in[in_cnt].in_data=amux_read_bio(out[i].bits);           
                 break;
-            //case SYN_FREQ: break;                
+            //case SYN_FREQ: break;   
+            case SYN_TICK_CLOCK:
+                for(uint16_t j=0; j<out[i].repeat; j++){
+                    modes[system_config.mode].protocol_tick_clock(&in[in_cnt], NULL);
+                }
+                break;    
+            case SYN_SET_CLK_HIGH:
+                modes[system_config.mode].protocol_clkh(&in[in_cnt], NULL);
+                break;         
+            case SYN_SET_CLK_LOW:
+                modes[system_config.mode].protocol_clkl(&in[in_cnt], NULL);
+                break;
+            case SYN_SET_DAT_HIGH:
+                modes[system_config.mode].protocol_dath(&in[in_cnt], NULL);
+                break;
+            case SYN_SET_DAT_LOW:   
+                modes[system_config.mode].protocol_datl(&in[in_cnt], NULL);
+                break;
+            case SYN_READ_DAT:  
+                for(uint16_t j=0; j<out[i].repeat; j++){ 
+                    modes[system_config.mode].protocol_bitr(&in[in_cnt], NULL);
+                }
+                break;  
             default:
                 printf("Unknown internal code %d\r\n", out[i].command);
                 return true;
@@ -411,9 +409,9 @@ bool syntax_post(void)
                 postprocess_mode_write(&in[i], &info);
                 break;                 
             case SYN_START:
-                if(in[i].data_message) printf("\r\n%s", in[i].data_message);
-                break;
+            case SYN_START_ALT:
             case SYN_STOP:  
+            case SYN_STOP_ALT:
                 if(in[i].data_message) printf("\r\n%s", in[i].data_message);
                 break;   
             case SYN_AUX_OUTPUT:
@@ -436,7 +434,36 @@ bool syntax_post(void)
             //case SYN_FREQ:      
                 
                 //break;
-            case SYN_WRITE_READ:                                  
+            case SYN_TICK_CLOCK:
+                printf("\r\n%s%s:%s %s%d%s", 
+                    ui_term_color_notice(), t[T_MODE_TICK_CLOCK], ui_term_color_reset(),
+                    ui_term_color_num_float(), in[i].repeat, ui_term_color_reset());
+                break;
+            case SYN_SET_CLK_HIGH:
+                printf("\r\n%s%s:%s %s1%s", 
+                    ui_term_color_notice(), t[T_MODE_SET_CLK], ui_term_color_reset(),
+                    ui_term_color_num_float(), ui_term_color_reset());
+                break;
+            case SYN_SET_CLK_LOW:
+                printf("\r\n%s%s:%s %s0%s", 
+                    ui_term_color_notice(), t[T_MODE_SET_CLK], ui_term_color_reset(),
+                    ui_term_color_num_float(), ui_term_color_reset());
+                break;
+            case SYN_SET_DAT_HIGH:
+                printf("\r\n%s%s:%s %s1%s", 
+                    ui_term_color_notice(), t[T_MODE_SET_DAT], ui_term_color_reset(),
+                    ui_term_color_num_float(), ui_term_color_reset());
+                break;  
+            case SYN_SET_DAT_LOW:   
+                printf("\r\n%s%s:%s %s0%s", 
+                    ui_term_color_notice(), t[T_MODE_SET_DAT], ui_term_color_reset(),
+                    ui_term_color_num_float(), ui_term_color_reset());
+                break;  
+            case SYN_READ_DAT:
+                printf("\r\n%s%s:%s %s%d%s", 
+                    ui_term_color_notice(), t[T_MODE_READ_DAT], ui_term_color_reset(),
+                    ui_term_color_num_float(), in[i].in_data, ui_term_color_reset());
+                break;                              
             default:
                 printf("\r\nUnimplemented command '%c'", in[i].command+0x30);
                 //return true;
@@ -503,6 +530,11 @@ void postprocess_mode_write(struct _bytecode *in, struct _output_info *info)
     while(repeat--)
     {
         postprocess_format_print_number(in, &value, (in->command==SYN_READ));
+        if(in->read_with_write){
+            printf("(");
+            postprocess_format_print_number(in, &in->in_data, false);
+            printf(")");
+        }
 
         info->row_counter--;
         if(in->data_message)

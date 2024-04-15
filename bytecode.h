@@ -11,9 +11,8 @@ struct _bytecode{
     const char *error_message;
 	uint32_t in_data; //up to 32bits results? BUT: how to deal with repeated reads????
     const char *data_message;    
+    bool read_with_write;
 };
-
-
 
 struct _bytecode_output{    
 	uint8_t number_format;
@@ -45,10 +44,17 @@ enum SYNTAX_RESULT{
 
 enum SYNTAX{
     SYN_WRITE=0,
-    SYN_WRITE_READ,
     SYN_READ,
     SYN_START,
     SYN_STOP,
+    SYN_START_ALT,
+    SYN_STOP_ALT,
+    SYN_TICK_CLOCK,
+    SYN_SET_CLK_HIGH, ///here
+    SYN_SET_CLK_LOW,
+    SYN_SET_DAT_HIGH,
+    SYN_SET_DAT_LOW,
+    SYN_READ_DAT,       //here
     SYN_DELAY_US,
     SYN_DELAY_MS,
     SYN_AUX_OUTPUT,

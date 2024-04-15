@@ -1,8 +1,6 @@
 #ifndef BP_HARDWARE_VERSION
 
-#include "shift.h"
-
-#define BP_HARDWARE_VERSION "Bus Pirate 5"
+#define BP_HARDWARE_VERSION "Bus Pirate 5 REV9"
 #define BP_HARDWARE_MCU "RP2040"
 #define BP_HARDWARE_RAM "264KB"
 #define BP_HARDWARE_FLASH "128Mbit"
@@ -159,15 +157,11 @@ static const uint8_t bio2bufdirpin[]=
 #define BP_SPI_CDO 19
 
 // TF flash card is on the BP_SPI_PORT, define Chip Select
-#define TFCARD_CS 26 //was 24
+#define FLASH_STORAGE_CS 26 
 
 // LCD is on the BP_SPI_PORT, define CS and DP pins
 #define DISPLAY_CS 25
 #define DISPLAY_DP 24
-#define DISPLAY_CS_REV8 23
-#define DISPLAY_DP_REV8 22
-#define DISPLAY_CS_REV9 25
-#define DISPLAY_DP_REV9 24
 
 // Two 74HC595 shift registers are on BP_SPI_PORT, define latch and enable pins
 #define SHIFT_EN 21
@@ -178,17 +172,9 @@ static const uint8_t bio2bufdirpin[]=
 // The number of SK6812 LEDs in the string
 #define RGB_LEN 16 
 
-// Over current detect pin
-//#define CURRENT_DETECT 25 
-
 //PWM based PSU control pins
 #define PSU_PWM_CURRENT_ADJ 22 //3A
 #define PSU_PWM_VREG_ADJ 23 //3B
-
-#define PSU_PWM_CURRENT_ADJ_REV8 24 //4A
-#define PSU_PWM_VREG_ADJ_REV8 25 //4B
-#define PSU_PWM_CURRENT_ADJ_REV9 22 //3A
-#define PSU_PWM_VREG_ADJ_REV9 23 //3B
 
 // A single ADC pin is used to measure the source selected by a 74hct4067
 #define AMUX_OUT 28
@@ -241,7 +227,9 @@ enum adc_mux{
     HW_ADC_MUX_COUNT
 };
 
-#define bufio2adc(x) (7 - x)
+#define HW_ADC_MUX_GND 15
+
+#define bufio2amux(x) (7 - x)
 
 //CURRENT SENSE is attached to a separate ADC, not through the mux
 //lets make a define for it (and space in the hw_adc_x arrays) at the end of HW_ADC_MUX_count
@@ -253,20 +241,13 @@ extern uint16_t hw_adc_raw[];
 extern uint32_t hw_adc_voltage[];
 extern uint32_t *hw_pin_voltage_ordered[];
 
-#define hw_adc_channel_select(x) shift_adc_select(x)
-
 //convert raw ADC to volts, for pin with a /2 resistor divider (MUX inputs)
 #define hw_adc_to_volts_x2(X) ((6600*hw_adc_raw[X])/4096);
 //convert raw ADC to volts, for pin with no resistor divider (Current sense inputs)
 #define hw_adc_to_volts_x1(X) ((3300*hw_adc_raw[X])/4096);
 
+//how many 595 shift registers are connected
 #define SHIFT_REG_COUNT 2
-
-// hardware platform command abstraction
-//#define HW_BIO_PULLUP_ENABLE() shift_set_clear_wait(0,PULLUP_EN)    
-//#define HW_BIO_PULLUP_DISABLE() shift_set_clear_wait(PULLUP_EN,0)
-#define delayms(X) busy_wait_ms(X)
-#define delayus(X) busy_wait_us_32(X)
 
 #define BP_DEBUG_UART_0 uart0
 #define BP_DEBUG_UART_0_TX BIO4
@@ -274,5 +255,7 @@ extern uint32_t *hw_pin_voltage_ordered[];
 #define BP_DEBUG_UART_1 uart1
 #define BP_DEBUG_UART_1_TX BIO0
 #define BP_DEBUG_UART_1_RX BIO1   
+
+#define BP_FLASH_DISK_BLOCK_SIZE 512
 
 #endif

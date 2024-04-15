@@ -13,10 +13,21 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h" 
+#include "opt_args.h"
 #include "bytecode.h" // Bytecode structure for data IO
+#include "pirate/bio.h" // Buffered pin IO functions
+#include "ui/ui_help.h"
 #include "dummy1.h"
-#include "bio.h" // Buffered pin IO functions
+
 static uint32_t returnval;
+
+// command configuration
+const struct _command_struct dummy1_commands[]=
+{   //HiZ? Function Help
+// note: for now the allow_hiz flag controls if the mode provides it's own help
+    //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+};
+const uint32_t dummy1_commands_count=count_of(dummy1_commands);
 
 // Pin labels shown on the display and in the terminal status bar
 // No more than 4 characters long
@@ -236,8 +247,10 @@ uint32_t dummy1_bitr(void)
 {
 	return "pin1\tpin2\tpin3\tpin4";
 }*/
-void dummy1_settings(void)
-{
+void dummy1_settings(void){
 	printf("DUMMY (arg1 arg2)=(%d, %d)", 1, 2);
 }
 
+void dummy1_help(void){
+	ui_help_mode_commands(dummy1_commands, dummy1_commands_count);
+}

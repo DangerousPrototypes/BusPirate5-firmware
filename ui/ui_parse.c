@@ -11,55 +11,6 @@
 
 static const struct prompt_result empty_result;
 
-//temporary shim to get the parser going with args
-bool ui_parse_get_int_args(opt_args *arg)
-{
-    struct prompt_result result;
-    uint32_t value;
-    bool temp=ui_parse_get_int(&result, &value);
-
-    arg->error=result.error;
-    arg->no_value=result.no_value;
-    arg->number_format=result.number_format;
-    arg->success=result.success;
-    arg->i=value;
-
-    return temp;
-}
-
-
-bool ui_parse_get_string(opt_args *result)
-{
-    char c;
-    bool ok;
-    result->no_value=true;
-
-    for(result->len=0; result->len<result->max_len; result->len++)
-    {
-        //take a byte, if no byte break
-        ok=cmdln_try_peek(0,&c);
-        if(!ok || c==0x00 || c==0x20)
-        {
-            result->c[result->len]=0x00;
-            cmdln_try_discard(1);
-            if(result->len==0)
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
-        result->no_value=false;
-        result->c[result->len]=c;
-        cmdln_try_discard(1);
-    }
-    result->c[result->max_len]=0x00;
-    result->success=true; //really we should detect too long/incomplete string and return notice
-    return true; 
-}
-
 bool ui_parse_get_hex(struct prompt_result *result, uint32_t *value)
 {
     char c;
@@ -144,7 +95,6 @@ bool ui_parse_get_dec(struct prompt_result *result, uint32_t *value)
 // XXXXXX integer
 // 0xXXXX hexadecimal
 // 0bXXXX bin
-// TODO: return format of number in struct
 bool ui_parse_get_int(struct prompt_result *result, uint32_t *value)
 {
     bool r1,r2;
@@ -181,6 +131,32 @@ bool ui_parse_get_int(struct prompt_result *result, uint32_t *value)
     }
 
 	return result->success;
+}
+
+bool ui_parse_get_string(struct prompt_result *result, char *str, uint8_t *size)
+{
+    char c;
+    uint8_t max_size = *size;
+
+    *result = empty_result;
+    result->no_value = true;
+    *size = 0;
+
+    while (max_size-- && cmdln_try_peek(0, &c)) {
+        if (c <= ' ') { break;
+        }
+        else if (c <= '~') {
+            *str++ = c;
+            (*size)++;
+        }
+        cmdln_try_remove(&c);
+        result->success = true;
+        result->no_value = false;
+    }
+    // Terminate string
+    *str = '\0';
+
+    return result->success;
 }
 
 // eats up the spaces and comma's from the cmdline
@@ -274,6 +250,40 @@ bool ui_parse_get_attributes(struct prompt_result *result, uint32_t* attr, uint8
 		}
 	}
 
+	return true;
+}
+
+bool ui_parse_get_bool(struct prompt_result *result, bool* value){
+ 
+    bool r;
+    char c;
+
+	*result = empty_result; // initialize result with empty result
+
+    r=cmdln_try_peek(0,&c);
+    if(!r || c==0x00) // user pressed enter only
+	{
+		result->no_value=true;
+	}
+	else if( r && ((c|0x20)=='x') ) // exit
+	{
+		result->exit=true;
+	}
+	else if(((c|0x20)=='y'))// yes or no
+    {
+        result->success=true;
+        (*value)=true;
+    }
+    else if(((c|0x20)=='n'))
+    {
+        result->success=true;
+        (*value)=false;        
+    }
+    else // bad result (not number)
+    { 
+        result->error=true;
+    }
+    cmdln_try_discard(1); //discard
 	return true;
 }
 

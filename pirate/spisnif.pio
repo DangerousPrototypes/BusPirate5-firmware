@@ -1,0 +1,113 @@
+; The first program handles one data pin (0), clock pin is 2.
+.program spisnif
+
+; This program is a simple SPI sniffer that captures the data on the SPI bus
+; inspired by https://github.com/raspberrypi/pico-examples/issues/104
+; data must be first pin, clock n pins after
+
+no_data:
+    mov isr, null       ; bad data, empty ISR
+    jmp is_cs_low       ; check if CS is low
+public entry_point:
+.wrap_target
+data_in:
+    wait 0 pin 2        ; wait for clock to go low
+    wait 1 pin 2        ; wait for clock to go high
+    in pins, 1          ; sample data
+is_cs_low:
+    jmp pin, no_data    ; if CS is high, ignore data
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+static inline void spisnif_program_init(PIO pio, uint sm, uint offset, uint pin_cs, uint pin_data, uint pin_clock) {
+    //assert(pin_scl == pin_sda + 1); //wait uses pin ordered inputs, need to be consecutive
+    pio_sm_config c = spisnif_program_get_default_config(offset);
+
+    // IO mapping
+    sm_config_set_in_pins(&c, pin_data);
+    sm_config_set_jmp_pin(&c, pin_cs);
+
+    // 8 bits auto push
+    sm_config_set_in_shift(&c, 
+                        false,// shift to left
+                        true, // autopush enabled
+                        8       // push threshold = 8
+                        );
+
+    //io pins to inputs
+    //pio_sm_set_pindirs_with_mask(pio, sm, 0, pin_pins); //read pins to input (0, mask)    
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_data, 1, false); //data and clock consecutive
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_clock, 1, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_cs, 1, false);
+    pio_gpio_init(pio, pin_data);
+    pio_gpio_init(pio, pin_clock);
+    pio_gpio_init(pio, pin_cs);
+
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+    // Configure and start SM
+    pio_sm_init(pio, sm, offset + spisnif_offset_entry_point, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+%}
+
+; handles second data pin (1), clock is pin 1
+.program spisnif_2
+
+; This program is a simple SPI sniffer that captures the data on the SPI bus
+; inspired by https://github.com/raspberrypi/pico-examples/issues/104
+; data must be first pin, clock n pins after
+
+no_data:
+    mov isr, null       ; bad data, empty ISR
+    jmp is_cs_low       ; check if CS is low
+public entry_point:
+.wrap_target
+data_in:
+    wait 0 pin 1        ; wait for clock to go low
+    wait 1 pin 1        ; wait for clock to go high
+    in pins, 1          ; sample data
+is_cs_low:
+    jmp pin, no_data    ; if CS is high, ignore data
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+static inline void spisnif_2_program_init(PIO pio, uint sm, uint offset, uint pin_cs, uint pin_data, uint pin_clock) {
+    //assert(pin_scl == pin_sda + 1); //wait uses pin ordered inputs, need to be consecutive
+    pio_sm_config c = spisnif_2_program_get_default_config(offset);
+
+    // IO mapping
+    sm_config_set_in_pins(&c, pin_data);
+    sm_config_set_jmp_pin(&c, pin_cs);
+
+    // 8 bits auto push
+    sm_config_set_in_shift(&c, 
+                        false,// shift to left
+                        true, // autopush enabled
+                        8       // push threshold = 8
+                        );
+
+    //io pins to inputs
+    //pio_sm_set_pindirs_with_mask(pio, sm, 0, pin_pins); //read pins to input (0, mask)    
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_data, 1, false); //data and clock consecutive
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_clock, 1, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_cs, 1, false);
+    pio_gpio_init(pio, pin_data);
+    pio_gpio_init(pio, pin_clock);
+    pio_gpio_init(pio, pin_cs);
+
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+    // Configure and start SM
+    pio_sm_init(pio, sm, offset + spisnif_2_offset_entry_point, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+%}

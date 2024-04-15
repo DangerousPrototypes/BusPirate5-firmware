@@ -1,5 +1,3 @@
-#include "tf_card.h"
-
 #include "pico.h"
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
@@ -8,8 +6,9 @@
 #include "pirate.h"
 #include "system_config.h"
 
-#include "ff.h"
-#include "diskio.h"
+#include "fatfs/ff.h"
+#include "fatfs/diskio.h"
+#include "fatfs/tf_card.h"
 
 /*--------------------------------------------------------------------------
 
@@ -19,13 +18,13 @@
 
 /* MMC/SD command */
 #define CMD0	(0)			/* GO_IDLE_STATE */
-#define CMD1	(1)			/* SEND_OP_COND (MMC) */
-#define	ACMD41	(0x80+41)	/* SEND_OP_COND (SDC) */
+#define CMD1	(1)			/* SEND_OP_COND (MMC) */ 
+#define	ACMD41	(0x80+41)	/* SEND_OP_COND (SDC) */ //(1)
 #define CMD8	(8)			/* SEND_IF_COND */
 #define CMD9	(9)			/* SEND_CSD */
 #define CMD10	(10)		/* SEND_CID */
 #define CMD12	(12)		/* STOP_TRANSMISSION */
-#define ACMD13	(0x80+13)	/* SD_STATUS (SDC) */
+#define ACMD13	(0x80+13)	/* SD_STATUS (SDC) */ //(9)
 #define CMD16	(16)		/* SET_BLOCKLEN */
 #define CMD17	(17)		/* READ_SINGLE_BLOCK */
 #define CMD18	(18)		/* READ_MULTIPLE_BLOCK */
@@ -98,12 +97,12 @@ static void FCLK_FAST(void)
 /*
 static void CS_HIGH(void)
 {
-    cs_deselect(TFCARD_CS);
+    cs_deselect(FLASH_STORAGE_CS);
 }
 
 static void CS_LOW(void)
 {
-    cs_select(TFCARD_CS);
+    cs_select(FLASH_STORAGE_CS);
 }
 */
 /* Initialize MMC interface */
@@ -111,7 +110,7 @@ static
 void init_spi(void)
 {
 	//dont use CS_HIGH because spinlock isn't setup yet
-	gpio_put(TFCARD_CS, 1);
+	gpio_put(FLASH_STORAGE_CS, 1);
 }
 
 /* Exchange a byte */
@@ -171,7 +170,7 @@ void deselect (void)
 	//CS_HIGH();		/* Set CS# high */
 	asm volatile("nop \n nop \n nop"); // FIXME
     //busy_wait_us(10);
-	gpio_put(TFCARD_CS, 1);
+	gpio_put(FLASH_STORAGE_CS, 1);
 	//busy_wait_us(10);
     asm volatile("nop \n nop \n nop"); // FIXME
 
@@ -193,7 +192,7 @@ int _select (void)	/* 1:OK, 0:Timeout */
     
 	asm volatile("nop \n nop \n nop"); // FIXME
 	//busy_wait_us(10);
-    gpio_put(TFCARD_CS, 0);
+    gpio_put(FLASH_STORAGE_CS, 0);
 	//busy_wait_us(10);
     asm volatile("nop \n nop \n nop"); // FIXME
 
@@ -290,7 +289,7 @@ BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 /* Initialize disk drive                                                 */
 /*-----------------------------------------------------------------------*/
 
-DSTATUS disk_initialize (
+DSTATUS diskio_initialize (
 	BYTE drv		/* Physical drive number (0) */
 )
 {
@@ -354,7 +353,7 @@ DSTATUS disk_initialize (
 /* Get disk status                                                       */
 /*-----------------------------------------------------------------------*/
 
-DSTATUS disk_status (
+DSTATUS diskio_status (
 	BYTE drv		/* Physical drive number (0) */
 )
 {
@@ -369,7 +368,7 @@ DSTATUS disk_status (
 /* Read sector(s)                                                        */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_read (
+DRESULT diskio_read (
 	BYTE drv,		/* Physical drive number (0) */
 	BYTE *buff,		/* Pointer to the data buffer to store read data */
 	LBA_t sector,	/* Start sector number (LBA) */
@@ -405,7 +404,7 @@ DRESULT disk_read (
 	return count ? RES_ERROR : RES_OK;	/* Return result */
 }
 
-
+ 
 
 #if !FF_FS_READONLY && !FF_FS_NORTC
 /* get the current time */
@@ -455,7 +454,7 @@ int xmit_datablock (	/* 1:OK, 0:Error */
 /* Write sector(s)                                                       */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_write (
+DRESULT diskio_write (
 	BYTE drv,			/* Physical drive number (0) */
 	const BYTE *buff,	/* Ponter to the data to write */
 	LBA_t sector,		/* Start sector number (LBA) */
@@ -501,7 +500,7 @@ DRESULT disk_write (
 /* Miscellaneous drive controls other than data read/write               */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_ioctl (
+DRESULT diskio_ioctl (
 	BYTE drv,		/* Physical drive number (0) */
 	BYTE cmd,		/* Control command code */
 	void *buff		/* Pointer to the conrtol data */
@@ -523,7 +522,14 @@ DRESULT disk_ioctl (
 	case CTRL_SYNC :		/* Wait for end of internal write process of the drive */
 		if (_select()) res = RES_OK;
 		break;
-
+	
+	case GET_SECTOR_SIZE:
+		;
+		WORD *sector_size_out = (WORD *)buff;
+		*sector_size_out = BP_FLASH_DISK_BLOCK_SIZE;
+		res = RES_OK;
+		break;
+	
 	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (DWORD) */
 		if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {
 			if ((csd[0] >> 6) == 1) {	/* SDC ver 2.00 */

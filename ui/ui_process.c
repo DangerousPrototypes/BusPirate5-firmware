@@ -8,6 +8,7 @@
 #include "commands.h"
 #include "bytecode.h"
 #include "modes.h"
+#include "displays.h"
 #include "mode/hiz.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -16,189 +17,180 @@
 #include "string.h"
 #include "syntax.h"
 
-
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
 static const struct command_result result_blank;
-static const struct opt_args empty_opt_args;
-static struct opt_args args[5];
 
-bool parse_help(void)
+bool ui_process_syntax(void)
 {
-    char c,d;
-    if(cmdln_try_peek(0,&c) && cmdln_try_peek(1,&d) && c=='-' && d=='h')
+    if(syntax_compile())
     {
-        return true;
+            printf("Syntax compile error\r\n");
+            return true;
     }
+    multicore_fifo_push_blocking(0xf0);
+    multicore_fifo_pop_blocking();
+    if(syntax_run())
+    {
+            multicore_fifo_push_blocking(0xf1);
+            multicore_fifo_pop_blocking(); 
+            printf("Syntax execution error\r\n");
+            return true;
+    }
+    multicore_fifo_push_blocking(0xf1);
+    multicore_fifo_pop_blocking();            
+    if(syntax_post())
+    {
+            printf("Syntax post process error\r\n");
+            return true;
+    }
+    //printf("Bus Syntax: Success\r\n");
     return false;
 }
 
-bool ui_process_commands(void)
+bool ui_process_macro(void)
 {
-    char c,d;
-
-    if(!cmdln_try_peek(0,&c))
+    uint32_t temp;
+    prompt_result result;
+    cmdln_try_discard(1);
+    ui_parse_get_macro(&result, &temp);   
+    if(result.success)
     {
-        return false;
+        modes[system_config.mode].protocol_macro(temp);
     }
-
-    while(cmdln_try_peek(0,&c))
+    else
     {
-        if(c==' ') //discard whitespace
-        {
-            cmdln_try_discard(1);
-            continue;
-        }
+        printf("%s\r\n",t[T_MODE_ERROR_PARSING_MACRO]);
+        return true;
+    }  
+    return false;  
+}
 
-        if(c=='[' || c=='>' || c=='{') //first character is { [ or >, process as syntax
-        {
-            if(syntax_compile(&args[0]))
-            {
-                    printf("Syntax compile error\r\n");
-                    return true;
-            }
-            multicore_fifo_push_blocking(0xf0);
-            multicore_fifo_pop_blocking();
-            if(syntax_run())
-            {
-                    multicore_fifo_push_blocking(0xf1);
-                    multicore_fifo_pop_blocking(); 
-                    printf("Syntax execution error\r\n");
-                    return true;
-            }
-            multicore_fifo_push_blocking(0xf1);
-            multicore_fifo_pop_blocking();            
-            if(syntax_post())
-            {
-                    printf("Syntax post process error\r\n");
-                    return true;
-            }
-            //printf("Bus Syntax: Success\r\n");
-            return false;
-        }
+bool ui_process_commands(void){
+    char c,d;
+    struct _command_info_t cp;
+    cp.nextptr=0;
 
-        //MODE macros
-        if(c=='(') //first character is (, mode macro
-        {
-            uint32_t temp;
-            prompt_result result;
+/*    cmdln_info();
+    cmdln_info_uint32();
+    command_var_t arg;
+    uint32_t value;
+    if(cmdln_args_find_flag_uint32('t', &arg, &value)) printf("Value -t: %d\r\n", value);
 
-            cmdln_try_discard(1);
-            ui_parse_get_macro(&result, &temp);   
-            if(result.success)
-            {
-                modes[system_config.mode].protocol_macro(temp);
-            }
-            else
-            {
-                printf("%s\r\n",t[T_MODE_ERROR_PARSING_MACRO]);
-                return true;
-            }  
-
-            return false;  
-        }       
+    return false;*/    
+    while(true){
+        if(!cmdln_find_next_command(&cp)) return false;
         
-        //process as a command
-
-        args[0]=empty_opt_args;
-        args[0].max_len=OPTARG_STRING_LEN;
-        ui_parse_get_string(&args[0]);
-        //printf("Command: %s\r\n", args[0].c);
-
-        if(args[0].no_value)
-        {
-            return false;
-        }
-
-        bool cmd_valid=false;
-        uint32_t user_cmd_id=0;
-        for(int i=0; i<count_of_cmd; i++)
-        {  
-            if(strcmp(args[0].c, cmd[i])==0)
-            {
-                user_cmd_id=i;
-                cmd_valid=true;
+        switch(cp.command[0]){
+            case '[':
+            case '>':
+            case '{':
+            case ']':
+            case '}':
+                return ui_process_syntax(); //first character is { [ or >, process as syntax
                 break;
-            }
+            case '(':
+                return ui_process_macro(); //first character is (, mode macro
+                break;
+
         }
-
-        if(!cmd_valid)
-        {
-            printf("%s", ui_term_color_notice());
-            printf(t[T_CMDLN_INVALID_COMMAND], args[0].c);
-            printf("%s\r\n", ui_term_color_reset());
-            return true;
-        }
-        //printf("Found: %s\r\n",cmd[user_cmd_id]);
-
-        //no such command, search TF flash card for runnable scripts
-
-        //do we have a command? good, get the opt args
-        if(parse_help())
-        {
-            printf("%s\r\n",t[exec_new[user_cmd_id].help_text]);
-            return false;
-        }
-
-        if(system_config.mode==HIZ && !exec_new[user_cmd_id].allow_hiz)
-        {
-            printf("%s\r\n",HiZerror());
-            //printf("\r\n")
-            return true;            
-        }    
-
-        if(exec_new[user_cmd_id].parsers)
-        {
-            for(int i=0; i<5;i++)
-            {                
-                if(exec_new[user_cmd_id].parsers[i].opt_parser==NULL)
-                {
-                    break;
-                } 
-                
-                args[i]=empty_opt_args;
-                args[i].max_len=OPTARG_STRING_LEN;
-                exec_new[user_cmd_id].parsers[i].opt_parser(&args[i]);
-            }
-        }
-
-        //printf("Opt arg: %s\r\n",args[0].c);    
-        //execute the command
+        //process as a command
+        char command_string[MAX_COMMAND_LENGTH];
         struct command_result result=result_blank;
-        exec_new[user_cmd_id].command(args, &result);
+        //string 0 is the command
+        // continue if we don't get anything? could be an empty chained command? should that be error?
+        if(!cmdln_args_string_by_position(0, sizeof(command_string), command_string)){
+            continue;
+        }   
+
+        enum COMMAND_TYPE {
+            NONE=0,
+            GLOBAL,
+            MODE,
+            DISPLAY 
+        };
+
+        // first search global commands
+        uint32_t user_cmd_id=0;
+        uint32_t command_type=NONE;
+        for(int i=0; i<commands_count; i++){  
+            if(strcmp(command_string, commands[i].command)==0){
+                user_cmd_id=i;
+                command_type=GLOBAL;
+                //global help handler (optional, set config in commands.c)
+                if(cmdln_args_find_flag('h')){
+                    if(commands[user_cmd_id].help_text!=0x00){ 
+                        printf("%s%s%s\r\n",ui_term_color_info(), t[commands[user_cmd_id].help_text], ui_term_color_reset());
+                        return false;
+                    }else{ // let app know we requested help
+                        result.help_flag=true;
+                    }
+                }
+
+                if(command_type==GLOBAL && system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz && !result.help_flag){
+                    printf("%s\r\n",hiz_error());
+                    return true;            
+                }
+                commands[user_cmd_id].func(&result);
+                goto cmd_ok;
+            }
+        }
+
+        // if not global, search mode specific commands
+        if(!command_type){
+            if(modes[system_config.mode].mode_commands_count){
+                for(int i=0; i< *modes[system_config.mode].mode_commands_count; i++){
+                    if(strcmp(command_string, modes[system_config.mode].mode_commands[i].command)==0){
+                        user_cmd_id=i;
+                        command_type=MODE;
+                        //mode help handler (optional, set config in modes command struct)
+                        if(cmdln_args_find_flag('h')){ 
+                            //show auto short help
+                            if( modes[system_config.mode].mode_commands[user_cmd_id].allow_hiz
+                            && (modes[system_config.mode].mode_commands[user_cmd_id].help_text!=0x00)){ 
+                                printf("%s%s%s\r\n",ui_term_color_info(), t[modes[system_config.mode].mode_commands[user_cmd_id].help_text], ui_term_color_reset());
+                                return false;
+                            }else{ // let app know we requested help
+                                result.help_flag=true;
+                            }
+                        }
+                        modes[system_config.mode].mode_commands[user_cmd_id].func(&result);
+                        goto cmd_ok;
+                    }
+                }
+            }
+        }
         
+        //no such command, search storage for runnable scripts?
+        
+        // if nothing so far, hand off to mode parser
+        if(!command_type){
+            if(displays[system_config.display].display_command){
+                if (displays[system_config.display].display_command(&result))
+                    goto cmd_ok;
+            }
+            if(modes[system_config.mode].protocol_command){
+                if (modes[system_config.mode].protocol_command(&result))
+                    goto cmd_ok;
+            }
+        }
+
+        // error no such command
+        printf("%s", ui_term_color_notice());
+        printf(t[T_CMDLN_INVALID_COMMAND], command_string);
+        printf("%s\r\n", ui_term_color_reset());
+        return true;
+        
+cmd_ok:
         printf("%s\r\n", ui_term_color_reset());
 
-        while(cmdln_try_peek(0,&c))
+        switch(cp.delimiter) //next action based on the command delimiter
         {
-            if(c==';') //next command
-            {
-                cmdln_try_discard(1);
-                break;
-            }
-
-            if(!cmdln_try_peek(1,&d))
-            {
-                return false;
-            }
-
-            if(c=='|' && d=='|') //perform next command if last failed
-            {
-                cmdln_try_discard(2);
-                if(!result.error) return false;
-                break;
-
-            }
-            else if(c=='&' && d=='&') // perform next command if previous was successful
-            {
-                cmdln_try_discard(2);
-                if(result.error) return false;
-                break;
-            }
-
-            cmdln_try_discard(1);
+            case 0: return false; //done
+            case ';': break; //next command
+            case '|': if(!result.error) return false; break; //perform next command if last failed
+            case '&': if(result.error) return false; break; //perform next if last success
         }
     }
-
     return false;
 }
 

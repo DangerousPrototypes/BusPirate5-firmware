@@ -2,7 +2,6 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "hardware/adc.h"
-#include "shift.h"
 #include "pico/bootrom.h"
 
 //TODO: move all this nonsense to the system config

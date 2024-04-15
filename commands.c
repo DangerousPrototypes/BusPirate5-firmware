@@ -6,324 +6,78 @@
 #include "command_attributes.h"
 #include "commands.h"
 #include "mode/hiz.h"
-#include "auxpinfunc.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
 #include "ui/ui_info.h"
+#include "ui/ui_help.h"
 #include "ui/ui_config.h"
 #include "ui/ui_mode.h"
-#include "pwm.h"
-#include "freq.h"
-#include "adc.h"
-#include "psu.h"
-#include "pullups.h"
-#include "helpers.h"
-#include "storage.h"
-#include "dump.h"
-#include "mcu/rp2040.h"
+#include "ui/ui_display.h"
+#include "commands/global/pwm.h"
+#include "commands/global/freq.h"
+#include "commands/global/a_auxio.h"
+#include "commands/global/v_adc.h"
+#include "commands/global/w_psu.h"
+#include "commands/global/p_pullups.h"
+#include "commands/global/cmd_mcu.h"
+#include "commands/global/l_bitorder.h"
+#include "commands/global/cmd_convert.h"
+#include "commands/global/pause.h"
+#include "commands/global/h_help.h"
+#include "commands/global/cmd_selftest.h"
+#include "commands/global/a_auxio.h"
+#include "commands/global/dummy.h"
+#include "commands/global/disk.h"
+#include "commands/global/i_info.h"
+#include "commands/global/macro.h"
+#include "commands/global/script.h"
+#include "commands/global/tutorial.h"
+#include "mode/logicanalyzer.h"
 
-enum E_CMD{
-    CMD_LS=0,
-	CMD_CD,
-	CMD_MKDIR,
-	CMD_RM,
-    CMD_CAT,
-    CMD_MODE, //temp
-    CMD_PSU_EN, //temp
-    CMD_RESET,
-    CMD_BOOTLOAD,
-    CMD_INT_FORMAT,
-    CMD_INT_INVERSE,
-    CMD_HELP,
-    CMD_CONFIG_MENU,
-    CMD_FREQ_ONE,
-    CMD_FREQ_CONT,
-    CMD_PWM_CONFIG,
-    CMD_PWM_DIS,
-    CMD_HELP_MODE,
-    CMD_INFO,
-    CMD_BITORDER_MSB,
-    CMD_BITORDER_LSB,
-    CMD_DISPLAY_FORMAT,
-    CMD_PULLUPS_EN,
-    CMD_PULLUPS_DIS,
-    CMD_PSU_DIS,
-    CMD_ADC_CONT,
-    CMD_ADC_ONE,
-    CMD_SELFTEST, 
-    CMD_AUX_IN,
-    CMD_AUX_LOW,
-    CMD_AUX_HIGH,     
-    CMD_DUMP, 
-    CMD_LOAD,     
-    CMD_LAST_ITEM_ALWAYS_AT_THE_END
+// command configuration
+const struct _command_struct commands[]=
+{   //HiZ? Function Help
+    {"ls",true,&disk_ls_handler,0x00}, //ls T_CMDLN_LS
+    {"cd", true, &disk_cd_handler,0x00},//cd T_CMDLN_CD
+    {"mkdir", true, &disk_mkdir_handler,0x00},//mkdir T_CMDLN_MKDIR
+    {"rm", true, &disk_rm_handler,0x00}, //rm T_CMDLN_RM
+    {"cat", true, &disk_cat_handler,0x00}, //cat T_CMDLN_CAT
+    {"m", true, &ui_mode_enable_args, T_CMDLN_MODE},            // "m"   //needs trailing int32   
+    {"W", false, &psucmd_enable_handler, 0x00},// "W"   T_CMDLN_PSU_EN  //TOD0: more flexability on help handling and also a general deescription
+    {"#", true, &cmd_mcu_reset_handler, T_CMDLN_RESET},// "#" 
+    {"$", true, &cmd_mcu_jump_to_bootloader_handler,0x00 },     // "$" T_CMDLN_BOOTLOAD
+    {"=", true, &cmd_convert_base_handler, T_CMDLN_INT_FORMAT}, // "="
+    {"|", true, &cmd_convert_inverse_handler, T_CMDLN_INT_INVERSE}, // "|"   
+    {"?", true, &help_handler, 0x00},        // "?" T_CMDLN_HELP
+    {"c", true, &ui_config_main_menu, T_CMDLN_CONFIG_MENU},       // "c"
+    {"f", true, &freq_single, T_CMDLN_FREQ_ONE},               // "f"    
+    {"F", true, &freq_cont, T_CMDLN_FREQ_CONT}, // "F"
+    {"G", false, &pwm_configure_enable, T_CMDLN_PWM_CONFIG}, //G
+    {"g", false, &pwm_configure_disable, T_CMDLN_PWM_DIS },       // "g"
+    {"h", true, &help_handler, 0x00 },         // "h" T_CMDLN_HELP_MODE
+    {"i", true, &i_info_handler, T_CMDLN_INFO },               // "i"
+    {"l", true, &bitorder_msb_handler, T_CMDLN_BITORDER_MSB },    // "l"
+    {"L", true, &bitorder_lsb_handler, T_CMDLN_BITORDER_LSB },    // "L"
+    {"o", true, &ui_mode_int_display_format, T_CMDLN_DISPLAY_FORMAT }, // "o"
+    {"P", false, &pullups_enable_handler, 0x00 },            // "P" //T_CMDLN_PULLUPS_EN
+    {"p", false, &pullups_disable_handler, 0x00 },          // "p" //T_CMDLN_PULLUPS_DIS
+    {"w", false, &psucmd_disable_handler, 0x00 },                  // "w" T_CMDLN_PSU_DIS
+    {"V", true, &adc_measure_cont,  0x00},             // "V" T_CMDLN_ADC_CONT
+    {"v", true, &adc_measure_single, 0x00 },            // "v" T_CMDLN_ADC_ONE
+    {"~", true, &cmd_selftest_handler, 0x00},             // "~" selftest T_CMDLN_SELFTEST 
+    {"@", true, &auxio_input_handler,0x00},               // "@" T_CMDLN_AUX_IN
+    {"a", false, &auxio_low_handler, 0x00},               // "a" T_CMDLN_AUX_LOW
+    {"A", false, &auxio_high_handler,0x00},             // "A"T_CMDLN_AUX_HIGH
+    {"format", true, &disk_format_handler, 0x00 },               // "format" T_HELP_CMD_FORMAT
+    {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d" 
+    {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
+    {"hex", true, &disk_hex_handler,0x00},                                // "hex"  T_CMDLN_HEX 
+    {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
+    {"dummy", true, &dummy_handler, 0x00 },                              // "dummy"
+    {"help", true, &help_handler, 0x00},
+    {"macro", true, &macro_handler, 0x00},
+    {"tutorial", true, &tutorial_handler, 0x00},
+    {"script", true, &script_handler, 0x00},    
 };
 
-const char *cmd[]={
-	[CMD_LS]="ls",
-	[CMD_CD]="cd",
-	[CMD_MKDIR]="mkdir",
-	[CMD_RM]="rm",
-    [CMD_CAT]="cat",
-    [CMD_MODE]="m",
-    [CMD_PSU_EN]="W",
-    [CMD_RESET]="#",
-    [CMD_BOOTLOAD]="$",
-    [CMD_INT_FORMAT]="=",
-    [CMD_INT_INVERSE]="|",
-    [CMD_HELP]="?",
-    [CMD_CONFIG_MENU]="c",
-    [CMD_FREQ_ONE]="f",
-    [CMD_FREQ_CONT]="F",
-    [CMD_PWM_CONFIG]="G",
-    [CMD_PWM_DIS]="g",
-    [CMD_HELP_MODE]="h",
-    [CMD_INFO]="i",
-    [CMD_BITORDER_MSB]="l",
-    [CMD_BITORDER_LSB]="L",
-    [CMD_DISPLAY_FORMAT]="o",
-    [CMD_PULLUPS_EN]="P",
-    [CMD_PULLUPS_DIS]="p",
-    [CMD_PSU_DIS]="w",
-    [CMD_ADC_CONT]="V",
-    [CMD_ADC_ONE]="v",
-    [CMD_SELFTEST]="~",
-    [CMD_AUX_IN]="@",
-    [CMD_AUX_LOW]="a",
-    [CMD_AUX_HIGH]="A",
-    [CMD_DUMP]="dump",
-    [CMD_LOAD]="load"    
-};
-static_assert(count_of(cmd)==CMD_LAST_ITEM_ALWAYS_AT_THE_END, "Command array wrong length");
-
-const uint32_t count_of_cmd=count_of(cmd);
-
-bool nullparse(opt_args *result)
-{
-    busy_wait_at_least_cycles(1);
-    return 0;
-}
-
-const struct _parsers list_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers change_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers make_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers unlink_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers cat_dir_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers m_parsers[]={{&ui_parse_get_string},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers psuen_parsers[]={{NULL},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers show_int_formats_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers show_int_inverse_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers freq_single_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers freq_cont_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers pwmen_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers pwmdis_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers adc_cont_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers adc_single_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers aux_input_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers aux_low_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers aux_high_parsers[]={{&ui_parse_get_int_args},{NULL},{NULL},{NULL},{NULL}};
-const struct _parsers dump_parsers[]={{&ui_parse_get_string},{&ui_parse_get_string},{&ui_parse_get_string},{NULL},{NULL}};
-const struct _parsers load_parsers[]={{&ui_parse_get_string},{&ui_parse_get_string},{&ui_parse_get_string},{NULL},{NULL}};
-
-const struct _command_parse exec_new[]=
-{
-    {
-        true,
-        &list_dir,
-        &list_dir_parsers[0],
-        T_CMDLN_LS
-    }, 
-    {
-        true, 
-        &change_dir,
-        &change_dir_parsers[0],
-        T_CMDLN_CD,
-    }, // CMD_CD 
-    {
-        true, 
-        &make_dir,
-        &make_dir_parsers[0],
-        T_CMDLN_MKDIR
-    }, // CMD_MKDIR
-    {
-        true, 
-        &storage_unlink,
-        &unlink_dir_parsers[0],
-        T_CMDLN_RM
-    }, // CMD_RM
-    {
-        true, 
-        &cat,
-        &cat_dir_parsers[0],
-        T_CMDLN_CAT
-    }, //CMD_CAT
-    {
-        true, 
-        &ui_mode_enable_args,
-        &m_parsers[0],
-        T_CMDLN_MODE
-    },            // "m"    
-    {
-        false, 
-        &psu_enable,
-        &psuen_parsers[0],
-        T_CMDLN_PSU_EN
-    },                // "W"    
-    {
-        true, 
-        &helpers_mcu_reset,
-        0,
-        T_CMDLN_RESET
-    }, // "#" 
-    {
-        true, 
-        &helpers_mcu_jump_to_bootloader,
-        0,
-        T_CMDLN_BOOTLOAD
-    },     // "$" 
-    {
-        true, 
-        &helpers_show_int_formats,
-        &show_int_formats_parsers[0],
-        T_CMDLN_INT_FORMAT
-    }, // "="
-    {
-        true, 
-        &helpers_show_int_inverse,
-        &show_int_inverse_parsers[0],
-        T_CMDLN_INT_INVERSE
-    }, // "|"   
-    {
-        true, 
-        &ui_info_print_help,
-        0,
-        T_CMDLN_HELP
-    },        // "?"
-    {
-        true, 
-        &ui_config_main_menu,
-        0,
-        T_CMDLN_CONFIG_MENU
-    },       // "c"
-    {
-        true, 
-        &freq_single,
-        &freq_single_parsers[0],
-        T_CMDLN_FREQ_ONE
-    },               // "f"    
-    {
-        true, 
-        &freq_cont,
-        &freq_cont_parsers[0],
-        T_CMDLN_FREQ_CONT
-    },                 // "F"
-    {
-        false, 
-        &pwm_configure_enable,
-        &pwmen_parsers[0],
-        T_CMDLN_PWM_CONFIG
-    },     // "G"
-    {
-        false, 
-        &pwm_configure_disable,
-        &pwmdis_parsers[0],
-        T_CMDLN_PWM_DIS
-    },    // "g"    
-    {
-        false, 
-        &helpers_mode_help,
-        0,
-        T_CMDLN_HELP_MODE
-    },         // "h"
-    {
-        true, 
-        &ui_info_print_info,
-        0,
-        T_CMDLN_INFO
-    },        // "i"
-    {
-        true, 
-        &helpers_bit_order_msb,
-        0,
-        T_CMDLN_BITORDER_MSB
-    },     // "l"    
-    {
-        true, 
-        &helpers_bit_order_lsb,
-        0,
-        T_CMDLN_BITORDER_LSB
-    },     // "L"
-    {
-        true, 
-        &ui_mode_int_display_format,
-        0,
-        T_CMDLN_DISPLAY_FORMAT
-    }, // "o"
-    {
-        false, 
-        &pullups_enable,
-        0,
-        T_CMDLN_PULLUPS_EN
-    },           // "P"    
-    {
-        false, 
-        &pullups_disable,
-        0,
-        T_CMDLN_PULLUPS_DIS
-    },          // "p"    
-    {
-        false, 
-        &psu_disable,
-        0,
-        T_CMDLN_PSU_DIS
-    },              // "w"    
-    {
-        true, 
-        &adc_measure_cont,
-        &adc_cont_parsers[0],
-        T_CMDLN_ADC_CONT
-    },          // "V"
-    {
-        true, 
-        &adc_measure_single,
-        &adc_single_parsers[0],
-        T_CMDLN_ADC_ONE
-    },        // "v"    
-    {
-        true, 
-        &helpers_selftest,
-        0,
-        T_CMDLN_SELFTEST
-    },           // "~" selftest    
-    {
-        true, 
-        &auxpinfunc_input,
-        &aux_input_parsers[0],
-        T_CMDLN_AUX_IN
-    },        // "@"    
-    {
-        false, 
-        &auxpinfunc_low,
-        &aux_low_parsers[0],
-        T_CMDLN_AUX_LOW
-    },        // "a"    
-    {
-        false, 
-        &auxpinfunc_high,
-        &aux_high_parsers[0],
-        T_CMDLN_AUX_HIGH
-    },        // "A"                
-    {
-        true, 
-        &dump,
-        &dump_parsers[0],
-        T_CMDLN_DUMP
-    },        // "dump"   
-    {
-        true, 
-        &load,
-        &load_parsers[0],
-        T_CMDLN_LOAD
-    }      // "load"   
-         
-};
+const uint32_t commands_count=count_of(commands);

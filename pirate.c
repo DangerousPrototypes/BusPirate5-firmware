@@ -61,7 +61,13 @@ int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
 int main(){
     char c;
     
-    uint8_t bp_rev=mcu_detect_revision();
+    //test: bprev
+    //#define TEST_BPREV
+    #ifdef TEST_BPREV
+        uint8_t bp_rev=10; //mcu_detect_revision();
+    #else
+        uint8_t bp_rev=mcu_detect_revision();
+    #endif
 
     //init buffered IO pins
     bio_init(); 
@@ -82,7 +88,10 @@ int main(){
     #endif
 
     //init psu pins 
-    psucmd_init();
+    //#define TEST_PSUINIT
+    #ifndef TEST_PSUINIT
+        psucmd_init();
+    #endif
    
     // LCD pin init
     lcd_init();
@@ -157,20 +166,25 @@ int main(){
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
     lcd_backlight_enable(true);
-
-    translation_set(system_config.terminal_language); 
     
     // turn everything off
 	bio_init();     // make all pins safe
+    #ifndef TEST_PSUINIT
 	psucmd_disable();    // disable psu and reset pin label, clear any errors
+    #endif
 
     // mount NAND flash here
     #if BP5_REV >= 10
+        //#define TEST_STORAGE
+        #ifndef TEST_STORAGE
         storage_mount();
         if(storage_load_config()){
             system_config.config_loaded_from_file=true;
         }
+        #endif
     #endif
+
+    translation_set(system_config.terminal_language); 
 
     // begin main loop on secondary core
     // this will also setup the USB device
@@ -332,7 +346,10 @@ void core1_entry(void){
     tx_fifo_init();
     rx_fifo_init();
 
+    #define TEST_RGB
+    #ifndef TEST_RGB
     rgb_init();
+    #endif
 
     // wait for main core to signal start
     while(multicore_fifo_pop_blocking()!=0);

@@ -51,7 +51,7 @@ pip3 install requests
 sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 sudo apt-get install iptables-persistent
 screen
-python3 webhook.py
+python3 webhook.py 
 
 
 

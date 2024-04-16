@@ -16,7 +16,7 @@ uint32_t dio_periodic(void);
 
 // setup functions
 uint32_t dio_setup(void);
-uint32_t dio_setup_exc(void);
+uint32_t dio_setup_exc(void); 
 void dio_cleanup(void);
 
 // displayed in the 'i' command

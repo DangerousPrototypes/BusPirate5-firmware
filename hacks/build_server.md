@@ -35,7 +35,7 @@ source /etc/profile.d/pico-sdk.sh
 sudo git clone https://github.com/DangerousPrototypes/BusPirate5-firmware.git bp5-main
 cd bp5-main
 md build
-cs build 
+cd build 
 cmake ..
 make 
 cd ~

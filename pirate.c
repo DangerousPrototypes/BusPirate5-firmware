@@ -332,7 +332,7 @@ void core1_entry(void){
     tx_fifo_init();
     rx_fifo_init();
 
-    rgb_init();
+    //rgb_init();
 
     // wait for main core to signal start
     while(multicore_fifo_pop_blocking()!=0);

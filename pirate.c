@@ -50,6 +50,9 @@ lock_core_t core;
 spin_lock_t *spi_spin_lock;
 uint spi_spin_lock_num;
 
+void make_usbmsdrive_readonly();
+void make_usbmsdrive_writable();
+
 void core1_entry(void);
 
 int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
@@ -211,6 +214,13 @@ int main(){
         if(script_entry()){ //enter scripting mode?
             bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
         }
+
+        if (tud_cdc_n_connected(0)){
+            make_usbmsdrive_readonly();
+            //need to sync fatfs to sync with host
+        }
+        else
+            make_usbmsdrive_writable();
 
         switch(bp_state){
             case BP_SM_DISPLAY_MODE:

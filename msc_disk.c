@@ -340,6 +340,8 @@ void make_usbmsdrive_readonly(void)
     return;
   // eject the usb drive
   tud_msc_start_stop_cb(0, 0, 0, 1);
+  // make sure the storage is synced
+  disk_ioctl(0, CTRL_SYNC, 0);
   writable = false;
   // insert the drive back
   tud_msc_start_stop_cb(0, 0, 1, 1);
@@ -350,6 +352,8 @@ void make_usbmsdrive_writable(void)
     return;
   // eject the usb drive
   tud_msc_start_stop_cb(0, 0, 0, 1);
+  //make sure the storage is synced
+  disk_ioctl(0, CTRL_SYNC, 0);
   writable = true;
   //insert the drive back
   tud_msc_start_stop_cb(0, 0, 1, 1);

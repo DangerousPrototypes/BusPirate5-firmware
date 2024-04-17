@@ -20,6 +20,8 @@
 #include "pirate/amux.h"   // Analog voltage measurement functions
 #include "pirate/button.h" // Button press functions
 
+void refresh_usbmsdrive(void);
+
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char * const usage[]= 
 {
@@ -202,6 +204,8 @@ void dummy_handler(struct command_result *res)
         }
         //if the file was closed
         printf("File %s closed\r\n", file);
+        //make the file available to the host
+        refresh_usbmsdrive();
 
         /* Open file and read */
         //open the file

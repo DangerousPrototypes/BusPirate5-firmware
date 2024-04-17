@@ -1,6 +1,7 @@
 void storage_init(void);
 bool storage_detect(void);
 uint8_t storage_mount(void);
+void storage_unmount(void);
 uint8_t storage_format(void);
 void storage_file_error(uint8_t res);
 bool storage_save_binary_blob_rollover(char *data, uint32_t ptr,uint32_t size, uint32_t rollover);

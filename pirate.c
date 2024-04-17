@@ -45,13 +45,10 @@
 #include "commands/global/w_psu.h"
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
-
+#include "msc_disk.h"
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
 uint spi_spin_lock_num;
-
-void make_usbmsdrive_readonly();
-void make_usbmsdrive_writable();
 
 void core1_entry(void);
 
@@ -208,7 +205,7 @@ int main(){
     uint32_t value;
     struct prompt_result result; 
     alarm_id_t screensaver;
-
+    bool has_been_connected = false;
     while(1){
 
         if(script_entry()){ //enter scripting mode?
@@ -216,11 +213,20 @@ int main(){
         }
 
         if (tud_cdc_n_connected(0)){
-            make_usbmsdrive_readonly();
-            //need to sync fatfs to sync with host
+            if(!has_been_connected){
+                has_been_connected = true;
+                make_usbmsdrive_readonly();
+                //sync with the host 
+                storage_unmount();
+                storage_mount();
+            }
         }
-        else
+        else{
+            if (has_been_connected){
+                has_been_connected = false;
+            }
             make_usbmsdrive_writable();
+        }
 
         switch(bp_state){
             case BP_SM_DISPLAY_MODE:

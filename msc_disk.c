@@ -334,7 +334,7 @@ void refresh_usbmsdrive(void)
   // insert the drive back
   tud_msc_start_stop_cb(0, 0, 1, 1);
 }
-void make_usbmsdrive_readonly()
+void make_usbmsdrive_readonly(void)
 {
   if (!writable)
     return;
@@ -344,7 +344,7 @@ void make_usbmsdrive_readonly()
   // insert the drive back
   tud_msc_start_stop_cb(0, 0, 1, 1);
 }
-void make_usbmsdrive_writable()
+void make_usbmsdrive_writable(void)
 {
   if(writable)
     return;

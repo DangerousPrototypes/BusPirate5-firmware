@@ -148,7 +148,7 @@ set(bp5_common
         #USB
         queue.c queue.h 
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h
-        msc_disk.c usb_descriptors.c  
+        msc_disk.c msc_disk.h usb_descriptors.c  
         )
 
 add_executable(bus_pirate5_rev8

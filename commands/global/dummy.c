@@ -19,8 +19,8 @@
 #include "system_config.h" // Stores current Bus Pirate system configuration
 #include "pirate/amux.h"   // Analog voltage measurement functions
 #include "pirate/button.h" // Button press functions
-
-void refresh_usbmsdrive(void);
+#include "msc_disk.h"
+//void refresh_usbmsdrive(void);
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char * const usage[]= 

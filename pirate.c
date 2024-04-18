@@ -45,13 +45,14 @@
 #include "commands/global/w_psu.h"
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
+#include "msc_disk.h"
 
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
 uint spi_spin_lock_num;
 
-void make_usbmsdrive_readonly();
-void make_usbmsdrive_writable();
+//void make_usbmsdrive_readonly();
+//void make_usbmsdrive_writable();
 
 void core1_entry(void);
 

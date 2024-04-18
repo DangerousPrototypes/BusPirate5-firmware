@@ -32,32 +32,31 @@ ADD_CUSTOM_TARGET (
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/timestamp.cmake
     ADD_DEPENDENCIES ${CMAKE_BINARY_DIR}/timestamp.cmake)
 
-
 # Add executable. Default name is the project name, version 0.1
-set(bp5_common 
-        #main loop and printf
-        pirate.c pirate.h printf-4.0.0/printf.c printf-4.0.0/printf.h 
-        modes.c modes.h system_config.h system_config.c 
+set(bp5_common
+        # main loop and printf
+        pirate.c pirate.h printf-4.0.0/printf.c printf-4.0.0/printf.h
+        modes.c modes.h system_config.h system_config.c
         system_monitor.h system_monitor.c
 
-        #pirate lib    
+        # pirate lib
         pirate/psu.h pirate/psu.c pirate/pullup.h pirate/pullup.c
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
         pirate/bio.h pirate/bio.c pirate/storage.h pirate/storage.c
-        pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h 
+        pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h
         pirate/lcd.h pirate/lcd.c pirate/shift.h pirate/shift.c
         pirate/amux.h pirate/amux.c pirate/rgb.h pirate/rgb.c
 
-        #commands
+        # commands
         commands.h commands.c
-        commands/global/w_psu.h commands/global/w_psu.c  
+        commands/global/w_psu.h commands/global/w_psu.c
         commands/global/p_pullups.h commands/global/p_pullups.c
         commands/global/cmd_mcu.h commands/global/cmd_mcu.c
-        commands/global/l_bitorder.h commands/global/l_bitorder.c 
-        commands/global/cmd_convert.h commands/global/cmd_convert.c 
+        commands/global/l_bitorder.h commands/global/l_bitorder.c
+        commands/global/cmd_convert.h commands/global/cmd_convert.c
         commands/global/pause.h commands/global/pause.c
         commands/global/h_help.h commands/global/h_help.c
-        commands/global/cmd_selftest.h commands/global/cmd_selftest.c 
+        commands/global/cmd_selftest.h commands/global/cmd_selftest.c
         commands/global/a_auxio.h commands/global/a_auxio.c
         commands/global/dummy.c commands/global/dummy.h
         commands/global/disk.c commands/global/disk.h
@@ -69,87 +68,102 @@ set(bp5_common
         commands/global/script.c commands/global/script.h
         commands/global/tutorial.c commands/global/tutorial.h
 
-        #HiZ
-        mode/hiz.h mode/hiz.c 
-        #1Wire
-        mode/hw1wire.h mode/hw1wire.c 
+        # HiZ
+        mode/hiz.h mode/hiz.c
+        # 1Wire
+        mode/hw1wire.h mode/hw1wire.c
         pirate/hw1wire_pio.h pirate/hw1wire_pio.c
         commands/1wire/scan.h commands/1wire/scan.c
         commands/1wire/demos.h commands/1wire/demos.c
-        #UART 
-        mode/hwuart.h mode/hwuart.c 
-        pirate/hwuart_pio.h pirate/hwuart_pio.c 
+
+        # UART
+        mode/hwuart.h mode/hwuart.c
+        pirate/hwuart_pio.h pirate/hwuart_pio.c
         commands/uart/nmea.c commands/uart/nmea.h
         commands/uart/bridge.h commands/uart/bridge.c
-        commands/uart/simcard.h commands/uart/simcard.c 
+        commands/uart/simcard.h commands/uart/simcard.c
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
-        #Half duplex UART
+
+        # Half duplex UART
         mode/hwhduart.h mode/hwhduart.c
-        #I2C
-        mode/hwi2c.c mode/hwi2c.h 
+
+        # I2C
+        mode/hwi2c.c mode/hwi2c.h
         pirate/hwi2c_pio.c pirate/hwi2c_pio.h
         commands/i2c/scan.h commands/i2c/scan.c
         commands/i2c/demos.h commands/i2c/demos.c
-        lib/i2c_address_list/dev_i2c_addresses.h 
-        lib/ms5611/ms5611.c lib/ms5611/ms5611.h lib/tsl2561/driver_tsl2561.c  lib/tsl2561/driver_tsl2561.h
-        #SPI
-        mode/hwspi.c mode/hwspi.h 
+        lib/i2c_address_list/dev_i2c_addresses.h
+        lib/ms5611/ms5611.c lib/ms5611/ms5611.h lib/tsl2561/driver_tsl2561.c lib/tsl2561/driver_tsl2561.h
+
+        # SPI
+        mode/hwspi.c mode/hwspi.h
         pirate/hwspi.c pirate/hwspi.h
         commands/spi/flash.c commands/spi/flash.h commands/spi/spiflash.h commands/spi/spiflash.c
         commands/spi/sniff.c commands/spi/sniff.h
-        lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h 
-        lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c         
-        #2WIRE
-        mode/hw2wire.h mode/hw2wire.c 
+        lib/sfud/inc/sfud.h lib/sfud/inc/sfud.c lib/sfud/inc/sfud_cfg.h lib/sfud/inc/sfud_def.h
+        lib/sfud/inc/sfud_flash_def.h lib/sfud/inc/sfud_port.c lib/sfud/inc/sfud_sfdp.c
+
+        # 2WIRE
+        mode/hw2wire.h mode/hw2wire.c
         pirate/hw2wire_pio.h pirate/hw2wire_pio.c
-        commands/2wire/sle4442.c commands/2wire/sle4442.h 
-        #LED
+        commands/2wire/sle4442.c commands/2wire/sle4442.h
+
+        # LED
         mode/hwled.c mode/hwled.h
-        #DIO
+
+        # DIO
         mode/dio.h mode/dio.c
-        #DUMMY MODE
-        mode/dummy1.c mode/dummy1.h 
-  
-        #UI
-        ui/ui_cmdln.c ui/ui_cmdln.h 
+
+        # DUMMY MODE
+        mode/dummy1.c mode/dummy1.h
+
+        # UI
+        ui/ui_cmdln.c ui/ui_cmdln.h
         ui/ui_process.h ui/ui_process.c
         ui/ui_flags.h
-        ui/ui_parse.c ui/ui_parse.h 
-        ui/ui_prompt.h ui/ui_prompt.c  
+        ui/ui_parse.c ui/ui_parse.h
+        ui/ui_prompt.h ui/ui_prompt.c
         ui/ui_mode.c ui/ui_mode.h
-	ui/ui_display.c ui/ui_display.h
-        ui/ui_info.h ui/ui_info.c 
-        ui/ui_format.c ui/ui_format.c 
+        ui/ui_display.c ui/ui_display.h
+        ui/ui_info.h ui/ui_info.c
+        ui/ui_format.c ui/ui_format.c
         ui/ui_init.c ui/ui_init.h
-        ui/ui_const.h ui/ui_const.c 
-        ui/ui_config.h ui/ui_config.c 
-        ui/ui_help.c ui/ui_help.h  
-        ui/ui_term.c ui/ui_term.h  
+        ui/ui_const.h ui/ui_const.c
+        ui/ui_config.h ui/ui_config.c
+        ui/ui_help.c ui/ui_help.h
+        ui/ui_term.c ui/ui_term.h
         ui/ui_statusbar.c ui/ui_statusbar.h
-        debug.c debug.h  
-        #JSON parser for saved settings
-        mjson/mjson.h mjson/mjson.c 
-        #syntax and commands
-        syntax.h syntax.c  syntax_struct.h
+        debug.c debug.h
+
+        # JSON parser for saved settings
+        mjson/mjson.h mjson/mjson.c
+
+        # syntax and commands
+        syntax.h syntax.c syntax_struct.h
         opt_args.h command_attributes.h bytecode.h
-        #FATfs
-        fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c 
-        #translations
-        translation/base.h translation/base.c 
+
+        # FATfs
+        fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c
+
+        # translations
+        translation/base.h translation/base.c
         translation/en-us.h translation/zh-cn.h translation/pl-pl.h
-        #binary mode
+
+        # binary mode
         mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
-        mode/logicanalyzer.h mode/logicanalyzer.c mode/sump.c mode/sump.h        
-        #displays
+        mode/logicanalyzer.h mode/logicanalyzer.c mode/sump.c mode/sump.h
+
+        # displays
         displays.c displays.h display/default.c display/default.h
-        ui/ui_lcd.c ui/ui_lcd.h display/scope.h display/scope.c 
-        font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h 
+        ui/ui_lcd.c ui/ui_lcd.h display/scope.h display/scope.c
+        font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h
         font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
-        #USB
-        queue.c queue.h 
+
+        # USB
+        queue.c queue.h
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h
-        msc_disk.c usb_descriptors.c  
-        )
+        msc_disk.c msc_disk.h usb_descriptors.c
+)
 
 add_executable(bus_pirate5_rev8
         ${bp5_common}

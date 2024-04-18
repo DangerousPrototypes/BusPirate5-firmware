@@ -45,7 +45,7 @@
 #include "commands/global/w_psu.h"
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
-
+#include "msc_disk.h"
 lock_core_t core;
 spin_lock_t *spi_spin_lock;
 uint spi_spin_lock_num;
@@ -205,11 +205,27 @@ int main(){
     uint32_t value;
     struct prompt_result result; 
     alarm_id_t screensaver;
-
+    bool has_been_connected = false;
     while(1){
 
         if(script_entry()){ //enter scripting mode?
             bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
+        }
+
+        if (tud_cdc_n_connected(0)){
+            if(!has_been_connected){
+                has_been_connected = true;
+                make_usbmsdrive_readonly();
+                //sync with the host 
+                storage_unmount();
+                storage_mount();
+            }
+        }
+        else{
+            if (has_been_connected){
+                has_been_connected = false;
+            }
+            make_usbmsdrive_writable();
         }
 
         switch(bp_state){

@@ -85,8 +85,10 @@ set(bp5_common
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
         #Half duplex UART
         mode/hwhduart.h mode/hwhduart.c
-        #I2C
-        mode/hwi2c.c mode/hwi2c.h 
+        commands/hdplxuart/bridge.c commands/hdplxuart/bridge.h
+
+        # I2C 
+        mode/hwi2c.c mode/hwi2c.h
         pirate/hwi2c_pio.c pirate/hwi2c_pio.h
         commands/i2c/scan.h commands/i2c/scan.c
         commands/i2c/demos.h commands/i2c/demos.c

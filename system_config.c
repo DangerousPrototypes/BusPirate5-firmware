@@ -105,6 +105,8 @@ void system_init(void)
 	system_config.clkpin=0;
 
 	system_config.big_buffer_owner=BP_BIG_BUFFER_NONE;
+
+	system_config.rts=0;
 }
 
 bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label)

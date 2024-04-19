@@ -86,6 +86,7 @@ set(bp5_common
 
         # Half duplex UART
         mode/hwhduart.h mode/hwhduart.c
+        commands/hdplxuart/bridge.c commands/hdplxuart/bridge.h
 
         # I2C
         mode/hwi2c.c mode/hwi2c.h

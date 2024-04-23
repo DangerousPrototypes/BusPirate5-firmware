@@ -221,7 +221,7 @@ int main(){
                     result.success=false;
 
                     if(rx_fifo_try_get(&c)){
-                        value='y';
+                        value='a';
                         result.success=true;
                     } 
                 }else{
@@ -231,15 +231,16 @@ int main(){
                 if(result.success){
                     switch(value){
                         case 'y':
-                            system_config.terminal_ansi_color=1;
+                            system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
                             system_config.terminal_ansi_statusbar=1;
+                        case 'a': // case were configuration already exists
                             ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
                             ui_term_init(); // Initialize VT100 if ANSI terminal
                             ui_statusbar_update(UI_UPDATE_ALL);
                             break;
                         case 'n':
                             system_config.terminal_ansi_statusbar=0;
-                            system_config.terminal_ansi_color=0;
+                            system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
                             break;
                         default:
                             break;

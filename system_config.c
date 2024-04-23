@@ -10,6 +10,7 @@
 #include "system_config.h"
 #include "mjson/mjson.h"
 #include "pirate/mem.h" //defines for buffer owner
+#include "ui/ui_term.h"
 
 struct _system_config system_config;
 
@@ -37,7 +38,7 @@ void system_init(void)
 	system_config.terminal_ansi_columns=80;
 	system_config.terminal_ansi_statusbar=0;
 	system_config.terminal_ansi_statusbar_update=false;
-	system_config.terminal_ansi_color=0;
+	system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
 	system_config.terminal_update=0;
 	system_config.terminal_hide_cursor=false;
 	system_config.terminal_ansi_statusbar_pause=false;

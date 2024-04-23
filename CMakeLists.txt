@@ -218,4 +218,15 @@ endforeach()
 
 string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
 
+# by setting the following variable to TRUE, you are accepting LGPL3 license
+# and you are oblicated to distribute the binary and the source under LGPL3 license
+set(USE_LGPL3 FALSE CACHE BOOL "indicated if to include LGPL3 protected code")
+include(ansi_colours_import.cmake)
+if(USE_LGPL3)
+if(LEGACY_ANSI_COLOURS_ENABLED)
+        target_link_libraries(bus_pirate5_rev10 lib_ansi_colours)
+        target_link_libraries(bus_pirate5_rev8 lib_ansi_colours)
+endif()
+endif()
+
  

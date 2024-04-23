@@ -7,7 +7,13 @@
 #include "usb_tx.h"
 #include "usb_rx.h"
 #include "ui/ui_cmdln.h"
-
+#ifdef ANSI_COLOR_256
+#include "ansi_colours.h"
+    /**
+     * The library ansi_colours is licensed under LGPL3 and copyrighted by Michał Nazarewicz <mina86@mina86.com> 2018.
+     * License compliance is explained at docs/licenses.md
+     */
+#endif
 
 //printf("你好小狗");
 // ESC [ ? 3 h       132 column mode
@@ -65,7 +71,7 @@ void ui_term_detect(void)
     //no reply, no terminal connected or doesn't support VT100
     if(p<0){
         system_config.terminal_ansi_statusbar=0;
-        system_config.terminal_ansi_color=0;
+        system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
         return;
     }
     // Extract cursor position from response
@@ -110,7 +116,7 @@ void ui_term_detect(void)
     {
         //non-detection fallback
         system_config.terminal_ansi_statusbar=0;
-        system_config.terminal_ansi_color=0;
+        system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
     }
     else
     {
@@ -149,25 +155,48 @@ void ui_term_init(void)
 
 void ui_term_color_text(uint32_t rgb)
 {
-    if(system_config.terminal_ansi_color)
+    switch (system_config.terminal_ansi_color)
     {
+    case UI_TERM_FULL_COLOR:
         printf("\x1b[38;2;%d;%d;%dm", (uint8_t)(rgb>>16), (uint8_t)(rgb>>8), (uint8_t)(rgb));
+        break;
+    #ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        uint8_t ansi_256_text = ansi256_from_rgb(rgb);
+        uint32_t count = printf("\x1b[38;5;%hhdm",ansi_256_text);
+        break;
+    #endif
+    case UI_TERM_NO_COLOR:
+    default:
+        break;
     }
 }
 
 void ui_term_color_background(uint32_t rgb)
 {
-    if(system_config.terminal_ansi_color)
+    switch (system_config.terminal_ansi_color)
     {
+    case UI_TERM_FULL_COLOR:
         printf("\x1b[48;2;%d;%d;%dm", (uint8_t)(rgb>>16), (uint8_t)(rgb>>8), (uint8_t)(rgb));
+        break;
+    #ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        uint8_t ansi_256_background = ansi256_from_rgb(rgb);
+        uint32_t count = printf("\x1b[48;5;%hhdm",ansi_256_background);
+        break;
+    #endif
+    case UI_TERM_NO_COLOR:
+    default:
+        break;
     }
 }
 
 uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_background)
 {
-    if(system_config.terminal_ansi_color)
+    switch (system_config.terminal_ansi_color)
     {
-       uint32_t i=printf("\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm", 
+    case UI_TERM_FULL_COLOR:
+        uint32_t i=printf("\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm", 
                         (uint8_t)(rgb_text>>16), 
                         (uint8_t)(rgb_text>>8), 
                         (uint8_t)(rgb_text), 
@@ -176,6 +205,16 @@ uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_backgroun
                         (uint8_t)(rgb_background)       
                     );
         return i;
+    #ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        uint8_t ansi_256_text = ansi256_from_rgb(rgb_text);
+        uint8_t ansi_256_background = ansi256_from_rgb(rgb_background);
+        uint32_t count = printf("\x1b[38;5;%hhd;48;5;%hhdm",ansi_256_text,ansi_256_background);
+        return count;
+    #endif
+    case UI_TERM_NO_COLOR:
+    default:
+        break;
     }
 
     return 0;
@@ -183,9 +222,10 @@ uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_backgroun
 
 uint32_t ui_term_color_text_background_buf(char *buf, uint32_t rgb_text, uint32_t rgb_background)
 {
-    if(system_config.terminal_ansi_color)
+    switch (system_config.terminal_ansi_color)
     {
-       uint32_t i=sprintf(buf,"\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm", 
+    case UI_TERM_FULL_COLOR:
+        uint32_t i=sprintf(buf, "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm", 
                         (uint8_t)(rgb_text>>16), 
                         (uint8_t)(rgb_text>>8), 
                         (uint8_t)(rgb_text), 
@@ -194,46 +234,145 @@ uint32_t ui_term_color_text_background_buf(char *buf, uint32_t rgb_text, uint32_
                         (uint8_t)(rgb_background)       
                     );
         return i;
+    #ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        uint8_t ansi_256_text = ansi256_from_rgb(rgb_text);
+        uint8_t ansi_256_background = ansi256_from_rgb(rgb_background);
+        uint32_t count = sprintf(buf, "\x1b[38;5;%hhd;48;5;%hhdm",ansi_256_text,ansi_256_background);
+        return count;
+    #endif
+    case UI_TERM_NO_COLOR:
+    default:
+        break;
     }
 
     return 0;
 }
 
-#define UI_TERM_COLOR_CONCAT_TEXT(color) "\x1b[38;2;" color "m"
-#define UI_TERM_COLOR_CONCAT_BACKGROUND(color) "\x1b[48;2;" color "m"
+#define UI_TERM_FULL_COLOR_CONCAT_TEXT(color) ("\x1b[38;2;" color "m")
+#define UI_TERM_FULL_COLOR_CONCAT_BACKGROUND(color) ("\x1b[48;2;" color "m")
+#define UI_TERM_256_COLOR_CONCAT_TEXT(color) ("\x1b[38;5;" color "m")
+#define UI_TERM_256_COLOR_CONCAT_BACKGROUND(color) ("\x1b[48;5;" color "m")
 
 char* ui_term_color_reset(void){
-    return system_config.terminal_ansi_color?"\x1b[0m":"";
+    switch (system_config.terminal_ansi_color)
+    {
+#ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+#endif
+    case UI_TERM_FULL_COLOR:
+        return "\x1b[0m";
+    case UI_TERM_NO_COLOR:
+    default:
+        return "";
+    }
 }
 
 char* ui_term_color_prompt(void){
-    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT(BP_COLOR_PROMPT_TEXT):"";
+    switch (system_config.terminal_ansi_color)
+    {
+#ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_PROMPT_TEXT);
+#endif
+    case UI_TERM_FULL_COLOR:
+        return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_PROMPT_TEXT);
+    case UI_TERM_NO_COLOR:
+    default:
+        return "";
+    }
 }
 
 char* ui_term_color_info(void)
 {
-    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT(BP_COLOR_INFO_TEXT):"";
+    switch (system_config.terminal_ansi_color)
+    {
+#ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_INFO_TEXT);
+#endif
+    case UI_TERM_FULL_COLOR:
+        return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_INFO_TEXT);
+    case UI_TERM_NO_COLOR:
+    default:
+        return "";
+    }
 }
 
 char* ui_term_color_notice(void)
 {
-    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT(BP_COLOR_NOTICE_TEXT):"";
+    switch (system_config.terminal_ansi_color)
+    {
+#ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_NOTICE_TEXT);
+#endif
+    case UI_TERM_FULL_COLOR:
+        return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_NOTICE_TEXT);
+    case UI_TERM_NO_COLOR:
+    default:
+        return "";
+    }
 }
 
 char* ui_term_color_warning(void){
-    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT(BP_COLOR_WARNING_TEXT):"";
+    switch (system_config.terminal_ansi_color)
+    {
+#ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_WARNING_TEXT);
+#endif
+    case UI_TERM_FULL_COLOR:
+        return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_WARNING_TEXT);
+    case UI_TERM_NO_COLOR:
+    default:
+        return "";
+    }
 }
 
 char* ui_term_color_error(void){
-    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT(BP_COLOR_ERROR_TEXT):"";
+    switch (system_config.terminal_ansi_color)
+    {
+#ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_ERROR_TEXT);
+#endif
+    case UI_TERM_FULL_COLOR:
+        return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_ERROR_TEXT);
+    case UI_TERM_NO_COLOR:
+    default:
+        return "";
+    }
 }
 
 char* ui_term_color_num_float(void){
-    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT(BP_COLOR_NUM_FLOAT_TEXT):"";
+    switch (system_config.terminal_ansi_color)
+    {
+#ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_NUM_FLOAT_TEXT);
+#endif
+    case UI_TERM_FULL_COLOR:
+        return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_NUM_FLOAT_TEXT);
+    case UI_TERM_NO_COLOR:
+    default:
+        return "";
+    }
 }
 
 char* ui_term_color_pacman(void){
-    return system_config.terminal_ansi_color?UI_TERM_COLOR_CONCAT_TEXT("255;238;00"):"";
+    switch (system_config.terminal_ansi_color)
+    {
+#ifdef ANSI_COLOR_256
+    case UI_TERM_256:
+        return UI_TERM_256_COLOR_CONCAT_TEXT("3");
+#endif
+    case UI_TERM_FULL_COLOR:
+        return UI_TERM_FULL_COLOR_CONCAT_TEXT("255;238;00");
+    case UI_TERM_NO_COLOR:
+    default:
+        return "";
+    }
 }
 
 char* ui_term_cursor_hide(void){

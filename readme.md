@@ -64,3 +64,8 @@ and you are obligated to distribute the binaries and this code base under LGPL3 
 To compile the firmware with LGPL3 components, simply add the following flags to the configuration step above:  
 `-DUSE_LGPL3=YES -DLEGACY_ANSI_COLOURS_ENABLED=YES`
 
+## other open source licenses
+This project uses code from the following licenses:  
+* LGPL3  
+
+More information on the licenses and components being used can be found [here](docs/licenses.md).  

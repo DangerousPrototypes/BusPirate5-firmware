@@ -6,32 +6,23 @@
 #include "opt_args.h"
 #include "display/scope.h"
 #include "hardware/sync.h"
+#include "pico/mutex.h"
 #include "pico/lock_core.h"
 
 static uint8_t amux_current_channel=0xff;
 
-//lock_core_t core;
-spin_lock_t *adc_spin_lock;
-uint adc_spin_lock_num;
+static mutex_t adc_mutex;
 
 //gives protected access to adc (core safe)
-void adc_busy_wait(bool enable){
-    static bool busy=false;
-
-    if(!enable){
-        busy=false;
-        return;
+static void adc_busy_wait(bool enable){
+    if (!enable)
+    {
+        mutex_exit(&adc_mutex);
     }
-    do{
-        spin_lock_unsafe_blocking(adc_spin_lock);
-        if(busy){
-            spin_unlock_unsafe(adc_spin_lock);
-        }else{
-            busy=true;
-            spin_unlock_unsafe(adc_spin_lock);
-            return;
-        }
-    }while(true);
+    else
+    {
+        mutex_enter_blocking(&adc_mutex);
+    }
 }
 
 void amux_init(void){
@@ -41,9 +32,8 @@ void amux_init(void){
 	adc_init(); 
     adc_gpio_init(AMUX_OUT); 
     adc_gpio_init(CURRENT_SENSE);
-    // setup the spinlock for adc arbitration
-    adc_spin_lock_num=spin_lock_claim_unused(true);
-    adc_spin_lock=spin_lock_init(adc_spin_lock_num);
+    // setup the mutex for adc arbitration
+    mutex_init(&adc_mutex);
 }
 
 // select AMUX input source, use the channel defines from the platform header

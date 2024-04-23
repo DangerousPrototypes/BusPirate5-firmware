@@ -114,7 +114,7 @@ void amux_sweep(void){
     amux_select_input(HW_ADC_MUX_GND); //to clear any charge from a floating pin
     adc_select_input(CURRENT_SENSE_ADC);
     busy_wait_us(60);
-    hw_adc_raw[HW_ADC_CURRENT_SENSE]=adc_read();
+    hw_adc_raw[HW_ADC_CURRENT_SENSE]=(adc_read()+hw_adc_raw[HW_ADC_CURRENT_SENSE])/2;
     adc_busy_wait(false);
     //do these outside the ADC spin lock
     for(int i=0; i<HW_ADC_MUX_COUNT; i++){

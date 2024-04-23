@@ -282,7 +282,7 @@ static char const * const it_it[]={
 	[T_CONFIG_LANGUAGE_CHINESE]="Cinese (semplificato)",
 	[T_CONFIG_LANGUAGE_POLISH]="Polacco",
 	[T_CONFIG_LANGUAGE_BOSNIAN]="Bosniaco",
-	[T_CONFIG_LANGUAGE_ITALIAN]="Italiano",
+	[T_CONFIG_LANGUAGE_ITALIAN]="Italian",
 	[T_CONFIG_DISABLE]="Disabilita",
 	[T_CONFIG_ENABLE]="Abilita",
 	[T_CONFIG_SCREENSAVER]="Screensaver LCD",
@@ -381,6 +381,8 @@ static char const * const it_it[]={
 	[T_HELP_1WIRE_SCAN]="scansiona per dispositivi 1-Wire",
 	[T_HELP_1WIRE_DS18B20]="Interroga il sensore di temperatura DS18B20",
 	[T_HELP_UART_BRIDGE]="apre UART con IO dati grezzi, modalità bridge USB-seriale",
+	[T_HELP_UART_BRIDGE_EXIT]="UART bridge. Press Bus Pirate button to exit.",
+	[T_HELP_UART_BRIDGE_TOOLBAR]="ENABLE toolbar while bridge is active (default: disabled)",
 	[T_HELP_UART_NMEA]="analizza i dati GPS NMEA",
 
 };

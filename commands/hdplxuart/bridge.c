@@ -14,6 +14,7 @@
 #include "usb_tx.h"
 #include "pirate/bio.h"
 #include "pirate/hwuart_pio.h"
+#include "ui/ui_cmdln.h"
 
 static const char * const usage[]= {
     "bridge\t[-h(elp)]",   
@@ -23,6 +24,7 @@ static const char * const usage[]= {
 
 static const struct ui_help_options options[]= {
 {1,"", T_HELP_UART_BRIDGE}, //command help
+    {0, "-t", T_HELP_UART_BRIDGE_TOOLBAR},
     {0,"-h",T_HELP_FLAG}, //help
 };
 
@@ -35,14 +37,20 @@ void hduart_bridge_handler(struct command_result *res){
     if(!ui_help_check_vout_vref()) return;
     static const char label[]="RTS";
 
+    bool toolbar_state= system_config.terminal_ansi_statusbar_pause;
+    bool pause_toolbar=!cmdln_args_find_flag('t'|0x20);
+    if(pause_toolbar){
+        system_config.terminal_ansi_statusbar_pause = true;
+    }
+
    	system_bio_claim(true, BIO2, BP_PIN_MODE, label);
     bio_output(BIO2);
     bio_put(BIO2, system_config.rts); 
     
-    printf("%sUART bridge. Press Bus Pirate button to exit.%s\r\n", ui_term_color_notice(), ui_term_color_reset());
+    printf("%s%s%s\r\n", ui_term_color_notice(),t[T_HELP_UART_BRIDGE_EXIT], ui_term_color_reset());
     while(true){
         char c;
-        bio_put(BIO2, system_config.rts); 
+        bio_put(BIO2, !system_config.rts); 
         if(rx_fifo_try_get(&c)){
             hwuart_pio_write(c);
         }
@@ -56,4 +64,7 @@ void hduart_bridge_handler(struct command_result *res){
     bio_input(BIO2);
    	system_bio_claim(false, BIO2, BP_PIN_MODE,0);
 
+    if(pause_toolbar){
+        system_config.terminal_ansi_statusbar_pause = toolbar_state;
+    }
 }

@@ -12,15 +12,17 @@
 #include "pirate/button.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
+#include "ui/ui_cmdln.h"
 
 static const char * const usage[]= {
-    "bridge\t[-h(elp)]",   
+    "bridge\t[-h(elp)] [-t(oolbar)]",   
     "Transparent UART bridge: bridge",
     "Exit: press Bus Pirate button"
 };
 
 static const struct ui_help_options options[]= {
 {1,"", T_HELP_UART_BRIDGE}, //command help
+    {0, "-t", T_HELP_UART_BRIDGE_TOOLBAR},
     {0,"-h",T_HELP_FLAG}, //help
 };
 
@@ -28,8 +30,14 @@ static const struct ui_help_options options[]= {
 void uart_bridge_handler(struct command_result *res){
     if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
     if(!ui_help_check_vout_vref()) return;
+
+    bool toolbar_state= system_config.terminal_ansi_statusbar_pause;
+    bool pause_toolbar=!cmdln_args_find_flag('t'|0x20);
+    if(pause_toolbar){
+        system_config.terminal_ansi_statusbar_pause = true;
+    }    
     
-    printf("%sUART bridge. Press Bus Pirate button to exit.%s\r\n", ui_term_color_notice(), ui_term_color_reset());
+    printf("%s%s%s\r\n", ui_term_color_notice(), t[T_HELP_UART_BRIDGE_EXIT], ui_term_color_reset());
     while(true){
         char c;
         if(rx_fifo_try_get(&c)){
@@ -40,6 +48,10 @@ void uart_bridge_handler(struct command_result *res){
             tx_fifo_put(&c);
         }
         //exit when button pressed.
-        if(button_get(0)) return;   
+        if(button_get(0)) break;   
+    }
+
+    if(pause_toolbar){
+        system_config.terminal_ansi_statusbar_pause = toolbar_state;
     }
 }

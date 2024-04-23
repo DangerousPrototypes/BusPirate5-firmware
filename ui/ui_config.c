@@ -106,7 +106,11 @@ uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b)
 
 static const struct prompt_item menu_items_language[]=
 {
-    {T_CONFIG_LANGUAGE_ENGLISH},{T_CONFIG_LANGUAGE_POLISH},{T_CONFIG_LANGUAGE_BOSNIAN}//,{T_CONFIG_LANGUAGE_CHINESE}
+    { T_CONFIG_LANGUAGE_ENGLISH },
+    { T_CONFIG_LANGUAGE_POLISH },
+    { T_CONFIG_LANGUAGE_BOSNIAN },
+    { T_CONFIG_LANGUAGE_ITALIAN },
+    //{ T_CONFIG_LANGUAGE_CHINESE }
 };
 
 uint32_t ui_config_action_language(uint32_t a, uint32_t b)

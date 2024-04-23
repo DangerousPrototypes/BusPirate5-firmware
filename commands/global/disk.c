@@ -225,29 +225,12 @@ void disk_ls_handler(struct command_result *res){
     //is there a trailing path to ls?
     char location[32];
     cmdln_args_string_by_position(1, sizeof(location), location);  
-    fr = f_opendir(&dir, location);                       /* Open the directory */
-    if (fr != FR_OK) {
+
+    if (!storage_ls(location, NULL, LS_ALL)) {
         storage_file_error(fr);
         res->error=true;
         return;
     }
-
-    nfile = ndir = 0;
-    for(;;){
-        fr = f_readdir(&dir, &fno);                   /* Read a directory item */
-        if(fr != FR_OK || fno.fname[0] == 0) break;  /* Error or end of dir */
-        strlwr(fno.fname); //FAT16 is only UPPERCASE, make it lower to be easy on the eyes...
-        if(fno.fattrib & AM_DIR){   /* Directory */
-            printf("%s   <DIR>   %s%s%s\r\n",ui_term_color_prompt(), ui_term_color_info(), fno.fname, ui_term_color_reset());
-            ndir++;
-        }else{   /* File */
-            printf("%s%10u %s%s%s\r\n", 
-            ui_term_color_prompt(),fno.fsize, ui_term_color_info(),fno.fname, ui_term_color_reset());
-            nfile++;
-        }
-    }
-    f_closedir(&dir);
-    printf("%s%d dirs, %d files%s\r\n", ui_term_color_info(), ndir, nfile, ui_term_color_reset());
 }
 
 uint8_t disk_format(void){

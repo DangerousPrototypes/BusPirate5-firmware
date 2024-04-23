@@ -38,11 +38,11 @@
 #ifdef	BP_USE_SW3W
     #include "SW3W.h"
 #endif
-#ifdef 	BP_USE_DIO
-    #include "DIO.h"
-#endif
 #ifdef  BP_USE_HWLED
     #include "mode/hwled.h"
+#endif
+#ifdef BP_USE_DIO
+    #include "mode/dio.h"
 #endif
 #ifdef	BP_USE_LCDSPI
     #include "LCDSPI.h"
@@ -476,12 +476,12 @@ struct _mode modes[MAXPROTO]={{
 #endif
 #ifdef BP_USE_DIO
 {
-    nullfunc1,				// start
-    nullfunc1,				// start with read
-     nullfunc1,				// stop
-    nullfunc1,				// stop with read
-    DIO_send,				// send(/read) max 32 bit
-    DIO_read,				// read max 32 bit
+    nullfunc1_temp,				// start
+    nullfunc1_temp,				// start with read
+    nullfunc1_temp,				// stop
+    nullfunc1_temp,				// stop with read
+    dio_write,				// send(/read) max 32 bit
+    dio_read,				// read max 32 bit
 	nullfunc1_temp,				// set clk high
 	nullfunc1_temp,				// set clk low
 	nullfunc1_temp,				// set dat hi
@@ -490,15 +490,15 @@ struct _mode modes[MAXPROTO]={{
 	nullfunc1_temp,				// tick clk
 	nullfunc1_temp,				// read dat
     noperiodic,				// service to regular poll whether a byte ahs arrived
-    DIO_macro,				// macro
-    DIO_setup,				// setup UI
-    DIO_setup_exc,				// real setup
-    DIO_cleanup,				// cleanup for HiZ
-    DIO_pins,				// display pin config
-    DIO_settings,				// display settings
-    DIO_help,				// display small help about the protocol
-        NULL,                   // mode specific commands
-    NULL,                   // mode specific commands count
+    dio_macro,				// macro
+    dio_setup,				// setup UI
+    dio_setup_exc,				// real setup
+    dio_cleanup,				// cleanup for HiZ
+    //dio_pins,				// display pin config
+    dio_settings,				// display settings
+    dio_help,				// display small help about the protocol
+    dio_commands,                   // mode specific commands
+    &dio_commands_count,                   // mode specific commands count
     "DIO",					// friendly name (promptname)
 },
 #endif

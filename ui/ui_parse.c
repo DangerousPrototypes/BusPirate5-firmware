@@ -133,6 +133,32 @@ bool ui_parse_get_int(struct prompt_result *result, uint32_t *value)
 	return result->success;
 }
 
+bool ui_parse_get_string(struct prompt_result *result, char *str, uint8_t *size)
+{
+    char c;
+    uint8_t max_size = *size;
+
+    *result = empty_result;
+    result->no_value = true;
+    *size = 0;
+
+    while (max_size-- && cmdln_try_peek(0, &c)) {
+        if (c <= ' ') { break;
+        }
+        else if (c <= '~') {
+            *str++ = c;
+            (*size)++;
+        }
+        cmdln_try_remove(&c);
+        result->success = true;
+        result->no_value = false;
+    }
+    // Terminate string
+    *str = '\0';
+
+    return result->success;
+}
+
 // eats up the spaces and comma's from the cmdline
 void ui_parse_consume_whitespace(void)
 {

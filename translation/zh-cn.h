@@ -282,6 +282,7 @@ static char const * const zh_cn[]={
 	[T_CONFIG_LANGUAGE_CHINESE]="Chinese (simplified)",
 	[T_CONFIG_LANGUAGE_POLISH]="Polish",
 	[T_CONFIG_LANGUAGE_BOSNIAN]="Bosnian",
+	[T_CONFIG_LANGUAGE_ITALIAN]="Italian",
 	[T_CONFIG_DISABLE]="Disable",
 	[T_CONFIG_ENABLE]="Enable",
 	[T_CONFIG_SCREENSAVER]="LCD screensaver",
@@ -380,6 +381,8 @@ static char const * const zh_cn[]={
 	[T_HELP_1WIRE_SCAN]="scan for 1-Wire devices",
 	[T_HELP_1WIRE_DS18B20]="Query DS18B20 temperature sensor",
 	[T_HELP_UART_BRIDGE]="open UART with raw data IO, usb to serial bridge mode",
+	[T_HELP_UART_BRIDGE_EXIT]="UART bridge. Press Bus Pirate button to exit.",
+	[T_HELP_UART_BRIDGE_TOOLBAR]="ENABLE toolbar while bridge is active (default: disabled)",
 	[T_HELP_UART_NMEA]="parse NMEA GPS data",
 
 };

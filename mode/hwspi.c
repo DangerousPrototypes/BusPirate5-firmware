@@ -16,11 +16,13 @@
 #include "commands/spi/flash.h"
 #include "ui/ui_help.h"
 #include "pirate/hwspi.h"
+#include "commands/spi/sniff.h"
 
 // command configuration
 const struct _command_struct hwspi_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
     {"flash",0x00,&flash,T_HELP_CMD_FLASH}, // the help is shown in the -h *and* the list of mode apps
+	{"sniff",0x00,&sniff_handler,T_HELP_CMD_FLASH}, // the help is shown in the -h *and* the list of mode apps
 };
 const uint32_t hwspi_commands_count=count_of(hwspi_commands);
 

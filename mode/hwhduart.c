@@ -20,6 +20,7 @@
 #include "commands/uart/bridge.h"
 #include "commands/uart/simcard.h"
 #include "pirate/hwuart_pio.h"
+#include "commands/hdplxuart/bridge.h"
 
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
@@ -29,7 +30,8 @@ const struct _command_struct hwhduart_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
     //{"gps",false,&nmea_decode_handler,T_HELP_UART_NMEA}, // the help is shown in the -h *and* the list of mode apps
     //{"bridge",false,&uart_bridge_handler,T_HELP_UART_BRIDGE}, // the help is shown in the -h *and* the list of mode apps
-	{"sim", false, &simcard_handler, 0x00}
+	//{"sim", false, &simcard_handler, 0x00}
+	{"bridge", false, &hduart_bridge_handler, 0x00}
 };
 const uint32_t hwhduart_commands_count=count_of(hwhduart_commands);
 
@@ -120,7 +122,7 @@ uint32_t hwhduart_setup_exc(void){
 	hwuart_pio_init(mode_config.data_bits, mode_config.parity, mode_config.stop_bits, mode_config.baudrate);
 	system_bio_claim(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
 
-    printf("\r\nHalf Duplex UART is a work in progress.\r\nPlease reserve bug reports for later.\r\n");
+    //printf("\r\nHalf Duplex UART is a work in progress.\r\nPlease reserve bug reports for later.\r\n");
 	return 1;
 }
 

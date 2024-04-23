@@ -29,6 +29,9 @@
 #include "commands/global/dummy.h"
 #include "commands/global/disk.h"
 #include "commands/global/i_info.h"
+#include "commands/global/macro.h"
+#include "commands/global/script.h"
+#include "commands/global/tutorial.h"
 #include "mode/logicanalyzer.h"
 
 // command configuration
@@ -72,6 +75,9 @@ const struct _command_struct commands[]=
     {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
     {"dummy", true, &dummy_handler, 0x00 },                              // "dummy"
     {"help", true, &help_handler, 0x00},
+    {"macro", true, &macro_handler, 0x00},
+    {"tutorial", true, &tutorial_handler, 0x00},
+    {"script", true, &script_handler, 0x00},    
 };
 
 const uint32_t commands_count=count_of(commands);

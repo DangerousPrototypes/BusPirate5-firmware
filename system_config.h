@@ -95,6 +95,8 @@ typedef struct _system_config
 
 	uint32_t big_buffer_owner;
 
+	bool rts;
+
 
 } _system_config;
 

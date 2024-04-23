@@ -1,0 +1,9 @@
+# This is a sample tutorial!
+# Welcome!
+# This is some syntax, hit enter to execute it!
+[0x00 0xff r:2]
+# This is a comment! It's not executed!
+# Here's a full on command!
+# Hit enter to execute it!
+pause
+# Did it pause?

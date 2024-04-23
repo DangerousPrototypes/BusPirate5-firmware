@@ -81,7 +81,8 @@ bool ui_help_check_vout_vref(void){
     if (scope_running) // scope is using the analog subsystem
         return true; //can't check, just skip
 
-    if(amux_read(HW_ADC_MUX_VREF_VOUT)<1200){
+    amux_sweep();
+    if(hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]<790) { //0.8V minimum output allowed to set on internal PSU when reading i could be 0.79
         ui_help_error(T_MODE_NO_VOUT_VREF_ERROR);
         printf("%s%s%s\r\n", ui_term_color_info(), t[T_MODE_NO_VOUT_VREF_HINT], ui_term_color_reset());
         return false;

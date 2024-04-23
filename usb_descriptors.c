@@ -170,7 +170,7 @@ uint8_t const desc_fs_configuration[] =
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
 
   // 2nd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 4, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 6, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
 
   #endif
   // Interface number, string index, EP Out & EP In address, EP size
@@ -270,6 +270,7 @@ char const* string_desc_arr [] =
   "123456789012",                // 3: Serials, should use chip ID
   "Bus Pirate CDC",                 // 4: CDC Interface
   "Bus Pirate MSC",                 // 5: MSC Interface
+  "Bus Pirate BIN"                  // 6: Binary CDC Interface
 };
 
 static uint16_t _desc_str[32];

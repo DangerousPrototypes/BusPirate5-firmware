@@ -145,6 +145,17 @@ void rx_fifo_service(void)
 }
 #endif
 
+
+// Invoked when cdc when line state changed e.g connected/disconnected
+void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts) {
+  system_config.rts=rts;
+}
+
+//insert a byte into the queue
+void rx_fifo_add(char *c){
+    queue2_add_blocking(&rx_fifo, c);
+}
+
 // functions to access the ring buffer from other code
 // block until a byte is available, remove from buffer
 void rx_fifo_get_blocking(char *c)

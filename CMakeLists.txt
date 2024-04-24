@@ -215,13 +215,12 @@ foreach(revision ${revisions})
         pico_set_program_name(${revision} ${revision})
         pico_set_program_version(${revision} "0.1.0")
         pico_set_program_description(${revision} "Bus Pirate 5 Firmware for RP2040")
-
         pico_enable_stdio_uart(${revision} 0)
         pico_enable_stdio_usb(${revision} 0)
 
         #XOSC fix?
         target_compile_definitions(${revision} PUBLIC PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
-
+        target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=1)
         # Add the standard library to the build
         target_link_libraries(${revision} ${stdlibs} )
         target_include_directories(${revision} PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )

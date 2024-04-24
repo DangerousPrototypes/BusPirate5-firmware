@@ -388,6 +388,7 @@ enum T_translations{
 	T_HELP_UART_BRIDGE,
 	T_HELP_UART_BRIDGE_EXIT,
 	T_HELP_UART_BRIDGE_TOOLBAR,
+	T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO,
 	T_HELP_UART_NMEA,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations

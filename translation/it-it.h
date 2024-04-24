@@ -383,6 +383,7 @@ static char const * const it_it[]={
 	[T_HELP_UART_BRIDGE]="apre UART con IO dati grezzi, modalità bridge USB-seriale",
 	[T_HELP_UART_BRIDGE_EXIT]="UART bridge. Press Bus Pirate button to exit.",
 	[T_HELP_UART_BRIDGE_TOOLBAR]="ENABLE toolbar while bridge is active (default: disabled)",
+	[T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO]="Suppress local echo, don't echo back sent data",
 	[T_HELP_UART_NMEA]="analizza i dati GPS NMEA",
 
 };

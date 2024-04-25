@@ -26,6 +26,7 @@ static const struct ui_help_options hex_options[]= {
     {0,"-d", T_HELP_DISK_HEX_ADDR},
     {0,"-a", T_HELP_DISK_HEX_ASCII},
     {0,"-s <size>", T_HELP_DISK_HEX_SIZE},
+    {0,"-t <off>", T_HELP_DISK_HEX_OFF},
 };
 
 // Show flags
@@ -110,6 +111,7 @@ void disk_hex_handler(struct command_result *res){
     uint8_t flags = HEX_NONE;
     uint32_t bytes_read = 0;
     uint16_t page_lines = 0;
+    uint32_t seek_off = 0;
     command_var_t arg;
 
     cmdln_args_string_by_position(1, sizeof(location), location);
@@ -126,10 +128,14 @@ void disk_hex_handler(struct command_result *res){
         flags |= HEX_ASCII;
     if (!cmdln_args_find_flag_uint32('s'|0x20, &arg, &row_size))
         row_size = DEF_ROW_SIZE;
+    if (!cmdln_args_find_flag_uint32('t'|0x20, &arg, &seek_off))
+        seek_off = 0;
     // TODO: get current terminal height in lines
 #define GET_TERM_LINES()    10U
     page_lines = GET_TERM_LINES();
 
+    f_lseek(&fil, seek_off);
+    off = seek_off;
     while ( (bytes_read=hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
         off += bytes_read;
 #if 0

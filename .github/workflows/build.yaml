@@ -1,0 +1,65 @@
+name: CMake
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+  
+
+env:
+  BUILD_TYPE: Release
+  BUILD_TARGET: all
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Linux setup
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt update && sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+        echo "PICO_SDK_FETCH_FROM_GIT=TRUE" >> "$GITHUB_ENV"
+
+    - name: MacOS setup
+      if: ${{ matrix.os == 'macos-latest'}}
+      run: |
+        brew update && brew install --cask gcc-arm-embedded
+        echo "PICO_SDK_FETCH_FROM_GIT=TRUE" >> "$GITHUB_ENV"
+
+    - name: Windows setup
+      if: ${{ matrix.os == 'windows-latest'}}
+      run: |
+        choco install gcc-arm-embedded
+        git clone https://github.com/raspberrypi/pico-sdk.git -b master --single-branch "$Env:TEMP\pico-sdk"
+        echo "PICO_SDK_PATH=$Env:TEMP\pico-sdk" >> "$env:GITHUB_ENV"
+        cd "$Env:TEMP\pico-sdk"
+        git submodule init
+        git submodule update
+
+
+    - name: Configure CMake Linux & MacOS
+      if: ${{ matrix.os != 'windows-latest'}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Configure CMake Windows
+      if: ${{ matrix.os == 'windows-latest'}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-gcc.exe -DCMAKE_CXX_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-g++.exe -G "Unix Makefiles"
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --target ${{env.BUILD_TARGET}}
+    
+    - name: Save Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: buspirate 5 firmware
+        path: ${{github.workspace}}/build/*.uf2
+        retention-days: 7

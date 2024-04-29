@@ -355,6 +355,7 @@ static char const * const bs_ba[]={
 	[T_HELP_DISK_HEX_ADDR]="Show address offset",
 	[T_HELP_DISK_HEX_ASCII]="Show also ASCII dump",
 	[T_HELP_DISK_HEX_SIZE]="Set line size in bytes",
+	[T_HELP_DISK_HEX_OFF]="Set file read start offset in bytes",
 	[T_HELP_DISK_CAT]="print file contents as text",
 	[T_HELP_DISK_CAT_FILE]="Name of file in 8.3 format (example1.txt)",
 	[T_HELP_DISK_MKDIR]="create directory on internal storage",

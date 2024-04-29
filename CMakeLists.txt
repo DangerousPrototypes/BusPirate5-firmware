@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 #set(PICO_SDK_PATH "C:/pico113/pico-sdk")
  
 # Pull in Raspberry Pi Pico SDK (must be before project)
-include(pico_sdk_import.cmake)
+include(cmake/pico_sdk_import.cmake)
 
 set(PICO_BOARD pico)
 
@@ -230,10 +230,12 @@ endforeach()
 
 string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
 
-# by setting the following variable to TRUE, you are accepting LGPL3 license
-# and you are oblicated to distribute the binary and the source under LGPL3 license
-set(USE_LGPL3 FALSE CACHE BOOL "indicated if to include LGPL3 protected code")
-include(ansi_colours_import.cmake)
+
+# by default this project uses LGPL3 libraries, if you do not want to comply
+# with LGPL3 license, please set the following variable to FALSE, otherwise
+# you are oblicated to distribute the resulted binaries under LGPL3 license
+set(USE_LGPL3 TRUE CACHE BOOL "indicated if to include LGPL3 protected code")
+include(cmake/ansi_colours_import.cmake)
 if(USE_LGPL3)
 if(LEGACY_ANSI_COLOURS_ENABLED)
         target_link_libraries(bus_pirate5_rev10 lib_ansi_colours)

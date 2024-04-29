@@ -57,15 +57,19 @@ we need to do the following modifications (currently it is not needed because bu
     `FLASH(rx) : ORIGIN = 0x10000000, LENGTH = 16384k`
 3. save the file and locally commit the change.
 
-### Building LGPL3 protected component
-**NOTE** by doing the following you are accepting LGPL3 license terms, 
-and you are obligated to distribute the binaries and this code base under LGPL3 license and terms.  
+### Building without LGPL3 protected component
+**NOTE** by doing the following you may not need to distribute the binaries under LGPL3 license terms. 
 
-To compile the firmware with LGPL3 components, simply add the following flags to the configuration step above:  
-`-DUSE_LGPL3=YES -DLEGACY_ANSI_COLOURS_ENABLED=YES`
+To compile the firmware without LGPL3 components, simply add the following flags to the configuration step above:  
+`-DUSE_LGPL3=NO -DLEGACY_ANSI_COLOURS_ENABLED=NO`
 
 ## other open source licenses
 This project uses code from the following licenses:  
 * LGPL3  
+* BSD 3 clause 
 
 More information on the licenses and components being used can be found [here](docs/licenses.md).  
+
+## Contributing
+
+please see [contributing.md](docs/contributing.md)

@@ -193,10 +193,12 @@ void ui_term_color_background(uint32_t rgb)
 
 uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_background)
 {
+    uint32_t count = 0;
+
     switch (system_config.terminal_ansi_color)
     {
     case UI_TERM_FULL_COLOR:
-        uint32_t i=printf("\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm", 
+        count = printf("\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm", 
                         (uint8_t)(rgb_text>>16), 
                         (uint8_t)(rgb_text>>8), 
                         (uint8_t)(rgb_text), 
@@ -204,12 +206,10 @@ uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_backgroun
                         (uint8_t)(rgb_background>>8), 
                         (uint8_t)(rgb_background)       
                     );
-        return i;
+        return count;
     #ifdef ANSI_COLOR_256
     case UI_TERM_256:
-        uint8_t ansi_256_text = ansi256_from_rgb(rgb_text);
-        uint8_t ansi_256_background = ansi256_from_rgb(rgb_background);
-        uint32_t count = printf("\x1b[38;5;%hhd;48;5;%hhdm",ansi_256_text,ansi_256_background);
+        count = printf("\x1b[38;5;%hhd;48;5;%hhdm",ansi256_from_rgb(rgb_text),ansi256_from_rgb(rgb_background));
         return count;
     #endif
     case UI_TERM_NO_COLOR:

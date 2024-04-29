@@ -26,20 +26,92 @@ static const struct ui_help_options hex_options[]= {
     {0,"-d", T_HELP_DISK_HEX_ADDR},
     {0,"-a", T_HELP_DISK_HEX_ASCII},
     {0,"-s <size>", T_HELP_DISK_HEX_SIZE},
+    {0,"-t <off>", T_HELP_DISK_HEX_OFF},
 };
+
+// Show flags
+#define HEX_NONE   0x00
+#define HEX_ADDR   0x01
+#define HEX_ASCII  0x02
+
+// shown_off:  starting shown offset, used for display only
+// page_lines: number of lines per page. 0 means no paging
+// row_size:   row size in bytes
+// flags:      show flags (address and ascii only for now)
+static uint32_t hex_dump(FIL *fil, uint32_t shown_off, const uint16_t page_lines,
+        const uint16_t row_size, const uint8_t flags)
+{
+    const bool flag_addr = flags & HEX_ADDR;
+    const bool flag_ascii = flags & HEX_ASCII;
+    const uint32_t page_size = page_lines ? page_lines * row_size : (uint32_t)-1;
+    char buf[512];
+    uint32_t buf_off = 0;
+    uint32_t line_start_off = 0;
+    uint32_t tot_read = 0;
+    bool print_addr = false;
+
+    printf("\r\n");
+    if (flag_addr)
+        print_addr = true;
+    UINT bytes_read = 0;
+    while (true) {
+        f_read(fil, &buf, MIN(sizeof(buf), page_size), &bytes_read);
+        tot_read += bytes_read;
+        if (!bytes_read) {
+            // Flush last line
+            if (flag_ascii) {
+                uint8_t rem = buf_off % row_size;
+                if (rem) {
+                    for (uint8_t j=0; j<row_size-rem; j++)
+                        printf("   ");
+                    printf(" |");
+                    for (uint8_t j=0; j<rem; j++)
+                        printf("%c", PRINTABLE(buf[line_start_off+j]));
+                    printf("|");
+                }
+            }
+            break;
+        }
+        for (uint16_t i=0; i<bytes_read; i++) {
+            if (print_addr) {
+                print_addr = false;
+                printf("%04x  ", shown_off);
+            }
+            printf("%02x ", buf[i]);
+            buf_off++;
+            shown_off++;
+            if (!(buf_off % row_size)) {
+                if (flag_ascii) {
+                    printf(" |");
+                    for (uint8_t j=0; j<row_size; j++)
+                        printf("%c", PRINTABLE(buf[line_start_off+j]));
+                    printf("|");
+                }
+                printf("\r\n");
+                if (flag_addr)
+                    print_addr = true;
+                line_start_off = buf_off;
+            }
+        }
+        if (tot_read >= page_size)
+            break;
+    }
+    return bytes_read;
+}
+
 void disk_hex_handler(struct command_result *res){
     //check help
     if(ui_help_show(res->help_flag,hex_usage,count_of(hex_usage), &hex_options[0],count_of(hex_options) )) return;
 
     FIL fil;        /* File object needed for each open file */
     FRESULT fr;     /* FatFs return code */
-    char file[512];
     char location[32];
     uint32_t off = 0;
-    uint32_t tmp_off = 0;
     uint32_t row_size = DEF_ROW_SIZE;
-    bool flag_addr = false;
-    bool flag_ascii = false;
+    uint8_t flags = HEX_NONE;
+    uint32_t bytes_read = 0;
+    uint16_t page_lines = 0;
+    uint32_t seek_off = 0;
     command_var_t arg;
 
     cmdln_args_string_by_position(1, sizeof(location), location);
@@ -50,52 +122,35 @@ void disk_hex_handler(struct command_result *res){
         return;
     }
 
-    flag_addr = cmdln_args_find_flag('d'|0x20);
-    flag_ascii = cmdln_args_find_flag('a'|0x20);
+    if (cmdln_args_find_flag('d'|0x20))
+       flags |= HEX_ADDR;
+    if (cmdln_args_find_flag('a'|0x20))
+        flags |= HEX_ASCII;
     if (!cmdln_args_find_flag_uint32('s'|0x20, &arg, &row_size))
         row_size = DEF_ROW_SIZE;
+    if (!cmdln_args_find_flag_uint32('t'|0x20, &arg, &seek_off))
+        seek_off = 0;
+    // TODO: get current terminal height in lines
+#define GET_TERM_LINES()    10U
+    page_lines = GET_TERM_LINES();
 
-    printf("\r\n");
-    if (flag_addr)
-        printf("%04x  ", off);
-    while (true) {
-        UINT bytes_read;
-        f_read(&fil, &file, sizeof(file),&bytes_read);
-        if (!bytes_read) {
-            // Flush last line
-            if (flag_ascii) {
-                uint8_t rem = off % row_size;
-                if (rem) {
-                    for (uint8_t j=0; j<row_size-rem; j++)
-                        printf("   ");
-                    printf(" |");
-                    for (uint8_t j=0; j<rem; j++)
-                        printf("%c", PRINTABLE(file[tmp_off+j]));
-                    printf("|");
-                }
-            }
+    f_lseek(&fil, seek_off);
+    off = seek_off;
+    while ( (bytes_read=hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
+        off += bytes_read;
+#if 0
+        // TODO: pseudo code
+        key = GET_KEY();
+        if (key == 'x')
             break;
-        }
-        for (uint16_t i=0; i<bytes_read; i++) {
-            printf("%02x ", file[i]);
-            off++;
-            if (!(off % row_size)) {
-                if (flag_ascii) {
-                    printf(" |");
-                    for (uint8_t j=0; j<row_size; j++)
-                        printf("%c", PRINTABLE(file[tmp_off+j]));
-                    printf("|");
-                }
-                printf("\r\n");
-                if (flag_addr)
-                    printf("%04x  ", off);
-                tmp_off = off;
-            }
-        }
+#else
+        // TODO: remove when above implemented
+        // Dummy temporary code to separate page
+        printf("----\r\n");
+#endif
     }
-    printf("\r\n");
-    /* Close the file */
     f_close(&fil);
+    printf("\r\n");
 }
 
 static const char * const cat_usage[]= {

@@ -25,6 +25,7 @@ static const char * const usage[]= {
 static const struct ui_help_options options[]= {
 {1,"", T_HELP_UART_BRIDGE}, //command help
     {0, "-t", T_HELP_UART_BRIDGE_TOOLBAR},
+    {0,"-s", T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO},
     {0,"-h",T_HELP_FLAG}, //help
 };
 
@@ -43,6 +44,8 @@ void hduart_bridge_handler(struct command_result *res){
         system_config.terminal_ansi_statusbar_pause = true;
     }
 
+    bool suppress_local_echo = cmdln_args_find_flag('s'|0x20);
+
    	system_bio_claim(true, BIO2, BP_PIN_MODE, label);
     bio_output(BIO2);
     bio_put(BIO2, system_config.rts); 
@@ -53,6 +56,7 @@ void hduart_bridge_handler(struct command_result *res){
         bio_put(BIO2, !system_config.rts); 
         if(rx_fifo_try_get(&c)){
             hwuart_pio_write(c);
+            if(!suppress_local_echo) tx_fifo_put(&c);
         }
         if(hwuart_pio_read(&raw, &cooked)){
             tx_fifo_put(&cooked);

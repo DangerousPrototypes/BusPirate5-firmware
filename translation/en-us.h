@@ -376,6 +376,7 @@ static char const * const en_us[]={
 	[T_HELP_DISK_HEX_ADDR]="Show address offset",
 	[T_HELP_DISK_HEX_ASCII]="Show also ASCII dump",
 	[T_HELP_DISK_HEX_SIZE]="Set line size in bytes",
+	[T_HELP_DISK_HEX_OFF]="Set file read start offset in bytes",
 	[T_HELP_DISK_CAT]="print file contents as text",
 	[T_HELP_DISK_CAT_FILE]="Name of file in 8.3 format (example1.txt)",
 	[T_HELP_DISK_MKDIR]="create directory on internal storage",	
@@ -404,6 +405,7 @@ static char const * const en_us[]={
 	[T_HELP_UART_BRIDGE]="open UART with raw data IO, usb to serial bridge mode",
 	[T_HELP_UART_BRIDGE_EXIT]="UART bridge. Press Bus Pirate button to exit.",
 	[T_HELP_UART_BRIDGE_TOOLBAR]="ENABLE toolbar while bridge is active (default: disabled)",
+	[T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO]="Suppress local echo, don't echo back sent data",
 	[T_HELP_UART_NMEA]="parse NMEA GPS data",
 };
 

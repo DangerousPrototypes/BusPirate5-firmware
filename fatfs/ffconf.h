@@ -197,7 +197,7 @@
 / System Configurations
 /---------------------------------------------------------------------------*/
 
-#define FF_FS_TINY 0
+#define FF_FS_TINY 1
 /* This option switches tiny buffer configuration. (0:Normal or 1:Tiny)
 /  At the tiny configuration, size of file object (FIL) is shrinked FF_MAX_SS bytes.
 /  Instead of private sector buffer eliminated from the file object, common sector
@@ -232,7 +232,7 @@
 /  bit1=1: Do not trust last allocated cluster number in the FSINFO.
 */
 
-#define FF_FS_LOCK 5
+#define FF_FS_LOCK 3
 /* The option FF_FS_LOCK switches file lock function to control duplicated file open
 /  and illegal operation to open objects. This option must be 0 when FF_FS_READONLY
 /  is 1.

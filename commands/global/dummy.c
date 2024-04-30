@@ -205,7 +205,7 @@ void dummy_handler(struct command_result *res)
         //if the file was closed
         printf("File %s closed\r\n", file);
         //make the file available to the host
-        refresh_usbmsdrive();
+        //refresh_usbmsdrive();
 
         /* Open file and read */
         //open the file

@@ -7,6 +7,7 @@
 #include "opt_args.h"
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
+#include "fatfs/diskio.h"
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -78,9 +79,14 @@ uint8_t storage_mount(void){
 }
 
 void storage_unmount(void){
+    //make sure the low level storage is consistent
+    disk_ioctl(fs.pdrv, CTRL_SYNC, 0);
+    f_unmount("");
     system_config.storage_available=false;
     system_config.storage_mount_error=0;
+#if BP5_REV == 8 || BP5_REV == 9
     printf("Storage removed\r\n");
+#endif
 }
 
 bool storage_detect(void){        

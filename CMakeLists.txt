@@ -152,6 +152,7 @@ set(bp5_common
 
         # binary mode
         mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
+        mode/binloopback.c mode/binloopback.h
         mode/logicanalyzer.h mode/logicanalyzer.c mode/sump.c mode/sump.h
 
         # displays

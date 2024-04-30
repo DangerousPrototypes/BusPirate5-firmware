@@ -82,6 +82,7 @@ void tud_cdc_rx_cb(uint8_t itf)
         }     
     }
 
+    //TODO: simple RX, with functions to fill RX internally for bin mode in the terminal
 #if(0)
     if(itf==1 && tud_cdc_n_available(1))
     {

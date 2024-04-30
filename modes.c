@@ -59,6 +59,9 @@
 #ifdef 	BP_USE_DUMMY2
     #include "dummy2.h"
 #endif 
+#ifdef BP_USE_BINLOOPBACK
+    #include "mode/binloopback.h"
+#endif
 
 // nulfuncs
 // these are the dummy functions when something ain't used 
@@ -584,7 +587,36 @@ struct _mode modes[MAXPROTO]={{
     dummy1_commands,             // mode specific commands
     &dummy1_commands_count,      // mode specific commands count    
     "DUMMY1",				// friendly name (promptname)
-}
+},
+#endif
+#ifdef BP_USE_BINLOOPBACK
+// Remove the unnecessary opening brace '{'
+{
+    binloopback_open,				// start
+    binloopback_open_read,				// start with read
+    binloopback_close,				// stop
+    binloopback_close,				// stop with read
+    binloopback_write,				// send(/read) max 32 bit
+    nullfunc1_temp,				// read max 32 bit
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
+    binloopback_periodic,				// service to regular poll whether a byte ahs arrived
+    hwled_macro,				// macro
+    binloopback_setup,				// setup UI
+    binloopback_setup_exc,			// real setup
+    binloopback_cleanup,				// cleanup for HiZ
+    //HWLED_pins,				// display pin config
+    hwled_settings,				// display settings
+    hwled_help,				// display small help about the protocol
+    binloopback_commands,                   // mode specific commands
+    &binloopback_commands_count,                   // mode specific commands count    
+    "BIN"				// friendly name (promptname)
+},
 #endif
 
 };

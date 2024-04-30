@@ -380,6 +380,45 @@ void binReset(void)
 
 }
 
+//0x00 reset
+//w/W Power supply (off/ON)
+//p/P Pull-up resistors (off/ON)
+//a/A/@ x Set IO x state (low/HI/READ)
+//v x/V x Show volts on IOx (once/CONT)
+enum {
+    BM_RESET = 0,
+    BM_POWER,
+    BM_PULLUP,
+    BM_AUX,
+    BM_ADC,
+};
+
+//functions for global binmode commands
+// maybe splitting global commands from mode commands 0-127, 127-255 might speed processing?
+typedef struct _global_binmode{
+	void (*global_reset)(void);			// reset
+    void (*global_power)(void);			// power
+    void (*global_pullup)(void);		// pullup
+    void (*global_aux)(void);			// aux
+    void (*global_adc)(void);			// adc
+} _global_binmode;
+
+// handler needs to be cooperative multitasking until mode is enabled
+bool binmode_mainloop(void){
+    //could activate binmode just by opening the port?
+    //if(!tud_cdc_n_connected(1)) return false;  
+    //if(!tud_cdc_n_available(1)) return false;
+    script_enabled();
+    while(true){
+        //do an echo test so we can interface via a mode ;)
+        if(tud_cdc_n_available(1)){
+            char c;
+            bin_rx_fifo_get_blocking(&c);
+            bin_tx_fifo_put(c);
+        }
+
+    }
+}
 
 
 unsigned char port_read(unsigned char inByte)

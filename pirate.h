@@ -43,6 +43,7 @@
 //#define 	BP_USE_DUMMY1
 //#define 	BP_USE_DUMMY2
 #define     BP_USE_SCOPE
+#define     BP_USE_BINLOOPBACK
 
 // enable display support
 //#define		DISPLAY_USE_HD44780	// is always enabled

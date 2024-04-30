@@ -5,6 +5,7 @@
 #include "hardware/spi.h"
 #include "hardware/timer.h"
 #include "hardware/uart.h"
+#include "pico/mutex.h"
 #include "ws2812.pio.h"
 #include "pirate.h"
 #include "system_config.h"
@@ -46,9 +47,8 @@
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
 #include "msc_disk.h"
-lock_core_t core;
-spin_lock_t *spi_spin_lock;
-uint spi_spin_lock_num;
+
+static mutex_t spi_mutex;
 
 void core1_entry(void);
 
@@ -81,6 +81,10 @@ int main(){
         #error "No platform revision defined. Check pirate.h."
     #endif
 
+    // SPI bus is used from here
+    // setup the mutex for spi arbitration
+    mutex_init(&spi_mutex);
+
     //init psu pins 
     psucmd_init();
    
@@ -93,10 +97,6 @@ int main(){
     // TF flash card CS pin init
     storage_init();
 
-    // SPI bus is used from here
-    // setup the spinlock for spi arbitration
-    spi_spin_lock_num=spin_lock_claim_unused(true);
-    spi_spin_lock=spin_lock_init(spi_spin_lock_num);
 
     // configure the defaults for shift register attached hardware
     shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN));
@@ -472,24 +472,11 @@ void lcd_irq_enable(int16_t repeat_interval){
 
 //gives protected access to spi (core safe)
 void spi_busy_wait(bool enable){
-    static bool busy=false;
-
     if(!enable){
-        busy=false;
-        return;
+        // the check is to protect against the first csel_deselect call not matched by a csel_select
+        if (lock_is_owner_id_valid(spi_mutex.owner))
+            mutex_exit(&spi_mutex);
+    }else{
+        mutex_enter_blocking(&spi_mutex);
     }
-    do{
-        //uint32_t save = spin_lock_unsafe_blocking(spi_spin_lock);
-        spin_lock_unsafe_blocking(spi_spin_lock);
-        if(busy){
-            spin_unlock_unsafe(spi_spin_lock);
-            //spin_unlock(spi_spin_lock, save);
-        }else{
-            busy=true;
-            spin_unlock_unsafe(spi_spin_lock);
-            //spin_unlock(spi_spin_lock, save);
-            return;
-        }
-
-    }while(true);
 }

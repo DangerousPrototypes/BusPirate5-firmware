@@ -208,9 +208,10 @@ int main(){
     bool has_been_connected = false;
     while(1){
 
-        if(script_entry()){ //enter scripting mode?
-            bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
-        }
+        script_mode(); //temp co-op multitask
+        //if(script_entry()){ //enter scripting mode?
+        //    bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
+        //}
 
         if (tud_cdc_n_connected(0)){
             if(!has_been_connected){

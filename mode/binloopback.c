@@ -16,8 +16,6 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "ui/ui_help.h"
-#include "commands/uart/nmea.h"
-#include "commands/uart/bridge.h"
 
 static struct _binloopback_mode_config mode_config;
 static struct command_attributes periodic_attributes;
@@ -49,19 +47,14 @@ uint32_t binloopback_setup_exc(void){
 }
 
 void binloopback_periodic(void){
-	if(mode_config.async_print && uart_is_readable(M_UART_PORT)){
-		//printf("ASYNC: %d\r\n", uart_getc(M_UART_PORT));
-		uint32_t temp = uart_getc(M_UART_PORT);
-		ui_format_print_number_2(&periodic_attributes,  &temp);
+    char c;
+	if(mode_config.async_print && bin_tx_fifo_try_get(&c)){
+        uint32_t temp=c;
+		ui_format_print_number_2(&periodic_attributes, &temp);
 	}
 }
 
 void binloopback_open(struct _bytecode *result, struct _bytecode *next){	
-	//clear FIFO and enable UART
-	while(uart_is_readable(M_UART_PORT)){
-		uart_getc(M_UART_PORT);
-	}
-
     mode_config.async_print=false;
     result->data_message=t[T_UART_OPEN];
 }
@@ -77,17 +70,14 @@ void binloopback_close(struct _bytecode *result, struct _bytecode *next){
 }
 
 void binloopback_write(struct _bytecode *result, struct _bytecode *next){
-	if(mode_config.blocking){
-		uart_putc_raw(M_UART_PORT, result->out_data);
-	}else{
-		uart_putc_raw(M_UART_PORT, result->out_data);
-	}
+    char c=result->out_data;
+    bin_rx_fifo_add(&c);
 }
 
 void binloopback_read(struct _bytecode *result, struct _bytecode *next){
 	uint32_t timeout=0xfff;
-
-	while(!uart_is_readable(M_UART_PORT)){
+    char c;
+	while(!bin_tx_fifo_try_get(&c)){
 		timeout--;
 		if(!timeout){
 			result->error=SRES_ERROR;
@@ -95,17 +85,10 @@ void binloopback_read(struct _bytecode *result, struct _bytecode *next){
 			return;			
 		}
 	}
-
-	if(uart_is_readable(M_UART_PORT)){
-		result->in_data=uart_getc(M_UART_PORT);
-	}else{
-		result->error=SRES_ERROR;
-		result->error_message=t[T_UART_NO_DATA_READ];
-	}
+	result->in_data=c;
 }
 
 void binloopback_cleanup(void){
-
 	bio_init();
 }
 

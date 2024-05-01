@@ -235,6 +235,9 @@ foreach(revision ${revisions})
 
         #XOSC fix?
         target_compile_definitions(${revision} PUBLIC PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
+        # useful for debug builds
+        target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=$<CONFIG:DEBUG>)
+        target_compile_definitions(${revision} PUBLIC PICO_STACK_SIZE=4096)        
 
         # Add the standard library to the build
         target_link_libraries(${revision} ${stdlibs} )

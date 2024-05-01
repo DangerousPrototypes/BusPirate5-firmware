@@ -4209,7 +4209,7 @@ FRESULT f_close (
 #endif
 		}
 		//reconnect the MSD to refresh the file system on the PC side
-		refresh_usbmsdrive();
+		if (fp->flag & FA_WRITE) refresh_usbmsdrive();
 	}
 	return res;
 }

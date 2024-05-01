@@ -124,31 +124,13 @@ enum _bp_bio_pins{
 };
 
 // here we map the short names to 
-// the buffer IO pin number 
-static const uint8_t bio2bufiopin[]=
-{
-    BUFIO0,
-    BUFIO1,
-    BUFIO2,
-    BUFIO3,
-    BUFIO4,
-    BUFIO5,
-    BUFIO6,
-    BUFIO7
-};
+// the buffer IO pin number
+extern const uint8_t bio2bufiopin[8];
+
 // here we map the short names to 
 // the buffer direction pin number
-static const uint8_t bio2bufdirpin[]=
-{
-    BUFDIR0,
-    BUFDIR1,
-    BUFDIR2,
-    BUFDIR3,
-    BUFDIR4,
-    BUFDIR5,
-    BUFDIR6,
-    BUFDIR7
-};
+extern const uint8_t bio2bufdirpin[8];
+
 
 // SPI Defines
 // We are going to use SPI 0 for on-board peripherals

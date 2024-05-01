@@ -20,3 +20,25 @@ uint32_t* hw_pin_voltage_ordered[]={
     &hw_adc_voltage[HW_ADC_MUX_BPIO6],
     &hw_adc_voltage[HW_ADC_MUX_BPIO7]
 };
+const uint8_t bio2bufiopin[] =
+    {
+        BUFIO0,
+        BUFIO1,
+        BUFIO2,
+        BUFIO3,
+        BUFIO4,
+        BUFIO5,
+        BUFIO6,
+        BUFIO7};
+// here we map the short names to
+// the buffer direction pin number
+const uint8_t bio2bufdirpin[] =
+    {
+        BUFDIR0,
+        BUFDIR1,
+        BUFDIR2,
+        BUFDIR3,
+        BUFDIR4,
+        BUFDIR5,
+        BUFDIR6,
+        BUFDIR7};

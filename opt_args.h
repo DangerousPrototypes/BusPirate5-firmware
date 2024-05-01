@@ -1,4 +1,4 @@
-#define MAX_COMMAND_LENGTH 9
+#define MAX_COMMAND_LENGTH 10
 
 typedef struct command_result {
 	uint8_t number_format;

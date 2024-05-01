@@ -11,13 +11,7 @@
 #include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "modes.h"
 
-void script_print(const char *str) 
-{
-    for(uint8_t i=0; i<strlen(str); i++)
-    {
-        bin_tx_fifo_put(str[i]);
-    }
-}
+
 
 void script_send(const char *c, uint32_t len) 
 {

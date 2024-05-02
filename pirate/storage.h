@@ -13,13 +13,7 @@ uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t
 uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t, uint8_t count);
 bool storage_ls(const char *location, const char *ext, const uint8_t flags);
 
-static const char storage_fat_type_labels[][8]={
-    "FAT12",
-    "FAT16",
-    "FAT32",
-    "EXFAT",
-    "UNKNOWN"
-};
+extern const char storage_fat_type_labels[5][8];
 
 #define LS_FILES    0x01
 #define LS_DIRS     0x02

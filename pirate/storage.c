@@ -28,6 +28,13 @@ uint8_t* buf = (uint8_t*)buf32;
 UINT br;
 UINT bw;
 
+const char storage_fat_type_labels[][8] = {
+    "FAT12",
+    "FAT16",
+    "FAT32",
+    "EXFAT",
+    "UNKNOWN"};
+
 const char *fresult_msg[]={
 	[FR_OK]="ok",                               /* (0) Succeeded */
 	[FR_DISK_ERR]="disk error",                 /* (1) A hard error occurred in the low level disk I/O layer */

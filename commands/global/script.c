@@ -48,17 +48,17 @@ void script_handler(struct command_result *res){
     bool pause_for_input=cmdln_args_find_flag('p'|0x20);
     bool show_comments=!cmdln_args_find_flag('d'|0x20);
     bool exit_on_error=cmdln_args_find_flag('e'|0x20);
-    if(script_exec(pause_for_input, show_comments, false, exit_on_error)) res->error=true;
+    char location[32];
+    cmdln_args_string_by_position(1, sizeof(location), location);    
+    if(script_exec(location, pause_for_input, show_comments, false, exit_on_error)) res->error=true;
 }
 
 // non zero return value indicates error
-bool script_exec(bool pause_for_input, bool show_comments, bool show_tip, bool exit_on_error){
+bool script_exec(char *location, bool pause_for_input, bool show_comments, bool show_tip, bool exit_on_error){
 
     FIL fil;		/* File object needed for each open file */
     FRESULT fr;     /* FatFs return code */    
-    char file[512];
-    char location[32];
-    cmdln_args_string_by_position(1, sizeof(location), location);    
+    char file[512];    
     fr = f_open(&fil, location, FA_READ);	
     if (fr != FR_OK) {
         storage_file_error(fr);

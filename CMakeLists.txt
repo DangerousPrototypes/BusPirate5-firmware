@@ -119,6 +119,7 @@ set(bp5_common
         mode/dummy1.c mode/dummy1.h
 
         # UI
+        ui/ui_button.c ui/ui_button.h
         ui/ui_cmdln.c ui/ui_cmdln.h
         ui/ui_process.h ui/ui_process.c
         ui/ui_flags.h

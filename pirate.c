@@ -25,7 +25,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
-#include "ui/ui_button.h"
+#include "commands/global/button_scr.h"
 #include "commands/global/freq.h"
 #include "queue.h"
 #include "usb_tx.h"
@@ -301,7 +301,7 @@ int main(){
                 }
                 if(button_check_irq(0)){
                     button_irq_disable(0);
-                    ui_button_exec(); //if button pressed, run button.scr script
+                    button_exec(); //if button pressed, run button.scr script
                     bp_state=BP_SM_COMMAND_PROMPT;  //return to command prompt
                 }
                 break;

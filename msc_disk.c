@@ -37,6 +37,10 @@
 
 // whether host does safe-eject
 bool ejected = false;
+//latch the ejected status until read by the host
+static bool latch_ejected = false;
+
+static bool writable = true;
 
 // Some MCU doesn't have enough 8KB SRAM to store the whole disk
 // We will use Flash as read-only disk with board that has
@@ -149,10 +153,12 @@ bool tud_msc_test_unit_ready_cb(uint8_t lun)
   (void) lun;
 
   // RAM disk is ready until ejected
-  if (ejected) {
+  if (ejected || latch_ejected) {
     tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
+    latch_ejected = false;
     return false;
   }
+  tud_msc_set_sense(lun, 0x00, 0x00, 0x00);
 
   return true;
 }
@@ -201,6 +207,7 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
     }else
     {
       // unload disk storage
+      latch_ejected = true;
       ejected = true;
     }
   }
@@ -312,6 +319,44 @@ int32_t tud_msc_scsi_cb (uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, 
   }
 
   return resplen;
+}
+
+bool tud_msc_is_writable_cb(uint8_t lun)
+{
+  return writable;
+}
+
+//eject and insert the usbms drive to force the host to sync its contents
+void refresh_usbmsdrive(void)
+{
+  // eject the usb drive
+  tud_msc_start_stop_cb(0, 0, 0, 1);
+  // insert the drive back
+  tud_msc_start_stop_cb(0, 0, 1, 1);
+}
+void make_usbmsdrive_readonly(void)
+{
+  if (!writable)
+    return;
+  // eject the usb drive
+  tud_msc_start_stop_cb(0, 0, 0, 1);
+  // make sure the storage is synced
+  disk_ioctl(0, CTRL_SYNC, 0);
+  writable = false;
+  // insert the drive back
+  tud_msc_start_stop_cb(0, 0, 1, 1);
+}
+void make_usbmsdrive_writable(void)
+{
+  if(writable)
+    return;
+  // eject the usb drive
+  tud_msc_start_stop_cb(0, 0, 0, 1);
+  //make sure the storage is synced
+  disk_ioctl(0, CTRL_SYNC, 0);
+  writable = true;
+  //insert the drive back
+  tud_msc_start_stop_cb(0, 0, 1, 1);
 }
 
 #endif

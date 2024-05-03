@@ -21,7 +21,7 @@
 
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of device I/O functions */
-
+#include "msc_disk.h"
 
 /*--------------------------------------------------------------------------
 
@@ -4208,6 +4208,8 @@ FRESULT f_close (
 			unlock_fs(fs, FR_OK);		/* Unlock volume */
 #endif
 		}
+		//reconnect the MSD to refresh the file system on the PC side
+		if (fp->flag & FA_WRITE) refresh_usbmsdrive();
 	}
 	return res;
 }
@@ -5000,6 +5002,8 @@ FRESULT f_unlink (
 #endif
 				}
 				if (res == FR_OK) res = sync_fs(fs);
+				//reconnect the MSD to refresh the file system on the PC side
+				refresh_usbmsdrive();
 			}
 		}
 		FREE_NAMBUF();
@@ -5081,6 +5085,8 @@ FRESULT f_mkdir (
 				}
 				if (res == FR_OK) {
 					res = sync_fs(fs);
+					//reconnect the MSD to refresh the file system on the PC side
+					refresh_usbmsdrive();
 				}
 			} else {
 				remove_chain(&sobj, dcl, 0);		/* Could not register, remove the allocated cluster */

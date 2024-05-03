@@ -48,15 +48,23 @@ void ff_memfree (
 
 //const osMutexDef_t Mutex[FF_VOLUMES];	/* Table of CMSIS-RTOS mutex */
 
+mutex_t Mutex[FF_VOLUMES];
 
-int ff_cre_syncobj (	/* 1:Function succeeded, 0:Could not create the sync object */
-	BYTE vol,			/* Corresponding volume (logical drive number) */
-	FF_SYNC_t* sobj		/* Pointer to return the created sync object */
+int ff_cre_syncobj(				   /* 1:Function succeeded, 0:Could not create the sync object */
+				   BYTE vol,	   /* Corresponding volume (logical drive number) */
+				   FF_SYNC_t *sobj /* Pointer to return the created sync object */
 )
 {
+	
+	/* PICO SDK */
+	if (vol >= FF_VOLUMES)
+		return 0;
+	mutex_init(&Mutex[vol]);
+	*sobj = &Mutex[vol];
+	return 1;
 	/* Win32 */
-	*sobj = CreateMutex(NULL, FALSE, NULL);
-	return (int)(*sobj != INVALID_HANDLE_VALUE);
+//	*sobj = CreateMutex(NULL, FALSE, NULL);
+//	return (int)(*sobj != INVALID_HANDLE_VALUE);
 
 	/* uITRON */
 //	T_CSEM csem = {TA_TPRI,1,1};
@@ -90,8 +98,10 @@ int ff_del_syncobj (	/* 1:Function succeeded, 0:Could not delete due to an error
 	FF_SYNC_t sobj		/* Sync object tied to the logical drive to be deleted */
 )
 {
+	/* PICO SDK */
+	return 1;
 	/* Win32 */
-	return (int)CloseHandle(sobj);
+//	return (int)CloseHandle(sobj);
 
 	/* uITRON */
 //	return (int)(del_sem(sobj) == E_OK);
@@ -121,8 +131,11 @@ int ff_req_grant (	/* 1:Got a grant to access the volume, 0:Could not get a gran
 	FF_SYNC_t sobj	/* Sync object to wait */
 )
 {
+	/* PICO SDK */
+	return mutex_enter_timeout_ms(sobj, FR_TIMEOUT);
+	
 	/* Win32 */
-	return (int)(WaitForSingleObject(sobj, FF_FS_TIMEOUT) == WAIT_OBJECT_0);
+//	return (int)(WaitForSingleObject(sobj, FF_FS_TIMEOUT) == WAIT_OBJECT_0);
 
 	/* uITRON */
 //	return (int)(wai_sem(sobj) == E_OK);
@@ -150,8 +163,11 @@ void ff_rel_grant (
 	FF_SYNC_t sobj	/* Sync object to be signaled */
 )
 {
+	/* PICO SDK */
+	mutex_exit(sobj);
+
 	/* Win32 */
-	ReleaseMutex(sobj);
+//	ReleaseMutex(sobj);
 
 	/* uITRON */
 //	sig_sem(sobj);

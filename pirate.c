@@ -5,6 +5,7 @@
 #include "hardware/spi.h"
 #include "hardware/timer.h"
 #include "hardware/uart.h"
+#include "pico/mutex.h"
 #include "ws2812.pio.h"
 #include "pirate.h"
 #include "system_config.h"
@@ -24,6 +25,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
+#include "commands/global/button_scr.h"
 #include "commands/global/freq.h"
 #include "queue.h"
 #include "usb_tx.h"
@@ -45,10 +47,9 @@
 #include "commands/global/w_psu.h"
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
+#include "msc_disk.h"
 
-lock_core_t core;
-spin_lock_t *spi_spin_lock;
-uint spi_spin_lock_num;
+static mutex_t spi_mutex;
 
 void core1_entry(void);
 
@@ -81,6 +82,10 @@ int main(){
         #error "No platform revision defined. Check pirate.h."
     #endif
 
+    // SPI bus is used from here
+    // setup the mutex for spi arbitration
+    mutex_init(&spi_mutex);
+
     //init psu pins 
     psucmd_init();
    
@@ -93,10 +98,6 @@ int main(){
     // TF flash card CS pin init
     storage_init();
 
-    // SPI bus is used from here
-    // setup the spinlock for spi arbitration
-    spi_spin_lock_num=spin_lock_claim_unused(true);
-    spi_spin_lock=spin_lock_init(spi_spin_lock_num);
 
     // configure the defaults for shift register attached hardware
     shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN));
@@ -205,11 +206,27 @@ int main(){
     uint32_t value;
     struct prompt_result result; 
     alarm_id_t screensaver;
-
+    bool has_been_connected = false;
     while(1){
 
         if(script_entry()){ //enter scripting mode?
             bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
+        }
+
+        if (tud_cdc_n_connected(0)){
+            if(!has_been_connected){
+                has_been_connected = true;
+                make_usbmsdrive_readonly();
+                //sync with the host 
+                storage_unmount();
+                storage_mount();
+            }
+        }
+        else{
+            if (has_been_connected){
+                has_been_connected = false;
+            }
+            make_usbmsdrive_writable();
         }
 
         switch(bp_state){
@@ -252,8 +269,8 @@ int main(){
                     printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
                 }
                 //printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
-                break;
-            
+                button_irq_enable(0, &button_irq_callback); //enable button interrupt
+                break;                 
             case BP_SM_GET_INPUT:
                 //helpers_mode_periodic();
                 //it seems like we need an array where we can add our function for periodic service?
@@ -280,7 +297,13 @@ int main(){
                         }
                         printf("\r\n");
                         bp_state=BP_SM_PROCESS_COMMAND;
+                        button_irq_disable(0);
                         break;
+                }
+                if(button_check_irq(0)){
+                    button_irq_disable(0);
+                    button_exec(); //if button pressed, run button.scr script
+                    bp_state=BP_SM_COMMAND_PROMPT;  //return to command prompt
                 }
                 break;
             
@@ -301,6 +324,7 @@ int main(){
                     screensaver = add_alarm_in_ms(system_config.lcd_timeout*300000, ui_term_screensaver_enable, NULL, false);
                 }
                 bp_state=BP_SM_GET_INPUT;
+                button_irq_enable(0, &button_irq_callback);
                 break;
             
             default:
@@ -457,24 +481,11 @@ void lcd_irq_enable(int16_t repeat_interval){
 
 //gives protected access to spi (core safe)
 void spi_busy_wait(bool enable){
-    static bool busy=false;
-
     if(!enable){
-        busy=false;
-        return;
+        // the check is to protect against the first csel_deselect call not matched by a csel_select
+        if (lock_is_owner_id_valid(spi_mutex.owner))
+            mutex_exit(&spi_mutex);
+    }else{
+        mutex_enter_blocking(&spi_mutex);
     }
-    do{
-        //uint32_t save = spin_lock_unsafe_blocking(spi_spin_lock);
-        spin_lock_unsafe_blocking(spi_spin_lock);
-        if(busy){
-            spin_unlock_unsafe(spi_spin_lock);
-            //spin_unlock(spi_spin_lock, save);
-        }else{
-            busy=true;
-            spin_unlock_unsafe(spi_spin_lock);
-            //spin_unlock(spi_spin_lock, save);
-            return;
-        }
-
-    }while(true);
 }

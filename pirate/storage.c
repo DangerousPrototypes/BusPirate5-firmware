@@ -7,6 +7,7 @@
 #include "opt_args.h"
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
+#include "fatfs/diskio.h"
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -26,6 +27,13 @@ uint32_t buf32[(BUF_SIZE + 3)/4];
 uint8_t* buf = (uint8_t*)buf32;
 UINT br;
 UINT bw;
+
+const char storage_fat_type_labels[][8] = {
+    "FAT12",
+    "FAT16",
+    "FAT32",
+    "EXFAT",
+    "UNKNOWN"};
 
 const char *fresult_msg[]={
 	[FR_OK]="ok",                               /* (0) Succeeded */
@@ -78,9 +86,14 @@ uint8_t storage_mount(void){
 }
 
 void storage_unmount(void){
+    //make sure the low level storage is consistent
+    disk_ioctl(fs.pdrv, CTRL_SYNC, 0);
+    f_unmount("");
     system_config.storage_available=false;
     system_config.storage_mount_error=0;
+#if BP5_REV == 8 || BP5_REV == 9
     printf("Storage removed\r\n");
+#endif
 }
 
 bool storage_detect(void){        

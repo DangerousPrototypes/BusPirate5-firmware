@@ -1,6 +1,5 @@
 # Open Source Licenses
-This file lists all the open source licenses that are being used by this project,
-and how this project complies with them.  
+This file lists all the open source licenses that are being used by this project, and how this project complies with them.  
 
 All the content in this document is copyrighted by the following authors:  
 * Copyright (c) 2024 Lior Shalmay <liorshalmay1@gmail.com>  
@@ -57,6 +56,29 @@ In conclusion, these are the reasons that we comply with LGPL3 and we can distri
 For further information, please see the discussion at [github](https://github.com/DangerousPrototypes/BusPirate5-firmware/pull/34).
 
 ## BSD 3 Clause
+This license is completely compatible with our MIT license. So BSD components have been directly incorporated into this project.
+
+### List of source files
+- `queue.c`
+- `queue.h`
+- `commands/1wire/`
+    - `demos.c`
+    - `scan.c`
+- `lib/sigrok/pico_sdk_sigrok.c`
+- `mode/logicanalyzer.pio`
+- `pirate/`
+    - `apa102.pio`
+    - `hw1wire_pio.c`
+    - `hw1wire.pio`
+    - `hw2wire_pio.c`
+    - `hw2wire_pio.h`
+    - `hw2wire.pio`
+    _ `hwi2c_pio.c`
+    _ `hwi2c_pio.h`
+    - `hwi2c.pio`
+    - `hwuart.pio`
+    - `ws2812.pio`
+
 
 
 

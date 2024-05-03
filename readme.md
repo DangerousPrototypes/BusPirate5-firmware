@@ -39,8 +39,16 @@ Bus Pirate 5 is the universal serial interface tool designed by hackers, for hac
 
 This project uses `cmake` as the build system, so building the project only takes 2 steps:
 1. project configuration (needs to be ran once, or when you want to change configuration).  
-    `cmake -S . -B build`  
-    you may want to add the flag `-DPICO_SDK_PATH=/path/to/pico-sdk` if you want to use pico-sdk that is in your local path.
+    `cmake -S . -B build -DPICO_SDK_FETCH_FROM_GIT=TRUE`  
+    you may want to add the flags `-DPICO_SDK_PATH=/path/to/pico-sdk -DPICO_SDK_FETCH_FROM_GIT=FALSE` if you want to use pico-sdk that is in your local path.  
+    > NOTE: WINDOWS users: for some reason the automatic fetch fails because of git submodule, so you will need to clone pico-sdk your self, and then
+    > apply the following commands inside the pico-sdk repo:  
+    > ```bash
+    > git submodule init
+    > git submodule update
+    > ```
+    
+    
 2. project build  
     `cmake --build ./build --target bus_pirate5_rev10`  
     you may set `bus_pirate5_rev10` to `bus_pirate5_rev8` if the have the development version.

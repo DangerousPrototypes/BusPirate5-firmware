@@ -63,7 +63,8 @@ we need to do the following modifications (currently it is not needed because bu
 To compile the firmware without LGPL3 components, simply add the following flags to the configuration step above:  
 `-DUSE_LGPL3=NO -DLEGACY_ANSI_COLOURS_ENABLED=NO`
 
-## other open source licenses
+## Other open source licenses
+
 This project uses code from the following licenses:  
 * LGPL3  
 * BSD 3 clause 
@@ -71,5 +72,5 @@ This project uses code from the following licenses:
 More information on the licenses and components being used can be found [here](docs/licenses.md).  
 
 ## Contributing
+Please see [contributing.md](docs/contributing.md)
 
-please see [contributing.md](docs/contributing.md)

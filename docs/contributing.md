@@ -19,7 +19,6 @@ see the above copyright also as an example.
 * You must not copyright code that is not yours!
 
 ## Licensing
-
 You must contribute your code under the MIT license.
 
 ### 3rd party code

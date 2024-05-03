@@ -7,11 +7,12 @@ All the content in this document is copyrighted by the following authors:
 
 ## Disclaimer
 All the source code in [this project](https://github.com/DangerousPrototypes/BusPirate5-firmware) is distributed under 
-MIT license (unless specified explicitly otherwise, at the start of the file), but there are libraries that are being 
-used by this project which are distributed under different licenses, this file maintains a documented list of all of them.  
-Any distributed binary derived from this project should be distributed along site a copy of this document, a copy of all 
-the licenses inside the `docs/third_party_licenses` directory and a copy of MIT license.  
-You may not need to distribute some of the licenses and claims, if you select not to use certain libraries.
+MIT license (unless specified explicitly otherwise, at the start of the file). This produced does use libraries which are distributed under different licenses, documented in this file.
+
+Any distributed binary derived from this project should be distributed alongside a copy of this document, a copy of all 
+the licenses inside the `docs/third_party_licenses` directory and a copy of MIT license.
+
+You may not need to distribute some of the licenses and claims, if you select to not use certain libraries.
 
 ### Copyright notices
 All the people listed below hold copyrights to code in this project:  
@@ -46,15 +47,14 @@ All the people listed below hold copyrights to code in this project:
 Copyright 2018 by Michał Nazarewicz <mina86@mina86.com>
 
 ### License Complience explained
-First of all, we gave the copyright notices in all the respective places in this repo.  
-Secondly, This project is complete open source and published to the public, distributed binaries are delivers with a link to this repo.  
-Thirdly, the original libraries code is left unmodified, and their code gets fetched by the build system, therefore that code is not part of this project.  
+First of all, we give the copyright notices in all the respective places in this repo.
+Secondly, this project is completely open source and published to the public, and distributed binaries are delivered with a link to this repo.
+Thirdly, the original libraries code is left unmodified, and their code gets fetched by the build system, therefore that code is not part of this project.
 
-Therefore, we comply with all the terms of the LGPL3 license, including section 4.d.0, because by access to this source code, the user can easily use
-the build system in order to provide a different library that has the same interface.
+Therefore, we comply with all the terms of the LGPL3 license, including section 4.d.0, because by access to this source code, the user can easily use the build system in order to provide a different library that has the same interface.
 
 In conclusion, these are the reasons that we comply with LGPL3 and we can distribute binaries under LGPL3 terms.  
-For farther information, please see the discussion at [github](https://github.com/DangerousPrototypes/BusPirate5-firmware/pull/34).  
+For further information, please see the discussion at [github](https://github.com/DangerousPrototypes/BusPirate5-firmware/pull/34).
 
 ## BSD 3 Clause
 

@@ -3,9 +3,9 @@
 #              That project helps converting RGB colors to ANSI 256 colors, in order to support non-trurcolor terminals.
 # Copyright (c) 2024 Lior Shalmay <liorshalmay1@gmail.com> 
 #
-# Note: The ansi_colours project is distributed under LGPL3, if you dont want to
-#       include that license than disable ANSI 256 color support (enabled by default).
-#       For farther license explaination please look at file License compliance is explained at docs/licenses.md
+# Note: The ansi_colours project is distributed under LGPL3. If you don't want to
+#       include that license then disable ANSI 256 color support (enabled by default).
+#       For further license explanation, please look at the docs/licenses.md file.
 # copyright notice:
 # the used ansi_colours code (ansi256.c ansi_colours.h) is copyrighted by the following people:
 #        Michał Nazarewicz <mina86@mina86.com> 2018
@@ -14,7 +14,7 @@ set(ANSI_COLOURS_GIT_URL "https://github.com/mina86/ansi_colours.git")
 set(ANSI_COLOURS_GIT_TAG "v1.2.2")
 set(ANSI_COLOURS_PATH "" CACHE PATH "Path to the ansi_colours library's source code")
 
-set(LEGACY_ANSI_COLOURS_ENABLED TRUE CACHE BOOL "Chooses to include the ansi)colours project or not to include it")
+set(LEGACY_ANSI_COLOURS_ENABLED TRUE CACHE BOOL "Chooses to include the ansi_colours project or not to include it")
 
 if(USE_LGPL3)
 if(LEGACY_ANSI_COLOURS_ENABLED)

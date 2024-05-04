@@ -60,3 +60,4 @@ UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
 
 # Or drop into the container and run builds manually
 UID=$(id -u) GID=$(id -g) docker compose run dev
+```

@@ -33,3 +33,30 @@ VT100 terminal emulation supports color and a live statusbar view of the voltage
 - 1-Wire, I2C, SPI, UART, MIDI, serial LEDs supported, more to come!
 
 Bus Pirate 5 is the universal serial interface tool designed by hackers, for hackers. It's crammed full of hardware and firmware features to make probing chips pleasant and easy.
+
+## Building
+Instructions on the forum provide additional details; however, this repo provides a docker compose image for you to just get running quickly in the event you want to try patching/hacking.
+To run a build, perform the following actions on linux:
+
+```sh
+# clone the repo
+git clone git@github.com:DangerousPrototypes/BusPirate5-firmware.git
+cd BusPirate5-firmware
+
+# build the environment
+docker compose bui
+
+# run a build
+UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
+# build stuff happens ...
+# [100%] Linking CXX executable bus_pirate5_rev10.elf
+# Memory region         Used Size  Region Size  %age Used
+#            FLASH:      460068 B         2 MB     21.94%
+#              RAM:      256168 B       256 KB     97.72%
+#        SCRATCH_X:          4 KB         4 KB    100.00%
+#        SCRATCH_Y:          0 GB         4 KB      0.00%
+# [100%] Built target bus_pirate5_rev10
+# your build will be placed in ./build/
+
+# Or drop into the container and run builds manually
+UID=$(id -u) GID=$(id -g) docker compose run dev

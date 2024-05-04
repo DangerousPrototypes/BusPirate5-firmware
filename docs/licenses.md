@@ -45,7 +45,7 @@ All the people listed below hold copyrights to code in this project:
 ##### copyright notice
 Copyright 2018 by Michał Nazarewicz <mina86@mina86.com>
 
-### License Complience explained
+### License Compliance explained
 First of all, we give the copyright notices in all the respective places in this repo.
 Secondly, this project is completely open source and published to the public, and distributed binaries are delivered with a link to this repo.
 Thirdly, the original libraries code is left unmodified, and their code gets fetched by the build system, therefore that code is not part of this project.

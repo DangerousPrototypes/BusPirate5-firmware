@@ -1,0 +1,13 @@
+services:
+  dev:
+    image: buspirate/buspirate_v5
+    build: ./docker
+    network_mode: host
+    privileged: true
+    tty: true
+    stdin_open: true
+    user: "${UID}:${GID}"
+    volumes:
+      - .:/project
+      - /dev/bus/usb:/dev/bus/usba
+    working_dir: '/project'

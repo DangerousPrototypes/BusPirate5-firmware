@@ -34,7 +34,6 @@ VT100 terminal emulation supports color and a live statusbar view of the voltage
 
 Bus Pirate 5 is the universal serial interface tool designed by hackers, for hackers. It's crammed full of hardware and firmware features to make probing chips pleasant and easy.  
 
-
 ## Build
 
 This project uses `cmake` as the build system, so building the project only takes 2 steps:
@@ -48,10 +47,37 @@ This project uses `cmake` as the build system, so building the project only take
     > git submodule update
     > ```
     
-    
 2. project build  
     `cmake --build ./build --target bus_pirate5_rev10`  
     you may set `bus_pirate5_rev10` to `bus_pirate5_rev8` if the have the development version.
+    
+### build using docker
+Instructions on the forum provide additional details; however, this repo provides a docker compose image for you to just get running quickly in the event you want to try patching/hacking.
+To run a build, perform the following actions on linux:
+
+```sh
+# clone the repo
+git clone git@github.com:DangerousPrototypes/BusPirate5-firmware.git
+cd BusPirate5-firmware
+
+# build the environment
+docker compose bui
+
+# run a build
+UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
+# build stuff happens ...
+# [100%] Linking CXX executable bus_pirate5_rev10.elf
+# Memory region         Used Size  Region Size  %age Used
+#            FLASH:      460068 B         2 MB     21.94%
+#              RAM:      256168 B       256 KB     97.72%
+#        SCRATCH_X:          4 KB         4 KB    100.00%
+#        SCRATCH_Y:          0 GB         4 KB      0.00%
+# [100%] Built target bus_pirate5_rev10
+# your build will be placed in ./build/
+
+# Or drop into the container and run builds manually
+UID=$(id -u) GID=$(id -g) docker compose run dev
+```
 
 ### patching pico SDK
 By default, pico-sdk assumes that we have 2MB of flash available, and there is no way to configure different flash size.  
@@ -81,4 +107,5 @@ More information on the licenses and components being used can be found [here](d
 
 ## Contributing
 Please see [contributing.md](docs/contributing.md)
+
 

@@ -25,6 +25,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
+#include "commands/global/button_scr.h"
 #include "commands/global/freq.h"
 #include "queue.h"
 #include "usb_tx.h"
@@ -237,7 +238,7 @@ int main(){
                     result.success=false;
 
                     if(rx_fifo_try_get(&c)){
-                        value='y';
+                        value='a';
                         result.success=true;
                     } 
                 }else{
@@ -247,15 +248,16 @@ int main(){
                 if(result.success){
                     switch(value){
                         case 'y':
-                            system_config.terminal_ansi_color=1;
+                            system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
                             system_config.terminal_ansi_statusbar=1;
+                        case 'a': // case were configuration already exists
                             ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
                             ui_term_init(); // Initialize VT100 if ANSI terminal
                             ui_statusbar_update(UI_UPDATE_ALL);
                             break;
                         case 'n':
                             system_config.terminal_ansi_statusbar=0;
-                            system_config.terminal_ansi_color=0;
+                            system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
                             break;
                         default:
                             break;
@@ -267,8 +269,8 @@ int main(){
                     printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
                 }
                 //printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
-                break;
-            
+                button_irq_enable(0, &button_irq_callback); //enable button interrupt
+                break;                 
             case BP_SM_GET_INPUT:
                 //helpers_mode_periodic();
                 //it seems like we need an array where we can add our function for periodic service?
@@ -295,7 +297,13 @@ int main(){
                         }
                         printf("\r\n");
                         bp_state=BP_SM_PROCESS_COMMAND;
+                        button_irq_disable(0);
                         break;
+                }
+                if(button_check_irq(0)){
+                    button_irq_disable(0);
+                    button_exec(); //if button pressed, run button.scr script
+                    bp_state=BP_SM_COMMAND_PROMPT;  //return to command prompt
                 }
                 break;
             
@@ -316,6 +324,7 @@ int main(){
                     screensaver = add_alarm_in_ms(system_config.lcd_timeout*300000, ui_term_screensaver_enable, NULL, false);
                 }
                 bp_state=BP_SM_GET_INPUT;
+                button_irq_enable(0, &button_irq_callback);
                 break;
             
             default:

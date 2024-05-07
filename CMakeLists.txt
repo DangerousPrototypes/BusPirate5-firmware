@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 #set(PICO_SDK_PATH "C:/pico113/pico-sdk")
  
 # Pull in Raspberry Pi Pico SDK (must be before project)
-include(pico_sdk_import.cmake)
+include(cmake/pico_sdk_import.cmake)
 
 set(PICO_BOARD pico)
 
@@ -67,7 +67,7 @@ set(bp5_common
         commands/global/macro.c commands/global/macro.h
         commands/global/script.c commands/global/script.h
         commands/global/tutorial.c commands/global/tutorial.h
-
+        commands/global/button_scr.c commands/global/button_scr.h
         # HiZ
         mode/hiz.h mode/hiz.c
         # 1Wire
@@ -119,6 +119,7 @@ set(bp5_common
         mode/dummy1.c mode/dummy1.h
 
         # UI
+        ui/ui_button.c ui/ui_button.h
         ui/ui_cmdln.c ui/ui_cmdln.h
         ui/ui_process.h ui/ui_process.c
         ui/ui_flags.h
@@ -245,5 +246,18 @@ foreach(revision ${revisions})
 endforeach()
 
 string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
+
+
+# by default this project uses LGPL3 libraries, if you do not want to comply
+# with LGPL3 license, please set the following variable to FALSE, otherwise
+# you are oblicated to distribute the resulted binaries under LGPL3 license
+set(USE_LGPL3 TRUE CACHE BOOL "indicated if to include LGPL3 protected code")
+include(cmake/ansi_colours_import.cmake)
+if(USE_LGPL3)
+if(LEGACY_ANSI_COLOURS_ENABLED)
+        target_link_libraries(bus_pirate5_rev10 lib_ansi_colours)
+        target_link_libraries(bus_pirate5_rev8 lib_ansi_colours)
+endif()
+endif()
 
  

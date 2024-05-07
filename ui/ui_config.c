@@ -70,6 +70,14 @@ uint32_t ui_config_action_screensaver(uint32_t a, uint32_t b)
     system_config.lcd_timeout=b;
 }
 
+static const struct prompt_item menu_items_ansi_color[] =
+{
+    {T_CONFIG_DISABLE}, 
+    {T_CONFIG_ANSI_COLOR_FULLCOLOR},
+#ifdef ANSI_COLOR_256
+    {T_CONFIG_ANSI_COLOR_256}
+#endif
+};
 uint32_t ui_config_action_ansi_color(uint32_t a, uint32_t b)
 {
     system_config.terminal_ansi_color=b;
@@ -89,7 +97,7 @@ uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b)
     system_config.terminal_ansi_statusbar=b;
     if(b)
     {   
-        system_config.terminal_ansi_color=1; //enable ANSI color more
+        if(!system_config.terminal_ansi_color) system_config.terminal_ansi_color=UI_TERM_FULL_COLOR; //enable ANSI color more
         ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
         ui_term_init(); // Initialize VT100 if ANSI terminal
         ui_statusbar_update(UI_UPDATE_ALL);
@@ -124,7 +132,7 @@ static const struct ui_prompt_config cfg=
 
 static const struct ui_prompt sub_prompts[]={
     {T_CONFIG_LANGUAGE, menu_items_language, count_of(menu_items_language),0,0,0,0,&ui_config_action_language, &cfg},
-    {T_CONFIG_ANSI_COLOR_MODE,menu_items_disable_enable,count_of(menu_items_disable_enable),0,0,0,0,&ui_config_action_ansi_color,&cfg},
+    {T_CONFIG_ANSI_COLOR_MODE,menu_items_ansi_color,count_of(menu_items_ansi_color),0,0,0,0,&ui_config_action_ansi_color, &cfg},
     {T_CONFIG_ANSI_TOOLBAR_MODE,menu_items_disable_enable,count_of(menu_items_disable_enable),0,0,0,0,&ui_config_action_ansi_toolbar,&cfg},
     {T_CONFIG_SCREENSAVER,menu_items_screensaver,count_of(menu_items_screensaver),0,0,0,0,&ui_config_action_screensaver,&cfg},
     {T_CONFIG_LEDS_EFFECT, menu_items_led_effect, count_of(menu_items_led_effect),0,0,0,0, &ui_config_action_led_effect, &cfg},

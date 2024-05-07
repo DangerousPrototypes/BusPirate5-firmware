@@ -45,5 +45,8 @@ static const struct ui_help_options options[]= {
 void tutorial_handler(struct command_result *res){
     //check help
    	if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
-    if(script_exec(true, true, true, false)) res->error=true;
+    char location[32];
+    cmdln_args_string_by_position(1, sizeof(location), location);    
+
+    if(script_exec(location, true, true, true, false)) res->error=true;
 }

@@ -277,6 +277,10 @@ static char const * const pl_pl[]={
 	[T_CONFIG_CONFIGURATION_OPTIONS]="Opcje konfiguracyjne",
 	[T_CONFIG_LANGUAGE]="Język",
 	[T_CONFIG_ANSI_COLOR_MODE]="Tryb kolorowy ANSI",
+	[T_CONFIG_ANSI_COLOR_FULLCOLOR]="ANSI Full-Color (16M colors)",
+#ifdef ANSI_COLOR_256
+	[T_CONFIG_ANSI_COLOR_256]="ANSI-256 color",
+#endif
 	[T_CONFIG_ANSI_TOOLBAR_MODE]="Tryb ANSI toolbar",
 	[T_CONFIG_LANGUAGE_ENGLISH]="Angielski",
 	[T_CONFIG_LANGUAGE_CHINESE]="Chiński (uproszczony)",

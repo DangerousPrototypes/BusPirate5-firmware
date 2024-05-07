@@ -292,6 +292,10 @@ static char const * const en_us[]={
 	[T_CONFIG_CONFIGURATION_OPTIONS]="Configuration options",
 	[T_CONFIG_LANGUAGE]="Language",
 	[T_CONFIG_ANSI_COLOR_MODE]="ANSI color mode",
+	[T_CONFIG_ANSI_COLOR_FULLCOLOR]="ANSI Full-Color (16M colors)",
+#ifdef ANSI_COLOR_256
+	[T_CONFIG_ANSI_COLOR_256]="ANSI-256 color",
+#endif
 	[T_CONFIG_ANSI_TOOLBAR_MODE]="ANSI toolbar mode",
 	[T_CONFIG_LANGUAGE_ENGLISH]="English",
 	[T_CONFIG_LANGUAGE_CHINESE]="Chinese (simplified)",

@@ -275,6 +275,8 @@
   "T_CONFIG_CONFIGURATION_OPTIONS": "Opzioni di configurazione",
   "T_CONFIG_LANGUAGE": "Lingua",
   "T_CONFIG_ANSI_COLOR_MODE": "Modalità colore ANSI",
+  "T_CONFIG_ANSI_COLOR_FULLCOLOR": "ANSI Full-Color (16M colors)",
+  "T_CONFIG_ANSI_COLOR_256": "ANSI-256 color",
   "T_CONFIG_ANSI_TOOLBAR_MODE": "Modalità barra degli strumenti ANSI",
   "T_CONFIG_LANGUAGE_ENGLISH": "Inglese",
   "T_CONFIG_LANGUAGE_CHINESE": "Cinese (semplificato)",

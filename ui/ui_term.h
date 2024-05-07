@@ -1,3 +1,14 @@
+#ifndef UI_TERM_H
+#define UI_TERM_H
+// enum to know which color type is supported
+typedef enum ui_term_type{
+    UI_TERM_NO_COLOR=0,
+    UI_TERM_FULL_COLOR,
+#ifdef ANSI_COLOR_256
+    UI_TERM_256
+#endif
+} ui_term_type_e;
+
 void ui_term_init(void);
 void ui_term_detect(void);
 
@@ -36,3 +47,4 @@ void ui_term_cmdln_arrow_keys(char *c);
 int ui_term_cmdln_history(int ptr);
 
 
+#endif

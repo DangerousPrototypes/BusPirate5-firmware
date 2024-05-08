@@ -339,6 +339,7 @@ static float freq_measure_reciprocal_and_duty_cycle(uint gpio, float* duty)
     pio_sm_claim(pio, sm);
     uint pio_loaded_offset = pio_add_program(pio, &freq_program);
     freq_program_init(pio, 0, pio_loaded_offset, gpio);
+    freq_start_counting(pio, sm);
     uint timeout_ms = 1000;
     while (pio_sm_is_rx_fifo_empty(pio, sm))
     {
@@ -346,10 +347,11 @@ static float freq_measure_reciprocal_and_duty_cycle(uint gpio, float* duty)
         if(--timeout_ms == 0)
             goto cleanup;
     }
-    uint32_t counter_high = pio_sm_get_blocking(pio, sm);
-    uint32_t counter_low = pio_sm_get_blocking(pio, sm);
-    freq = clock_get_hz(clk_sys) / (2.0f * (~0U - (counter_high + counter_low)));
-    *duty = (float)(~0U - counter_high) / ((~0U - counter_low) + (~0U - counter_high));
+
+    uint32_t counter_high = ~pio_sm_get_blocking(pio, sm);
+    uint32_t counter_low = ~pio_sm_get_blocking(pio, sm);
+    freq = clock_get_hz(clk_sys) / (2.0f * (counter_high + counter_low));
+    *duty = (float)(counter_high) /(counter_high + counter_low);
 cleanup:
     pio_remove_program(pio, &freq_program, pio_loaded_offset);
     pio_sm_unclaim(pio, sm);
@@ -360,24 +362,40 @@ static float freq_measure_duty_cycle(uint gpio)
 {
     // Only the PWM B pins can be used as inputs.
     assert(pwm_gpio_to_channel(gpio) == PWM_CHAN_B);
-    uint slice_num = pwm_gpio_to_slice_num(gpio);
+    PIO pio = pio0;
+    uint sm = 0;
+    float duty = 0;
+    pio_sm_claim(pio, sm);
+    uint pio_loaded_offset = pio_add_program(pio, &duty_cycle_program);
+    duty_cycle_program_init(pio, 0, pio_loaded_offset, gpio);
 
-    // Count once for every div cycles the PWM B input is high
-    pwm_config cfg = pwm_get_default_config();
-    pwm_config_set_clkdiv_mode(&cfg, PWM_DIV_B_HIGH);
-    // div set for max counter value at 100% duty cycle
-    uint div = (clock_get_hz(clk_sys) / 10 + 0xFFFE) / 0xFFFF;
-    pwm_config_set_clkdiv(&cfg, div);
-    pwm_init(slice_num, &cfg, false);
-    gpio_set_function(gpio, GPIO_FUNC_PWM);
+    bool hyst_turned_on = false;
+    if (!gpio_is_input_hysteresis_enabled(gpio))
+    {
+        gpio_set_input_hysteresis_enabled(gpio, true);
+        hyst_turned_on = true;
+    }
 
-    pwm_set_counter(slice_num, 0);
-    pwm_set_enabled(slice_num, true);
+    uint32_t status = save_and_disable_interrupts();
+    duty_cycle_start_counting(pio, sm);
+    uint32_t start = timer_hw->timerawl;
+    restore_interrupts(status);
     busy_wait_ms(100);
-    pwm_set_enabled(slice_num, false);
-    uint16_t counter = pwm_get_counter(slice_num);
-    float counting_rate = clock_get_hz(clk_sys) / div;
-    float max_possible_count = counting_rate * 0.1;
+    status = save_and_disable_interrupts();
+    duty_cycle_stop_counting(pio, sm);
+    uint32_t stop = timer_hw->timerawl;
+    restore_interrupts(status);
+    uint32_t time_gate_us = stop - start;
+
+    uint32_t counter = ~duty_cycle_get_counter(pio, sm);
+    pio_remove_program(pio, &duty_cycle_program, pio_loaded_offset);
+    pio_sm_unclaim(pio, sm);
+
+    if (hyst_turned_on)
+        gpio_set_input_hysteresis_enabled(gpio, false);
+
+    float counting_rate = clock_get_hz(clk_sys) / 2;
+    float max_possible_count = .000001f * counting_rate * time_gate_us;
     gpio_set_function(gpio, GPIO_FUNC_SIO);
 
     return counter / max_possible_count;
@@ -387,57 +405,45 @@ float freq_measure_period_and_duty_cycle(uint gpio, float* duty)
 {
     // Only the PWM B pins can be used as inputs.
     assert(pwm_gpio_to_channel(gpio) == PWM_CHAN_B);
-    uint slice_num = pwm_gpio_to_slice_num(gpio);
-    pwm_config cfg = pwm_get_default_config();
-    pwm_config_set_clkdiv_mode(&cfg, PWM_DIV_B_RISING);
-    pwm_config_set_clkdiv(&cfg, 1);
-    pwm_init(slice_num, &cfg, false);
-    gpio_set_function(gpio, GPIO_FUNC_PWM);
+    PIO pio = pio0;
+    uint sm = 0;
+    float freq = 0.f;
+    *duty = 0;
+    pio_sm_claim(pio, sm);
+    uint pio_loaded_offset = pio_add_program(pio, &freq_pulse_program);
+    freq_pulse_program_init(pio, 0, pio_loaded_offset, gpio);
+
     bool hyst_turned_on = false;
     if (!gpio_is_input_hysteresis_enabled(gpio))
     {
         gpio_set_input_hysteresis_enabled(gpio, true);
         hyst_turned_on = true;
     }
-    //Try one time with 1ms gate time (highest range)
-    pwm_set_counter(slice_num, 0);
+    //Try pulse counting with 100ms gate time 
     uint32_t status = save_and_disable_interrupts();
-    pwm_set_enabled(slice_num, true);
+    freq_pulse_start_counting(pio, sm);
     uint32_t start = timer_hw->timerawl;
     restore_interrupts(status);
-    busy_wait_ms(1);
+    busy_wait_ms(100);
     status = save_and_disable_interrupts();
-    pwm_set_enabled(slice_num, false);
+    freq_pulse_stop_counting(pio, sm);
     uint32_t stop = timer_hw->timerawl;
     restore_interrupts(status);
-    uint32_t time_gate_us = stop - start;
+    uint32_t time_gate_us = stop - start - 4; //experimental correction 2 for release, 5 for debug 
 
     *duty = -1.f;
-    uint16_t counter = pwm_get_counter(slice_num);
-    float freq = 1000000.0f * counter / time_gate_us;
+    uint32_t counter = ~freq_pulse_get_counter(pio, sm);
+    pio_remove_program(pio, &freq_pulse_program, pio_loaded_offset);
+    pio_sm_unclaim(pio, sm);
+
+    freq = (1000000.0f * counter) / time_gate_us;
     if (freq <= 20000.f) { //freq too low to be precise by counting cycles.
         freq = freq_measure_reciprocal_and_duty_cycle(gpio, duty);
-    }
-    else if (counter < 0x8000) { //autorange the gate time
-        uint gate_time_ms = MIN((65000 / (counter ? counter : 1)), max_gate_time_ms);
-        pwm_set_counter(slice_num, 0);
-        uint32_t status = save_and_disable_interrupts();
-        pwm_set_enabled(slice_num, true);
-        uint32_t start = timer_hw->timerawl;
-        restore_interrupts(status);
-        busy_wait_ms(gate_time_ms);
-        status = save_and_disable_interrupts();
-        pwm_set_enabled(slice_num, false);
-        uint32_t stop = timer_hw->timerawl;
-        restore_interrupts(status);
-        uint32_t time_gate_us = stop - start;
-        counter = pwm_get_counter(slice_num);
-        freq = 1000000.0f * counter / time_gate_us;
     }
 
     if (hyst_turned_on)
         gpio_set_input_hysteresis_enabled(gpio, false);
-    gpio_set_function(gpio, GPIO_FUNC_SIO);
+
     if (*duty < 0.f)
         *duty = freq_measure_duty_cycle(gpio);
     return freq;

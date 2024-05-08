@@ -1,0 +1,44 @@
+.program freq
+; This program detects a raising edge then measures the duration for a full cycle
+; x contains the duration of the high level 
+; y contains the duration of the low level
+start:
+    mov isr, null       ; empty ISR
+    mov x !null         
+    mov y !null 
+    wait 0 pin 0        ; wait for a raising edge
+    wait 1 pin 0 
+level_one:
+    jmp pin, level_one_continue; wait for a falling edge
+    .wrap
+level_one_continue:
+    jmp x--, level_one
+    jmp, end
+level_zero:
+    jmp pin, end        ;wait for a raising edge
+.wrap_target
+    jmp y--, level_zero  
+end:
+    in x, 32
+    in y, 32
+
+% c-sdk{
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+static inline void freq_program_init(PIO pio, uint sm, uint offset, uint pin_freq) {
+    pio_sm_config c = freq_program_get_default_config(offset);
+
+    // IO mapping
+    sm_config_set_in_pins(&c, pin_freq);
+    sm_config_set_jmp_pin(&c, pin_freq);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_freq, 1, false);
+    sm_config_set_in_shift(&c, true, true, 32);
+
+    // Configure and start SM
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+%}

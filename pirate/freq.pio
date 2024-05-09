@@ -41,4 +41,110 @@ static inline void freq_program_init(PIO pio, uint sm, uint offset, uint pin_fre
     pio_sm_set_enabled(pio, sm, true);
 }
 
+static inline void freq_start_counting(PIO pio, uint sm) {
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+static inline void freq_stop_counting(PIO pio, uint sm) {
+    pio_sm_set_enabled(pio, sm, false);
+}
+
+%}
+
+.program freq_pulse
+;This program counts the rising edges of pin 0 
+; x contains the ~number of pulses
+
+start_freq_pulse:
+    mov x !null         
+count:
+    wait 0 pin 0        ; wait for a raising edge
+    wait 1 pin 0
+    jmp x--, count
+overflow:
+
+% c-sdk{
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+static inline void freq_pulse_program_init(PIO pio, uint sm, uint offset, uint pin_freq) {
+    pio_sm_config c = freq_pulse_program_get_default_config(offset);
+
+    // IO mapping
+    sm_config_set_in_pins(&c, pin_freq);
+    sm_config_set_jmp_pin(&c, pin_freq);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_freq, 1, false);
+    sm_config_set_in_shift(&c, true, true, 32);
+
+    // Configure and start SM
+    pio_sm_init(pio, sm, offset, &c);
+
+}
+
+static inline void freq_pulse_start_counting(PIO pio, uint sm) {
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+static inline void freq_pulse_stop_counting(PIO pio, uint sm) {
+    pio_sm_set_enabled(pio, sm, false);
+}
+
+static inline uint32_t freq_pulse_get_counter(PIO pio, uint sm) {
+    pio_sm_exec(pio, sm, 0x4020);
+    return pio_sm_get_blocking(pio, sm);
+}
+%}
+
+.program duty_cycle
+; This program detects a raising edge then measures the duration for a full cycle
+; x contains the duration of the high level 
+; y contains the duration of the low level
+start:
+    mov x !null         
+level_one:
+    jmp pin, level_one_continue; wait for a falling edge
+    .wrap
+level_one_continue:
+    jmp x--, level_one
+    jmp, end
+level_zero:
+    jmp pin, level_one_continue        ;wait for a raising edge
+.wrap_target
+    jmp, level_zero  
+end:
+    nop
+
+% c-sdk{
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+static inline void duty_cycle_program_init(PIO pio, uint sm, uint offset, uint pin_freq) {
+    pio_sm_config c = duty_cycle_program_get_default_config(offset);
+
+    // IO mapping
+    sm_config_set_in_pins(&c, pin_freq);
+    sm_config_set_jmp_pin(&c, pin_freq);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_freq, 1, false);
+    sm_config_set_in_shift(&c, true, true, 32);
+
+    // Configure and start SM
+    pio_sm_init(pio, sm, offset, &c);
+}
+
+static inline void duty_cycle_start_counting(PIO pio, uint sm) {
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+static inline void duty_cycle_stop_counting(PIO pio, uint sm) {
+    pio_sm_set_enabled(pio, sm, false);
+}
+
+static inline uint32_t duty_cycle_get_counter(PIO pio, uint sm) {
+    pio_sm_exec(pio, sm, 0x4020);
+    return pio_sm_get_blocking(pio, sm);
+}
+
+
 %}

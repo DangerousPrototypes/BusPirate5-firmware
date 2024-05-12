@@ -1,3 +1,6 @@
+#ifndef PIRATE__STORAGE_H
+#define PIRATE__STORAGE_H
+
 void storage_init(void);
 bool storage_detect(void);
 uint8_t storage_mount(void);
@@ -21,3 +24,4 @@ extern const char storage_fat_type_labels[5][8];
 #define LS_SUMM     0x08
 #define LS_ALL      (LS_FILES | LS_DIRS | LS_SIZE | LS_SUMM)
 
+#endif

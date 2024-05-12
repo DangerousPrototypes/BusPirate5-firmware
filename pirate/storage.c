@@ -33,7 +33,8 @@ const char storage_fat_type_labels[][8] = {
     "FAT16",
     "FAT32",
     "EXFAT",
-    "UNKNOWN"};
+    "UNKNOWN"
+};
 
 const char *fresult_msg[]={
 	[FR_OK]="ok",                               /* (0) Succeeded */
@@ -128,8 +129,11 @@ uint8_t storage_format(void){
         return FR_NOT_ENOUGH_CORE;
     }
     fr = f_mkfs("", 0, work_buffer, FF_MAX_SS);
-    return fr;
     mem_free(work_buffer);
+    if(fr == FR_OK){
+        fr = f_setlabel("Bus_Pirate5");
+    }
+    return fr;
 }
 
 bool storage_save_binary_blob_rollover(char *data, uint32_t ptr,uint32_t size, uint32_t rollover){

@@ -1,3 +1,13 @@
+/**
+ * @file disk.c
+ * @author 
+ * @brief implements all the disk cli commands
+ * @version 0.1
+ * @date 2024-05-11
+ * 
+ * @copyright Copyright (c) 2024
+ * Modified by Lior Shalmay Copyright (c) 2024
+ */
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
@@ -12,6 +22,7 @@
 #include "pirate/storage.h"
 #include "pirate/mem.h"
 #include "ui/ui_cmdln.h"
+#include "pirate/storage.h"
 
 #define DEF_ROW_SIZE    8
 #define PRINTABLE(_c)   (_c>0x1f && _c<0x7f ? _c : '.')
@@ -345,4 +356,78 @@ void disk_format_handler(struct command_result *res){
         storage_file_error(format_status);
         res->error=true;        
     }
+}
+
+static const char * const label_usage[]= {
+    "label <get|set> [label name]",
+    "Get flash storage label name: label get",
+    "Set flash storage label name: label set <name>"
+};
+
+static const struct ui_help_options label_options[]= {
+{1,"", T_HELP_DISK_LABEL}, 
+    {0,"get", T_HELP_DISK_LABEL_GET},
+    {0,"set", T_HELP_DISK_LABEL_SET},
+};
+
+typedef enum label_sub_commands {
+    GET_LABEL,
+    SET_LABEL,
+    INVALID_LABEL_CMD,
+} label_sub_cmd_e;
+#define MAX_LABEL_LENGTH (11)
+
+void disk_label_handler(struct command_result *res) {
+    //check help
+   	if(ui_help_show(res->help_flag,label_usage,count_of(label_usage), &label_options[0],count_of(label_options) )) return;
+
+    char command_string[4];
+    char label_string[MAX_LABEL_LENGTH + 2]; // maximum label length for fat12/16 is 11 characters
+    FRESULT f_result;
+    label_sub_cmd_e command = INVALID_LABEL_CMD;
+    DWORD label_id;
+    res->error=true;
+
+    if(!cmdln_args_string_by_position(1, sizeof(command_string), command_string)){
+        printf("Missing command argument, please provide either get or set commands\r\n");
+        return;
+    }
+    if(strcmp(command_string, "get")==0) command = GET_LABEL;    
+    else if (strcmp(command_string, "set")==0) command = SET_LABEL;
+
+    switch (command)
+    {
+    case GET_LABEL:
+        f_result = f_getlabel("", label_string, &label_id);
+        if(f_result == FR_OK){
+            printf("disk label: %s", label_string);
+        } else {
+            storage_file_error(f_result);
+            return;
+        }
+        break;
+    
+    case SET_LABEL:
+        if(!cmdln_args_string_by_position(2, sizeof(label_string), label_string)){
+            printf("Missing label argument, please provide a name to set the label to\r\n");
+            return;
+        }
+        if(strlen(label_string) > MAX_LABEL_LENGTH){
+            printf("label is too long, maximum label length is %d characters\r\n", MAX_LABEL_LENGTH);
+            return;
+        }
+        f_result = f_setlabel(label_string);
+        if (f_result != FR_OK){
+            storage_file_error(f_result);
+            return;
+        }
+        break;
+
+    default:
+        printf("Invalid command: '%s'\r\n", command_string);
+        return;
+    }
+    
+    res->error=false;
+    return;
 }

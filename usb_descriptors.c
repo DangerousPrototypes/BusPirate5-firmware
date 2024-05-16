@@ -267,7 +267,7 @@ char const* string_desc_arr [] =
   (const char[]) { 0x09, 0x04 }, // 0: is supported language is English (0x0409)
   "Bus Pirate",                  // 1: Manufacturer
   "Bus Pirate 5",                // 2: Product
-  "123456789012",                // 3: Serials, should use chip ID
+  "5buspirate",                // 3: Serials, should use chip ID
   "Bus Pirate CDC",                 // 4: CDC Interface
   "Bus Pirate MSC",                 // 5: MSC Interface
   "Bus Pirate BIN"                  // 6: Binary CDC Interface

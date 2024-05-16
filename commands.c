@@ -70,6 +70,7 @@ const struct _command_struct commands[]=
     {"a", false, &auxio_low_handler, 0x00},               // "a" T_CMDLN_AUX_LOW
     {"A", false, &auxio_high_handler,0x00},             // "A"T_CMDLN_AUX_HIGH
     {"format", true, &disk_format_handler, 0x00 },               // "format" T_HELP_CMD_FORMAT
+    {"label", true, &disk_label_handler, 0x00},
     {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d" 
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
     {"hex", true, &disk_hex_handler,0x00},                                // "hex"  T_CMDLN_HEX 

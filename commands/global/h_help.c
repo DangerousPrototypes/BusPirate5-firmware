@@ -53,6 +53,7 @@ const struct ui_help_options global_commands[]={
     {0,"hex",T_HELP_CMD_HEX},//     Print HEX file contents
 	{0,"pause", T_HELP_CMD_PAUSE},
 	{0, "format", T_HELP_CMD_FORMAT},
+	{0, "label", T_HELP_CMD_LABEL},
 
 //useful command and mini programs
 //{1,"",T_HELP_SECTION_PROGRAMS},

@@ -393,17 +393,12 @@ uint32_t ui_term_get_user_input(void)
     switch(c)
     {
         case 0x08:	// backspace
+        case 0x7F:	// delete, but most terminals use this character as a BS, and use other combo for delete
                 if(!ui_term_cmdln_char_backspace())
                 {
                     printf("\x07");
                 }
-                break;
-        case 0x7F:	// delete
-                if(!ui_term_cmdln_char_delete())
-                {
-                    printf("\x07");
-                }
-                break;                        
+                break;                
         case '\x1B': // escape commands	
                 rx_fifo_get_blocking(&c);
                 switch(c)
@@ -606,7 +601,6 @@ void ui_term_cmdln_arrow_keys(char *c)
                 }
                 break;
         case '3': // 3~=delete
-                rx_fifo_get_blocking(c);
                 rx_fifo_get_blocking(&scrap);
                 if(scrap!='~') break;
                 if(!ui_term_cmdln_char_delete()) printf("\x07");

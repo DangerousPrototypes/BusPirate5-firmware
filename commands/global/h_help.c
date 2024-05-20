@@ -51,13 +51,16 @@ const struct ui_help_options global_commands[]={
 	{0,"rm", T_HELP_CMD_RM},
 	{0,"cat", T_HELP_CMD_CAT},
     {0,"hex",T_HELP_CMD_HEX},//     Print HEX file contents
-	{0,"pause", T_HELP_CMD_PAUSE},
 	{0, "format", T_HELP_CMD_FORMAT},
 	{0, "label", T_HELP_CMD_LABEL},
 
-//useful command and mini programs
-//{1,"",T_HELP_SECTION_PROGRAMS},
-	//{0,"flash", T_HELP_CMD_FLASH},
+{1,"",T_HELP_SECTION_SCRIPT},
+    {0,"script", T_HELP_CMD_SCRIPT},
+    {0,"button", T_HELP_CMD_BUTTON},
+    {0, "macro", T_HELP_CMD_MACRO},
+    {0, "tutorial", T_HELP_CMD_TUTORIAL},
+    {0,"pause", T_HELP_CMD_PAUSE},    
+
 
 // enter a mode to use protocols
 {1,"",T_HELP_SECTION_MODE},

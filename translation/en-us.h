@@ -202,7 +202,7 @@ static char const * const en_us[]={
 	[T_HELP_CMD_CD]="Change directory",
 	[T_HELP_CMD_MKDIR]="Make directory",
 	[T_HELP_CMD_RM]="Remove file/directory",
-	[T_HELP_CMD_PAUSE]="Pause until any key is pressed, for scripting",
+	[T_HELP_CMD_PAUSE]="Pause until any key is pressed",
 	[T_HELP_CMD_FORMAT]="Format storage disk (FAT16)",
 	[T_HELP_CMD_CAT]="Print file contents as text",
 	[T_HELP_CMD_HEX]="Print file contents in HEX",	
@@ -411,6 +411,11 @@ static char const * const en_us[]={
 	[T_HELP_UART_BRIDGE_TOOLBAR]="ENABLE toolbar while bridge is active (default: disabled)",
 	[T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO]="Suppress local echo, don't echo back sent data",
 	[T_HELP_UART_NMEA]="parse NMEA GPS data",
+    [T_HELP_SECTION_SCRIPT]="run scripts, macros and assign button functions",
+    [T_HELP_CMD_SCRIPT]="Run script files, automation",
+    [T_HELP_CMD_BUTTON]="Assign button functions",
+    [T_HELP_CMD_MACRO]="Run macros, load a macro file",
+    [T_HELP_CMD_TUTORIAL]="Run tutorial files",	
 };
 
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

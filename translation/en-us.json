@@ -371,8 +371,8 @@
     "T_HELP_DISK_FORMAT": "erase and format internal storage in FAT16 format",
     "T_HELP_DISK_FORMAT_CMD": "All data will be lost, answer 'y' twice to continue",
     "T_HELP_DISK_LABEL": "get or set the disk label",
-	"T_HELP_DISK_LABEL_GET": "returns the current label of the disk",
-	"T_HELP_DISK_LABEL_SET": "sets the current label of the disk",
+    "T_HELP_DISK_LABEL_GET": "returns the current label of the disk",
+    "T_HELP_DISK_LABEL_SET": "sets the current label of the disk",
     "T_HELP_VADC": "measure voltage on IO pins",
     "T_HELP_VADC_SINGLE": "Single measurement",
     "T_HELP_VADC_CONTINUOUS": "Continuous measurement",
@@ -389,5 +389,10 @@
     "T_HELP_UART_BRIDGE_EXIT": "UART bridge. Press Bus Pirate button to exit.",
     "T_HELP_UART_BRIDGE_TOOLBAR": "ENABLE toolbar while bridge is active (default: disabled)",
     "T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO": "Suppress local echo, don't echo back sent data",
-    "T_HELP_UART_NMEA": "parse NMEA GPS data"
+    "T_HELP_UART_NMEA": "parse NMEA GPS data",
+    "T_HELP_SECTION_SCRIPT": "run scripts, macros and assign button functions",
+    "T_HELP_CMD_SCRIPT": "Run script files, automation",
+    "T_HELP_CMD_BUTTON": "Assign button functions",
+    "T_HELP_CMD_MACRO": "Run macros, load a macro file",
+    "T_HELP_CMD_TUTORIAL": "Run tutorial files"
 }

@@ -279,9 +279,7 @@ static char const * const bs_ba[]={
 	[T_CONFIG_LANGUAGE]="Jezik",
 	[T_CONFIG_ANSI_COLOR_MODE]="ANSI color mode",
 	[T_CONFIG_ANSI_COLOR_FULLCOLOR]="ANSI Full-Color (16M colors)",
-#ifdef ANSI_COLOR_256
 	[T_CONFIG_ANSI_COLOR_256]="ANSI-256 color",
-#endif
 	[T_CONFIG_ANSI_TOOLBAR_MODE]="ANSI toolbar mode",
 	[T_CONFIG_LANGUAGE_ENGLISH]="Engleski",
 	[T_CONFIG_LANGUAGE_CHINESE]="Kineski",
@@ -394,6 +392,11 @@ static char const * const bs_ba[]={
 	[T_HELP_UART_BRIDGE_TOOLBAR]="ENABLE toolbar while bridge is active (default: disabled)",
 	[T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO]="Suppress local echo, don't echo back sent data",
 	[T_HELP_UART_NMEA]="parse NMEA GPS data",
+	[T_HELP_SECTION_SCRIPT]="run scripts, macros and assign button functions",
+	[T_HELP_CMD_SCRIPT]="Run script files, automation",
+	[T_HELP_CMD_BUTTON]="Assign button functions",
+	[T_HELP_CMD_MACRO]="Run macros, load a macro file",
+	[T_HELP_CMD_TUTORIAL]="Run tutorial files",
 
 };
 

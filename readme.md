@@ -61,7 +61,7 @@ git clone git@github.com:DangerousPrototypes/BusPirate5-firmware.git
 cd BusPirate5-firmware
 
 # build the environment
-docker compose bui
+docker compose build
 
 # run a build
 UID=$(id -u) GID=$(id -g) docker compose run dev build-clean

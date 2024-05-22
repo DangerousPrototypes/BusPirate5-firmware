@@ -737,10 +737,12 @@ void ui_term_progress_bar_cleanup(ui_term_progress_bar_t *pb)
 
 }
 
-void ui_term_cmdln_wait_char(char c) {
+// wait for a specific char from the cmdline (or any if NULL)
+// return the char sent in case we want to do more complex control
+char ui_term_cmdln_wait_char(char c) {
     char r = '\0';
     while(!system_config.error) {
-        if(rx_fifo_try_get(&r) && (r == c)) return;
+        if(rx_fifo_try_get(&r) && ((r == c) || c == '\0')) return r;
         busy_wait_ms(1);
     }
 }

@@ -30,6 +30,7 @@
 static const char * const hex_usage[]= {
     "hex <file> [-d(address)] [-a(ascii)] [-s <size>]",
     "Print file contents in HEX: hex example.bin -d -a -s 8",
+    "press 'q' to quit pager"
 };
 static const struct ui_help_options hex_options[]= {
 {1,"", T_HELP_DISK_HEX}, //section heading
@@ -38,6 +39,7 @@ static const struct ui_help_options hex_options[]= {
     {0,"-a", T_HELP_DISK_HEX_ASCII},
     {0,"-s <size>", T_HELP_DISK_HEX_SIZE},
     {0,"-t <off>", T_HELP_DISK_HEX_OFF},
+    {0,"-c", T_HELP_DISK_HEX_PAGER_OFF}
 };
 
 // Show flags
@@ -61,7 +63,6 @@ static uint32_t hex_dump(FIL *fil, uint32_t shown_off, const uint16_t page_lines
     uint32_t tot_read = 0;
     bool print_addr = false;
 
-    printf("\r\n");
     if (flag_addr)
         print_addr = true;
     UINT bytes_read = 0;
@@ -123,7 +124,9 @@ void disk_hex_handler(struct command_result *res){
     uint32_t bytes_read = 0;
     uint16_t page_lines = 0;
     uint32_t seek_off = 0;
+    uint32_t pager_off = 0;
     command_var_t arg;
+    char recv_char;
 
     cmdln_args_string_by_position(1, sizeof(location), location);
     fr = f_open(&fil, location, FA_READ);
@@ -141,25 +144,31 @@ void disk_hex_handler(struct command_result *res){
         row_size = DEF_ROW_SIZE;
     if (!cmdln_args_find_flag_uint32('t'|0x20, &arg, &seek_off))
         seek_off = 0;
-    // TODO: get current terminal height in lines
-#define GET_TERM_LINES()    10U
-    page_lines = GET_TERM_LINES();
+    if (cmdln_args_find_flag('c'|0x20))
+        pager_off = 1;
 
+    page_lines = system_config.terminal_ansi_rows;
     f_lseek(&fil, seek_off);
     off = seek_off;
-    while ( (bytes_read=hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
+    printf("\r\n");
+    while ( (bytes_read = hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
         off += bytes_read;
-#if 0
-        // TODO: pseudo code
-        key = GET_KEY();
-        if (key == 'x')
-            break;
-#else
-        // TODO: remove when above implemented
-        // Dummy temporary code to separate page
-        printf("----\r\n");
-#endif
+
+        if (pager_off) continue;
+
+        recv_char = ui_term_cmdln_wait_char('\0');
+        switch (recv_char) {
+            // give the user the ability to bail out
+            case 'q':
+                goto exit_hex_dump_early;
+                break;
+            // anything else just keep going
+            default:
+                break;
+        }
     }
+
+exit_hex_dump_early:
     f_close(&fil);
     printf("\r\n");
 }

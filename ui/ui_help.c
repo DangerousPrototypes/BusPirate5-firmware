@@ -22,7 +22,7 @@ void ui_help_options(const struct ui_help_options (*help), uint32_t count) {
 
     for(uint i=0; i<count; i++) {
         if ((i > 0) && ((i % pager_rows) == 0)) {
-            ui_term_cmdln_wait_char(' ');
+            ui_term_cmdln_wait_char('\0');
         }
         switch(help[i].help) {
             case 1: //heading

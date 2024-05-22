@@ -12,9 +12,19 @@
 #include "modes.h"
 
 // displays the help
-void ui_help_options(const struct ui_help_options (*help), uint32_t count){
-	for(uint i=0; i<count; i++){
-		switch(help[i].help){
+// NOTE: update if the count of "\r\n" prints in the switch statement below changes
+// case1(3) + case0(3) + case\n(1) = 7
+#define PAGER_PER_HELP_ROWS 7
+void ui_help_options(const struct ui_help_options (*help), uint32_t count) {
+    // set the pager rows for a pause, fix the integer wrap around if something weird is going on
+    uint8_t pager_rows = system_config.terminal_ansi_rows - PAGER_PER_HELP_ROWS;
+    if (pager_rows > system_config.terminal_ansi_rows) pager_rows = system_config.terminal_ansi_rows;
+
+    for(uint i=0; i<count; i++) {
+        if ((i > 0) && ((i % pager_rows) == 0)) {
+            ui_term_cmdln_wait_char(' ');
+        }
+        switch(help[i].help) {
             case 1: //heading
                 printf("\r\n%s%s%s\r\n", 
                     ui_term_color_info(), 
@@ -33,8 +43,8 @@ void ui_help_options(const struct ui_help_options (*help), uint32_t count){
                 break;
             default:
                 break;
-		}
-	}
+        }
+    }
 }
 
 void ui_help_usage(const char * const flash_usage[], uint32_t count){
@@ -52,7 +62,7 @@ bool ui_help_show(bool help_flag, const char * const usage[], uint32_t count_of_
         ui_help_usage(usage, count_of_usage);
         ui_help_options(&options[0],count_of_options);
         return true;
-    }   
+    }
     return false;
 }
 
@@ -86,11 +96,11 @@ bool ui_help_check_vout_vref(void){
         ui_help_error(T_MODE_NO_VOUT_VREF_ERROR);
         printf("%s%s%s\r\n", ui_term_color_info(), t[T_MODE_NO_VOUT_VREF_HINT], ui_term_color_reset());
         return false;
-    }    
+    }
     return true;
 }
 
 //move to help?
 void ui_help_error(uint32_t error){
-	printf("\x07\r\n%sError:%s %s\r\n",ui_term_color_error(), ui_term_color_reset(), t[error]);
+    printf("\x07\r\n%sError:%s %s\r\n",ui_term_color_error(), ui_term_color_reset(), t[error]);
 }

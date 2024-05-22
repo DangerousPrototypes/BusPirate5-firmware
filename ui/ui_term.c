@@ -737,3 +737,10 @@ void ui_term_progress_bar_cleanup(ui_term_progress_bar_t *pb)
 
 }
 
+void ui_term_cmdln_wait_char(char c) {
+    char r = '\0';
+    while(!system_config.error) {
+        if(rx_fifo_try_get(&r) && (r == c)) return;
+        busy_wait_ms(1);
+    }
+}

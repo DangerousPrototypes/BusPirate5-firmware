@@ -5,8 +5,8 @@
 #include "pirate/amux.h"
 #include "ui/ui_term.h"
 #include "opt_args.h" //remove?
-#include "ui/ui_help.h" 
-#include "display/scope.h" 
+#include "ui/ui_help.h"
+#include "display/scope.h"
 #include "system_config.h"
 #include "bytecode.h"
 #include "modes.h"
@@ -26,9 +26,9 @@ void ui_help_options(const struct ui_help_options (*help), uint32_t count) {
         }
         switch(help[i].help) {
             case 1: //heading
-                printf("\r\n%s%s%s\r\n", 
-                    ui_term_color_info(), 
-                    t[help[i].description], 
+                printf("\r\n%s%s%s\r\n",
+                    ui_term_color_info(),
+                    t[help[i].description],
                     ui_term_color_reset()
                 );
                 break;
@@ -71,11 +71,11 @@ void ui_help_mode_commands_exec(const struct _command_struct *commands, uint32_t
     //printf("\r\nAvailable mode commands:\r\n");
     printf("\r\n%s%s%s mode commands:%s\r\n", ui_term_color_prompt(), mode, ui_term_color_info(), ui_term_color_reset());
     for(uint32_t i=0; i<count; i++){
-        printf("%s%s%s\t%s%s\r\n", 
-            ui_term_color_prompt(), 
-            commands[i].command, 
-            ui_term_color_info(), 
-            commands[i].help_text?t[commands[i].help_text]:"Description not set. Try -h for command help", 
+        printf("%s%s%s\t%s%s\r\n",
+            ui_term_color_prompt(),
+            commands[i].command,
+            ui_term_color_info(),
+            commands[i].help_text?t[commands[i].help_text]:"Description not set. Try -h for command help",
             ui_term_color_reset()
         );
     }
@@ -84,8 +84,6 @@ void ui_help_mode_commands_exec(const struct _command_struct *commands, uint32_t
 void ui_help_mode_commands(const struct _command_struct *commands, uint32_t count){
     ui_help_mode_commands_exec(commands, count, modes[system_config.mode].protocol_name);
 }
-
-
 
 //true if there is a voltage on out/vref pin
 bool ui_help_check_vout_vref(void){

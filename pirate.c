@@ -177,9 +177,7 @@ int main(){
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
-    multicore_fifo_push_blocking(BP_ICM_INIT_CORE1__REQUEST);
-    // wait for init to complete  
-    while(multicore_fifo_pop_blocking()!=BP_ICM_INIT_CORE1__COMPLETE);
+    icm_core0_send_message(BP_ICM_INIT_CORE1);
 
     //test for PCB revision
     //must be done after shift register setup
@@ -361,7 +359,10 @@ void core1_entry(void){
     rgb_init();
 
     // wait for main core to signal start
-    while(multicore_fifo_pop_blocking()!=BP_ICM_INIT_CORE1__REQUEST);
+    uint32_t raw_init_message;
+    do {
+        raw_init_message = multicore_fifo_pop_blocking();
+    } while(icm_get_message(raw_init_message) != BP_ICM_INIT_CORE1);
 
     // USB init
     if(system_config.terminal_usb_enable){
@@ -375,7 +376,7 @@ void core1_entry(void){
         rx_uart_init_irq();
     }
 
-    multicore_fifo_push_blocking(BP_ICM_INIT_CORE1__COMPLETE);
+    multicore_fifo_push_blocking(raw_init_message); // notify completion of initialization using full 32-bit raw init value
 
     while(1){
         //service (thread safe) tinyusb tasks

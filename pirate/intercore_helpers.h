@@ -11,8 +11,7 @@
 //
 
 // Having defined names (rather than magic numbers) improves readability of the code.
-#define BP_ICM_INIT_CORE1__REQUEST   ((uint8_t)0x00) // BUGBUG -- Most messages use same ID for request/response...
-#define BP_ICM_INIT_CORE1__COMPLETE  ((uint8_t)0xFF) // BUGBUG -- Most messages use same ID for request/response...
+#define BP_ICM_INIT_CORE1            ((uint8_t)0xA5) // Used to synchronize Core0 and Core1 intialization.
 #define BP_ICM_DISABLE_LCD_UPDATES   ((uint8_t)0xF0) // disables LCD updates / IRQ
 #define BP_ICM_ENABLE_LCD_UPDATES    ((uint8_t)0xF1) // enables LCD updates / IRQ
 #define BP_ICM_FORCE_LCD_UPDATE      ((uint8_t)0xF2) // enable LCD updates / IRQ and force an update

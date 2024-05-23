@@ -117,6 +117,8 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
   const char pid[] = "Storage";
   const char rev[] = "1.0";
 
+  // NOTE: tinyusb (class/msc/msc_device.c) sets all values
+  //       to spaces by default, so safe to only copy changes
   memcpy(vendor_id  , vid, strlen(vid));
   memcpy(product_id , pid, strlen(pid));
   memcpy(product_rev, rev, strlen(rev));

@@ -61,8 +61,6 @@ int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
 }
 
 int main(){
-    char c;
-    
     uint8_t bp_rev=mcu_detect_revision();
 
     //init buffered IO pins

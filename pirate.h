@@ -117,15 +117,5 @@ void spi_busy_wait(bool enable);
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 //only used on APA102
 
-// Intercore messages (always requested by core 0, always completed by core 1)
-// NOTE: values should be kept in a range that would not be a valid pointer,
-//       to allow for later expansion to passing data buffers directly.
-#define BP_ICM_INIT_CORE1__REQUEST   ((uint32_t)0x00) // BUGBUG -- Most messages use same ID for request/response...
-#define BP_ICM_INIT_CORE1__COMPLETE  ((uint32_t)0xFF) // BUGBUG -- Most messages use same ID for request/response...
-#define BP_ICM_VALUE_F0              ((uint32_t)0xF0) // disables LCD IRQ, disabled LCD updates
-#define BP_ICM_VALUE_F1              ((uint32_t)0xF1) // enables LCD IRQ, enables LCD updates
-#define BP_ICM_VALUE_F2              ((uint32_t)0xF2) // enable LCD IRQ, enabled and forces LCD update
-#define BP_ICM_VALUE_F3              ((uint32_t)0xF3) // disables RGB IRQ
-#define BP_ICM_VALUE_F4              ((uint32_t)0xF4) // enables RGB IRQ
 
 #endif

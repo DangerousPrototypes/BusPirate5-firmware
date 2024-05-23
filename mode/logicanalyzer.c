@@ -320,8 +320,8 @@ la_x:
 
 void logicanalyzer_reset_led(void)
 {
-    multicore_fifo_push_blocking(0xf4);
-    multicore_fifo_pop_blocking();
+    multicore_fifo_push_blocking(0xf4); // BUGBUG ... #define friendly constants for these magic numbers
+    multicore_fifo_pop_blocking(); // BUGBUG ... other code paths loop until this pops the expected value?
 }
 
 
@@ -484,8 +484,8 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     irq_set_enabled(pio_get_dreq(pio, sm, false), true);
     irq_clear(pio_get_dreq(pio, sm, false));
     la_status=LA_ARMED_INIT;
-    multicore_fifo_push_blocking(0xf3);
-    multicore_fifo_pop_blocking();
+    multicore_fifo_push_blocking(0xf3); // BUGBUG ... #define friendly constants for these magic numbers
+    multicore_fifo_pop_blocking(); // BUGBUG ... other code paths loop until this pops the expected value?
     //rgb_irq_enable(false);
     busy_wait_ms(5);
     rgb_set_all(0xff,0,0); //RED LEDs for armed

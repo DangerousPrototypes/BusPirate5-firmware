@@ -27,17 +27,17 @@ bool ui_process_syntax(void)
             printf("Syntax compile error\r\n");
             return true;
     }
-    multicore_fifo_push_blocking(0xf0);
-    multicore_fifo_pop_blocking();
+    multicore_fifo_push_blocking(0xf0); // BUGBUG ... #define friendly constants for these magic numbers
+    multicore_fifo_pop_blocking(); // BUGBUG ... other code paths loop until this pops the expected value?
     if(syntax_run())
     {
-            multicore_fifo_push_blocking(0xf1);
-            multicore_fifo_pop_blocking(); 
+            multicore_fifo_push_blocking(0xf1); // BUGBUG ... #define friendly constants for these magic numbers
+            multicore_fifo_pop_blocking(); // BUGBUG ... other code paths loop until this pops the expected value?
             printf("Syntax execution error\r\n");
             return true;
     }
-    multicore_fifo_push_blocking(0xf1);
-    multicore_fifo_pop_blocking();            
+    multicore_fifo_push_blocking(0xf1); // BUGBUG ... #define friendly constants for these magic numbers
+    multicore_fifo_pop_blocking(); // BUGBUG ... other code paths loop until this pops the expected value?    
     if(syntax_post())
     {
             printf("Syntax post process error\r\n");

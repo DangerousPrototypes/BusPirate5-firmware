@@ -339,8 +339,8 @@ void cmd_selftest(void){
     #endif        
 
     printf("SELF TEST STARTING\r\nDISABLE IRQ: ");
-    multicore_fifo_push_blocking(0xf0);
-    while(multicore_fifo_pop_blocking()!=0xf0);
+    multicore_fifo_push_blocking(0xf0); // BUGBUG ... #define friendly constants for these magic numbers
+    while(multicore_fifo_pop_blocking()!=0xf0); // BUGBUG ... #define friendly constants for these magic numbers
     busy_wait_ms(500);
     printf("OK\r\n");
 
@@ -398,8 +398,8 @@ void cmd_selftest(void){
     system_config.error=false;
 
     //enable system interrupts
-    multicore_fifo_push_blocking(0xf1);
-    while(multicore_fifo_pop_blocking()!=0xf1);
+    multicore_fifo_push_blocking(0xf1); // BUGBUG ... #define friendly constants for these magic numbers
+    while(multicore_fifo_pop_blocking()!=0xf1); // BUGBUG ... #define friendly constants for these magic numbers
 }
 
 static const char * const usage[]={

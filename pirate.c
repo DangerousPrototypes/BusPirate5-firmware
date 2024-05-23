@@ -176,9 +176,9 @@ int main(){
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
-    multicore_fifo_push_blocking(0); 
+    multicore_fifo_push_blocking(0);  // BUGBUG ... #define friendly constants for these magic numbers
     // wait for init to complete  
-    while(multicore_fifo_pop_blocking()!=0xff);
+    while(multicore_fifo_pop_blocking()!=0xff); // BUGBUG ... #define friendly constants for these magic numbers
 
     //test for PCB revision
     //must be done after shift register setup
@@ -374,7 +374,7 @@ void core1_entry(void){
         rx_uart_init_irq();
     }
 
-    multicore_fifo_push_blocking(0xff); 
+    multicore_fifo_push_blocking(0xff);  // BUGBUG ... #define friendly constants for these magic numbers
 
     while(1){
         //service (thread safe) tinyusb tasks
@@ -430,29 +430,29 @@ void core1_entry(void){
         while(multicore_fifo_rvalid()){
             temp=multicore_fifo_pop_blocking();
             switch(temp){
-                case 0xf0:
+                case 0xf0: // BUGBUG ... #define friendly constants for these magic numbers
                     lcd_irq_disable();
                     lcd_update_request=false;
                     break;
-                case 0xf1:
+                case 0xf1: // BUGBUG ... #define friendly constants for these magic numbers
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_request=true;
                     break;
-                case 0xf2:
+                case 0xf2: // BUGBUG ... #define friendly constants for these magic numbers
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_force=true;
                     lcd_update_request=true;
                     break;
-                case 0xf3:
+                case 0xf3: // BUGBUG ... #define friendly constants for these magic numbers
                     rgb_irq_enable(false);
                     break;
-                case 0xf4:
+                case 0xf4: // BUGBUG ... #define friendly constants for these magic numbers
                     rgb_irq_enable(true);
                     break;
                 default:
                     break;
             }
-            multicore_fifo_push_blocking(temp); //acknowledge
+            multicore_fifo_push_blocking(temp); // acknowledge ...  // BUGBUG ... #define friendly constants for these magic numbers
         }
 
     }// while(1)

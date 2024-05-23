@@ -56,11 +56,11 @@ uint32_t disp_default_setup(void)
 
 uint32_t disp_default_setup_exc(void)
 {
-    multicore_fifo_push_blocking(0xf0);
-    while(multicore_fifo_pop_blocking()!=0xf0);
+    multicore_fifo_push_blocking(0xf0); // BUGBUG ... #define friendly constants for these magic numbers
+    while(multicore_fifo_pop_blocking()!=0xf0); // BUGBUG ... #define friendly constants for these magic numbers
 
-    multicore_fifo_push_blocking(0xf2);
-    while(multicore_fifo_pop_blocking()!=0xf2);
+    multicore_fifo_push_blocking(0xf2); // BUGBUG ... #define friendly constants for these magic numbers
+    while(multicore_fifo_pop_blocking()!=0xf2); // BUGBUG ... #define friendly constants for these magic numbers
 	return 1;
 }
 

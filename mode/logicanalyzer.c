@@ -20,6 +20,7 @@
 #include "pico/multicore.h"
 #include "pirate/amux.h"
 #include "ui/ui_cmdln.h"
+#include "pirate/intercore_helpers.h"
 
 enum logicanalyzer_status
 {
@@ -320,8 +321,7 @@ la_x:
 
 void logicanalyzer_reset_led(void)
 {
-    multicore_fifo_push_blocking(0xf4); // BUGBUG ... #define friendly constants for these magic numbers
-    multicore_fifo_pop_blocking(); // BUGBUG ... other code paths loop until this pops the expected value?
+    icm_core0_send_message(BP_ICM_VALUE_F4);
 }
 
 
@@ -484,7 +484,7 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     irq_set_enabled(pio_get_dreq(pio, sm, false), true);
     irq_clear(pio_get_dreq(pio, sm, false));
     la_status=LA_ARMED_INIT;
-    multicore_fifo_push_blocking(0xf3); // BUGBUG ... #define friendly constants for these magic numbers
+    icm_core0_send_message(BP_ICM_VALUE_F3);
     multicore_fifo_pop_blocking(); // BUGBUG ... other code paths loop until this pops the expected value?
     //rgb_irq_enable(false);
     busy_wait_ms(5);

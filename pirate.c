@@ -48,6 +48,7 @@
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
 #include "msc_disk.h"
+#include "pirate/intercore_helpers.h"
 
 static mutex_t spi_mutex;
 
@@ -176,9 +177,9 @@ int main(){
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
-    multicore_fifo_push_blocking(0);  // BUGBUG ... #define friendly constants for these magic numbers
+    multicore_fifo_push_blocking(BP_ICM_INIT_CORE1__REQUEST);
     // wait for init to complete  
-    while(multicore_fifo_pop_blocking()!=0xff); // BUGBUG ... #define friendly constants for these magic numbers
+    while(multicore_fifo_pop_blocking()!=BP_ICM_INIT_CORE1__COMPLETE);
 
     //test for PCB revision
     //must be done after shift register setup
@@ -360,7 +361,7 @@ void core1_entry(void){
     rgb_init();
 
     // wait for main core to signal start
-    while(multicore_fifo_pop_blocking()!=0);
+    while(multicore_fifo_pop_blocking()!=BP_ICM_INIT_CORE1__REQUEST);
 
     // USB init
     if(system_config.terminal_usb_enable){
@@ -374,7 +375,7 @@ void core1_entry(void){
         rx_uart_init_irq();
     }
 
-    multicore_fifo_push_blocking(0xff);  // BUGBUG ... #define friendly constants for these magic numbers
+    multicore_fifo_push_blocking(BP_ICM_INIT_CORE1__COMPLETE);
 
     while(1){
         //service (thread safe) tinyusb tasks
@@ -429,30 +430,30 @@ void core1_entry(void){
         // service any requests with priority
         while(multicore_fifo_rvalid()){
             temp=multicore_fifo_pop_blocking();
-            switch(temp){
-                case 0xf0: // BUGBUG ... #define friendly constants for these magic numbers
+            switch(icm_get_message(temp)){
+                case BP_ICM_VALUE_F0:
                     lcd_irq_disable();
                     lcd_update_request=false;
                     break;
-                case 0xf1: // BUGBUG ... #define friendly constants for these magic numbers
+                case BP_ICM_VALUE_F1:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_request=true;
                     break;
-                case 0xf2: // BUGBUG ... #define friendly constants for these magic numbers
+                case BP_ICM_VALUE_F2:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_force=true;
                     lcd_update_request=true;
                     break;
-                case 0xf3: // BUGBUG ... #define friendly constants for these magic numbers
+                case BP_ICM_VALUE_F3:
                     rgb_irq_enable(false);
                     break;
-                case 0xf4: // BUGBUG ... #define friendly constants for these magic numbers
+                case BP_ICM_VALUE_F4:
                     rgb_irq_enable(true);
                     break;
                 default:
                     break;
             }
-            multicore_fifo_push_blocking(temp); // acknowledge ...  // BUGBUG ... #define friendly constants for these magic numbers
+            multicore_fifo_push_blocking(temp); // acknowledge completion using the same BP_ICM_... code
         }
 
     }// while(1)

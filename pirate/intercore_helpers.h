@@ -13,11 +13,11 @@
 // Having defined names (rather than magic numbers) improves readability of the code.
 #define BP_ICM_INIT_CORE1__REQUEST   ((uint8_t)0x00) // BUGBUG -- Most messages use same ID for request/response...
 #define BP_ICM_INIT_CORE1__COMPLETE  ((uint8_t)0xFF) // BUGBUG -- Most messages use same ID for request/response...
-#define BP_ICM_VALUE_F0              ((uint8_t)0xF0) // disables LCD IRQ, disabled LCD updates
-#define BP_ICM_VALUE_F1              ((uint8_t)0xF1) // enables LCD IRQ, enables LCD updates
-#define BP_ICM_VALUE_F2              ((uint8_t)0xF2) // enable LCD IRQ, enabled and forces LCD update
-#define BP_ICM_VALUE_F3              ((uint8_t)0xF3) // disables RGB IRQ
-#define BP_ICM_VALUE_F4              ((uint8_t)0xF4) // enables RGB IRQ
+#define BP_ICM_DISABLE_LCD_UPDATES   ((uint8_t)0xF0) // disables LCD updates / IRQ
+#define BP_ICM_ENABLE_LCD_UPDATES    ((uint8_t)0xF1) // enables LCD updates / IRQ
+#define BP_ICM_FORCE_LCD_UPDATE      ((uint8_t)0xF2) // enable LCD updates / IRQ and force an update
+#define BP_ICM_DISABLE_RGB_UPDATES   ((uint8_t)0xF3) // disables RGB updates / IRQ
+#define BP_ICM_ENABLE_RGB_UPDATES    ((uint8_t)0xF4) // enables RGB updates / IRQ
 
 // While core1 has a single point where these messages are received / responded to,
 // core0 sends the messages from many files.

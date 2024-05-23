@@ -431,23 +431,23 @@ void core1_entry(void){
         while(multicore_fifo_rvalid()){
             temp=multicore_fifo_pop_blocking();
             switch(icm_get_message(temp)){
-                case BP_ICM_VALUE_F0:
+                case BP_ICM_DISABLE_LCD_UPDATES:
                     lcd_irq_disable();
                     lcd_update_request=false;
                     break;
-                case BP_ICM_VALUE_F1:
+                case BP_ICM_ENABLE_LCD_UPDATES:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_request=true;
                     break;
-                case BP_ICM_VALUE_F2:
+                case BP_ICM_FORCE_LCD_UPDATE:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_force=true;
                     lcd_update_request=true;
                     break;
-                case BP_ICM_VALUE_F3:
+                case BP_ICM_DISABLE_RGB_UPDATES:
                     rgb_irq_enable(false);
                     break;
-                case BP_ICM_VALUE_F4:
+                case BP_ICM_ENABLE_RGB_UPDATES:
                     rgb_irq_enable(true);
                     break;
                 default:

@@ -57,8 +57,8 @@ uint32_t disp_default_setup(void)
 
 uint32_t disp_default_setup_exc(void)
 {
-	icm_core0_send_message(BP_ICM_VALUE_F0);
-	icm_core0_send_message(BP_ICM_VALUE_F2);
+	icm_core0_send_message(BP_ICM_DISABLE_LCD_UPDATES);
+	icm_core0_send_message(BP_ICM_FORCE_LCD_UPDATE);
 	return 1;
 }
 

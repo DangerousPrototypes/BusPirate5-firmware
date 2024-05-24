@@ -107,9 +107,9 @@ uint32_t color_wheel_div(uint8_t pos) {
 }
 
 
-void rgb_assign_color(uint32_t l, uint32_t color){
+void rgb_assign_color(uint32_t index_mask, uint32_t color){
     for (int i=0;i<RGB_LEN; i++){
-        if(l&(1u<<i)) {
+        if(index_mask&(1u<<i)) {
             leds[i]=color;
         }
     }

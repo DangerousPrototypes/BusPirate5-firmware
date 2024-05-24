@@ -46,6 +46,8 @@ static bool writable = true;
 enum
 {
   MSC_DEMO_DISK_BLOCK_NUM  = 16, // 8KB is the smallest size that windows allow to mount
+  // should this be MSC_DEMO_DISK_SECTOR_SIZE?
+  // ..._BLOCK_SIZE refers to an erase size (e.g., for 4k physical, 512b logical sectors)
   MSC_DEMO_DISK_BLOCK_SIZE = 512 //512
 };
 

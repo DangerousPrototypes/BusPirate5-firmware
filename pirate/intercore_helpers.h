@@ -9,6 +9,9 @@
 //     Other places, core0 sends, and then loops until core1 sends ***any*** value as response.
 //     (This could improperly continue even if the response is for a different message.)
 //
+//     There are strong warnings AGAINST using multicore FIFOs unless can be sure not used
+//     by any RTOS layer, intercore lockout functionality, etc.  Thus, consider changing these
+//     to use a standard queue instead.
 
 // Having defined names (rather than magic numbers) improves readability of the code.
 typedef uint8_t bp_icm_message_t;

@@ -24,6 +24,7 @@
  */
 
 #include "tusb.h"
+#include "pirate/mcu.h"
 
 /* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
  * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
@@ -264,10 +265,10 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 // array of pointer to string descriptors
 char const* string_desc_arr [] =
 {
-  (const char[]) { 0x09, 0x04 }, // 0: is supported language is English (0x0409)
-  "Bus Pirate",                  // 1: Manufacturer
-  "Bus Pirate 5",                // 2: Product
-  "5buspirate",                // 3: Serials, should use chip ID
+  (const char[]) { 0x09, 0x04 },    // 0: is supported language is English (0x0409)
+  "Bus Pirate",                     // 1: Manufacturer
+  "Bus Pirate 5",                   // 2: Product
+  "5buspirate",                     // 3: Serials, should use chip ID
   "Bus Pirate CDC",                 // 4: CDC Interface
   "Bus Pirate MSC",                 // 5: MSC Interface
   "Bus Pirate BIN"                  // 6: Binary CDC Interface
@@ -283,10 +284,20 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
   uint8_t chr_count;
 
-  if ( index == 0)
+  if ( index == 0) // supported language == English
   {
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
+  } else if ( index == 3 ) { // USB Serial number
+    //  1x  uint16_t for length/type
+    // 16x  uint16_t to encode 64-bit value as hex (16x nibbles)
+    static_assert(sizeof(_desc_str) >= 17);
+    uint64_t unique_id = mcu_get_unique_id();
+    for ( uint_fast8_t t = 0; t < 16; t++ ) {
+      uint8_t nibble = (unique_id >> (t * 4u)) & 0xF;
+      _desc_str[1+t] = nibble < 10 ? '0' + nibble : 'A' + nibble - 10;
+    }
+    chr_count = 16;
   }else
   {
     // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.

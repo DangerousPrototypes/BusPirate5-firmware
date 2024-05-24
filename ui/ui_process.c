@@ -28,14 +28,14 @@ bool ui_process_syntax(void)
             printf("Syntax compile error\r\n");
             return true;
     }
-    icm_core0_send_message(BP_ICM_DISABLE_LCD_UPDATES);
+    icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
     if(syntax_run())
     {
-            icm_core0_send_message(BP_ICM_ENABLE_LCD_UPDATES);
+            icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
             printf("Syntax execution error\r\n");
             return true;
     }
-    icm_core0_send_message(BP_ICM_ENABLE_LCD_UPDATES);
+    icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
     if(syntax_post())
     {
             printf("Syntax post process error\r\n");

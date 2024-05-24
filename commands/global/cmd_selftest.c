@@ -340,7 +340,7 @@ void cmd_selftest(void){
     #endif        
 
     printf("SELF TEST STARTING\r\nDISABLE IRQ: ");
-    icm_core0_send_message(BP_ICM_DISABLE_LCD_UPDATES);
+    icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
     busy_wait_ms(500);
     printf("OK\r\n");
 
@@ -398,7 +398,7 @@ void cmd_selftest(void){
     system_config.error=false;
 
     //enable system interrupts
-    icm_core0_send_message(BP_ICM_ENABLE_LCD_UPDATES);
+    icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
 }
 
 static const char * const usage[]={

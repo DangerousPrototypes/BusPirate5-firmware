@@ -12,7 +12,7 @@
 // alternative cross-core communication methods if needed.
 
 
-void icm_core0_send_message(bp_icm_message_t message_id) {
+void icm_core0_send_message_synchronous(bp_icm_message_t message_id) {
     // NOTE: although split into multiple lines for readability,
     //       the compiler optimizes this quite well!
 

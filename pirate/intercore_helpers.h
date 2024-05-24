@@ -23,7 +23,7 @@ typedef uint8_t bp_icm_message_t;
 // core0 sends the messages from many files.
 // Funnel into low-overhead wrapper to catch errors in cross-core synchronization,
 // because debugging such issues is ... non-trivial.
-void icm_core0_send_message(bp_icm_message_t message_id);
+void icm_core0_send_message_synchronous(bp_icm_message_t message_id);
 
 
 // Ultra-low overhead ... maybe even zero overhead with full optimizations.

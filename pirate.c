@@ -175,7 +175,7 @@ int main(){
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
-    icm_core0_send_message(BP_ICM_INIT_CORE1);
+    icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
     //test for PCB revision
     //must be done after shift register setup

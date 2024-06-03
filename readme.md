@@ -79,18 +79,6 @@ UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
 UID=$(id -u) GID=$(id -g) docker compose run dev
 ```
 
-### patching pico SDK
-By default, pico-sdk assumes that we have 2MB of flash available, and there is no way to configure different flash size.  
-In reality, buspirate5 has 16MB of flash, if we want to fully utilize the available flash,
-we need to do the following modifications (currently it is not needed because buspirate5 firmware size is less than 2MB).
-
-1. open file `src/rp2_common/pico_standard_link/memmap_default.ld`
-2. change the line:  
-    `FLASH(rx) : ORIGIN = 0x10000000, LENGTH = 2048k`  
-    to:
-    `FLASH(rx) : ORIGIN = 0x10000000, LENGTH = 16384k`
-3. save the file and locally commit the change.
-
 ### Building without LGPL3 protected component
 **NOTE** by doing the following you may not need to distribute the binaries under LGPL3 license terms. 
 

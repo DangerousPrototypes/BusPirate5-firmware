@@ -243,6 +243,8 @@ foreach(revision ${revisions})
         target_link_libraries(${revision} ${stdlibs} )
         target_include_directories(${revision} PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )
         pico_add_extra_outputs(${revision})
+
+        pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate5.ld)
 endforeach()
 
 string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")

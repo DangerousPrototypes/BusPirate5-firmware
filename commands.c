@@ -74,7 +74,7 @@ const struct _command_struct commands[]=
     {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d" 
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
     {"hex", true, &disk_hex_handler,0x00},                                // "hex"  T_CMDLN_HEX 
-    {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
+    {"pause", true, &pause_handler, 0x00},             // "pause"
     {"dummy", true, &dummy_handler, 0x00 },                              // "dummy"
     {"help", true, &help_handler, 0x00},
     {"macro", true, &macro_handler, 0x00},

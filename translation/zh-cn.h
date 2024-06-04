@@ -17,6 +17,7 @@ static char const * const zh_cn[]={
 	[T_PRESS_ANY_KEY_TO_EXIT]="按任意键退出页面",
 	[T_PRESS_ANY_KEY]="Press any key",
 	[T_PRESS_BUTTON]="Press button",
+	[T_PRESS_X_TO_EXIT]="Press 'x' to exit",
 	[T_MODE_MODE_SELECTION]="Mode selection",
 	[T_MODE_MODE]="模式",
 	[T_MODE_NUMBER_DISPLAY_FORMAT]="Number display format",

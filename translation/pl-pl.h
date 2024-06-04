@@ -17,6 +17,7 @@ static char const * const pl_pl[]={
 	[T_PRESS_ANY_KEY_TO_EXIT]="Naciśnij jakiś klawisz aby wyjść",
 	[T_PRESS_ANY_KEY]="Press any key",
 	[T_PRESS_BUTTON]="Press button",
+	[T_PRESS_X_TO_EXIT]="Press 'x' to exit",
 	[T_MODE_MODE_SELECTION]="Wybór trybu",
 	[T_MODE_MODE]="Tryb",
 	[T_MODE_NUMBER_DISPLAY_FORMAT]="Numeryczny format wyśwetlania",

@@ -17,6 +17,7 @@ static char const * const bs_ba[]={
 	[T_PRESS_ANY_KEY_TO_EXIT]="Pritisnite bilo koju tipku za izlaz",
 	[T_PRESS_ANY_KEY]="Press any key",
 	[T_PRESS_BUTTON]="Press button",
+	[T_PRESS_X_TO_EXIT]="Press 'x' to exit",
 	[T_MODE_MODE_SELECTION]="Izbor moda",
 	[T_MODE_MODE]="Mod",
 	[T_MODE_NUMBER_DISPLAY_FORMAT]="Format prikaza brojeva",

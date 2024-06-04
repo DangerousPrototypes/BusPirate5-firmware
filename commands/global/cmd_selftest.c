@@ -303,9 +303,17 @@ bool selftest_current_limit(void){
 }
 
 bool selftest_button(void){
+    //debounce value selected somewhat arbitrarily
+    static const uint32_t DEBOUNCE_DELAY_MS = 100;    
     //prompt to push button
     printf("PUSH BUTTON TO COMPLETE: ");
+    //wait for button to be pressed
     while(!button_get(0));
+    busy_wait_ms(DEBOUNCE_DELAY_MS);
+    //then wait for button to be released
+    while( button_get(0));
+    busy_wait_ms(DEBOUNCE_DELAY_MS);
+
     printf("OK\r\n");
     return false;
 }

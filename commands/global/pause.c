@@ -13,11 +13,19 @@ static const char * const usage[]={
     "pause and wait for any key: pause",  
     "pause and wait for button press: pause -b", 
     "pause and wait for button or any key: pause -b -k", 
-    "'x' key to exit: pause -x", 
+    "'x' key to exit (e.g. script mode): pause -x", 
+};
+
+static const struct ui_help_options options[]={
+{1,"", T_HELP_CMD_PAUSE}, //command help
+    {0,"-k",T_HELP_CMD_PAUSE_KEY }, 
+	{0,"-b",T_HELP_CMD_PAUSE_BUTTON }, 
+    {0,"-x", T_HELP_CMD_PAUSE_EXIT},
+	{0,"-h", T_HELP_FLAG},
 };
 
 void pause_handler(struct command_result *res){
-    if(ui_help_show(res->help_flag,usage,count_of(usage), 0x00,0x00)) return;
+    if(ui_help_show(res->help_flag,usage,count_of(usage), options,count_of(options))) return;
 
     //check for -b button flag
     bool pause_for_button=cmdln_args_find_flag('b'|0x20);

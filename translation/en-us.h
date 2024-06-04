@@ -418,6 +418,10 @@ static char const * const en_us[]={
     [T_HELP_CMD_BUTTON]="Assign button functions",
     [T_HELP_CMD_MACRO]="Run macros, load a macro file",
     [T_HELP_CMD_TUTORIAL]="Run tutorial files",	
-};
+	[T_HELP_CMD_PAUSE]="pause for user input, optional exit",
+	[T_HELP_CMD_PAUSE_KEY]="Press any key to continue (default)",
+	[T_HELP_CMD_PAUSE_BUTTON]="Press the Bus Pirate button to continue",
+	[T_HELP_CMD_PAUSE_EXIT]="'x' key to exit (e.g. script mode)"
+};	
 
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

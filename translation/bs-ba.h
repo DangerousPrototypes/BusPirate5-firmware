@@ -192,7 +192,7 @@ static char const * const bs_ba[]={
 	[T_HELP_CMD_CD]="Promjeni direktorij",
 	[T_HELP_CMD_MKDIR]="Napravi direktorij",
 	[T_HELP_CMD_RM]="Ukloni datoteku/Direktorij",
-	[T_HELP_CMD_PAUSE]="Pause until any key is pressed",
+	[T_HELP_CMD_PAUSE]="pause for user input, optional exit",
 	[T_HELP_CMD_FORMAT]="Format storage disk (FAT16)",
 	[T_HELP_CMD_CAT]="Ispiši sadržaj datoteke",
 	[T_HELP_CMD_HEX]="Print file contents in HEX",
@@ -399,6 +399,9 @@ static char const * const bs_ba[]={
 	[T_HELP_CMD_BUTTON]="Assign button functions",
 	[T_HELP_CMD_MACRO]="Run macros, load a macro file",
 	[T_HELP_CMD_TUTORIAL]="Run tutorial files",
+	[T_HELP_CMD_PAUSE_KEY]="Press any key to continue (default)",
+	[T_HELP_CMD_PAUSE_BUTTON]="Press the Bus Pirate button to continue",
+	[T_HELP_CMD_PAUSE_EXIT]="'x' key to exit (e.g. script mode)",
 
 };
 

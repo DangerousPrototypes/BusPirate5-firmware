@@ -404,6 +404,9 @@ enum T_translations{
 	T_HELP_CMD_BUTTON,
 	T_HELP_CMD_MACRO,
 	T_HELP_CMD_TUTORIAL,
+	T_HELP_CMD_PAUSE_KEY,
+	T_HELP_CMD_PAUSE_BUTTON,
+	T_HELP_CMD_PAUSE_EXIT,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

@@ -305,7 +305,7 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     uint64_t unique_id = mcu_get_unique_id();
     for ( uint_fast8_t t = 0; t < 16; t++ ) {
       uint8_t nibble = (unique_id >> (t * 4u)) & 0xF;
-      _desc_str[1+t] = nibble < 10 ? '0' + nibble : 'A' + nibble - 10;
+      _desc_str[16-t] = nibble < 10 ? '0' + nibble : 'A' + nibble - 10;
     }
     chr_count = 16;
   } else if ( index >= STRING_DESC_ARR_ELEMENT_COUNT ) { // if not in table, return NULL

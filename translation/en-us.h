@@ -16,6 +16,7 @@ static char const * const en_us[]={
 	[T_MODE_NO_HELP_AVAILABLE]="No help available",
 	[T_PRESS_ANY_KEY_TO_EXIT]="Press any key to exit",
 	[T_PRESS_ANY_KEY]="Press any key",
+	[T_PRESS_BUTTON]="Press button",
 	[T_MODE_MODE_SELECTION]="Mode selection",
 	[T_MODE_MODE]="Mode",
 	[T_MODE_NUMBER_DISPLAY_FORMAT]="Number display format",

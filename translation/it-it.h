@@ -16,6 +16,7 @@ static char const * const it_it[]={
 	[T_MODE_NO_HELP_AVAILABLE]="Nessun aiuto disponibile",
 	[T_PRESS_ANY_KEY_TO_EXIT]="Premere un tasto per uscire",
 	[T_PRESS_ANY_KEY]="Premere un tasto",
+	[T_PRESS_BUTTON]="Press button",
 	[T_MODE_MODE_SELECTION]="Selezione modalità",
 	[T_MODE_MODE]="Modalità",
 	[T_MODE_NUMBER_DISPLAY_FORMAT]="Formato visualizzazione numero",

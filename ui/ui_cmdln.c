@@ -235,7 +235,7 @@ bool cmdln_args_get_int(uint32_t *rptr, struct prompt_result *result, uint32_t *
         cmdln_args_get_hex(rptr, result, value);
         result->number_format=df_hex;// whatever from ui_const
     }else if( r2 && (p2|0x20)=='b' ){ // BIN
-        (rptr)+=2;
+        (*rptr)+=2;
         cmdln_args_get_bin(rptr, result, value);
         result->number_format=df_bin;// whatever from ui_const        
     }else{  // DEC

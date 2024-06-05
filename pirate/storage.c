@@ -271,20 +271,20 @@ bool storage_ls(const char *location, const char *ext, const uint8_t flags)
 const char system_config_file[]="bpconfig.bp";
 
 struct _mode_config_t system_config_json[]={
-    {"$.terminal_language", &system_config.terminal_language},
-    {"$.terminal_ansi_color", &system_config.terminal_ansi_color},
-    {"$.terminal_ansi_statusbar", &system_config.terminal_ansi_statusbar},
-    {"$.display_format", &system_config.display_format},   
-    {"$.lcd_screensaver_active", &system_config.lcd_screensaver_active},
-    {"$.lcd_timeout", &system_config.lcd_timeout},
-    {"$.led_effect", &system_config.led_effect},
-    {"$.led_color", &system_config.led_color},
-    {"$.led_brightness", &system_config.led_brightness},   
-    {"$.terminal_usb_enable", &system_config.terminal_usb_enable},
-    {"$.terminal_uart_enable", &system_config.terminal_uart_enable},
-    {"$.terminal_uart_number", &system_config.terminal_uart_number},
-    {"$.debug_uart_enable", &system_config.debug_uart_enable},
-    {"$.debug_uart_number", &system_config.debug_uart_number},
+    {"$.terminal_language",       &system_config.terminal_language       },
+    {"$.terminal_ansi_color",     &system_config.terminal_ansi_color     },
+    {"$.terminal_ansi_statusbar", &system_config.terminal_ansi_statusbar },
+    {"$.display_format",          &system_config.display_format          },   
+    {"$.lcd_screensaver_active",  &system_config.lcd_screensaver_active  },
+    {"$.lcd_timeout",             &system_config.lcd_timeout             },
+    {"$.led_effect",              &system_config.led_effect              },
+    {"$.led_color",               &system_config.led_color               },
+    {"$.led_brightness",          &system_config.led_brightness          },   
+    {"$.terminal_usb_enable",     &system_config.terminal_usb_enable     },
+    {"$.terminal_uart_enable",    &system_config.terminal_uart_enable    },
+    {"$.terminal_uart_number",    &system_config.terminal_uart_number    },
+    {"$.debug_uart_enable",       &system_config.debug_uart_enable       },
+    {"$.debug_uart_number",       &system_config.debug_uart_number       },
 };
 
 uint32_t storage_save_config(void){

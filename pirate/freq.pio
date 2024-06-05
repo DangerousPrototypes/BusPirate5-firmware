@@ -3,7 +3,6 @@
 ; x contains the duration of the high level 
 ; y contains the duration of the low level
 start:
-    mov isr, null       ; empty ISR
     mov x !null         
     mov y !null 
     wait 0 pin 0        ; wait for a raising edge
@@ -97,23 +96,17 @@ static inline uint32_t freq_pulse_get_counter(PIO pio, uint sm) {
 %}
 
 .program duty_cycle
-; This program detects a raising edge then measures the duration for a full cycle
+; This program measures the duty cycle by counting the clocks spent in high state
 ; x contains the duration of the high level 
-; y contains the duration of the low level
+
 start:
     mov x !null         
 level_one:
     jmp pin, level_one_continue; wait for a falling edge
-    .wrap
+    wait 1 pin 0
 level_one_continue:
     jmp x--, level_one
-    jmp, end
-level_zero:
-    jmp pin, level_one_continue        ;wait for a raising edge
-.wrap_target
-    jmp, level_zero  
-end:
-    nop
+
 
 % c-sdk{
 #include "hardware/clocks.h"

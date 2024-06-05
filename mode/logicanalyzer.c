@@ -10,7 +10,7 @@
 #include "opt_args.h"
 #include "logicanalyzer.h"
 #include "hardware/pio.h"
-#include "build/logicanalyzer.pio.h"
+#include "logicanalyzer.pio.h"
 #include "pirate/mem.h"
 #include "hardware/structs/bus_ctrl.h"
 #include "ui/ui_term.h"

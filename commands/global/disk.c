@@ -30,7 +30,7 @@
 static const char * const hex_usage[]= {
     "hex <file> [-d(address)] [-a(ascii)] [-s <size>]",
     "Print file contents in HEX: hex example.bin -d -a -s 8",
-    "press 'q' to quit pager"
+    "press 'x' to quit pager"
 };
 static const struct ui_help_options hex_options[]= {
 {1,"", T_HELP_DISK_HEX}, //section heading
@@ -159,7 +159,7 @@ void disk_hex_handler(struct command_result *res){
         recv_char = ui_term_cmdln_wait_char('\0');
         switch (recv_char) {
             // give the user the ability to bail out
-            case 'q':
+            case 'x':
                 goto exit_hex_dump_early;
                 break;
             // anything else just keep going

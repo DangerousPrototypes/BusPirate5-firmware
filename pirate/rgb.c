@@ -114,7 +114,7 @@ uint32_t color_wheel_div(uint8_t pos) {
 }
 
 
-void rgb_assign_color(uint32_t index_mask, uint32_t color){
+void rgb_assign_grb_color(uint32_t index_mask, uint32_t color){
     for (int i=0;i<RGB_LEN; i++){
         if(index_mask&(1u<<i)) {
             leds[i]=color;
@@ -128,7 +128,7 @@ bool rgb_master(const uint32_t *groups, uint8_t group_count, uint32_t (*color_wh
     static uint16_t c=0;
 
     for(int i=0; i< group_count; i++){
-        rgb_assign_color(groups[i], color_wheel( (color+(i*color_increment))) );
+        rgb_assign_grb_color(groups[i], color_wheel( (color+(i*color_increment))) );
     }
     rgb_send();
 
@@ -168,7 +168,7 @@ bool rgb_scanner(void){
     color_grb|=((((colors[color]&0x00ff00)/system_config.led_brightness)&0x00ff00)<<8);
     color_grb|=((((colors[color]&0x0000ff)/system_config.led_brightness)&0x0000ff));
     for(int i=0; i< count_of(groups_center_left); i++){
-        rgb_assign_color(groups_center_left[i], (bitmask & (1u<<i))?color_grb:0x0a0a0a);
+        rgb_assign_grb_color(groups_center_left[i], (bitmask & (1u<<i))?color_grb:0x0a0a0a);
     }   
     rgb_send();
     
@@ -191,10 +191,6 @@ bool rgb_scanner(void){
 bool rgb_timer_callback(struct repeating_timer *t){
     static uint8_t mode=2;
 
-    //shortened list of HSV colors from fastLED
-    const uint32_t colors[]={0xFF0000, 0xD52A00, 0xAB7F00,0x00FF00, 0x0000FF, 0x5500AB, 0xAB0055};
-
-
     uint32_t color_grb;
     bool next=false;
 
@@ -204,15 +200,15 @@ bool rgb_timer_callback(struct repeating_timer *t){
     
     switch(mode) {
         case 0: //disable
-            rgb_assign_color(0xffffffff, 0x000000);
+            rgb_assign_grb_color(0xffffffff, 0x000000);
             rgb_send();  
             break;          
         case 1:
             //solid
-            color_grb =((((colors[system_config.led_color]&0xff0000)/system_config.led_brightness)&0xff0000)>>8);
-            color_grb|=((((colors[system_config.led_color]&0x00ff00)/system_config.led_brightness)&0x00ff00)<<8);
-            color_grb|=((((colors[system_config.led_color]&0x0000ff)/system_config.led_brightness)&0x0000ff));            
-            rgb_assign_color(0xffffffff, color_grb);
+            color_grb  = (( ((system_config.led_color & 0xff0000) / system_config.led_brightness ) & 0xff0000) >> 8);
+            color_grb |= (( ((system_config.led_color & 0x00ff00) / system_config.led_brightness ) & 0x00ff00) << 8);
+            color_grb |= (( ((system_config.led_color & 0x0000ff) / system_config.led_brightness ) & 0x0000ff)     );
+            rgb_assign_grb_color(0xffffffff, color_grb);
             rgb_send();
             break;
         case 2:
@@ -281,7 +277,7 @@ void rgb_init(void)
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b){
     uint32_t color= ((g/system_config.led_brightness)<<16) | ((r/system_config.led_brightness)<<8) | (b/system_config.led_brightness);
-    rgb_assign_color(0xffffffff, color);
+    rgb_assign_grb_color(0xffffffff, color);
     rgb_send();
 }
 

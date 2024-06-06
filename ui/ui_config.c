@@ -46,6 +46,10 @@ uint32_t ui_config_action_led_effect(uint32_t a, uint32_t b)
 }
 
 // LED color (?) Rainbow short, rainbow long, ROYGBIV
+// shortened list of HSV colors (as RGB) from fastLED
+// Any color can be configured in the configuration file
+// as a 24-bit RGB value; The menu simply provides common
+// colors as a convenience.
 static const struct prompt_item menu_items_led_color[]=
 {
     {T_CONFIG_LEDS_COLOR_RED},
@@ -59,8 +63,21 @@ static const struct prompt_item menu_items_led_color[]=
 
 uint32_t ui_config_action_led_color(uint32_t a, uint32_t b)
 {
+    // This needs to stay in sync with the above list of colors
+    static const uint32_t menu_based_colors[]= {
+        0xFF0000, // aka T_CONFIG_LEDS_COLOR_RED  
+        0xD52A00, // aka T_CONFIG_LEDS_COLOR_ORANGE  
+        0xAB7F00, // aka T_CONFIG_LEDS_COLOR_YELLOW  
+        0x00FF00, // aka T_CONFIG_LEDS_COLOR_GREEN  
+        0x0000FF, // aka T_CONFIG_LEDS_COLOR_BLUE  
+        0x5500AB, // aka T_CONFIG_LEDS_COLOR_PURPLE  
+        0xAB0055, // aka T_CONFIG_LEDS_COLOR_PINK 
+    };
+ 
+    static_assert(count_of(menu_based_colors) == count_of(menu_items_led_color), "menu_based_colors and menu_items_led_color must have the same number of items");
     if (b < count_of(menu_items_led_color)) {
-        system_config.led_color=b;
+        system_config.led_color=menu_based_colors[b];
+
     }
 }
 

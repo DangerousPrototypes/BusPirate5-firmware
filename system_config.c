@@ -31,7 +31,7 @@ void system_init(void)
     system_config.lcd_timeout=0;
     
     system_config.led_effect=7;
-    system_config.led_color=0;                      // OFF (black) is the default color at power-up
+    system_config.led_color=0x00FF0000u;            // Now stores actual RGB value in common form 0x00RRGGBB
     system_config.led_brightness=10;
 
     system_config.terminal_ansi_rows=24;
@@ -179,7 +179,7 @@ bool system_load_config(void)
     system_config.lcd_timeout=0;
     
     system_config.led_effect=7;
-    system_config.led_color=1;
+    system_config.led_color=0xFF0000;
     system_config.led_brightness=5;
 
     system_config.display_format=df_auto;

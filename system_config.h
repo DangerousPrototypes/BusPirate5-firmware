@@ -26,8 +26,8 @@ typedef struct _system_config
     uint32_t lcd_timeout;                  // in what units?
 
     uint32_t led_effect;
-    uint32_t led_color;                    // index into predefined list of colors (see rgb_timer_callback()) ... TODO: store actual RGB values
-    uint32_t led_brightness;               // why is this stored units of 10%?
+    uint32_t led_color;                    // RGB value stored as 0x00RRGGBB
+    uint32_t led_brightness;               // Note: limited to 30% ... they could draw too much power and are ultra-bright even at 30%
 
     uint8_t terminal_ansi_rows;
     uint8_t terminal_ansi_columns;

@@ -17,9 +17,9 @@
 #include "pirate/mem.h"
 #include "ui/ui_cmdln.h"
 
-FATFS fs;		/* FatFs work area needed for each volume */
-//FIL fil;			/* File object needed for each open file */
-//FRESULT fr;     /* FatFs return code */
+FATFS fs;        /* FatFs work area needed for each volume */
+//FIL fil;         /* File object needed for each open file */
+//FRESULT fr;      /* FatFs return code */
 // Size of read/write.
 #define BUF_SIZE 512
 // Insure 4-byte alignment.
@@ -37,27 +37,27 @@ const char storage_fat_type_labels[][8] = {
 };
 
 const char *fresult_msg[]={
-	[FR_OK]="ok",                               /* (0) Succeeded */
-	[FR_DISK_ERR]="disk error",                 /* (1) A hard error occurred in the low level disk I/O layer */
-	[FR_INT_ERR]="assertion failed",            /* (2) Assertion failed */
-	[FR_NOT_READY]="drive not ready",			/* (3) The physical drive cannot work */
-	[FR_NO_FILE]="file not found",				/* (4) Could not find the file */
-	[FR_NO_PATH]="path not found",				/* (5) Could not find the path */
-	[FR_INVALID_NAME]="invalid path",		/* (6) The path name format is invalid */
-	[FR_DENIED]="access denied",				/* (7) Access denied due to prohibited access or directory full */
-	[FR_EXIST]="access denied",				/* (8) Access denied due to prohibited access */
-	[FR_INVALID_OBJECT]="invalid object",		/* (9) The file/directory object is invalid */
-	[FR_WRITE_PROTECTED]="write prohibited",		/* (10) The physical drive is write protected */
-	[FR_INVALID_DRIVE]="invalid drive",		/* (11) The logical drive number is invalid */
-	[FR_NOT_ENABLED]="drive not enabled",			/* (12) The volume has no work area */
-	[FR_NO_FILESYSTEM]="filesystem not found",		/* (13) There is no valid FAT volume */
-	[FR_MKFS_ABORTED]="format aborted",		/* (14) The f_mkfs() aborted due to any problem */
-	[FR_TIMEOUT]="timeout",				/* (15) Could not get a grant to access the volume within defined period */
-	[FR_LOCKED]="file locked",				/* (16) The operation is rejected according to the file sharing policy */
-	[FR_NOT_ENOUGH_CORE]="buffer full",		/* (17) LFN working buffer could not be allocated */
-	[FR_TOO_MANY_OPEN_FILES]="too many open files",	/* (18) Number of open files > FF_FS_LOCK */
-	[FR_INVALID_PARAMETER]="invalid parameter"	/* (19) Given parameter is invalid */
-};
+    [FR_OK]="ok",                                    /* ( 0) Succeeded */
+    [FR_DISK_ERR]="disk error",                      /* ( 1) A hard error occurred in the low level disk I/O layer */
+    [FR_INT_ERR]="assertion failed",                 /* ( 2) Assertion failed */
+    [FR_NOT_READY]="drive not ready",                /* ( 3) The physical drive cannot work */
+    [FR_NO_FILE]="file not found",                   /* ( 4) Could not find the file */
+    [FR_NO_PATH]="path not found",                   /* ( 5) Could not find the path */
+    [FR_INVALID_NAME]="invalid path",                /* ( 6) The path name format is invalid */
+    [FR_DENIED]="access denied",                     /* ( 7) Access denied due to prohibited access or directory full */
+    [FR_EXIST]="access denied",                      /* ( 8) Access denied due to prohibited access */
+    [FR_INVALID_OBJECT]="invalid object",            /* ( 9) The file/directory object is invalid */
+    [FR_WRITE_PROTECTED]="write prohibited",         /* (10) The physical drive is write protected */
+    [FR_INVALID_DRIVE]="invalid drive",              /* (11) The logical drive number is invalid */
+    [FR_NOT_ENABLED]="drive not enabled",            /* (12) The volume has no work area */
+    [FR_NO_FILESYSTEM]="filesystem not found",       /* (13) There is no valid FAT volume */
+    [FR_MKFS_ABORTED]="format aborted",              /* (14) The f_mkfs() aborted due to any problem */
+    [FR_TIMEOUT]="timeout",                          /* (15) Could not get a grant to access the volume within defined period */
+    [FR_LOCKED]="file locked",                       /* (16) The operation is rejected according to the file sharing policy */
+    [FR_NOT_ENOUGH_CORE]="buffer full",              /* (17) LFN working buffer could not be allocated */
+    [FR_TOO_MANY_OPEN_FILES]="too many open files",  /* (18) Number of open files > FF_FS_LOCK */
+    [FR_INVALID_PARAMETER]="invalid parameter"       /* (19) Given parameter is invalid */
+    };
 
 void storage_file_error(uint8_t res){
     if(res>0){
@@ -138,18 +138,18 @@ uint8_t storage_format(void){
 
 bool storage_save_binary_blob_rollover(char *data, uint32_t ptr,uint32_t size, uint32_t rollover){
     FRESULT fr;     /* FatFs return code */
-    FIL fil;			/* File object needed for each open file */
-    fr = f_open(&fil, "la.bin", FA_WRITE | FA_CREATE_ALWAYS);	
+    FIL fil;        /* File object needed for each open file */
+    fr = f_open(&fil, "la.bin", FA_WRITE | FA_CREATE_ALWAYS);    
     if (fr == FR_OK) {   
         //middle to end
         if(ptr+size<=rollover){     
-            f_write(&fil, &data[ptr], size, &bw);	
+            f_write(&fil, &data[ptr], size, &bw);    
         }else{
-            f_write(&fil, &data[ptr], rollover-ptr, &bw);	
-            f_write(&fil, &data[0], size-(rollover-ptr), &bw);	
+            f_write(&fil, &data[ptr], rollover-ptr, &bw);    
+            f_write(&fil, &data[0], size-(rollover-ptr), &bw);    
         }
-        fr = f_close(&fil);							
-        if (fr == FR_OK) {		
+        fr = f_close(&fil);                            
+        if (fr == FR_OK) {        
             return true;
         }else{
             return false;
@@ -174,8 +174,8 @@ uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t
         return 0;
     }
     FRESULT fr;     /* FatFs return code */
-    FIL fil;			/* File object needed for each open file */
-    fr = f_open(&fil, filename, FA_CREATE_ALWAYS | FA_WRITE);	
+    FIL fil;        /* File object needed for each open file */
+    fr = f_open(&fil, filename, FA_CREATE_ALWAYS | FA_WRITE);    
     if (fr != FR_OK) {
         storage_file_error(fr);
         return 0;
@@ -196,8 +196,8 @@ uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t
         return 0;
     }
     FRESULT fr;     /* FatFs return code */
-    FIL fil;			/* File object needed for each open file */
-    fr = f_open(&fil, filename, FA_READ);	
+    FIL fil;        /* File object needed for each open file */
+    fr = f_open(&fil, filename, FA_READ);    
     if (fr != FR_OK) {
         return 0;
     }
@@ -206,7 +206,7 @@ uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t
     //UINT btr,    /* [IN] Number of bytes to read */
     //UINT* br     /* [OUT] Number of bytes read */
     fr = f_read ( &fil, &json, sizeof(json), &br);
-	int found;
+    int found;
     for(uint8_t i=0; i<count; i++){
         uint32_t val=getint(json, br, config_t[i].tag, 0, &found);
         if(found){
@@ -228,7 +228,7 @@ bool storage_ls(const char *location, const char *ext, const uint8_t flags)
     FILINFO fno;
     int nfile, ndir;
 
-    fr = f_opendir(&dir, location);                       /* Open the directory */
+    fr = f_opendir(&dir, location);                   /* Open the directory */
     if (fr != FR_OK) {
         return false;
     }
@@ -274,12 +274,12 @@ struct _mode_config_t system_config_json[]={
     {"$.terminal_language",       &system_config.terminal_language       },
     {"$.terminal_ansi_color",     &system_config.terminal_ansi_color     },
     {"$.terminal_ansi_statusbar", &system_config.terminal_ansi_statusbar },
-    {"$.display_format",          &system_config.display_format          },   
+    {"$.display_format",          &system_config.display_format          },
     {"$.lcd_screensaver_active",  &system_config.lcd_screensaver_active  },
     {"$.lcd_timeout",             &system_config.lcd_timeout             },
     {"$.led_effect",              &system_config.led_effect              },
-    {"$.led_color",               &system_config.led_color               },
-    {"$.led_brightness",          &system_config.led_brightness          },   
+    {"$.led_color_rgb",           &system_config.led_color               },
+    {"$.led_brightness",          &system_config.led_brightness          },
     {"$.terminal_usb_enable",     &system_config.terminal_usb_enable     },
     {"$.terminal_uart_enable",    &system_config.terminal_uart_enable    },
     {"$.terminal_uart_number",    &system_config.terminal_uart_number    },
@@ -292,5 +292,5 @@ uint32_t storage_save_config(void){
 }
 
 uint32_t storage_load_config(void){
- 	return storage_load_mode(system_config_file, system_config_json, count_of(system_config_json));
+     return storage_load_mode(system_config_file, system_config_json, count_of(system_config_json));
 }

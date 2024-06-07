@@ -16,105 +16,40 @@
 // This reduces type-confusion that results in incorrect colors.
 
 typedef struct _CPIXEL_COLOR_RGB {
-    // pad to 32-bits b/c pio_sm_put_blocking() expects a uint32_t
-    // This also ensures the compiler can optimize away conversion
-    // from constexpr uint32_t colors (0x00RRGGBB format) into this
-    // type into a noop (same underlying structure)
-    uint8_t _unused; 
     union {
-        uint8_t red;
         uint8_t r;
+        uint8_t red;
     };
     union {
-        uint8_t green;
         uint8_t g;
+        uint8_t green;
     };
     union {
-        uint8_t blue;
         uint8_t b;
+        uint8_t blue;
     };
 } CPIXEL_COLOR_RGB;
 
-typedef struct _CPIXEL_COLOR_GRB {
-    uint8_t _unused;
-    union {
-        uint8_t green;
-        uint8_t g;
-    };
-    union {
-        uint8_t red;
-        uint8_t r;
-    };
-    union {
-        uint8_t blue;
-        uint8_t b;
-    };
-} CPIXEL_COLOR_GRB;
-
 // C23 would allow this to be `constexpr`
-// here, `static const` relies on compiler to optimize this away
+// here, `static const` relies on compiler to optimize this away (and remove entirely if unused)
 static const CPIXEL_COLOR_RGB RGBCOLOR_BLACK = { .r=0x00, .g=0x00, .b=0x00 };
 
-
-
-
-static CPIXEL_COLOR_RGB color_rgb(uint8_t r, uint8_t g, uint8_t b) {
+static inline CPIXEL_COLOR_RGB color_rgb(uint8_t r, uint8_t g, uint8_t b) {
     CPIXEL_COLOR_RGB c = { .r = r, .g = g, .b = b };
     return c;
 }
-static CPIXEL_COLOR_GRB color_grb(uint8_t g, uint8_t r, uint8_t b) {
-    CPIXEL_COLOR_GRB c = { .g = g, .r = r, .b = b };
-    return c;
-}
-static CPIXEL_COLOR_RGB rgb_from_rgb(CPIXEL_COLOR_RGB c) { return c; }
-static CPIXEL_COLOR_GRB grb_from_grb(CPIXEL_COLOR_GRB c) { return c; }
-static CPIXEL_COLOR_RGB rgb_from_grb(CPIXEL_COLOR_GRB c) {
-    CPIXEL_COLOR_RGB r = { .r = c.r, .g = c.g, .b = c.b };
-    return r;
-}
-static CPIXEL_COLOR_GRB grb_from_rgb(CPIXEL_COLOR_RGB c) {
-    CPIXEL_COLOR_GRB r = { .g = c.g, .r = c.r, .b = c.b };
-    return r;
-}
-static CPIXEL_COLOR_RGB rgb_from_uint32(uint32_t c) {
+static inline CPIXEL_COLOR_RGB rgb_from_rgb(CPIXEL_COLOR_RGB c) { return c; }
+static inline CPIXEL_COLOR_RGB rgb_from_uint32(uint32_t c) {
     CPIXEL_COLOR_RGB r = {
-        ._unused = (c >> 24) & 0xff, // carry the input data, to allow compiler to optimization this to a noop
         .r =       (c >> 16) & 0xff,
         .g =       (c >>  8) & 0xff,
         .b =       (c >>  0) & 0xff,
     };
     return r;
 }
-static CPIXEL_COLOR_GRB grb_from_uint32(uint32_t c) {
-    CPIXEL_COLOR_GRB r = { .g = (c >> 8) & 0xff, .r = (c >> 16) & 0xff, .b = c & 0xff };
-    return r;
-}
-static uint32_t rgb_as_uint32(CPIXEL_COLOR_RGB c) {
+static inline uint32_t         rgb_as_uint32(CPIXEL_COLOR_RGB c) {
     return (c.r << 16) | (c.g << 8) | c.b;
 }
-static uint32_t grb_as_uint32(CPIXEL_COLOR_GRB c) {
-    return (c.r << 16) | (c.g << 8) | c.b;
-}
-
-// Use _Generic to auto-select the correct conversion function
-// based on the color type ... allows the code to be easier to write
-#define rgb_from_color(COLOR)                       \
-    _Generic((COLOR),                               \
-        CPIXEL_COLOR_RGB: rgb_from_rgb,             \
-        CPIXEL_COLOR_GRB: rgb_from_grb,             \
-    )(COLOR)
-#define grb_from_color(COLOR)                       \
-    _Generic((COLOR),                               \
-        CPIXEL_COLOR_RGB: grb_from_rgb,             \
-        CPIXEL_COLOR_GRB: grb_from_grb,             \
-    )(COLOR)
-#define uint32_from_color(COLOR)                    \
-    _Generic((COLOR),                               \
-        CPIXEL_COLOR_RGB: rgb_as_uint32,            \
-        CPIXEL_COLOR_GRB: grb_as_uint32,            \
-    )(COLOR)
-
-
 
 // Note that both the layout and overall count of pixels
 // has changed between revisions.  As a result, the count
@@ -219,7 +154,8 @@ CPIXEL_COLOR_RGB leds[RGB_LEN]; // store as RGB as it's easier to recognize / de
 static inline void rgb_send(void){  
     for(int i=0; i<RGB_LEN; i++){
         // old code took uint32_t in format 0x00GGRRBB (GRB format), and left-shifted the value 8 bits
-        // resulting in 0xGGRRBB00.  Replicate this behavior here using CPIXEL_COLOR_RGB
+        // resulting in 0xGGRRBB00.  Replicate this behavior here using CPIXEL_COLOR_RGB, and let the
+        // compiler optimize where possible.
         uint32_t toSend =
             (leds[i].g << 24) |
             (leds[i].r << 16) |
@@ -227,40 +163,6 @@ static inline void rgb_send(void){
         pio_sm_put_blocking(pio1, 3, toSend);
     }
 }
-
-// -- I believe this is dead code, as it's not referenced anywhere in the code
-// struct rgb_segment{
-//     uint32_t speed;
-//     uint32_t increment;
-//     bool direction;
-//     uint32_t destination;
-//     uint32_t fade;
-//     uint8_t led_total;
-//     uint8_t led_position;   
-// };
-
-// struct rgb_program{
-//     struct rgb_segment segment;
-//     bool (*handler)(struct rgb_segment *segment, uint8_t led);
-// };
-
-// struct rgb_program rgb_handlers[RGB_LEN];
-
-// void irq_rgb(void)
-// {
-//     for(uint8_t i =0; i<RGB_LEN; i++)
-//     {
-//         if(rgb_handlers[i].handler!=0)
-//         {
-//             rgb_handlers[i].handler(&rgb_handlers[i].segment, i);
-//         }
-//     }    
-//     rgb_send();
-// }
-
-
-
-
 
 /*
  * Put a value 0 to 255 in to get a color value.
@@ -299,9 +201,9 @@ CPIXEL_COLOR_RGB color_wheel_div(uint8_t pos) {
     return color;
 }
 
-// BUGBUG -- Many of the callers convert an RGB color to GRB before passing
-//           it to this function.  This means the color parameter is GRB (not RGB)?
-// TODO: define RGB and GRB structures, and use them for clarity rather than uint32_t
+/*
+ * Assign a color to a group of LEDs.
+ */
 void rgb_assign_color(uint32_t index_mask, CPIXEL_COLOR_RGB rgb_color){
     for (int i=0;i<RGB_LEN; i++){
         if(index_mask&(1u<<i)) {
@@ -310,8 +212,7 @@ void rgb_assign_color(uint32_t index_mask, CPIXEL_COLOR_RGB rgb_color){
     }
 }
 
-//something like this to cycle, delay, return done
-//This needs some more documentation:
+// rgb_master() is a function that can be called to animate the LEDs.
 //  groups          the pixel groups; a pointer to an array of index_masks,
 //                  each index_mask indicating which LEDs are considered part of the group
 //  group_count     how many groups in that array
@@ -320,8 +221,9 @@ void rgb_assign_color(uint32_t index_mask, CPIXEL_COLOR_RGB rgb_color){
 //  color_count     the distinct seed values for color_wheel() parameter.
 //                  rgb_master() will ensure the parameter is always in range [0..color_count-1]
 //  color_increment the PER GROUP increment of colors for the color_wheel() parameter.
-//returns false if additional iterations are needed.
-//returns true if sufficient iterations have been completed.
+//
+// returns false if additional iterations are needed to finish all cycles of the animation.
+// returns true if sufficient iterations have been completed.
 //
 // HACKHACK -- to ensure known starting state (reset the static variables)
 //             can call with group_count=0, cycles=0
@@ -385,7 +287,7 @@ bool rgb_scanner(void) {
     static uint8_t frame_delay_count = 0;
     static uint8_t color_idx = 0;
 
-    static const CPIXEL_COLOR_RGB background_pixel_color = { 0x00, 0x0a, 0x0a, 0x0a };
+    static const CPIXEL_COLOR_RGB background_pixel_color = { .r = 0x0a, .g = 0x0a, .b = 0x0a };
     // each loop of the animation, use the next color in this sequence.
     // when all the colors have been used, the animation is complete.
     const CPIXEL_COLOR_RGB colors[]={

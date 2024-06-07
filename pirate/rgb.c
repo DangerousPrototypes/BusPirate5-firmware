@@ -360,7 +360,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
     uint32_t color_grb;
     bool next=false;
 
-    if(system_config.led_effect<7) {
+    if(system_config.led_effect<7) { // BUGBUG -- define enum for the valid set of led effects (with appropriately descriptive names)
         mode = system_config.led_effect;
     }
     

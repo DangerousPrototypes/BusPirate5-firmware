@@ -27,7 +27,7 @@ typedef struct _system_config
 
     uint32_t led_effect;
     uint32_t led_color;                    // RGB value stored as 0x00RRGGBB
-    uint32_t led_brightness;               // Note: limited to 30% ... they could draw too much power and are ultra-bright even at 30%
+    uint32_t led_brightness;               // BUGBUG - Poor naming as this is a DIVISOR of the r/g/b component values
 
     uint8_t terminal_ansi_rows;
     uint8_t terminal_ansi_columns;
@@ -106,4 +106,3 @@ void system_init(void);
 bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label);
 bool system_bio_claim(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label);
 bool system_set_active(bool active, uint8_t bio_pin, uint8_t* function_register);
-bool system_load_config(void);

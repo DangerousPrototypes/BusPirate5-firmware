@@ -45,6 +45,7 @@ bool ui_term_cmdln_char_delete(void);
 void ui_term_cmdln_fkey(char *c);
 void ui_term_cmdln_arrow_keys(char *c);
 int ui_term_cmdln_history(int ptr);
+char ui_term_cmdln_wait_char(char c);
 
 
 #endif

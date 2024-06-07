@@ -361,6 +361,7 @@ static char const * const it_it[]={
 	[T_HELP_DISK_HEX_ASCII]="Mostra anche il dump ASCII",
 	[T_HELP_DISK_HEX_SIZE]="Imposta la dimensione della riga in byte",
 	[T_HELP_DISK_HEX_OFF]="Set file read start offset in bytes",
+    [T_HELP_DISK_HEX_PAGER_OFF]="Disable the pager for dumping",
 	[T_HELP_DISK_CAT]="Stampa i contenuti del file come testo",
 	[T_HELP_DISK_CAT_FILE]="Nome del file in formato 8.3 (esempio1.txt)",
 	[T_HELP_DISK_MKDIR]="Crea una cartella su archiviazione interna",

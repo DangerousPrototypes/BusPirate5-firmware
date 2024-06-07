@@ -8,18 +8,103 @@
 
 #define RGB_MAX_BRIGHT 32
 
-// pairs of LEDs for a top left corner to bottom right corner fade
-// not all LEDs have a pair, they are included with a neighboring LED pair
+// Note that both the layout and overall count of pixels
+// has changed between revisions.  As a result, the count
+// of elements for any of these arrays may differ.
+//
+// groups_top_left[]:
+//    defines led_bitmasks that generally start at the top left corner of the device,
+//    and continue in a diagnol pattern.  Generally setup in pairs, although some groups
+//    may set three pixels at a time.
+//
+// groups_center_left[]:
+//    tbd
+//
+// groups_center_clockwise[]:
+//    tbd
+//
+// groups_top_down[]:
+//    tbd
+//
+// Also add a new constant, COUNT_OF_PIXELS, to define the number
+// pixels on each revision of board.
 #if BP5_REV <= 9
-    const uint32_t groups_top_left[]={((1u<<1) | (1u<<2)), ((1u<<0) | (1u<<3)), ((1u<<4) | (1u<<5) | (1u<<15)), ((1u<<6) | (1u<<7) | (1u<<14)), ((1u<<8) | (1u<<13)), ((1u<<9) | (1u<<12)), ((1u<<10) | (1u<<11)) };
-    const uint32_t groups_center_left[]={(1u<<3)|(1u<<4),(1u<<2)|(1u<<5),(1u<<1)|(1u<<6),(1u<<0)|(1u<<7)|(1u<<8)|(1<<9),(1u<<10)|(1u<<15),(1u<<11)|(1u<<14),(1u<<12)|(1u<<13)};  
-    const uint32_t groups_center_clockwise[]={(1u<<13)|(1u<<14),(1u<<15), (1u<<0)|(1u<<1), (1u<<2)|(1u<<3), (1u<<4)|(1u<<5),(1u<<6)|(1u<<7),(1u<<8)|(1u<<9), (1u<<10),(1u<<11)|(1u<<12)};
-    const uint32_t groups_top_down[]={0b0011001010011001,0b1100110101100110}; //MSB is last led in string...
+    static const uint8_t COUNT_OF_PIXELS = 16;
+    const uint32_t groups_top_left[]={
+        ((1u <<  1)              | (1u <<  2)),
+        ((1u <<  0)              | (1u <<  3)),
+        ((1u <<  4) | (1u <<  5) | (1u << 15)),
+        ((1u <<  6) | (1u <<  7) | (1u << 14)),
+        ((1u <<  8)              | (1u << 13)),
+        ((1u <<  9)              | (1u << 12)),
+        ((1u << 10)              | (1u << 11)),
+    };
+    const uint32_t groups_center_left[]={
+        ((1u <<  3) | (1u <<  4)),
+        ((1u <<  2) | (1u <<  5)),
+        ((1u <<  1) | (1u <<  6)),
+        ((1u <<  0) | (1u <<  7) | (1u <<  8) | (1 <<  9)), // BUGBUG -- this seems ... off?  combines 7/8/9 as one logical pixel for this?
+        ((1u << 15) | (1u << 10)),
+        ((1u << 14) | (1u << 11)),
+        ((1u << 13) | (1u << 12)),
+    };
+    const uint32_t groups_center_clockwise[]={
+        ((1u << 13) | (1u << 14)),
+        ((1u << 15)             ), 
+        ((1u <<  0) | (1u <<  1)),
+        ((1u <<  2) | (1u <<  3)),
+        ((1u <<  4) | (1u <<  5)),
+        ((1u <<  6) | (1u <<  7)),
+        ((1u <<  8) | (1u <<  9)),
+        ((1u << 10)             ), 
+        ((1u << 11) | (1u << 12)),
+    };
+    const uint32_t groups_top_down[]={ //MSB is last led in string...
+        0b0011001010011001,
+        0b1100110101100110,
+        //|...|...|...|... == 16 bits == COUNT_OF_PIXELS
+    }; 
 #elif BP5_REV >= 10
-    const uint32_t groups_top_left[]={((1u<<2) | (1u<<3)), ((1u<<1) | (1u<<4)), ((1u<<0) | (1u<<17) | (1u<<5)), ((1u<<16) | (1u<<6)), ((1u<<15) | (1u<<7)), ((1u<<14) | (1u<<9) | (1u<<8)), ((1u<<13) | (1u<<10) | (1u<<5)), ((1u<<12)|(1u<<11))};
-    const uint32_t groups_center_left[]={(1u<<4)|(1u<<5),(1u<<3)|(1u<<6),(1u<<2)|(1u<<7),(1u<<1)|(1u<<8), (1u<<0)|(1<<9), (1u<<17)|(1u<<10), (1u<<16)|(1u<<11), (1u<<12)|(1u<<15), (1u<<13)|(1u<<14)};  
-    const uint32_t groups_center_clockwise[]={(1u<<14)|(1u<<15),(1u<<16), (1u<<17)|(1u<<0), (1u<<1)|(1u<<2), (1u<<3)|(1u<<4), (1u<<5)|(1u<<6), (1u<<7), (1u<<8)|(1u<<9), (1u<<10)|(1u<<11), (1u<<12)|(1u<<13)};
-    const uint32_t groups_top_down[]={0b011001101011001101, 0b100110010100110010}; //MSB is last led in string...
+
+    static const uint8_t COUNT_OF_PIXELS = 18;
+    const uint32_t groups_top_left[]={
+        ((1u <<  2) | (1u <<  3)),
+        ((1u <<  1) | (1u <<  4)),
+        ((1u <<  0) | (1u <<  5) | (1u << 17)), // three LEDs at a time here (17&0 as pair)
+        ((1u << 16) | (1u <<  6)),
+        ((1u << 15) | (1u <<  7)),
+        ((1u << 14) | (1u <<  8) | (1u <<  9)), // three LEDs at a time here (8&9 as pair)
+        ((1u << 13) | (1u << 10) | (1u <<  5)), // BUGBUG -- 5 is repeated here
+        ((1u << 12) | (1u << 11)),
+    };
+    const uint32_t groups_center_left[]={
+        (1u <<  4) | (1u <<  5),
+        (1u <<  3) | (1u <<  6),
+        (1u <<  2) | (1u <<  7),
+        (1u <<  1) | (1u <<  8),
+        (1u <<  0) | (1u <<  9),
+        (1u << 17) | (1u << 10),
+        (1u << 16) | (1u << 11),
+        (1u << 15) | (1u << 12),
+        (1u << 14) | (1u << 13),
+    };
+    const uint32_t groups_center_clockwise[]={
+        (1u << 14) | (1u << 15),
+        (1u << 16)             ,
+        (1u << 17) | (1u <<  0),
+        (1u <<  1) | (1u <<  2),
+        (1u <<  3) | (1u <<  4),
+        (1u <<  5) | (1u <<  6),
+        (1u <<  7)             ,
+        (1u <<  8) | (1u <<  9),
+        (1u << 10) | (1u << 11),
+        (1u << 12) | (1u << 13),
+    };
+    const uint32_t groups_top_down[]={ //MSB is last led in string...
+        0b011001101011001101,
+        0b100110010100110010,
+        //..|...|...|...|... == 18 bits == COUNT_OF_PIXELS
+    };
 #endif
 
 uint32_t leds[RGB_LEN];
@@ -113,78 +198,124 @@ uint32_t color_wheel_div(uint8_t pos) {
     return ((g/system_config.led_brightness)<<16) | ((r/system_config.led_brightness)<<8) | (b/system_config.led_brightness);
 }
 
-
-void rgb_assign_grb_color(uint32_t index_mask, uint32_t color){
+// BUGBUG -- Many of the callers convert an RGB color to GRB before passing
+//           it to this function.  This means the color parameter is GRB (not RGB)?
+// TODO: define RGB and GRB structures, and use them for clarity rather than uint32_t
+void rgb_assign_grb_color(uint32_t index_mask, uint32_t grb_color){
     for (int i=0;i<RGB_LEN; i++){
         if(index_mask&(1u<<i)) {
-            leds[i]=color;
+            leds[i]=grb_color;
         }
     }
 }
 
 //something like this to cycle, delay, return done
-bool rgb_master(const uint32_t *groups, uint8_t group_count, uint32_t (*color_wheel)(uint8_t color), uint8_t color_count, uint8_t color_increment, uint8_t cycles, uint8_t delay_ms ){
-    static uint8_t color=0;
-    static uint16_t c=0;
+//This needs some more documentation:
+//  groups          the pixel groups; a pointer to an array of index_masks,
+//                  each index_mask indicating which LEDs are considered part of the group
+//  group_count     how many groups in that array
+//  color_wheel     a function pointer; Function must take a single byte parameter
+//                  and return a ***GRB-formatted*** color -- BUGBUG -- Verify color order that is expected?
+//  color_count     the distinct seed values for color_wheel() parameter.
+//                  rgb_master() will ensure the parameter is always in range [0..color_count-1]
+//  color_increment the PER GROUP increment of colors for the color_wheel() parameter.
+//returns false if additional iterations are needed.
+//returns true if sufficient iterations have been completed.
+//
+// HACKHACK -- to ensure known starting state (reset the static variables)
+//             can call with group_count=0, cycles=0
+bool rgb_master(
+    const uint32_t *groups,
+    uint8_t group_count,
+    uint32_t (*color_wheel)(uint8_t color),
+    uint8_t color_count,
+    uint8_t color_increment,
+    uint8_t cycles,
+    uint8_t delay_ms_unused_parameter /* unused parameter ... was delay_ms ... BUGBUG: Remove unused parameter */
+    ){
+    static uint8_t color_idx=0; // one cycle is defined as `color_count` calls to this function
+    static uint16_t completed_cycles=0;
 
-    for(int i=0; i< group_count; i++){
-        rgb_assign_grb_color(groups[i], color_wheel( (color+(i*color_increment))) );
+    for(int i=0; i< group_count; i++) {
+        // group_count     is uint8_t (1..255)
+        // color_increment is uint8_t (0..255)
+        // color_count     is uint8_t (1..255)
+        // therefore, maximum value of tmp_color is
+        // color_count + (group_count * color_increment) = 255 + (255 * 255) = 65010
+        // This value fits in uint16_t ... but just use 32-bits.
+        uint32_t tmp_color_idx = color_idx + (i*color_increment);
+        tmp_color_idx %= color_count; // ensures safe to cast to uint8_t
+        uint32_t rgb_color = color_wheel((uint8_t)tmp_color_idx);
+        rgb_assign_grb_color(groups[i], rgb_color);
     }
     rgb_send();
+    ++color_idx;
 
-    //finished one complete cycle
-    if((color==color_count)){
-        color=0;
-        c++;
-        if(c==cycles){
-            c=0;
+    //finished one complete cycle through the colors
+    if (color_idx == color_count) {
+        color_idx = 0;
+        ++completed_cycles;
+        if (completed_cycles >= cycles) {
+            // returning TRUE indicates to the caller that the animation has completed.
+            // resets the cycle count to zero
+            // BUGBUG - LEAVES THE color_idx AT CURRENT VALUE (?!) ... non-deterministic for caller
+            completed_cycles = 0;
+            // color_idx = 0
             return true;
-        }        
+        }
     }
 
-    color+=1;
     return false;
 }
 
 struct repeating_timer rgb_timer;
 
-bool rgb_scanner(void){
-    static uint16_t bitmask=0b1000000;
-    static uint8_t delay=0;
-    static uint8_t color=0;
+bool rgb_scanner(void) {
+    // TODO: decode this animation and add notes on what it's intended result is
+    static_assert(count_of(groups_center_left) <= (sizeof(uint16_t)*8), "uint16_t too small to hold count_of(groups_center_left) elements");
+    
+    // led_bitmask has two purposes:
+    // 1. it
+    static uint16_t led_bitmask = 0b1000000; // BUGBUG -- should this be (0x01 << (count_of(groups_center_left)))?
+    static uint8_t frame_delay_count = 0;
+    static uint8_t color_idx = 0;
     
     const uint32_t colors[]={
-    0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
-    0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
-    0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
-    0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B
+        0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
+        0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
+        0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
+        0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B
     };
 
-    if(delay){
-        delay--;
+    if (frame_delay_count){
+        frame_delay_count--;
         return false;
     }
-    uint32_t color_grb=((((colors[color]&0xff0000)/system_config.led_brightness)&0xff0000)>>8);
-    color_grb|=((((colors[color]&0x00ff00)/system_config.led_brightness)&0x00ff00)<<8);
-    color_grb|=((((colors[color]&0x0000ff)/system_config.led_brightness)&0x0000ff));
+    uint32_t color_grb = 0; // swap from RGB to GRB
+    color_grb |= (( ((colors[color_idx] & 0xff0000) / system_config.led_brightness) & 0xff0000) >> 8);
+    color_grb |= (( ((colors[color_idx] & 0x00ff00) / system_config.led_brightness) & 0x00ff00) << 8);
+    color_grb |= (( ((colors[color_idx] & 0x0000ff) / system_config.led_brightness) & 0x0000ff)     );
     for(int i=0; i< count_of(groups_center_left); i++){
-        rgb_assign_grb_color(groups_center_left[i], (bitmask & (1u<<i))?color_grb:0x0a0a0a);
+        rgb_assign_grb_color(groups_center_left[i], (led_bitmask & (1u<<i)) ? color_grb : 0x0a0a0a);
     }   
     rgb_send();
     
-    if(bitmask & 0b1){
-        delay=0xF0;
-        bitmask=(0x01 << (count_of(groups_center_left)));
-        color++;
-        if(color==count_of(colors)){
-            color=0;
-            bitmask=bitmask>>1;
+    // led_bitmask has two purposes:
+    // this detects the end of one cycle of animation
+
+    if(led_bitmask & 0b1) {
+        frame_delay_count=0xF0; // the final step of animation is shown 241 times (the last step of each cycle)
+        led_bitmask = (0x01 << (count_of(groups_center_left)));
+        color_idx++;
+        if(color_idx==count_of(colors)){
+            color_idx=0;
+            led_bitmask >>= 1;
             return true;
         }
     }else{
-        delay=0x8;
+        frame_delay_count = 0x8; // every non-final step of the animation is shown nine times
     }
-    bitmask=bitmask>>1;
+    led_bitmask >>= 1;
     return false;
 }
 
@@ -204,18 +335,18 @@ bool rgb_timer_callback(struct repeating_timer *t){
             rgb_send();  
             break;          
         case 1:
-            //solid
-            color_grb  = (( ((system_config.led_color & 0xff0000) / system_config.led_brightness ) & 0xff0000) >> 8);
-            color_grb |= (( ((system_config.led_color & 0x00ff00) / system_config.led_brightness ) & 0x00ff00) << 8);
-            color_grb |= (( ((system_config.led_color & 0x0000ff) / system_config.led_brightness ) & 0x0000ff)     );
+            //solid color ... so just convert from RGB to GRB
+            color_grb  = (( ((system_config.led_color & 0xff0000) / system_config.led_brightness) & 0xff0000) >> 8);
+            color_grb |= (( ((system_config.led_color & 0x00ff00) / system_config.led_brightness) & 0x00ff00) << 8);
+            color_grb |= (( ((system_config.led_color & 0x0000ff) / system_config.led_brightness) & 0x0000ff)     );
             rgb_assign_grb_color(0xffffffff, color_grb);
             rgb_send();
             break;
         case 2:
-            next = rgb_master(groups_top_left,         count_of(groups_top_left),         &color_wheel_div, 0xff, (0xff/count_of(groups_top_left)), 5, 10);
+            next = rgb_master(groups_top_left,         count_of(groups_top_left),         &color_wheel_div, 0xff, (0xff/count_of(groups_top_left)        ), 5, 10);
             break;
         case 3:
-            next = rgb_master(groups_center_left,      count_of(groups_center_left),      &color_wheel_div, 0xff, (0xff/count_of(groups_center_left)), 5, 10);
+            next = rgb_master(groups_center_left,      count_of(groups_center_left),      &color_wheel_div, 0xff, (0xff/count_of(groups_center_left)     ), 5, 10);
             break;
         case 4:
             next = rgb_master(groups_center_clockwise, count_of(groups_center_clockwise), &color_wheel_div, 0xff, (0xff/count_of(groups_center_clockwise)), 5, 10);

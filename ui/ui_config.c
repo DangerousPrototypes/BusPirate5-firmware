@@ -77,7 +77,6 @@ uint32_t ui_config_action_led_color(uint32_t a, uint32_t b)
     static_assert(count_of(menu_based_colors) == count_of(menu_items_led_color), "menu_based_colors and menu_items_led_color must have the same number of items");
     if (b < count_of(menu_items_led_color)) {
         system_config.led_color=menu_based_colors[b];
-
     }
 }
 
@@ -95,7 +94,16 @@ static const struct prompt_item menu_items_led_brightness[]=
 uint32_t ui_config_action_led_brightness(uint32_t a, uint32_t b)
 {
     if (b < count_of(menu_items_led_brightness)) {
-        system_config.led_brightness=10/(b+1);     
+        if (b == 0) {
+            system_config.led_brightness=10; // 10% brightness = divide by 10
+        } else if (b == 1){
+            system_config.led_brightness=5; // 20% brightness = divide by 5
+        } else if (b == 2){
+            system_config.led_brightness=3; // 30% brightness ~= divide by 3
+        } else {
+            assert(false);
+            static_assert(count_of(menu_items_led_brightness) == 3, "must update this switch statement");
+        }
     }
 }
 

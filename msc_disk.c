@@ -310,6 +310,12 @@ void refresh_usbmsdrive(void)
   // insert the drive back
   tud_msc_start_stop_cb(0, 0, 1, 1);
 }
+//eject and insert the usbms drive to force the host to sync its contents
+void eject_usbmsdrive(void)
+{
+  // eject the usb drive
+  tud_msc_start_stop_cb(0, 0, 0, 1);
+}
 void make_usbmsdrive_readonly(void)
 {
   if (!writable)

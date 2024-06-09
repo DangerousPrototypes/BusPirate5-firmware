@@ -31,3 +31,6 @@ void make_usbmsdrive_readonly(void);
 
 // make the usb drive appear read write on the host
 void make_usbmsdrive_writable(void);
+
+//eject before jump to bootloader
+void eject_usbmsdrive(void);

@@ -21,9 +21,11 @@
 #define BUTTON_FLAG_HIDE_COMMENTS 1u<<0
 #define BUTTON_FLAG_EXIT_ON_ERROR 1u<<1
 #define BUTTON_FLAG_FILE_CONFIGURED 1u<<2
+#define LONG_BUTTON_FLAG_FILE_CONFIGURED 1u<<3
 
 static uint8_t button_flags=0;
 static char button_script_file[32];
+static char long_button_script_file[32];
 
 static const char * const usage[]= {
     "button <file> [-d (hiDe comments)] [-e(xit on error)] [-h(elp)]",
@@ -77,4 +79,22 @@ bool button_exec(void){
         return true;
     }
 
+}
+
+bool button_long_exec(void){
+
+    if(!(button_flags & LONG_BUTTON_FLAG_FILE_CONFIGURED)){
+        memcpy(long_button_script_file, "bulong.scr", sizeof("bulong.scr"));
+        button_flags|=LONG_BUTTON_FLAG_FILE_CONFIGURED;
+        printf("Using long default '%s'\r\n", long_button_script_file);
+    }
+
+    printf("\r\n");
+
+    if(script_exec(long_button_script_file, false, !(button_flags & BUTTON_FLAG_HIDE_COMMENTS), false, (button_flags & BUTTON_FLAG_EXIT_ON_ERROR))){
+        printf("\r\nError in script file '%s'. Try button -h for help\r\n", long_button_script_file);
+        return true;
+    }
+
+    return false;
 }

@@ -207,6 +207,7 @@ int main(){
     struct prompt_result result; 
     alarm_id_t screensaver;
     bool has_been_connected = false;
+    bool long_press = false;
     while(1){
 
         if(script_entry()){ //enter scripting mode?
@@ -300,9 +301,13 @@ int main(){
                         button_irq_disable(0);
                         break;
                 }
-                if(button_check_irq(0)){
+                if(button_check_irq(0, &long_press)){
                     button_irq_disable(0);
-                    button_exec(); //if button pressed, run button.scr script
+                    if (long_press) {
+                        button_long_exec(); // over long press threshold execute bulong.scr
+                    } else {
+                        button_exec(); // short press execute button.scr
+                    }
                     bp_state=BP_SM_COMMAND_PROMPT;  //return to command prompt
                 }
                 break;

@@ -301,14 +301,11 @@ int main(){
                         button_irq_disable(0);
                         break;
                 }
-                if(button_check_irq(0, &long_press)){
+                enum button_codes press_code = button_check_press(0);
+                if(press_code != BP_BUTT_NO_PRESS){
                     button_irq_disable(0);
-                    if (long_press) {
-                        button_long_exec(); // over long press threshold execute bulong.scr
-                    } else {
-                        button_exec(); // short press execute button.scr
-                    }
-                    bp_state=BP_SM_COMMAND_PROMPT;  //return to command prompt
+                    button_exec(press_code);
+                    bp_state=BP_SM_COMMAND_PROMPT;
                 }
                 break;
             

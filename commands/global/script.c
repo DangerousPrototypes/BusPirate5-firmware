@@ -54,7 +54,7 @@ void script_handler(struct command_result *res){
 }
 
 // non zero return value indicates error
-bool script_exec(const char *location, bool pause_for_input, bool show_comments, bool show_tip, bool exit_on_error){
+bool script_exec(char *location, bool pause_for_input, bool show_comments, bool show_tip, bool exit_on_error){
 
     FIL fil;		/* File object needed for each open file */
     FRESULT fr;     /* FatFs return code */    

@@ -207,7 +207,6 @@ int main(){
     struct prompt_result result; 
     alarm_id_t screensaver;
     bool has_been_connected = false;
-    bool long_press = false;
     while(1){
 
         if(script_entry()){ //enter scripting mode?
@@ -301,11 +300,10 @@ int main(){
                         button_irq_disable(0);
                         break;
                 }
-                enum button_codes press_code = button_check_press(0);
-                if(press_code != BP_BUTT_NO_PRESS){
+                if(button_check_irq(0)){
                     button_irq_disable(0);
-                    button_exec(press_code);
-                    bp_state=BP_SM_COMMAND_PROMPT;
+                    button_exec(); //if button pressed, run button.scr script
+                    bp_state=BP_SM_COMMAND_PROMPT;  //return to command prompt
                 }
                 break;
             

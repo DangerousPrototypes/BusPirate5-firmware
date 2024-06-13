@@ -1,8 +1,9 @@
 # Generated Cmake Pico project file
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.21)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 
 # initalize pico_sdk from installed location
@@ -46,6 +47,7 @@ set(bp5_common
         pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h
         pirate/lcd.h pirate/lcd.c pirate/shift.h pirate/shift.c
         pirate/amux.h pirate/amux.c pirate/rgb.h pirate/rgb.c
+        pirate/intercore_helpers.c
 
         # commands
         commands.h commands.c
@@ -173,8 +175,8 @@ add_executable(bus_pirate5_rev8
         #tf card access control
         fatfs/tf_card.c fatfs/tf_card.h
         )
-
 target_compile_definitions(bus_pirate5_rev8 PUBLIC BP5_REV=8)
+set_property(TARGET bus_pirate5_rev8 PROPERTY C_STANDARD 23)
 
 add_executable(bus_pirate5_rev10
         ${bp5_common}
@@ -185,6 +187,7 @@ add_executable(bus_pirate5_rev10
         nand/sys_time.c nand/sys_time.h
         )
 target_compile_definitions(bus_pirate5_rev10 PUBLIC BP5_REV=10)
+set_property(TARGET bus_pirate5_rev10 PROPERTY C_STANDARD 23)
 
 set(stdlibs
         pico_stdlib

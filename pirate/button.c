@@ -2,7 +2,8 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 
-static bool button_pressed = false;
+// TODO -- consider marking this `volatile`, as value is modified in ISR.
+static bool button_pressed = false; 
 
 // poll the value of button button_id
 bool button_get(uint8_t button_id){

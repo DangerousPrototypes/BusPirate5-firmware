@@ -190,6 +190,7 @@ void dummy_handler(struct command_result *res)
         if(result!=FR_OK){ 
             printf("Error writing to file %s\r\n", file);
             system_config.error=true; //set the error flag
+            // BUGBUG -- leaks file handle here
             return;
         }
         //if the write was successful

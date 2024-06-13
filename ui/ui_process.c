@@ -16,6 +16,7 @@
 #include "ui/ui_cmdln.h"
 #include "string.h"
 #include "syntax.h"
+#include "pirate/intercore_helpers.h"
 
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
 static const struct command_result result_blank;
@@ -27,17 +28,14 @@ bool ui_process_syntax(void)
             printf("Syntax compile error\r\n");
             return true;
     }
-    multicore_fifo_push_blocking(0xf0);
-    multicore_fifo_pop_blocking();
+    icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
     if(syntax_run())
     {
-            multicore_fifo_push_blocking(0xf1);
-            multicore_fifo_pop_blocking(); 
+            icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
             printf("Syntax execution error\r\n");
             return true;
     }
-    multicore_fifo_push_blocking(0xf1);
-    multicore_fifo_pop_blocking();            
+    icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
     if(syntax_post())
     {
             printf("Syntax post process error\r\n");

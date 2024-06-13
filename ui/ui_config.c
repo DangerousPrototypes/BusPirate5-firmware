@@ -21,53 +21,107 @@ bool ui_config_menu(const struct ui_prompt * menu);
 // menu items options
 static const struct prompt_item menu_items_disable_enable[]=
 {
-    {T_CONFIG_DISABLE},{T_CONFIG_ENABLE}
+    {T_CONFIG_DISABLE},
+    {T_CONFIG_ENABLE}
 };
 
 // LED effect
 static const struct prompt_item menu_items_led_effect[]=
 {
-    {T_CONFIG_DISABLE},{T_CONFIG_LEDS_EFFECT_SOLID},{T_CONFIG_LEDS_EFFECT_ANGLEWIPE},{T_CONFIG_LEDS_EFFECT_CENTERWIPE},{T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE},{T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE},{T_CONFIG_LEDS_EFFECT_SCANNER},{T_CONFIG_LEDS_EFFECT_CYCLE}
+    {T_CONFIG_DISABLE},
+    {T_CONFIG_LEDS_EFFECT_SOLID},
+    {T_CONFIG_LEDS_EFFECT_ANGLEWIPE},
+    {T_CONFIG_LEDS_EFFECT_CENTERWIPE},
+    {T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE},
+    {T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE},
+    {T_CONFIG_LEDS_EFFECT_SCANNER},
+    {T_CONFIG_LEDS_EFFECT_CYCLE}
 };
 
 uint32_t ui_config_action_led_effect(uint32_t a, uint32_t b)
 {
-    system_config.led_effect=b;
+    if (b < count_of(menu_items_led_effect)) {
+        system_config.led_effect=b;
+    }
 }
 
 // LED color (?) Rainbow short, rainbow long, ROYGBIV
+// shortened list of HSV colors (as RGB) from fastLED
+// Any color can be configured in the configuration file
+// as a 24-bit RGB value; The menu simply provides common
+// colors as a convenience.
 static const struct prompt_item menu_items_led_color[]=
 {
-    {T_CONFIG_LEDS_COLOR_RED},{T_CONFIG_LEDS_COLOR_ORANGE},{T_CONFIG_LEDS_COLOR_YELLOW},{T_CONFIG_LEDS_COLOR_GREEN},{T_CONFIG_LEDS_COLOR_BLUE},{T_CONFIG_LEDS_COLOR_PURPLE},{T_CONFIG_LEDS_COLOR_PINK}
+    {T_CONFIG_LEDS_COLOR_RED},
+    {T_CONFIG_LEDS_COLOR_ORANGE},
+    {T_CONFIG_LEDS_COLOR_YELLOW},
+    {T_CONFIG_LEDS_COLOR_GREEN},
+    {T_CONFIG_LEDS_COLOR_BLUE},
+    {T_CONFIG_LEDS_COLOR_PURPLE},
+    {T_CONFIG_LEDS_COLOR_PINK}
 };
 
 uint32_t ui_config_action_led_color(uint32_t a, uint32_t b)
 {
-    system_config.led_color=b;    
+    // This needs to stay in sync with the above list of colors
+    static const uint32_t menu_based_colors[]= {
+        0xFF0000, // aka T_CONFIG_LEDS_COLOR_RED  
+        0xD52A00, // aka T_CONFIG_LEDS_COLOR_ORANGE  
+        0xAB7F00, // aka T_CONFIG_LEDS_COLOR_YELLOW  
+        0x00FF00, // aka T_CONFIG_LEDS_COLOR_GREEN  
+        0x0000FF, // aka T_CONFIG_LEDS_COLOR_BLUE  
+        0x5500AB, // aka T_CONFIG_LEDS_COLOR_PURPLE  
+        0xAB0055, // aka T_CONFIG_LEDS_COLOR_PINK 
+    };
+ 
+    static_assert(count_of(menu_based_colors) == count_of(menu_items_led_color), "menu_based_colors and menu_items_led_color must have the same number of items");
+    if (b < count_of(menu_items_led_color)) {
+        system_config.led_color=menu_based_colors[b];
+    }
 }
 
 // LED brightness %?
 static const struct prompt_item menu_items_led_brightness[]=
 {
-    {T_CONFIG_LEDS_BRIGHTNESS_10},{T_CONFIG_LEDS_BRIGHTNESS_20},{T_CONFIG_LEDS_BRIGHTNESS_30}//,{T_CONFIG_LEDS_BRIGHTNESS_40},{T_CONFIG_LEDS_BRIGHTNESS_50},{T_CONFIG_LEDS_BRIGHTNESS_100},
+    {T_CONFIG_LEDS_BRIGHTNESS_10},
+    {T_CONFIG_LEDS_BRIGHTNESS_20},
+    {T_CONFIG_LEDS_BRIGHTNESS_30}
+    //,{T_CONFIG_LEDS_BRIGHTNESS_40}
+    //,{T_CONFIG_LEDS_BRIGHTNESS_50}
+    //,{T_CONFIG_LEDS_BRIGHTNESS_100}
 };
 
 uint32_t ui_config_action_led_brightness(uint32_t a, uint32_t b)
 {
-    if(b==5) system_config.led_brightness=1;
-    else system_config.led_brightness=10/(b+1);     
+    if (b < count_of(menu_items_led_brightness)) {
+        if (b == 0) {
+            system_config.led_brightness=10; // 10% brightness = divide by 10
+        } else if (b == 1){
+            system_config.led_brightness=5; // 20% brightness = divide by 5
+        } else if (b == 2){
+            system_config.led_brightness=3; // 30% brightness ~= divide by 3
+        } else {
+            assert(false);
+            static_assert(count_of(menu_items_led_brightness) == 3, "must update this switch statement");
+        }
+    }
 }
 
 
 // config menu helper functions
 static const struct prompt_item menu_items_screensaver[]=
 {
-    {T_CONFIG_DISABLE}, {T_CONFIG_SCREENSAVER_5}, {T_CONFIG_SCREENSAVER_10}, {T_CONFIG_SCREENSAVER_15}
+    {T_CONFIG_DISABLE},
+    {T_CONFIG_SCREENSAVER_5},
+    {T_CONFIG_SCREENSAVER_10},
+    {T_CONFIG_SCREENSAVER_15}
 };
 
 uint32_t ui_config_action_screensaver(uint32_t a, uint32_t b)
 {
-    system_config.lcd_timeout=b;
+    if (b < count_of(menu_items_screensaver)) {
+        system_config.lcd_timeout=b;
+    }
 }
 
 static const struct prompt_item menu_items_ansi_color[] =
@@ -78,23 +132,25 @@ static const struct prompt_item menu_items_ansi_color[] =
     {T_CONFIG_ANSI_COLOR_256}
 #endif
 };
+
 uint32_t ui_config_action_ansi_color(uint32_t a, uint32_t b)
 {
-    system_config.terminal_ansi_color=b;
-    if(!b)
-    {
-        system_config.terminal_ansi_statusbar=0; //disable the toolbar if ansi is disabled....
+    if (b < count_of(menu_items_ansi_color)) {
+        system_config.terminal_ansi_color=b;
+        if(!b)
+        {
+            system_config.terminal_ansi_statusbar=0; //disable the toolbar if ansi is disabled....
+        }
+        else
+        {
+            ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
+        }
     }
-    else
-    {
-        ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
-    }
-
 }
 
 uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b)
 {
-    system_config.terminal_ansi_statusbar=b;
+    system_config.terminal_ansi_statusbar=b; // true/false?
     if(b)
     {   
         if(!system_config.terminal_ansi_color) system_config.terminal_ansi_color=UI_TERM_FULL_COLOR; //enable ANSI color more
@@ -115,29 +171,31 @@ static const struct prompt_item menu_items_language[]=
 
 uint32_t ui_config_action_language(uint32_t a, uint32_t b)
 {
-    system_config.terminal_language=b; 
-    translation_set(b);
+    if (b < count_of(menu_items_language)) {
+        system_config.terminal_language=b;
+        translation_set(b);
+    }
 }
 
 static const struct ui_prompt_config cfg=
 {
-	false, //bool allow_prompt_text;
-	false, //bool allow_prompt_defval;
-	false, //bool allow_defval; 
-	true, //bool allow_exit;
-	&ui_prompt_menu_ordered_list, //bool (*menu_print)(const struct ui_prompt* menu);
-	&ui_prompt_prompt_ordered_list,     //bool (*menu_prompt)(const struct ui_prompt* menu);
-	&ui_prompt_validate_ordered_list //bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
+    false, //bool allow_prompt_text;
+    false, //bool allow_prompt_defval;
+    false, //bool allow_defval; 
+    true,  //bool allow_exit;
+    &ui_prompt_menu_ordered_list,    //bool (*menu_print   )(const struct ui_prompt* menu);
+    &ui_prompt_prompt_ordered_list,  //bool (*menu_prompt  )(const struct ui_prompt* menu);
+    &ui_prompt_validate_ordered_list //bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
 };
 
 static const struct ui_prompt sub_prompts[]={
-    {T_CONFIG_LANGUAGE, menu_items_language, count_of(menu_items_language),0,0,0,0,&ui_config_action_language, &cfg},
-    {T_CONFIG_ANSI_COLOR_MODE,menu_items_ansi_color,count_of(menu_items_ansi_color),0,0,0,0,&ui_config_action_ansi_color, &cfg},
-    {T_CONFIG_ANSI_TOOLBAR_MODE,menu_items_disable_enable,count_of(menu_items_disable_enable),0,0,0,0,&ui_config_action_ansi_toolbar,&cfg},
-    {T_CONFIG_SCREENSAVER,menu_items_screensaver,count_of(menu_items_screensaver),0,0,0,0,&ui_config_action_screensaver,&cfg},
-    {T_CONFIG_LEDS_EFFECT, menu_items_led_effect, count_of(menu_items_led_effect),0,0,0,0, &ui_config_action_led_effect, &cfg},
-    {T_CONFIG_LEDS_COLOR, menu_items_led_color, count_of(menu_items_led_color),0,0,0,0, &ui_config_action_led_color, &cfg},
-    {T_CONFIG_LEDS_BRIGHTNESS, menu_items_led_brightness, count_of(menu_items_led_brightness),0,0,0,0, &ui_config_action_led_brightness, &cfg}
+    {T_CONFIG_LANGUAGE,         menu_items_language,       count_of(menu_items_language),       0,0,0,0, &ui_config_action_language,       &cfg},
+    {T_CONFIG_ANSI_COLOR_MODE,  menu_items_ansi_color,     count_of(menu_items_ansi_color),     0,0,0,0, &ui_config_action_ansi_color,     &cfg},
+    {T_CONFIG_ANSI_TOOLBAR_MODE,menu_items_disable_enable, count_of(menu_items_disable_enable), 0,0,0,0, &ui_config_action_ansi_toolbar,   &cfg},
+    {T_CONFIG_SCREENSAVER,      menu_items_screensaver,    count_of(menu_items_screensaver),    0,0,0,0, &ui_config_action_screensaver,    &cfg},
+    {T_CONFIG_LEDS_EFFECT,      menu_items_led_effect,     count_of(menu_items_led_effect),     0,0,0,0, &ui_config_action_led_effect,     &cfg},
+    {T_CONFIG_LEDS_COLOR,       menu_items_led_color,      count_of(menu_items_led_color),      0,0,0,0, &ui_config_action_led_color,      &cfg},
+    {T_CONFIG_LEDS_BRIGHTNESS,  menu_items_led_brightness, count_of(menu_items_led_brightness), 0,0,0,0, &ui_config_action_led_brightness, &cfg}
 };
 
 static const struct ui_prompt_config main_cfg=

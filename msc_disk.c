@@ -46,6 +46,8 @@ static bool writable = true;
 enum
 {
   MSC_DEMO_DISK_BLOCK_NUM  = 16, // 8KB is the smallest size that windows allow to mount
+  // should this be MSC_DEMO_DISK_SECTOR_SIZE?
+  // ..._BLOCK_SIZE refers to an erase size (e.g., for 4k physical, 512b logical sectors)
   MSC_DEMO_DISK_BLOCK_SIZE = 512 //512
 };
 
@@ -117,6 +119,8 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
   const char pid[] = "Storage";
   const char rev[] = "1.0";
 
+  // NOTE: tinyusb (class/msc/msc_device.c) sets all values
+  //       to spaces by default, so safe to only copy changes
   memcpy(vendor_id  , vid, strlen(vid));
   memcpy(product_id , pid, strlen(pid));
   memcpy(product_rev, rev, strlen(rev));

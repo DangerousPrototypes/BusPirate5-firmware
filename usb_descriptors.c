@@ -292,7 +292,6 @@ static uint16_t _desc_str[MAXIMUM_DESCRIPTOR_STRING_ELEMENT_COUNT];
 uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 {
   (void) langid;
-
   uint8_t chr_count;
 
   if ( index == 0) { // supported language == English

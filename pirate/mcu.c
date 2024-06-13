@@ -6,6 +6,7 @@
 #include "pico/bootrom.h"
 
 uint64_t mcu_get_unique_id(void){
+	static_assert(sizeof(pico_unique_board_id_t) == sizeof(uint64_t), "pico_unique_board_id_t is not 64 bits");
 	pico_unique_board_id_t id;
 	pico_get_unique_board_id(&id);
     return *((uint64_t*)(id.id));

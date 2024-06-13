@@ -48,6 +48,7 @@
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
 #include "msc_disk.h"
+#include "pirate/intercore_helpers.h"
 
 static mutex_t spi_mutex;
 
@@ -59,9 +60,14 @@ int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
     return 0;
 }
 
+
+// TODO: reduce cyclomatic complexity by splitting massive main() into smaller functions:
+//       - single_core_hw_init() for hardware initialization before multicore launch
+//       - core0_hw_init() for hardware initialization after multicore launch
+//       - core0_main_loop() for main loop
 int main(){
-    char c;
-    
+
+#pragma region "Single core hw init"
     uint8_t bp_rev=mcu_detect_revision();
 
     //init buffered IO pins
@@ -146,9 +152,11 @@ int main(){
     if(system_config.debug_uart_enable){
         debug_uart_init(system_config.debug_uart_number, true, true, false);
     }
+#pragma endregion // "Single core hw init"
  
     multicore_launch_core1(core1_entry);
 
+#pragma region "core0 hw init"
     // LCD setup
     lcd_configure();
     monitor(system_config.psu);
@@ -172,13 +180,12 @@ int main(){
             system_config.config_loaded_from_file=true;
         }
     #endif
+#pragma endregion // "core0 hw init"
 
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
-    multicore_fifo_push_blocking(0); 
-    // wait for init to complete  
-    while(multicore_fifo_pop_blocking()!=0xff);
+    icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
     //test for PCB revision
     //must be done after shift register setup
@@ -193,6 +200,8 @@ int main(){
             busy_wait_ms(500);
         }
     }    
+
+#pragma region "core0 main loop"
 
     enum bp_statemachine{
         BP_SM_DISPLAY_MODE,
@@ -342,6 +351,8 @@ int main(){
         }
 
     }
+#pragma endregion // "core0 main loop"
+
     return 0;
 }
 
@@ -351,16 +362,18 @@ bool lcd_update_force=false;
 
 // begin of code execution for the second core (core1)
 void core1_entry(void){ 
-    char c;
-    uint32_t temp;
-
+    
+#pragma region "core1 hw init"
     tx_fifo_init();
     rx_fifo_init();
 
     rgb_init();
 
     // wait for main core to signal start
-    while(multicore_fifo_pop_blocking()!=0);
+    uint32_t raw_init_message;
+    do {
+        raw_init_message = multicore_fifo_pop_blocking();
+    } while(icm_get_message(raw_init_message) != BP_ICM_INIT_CORE1);
 
     // USB init
     if(system_config.terminal_usb_enable){
@@ -374,8 +387,10 @@ void core1_entry(void){
         rx_uart_init_irq();
     }
 
-    multicore_fifo_push_blocking(0xff); 
+    multicore_fifo_push_blocking(raw_init_message); // notify completion of initialization using full 32-bit raw init value
+#pragma endregion // "core1 hw init"
 
+#pragma region "core1 main loop"
     while(1){
         //service (thread safe) tinyusb tasks
         if(system_config.terminal_usb_enable){
@@ -428,34 +443,35 @@ void core1_entry(void){
         
         // service any requests with priority
         while(multicore_fifo_rvalid()){
-            temp=multicore_fifo_pop_blocking();
-            switch(temp){
-                case 0xf0:
+            uint32_t raw_msg=multicore_fifo_pop_blocking();
+            switch(icm_get_message(raw_msg)){
+                case BP_ICM_DISABLE_LCD_UPDATES:
                     lcd_irq_disable();
                     lcd_update_request=false;
                     break;
-                case 0xf1:
+                case BP_ICM_ENABLE_LCD_UPDATES:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_request=true;
                     break;
-                case 0xf2:
+                case BP_ICM_FORCE_LCD_UPDATE:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_force=true;
                     lcd_update_request=true;
                     break;
-                case 0xf3:
+                case BP_ICM_DISABLE_RGB_UPDATES:
                     rgb_irq_enable(false);
                     break;
-                case 0xf4:
+                case BP_ICM_ENABLE_RGB_UPDATES:
                     rgb_irq_enable(true);
                     break;
                 default:
                     break;
             }
-            multicore_fifo_push_blocking(temp); //acknowledge
+            multicore_fifo_push_blocking(raw_msg); // acknowledge completion using the same BP_ICM_... code
         }
 
     }// while(1)
+#pragma endregion // "core1 main loop"
 
 }
 

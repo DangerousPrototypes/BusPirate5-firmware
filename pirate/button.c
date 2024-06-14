@@ -71,28 +71,3 @@ void button_init(void){
     gpio_set_dir(EXT1, GPIO_IN);
     gpio_pull_down(EXT1);
 }
-bool button_exec(enum button_codes button_code) {
-    const char *script_file;
-    if (button_code == BP_BUTT_LONG_PRESS) {
-        if (!(button_flags & BUTTON_LONG_FLAG_FILE_CONFIGURED)) {
-            memcpy(button_long_script_file, "bulong.scr", sizeof("bulong.scr"));
-            button_flags |= BUTTON_LONG_FLAG_FILE_CONFIGURED;
-            printf("Using long default '%s'\r\n", button_long_script_file);
-        }
-        script_file = button_long_script_file;
-    } else {
-        if (!(button_flags & BUTTON_FLAG_FILE_CONFIGURED)) {
-            button_flags |= BUTTON_FLAG_FILE_CONFIGURED;
-            printf("Using default '%s'\r\n", button_script_file);
-        }
-        script_file = button_script_file;
-    }
-
-    printf("\r\n");
-
-    if (script_exec((char *)script_file, false, !(button_flags & BUTTON_FLAG_HIDE_COMMENTS), false, (button_flags & BUTTON_FLAG_EXIT_ON_ERROR))) {
-        printf("\r\nError in script file '%s'. Try button -h for help\r\n", script_file);
-        return true;
-    }
-    return false;
-}

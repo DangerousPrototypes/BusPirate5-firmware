@@ -26,6 +26,7 @@
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
 #include "commands/global/button_scr.h"
+#include "commands/global/bulong_scr.h"
 #include "commands/global/freq.h"
 #include "queue.h"
 #include "usb_tx.h"
@@ -300,13 +301,14 @@ int main(){
                         button_irq_disable(0);
                         break;
                 }
-                if(button_check_irq(0)){
+                
+                enum button_codes press_code = button_check_press(0);
+                if (press_code != BP_BUTT_NO_PRESS) {
                     button_irq_disable(0);
-                    button_exec(); //if button pressed, run button.scr script
-                    bp_state=BP_SM_COMMAND_PROMPT;  //return to command prompt
+                    button_exec(press_code); // execute script based on the button press type
+                    bp_state = BP_SM_COMMAND_PROMPT; //return to command prompt
                 }
                 break;
-            
             case BP_SM_PROCESS_COMMAND:
                 system_config.error=ui_process_commands();   
                 bp_state=BP_SM_COMMAND_PROMPT;      

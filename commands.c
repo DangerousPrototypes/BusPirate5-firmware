@@ -33,6 +33,7 @@
 #include "commands/global/script.h"
 #include "commands/global/tutorial.h"
 #include "commands/global/button_scr.h"
+#include "commands/global/bulong_scr.h"
 #include "mode/logicanalyzer.h"
 
 // command configuration
@@ -81,6 +82,7 @@ const struct _command_struct commands[]=
     {"tutorial", true, &tutorial_handler, 0x00},
     {"script", true, &script_handler, 0x00},  
     {"button", true, &button_scr_handler, 0x00},
+    {"bulong", true, &bulong_scr_handler, 0x00},
 };
 
 const uint32_t commands_count=count_of(commands);

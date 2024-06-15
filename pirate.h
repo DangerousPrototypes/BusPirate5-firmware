@@ -13,7 +13,7 @@
 //#define XSTR(x) STR(x)
 //#define STR(x) #x
 //#pragma message "BP_FIRMWARE_HASH value:" XSTR(BP_FIRMWARE_HASH)
-#define BP_FILENAME_MAX 12
+#define BP_FILENAME_MAX 13
 
 // UI stuff
 #define UI_CMDBUFFSIZE	512		// must be power of 2

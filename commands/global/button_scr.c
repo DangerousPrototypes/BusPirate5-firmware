@@ -105,7 +105,7 @@ void button_scr_handler(struct command_result *res){
     button_flags[button_code-1]|=BUTTON_FLAG_FILE_CONFIGURED;
 
     //copy to button press type array
-    strcpy(button_script_files[button_code-1], button_script_file);
+    memcpy(button_script_files[button_code-1], button_script_file, BP_FILENAME_MAX);
     printf("Button script file set to '%s'\r\n", button_script_file);
 
     //set other flag options
@@ -119,9 +119,9 @@ bool button_exec(enum button_codes button_code) {
 
     if (!(button_flags[button_code-1] & BUTTON_FLAG_FILE_CONFIGURED)) {
         //how long is the string
-        uint8_t file_name_len = strlen(button_script_files_default[button_code-1]);
+        uint8_t file_name_len = strlen(button_press_types[button_code-1].default_file);
         //copy the default to the button script file
-        memcpy(button_script_files[button_code-1], button_script_files_default[button_code-1], file_name_len);
+        memcpy(button_script_files[button_code-1], button_press_types[button_code-1].default_file, file_name_len);
         button_flags[button_code-1] |= BUTTON_FLAG_FILE_CONFIGURED;
         printf("Using default '%s'\r\n", button_script_files[button_code-1]);
     }

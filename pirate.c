@@ -26,7 +26,6 @@
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
 #include "commands/global/button_scr.h"
-#include "commands/global/bulong_scr.h"
 #include "commands/global/freq.h"
 #include "queue.h"
 #include "usb_tx.h"

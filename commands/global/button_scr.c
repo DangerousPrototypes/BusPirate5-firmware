@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
+#include <string.h>
 #include "pirate.h"
 #include "system_config.h"
 #include "pirate/button.h"
@@ -46,14 +47,14 @@ void button_scr_handler(struct command_result *res){
     //find our action
 	char action[6]; //short or long
     uint8_t button_code;
-    uint8_t *button_flags;
+    
     //first thing following the command (0) is the action (1)
     //determine short or long etc
     //This could be an array of string references. Then strcmp in a loop and use the index as the action type
 	cmdln_args_string_by_position(1, sizeof(action), action);
-    if(strcmp(action, "short")){
+    if(strcmp(action, "short") == 0){
         button_code=BP_BUTT_SHORT_PRESS;
-    }else if(strcmp(action, "long")){
+    }else if(strcmp(action, "long") == 0){
         button_code=BP_BUTT_LONG_PRESS; 
     }else{
         printf("Invalid action. Try button -h for help\r\n");
@@ -97,7 +98,8 @@ void button_scr_handler(struct command_result *res){
 
 
 bool button_exec(enum button_codes button_code) {
-    const char *script_file;
+    //const char *script_file;
+    const char *script_file = button_script_files[button_code-1];
 
     if (!(button_flags[button_code-1] & BUTTON_FLAG_FILE_CONFIGURED)) {
         //how long is the string

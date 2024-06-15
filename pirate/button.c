@@ -7,17 +7,12 @@
 #include "opt_args.h"
 #include "commands/global/script.h"
 #include "commands/global/button_scr.h"
-#include "commands/global/bulong_scr.h"
 
-#define BP_BUTTON_SHORT_PRESS_MS 1000
+#define BP_BUTTON_SHORT_PRESS_MS 550
 
 static bool button_pressed = false;
 static absolute_time_t press_start_time;
 static enum button_codes button_code = BP_BUTT_NO_PRESS;
-
-uint8_t button_flags = 0;
-char button_script_file[BP_FILENAME_MAX + 1] = "button.scr";
-char button_long_script_file[BP_FILENAME_MAX + 1] = "bulong.scr";
 
 // poll the value of button button_id
 bool button_get(uint8_t button_id){

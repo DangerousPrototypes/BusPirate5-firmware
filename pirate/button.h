@@ -10,7 +10,6 @@ void button_irq_callback(uint gpio, uint32_t events);
 bool button_get(uint8_t button_id);
 //check for interrupt and clear interrupt flag
 
-// enum for button press types
 enum button_codes {
     BP_BUTT_NO_PRESS = 0,
     BP_BUTT_SHORT_PRESS,

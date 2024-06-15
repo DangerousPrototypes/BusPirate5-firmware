@@ -25,14 +25,27 @@
 
 uint8_t button_flags[BP_BUTT_MAX-1];
 char button_script_files[BP_BUTT_MAX-1][BP_FILENAME_MAX + 1];
-const char * const button_script_files_default[BP_BUTT_MAX-1] = {"button.scr", "bulong.scr"};
+
+//array of button press types
+button_press_type_t button_press_types[] = {
+    {"short", "button.scr"},
+    {"long", "buttlong.scr"}
+};
+
+//array of default script file names
+const char *button_script_files_default[] = {
+    "button.scr",
+    "buttlong.scr"
+};
+
+const uint8_t num_button_press_types = sizeof(button_press_types) / sizeof(button_press_type_t);
 
 static const char * const usage[]= {
     "button [short|long] [-f <file>] [-d (hiDe comments)] [-e(xit on error)] [-h(elp)]",
     "Assign script file to short button press: button short -f example.scr",
     "Assign script file to long button press: button long -f example.scr",
     "Exit script on error option: button short example.scr -e",
-    "Default script files are 'button.scr' and 'bulong.scr' in the root directory",
+    "Default script files are 'button.scr' and 'buttlong.scr' in the root directory",
 };
 
 static const struct ui_help_options options[]= {
@@ -41,8 +54,8 @@ static const struct ui_help_options options[]= {
 };
 
 void button_scr_handler(struct command_result *res){
-   //check help
-   	if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
+    //check help
+    if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
     
     //find our action
 	char action[6]; //short or long
@@ -52,21 +65,25 @@ void button_scr_handler(struct command_result *res){
     //determine short or long etc
     //This could be an array of string references. Then strcmp in a loop and use the index as the action type
 	cmdln_args_string_by_position(1, sizeof(action), action);
-    if(strcmp(action, "short") == 0){
-        button_code=BP_BUTT_SHORT_PRESS;
-    }else if(strcmp(action, "long") == 0){
-        button_code=BP_BUTT_LONG_PRESS; 
-    }else{
+    
+    for(uint8_t i = 0; i < num_button_press_types; i++){
+        if(strcmp(action, button_press_types[i].verb) == 0){
+            button_code = i + 1;
+            break;
+        }
+    }
+
+    if(button_code == 0){
         printf("Invalid action. Try button -h for help\r\n");
-        ui_help_show(true,usage,count_of(usage), &options[0],count_of(options) );
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
         res->error=true;
         return;
-    } 
+    }
 
     //grab the file name, error if none
     char button_script_file[BP_FILENAME_MAX + 1];
     command_var_t arg;	
-    if(!cmdln_args_find_flag_string('f',&arg, BP_FILENAME_MAX, button_script_file)){ //maybe +1?
+    if(!cmdln_args_find_flag_string('f',&arg, BP_FILENAME_MAX, button_script_file)){
         printf("Specify a script file with the -f flag (-f script.scr)\r\n");
         ui_help_show(true,usage,count_of(usage), &options[0],count_of(options) );
         return;
@@ -98,7 +115,6 @@ void button_scr_handler(struct command_result *res){
 
 
 bool button_exec(enum button_codes button_code) {
-    //const char *script_file;
     const char *script_file = button_script_files[button_code-1];
 
     if (!(button_flags[button_code-1] & BUTTON_FLAG_FILE_CONFIGURED)) {
@@ -111,7 +127,7 @@ bool button_exec(enum button_codes button_code) {
     }
     printf("\r\n");
 
-    if (script_exec((char *)button_script_files[button_code-1], false, !(button_flags[button_code-1] & BUTTON_FLAG_HIDE_COMMENTS), false, (button_flags[button_code-1] & BUTTON_FLAG_EXIT_ON_ERROR))) {
+    if (script_exec(button_script_files[button_code-1], false, !(button_flags[button_code-1] & BUTTON_FLAG_HIDE_COMMENTS), false, (button_flags[button_code-1] & BUTTON_FLAG_EXIT_ON_ERROR))) {
         printf("\r\nError in script file '%s'. Try button -h for help\r\n", script_file);
         return true;
     }

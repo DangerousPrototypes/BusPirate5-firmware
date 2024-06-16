@@ -26,19 +26,18 @@
 uint8_t button_flags[BP_BUTT_MAX-1];
 char button_script_files[BP_BUTT_MAX-1][BP_FILENAME_MAX + 1];
 
+typedef struct {
+    const char *verb;
+    const char *default_file;
+} button_press_type_t;
+
 //array of button press types
-button_press_type_t button_press_types[] = {
+static button_press_type_t button_press_types[] = {
     {"short", "button.scr"},
     {"long", "buttlong.scr"}
 };
 
-//array of default script file names
-const char *button_script_files_default[] = {
-    "button.scr",
-    "buttlong.scr"
-};
-
-const uint8_t num_button_press_types = sizeof(button_press_types) / sizeof(button_press_type_t);
+static const uint8_t num_button_press_types = count_of(button_press_types);
 
 static const char * const usage[]= {
     "button [short|long] [-f <file>] [-d (hiDe comments)] [-e(xit on error)] [-h(elp)]",

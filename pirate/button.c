@@ -4,9 +4,6 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "pirate/button.h"
-#include "opt_args.h"
-#include "commands/global/script.h"
-#include "commands/global/button_scr.h"
 
 #define BP_BUTTON_SHORT_PRESS_MS 550
 

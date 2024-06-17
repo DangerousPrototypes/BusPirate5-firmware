@@ -13,6 +13,7 @@
 //#define XSTR(x) STR(x)
 //#define STR(x) #x
 //#pragma message "BP_FIRMWARE_HASH value:" XSTR(BP_FIRMWARE_HASH)
+#define BP_FILENAME_MAX 13
 
 // UI stuff
 #define UI_CMDBUFFSIZE	512		// must be power of 2
@@ -69,6 +70,8 @@
 
 #include "translation/base.h"
 #include "printf-4.0.0/printf.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);

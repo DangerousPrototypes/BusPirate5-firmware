@@ -7,23 +7,25 @@
 
 .program logicanalyzer_no_trigger
 ; get post trigger sample count
-    pull block
-    mov x, osr
+    out x, 32
 ; count down the samples
 capture:
     in pins, 8
     jmp x-- capture
     irq 0
-; done, forever loop
-done:
-    jmp done
+
 
 .program logicanalyzer_high_trigger
-; get post trigger sample count
-    pull block
-    mov x, osr
+
 ; sample and loop for trigger
-.wrap_target
+public edge_trigger_rising:
+wait_low:
+    in pins, 8
+    jmp pin wait_low
+public high_trigger:
+; get post trigger sample count
+    out x, 32
+.wrap_target    ; wait high
     in pins, 8
     jmp pin capture
 .wrap
@@ -32,30 +34,30 @@ capture:
     in pins, 8
     jmp x-- capture
     irq 0
-; done, forever loop
-done:
-    jmp done
+
 
 
 .program logicanalyzer_low_trigger
-; get post trigger sample count
-    pull block
-    mov x, osr
+public edge_trigger_falling:
 ; sample and loop for trigger
+.wrap_target     ;wait high
+    in pins, 8
+    jmp pin low_trigger
+.wrap
+public low_trigger:
+; get post trigger sample count
+    out x, 32
 wait_low:
     in pins, 8
     jmp pin wait_low
-; count down the samples
+;count down the samples
 capture:
-    in pins, 8
+    in pins,8
     jmp x-- capture
     irq 0
-; done, forever loop
-done:
-    jmp done
 
 % c-sdk {
-static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq) {
+static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq, bool edge) {
     pio_sm_set_enabled(pio, sm, false);
     pio_sm_clear_fifos(pio, sm);
     pio_sm_restart(pio, sm);    
@@ -82,12 +84,13 @@ static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uin
     pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
     pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
 
+    uint program_offset = offset + (edge ? logicanalyzer_high_trigger_offset_edge_trigger_rising : logicanalyzer_high_trigger_offset_high_trigger);
     // Load our configuration, and jump to the start of the program
-    pio_sm_init(pio, sm, offset, &c);
- 
+    pio_sm_init(pio, sm, program_offset, &c);
+
 }
 
-static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq) {
+static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq, bool edge) {
     pio_sm_set_enabled(pio, sm, false);
     pio_sm_clear_fifos(pio, sm);
     pio_sm_restart(pio, sm);    
@@ -111,9 +114,13 @@ static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint
 	float div = clock_get_hz(clk_sys) / (freq * 2); //2 instructions per sample, run twice as fast as requested sampling rate  
 	sm_config_set_clkdiv(&c, div);
 
+    pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+
+    uint program_offset = offset + (edge ? logicanalyzer_low_trigger_offset_edge_trigger_falling : logicanalyzer_low_trigger_offset_low_trigger);
     // Load our configuration, and jump to the start of the program
-    pio_sm_init(pio, sm, offset, &c);
- 
+    pio_sm_init(pio, sm, program_offset, &c);
+
 }
 
 static inline void logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
@@ -137,8 +144,11 @@ static inline void logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint 
     sm_config_set_out_shift(&c, false, true, 32);
     sm_config_set_in_shift(&c, false, true, 8);
 
-	float div = clock_get_hz(clk_sys) / (freq * 2);  
-	sm_config_set_clkdiv(&c, div);
+    float div = clock_get_hz(clk_sys) / (freq * 2);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
 
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, offset, &c);

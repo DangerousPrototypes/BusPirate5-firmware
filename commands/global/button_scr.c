@@ -24,7 +24,7 @@
 #define BUTTON_FLAG_FILE_CONFIGURED 1u<<2
 
 uint8_t button_flags[BP_BUTT_MAX-1];
-char button_script_files[BP_BUTT_MAX-1][BP_FILENAME_MAX + 1];
+char button_script_files[BP_BUTT_MAX-1][BP_FILENAME_MAX];
 
 typedef struct {
     const char *verb;
@@ -48,8 +48,13 @@ static const char * const usage[]= {
 };
 
 static const struct ui_help_options options[]= {
-//{1,"", T_HELP_FLASH}, //flash command help
-//    {0,"-f",T_HELP_FLASH_FILE_FLAG}, //file to read/write/verify    
+{1,"", T_HELP_BUTTON}, 
+    {0,"short",T_HELP_BUTTON_SHORT}, 
+    {0,"long",T_HELP_BUTTON_LONG}, 
+    {0,"-f",T_HELP_BUTTON_FILE}, 
+    {0,"-d",T_HELP_BUTTON_HIDE}, 
+    {0,"-e",T_HELP_BUTTON_EXIT}, 
+    {0,"-h",T_HELP_FLAG}, 
 };
 
 void button_scr_handler(struct command_result *res){
@@ -80,9 +85,9 @@ void button_scr_handler(struct command_result *res){
     }
 
     //grab the file name, error if none
-    char button_script_file[BP_FILENAME_MAX + 1];
+    char button_script_file[BP_FILENAME_MAX];
     command_var_t arg;	
-    if(!cmdln_args_find_flag_string('f',&arg, BP_FILENAME_MAX, button_script_file)){
+    if(!cmdln_args_find_flag_string('f',&arg, BP_FILENAME_MAX-1, button_script_file)){
         printf("Specify a script file with the -f flag (-f script.scr)\r\n");
         ui_help_show(true,usage,count_of(usage), &options[0],count_of(options) );
         return;
@@ -104,7 +109,7 @@ void button_scr_handler(struct command_result *res){
     button_flags[button_code-1]|=BUTTON_FLAG_FILE_CONFIGURED;
 
     //copy to button press type array
-    memcpy(button_script_files[button_code-1], button_script_file, BP_FILENAME_MAX);
+    memcpy(button_script_files[button_code-1], button_script_file, BP_FILENAME_MAX-1);
     printf("Button script file set to '%s'\r\n", button_script_file);
 
     //set other flag options

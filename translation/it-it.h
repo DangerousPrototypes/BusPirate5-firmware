@@ -403,6 +403,12 @@ static char const * const it_it[]={
 	[T_HELP_CMD_PAUSE_KEY]="Press any key to continue (default)",
 	[T_HELP_CMD_PAUSE_BUTTON]="Press the Bus Pirate button to continue",
 	[T_HELP_CMD_PAUSE_EXIT]="'x' key to exit (e.g. script mode)",
+	[T_HELP_BUTTON]="Assign script file to button press",
+	[T_HELP_BUTTON_SHORT]="Assign script file to short button press",
+	[T_HELP_BUTTON_LONG]="Assign script file to long button press",
+	[T_HELP_BUTTON_FILE]="Script file to assign to button press",
+	[T_HELP_BUTTON_HIDE]="Hide comments",
+	[T_HELP_BUTTON_EXIT]="Exit script on error",
 
 };
 

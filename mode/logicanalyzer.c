@@ -35,7 +35,8 @@ enum logicanalyzer_status
 int la_dma[LA_DMA_COUNT];
 uint8_t *la_buf;
 uint32_t la_ptr=0;
-uint8_t la_status=LA_IDLE;
+volatile uint8_t la_status=LA_IDLE;
+volatile uint32_t la_sm_done = false;
 
 PIO pio = pio0;
 uint sm = 0; 
@@ -170,7 +171,7 @@ void la_periodic(void)
     if(la_active && la_status==LA_IDLE)
     {
         la_redraw(0, la_samples);
-        logic_analyzer_arm((float)(la_freq*1000), la_samples, la_trigger_pin, la_trigger_level);
+        logic_analyzer_arm((float)(la_freq*1000), la_samples, la_trigger_pin, la_trigger_level, false);
     }
 
 }
@@ -249,8 +250,8 @@ void la_test_args(struct command_result *res)
                     storage_save_binary_blob_rollover(la_buf, (la_ptr-la_samples) & 0x1ffff, la_samples, 0x1ffff);
                     break;
                 case 'r':
-la_sample:                
-                    logic_analyzer_arm((float)(la_freq*1000), la_samples, la_trigger_pin, la_trigger_level);
+                la_sample:                
+                    logic_analyzer_arm((float)(la_freq*1000), la_samples, la_trigger_pin, la_trigger_level, false);
                     sample_position=0;
                     while(!logic_analyzer_is_done())
                     {
@@ -269,7 +270,7 @@ la_sample:
                     break;
                 case 'q':
                 case 'x':
-la_x:
+                    la_x:
                     system_config.terminal_hide_cursor=false;
                     printf("\e[?25h\e[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); //back to bottom
                     logic_analyzer_cleanup();
@@ -340,7 +341,7 @@ void logic_analyser_done(void)
     //turn off stuff!
     pio_interrupt_clear(pio, 0);
     irq_set_enabled(PIO0_IRQ_0, false);
-    irq_set_enabled(pio_get_dreq(pio, sm, false), false);
+    //irq_set_enabled(pio_get_dreq(pio, sm, false), false);
     irq_remove_handler(PIO0_IRQ_0, logic_analyser_done);
     pio_sm_set_enabled(pio, sm, false);
     //pio_clear_instruction_memory(pio);
@@ -377,8 +378,8 @@ void logic_analyser_done(void)
     la_ptr = ( (DMA_BYTES_PER_CHUNK * tail_dma) + tail);
 
     rgb_set_all(0x00,0xff,0);//,0x00FF00 green for dump
-
-    la_status=LA_IDLE;
+    la_sm_done = true;
+ 
 }
 
 uint32_t logic_analyzer_get_dma_tail(void)
@@ -419,13 +420,43 @@ bool logic_analyzer_is_done(void)
         rgb_set_all(0xab,0x7f,0);//0xAB7F00 yellow for capture in progress.
 
     }
-
-    return (la_status==LA_IDLE);
+    if (la_sm_done)
+    {
+        la_status = LA_IDLE;
+    }
+    return (la_status == LA_IDLE);
 }
 
-bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction)
+void restart_dma()
 {
-    memset(la_buf, 0, sizeof(la_buf));
+    dma_channel_config la_dma_config;
+    for (uint8_t i = 0; i < count_of(la_dma); i++)
+    {
+        dma_channel_abort(la_dma[i]);
+        la_dma_config = dma_channel_get_default_config(la_dma[i]);
+        channel_config_set_read_increment(&la_dma_config, false);              // read fixed PIO address
+        channel_config_set_write_increment(&la_dma_config, true);              // write to circular buffer
+        channel_config_set_transfer_data_size(&la_dma_config, DMA_SIZE_8);     // we have 8 IO pins
+        channel_config_set_dreq(&la_dma_config, pio_get_dreq(pio, sm, false)); // &pio0_hw->rxf[sm] paces the rate of transfer
+        channel_config_set_ring(&la_dma_config, true, 15);                     // loop at 2 * 8 bytes
+
+        int la_dma_next = (i + 1 < count_of(la_dma)) ? la_dma[i + 1] : la_dma[0];
+        channel_config_set_chain_to(&la_dma_config, la_dma_next); // chain to next DMA
+
+        dma_channel_configure(la_dma[i], &la_dma_config, (volatile uint8_t *)&la_buf[DMA_BYTES_PER_CHUNK * i], &pio->rxf[sm], DMA_BYTES_PER_CHUNK, false);
+    }
+
+    // start the first channel, will pause for data from PIO
+    dma_channel_start(la_dma[0]);
+}
+
+bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction, bool edge)
+{
+    la_sm_done = false;
+    memset(la_buf, 0, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT);
+
+    //This can be useful for debugging. The position of sampling always start at the beginning of the buffer
+    //restart_dma();
 
     /*for(uint8_t i=0; i<BIO_MAX_PINS; i++)
     {
@@ -459,13 +490,13 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
         {
             offset=pio_add_program(pio, &logicanalyzer_high_trigger_program);
             pio_program_active=&logicanalyzer_high_trigger_program;
-            logicanalyzer_high_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq);
+            logicanalyzer_high_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq, edge);
         }
         else //low level trigger program
         {
             offset=pio_add_program(pio, &logicanalyzer_low_trigger_program);
             pio_program_active=&logicanalyzer_low_trigger_program;
-            logicanalyzer_low_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq);           
+            logicanalyzer_low_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq, edge);           
         }
     }
     else    //else no trigger program
@@ -482,7 +513,6 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     irq_set_exclusive_handler(PIO0_IRQ_0, logic_analyser_done);
     irq_set_enabled(PIO0_IRQ_0, true);
     irq_set_enabled(pio_get_dreq(pio, sm, false), true);
-    irq_clear(pio_get_dreq(pio, sm, false));
     la_status=LA_ARMED_INIT;
     multicore_fifo_push_blocking(0xf3);
     multicore_fifo_pop_blocking();
@@ -492,7 +522,6 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     //write sample count and enable sampling
     pio_sm_put_blocking(pio, sm, samples - 1);
     pio_sm_set_enabled(pio, sm, true);
-    
 }
 
 bool logic_analyzer_cleanup(void)
@@ -518,10 +547,10 @@ bool logic_analyzer_cleanup(void)
 
 bool logicanalyzer_setup(void)
 {
-    dma_channel_config la_dma_config[LA_DMA_COUNT];
+
 
     la_buf=mem_alloc(DMA_BYTES_PER_CHUNK*LA_DMA_COUNT, 0);
-    if(!la_buf)
+    if(!la_buf || ((uint)la_buf != ((uint)la_buf & ~((1<<15)-1))))
     {
         //printf("Failed to allocate buffer. Is the scope running?\r\n");
         return false;
@@ -535,23 +564,6 @@ bool logicanalyzer_setup(void)
         la_dma[i]= dma_claim_unused_channel(true);
     }
 
-    for(uint8_t i=0; i<count_of(la_dma); i++)
-    {
-        la_dma_config[i] = dma_channel_get_default_config(la_dma[i]);
-        channel_config_set_read_increment(&la_dma_config[i], false); // read fixed PIO address
-        channel_config_set_write_increment(&la_dma_config[i], true); // write to circular buffer
-        channel_config_set_transfer_data_size(&la_dma_config[i], DMA_SIZE_8); // we have 8 IO pins
-        channel_config_set_dreq(&la_dma_config[i], pio_get_dreq(pio, sm, false)); // &pio0_hw->rxf[sm] paces the rate of transfer
-        channel_config_set_ring(&la_dma_config[i], true, 15); // loop at 2 * 8 bytes
-
-        int la_dma_next = (i+1 < count_of(la_dma))? la_dma[i+1] : la_dma[0];
-        channel_config_set_chain_to(&la_dma_config[i], la_dma_next); // chain to next DMA
-
-        dma_channel_configure(la_dma[i], &la_dma_config[i], (volatile uint8_t *)&la_buf[DMA_BYTES_PER_CHUNK * i], &pio->rxf[sm], DMA_BYTES_PER_CHUNK, false); 
-
-    }
-
-    //start the first channel, will pause for data from PIO
-    dma_channel_start(la_dma[0]);
+    restart_dma();
     return true;
 }

@@ -33,6 +33,8 @@ enum logicanalyzer_status
 #define DMA_BYTES_PER_CHUNK 32768
 #define LA_DMA_COUNT 4
 
+static void restart_dma();
+
 int la_dma[LA_DMA_COUNT];
 uint8_t *la_buf;
 uint32_t la_ptr=0;

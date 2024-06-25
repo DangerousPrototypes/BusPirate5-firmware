@@ -1,6 +1,5 @@
 void la_test_args (struct command_result *res);
 bool logicanalyzer_setup(void);
-void restart_dma();
 int logicanalyzer_status(void);
 uint8_t logicanalyzer_dump(uint8_t *txbuf);
 bool logic_analyzer_is_done(void);

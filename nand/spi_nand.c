@@ -52,12 +52,21 @@
 // ALSO: Define forced-inline function `get_plane(row_address_t row_address_t)`
 // for each supported chip.  Legacy is easy: just return 0.
 //
+#if defined(FLASH_MT29F2G01ABAFDWB)
 
+    #define SPI_NAND_MFR_ID      0x2C // Micron
+    #define SPI_NAND_DEVICE_ID   0x24 // DEVICE_ID_1G_3V3
+    inline uint8_t get_plane(row_address_t row) { return row.whole & 0x1; }
+
+#else // default to MT29F1G01ABAFDWB
+
+    #define SPI_NAND_MFR_ID      0x2C // Micron
+    #define SPI_NAND_DEVICE_ID   0x14 // DEVICE_ID_1G_3V3
+    inline uint8_t get_plane(row_address_t row) { return 0; }
+
+#endif
 #define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK - 1) // zero-indexed
 #define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_BLOCKS_PER_LUN - 1)  // zero-indexed
-#define MFR_ID_MICRON        0x2C
-#define DEVICE_ID_1G_3V3     0x14
-inline uint8_t get_plane(row_address_t row) { return 0; }
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #define FEATURE_TRANS_LEN  3
@@ -446,8 +455,8 @@ static int read_id(void)
     // check spi return
     if (SPI_RET_OK == ret) {
         // check mfr & device id
-        if ((MFR_ID_MICRON == rx_data[READ_ID_MFR_INDEX]) &&
-            (DEVICE_ID_1G_3V3 == rx_data[READ_ID_DEVICE_INDEX])) {
+        if ((SPI_NAND_MFR_ID    == rx_data[READ_ID_MFR_INDEX]) &&
+            (SPI_NAND_DEVICE_ID == rx_data[READ_ID_DEVICE_INDEX])) {
             // success
             return SPI_NAND_RET_OK;
         }
@@ -648,7 +657,7 @@ static int program_execute(row_address_t row, uint32_t timeout)
     }
 }
 
-static int block_erase(row_address_t row, uint32_t timeout)
+static int block_erase_impl(row_address_t row, uint32_t timeout)
 {
     // setup timeout tracking for second operation
     uint32_t start = sys_time_get_ms();
@@ -679,6 +688,23 @@ static int block_erase(row_address_t row, uint32_t timeout)
     else {
         return SPI_NAND_RET_OK;
     }
+}
+static int block_erase(row_address_t row, uint32_t timeout)
+{
+    int ret = block_erase_impl(row, timeout);
+
+#if defined(SPI_HACK_FOR_MULTI_PLANE_SUPPORT_INCREASED_PAGES_PER_BLOCK)
+    // this hack makes each page "look" twice as large,
+    // at least until dhara has native support for multi-plane NAND
+    // therefore, if erasing plane 0, also ensure to erase the other plane(s).
+    for (int i = 1; i < SPI_NAND_PLANE_COUNT; ++i) {
+        if (SPI_NAND_RET_OK != ret) return ret; // exit early if already failed
+        ++row.whole; // also erase the other plane(s)
+        ret = block_erase_impl(row, timeout);
+    }
+#endif
+
+    return ret;
 }
 
 static int unlock_all_blocks(void)

@@ -62,9 +62,9 @@ typedef union {
     uint32_t whole;
     struct {
         /// valid range 0-63
-        uint32_t page  :  6;    // TODO: bitcount == SPI_NAND_LOG2_PAGES_PER_BLOCK
+        uint32_t page  : SPI_NAND_LOG2_PAGES_PER_BLOCK;
         /// valid range 0-1023
-        uint32_t block : 26;    // TODO: bitcount == 32 - SPI_NAND_LOG2_PAGES_PER_BLOCK
+        uint32_t block : (32 - SPI_NAND_LOG2_PAGES_PER_BLOCK);
     };
 } row_address_t;
 /// @brief Nand column address (valid range 0-2175)

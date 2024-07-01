@@ -52,8 +52,12 @@
 // ALSO: Define forced-inline function `get_plane(row_address_t row_address_t)`
 // for each supported chip.  Legacy is easy: just return 0.
 //
+
+#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK - 1) // zero-indexed
+#define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_BLOCKS_PER_LUN - 1)  // zero-indexed
 #define MFR_ID_MICRON        0x2C
 #define DEVICE_ID_1G_3V3     0x14
+inline uint8_t get_plane(row_address_t row) { return 0; }
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #define FEATURE_TRANS_LEN  3
@@ -140,17 +144,11 @@ static int set_feature(uint8_t reg, uint8_t data, uint32_t timeout);
 static int get_feature(uint8_t reg, uint8_t *data_out, uint32_t timeout);
 static int write_enable(uint32_t timeout);
 static int page_read(row_address_t row, uint32_t timeout);
-
-// TODO: read_from_cache() now requires the plane bits.  Maybe just add row_address_t?
-static int read_from_cache(column_address_t column, uint8_t *data_out, size_t read_len,
+static int read_from_cache(row_address_t row, column_address_t column, uint8_t *data_out, size_t read_len,
                            uint32_t timeout);
-
-// TODO: program_load() now requires the plane bits.  Maybe just add row_address_t?
-static int program_load(column_address_t column, const uint8_t *data_in, size_t write_len,
+static int program_load(row_address_t row, column_address_t column, const uint8_t *data_in, size_t write_len,
                         uint32_t timeout);
-
-// TODO: program_load_random_data() now requires the plane bits.  Maybe just add row_address_t?
-static int program_load_random_data(column_address_t column, uint8_t *data_in, size_t write_len,
+static int program_load_random_data(row_address_t row, column_address_t column, uint8_t *data_in, size_t write_len,
                                     uint32_t timeout);
 
 static int program_execute(row_address_t row, uint32_t timeout);
@@ -217,9 +215,7 @@ int spi_nand_page_read(row_address_t row, column_address_t column, uint8_t *data
 
     // read from cache 
     uint32_t timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
-
-    // TODO: Update to pass the plane bits
-    return read_from_cache(column, data_out, read_len, timeout);
+    return read_from_cache(row, column, data_out, read_len, timeout);
 }
 
 int spi_nand_page_program(row_address_t row, column_address_t column, const uint8_t *data_in,
@@ -241,9 +237,7 @@ int spi_nand_page_program(row_address_t row, column_address_t column, const uint
 
     // load data into nand's internal cache
     uint32_t timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
-
-    // TODO: Update to pass the plane bits
-    ret = program_load(column, data_in, write_len, timeout);
+    ret = program_load(row, column, data_in, write_len, timeout);
     if (SPI_NAND_RET_OK != ret) return ret;
 
     // write to cell array from nand's internal cache
@@ -253,16 +247,24 @@ int spi_nand_page_program(row_address_t row, column_address_t column, const uint
 
 int spi_nand_page_copy(row_address_t src, row_address_t dest)
 {
-    // BUGBUG -- When the source and destination
-    //           are on different planes, this fails
-    //           because presumes the read data is
-    //           in the same plane as will be written to
-    // For multi-plane NAND, may need to read to a host buffer,
-    // and then write that buffer back to the new destination.
-
     // input validation
     if (!validate_row_address(src) || !validate_row_address(src)) {
         return SPI_NAND_RET_BAD_ADDRESS;
+    }
+    if (!validate_row_address(dest) || !validate_row_address(dest)) {
+        return SPI_NAND_RET_BAD_ADDRESS;
+    }
+    if (get_plane(src) != get_plane(dest)) {
+        // If the source and destination are on different planes,
+        // the optimized copy operation cannot be used.  This is because
+        // there does not appear to be a command to move data from one
+        // plane's cache register to another plane's cache register.
+        //
+        // Without this check, data would be corrupted on multi-plane
+        // NAND when the source and destination are on different planes.
+        int ret = spi_nand_page_read(src, 0, page_main_and_oob_buffer, sizeof(page_main_and_oob_buffer));
+        if (SPI_NAND_RET_OK != ret) return ret;
+        return spi_nand_page_program(dest, 0, page_main_and_oob_buffer, sizeof(page_main_and_oob_buffer));
     }
 
     // setup timeout tracking
@@ -280,9 +282,7 @@ int spi_nand_page_copy(row_address_t src, row_address_t dest)
     // empty program load random data
     timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
     uint8_t dummy_byte = 0; // avoid a null pointer
-
-    // TODO: Update to pass the plane bits (!!! BUT SEE BUGBUG ABOVE !!!)
-    ret = program_load_random_data(0, &dummy_byte, 0, timeout);
+    ret = program_load_random_data(src, 0, &dummy_byte, 0, timeout);
     if (SPI_NAND_RET_OK != ret) return ret;
 
     // write to cell array from nand's internal cache
@@ -539,7 +539,7 @@ static int page_read(row_address_t row, uint32_t timeout)
 }
 
 /// @note Input validation is expected to be performed by caller.
-static int read_from_cache(column_address_t column, uint8_t *data_out, size_t read_len,
+static int read_from_cache(row_address_t row, column_address_t column, uint8_t *data_out, size_t read_len,
                            uint32_t timeout)
 {
     // setup timeout tracking for second operation
@@ -548,15 +548,9 @@ static int read_from_cache(column_address_t column, uint8_t *data_out, size_t re
     // setup data for read from cache command (need to go from LSB -> MSB first on address)
     uint8_t tx_data[READ_FROM_CACHE_TRANS_LEN];
 
-    // TODO: This is where the plane bit needs to be added
-    // Maybe define per-chip get_plane_bits() inline function?
-    // single-plane will always be zero.
-    // up to four bits could be returned.
-
     tx_data[0] = CMD_READ_FROM_CACHE;
-    //uint8_t plane = get_plane(row);
-    //tx_data[1] = ((column >> 8) & 0xF) | (plane << 4);
-    tx_data[1] = column >> 8;
+    uint8_t plane = get_plane(row);
+    tx_data[1] = (plane << 4) | ((column >> 8) & 0xF);
     tx_data[2] = column;
     tx_data[3] = 0;
     // perform transaction
@@ -572,23 +566,17 @@ static int read_from_cache(column_address_t column, uint8_t *data_out, size_t re
 }
 
 /// @note Input validation is expected to be performed by caller.
-static int program_load(column_address_t column, const uint8_t *data_in, size_t write_len,
+static int program_load(row_address_t row, column_address_t column, const uint8_t *data_in, size_t write_len,
                         uint32_t timeout)
 {
     // setup timeout tracking for second operation
     uint32_t start = sys_time_get_ms();
 
-    // TODO: This is where the plane bit needs to be added
-    // Maybe define per-chip get_plane_bits() inline function?
-    // single-plane will always be zero.
-    // up to four bits could be returned.
-
     // setup data for program load (need to go from LSB -> MSB first on address)
     uint8_t tx_data[PROGRAM_LOAD_TRANS_LEN];
     tx_data[0] = CMD_PROGRAM_LOAD;
-    //uint8_t plane = get_plane(row);
-    //tx_data[1] = ((column >> 8) & 0xF) | (plane << 4);
-    tx_data[1] = column >> 8;
+    uint8_t plane = get_plane(row);
+    tx_data[1] = (plane << 4) | ((column >> 8) & 0xF);
     tx_data[2] = column;
     // perform transaction
     csel_select();
@@ -602,23 +590,17 @@ static int program_load(column_address_t column, const uint8_t *data_in, size_t 
     return (SPI_RET_OK == ret) ? SPI_NAND_RET_OK : SPI_NAND_RET_BAD_SPI;
 }
 
-static int program_load_random_data(column_address_t column, uint8_t *data_in, size_t write_len,
+static int program_load_random_data(row_address_t row, column_address_t column, uint8_t *data_in, size_t write_len,
                                     uint32_t timeout)
 {
     // setup timeout tracking for second operation
     uint32_t start = sys_time_get_ms();
 
-    // TODO: This is where the plane bit needs to be added
-    // Maybe define per-chip get_plane_bits() inline function?
-    // single-plane will always be zero.
-    // up to four bits could be returned.
-
     // setup data for program load (need to go from LSB -> MSB first on address)
     uint8_t tx_data[PROGRAM_LOAD_RANDOM_DATA_TRANS_LEN];
     tx_data[0] = CMD_PROGRAM_LOAD_RANDOM_DATA;
-    //uint8_t plane = get_plane(row);
-    //tx_data[1] = ((column >> 8) & 0xF) | (plane << 4);
-    tx_data[1] = column >> 8;
+    uint8_t plane = get_plane(row);
+    tx_data[1] = (plane << 4) | ((column >> 8) & 0xF);
     tx_data[2] = column;
     // perform transaction
     csel_select();

@@ -38,8 +38,23 @@
 #define READ_ID_TRANS_LEN    4
 #define READ_ID_MFR_INDEX    2
 #define READ_ID_DEVICE_INDEX 3
+// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// TODO: allow the following to be dynamic values from the flash's
+//       parameter page, rather than hard-coded?
+//       If too much change, then at least use #ifdef to allow multiple
+//       supported flash chips to easily define their values in spi_nand.h.
+//
+// Define relevant values here in a single location, within
+// #ifdef guards for each supported chip.  See also the corresponding
+// #ifdef guards in spi_nand.h, for corresponding values that impact
+// external files.
+//
+// ALSO: Define forced-inline function `get_plane(row_address_t row_address_t)`
+// for each supported chip.  Legacy is easy: just return 0.
+//
 #define MFR_ID_MICRON        0x2C
 #define DEVICE_ID_1G_3V3     0x14
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #define FEATURE_TRANS_LEN  3
 #define FEATURE_REG_INDEX  1
@@ -62,8 +77,6 @@
 #define ECC_STATUS_4_6_REFRESH    0b011
 #define ECC_STATUS_7_8_REFRESH    0b101
 #define ECC_STATUS_NOT_CORRECTED  0b010
-
-#define ROW_ADDRESS_BLOCK_SHIFT 6
 
 #define BAD_BLOCK_MARK 0
 
@@ -127,12 +140,19 @@ static int set_feature(uint8_t reg, uint8_t data, uint32_t timeout);
 static int get_feature(uint8_t reg, uint8_t *data_out, uint32_t timeout);
 static int write_enable(uint32_t timeout);
 static int page_read(row_address_t row, uint32_t timeout);
+
+// TODO: read_from_cache() now requires the plane bits.  Maybe just add row_address_t?
 static int read_from_cache(column_address_t column, uint8_t *data_out, size_t read_len,
                            uint32_t timeout);
+
+// TODO: program_load() now requires the plane bits.  Maybe just add row_address_t?
 static int program_load(column_address_t column, const uint8_t *data_in, size_t write_len,
                         uint32_t timeout);
+
+// TODO: program_load_random_data() now requires the plane bits.  Maybe just add row_address_t?
 static int program_load_random_data(column_address_t column, uint8_t *data_in, size_t write_len,
                                     uint32_t timeout);
+
 static int program_execute(row_address_t row, uint32_t timeout);
 static int block_erase(row_address_t row, uint32_t timeout);
 
@@ -195,8 +215,10 @@ int spi_nand_page_read(row_address_t row, column_address_t column, uint8_t *data
     int ret = page_read(row, OP_TIMEOUT);
     if (SPI_NAND_RET_OK != ret) return ret;
 
-    // read from cache
+    // read from cache 
     uint32_t timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
+
+    // TODO: Update to pass the plane bits
     return read_from_cache(column, data_out, read_len, timeout);
 }
 
@@ -219,6 +241,8 @@ int spi_nand_page_program(row_address_t row, column_address_t column, const uint
 
     // load data into nand's internal cache
     uint32_t timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
+
+    // TODO: Update to pass the plane bits
     ret = program_load(column, data_in, write_len, timeout);
     if (SPI_NAND_RET_OK != ret) return ret;
 
@@ -229,6 +253,13 @@ int spi_nand_page_program(row_address_t row, column_address_t column, const uint
 
 int spi_nand_page_copy(row_address_t src, row_address_t dest)
 {
+    // BUGBUG -- When the source and destination
+    //           are on different planes, this fails
+    //           because presumes the read data is
+    //           in the same plane as will be written to
+    // For multi-plane NAND, may need to read to a host buffer,
+    // and then write that buffer back to the new destination.
+
     // input validation
     if (!validate_row_address(src) || !validate_row_address(src)) {
         return SPI_NAND_RET_BAD_ADDRESS;
@@ -249,6 +280,8 @@ int spi_nand_page_copy(row_address_t src, row_address_t dest)
     // empty program load random data
     timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
     uint8_t dummy_byte = 0; // avoid a null pointer
+
+    // TODO: Update to pass the plane bits (!!! BUT SEE BUGBUG ABOVE !!!)
     ret = program_load_random_data(0, &dummy_byte, 0, timeout);
     if (SPI_NAND_RET_OK != ret) return ret;
 
@@ -279,13 +312,16 @@ int spi_nand_block_erase(row_address_t row)
 
 int spi_nand_block_is_bad(row_address_t row, bool *is_bad)
 {
-    uint8_t bad_block_mark[2];
+    uint8_t bad_block_mark[1];
     // page read will validate the block address
     int ret = spi_nand_page_read(row, SPI_NAND_PAGE_SIZE, bad_block_mark, sizeof(bad_block_mark));
     if (SPI_NAND_RET_OK != ret) return ret;
 
-    // check marker
-    if (BAD_BLOCK_MARK == bad_block_mark[0] || BAD_BLOCK_MARK == bad_block_mark[1]) {
+    // Refer to MT29F2G01ABAGD datasheet, table 11 on page 46:
+    // Bad blocks can be detected by the value 0x00 in the
+    // FIRST BYTE of the spare area.
+    // This is ONFI-compliant, so should be universal nowadays.
+    if (BAD_BLOCK_MARK == bad_block_mark[0]) {
         *is_bad = true;
     }
     else {
@@ -297,7 +333,12 @@ int spi_nand_block_is_bad(row_address_t row, bool *is_bad)
 
 int spi_nand_block_mark_bad(row_address_t row)
 {
-    uint8_t bad_block_mark[2] = {BAD_BLOCK_MARK, BAD_BLOCK_MARK};
+    // Refer to MT29F2G01ABAGD datasheet, table 11 on page 46:
+    // Bad blocks can be detected by the value 0x00 in the
+    // FIRST BYTE of the spare area.
+    // This is ONFI-compliant, so should be universal nowadays.
+
+    uint8_t bad_block_mark[1] = {BAD_BLOCK_MARK};
     // page program will validate the block address
     return spi_nand_page_program(row, SPI_NAND_PAGE_SIZE, bad_block_mark, sizeof(bad_block_mark));
 }
@@ -311,6 +352,8 @@ int spi_nand_page_is_free(row_address_t row, bool *is_free)
 
     *is_free = true; // innocent until proven guilty
     // iterate through page & oob to make sure its 0xff's all the way down
+
+    // TODO: static_assert( sizeof(page_main_and_oob_buffer) % sizeof(uint32_t) == 0, "page_main_and_oob_buffer size must be a multiple of 4" );
     uint32_t comp_word = 0xffffffff;
     for (int i = 0; i < sizeof(page_main_and_oob_buffer); i += sizeof(comp_word)) {
         if (0 != memcmp(&comp_word, &page_main_and_oob_buffer[i], sizeof(comp_word))) {
@@ -504,7 +547,15 @@ static int read_from_cache(column_address_t column, uint8_t *data_out, size_t re
 
     // setup data for read from cache command (need to go from LSB -> MSB first on address)
     uint8_t tx_data[READ_FROM_CACHE_TRANS_LEN];
+
+    // TODO: This is where the plane bit needs to be added
+    // Maybe define per-chip get_plane_bits() inline function?
+    // single-plane will always be zero.
+    // up to four bits could be returned.
+
     tx_data[0] = CMD_READ_FROM_CACHE;
+    //uint8_t plane = get_plane(row);
+    //tx_data[1] = ((column >> 8) & 0xF) | (plane << 4);
     tx_data[1] = column >> 8;
     tx_data[2] = column;
     tx_data[3] = 0;
@@ -527,9 +578,16 @@ static int program_load(column_address_t column, const uint8_t *data_in, size_t 
     // setup timeout tracking for second operation
     uint32_t start = sys_time_get_ms();
 
+    // TODO: This is where the plane bit needs to be added
+    // Maybe define per-chip get_plane_bits() inline function?
+    // single-plane will always be zero.
+    // up to four bits could be returned.
+
     // setup data for program load (need to go from LSB -> MSB first on address)
     uint8_t tx_data[PROGRAM_LOAD_TRANS_LEN];
     tx_data[0] = CMD_PROGRAM_LOAD;
+    //uint8_t plane = get_plane(row);
+    //tx_data[1] = ((column >> 8) & 0xF) | (plane << 4);
     tx_data[1] = column >> 8;
     tx_data[2] = column;
     // perform transaction
@@ -550,9 +608,16 @@ static int program_load_random_data(column_address_t column, uint8_t *data_in, s
     // setup timeout tracking for second operation
     uint32_t start = sys_time_get_ms();
 
+    // TODO: This is where the plane bit needs to be added
+    // Maybe define per-chip get_plane_bits() inline function?
+    // single-plane will always be zero.
+    // up to four bits could be returned.
+
     // setup data for program load (need to go from LSB -> MSB first on address)
     uint8_t tx_data[PROGRAM_LOAD_RANDOM_DATA_TRANS_LEN];
     tx_data[0] = CMD_PROGRAM_LOAD_RANDOM_DATA;
+    //uint8_t plane = get_plane(row);
+    //tx_data[1] = ((column >> 8) & 0xF) | (plane << 4);
     tx_data[1] = column >> 8;
     tx_data[2] = column;
     // perform transaction

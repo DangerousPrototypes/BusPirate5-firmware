@@ -28,7 +28,26 @@ enum {
     SPI_NAND_RET_E_FAIL = -9,
 };
 
-#define SPI_NAND_PAGE_SIZE       2048
+// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// TODO: allow the following to be dynamic values from the flash's
+//       parameter page, rather than hard-coded?
+//
+// Unfortunately, multiple files use these values directly, so the
+// change for dynamically supporting multiple flash chips would be
+// larger.  Files that would be impacted:
+//
+// 1. dhara/nand.c
+// 2. nand/nand_ftl_diskio.c
+// 3. nand/spi_nand.c
+// 4. nand/attic/mem.c
+// 5. nand/attic/shell_cmd.c
+//
+// Instead, define relevant values here in a single location, within
+// #ifdef guards for each supported chip.  This way, the externally
+// impacting values are at least well-defined.  Also define the
+// INTERNAL-ONLY value with similar #ifdef guards in spi_nand.c.
+//
+#define SPI_NAND_PAGE_SIZE       2048 // dhara/nand.c uses this exactly once
 #define SPI_NAND_OOB_SIZE        64
 #define SPI_NAND_PAGES_PER_BLOCK 64
 #define SPI_NAND_BLOCKS_PER_LUN  1024
@@ -38,15 +57,17 @@ enum {
 
 #define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK - 1) // zero-indexed
 #define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_BLOCKS_PER_LUN - 1)  // zero-indexed
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 /// @brief Nand row address
 typedef union {
     uint32_t whole;
     struct {
         /// valid range 0-63
-        uint32_t page : 6;
+        uint32_t page  :  6;    // TODO: bitcount == SPI_NAND_LOG2_PAGES_PER_BLOCK
         /// valid range 0-1023
-        uint32_t block : 26;
+        uint32_t block : 26;    // TODO: bitcount == 32 - SPI_NAND_LOG2_PAGES_PER_BLOCK
     };
 } row_address_t;
 /// @brief Nand column address (valid range 0-2175)

@@ -47,16 +47,13 @@ enum {
 // impacting values are at least well-defined.  Also define the
 // INTERNAL-ONLY value with similar #ifdef guards in spi_nand.c.
 //
-#define SPI_NAND_PAGE_SIZE       2048 // dhara/nand.c uses this exactly once
+#define SPI_NAND_PAGE_SIZE       2048
 #define SPI_NAND_OOB_SIZE        64
 #define SPI_NAND_PAGES_PER_BLOCK 64
 #define SPI_NAND_BLOCKS_PER_LUN  1024
 
 #define SPI_NAND_LOG2_PAGE_SIZE       11
 #define SPI_NAND_LOG2_PAGES_PER_BLOCK 6
-
-#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK - 1) // zero-indexed
-#define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_BLOCKS_PER_LUN - 1)  // zero-indexed
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 

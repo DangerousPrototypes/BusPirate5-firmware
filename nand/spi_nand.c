@@ -43,7 +43,7 @@
 #if defined(FLASH_MT29F2G01ABAFDWB)
 
     #define SPI_NAND_MFR_ID      0x2C // Micron
-    #define SPI_NAND_DEVICE_ID   0x24 // DEVICE_ID_1G_3V3
+    #define SPI_NAND_DEVICE_ID   0x24 // DEVICE_ID_2G_3V3
 
 #else // default to MT29F1G01ABAFDWB
 

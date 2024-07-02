@@ -39,32 +39,25 @@
 #define READ_ID_MFR_INDEX    2
 #define READ_ID_DEVICE_INDEX 3
 // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-// TODO: allow the following to be dynamic values from the flash's
-//       parameter page, rather than hard-coded?
-//       If too much change, then at least use #ifdef to allow multiple
-//       supported flash chips to easily define their values in spi_nand.h.
-//
-// Define relevant values here in a single location, within
-// #ifdef guards for each supported chip.  See also the corresponding
-// #ifdef guards in spi_nand.h, for corresponding values that impact
-// external files.
-//
-// ALSO: Define forced-inline function `get_plane(row_address_t row_address_t)`
-// for each supported chip.  Legacy is easy: just return 0.
-//
+// See also: spi_nand.h, which contains external per-chip guards
 #if defined(FLASH_MT29F2G01ABAFDWB)
 
     #define SPI_NAND_MFR_ID      0x2C // Micron
     #define SPI_NAND_DEVICE_ID   0x24 // DEVICE_ID_1G_3V3
-    inline uint8_t get_plane(row_address_t row) { return row.whole & 0x1; }
 
 #else // default to MT29F1G01ABAFDWB
 
     #define SPI_NAND_MFR_ID      0x2C // Micron
     #define SPI_NAND_DEVICE_ID   0x14 // DEVICE_ID_1G_3V3
-    inline uint8_t get_plane(row_address_t row) { return 0; }
 
 #endif
+
+inline uint8_t get_plane(row_address_t row) {
+    if (SPI_NAND_LOG2_PLANE_COUNT == 0) return 0;
+    return (row.whole & (SPI_NAND_PLANE_COUNT -1));
+}
+
+
 #define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK - 1) // zero-indexed
 #define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_BLOCKS_PER_LUN - 1)  // zero-indexed
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

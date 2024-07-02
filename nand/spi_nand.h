@@ -29,24 +29,7 @@ enum {
 };
 
 // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-// TODO: allow the following to be dynamic values from the flash's
-//       parameter page, rather than hard-coded?
-//
-// Unfortunately, multiple files use these values directly, so the
-// change for dynamically supporting multiple flash chips would be
-// larger.  Files that would be impacted:
-//
-// 1. dhara/nand.c
-// 2. nand/nand_ftl_diskio.c
-// 3. nand/spi_nand.c
-// 4. nand/attic/mem.c
-// 5. nand/attic/shell_cmd.c
-//
-// Instead, define relevant values here in a single location, within
-// #ifdef guards for each supported chip.  This way, the externally
-// impacting values are at least well-defined.  Also define the
-// INTERNAL-ONLY value with similar #ifdef guards in spi_nand.c.
-//
+// See also: spi_nand.c, which contains internal-only per chip guards
 #if defined(FLASH_MT29F2G01ABAFDWB)
 
     // NOTE: This is using a lie to get things up and running rapidly.
@@ -71,13 +54,14 @@ enum {
 #else // default to MT29F1G01ABAFDWB
 
     #define SPI_NAND_LOG2_PAGE_SIZE       11
-    #define SPI_NAND_LOG2_PAGES_PER_BLOCK  6
     #define SPI_NAND_LOG2_PLANE_COUNT      0
-
+    #define SPI_NAND_LOG2_PAGES_PER_BLOCK  6
     #define SPI_NAND_OOB_SIZE        64
     #define SPI_NAND_BLOCKS_PER_LUN  1024
 
 #endif
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 #define SPI_NAND_PAGES_PER_BLOCK (1 << SPI_NAND_LOG2_PAGES_PER_BLOCK)
 #define SPI_NAND_PAGE_SIZE       (1 << SPI_NAND_LOG2_PAGE_SIZE)
 #define SPI_NAND_PLANE_COUNT     (1 << SPI_NAND_LOG2_PLANE_COUNT)
@@ -85,21 +69,12 @@ enum {
 #if SPI_NAND_PAGE_SIZE != 2048
     #error "Currently only 2048-byte pages are supported"
 #endif
-#if SPI_NAND_PAGES_PER_BLOCK != 64
-    #error "Currently only 64 pages per block are supported"
-#endif
-
-
-// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 
 /// @brief Nand row address
 typedef union {
     uint32_t whole;
     struct {
-        /// valid range 0-63
-        uint32_t page  : SPI_NAND_LOG2_PAGES_PER_BLOCK;
-        /// valid range 0-1023
+        uint32_t page  : SPI_NAND_LOG2_PAGES_PER_BLOCK; // least significant bits
         uint32_t block : (32 - SPI_NAND_LOG2_PAGES_PER_BLOCK);
     };
 } row_address_t;

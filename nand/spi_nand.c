@@ -694,8 +694,8 @@ static int block_erase(row_address_t row, uint32_t timeout)
     int ret = block_erase_impl(row, timeout);
 
 #if defined(SPI_HACK_FOR_MULTI_PLANE_SUPPORT_INCREASED_PAGES_PER_BLOCK)
-    // this hack makes each page "look" twice as large,
-    // at least until dhara has native support for multi-plane NAND
+    // this hack makes each page "look" N times as large (N == SPI_NAND_PLANE_COUNT),
+    // at least until dhara has native support for multi-plane NAND.
     // therefore, if erasing plane 0, also ensure to erase the other plane(s).
     for (int i = 1; i < SPI_NAND_PLANE_COUNT; ++i) {
         if (SPI_NAND_RET_OK != ret) return ret; // exit early if already failed

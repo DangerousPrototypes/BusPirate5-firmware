@@ -167,6 +167,13 @@ set(bp5_common
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h
         msc_disk.c msc_disk.h usb_descriptors.c
 )
+set(bp5_rev10
+        platform/bpi-rev10.h platform/bpi-rev10.c 
+        #nand flash management and dhara
+        dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
+        nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
+        nand/sys_time.c nand/sys_time.h
+)
 
 add_executable(bus_pirate5_rev8
         ${bp5_common}
@@ -179,21 +186,13 @@ target_compile_definitions(bus_pirate5_rev8 PUBLIC BP5_REV=8)
 
 add_executable(bus_pirate5_rev10
         ${bp5_common}
-        platform/bpi-rev10.h platform/bpi-rev10.c 
-        #nand flash management and dhara
-        dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
-        nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
-        nand/sys_time.c nand/sys_time.h
+        ${bp5_rev10}
         )
 target_compile_definitions(bus_pirate5_rev10 PUBLIC BP5_REV=10)
 
 add_executable(bus_pirate5_rev10_2gbit
         ${bp5_common}
-        platform/bpi-rev10.h platform/bpi-rev10.c 
-        #nand flash management and dhara
-        dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
-        nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
-        nand/sys_time.c nand/sys_time.h
+        ${bp5_rev10}
         )
 target_compile_definitions(bus_pirate5_rev10_2gbit PUBLIC BP5_REV=10)
 target_compile_definitions(bus_pirate5_rev10_2gbit PUBLIC FLASH_MT29F2G01ABAFDWB)
@@ -230,6 +229,7 @@ set(revisions
         )
         
 
+# Compile the various PIO programs to generate the header files
 foreach(revision ${revisions})
         ADD_DEPENDENCIES (${revision} timestamp)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw2wire.pio)

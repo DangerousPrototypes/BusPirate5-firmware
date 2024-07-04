@@ -87,7 +87,7 @@ typedef struct _mode
     void     (*protocol_lcd_update)(uint32_t flags);	// replacement for ui_lcd_update if non-nullptr
 } bp_mode_t;
 
-extern bp_mode_t modes[MAXPROTO];
+extern const bp_mode_t modes[MAXPROTO];
 
 // Some null functions, for when a mode doesn't need to do anything at a given function
 void         nullfunc1  (void      );

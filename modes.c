@@ -110,9 +110,9 @@ void nullfunc1_temp(bytecode_t *result, bytecode_t *next){
 }
 
 // all modes and their interaction is handled here
-// buspirateNG.h has the conditional defines for modes
+// pirate.h has the conditional defines for modes
 
-bp_mode_t modes[MAXPROTO]={
+const bp_mode_t modes[MAXPROTO]={
 #if 1 // BP_MODE_HIZ is always available
     [BP_MODE_HIZ] = {
         nullfunc1_temp,				// start

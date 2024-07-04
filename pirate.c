@@ -51,6 +51,8 @@
 
 static mutex_t spi_mutex;
 
+uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = {0};
+
 void core1_entry(void);
 
 int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
@@ -63,6 +65,10 @@ int main(){
     char c;
     
     uint8_t bp_rev=mcu_detect_revision();
+
+    reserve_for_future_mode_specific_allocations[1] = 99;
+    reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
+    reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
 
     //init buffered IO pins
     bio_init(); 

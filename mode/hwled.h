@@ -1,8 +1,8 @@
 
-void hwled_start(struct _bytecode *result, struct _bytecode *next);
-void hwled_stop(struct _bytecode *result, struct _bytecode *next);
-void hwled_write(struct _bytecode *result, struct _bytecode *next);
-void hwled_read(struct _bytecode *result, struct _bytecode *next);
+void hwled_start(bytecode_t *result, bytecode_t *next);
+void hwled_stop(bytecode_t *result, bytecode_t *next);
+void hwled_write(bytecode_t *result, bytecode_t *next);
+void hwled_read(bytecode_t *result, bytecode_t *next);
 void hwled_macro(uint32_t macro);
 uint32_t hwled_setup(void);
 uint32_t hwled_setup_exc(void);

@@ -57,19 +57,19 @@ enum
 
 typedef struct _mode
 {
-    void     (*protocol_start     )(struct _bytecode *result, struct _bytecode *next); // start
-    void     (*protocol_start_alt )(struct _bytecode *result, struct _bytecode *next); // start with read
-    void     (*protocol_stop      )(struct _bytecode *result, struct _bytecode *next); // stop
-    void     (*protocol_stop_alt  )(struct _bytecode *result, struct _bytecode *next); // stop with read
-    void     (*protocol_write     )(struct _bytecode *result, struct _bytecode *next); // send(/read) max 32 bit
-    void     (*protocol_read      )(struct _bytecode *result, struct _bytecode *next); // read max 32 bit
-    void     (*protocol_clkh      )(struct _bytecode *result, struct _bytecode *next); // set clk high
-    void     (*protocol_clkl      )(struct _bytecode *result, struct _bytecode *next); // set clk low
-    void     (*protocol_dath      )(struct _bytecode *result, struct _bytecode *next); // set dat hi
-    void     (*protocol_datl      )(struct _bytecode *result, struct _bytecode *next); // set dat lo
-    void     (*protocol_dats      )(struct _bytecode *result, struct _bytecode *next); // toggle dat (maybe remove?)
-    void     (*protocol_tick_clock)(struct _bytecode *result, struct _bytecode *next); // tick clk
-    void     (*protocol_bitr      )(struct _bytecode *result, struct _bytecode *next); // read dat pin
+    void     (*protocol_start     )(bytecode_t *result, bytecode_t *next); // start
+    void     (*protocol_start_alt )(bytecode_t *result, bytecode_t *next); // start with read
+    void     (*protocol_stop      )(bytecode_t *result, bytecode_t *next); // stop
+    void     (*protocol_stop_alt  )(bytecode_t *result, bytecode_t *next); // stop with read
+    void     (*protocol_write     )(bytecode_t *result, bytecode_t *next); // send(/read) max 32 bit
+    void     (*protocol_read      )(bytecode_t *result, bytecode_t *next); // read max 32 bit
+    void     (*protocol_clkh      )(bytecode_t *result, bytecode_t *next); // set clk high
+    void     (*protocol_clkl      )(bytecode_t *result, bytecode_t *next); // set clk low
+    void     (*protocol_dath      )(bytecode_t *result, bytecode_t *next); // set dat hi
+    void     (*protocol_datl      )(bytecode_t *result, bytecode_t *next); // set dat lo
+    void     (*protocol_dats      )(bytecode_t *result, bytecode_t *next); // toggle dat (maybe remove?)
+    void     (*protocol_tick_clock)(bytecode_t *result, bytecode_t *next); // tick clk
+    void     (*protocol_bitr      )(bytecode_t *result, bytecode_t *next); // read dat pin
     
     void     (*protocol_periodic  )(void    );     // service to regular poll whether a byte has arrived or something interesting has happened
     void     (*protocol_macro     )(uint32_t);     // macro
@@ -85,9 +85,9 @@ typedef struct _mode
 
     uint32_t (*protocol_command   )(struct command_result *result); // per mode command parser - ignored if nullptr
     void     (*protocol_lcd_update)(uint32_t flags);	// replacement for ui_lcd_update if non-nullptr
-} _mode;
+} bp_mode_t;
 
-extern struct _mode modes[MAXPROTO];
+extern bp_mode_t modes[MAXPROTO];
 
 // Some null functions, for when a mode doesn't need to do anything at a given function
 void         nullfunc1  (void      );

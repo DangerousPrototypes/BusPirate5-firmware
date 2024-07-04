@@ -1,8 +1,8 @@
 
-void dio_write(struct _bytecode *result, struct _bytecode *next);
-void dio_read(struct _bytecode *result, struct _bytecode *next);
-void dio_start(struct _bytecode *result, struct _bytecode *next);
-void dio_stop(struct _bytecode *result, struct _bytecode *next);
+void dio_write(bytecode_t *result, bytecode_t *next);
+void dio_read(bytecode_t *result, bytecode_t *next);
+void dio_start(bytecode_t *result, bytecode_t *next);
+void dio_stop(bytecode_t *result, bytecode_t *next);
 
 // full duplex commands not currently implemented
 void dio_startr(void);

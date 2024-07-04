@@ -176,37 +176,37 @@ void spi_set_cs(uint8_t cs){
 	}
 }
 
-void spi_start(struct _bytecode *result, struct _bytecode *next){
+void spi_start(bytecode_t *result, bytecode_t *next){
 	mode_config.read_with_write=false;
 	result->data_message=t[T_HWSPI_CS_SELECT];
 	spi_set_cs(M_SPI_SELECT);
 }
 
-void spi_startr(struct _bytecode *result, struct _bytecode *next){
+void spi_startr(bytecode_t *result, bytecode_t *next){
 	mode_config.read_with_write=true;
 	result->data_message=t[T_HWSPI_CS_SELECT];
 	spi_set_cs(M_SPI_SELECT);
 }
 
-void spi_stop(struct _bytecode *result, struct _bytecode *next){
+void spi_stop(bytecode_t *result, bytecode_t *next){
 	mode_config.read_with_write=false;
 	result->data_message=t[T_HWSPI_CS_DESELECT];
 	spi_set_cs(M_SPI_DESELECT);
 }
 
-void spi_stopr(struct _bytecode *result, struct _bytecode *next){
+void spi_stopr(bytecode_t *result, bytecode_t *next){
 	mode_config.read_with_write=false;
 	result->data_message=t[T_HWSPI_CS_DESELECT];
 	spi_set_cs(M_SPI_DESELECT);
 }
 
-void spi_write(struct _bytecode *result, struct _bytecode *next){
+void spi_write(bytecode_t *result, bytecode_t *next){
 	//hwspi_write((uint32_t)result->out_data);
 	result->in_data=hwspi_write_read((uint8_t)result->out_data);
 	result->read_with_write=mode_config.read_with_write;
 }
 
-void spi_read(struct _bytecode *result, struct _bytecode *next){
+void spi_read(bytecode_t *result, bytecode_t *next){
 	result->in_data = (uint8_t)hwspi_read();
 }
 

@@ -87,7 +87,7 @@ uint32_t hw2wire_setup_exc(void){
 	bio_put(M_2WIRE_RST, 0); //preload the RST pin to be 0 when output	
 }
 
-void hw2wire_start(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_start(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HWI2C_START];
 	if(checkshort()){
 		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
@@ -96,28 +96,28 @@ void hw2wire_start(struct _bytecode *result, struct _bytecode *next){
 	pio_hw2wire_start();
 }
 
-void hw2wire_start_alt(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_start_alt(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HW2WIRE_RST_HIGH];
 	bio_input(M_2WIRE_RST);
 }
 
-void hw2wire_stop(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_stop(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HWI2C_STOP];
 	pio_hw2wire_stop();
 }
 
-void hw2wire_stop_alt(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_stop_alt(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HW2WIRE_RST_LOW];
 	bio_output(M_2WIRE_RST);
 }
 
-void hw2wire_write(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_write(bytecode_t *result, bytecode_t *next){
 	uint32_t temp=result->out_data;
 	ui_format_bitorder_manual(&temp, result->bits, system_config.bit_order);
 	pio_hw2wire_put16(temp);
 }
 
-void hw2wire_read(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_read(bytecode_t *result, bytecode_t *next){
 	uint8_t temp8;
 	pio_hw2wire_get16(&temp8); 
 	uint32_t temp=temp8;
@@ -125,27 +125,27 @@ void hw2wire_read(struct _bytecode *result, struct _bytecode *next){
 	result->in_data=temp;
 } 
 
-void hw2wire_tick_clock(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_tick_clock(bytecode_t *result, bytecode_t *next){
 	pio_hw2wire_clock_tick();
 }
 
-void hw2wire_set_clk_high(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_set_clk_high(bytecode_t *result, bytecode_t *next){
 	pio_hw2wire_set_mask(1<<M_2WIRE_SCL, 1<<M_2WIRE_SCL);
 }
 
-void hw2wire_set_clk_low(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_set_clk_low(bytecode_t *result, bytecode_t *next){
 	pio_hw2wire_set_mask(1<<M_2WIRE_SCL, 0);
 }
 
-void hw2wire_set_dat_high(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_set_dat_high(bytecode_t *result, bytecode_t *next){
 	pio_hw2wire_set_mask(1<<M_2WIRE_SDA, 1<<M_2WIRE_SDA);
 }
 
-void hw2wire_set_dat_low(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_set_dat_low(bytecode_t *result, bytecode_t *next){
 	pio_hw2wire_set_mask(1<<M_2WIRE_SDA, 0);
 }
 
-void hw2wire_read_bit(struct _bytecode *result, struct _bytecode *next){
+void hw2wire_read_bit(bytecode_t *result, bytecode_t *next){
 	result->in_data=bio_get(M_2WIRE_SDA);
 }	
 

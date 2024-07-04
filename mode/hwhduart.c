@@ -136,7 +136,7 @@ void hwhduart_periodic(void){
 	}
 }
 
-void hwhduart_open(struct _bytecode *result, struct _bytecode *next){	
+void hwhduart_open(bytecode_t *result, bytecode_t *next){	
 	//clear FIFO and enable UART
 	//while(uart_is_readable(M_UART_PORT)){
 	//	uart_getc(M_UART_PORT);
@@ -146,27 +146,27 @@ void hwhduart_open(struct _bytecode *result, struct _bytecode *next){
     result->data_message=t[T_UART_OPEN_WITH_READ];
 }
 
-void hwhduart_open_read(struct _bytecode *result, struct _bytecode *next){    // start with read
+void hwhduart_open_read(bytecode_t *result, bytecode_t *next){    // start with read
     mode_config.async_print=true;
     result->data_message=t[T_UART_OPEN_WITH_READ];
 }
 
-void hwhduart_close(struct _bytecode *result, struct _bytecode *next){
+void hwhduart_close(bytecode_t *result, bytecode_t *next){
 	mode_config.async_print=false;
 	result->data_message=t[T_UART_CLOSE];
 }
 
-void hwhduart_start_alt(struct _bytecode *result, struct _bytecode *next){
+void hwhduart_start_alt(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HW2WIRE_RST_HIGH];
 	bio_input(M_2WIRE_RST);
 }
 
-void hwhduart_stop_alt(struct _bytecode *result, struct _bytecode *next){
+void hwhduart_stop_alt(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HW2WIRE_RST_LOW];
 	bio_output(M_2WIRE_RST);
 }
 
-void hwhduart_write(struct _bytecode *result, struct _bytecode *next){
+void hwhduart_write(bytecode_t *result, bytecode_t *next){
 	if(mode_config.blocking){
 		//uart_putc_raw(M_UART_PORT, result->out_data);
 	}else{
@@ -175,7 +175,7 @@ void hwhduart_write(struct _bytecode *result, struct _bytecode *next){
 	hwuart_pio_write(result->out_data);
 }
 
-void hwhduart_read(struct _bytecode *result, struct _bytecode *next){
+void hwhduart_read(bytecode_t *result, bytecode_t *next){
 	uint32_t timeout=0xfff;
 	uint32_t raw;
 	uint8_t cooked;

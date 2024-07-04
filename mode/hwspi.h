@@ -1,9 +1,9 @@
-void spi_start(struct _bytecode *result, struct _bytecode *next);
-void spi_startr(struct _bytecode *result, struct _bytecode *next);
-void spi_stop(struct _bytecode *result, struct _bytecode *next);
-void spi_stopr(struct _bytecode *result, struct _bytecode *next); 
-void spi_write(struct _bytecode *result, struct _bytecode *next);
-void spi_read(struct _bytecode *result, struct _bytecode *next);
+void spi_start(bytecode_t *result, bytecode_t *next);
+void spi_startr(bytecode_t *result, bytecode_t *next);
+void spi_stop(bytecode_t *result, bytecode_t *next);
+void spi_stopr(bytecode_t *result, bytecode_t *next); 
+void spi_write(bytecode_t *result, bytecode_t *next);
+void spi_read(bytecode_t *result, bytecode_t *next);
 void spi_macro(uint32_t macro);
 uint32_t spi_setup(void);
 uint32_t spi_setup_exc(void);

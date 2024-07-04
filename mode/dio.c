@@ -62,7 +62,7 @@ void dio_cleanup(void)
 
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
 // This function generally writes data out to the IO pins or a peripheral
-void dio_write(struct _bytecode *result, struct _bytecode *next){
+void dio_write(bytecode_t *result, bytecode_t *next){
 	static const char labels[][5]={"AUXL","AUXH"};
 	//your code
 	for(uint8_t i=0; i<8; i++){
@@ -80,7 +80,7 @@ void dio_write(struct _bytecode *result, struct _bytecode *next){
 }
 
 // This function is called when the user enters 'r' to read data
-void dio_read(struct _bytecode *result, struct _bytecode *next){
+void dio_read(bytecode_t *result, bytecode_t *next){
 	//your code
 	uint8_t data=0;
 	for(uint8_t i=0; i<8; i++){
@@ -91,7 +91,7 @@ void dio_read(struct _bytecode *result, struct _bytecode *next){
 
 // Handler for mode START when user enters the '[' key
 #if 0
-void dio_start(struct _bytecode *result, struct _bytecode *next)
+void dio_start(bytecode_t *result, bytecode_t *next)
 {
 	static const char message[]="-DUMMY1- start()"; //The message to show the user
 	
@@ -101,7 +101,7 @@ void dio_start(struct _bytecode *result, struct _bytecode *next)
 }
 
 // Handler for mode STOP when user enters the ']' key
-void dio_stop(struct _bytecode *result, struct _bytecode *next)
+void dio_stop(bytecode_t *result, bytecode_t *next)
 {
 	static const char message[]="-DUMMY1- stop()"; //The message to show the user
 	

@@ -1,10 +1,10 @@
-void hwhduart_open(struct _bytecode *result, struct _bytecode *next);				// start
-void hwhduart_open_read(struct _bytecode *result, struct _bytecode *next);
-void hwhduart_stop_alt(struct _bytecode *result, struct _bytecode *next);
-void hwhduart_start_alt(struct _bytecode *result, struct _bytecode *next);				// start with read
-void hwhduart_close(struct _bytecode *result, struct _bytecode *next);				// stop
-void hwhduart_write(struct _bytecode *result, struct _bytecode *next);
-void hwhduart_read(struct _bytecode *result, struct _bytecode *next);
+void hwhduart_open(bytecode_t *result, bytecode_t *next);				// start
+void hwhduart_open_read(bytecode_t *result, bytecode_t *next);
+void hwhduart_stop_alt(bytecode_t *result, bytecode_t *next);
+void hwhduart_start_alt(bytecode_t *result, bytecode_t *next);				// start with read
+void hwhduart_close(bytecode_t *result, bytecode_t *next);				// stop
+void hwhduart_write(bytecode_t *result, bytecode_t *next);
+void hwhduart_read(bytecode_t *result, bytecode_t *next);
 void hwhduart_macro(uint32_t macro);
 uint32_t hwhduart_setup(void);
 uint32_t hwhduart_setup_exc(void);

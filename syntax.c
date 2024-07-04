@@ -22,9 +22,9 @@ const struct command_attributes attributes_empty;
 const struct command_response response_empty;
 struct command_attributes attributes;
 struct prompt_result result;
-struct _bytecode out[SYN_MAX_LENGTH];
-struct _bytecode in[SYN_MAX_LENGTH];
-const struct _bytecode bytecode_empty;
+bytecode_t out[SYN_MAX_LENGTH];
+bytecode_t in[SYN_MAX_LENGTH];
+const bytecode_t bytecode_empty;
 uint32_t out_cnt=0;
 uint32_t in_cnt=0;
 
@@ -35,8 +35,8 @@ struct _output_info{
     uint8_t row_counter;    
 };
 
-void postprocess_mode_write(struct _bytecode *in, struct _output_info *info);
-void postprocess_format_print_number(struct _bytecode *in, uint32_t *value, bool read);
+void postprocess_mode_write(bytecode_t *in, struct _output_info *info);
+void postprocess_format_print_number(bytecode_t *in, uint32_t *value, bool read);
 
 
 bool syntax_compile(void){
@@ -482,7 +482,7 @@ bool syntax_post(void)
 }
 
 
-void postprocess_mode_write(struct _bytecode *in, struct _output_info *info)
+void postprocess_mode_write(bytecode_t *in, struct _output_info *info)
 {
     uint32_t repeat;
     uint32_t value;
@@ -555,7 +555,7 @@ void postprocess_mode_write(struct _bytecode *in, struct _output_info *info)
 }
 
 // represent d in the current display mode. If numbits=8 also display the ascii representation 
-void postprocess_format_print_number(struct _bytecode *in, uint32_t *value, bool read)
+void postprocess_format_print_number(bytecode_t *in, uint32_t *value, bool read)
 {
 	uint32_t mask, i, d, j;
     uint8_t num_bits, num_nibbles, display_format;
@@ -703,7 +703,7 @@ struct __attribute__((packed, aligned(sizeof(uint64_t)))) _bytecode_output{
 
 //need a way to generate multiple results from a single repeated command
 //track by command ID? sequence number?
-struct _bytecode_result{
+bytecode_t_result{
 	uint8_t error; //mode flags errors. One bit to halt execution? Other bits for warnings? ccan override the halt from configuration menu?
 	uint8_t command; //copied from above for post-process
 	uint8_t bits;  //copied from above for post-process

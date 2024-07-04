@@ -1,8 +1,8 @@
 
-void hwi2c_start(struct _bytecode *result, struct _bytecode *next);
-void hwi2c_stop(struct _bytecode *result, struct _bytecode *next);
-void hwi2c_write(struct _bytecode *result, struct _bytecode *next);
-void hwi2c_read(struct _bytecode *result, struct _bytecode *next);
+void hwi2c_start(bytecode_t *result, bytecode_t *next);
+void hwi2c_stop(bytecode_t *result, bytecode_t *next);
+void hwi2c_write(bytecode_t *result, bytecode_t *next);
+void hwi2c_read(bytecode_t *result, bytecode_t *next);
 void hwi2c_macro(uint32_t macro);
 uint32_t hwi2c_setup(void);
 uint32_t hwi2c_setup_exc(void);

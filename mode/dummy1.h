@@ -1,8 +1,8 @@
 
-void dummy1_write(struct _bytecode *result, struct _bytecode *next);
-void dummy1_read(struct _bytecode *result, struct _bytecode *next);
-void dummy1_start(struct _bytecode *result, struct _bytecode *next);
-void dummy1_stop(struct _bytecode *result, struct _bytecode *next);
+void dummy1_write(bytecode_t *result, bytecode_t *next);
+void dummy1_read(bytecode_t *result, bytecode_t *next);
+void dummy1_start(bytecode_t *result, bytecode_t *next);
+void dummy1_stop(bytecode_t *result, bytecode_t *next);
 
 // full duplex commands not currently implemented
 void dummy1_startr(void);

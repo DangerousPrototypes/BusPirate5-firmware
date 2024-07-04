@@ -43,7 +43,7 @@ uint32_t hw1wire_setup_exc(void){
     return 1;
 }
 
-void hw1wire_start(struct _bytecode *result, struct _bytecode *next){
+void hw1wire_start(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HW1WIRE_RESET];
 
 	if(bio_get(M_OW_OWD)==0){
@@ -62,12 +62,12 @@ void hw1wire_start(struct _bytecode *result, struct _bytecode *next){
         
 }
 
-void hw1wire_write(struct _bytecode *result, struct _bytecode *next){
+void hw1wire_write(bytecode_t *result, bytecode_t *next){
     onewire_tx_byte(result->out_data);
     onewire_wait_for_idle();
 }
 
-void hw1wire_read(struct _bytecode *result, struct _bytecode *next){
+void hw1wire_read(bytecode_t *result, bytecode_t *next){
     result->in_data=onewire_rx_byte();
 }
 

@@ -87,7 +87,7 @@ void dummy1_cleanup(void)
 
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
 // This function generally writes data out to the IO pins or a peripheral
-void dummy1_write(struct _bytecode *result, struct _bytecode *next)
+void dummy1_write(bytecode_t *result, bytecode_t *next)
 {
 	// The result struct has data about the command the user entered.
 	// next is the same, but the next command in the sequence (if any). 
@@ -135,7 +135,7 @@ void dummy1_write(struct _bytecode *result, struct _bytecode *next)
 }
 
 // This function is called when the user enters 'r' to read data
-void dummy1_read(struct _bytecode *result, struct _bytecode *next)
+void dummy1_read(bytecode_t *result, bytecode_t *next)
 {
 	static const char message[]="--DUMMY1- read()";
 	
@@ -147,7 +147,7 @@ void dummy1_read(struct _bytecode *result, struct _bytecode *next)
 }
 
 // Handler for mode START when user enters the '[' key
-void dummy1_start(struct _bytecode *result, struct _bytecode *next)
+void dummy1_start(bytecode_t *result, bytecode_t *next)
 {
 	static const char message[]="-DUMMY1- start()"; //The message to show the user
 	
@@ -157,7 +157,7 @@ void dummy1_start(struct _bytecode *result, struct _bytecode *next)
 }
 
 // Handler for mode STOP when user enters the ']' key
-void dummy1_stop(struct _bytecode *result, struct _bytecode *next)
+void dummy1_stop(bytecode_t *result, bytecode_t *next)
 {
 	static const char message[]="-DUMMY1- stop()"; //The message to show the user
 	

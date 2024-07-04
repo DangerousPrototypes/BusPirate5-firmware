@@ -137,7 +137,7 @@ uint32_t hwled_setup_exc(void){
 }
 
 
-void hwled_start(struct _bytecode *result, struct _bytecode *next){
+void hwled_start(bytecode_t *result, bytecode_t *next){
 	switch(mode_config.device){
 		case M_LED_WS2812:
 		case M_LED_WS2812_ONBOARD:
@@ -156,7 +156,7 @@ void hwled_start(struct _bytecode *result, struct _bytecode *next){
 	}	
 }
 
-void hwled_stop(struct _bytecode *result, struct _bytecode *next){
+void hwled_stop(bytecode_t *result, bytecode_t *next){
 	switch(mode_config.device){
 		case M_LED_WS2812:
 		case M_LED_WS2812_ONBOARD:
@@ -175,7 +175,7 @@ void hwled_stop(struct _bytecode *result, struct _bytecode *next){
 	}	
 }
 
-void hwled_write(struct _bytecode *result, struct _bytecode *next){
+void hwled_write(bytecode_t *result, bytecode_t *next){
 	uint32_t temp;
 
 	switch(mode_config.device){

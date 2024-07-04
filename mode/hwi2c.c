@@ -84,7 +84,7 @@ uint32_t hwi2c_setup_exc(void){
 	return 1;
 }
 
-bool hwi2c_error(uint32_t error, struct _bytecode *result){
+bool hwi2c_error(uint32_t error, bytecode_t *result){
 	switch(error){
 		case 1:
 			result->error_message=t[T_HWI2C_I2C_ERROR];
@@ -103,7 +103,7 @@ bool hwi2c_error(uint32_t error, struct _bytecode *result){
 	}
 }
 
-void hwi2c_start(struct _bytecode *result, struct _bytecode *next){
+void hwi2c_start(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HWI2C_START];
 	if(hwi2c_checkshort()){
 		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
@@ -115,13 +115,13 @@ void hwi2c_start(struct _bytecode *result, struct _bytecode *next){
 	}
 }
 
-void hwi2c_stop(struct _bytecode *result, struct _bytecode *next){
+void hwi2c_stop(bytecode_t *result, bytecode_t *next){
 	result->data_message=t[T_HWI2C_STOP];
 	uint32_t error=pio_i2c_stop_timeout( 0xffff);
 	hwi2c_error(error, result);
 }
 
-void hwi2c_write(struct _bytecode *result, struct _bytecode *next){
+void hwi2c_write(bytecode_t *result, bytecode_t *next){
 	//if a start was just sent, determine if this is a read or write address
 	// and configure the PIO I2C
 	if(mode_config.start_sent){
@@ -133,7 +133,7 @@ void hwi2c_write(struct _bytecode *result, struct _bytecode *next){
 	result->data_message=(error?t[T_HWI2C_NACK]:t[T_HWI2C_ACK]);
 }
 
-void hwi2c_read(struct _bytecode *result, struct _bytecode *next){
+void hwi2c_read(bytecode_t *result, bytecode_t *next){
 	//if next is start, stop, startr or stopr, then NACK
 	bool ack=true;
 	if(next){

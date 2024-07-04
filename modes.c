@@ -104,7 +104,7 @@ void noperiodic(void){
 	return;
 }
 
-void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next){
+void nullfunc1_temp(bytecode_t *result, bytecode_t *next){
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
     system_config.error=1;
 }
@@ -112,7 +112,7 @@ void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next){
 // all modes and their interaction is handled here
 // buspirateNG.h has the conditional defines for modes
 
-struct _mode modes[MAXPROTO]={
+bp_mode_t modes[MAXPROTO]={
 #if 1 // BP_MODE_HIZ is always available
     [BP_MODE_HIZ] = {
         nullfunc1_temp,				// start

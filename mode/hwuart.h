@@ -1,8 +1,8 @@
-void hwuart_open(struct _bytecode *result, struct _bytecode *next);				// start
-void hwuart_open_read(struct _bytecode *result, struct _bytecode *next);				// start with read
-void hwuart_close(struct _bytecode *result, struct _bytecode *next);				// stop
-void hwuart_write(struct _bytecode *result, struct _bytecode *next);
-void hwuart_read(struct _bytecode *result, struct _bytecode *next);
+void hwuart_open(bytecode_t *result, bytecode_t *next);				// start
+void hwuart_open_read(bytecode_t *result, bytecode_t *next);				// start with read
+void hwuart_close(bytecode_t *result, bytecode_t *next);				// stop
+void hwuart_write(bytecode_t *result, bytecode_t *next);
+void hwuart_read(bytecode_t *result, bytecode_t *next);
 void hwuart_macro(uint32_t macro);
 uint32_t hwuart_setup(void);
 uint32_t hwuart_setup_exc(void);

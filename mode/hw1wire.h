@@ -20,9 +20,9 @@ uint32_t hw1wire_setup_exc(void);
 void hw1wire_cleanup(void);
 void hw1wire_pins(void);
 void hw1wire_settings(void);
-void hw1wire_start(struct _bytecode *result, struct _bytecode *next);
-void hw1wire_write(struct _bytecode *result, struct _bytecode *next);
-void hw1wire_read(struct _bytecode *result, struct _bytecode *next);
+void hw1wire_start(bytecode_t *result, bytecode_t *next);
+void hw1wire_write(bytecode_t *result, bytecode_t *next);
+void hw1wire_read(bytecode_t *result, bytecode_t *next);
 void hw1wire_macro(uint32_t macro);
 void hw1wire_help(void);
 

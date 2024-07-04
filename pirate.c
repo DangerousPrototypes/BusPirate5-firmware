@@ -48,6 +48,7 @@
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
 #include "msc_disk.h"
+#include "pirate/intercore_helpers.h"
 
 static mutex_t spi_mutex;
 
@@ -182,9 +183,7 @@ int main(){
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
-    multicore_fifo_push_blocking(0); 
-    // wait for init to complete  
-    while(multicore_fifo_pop_blocking()!=0xff);
+    icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
     //test for PCB revision
     //must be done after shift register setup
@@ -358,16 +357,16 @@ bool lcd_update_force=false;
 
 // begin of code execution for the second core (core1)
 void core1_entry(void){ 
-    char c;
-    uint32_t temp;
-
     tx_fifo_init();
     rx_fifo_init();
 
     rgb_init();
 
     // wait for main core to signal start
-    while(multicore_fifo_pop_blocking()!=0);
+    bp_icm_raw_message_t raw_init_message;
+    do {
+        raw_init_message = icm_core1_get_raw_message();
+    } while(get_embedded_message(raw_init_message) != BP_ICM_INIT_CORE1);
 
     // USB init
     if(system_config.terminal_usb_enable){
@@ -381,7 +380,7 @@ void core1_entry(void){
         rx_uart_init_irq();
     }
 
-    multicore_fifo_push_blocking(0xff); 
+    icm_core1_notify_completion(raw_init_message);
 
     while(1){
         //service (thread safe) tinyusb tasks
@@ -435,31 +434,31 @@ void core1_entry(void){
         
         // service any requests with priority
         while(multicore_fifo_rvalid()){
-            temp=multicore_fifo_pop_blocking();
-            switch(temp){
-                case 0xf0:
+            bp_icm_raw_message_t raw_message = icm_core1_get_raw_message();
+            switch(get_embedded_message(raw_message)){
+                case BP_ICM_DISABLE_LCD_UPDATES:
                     lcd_irq_disable();
                     lcd_update_request=false;
                     break;
-                case 0xf1:
+                case BP_ICM_ENABLE_LCD_UPDATES:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_request=true;
                     break;
-                case 0xf2:
+                case BP_ICM_FORCE_LCD_UPDATE:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_force=true;
                     lcd_update_request=true;
                     break;
-                case 0xf3:
+                case BP_ICM_ENABLE_RGB_UPDATES:
                     rgb_irq_enable(false);
                     break;
-                case 0xf4:
+                case BP_ICM_DISABLE_RGB_UPDATES:
                     rgb_irq_enable(true);
                     break;
                 default:
                     break;
             }
-            multicore_fifo_push_blocking(temp); //acknowledge
+            icm_core1_notify_completion(raw_message);
         }
 
     }// while(1)

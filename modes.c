@@ -338,7 +338,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_SW3W
-    [SW3W] = {
+    [BP_MODE_SW3W] = {
         SW3W_start,				// start
         SW3W_startr,				// start with read
         SW3W_stop,				// stop
@@ -366,7 +366,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_DIO
-    [DIO] = {
+    [BP_MODE_DIO] = {
         nullfunc1_temp,				// start
         nullfunc1_temp,				// start with read
         nullfunc1_temp,				// stop
@@ -394,7 +394,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_LCDSPI
-    [LCDSPI] = {
+    [BP_MODE_LCDSPI] = {
         nullfunc1,				// start
         nullfunc1,				// start with read
         nullfunc1,				// stop
@@ -422,7 +422,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_LCDI2C
-    [LCDI2C] = {
+    [BP_MODE_LCDI2C] = {
         nullfunc1,				// start
         nullfunc1,				// start with read
         nullfunc1,				// stop
@@ -450,7 +450,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_SW1WIRE
-    [SW1WIRE] = {
+    [BP_MODE_SW1WIRE] = {
         ONEWIRE_start,				// start
         ONEWIRE_startr,				// start with read
         ONEWIRE_stop,				// stop
@@ -478,7 +478,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_HW1WIRE
-    [HW1WIRE] = {
+    [BP_MODE_HW1WIRE] = {
         hw1wire_start,				// start
         hw1wire_start,				// start with read
         nullfunc1_temp,				// stop
@@ -506,7 +506,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_HWLED
-    [HWLED] = {
+    [BP_MODE_HWLED] = {
         hwled_start,				// start
         hwled_start,				// start with read
         hwled_stop,				// stop
@@ -534,7 +534,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_DUMMY1
-    [DUMMY1] = {
+    [BP_MODE_DUMMY1] = {
         dummy1_start,				// start
         dummy1_start,				// start with read
         dummy1_stop,				// stop
@@ -562,7 +562,7 @@ struct _mode modes[MAXPROTO]={
     }
 #endif
 #ifdef BP_USE_DUMMY2
-    [DUMMY2] = {
+    [BP_MODE_DUMMY2] = {
         dummy2_start,				// start
         dummy2_start,				// start with read
         dummy2_stop,				// stop

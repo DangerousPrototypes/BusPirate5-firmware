@@ -25,31 +25,31 @@ enum
     BP_MODE_SW2W,
 #endif
 #ifdef BP_USE_SW3W
-    SW3W,
+    BP_MODE_SW3W,
 #endif
 #ifdef BP_USE_DIO
-    DIO,
+    BP_MODE_DIO,
 #endif
 #ifdef BP_USE_LCDSPI
-    LCDSPI,
+    BP_MODE_LCDSPI,
 #endif
 #ifdef BP_USE_LCDI2C	// future
-    LCDI2C,
+    BP_MODE_LCDI2C,
 #endif
 #ifdef BP_USE_SW1WIRE
-    SW1WIRE,
+    BP_MODE_SW1WIRE,
 #endif
 #ifdef BP_USE_HW1WIRE
-    HW1WIRE,
+    BP_MODE_HW1WIRE,
 #endif
 #ifdef BP_USE_HWLED
-    HWLED,
+    BP_MODE_HWLED,
 #endif
 #ifdef BP_USE_DUMMY1
-    DUMMY1,
+    BP_MODE_DUMMY1,
 #endif
 #ifdef BP_USE_DUMMY2
-    DUMMY2,
+    BP_MODE_DUMMY2,
 #endif
     MAXPROTO
 };

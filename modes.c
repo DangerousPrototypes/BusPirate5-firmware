@@ -113,8 +113,8 @@ void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next){
 // buspirateNG.h has the conditional defines for modes
 
 struct _mode modes[MAXPROTO]={
-#if 1 // HIZ is always available
-    [HIZ] = {
+#if 1 // BP_MODE_HIZ is always available
+    [BP_MODE_HIZ] = {
         nullfunc1_temp,				// start
         nullfunc1_temp,				// start alternate
         nullfunc1_temp,				// stop
@@ -142,7 +142,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_HWSPI
-    [HWSPI] = {
+    [BP_MODE_HWSPI] = {
         spi_start,				// start
         spi_startr,				// start with read
         spi_stop,				// stop
@@ -170,7 +170,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_HWUART
-    [HWUART] = {
+    [BP_MODE_HWUART] = {
         hwuart_open,				// start
         hwuart_open_read,			// start with read
         hwuart_close,				// stop
@@ -198,7 +198,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_HWHDUART
-    [HWHDUART] = {
+    [BP_MODE_HWHDUART] = {
         hwhduart_open,				// start
         hwhduart_start_alt,			// start with read
         hwhduart_close,				// stop
@@ -226,7 +226,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_HWI2C
-    [HWI2C] = {
+    [BP_MODE_HWI2C] = {
         hwi2c_start,				// start
         hwi2c_start,				// start with read
         hwi2c_stop,				// stop
@@ -254,7 +254,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_LA
-    [LA] = {
+    [BP_MODE_LA] = {
         nullfunc1,				// start
         nullfunc1,				// start with read
         nullfunc1,				// stop
@@ -282,7 +282,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_HW2WIRE
-    [HW2WIRE] = {
+    [BP_MODE_HW2WIRE] = {
         hw2wire_start,				// start
         hw2wire_start_alt,			// start alternate
         hw2wire_stop,				// stop
@@ -310,7 +310,7 @@ struct _mode modes[MAXPROTO]={
     },
 #endif
 #ifdef BP_USE_SW2W
-    [SW2W] = {
+    [BP_MODE_SW2W] = {
         SW2W_start,				// start
         SW2W_startr,				// start with read
         SW2W_stop,				// stop

@@ -115,7 +115,7 @@ void i_info_handler(struct command_result *res){
         ui_const_display_formats[system_config.display_format]);
 	
     // State of peripherals
-	if(system_config.mode!=HIZ){
+	if(system_config.mode!=BP_MODE_HIZ){
         // Data settings and configuration
 		printf("%s%s:%s %d %s, %s %s\r\n",
 			ui_term_color_info(),

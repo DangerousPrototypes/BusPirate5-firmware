@@ -2,27 +2,27 @@
 
 enum
 {
-    HIZ = 0,
+    BP_MODE_HIZ = 0,
 #ifdef BP_USE_HWSPI
-    HWSPI,
+    BP_MODE_HWSPI,
 #endif
 #ifdef BP_USE_HWUART
-    HWUART,
+    BP_MODE_HWUART,
 #endif
 #ifdef BP_USE_HWHDUART
-    HWHDUART,
+    BP_MODE_HWHDUART,
 #endif
 #ifdef BP_USE_HWI2C
-    HWI2C,
+    BP_MODE_HWI2C,
 #endif
 #ifdef BP_USE_LA
-    LA,
+    BP_MODE_LA,
 #endif
 #ifdef BP_USE_HW2WIRE
-    HW2WIRE,
+    BP_MODE_HW2WIRE,
 #endif
 #ifdef BP_USE_SW2W
-    SW2W,
+    BP_MODE_SW2W,
 #endif
 #ifdef BP_USE_SW3W
     SW3W,

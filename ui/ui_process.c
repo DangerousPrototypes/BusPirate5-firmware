@@ -126,7 +126,7 @@ bool ui_process_commands(void){
                     }
                 }
 
-                if(command_type==GLOBAL && system_config.mode==HIZ && !commands[user_cmd_id].allow_hiz && !result.help_flag){
+                if(command_type==GLOBAL && system_config.mode==BP_MODE_HIZ && !commands[user_cmd_id].allow_hiz && !result.help_flag){
                     printf("%s\r\n",hiz_error());
                     return true;            
                 }

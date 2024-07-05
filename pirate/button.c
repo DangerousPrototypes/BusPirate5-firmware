@@ -7,9 +7,10 @@
 
 #define BP_BUTTON_SHORT_PRESS_MS 550
 
-static bool button_pressed = false;
-static absolute_time_t press_start_time;
-static enum button_codes button_code = BP_BUTT_NO_PRESS;
+// volatile because these are modified in IRQ handler
+static volatile bool button_pressed = false;
+static volatile absolute_time_t press_start_time;
+static volatile enum button_codes button_code = BP_BUTT_NO_PRESS;
 
 // poll the value of button button_id
 bool button_get(uint8_t button_id){

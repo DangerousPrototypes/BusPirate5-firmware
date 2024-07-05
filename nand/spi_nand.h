@@ -32,39 +32,26 @@ enum {
 // See also: spi_nand.c, which contains internal-only per chip guards
 #if defined(FLASH_MT29F2G01ABAFDWB)
 
-    // NOTE: This is using a lie to get things up and running rapidly.
-    //       While the device is actually 64 pages per block, dhara does
-    //       not understand multiple planes.  Therefore, pretend that
-    //       the full plane is 2x as large.  This is the smallest
-    //       change.  However, it requires a hack in the erase function,
-    //       because dhara is tracking the corresponding pages of BOTH
-    //       planes as a single page.   Therefore, only a SINGLE erase
-    //       call is made (to plane zero), when ALL the planes need to
-    //       be erased.
-    // TODO: Is there an updated dhara that more natively supports
-    //       multiple plane NAND devices?
-    #define SPI_HACK_FOR_MULTI_PLANE_SUPPORT_INCREASED_PAGES_PER_BLOCK
-
-    #define SPI_NAND_LOG2_PAGE_SIZE       11
-    #define SPI_NAND_LOG2_PLANE_COUNT      1
-    #define SPI_NAND_LOG2_PAGES_PER_BLOCK  7 // Actually 6, but add LOG2_PLANE_COUNT for the hack
-    #define SPI_NAND_OOB_SIZE        128
-    #define SPI_NAND_BLOCKS_PER_LUN  2048
+    #define SPI_NAND_LOG2_PAGE_SIZE               11
+    #define SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK    6  // 64 pages per erase block
+    #define SPI_NAND_LOG2_PLANE_COUNT              1
+    #define SPI_NAND_ERASE_BLOCKS_PER_PLANE     1024
+    #define SPI_NAND_OOB_SIZE                    128
 
 #else // default to MT29F1G01ABAFDWB
 
-    #define SPI_NAND_LOG2_PAGE_SIZE       11
-    #define SPI_NAND_LOG2_PLANE_COUNT      0
-    #define SPI_NAND_LOG2_PAGES_PER_BLOCK  6
-    #define SPI_NAND_OOB_SIZE        64
-    #define SPI_NAND_BLOCKS_PER_LUN  1024
+    #define SPI_NAND_LOG2_PAGE_SIZE               11
+    #define SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK    6
+    #define SPI_NAND_LOG2_PLANE_COUNT              0
+    #define SPI_NAND_ERASE_BLOCKS_PER_PLANE     1024
+    #define SPI_NAND_OOB_SIZE                     64 // extra bytes of data per sector / block
 
 #endif
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-#define SPI_NAND_PAGES_PER_BLOCK (1 << SPI_NAND_LOG2_PAGES_PER_BLOCK)
-#define SPI_NAND_PAGE_SIZE       (1 << SPI_NAND_LOG2_PAGE_SIZE)
-#define SPI_NAND_PLANE_COUNT     (1 << SPI_NAND_LOG2_PLANE_COUNT)
+#define SPI_NAND_PAGES_PER_BLOCK      (1 << SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK)
+#define SPI_NAND_PAGE_SIZE            (1 << SPI_NAND_LOG2_PAGE_SIZE)
+#define SPI_NAND_PLANE_COUNT          (1 << SPI_NAND_LOG2_PLANE_COUNT)
+#define SPI_NAND_ERASE_BLOCKS_PER_LUN (SPI_NAND_PLANE_COUNT * SPI_NAND_ERASE_BLOCKS_PER_PLANE)
 
 #if SPI_NAND_PAGE_SIZE != 2048
     #error "Currently only 2048-byte pages are supported"
@@ -74,8 +61,8 @@ enum {
 typedef union {
     uint32_t whole;
     struct {
-        uint32_t page  : SPI_NAND_LOG2_PAGES_PER_BLOCK; // least significant bits
-        uint32_t block : (32 - SPI_NAND_LOG2_PAGES_PER_BLOCK);
+        uint32_t page  : SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK; // least significant bits
+        uint32_t block : (32 - SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK);
     };
 } row_address_t;
 /// @brief Nand column address (valid range 0-2175)

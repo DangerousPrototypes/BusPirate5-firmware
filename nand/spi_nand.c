@@ -54,12 +54,12 @@
 
 inline uint8_t get_plane(row_address_t row) {
     if (SPI_NAND_LOG2_PLANE_COUNT == 0) return 0;
-    return (row.whole & (SPI_NAND_PLANE_COUNT -1));
+    return (row.block & (SPI_NAND_PLANE_COUNT -1));
 }
 
 
-#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK - 1) // zero-indexed
-#define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_BLOCKS_PER_LUN - 1)  // zero-indexed
+#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK      - 1) // zero-indexed
+#define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_ERASE_BLOCKS_PER_LUN - 1)  // zero-indexed
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #define FEATURE_TRANS_LEN  3
@@ -370,7 +370,7 @@ int spi_nand_page_is_free(row_address_t row, bool *is_free)
 int spi_nand_clear(void)
 {
     bool is_bad;
-    for (int i = 0; i < SPI_NAND_BLOCKS_PER_LUN; i++) {
+    for (int i = 0; i < SPI_NAND_ERASE_BLOCKS_PER_LUN; i++) {
         // get bad block flag
         row_address_t row = {.block = i, .page = 0};
         int ret = spi_nand_block_is_bad(row, &is_bad);
@@ -650,7 +650,7 @@ static int program_execute(row_address_t row, uint32_t timeout)
     }
 }
 
-static int block_erase_impl(row_address_t row, uint32_t timeout)
+static int block_erase(row_address_t row, uint32_t timeout)
 {
     // setup timeout tracking for second operation
     uint32_t start = sys_time_get_ms();
@@ -681,23 +681,6 @@ static int block_erase_impl(row_address_t row, uint32_t timeout)
     else {
         return SPI_NAND_RET_OK;
     }
-}
-static int block_erase(row_address_t row, uint32_t timeout)
-{
-    int ret = block_erase_impl(row, timeout);
-
-#if defined(SPI_HACK_FOR_MULTI_PLANE_SUPPORT_INCREASED_PAGES_PER_BLOCK)
-    // this hack makes each page "look" N times as large (N == SPI_NAND_PLANE_COUNT),
-    // at least until dhara has native support for multi-plane NAND.
-    // therefore, if erasing plane 0, also ensure to erase the other plane(s).
-    for (int i = 1; i < SPI_NAND_PLANE_COUNT; ++i) {
-        if (SPI_NAND_RET_OK != ret) return ret; // exit early if already failed
-        ++row.whole; // also erase the other plane(s)
-        ret = block_erase_impl(row, timeout);
-    }
-#endif
-
-    return ret;
 }
 
 static int unlock_all_blocks(void)

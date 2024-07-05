@@ -222,7 +222,7 @@ static void command_get_bad_block_table(int argc, char *argv[])
     }
     // read block status into page buffer
     bool success = true;
-    for (int i = 0; i < SPI_NAND_BLOCKS_PER_LUN; i++) {
+    for (int i = 0; i < SPI_NAND_ERASE_BLOCKS_PER_LUN; i++) {
         bool is_bad;
         row_address_t row = {.block = i, .page = 0};
         int ret = spi_nand_block_is_bad(row, &is_bad);
@@ -238,7 +238,7 @@ static void command_get_bad_block_table(int argc, char *argv[])
 
     // print bad block table
     if (success) {
-        print_bytes(page_buffer, SPI_NAND_BLOCKS_PER_LUN);
+        print_bytes(page_buffer, SPI_NAND_ERASE_BLOCKS_PER_LUN);
     }
     mem_free(page_buffer);
 }

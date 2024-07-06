@@ -18,6 +18,7 @@
 #include "ui/ui_help.h"
 #include "commands/uart/nmea.h"
 #include "commands/uart/bridge.h"
+#include "commands/uart/monitor.h"
 
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
@@ -27,6 +28,8 @@ const struct _command_struct hwuart_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
     {"gps",false,&nmea_decode_handler,T_HELP_UART_NMEA}, // the help is shown in the -h *and* the list of mode apps
     {"bridge",false,&uart_bridge_handler,T_HELP_UART_BRIDGE}, // the help is shown in the -h *and* the list of mode apps
+    {"monitor",false,&uart_monitor_handler,0x00}, // the help is shown in the -h *and* the list of mode apps
+
 };
 const uint32_t hwuart_commands_count=count_of(hwuart_commands);
 

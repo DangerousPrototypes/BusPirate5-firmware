@@ -83,6 +83,7 @@ set(bp5_common
         commands/uart/bridge.h commands/uart/bridge.c
         commands/uart/simcard.h commands/uart/simcard.c
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
+        commands/uart/monitor.h commands/uart/monitor.c
 
         # Half duplex UART
         mode/hwhduart.h mode/hwhduart.c

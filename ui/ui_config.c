@@ -15,6 +15,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_statusbar.h"
 #include "ui/ui_flags.h"
+#include "pirate/rgb.h" // for LED effect enum
 
 bool ui_config_menu(const struct ui_prompt * menu);
 
@@ -28,15 +29,16 @@ static const struct prompt_item menu_items_disable_enable[]=
 // LED effect
 static const struct prompt_item menu_items_led_effect[]=
 {
-    {T_CONFIG_DISABLE},
-    {T_CONFIG_LEDS_EFFECT_SOLID},
-    {T_CONFIG_LEDS_EFFECT_ANGLEWIPE},
-    {T_CONFIG_LEDS_EFFECT_CENTERWIPE},
-    {T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE},
-    {T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE},
-    {T_CONFIG_LEDS_EFFECT_SCANNER},
-    {T_CONFIG_LEDS_EFFECT_CYCLE},
+    [LED_EFFECT_DISABLED      ] = {T_CONFIG_DISABLE},
+    [LED_EFFECT_SOLID         ] = {T_CONFIG_LEDS_EFFECT_SOLID},
+    [LED_EFFECT_ANGLE_WIPE    ] = {T_CONFIG_LEDS_EFFECT_ANGLEWIPE},
+    [LED_EFFECT_CENTER_WIPE   ] = {T_CONFIG_LEDS_EFFECT_CENTERWIPE},
+    [LED_EFFECT_CLOCKWISE_WIPE] = {T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE},
+    [LED_EFFECT_TOP_SIDE_WIPE ] = {T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE},
+    [LED_EFFECT_SCANNER       ] = {T_CONFIG_LEDS_EFFECT_SCANNER},
+    [LED_EFFECT_PARTY_MODE    ] = {T_CONFIG_LEDS_EFFECT_CYCLE},
 };
+static_assert(count_of(menu_items_led_effect) == MAX_LED_EFFECT, "menu_items_led_effect mismatch vs. enum of available effects");
 
 uint32_t ui_config_action_led_effect(uint32_t a, uint32_t b)
 {

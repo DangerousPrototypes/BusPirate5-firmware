@@ -5,6 +5,7 @@
 #include "hardware/timer.h"
 #include "ws2812.pio.h"
 #include "system_config.h"
+#include "pirate/rgb.h"
 
 #define RGB_MAX_BRIGHT 32
 
@@ -30,9 +31,19 @@
 // pixels on each revision of board.
 
 #if BP5_REV <= 9
-    static const uint8_t COUNT_OF_PIXELS = 16u;
+    // Sadly, C still doesn't recognize the following format as constexpr enough for static_assert()
+    //static const uint8_t COUNT_OF_PIXELS = 16u;
+    //static const uint32_t PIXEL_MASK_UPPER = 0b011001101011001101;
+    //static const uint32_t PIXEL_MASK_SIDE  = 0b100110010100110010;
 
-    const uint32_t groups_top_left[] = {
+    static const uint8_t COUNT_OF_PIXELS = 16u;
+    static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel mask definition to be valid")
+    // Pixels that shine in direction  of OLED: idx 0,    3,4,    7,  9,      12,13,
+    static const uint32_t PIXEL_MASK_UPPER = 0b0011 0010 1001 1001;
+    // Pixels that shine    orthogonal to OLED: idx   1,2,    5,6,  8,  10,11,      14,15,
+    static const uint32_t PIXEL_MASK_SIDE  = 0b1100 1101 0110 0110;
+
+    static const uint32_t groups_top_left[] = {
         ((1u <<  1) | (1u <<  2)             ),
         ((1u <<  0) | (1u <<  3)             ),
         ((1u <<  4) | (1u <<  5) | (1u << 15)),
@@ -41,7 +52,7 @@
         ((1u <<  9) | (1u << 12)             ),
         ((1u << 10) | (1u << 11)             ),
     };
-    const uint32_t groups_center_left[] = {
+    static const uint32_t groups_center_left[] = {
         ((1u <<  3) | (1u <<  4)                         ),
         ((1u <<  2) | (1u <<  5)                         ),
         ((1u <<  1) | (1u <<  6)                         ),
@@ -50,7 +61,7 @@
         ((1u << 11) | (1u << 14)                         ),
         ((1u << 12) | (1u << 13)                         ),
     };  
-    const uint32_t groups_center_clockwise[] = {
+    static const uint32_t groups_center_clockwise[] = {
         ((1u << 13) | (1u << 14)),
         ((1u << 15)             ),
         ((1u <<  0) | (1u <<  1)),
@@ -61,14 +72,22 @@
         ((1u << 10)             ),
         ((1u << 11) | (1u << 12)),
     };
-    const uint32_t groups_top_down[] = {
-        0b0011001010011001,
-        0b1100110101100110,
-    }; //MSB is last led in string...
 #elif BP5_REV >= 10
-    static const uint8_t COUNT_OF_PIXELS = 18u;
+    // Sadly, C still doesn't recognize the following format as constexpr enough for static_assert()
+    // and thus we must resort to preprocessor macros (still).
+    //static const uint8_t COUNT_OF_PIXELS = 18u;
+    //static const uint32_t PIXEL_MASK_UPPER = 0b011001101011001101;
+    //static const uint32_t PIXEL_MASK_SIDE  = 0b100110010100110010;
 
-    const uint32_t groups_top_left[] = {
+    // Total count of RGB pixels
+    #define COUNT_OF_PIXELS (18)
+    // Pixels that shine in direction  of OLED: idx 0,  2,3,    6,7,  9,   11,12,      15,16
+    #define PIXEL_MASK_UPPER (0b011001101011001101)
+    // Pixels that shine    orthogonal to OLED: idx   1,    4,5,    8,  10,      13,14,     17
+    #define PIXEL_MASK_SIDE  (0b100110010100110010)
+
+
+    static const uint32_t groups_top_left[] = {
         ((1u <<  2)   |              (1u <<  3)),
         ((1u <<  1)   |              (1u <<  4)),
         ((1u <<  0)   | (1u << 17) | (1u <<  5)),
@@ -78,7 +97,7 @@
         ((1u << 13)   | (1u << 10) | (1u <<  5)), // BUGBUG -- LED 5 is likely a typo?
         ((1u << 12)   | (1u << 11)             ),
     };
-    const uint32_t groups_center_left[] = {
+    static const uint32_t groups_center_left[] = {
         ((1u <<  4) | (1u <<  5)),
         ((1u <<  3) | (1u <<  6)),
         ((1u <<  2) | (1u <<  7)),
@@ -89,7 +108,7 @@
         ((1u << 15) | (1u << 12)),
         ((1u << 14) | (1u << 13)),
     };  
-    const uint32_t groups_center_clockwise[] = {
+    static const uint32_t groups_center_clockwise[] = {
         ((1u << 14) | (1u << 15)),
         ((1u << 16)             ),
         ((1u << 17) | (1u <<  0)),
@@ -101,11 +120,18 @@
         ((1u << 10) | (1u << 11)),
         ((1u << 12) | (1u << 13)),
     };
-    const uint32_t groups_top_down[] = {
-        0b011001101011001101,
-        0b100110010100110010
-    }; //MSB is last led in string...
 #endif
+
+static const uint32_t groups_top_down[] = {
+    PIXEL_MASK_UPPER,
+    PIXEL_MASK_SIDE,
+}; // MSb is last led in string...
+
+#define PIXEL_MASK_ALL ((1u << COUNT_OF_PIXELS) - 1)
+
+static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel mask definition to be valid");
+static_assert((PIXEL_MASK_UPPER & PIXEL_MASK_SIDE) == 0, "Pixel cannot be both upper and side");
+static_assert((PIXEL_MASK_UPPER | PIXEL_MASK_SIDE) == PIXEL_MASK_ALL, "Pixel must be either upper or side");
 
 uint32_t leds[RGB_LEN];
 
@@ -249,11 +275,12 @@ bool rgb_scanner(void){
         delay--;
         return false;
     }
-    uint32_t color_grb=((((colors[color]&0xff0000)/system_config.led_brightness)&0xff0000)>>8);
-    color_grb|=((((colors[color]&0x00ff00)/system_config.led_brightness)&0x00ff00)<<8);
-    color_grb|=((((colors[color]&0x0000ff)/system_config.led_brightness)&0x0000ff));
-    for(int i=0; i< count_of(groups_center_left); i++){
-        rgb_assign_grb_color(groups_center_left[i], (bitmask & (1u<<i))?color_grb:0x0a0a0a);
+    uint32_t color_grb = 0;
+    color_grb |= ( (((colors[color] & 0xff0000) / system_config.led_brightness) & 0xff0000) >> 8); // swap R/G
+    color_grb |= ( (((colors[color] & 0x00ff00) / system_config.led_brightness) & 0x00ff00) << 8); // swap R/G
+    color_grb |= ( (((colors[color] & 0x0000ff) / system_config.led_brightness) & 0x0000ff)     ); // B remains in place
+    for (int i = 0; i < count_of(groups_center_left); i++) {
+        rgb_assign_grb_color(groups_center_left[i], (bitmask & (1u << i)) ? color_grb : 0x0a0a0a);
     }
     rgb_send();
     
@@ -279,17 +306,16 @@ bool rgb_timer_callback(struct repeating_timer *t){
     uint32_t color_grb;
     bool next=false;
 
-    if(system_config.led_effect<7) {
+    if (system_config.led_effect < MAX_LED_EFFECT) {
         mode = system_config.led_effect;
     }
     
     switch(mode) {
-        case 0: //disable
+        case LED_EFFECT_DISABLED:
             rgb_assign_grb_color(0xffffffff, 0x000000);
             rgb_send();  
             break;          
-        case 1:
-            //solid
+        case LED_EFFECT_SOLID:
             // NOTE: swaps from RGB to GRB because that is what the LED strip uses
             color_grb  = ( (((system_config.led_color & 0xff0000) / system_config.led_brightness) & 0xff0000) >> 8); // swap R/G
             color_grb |= ( (((system_config.led_color & 0x00ff00) / system_config.led_brightness) & 0x00ff00) << 8); // swap R/G
@@ -297,26 +323,33 @@ bool rgb_timer_callback(struct repeating_timer *t){
             rgb_assign_grb_color(0xffffffff, color_grb);
             rgb_send();
             break;
-        case 2:
+        case LED_EFFECT_ANGLE_WIPE:
             next = rgb_master(groups_top_left,         count_of(groups_top_left),         &color_wheel_div, 0xff, (0xff/count_of(groups_top_left)        ), 5, 10);
             break;
-        case 3:
+        case LED_EFFECT_CENTER_WIPE:
             next = rgb_master(groups_center_left,      count_of(groups_center_left),      &color_wheel_div, 0xff, (0xff/count_of(groups_center_left)     ), 5, 10);
             break;
-        case 4:
+        case LED_EFFECT_CLOCKWISE_WIPE:
             next = rgb_master(groups_center_clockwise, count_of(groups_center_clockwise), &color_wheel_div, 0xff, (0xff/count_of(groups_center_clockwise)), 5, 10);
             break;
-        case 5:
+        case LED_EFFECT_TOP_SIDE_WIPE:
             next = rgb_master(groups_top_down,         count_of(groups_top_down),         &color_wheel_div, 0xff, (                                    30), 5, 10);
             break;
-        case 6:
+        case LED_EFFECT_SCANNER:
             next = rgb_scanner();
+            break;
+        case LED_EFFECT_PARTY_MODE:
+            assert(!"Party mode should never be value of the local mode variable!");
             break;
     }
 
-    if(system_config.led_effect==7 && next){
-        mode++;
-        if(mode>6) mode=2;
+    if (system_config.led_effect == LED_EFFECT_PARTY_MODE && next) {
+        static_assert(LED_EFFECT_DISABLED == 0, "LED_EFFECT_DISABLED must be zero");
+        static_assert(MAX_LED_EFFECT-1 == LED_EFFECT_PARTY_MODE, "LED_EFFECT_PARTY_MODE must be the last effect");
+        ++mode;
+        if (mode >= LED_EFFECT_PARTY_MODE) {
+            mode = LED_EFFECT_DISABLED+1;
+        }
     }
 
     return true;

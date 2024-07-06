@@ -40,7 +40,9 @@ static const struct prompt_item menu_items_led_effect[]=
 
 uint32_t ui_config_action_led_effect(uint32_t a, uint32_t b)
 {
-    system_config.led_effect=b;
+    if (b < count_of(menu_items_led_effect)) {
+        system_config.led_effect = b;
+    }
 }
 
 // LED color (?) Rainbow short, rainbow long, ROYGBIV
@@ -57,7 +59,9 @@ static const struct prompt_item menu_items_led_color[]=
 
 uint32_t ui_config_action_led_color(uint32_t a, uint32_t b)
 {
-    system_config.led_color=b;    
+    if (b < count_of(menu_items_led_color)) {
+        system_config.led_color = b;
+    }
 }
 
 // LED brightness %?
@@ -73,8 +77,9 @@ static const struct prompt_item menu_items_led_brightness[]=
 
 uint32_t ui_config_action_led_brightness(uint32_t a, uint32_t b)
 {
-    if(b==5) system_config.led_brightness=1;
-    else system_config.led_brightness=10/(b+1);     
+    if (b < count_of(menu_items_led_brightness)) {
+        system_config.led_brightness = 10/(b+1);     
+    }
 }
 
 
@@ -89,7 +94,9 @@ static const struct prompt_item menu_items_screensaver[]=
 
 uint32_t ui_config_action_screensaver(uint32_t a, uint32_t b)
 {
-    system_config.lcd_timeout=b;
+    if (b < count_of(menu_items_screensaver)) {
+        system_config.lcd_timeout = b;
+    }
 }
 
 static const struct prompt_item menu_items_ansi_color[] =
@@ -102,26 +109,33 @@ static const struct prompt_item menu_items_ansi_color[] =
 };
 uint32_t ui_config_action_ansi_color(uint32_t a, uint32_t b)
 {
-    system_config.terminal_ansi_color=b;
-    if(!b)
-    {
-        system_config.terminal_ansi_statusbar=0; //disable the toolbar if ansi is disabled....
+    if (b < count_of(menu_items_ansi_color)) {
+        system_config.terminal_ansi_color = b;
+        if(!b)
+        {
+            system_config.terminal_ansi_statusbar=0; // disable the toolbar if ansi is disabled....
+        }
+        else
+        {
+            ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
+        }
     }
-    else
-    {
-        ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
-    }
-
 }
 
 uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b)
 {
-    system_config.terminal_ansi_statusbar=b;
-    if(b)
+    // NOTE: `b` is treated as a boolean value
+    b = !!b;
+
+    system_config.terminal_ansi_statusbar = b;
+    if (b)
     {   
-        if(!system_config.terminal_ansi_color) system_config.terminal_ansi_color=UI_TERM_FULL_COLOR; //enable ANSI color more
+        if (!system_config.terminal_ansi_color) {
+            // enable ANSI color mode
+            system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
+        }
         ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
-        ui_term_init(); // Initialize VT100 if ANSI terminal
+        ui_term_init();   // Initialize VT100 if ANSI terminal
         ui_statusbar_update(UI_UPDATE_ALL);
     }
 }
@@ -137,19 +151,21 @@ static const struct prompt_item menu_items_language[]=
 
 uint32_t ui_config_action_language(uint32_t a, uint32_t b)
 {
-    system_config.terminal_language=b; 
-    translation_set(b);
+    if (b < count_of(menu_items_language)) {
+        system_config.terminal_language = b;
+        translation_set(b);
+    }
 }
 
 static const struct ui_prompt_config cfg=
 {
-	false, //bool allow_prompt_text;
-	false, //bool allow_prompt_defval;
-	false, //bool allow_defval; 
-	true, //bool allow_exit;
-	&ui_prompt_menu_ordered_list, //bool (*menu_print)(const struct ui_prompt* menu);
-	&ui_prompt_prompt_ordered_list,     //bool (*menu_prompt)(const struct ui_prompt* menu);
-	&ui_prompt_validate_ordered_list //bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
+	.allow_prompt_text   = false,
+	.allow_prompt_defval = false,
+	.allow_defval        = false,
+	.allow_exit          = true,
+    .menu_print          = &ui_prompt_menu_ordered_list,
+	.menu_prompt         = &ui_prompt_prompt_ordered_list,
+	.menu_validate       = &ui_prompt_validate_ordered_list,
 };
 
 static const struct ui_prompt sub_prompts[]={
@@ -189,9 +205,9 @@ static const struct ui_prompt main_prompt=
 
 bool ui_config_menu(const struct ui_prompt * menu)
 {
-    for(uint i=0; i<count_of(sub_prompts); i++)
+    for (uint i = 0; i < count_of(sub_prompts); i++)
     {
-        printf(" %d. %s%s%s\r\n", i+1, ui_term_color_info(),t[sub_prompts[i].description], ui_term_color_reset()); 
+        printf(" %d. %s%s%s\r\n", i+1, ui_term_color_info(), t[sub_prompts[i].description], ui_term_color_reset()); 
     }   
 }
 

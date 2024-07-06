@@ -46,6 +46,7 @@ set(bp5_common
         pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h
         pirate/lcd.h pirate/lcd.c pirate/shift.h pirate/shift.c
         pirate/amux.h pirate/amux.c pirate/rgb.h pirate/rgb.c
+        pirate/intercore_helpers.c
 
         # commands
         commands.h commands.c

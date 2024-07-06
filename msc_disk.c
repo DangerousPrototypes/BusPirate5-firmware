@@ -98,7 +98,11 @@ uint8_t msc_disk[MSC_DEMO_DISK_BLOCK_NUM][MSC_DEMO_DISK_BLOCK_SIZE] =
       // second entry is readme file
       'R' , 'E' , 'A' , 'D' , 'M' , 'E' , ' ' , ' ' , 'T' , 'X' , 'T' , 0x20, 0x00, 0xC6, 0x52, 0x6D,
       0x65, 0x43, 0x65, 0x43, 0x00, 0x00, 0x88, 0x6D, 0x65, 0x43, 0x02, 0x00,
-      sizeof(README_CONTENTS)-1, 0x00, 0x00, 0x00 // readme's files size (4 Bytes)
+      
+      (sizeof(README_CONTENTS)-1 >> (8*0)), // readme's files size (4 Bytes, little-endian)
+      (sizeof(README_CONTENTS)-1 >> (8*1)), // readme's files size (4 Bytes, little-endian)
+      (sizeof(README_CONTENTS)-1 >> (8*2)), // readme's files size (4 Bytes, little-endian)
+      (sizeof(README_CONTENTS)-1 >> (8*3)), // readme's files size (4 Bytes, little-endian)
   },
 
   //------------- Block3: Readme Content -------------//
@@ -117,6 +121,8 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
   const char pid[] = "Storage";
   const char rev[] = "1.0";
 
+  // NOTE: Relies on behavior of TinyUSB, which sets all strings to 0x20 (space)
+  //       before calling this function.  See class/msc/msc_device.c.
   memcpy(vendor_id  , vid, strlen(vid));
   memcpy(product_id , pid, strlen(pid));
   memcpy(product_rev, rev, strlen(rev));

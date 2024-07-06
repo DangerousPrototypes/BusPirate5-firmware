@@ -27,7 +27,7 @@
 #include "ui/ui_parse.h"
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
-
+#include "pirate/intercore_helpers.h"
 
 void
 disp_default_settings(void)
@@ -56,11 +56,8 @@ uint32_t disp_default_setup(void)
 
 uint32_t disp_default_setup_exc(void)
 {
-    multicore_fifo_push_blocking(0xf0);
-    while(multicore_fifo_pop_blocking()!=0xf0);
-
-    multicore_fifo_push_blocking(0xf2);
-    while(multicore_fifo_pop_blocking()!=0xf2);
+    icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
+    icm_core0_send_message_synchronous(BP_ICM_FORCE_LCD_UPDATE);
 	return 1;
 }
 

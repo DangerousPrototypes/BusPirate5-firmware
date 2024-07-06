@@ -8,18 +8,103 @@
 
 #define RGB_MAX_BRIGHT 32
 
-// pairs of LEDs for a top left corner to bottom right corner fade
-// not all LEDs have a pair, they are included with a neighboring LED pair
+// Note that both the layout and overall count of pixels
+// has changed between revisions.  As a result, the count
+// of elements for any of these arrays may differ.
+//
+// groups_top_left[]:
+//    defines led_bitmasks that generally start at the top left corner of the device,
+//    and continue in a diagnol pattern.  Generally setup in pairs, although some groups
+//    may set three pixels at a time.
+//
+// groups_center_left[]:
+//    tbd
+//
+// groups_center_clockwise[]:
+//    tbd
+//
+// groups_top_down[]:
+//    tbd
+//
+// Also add a new constant, COUNT_OF_PIXELS, to define the number
+// pixels on each revision of board.
+
 #if BP5_REV <= 9
-    const uint32_t groups_top_left[]={((1u<<1) | (1u<<2)), ((1u<<0) | (1u<<3)), ((1u<<4) | (1u<<5) | (1u<<15)), ((1u<<6) | (1u<<7) | (1u<<14)), ((1u<<8) | (1u<<13)), ((1u<<9) | (1u<<12)), ((1u<<10) | (1u<<11)) };
-    const uint32_t groups_center_left[]={(1u<<3)|(1u<<4),(1u<<2)|(1u<<5),(1u<<1)|(1u<<6),(1u<<0)|(1u<<7)|(1u<<8)|(1<<9),(1u<<10)|(1u<<15),(1u<<11)|(1u<<14),(1u<<12)|(1u<<13)};  
-    const uint32_t groups_center_clockwise[]={(1u<<13)|(1u<<14),(1u<<15), (1u<<0)|(1u<<1), (1u<<2)|(1u<<3), (1u<<4)|(1u<<5),(1u<<6)|(1u<<7),(1u<<8)|(1u<<9), (1u<<10),(1u<<11)|(1u<<12)};
-    const uint32_t groups_top_down[]={0b0011001010011001,0b1100110101100110}; //MSB is last led in string...
+    static const uint8_t COUNT_OF_PIXELS = 16u;
+
+    const uint32_t groups_top_left[] = {
+        ((1u <<  1) | (1u <<  2)             ),
+        ((1u <<  0) | (1u <<  3)             ),
+        ((1u <<  4) | (1u <<  5) | (1u << 15)),
+        ((1u <<  6) | (1u <<  7) | (1u << 14)),
+        ((1u <<  8) | (1u << 13)             ),
+        ((1u <<  9) | (1u << 12)             ),
+        ((1u << 10) | (1u << 11)             ),
+    };
+    const uint32_t groups_center_left[] = {
+        ((1u <<  3) | (1u <<  4)                         ),
+        ((1u <<  2) | (1u <<  5)                         ),
+        ((1u <<  1) | (1u <<  6)                         ),
+        ((1u <<  0) | (1u <<  7) | (1u <<  8) | (1 <<  9)),
+        ((1u << 10) | (1u << 15)                         ),
+        ((1u << 11) | (1u << 14)                         ),
+        ((1u << 12) | (1u << 13)                         ),
+    };  
+    const uint32_t groups_center_clockwise[] = {
+        ((1u << 13) | (1u << 14)),
+        ((1u << 15)             ),
+        ((1u <<  0) | (1u <<  1)),
+        ((1u <<  2) | (1u <<  3)),
+        ((1u <<  4) | (1u <<  5)),
+        ((1u <<  6) | (1u <<  7)),
+        ((1u <<  8) | (1u <<  9)),
+        ((1u << 10)             ),
+        ((1u << 11) | (1u << 12)),
+    };
+    const uint32_t groups_top_down[] = {
+        0b0011001010011001,
+        0b1100110101100110,
+    }; //MSB is last led in string...
 #elif BP5_REV >= 10
-    const uint32_t groups_top_left[]={((1u<<2) | (1u<<3)), ((1u<<1) | (1u<<4)), ((1u<<0) | (1u<<17) | (1u<<5)), ((1u<<16) | (1u<<6)), ((1u<<15) | (1u<<7)), ((1u<<14) | (1u<<9) | (1u<<8)), ((1u<<13) | (1u<<10) | (1u<<5)), ((1u<<12)|(1u<<11))};
-    const uint32_t groups_center_left[]={(1u<<4)|(1u<<5),(1u<<3)|(1u<<6),(1u<<2)|(1u<<7),(1u<<1)|(1u<<8), (1u<<0)|(1<<9), (1u<<17)|(1u<<10), (1u<<16)|(1u<<11), (1u<<12)|(1u<<15), (1u<<13)|(1u<<14)};  
-    const uint32_t groups_center_clockwise[]={(1u<<14)|(1u<<15),(1u<<16), (1u<<17)|(1u<<0), (1u<<1)|(1u<<2), (1u<<3)|(1u<<4), (1u<<5)|(1u<<6), (1u<<7), (1u<<8)|(1u<<9), (1u<<10)|(1u<<11), (1u<<12)|(1u<<13)};
-    const uint32_t groups_top_down[]={0b011001101011001101, 0b100110010100110010}; //MSB is last led in string...
+    static const uint8_t COUNT_OF_PIXELS = 18u;
+
+    const uint32_t groups_top_left[] = {
+        ((1u <<  2)   |              (1u <<  3)),
+        ((1u <<  1)   |              (1u <<  4)),
+        ((1u <<  0)   | (1u << 17) | (1u <<  5)),
+        ((1u << 16)   |              (1u <<  6)),
+        ((1u << 15)   |              (1u <<  7)),
+        ((1u << 14)   | (1u <<  9) | (1u <<  8)),
+        ((1u << 13)   | (1u << 10) | (1u <<  5)), // BUGBUG -- LED 5 is likely a typo?
+        ((1u << 12)   | (1u << 11)             ),
+    };
+    const uint32_t groups_center_left[] = {
+        ((1u <<  4) | (1u <<  5)),
+        ((1u <<  3) | (1u <<  6)),
+        ((1u <<  2) | (1u <<  7)),
+        ((1u <<  1) | (1u <<  8)),
+        ((1u <<  0) | (1u <<  9)),
+        ((1u << 17) | (1u << 10)),
+        ((1u << 16) | (1u << 11)),
+        ((1u << 15) | (1u << 12)),
+        ((1u << 14) | (1u << 13)),
+    };  
+    const uint32_t groups_center_clockwise[] = {
+        ((1u << 14) | (1u << 15)),
+        ((1u << 16)             ),
+        ((1u << 17) | (1u <<  0)),
+        ((1u <<  1) | (1u <<  2)),
+        ((1u <<  3) | (1u <<  4)),
+        ((1u <<  5) | (1u <<  6)),
+        ((1u <<  7)             ),
+        ((1u <<  8) | (1u <<  9)),
+        ((1u << 10) | (1u << 11)),
+        ((1u << 12) | (1u << 13)),
+    };
+    const uint32_t groups_top_down[] = {
+        0b011001101011001101,
+        0b100110010100110010
+    }; //MSB is last led in string...
 #endif
 
 uint32_t leds[RGB_LEN];

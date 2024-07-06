@@ -84,6 +84,13 @@ uint32_t color_wheel(uint8_t pos) {
   }   
 }
 
+/*
+ * Put a value 0 to 255 in to get a color value.
+ * The colours are a transition r -> g -> b -> back to r
+ * Inspired by the Adafruit examples.
+ * The ..._div() version of the function divides each of
+ * the R/G/B values by the system config's led brightness.
+ */
 uint32_t color_wheel_div(uint8_t pos) {
     pos = 255 - pos;
     uint8_t r,g,b;
@@ -107,9 +114,9 @@ uint32_t color_wheel_div(uint8_t pos) {
 }
 
 
-void rgb_assign_color(uint32_t l, uint32_t color){
+void rgb_assign_color(uint32_t index_mask, uint32_t color){
     for (int i=0;i<RGB_LEN; i++){
-        if(l&(1u<<i)) {
+        if(index_mask&(1u<<i)) {
             leds[i]=color;
         }
     }
@@ -202,26 +209,27 @@ bool rgb_timer_callback(struct repeating_timer *t){
             break;          
         case 1:
             //solid
-            color_grb=((((colors[system_config.led_color]&0xff0000)/system_config.led_brightness)&0xff0000)>>8);
+            // NOTE: swaps from RGB to GRB because that is what the LED strip uses
+            color_grb =((((colors[system_config.led_color]&0xff0000)/system_config.led_brightness)&0xff0000)>>8);
             color_grb|=((((colors[system_config.led_color]&0x00ff00)/system_config.led_brightness)&0x00ff00)<<8);
             color_grb|=((((colors[system_config.led_color]&0x0000ff)/system_config.led_brightness)&0x0000ff));            
             rgb_assign_color(0xffffffff, color_grb);
             rgb_send();
             break;
         case 2:
-            next = rgb_master(groups_top_left, count_of(groups_top_left), &color_wheel_div, 0xff, (0xff/count_of(groups_top_left)), 5, 10);
+            next = rgb_master(groups_top_left,         count_of(groups_top_left),         &color_wheel_div, 0xff, (0xff/count_of(groups_top_left)        ), 5, 10);
             break;
         case 3:
-            next=rgb_master(groups_center_left, count_of(groups_center_left), &color_wheel_div, 0xff, (0xff/count_of(groups_center_left)), 5, 10);
+            next = rgb_master(groups_center_left,      count_of(groups_center_left),      &color_wheel_div, 0xff, (0xff/count_of(groups_center_left)     ), 5, 10);
             break;
         case 4:
-            next=rgb_master(groups_center_clockwise, count_of(groups_center_clockwise), &color_wheel_div, 0xff, (0xff/count_of(groups_center_clockwise)), 5, 10);
+            next = rgb_master(groups_center_clockwise, count_of(groups_center_clockwise), &color_wheel_div, 0xff, (0xff/count_of(groups_center_clockwise)), 5, 10);
             break;
         case 5:
-            next = rgb_master(groups_top_down, count_of(groups_top_down), &color_wheel_div, 0xff, 30, 5, 10);
+            next = rgb_master(groups_top_down,         count_of(groups_top_down),         &color_wheel_div, 0xff, (                                    30), 5, 10);
             break;
         case 6:
-            next= rgb_scanner();
+            next = rgb_scanner();
             break;
     }
 

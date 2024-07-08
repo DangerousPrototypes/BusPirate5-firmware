@@ -28,25 +28,36 @@ enum {
     SPI_NAND_RET_E_FAIL = -9,
 };
 
-#define SPI_NAND_PAGE_SIZE       2048
-#define SPI_NAND_OOB_SIZE        64
-#define SPI_NAND_PAGES_PER_BLOCK 64
-#define SPI_NAND_BLOCKS_PER_LUN  1024
+// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// See also: spi_nand.c, which contains internal-only per chip guards
+#if defined(FLASH_MT29F2G01ABAFDWB)
+    #define SPI_NAND_LOG2_PLANE_COUNT              1
+    #define SPI_NAND_OOB_SIZE                    128
+#else // default to MT29F1G01ABAFDWB
+    #define SPI_NAND_LOG2_PLANE_COUNT              0
+    #define SPI_NAND_OOB_SIZE                     64 // extra bytes of data per sector / block
 
-#define SPI_NAND_LOG2_PAGE_SIZE       11
-#define SPI_NAND_LOG2_PAGES_PER_BLOCK 6
+#endif
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#define SPI_NAND_LOG2_PAGE_SIZE               11
+#define SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK    6
+#define SPI_NAND_ERASE_BLOCKS_PER_PLANE     1024
 
-#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK - 1) // zero-indexed
-#define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_BLOCKS_PER_LUN - 1)  // zero-indexed
+#define SPI_NAND_PAGES_PER_BLOCK      (1 << SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK)
+#define SPI_NAND_PAGE_SIZE            (1 << SPI_NAND_LOG2_PAGE_SIZE)
+#define SPI_NAND_PLANE_COUNT          (1 << SPI_NAND_LOG2_PLANE_COUNT)
+#define SPI_NAND_ERASE_BLOCKS_PER_LUN (SPI_NAND_PLANE_COUNT * SPI_NAND_ERASE_BLOCKS_PER_PLANE)
+
+#if SPI_NAND_PAGE_SIZE != 2048
+    #error "Currently only 2048-byte pages are supported"
+#endif
 
 /// @brief Nand row address
 typedef union {
     uint32_t whole;
     struct {
-        /// valid range 0-63
-        uint32_t page : 6;
-        /// valid range 0-1023
-        uint32_t block : 26;
+        uint32_t page  : SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK; // least significant bits
+        uint32_t block : (32 - SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK);
     };
 } row_address_t;
 /// @brief Nand column address (valid range 0-2175)

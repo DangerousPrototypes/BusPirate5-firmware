@@ -25,8 +25,8 @@ static struct dhara_map map;
 static uint8_t page_buffer[SPI_NAND_PAGE_SIZE];
 static struct dhara_nand nand = {
     .log2_page_size = SPI_NAND_LOG2_PAGE_SIZE,
-    .log2_ppb = SPI_NAND_LOG2_PAGES_PER_BLOCK,
-    .num_blocks = SPI_NAND_BLOCKS_PER_LUN,
+    .log2_ppb = SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK,
+    .num_blocks = SPI_NAND_ERASE_BLOCKS_PER_LUN,
 };
 
 // public function definitions

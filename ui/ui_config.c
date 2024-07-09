@@ -29,6 +29,7 @@ static const struct prompt_item menu_items_disable_enable[]=
 // LED effect
 static const struct prompt_item menu_items_led_effect[]=
 {
+    // clang-format off
     [LED_EFFECT_DISABLED      ] = {T_CONFIG_DISABLE},
     [LED_EFFECT_SOLID         ] = {T_CONFIG_LEDS_EFFECT_SOLID},
     [LED_EFFECT_ANGLE_WIPE    ] = {T_CONFIG_LEDS_EFFECT_ANGLEWIPE},
@@ -37,6 +38,7 @@ static const struct prompt_item menu_items_led_effect[]=
     [LED_EFFECT_TOP_SIDE_WIPE ] = {T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE},
     [LED_EFFECT_SCANNER       ] = {T_CONFIG_LEDS_EFFECT_SCANNER},
     [LED_EFFECT_PARTY_MODE    ] = {T_CONFIG_LEDS_EFFECT_CYCLE},
+    // clang-format on
 };
 static_assert(count_of(menu_items_led_effect) == MAX_LED_EFFECT, "menu_items_led_effect mismatch vs. enum of available effects");
 
@@ -177,6 +179,7 @@ uint32_t ui_config_action_language(uint32_t a, uint32_t b)
 
 static const struct ui_prompt_config cfg=
 {
+    // clang-format on
 	.allow_prompt_text   = false,
 	.allow_prompt_defval = false,
 	.allow_defval        = false,
@@ -184,9 +187,11 @@ static const struct ui_prompt_config cfg=
     .menu_print          = &ui_prompt_menu_ordered_list,
 	.menu_prompt         = &ui_prompt_prompt_ordered_list,
 	.menu_validate       = &ui_prompt_validate_ordered_list,
+    // clang-format off
 };
 
 static const struct ui_prompt sub_prompts[]={
+    // clang-format off
     {T_CONFIG_LANGUAGE,          menu_items_language,       count_of(menu_items_language),       0,0,0,0, &ui_config_action_language,       &cfg},
     {T_CONFIG_ANSI_COLOR_MODE,   menu_items_ansi_color,     count_of(menu_items_ansi_color),     0,0,0,0, &ui_config_action_ansi_color,     &cfg},
     {T_CONFIG_ANSI_TOOLBAR_MODE, menu_items_disable_enable, count_of(menu_items_disable_enable), 0,0,0,0, &ui_config_action_ansi_toolbar,   &cfg},
@@ -194,10 +199,12 @@ static const struct ui_prompt sub_prompts[]={
     {T_CONFIG_LEDS_EFFECT,       menu_items_led_effect,     count_of(menu_items_led_effect),     0,0,0,0, &ui_config_action_led_effect,     &cfg},
     {T_CONFIG_LEDS_COLOR,        menu_items_led_color,      count_of(menu_items_led_color),      0,0,0,0, &ui_config_action_led_color,      &cfg},
     {T_CONFIG_LEDS_BRIGHTNESS,   menu_items_led_brightness, count_of(menu_items_led_brightness), 0,0,0,0, &ui_config_action_led_brightness, &cfg},
+    // clang-format on
 };
 
 static const struct ui_prompt_config main_cfg=
 {
+    // clang-format off
 	.allow_prompt_text   = false,
 	.allow_prompt_defval = false,
 	.allow_defval        = false,
@@ -205,10 +212,12 @@ static const struct ui_prompt_config main_cfg=
 	.menu_print          = &ui_config_menu,
 	.menu_prompt         = &ui_prompt_prompt_ordered_list,
 	.menu_validate       = &ui_prompt_validate_int,
+    // clang-format on
 };
 
 static const struct ui_prompt main_prompt=
 {
+    // clang-format off
     .description      = T_CONFIG_CONFIGURATION_OPTIONS,
 	.menu_items       = NULL,
     .menu_items_count = count_of(sub_prompts),
@@ -218,6 +227,7 @@ static const struct ui_prompt main_prompt=
     .defval           = 0,
 	.menu_action      = NULL,
     .config           = &main_cfg,
+    // clang-format on
 };
 
 

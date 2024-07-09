@@ -44,6 +44,7 @@
     static const uint32_t PIXEL_MASK_SIDE  = 0b1100 1101 0110 0110;
 
     static const uint32_t groups_top_left[] = {
+        // clang-format off
         ((1u <<  1) | (1u <<  2)             ),
         ((1u <<  0) | (1u <<  3)             ),
         ((1u <<  4) | (1u <<  5) | (1u << 15)),
@@ -51,8 +52,10 @@
         ((1u <<  8) | (1u << 13)             ),
         ((1u <<  9) | (1u << 12)             ),
         ((1u << 10) | (1u << 11)             ),
+        // clang-format on
     };
     static const uint32_t groups_center_left[] = {
+        // clang-format off
         ((1u <<  3) | (1u <<  4)                         ),
         ((1u <<  2) | (1u <<  5)                         ),
         ((1u <<  1) | (1u <<  6)                         ),
@@ -60,8 +63,10 @@
         ((1u << 10) | (1u << 15)                         ),
         ((1u << 11) | (1u << 14)                         ),
         ((1u << 12) | (1u << 13)                         ),
+        // clang-format on
     };  
     static const uint32_t groups_center_clockwise[] = {
+        // clang-format off
         ((1u << 13) | (1u << 14)),
         ((1u << 15)             ),
         ((1u <<  0) | (1u <<  1)),
@@ -71,6 +76,7 @@
         ((1u <<  8) | (1u <<  9)),
         ((1u << 10)             ),
         ((1u << 11) | (1u << 12)),
+        // clang-format on
     };
 #elif BP5_REV >= 10
     // Sadly, C still doesn't recognize the following format as constexpr enough for static_assert()
@@ -88,6 +94,7 @@
 
 
     static const uint32_t groups_top_left[] = {
+        // clang-format off
         ((1u <<  2)   |              (1u <<  3)),
         ((1u <<  1)   |              (1u <<  4)),
         ((1u <<  0)   | (1u << 17) | (1u <<  5)),
@@ -96,8 +103,10 @@
         ((1u << 14)   | (1u <<  9) | (1u <<  8)),
         ((1u << 13)   | (1u << 10) | (1u <<  5)), // BUGBUG -- LED 5 is likely a typo?
         ((1u << 12)   | (1u << 11)             ),
+        // clang-format on
     };
     static const uint32_t groups_center_left[] = {
+        // clang-format off
         ((1u <<  4) | (1u <<  5)),
         ((1u <<  3) | (1u <<  6)),
         ((1u <<  2) | (1u <<  7)),
@@ -107,8 +116,10 @@
         ((1u << 16) | (1u << 11)),
         ((1u << 15) | (1u << 12)),
         ((1u << 14) | (1u << 13)),
+        // clang-format on
     };  
     static const uint32_t groups_center_clockwise[] = {
+        // clang-format off
         ((1u << 14) | (1u << 15)),
         ((1u << 16)             ),
         ((1u << 17) | (1u <<  0)),
@@ -119,6 +130,7 @@
         ((1u <<  8) | (1u <<  9)),
         ((1u << 10) | (1u << 11)),
         ((1u << 12) | (1u << 13)),
+        // clang-format on
     };
 #endif
 
@@ -276,9 +288,11 @@ bool rgb_scanner(void){
         return false;
     }
     uint32_t color_grb = 0;
+    // clang-format off
     color_grb |= ( (((colors[color] & 0xff0000) / system_config.led_brightness) & 0xff0000) >> 8); // swap R/G
     color_grb |= ( (((colors[color] & 0x00ff00) / system_config.led_brightness) & 0x00ff00) << 8); // swap R/G
     color_grb |= ( (((colors[color] & 0x0000ff) / system_config.led_brightness) & 0x0000ff)     ); // B remains in place
+    // clang-format on
     for (int i = 0; i < count_of(groups_center_left); i++) {
         rgb_assign_grb_color(groups_center_left[i], (bitmask & (1u << i)) ? color_grb : 0x0a0a0a);
     }
@@ -310,6 +324,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
         mode = system_config.led_effect;
     }
     
+    // clang-format off
     switch(mode) {
         case LED_EFFECT_DISABLED:
             rgb_assign_grb_color(0xffffffff, 0x000000);
@@ -342,6 +357,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
             assert(!"Party mode should never be value of the local mode variable!");
             break;
     }
+    // clang-format on
 
     if (system_config.led_effect == LED_EFFECT_PARTY_MODE && next) {
         static_assert(LED_EFFECT_DISABLED == 0, "LED_EFFECT_DISABLED must be zero");
@@ -395,10 +411,12 @@ void rgb_init(void)
 
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b){
+    // clang-format off
     uint32_t color =
         ( (g / system_config.led_brightness) << 16) |
         ( (r / system_config.led_brightness) <<  8) |
         ( (b / system_config.led_brightness) <<  0) ;
+    // clang-format on
     rgb_assign_grb_color(0xffffffff, color);
     rgb_send();
 }

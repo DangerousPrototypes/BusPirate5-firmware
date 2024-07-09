@@ -23,11 +23,7 @@
 static bool initialized = false;
 static struct dhara_map map;
 static uint8_t page_buffer[SPI_NAND_PAGE_SIZE];
-static struct dhara_nand nand = {
-    .log2_page_size = SPI_NAND_LOG2_PAGE_SIZE,
-    .log2_ppb = SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK,
-    .num_blocks = SPI_NAND_ERASE_BLOCKS_PER_LUN,
-};
+static struct dhara_nand dhara_nand_parameters = {};
 
 // public function definitions
 DSTATUS diskio_initialize(BYTE drv)
@@ -35,13 +31,13 @@ DSTATUS diskio_initialize(BYTE drv)
     if (drv) return STA_NOINIT;			/* Supports only drive 0 */
 
     // init flash management stack
-    int ret = spi_nand_init();
+    int ret = spi_nand_init(&dhara_nand_parameters);
     if (SPI_NAND_RET_OK != ret) {
         //printf("spi_nand_init failed, status: %d.", ret);
         return STA_NOINIT;
     }
     // init flash translation layer
-    dhara_map_init(&map, &nand, page_buffer, 4);
+    dhara_map_init(&map, &dhara_nand_parameters, page_buffer, 4);
     dhara_error_t err = DHARA_E_NONE;
     ret = dhara_map_resume(&map, &err);
     //printf("dhara resume return: %d, error: %d", ret, err);
@@ -135,7 +131,7 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void *buff)
         case GET_BLOCK_SIZE:
             ;
             DWORD *block_size_out = (DWORD *)buff;
-            *block_size_out = SPI_NAND_PAGES_PER_BLOCK;
+            *block_size_out = SPI_NAND_PAGES_PER_ERASE_BLOCK;
             break;
         case CTRL_TRIM:
             ;

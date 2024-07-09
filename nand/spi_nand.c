@@ -38,8 +38,29 @@
 #define READ_ID_TRANS_LEN    4
 #define READ_ID_MFR_INDEX    2
 #define READ_ID_DEVICE_INDEX 3
-#define MFR_ID_MICRON        0x2C
-#define DEVICE_ID_1G_3V3     0x14
+// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+// See also: spi_nand.h, which contains external per-chip guards
+#if defined(FLASH_MT29F2G01ABAFDWB)
+
+    #define SPI_NAND_MFR_ID      0x2C // Micron
+    #define SPI_NAND_DEVICE_ID   0x24 // DEVICE_ID_2G_3V3
+
+#else // default to MT29F1G01ABAFDWB
+
+    #define SPI_NAND_MFR_ID      0x2C // Micron
+    #define SPI_NAND_DEVICE_ID   0x14 // DEVICE_ID_1G_3V3
+
+#endif
+
+inline uint8_t get_plane(row_address_t row) {
+    if (SPI_NAND_LOG2_PLANE_COUNT == 0) return 0;
+    return (row.block & (SPI_NAND_PLANE_COUNT -1));
+}
+
+
+#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK      - 1) // zero-indexed
+#define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_ERASE_BLOCKS_PER_LUN - 1)  // zero-indexed
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #define FEATURE_TRANS_LEN  3
 #define FEATURE_REG_INDEX  1
@@ -62,8 +83,6 @@
 #define ECC_STATUS_4_6_REFRESH    0b011
 #define ECC_STATUS_7_8_REFRESH    0b101
 #define ECC_STATUS_NOT_CORRECTED  0b010
-
-#define ROW_ADDRESS_BLOCK_SHIFT 6
 
 #define BAD_BLOCK_MARK 0
 
@@ -127,12 +146,13 @@ static int set_feature(uint8_t reg, uint8_t data, uint32_t timeout);
 static int get_feature(uint8_t reg, uint8_t *data_out, uint32_t timeout);
 static int write_enable(uint32_t timeout);
 static int page_read(row_address_t row, uint32_t timeout);
-static int read_from_cache(column_address_t column, uint8_t *data_out, size_t read_len,
+static int read_from_cache(row_address_t row, column_address_t column, uint8_t *data_out, size_t read_len,
                            uint32_t timeout);
-static int program_load(column_address_t column, const uint8_t *data_in, size_t write_len,
+static int program_load(row_address_t row, column_address_t column, const uint8_t *data_in, size_t write_len,
                         uint32_t timeout);
-static int program_load_random_data(column_address_t column, uint8_t *data_in, size_t write_len,
+static int program_load_random_data(row_address_t row, column_address_t column, uint8_t *data_in, size_t write_len,
                                     uint32_t timeout);
+
 static int program_execute(row_address_t row, uint32_t timeout);
 static int block_erase(row_address_t row, uint32_t timeout);
 
@@ -195,9 +215,9 @@ int spi_nand_page_read(row_address_t row, column_address_t column, uint8_t *data
     int ret = page_read(row, OP_TIMEOUT);
     if (SPI_NAND_RET_OK != ret) return ret;
 
-    // read from cache
+    // read from cache 
     uint32_t timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
-    return read_from_cache(column, data_out, read_len, timeout);
+    return read_from_cache(row, column, data_out, read_len, timeout);
 }
 
 int spi_nand_page_program(row_address_t row, column_address_t column, const uint8_t *data_in,
@@ -219,7 +239,7 @@ int spi_nand_page_program(row_address_t row, column_address_t column, const uint
 
     // load data into nand's internal cache
     uint32_t timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
-    ret = program_load(column, data_in, write_len, timeout);
+    ret = program_load(row, column, data_in, write_len, timeout);
     if (SPI_NAND_RET_OK != ret) return ret;
 
     // write to cell array from nand's internal cache
@@ -232,6 +252,21 @@ int spi_nand_page_copy(row_address_t src, row_address_t dest)
     // input validation
     if (!validate_row_address(src) || !validate_row_address(src)) {
         return SPI_NAND_RET_BAD_ADDRESS;
+    }
+    if (!validate_row_address(dest) || !validate_row_address(dest)) {
+        return SPI_NAND_RET_BAD_ADDRESS;
+    }
+    if (get_plane(src) != get_plane(dest)) {
+        // If the source and destination are on different planes,
+        // the optimized copy operation cannot be used.  This is because
+        // there does not appear to be a command to move data from one
+        // plane's cache register to another plane's cache register.
+        //
+        // Without this check, data would be corrupted on multi-plane
+        // NAND when the source and destination are on different planes.
+        int ret = spi_nand_page_read(src, 0, page_main_and_oob_buffer, sizeof(page_main_and_oob_buffer));
+        if (SPI_NAND_RET_OK != ret) return ret;
+        return spi_nand_page_program(dest, 0, page_main_and_oob_buffer, sizeof(page_main_and_oob_buffer));
     }
 
     // setup timeout tracking
@@ -249,7 +284,7 @@ int spi_nand_page_copy(row_address_t src, row_address_t dest)
     // empty program load random data
     timeout = OP_TIMEOUT - sys_time_get_elapsed(start);
     uint8_t dummy_byte = 0; // avoid a null pointer
-    ret = program_load_random_data(0, &dummy_byte, 0, timeout);
+    ret = program_load_random_data(src, 0, &dummy_byte, 0, timeout);
     if (SPI_NAND_RET_OK != ret) return ret;
 
     // write to cell array from nand's internal cache
@@ -279,13 +314,16 @@ int spi_nand_block_erase(row_address_t row)
 
 int spi_nand_block_is_bad(row_address_t row, bool *is_bad)
 {
-    uint8_t bad_block_mark[2];
+    uint8_t bad_block_mark[1];
     // page read will validate the block address
     int ret = spi_nand_page_read(row, SPI_NAND_PAGE_SIZE, bad_block_mark, sizeof(bad_block_mark));
     if (SPI_NAND_RET_OK != ret) return ret;
 
-    // check marker
-    if (BAD_BLOCK_MARK == bad_block_mark[0] || BAD_BLOCK_MARK == bad_block_mark[1]) {
+    // Refer to MT29F2G01ABAGD datasheet, table 11 on page 46:
+    // Bad blocks can be detected by the value 0x00 in the
+    // FIRST BYTE of the spare area.
+    // This is ONFI-compliant, so should be universal nowadays.
+    if (BAD_BLOCK_MARK == bad_block_mark[0]) {
         *is_bad = true;
     }
     else {
@@ -297,7 +335,12 @@ int spi_nand_block_is_bad(row_address_t row, bool *is_bad)
 
 int spi_nand_block_mark_bad(row_address_t row)
 {
-    uint8_t bad_block_mark[2] = {BAD_BLOCK_MARK, BAD_BLOCK_MARK};
+    // Refer to MT29F2G01ABAGD datasheet, table 11 on page 46:
+    // Bad blocks can be detected by the value 0x00 in the
+    // FIRST BYTE of the spare area.
+    // This is ONFI-compliant, so should be universal nowadays.
+
+    uint8_t bad_block_mark[1] = {BAD_BLOCK_MARK};
     // page program will validate the block address
     return spi_nand_page_program(row, SPI_NAND_PAGE_SIZE, bad_block_mark, sizeof(bad_block_mark));
 }
@@ -311,6 +354,8 @@ int spi_nand_page_is_free(row_address_t row, bool *is_free)
 
     *is_free = true; // innocent until proven guilty
     // iterate through page & oob to make sure its 0xff's all the way down
+
+    // TODO: static_assert( sizeof(page_main_and_oob_buffer) % sizeof(uint32_t) == 0, "page_main_and_oob_buffer size must be a multiple of 4" );
     uint32_t comp_word = 0xffffffff;
     for (int i = 0; i < sizeof(page_main_and_oob_buffer); i += sizeof(comp_word)) {
         if (0 != memcmp(&comp_word, &page_main_and_oob_buffer[i], sizeof(comp_word))) {
@@ -325,7 +370,7 @@ int spi_nand_page_is_free(row_address_t row, bool *is_free)
 int spi_nand_clear(void)
 {
     bool is_bad;
-    for (int i = 0; i < SPI_NAND_BLOCKS_PER_LUN; i++) {
+    for (int i = 0; i < SPI_NAND_ERASE_BLOCKS_PER_LUN; i++) {
         // get bad block flag
         row_address_t row = {.block = i, .page = 0};
         int ret = spi_nand_block_is_bad(row, &is_bad);
@@ -403,8 +448,8 @@ static int read_id(void)
     // check spi return
     if (SPI_RET_OK == ret) {
         // check mfr & device id
-        if ((MFR_ID_MICRON == rx_data[READ_ID_MFR_INDEX]) &&
-            (DEVICE_ID_1G_3V3 == rx_data[READ_ID_DEVICE_INDEX])) {
+        if ((SPI_NAND_MFR_ID    == rx_data[READ_ID_MFR_INDEX]) &&
+            (SPI_NAND_DEVICE_ID == rx_data[READ_ID_DEVICE_INDEX])) {
             // success
             return SPI_NAND_RET_OK;
         }
@@ -496,7 +541,7 @@ static int page_read(row_address_t row, uint32_t timeout)
 }
 
 /// @note Input validation is expected to be performed by caller.
-static int read_from_cache(column_address_t column, uint8_t *data_out, size_t read_len,
+static int read_from_cache(row_address_t row, column_address_t column, uint8_t *data_out, size_t read_len,
                            uint32_t timeout)
 {
     // setup timeout tracking for second operation
@@ -504,8 +549,10 @@ static int read_from_cache(column_address_t column, uint8_t *data_out, size_t re
 
     // setup data for read from cache command (need to go from LSB -> MSB first on address)
     uint8_t tx_data[READ_FROM_CACHE_TRANS_LEN];
+
     tx_data[0] = CMD_READ_FROM_CACHE;
-    tx_data[1] = column >> 8;
+    uint8_t plane = get_plane(row);
+    tx_data[1] = (plane << 4) | ((column >> 8) & 0xF);
     tx_data[2] = column;
     tx_data[3] = 0;
     // perform transaction
@@ -521,7 +568,7 @@ static int read_from_cache(column_address_t column, uint8_t *data_out, size_t re
 }
 
 /// @note Input validation is expected to be performed by caller.
-static int program_load(column_address_t column, const uint8_t *data_in, size_t write_len,
+static int program_load(row_address_t row, column_address_t column, const uint8_t *data_in, size_t write_len,
                         uint32_t timeout)
 {
     // setup timeout tracking for second operation
@@ -530,7 +577,8 @@ static int program_load(column_address_t column, const uint8_t *data_in, size_t 
     // setup data for program load (need to go from LSB -> MSB first on address)
     uint8_t tx_data[PROGRAM_LOAD_TRANS_LEN];
     tx_data[0] = CMD_PROGRAM_LOAD;
-    tx_data[1] = column >> 8;
+    uint8_t plane = get_plane(row);
+    tx_data[1] = (plane << 4) | ((column >> 8) & 0xF);
     tx_data[2] = column;
     // perform transaction
     csel_select();
@@ -544,7 +592,7 @@ static int program_load(column_address_t column, const uint8_t *data_in, size_t 
     return (SPI_RET_OK == ret) ? SPI_NAND_RET_OK : SPI_NAND_RET_BAD_SPI;
 }
 
-static int program_load_random_data(column_address_t column, uint8_t *data_in, size_t write_len,
+static int program_load_random_data(row_address_t row, column_address_t column, uint8_t *data_in, size_t write_len,
                                     uint32_t timeout)
 {
     // setup timeout tracking for second operation
@@ -553,7 +601,8 @@ static int program_load_random_data(column_address_t column, uint8_t *data_in, s
     // setup data for program load (need to go from LSB -> MSB first on address)
     uint8_t tx_data[PROGRAM_LOAD_RANDOM_DATA_TRANS_LEN];
     tx_data[0] = CMD_PROGRAM_LOAD_RANDOM_DATA;
-    tx_data[1] = column >> 8;
+    uint8_t plane = get_plane(row);
+    tx_data[1] = (plane << 4) | ((column >> 8) & 0xF);
     tx_data[2] = column;
     // perform transaction
     csel_select();

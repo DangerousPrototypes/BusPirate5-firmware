@@ -507,13 +507,12 @@ static int read_id(nand_identity_t * identity_out)
     csel_deselect();
 
     // check spi return
-    if (SPI_RET_OK == ret) {
-        identity_out->Manufacturer = rx_data[READ_ID_MFR_INDEX];
-        identity_out->DeviceID = rx_data[READ_ID_DEVICE_INDEX];
-    }
-    else {
+    if (SPI_RET_OK != ret) {
         return SPI_NAND_RET_BAD_SPI;
     }
+    identity_out->Manufacturer = rx_data[READ_ID_MFR_INDEX];
+    identity_out->DeviceID = rx_data[READ_ID_DEVICE_INDEX];
+    return SPI_RET_OK;
 }
 
 static int set_feature(uint8_t reg, uint8_t data, uint32_t timeout)

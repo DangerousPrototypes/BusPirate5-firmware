@@ -123,6 +123,8 @@ bool storage_detect(void){
 }
 
 uint8_t storage_format(void){
+    static_assert(FF_MAX_SS <= BIG_BUFFER_SIZE, "BIG_BUFFER_SIZE must be at least FF_MAX_SS for this allocation to succeed.");
+
     FRESULT fr;     /* FatFs return code */
     uint8_t *work_buffer = mem_alloc(FF_MAX_SS, BP_BIG_BUFFER_DISKFORMAT);
     if (!work_buffer) {

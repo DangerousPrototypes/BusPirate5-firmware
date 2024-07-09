@@ -190,15 +190,6 @@ add_executable(bus_pirate5_rev10
         )
 target_compile_definitions(bus_pirate5_rev10 PUBLIC BP5_REV=10)
 
-add_executable(bus_pirate5_rev10_2gbit
-        ${bp5_common}
-        ${bp5_rev10}
-        )
-target_compile_definitions(bus_pirate5_rev10_2gbit PUBLIC BP5_REV=10)
-target_compile_definitions(bus_pirate5_rev10_2gbit PUBLIC FLASH_MT29F2G01ABAFDWB)
-
-
-
 set(stdlibs
         pico_stdlib
         hardware_spi
@@ -225,7 +216,6 @@ set(stdlibs
 set(revisions
         bus_pirate5_rev8  
         bus_pirate5_rev10
-        bus_pirate5_rev10_2gbit
         )
         
 
@@ -272,7 +262,6 @@ set(USE_LGPL3 TRUE CACHE BOOL "indicated if to include LGPL3 protected code")
 include(cmake/ansi_colours_import.cmake)
 if(USE_LGPL3)
 if(LEGACY_ANSI_COLOURS_ENABLED)
-        target_link_libraries(bus_pirate5_rev10_2gbit lib_ansi_colours)
         target_link_libraries(bus_pirate5_rev10       lib_ansi_colours)
         target_link_libraries(bus_pirate5_rev8        lib_ansi_colours)
 endif()

@@ -13,7 +13,7 @@
 #include "system_config.h"
 
 // private variables
-static uint8_t mem_buffer[BIG_BUFFER_SIZE] __attribute__((aligned(32768)));
+static uint8_t mem_buffer[BIG_BUFFER_SIZE] __attribute__((aligned(32768))); // 128k ... this is 50% of the total RAM!
 static bool allocated = false;
 
 // public function definitions

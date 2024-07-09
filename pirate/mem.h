@@ -24,7 +24,7 @@ enum big_buffer_owners{
 	BP_BIG_BUFFER_NONE=0,
 	BP_BIG_BUFFER_SCOPE,
 	BP_BIG_BUFFER_LA,
-	BP_BIG_BUFFER_DISKFORMAT
+	BP_BIG_BUFFER_DISKFORMAT,
 };
 
 /// @brief Attempts to allocate a nand page buffer.

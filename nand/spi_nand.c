@@ -40,27 +40,61 @@
 #define READ_ID_DEVICE_INDEX 3
 // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 // See also: spi_nand.h, which contains external per-chip guards
-#if defined(FLASH_MT29F2G01ABAFDWB)
 
-    #define SPI_NAND_MFR_ID      0x2C // Micron
-    #define SPI_NAND_DEVICE_ID   0x24 // DEVICE_ID_2G_3V3
+/// @brief Since only support two chips, can differentiate them simply
+///        using only the DeviceID.
+typedef struct _nand_identity {
+    uint8_t Manufacturer;
+    uint8_t DeviceID;
+} nand_identity_t;
 
-#else // default to MT29F1G01ABAFDWB
+/// @brief Only two chips supported.  List only the parts that differ for now.
+///        Can later make this more dynamic by reading the parameter from the chip,
+///        and more thoroughly validating the chip's identity.
+typedef struct _supported_nand_device {
+    nand_identity_t Identity;
+    /// @brief Log2 of the number of planes in the device
+    uint8_t Log2_plane_count;
+    /// @brief Count of planes in the device ( === 2^Log2_plane_count )
+    uint8_t Plane_count;
+    /// @brief Mask to get plane from block ( === (2^Log2_plane_count) - 1 )
+    uint8_t Plane_mask;
+    /// @brief size, in bytes, of extra data per sector / block (typically used for ECC)
+    uint8_t Oob_size;
+} supported_nand_device_t;
+static const supported_nand_device_t * g_Actual_Nand_Device = NULL; // stays NULL until set by `spi_nand_init()`
+static const supported_nand_device_t bp5_supported_nand[] = {
+    { .Identity = { .Manufacturer = 0x2C, .DeviceID = 0x14 },  .Log2_plane_count = 0, .Plane_count = 1, .Plane_mask = 0, .Oob_size =  64, },
+    { .Identity = { .Manufacturer = 0x2C, .DeviceID = 0x24 },  .Log2_plane_count = 1, .Plane_count = 2, .Plane_mask = 1, .Oob_size = 128, },
+};
 
-    #define SPI_NAND_MFR_ID      0x2C // Micron
-    #define SPI_NAND_DEVICE_ID   0x14 // DEVICE_ID_1G_3V3
+#define SPI_NAND_LARGEST_OOB_SUPPORTED       128 // so can allocate buffer large enough for any supported NAND chip
+#define SPI_NAND_ERASE_BLOCKS_PER_PLANE     1024 // both supported devices have the same count per plane...
 
-#endif
-
-inline uint8_t get_plane(row_address_t row) {
-    if (SPI_NAND_LOG2_PLANE_COUNT == 0) return 0;
-    return (row.block & (SPI_NAND_PLANE_COUNT -1));
+static inline uint8_t SPI_NAND_OOB_SIZE() {
+    assert(g_Actual_Nand_Device != NULL);
+    return g_Actual_Nand_Device->Oob_size;
 }
+static inline uint32_t SPI_NAND_PLANE_COUNT() {
+    assert(g_Actual_Nand_Device != NULL);
+    return g_Actual_Nand_Device->Plane_count;
+}
+static inline uint32_t SPI_NAND_ERASE_BLOCKS_PER_LUN() {
+    assert(g_Actual_Nand_Device != NULL);
+    return g_Actual_Nand_Device->Plane_count * SPI_NAND_ERASE_BLOCKS_PER_PLANE;
+}
+static inline uint32_t SPI_NAND_MAX_BLOCK_ADDRESS() {
+    return SPI_NAND_ERASE_BLOCKS_PER_LUN() - 1;
+}
+#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_ERASE_BLOCK - 1) // zero-indexed
 
-
-#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK      - 1) // zero-indexed
-#define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_ERASE_BLOCKS_PER_LUN - 1)  // zero-indexed
+static inline uint8_t get_plane(row_address_t row) {
+    assert(g_Actual_Nand_Device != NULL);
+    return row.block & g_Actual_Nand_Device->Plane_mask;
+}
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
 
 #define FEATURE_TRANS_LEN  3
 #define FEATURE_REG_INDEX  1
@@ -140,17 +174,17 @@ static void csel_setup(void);
 static void csel_deselect(void);
 static void csel_select(void);
 
-static int reset(void);
-static int read_id(void);
+static int spi_nand_reset(void);
+static int read_id(nand_identity_t * identity_out);
 static int set_feature(uint8_t reg, uint8_t data, uint32_t timeout);
 static int get_feature(uint8_t reg, uint8_t *data_out, uint32_t timeout);
 static int write_enable(uint32_t timeout);
 static int page_read(row_address_t row, uint32_t timeout);
-static int read_from_cache(row_address_t row, column_address_t column, uint8_t *data_out, size_t read_len,
+static int read_from_cache(row_address_t row, column_address_t column, void *data_out, size_t read_len,
                            uint32_t timeout);
-static int program_load(row_address_t row, column_address_t column, const uint8_t *data_in, size_t write_len,
+static int program_load(row_address_t row, column_address_t column, const void *data_in, size_t write_len,
                         uint32_t timeout);
-static int program_load_random_data(row_address_t row, column_address_t column, uint8_t *data_in, size_t write_len,
+static int program_load_random_data(row_address_t row, column_address_t column, void *data_in, size_t write_len,
                                     uint32_t timeout);
 
 static int program_execute(row_address_t row, uint32_t timeout);
@@ -166,11 +200,13 @@ static int get_ret_from_ecc_status(feature_reg_status_t status);
 
 // private variables
 // this buffer is needed for is_free, we don't want to allocate this on the stack
-uint8_t page_main_and_oob_buffer[SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE];
+uint8_t page_main_and_largest_oob_buffer[SPI_NAND_PAGE_SIZE + SPI_NAND_LARGEST_OOB_SUPPORTED];
 
 // public function definitions
-int spi_nand_init(void)
+int spi_nand_init(struct dhara_nand * dhara_parameters_out)
 {
+    memset(dhara_parameters_out, 0, sizeof(struct dhara_nand));
+
     // initialize chip select
     csel_deselect();
     csel_setup();
@@ -178,14 +214,27 @@ int spi_nand_init(void)
     // reset
     //sys_time_delay(RESET_DELAY);
     busy_wait_ms(RESET_DELAY);
-    int ret = reset();
+    int ret = spi_nand_reset();
     if (SPI_NAND_RET_OK != ret) return ret;
     //sys_time_delay(RESET_DELAY);
     busy_wait_ms(RESET_DELAY);
 
     // read id
-    ret = read_id();
+    nand_identity_t chip_id;
+    ret = read_id(&chip_id);
     if (SPI_NAND_RET_OK != ret) return ret;
+
+    // Check for a supported chip and set the dhara parameters accordingly
+    for (int i = 0; i < count_of(bp5_supported_nand); ++i) {
+        if ((bp5_supported_nand[i].Identity.Manufacturer == chip_id.Manufacturer) &&
+            (bp5_supported_nand[i].Identity.DeviceID == chip_id.DeviceID)) {
+            g_Actual_Nand_Device = &bp5_supported_nand[i];
+            break; // out of for loop
+        }
+    }
+    if (g_Actual_Nand_Device == NULL) {
+        return SPI_NAND_RET_DEVICE_ID;
+    }
 
     // unlock all blocks
     ret = unlock_all_blocks();
@@ -195,17 +244,22 @@ int spi_nand_init(void)
     ret = enable_ecc();
     if (SPI_NAND_RET_OK != ret) return ret;
 
+    // fill in the return structure
+    dhara_parameters_out->log2_page_size = SPI_NAND_LOG2_PAGE_SIZE;
+    dhara_parameters_out->log2_ppb       = SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK;
+    dhara_parameters_out->num_blocks     = SPI_NAND_ERASE_BLOCKS_PER_LUN();
+
     return ret;
 }
 
-int spi_nand_page_read(row_address_t row, column_address_t column, uint8_t *data_out,
+int spi_nand_page_read(row_address_t row, column_address_t column, void *data_out,
                        size_t read_len)
 {
     // input validation
     if (!validate_row_address(row) || !validate_column_address(column)) {
         return SPI_NAND_RET_BAD_ADDRESS;
     }
-    uint16_t max_read_len = (SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE) - column;
+    uint16_t max_read_len = (SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE()) - column;
     if (read_len > max_read_len) return SPI_NAND_RET_INVALID_LEN;
 
     // setup timeout tracking
@@ -220,14 +274,14 @@ int spi_nand_page_read(row_address_t row, column_address_t column, uint8_t *data
     return read_from_cache(row, column, data_out, read_len, timeout);
 }
 
-int spi_nand_page_program(row_address_t row, column_address_t column, const uint8_t *data_in,
+int spi_nand_page_program(row_address_t row, column_address_t column, const void *data_in,
                           size_t write_len)
 {
     // input validation
     if (!validate_row_address(row) || !validate_column_address(column)) {
         return SPI_NAND_RET_BAD_ADDRESS;
     }
-    uint16_t max_write_len = (SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE) - column;
+    uint16_t max_write_len = (SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE()) - column;
     if (write_len > max_write_len) return SPI_NAND_RET_INVALID_LEN;
 
     // setup timeout tracking
@@ -264,9 +318,13 @@ int spi_nand_page_copy(row_address_t src, row_address_t dest)
         //
         // Without this check, data would be corrupted on multi-plane
         // NAND when the source and destination are on different planes.
-        int ret = spi_nand_page_read(src, 0, page_main_and_oob_buffer, sizeof(page_main_and_oob_buffer));
+        //
+        // As a result, must read the source sector to a host buffer, and
+        // then write that host buffer to the destination sector.
+        size_t page_and_oob_len = SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE();
+        int ret = spi_nand_page_read(src, 0, page_main_and_largest_oob_buffer, page_and_oob_len);
         if (SPI_NAND_RET_OK != ret) return ret;
-        return spi_nand_page_program(dest, 0, page_main_and_oob_buffer, sizeof(page_main_and_oob_buffer));
+        return spi_nand_page_program(dest, 0, page_main_and_largest_oob_buffer, page_and_oob_len);
     }
 
     // setup timeout tracking
@@ -348,8 +406,9 @@ int spi_nand_block_mark_bad(row_address_t row)
 int spi_nand_page_is_free(row_address_t row, bool *is_free)
 {
     // page read will validate block & page address
-    int ret =
-        spi_nand_page_read(row, 0, page_main_and_oob_buffer, sizeof(page_main_and_oob_buffer));
+    size_t page_and_oob_len = SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE();
+
+    int ret = spi_nand_page_read(row, 0, page_main_and_largest_oob_buffer, page_and_oob_len);
     if (SPI_NAND_RET_OK != ret) return ret;
 
     *is_free = true; // innocent until proven guilty
@@ -357,8 +416,8 @@ int spi_nand_page_is_free(row_address_t row, bool *is_free)
 
     // TODO: static_assert( sizeof(page_main_and_oob_buffer) % sizeof(uint32_t) == 0, "page_main_and_oob_buffer size must be a multiple of 4" );
     uint32_t comp_word = 0xffffffff;
-    for (int i = 0; i < sizeof(page_main_and_oob_buffer); i += sizeof(comp_word)) {
-        if (0 != memcmp(&comp_word, &page_main_and_oob_buffer[i], sizeof(comp_word))) {
+    for (size_t i = 0; i < page_and_oob_len; i += sizeof(comp_word)) {
+        if (0 != memcmp(&comp_word, &page_main_and_largest_oob_buffer[i], sizeof(comp_word))) {
             *is_free = false;
             break;
         }
@@ -370,7 +429,7 @@ int spi_nand_page_is_free(row_address_t row, bool *is_free)
 int spi_nand_clear(void)
 {
     bool is_bad;
-    for (int i = 0; i < SPI_NAND_ERASE_BLOCKS_PER_LUN; i++) {
+    for (int i = 0; i < SPI_NAND_ERASE_BLOCKS_PER_LUN(); i++) {
         // get bad block flag
         row_address_t row = {.block = i, .page = 0};
         int ret = spi_nand_block_is_bad(row, &is_bad);
@@ -419,7 +478,7 @@ static void csel_select(void)
     gpio_put(FLASH_STORAGE_CS, 0); 
 }
 
-static int reset(void)
+static int spi_nand_reset(void)
 {
     // setup data
     uint8_t tx_data = CMD_RESET; // this is just a one-byte command
@@ -434,8 +493,10 @@ static int reset(void)
     return poll_for_oip_clear(&status, OP_TIMEOUT);
 }
 
-static int read_id(void)
+static int read_id(nand_identity_t * identity_out)
 {
+    memset(identity_out, 0, sizeof(nand_identity_t));
+
     // setup data
     uint8_t tx_data[READ_ID_TRANS_LEN] = {0};
     uint8_t rx_data[READ_ID_TRANS_LEN] = {0};
@@ -447,16 +508,8 @@ static int read_id(void)
 
     // check spi return
     if (SPI_RET_OK == ret) {
-        // check mfr & device id
-        if ((SPI_NAND_MFR_ID    == rx_data[READ_ID_MFR_INDEX]) &&
-            (SPI_NAND_DEVICE_ID == rx_data[READ_ID_DEVICE_INDEX])) {
-            // success
-            return SPI_NAND_RET_OK;
-        }
-        else {
-            // bad mfr or device id
-            return SPI_NAND_RET_DEVICE_ID;
-        }
+        identity_out->Manufacturer = rx_data[READ_ID_MFR_INDEX];
+        identity_out->DeviceID = rx_data[READ_ID_DEVICE_INDEX];
     }
     else {
         return SPI_NAND_RET_BAD_SPI;
@@ -541,7 +594,7 @@ static int page_read(row_address_t row, uint32_t timeout)
 }
 
 /// @note Input validation is expected to be performed by caller.
-static int read_from_cache(row_address_t row, column_address_t column, uint8_t *data_out, size_t read_len,
+static int read_from_cache(row_address_t row, column_address_t column, void *data_out, size_t read_len,
                            uint32_t timeout)
 {
     // setup timeout tracking for second operation
@@ -568,7 +621,7 @@ static int read_from_cache(row_address_t row, column_address_t column, uint8_t *
 }
 
 /// @note Input validation is expected to be performed by caller.
-static int program_load(row_address_t row, column_address_t column, const uint8_t *data_in, size_t write_len,
+static int program_load(row_address_t row, column_address_t column, const void *data_in, size_t write_len,
                         uint32_t timeout)
 {
     // setup timeout tracking for second operation
@@ -592,7 +645,7 @@ static int program_load(row_address_t row, column_address_t column, const uint8_
     return (SPI_RET_OK == ret) ? SPI_NAND_RET_OK : SPI_NAND_RET_BAD_SPI;
 }
 
-static int program_load_random_data(row_address_t row, column_address_t column, uint8_t *data_in, size_t write_len,
+static int program_load_random_data(row_address_t row, column_address_t column, void *data_in, size_t write_len,
                                     uint32_t timeout)
 {
     // setup timeout tracking for second operation
@@ -696,7 +749,7 @@ static int enable_ecc(void)
     return set_feature(FEATURE_REG_CONFIGURATION, ecc_enable.whole, OP_TIMEOUT);
 }
 
-static int poll_for_oip_clear(feature_reg_status_t *status_out, uint32_t timeout)
+static int poll_for_oip_clear(feature_reg_status_t *status_out, uint32_t ms_timeout)
 {
     uint32_t start_time = sys_time_get_ms();
     for (;;) {
@@ -711,7 +764,7 @@ static int poll_for_oip_clear(feature_reg_status_t *status_out, uint32_t timeout
             return SPI_NAND_RET_OK;
         }
         // check for timeout
-        if (sys_time_is_elapsed(start_time, timeout)) {
+        if (sys_time_is_elapsed(start_time, ms_timeout)) {
             return SPI_NAND_RET_TIMEOUT;
         }
     }
@@ -719,7 +772,7 @@ static int poll_for_oip_clear(feature_reg_status_t *status_out, uint32_t timeout
 
 static bool validate_row_address(row_address_t row)
 {
-    if ((row.block > SPI_NAND_MAX_BLOCK_ADDRESS) || (row.page > SPI_NAND_MAX_PAGE_ADDRESS)) {
+    if ((row.block > SPI_NAND_MAX_BLOCK_ADDRESS()) || (row.page > SPI_NAND_MAX_PAGE_ADDRESS)) {
         return false;
     }
     else {
@@ -729,7 +782,7 @@ static bool validate_row_address(row_address_t row)
 
 static bool validate_column_address(column_address_t address)
 {
-    if (address >= (SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE)) {
+    if (address >= (SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE())) {
         return false;
     }
     else {

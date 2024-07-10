@@ -37,6 +37,7 @@ static const struct prompt_item menu_items_led_effect[]=
     [LED_EFFECT_CLOCKWISE_WIPE] = {T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE},
     [LED_EFFECT_TOP_SIDE_WIPE ] = {T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE},
     [LED_EFFECT_SCANNER       ] = {T_CONFIG_LEDS_EFFECT_SCANNER},
+    [LED_EFFECT_GENTLE_GLOW   ] = {T_CONFIG_LEDS_EFFECT_GENTLE_GLOW},
     [LED_EFFECT_PARTY_MODE    ] = {T_CONFIG_LEDS_EFFECT_CYCLE},
     // clang-format on
 };
@@ -63,6 +64,7 @@ static const struct prompt_item menu_items_led_color[]=
     {T_CONFIG_LEDS_COLOR_BLUE},
     {T_CONFIG_LEDS_COLOR_PURPLE},
     {T_CONFIG_LEDS_COLOR_PINK},
+    {T_CONFIG_LEDS_COLOR_WHITE},
 };
 
 uint32_t ui_config_action_led_color(uint32_t a, uint32_t b)
@@ -75,7 +77,8 @@ uint32_t ui_config_action_led_color(uint32_t a, uint32_t b)
         0x00FF00, // aka T_CONFIG_LEDS_COLOR_GREEN  
         0x0000FF, // aka T_CONFIG_LEDS_COLOR_BLUE  
         0x5500AB, // aka T_CONFIG_LEDS_COLOR_PURPLE  
-        0xAB0055, // aka T_CONFIG_LEDS_COLOR_PINK 
+        0xAB0055, // aka T_CONFIG_LEDS_COLOR_PINK
+        0x282828, // aka T_CONFIG_LEDS_COLOR_WHITE
     };
  
     static_assert(count_of(menu_based_colors) == count_of(menu_items_led_color), "menu_based_colors and menu_items_led_color must have the same number of items");

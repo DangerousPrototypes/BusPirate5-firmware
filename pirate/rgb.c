@@ -396,6 +396,24 @@ bool rgb_master(
 
 struct repeating_timer rgb_timer;
 
+bool rgb_gentle_glow(void) {
+
+    static const uint16_t animation_cycles = 240 * 16 + 9 * 9; // approximately same time as scanner
+    static uint16_t cycle_count = 0;
+    CPIXEL_COLOR_RGB top_color = { .r = 15, .g = 15, .b = 15 };
+    CPIXEL_COLOR_RGB side_color = { .r = 60, .g = 60, .b = 60 };
+    assign_pixel_rgb_color(PIXEL_MASK_UPPER, top_color );
+    assign_pixel_rgb_color(PIXEL_MASK_SIDE,  side_color);
+    update_pixels();
+
+    ++cycle_count;
+    if (cycle_count >= animation_cycles) {
+        cycle_count = 0;
+        return true;
+    }
+    return false;
+}
+
 bool rgb_scanner(void) {
     // TODO: decode this animation and add notes on what it's intended result is
     static_assert(count_of(groups_center_left) < (sizeof(uint16_t)*8), "uint16_t too small to hold count_of(groups_center_left) elements");
@@ -509,6 +527,9 @@ bool rgb_timer_callback(struct repeating_timer *t){
             break;
         case LED_EFFECT_SCANNER:
             next = rgb_scanner();
+            break;
+        case LED_EFFECT_GENTLE_GLOW:
+            next = rgb_gentle_glow();
             break;
         case LED_EFFECT_PARTY_MODE:
             assert(!"Party mode should never be value of the *local* variable!");

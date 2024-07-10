@@ -248,41 +248,45 @@ static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel m
 static_assert((PIXEL_MASK_UPPER & PIXEL_MASK_SIDE) == 0, "Pixel cannot be both upper and side");
 static_assert((PIXEL_MASK_UPPER | PIXEL_MASK_SIDE) == PIXEL_MASK_ALL, "Pixel must be either upper or side");
 
-uint32_t leds[COUNT_OF_PIXELS];
+CPIXEL_COLOR_RGB pixels[COUNT_OF_PIXELS]; // store as RGB ... as it's the common format
 
-static inline void rgb_send(void){  
+static inline void update_pixels(void) {  
     // TODO: define symbolic constant for which state machine (no magic numbers!)
-    for(int i=0; i<RGB_LEN; i++) {
+    for (int i = 0; i < COUNT_OF_PIXELS; i++) {
+
         // little-endian, so 0x00GGRRBB  is stored as 0xBB 0xRR 0xGG 0x00
         // Shifting it left by 8 bits will give bytes 0x00 0xBB 0xRR 0xGG
         // which allows the PIO to unshift the bytes in the correct order
-        pio_sm_put_blocking(pio1, 3, ((leds[i]) << 8u));
+        CPIXEL_COLOR_RGB c = pixels[i];
+        c.r = c.r / system_config.led_brightness_divisor;
+        c.g = c.g / system_config.led_brightness_divisor;
+        c.b = c.b / system_config.led_brightness_divisor;
+        uint32_t toSend =
+            (c.g << 24) |
+            (c.r << 16) |
+            (c.b <<  8) ;
+        pio_sm_put_blocking(pio1, 3, toSend);
     }
 }
-
-static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
-  return ((uint32_t)(r) << 8) |
-         ((uint32_t)(g) << 16) |
-         (uint32_t)(b);
-}
-
 
 /*
  * Put a value 0 to 255 in to get a color value.
  * The colours are a transition r -> g -> b -> back to r
  * Inspired by the Adafruit examples.
  */
-uint32_t color_wheel(uint8_t pos) {
-  pos = 255 - pos;
-  if(pos < 85) {
-    return ((uint32_t)(255 - pos * 3) << 16) | ((uint32_t)(0) << 8) | (pos * 3);
-  } else if(pos < 170) {
-    pos -= 85;
-    return ((uint32_t)(0) << 16) | ((uint32_t)(pos * 3) << 8) | (255 - pos * 3);
-  } else {
-    pos -= 170;
-    return ((uint32_t)(pos * 3) << 16) | ((uint32_t)(255 - pos * 3) << 8) | (0);
-  }   
+CPIXEL_COLOR_RGB color_wheel(uint8_t pos) {
+    CPIXEL_COLOR_RGB result;
+    pos = 255 - pos;
+    if(pos < 85) {
+        result = color_rgb(255 - (pos*3), 0, (pos*3));
+    } else if(pos < 170) {
+        pos -= 85;
+        result = color_rgb(0, (pos*3), 255 - (pos*3));
+    } else {
+        pos -= 170;
+        result = color_rgb((pos*3), 255 - (pos*3), 0);
+    }
+    return result;
 }
 
 /*
@@ -292,40 +296,36 @@ uint32_t color_wheel(uint8_t pos) {
  * The ..._div() version of the function divides each of
  * the R/G/B values by the system config's led brightness.
  */
-uint32_t color_wheel_div(uint8_t pos) {
-    pos = 255 - pos;
+CPIXEL_COLOR_RGB color_wheel_div(uint8_t pos) {
+    pos = 255u - pos;
     uint8_t r,g,b;
-    if(pos < 85) {
-        r=((uint32_t)(255 - pos * 3));
-        g=((uint32_t)(0) );
-        b=(pos * 3);
-    } else if(pos < 170) {
-        pos -= 85;
-        r=((uint32_t)(0) );
-        g=((uint32_t)(pos * 3) );
-        b=(255 - pos * 3);
+    if(pos < 85u) {
+        r=((uint32_t)(255u - pos * 3u));
+        g=((uint32_t)(0u) );
+        b=(pos * 3u);
+    } else if(pos < 170u) {
+        pos -= 85u;
+        r=((uint32_t)(0u) );
+        g=((uint32_t)(pos * 3u) );
+        b=(255u - pos * 3u);
     } else {
-        pos -= 170;
-        r=((uint32_t)(pos * 3));
-        g=((uint32_t)(255 - pos * 3) );
-        b=(0);
+        pos -= 170u;
+        r=((uint32_t)(pos * 3u));
+        g=((uint32_t)(255u - pos * 3u) );
+        b=(0u);
     }
-
-    return
-        // clang-format off
-        ( (g/system_config.led_brightness_divisor) << 16) |
-        ( (r/system_config.led_brightness_divisor) <<  8) |
-        ( (b/system_config.led_brightness_divisor)      ) ;
-        // clang-format on
+    CPIXEL_COLOR_RGB result =
+        color_rgb(r, g, b);
+    return result;
 }
 
 // BUGBUG -- Many of the callers convert an RGB color to GRB before passing
 //           it to this function.  This means the color parameter is GRB (not RGB)?
 // TODO: define RGB and GRB structures, and use them for clarity rather than uint32_t
-void rgb_assign_grb_color(uint32_t index_mask, uint32_t grb_color){
+void assign_pixel_rgb_color(uint32_t index_mask, CPIXEL_COLOR_RGB rgb_color){
     for (int i = 0; i < RGB_LEN; i++){
         if (index_mask & (1u << i)) {
-            leds[i] = grb_color;
+            pixels[i] = rgb_color;
         }
     }
 }
@@ -354,7 +354,7 @@ void rgb_assign_grb_color(uint32_t index_mask, uint32_t grb_color){
 bool rgb_master(
     const uint32_t *groups,
     uint8_t group_count,
-    uint32_t (*color_wheel)(uint8_t color),
+    CPIXEL_COLOR_RGB (*color_wheel)(uint8_t color),
     uint8_t color_count,
     uint8_t color_increment,
     uint8_t cycles,
@@ -375,10 +375,10 @@ bool rgb_master(
         uint32_t tmp_color_idx = color_idx + (i*color_increment);
         tmp_color_idx %= color_count; // ensures safe to cast to uint8_t
 
-        uint32_t rgb_color = color_wheel((uint8_t)tmp_color_idx);
-        rgb_assign_grb_color(groups[i], rgb_color);
+        CPIXEL_COLOR_RGB rgb_color = color_wheel((uint8_t)tmp_color_idx);
+        assign_pixel_rgb_color(groups[i], rgb_color);
     }
-    rgb_send();
+    update_pixels();
     ++color_idx;
 
     //finished one complete cycle
@@ -400,51 +400,74 @@ bool rgb_scanner(void) {
     // TODO: decode this animation and add notes on what it's intended result is
     static_assert(count_of(groups_center_left) < (sizeof(uint16_t)*8), "uint16_t too small to hold count_of(groups_center_left) elements");
 
+    // pixel_bitmask has a single bit set, which serves two purposes:
+    // 1. when that bit shifts off the LSB, it indicates the end of the animation cycle
+    // 2. the mask selects which of the group of the pixels gets the color applied this round
+    // pixel_bitmask is right-shifted every time this function generates a new animation frame
+    // (note: not every time the function is called ... no shift if still in a delay cycle)
     static uint16_t pixel_bitmask = 1u << (count_of(groups_center_left) - 1);
     static uint8_t frame_delay_count = 0u;
     static uint8_t color_idx = 0;
     
-    const uint32_t colors[] = {
-        0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
-        0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
-        0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
-        0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B,
+    static const CPIXEL_COLOR_RGB background_pixel_color = { .r = 0x20, .g = 0x20, .b = 0x20 };
+    // each loop of the animation, use the next color in this sequence.
+    // when all the colors have been used, the animation is complete.
+    const CPIXEL_COLOR_RGB colors[]={
+        { .r = 0xFF, .g = 0x00, .b = 0x00 },
+        { .r = 0xD5, .g = 0x2A, .b = 0x00 },
+        { .r = 0xAB, .g = 0x55, .b = 0x00 },
+        { .r = 0xAB, .g = 0x7F, .b = 0x00 },
+
+        { .r = 0xAB, .g = 0xAB, .b = 0x00 },
+        { .r = 0x56, .g = 0xD5, .b = 0x00 },
+        { .r = 0x00, .g = 0xFF, .b = 0x00 },
+        { .r = 0x00, .g = 0xD5, .b = 0x2A },
+
+        { .r = 0x00, .g = 0xAB, .b = 0x55 },
+        { .r = 0x00, .g = 0x56, .b = 0xAA },
+        { .r = 0x00, .g = 0x00, .b = 0xFF },
+        { .r = 0x2A, .g = 0x00, .b = 0xD5 },
+
+        { .r = 0x55, .g = 0x00, .b = 0xAB },
+        { .r = 0x7F, .g = 0x00, .b = 0x81 },
+        { .r = 0xAB, .g = 0x00, .b = 0x55 },
+        { .r = 0xD5, .g = 0x00, .b = 0x2B },
     };
 
-    if(frame_delay_count){
+    // early exit from function when keeping current animation frame
+    if (frame_delay_count) {
         --frame_delay_count;
         return false;
     }
 
-    uint32_t color_grb = 0;
-    // clang-format off
-    color_grb |= ( (((colors[color_idx] & 0xff0000) / system_config.led_brightness_divisor) & 0xff0000) >> 8); // swap R/G
-    color_grb |= ( (((colors[color_idx] & 0x00ff00) / system_config.led_brightness_divisor) & 0x00ff00) << 8); // swap R/G
-    color_grb |= ( (((colors[color_idx] & 0x0000ff) / system_config.led_brightness_divisor) & 0x0000ff)     ); // B remains in place
-    // clang-format on
+    // generate the next frame of the animation
     for (int i = 0; i < count_of(groups_center_left); i++) {
-        // only use the above color for those pixels in the bitmask
-        uint32_t tmp_color = (pixel_bitmask & (1u << i)) ? color_grb : 0x0a0a0a;
-        rgb_assign_grb_color(groups_center_left[i], tmp_color);
+        CPIXEL_COLOR_RGB color = background_pixel_color;
+        // does this pixel get the non-background color?
+        if (pixel_bitmask & (1u << i)) {
+            color = colors[color_idx];
+        }
+        assign_pixel_rgb_color(groups_center_left[i], color);
     }
-    rgb_send();
+    update_pixels();
     
+    // was this the last group to get the current color applied?
     if (pixel_bitmask == 0) {
-        // no more bits set, so done with a cycle
-        // set a longer delay before starting the next cycle
+        // set a longer delay before starting the next color
         frame_delay_count = 0xF0;
-        // reset the pixel bitmask 
+        // reset the pixel bitmask and move to the next color
         pixel_bitmask = (0x01 << (count_of(groups_center_left)));
         color_idx++;
-        // if gone through all the colors,
+        // however, if there are no more colors,
         // then re-initialize static variables (reset state)
+        // and return true to indicate the animation is complete.
         if (color_idx == count_of(colors)) {
             color_idx = 0;
             pixel_bitmask = pixel_bitmask >> 1;
             return true;
         }
     } else {
-        // stay on each frame for eight calls
+        // stay on each frame for eight additional calls to this fn
         frame_delay_count = 0x8;
     }
     pixel_bitmask = pixel_bitmask >> 1;
@@ -464,19 +487,13 @@ bool rgb_timer_callback(struct repeating_timer *t){
     // clang-format off
     switch(mode) {
         case LED_EFFECT_DISABLED:
-            rgb_assign_grb_color(0xffffffff, 0x000000);
-            rgb_send();  
+            assign_pixel_rgb_color(PIXEL_MASK_ALL, RGBCOLOR_BLACK);
+            update_pixels();  
             break;          
-        case LED_EFFECT_SOLID:
-            // NOTE: swaps from RGB (typical stored value) to GRB
-            //       because that is the order the Pixels expect
-            // clang-format off
-            color_grb  = ( (((system_config.led_color & 0xff0000) / system_config.led_brightness_divisor) & 0xff0000) >> 8); // swap R/G
-            color_grb |= ( (((system_config.led_color & 0x00ff00) / system_config.led_brightness_divisor) & 0x00ff00) << 8); // swap R/G
-            color_grb |= ( (((system_config.led_color & 0x0000ff) / system_config.led_brightness_divisor) & 0x0000ff)     ); // B remains in place
-            // clang-format on
-            rgb_assign_grb_color(0xffffffff, color_grb);
-            rgb_send();
+        case LED_EFFECT_SOLID:; // semicolon is required for ... reasons
+            CPIXEL_COLOR_RGB color = rgb_from_uint32(system_config.led_color);
+            assign_pixel_rgb_color(PIXEL_MASK_ALL, color);
+            update_pixels();
             break;
         case LED_EFFECT_ANGLE_WIPE:
             next = rgb_master(groups_top_left,         count_of(groups_top_left),         &color_wheel_div, 0xff, (0xff/count_of(groups_top_left)        ), 5, 10);
@@ -494,7 +511,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
             next = rgb_scanner();
             break;
         case LED_EFFECT_PARTY_MODE:
-            assert(!"Party mode should never be value of the local mode variable!");
+            assert(!"Party mode should never be value of the *local* variable!");
             break;
     }
     // clang-format on
@@ -504,7 +521,7 @@ bool rgb_timer_callback(struct repeating_timer *t){
         static_assert(MAX_LED_EFFECT-1 == LED_EFFECT_PARTY_MODE, "LED_EFFECT_PARTY_MODE must be the last effect");
         ++mode;
         if (mode >= LED_EFFECT_PARTY_MODE) {
-            mode = LED_EFFECT_DISABLED+1;
+            mode = LED_EFFECT_DISABLED + 1;
         }
     }
 
@@ -537,8 +554,8 @@ void rgb_init(void)
 
     ws2812_program_init(pio, sm, offset, RGB_CDO, 800000, false);
 
-    for (int i=0;i<RGB_LEN; i++){
-        leds[i]=0x00;
+    for (int i = 0; i < COUNT_OF_PIXELS; i++){
+        pixels[i] = RGBCOLOR_BLACK;
     }
 
     // Create a repeating timer that calls repeating_timer_callback.
@@ -551,25 +568,20 @@ void rgb_init(void)
 
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b){
-    uint32_t color =
-    // clang-format off
-        ( (g / system_config.led_brightness_divisor) << 16) |
-        ( (r / system_config.led_brightness_divisor) <<  8) |
-        ( (b / system_config.led_brightness_divisor) <<  0) ;
-    // clang-format on
-    rgb_assign_grb_color(0xffffffff, color);
-    rgb_send();
+    CPIXEL_COLOR_RGB color = { .r = r, .g = g, .b = b };
+    assign_pixel_rgb_color(PIXEL_MASK_ALL, color);
+    update_pixels();
 }
 
 //function to control LED from led mode onboard demo
 #define DEMO_LED 1
 void rgb_put(uint32_t color)
 {
-
-    for (int i=0;i<RGB_LEN; i++){
-        leds[i]=0;
+    // first set each pixel to off
+    for (int i = 0; i < COUNT_OF_PIXELS; i++){
+        pixels[i] = RGBCOLOR_BLACK;
     }
-    leds[DEMO_LED]=color & 0xffffff; //urgb_u32(color>>16,(color>>8)&0xff,color&0xff);
-    rgb_send();
-
+    CPIXEL_COLOR_RGB rgb = rgb_from_uint32(color);
+    pixels[DEMO_LED] = rgb;
+    update_pixels();
 };

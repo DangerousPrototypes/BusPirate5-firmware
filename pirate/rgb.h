@@ -12,9 +12,13 @@ typedef enum _led_effect {
     LED_EFFECT_PARTY_MODE, // NOTE: This must be the last effect
     MAX_LED_EFFECT,
 } led_effect_t;
+#define DEFAULT_LED_EFFECT = LED_EFFECT_PARTY_MODE;
+
 static_assert(LED_EFFECT_DISABLED == 0, "LED_EFFECT_DISABLED must be zero"); // when used as boolean, also relied upon in party mode handling
 static_assert(MAX_LED_EFFECT-1 == LED_EFFECT_PARTY_MODE, "LED_EFFECT_PARTY_MODE must be the last effect");
 
+// TODO: review and provide a more useful client-focused API.
+// TODO: adjust to use RGB color type instead of uint32_t.
 void rgb_init(void);
 uint32_t rgb_update(uint32_t mode);
 void rgb_put(uint32_t color);

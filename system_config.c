@@ -11,6 +11,7 @@
 #include "mjson/mjson.h"
 #include "pirate/mem.h" //defines for buffer owner
 #include "ui/ui_term.h"
+#include "pirate/rgb.h"
 
 struct _system_config system_config;
 
@@ -30,9 +31,10 @@ void system_init(void)
     system_config.lcd_screensaver_active=false;
     system_config.lcd_timeout=0;
     
-    system_config.led_effect=7;
+	// NOTE: LED effect is an enum.
+    system_config.led_effect=LED_EFFECT_SOLID;
     system_config.led_color=0xFF0000u; // now stores actual RGB value directly (not an index)
-    system_config.led_brightness=10;
+    system_config.led_brightness=10; // The name is wrong.  This is a divisor for the led's brightness.   10 = 10%, 5 = 20%, 4 = 25%, etc.
 
 	system_config.terminal_ansi_rows=24;
 	system_config.terminal_ansi_columns=80;

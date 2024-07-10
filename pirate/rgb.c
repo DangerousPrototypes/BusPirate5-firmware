@@ -9,6 +9,111 @@
 
 #define RGB_MAX_BRIGHT 32
 
+// Externally to this file, colors are always handled as uint32_t values
+// which stores the color in 0x00RRGGBB format.
+// Internally to this file, the color is stored in the CPIXEL_COLOR_xxx format.
+// This reduces type-confusion that results in incorrect colors.
+
+typedef struct _CPIXEL_COLOR_RGB {
+    // pad to 32-bits b/c pio_sm_put_blocking() expects a uint32_t
+    // This also ensures the compiler can optimize away conversion
+    // from constexpr uint32_t colors (0x00RRGGBB format) into this
+    // type into a noop (same underlying structure)
+    uint8_t _unused;
+    union {
+        uint8_t red;
+        uint8_t r;
+    };
+    union {
+        uint8_t green;
+        uint8_t g;
+    };
+    union {
+        uint8_t blue;
+        uint8_t b;
+    };
+} CPIXEL_COLOR_RGB;
+
+typedef struct _CPIXEL_COLOR_GRB {
+    uint8_t _unused;
+    union {
+        uint8_t green;
+        uint8_t g;
+    };
+    union {
+        uint8_t red;
+        uint8_t r;
+    };
+    union {
+        uint8_t blue;
+        uint8_t b;
+    };
+} CPIXEL_COLOR_GRB;
+
+// C23 would allow this to be `constexpr`
+// here, `static const` relies on compiler to optimize this away
+static const CPIXEL_COLOR_RGB RGBCOLOR_BLACK = { .r=0x00, .g=0x00, .b=0x00 };
+
+static CPIXEL_COLOR_RGB color_rgb(uint8_t r, uint8_t g, uint8_t b) {
+    CPIXEL_COLOR_RGB c = { .r = r, .g = g, .b = b };
+    return c;
+}
+static CPIXEL_COLOR_GRB color_grb(uint8_t g, uint8_t r, uint8_t b) {
+    CPIXEL_COLOR_GRB c = { .g = g, .r = r, .b = b };
+    return c;
+}
+static CPIXEL_COLOR_RGB rgb_from_rgb(CPIXEL_COLOR_RGB c) { return c; }
+static CPIXEL_COLOR_GRB grb_from_grb(CPIXEL_COLOR_GRB c) { return c; }
+static CPIXEL_COLOR_RGB rgb_from_grb(CPIXEL_COLOR_GRB c) {
+    CPIXEL_COLOR_RGB r = { .r = c.r, .g = c.g, .b = c.b };
+    return r;
+}
+static CPIXEL_COLOR_GRB grb_from_rgb(CPIXEL_COLOR_RGB c) {
+    CPIXEL_COLOR_GRB r = { .g = c.g, .r = c.r, .b = c.b };
+    return r;
+}
+static CPIXEL_COLOR_RGB rgb_from_uint32(uint32_t c) {
+    CPIXEL_COLOR_RGB r = {
+        ._unused = (c >> 24) & 0xff, // carry the input data, to allow compiler to optimization this to a noop
+        .r =       (c >> 16) & 0xff,
+        .g =       (c >>  8) & 0xff,
+        .b =       (c >>  0) & 0xff,
+    };
+    return r;
+}
+static CPIXEL_COLOR_GRB grb_from_uint32(uint32_t c) {
+    CPIXEL_COLOR_GRB r = { .g = (c >> 8) & 0xff, .r = (c >> 16) & 0xff, .b = c & 0xff };
+    return r;
+}
+static uint32_t rgb_as_uint32(CPIXEL_COLOR_RGB c) {
+    return (c.r << 16) | (c.g << 8) | c.b;
+}
+static uint32_t grb_as_uint32(CPIXEL_COLOR_GRB c) {
+    return (c.r << 16) | (c.g << 8) | c.b;
+}
+
+// Use C11 `_Generic` to auto-select the correct conversion function
+// based on the color type ... simplifies writing correct code.
+#define rgb_from_color(COLOR)                       \
+    _Generic((COLOR),                               \
+        CPIXEL_COLOR_RGB: rgb_from_rgb,             \
+        CPIXEL_COLOR_GRB: rgb_from_grb,             \
+    )(COLOR)
+#define grb_from_color(COLOR)                       \
+    _Generic((COLOR),                               \
+        CPIXEL_COLOR_RGB: grb_from_rgb,             \
+        CPIXEL_COLOR_GRB: grb_from_grb,             \
+    )(COLOR)
+#define uint32_from_color(COLOR)                    \
+    _Generic((COLOR),                               \
+        CPIXEL_COLOR_RGB: rgb_as_uint32,            \
+        CPIXEL_COLOR_GRB: grb_as_uint32,            \
+    )(COLOR)
+
+
+
+
+
 // Note that both the layout and overall count of pixels
 // has changed between revisions.  As a result, the count
 // of elements for any of these arrays may differ.
@@ -30,13 +135,14 @@
 // Also add a new constant, COUNT_OF_PIXELS, to define the number
 // pixels on each revision of board.
 
+// Total count of RGB pixels
+#define COUNT_OF_PIXELS RGB_LEN
 #if BP5_REV <= 9
     // Sadly, C still doesn't recognize the following format as constexpr enough for static_assert()
     //static const uint8_t COUNT_OF_PIXELS = 16u;
     //static const uint32_t PIXEL_MASK_UPPER = 0b011001101011001101;
     //static const uint32_t PIXEL_MASK_SIDE  = 0b100110010100110010;
 
-    static const uint8_t COUNT_OF_PIXELS = 16u;
     static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel mask definition to be valid")
     // Pixels that shine in direction  of OLED: idx 0,    3,4,    7,  9,      12,13,
     static const uint32_t PIXEL_MASK_UPPER = 0b0011 0010 1001 1001;
@@ -81,12 +187,9 @@
 #elif BP5_REV >= 10
     // Sadly, C still doesn't recognize the following format as constexpr enough for static_assert()
     // and thus we must resort to preprocessor macros (still).
-    //static const uint8_t COUNT_OF_PIXELS = 18u;
     //static const uint32_t PIXEL_MASK_UPPER = 0b011001101011001101;
     //static const uint32_t PIXEL_MASK_SIDE  = 0b100110010100110010;
 
-    // Total count of RGB pixels
-    #define COUNT_OF_PIXELS (18)
     // Pixels that shine in direction  of OLED: idx 0,  2,3,    6,7,  9,   11,12,      15,16
     #define PIXEL_MASK_UPPER (0b011001101011001101)
     // Pixels that shine    orthogonal to OLED: idx   1,    4,5,    8,  10,      13,14,     17
@@ -145,28 +248,15 @@ static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel m
 static_assert((PIXEL_MASK_UPPER & PIXEL_MASK_SIDE) == 0, "Pixel cannot be both upper and side");
 static_assert((PIXEL_MASK_UPPER | PIXEL_MASK_SIDE) == PIXEL_MASK_ALL, "Pixel must be either upper or side");
 
-uint32_t leds[RGB_LEN];
-
-struct rgb_segment{
-    uint32_t speed;
-    uint32_t increment;
-    bool direction;
-    uint32_t destination;
-    uint32_t fade;
-    uint8_t led_total;
-    uint8_t led_position;   
-};
-
-struct rgb_program{
-    struct rgb_segment segment;
-    bool (*handler)(struct rgb_segment *segment, uint8_t led);
-};
-
-struct rgb_program rgb_handlers[RGB_LEN];
+uint32_t leds[COUNT_OF_PIXELS];
 
 static inline void rgb_send(void){  
-    for(int i=0; i<RGB_LEN; i++){
-        pio_sm_put_blocking(pio1, 3, ((leds[i]) << 8u));        
+    // TODO: define symbolic constant for which state machine (no magic numbers!)
+    for(int i=0; i<RGB_LEN; i++) {
+        // little-endian, so 0x00GGRRBB  is stored as 0xBB 0xRR 0xGG 0x00
+        // Shifting it left by 8 bits will give bytes 0x00 0xBB 0xRR 0xGG
+        // which allows the PIO to unshift the bytes in the correct order
+        pio_sm_put_blocking(pio1, 3, ((leds[i]) << 8u));
     }
 }
 
@@ -176,18 +266,6 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
          (uint32_t)(b);
 }
 
-
-void irq_rgb(void)
-{
-    for(uint8_t i =0; i<RGB_LEN; i++)
-    {
-        if(rgb_handlers[i].handler!=0)
-        {
-            rgb_handlers[i].handler(&rgb_handlers[i].segment, i);
-        }
-    }    
-    rgb_send();
-}
 
 /*
  * Put a value 0 to 255 in to get a color value.

@@ -95,9 +95,9 @@
 
     static const uint32_t groups_top_left[] = {
         // clang-format off
-        ((1u <<  2)   |              (1u <<  3)),
-        ((1u <<  1)   |              (1u <<  4)),
-        ((1u <<  0)   | (1u << 17) | (1u <<  5)),
+        (               (1u <<  2) | (1u <<  3)),
+        (               (1u <<  1) | (1u <<  4)),
+        ((1u << 17)   | (1u <<  0) | (1u <<  5)),
         ((1u << 16)   |              (1u <<  6)),
         ((1u << 15)   |              (1u <<  7)),
         ((1u << 14)   | (1u <<  9) | (1u <<  8)),
@@ -241,7 +241,9 @@ uint32_t color_wheel_div(uint8_t pos) {
         // clang-format on
 }
 
-// color passed to this function must already be in LED-native form (GRB instead of RGB)
+// BUGBUG -- Many of the callers convert an RGB color to GRB before passing
+//           it to this function.  This means the color parameter is GRB (not RGB)?
+// TODO: define RGB and GRB structures, and use them for clarity rather than uint32_t
 void rgb_assign_grb_color(uint32_t index_mask, uint32_t grb_color){
     for (int i = 0; i < RGB_LEN; i++){
         if (index_mask & (1u << i)) {
@@ -251,71 +253,123 @@ void rgb_assign_grb_color(uint32_t index_mask, uint32_t grb_color){
 }
 
 //something like this to cycle, delay, return done
-bool rgb_master(const uint32_t *groups, uint8_t group_count, uint32_t (*color_wheel)(uint8_t color), uint8_t color_count, uint8_t color_increment, uint8_t cycles, uint8_t delay_ms ){
-    static uint8_t color=0;
-    static uint16_t c=0;
+//This needs some more documentation:
+//  groups            the pixel groups; a pointer to an array of index_masks,
+//                    each index_mask indicating which LEDs are considered
+//                    part of the group
+//  group_count       count of elements in the `groups` array
+//  color_wheel       a function pointer; Function must take a single byte
+//                    parameter and return a ***GRB-formatted*** color
+//                    -- BUGBUG -- Verify color order is as expected?
+//  color_count       the distinct seed values for color_wheel() parameter.
+//                    rgb_master() will ensure the parameter is always in
+//                    range [0..color_count-1]
+//  color_increment   the PER GROUP increment of colors for the color_wheel()
+//                    parameter
+//This function returns:
+//  false             if additional iterations are needed for the animation
+//  true              sufficient iterations have been completed
+//
+// HACKHACK -- to ensure a known starting state (reset the static variables)
+//             can call with group_count=0, cycles=0
+// TODO: Rename `color_wheel` to more appropriate, generic name
+bool rgb_master(
+    const uint32_t *groups,
+    uint8_t group_count,
+    uint32_t (*color_wheel)(uint8_t color),
+    uint8_t color_count,
+    uint8_t color_increment,
+    uint8_t cycles,
+    uint8_t delay_ms
+    )
+{
+    static uint8_t color_idx = 0;
+    static uint16_t completed_cycles = 0;
 
-    for(int i = 0; i < group_count; i++) {
-        rgb_assign_grb_color(groups[i], color_wheel(color+(i*color_increment)));
+    for (int i = 0; i < group_count; i++) {
+        // group_count     is uint8_t (1..255)
+        // color_increment is uint8_t (0..255)
+        // color_count     is uint8_t (1..255)
+        // therefore, maximum value of tmp_color is
+        // color_count + (group_count * color_increment)
+        // === 255 + (255 * 255) = 65010
+        // This value could fit in uint16_t ... but just use PICO-native 32-bits
+        uint32_t tmp_color_idx = color_idx + (i*color_increment);
+        tmp_color_idx %= color_count; // ensures safe to cast to uint8_t
+
+        uint32_t rgb_color = color_wheel((uint8_t)tmp_color_idx);
+        rgb_assign_grb_color(groups[i], rgb_color);
     }
     rgb_send();
+    ++color_idx;
 
     //finished one complete cycle
-    if((color==color_count)){
-        color=0;
-        c++;
-        if(c==cycles){
-            c=0;
+    if (color_idx == color_count) {
+        color_idx = 0;
+        ++completed_cycles;
+        if (completed_cycles >= cycles) {
+            completed_cycles = 0;
             return true;
         }        
     }
 
-    color+=1;
     return false;
 }
 
 struct repeating_timer rgb_timer;
 
-bool rgb_scanner(void){
-    static uint16_t bitmask=0b1000000;
-    static uint8_t delay=0;
-    static uint8_t color=0;
+bool rgb_scanner(void) {
+    // TODO: decode this animation and add notes on what it's intended result is
+    static_assert(count_of(groups_center_left) < (sizeof(uint16_t)*8), "uint16_t too small to hold count_of(groups_center_left) elements");
+
+    static uint16_t pixel_bitmask = 1u << (count_of(groups_center_left) - 1);
+    static uint8_t frame_delay_count = 0u;
+    static uint8_t color_idx = 0;
     
-    const uint32_t colors[]={
-    0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
-    0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
-    0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
-    0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B
+    const uint32_t colors[] = {
+        0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
+        0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
+        0x00AB55, 0x0056AA, 0x0000FF, 0x2A00D5,
+        0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B,
     };
 
-    if(delay){
-        delay--;
+    if(frame_delay_count){
+        --frame_delay_count;
         return false;
     }
+
     uint32_t color_grb = 0;
     // clang-format off
-    color_grb |= ( (((colors[color] & 0xff0000) / system_config.led_brightness_divisor) & 0xff0000) >> 8); // swap R/G
-    color_grb |= ( (((colors[color] & 0x00ff00) / system_config.led_brightness_divisor) & 0x00ff00) << 8); // swap R/G
-    color_grb |= ( (((colors[color] & 0x0000ff) / system_config.led_brightness_divisor) & 0x0000ff)     ); // B remains in place
+    color_grb |= ( (((colors[color_idx] & 0xff0000) / system_config.led_brightness_divisor) & 0xff0000) >> 8); // swap R/G
+    color_grb |= ( (((colors[color_idx] & 0x00ff00) / system_config.led_brightness_divisor) & 0x00ff00) << 8); // swap R/G
+    color_grb |= ( (((colors[color_idx] & 0x0000ff) / system_config.led_brightness_divisor) & 0x0000ff)     ); // B remains in place
     // clang-format on
     for (int i = 0; i < count_of(groups_center_left); i++) {
-        rgb_assign_grb_color(groups_center_left[i], (bitmask & (1u << i)) ? color_grb : 0x0a0a0a);
+        // only use the above color for those pixels in the bitmask
+        uint32_t tmp_color = (pixel_bitmask & (1u << i)) ? color_grb : 0x0a0a0a;
+        rgb_assign_grb_color(groups_center_left[i], tmp_color);
     }
     rgb_send();
     
-    if(bitmask & 0b1){
-        delay=0xF0;
-        bitmask=(0x01 << (count_of(groups_center_left)));
-        color++;
-        if(color==count_of(colors)){
-            color=0;
-            bitmask=bitmask>>1;
+    if (pixel_bitmask == 0) {
+        // no more bits set, so done with a cycle
+        // set a longer delay before starting the next cycle
+        frame_delay_count = 0xF0;
+        // reset the pixel bitmask 
+        pixel_bitmask = (0x01 << (count_of(groups_center_left)));
+        color_idx++;
+        // if gone through all the colors,
+        // then re-initialize static variables (reset state)
+        if (color_idx == count_of(colors)) {
+            color_idx = 0;
+            pixel_bitmask = pixel_bitmask >> 1;
             return true;
         }
-    }else{
-        delay=0x8;
+    } else {
+        // stay on each frame for eight calls
+        frame_delay_count = 0x8;
     }
-    bitmask=bitmask>>1;
+    pixel_bitmask = pixel_bitmask >> 1;
     return false;
 }
 
@@ -336,7 +390,8 @@ bool rgb_timer_callback(struct repeating_timer *t){
             rgb_send();  
             break;          
         case LED_EFFECT_SOLID:
-            // NOTE: swaps from RGB to GRB because that is what the LED strip uses
+            // NOTE: swaps from RGB (typical stored value) to GRB
+            //       because that is the order the Pixels expect
             // clang-format off
             color_grb  = ( (((system_config.led_color & 0xff0000) / system_config.led_brightness_divisor) & 0xff0000) >> 8); // swap R/G
             color_grb |= ( (((system_config.led_color & 0x00ff00) / system_config.led_brightness_divisor) & 0x00ff00) << 8); // swap R/G

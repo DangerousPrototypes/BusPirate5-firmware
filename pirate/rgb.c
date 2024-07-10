@@ -233,7 +233,12 @@ uint32_t color_wheel_div(uint8_t pos) {
         b=(0);
     }
 
-    return ((g/system_config.led_brightness)<<16) | ((r/system_config.led_brightness)<<8) | (b/system_config.led_brightness);
+    return
+        // clang-format off
+        ( (g/system_config.led_brightness_divisor) << 16) |
+        ( (r/system_config.led_brightness_divisor) <<  8) |
+        ( (b/system_config.led_brightness_divisor)      ) ;
+        // clang-format on
 }
 
 // color passed to this function must already be in LED-native form (GRB instead of RGB)
@@ -289,9 +294,9 @@ bool rgb_scanner(void){
     }
     uint32_t color_grb = 0;
     // clang-format off
-    color_grb |= ( (((colors[color] & 0xff0000) / system_config.led_brightness) & 0xff0000) >> 8); // swap R/G
-    color_grb |= ( (((colors[color] & 0x00ff00) / system_config.led_brightness) & 0x00ff00) << 8); // swap R/G
-    color_grb |= ( (((colors[color] & 0x0000ff) / system_config.led_brightness) & 0x0000ff)     ); // B remains in place
+    color_grb |= ( (((colors[color] & 0xff0000) / system_config.led_brightness_divisor) & 0xff0000) >> 8); // swap R/G
+    color_grb |= ( (((colors[color] & 0x00ff00) / system_config.led_brightness_divisor) & 0x00ff00) << 8); // swap R/G
+    color_grb |= ( (((colors[color] & 0x0000ff) / system_config.led_brightness_divisor) & 0x0000ff)     ); // B remains in place
     // clang-format on
     for (int i = 0; i < count_of(groups_center_left); i++) {
         rgb_assign_grb_color(groups_center_left[i], (bitmask & (1u << i)) ? color_grb : 0x0a0a0a);
@@ -332,9 +337,11 @@ bool rgb_timer_callback(struct repeating_timer *t){
             break;          
         case LED_EFFECT_SOLID:
             // NOTE: swaps from RGB to GRB because that is what the LED strip uses
-            color_grb  = ( (((system_config.led_color & 0xff0000) / system_config.led_brightness) & 0xff0000) >> 8); // swap R/G
-            color_grb |= ( (((system_config.led_color & 0x00ff00) / system_config.led_brightness) & 0x00ff00) << 8); // swap R/G
-            color_grb |= ( (((system_config.led_color & 0x0000ff) / system_config.led_brightness) & 0x0000ff)     ); // B remains in place
+            // clang-format off
+            color_grb  = ( (((system_config.led_color & 0xff0000) / system_config.led_brightness_divisor) & 0xff0000) >> 8); // swap R/G
+            color_grb |= ( (((system_config.led_color & 0x00ff00) / system_config.led_brightness_divisor) & 0x00ff00) << 8); // swap R/G
+            color_grb |= ( (((system_config.led_color & 0x0000ff) / system_config.led_brightness_divisor) & 0x0000ff)     ); // B remains in place
+            // clang-format on
             rgb_assign_grb_color(0xffffffff, color_grb);
             rgb_send();
             break;
@@ -411,11 +418,11 @@ void rgb_init(void)
 
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b){
-    // clang-format off
     uint32_t color =
-        ( (g / system_config.led_brightness) << 16) |
-        ( (r / system_config.led_brightness) <<  8) |
-        ( (b / system_config.led_brightness) <<  0) ;
+    // clang-format off
+        ( (g / system_config.led_brightness_divisor) << 16) |
+        ( (r / system_config.led_brightness_divisor) <<  8) |
+        ( (b / system_config.led_brightness_divisor) <<  0) ;
     // clang-format on
     rgb_assign_grb_color(0xffffffff, color);
     rgb_send();

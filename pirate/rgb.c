@@ -143,11 +143,11 @@ static uint32_t grb_as_uint32(CPIXEL_COLOR_GRB c) {
     //static const uint32_t PIXEL_MASK_UPPER = 0b011001101011001101;
     //static const uint32_t PIXEL_MASK_SIDE  = 0b100110010100110010;
 
-    static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel mask definition to be valid")
+    static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel mask definition to be valid");
     // Pixels that shine in direction  of OLED: idx 0,    3,4,    7,  9,      12,13,
-    static const uint32_t PIXEL_MASK_UPPER = 0b0011 0010 1001 1001;
+    #define PIXEL_MASK_UPPER (0b0011001010011001)
     // Pixels that shine    orthogonal to OLED: idx   1,2,    5,6,  8,  10,11,      14,15,
-    static const uint32_t PIXEL_MASK_SIDE  = 0b1100 1101 0110 0110;
+    #define PIXEL_MASK_SIDE  (0b1100110101100110)
 
     static const uint32_t groups_top_left[] = {
         // clang-format off

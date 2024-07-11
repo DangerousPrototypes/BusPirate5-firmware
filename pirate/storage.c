@@ -171,7 +171,7 @@ uint32_t getint(const char *buf, int len, const char *path, uint32_t defvalue, i
   }
 }
 
-uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t, uint8_t count){
+uint32_t storage_save_mode(const char *filename, const mode_config_t *config, uint8_t count){
     if(system_config.storage_available==0){
         return 0;
     }
@@ -183,8 +183,15 @@ uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t
         return 0;
     }
     f_printf(&fil,"{\n");
-    for(uint8_t i=0; i<count; i++){
-        f_printf(&fil, "\"%s\": %d%s\n",&config_t[i].tag[2], *config_t[i].config, (i==(count-1)?"":",") );  
+    for (uint8_t i = 0; i < count; i++) {
+        const char* tag = &config[i].tag[2]; // skip "$." prefix, which is used for loading...
+        const char* comma = ( i == (count-1) ? "" : "," );
+        if (config[i].formatted_as == MODE_CONFIG_FORMAT_HEXSTRING) {
+            f_printf(&fil, "\"%s\": \"0x%08X\"%s\n", tag, *config[i].config, comma );
+        } else {
+            // fallback to decimal
+            f_printf(&fil, "\"%s\": %d%s\n", tag, *config[i].config, comma );
+        }
     }
     f_printf(&fil,"}");
     /* Close the file */
@@ -192,13 +199,13 @@ uint32_t storage_save_mode(const char *filename, struct _mode_config_t *config_t
     return 1;
 }
 
-uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t, uint8_t count){
+uint32_t storage_load_mode(const char *filename, const mode_config_t *config, uint8_t count){
     char json[512];
-    if(system_config.storage_available==0){
+    if (system_config.storage_available == 0) {
         return 0;
     }
     FRESULT fr;     /* FatFs return code */
-    FIL fil;			/* File object needed for each open file */
+    FIL fil;        /* File object needed for each open file */
     fr = f_open(&fil, filename, FA_READ);	
     if (fr != FR_OK) {
         return 0;
@@ -207,19 +214,29 @@ uint32_t storage_load_mode(const char *filename, struct _mode_config_t *config_t
     //void* buff,  /* [OUT] Buffer to store read data */
     //UINT btr,    /* [IN] Number of bytes to read */
     //UINT* br     /* [OUT] Number of bytes read */
-    fr = f_read ( &fil, &json, sizeof(json), &br);
+    fr = f_read(&fil, &json, sizeof(json), &br);
 	int found;
-    for(uint8_t i=0; i<count; i++){
-        uint32_t val=getint(json, br, config_t[i].tag, 0, &found);
-        if(found){
-            //printf("%s: %d\r\n",config_t[i].tag, val);
-            *config_t[i].config=val;         
-        }else{
-            //printf("%s: not found\r\n",config_t[i].tag);
+    for (uint8_t i = 0; i < count; i++) {
+        const char* tag = config[i].tag;
+        if (config[i].formatted_as == MODE_CONFIG_FORMAT_HEXSTRING) {
+            char as_hexstring[11] = {}; // large enough for maximum uint32_t
+            int len = mjson_get_string(json, br, tag, as_hexstring, sizeof(as_hexstring));
+            if (len > 0) {
+                uint32_t val = strtoul(as_hexstring, NULL, 16);
+                *(config[i].config) = val;
+            }
+        } else { // default to reading integer
+            uint32_t val = getint(json, br, tag, 0, &found);
+            if (found) {
+                //printf("%s: %d\r\n",config_t[i].tag, val);
+                *(config[i].config) = val;
+            } else {
+                //printf("%s: not found\r\n",config_t[i].tag);
+            }
         }
     }
     /* Close the file */
-    f_close(&fil);  
+    f_close(&fil);
     return 1;
 }
 
@@ -272,21 +289,23 @@ bool storage_ls(const char *location, const char *ext, const uint8_t flags)
 
 const char system_config_file[]="bpconfig.bp";
 
-struct _mode_config_t system_config_json[]={
-    {"$.terminal_language", &system_config.terminal_language},
-    {"$.terminal_ansi_color", &system_config.terminal_ansi_color},
-    {"$.terminal_ansi_statusbar", &system_config.terminal_ansi_statusbar},
-    {"$.display_format", &system_config.display_format},   
-    {"$.lcd_screensaver_active", &system_config.lcd_screensaver_active},
-    {"$.lcd_timeout", &system_config.lcd_timeout},
-    {"$.led_effect", &system_config.led_effect},
-    {"$.led_color", &system_config.led_color},
-    {"$.led_brightness", &system_config.led_brightness},   
-    {"$.terminal_usb_enable", &system_config.terminal_usb_enable},
-    {"$.terminal_uart_enable", &system_config.terminal_uart_enable},
-    {"$.terminal_uart_number", &system_config.terminal_uart_number},
-    {"$.debug_uart_enable", &system_config.debug_uart_enable},
-    {"$.debug_uart_number", &system_config.debug_uart_number},
+const mode_config_t system_config_json[]={
+    // clang-format off
+    {"$.terminal_language",       &system_config.terminal_language,       MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_ansi_color",     &system_config.terminal_ansi_color,     MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_ansi_statusbar", &system_config.terminal_ansi_statusbar, MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.display_format",          &system_config.display_format,          MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.lcd_screensaver_active",  &system_config.lcd_screensaver_active,  MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.lcd_timeout",             &system_config.lcd_timeout,             MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.led_effect",              &system_config.led_effect_as_uint32,    MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.led_color",               &system_config.led_color,               MODE_CONFIG_FORMAT_HEXSTRING, },
+    {"$.led_brightness_divisor",  &system_config.led_brightness_divisor,  MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_usb_enable",     &system_config.terminal_usb_enable,     MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_uart_enable",    &system_config.terminal_uart_enable,    MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_uart_number",    &system_config.terminal_uart_number,    MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.debug_uart_enable",       &system_config.debug_uart_enable,       MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.debug_uart_number",       &system_config.debug_uart_number,       MODE_CONFIG_FORMAT_DECIMAL,   },
+    // clang-format on
 };
 
 uint32_t storage_save_config(void){

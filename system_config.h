@@ -1,3 +1,7 @@
+#pragma once
+
+#include "../pirate/rgb.h" // for `led_effect_t` enumeration
+
 typedef struct _pwm_config 
 {
     float period;
@@ -25,9 +29,12 @@ typedef struct _system_config
     uint32_t lcd_screensaver_active;
     uint32_t lcd_timeout;
 
-    uint32_t led_effect;
     uint32_t led_color;
-    uint32_t led_brightness;
+    uint32_t led_brightness_divisor;
+	union {
+		uint32_t led_effect_as_uint32; // for json, which needs this to be uint32 (sigh)
+    	led_effect_t led_effect;
+	};
     
 	uint8_t terminal_ansi_rows;
 	uint8_t terminal_ansi_columns;

@@ -50,9 +50,9 @@ uint32_t hw2wire_setup(void){
 
 	const char config_file[]="bp2wire.bp";
 
-	struct _mode_config_t config_t[]={
-		{"$.baudrate", &hw2wire_mode_config.baudrate},
-		{"$.data_bits", &hw2wire_mode_config.data_bits}
+	const mode_config_t config_t[]={
+		{"$.baudrate",  &hw2wire_mode_config.baudrate,  MODE_CONFIG_FORMAT_DECIMAL, },
+		{"$.data_bits", &hw2wire_mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL, },
 	};
 	prompt_result result;
 

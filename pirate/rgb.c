@@ -153,11 +153,11 @@ static uint32_t grb_as_uint32(CPIXEL_COLOR_GRB c) {
         // clang-format off
         ((1u <<  1) | (1u <<  2)             ),
         ((1u <<  0) | (1u <<  3)             ),
-        ((1u <<  4) | (1u <<  5) | (1u << 15)),
-        ((1u <<  6) | (1u <<  7) | (1u << 14)),
-        ((1u <<  8) | (1u << 13)             ),
-        ((1u <<  9) | (1u << 12)             ),
-        ((1u << 10) | (1u << 11)             ),
+        ((1u << 15) | (1u <<  4) | (1u <<  5)), // pair up 4/5
+        ((1u << 14) | (1u <<  6) | (1u <<  7)), // pair up 6/7
+        ((1u << 13) | (1u <<  8)             ),
+        ((1u << 12) | (1u <<  9)             ),
+        ((1u << 11) | (1u << 10)             ),
         // clang-format on
     };
     static const uint32_t groups_center_left[] = {
@@ -165,13 +165,17 @@ static uint32_t grb_as_uint32(CPIXEL_COLOR_GRB c) {
         ((1u <<  3) | (1u <<  4)                         ),
         ((1u <<  2) | (1u <<  5)                         ),
         ((1u <<  1) | (1u <<  6)                         ),
-        ((1u <<  0) | (1u <<  7) | (1u <<  8) | (1 <<  9)),
+        ((1u <<  0) | (1u <<  7) | (1u <<  8) | (1 <<  9)), // pair 7, 8, and 9?
         ((1u << 10) | (1u << 15)                         ),
         ((1u << 11) | (1u << 14)                         ),
         ((1u << 12) | (1u << 13)                         ),
         // clang-format on
     };  
     static const uint32_t groups_center_clockwise[] = {
+        // Generally, pixel 15 and 10 are single, others are just pairs of top/bottom pixels
+        // Here's upper/side masks split into the groupings:
+        // PIXEL_MASK_UPPER (0b 0 01 10 0 10 10 01 10 01)
+        // PIXEL_MASK_SIDE  (0b 1 10 01 1 01 01 10 01 10)
         // clang-format off
         ((1u << 13) | (1u << 14)),
         ((1u << 15)             ),
@@ -204,7 +208,7 @@ static uint32_t grb_as_uint32(CPIXEL_COLOR_GRB c) {
         ((1u << 16)   |              (1u <<  6)),
         ((1u << 15)   |              (1u <<  7)),
         ((1u << 14)   | (1u <<  9) | (1u <<  8)),
-        ((1u << 13)   | (1u << 10) | (1u <<  5)), // BUGBUG -- LED 5 is likely a typo?
+        ((1u << 13)   | (1u << 10)             ),
         ((1u << 12)   | (1u << 11)             ),
         // clang-format on
     };

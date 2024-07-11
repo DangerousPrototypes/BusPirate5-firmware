@@ -187,7 +187,7 @@ uint32_t storage_save_mode(const char *filename, const mode_config_t *config, ui
         const char* tag = &config[i].tag[2]; // skip "$." prefix, which is used for loading...
         const char* comma = ( i == (count-1) ? "" : "," );
         if (config[i].formatted_as == MODE_CONFIG_FORMAT_HEXSTRING) {
-            f_printf(&fil, "\"%s\": \"0x%08X\"%s\n", tag, *config[i].config, comma );
+            f_printf(&fil, "\"%s\": \"0x%06X\"%s\n", tag, *config[i].config, comma );
         } else {
             // fallback to decimal
             f_printf(&fil, "\"%s\": %d%s\n", tag, *config[i].config, comma );

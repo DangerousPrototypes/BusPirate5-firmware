@@ -70,9 +70,9 @@ uint32_t hwled_setup(void)
 
 		const char config_file[]="bpled.bp";
 
-		struct _mode_config_t config_t[]={
-			{"$.device", &mode_config.device},
-			{"$.num_leds", &mode_config.num_leds}
+		const mode_config_t config_t[]={
+			{"$.device",   &mode_config.device,   MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.num_leds", &mode_config.num_leds, MODE_CONFIG_FORMAT_DECIMAL, },
 		};
 
 		if(storage_load_mode(config_file, config_t, count_of(config_t)))

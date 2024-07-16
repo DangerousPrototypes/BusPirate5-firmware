@@ -13,7 +13,7 @@
 #include "ui/ui_info.h"
 
 
-#include "pwd.h"
+//#include "pwd.h"
 #include "commands/global/freq.h"
 #include "ui/ui_cmdln.h"
 

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "hardware/pio.h"
@@ -7,35 +8,24 @@
 #include "system_config.h"
 #include "pirate/rgb.h"
 
-#define RGB_MAX_BRIGHT 32
+// Total count of RGB pixels
+#define COUNT_OF_PIXELS RGB_LEN
 
 // Externally to this file, colors are always handled as uint32_t values
 // which stores the color in 0x00RRGGBB format.
-// Internally to this file, the color is stored in the CPIXEL_COLOR_xxx format.
-// This reduces type-confusion that results in incorrect colors.
+// Internally to this file, the color is stored in the CPIXEL_COLOR format.
+// The only location where the order of bytes changes is when actually
+// pushing the bytes to PIO ... to match the color format expected by the
+// particular type of pixels used:  See update_pixels().
 
-typedef struct _CPIXEL_COLOR_RGB {
-    // pad to 32-bits b/c pio_sm_put_blocking() expects a uint32_t
-    // This also ensures the compiler can optimize away conversion
+typedef struct _CPIXEL_COLOR {
+    // pad to 32-bits to ensure compiler can optimize away conversion
     // from constexpr uint32_t colors (0x00RRGGBB format) into this
-    // type into a noop (same underlying structure)
-    uint8_t _unused;
-    union {
-        uint8_t red;
-        uint8_t r;
-    };
-    union {
-        uint8_t green;
-        uint8_t g;
-    };
+    // type into a noop (same underlying data in little-endian)
     union {
         uint8_t blue;
         uint8_t b;
     };
-} CPIXEL_COLOR_RGB;
-
-typedef struct _CPIXEL_COLOR_GRB {
-    uint8_t _unused;
     union {
         uint8_t green;
         uint8_t g;
@@ -44,74 +34,29 @@ typedef struct _CPIXEL_COLOR_GRB {
         uint8_t red;
         uint8_t r;
     };
-    union {
-        uint8_t blue;
-        uint8_t b;
-    };
-} CPIXEL_COLOR_GRB;
+    uint8_t _unused;
+} CPIXEL_COLOR;
 
 // C23 would allow this to be `constexpr`
 // here, `static const` relies on compiler to optimize this away
-static const CPIXEL_COLOR_RGB RGBCOLOR_BLACK = { .r=0x00, .g=0x00, .b=0x00 };
+static const CPIXEL_COLOR PIXEL_COLOR_BLACK = { .r=0x00, .g=0x00, .b=0x00 };
 
-static CPIXEL_COLOR_RGB color_rgb(uint8_t r, uint8_t g, uint8_t b) {
-    CPIXEL_COLOR_RGB c = { .r = r, .g = g, .b = b };
+static CPIXEL_COLOR color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
+    CPIXEL_COLOR c = { .r = r, .g = g, .b = b };
     return c;
 }
-static CPIXEL_COLOR_GRB color_grb(uint8_t g, uint8_t r, uint8_t b) {
-    CPIXEL_COLOR_GRB c = { .g = g, .r = r, .b = b };
-    return c;
-}
-static CPIXEL_COLOR_RGB rgb_from_rgb(CPIXEL_COLOR_RGB c) { return c; }
-static CPIXEL_COLOR_GRB grb_from_grb(CPIXEL_COLOR_GRB c) { return c; }
-static CPIXEL_COLOR_RGB rgb_from_grb(CPIXEL_COLOR_GRB c) {
-    CPIXEL_COLOR_RGB r = { .r = c.r, .g = c.g, .b = c.b };
-    return r;
-}
-static CPIXEL_COLOR_GRB grb_from_rgb(CPIXEL_COLOR_RGB c) {
-    CPIXEL_COLOR_GRB r = { .g = c.g, .r = c.r, .b = c.b };
-    return r;
-}
-static CPIXEL_COLOR_RGB rgb_from_uint32(uint32_t c) {
-    CPIXEL_COLOR_RGB r = {
+static CPIXEL_COLOR color_from_uint32(uint32_t c) {
+    CPIXEL_COLOR result = {
         ._unused = (c >> 24) & 0xff, // carry the input data, to allow compiler to optimization this to a noop
         .r =       (c >> 16) & 0xff,
         .g =       (c >>  8) & 0xff,
         .b =       (c >>  0) & 0xff,
     };
-    return r;
+    return result;
 }
-static CPIXEL_COLOR_GRB grb_from_uint32(uint32_t c) {
-    CPIXEL_COLOR_GRB r = { .g = (c >> 8) & 0xff, .r = (c >> 16) & 0xff, .b = c & 0xff };
-    return r;
-}
-static uint32_t rgb_as_uint32(CPIXEL_COLOR_RGB c) {
+static uint32_t color_as_uint32(CPIXEL_COLOR c) {
     return (c.r << 16) | (c.g << 8) | c.b;
 }
-static uint32_t grb_as_uint32(CPIXEL_COLOR_GRB c) {
-    return (c.r << 16) | (c.g << 8) | c.b;
-}
-
-// Use C11 `_Generic` to auto-select the correct conversion function
-// based on the color type ... simplifies writing correct code.
-#define rgb_from_color(COLOR)                       \
-    _Generic((COLOR),                               \
-        CPIXEL_COLOR_RGB: rgb_from_rgb,             \
-        CPIXEL_COLOR_GRB: rgb_from_grb,             \
-    )(COLOR)
-#define grb_from_color(COLOR)                       \
-    _Generic((COLOR),                               \
-        CPIXEL_COLOR_RGB: grb_from_rgb,             \
-        CPIXEL_COLOR_GRB: grb_from_grb,             \
-    )(COLOR)
-#define uint32_from_color(COLOR)                    \
-    _Generic((COLOR),                               \
-        CPIXEL_COLOR_RGB: rgb_as_uint32,            \
-        CPIXEL_COLOR_GRB: grb_as_uint32,            \
-    )(COLOR)
-
-
-
 
 
 // Note that both the layout and overall count of pixels
@@ -135,8 +80,6 @@ static uint32_t grb_as_uint32(CPIXEL_COLOR_GRB c) {
 // Also add a new constant, COUNT_OF_PIXELS, to define the number
 // pixels on each revision of board.
 
-// Total count of RGB pixels
-#define COUNT_OF_PIXELS RGB_LEN
 #if BP5_REV <= 9
     // Sadly, C still doesn't recognize the following format as constexpr enough for static_assert()
     //static const uint8_t COUNT_OF_PIXELS = 16u;
@@ -252,7 +195,7 @@ static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel m
 static_assert((PIXEL_MASK_UPPER & PIXEL_MASK_SIDE) == 0, "Pixel cannot be both upper and side");
 static_assert((PIXEL_MASK_UPPER | PIXEL_MASK_SIDE) == PIXEL_MASK_ALL, "Pixel must be either upper or side");
 
-CPIXEL_COLOR_RGB pixels[COUNT_OF_PIXELS]; // store as RGB ... as it's the common format
+CPIXEL_COLOR pixels[COUNT_OF_PIXELS]; // store as RGB ... as it's the common format
 
 static inline void update_pixels(void) {  
     // TODO: define symbolic constant for which state machine (no magic numbers!)
@@ -261,7 +204,7 @@ static inline void update_pixels(void) {
         // little-endian, so 0x00GGRRBB  is stored as 0xBB 0xRR 0xGG 0x00
         // Shifting it left by 8 bits will give bytes 0x00 0xBB 0xRR 0xGG
         // which allows the PIO to unshift the bytes in the correct order
-        CPIXEL_COLOR_RGB c = pixels[i];
+        CPIXEL_COLOR c = pixels[i];
         c.r = c.r / system_config.led_brightness_divisor;
         c.g = c.g / system_config.led_brightness_divisor;
         c.b = c.b / system_config.led_brightness_divisor;
@@ -278,58 +221,32 @@ static inline void update_pixels(void) {
  * The colours are a transition r -> g -> b -> back to r
  * Inspired by the Adafruit examples.
  */
-CPIXEL_COLOR_RGB color_wheel(uint8_t pos) {
-    CPIXEL_COLOR_RGB result;
+CPIXEL_COLOR color_wheel(uint8_t pos) {
+    uint8_t r, g, b;
+
     pos = 255 - pos;
     if(pos < 85) {
-        result = color_rgb(255 - (pos*3), 0, (pos*3));
+        r = 255u - (pos * 3u);
+        g = 0u;
+        b = pos * 3;
     } else if(pos < 170) {
         pos -= 85;
-        result = color_rgb(0, (pos*3), 255 - (pos*3));
+        r = 0u;
+        g = pos * 3u;
+        b = 255u - (pos * 3u);
     } else {
         pos -= 170;
-        result = color_rgb((pos*3), 255 - (pos*3), 0);
+        r = pos * 3u;
+        g = 255u - (pos * 3u);
+        b = 0u;
     }
-    return result;
+    return color_from_rgb(r, g, b);
 }
 
-/*
- * Put a value 0 to 255 in to get a color value.
- * The colours are a transition r -> g -> b -> back to r
- * Inspired by the Adafruit examples.
- * The ..._div() version of the function divides each of
- * the R/G/B values by the system config's led brightness.
- */
-CPIXEL_COLOR_RGB color_wheel_div(uint8_t pos) {
-    pos = 255u - pos;
-    uint8_t r,g,b;
-    if(pos < 85u) {
-        r=((uint32_t)(255u - pos * 3u));
-        g=((uint32_t)(0u) );
-        b=(pos * 3u);
-    } else if(pos < 170u) {
-        pos -= 85u;
-        r=((uint32_t)(0u) );
-        g=((uint32_t)(pos * 3u) );
-        b=(255u - pos * 3u);
-    } else {
-        pos -= 170u;
-        r=((uint32_t)(pos * 3u));
-        g=((uint32_t)(255u - pos * 3u) );
-        b=(0u);
-    }
-    CPIXEL_COLOR_RGB result =
-        color_rgb(r, g, b);
-    return result;
-}
-
-// BUGBUG -- Many of the callers convert an RGB color to GRB before passing
-//           it to this function.  This means the color parameter is GRB (not RGB)?
-// TODO: define RGB and GRB structures, and use them for clarity rather than uint32_t
-void assign_pixel_rgb_color(uint32_t index_mask, CPIXEL_COLOR_RGB rgb_color){
-    for (int i = 0; i < RGB_LEN; i++){
+void assign_pixel_color(uint32_t index_mask, CPIXEL_COLOR pixel_color){
+    for (int i = 0; i < COUNT_OF_PIXELS; i++){
         if (index_mask & (1u << i)) {
-            pixels[i] = rgb_color;
+            pixels[i] = pixel_color;
         }
     }
 }
@@ -358,7 +275,7 @@ void assign_pixel_rgb_color(uint32_t index_mask, CPIXEL_COLOR_RGB rgb_color){
 bool rgb_master(
     const uint32_t *groups,
     uint8_t group_count,
-    CPIXEL_COLOR_RGB (*color_wheel)(uint8_t color),
+    CPIXEL_COLOR (*color_wheel)(uint8_t color),
     uint8_t color_count,
     uint8_t color_increment,
     uint8_t cycles,
@@ -379,8 +296,8 @@ bool rgb_master(
         uint32_t tmp_color_idx = color_idx + (i*color_increment);
         tmp_color_idx %= color_count; // ensures safe to cast to uint8_t
 
-        CPIXEL_COLOR_RGB rgb_color = color_wheel((uint8_t)tmp_color_idx);
-        assign_pixel_rgb_color(groups[i], rgb_color);
+        CPIXEL_COLOR rgb_color = color_wheel((uint8_t)tmp_color_idx);
+        assign_pixel_color(groups[i], rgb_color);
     }
     update_pixels();
     ++color_idx;
@@ -404,10 +321,12 @@ bool rgb_gentle_glow(void) {
 
     static const uint16_t animation_cycles = 240 * 16 + 9 * 9; // approximately same time as scanner
     static uint16_t cycle_count = 0;
-    CPIXEL_COLOR_RGB top_color = { .r = 15, .g = 15, .b = 15 };
-    CPIXEL_COLOR_RGB side_color = { .r = 60, .g = 60, .b = 60 };
-    assign_pixel_rgb_color(PIXEL_MASK_UPPER, top_color );
-    assign_pixel_rgb_color(PIXEL_MASK_SIDE,  side_color);
+    // clang-format off
+    CPIXEL_COLOR top_color  = { .r = 15, .g = 15, .b = 15 };
+    CPIXEL_COLOR side_color = { .r = 60, .g = 60, .b = 60 };
+    assign_pixel_color(PIXEL_MASK_UPPER, top_color );
+    assign_pixel_color(PIXEL_MASK_SIDE,  side_color);
+    // clang-format on
     update_pixels();
 
     ++cycle_count;
@@ -419,7 +338,7 @@ bool rgb_gentle_glow(void) {
 }
 
 bool rgb_scanner(void) {
-    // TODO: decode this animation and add notes on what it's intended result is
+
     static_assert(count_of(groups_center_left) < (sizeof(uint16_t)*8), "uint16_t too small to hold count_of(groups_center_left) elements");
 
     // pixel_bitmask has a single bit set, which serves two purposes:
@@ -431,10 +350,10 @@ bool rgb_scanner(void) {
     static uint8_t frame_delay_count = 0u;
     static uint8_t color_idx = 0;
     
-    static const CPIXEL_COLOR_RGB background_pixel_color = { .r = 0x20, .g = 0x20, .b = 0x20 };
+    static const CPIXEL_COLOR background_pixel_color = { .r = 0x20, .g = 0x20, .b = 0x20 };
     // each loop of the animation, use the next color in this sequence.
     // when all the colors have been used, the animation is complete.
-    const CPIXEL_COLOR_RGB colors[]={
+    const CPIXEL_COLOR colors[]={
         { .r = 0xFF, .g = 0x00, .b = 0x00 },
         { .r = 0xD5, .g = 0x2A, .b = 0x00 },
         { .r = 0xAB, .g = 0x55, .b = 0x00 },
@@ -464,12 +383,12 @@ bool rgb_scanner(void) {
 
     // generate the next frame of the animation
     for (int i = 0; i < count_of(groups_center_left); i++) {
-        CPIXEL_COLOR_RGB color = background_pixel_color;
+        CPIXEL_COLOR color = background_pixel_color;
         // does this pixel get the non-background color?
         if (pixel_bitmask & (1u << i)) {
             color = colors[color_idx];
         }
-        assign_pixel_rgb_color(groups_center_left[i], color);
+        assign_pixel_color(groups_center_left[i], color);
     }
     update_pixels();
     
@@ -496,7 +415,7 @@ bool rgb_scanner(void) {
     return false;
 }
 
-bool rgb_timer_callback(struct repeating_timer *t){
+bool pixel_timer_callback(struct repeating_timer *t){
     static uint8_t mode=2;
 
     uint32_t color_grb;
@@ -509,25 +428,25 @@ bool rgb_timer_callback(struct repeating_timer *t){
     // clang-format off
     switch(mode) {
         case LED_EFFECT_DISABLED:
-            assign_pixel_rgb_color(PIXEL_MASK_ALL, RGBCOLOR_BLACK);
+            assign_pixel_color(PIXEL_MASK_ALL, PIXEL_COLOR_BLACK);
             update_pixels();  
             break;          
         case LED_EFFECT_SOLID:; // semicolon is required for ... reasons
-            CPIXEL_COLOR_RGB color = rgb_from_uint32(system_config.led_color);
-            assign_pixel_rgb_color(PIXEL_MASK_ALL, color);
+            CPIXEL_COLOR color = color_from_uint32(system_config.led_color);
+            assign_pixel_color(PIXEL_MASK_ALL, color);
             update_pixels();
             break;
         case LED_EFFECT_ANGLE_WIPE:
-            next = rgb_master(groups_top_left,         count_of(groups_top_left),         &color_wheel_div, 0xff, (0xff/count_of(groups_top_left)        ), 5, 10);
+            next = rgb_master(groups_top_left,         count_of(groups_top_left),         &color_wheel, 0xff, (0xff/count_of(groups_top_left)        ), 5, 10);
             break;
         case LED_EFFECT_CENTER_WIPE:
-            next = rgb_master(groups_center_left,      count_of(groups_center_left),      &color_wheel_div, 0xff, (0xff/count_of(groups_center_left)     ), 5, 10);
+            next = rgb_master(groups_center_left,      count_of(groups_center_left),      &color_wheel, 0xff, (0xff/count_of(groups_center_left)     ), 5, 10);
             break;
         case LED_EFFECT_CLOCKWISE_WIPE:
-            next = rgb_master(groups_center_clockwise, count_of(groups_center_clockwise), &color_wheel_div, 0xff, (0xff/count_of(groups_center_clockwise)), 5, 10);
+            next = rgb_master(groups_center_clockwise, count_of(groups_center_clockwise), &color_wheel, 0xff, (0xff/count_of(groups_center_clockwise)), 5, 10);
             break;
         case LED_EFFECT_TOP_SIDE_WIPE:
-            next = rgb_master(groups_top_down,         count_of(groups_top_down),         &color_wheel_div, 0xff, (                                    30), 5, 10);
+            next = rgb_master(groups_top_down,         count_of(groups_top_down),         &color_wheel, 0xff, (                                    30), 5, 10);
             break;
         case LED_EFFECT_SCANNER:
             next = rgb_scanner();
@@ -558,7 +477,7 @@ void rgb_irq_enable(bool enable){
     static bool enabled=false;
     if(enable && !enabled)
     {
-        add_repeating_timer_ms(-10, rgb_timer_callback, NULL, &rgb_timer);
+        add_repeating_timer_ms(-10, pixel_timer_callback, NULL, &rgb_timer);
         enabled=true;
     }
     else if(!enable && enabled)
@@ -580,7 +499,7 @@ void rgb_init(void)
     ws2812_program_init(pio, sm, offset, RGB_CDO, 800000, false);
 
     for (int i = 0; i < COUNT_OF_PIXELS; i++){
-        pixels[i] = RGBCOLOR_BLACK;
+        pixels[i] = PIXEL_COLOR_BLACK;
     }
 
     // Create a repeating timer that calls repeating_timer_callback.
@@ -593,8 +512,8 @@ void rgb_init(void)
 
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b){
-    CPIXEL_COLOR_RGB color = { .r = r, .g = g, .b = b };
-    assign_pixel_rgb_color(PIXEL_MASK_ALL, color);
+    CPIXEL_COLOR color = { .r = r, .g = g, .b = b };
+    assign_pixel_color(PIXEL_MASK_ALL, color);
     update_pixels();
 }
 
@@ -604,9 +523,8 @@ void rgb_put(uint32_t color)
 {
     // first set each pixel to off
     for (int i = 0; i < COUNT_OF_PIXELS; i++){
-        pixels[i] = RGBCOLOR_BLACK;
+        pixels[i] = PIXEL_COLOR_BLACK;
     }
-    CPIXEL_COLOR_RGB rgb = rgb_from_uint32(color);
-    pixels[DEMO_LED] = rgb;
+    pixels[DEMO_LED] = color_from_uint32(color);
     update_pixels();
 };

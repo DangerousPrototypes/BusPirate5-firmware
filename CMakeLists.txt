@@ -70,6 +70,7 @@ set(bp5_common
         commands/global/tutorial.c commands/global/tutorial.h
         commands/global/button_scr.c commands/global/button_scr.h
         commands/global/smps.c commands/global/smps.h
+        commands/global/cls.h commands/global/cls.c  
         # HiZ
         mode/hiz.h mode/hiz.c
         # 1Wire

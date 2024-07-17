@@ -34,6 +34,7 @@
 #include "commands/global/tutorial.h"
 #include "commands/global/button_scr.h"
 #include "commands/global/smps.h"
+#include "commands/global/cls.h"
 #include "mode/logicanalyzer.h"
 
 // command configuration
@@ -82,6 +83,7 @@ const struct _command_struct commands[]=
     {"tutorial", true, &tutorial_handler, 0x00},
     {"script", true, &script_handler, 0x00},  
     {"button", true, &button_scr_handler, 0x00},
+    {"cls", true, &ui_display_clear, 0x00},
     {"smps", true, &smps_handler, 0x00}
 };
 

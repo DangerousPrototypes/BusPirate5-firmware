@@ -297,7 +297,6 @@ static uint32_t color_as_uint32(CPIXEL_COLOR c) {
 
 
 static inline void update_pixels(void) {  
-    // TODO: define symbolic constant for which state machine (no magic numbers!)
     for (int i = 0; i < COUNT_OF_PIXELS; i++) {
 
         // little-endian, so 0x00GGRRBB  is stored as 0xBB 0xRR 0xGG 0x00
@@ -311,6 +310,10 @@ static inline void update_pixels(void) {
             (c.g << 24) |
             (c.r << 16) |
             (c.b <<  8) ;
+
+        // TODO: define symbolic constant for which PIO / state machine (no magic numbers!)
+        //       e.g., #define WS2812_PIO  pio1
+        //       e.g., #define WS2812_SM   3
         pio_sm_put_blocking(pio1, 3, toSend);
     }
 }

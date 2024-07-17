@@ -183,6 +183,8 @@ static uint32_t color_as_uint32(CPIXEL_COLOR c) {
 }
 
 
+
+
 #pragma region    // Legacy pixel animation groups
 
     // Note that both the layout and overall count of pixels
@@ -323,7 +325,7 @@ static inline void update_pixels(void) {
  * The colours are a transition r -> g -> b -> back to r
  * Inspired by the Adafruit examples.
  */
-CPIXEL_COLOR color_wheel(uint8_t pos) {
+static CPIXEL_COLOR color_wheel(uint8_t pos) {
     uint8_t r, g, b;
 
     pos = 255 - pos;
@@ -345,7 +347,7 @@ CPIXEL_COLOR color_wheel(uint8_t pos) {
     return color_from_rgb(r, g, b);
 }
 
-void assign_pixel_color(uint32_t index_mask, CPIXEL_COLOR pixel_color){
+static void assign_pixel_color(uint32_t index_mask, CPIXEL_COLOR pixel_color){
     for (int i = 0; i < COUNT_OF_PIXELS; i++){
         if (index_mask & (1u << i)) {
             pixels[i] = pixel_color;
@@ -374,7 +376,7 @@ void assign_pixel_color(uint32_t index_mask, CPIXEL_COLOR pixel_color){
 // HACKHACK -- to ensure a known starting state (reset the static variables)
 //             can call with group_count=0, cycles=0
 // TODO: Rename `color_wheel` to more appropriate, generic name
-bool rgb_master(
+static bool rgb_master(
     const uint32_t *groups,
     uint8_t group_count,
     CPIXEL_COLOR (*color_wheel)(uint8_t color),
@@ -419,7 +421,7 @@ bool rgb_master(
 
 struct repeating_timer rgb_timer;
 
-bool rgb_gentle_glow(void) {
+static bool rgb_gentle_glow(void) {
 
     static const uint16_t animation_cycles = 240 * 16 + 9 * 9; // approximately same time as scanner
     static uint16_t cycle_count = 0;
@@ -439,7 +441,7 @@ bool rgb_gentle_glow(void) {
     return false;
 }
 
-bool rgb_scanner(void) {
+static bool rgb_scanner(void) {
 
     static_assert(count_of(groups_center_left) < (sizeof(uint16_t)*8), "uint16_t too small to hold count_of(groups_center_left) elements");
 
@@ -517,7 +519,7 @@ bool rgb_scanner(void) {
     return false;
 }
 
-bool pixel_timer_callback(struct repeating_timer *t){
+static bool pixel_timer_callback(struct repeating_timer *t){
     static uint8_t mode=2;
 
     uint32_t color_grb;
@@ -573,6 +575,11 @@ bool pixel_timer_callback(struct repeating_timer *t){
 
     return true;
 }
+
+
+
+// ================================================================================
+// Exported functions (Pixel API) follows:
 
 
 void rgb_irq_enable(bool enable){

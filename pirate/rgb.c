@@ -181,7 +181,14 @@ static CPIXEL_COLOR color_from_uint32(uint32_t c) {
 static uint32_t color_as_uint32(CPIXEL_COLOR c) {
     return (c.r << 16) | (c.g << 8) | c.b;
 }
-
+static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t divisor) {
+    CPIXEL_COLOR r = {
+        .r = c.r * numerator / divisor,
+        .g = c.g * numerator / divisor,
+        .b = c.b * numerator / divisor,
+    };
+    return r;
+}
 
 
 
@@ -421,7 +428,7 @@ static bool rgb_master(
 
 struct repeating_timer rgb_timer;
 
-static bool rgb_gentle_glow(void) {
+static bool animation_gentle_glow(void) {
 
     static const uint16_t animation_cycles = 240 * 16 + 9 * 9; // approximately same time as scanner
     static uint16_t cycle_count = 0;
@@ -439,6 +446,132 @@ static bool rgb_gentle_glow(void) {
         return true;
     }
     return false;
+}
+
+/// @brief angular wipe from upper left to bottom right, with diffusion / blur
+/// @param color The color to use for the wipe, or RGBCOLOR_BLACK to use angle-based rainbow
+/// @return true when full animation has run its course
+static bool animation_angular_wipe(CPIXEL_COLOR color) {
+    static const uint16_t value_diffusion = 40u;
+    static const uint16_t starting_value = 0u;
+    static const uint16_t ending_value = value_diffusion*4u + 256u;
+    static const uint16_t default_frame_delay = 1u;
+
+    static uint8_t frame_delay_count = 0;
+    static uint16_t current_value = starting_value;
+
+    // delay with each frame showing for multiple callbacks
+    if (frame_delay_count != 0) {
+        --frame_delay_count;
+        return false;
+    }
+
+    // ending condition
+    if (current_value == ending_value) {
+        frame_delay_count = default_frame_delay * 4;
+        current_value = starting_value;
+        return true;
+    }
+
+    // what color to use for this value?
+    if (color.r == 0 && color.g == 0 && color.b == 0) {
+        color = color_wheel(current_value);
+    }
+
+    // always loop through each pixel
+    for (int i = 0; i < count_of(pixel_coordin8); ++i) {
+        // does it get color for this value?
+
+        // TODO: allow arbitrary angle for the wipe.
+        // For now, hard-coded to (X+Y)/2 for wipe
+        // from upper left to lower right corner ...
+        uint16_t pix_v = (((uint16_t)pixel_coordin8[i].x) + ((uint16_t)pixel_coordin8[i].y)) / 2u;
+        
+        // shift from [0..255] to [2*value_diffusion .. 255 + 4*value_diffusion]
+        // this allows smooth entry and exit diffusion effects
+        pix_v += 2u * value_diffusion;
+
+        // diff is not a true cartesion distance,
+        // but good enough for current purposes.
+        uint16_t diff = abs(current_value - pix_v);
+
+        // until migrate the FastLED color mixing,
+        // background must be black for blur / diffusion effects
+        if (diff < value_diffusion) {
+            static_assert(value_diffusion < 256u, "invalid brightness calculations when value_diffusion is too large (limited to uint8_t)");
+            CPIXEL_COLOR dimmed_color = reduce_brightness(color, value_diffusion - diff, value_diffusion);
+            assign_pixel_color(1u << i, dimmed_color);
+        } else {
+            assign_pixel_color(1u << i, PIXEL_COLOR_BLACK);
+        }
+    }
+    update_pixels();
+
+    // same delay for all frames
+    frame_delay_count = default_frame_delay;
+    current_value++; // mod(256) is implicit
+    return false;
+}
+
+/// @brief  starting at noon/up, color pixels in an anti-clockwise direction
+/// @param color color to use for the pixels, or RGBCOLOR_BLACK to use angle-based rainbow
+/// @return true when rull animation has run its course
+static bool animation_anticlockwise_scan(CPIXEL_COLOR color) {
+    static const uint8_t starting_angle256 = 64u;
+    static const uint8_t angle_diffusion = 20u;
+    static const uint8_t default_frame_delay = 3u;
+
+    static bool first_time_through = true;
+    static uint8_t frame_delay_count = 0;
+    static uint8_t current_angle256 = starting_angle256;
+
+    // delay with each frame showing for multiple callbacks
+    if (frame_delay_count != 0) {
+        --frame_delay_count;
+        return false;
+    }
+
+    // ending condition
+    if (current_angle256 == starting_angle256) {
+        if (first_time_through) {
+            first_time_through = false;
+        } else {
+            first_time_through = true;
+            return true;
+        }
+    }
+
+    // what color to use for this angle?
+    if (color.r == 0 && color.g == 0 && color.b == 0) {
+        color = color_wheel(current_angle256);
+    }
+
+    // always loop through each pixel
+    for (int i = 0; i < count_of(pixel_angle256); ++i) {
+        // does it get color at this angle?
+        uint8_t pixel_a = pixel_angle256[i];
+        uint8_t angle_diff = abs(current_angle256 - pixel_a);
+        if (angle_diff < angle_diffusion) {
+            CPIXEL_COLOR reduced = reduce_brightness(color, angle_diffusion - angle_diff, angle_diffusion);
+            assign_pixel_color(1u << i, reduced);
+        } else {
+            assign_pixel_color(1u << i, PIXEL_COLOR_BLACK);
+        }
+    }
+    update_pixels();
+
+    // same delay for all frames
+    frame_delay_count = default_frame_delay;
+    current_angle256++; // mod(256) is implicit
+    return false;
+}
+
+/// @brief  starting at two pixels near USB port, scan edges towards plank connector
+/// @param color color to use for the pixels, or RGBCOLOR_BLACK to use angle-based rainbow
+/// @return true when rull animation has run its course
+static bool animation_scanner(CPIXEL_COLOR color) {
+    // TODO: implement this function
+    return true;
 }
 
 static bool rgb_scanner(void) {
@@ -553,10 +686,13 @@ static bool pixel_timer_callback(struct repeating_timer *t){
             next = rgb_master(groups_top_down,         count_of(groups_top_down),         &color_wheel, 0xff, (                                    30), 5, 10);
             break;
         case LED_EFFECT_SCANNER:
+            //static const CPIXEL_COLOR scanner_color = { .r = 0x80, .g = 0x20, .b = 0x20 };
+            //next = animation_angular_wipe(scanner_color);
+            //next = animation_anticlockwise_scan(scanner_color);
             next = rgb_scanner();
             break;
         case LED_EFFECT_GENTLE_GLOW:
-            next = rgb_gentle_glow();
+            next = animation_gentle_glow();
             break;
         case LED_EFFECT_PARTY_MODE:
             assert(!"Party mode should never be value of the *local* variable!");

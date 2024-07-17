@@ -8,8 +8,130 @@
 #include "system_config.h"
 #include "pirate/rgb.h"
 
-// Total count of RGB pixels
-#define COUNT_OF_PIXELS RGB_LEN
+
+//        REV10                     REV8             
+//                                                    
+//    11 10  9  8  7            10  9  8  7  6        
+// 12    +-------+    6     11    +-------+     5    
+// 13    |       |    5     12    |       |     4    
+// USB   | OLED  |   []     USB   | OLED  |    []    
+// 14    |       |    4     13    |       |     3    
+// 15    +-------+    3     14    +-------+     2    
+//    16 17  0  1  2            15  x  x  0  1       
+//
+#define COUNT_OF_PIXELS RGB_LEN // 18 for Rev10, 16 for Rev8
+
+#pragma region    // 8-bit scaled pixel coordinates and angle256
+    /// @brief Scaled coordinates in range [0..255]
+    typedef struct _coordin8 {
+        uint8_t x;
+        uint8_t y;
+    } coordin8_t;
+
+
+    /// @brief Each pixel's coordinate in a 256x256 grid, as
+    ///        extracted from the PCB layout and Pick'n'Place data.
+    /// @details The grid is oriented with the origin (0,0) at the
+    ///          upper left, similar to a PC screen.  Orient the PCB
+    ///          so the USB port is on the left, and the
+    ///          plank connector is on the right.
+    ///
+    ///            y
+    ///          x +---------------> +x
+    ///            |    11  10 ...
+    ///            |  12
+    ///            |  ...
+    ///            V
+    ///           +y
+    ///
+    static const coordin8_t pixel_coordin8[] = {
+        //                        // SIDE      POSITION    FACING
+        #if BP5_REV >= 10
+        { .x = 127, .y = 255,  }, // bottom    center      out
+        #endif
+        { .x = 165, .y = 255,  }, // bottom    right       side
+        { .x = 202, .y = 255,  }, // bottom    right       out
+        { .x = 255, .y = 202,  }, // right     bottom      out
+        { .x = 255, .y = 171,  }, // right     bottom      side    (by plank connector)
+        { .x = 255, .y =  84,  }, // right     top         side    (by plank connector)
+        { .x = 255, .y =  52,  }, // right     top         out
+        { .x = 202, .y =   0,  }, // top       right       out
+        { .x = 165, .y =   0,  }, // top       right       side
+        { .x = 127, .y =   0,  }, // top       center      out
+        { .x =  90, .y =   0,  }, // top       left        side
+        { .x =  52, .y =   0,  }, // top       left        out
+        { .x =   0, .y =  52,  }, // left      top         out
+        { .x =   0, .y =  84,  }, // left      top         side    (by USB port)
+        { .x =   0, .y = 171,  }, // left      bottom      side    (by USB port)
+        { .x =   0, .y = 202,  }, // left      bottom      out
+        { .x =  52, .y = 255,  }, // bottom    left        out
+        #if BP5_REV >= 10
+        { .x =  90, .y = 255,  }, // bottom    left        side
+        #endif
+    };
+
+    /// @brief Angular position in 1/256th-circle units, as
+    ///        extracted from the PCB layout and Pick'n'Place data.
+    ///        From the center of the PCB, the zero angle is
+    ///        directly towards the center of the plank connector,
+    ///        with angles increasing in the anti-clockwise direction.
+    static const uint8_t pixel_angle256[] = {
+        #if BP5_REV >= 10
+        192,
+        #endif
+        204,
+        214,
+        234,
+        243,
+         13,
+         22,
+         42,
+         52,
+         64,
+         76,
+         86,
+        106,
+        115,
+        141,
+        150,
+        170,
+        #if BP5_REV >= 10
+        180,
+        #endif
+    };
+
+    static_assert(count_of(pixel_coordin8) == COUNT_OF_PIXELS);
+    static_assert(count_of(pixel_angle256) == COUNT_OF_PIXELS);
+
+    // Sadly, C still refuses to allow the following format in static_assert(), saying it's not constant.
+    //static const uint32_t PIXEL_MASK_UPPER = 0b0....1;
+    //static const uint32_t PIXEL_MASK_SIDE  = 0b1....0;
+
+    // clang-format off
+    #if BP5_REV <= 9
+        // Pixels that shine    orthogonal to OLED: idx     1,2,    5,6,  8,  10,11,      14,15,
+        #define PIXEL_MASK_UPPER ( 0b1100110101100110 )
+        // Pixels that shine    orthogonal to OLED: idx   0,    3,4,    7,  9,      12,13,
+        #define PIXEL_MASK_SIDE  ( 0b0011001010011001 )
+    #else
+        // Pixels that shine in direction  of OLED: idx 0,  2,3,    6,7,  9,   11,12,      15,16
+        #define PIXEL_MASK_UPPER (0b011001101011001101)
+        // Pixels that shine    orthogonal to OLED: idx   1,    4,5,    8,  10,      13,14,     17
+        #define PIXEL_MASK_SIDE  (0b100110010100110010)
+    #endif
+    // clang-format on
+
+    static const uint32_t groups_top_down[] = {
+        PIXEL_MASK_UPPER,
+        PIXEL_MASK_SIDE,
+    }; // MSb is last led in string...
+    #define PIXEL_MASK_ALL ((1u << COUNT_OF_PIXELS) - 1)
+    static_assert(COUNT_OF_PIXELS < (sizeof(uint32_t)*8)-1, "Too many pixels for pixel mask definition to be valid");
+    static_assert((PIXEL_MASK_UPPER & PIXEL_MASK_SIDE) == 0, "Pixel cannot be both upper and side");
+    static_assert((PIXEL_MASK_UPPER | PIXEL_MASK_SIDE) == PIXEL_MASK_ALL, "Pixel must be either upper or side");
+
+
+#pragma endregion
 
 // Externally to this file, colors are always handled as uint32_t values
 // which stores the color in 0x00RRGGBB format.
@@ -37,8 +159,10 @@ typedef struct _CPIXEL_COLOR {
     uint8_t _unused;
 } CPIXEL_COLOR;
 
+CPIXEL_COLOR pixels[COUNT_OF_PIXELS]; // store as RGB ... as it's the common format
+
 // C23 would allow this to be `constexpr`
-// here, `static const` relies on compiler to optimize this away
+// here, `static const` relies on compiler to optimize this away to a literal `((uint32_t)0u)`
 static const CPIXEL_COLOR PIXEL_COLOR_BLACK = { .r=0x00, .g=0x00, .b=0x00 };
 
 static CPIXEL_COLOR color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
@@ -59,143 +183,118 @@ static uint32_t color_as_uint32(CPIXEL_COLOR c) {
 }
 
 
-// Note that both the layout and overall count of pixels
-// has changed between revisions.  As a result, the count
-// of elements for any of these arrays may differ.
-//
-// groups_top_left[]:
-//    defines led_bitmasks that generally start at the top left corner of the device,
-//    and continue in a diagnol pattern.  Generally setup in pairs, although some groups
-//    may set three pixels at a time.
-//
-// groups_center_left[]:
-//    tbd
-//
-// groups_center_clockwise[]:
-//    tbd
-//
-// groups_top_down[]:
-//    tbd
-//
-// Also add a new constant, COUNT_OF_PIXELS, to define the number
-// pixels on each revision of board.
+#pragma region    // Legacy pixel animation groups
 
-#if BP5_REV <= 9
-    // Sadly, C still doesn't recognize the following format as constexpr enough for static_assert()
-    //static const uint8_t COUNT_OF_PIXELS = 16u;
-    //static const uint32_t PIXEL_MASK_UPPER = 0b011001101011001101;
-    //static const uint32_t PIXEL_MASK_SIDE  = 0b100110010100110010;
+    // Note that both the layout and overall count of pixels
+    // has changed between revisions.  As a result, the count
+    // of elements for any of these arrays may differ.
+    //
+    // groups_top_left[]:
+    //    generally start at the top left corner of the device,
+    //    and continue in a diagnol wipe to bottom right.
+    //
+    // groups_center_left[]:
+    //    generally start at left center two pixels (by USB port),
+    //    each of which flows towards the plank connector (in opposite directions)
+    //
+    // groups_center_clockwise[]:
+    //    Similar to a clock, rotating around the device clockwise.
+    //
+    // groups_top_down[]:
+    //    All the pixels facing upwards as one group, and all the pixels
+    //    facing the sides as a second group.
 
-    static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel mask definition to be valid");
-    // Pixels that shine in direction  of OLED: idx 0,    3,4,    7,  9,      12,13,
-    #define PIXEL_MASK_UPPER (0b0011001010011001)
-    // Pixels that shine    orthogonal to OLED: idx   1,2,    5,6,  8,  10,11,      14,15,
-    #define PIXEL_MASK_SIDE  (0b1100110101100110)
+    #if BP5_REV <= 9
+        static const uint32_t groups_top_left[] = {
+            // clang-format off
+            ((1u <<  1) | (1u <<  2)             ),
+            ((1u <<  0) | (1u <<  3)             ),
+            ((1u << 15) | (1u <<  4) | (1u <<  5)), // pair up 4/5
+            ((1u << 14) | (1u <<  6) | (1u <<  7)), // pair up 6/7
+            ((1u << 13) | (1u <<  8)             ),
+            ((1u << 12) | (1u <<  9)             ),
+            ((1u << 11) | (1u << 10)             ),
+            // clang-format on
+        };
+        static const uint32_t groups_center_left[] = {
+            // clang-format off
+            ((1u <<  3) | (1u <<  4)                         ),
+            ((1u <<  2) | (1u <<  5)                         ),
+            ((1u <<  1) | (1u <<  6)                         ),
+            ((1u <<  0) | (1u <<  7) | (1u <<  8) | (1 <<  9)),
+            ((1u << 10) | (1u << 15)                         ),
+            ((1u << 11) | (1u << 14)                         ),
+            ((1u << 12) | (1u << 13)                         ),
+            // clang-format on
+        };  
+        static const uint32_t groups_center_clockwise[] = {
+            // clang-format off
+            ((1u << 13) | (1u << 14)),
+            ((1u << 15)             ),
+            ((1u <<  0) | (1u <<  1)),
+            ((1u <<  2) | (1u <<  3)),
+            ((1u <<  4) | (1u <<  5)),
+            ((1u <<  6) | (1u <<  7)),
+            ((1u <<  8) | (1u <<  9)),
+            ((1u << 10)             ),
+            ((1u << 11) | (1u << 12)),
+            // clang-format on
+        };
+    #elif BP5_REV >= 10
+        static const uint32_t groups_top_left[] = {
+            // TODO: use grid mappings instead
+            //       e.g., for iteration target from 255..0
+            //             (x+y)/2 == iteration
+            // clang-format off
+            (               (1u <<  2) | (1u <<  3)),
+            (               (1u <<  1) | (1u <<  4)),
+            ((1u << 17)   | (1u <<  0) | (1u <<  5)),
+            ((1u << 16)   |              (1u <<  6)),
+            ((1u << 15)   |              (1u <<  7)),
+            ((1u << 14)   | (1u <<  9) | (1u <<  8)),
+            ((1u << 13)   | (1u << 10)             ),
+            ((1u << 12)   | (1u << 11)             ),
+            // clang-format on
+        };
+        static const uint32_t groups_center_left[] = {
+            // TODO: use angular mappings instead
+            //       e.g., for iteration target from 255..0
+            //             // convert to angular range: [0..127] based on absolute offset from angle 0
+            //             uint8_t pix_a = (a256 > 127u) ? 256u - a256 : a256;
+            //             // scale it up to range [0..255]
+            //             pix_a *= 2u;
+            // clang-format off
+            ((1u <<  4) | (1u <<  5)),
+            ((1u <<  3) | (1u <<  6)),
+            ((1u <<  2) | (1u <<  7)),
+            ((1u <<  1) | (1u <<  8)),
+            ((1u <<  0) | (1u <<  9)),
+            ((1u << 17) | (1u << 10)),
+            ((1u << 16) | (1u << 11)),
+            ((1u << 15) | (1u << 12)),
+            ((1u << 14) | (1u << 13)),
+            // clang-format on
+        };  
+        static const uint32_t groups_center_clockwise[] = {
+            // TODO: use angular mappings instead
+            //       e.g., for iteration target from 255..0
+            //             uint8_t pix_a = 256u - a256;
+            // clang-format off
+            ((1u << 14) | (1u << 15)),
+            ((1u << 16)             ),
+            ((1u << 17) | (1u <<  0)),
+            ((1u <<  1) | (1u <<  2)),
+            ((1u <<  3) | (1u <<  4)),
+            ((1u <<  5) | (1u <<  6)),
+            ((1u <<  7)             ),
+            ((1u <<  8) | (1u <<  9)),
+            ((1u << 10) | (1u << 11)),
+            ((1u << 12) | (1u << 13)),
+            // clang-format on
+        };
+    #endif
+#pragma endregion // Legacy pixel animation groups
 
-    static const uint32_t groups_top_left[] = {
-        // clang-format off
-        ((1u <<  1) | (1u <<  2)             ),
-        ((1u <<  0) | (1u <<  3)             ),
-        ((1u << 15) | (1u <<  4) | (1u <<  5)), // pair up 4/5
-        ((1u << 14) | (1u <<  6) | (1u <<  7)), // pair up 6/7
-        ((1u << 13) | (1u <<  8)             ),
-        ((1u << 12) | (1u <<  9)             ),
-        ((1u << 11) | (1u << 10)             ),
-        // clang-format on
-    };
-    static const uint32_t groups_center_left[] = {
-        // clang-format off
-        ((1u <<  3) | (1u <<  4)                         ),
-        ((1u <<  2) | (1u <<  5)                         ),
-        ((1u <<  1) | (1u <<  6)                         ),
-        ((1u <<  0) | (1u <<  7) | (1u <<  8) | (1 <<  9)), // pair 7, 8, and 9?
-        ((1u << 10) | (1u << 15)                         ),
-        ((1u << 11) | (1u << 14)                         ),
-        ((1u << 12) | (1u << 13)                         ),
-        // clang-format on
-    };  
-    static const uint32_t groups_center_clockwise[] = {
-        // Generally, pixel 15 and 10 are single, others are just pairs of top/bottom pixels
-        // Here's upper/side masks split into the groupings:
-        // PIXEL_MASK_UPPER (0b 0 01 10 0 10 10 01 10 01)
-        // PIXEL_MASK_SIDE  (0b 1 10 01 1 01 01 10 01 10)
-        // clang-format off
-        ((1u << 13) | (1u << 14)),
-        ((1u << 15)             ),
-        ((1u <<  0) | (1u <<  1)),
-        ((1u <<  2) | (1u <<  3)),
-        ((1u <<  4) | (1u <<  5)),
-        ((1u <<  6) | (1u <<  7)),
-        ((1u <<  8) | (1u <<  9)),
-        ((1u << 10)             ),
-        ((1u << 11) | (1u << 12)),
-        // clang-format on
-    };
-#elif BP5_REV >= 10
-    // Sadly, C still doesn't recognize the following format as constexpr enough for static_assert()
-    // and thus we must resort to preprocessor macros (still).
-    //static const uint32_t PIXEL_MASK_UPPER = 0b011001101011001101;
-    //static const uint32_t PIXEL_MASK_SIDE  = 0b100110010100110010;
-
-    // Pixels that shine in direction  of OLED: idx 0,  2,3,    6,7,  9,   11,12,      15,16
-    #define PIXEL_MASK_UPPER (0b011001101011001101)
-    // Pixels that shine    orthogonal to OLED: idx   1,    4,5,    8,  10,      13,14,     17
-    #define PIXEL_MASK_SIDE  (0b100110010100110010)
-
-
-    static const uint32_t groups_top_left[] = {
-        // clang-format off
-        (               (1u <<  2) | (1u <<  3)),
-        (               (1u <<  1) | (1u <<  4)),
-        ((1u << 17)   | (1u <<  0) | (1u <<  5)),
-        ((1u << 16)   |              (1u <<  6)),
-        ((1u << 15)   |              (1u <<  7)),
-        ((1u << 14)   | (1u <<  9) | (1u <<  8)),
-        ((1u << 13)   | (1u << 10)             ),
-        ((1u << 12)   | (1u << 11)             ),
-        // clang-format on
-    };
-    static const uint32_t groups_center_left[] = {
-        // clang-format off
-        ((1u <<  4) | (1u <<  5)),
-        ((1u <<  3) | (1u <<  6)),
-        ((1u <<  2) | (1u <<  7)),
-        ((1u <<  1) | (1u <<  8)),
-        ((1u <<  0) | (1u <<  9)),
-        ((1u << 17) | (1u << 10)),
-        ((1u << 16) | (1u << 11)),
-        ((1u << 15) | (1u << 12)),
-        ((1u << 14) | (1u << 13)),
-        // clang-format on
-    };  
-    static const uint32_t groups_center_clockwise[] = {
-        // clang-format off
-        ((1u << 14) | (1u << 15)),
-        ((1u << 16)             ),
-        ((1u << 17) | (1u <<  0)),
-        ((1u <<  1) | (1u <<  2)),
-        ((1u <<  3) | (1u <<  4)),
-        ((1u <<  5) | (1u <<  6)),
-        ((1u <<  7)             ),
-        ((1u <<  8) | (1u <<  9)),
-        ((1u << 10) | (1u << 11)),
-        ((1u << 12) | (1u << 13)),
-        // clang-format on
-    };
-#endif
-
-static const uint32_t groups_top_down[] = {
-    PIXEL_MASK_UPPER,
-    PIXEL_MASK_SIDE,
-}; // MSb is last led in string...
-
-#define PIXEL_MASK_ALL ((1u << COUNT_OF_PIXELS) - 1)
-
-static_assert(COUNT_OF_PIXELS < sizeof(uint32_t)*8, "Too many pixels for pixel mask definition to be valid");
-static_assert((PIXEL_MASK_UPPER & PIXEL_MASK_SIDE) == 0, "Pixel cannot be both upper and side");
-static_assert((PIXEL_MASK_UPPER | PIXEL_MASK_SIDE) == PIXEL_MASK_ALL, "Pixel must be either upper or side");
-
-CPIXEL_COLOR pixels[COUNT_OF_PIXELS]; // store as RGB ... as it's the common format
 
 static inline void update_pixels(void) {  
     // TODO: define symbolic constant for which state machine (no magic numbers!)

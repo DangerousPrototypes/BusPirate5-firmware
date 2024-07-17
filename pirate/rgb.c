@@ -46,6 +46,7 @@
     ///
     static const coordin8_t pixel_coordin8[] = {
         //                        // SIDE      POSITION    FACING
+        // clang-format off
         #if BP5_REV >= 10
         { .x = 127, .y = 255,  }, // bottom    center      out
         #endif
@@ -68,6 +69,7 @@
         #if BP5_REV >= 10
         { .x =  90, .y = 255,  }, // bottom    left        side
         #endif
+        // clang-format on
     };
 
     /// @brief Angular position in 1/256th-circle units, as
@@ -76,28 +78,31 @@
     ///        directly towards the center of the plank connector,
     ///        with angles increasing in the anti-clockwise direction.
     static const uint8_t pixel_angle256[] = {
+        //                  // SIDE      POSITION    FACING
+        // clang-format off
         #if BP5_REV >= 10
-        192,
+        192,                // bottom    center      out
         #endif
-        204,
-        214,
-        234,
-        243,
-         13,
-         22,
-         42,
-         52,
-         64,
-         76,
-         86,
-        106,
-        115,
-        141,
-        150,
-        170,
+        204,                // bottom    right       side
+        214,                // bottom    right       out
+        234,                // right     bottom      out
+        243,                // right     bottom      side    (by plank connector)
+         13,                // right     top         side    (by plank connector)
+         22,                // right     top         out
+         42,                // top       right       out
+         52,                // top       right       side
+         64,                // top       center      out
+         76,                // top       left        side
+         86,                // top       left        out
+        106,                // left      top         out
+        115,                // left      top         side    (by USB port)
+        141,                // left      bottom      side    (by USB port)
+        150,                // left      bottom      out
+        170,                // bottom    left        out
         #if BP5_REV >= 10
-        180,
+        180,                // bottom    left        side
         #endif
+        // clang-format on
     };
 
     static_assert(count_of(pixel_coordin8) == COUNT_OF_PIXELS);

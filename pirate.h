@@ -51,8 +51,6 @@
 
 #define OPTARG_STRING_LEN 20
 
-#define BIG_BUFFER_SIZE (128 * 1024)
-
 // include platform
 #ifndef BP5_REV
     #error "No /platform/ file included in pirate.h"

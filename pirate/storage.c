@@ -124,7 +124,7 @@ bool storage_detect(void){
 
 uint8_t storage_format(void) {
     FRESULT fr;     /* FatFs return code */
-    uint8_t *work_buffer = mem_alloc(FF_MAX_SS, BP_BIG_BUFFER_DISKFORMAT);
+    uint8_t *work_buffer = mem_alloc(FF_MAX_SS, BP_BIG_BUFFER_OWNER_DISKFORMAT);
     if (!work_buffer) {
         return FR_NOT_ENOUGH_CORE;
     }

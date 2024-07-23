@@ -235,7 +235,7 @@ uint32_t scope_setup(void)
 {
 	uint8_t *x;
 	
-	x = mem_alloc(MALLOC_SIZE, BP_BIG_BUFFER_SCOPE);
+	x = mem_alloc(MALLOC_SIZE, BP_BIG_BUFFER_OWNER_SCOPE);
 	if (!x) {
 		printf("couldn't allocate %d bytes, scope mode broken\r\n", MALLOC_SIZE);
 		return 0;
@@ -249,7 +249,7 @@ uint32_t scope_setup_exc(void)
 {
 	uint8_t *x;
 	
-	x = mem_alloc(MALLOC_SIZE, BP_BIG_BUFFER_SCOPE);
+	x = mem_alloc(MALLOC_SIZE, BP_BIG_BUFFER_OWNER_SCOPE);
 	if (!x)
 		return 0;
 	fb = x;

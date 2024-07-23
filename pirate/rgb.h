@@ -21,7 +21,6 @@ static_assert(MAX_LED_EFFECT-1 == LED_EFFECT_PARTY_MODE, "LED_EFFECT_PARTY_MODE 
 // TODO: review and provide a more useful client-focused API.
 // TODO: adjust to use RGB color type instead of uint32_t.
 void rgb_init(void);
-uint32_t rgb_update(uint32_t mode);
 void rgb_put(uint32_t color);
 void rgb_irq_enable(bool enable);
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b);

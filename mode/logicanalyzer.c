@@ -10,7 +10,7 @@
 #include "opt_args.h"
 #include "logicanalyzer.h"
 #include "hardware/pio.h"
-#include "build/logicanalyzer.pio.h"
+#include "logicanalyzer.pio.h"
 #include "pirate/mem.h"
 #include "hardware/structs/bus_ctrl.h"
 #include "ui/ui_term.h"
@@ -20,6 +20,7 @@
 #include "pico/multicore.h"
 #include "pirate/amux.h"
 #include "ui/ui_cmdln.h"
+#include "pirate/intercore_helpers.h"
 
 enum logicanalyzer_status
 {
@@ -320,8 +321,7 @@ la_x:
 
 void logicanalyzer_reset_led(void)
 {
-    multicore_fifo_push_blocking(0xf4);
-    multicore_fifo_pop_blocking();
+    icm_core0_send_message_synchronous(BP_ICM_DISABLE_RGB_UPDATES);
 }
 
 
@@ -484,8 +484,7 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
     irq_set_enabled(pio_get_dreq(pio, sm, false), true);
     irq_clear(pio_get_dreq(pio, sm, false));
     la_status=LA_ARMED_INIT;
-    multicore_fifo_push_blocking(0xf3);
-    multicore_fifo_pop_blocking();
+    icm_core0_send_message_synchronous(BP_ICM_ENABLE_RGB_UPDATES);
     //rgb_irq_enable(false);
     busy_wait_ms(5);
     rgb_set_all(0xff,0,0); //RED LEDs for armed

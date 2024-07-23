@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 #set(PICO_SDK_PATH "C:/pico113/pico-sdk")
  
 # Pull in Raspberry Pi Pico SDK (must be before project)
-include(pico_sdk_import.cmake)
+include(cmake/pico_sdk_import.cmake)
 
 set(PICO_BOARD pico)
 
@@ -46,6 +46,7 @@ set(bp5_common
         pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h
         pirate/lcd.h pirate/lcd.c pirate/shift.h pirate/shift.c
         pirate/amux.h pirate/amux.c pirate/rgb.h pirate/rgb.c
+        pirate/intercore_helpers.c
 
         # commands
         commands.h commands.c
@@ -67,7 +68,9 @@ set(bp5_common
         commands/global/macro.c commands/global/macro.h
         commands/global/script.c commands/global/script.h
         commands/global/tutorial.c commands/global/tutorial.h
-
+        commands/global/button_scr.c commands/global/button_scr.h
+        commands/global/smps.c commands/global/smps.h
+        commands/global/cls.h commands/global/cls.c  
         # HiZ
         mode/hiz.h mode/hiz.c
         # 1Wire
@@ -83,6 +86,7 @@ set(bp5_common
         commands/uart/bridge.h commands/uart/bridge.c
         commands/uart/simcard.h commands/uart/simcard.c
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
+        commands/uart/monitor.h commands/uart/monitor.c
 
         # Half duplex UART
         mode/hwhduart.h mode/hwhduart.c
@@ -119,6 +123,7 @@ set(bp5_common
         mode/dummy1.c mode/dummy1.h
 
         # UI
+        ui/ui_button.c ui/ui_button.h
         ui/ui_cmdln.c ui/ui_cmdln.h
         ui/ui_process.h ui/ui_process.c
         ui/ui_flags.h
@@ -166,6 +171,13 @@ set(bp5_common
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h
         msc_disk.c msc_disk.h usb_descriptors.c
 )
+set(bp5_rev10
+        platform/bpi-rev10.h platform/bpi-rev10.c 
+        #nand flash management and dhara
+        dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
+        nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
+        nand/sys_time.c nand/sys_time.h
+)
 
 add_executable(bus_pirate5_rev8
         ${bp5_common}
@@ -178,11 +190,7 @@ target_compile_definitions(bus_pirate5_rev8 PUBLIC BP5_REV=8)
 
 add_executable(bus_pirate5_rev10
         ${bp5_common}
-        platform/bpi-rev10.h platform/bpi-rev10.c 
-        #nand flash management and dhara
-        dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
-        nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
-        nand/sys_time.c nand/sys_time.h
+        ${bp5_rev10}
         )
 target_compile_definitions(bus_pirate5_rev10 PUBLIC BP5_REV=10)
 
@@ -215,6 +223,7 @@ set(revisions
         )
         
 
+# Compile the various PIO programs to generate the header files
 foreach(revision ${revisions})
         ADD_DEPENDENCIES (${revision} timestamp)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw2wire.pio)
@@ -243,8 +252,23 @@ foreach(revision ${revisions})
         target_link_libraries(${revision} ${stdlibs} )
         target_include_directories(${revision} PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )
         pico_add_extra_outputs(${revision})
+
+        pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate5.ld)
 endforeach()
 
 string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
+
+
+# by default this project uses LGPL3 libraries, if you do not want to comply
+# with LGPL3 license, please set the following variable to FALSE, otherwise
+# you are oblicated to distribute the resulted binaries under LGPL3 license
+set(USE_LGPL3 TRUE CACHE BOOL "indicated if to include LGPL3 protected code")
+include(cmake/ansi_colours_import.cmake)
+if(USE_LGPL3)
+if(LEGACY_ANSI_COLOURS_ENABLED)
+        target_link_libraries(bus_pirate5_rev10       lib_ansi_colours)
+        target_link_libraries(bus_pirate5_rev8        lib_ansi_colours)
+endif()
+endif()
 
  

@@ -32,4 +32,68 @@ VT100 terminal emulation supports color and a live statusbar view of the voltage
 - Just one button - 18 party LEDs but just one button!
 - 1-Wire, I2C, SPI, UART, MIDI, serial LEDs supported, more to come!
 
-Bus Pirate 5 is the universal serial interface tool designed by hackers, for hackers. It's crammed full of hardware and firmware features to make probing chips pleasant and easy.
+Bus Pirate 5 is the universal serial interface tool designed by hackers, for hackers. It's crammed full of hardware and firmware features to make probing chips pleasant and easy.  
+
+## Build
+
+This project uses `cmake` as the build system, so building the project only takes 2 steps:
+1. project configuration (needs to be ran once, or when you want to change configuration).  
+    `cmake -S . -B build -DPICO_SDK_FETCH_FROM_GIT=TRUE`  
+    you may want to add the flags `-DPICO_SDK_PATH=/path/to/pico-sdk -DPICO_SDK_FETCH_FROM_GIT=FALSE` if you want to use pico-sdk that is in your local path.  
+    > NOTE: WINDOWS users: for some reason the automatic fetch fails because of git submodule, so you will need to clone pico-sdk your self, and then
+    > apply the following commands inside the pico-sdk repo:  
+    > ```bash
+    > git submodule init
+    > git submodule update
+    > ```
+    
+2. project build  
+    `cmake --build ./build --target bus_pirate5_rev10`  
+    you may set `bus_pirate5_rev10` to `bus_pirate5_rev8` if the have the development version.
+    
+### build using docker
+Instructions on the forum provide additional details; however, this repo provides a docker compose image for you to just get running quickly in the event you want to try patching/hacking.
+To run a build, perform the following actions on linux:
+
+```sh
+# clone the repo
+git clone git@github.com:DangerousPrototypes/BusPirate5-firmware.git
+cd BusPirate5-firmware
+
+# build the environment
+docker compose build
+
+# run a build
+UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
+# build stuff happens ...
+# [100%] Linking CXX executable bus_pirate5_rev10.elf
+# Memory region         Used Size  Region Size  %age Used
+#            FLASH:      460068 B         2 MB     21.94%
+#              RAM:      256168 B       256 KB     97.72%
+#        SCRATCH_X:          4 KB         4 KB    100.00%
+#        SCRATCH_Y:          0 GB         4 KB      0.00%
+# [100%] Built target bus_pirate5_rev10
+# your build will be placed in ./build/
+
+# Or drop into the container and run builds manually
+UID=$(id -u) GID=$(id -g) docker compose run dev
+```
+
+### Building without LGPL3 protected component
+**NOTE** by doing the following you may not need to distribute the binaries under LGPL3 license terms. 
+
+To compile the firmware without LGPL3 components, simply add the following flags to the configuration step above:  
+`-DUSE_LGPL3=NO -DLEGACY_ANSI_COLOURS_ENABLED=NO`
+
+## Other open source licenses
+
+This project uses code from the following licenses:  
+* LGPL3  
+* BSD 3 clause 
+
+More information on the licenses and components being used can be found [here](docs/licenses.md).  
+
+## Contributing
+Please see [contributing.md](docs/contributing.md)
+
+

@@ -26,11 +26,17 @@
 //these have to be ASCII strings for the terminal
 //TODO: abuse pre-compiler to use 0x000000 format as above...
 #define BP_COLOR_PROMPT_TEXT "150;203;89"
+#define BP_COLOR_256_PROMPT_TEXT "113"
 #define BP_COLOR_INFO_TEXT "191;165;48"
+#define BP_COLOR_256_INFO_TEXT "178"
 #define BP_COLOR_NOTICE_TEXT "191;165;48"
+#define BP_COLOR_256_NOTICE_TEXT "178"
 #define BP_COLOR_WARNING_TEXT "191;165;48"
+#define BP_COLOR_256_WARNING_TEXT "178"
 #define BP_COLOR_ERROR_TEXT "191;48;48"
+#define BP_COLOR_256_ERROR_TEXT "1"
 #define BP_COLOR_NUM_FLOAT_TEXT "83;166;230"
+#define BP_COLOR_256_NUM_FLOAT_TEXT "26"
 
 // LCD color pallet 5-6-5 RGB
 #define BP_LCD_COLOR_RED    0b1111100000000000

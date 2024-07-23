@@ -10,6 +10,8 @@
 #include "system_config.h"
 #include "mjson/mjson.h"
 #include "pirate/mem.h" //defines for buffer owner
+#include "ui/ui_term.h"
+#include "pirate/rgb.h"
 
 struct _system_config system_config;
 
@@ -29,15 +31,16 @@ void system_init(void)
     system_config.lcd_screensaver_active=false;
     system_config.lcd_timeout=0;
     
-    system_config.led_effect=7;
-    system_config.led_color=0;
-    system_config.led_brightness=10;
+	// NOTE: LED effect is an enum.
+    system_config.led_effect=LED_EFFECT_SOLID;
+    system_config.led_color=0xFF0000u; // now stores actual RGB value directly (not an index)
+    system_config.led_brightness_divisor=10; // Divisor for the led's brightness.   10 = 10%, 5 = 20%, 4 = 25%, etc.
 
 	system_config.terminal_ansi_rows=24;
 	system_config.terminal_ansi_columns=80;
 	system_config.terminal_ansi_statusbar=0;
 	system_config.terminal_ansi_statusbar_update=false;
-	system_config.terminal_ansi_color=0;
+	system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
 	system_config.terminal_update=0;
 	system_config.terminal_hide_cursor=false;
 	system_config.terminal_ansi_statusbar_pause=false;
@@ -161,69 +164,4 @@ bool system_set_active(bool active, uint8_t bio_pin, uint8_t* function_register)
         (*function_register)&=~(0x01<<((uint8_t)bio_pin)); 
     }
     return true;
-}
-
-bool system_load_config(void)
-{
-/*
-	system_config.terminal_usb_enable=true; 		//enable USB CDC terminal
-
-	system_config.terminal_uart_enable=false; 		//enable UART terminal on IO pins
-	system_config.terminal_uart_number=1; 	//which UART to use (0 or 1)
-
-	system_config.debug_uart_enable=false;			//initializes a UART for general developer use
-	system_config.debug_uart_number=0;		//which UART to use (0 or 1)
-
-    system_config.lcd_screensaver_active=false;
-    system_config.lcd_timeout=0;
-    
-    system_config.led_effect=7;
-    system_config.led_color=1;
-    system_config.led_brightness=5;
-
-	system_config.display_format=df_auto;
-*/
-
-	const char *s ="{\"terminal_usb_enable\":true, 	//enable USB CDC terminal \
-	\"terminal_uart_enable\":false, //enable UART terminal on IO pins\
-	\"terminal_uart_number\":1, 	//which UART to use (0 or 1)\
-	\"debug_uart_enable\"=false,	//initializes a UART for general developer use\
-	\"debug_uart_number\"=0,		//which UART to use (0 or 1)\
-    \"lcd_screensaver_active\"=false,\
-    \"lcd_timeout\"=0, \
-    \"led_effect\"=7,\
-    \"led_color\"=1,\
-    \"led_brightness\"=5,\
-	\"display_format\"=0}";
-
-
-
-	int v;                                           // Extract `false`
-	if (mjson_get_bool(s, strlen(s), "$.terminal_usb_enable", &v))  // into C variable `v`
-	printf("boolean: %d\r\n", v);                    // boolean: 0	
-
-	//int v;                                           // Extract `false`
-	if (mjson_get_bool(s, strlen(s), "$.terminal_uart_enable", &v))  // into C variable `v`
-	printf("boolean: %d\r\n", v);                    // boolean: 0	
-
-	double val;                                       // Get `a` attribute
-	if (mjson_get_number(s, strlen(s), "$.terminal_uart_number", &val))  // into C variable `val`
-	printf("a: %g\r\n", val);       	
-
-	//const char *s = "{\"a\":1,\"b\":[2,false]}";  // {"a":1,"b":[2,false]}
-/*
-	double val;                                       // Get `a` attribute
-	if (mjson_get_number(s, strlen(s), "$.a", &val))  // into C variable `val`
-	printf("a: %g\n", val);                         // a: 1
-
-	const char *buf;  // Get `b` sub-object
-	int len;          // into C variables `buf,len`
-	if (mjson_find(s, strlen(s), "$.b", &buf, &len))  // And print it
-	printf("%.*s\n", len, buf);                     // [2,false]
-
-	int v;                                           // Extract `false`
-	if (mjson_get_bool(s, strlen(s), "$.b[1]", &v))  // into C variable `v`
-	printf("boolean: %d\n", v);                    // boolean: 0
-
-	*/
 }

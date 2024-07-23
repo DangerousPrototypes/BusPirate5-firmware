@@ -4,6 +4,7 @@
 #include "pirate/mcu.h"
 #include "system_config.h"
 #include "opt_args.h"
+#include "msc_disk.h"
 
 void cmd_mcu_reset(void){
  	mcu_reset();
@@ -30,6 +31,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result *res){
 		return;
 	}
     printf("Later Alligator!");
+    eject_usbmsdrive();
     busy_wait_ms(200);
     cmd_mcu_jump_to_bootloader();
 }

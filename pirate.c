@@ -25,6 +25,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_process.h"
 #include "ui/ui_flags.h"
+#include "commands/global/button_scr.h"
 #include "commands/global/freq.h"
 #include "queue.h"
 #include "usb_tx.h"
@@ -47,8 +48,11 @@
 //#include "display/scope.h"
 #include "mode/logicanalyzer.h"
 #include "msc_disk.h"
+#include "pirate/intercore_helpers.h"
 
 static mutex_t spi_mutex;
+
+uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = {0};
 
 void core1_entry(void);
 
@@ -62,6 +66,10 @@ int main(){
     char c;
     
     uint8_t bp_rev=mcu_detect_revision();
+
+    reserve_for_future_mode_specific_allocations[1] = 99;
+    reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
+    reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
 
     //init buffered IO pins
     bio_init(); 
@@ -175,9 +183,7 @@ int main(){
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
-    multicore_fifo_push_blocking(0); 
-    // wait for init to complete  
-    while(multicore_fifo_pop_blocking()!=0xff);
+    icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
     //test for PCB revision
     //must be done after shift register setup
@@ -238,7 +244,7 @@ int main(){
                     result.success=false;
 
                     if(rx_fifo_try_get(&c)){
-                        value='y';
+                        value='a';
                         result.success=true;
                     } 
                 }else{
@@ -248,15 +254,16 @@ int main(){
                 if(result.success){
                     switch(value){
                         case 'y':
-                            system_config.terminal_ansi_color=1;
+                            system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
                             system_config.terminal_ansi_statusbar=1;
+                        case 'a': // case were configuration already exists
                             ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
                             ui_term_init(); // Initialize VT100 if ANSI terminal
                             ui_statusbar_update(UI_UPDATE_ALL);
                             break;
                         case 'n':
                             system_config.terminal_ansi_statusbar=0;
-                            system_config.terminal_ansi_color=0;
+                            system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
                             break;
                         default:
                             break;
@@ -268,8 +275,8 @@ int main(){
                     printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
                 }
                 //printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
-                break;
-            
+                button_irq_enable(0, &button_irq_callback); //enable button interrupt
+                break;                 
             case BP_SM_GET_INPUT:
                 //helpers_mode_periodic();
                 //it seems like we need an array where we can add our function for periodic service?
@@ -296,10 +303,17 @@ int main(){
                         }
                         printf("\r\n");
                         bp_state=BP_SM_PROCESS_COMMAND;
+                        button_irq_disable(0);
                         break;
                 }
+                
+                enum button_codes press_code = button_check_press(0);
+                if (press_code != BP_BUTT_NO_PRESS) {
+                    button_irq_disable(0);
+                    button_exec(press_code); // execute script based on the button press type
+                    bp_state = BP_SM_COMMAND_PROMPT; //return to command prompt
+                }
                 break;
-            
             case BP_SM_PROCESS_COMMAND:
                 system_config.error=ui_process_commands();   
                 bp_state=BP_SM_COMMAND_PROMPT;      
@@ -317,6 +331,7 @@ int main(){
                     screensaver = add_alarm_in_ms(system_config.lcd_timeout*300000, ui_term_screensaver_enable, NULL, false);
                 }
                 bp_state=BP_SM_GET_INPUT;
+                button_irq_enable(0, &button_irq_callback);
                 break;
             
             default:
@@ -343,16 +358,16 @@ bool lcd_update_force=false;
 
 // begin of code execution for the second core (core1)
 void core1_entry(void){ 
-    char c;
-    uint32_t temp;
-
     tx_fifo_init();
     rx_fifo_init();
 
     rgb_init();
 
     // wait for main core to signal start
-    while(multicore_fifo_pop_blocking()!=0);
+    bp_icm_raw_message_t raw_init_message;
+    do {
+        raw_init_message = icm_core1_get_raw_message();
+    } while(get_embedded_message(raw_init_message) != BP_ICM_INIT_CORE1);
 
     // USB init
     if(system_config.terminal_usb_enable){
@@ -366,7 +381,7 @@ void core1_entry(void){
         rx_uart_init_irq();
     }
 
-    multicore_fifo_push_blocking(0xff); 
+    icm_core1_notify_completion(raw_init_message);
 
     while(1){
         //service (thread safe) tinyusb tasks
@@ -420,31 +435,31 @@ void core1_entry(void){
         
         // service any requests with priority
         while(multicore_fifo_rvalid()){
-            temp=multicore_fifo_pop_blocking();
-            switch(temp){
-                case 0xf0:
+            bp_icm_raw_message_t raw_message = icm_core1_get_raw_message();
+            switch(get_embedded_message(raw_message)){
+                case BP_ICM_DISABLE_LCD_UPDATES:
                     lcd_irq_disable();
                     lcd_update_request=false;
                     break;
-                case 0xf1:
+                case BP_ICM_ENABLE_LCD_UPDATES:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_request=true;
                     break;
-                case 0xf2:
+                case BP_ICM_FORCE_LCD_UPDATE:
                     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
                     lcd_update_force=true;
                     lcd_update_request=true;
                     break;
-                case 0xf3:
+                case BP_ICM_ENABLE_RGB_UPDATES:
                     rgb_irq_enable(false);
                     break;
-                case 0xf4:
+                case BP_ICM_DISABLE_RGB_UPDATES:
                     rgb_irq_enable(true);
                     break;
                 default:
                     break;
             }
-            multicore_fifo_push_blocking(temp); //acknowledge
+            icm_core1_notify_completion(raw_message);
         }
 
     }// while(1)

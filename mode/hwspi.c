@@ -87,12 +87,12 @@ uint32_t spi_setup(void){
 
 		const char config_file[]="bpspi.bp";
 
-		struct _mode_config_t config_t[]={
-			{"$.baudrate", &mode_config.baudrate},
-			{"$.data_bits", &mode_config.data_bits},
-			{"$.stop_bits", &mode_config.clock_polarity},
-			{"$.parity", &mode_config.clock_phase},
-			{"$.cs_idle", &mode_config.cs_idle}
+		const mode_config_t config_t[]={
+			{"$.baudrate",  &mode_config.baudrate,       MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.data_bits", &mode_config.data_bits,      MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.stop_bits", &mode_config.clock_polarity, MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.parity",    &mode_config.clock_phase,    MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.cs_idle",   &mode_config.cs_idle,        MODE_CONFIG_FORMAT_DECIMAL, },
 		};
 
 		if(storage_load_mode(config_file, config_t, count_of(config_t))){

@@ -13,6 +13,16 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "../dhara/nand.h" // for `struct dhara_nand` definition
+
+#define SPI_NAND_LOG2_PAGE_SIZE              (  11)
+#define SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK  (   6)
+#define SPI_NAND_PAGES_PER_ERASE_BLOCK       (1 << SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK)
+#define SPI_NAND_PAGE_SIZE                   (1 << SPI_NAND_LOG2_PAGE_SIZE)
+
+#if SPI_NAND_PAGE_SIZE != 2048
+    #error "Currently only 2048-byte pages are supported" // cannot be static assert (until C23?)
+#endif
 
 /// @brief SPI return statuses
 enum {
@@ -28,39 +38,27 @@ enum {
     SPI_NAND_RET_E_FAIL = -9,
 };
 
-#define SPI_NAND_PAGE_SIZE       2048
-#define SPI_NAND_OOB_SIZE        64
-#define SPI_NAND_PAGES_PER_BLOCK 64
-#define SPI_NAND_BLOCKS_PER_LUN  1024
-
-#define SPI_NAND_LOG2_PAGE_SIZE       11
-#define SPI_NAND_LOG2_PAGES_PER_BLOCK 6
-
-#define SPI_NAND_MAX_PAGE_ADDRESS  (SPI_NAND_PAGES_PER_BLOCK - 1) // zero-indexed
-#define SPI_NAND_MAX_BLOCK_ADDRESS (SPI_NAND_BLOCKS_PER_LUN - 1)  // zero-indexed
 
 /// @brief Nand row address
 typedef union {
     uint32_t whole;
     struct {
-        /// valid range 0-63
-        uint32_t page : 6;
-        /// valid range 0-1023
-        uint32_t block : 26;
+        uint32_t page  : SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK; // least significant bits
+        uint32_t block : (32 - SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK);
     };
 } row_address_t;
 /// @brief Nand column address (valid range 0-2175)
 typedef uint16_t column_address_t;
 
 /// @brief Initializes the spi nand driver
-int spi_nand_init(void);
+int spi_nand_init(struct dhara_nand *dhara_parameters_out);
 
 /// @brief Performs a read page operation
-int spi_nand_page_read(row_address_t row, column_address_t column, uint8_t *data_out,
+int spi_nand_page_read(row_address_t row, column_address_t column, void *data_out,
                        size_t read_len);
 
 /// @brief Performs a page program operation
-int spi_nand_page_program(row_address_t row, column_address_t column, const uint8_t *data_in,
+int spi_nand_page_program(row_address_t row, column_address_t column, const void *data_in,
                           size_t write_len);
 
 /// @brief Copies the source page to the destination page using nand's internal cache

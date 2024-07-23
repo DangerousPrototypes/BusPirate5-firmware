@@ -16,6 +16,7 @@
 #include "pirate/bio.h"
 #include "pirate/amux.h"
 #include "display/scope.h"
+#include "pirate/intercore_helpers.h"
 
 #define SELF_TEST_LOW_LIMIT 300
 
@@ -303,9 +304,17 @@ bool selftest_current_limit(void){
 }
 
 bool selftest_button(void){
+    //debounce value selected somewhat arbitrarily
+    static const uint32_t DEBOUNCE_DELAY_MS = 100;    
     //prompt to push button
     printf("PUSH BUTTON TO COMPLETE: ");
+    //wait for button to be pressed
     while(!button_get(0));
+    busy_wait_ms(DEBOUNCE_DELAY_MS);
+    //then wait for button to be released
+    while( button_get(0));
+    busy_wait_ms(DEBOUNCE_DELAY_MS);
+
     printf("OK\r\n");
     return false;
 }
@@ -331,8 +340,7 @@ void cmd_selftest(void){
     #endif        
 
     printf("SELF TEST STARTING\r\nDISABLE IRQ: ");
-    multicore_fifo_push_blocking(0xf0);
-    while(multicore_fifo_pop_blocking()!=0xf0);
+    icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
     busy_wait_ms(500);
     printf("OK\r\n");
 
@@ -390,8 +398,7 @@ void cmd_selftest(void){
     system_config.error=false;
 
     //enable system interrupts
-    multicore_fifo_push_blocking(0xf1);
-    while(multicore_fifo_pop_blocking()!=0xf1);
+    icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
 }
 
 static const char * const usage[]={

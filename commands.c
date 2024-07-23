@@ -32,6 +32,9 @@
 #include "commands/global/macro.h"
 #include "commands/global/script.h"
 #include "commands/global/tutorial.h"
+#include "commands/global/button_scr.h"
+#include "commands/global/smps.h"
+#include "commands/global/cls.h"
 #include "mode/logicanalyzer.h"
 
 // command configuration
@@ -69,15 +72,19 @@ const struct _command_struct commands[]=
     {"a", false, &auxio_low_handler, 0x00},               // "a" T_CMDLN_AUX_LOW
     {"A", false, &auxio_high_handler,0x00},             // "A"T_CMDLN_AUX_HIGH
     {"format", true, &disk_format_handler, 0x00 },               // "format" T_HELP_CMD_FORMAT
+    {"label", true, &disk_label_handler, 0x00},
     {"d", true, &ui_display_enable_args, T_CMDLN_DISPLAY },         // "d" 
     {"logic", true, &la_test_args, T_CMDLN_LOGIC },                     // "logic" 
     {"hex", true, &disk_hex_handler,0x00},                                // "hex"  T_CMDLN_HEX 
-    {"pause", true, &pause_handler, T_HELP_CMD_PAUSE },             // "pause"
+    {"pause", true, &pause_handler, 0x00},             // "pause"
     {"dummy", true, &dummy_handler, 0x00 },                              // "dummy"
     {"help", true, &help_handler, 0x00},
     {"macro", true, &macro_handler, 0x00},
     {"tutorial", true, &tutorial_handler, 0x00},
-    {"script", true, &script_handler, 0x00},    
+    {"script", true, &script_handler, 0x00},  
+    {"button", true, &button_scr_handler, 0x00},
+    {"cls", true, &ui_display_clear, 0x00},
+    {"smps", true, &smps_handler, 0x00}
 };
 
 const uint32_t commands_count=count_of(commands);

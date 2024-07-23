@@ -1,3 +1,13 @@
+/**
+ * @file disk.c
+ * @author 
+ * @brief implements all the disk cli commands
+ * @version 0.1
+ * @date 2024-05-11
+ * 
+ * @copyright Copyright (c) 2024
+ * Modified by Lior Shalmay Copyright (c) 2024
+ */
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
@@ -12,6 +22,7 @@
 #include "pirate/storage.h"
 #include "pirate/mem.h"
 #include "ui/ui_cmdln.h"
+#include "pirate/storage.h"
 
 #define DEF_ROW_SIZE    8
 #define PRINTABLE(_c)   (_c>0x1f && _c<0x7f ? _c : '.')
@@ -19,6 +30,7 @@
 static const char * const hex_usage[]= {
     "hex <file> [-d(address)] [-a(ascii)] [-s <size>]",
     "Print file contents in HEX: hex example.bin -d -a -s 8",
+    "press 'x' to quit pager"
 };
 static const struct ui_help_options hex_options[]= {
 {1,"", T_HELP_DISK_HEX}, //section heading
@@ -27,6 +39,7 @@ static const struct ui_help_options hex_options[]= {
     {0,"-a", T_HELP_DISK_HEX_ASCII},
     {0,"-s <size>", T_HELP_DISK_HEX_SIZE},
     {0,"-t <off>", T_HELP_DISK_HEX_OFF},
+    {0,"-c", T_HELP_DISK_HEX_PAGER_OFF}
 };
 
 // Show flags
@@ -50,7 +63,6 @@ static uint32_t hex_dump(FIL *fil, uint32_t shown_off, const uint16_t page_lines
     uint32_t tot_read = 0;
     bool print_addr = false;
 
-    printf("\r\n");
     if (flag_addr)
         print_addr = true;
     UINT bytes_read = 0;
@@ -112,7 +124,9 @@ void disk_hex_handler(struct command_result *res){
     uint32_t bytes_read = 0;
     uint16_t page_lines = 0;
     uint32_t seek_off = 0;
+    uint32_t pager_off = 0;
     command_var_t arg;
+    char recv_char;
 
     cmdln_args_string_by_position(1, sizeof(location), location);
     fr = f_open(&fil, location, FA_READ);
@@ -130,25 +144,31 @@ void disk_hex_handler(struct command_result *res){
         row_size = DEF_ROW_SIZE;
     if (!cmdln_args_find_flag_uint32('t'|0x20, &arg, &seek_off))
         seek_off = 0;
-    // TODO: get current terminal height in lines
-#define GET_TERM_LINES()    10U
-    page_lines = GET_TERM_LINES();
+    if (cmdln_args_find_flag('c'|0x20))
+        pager_off = 1;
 
+    page_lines = system_config.terminal_ansi_rows;
     f_lseek(&fil, seek_off);
     off = seek_off;
-    while ( (bytes_read=hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
+    printf("\r\n");
+    while ( (bytes_read = hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
         off += bytes_read;
-#if 0
-        // TODO: pseudo code
-        key = GET_KEY();
-        if (key == 'x')
-            break;
-#else
-        // TODO: remove when above implemented
-        // Dummy temporary code to separate page
-        printf("----\r\n");
-#endif
+
+        if (pager_off) continue;
+
+        recv_char = ui_term_cmdln_wait_char('\0');
+        switch (recv_char) {
+            // give the user the ability to bail out
+            case 'x':
+                goto exit_hex_dump_early;
+                break;
+            // anything else just keep going
+            default:
+                break;
+        }
     }
+
+exit_hex_dump_early:
     f_close(&fil);
     printf("\r\n");
 }
@@ -345,4 +365,78 @@ void disk_format_handler(struct command_result *res){
         storage_file_error(format_status);
         res->error=true;        
     }
+}
+
+static const char * const label_usage[]= {
+    "label <get|set> [label name]",
+    "Get flash storage label name: label get",
+    "Set flash storage label name: label set <name>"
+};
+
+static const struct ui_help_options label_options[]= {
+{1,"", T_HELP_DISK_LABEL}, 
+    {0,"get", T_HELP_DISK_LABEL_GET},
+    {0,"set", T_HELP_DISK_LABEL_SET},
+};
+
+typedef enum label_sub_commands {
+    GET_LABEL,
+    SET_LABEL,
+    INVALID_LABEL_CMD,
+} label_sub_cmd_e;
+#define MAX_LABEL_LENGTH (11)
+
+void disk_label_handler(struct command_result *res) {
+    //check help
+   	if(ui_help_show(res->help_flag,label_usage,count_of(label_usage), &label_options[0],count_of(label_options) )) return;
+
+    char command_string[4];
+    char label_string[MAX_LABEL_LENGTH + 2]; // maximum label length for fat12/16 is 11 characters
+    FRESULT f_result;
+    label_sub_cmd_e command = INVALID_LABEL_CMD;
+    DWORD label_id;
+    res->error=true;
+
+    if(!cmdln_args_string_by_position(1, sizeof(command_string), command_string)){
+        printf("Missing command argument, please provide either get or set commands\r\n");
+        return;
+    }
+    if(strcmp(command_string, "get")==0) command = GET_LABEL;    
+    else if (strcmp(command_string, "set")==0) command = SET_LABEL;
+
+    switch (command)
+    {
+    case GET_LABEL:
+        f_result = f_getlabel("", label_string, &label_id);
+        if(f_result == FR_OK){
+            printf("disk label: %s", label_string);
+        } else {
+            storage_file_error(f_result);
+            return;
+        }
+        break;
+    
+    case SET_LABEL:
+        if(!cmdln_args_string_by_position(2, sizeof(label_string), label_string)){
+            printf("Missing label argument, please provide a name to set the label to\r\n");
+            return;
+        }
+        if(strlen(label_string) > MAX_LABEL_LENGTH){
+            printf("label is too long, maximum label length is %d characters\r\n", MAX_LABEL_LENGTH);
+            return;
+        }
+        f_result = f_setlabel(label_string);
+        if (f_result != FR_OK){
+            storage_file_error(f_result);
+            return;
+        }
+        break;
+
+    default:
+        printf("Invalid command: '%s'\r\n", command_string);
+        return;
+    }
+    
+    res->error=false;
+    return;
 }

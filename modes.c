@@ -250,7 +250,7 @@ struct _mode modes[MAXPROTO]={{
     hwhduart_help,				// display small help about the protocol
     hwhduart_commands,               // mode specific commands
     &hwhduart_commands_count,       // mode specific commands count    
-    "HDPLXUART",				// friendly name (promptname)
+    "HDUART",				// friendly name (promptname)
 },
 #endif
 #ifdef BP_USE_HWI2C

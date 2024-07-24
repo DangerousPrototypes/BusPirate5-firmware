@@ -370,7 +370,7 @@ uint32_t pwm_get_settings(float* pwm_hz_actual, float* duty_user_value)
 
         if(result.exit)
         {
-            return 0; //TODO: make sure we can break out....
+            return 0; 
         }      
 
         switch(duty_user_units)

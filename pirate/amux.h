@@ -6,6 +6,8 @@ bool amux_select_input(uint8_t channel);
 bool amux_select_bio(uint8_t bio);
 // read from AMUX using channel list in platform header file
 uint32_t amux_read(uint8_t channel);
+// read from presently selected AMUX channel
+uint32_t amux_read_present_channel(void);
 // read from AMUX using BIO pin number
 uint32_t amux_read_bio(uint8_t bio);
 // this is actually on a different ADC and not the AMUX

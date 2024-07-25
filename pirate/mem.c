@@ -82,8 +82,6 @@ size_t FindUnusedTrackingEntryIndex(void) {
 
 
 // uintptr_t allows cleaner addition/subtraction between pointers
-static uintptr_t s_BigBufLongTermMarker  = 0u; // cannot use until initialized
-
 static uint16_t    s_BigBufTempAllocCount      = 0u;
 static uint16_t    s_BigBufLongLivedAllocCount = 0u;
 static bool        s_BigBufInitialized         = false;
@@ -113,7 +111,7 @@ void BigBuffer_Initialize(void) {
     s_State.total_size          = count_of(s_BigBufMemory);
     s_State.high_watermark      = s_State.buffer + s_State.total_size;
     s_State.low_watermark       = s_State.buffer;
-    s_BigBufLongTermMarker      = s_State.high_watermark - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u);
+    s_State.long_lived_limit    = s_State.high_watermark - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u);
     s_BigBufTempAllocCount      = 0u;
     s_BigBufLongLivedAllocCount = 0u;
 
@@ -155,7 +153,7 @@ big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
         if (s_State.total_size != count_of(s_BigBufMemory)) {
             result_flags |= BIG_BUFFER_INVARIANT_CONSTANT_BIGBUF_SIZE;
         }
-        if (s_BigBufLongTermMarker != s_State.buffer + s_State.total_size - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u)) {
+        if (s_State.long_lived_limit != s_State.buffer + s_State.total_size - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u)) {
             result_flags |= BIG_BUFFER_INVARIANT_CONSTANT_LONGTERM_MARKER;
         }
 
@@ -166,7 +164,7 @@ big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
         if (s_State.low_watermark > s_State.buffer + s_State.total_size) {
             result_flags |= BIG_BUFFER_INVARIANT_LOW_WATERMARK_VALUE_TOO_HIGH;
         }
-        if (s_State.high_watermark < s_BigBufLongTermMarker) {
+        if (s_State.high_watermark < s_State.long_lived_limit) {
             result_flags |= BIG_BUFFER_INVARIANT_HIGH_WATERMARK_VALUE_TOO_LOW;
         }
         if (s_State.high_watermark > s_State.buffer + s_State.total_size) {
@@ -193,8 +191,8 @@ big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
         if((s_State.buffer              != 0u) ||
            (s_State.total_size          != 0u) ||
            (s_State.high_watermark      != 0u) ||
-           (s_State.low_watermark        != 0u) ||
-           (s_BigBufLongTermMarker      != 0u) ||
+           (s_State.low_watermark       != 0u) ||
+           (s_State.long_lived_limit    != 0u) ||
            (s_BigBufTempAllocCount      != 0u) ||
            (s_BigBufLongLivedAllocCount != 0u)  ) {
             result_flags |= BIG_BUFFER_INVARIANT_UNINITIALIZED_BUT_STORING_VALUES;
@@ -332,7 +330,7 @@ void* BigBuffer_AllocateLongLived(size_t countOfBytes, size_t requiredAlignment,
     }
 
     // limit lower bound of the allocation
-    uintptr_t lower_limit = s_BigBufLongTermMarker;
+    uintptr_t lower_limit = s_State.long_lived_limit;
     if (s_State.low_watermark > lower_limit) {
         lower_limit = s_State.low_watermark;
     }
@@ -490,7 +488,7 @@ size_t BigBuffer_GetAvailableLongLivedMemory(size_t requiredAlignment) {
         assert(false); // alignment must be a power of 2
         return 0u;
     }
-    uintptr_t lower = s_BigBufLongTermMarker;
+    uintptr_t lower = s_State.long_lived_limit;
     if (s_State.low_watermark > lower) {
         lower = s_State.low_watermark;
     }

@@ -160,25 +160,48 @@ static void SortAllocationTrackingData(void) {
 }
 
 static void DumpGeneralStateHeader(void) {
+    printf("BB: Buffer*  | TotalSize | HighWater | LowWater | TmpCnt | LongCnt\n");
+    printf("    ---------|-----------|-----------|----------|--------|--------\n");
+    //intf("BB: ..xxxx.. |  ..xxxx.. |  ..xxxx.. | ..xxxx.. |   .xx. |    .xx.\n");
     return;
 }
-static void DumpGeneralState(big_buffer_general_state_t * general_state) {
+static void DumpGeneralState(const big_buffer_general_state_t * general_state) {
+    printf("BB: %08x |  %08x |  %08x | %08x |   %04x |    %04x\n",
+           general_state->buffer,
+           general_state->total_size,
+           general_state->high_watermark,
+           general_state->low_watermark,
+           general_state->temp_allocations_count,
+           general_state->long_lived_allocations_count
+           );
     return;
 }
 static void DumpAllocationInstanceHeader(void) {
+    printf("BB: Buffer*  | Req_Size | Req_Align | OwnerTag | Type\n");
+    //intf("BB: ..xxxx.. | ..xxxx.. |  ..xxxx.. | ..xxxx.. | .ss.\n");
     return;
 }
-static void DumpAllocationInstance(big_buffer_allocation_instance_t* alloc_state) { // TODO: type of this parameter TBD
+static void DumpAllocationInstance(const big_buffer_allocation_instance_t* alloc_state) {
+    printf(
+        "BB: %08x | %08x |  %08x | %08x | %4s\n",
+        alloc_state->result,
+        alloc_state->requested_size,
+        alloc_state->requested_alignment,
+        alloc_state->owner_tag,
+        (alloc_state->was_long_lived_allocation) ? "long" : "temp"
+        );
     return;
 }
 static void DumpFullMemoryState(void) {
     DumpGeneralStateHeader();
     DumpGeneralState(&s_State);
-    SortAllocationTrackingData();
-    DumpAllocationInstanceHeader();
-    for (size_t j = 0; j < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++j) {
-        if (s_Allocation[j].result != 0u) {
-            DumpAllocationInstance(&s_Allocation[j]);
+    if ((s_State.temp_allocations_count > 0) || (s_State.long_lived_allocations_count > 0)) {
+        SortAllocationTrackingData();
+        DumpAllocationInstanceHeader();
+        for (size_t j = 0; j < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++j) {
+            if (s_Allocation[j].result != 0u) {
+                DumpAllocationInstance(&s_Allocation[j]);
+            }
         }
     }
 }

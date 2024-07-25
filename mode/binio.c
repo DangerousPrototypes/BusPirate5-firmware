@@ -17,6 +17,7 @@
 /* Binary access modes for Bus Pirate scripting */
 
 //#include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "queue.h"
@@ -63,9 +64,12 @@ void script_disabled(void){
     printf("\r\nTerminal unlocked.\r\n");     //fall through to prompt 
 }
 
-#define BINMODE_COMMAND 0
-#define BINMODE_ARG 1
-#define BINMODE_PRINT_STRING 2
+enum binmode_statemachine {
+    BINMODE_COMMAND=0,
+    BINMODE_GLOBAL_ARG,
+    BINMODE_LOCAL_ARG,
+    BINMODE_PRINT_STRING
+};
 #define BINMODE_MAX_ARGS 7
 
 //0x00 reset
@@ -78,7 +82,7 @@ void script_disabled(void){
 
 static uint8_t binmode_args[BINMODE_MAX_ARGS];
 
-struct _binmode_global_struct{
+struct _binmode_struct{
     uint32_t(*func)(void);
     uint32_t arg_count;
 };
@@ -91,7 +95,8 @@ struct _binmode_global_struct{
 // d/D Delay 1 us/MS (d:4 to repeat) 	a/A/@.x Set IO.x state (low/HI/READ)
 // v.x Measure volts on IO.x 	> Run bus syntax (really a global command…)
 enum{
-    BM_WRITE=0,
+    BM_CONFIG=0,
+    BM_WRITE,
     BM_START,
     BM_START_ALT,
     BM_STOP,
@@ -103,100 +108,120 @@ enum{
     BM_DATH,
     BM_DATL,
     BM_BITR,
-    BM_DELAY,
-    BM_DELAY_MS
 };
 
-struct _binmode_local_struct{
-    void (*func)(void);
-    uint32_t arg_count;
-};
-
-void binmode_write(void){
+uint32_t binmode_config(void){
     struct _bytecode result; 
     struct _bytecode next;
-    modes[system_config.mode].protocol_write(&result, &next);
+    if(modes[system_config.mode].binmode_setup()) return 1;
+    modes[system_config.mode].protocol_setup_exc();
+    return 0;
 }
 
-void binmode_start(void){
+uint32_t binmode_write(void){
+    struct _bytecode result; 
+    struct _bytecode next;
+    char c;
+
+    //arg 0 and 1 are number of bytes to write
+    uint16_t bytes_to_write=binmode_args[0]<<8 | binmode_args[1];
+    //loop through the bytes
+    for(uint32_t i=0;i<bytes_to_write;i++){
+        bin_rx_fifo_get_blocking(&c);
+        result.out_data=c; 
+        modes[system_config.mode].protocol_write(&result, &next);
+        if(result.read_with_write){
+            bin_tx_fifo_put(result.in_data);
+        }
+    }
+    return 0;
+}
+
+uint32_t binmode_start(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_start(&result, &next);
+    return 0;
 }
 
-void binmode_start_alt(void){
+uint32_t binmode_start_alt(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_start_alt(&result, &next);
+    return 0;
 }
 
-void binmode_stop(void){
+uint32_t binmode_stop(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_stop(&result, &next);
+    return 0;
 }
 
-void binmode_stop_alt(void){
+uint32_t binmode_stop_alt(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_stop_alt(&result, &next);
+    return 0;
 }
 
-void binmode_read(void){
+// same as binmode_write, but with a read
+uint32_t binmode_read(void){
     struct _bytecode result; 
     struct _bytecode next;
+
+    //arg 0 and 1 are number of bytes to read
+    uint16_t bytes_to_read=binmode_args[0]<<8 | binmode_args[1];
+    //loop through the bytes
+    for(uint32_t i=0;i<bytes_to_read;i++){
+        modes[system_config.mode].protocol_read(&result, &next);
+        bin_tx_fifo_put(result.in_data);
+    }
     modes[system_config.mode].protocol_read(&result, &next);
+    return 0;
 }
 
-void binmode_clkh(void){
+// might have to compare the function to the 
+// address of the dummy functions to see if 
+// these apply to the mode
+uint32_t binmode_clkh(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_clkh(&result, &next);
 }
 
-void binmode_clkl(void){
+uint32_t binmode_clkl(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_clkl(&result, &next);
 }
 
-void binmode_tick(void){
+uint32_t binmode_tick(void){
     struct _bytecode result; 
     struct _bytecode next;
-    //modes[system_config.mode].protocol_tick(&result, &next);
+    modes[system_config.mode].protocol_tick_clock(&result, &next);
 }
-
-void binmode_dath(void){
+ 
+uint32_t binmode_dath(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_dath(&result, &next);
 }
 
-void binmode_datl(void){
+uint32_t binmode_datl(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_datl(&result, &next);
 }
 
-void binmode_bitr(void){
+uint32_t binmode_bitr(void){
     struct _bytecode result; 
     struct _bytecode next;
     modes[system_config.mode].protocol_bitr(&result, &next);
 }
 
-void binmode_delay(void){
-    struct _bytecode result; 
-    struct _bytecode next;
-    //modes[system_config.mode].protocol_delay(&result, &next);
-}
-
-void binmode_delay_ms(void){
-    struct _bytecode result; 
-    struct _bytecode next;
-    //modes[system_config.mode].protocol_delay_ms(&result, &next);
-}
-
-static const struct _binmode_local_struct local_commands[]={ 
+static const struct _binmode_struct local_commands[]={ 
+    [BM_CONFIG]={&binmode_config,0},
     [BM_WRITE]={&binmode_write,1},
     [BM_START]={&binmode_start,0},
     [BM_START_ALT]={&binmode_start_alt,0},
@@ -209,8 +234,6 @@ static const struct _binmode_local_struct local_commands[]={
     [BM_DATH]={&binmode_dath,0},
     [BM_DATL]={&binmode_datl,0},
     [BM_BITR]={&binmode_bitr,0},
-    [BM_DELAY]={&binmode_delay,1},
-    [BM_DELAY_MS]={&binmode_delay_ms,1},
 };
 
 
@@ -237,11 +260,14 @@ enum {
     BM_PWM_EN, //19
     BM_PWM_DIS, //20
     BM_PWM_RAW, //21
-    BM_FREQ, //22
-    BM_FREQ_RAW, //23
-    BM_BOOTLOADER, //24
-    BM_RESET_BUSPIRATE, //25
-    BM_PRINT_STRING, //26
+    //BM_PWM_ACTUAL_FREQ, //22
+    BM_FREQ, //23
+    BM_FREQ_RAW, //24
+    BM_DELAY_US, //25
+    BM_DELAY_MS, //26
+    BM_BOOTLOADER, //27
+    BM_RESET_BUSPIRATE, //28
+    BM_PRINT_STRING, //29
     //self test
     //disable all interrupt
     //enable all interrupt
@@ -315,20 +341,28 @@ uint32_t binmode_pullup_disable(void){
 uint32_t mode_list(void){
     for(uint8_t i=0;i<count_of(modes);i++){
         script_print(modes[i].protocol_name);
-        bin_tx_fifo_put(',');
+        if(i< (count_of(modes)-1) ) bin_tx_fifo_put(',');
     }
     //bin_tx_fifo_put(';');
     return 0;
 }
 
-// TODO: capture arguments for mode name until 0x00
-// TODO: compare mode string to modes.protocol_name
-// TODO: success (protocol name) or fail (unknown mode)
 uint32_t mode_change(void){
-    /*if(binmode_args[0]>count_of(modes)) return 1;
-    modes[system_config.mode].protocol_cleanup();
-    system_config.mode=binmode_args[0];
-    modes[system_config.mode].protocol_setup();*/
+    char mode_name[10];
+    for(uint8_t i=0;i<10;i++){
+        //capture mode name
+        bin_rx_fifo_get_blocking(&mode_name[i]);
+        if(mode_name[i]==0x00) break;    
+    }
+    //compare mode name to modes.protocol_name
+    for(uint8_t i=0;i<count_of(modes);i++){
+        if(strcmp(mode_name, modes[i].protocol_name)==0){
+            modes[system_config.mode].protocol_cleanup();
+            system_config.mode=i;
+            if(binmode_debug) printf("[MODE] Changed to %s\r\n", modes[system_config.mode].protocol_name);
+            return 0;
+        }
+    }
     return 1;
 }
 
@@ -593,6 +627,18 @@ uint32_t binmode_freq_raw(void){
     return 0;
 }
 
+uint32_t binmode_delay_us(void){
+    if(binmode_debug) printf("[DELAY] %dus\r\n", binmode_args[0]);
+    busy_wait_us(binmode_args[0]);
+    return 0;
+}
+
+uint32_t binmode_delay_ms(void){
+    if(binmode_debug) printf("[DELAY] %dms\r\n", binmode_args[0]);
+    busy_wait_ms(binmode_args[0]);
+    return 0;
+}
+
 uint32_t binmode_bootloader(void){
     if(binmode_debug){
         printf("[BOOTLOADER] Jumping to bootloader\r\n");
@@ -611,10 +657,7 @@ uint32_t binmode_reset_buspirate(void){
     return 0;
 }
 
-
-
-
-static const struct _binmode_global_struct global_commands[]={ 
+static const struct _binmode_struct global_commands[]={ 
     [BM_RESET]={&binmode_reset,0},
     [BM_DEBUG_LEVEL]={&binmode_debug_level,1},
     [BM_POWER_EN]={&binmode_psu_enable,4},
@@ -639,6 +682,8 @@ static const struct _binmode_global_struct global_commands[]={
     [BM_PWM_RAW]={&binmode_pwm_raw,7},
     [BM_FREQ]={&binmode_freq,2},
     [BM_FREQ_RAW]={&binmode_freq_raw,2},
+    [BM_DELAY_US]={&binmode_delay_us,1},
+    [BM_DELAY_MS]={&binmode_delay_ms,1},
     [BM_BOOTLOADER]={&binmode_bootloader,0},
     [BM_RESET_BUSPIRATE]={&binmode_reset_buspirate,0},
     [BM_PRINT_STRING]={0,0},
@@ -666,8 +711,15 @@ bool script_mode(void){
         
                 switch(binmode_state){
                     case BINMODE_COMMAND:
-                        if(c<0x7f && c<count_of(global_commands)){
-                            if(binmode_debug) printf("Global command %d, args: %d\r\n",c, global_commands[c].arg_count);
+                        if(c<0x7f){
+
+                            if(c>=count_of(global_commands)){
+                                if(binmode_debug) printf("[MAIN] Invalid global command %d\r\n",c);
+                                bin_tx_fifo_put(1);
+                                break;
+                            } 
+
+                            if(binmode_debug) printf("[MAIN] Global command %d, args: %d\r\n",c, global_commands[c].arg_count);
                             binmode_command=c;
 
                             if(binmode_command==BM_PRINT_STRING){
@@ -678,34 +730,55 @@ bool script_mode(void){
                             
                             if(global_commands[c].arg_count){ 
                                 binmode_arg_count=global_commands[c].arg_count;
-                                binmode_state=BINMODE_ARG;
+                                binmode_state=BINMODE_GLOBAL_ARG;
                             }else{
-                                goto do_command;
+                                goto do_global_command;
                             }
                             break;
                         }
-                        if(c>0x7f && (c&0x7f)<count_of(local_commands)){
-                            c; //clear upper
-                            if(local_commands[c&0x7f].arg_count>0){
-                                binmode_command=c;
-                                binmode_arg_count=local_commands[c&=0b10000000].arg_count;
-                                binmode_state=BINMODE_ARG;
-                                break; //need more args
+
+                        if(c>0x7f){
+                            c=c&0b01111111; //clear upper
+                            if(c>=count_of(local_commands)){                                
+                                if(binmode_debug) printf("[MAIN] Invalid local command %d\r\n",c);
+                                bin_tx_fifo_put(1);
+                                break;
+                            } 
+
+                            if(binmode_debug) printf("[MAIN] Local command %d, args: %d\r\n",c, local_commands[c].arg_count);
+                            binmode_command=c;
+
+                            if(local_commands[c].arg_count){ 
+                                binmode_arg_count=local_commands[c].arg_count;
+                                binmode_state=BINMODE_LOCAL_ARG;
+                            }else{
+                                goto do_local_command;
                             }
-                            local_commands[c&=0b10000000].func();
+                            break;
                         }
                         break; //invalid command
-                    case BINMODE_ARG:
+                    case BINMODE_GLOBAL_ARG:
                         binmode_args[(global_commands[binmode_command].arg_count - binmode_arg_count)]=c;
                         binmode_arg_count--;
                         if(!binmode_arg_count){
-                    do_command:
+                    do_global_command:
                             temp = global_commands[binmode_command].func();
-                            if(binmode_debug) printf("Command %d returned %d\r\n", binmode_command, temp);
+                            if(binmode_debug) printf("[MAIN] Global command %d returned %d\r\n", binmode_command, temp);
                             bin_tx_fifo_put(temp);
                             binmode_state=BINMODE_COMMAND;
                         }
                         break;
+                    case BINMODE_LOCAL_ARG:
+                        binmode_args[(local_commands[binmode_command].arg_count - binmode_arg_count)]=c;
+                        binmode_arg_count--;
+                        if(!binmode_arg_count){
+                    do_local_command:
+                            temp = local_commands[binmode_command].func();
+                            if(binmode_debug) printf("[MAIN] Local command %d returned %d\r\n", binmode_command, temp);
+                            bin_tx_fifo_put(temp);
+                            binmode_state=BINMODE_COMMAND;
+                        }
+                        break;                        
                     case BINMODE_PRINT_STRING:
                         if(c==0x00){
                             printf("\r\n");

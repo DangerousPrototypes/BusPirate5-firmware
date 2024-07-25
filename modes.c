@@ -132,6 +132,7 @@ struct _mode modes[MAXPROTO]={{
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	nullfunc4,				// macro
 	hiz_setup,				// setup UI
+    nullfunc3,                // binmode setup
 	hiz_setup_exec,				// real setup
 	hiz_cleanup,				// cleanup for HiZ
 	//hiz_pins,				// display pin config
@@ -159,6 +160,7 @@ struct _mode modes[MAXPROTO]={{
     ONEWIRE_period,				// service to regular poll whether a byte ahs arrived
     ONEWIRE_macro,				// macro
     ONEWIRE_setup,				// setup UI
+    nullfunc3,                // binmode setup
     ONEWIRE_setup_exc,			// real setup
     ONEWIRE_cleanup,			// cleanup for HiZ
     ONEWIRE_pins,				// display pin config
@@ -187,6 +189,7 @@ struct _mode modes[MAXPROTO]={{
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	hw1wire_macro,				// macro
 	hw1wire_setup,				// setup UI
+    nullfunc3,                // binmode setup
 	hw1wire_setup_exc,				// real setup
 	hw1wire_cleanup,				// cleanup for HiZ
 	//hiz_pins,				// display pin config
@@ -215,6 +218,7 @@ struct _mode modes[MAXPROTO]={{
     hwuart_periodic,				// service to regular poll whether a byte ahs arrived
     hwuart_macro,				// macro
     hwuart_setup,				// setup UI
+    nullfunc3,                // binmode setup
     hwuart_setup_exc,			// real setup
     hwuart_cleanup,			// cleanup for HiZ
     //hwuart_pins,				// display pin config
@@ -243,6 +247,7 @@ struct _mode modes[MAXPROTO]={{
     hwhduart_periodic,				// service to regular poll whether a byte ahs arrived
     hwhduart_macro,				// macro
     hwhduart_setup,				// setup UI
+    nullfunc3,                // binmode setup
     hwhduart_setup_exc,			// real setup
     hwhduart_cleanup,			// cleanup for HiZ
     //hwuart_pins,				// display pin config
@@ -271,6 +276,7 @@ struct _mode modes[MAXPROTO]={{
     noperiodic,				// service to regular poll whether a byte ahs arrived
     hwi2c_macro,				// macro
     hwi2c_setup,				// setup UI
+    nullfunc3,                // binmode setup
     hwi2c_setup_exc,			// real setup
     hwi2c_cleanup,				// cleanup for HiZ
     //HWI2C_pins,				// display pin config
@@ -299,6 +305,7 @@ struct _mode modes[MAXPROTO]={{
     noperiodic,				// service to regular poll whether a byte ahs arrived
     SWI2C_macro,				// macro
     SWI2C_setup,				// setup UI
+    nullfunc3,                // binmode setup
     SWI2C_setup_exc,			// real setup
     SWI2C_cleanup,				// cleanup for HiZ
     SWI2C_pins,				// display pin config
@@ -327,6 +334,7 @@ struct _mode modes[MAXPROTO]={{
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	spi_macro,				// macro
 	spi_setup,				// setup UI
+    spi_binmode_setup,                // binmode setup
 	spi_setup_exc,			// real setup
 	spi_cleanup,				// cleanup for HiZ
 	//spi_pins,				// display pin config
@@ -355,6 +363,7 @@ struct _mode modes[MAXPROTO]={{
     noperiodic,				    // service to regular poll whether a byte ahs arrived
     hw2wire_macro,				// macro
     hw2wire_setup,				// setup UI
+    nullfunc3,                // binmode setup
     hw2wire_setup_exc,			// real setup
     hw2wire_cleanup,			// cleanup for HiZ
     //HWI2C_pins,				// display pin config
@@ -383,6 +392,7 @@ struct _mode modes[MAXPROTO]={{
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	SW2W_macro,				// macro
 	SW2W_setup,				// setup UI
+    nullfunc3,                // binmode setup
 	SW2W_setup_exc,				// real setup
 	SW2W_cleanup,				// cleanup for HiZ
 	SW2W_pins,				// display pin config
@@ -411,6 +421,7 @@ struct _mode modes[MAXPROTO]={{
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	SW3W_macro,				// macro
 	SW3W_setup,				// setup UI
+    nullfunc3,                // binmode setup
 	SW3W_setup_exc,				// real setup
 	SW3W_cleanup,				// cleanup for HiZ
 	SW3W_pins,				// display pin config
@@ -439,6 +450,7 @@ struct _mode modes[MAXPROTO]={{
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	LCDSPI_macro,				// macro
 	LCDSPI_setup,				// setup UI
+    nullfunc3,                // binmode setup
 	LCDSPI_setup_exc,			// real setup
 	LCDSPI_cleanup,				// cleanup for HiZ
 	LCDSPI_pins,				// display pin config
@@ -467,6 +479,7 @@ struct _mode modes[MAXPROTO]={{
 	noperiodic,				// service to regular poll whether a byte ahs arrived
 	LCDI2C_macro,				// macro
 	LCDI2C_setup,				// setup UI
+    nullfunc3,                // binmode setup
 	LCDI2C_setup_exc,			// real setup
 	LCDI2C_cleanup,				// cleanup for HiZ
 	LCDI2C_pins,				// display pin config
@@ -495,6 +508,7 @@ struct _mode modes[MAXPROTO]={{
     noperiodic,				// service to regular poll whether a byte ahs arrived
     dio_macro,				// macro
     dio_setup,				// setup UI
+    nullfunc3,                // binmode setup
     dio_setup_exc,				// real setup
     dio_cleanup,				// cleanup for HiZ
     //dio_pins,				// display pin config
@@ -523,6 +537,7 @@ struct _mode modes[MAXPROTO]={{
     noperiodic,				// service to regular poll whether a byte ahs arrived
     hwled_macro,				// macro
     hwled_setup,				// setup UI
+    nullfunc3,                // binmode setup
     hwled_setup_exc,			// real setup
     hwled_cleanup,				// cleanup for HiZ
     //HWLED_pins,				// display pin config
@@ -551,6 +566,7 @@ struct _mode modes[MAXPROTO]={{
     noperiodic,				// service to regular poll whether a byte ahs arrived
     LA_macro,				// macro
     LA_setup,				// setup UI
+    nullfunc3,                // binmode setup
     LA_setup_exc,				// real setup
     LA_cleanup,				// cleanup for HiZ
     LA_pins,				// display pin config
@@ -579,6 +595,7 @@ struct _mode modes[MAXPROTO]={{
     dummy1_periodic,				// service to regular poll whether a byte ahs arrived
     dummy1_macro,				// macro
     dummy1_setup,				// setup UI
+    nullfunc3,                // binmode setup
     dummy1_setup_exc,			// real setup
     dummy1_cleanup,				// cleanup for HiZ
     //dummy1_pins,				// display pin config
@@ -608,6 +625,7 @@ struct _mode modes[MAXPROTO]={{
     binloopback_periodic,				// service to regular poll whether a byte ahs arrived
     hwled_macro,				// macro
     binloopback_setup,				// setup UI
+    nullfunc3,                // binmode setup
     binloopback_setup_exc,			// real setup
     binloopback_cleanup,				// cleanup for HiZ
     //HWLED_pins,				// display pin config

@@ -6,6 +6,7 @@ void spi_write(struct _bytecode *result, struct _bytecode *next);
 void spi_read(struct _bytecode *result, struct _bytecode *next);
 void spi_macro(uint32_t macro);
 uint32_t spi_setup(void);
+uint32_t spi_binmode_setup(void);
 uint32_t spi_setup_exc(void);
 void spi_cleanup(void);
 void spi_pins(void);
@@ -35,6 +36,7 @@ typedef struct _spi_mode_config{
 	uint32_t cs_idle; 
 	uint32_t dff; 
 	bool read_with_write;
+	bool binmode;
 }_spi_mode_config;
 
 extern const struct _command_struct hwspi_commands[];

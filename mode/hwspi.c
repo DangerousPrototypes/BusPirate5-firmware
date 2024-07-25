@@ -17,6 +17,7 @@
 #include "ui/ui_help.h"
 #include "pirate/hwspi.h"
 #include "commands/spi/sniff.h"
+#include "usb_rx.h"
 
 // command configuration
 const struct _command_struct hwspi_commands[]={   //Function Help
@@ -37,38 +38,6 @@ static struct _spi_mode_config mode_config;
 
 uint32_t spi_setup(void){
 	uint32_t temp;
-	// did the user leave us arguments?
-	// baudrate
-/*	if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	br=getint();
-	if((br>=1)&&(br<=7)) br<<=3;
-		else system_config.error=1;
-
-	// clock polarity
-	if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	spi_clock_polarity=getint()-1;
-	if(spi_clock_polarity<=1) spi_clock_polarity<<=1;
-		else system_config.error=1;
-
-	// clock phase
-	if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	spi_clock_phase=getint()-1;
-	if(spi_clock_phase<=1) spi_clock_phase=spi_clock_phase;
-		else system_config.error=1;
-
-	// cs behauviour
-	if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	csidle=getint()-1;
-	if(csidle<=1) csidle=csidle;
-		else system_config.error=1;
-*/
-	// did the user did it right?
-	//if(system_config.error)			// go interactive 
-	//{
 
 		static const struct prompt_item spi_speed_menu[]={{T_HWSPI_SPEED_MENU_1}};
 		static const struct prompt_item spi_bits_menu[]={{T_HWSPI_BITS_MENU_1}};		
@@ -129,17 +98,54 @@ uint32_t spi_setup(void){
 		if(result.exit) return 0;
 		mode_config.cs_idle=(uint8_t)(temp-1);
 
+		mode_config.binmode=false;
+
 	storage_save_mode(config_file, config_t, count_of(config_t));
 	//}
 	
 	return 1;
 }
 
+uint32_t spi_binmode_setup(void){
+	//spi config sequence:
+	//0x2540BE40 4-8 CPOL=0 CPHA=0 CS=1
+	uint32_t temp;
+	char c;
+	for(uint8_t i=0;i<4;i++){
+		temp=temp<<8;
+		bin_rx_fifo_get_blocking(&c);
+		temp|=c;
+	}	
+	if(temp>62500000) return 1;
+	mode_config.baudrate=temp;
+
+	bin_rx_fifo_get_blocking(&c);
+	if(c<4 || c>8) return 1;
+	mode_config.data_bits=c;
+
+	bin_rx_fifo_get_blocking(&c);
+	if(c>1) return 1;
+	mode_config.clock_polarity=c;
+
+	bin_rx_fifo_get_blocking(&c);
+	if(c>1) return 1;	
+	mode_config.clock_phase=c;
+
+	bin_rx_fifo_get_blocking(&c);
+	if(c>1) return 1;
+	mode_config.cs_idle=c;
+
+	mode_config.binmode=true;
+	
+	return 0;
+
+}
+
 uint32_t spi_setup_exc(void){		
 	//setup spi
 	mode_config.read_with_write=false;
 	mode_config.baudrate_actual=spi_init(M_SPI_PORT, mode_config.baudrate);
-	printf("\r\n%s%s:%s %ukHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
+	if(!mode_config.binmode) printf("\r\n%s%s:%s %ukHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
 	hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
 	system_bio_claim(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);

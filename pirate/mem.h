@@ -33,6 +33,8 @@ static_assert(sizeof(big_buffer_owner_t) <= 4);
 static_assert(MAXIMUM_BP_BIG_BUFFER_OWNER <= 0x10000);
 
 typedef struct _big_buffer_general_state {
+    // uintptr_t allows cleaner addition/subtraction between pointers
+    static_assert(sizeof(uintptr_t) >= sizeof(size_t));
     uintptr_t buffer;
     size_t    total_size;
     uintptr_t high_watermark; // end of allocatable memory

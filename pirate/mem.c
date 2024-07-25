@@ -33,96 +33,13 @@ static uint8_t s_BigBufMemory[BIG_BUFFER_SIZE] __attribute__((aligned(BIG_BUFFER
 // This 2k is going to be used for tracking allocations, and RFU (Reserved For Use) for future memory allocator features.
 // For now, mark as requiring 8k alignment solely to have it "nearby" in the memory map.
 #define REMAINING_RESERVED_2K_BUFFER ()
+// TODO: only enable this on DEBUG builds
+#define CHECK_BIGBUF_INVARIANTS() BigBuffer_VerifyInvariants(__FILE__, __func__, __LINE__)
 
-static uint8_t s_ReservedForAllocationTracking[1024u];
+static bool s_BigBufInitialized = false;
+static uint8_t s_ReservedForFutureAllocationTracking[1024u];
 static big_buffer_general_state_t s_State = {0};
 static big_buffer_allocation_instance_t s_Allocation[MAXIMUM_SUPPORTED_ALLOCATION_COUNT] = {0};
-
-static void SortAllocationTrackingData(void) {
-    // Sort the allocation tracking data by allocated address.
-    return;
-}
-
-void DumpGeneralStateHeader(void) {
-    return;
-}
-void DumpGeneralState(big_buffer_general_state_t * general_state) {
-    return;
-}
-void DumpAllocationInstanceHeader(void) {
-    return;
-}
-void DumpAllocationInstance(big_buffer_allocation_instance_t* alloc_state) { // TODO: type of this parameter TBD
-    return;
-}
-void DumpFullMemoryState(void) {
-    DumpGeneralStateHeader();
-    DumpGeneralState(&s_State);
-    SortAllocationTrackingData();
-    DumpAllocationInstanceHeader();
-    for (size_t j = 0; j < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++j) {
-        if (s_Allocation[j].result != 0u) {
-            DumpAllocationInstance(&s_Allocation[j]);
-        }
-    }
-}
-size_t FindUnusedTrackingEntryIndex(void) {
-    // This should never fail, because successful allocations are limited to MAXIMUM_SUPPORTED_ALLOCATION_COUNT
-    for (size_t i = 0; i < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++i) {
-        if (s_Allocation[i].result == 0u) {
-            return i;
-        }
-    }
-    do { // Should never reach this point ... loop infinitely, dumping state every 5 seconds
-        assert(false);
-        sleep_ms(5000);
-        DumpFullMemoryState();
-    } while (1);
-}
-
-
-// uintptr_t allows cleaner addition/subtraction between pointers
-static bool        s_BigBufInitialized         = false;
-
-/* Big Buffer Memory Layout:
-   (high)  __BIG_BUFFER_END__     -> Pointer just past the end of Big Buffer
-   (... )  ...                    -> Long-lived allocations (if any)
-   (... )  s_State.high_watermark -> Pointer just past the last unallocated memory,
-                                     or equal to low water mark if all memory allocated
-   (... )  ...                    -> Unallocated memory ...
-                                     Long-lived allocations grow from top
-                                     while temporary allocations grow from bottom
-   (... )  s_State.low_watermark  -> Pointer to the first unused byte of memory
-   (... )  ...                    -> Temporary memory allocations
-   (low )  __BIG_BUFFER_START__   -> Guaranteed to be 32k aligned
-*/
-
-
-void BigBuffer_Initialize(void) {
-    printf("BB: Init()\n");
-    if (s_BigBufInitialized) {
-        assert(false); // should only call this once
-        return;
-    }
-
-    s_State.buffer                       = (uintptr_t)s_BigBufMemory;
-    s_State.total_size                   = count_of(s_BigBufMemory);
-    s_State.high_watermark               = s_State.buffer + s_State.total_size;
-    s_State.low_watermark                = s_State.buffer;
-    s_State.long_lived_limit             = s_State.high_watermark - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u);
-    s_State.temp_allocations_count       = 0u;
-    s_State.long_lived_allocations_count = 0u;
-
-    printf("BB: BB @ %p, size %zu, high %p, low %p\n",
-           s_State.buffer, s_State.total_size, s_State.high_watermark, s_State.low_watermark
-           );
-    memset(s_BigBufMemory, 0xAA, s_State.total_size);
-
-    // TODO: initialize memory tracking buffer also
-    memset(s_ReservedForAllocationTracking, 0x00, count_of(s_ReservedForAllocationTracking));
-
-    s_BigBufInitialized = true;
-}
 
 typedef enum _big_buffer_invariant_error_flags {
     BIG_BUFFER_INVARIANT_NONE = 0,
@@ -141,7 +58,7 @@ typedef enum _big_buffer_invariant_error_flags {
     BIG_BUFFER_INVARIANT_UNINITIALIZED_BUT_STORING_VALUES  = 0x8000,
 } big_buffer_invariant_error_flags_t;
 
-big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
+static big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
     uint32_t result_flags = 0u;
     if (s_BigBufInitialized) {
         // constant values
@@ -199,20 +116,140 @@ big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
     }
     return result_flags;
 }
+static void BigBuffer_VerifyInvariants(const char* file, const char* func, int line) {
+    big_buffer_invariant_error_flags_t error_flags = BigBuffer_InvariantsFailed();
+    static_assert(BIG_BUFFER_INVARIANT_NONE == 0);
+    if (error_flags != 0) {
+        // loop 3x to allow connection of a debugger, else printed message is lost
+        // if there was an `if (DebuggerConnected())` function, could have smarter behavior
+        for (int i = 0; i < 3; ++i) {
+            printf("BB Invariant failed: %#08X at %s:%s:%d\n", error_flags, file, func, line);
+            assert(false);
+        }
+    }
+}
+static void SortAllocationTrackingData(void) {
+    // Only 32 maximum entries, so N*N algorithm is only 1024 iterations.
+    // If max allocation count is increased, consider a more efficient sorting algorithm.
+    static_assert(MAXIMUM_SUPPORTED_ALLOCATION_COUNT <= 32);
+
+    for (size_t dest = 0; dest < MAXIMUM_SUPPORTED_ALLOCATION_COUNT - 1; ++dest) {
+        // find the smallest remaining non-null index
+        // Sort by allocated address ()
+        size_t smallest = dest;
+        for (size_t i = dest + 1; i < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++i) {
+            if (s_Allocation[i].result == 0u) {
+                // ignore NULL pointers (non-allocated)
+            } else if (s_Allocation[i].result > s_Allocation[smallest].result) {
+                // ignore because not a smaller address
+            } else if (s_Allocation[i].result < s_Allocation[smallest].result) {
+                smallest = i; // update smallest index because it's smaller
+            } else {
+                // two allocations at the same address should never happen ...
+                assert(false);
+            }
+        }
+        // swap the dest and smallest indices
+        if (smallest != dest) {
+            big_buffer_allocation_instance_t tmp = s_Allocation[dest];
+            s_Allocation[dest] = s_Allocation[smallest];
+            s_Allocation[smallest] = tmp;
+        }
+    }
+    return;
+}
+
+static void DumpGeneralStateHeader(void) {
+    return;
+}
+static void DumpGeneralState(big_buffer_general_state_t * general_state) {
+    return;
+}
+static void DumpAllocationInstanceHeader(void) {
+    return;
+}
+static void DumpAllocationInstance(big_buffer_allocation_instance_t* alloc_state) { // TODO: type of this parameter TBD
+    return;
+}
+static void DumpFullMemoryState(void) {
+    DumpGeneralStateHeader();
+    DumpGeneralState(&s_State);
+    SortAllocationTrackingData();
+    DumpAllocationInstanceHeader();
+    for (size_t j = 0; j < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++j) {
+        if (s_Allocation[j].result != 0u) {
+            DumpAllocationInstance(&s_Allocation[j]);
+        }
+    }
+}
+static size_t FindUnusedTrackingEntryIndex(void) {
+    // This should never fail, because successful allocations are limited to MAXIMUM_SUPPORTED_ALLOCATION_COUNT
+    for (size_t i = 0; i < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++i) {
+        if (s_Allocation[i].result == 0u) {
+            return i;
+        }
+    }
+    do { // Should never reach this point ... loop infinitely, dumping state every 5 seconds
+        assert(false);
+        sleep_ms(5000);
+        DumpFullMemoryState();
+    } while (1);
+}
+
+/* Big Buffer Memory Layout:
+   (high)  __BIG_BUFFER_END__     -> Pointer just past the end of Big Buffer
+   (... )  ...                    -> Long-lived allocations (if any)
+   (... )  s_State.high_watermark -> Pointer just past the last unallocated memory,
+                                     or equal to low water mark if all memory allocated
+   (... )  ...                    -> Unallocated memory ...
+                                     Long-lived allocations grow from top
+                                     while temporary allocations grow from bottom
+   (... )  s_State.low_watermark  -> Pointer to the first unused byte of memory
+   (... )  ...                    -> Temporary memory allocations
+   (low )  __BIG_BUFFER_START__   -> Guaranteed to be 32k aligned
+*/
+
+void BigBuffer_Initialize(void) {
+    CHECK_BIGBUF_INVARIANTS();
+    printf("BB: Init()\n");
+    if (s_BigBufInitialized) {
+        assert(false); // should only call this once
+        return;
+    }
+    memset(&s_State, 0, sizeof(s_State));
+    s_State.buffer                       = (uintptr_t)s_BigBufMemory;
+    s_State.total_size                   = count_of(s_BigBufMemory);
+    s_State.high_watermark               = s_State.buffer + s_State.total_size;
+    s_State.low_watermark                = s_State.buffer;
+    s_State.long_lived_limit             = s_State.high_watermark - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u);
+    s_State.temp_allocations_count       = 0u;
+    s_State.long_lived_allocations_count = 0u;
+
+    printf("BB: BB @ %p, size %zu, high %p, low %p\n",
+           s_State.buffer, s_State.total_size, s_State.high_watermark, s_State.low_watermark
+           );
+    memset(s_BigBufMemory, 0xAA, s_State.total_size);
+
+    // Initialize memory tracking buffer also
+    memset(&s_Allocation[0], 0, sizeof(s_Allocation));
+
+    s_BigBufInitialized = true;
+    CHECK_BIGBUF_INVARIANTS();
+}
+
 void BigBuffer_VerifyNoTemporaryAllocations(void) {
     if (!s_BigBufInitialized) {
         assert(false); // this is recoverable in this instance, but still violates the API contract
         BigBuffer_Initialize(); 
     }
-    big_buffer_invariant_error_flags_t error_flags = BigBuffer_InvariantsFailed();
-    assert(error_flags == 0);
+    CHECK_BIGBUF_INVARIANTS();
     assert(s_State.temp_allocations_count == 0);
     // TODO: also verify no allocation tracking data lists a temporary allocation?
 }
 // TODO: macro to call BigBuffer_InvariantsFailed() and assert if non-zero result
 //       this will simplify compiling this to nothing on release builds, and allow file / func / line numbers
 
-uintptr_t BigBuffer_DetermineNewLowWaterMark(void) {
+static uintptr_t BigBuffer_DetermineNewLowWaterMark(void) {
     // find the highest address allocated to tracked temporary allocations
     uint16_t allocations_found = 0u;
     uintptr_t new_low_water_mark = 0u;
@@ -228,7 +265,7 @@ uintptr_t BigBuffer_DetermineNewLowWaterMark(void) {
     assert(allocations_found == s_State.temp_allocations_count);
     return new_low_water_mark;
 }
-uintptr_t BigBuffer_DetermineNewHighWaterMark(void) {
+static uintptr_t BigBuffer_DetermineNewHighWaterMark(void) {
     // find the lowest address allocated to tracked long-lived allocations
     uint16_t allocations_found = 0u;
     uintptr_t new_high_water_mark = s_State.buffer + s_State.total_size; // highest value ... when no long-lived allocations
@@ -246,6 +283,8 @@ uintptr_t BigBuffer_DetermineNewHighWaterMark(void) {
 }
 
 void* BigBuffer_AllocateTemporary(size_t countOfBytes, size_t requiredAlignment, big_buffer_owner_t owner) {
+    CHECK_BIGBUF_INVARIANTS();
+
     size_t alignmentMask = requiredAlignment - 1;
 
     if (!s_BigBufInitialized) {
@@ -301,9 +340,13 @@ void* BigBuffer_AllocateTemporary(size_t countOfBytes, size_t requiredAlignment,
 
     // finally, zero the memory before returning it.
     memset((void*)result, 0, countOfBytes);
+
+    CHECK_BIGBUF_INVARIANTS();
     return (void*)result;
 }
 void* BigBuffer_AllocateLongLived(size_t countOfBytes, size_t requiredAlignment, big_buffer_owner_t owner) {
+    CHECK_BIGBUF_INVARIANTS();
+
     size_t alignmentMask = requiredAlignment - 1;
 
     if (!s_BigBufInitialized) {
@@ -364,6 +407,8 @@ void* BigBuffer_AllocateLongLived(size_t countOfBytes, size_t requiredAlignment,
 
     // finally, zero the memory before returning it.
     memset((void*)result, 0, countOfBytes);
+
+    CHECK_BIGBUF_INVARIANTS();
     return (void*)result;
 }
 
@@ -413,7 +458,8 @@ static big_buffer_allocation_instance_t* BigBuffer_FreeCommon(uintptr_t p, big_b
     return allocated;
 }
 void BigBuffer_FreeTemporary(void* ptr, big_buffer_owner_t owner) {
-    
+    CHECK_BIGBUF_INVARIANTS();
+
     big_buffer_allocation_instance_t* allocation = BigBuffer_FreeCommon((uintptr_t)ptr, owner);
     if (allocation == NULL) {
         // already asserted in BigBuffer_FreeCommon()
@@ -431,9 +477,12 @@ void BigBuffer_FreeTemporary(void* ptr, big_buffer_owner_t owner) {
     --s_State.temp_allocations_count;
     s_State.low_watermark = BigBuffer_DetermineNewLowWaterMark();
 
+    CHECK_BIGBUF_INVARIANTS();
     return;
 }
 void BigBuffer_FreeLongLived(void* ptr, big_buffer_owner_t owner) {
+    CHECK_BIGBUF_INVARIANTS();
+
     big_buffer_allocation_instance_t* allocation = BigBuffer_FreeCommon((uintptr_t)ptr, owner);
     if (allocation == NULL) {
         // already asserted in BigBuffer_FreeCommon()
@@ -451,21 +500,28 @@ void BigBuffer_FreeLongLived(void* ptr, big_buffer_owner_t owner) {
     --s_State.long_lived_allocations_count;
     s_State.high_watermark = BigBuffer_DetermineNewHighWaterMark();
 
+    CHECK_BIGBUF_INVARIANTS();
     return;
 }
 
 
 bool BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_out ) {
     static_assert(sizeof(s_State) == sizeof(big_buffer_general_state_t));
+    CHECK_BIGBUF_INVARIANTS();
+
     memcpy(general_state_out, &s_State, sizeof(big_buffer_general_state_t));
 }
 bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out ) {
     static_assert(sizeof(s_State) == sizeof(state_out->general));
     static_assert(sizeof(s_Allocation) == sizeof(state_out->allocation));
+    CHECK_BIGBUF_INVARIANTS();
+
     memcpy(&(state_out->general), &s_State, sizeof(big_buffer_general_state_t));
     memcpy(&(state_out->allocation[0]), &(s_Allocation[0]), sizeof(state_out->allocation));
 }
 size_t BigBuffer_GetAvailableTemporaryMemory(size_t requiredAlignment) {
+    CHECK_BIGBUF_INVARIANTS();
+
     size_t alignmentMask = requiredAlignment - 1;
     if ((requiredAlignment & alignmentMask) != 0u) {
         printf("BB_GetAvailableTempMemory: alignment must be a power of 2\n");
@@ -481,6 +537,8 @@ size_t BigBuffer_GetAvailableTemporaryMemory(size_t requiredAlignment) {
     return result;
 }
 size_t BigBuffer_GetAvailableLongLivedMemory(size_t requiredAlignment) {
+    CHECK_BIGBUF_INVARIANTS();
+
     size_t alignmentMask = requiredAlignment - 1;
     if ((requiredAlignment & alignmentMask) != 0u) {
         printf("BB_GetAvailableTempMemory: alignment must be a power of 2\n");
@@ -501,6 +559,7 @@ size_t BigBuffer_GetAvailableLongLivedMemory(size_t requiredAlignment) {
 
 
 
+// /////////////////////////////////////////////////////////////////////////////
 // TODO: replace the below API with BigBuffer_xxxx() API.
 static big_buffer_owner_t legacy_owner = BP_BIG_BUFFER_OWNER_NONE;
 uint8_t *mem_alloc(size_t size, big_buffer_owner_t owner)

@@ -82,7 +82,6 @@ size_t FindUnusedTrackingEntryIndex(void) {
 
 
 // uintptr_t allows cleaner addition/subtraction between pointers
-static uintptr_t s_BigBufHighWaterMark   = 0u; // cannot use until initialized
 static uintptr_t s_BigBufLowWaterMark    = 0u; // cannot use until initialized
 static uintptr_t s_BigBufLongTermMarker  = 0u; // cannot use until initialized
 
@@ -93,7 +92,7 @@ static bool        s_BigBufInitialized         = false;
 /* Big Buffer Memory Layout:
    (high)  __BIG_BUFFER_END__    -> Pointer just past the end of Big Buffer
    (... )  ...                   -> Long-lived allocations (if any)
-   (... )  s_BigBufHighWaterMark -> Pointer just past the last unallocated memory,
+   (... )  s_State.high_watermark -> Pointer just past the last unallocated memory,
                                     or equal to low water mark if all memory allocated
    (... )  ...                   -> Unallocated memory ...
                                     Long-lived allocations grow from top
@@ -113,14 +112,14 @@ void BigBuffer_Initialize(void) {
 
     s_State.buffer              = (uintptr_t)s_BigBufMemory;
     s_State.total_size          = count_of(s_BigBufMemory);
-    s_BigBufHighWaterMark       = s_State.buffer + s_State.total_size;
+    s_State.high_watermark      = s_State.buffer + s_State.total_size;
     s_BigBufLowWaterMark        = s_State.buffer;
-    s_BigBufLongTermMarker      = s_BigBufHighWaterMark - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u);
+    s_BigBufLongTermMarker      = s_State.high_watermark - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u);
     s_BigBufTempAllocCount      = 0u;
     s_BigBufLongLivedAllocCount = 0u;
 
     printf("BB: BB @ %p, size %zu, high %p, low %p\n",
-           s_State.buffer, s_State.total_size, s_BigBufHighWaterMark, s_BigBufLowWaterMark
+           s_State.buffer, s_State.total_size, s_State.high_watermark, s_BigBufLowWaterMark
            );
     memset(s_BigBufMemory, 0xAA, s_State.total_size);
 
@@ -168,13 +167,13 @@ big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
         if (s_BigBufLowWaterMark > s_State.buffer + s_State.total_size) {
             result_flags |= BIG_BUFFER_INVARIANT_LOW_WATERMARK_VALUE_TOO_HIGH;
         }
-        if (s_BigBufHighWaterMark < s_BigBufLongTermMarker) {
+        if (s_State.high_watermark < s_BigBufLongTermMarker) {
             result_flags |= BIG_BUFFER_INVARIANT_HIGH_WATERMARK_VALUE_TOO_LOW;
         }
-        if (s_BigBufHighWaterMark > s_State.buffer + s_State.total_size) {
+        if (s_State.high_watermark > s_State.buffer + s_State.total_size) {
             result_flags |= BIG_BUFFER_INVARIANT_HIGH_WATERMARK_VALUE_TOO_HIGH;
         }
-        if (s_BigBufLowWaterMark > s_BigBufHighWaterMark) {
+        if (s_BigBufLowWaterMark > s_State.high_watermark) {
             result_flags |= BIG_BUFFER_INVARIANT_WATERMARKS_CROSSED;
         }
         // if there are no temporary allocations...
@@ -187,14 +186,14 @@ big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
         // if neither short nor long-lived allocations...
         if ((s_BigBufTempAllocCount == 0) && (s_BigBufLongLivedAllocCount == 0)) {
             // high water mark should point to end of big buffer
-            if (s_BigBufHighWaterMark != s_State.buffer + s_State.total_size) {
+            if (s_State.high_watermark != s_State.buffer + s_State.total_size) {
                 result_flags |= BIG_BUFFER_INVARIANT_HIGH_WATERMARK_WITH_NO_ALLOCS;
             }
         }
     } else {
         if((s_State.buffer              != 0u) ||
            (s_State.total_size          != 0u) ||
-           (s_BigBufHighWaterMark       != 0u) ||
+           (s_State.high_watermark      != 0u) ||
            (s_BigBufLowWaterMark        != 0u) ||
            (s_BigBufLongTermMarker      != 0u) ||
            (s_BigBufTempAllocCount      != 0u) ||
@@ -277,8 +276,8 @@ void* BigBuffer_AllocateTemporary(size_t countOfBytes, size_t requiredAlignment,
 
     // exit early if the request number of bytes is larger than what's left
     // N.B. It might still not fit due to alignment requirements ... checked later.
-    if (countOfBytes > s_BigBufHighWaterMark - s_BigBufLowWaterMark) {
-        printf("BB_AllocTemp: requested %zu bytes > %zu bytes available\n", countOfBytes, s_BigBufHighWaterMark - s_BigBufLowWaterMark);
+    if (countOfBytes > s_State.high_watermark - s_BigBufLowWaterMark) {
+        printf("BB_AllocTemp: requested %zu bytes > %zu bytes available\n", countOfBytes, s_State.high_watermark - s_BigBufLowWaterMark);
         return NULL;
     }
     
@@ -287,7 +286,7 @@ void* BigBuffer_AllocateTemporary(size_t countOfBytes, size_t requiredAlignment,
     if ((result & alignmentMask) != 0u) {
         // adjust the allocation so that it's properly aligned ... move result to larger address
         result = (result + requiredAlignment) & ~alignmentMask;
-        if (s_BigBufHighWaterMark - result < countOfBytes) {
+        if (s_State.high_watermark - result < countOfBytes) {
             printf("BB_AllocTemp: insufficient space due to alignment requirement\n");
             return NULL;
         }
@@ -341,12 +340,12 @@ void* BigBuffer_AllocateLongLived(size_t countOfBytes, size_t requiredAlignment,
 
     // exit early if the request number of bytes is larger than what's left
     // N.B. It might still not fit due to alignment requirements ... checked later.
-    if (countOfBytes > s_BigBufHighWaterMark - lower_limit) {
-        printf("BB_AllocLongLived: requested %zu bytes > %zu bytes available\n", countOfBytes, s_BigBufHighWaterMark - lower_limit);
+    if (countOfBytes > s_State.high_watermark - lower_limit) {
+        printf("BB_AllocLongLived: requested %zu bytes > %zu bytes available\n", countOfBytes, s_State.high_watermark - lower_limit);
         return NULL;
     }
 
-    uintptr_t result = s_BigBufHighWaterMark - countOfBytes;
+    uintptr_t result = s_State.high_watermark - countOfBytes;
     if ((result & alignmentMask) != 0u) {
         // adjust the allocation so that it's properly aligned ... move result to SMALLER address
         result = result & ~alignmentMask;
@@ -357,7 +356,7 @@ void* BigBuffer_AllocateLongLived(size_t countOfBytes, size_t requiredAlignment,
     }
 
     // adjust tracking data
-    s_BigBufHighWaterMark = result;
+    s_State.high_watermark = result;
     ++s_BigBufLongLivedAllocCount;
     size_t idx = FindUnusedTrackingEntryIndex();
     memset(&s_Allocation[idx], 0, sizeof(big_buffer_allocation_instance_t));
@@ -454,7 +453,7 @@ void BigBuffer_FreeLongLived(void* ptr, big_buffer_owner_t owner) {
     // Then, scan all the allocations to find a new high water mark.
     memset(allocation, 0, sizeof(big_buffer_allocation_instance_t));
     --s_BigBufLongLivedAllocCount;
-    s_BigBufHighWaterMark = BigBuffer_DetermineNewHighWaterMark();
+    s_State.high_watermark = BigBuffer_DetermineNewHighWaterMark();
 
     return;
 }
@@ -479,10 +478,10 @@ size_t BigBuffer_GetAvailableTemporaryMemory(size_t requiredAlignment) {
     }
 
     uintptr_t aligned_lower = (s_BigBufLowWaterMark + (requiredAlignment - 1)) & (~alignmentMask);
-    if (aligned_lower >= s_BigBufHighWaterMark) {
+    if (aligned_lower >= s_State.high_watermark) {
         return 0u;
     }
-    size_t result = s_BigBufHighWaterMark - aligned_lower;
+    size_t result = s_State.high_watermark - aligned_lower;
     return result;
 }
 size_t BigBuffer_GetAvailableLongLivedMemory(size_t requiredAlignment) {
@@ -497,10 +496,10 @@ size_t BigBuffer_GetAvailableLongLivedMemory(size_t requiredAlignment) {
         lower = s_BigBufLowWaterMark;
     }
     uintptr_t aligned_lower = (lower + (requiredAlignment - 1)) & (~alignmentMask);
-    if (aligned_lower >= s_BigBufHighWaterMark) {
+    if (aligned_lower >= s_State.high_watermark) {
         return 0u;
     }
-    size_t result = s_BigBufHighWaterMark - aligned_lower;
+    size_t result = s_State.high_watermark - aligned_lower;
     return result;
 }
 

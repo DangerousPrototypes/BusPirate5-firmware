@@ -509,7 +509,7 @@ bool logic_analyzer_cleanup(void)
         pio_program_active=0;
     }
 
-    mem_free(la_buf);
+    BigBuffer_FreeTemporary(la_buf, BP_BIG_BUFFER_OWNER_LA);
 
     logicanalyzer_reset_led();
 
@@ -519,38 +519,51 @@ bool logicanalyzer_setup(void)
 {
     dma_channel_config la_dma_config[LA_DMA_COUNT];
 
-    la_buf=mem_alloc(DMA_BYTES_PER_CHUNK*LA_DMA_COUNT, 0);
-    if(!la_buf)
+    // Each buffer must be aligned to DMA_BYTES_PER_CHUNK (32k)
+    // because the DMA channels are setup to wrap the low bits
+    // of the address (based on transfer count).
+    la_buf = BigBuffer_AllocateTemporary(DMA_BYTES_PER_CHUNK*LA_DMA_COUNT, DMA_BYTES_PER_CHUNK, BP_BIG_BUFFER_OWNER_LA);
+    if (!la_buf)
     {
         //printf("Failed to allocate buffer. Is the scope running?\r\n");
         return false;
     }
 
-    // high bus priority to the DMA
+    // high bus priority to the DMA channels
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
     
-    for(uint8_t i=0; i<count_of(la_dma); i++)
+    for (uint8_t i = 0; i < count_of(la_dma); i++)
     {
-        la_dma[i]= dma_claim_unused_channel(true);
+        la_dma[i] = dma_claim_unused_channel(true);
     }
 
-    for(uint8_t i=0; i<count_of(la_dma); i++)
+    for (uint8_t i = 0; i < count_of(la_dma); i++)
     {
         la_dma_config[i] = dma_channel_get_default_config(la_dma[i]);
-        channel_config_set_read_increment(&la_dma_config[i], false); // read fixed PIO address
-        channel_config_set_write_increment(&la_dma_config[i], true); // write to circular buffer
-        channel_config_set_transfer_data_size(&la_dma_config[i], DMA_SIZE_8); // we have 8 IO pins
+        channel_config_set_read_increment(&la_dma_config[i], false); // read from a fixed address (PIO rxf)
+        channel_config_set_write_increment(&la_dma_config[i], true); // auto-increment, so write to entire buffer
+        channel_config_set_transfer_data_size(&la_dma_config[i], DMA_SIZE_8); // we have 8 IO pins ... maximum of a single byte is transferred per clock
         channel_config_set_dreq(&la_dma_config[i], pio_get_dreq(pio, sm, false)); // &pio0_hw->rxf[sm] paces the rate of transfer
-        channel_config_set_ring(&la_dma_config[i], true, 15); // loop at 2 * 8 bytes
+        
+        channel_config_set_ring(&la_dma_config[i], true, 15); // loop at 1u << 15 == 32k bytes -- This can be disabled if using Vectored IO
 
-        int la_dma_next = (i+1 < count_of(la_dma))? la_dma[i+1] : la_dma[0];
+        // Setup each DMA channel to chain (automatically start) the next DMA channel.
+        // This is a simple way to keep the DMA channels running in a loop.
+        int la_dma_next = (i+1 < count_of(la_dma)) ? la_dma[i+1] : la_dma[0];
         channel_config_set_chain_to(&la_dma_config[i], la_dma_next); // chain to next DMA
 
-        dma_channel_configure(la_dma[i], &la_dma_config[i], (volatile uint8_t *)&la_buf[DMA_BYTES_PER_CHUNK * i], &pio->rxf[sm], DMA_BYTES_PER_CHUNK, false); 
+        dma_channel_configure(
+            la_dma[i],
+            &la_dma_config[i],
+            (volatile uint8_t *)&la_buf[DMA_BYTES_PER_CHUNK * i],
+            &pio->rxf[sm],
+            DMA_BYTES_PER_CHUNK,
+            false
+            ); 
 
     }
 
-    //start the first channel, will pause for data from PIO
+    // start the first channel, will pause for data from PIO
     dma_channel_start(la_dma[0]);
     return true;
 }

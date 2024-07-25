@@ -123,6 +123,15 @@ bool BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_ou
 ///       interactive display of information.
 bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out );
 
+/// @brief Prints the current state of the BigBuffer module
+/// @details This is intended for debugging purposes.  It will print the
+///          current internal `big_buffer_general_state_t`.  If the `verbose`
+///          parameter is true, it will also print all currently allocated
+///          memory allocations (one allocation per line).
+/// @note This API is /NOT/ performance-critical, as it is intended for
+///       interactive display of information.
+void BigBuffer_DebugDumpCurrentState(bool verbose);
+
 // End of debug APIs
 ////////////////////////////////////////////////////////////////////////////////
 

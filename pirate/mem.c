@@ -21,25 +21,9 @@
 #define BIG_BUFFER_TEMPORARY_BUFFER_KB (128u)
 #define BIG_BUFFER_LONGLIVED_BUFFER_KB (  8u)
 #define BIG_BUFFER_ALIGNMENT_KB        ( 32u)
-
-// Why?  Currently, the way the LA DMA works, it requires 4x 32k-aligned, contiguously allocated buffers.
-// AKA: a 128k contiguous, 32k-aligned buffer
-static_assert(BIG_BUFFER_TEMPORARY_BUFFER_KB >= 128u, "BigBuffer size must be at least 128k for LA DMA architecture");
-static_assert(BIG_BUFFER_ALIGNMENT_KB        >=  32u, "BigBuffer alignment must be at least 32k for LA DMA architecture");
-
 #define BIG_BUFFER_SIZE ((BIG_BUFFER_TEMPORARY_BUFFER_KB + BIG_BUFFER_LONGLIVED_BUFFER_KB) * 1024u)
-static uint8_t s_BigBufMemory[BIG_BUFFER_SIZE] __attribute__((aligned(BIG_BUFFER_ALIGNMENT_KB * 1024u))); 
-
-// This 2k is going to be used for tracking allocations, and RFU (Reserved For Use) for future memory allocator features.
-// For now, mark as requiring 8k alignment solely to have it "nearby" in the memory map.
-#define REMAINING_RESERVED_2K_BUFFER ()
 // TODO: only enable this on DEBUG builds
 #define CHECK_BIGBUF_INVARIANTS() BigBuffer_VerifyInvariants(__FILE__, __func__, __LINE__)
-
-static bool s_BigBufInitialized = false;
-static uint8_t s_ReservedForFutureAllocationTracking[1024u];
-static big_buffer_general_state_t s_State = {0};
-static big_buffer_allocation_instance_t s_Allocation[MAXIMUM_SUPPORTED_ALLOCATION_COUNT] = {0};
 
 typedef enum _big_buffer_invariant_error_flags {
     BIG_BUFFER_INVARIANT_NONE = 0,
@@ -57,6 +41,22 @@ typedef enum _big_buffer_invariant_error_flags {
 
     BIG_BUFFER_INVARIANT_UNINITIALIZED_BUT_STORING_VALUES  = 0x8000,
 } big_buffer_invariant_error_flags_t;
+
+
+
+// Why?  Currently, the way the LA DMA works, it requires 4x 32k-aligned, contiguously allocated buffers.
+// AKA: a 128k contiguous, 32k-aligned buffer
+static_assert(BIG_BUFFER_TEMPORARY_BUFFER_KB >= 128u, "BigBuffer size must be at least 128k for LA DMA architecture");
+static_assert(BIG_BUFFER_ALIGNMENT_KB        >=  32u, "BigBuffer alignment must be at least 32k for LA DMA architecture");
+
+static uint8_t s_BigBufMemory[BIG_BUFFER_SIZE] __attribute__((aligned(BIG_BUFFER_ALIGNMENT_KB * 1024u))); 
+
+
+static bool s_BigBufInitialized = false;
+static uint8_t s_ReservedForFutureAllocationTracking[1024u];
+static big_buffer_general_state_t s_State = {0};
+static big_buffer_allocation_instance_t s_Allocation[MAXIMUM_SUPPORTED_ALLOCATION_COUNT] = {0};
+
 
 static big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
     uint32_t result_flags = 0u;
@@ -192,19 +192,8 @@ static void DumpAllocationInstance(const big_buffer_allocation_instance_t* alloc
         );
     return;
 }
-static void DumpFullMemoryState(void) {
-    DumpGeneralStateHeader();
-    DumpGeneralState(&s_State);
-    if ((s_State.temp_allocations_count > 0) || (s_State.long_lived_allocations_count > 0)) {
-        SortAllocationTrackingData();
-        DumpAllocationInstanceHeader();
-        for (size_t j = 0; j < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++j) {
-            if (s_Allocation[j].result != 0u) {
-                DumpAllocationInstance(&s_Allocation[j]);
-            }
-        }
-    }
-}
+
+
 static size_t FindUnusedTrackingEntryIndex(void) {
     // This should never fail, because successful allocations are limited to MAXIMUM_SUPPORTED_ALLOCATION_COUNT
     for (size_t i = 0; i < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++i) {
@@ -215,7 +204,7 @@ static size_t FindUnusedTrackingEntryIndex(void) {
     do { // Should never reach this point ... loop infinitely, dumping state every 5 seconds
         assert(false);
         sleep_ms(5000);
-        DumpFullMemoryState();
+        BigBuffer_DebugDumpCurrentState(true);
     } while (1);
 }
 
@@ -542,6 +531,20 @@ bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out ) {
     memcpy(&(state_out->general), &s_State, sizeof(big_buffer_general_state_t));
     memcpy(&(state_out->allocation[0]), &(s_Allocation[0]), sizeof(state_out->allocation));
 }
+void BigBuffer_DebugDumpCurrentState(bool verbose) {
+    DumpGeneralStateHeader();
+    DumpGeneralState(&s_State);
+    if (verbose && ((s_State.temp_allocations_count > 0) || (s_State.long_lived_allocations_count > 0))) {
+        SortAllocationTrackingData();
+        DumpAllocationInstanceHeader();
+        for (size_t j = 0; j < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++j) {
+            if (s_Allocation[j].result != 0u) {
+                DumpAllocationInstance(&s_Allocation[j]);
+            }
+        }
+    }
+}
+
 size_t BigBuffer_GetAvailableTemporaryMemory(size_t requiredAlignment) {
     CHECK_BIGBUF_INVARIANTS();
 

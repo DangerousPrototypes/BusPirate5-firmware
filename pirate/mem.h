@@ -60,12 +60,6 @@ typedef struct _big_buffer_state {
 	big_buffer_allocation_instance_t allocation[MAXIMUM_SUPPORTED_ALLOCATION_COUNT];
 } big_buffer_state_t;
 
-
-
-
-
-
-
 /// @brief Initializes the BigBuffer module.
 /// @details Must be called before any other BigBuffer API.
 /// @note Called during system init, so in some respects this is an implementation detail.
@@ -100,6 +94,17 @@ void BigBuffer_FreeTemporary(void* ptr, big_buffer_owner_t owner);
 ///       more difficult to catch / debug / track down.
 void BigBuffer_FreeLongLived(void* ptr, big_buffer_owner_t owner);
 
+/// @brief How many bytes of temporary memory are available with a given alignment?
+size_t BigBuffer_GetAvailableTemporaryMemory(size_t requiredAlignment);
+
+/// @brief How many bytes of long-lived memory are available with a given alignment?
+size_t BigBuffer_GetAvailableLongLivedMemory(size_t requiredAlignment);
+
+////////////////////////////////////////////////////////////////////////////////
+// Debug APIs ... not really intended for general use, but may be useful during
+//                development / debugging.
+////////////////////////////////////////////////////////////////////////////////
+
 
 /// @brief provide statistics on current BigBuffer usage
 /// @details Provides overview of BigBuffer state (high / low water marks, etc.)
@@ -118,24 +123,34 @@ bool BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_ou
 ///       interactive display of information.
 bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out );
 
-
-/// @brief How many bytes of temporary memory are available?
-size_t BigBuffer_GetAvailableTemporaryMemory(size_t requiredAlignment);
-
-/// @brief How many bytes of long-lived memory are available?
-size_t BigBuffer_GetAvailableLongLivedMemory(size_t requiredAlignment);
+// End of debug APIs
+////////////////////////////////////////////////////////////////////////////////
 
 
+////////////////////////////////////////////////////////////////////////////////
+// LEGACY APIs ... these are deprecated and will soon be removed
+//
+// Stage 0: define the new APIs (above)
+// Stage 1: migrate all code to use the new APIs
+// Stage 2: mark the functions with deprecated attribute
+// Stage 3: wait appropriate time for braches to be updated
+// Stage 4: remove the deprecated functions entirely
 
+#define DEPRECATE_MEM_ALLOC
+//#define DEPRECATE_MEM_ALLOC __attribute__((deprecated))
 
 /// @brief Attempts to allocate a nand page buffer.
 /// @return Pointer to the buffer if available, NULL if not available
 /// @note Return value should always be checked against null.
 /// @note Max size: SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE
-uint8_t *mem_alloc(size_t size, big_buffer_owner_t owner);
-
+uint8_t* mem_alloc(size_t size, big_buffer_owner_t owner) DEPRECATE_MEM_ALLOC;
 /// @brief Frees the allocated nand page buffer
 /// @param ptr pointer to the nand page buffer
-void mem_free(uint8_t *ptr);
+void     mem_free(uint8_t *ptr)                           DEPRECATE_MEM_ALLOC;
+
+// End of legacy memory allocation APIs
+////////////////////////////////////////////////////////////////////////////////
+
+
 
 #endif // __MEM_H

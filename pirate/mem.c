@@ -37,8 +37,11 @@ static uint8_t s_BigBufMemory[BIG_BUFFER_SIZE] __attribute__((aligned(BIG_BUFFER
 static uint8_t s_ReservedForAllocationTracking[1024u];
 static big_buffer_state_t s_State = {0};
 
+static void SortAllocationTrackingData(void) {
+    // Sort the allocation tracking data by allocated address.
+    return;
+}
 
-// TODO: track allocations as well....
 void DumpGeneralStateHeader(void) {
     return;
 }
@@ -54,6 +57,7 @@ void DumpAllocationInstance(big_buffer_allocation_instance_t* alloc_state) { // 
 void DumpFullMemoryState(void) {
     DumpGeneralStateHeader();
     DumpGeneralState(&s_State.general);
+    SortAllocationTrackingData();
     DumpAllocationInstanceHeader();
     for (size_t j = 0; j < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++j) {
         if (s_State.allocation[j].result != 0u) {
@@ -89,11 +93,14 @@ static bool        s_BigBufInitialized         = false;
 
 /* Big Buffer Memory Layout:
    (high)  __BIG_BUFFER_END__    -> Pointer just past the end of Big Buffer
-   (... )  ...                   -> Long-lived allocations, if any
-   (... )  s_BigBufHighWaterMark -> Pointer just past the last unallocated memory, or equal to low water mark if all memory allocated
-   (... )  ...                   -> Unallocated memory ... could be allocated from top (small) or bottom (aligned)
+   (... )  ...                   -> Long-lived allocations (if any)
+   (... )  s_BigBufHighWaterMark -> Pointer just past the last unallocated memory,
+                                    or equal to low water mark if all memory allocated
+   (... )  ...                   -> Unallocated memory ...
+                                    Long-lived allocations grow from top
+                                    while temporary allocations grow from bottom
    (... )  s_BigBufLowWaterMark  -> Pointer to the first unused byte of memory
-   (... )  ...                   -> Large (>1k), or high-alignment requirement (1k+) allocated memory
+   (... )  ...                   -> Temporary memory allocations
    (low )  __BIG_BUFFER_START__  -> Guaranteed to be 32k aligned
 */
 

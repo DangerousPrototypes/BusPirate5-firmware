@@ -320,6 +320,10 @@ void* BigBuffer_AllocateTemporary(size_t countOfBytes, size_t requiredAlignment,
         printf("BB_AllocTemp: too many allocations\n");
         return NULL;
     }
+    if (countOfBytes == 0) {
+        printf("BB_AllocTemp: returning NULL for zero-byte allocation request");
+        return NULL;
+    }
 
     // exit early if the request number of bytes is larger than what's left
     // N.B. It might still not fit due to alignment requirements ... checked later.
@@ -382,6 +386,10 @@ void* BigBuffer_AllocateLongLived(size_t countOfBytes, size_t requiredAlignment,
         printf("BB_AllocLongLived: too many allocations\n");
         return NULL;
     }
+    if (countOfBytes == 0) {
+        printf("BB_AllocTemp: returning NULL for zero-byte allocation request");
+        return NULL;
+    }
 
     // limit lower bound of the allocation
     uintptr_t lower_limit = s_State.long_lived_limit;
@@ -431,9 +439,8 @@ static big_buffer_allocation_instance_t* BigBuffer_FreeCommon(uintptr_t p, big_b
         assert(false); // BigBuffer_Initialize() must be called before attempting to free memory
         return NULL;
     }
-    if (p == 0u) {
+    if (p == 0u) { // permit the free'ing of a nullptr ...
         printf("BB_Free: NULL pointer\n");
-        assert(false); // NULL pointers are not valid
         return NULL;
     }
     if (p < s_State.buffer) {

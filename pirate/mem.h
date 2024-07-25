@@ -38,7 +38,7 @@ typedef struct _big_buffer_general_state {
     uintptr_t high_watermark; // end of allocatable memory
     uintptr_t low_watermark;
     uintptr_t long_lived_limit;
-    uint16_t  temporary_allocations_count;
+    uint16_t  temp_allocations_count;
     uint16_t  long_lived_allocations_count;
 } big_buffer_general_state_t;
 

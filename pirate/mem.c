@@ -82,7 +82,6 @@ size_t FindUnusedTrackingEntryIndex(void) {
 
 
 // uintptr_t allows cleaner addition/subtraction between pointers
-static uint16_t    s_BigBufTempAllocCount      = 0u;
 static uint16_t    s_BigBufLongLivedAllocCount = 0u;
 static bool        s_BigBufInitialized         = false;
 
@@ -107,13 +106,13 @@ void BigBuffer_Initialize(void) {
         return;
     }
 
-    s_State.buffer              = (uintptr_t)s_BigBufMemory;
-    s_State.total_size          = count_of(s_BigBufMemory);
-    s_State.high_watermark      = s_State.buffer + s_State.total_size;
-    s_State.low_watermark       = s_State.buffer;
-    s_State.long_lived_limit    = s_State.high_watermark - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u);
-    s_BigBufTempAllocCount      = 0u;
-    s_BigBufLongLivedAllocCount = 0u;
+    s_State.buffer                 = (uintptr_t)s_BigBufMemory;
+    s_State.total_size             = count_of(s_BigBufMemory);
+    s_State.high_watermark         = s_State.buffer + s_State.total_size;
+    s_State.low_watermark          = s_State.buffer;
+    s_State.long_lived_limit       = s_State.high_watermark - (BIG_BUFFER_LONGLIVED_BUFFER_KB * 1024u);
+    s_State.temp_allocations_count = 0u;
+    s_BigBufLongLivedAllocCount    = 0u;
 
     printf("BB: BB @ %p, size %zu, high %p, low %p\n",
            s_State.buffer, s_State.total_size, s_State.high_watermark, s_State.low_watermark
@@ -174,27 +173,27 @@ big_buffer_invariant_error_flags_t BigBuffer_InvariantsFailed(void) {
             result_flags |= BIG_BUFFER_INVARIANT_WATERMARKS_CROSSED;
         }
         // if there are no temporary allocations...
-        if (s_BigBufTempAllocCount == 0) {
+        if (s_State.temp_allocations_count == 0) {
             // then low water mark should always point to start of big buffer
             if (s_State.low_watermark != s_State.buffer) {
                 result_flags |= BIG_BUFFER_INVARIANT_LOW_WATERMARK_AT_ZERO_TEMP_ALLOCS;
             }
         }
         // if neither short nor long-lived allocations...
-        if ((s_BigBufTempAllocCount == 0) && (s_BigBufLongLivedAllocCount == 0)) {
+        if ((s_State.temp_allocations_count == 0) && (s_BigBufLongLivedAllocCount == 0)) {
             // high water mark should point to end of big buffer
             if (s_State.high_watermark != s_State.buffer + s_State.total_size) {
                 result_flags |= BIG_BUFFER_INVARIANT_HIGH_WATERMARK_WITH_NO_ALLOCS;
             }
         }
     } else {
-        if((s_State.buffer              != 0u) ||
-           (s_State.total_size          != 0u) ||
-           (s_State.high_watermark      != 0u) ||
-           (s_State.low_watermark       != 0u) ||
-           (s_State.long_lived_limit    != 0u) ||
-           (s_BigBufTempAllocCount      != 0u) ||
-           (s_BigBufLongLivedAllocCount != 0u)  ) {
+        if((s_State.buffer                 != 0u) ||
+           (s_State.total_size             != 0u) ||
+           (s_State.high_watermark         != 0u) ||
+           (s_State.low_watermark          != 0u) ||
+           (s_State.long_lived_limit       != 0u) ||
+           (s_State.temp_allocations_count != 0u) ||
+           (s_BigBufLongLivedAllocCount    != 0u)  ) {
             result_flags |= BIG_BUFFER_INVARIANT_UNINITIALIZED_BUT_STORING_VALUES;
         }
     }
@@ -207,7 +206,7 @@ void BigBuffer_VerifyNoTemporaryAllocations(void) {
     }
     big_buffer_invariant_error_flags_t error_flags = BigBuffer_InvariantsFailed();
     assert(error_flags == 0);
-    assert(s_BigBufTempAllocCount == 0);
+    assert(s_State.temp_allocations_count == 0);
     // TODO: also verify no allocation tracking data lists a temporary allocation?
 }
 // TODO: macro to call BigBuffer_InvariantsFailed() and assert if non-zero result
@@ -226,7 +225,7 @@ uintptr_t BigBuffer_DetermineNewLowWaterMark(void) {
             new_low_water_mark = end_of_allocation;
         }
     }
-    assert(allocations_found == s_BigBufTempAllocCount);
+    assert(allocations_found == s_State.temp_allocations_count);
     return new_low_water_mark;
 }
 uintptr_t BigBuffer_DetermineNewHighWaterMark(void) {
@@ -266,7 +265,7 @@ void* BigBuffer_AllocateTemporary(size_t countOfBytes, size_t requiredAlignment,
         printf("BB_AllocLongLived: required alignment too large\n");
         return NULL;
     }
-    if (s_BigBufLongLivedAllocCount + s_BigBufTempAllocCount >= MAXIMUM_SUPPORTED_ALLOCATION_COUNT) {
+    if (s_BigBufLongLivedAllocCount + s_State.temp_allocations_count >= MAXIMUM_SUPPORTED_ALLOCATION_COUNT) {
         printf("BB_AllocTemp: too many allocations\n");
         return NULL;
     }
@@ -291,7 +290,7 @@ void* BigBuffer_AllocateTemporary(size_t countOfBytes, size_t requiredAlignment,
 
     // adjust tracking data
     s_State.low_watermark = result + countOfBytes;
-    ++s_BigBufTempAllocCount;
+    ++s_State.temp_allocations_count;
     size_t idx = FindUnusedTrackingEntryIndex();
     memset(&s_Allocation[idx], 0, sizeof(big_buffer_allocation_instance_t));
     s_Allocation[idx].result = result;
@@ -324,7 +323,7 @@ void* BigBuffer_AllocateLongLived(size_t countOfBytes, size_t requiredAlignment,
         printf("BB_AllocLongLived: required alignment too large\n");
         return NULL;
     }
-    if (s_BigBufLongLivedAllocCount + s_BigBufTempAllocCount >= MAXIMUM_SUPPORTED_ALLOCATION_COUNT) {
+    if (s_BigBufLongLivedAllocCount + s_State.temp_allocations_count >= MAXIMUM_SUPPORTED_ALLOCATION_COUNT) {
         printf("BB_AllocLongLived: too many allocations\n");
         return NULL;
     }
@@ -429,7 +428,7 @@ void BigBuffer_FreeTemporary(void* ptr, big_buffer_owner_t owner) {
     // zero this one's tracking data, which free's the memory and prevents it from affecting calculation of new watermarks.
     // Then, scan all the allocations to find a new low water mark.
     memset(allocation, 0, sizeof(big_buffer_allocation_instance_t));
-    --s_BigBufTempAllocCount;
+    --s_State.temp_allocations_count;
     s_State.low_watermark = BigBuffer_DetermineNewLowWaterMark();
 
     return;

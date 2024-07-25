@@ -84,7 +84,7 @@ static uint8_t scope_stopped = 1;
 static uint8_t scope_subsystem_stopped = 1;
 volatile uint8_t scope_running = 0;
 static volatile uint8_t scope_stop_waiting = 0;
-static unsigned char *fb=0;
+static unsigned char *fb=0; // framebuffer ... allocated when mode is entered
 typedef enum { SMODE_ONCE, SMODE_NORMAL, SMODE_AUTO } SCOPE_MODE;
 static SCOPE_MODE scope_mode=SMODE_ONCE;
 typedef enum { TRIGGER_POS, TRIGGER_NEG, TRIGGER_NONE, TRIGGER_BOTH } TRIGGER_TYPE;
@@ -198,8 +198,8 @@ void scope_cleanup(void)
 		scope_shutdown(1);
 	}
 	scope_subsystem_stopped = 1;
-	mem_free(fb);
-	fb = 0;
+	BigBuffer_FreeTemporary(fb, BP_BIG_BUFFER_OWNER_SCOPE);
+	fb = NULL;
 	capture_buffer = 0;
 	display_buffer = 0;
 	display = 0;
@@ -233,25 +233,23 @@ void scope_periodic(void)
 
 uint32_t scope_setup(void)
 {
-	uint8_t *x;
-	
-	x = mem_alloc(MALLOC_SIZE, BP_BIG_BUFFER_OWNER_SCOPE);
+	uint8_t * x = BigBuffer_AllocateTemporary(MALLOC_SIZE, 4, BP_BIG_BUFFER_OWNER_SCOPE);
 	if (!x) {
 		printf("couldn't allocate %d bytes, scope mode broken\r\n", MALLOC_SIZE);
 		return 0;
 	}
-	mem_free(x);
+	BigBuffer_FreeTemporary(x, BP_BIG_BUFFER_OWNER_SCOPE);
 	display = 1;
 	return 1;
 }
 
 uint32_t scope_setup_exc(void)
 {
-	uint8_t *x;
-	
-	x = mem_alloc(MALLOC_SIZE, BP_BIG_BUFFER_OWNER_SCOPE);
-	if (!x)
+	uint8_t * x = BigBuffer_AllocateTemporary(MALLOC_SIZE, 4, BP_BIG_BUFFER_OWNER_SCOPE);
+	if (!x) {
+		printf("couldn't allocate %d bytes, scope mode broken\r\n", MALLOC_SIZE);
 		return 0;
+	}
 	fb = x;
 	display_buffer =          (uint16_t *)&x[VS*HS/2]; // 2 byte aligned
 	capture_buffer = (volatile uint16_t *)&x[VS*HS/2+2*BUFFERS*CAPTURE_DEPTH]; // 2 byte aligned

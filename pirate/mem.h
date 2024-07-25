@@ -145,8 +145,10 @@ void BigBuffer_DebugDumpCurrentState(bool verbose);
 // Stage 3: wait appropriate time for braches to be updated
 // Stage 4: remove the deprecated functions entirely
 
-#define DEPRECATE_MEM_ALLOC
-//#define DEPRECATE_MEM_ALLOC __attribute__((deprecated))
+//#define DEPRECATE_MEM_ALLOC
+//#define DEPRECATE_MEM_FREE
+#define DEPRECATE_MEM_ALLOC __attribute__((deprecated("use BigBuffer_AllocateTemporary() instead")))
+#define DEPRECATE_MEM_FREE __attribute__((deprecated("use BigBuffer_FreeTemporary() instead")))
 
 /// @brief Attempts to allocate a nand page buffer.
 /// @return Pointer to the buffer if available, NULL if not available
@@ -155,7 +157,7 @@ void BigBuffer_DebugDumpCurrentState(bool verbose);
 uint8_t* mem_alloc(size_t size, big_buffer_owner_t owner) DEPRECATE_MEM_ALLOC;
 /// @brief Frees the allocated nand page buffer
 /// @param ptr pointer to the nand page buffer
-void     mem_free(uint8_t *ptr)                           DEPRECATE_MEM_ALLOC;
+void     mem_free(uint8_t *ptr)                           DEPRECATE_MEM_FREE;
 
 // End of legacy memory allocation APIs
 ////////////////////////////////////////////////////////////////////////////////

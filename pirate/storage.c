@@ -124,13 +124,15 @@ bool storage_detect(void){
 
 uint8_t storage_format(void) {
     FRESULT fr;     /* FatFs return code */
-    uint8_t *work_buffer = mem_alloc(FF_MAX_SS, BP_BIG_BUFFER_OWNER_DISKFORMAT);
+    uint8_t *work_buffer = BigBuffer_AllocateTemporary(FF_MAX_SS, 4, BP_BIG_BUFFER_OWNER_DISKFORMAT);
     if (!work_buffer) {
         return FR_NOT_ENOUGH_CORE;
     }
+
     fr = f_mkfs("", 0, work_buffer, FF_MAX_SS);
-    mem_free(work_buffer);
-    if(fr == FR_OK){
+    BigBuffer_FreeTemporary(work_buffer, BP_BIG_BUFFER_OWNER_DISKFORMAT);
+
+    if (fr == FR_OK) {
         fr = f_setlabel("Bus_Pirate5");
     }
     return fr;

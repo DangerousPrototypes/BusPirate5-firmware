@@ -19,8 +19,13 @@
 #define BP_CLK  BIO5
 #define BP_MISO BIO6
 #define BP_CS   BIO7
-bool script_entry(void);
-bool script_mode(void);
+void script_mode(void);
 unsigned char binBBpindirectionset(unsigned char inByte);
 unsigned char binBBpinset(unsigned char inByte);
+
+typedef struct _binmode{
+	void (*binmode_service)(void);
+} binmode_t;
+
+extern struct _binmode binmodes[];
 

@@ -104,6 +104,8 @@ typedef struct _system_config
 
 	bool rts;
 
+	uint8_t binmode_select;
+
 
 } _system_config;
 

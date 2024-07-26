@@ -45,6 +45,10 @@
 #include "timestamp.h"
 #include "ui/ui_const.h"
 
+struct _binmode binmodes[]={
+    {&script_mode},
+};
+
 void script_print(const char *str) {
     for(uint8_t i=0; i<strlen(str); i++){
         bin_tx_fifo_put(str[i]);
@@ -692,7 +696,7 @@ static const struct _binmode_struct global_commands[]={
 // NOTE: THIS DOES NOT WORK ATM BECAUSE I TRIED TO GET CUTE AND BROKE LOTS OF STUFF
 // NOTE2: I'M PRETTY UNHAPPY WITH REPEATING THE TESTS FOR GLOBAL/LOCAL, BUT I WANT THAT SEPARATION.
 // handler needs to be cooperative multitasking until mode is enabled
-bool script_mode(void){
+void script_mode(void){
     static uint8_t binmode_state=BINMODE_COMMAND;
     static uint8_t binmode_command;
 
@@ -794,7 +798,6 @@ bool script_mode(void){
         //}
 
     //}
-    return false;
 }
 
  

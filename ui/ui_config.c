@@ -26,6 +26,20 @@ static const struct prompt_item menu_items_disable_enable[]=
     {T_CONFIG_ENABLE},
 };
 
+static const struct prompt_item menu_items_binmode_select[]={
+    {T_CONFIG_BINMODE_SELECT_1},
+    {T_CONFIG_BINMODE_SELECT_2},
+    {T_CONFIG_BINMODE_SELECT_3},
+    {T_CONFIG_BINMODE_SELECT_4},
+    {T_CONFIG_BINMODE_SELECT_5},
+};
+
+uint32_t ui_config_action_binmode_select(uint32_t a, uint32_t b){
+    if (b < count_of(menu_items_binmode_select)) {
+        system_config.binmode_select = b;
+    }
+}
+
 // LED effect
 static const struct prompt_item menu_items_led_effect[]=
 {
@@ -215,6 +229,7 @@ static const struct ui_prompt sub_prompts[]={
     {T_CONFIG_LEDS_EFFECT,       menu_items_led_effect,     count_of(menu_items_led_effect),     0,0,0,0, &ui_config_action_led_effect,     &cfg},
     {T_CONFIG_LEDS_COLOR,        menu_items_led_color,      count_of(menu_items_led_color),      0,0,0,0, &ui_config_action_led_color,      &cfg},
     {T_CONFIG_LEDS_BRIGHTNESS,   menu_items_led_brightness, count_of(menu_items_led_brightness), 0,0,0,0, &ui_config_action_led_brightness, &cfg},
+    {T_CONFIG_BINMODE_SELECT,   menu_items_binmode_select, count_of(menu_items_binmode_select), 0,0,0,0, &ui_config_action_binmode_select,   &cfg},    
     // clang-format on
 };
 

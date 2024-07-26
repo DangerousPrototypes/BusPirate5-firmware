@@ -214,10 +214,10 @@ int main(){
     bool has_been_connected = false;
     while(1){
 
-        script_mode(); //temp co-op multitask
-        //if(script_entry()){ //enter scripting mode?
-        //    bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
-        //}
+        //co-op multitask **when not actively doing anything**
+        //core 2 handles USB and other sensitive stuff, so it's not critical to co-op multitask
+        //but the terminal will not be responsive if the service is blocking
+        binmodes[system_config.binmode].binmode_service();
 
         if (tud_cdc_n_connected(0)){
             if(!has_been_connected){

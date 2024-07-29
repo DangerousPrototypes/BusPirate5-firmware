@@ -108,36 +108,37 @@ uint32_t spi_setup(void){
 
 uint32_t spi_binmode_setup(void){
 	//spi config sequence:
-	//0x2540BE40 4-8 CPOL=0 CPHA=0 CS=1
-	uint32_t temp;
+	//0x3b9aca0 4-8 CPOL=0 CPHA=0 CS=1
+	uint32_t temp=0;
 	char c;
+	bool error=false;
 	for(uint8_t i=0;i<4;i++){
 		temp=temp<<8;
 		bin_rx_fifo_get_blocking(&c);
 		temp|=c;
 	}	
-	if(temp>62500000) return 1;
-	mode_config.baudrate=temp;
+	if(temp>62500000) error=true;
+	else mode_config.baudrate=temp;
 
 	bin_rx_fifo_get_blocking(&c);
-	if(c<4 || c>8) return 1;
-	mode_config.data_bits=c;
+	if(c<4 || c>8) error=true;
+	else mode_config.data_bits=c;
 
 	bin_rx_fifo_get_blocking(&c);
-	if(c>1) return 1;
-	mode_config.clock_polarity=c;
+	if(c>1) error=true;
+	else mode_config.clock_polarity=c;
 
 	bin_rx_fifo_get_blocking(&c);
-	if(c>1) return 1;	
-	mode_config.clock_phase=c;
+	if(c>1) error=true;	
+	else mode_config.clock_phase=c;
 
 	bin_rx_fifo_get_blocking(&c);
-	if(c>1) return 1;
-	mode_config.cs_idle=c;
+	if(c>1) error=true;
+	else mode_config.cs_idle=c;
 
 	mode_config.binmode=true;
 	
-	return 0;
+	return error;
 
 }
 

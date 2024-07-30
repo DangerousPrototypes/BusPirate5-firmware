@@ -71,30 +71,6 @@ struct _binmode_struct{
     int arg_count;
 };
 
-// [/{ Start/Start II (mode dependent) 	]/} Stop/Stop II (mode dependent)
-// 123 Write value (decimal) 	r Read
-// / Clock high 	\ Clock low
-// ^ Clock tick 	- Data high
-// _ Data low 	. Read data pin state
-// d/D Delay 1 us/MS (d:4 to repeat) 	a/A/@.x Set IO.x state (low/HI/READ)
-// v.x Measure volts on IO.x 	> Run bus syntax (really a global command…)
-/*enum{
-    BM_CONFIG=0,
-    BM_WRITE,
-    BM_START,
-    BM_START_ALT,
-    BM_STOP,
-    BM_STOP_ALT,
-    BM_READ,
-    BM_CLKH,
-    BM_CLKL,
-    BM_TICK,
-    BM_DATH,
-    BM_DATL,
-    BM_BITR,
-};*/
-
-
 enum {
     BM_RESET = 0,
     BM_DEBUG_LEVEL, //1
@@ -153,7 +129,7 @@ uint32_t binmode_config(uint8_t *binmode_args){
     struct _bytecode result; 
     struct _bytecode next;
     if(binmode_debug) printf("[CONFIG] Setting up mode\r\n");
-    if(modes[system_config.mode].binmode_setup()) return 1;
+    if(modes[system_config.mode].binmode_setup(binmode_args)) return 1;
     modes[system_config.mode].protocol_setup_exc();
     return 0;
 }
@@ -356,7 +332,11 @@ uint32_t mode_change(uint8_t *binmode_args){
         if(modes[i].binmode_setup && strcmp(binmode_args, modes[i].protocol_name)==0){
             modes[system_config.mode].protocol_cleanup();
             system_config.mode=i;
-            if(binmode_debug) printf("[MODE] Changed to %s\r\n", modes[system_config.mode].protocol_name);
+            if(modes[system_config.mode].binmode_get_config_length()>BINMODE_MAX_ARGS){
+                if(binmode_debug) printf("[MODE] Config length too long for arguments buffer\r\n");
+                return 1;
+            }
+            if(binmode_debug) printf("[MODE] Changed to %s, config length %d\r\n", modes[system_config.mode].protocol_name, modes[system_config.mode].binmode_get_config_length());
             return 0;
         }
     }
@@ -364,7 +344,7 @@ uint32_t mode_change(uint8_t *binmode_args){
 }
 
 uint32_t binmode_info(uint8_t *binmode_args){
-    script_print("BBIO2.0");
+    script_print("BBIO2.000");
     return 0;
 }
 
@@ -726,7 +706,8 @@ void script_mode(void){
     static uint8_t binmode_command;
     static uint8_t binmode_args[BINMODE_MAX_ARGS];
     static uint8_t binmode_arg_count=0;
-    static uint8_t binmode_null_count=0;
+    static uint8_t binmode_arg_total=0;
+    //static uint8_t binmode_null_count=0;
     //could activate binmode just by opening the port?
     //if(!tud_cdc_n_connected(1)) return false;  
 
@@ -743,39 +724,47 @@ void script_mode(void){
 
                 if(binmode_debug) printf("[MAIN] Global command %d, args: %d\r\n",c, binmode_commands[c].arg_count);
                 binmode_command=c;
+                binmode_arg_count=0;
+                binmode_arg_total=0;
 
                 if(binmode_command==BM_PRINT_STRING){
                     binmode_state=BINMODE_PRINT_STRING;
-                    binmode_arg_count=0;
+                    break;
+                }else if(binmode_command==BM_CONFIG){
+                    binmode_state=BINMODE_GET_ARGS;
+                    binmode_arg_total=modes[system_config.mode].binmode_get_config_length();
+                    if(binmode_debug) printf("[MAIN] Mode config length %d\r\n", binmode_arg_total);
+                    if(binmode_arg_total==0){
+                        goto do_binmode_command;
+                    }
                     break;
                 }
-                
+
                 if(binmode_commands[c].arg_count>0){ 
-                    binmode_arg_count=binmode_commands[c].arg_count;
+                    binmode_arg_total=binmode_commands[c].arg_count;
                     binmode_state=BINMODE_GET_ARGS;
                 }else if(binmode_commands[c].arg_count<0){
                     binmode_state=BINMODE_GET_NULL_TERM;
-                    binmode_null_count=0;
                 }else{
                     goto do_binmode_command;
                 }
                 break;
             case BINMODE_GET_ARGS:
-                binmode_args[(binmode_commands[binmode_command].arg_count - binmode_arg_count)]=c;
-                binmode_arg_count--;
-                if(!binmode_arg_count){
+                binmode_args[binmode_arg_count]=c;
+                binmode_arg_count++;
+                if(binmode_arg_count==binmode_arg_total){
                     goto do_binmode_command;
                 }
                 break;    
             case BINMODE_GET_NULL_TERM:
-                binmode_args[binmode_null_count]=c;
-                binmode_null_count++;
+                binmode_args[binmode_arg_count]=c;
+                binmode_arg_count++;
                 if(c==0x00){
                     goto do_binmode_command;
                 }
-                if(binmode_null_count>=BINMODE_MAX_ARGS){
+                if(binmode_arg_count>=BINMODE_MAX_ARGS){
                     binmode_state=BINMODE_COMMAND;
-                    if(binmode_debug) printf("[MAIN] Null term too long\r\n");
+                    if(binmode_debug) printf("[MAIN] Null terminated data too long\r\n");
                     bin_tx_fifo_put(1);
                 }
                 break;

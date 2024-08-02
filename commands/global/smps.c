@@ -65,9 +65,13 @@ void smps_handler(struct command_result *res){
         }
     }
 
-    if(!has_volts || volts<5.1f || volts>16.0f){
+    if(((!has_volts) && (!has_setpoints)) || volts<5.1f || volts>16.0f){
+
+        if(volts<5.1f || volts>16.0f){
+            printf("Invalid voltage: %f.2\r\n", volts);
+        }
+
         prompt_result result;
-        //prompt voltage (float)
         printf("%sSMPS\r\nVolts (5.1V-16.0V)%s", ui_term_color_info(), ui_term_color_reset());  
         ui_prompt_float(&result, 5.1f, 16.0f, 13.0f, true, &volts, false);
         if(result.exit){

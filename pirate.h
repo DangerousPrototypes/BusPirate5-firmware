@@ -35,12 +35,12 @@
 #define		BP_USE_HW2WIRE
 //#define		BP_USE_SW2W
 //#define		BP_USE_SW3W
-//#define 	BP_USE_DIO
 #define     BP_USE_HWLED
 //#define		BP_USE_LCDSPI
 //#define		BP_USE_LCDI2C
 //#define		BP_USE_LA
 #define     BP_USE_DIO
+#define     BP_USE_INFRARED
 //#define 	BP_USE_DUMMY1
 //#define 	BP_USE_DUMMY2
 #define     BP_USE_SCOPE

@@ -68,7 +68,7 @@ void smps_handler(struct command_result *res){
     if(((!has_volts) && (!has_setpoints)) || volts<5.1f || volts>16.0f){
 
         if(volts<5.1f || volts>16.0f){
-            printf("Invalid voltage: %f.2\r\n", volts);
+            printf("Invalid voltage: %1.2f\r\n", volts);
         }
 
         prompt_result result;

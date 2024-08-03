@@ -44,11 +44,13 @@
 #include "commands/global/pwm.h"
 #include "timestamp.h"
 #include "ui/ui_const.h"
+#include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 
 uint8_t binmode_debug=0;
 
 struct _binmode binmodes[]={
     {&script_mode},
+    {&arduino_ch32v003},
 };
 
 void script_print(const char *str) {

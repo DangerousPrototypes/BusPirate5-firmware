@@ -159,6 +159,8 @@ set(bp5_common
         mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
         mode/binloopback.c mode/binloopback.h
         mode/logicanalyzer.h mode/logicanalyzer.c mode/sump.c mode/sump.h
+        lib/arduino-ch32v003-swio/arduino_ch32v003.c lib/arduino-ch32v003-swio/arduino_ch32v003.h
+        lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c   
 
         # displays
         displays.c displays.h display/default.c display/default.h

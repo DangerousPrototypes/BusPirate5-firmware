@@ -217,7 +217,7 @@ int main(){
         //co-op multitask **when not actively doing anything**
         //core 2 handles USB and other sensitive stuff, so it's not critical to co-op multitask
         //but the terminal will not be responsive if the service is blocking
-        binmodes[system_config.binmode].binmode_service();
+        binmodes[system_config.binmode_select].binmode_service();
 
         if (tud_cdc_n_connected(0)){
             if(!has_been_connected){
@@ -391,7 +391,7 @@ void core1_entry(void){
 
         //service the terminal TX queue
         tx_fifo_service();
-        //bin_tx_fifo_service();
+        bin_tx_fifo_service();
 
         if(system_config.psu==1 && system_config.psu_irq_en==true && !psu_fuse_ok()){
             system_config.psu_irq_en=false;

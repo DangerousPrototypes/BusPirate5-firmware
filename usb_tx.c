@@ -163,7 +163,7 @@ bool bin_tx_fifo_try_get(char *c){
     return queue2_try_remove(&bin_tx_fifo, c);
 }
 
-#if(0)
+//#if(0)
 void bin_tx_fifo_service(void)
 {
     uint16_t bytes_available;
@@ -190,7 +190,7 @@ void bin_tx_fifo_service(void)
     tud_cdc_n_write(1, &data, i);
     tud_cdc_n_write_flush(1);
 }
-#endif
+//#endif
 
 bool bin_tx_not_empty(void)
 {

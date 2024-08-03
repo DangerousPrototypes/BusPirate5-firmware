@@ -1,0 +1,1 @@
+void arduino_ch32v003();

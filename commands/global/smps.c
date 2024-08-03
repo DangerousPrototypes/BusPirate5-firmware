@@ -129,7 +129,7 @@ void smps_handler(struct command_result *res){
 
         int64_t duration_ms = absolute_time_diff_us(start_time, get_absolute_time()) / 1000;
         if(duration_ms>1000){
-            printf("SMPS voltage: %d\r",raw/165);
+            printf("SMPS voltage: %1.2f\r",(float)((float)raw/165.0f));
             start_time = get_absolute_time();            
         }
     }

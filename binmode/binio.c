@@ -77,6 +77,7 @@ uint32_t binmode_config(uint8_t *binmode_args){
     return 0;
 }
 
+/* move to protocol layer
 uint32_t binmode_write(uint8_t *binmode_args){
     struct _bytecode result; 
     struct _bytecode next;
@@ -93,6 +94,21 @@ uint32_t binmode_write(uint8_t *binmode_args){
             bin_tx_fifo_put(result.in_data);
         }
     }
+    return 0;
+}
+*/
+
+uint32_t binmode_write(uint8_t *binmode_args){
+    struct _bytecode result; 
+    struct _bytecode next;
+    char c;
+
+    result.out_data=binmode_args[0]; 
+    modes[system_config.mode].protocol_write(&result, &next);
+    if(result.read_with_write){
+       return result.in_data;
+    }
+
     return 0;
 }
 
@@ -125,7 +141,7 @@ uint32_t binmode_stop_alt(uint8_t *binmode_args){
 }
 
 // same as binmode_write, but with a read
-uint32_t binmode_read(uint8_t *binmode_args){
+/*uint32_t binmode_read(uint8_t *binmode_args){
     struct _bytecode result; 
     struct _bytecode next;
 
@@ -138,6 +154,14 @@ uint32_t binmode_read(uint8_t *binmode_args){
     }
     modes[system_config.mode].protocol_read(&result, &next);
     return 0;
+}*/
+
+uint32_t binmode_read(uint8_t *binmode_args){
+    struct _bytecode result; 
+    struct _bytecode next;
+
+    modes[system_config.mode].protocol_read(&result, &next);
+    return result.in_data;
 }
 
 // might have to compare the function to the 

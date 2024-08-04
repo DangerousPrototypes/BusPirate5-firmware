@@ -31,13 +31,13 @@ const binmode_t binmodes[]={
 };
 
 inline void binmode_setup(void){
-    binmodes[system_config.mode].binmode_setup();
+    binmodes[system_config.binmode_select].binmode_setup();
 }
 
 inline void binmode_service(void){
-    binmodes[system_config.mode].binmode_service();
+    binmodes[system_config.binmode_select].binmode_service();
 }
 
 inline void binmode_cleanup(void){
-    binmodes[system_config.mode].binmode_cleanup();
+    binmodes[system_config.binmode_select].binmode_cleanup();
 }

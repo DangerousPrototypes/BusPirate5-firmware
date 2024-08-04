@@ -35,22 +35,19 @@
 #define		BP_USE_HW2WIRE
 //#define		BP_USE_SW2W
 //#define		BP_USE_SW3W
-//#define 	BP_USE_DIO
+#define 	BP_USE_DIO
 #define     BP_USE_HWLED
 //#define		BP_USE_LCDSPI
 //#define		BP_USE_LCDI2C
 //#define		BP_USE_LA
-#define     BP_USE_DIO
 //#define 	BP_USE_DUMMY1
 //#define 	BP_USE_DUMMY2
 #define     BP_USE_SCOPE
-#define     BP_USE_BINLOOPBACK
+//#define     BP_USE_BINLOOPBACK
 
 // enable display support
 //#define		DISPLAY_USE_HD44780	// is always enabled
 //#define		DISPLAY_USE_ST7735
-
-#define OPTARG_STRING_LEN 20
 
 #define BIG_BUFFER_SIZE (128 * 1024)
 

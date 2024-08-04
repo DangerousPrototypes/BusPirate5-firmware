@@ -41,7 +41,7 @@
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
 //#include "helpers.h"
-#include "mode/binio.h"
+#include "binmode/binmodes.h"
 #include "commands/global/p_pullups.h"
 #include "pirate/psu.h"
 #include "commands/global/w_psu.h"
@@ -203,8 +203,7 @@ int main(){
         BP_SM_DISPLAY_MODE,
         BP_SM_GET_INPUT,
         BP_SM_PROCESS_COMMAND,
-        BP_SM_COMMAND_PROMPT,
-        BP_SM_SCRIPT_MODE
+        BP_SM_COMMAND_PROMPT
     };
     
     uint8_t bp_state=0;
@@ -318,8 +317,6 @@ int main(){
                 system_config.error=ui_process_commands();   
                 bp_state=BP_SM_COMMAND_PROMPT;      
                 break;     
-            case BP_SM_SCRIPT_MODE:
-                script_mode();
             case BP_SM_COMMAND_PROMPT:
                 if(system_config.subprotocol_name){
                     printf("%s%s-(%s)>%s ", ui_term_color_prompt(), modes[system_config.mode].protocol_name, system_config.subprotocol_name, ui_term_color_reset());

@@ -156,11 +156,13 @@ set(bp5_common
         translation/en-us.h translation/zh-cn.h translation/pl-pl.h
 
         # binary mode
-        mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
+        binmode/binmodes.c binmode/binmodes.h binmode/binio.c binmode/binio.h  
+        binmode/binio_helpers.c binmode/binio_helpers.h
         mode/binloopback.c mode/binloopback.h
         mode/logicanalyzer.h mode/logicanalyzer.c mode/sump.c mode/sump.h
+        binmode/dirtyproto.c binmode/dirtyproto.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c lib/arduino-ch32v003-swio/arduino_ch32v003.h
-        lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c   
+        lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c     
 
         # displays
         displays.c displays.h display/default.c display/default.h

@@ -46,9 +46,9 @@
 #include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and bytecode stuff to a single helper file
 #include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "modes.h"
-#include "mode/binio.h"
+//#include "mode/binio.h"
 #include "pirate/psu.h"
-#include "binio_helpers.h"
+//#include "binio_helpers.h"
 #include "mode/logicanalyzer.h"
 
 #include "tusb.h"

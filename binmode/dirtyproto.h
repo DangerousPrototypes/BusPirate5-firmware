@@ -1,0 +1,1 @@
+void dirtyproto_mode(void);

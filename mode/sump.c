@@ -85,7 +85,7 @@ static struct _sump {
     bool     cdc_connected;
     uint8_t  cmd[5];		// command
     uint8_t  cmd_pos;		// command buffer position
-    uint8_t  state;		// SUMP_STATE_*
+    volatile uint8_t  state;		// SUMP_STATE_*
     uint8_t  width;		// in bytes, 1 = 8 bits, 2 = 16 bits
     uint8_t  trigger_index;
     uint32_t pio_prog_offset;
@@ -198,8 +198,9 @@ static void sump_do_run(void)
     uint8_t state;
     uint32_t i, tmask = 0;
     bool tstart = false;
-
-    if (sump.width == 0) 
+    bool edge = false;
+    uint32_t trigger_value = sump.trigger[0].value;
+    if (sump.width == 0)
     {
         // invalid config, dump something nice
         sump.state = SUMP_STATE_DUMP;
@@ -216,7 +217,15 @@ static void sump_do_run(void)
 
     if (tstart && tmask) 
     {
-	    sump.state = SUMP_STATE_TRIGGER;
+        //test for 2 level triggering to achieve edge triggering
+        //same masks and opposite values on level 1 and 2
+        if ((sump.trigger[0].mask == sump.trigger[1].mask) &&
+            (sump.trigger[0].mask & sump.trigger[0].value) == (sump.trigger[1].mask & ~sump.trigger[1].value))
+        {
+            edge = true;
+            trigger_value = sump.trigger[1].value;
+        }
+        sump.state = SUMP_STATE_TRIGGER;
 	    //sump.trigger_index = 0;    
     } 
     else 
@@ -224,7 +233,7 @@ static void sump_do_run(void)
         sump.state = SUMP_STATE_SAMPLING;
     }
 
-    logic_analyzer_arm(freq, sump.delay_count, sump.trigger[0].mask, sump.trigger[0].value);   
+    logic_analyzer_arm(freq, sump.delay_count, sump.trigger[0].mask, trigger_value, edge);   
 
     return;
 }

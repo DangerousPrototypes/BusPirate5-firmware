@@ -27,6 +27,8 @@ void target_power(int x){
 #define PROTOCOL_WRITE_REG 'w'
 #define PROTOCOL_READ_REG  'r'
 
+const char arduino_ch32v003_name[]="Arduino CH32V003 SWIO";
+
 void arduino_ch32v003(void) {
     uint8_t reg;
     uint32_t val;

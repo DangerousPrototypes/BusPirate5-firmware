@@ -46,7 +46,6 @@
 #include "ui/ui_const.h"
 #include "binmode/binmodes.h"
 
-
 uint8_t binmode_debug=0;
 
 void script_print(const char *str) {
@@ -56,11 +55,17 @@ void script_print(const char *str) {
 }
 
 void script_enabled(void){
-    printf("\r\nScripting mode enabled. Terminal locked.\r\n");
+    if(tud_cdc_n_connected(0)){
+        printf("\r\nScripting mode enabled. Terminal locked.\r\n");
+    }
+    system_config.binmode_lock_terminal=true;
 }
 
 void script_disabled(void){
-    printf("\r\nTerminal unlocked.\r\n");     //fall through to prompt 
+    if(tud_cdc_n_connected(0)){
+        printf("\r\nTerminal unlocked.\r\n");
+    }
+    system_config.binmode_lock_terminal=false;   
 }
 
 uint32_t binmode_config(uint8_t *binmode_args){
@@ -560,8 +565,7 @@ uint32_t binmode_change_binmode(uint8_t *binmode_args){
     if(binmode_debug){
         printf("[BINMODE] Changing to %d\r\n", binmode_args[0]);
     }
-    //if(binmode_args[0]>=count_of(binmodes)) return 1;
-    if(binmode_args[0]>=3) return 1;
-    system_config.binmode=binmode_args[0];
+    if(binmode_args[0]>=count_of(binmodes)) return 1;
+    system_config.binmode_select=binmode_args[0];
     return 0;
 }

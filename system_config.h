@@ -14,8 +14,6 @@ typedef struct _system_config
 	bool config_loaded_from_file;
 	uint8_t hardware_revision;
 
-	bool binmode;
-
 	uint32_t terminal_language;
 
 	uint32_t terminal_usb_enable; 		//enable USB CDC terminal
@@ -104,8 +102,10 @@ typedef struct _system_config
 
 	bool rts;
 
-	uint8_t binmode_select;
-
+	bool binmode_usb_rx_queue_enable; 	//enable the binmode RX queue, disable to handle USB directly with tinyusb functions
+	bool binmode_usb_tx_queue_enable; 	//enable the binmode TX queue, disable to handle USB directly with tinyusb functions
+	uint8_t binmode_select;				//index of currently active binary mode
+	bool binmode_lock_terminal;			//disable terminal while in binmode
 
 } _system_config;
 

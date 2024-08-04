@@ -63,8 +63,6 @@ void rx_usb_init(void){
 // Invoked when CDC interface received data from host
 void tud_cdc_rx_cb(uint8_t itf) {
     char buf[64];
-    static bool binmode=false;
-    static uint8_t binmode_cnt=0;
 
     if(itf==0 && tud_cdc_n_available(0)){
         uint32_t count = tud_cdc_n_read(0, buf, 64);
@@ -75,7 +73,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
         }     
     }
 
-    if(itf==1 && tud_cdc_n_available(1)){
+    if(system_config.binmode_usb_rx_queue_enable && itf==1 && tud_cdc_n_available(1)){
         uint32_t count = tud_cdc_n_read(1, buf, 64);
 
         // while bytes available shove them in the buffer

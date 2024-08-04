@@ -17,7 +17,6 @@ struct _system_config system_config;
 
 void system_init(void)
 {
-	system_config.binmode=false;
 	system_config.terminal_language=0;
 	system_config.config_loaded_from_file=false;
 	system_config.terminal_usb_enable=true; 		//enable USB CDC terminal
@@ -112,6 +111,10 @@ void system_init(void)
 	system_config.rts=0;
 
 	system_config.binmode_select=0;
+	system_config.binmode_lock_terminal=false;
+	system_config.binmode_usb_rx_queue_enable=true; 	//enable the binmode RX queue, disable to handle USB directly with tinyusb functions
+	system_config.binmode_usb_tx_queue_enable=true; 	//enable the binmode TX queue, disable to handle USB directly with tinyusb functions
+
 }
 
 bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label)

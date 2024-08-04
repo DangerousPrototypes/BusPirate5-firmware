@@ -146,6 +146,8 @@ enum binmode_statemachine {
     BINMODE_PRINT_STRING,    
 };
 
+const char dirtyproto_mode_name[]="Binmode test framework";
+
 // handler needs to be cooperative multitasking until mode is enabled
 void dirtyproto_mode(void){
     static uint8_t binmode_state=BINMODE_COMMAND;

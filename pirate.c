@@ -199,6 +199,8 @@ int main(){
         }
     }    
 
+    binmode_setup();
+
     enum bp_statemachine{
         BP_SM_DISPLAY_MODE,
         BP_SM_GET_INPUT,
@@ -216,7 +218,7 @@ int main(){
         //co-op multitask **when not actively doing anything**
         //core 2 handles USB and other sensitive stuff, so it's not critical to co-op multitask
         //but the terminal will not be responsive if the service is blocking
-        binmodes[system_config.binmode_select].binmode_service();
+        binmode_service();
 
         if (tud_cdc_n_connected(0)){
             if(!has_been_connected){
@@ -280,6 +282,8 @@ int main(){
                 //it seems like we need an array where we can add our function for periodic service?
                 displays[system_config.display].display_periodic();
                 modes[system_config.mode].protocol_periodic();
+                
+                if(system_config.binmode_lock_terminal) break;
 
                 switch(ui_term_get_user_input()){
                     case 0x01:// user pressed a key
@@ -386,7 +390,10 @@ void core1_entry(void){
 
         //service the terminal TX queue
         tx_fifo_service();
-        bin_tx_fifo_service();
+        //optionally service the binmode TX queue if requested
+        if(system_config.binmode_usb_tx_queue_enable){
+            bin_tx_fifo_service();
+        }
 
         if(system_config.psu==1 && system_config.psu_irq_en==true && !psu_fuse_ok()){
             system_config.psu_irq_en=false;

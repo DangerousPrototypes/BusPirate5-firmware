@@ -50,6 +50,7 @@
 #include "pirate/psu.h"
 //#include "binio_helpers.h"
 #include "binmode/logicanalyzer.h"
+#include "binmode/binio.h"
 
 #include "tusb.h"
 
@@ -555,21 +556,47 @@ void cdc_sump_task(void)
     //}
 }
 
-void sump_logic_analyzer(void){
+enum {
+    SLA_STATE_IDLE,
+    SLA_STATE_SERVICE,
+};
+
+void sump_logic_analyzer_setup(void){
+    system_config.binmode_usb_rx_queue_enable=false; 
+    system_config.binmode_usb_tx_queue_enable=false; 
+}
+
+void sump_logic_analyzer_cleanup(void){
+    system_config.binmode_usb_rx_queue_enable=true; 
+    system_config.binmode_usb_tx_queue_enable=true; 
+}
+
+const char sump_logic_analyzer_name[]="SUMP logic analyzer";
+
+void sump_logic_analyzer_service(void){
 #if TURBO_200MHZ
     set_sys_clock_khz(200000, true);
 #endif
+    static uint8_t state=SLA_STATE_IDLE;
 
-    cdc_sump_init();
-    cdc_sump_init_connect();
-    psu_enable(3.3,100, true);
-
-    while (1) {
-        //tud_task(); // tinyusb device task
-        cdc_sump_task();
-        // exit out on button press
-        if(button_get(0)) break;
+    switch(state){
+        case SLA_STATE_IDLE:
+            if(tud_cdc_n_connected(1)){
+                script_enabled();
+                cdc_sump_init();
+                cdc_sump_init_connect();
+                psu_enable(3.3,100, true);
+                state=SLA_STATE_SERVICE;
+            }
+            break;
+        case SLA_STATE_SERVICE:
+            cdc_sump_task();
+            if(!tud_cdc_n_connected(1) || button_get(0)){
+                logic_analyzer_cleanup();
+                psu_disable();
+                script_disabled();
+                state=SLA_STATE_IDLE;
+            }
+            break;
     }
-    logic_analyzer_cleanup();
-    psu_disable();
 }

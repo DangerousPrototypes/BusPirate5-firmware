@@ -35,7 +35,7 @@
 //#include "pirate/pullup.h"
 #include "pirate/psu.h"
 #include "pirate/amux.h"
-#include "mode/sump.h"
+#include "binmode/sump.h"
 #include "binio_helpers.h"
 #include "tusb.h"
 #include "commands/global/l_bitorder.h"

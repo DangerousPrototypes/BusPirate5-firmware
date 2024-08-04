@@ -159,7 +159,7 @@ set(bp5_common
         binmode/binmodes.c binmode/binmodes.h binmode/binio.c binmode/binio.h  
         binmode/binio_helpers.c binmode/binio_helpers.h
         mode/binloopback.c mode/binloopback.h
-        mode/logicanalyzer.h mode/logicanalyzer.c mode/sump.c mode/sump.h
+        binmode/logicanalyzer.h binmode/logicanalyzer.c binmode/sump.c binmode/sump.h
         binmode/dirtyproto.c binmode/dirtyproto.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c lib/arduino-ch32v003-swio/arduino_ch32v003.h
         lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c     
@@ -237,7 +237,7 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw1wire.pio) 
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwuart.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/spisnif.pio)  
-        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/logicanalyzer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/binmode/logicanalyzer.pio)
 
         pico_set_program_name(${revision} ${revision})
         pico_set_program_version(${revision} "0.1.0")

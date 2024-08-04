@@ -49,7 +49,7 @@
 //#include "mode/binio.h"
 #include "pirate/psu.h"
 //#include "binio_helpers.h"
-#include "mode/logicanalyzer.h"
+#include "binmode/logicanalyzer.h"
 
 #include "tusb.h"
 

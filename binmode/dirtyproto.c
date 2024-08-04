@@ -25,6 +25,8 @@
 #include "usb_tx.h"
 #include "pirate.h"
 //#include "sump.h"
+#include "opt_args.h" //needed for same reason as bytecode and needs same fix
+#include "bytecode.h"
 #include "modes.h"
 #include "binio_helpers.h"
 #include "tusb.h"

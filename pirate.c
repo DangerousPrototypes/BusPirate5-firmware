@@ -46,7 +46,7 @@
 #include "pirate/psu.h"
 #include "commands/global/w_psu.h"
 //#include "display/scope.h"
-#include "mode/logicanalyzer.h"
+//#include "mode/logicanalyzer.h"
 #include "msc_disk.h"
 #include "pirate/intercore_helpers.h"
 
@@ -277,11 +277,9 @@ int main(){
                 button_irq_enable(0, &button_irq_callback); //enable button interrupt
                 break;                 
             case BP_SM_GET_INPUT:
-                //helpers_mode_periodic();
                 //it seems like we need an array where we can add our function for periodic service?
                 displays[system_config.display].display_periodic();
                 modes[system_config.mode].protocol_periodic();
-                la_periodic();
 
                 switch(ui_term_get_user_input()){
                     case 0x01:// user pressed a key

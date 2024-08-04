@@ -35,7 +35,7 @@
 #include "commands/global/button_scr.h"
 #include "commands/global/smps.h"
 #include "commands/global/cls.h"
-#include "mode/logicanalyzer.h"
+#include "binmode/logicanalyzer.h"
 
 // command configuration
 const struct _command_struct commands[]=

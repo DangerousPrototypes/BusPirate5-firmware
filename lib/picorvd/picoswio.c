@@ -10,7 +10,7 @@ Changed by: Ian Lesnet, 2024 Where Labs LLC for Bus Pirate 5
 #include "ch32vswio.pio.h"
 #include "debug_defines.h"
 #include "hardware/pio.h"
-//#include "utils.h"
+#include "picoswio.h"
 
 #define DUMP_COMMANDS
 
@@ -32,6 +32,10 @@ void ch32vswio_reset(int pin, int dirpin) {
   gpio_set_slew_rate     (pin, GPIO_SLEW_RATE_SLOW);
   gpio_set_function      (pin, GPIO_FUNC_PIO0);
 
+  gpio_set_drive_strength(dirpin, GPIO_DRIVE_STRENGTH_2MA);
+  gpio_set_slew_rate     (dirpin, GPIO_SLEW_RATE_SLOW);
+  gpio_set_function      (dirpin, GPIO_FUNC_PIO0);
+
   // Reset PIO module
   pio0->ctrl = 0b000100010001;
   pio_sm_set_enabled(pio0, pio_sm, false);
@@ -45,10 +49,11 @@ void ch32vswio_reset(int pin, int dirpin) {
   //in pin should be buffer IO
   pio_sm_config c = pio_get_default_sm_config();
   sm_config_set_wrap        (&c, pio_offset + singlewire_wrap_target, pio_offset + singlewire_wrap);
-  sm_config_set_sideset     (&c, 1, /*optional*/ false, /*pindirs*/ true);
-  sm_config_set_out_pins    (&c, pin, 1);
+  //sm_config_set_sideset     (&c, 1, /*optional*/ false, /*pindirs*/ true);
+    sm_config_set_sideset     (&c, 1, /*optional*/ false, /*pindirs*/ false); //direct control of the buffer direction
+  sm_config_set_out_pins    (&c, dirpin, 1);
   sm_config_set_in_pins     (&c, pin);
-  sm_config_set_set_pins    (&c, pin, 1);
+  sm_config_set_set_pins    (&c, dirpin, 1);
   sm_config_set_sideset_pins(&c, dirpin);
   sm_config_set_out_shift   (&c, /*shift_right*/ false, /*autopull*/ false, /*pull_threshold*/ 32);
   sm_config_set_in_shift    (&c, /*shift_right*/ false, /*autopush*/ true,  /*push_threshold*/ 32);
@@ -56,26 +61,32 @@ void ch32vswio_reset(int pin, int dirpin) {
   // 125 mhz / 12 = 96 nanoseconds per tick, close enough to 100 ns.
   sm_config_set_clkdiv      (&c, 12);
 
+  gpio_pull_down(pin);
+  pio_sm_set_pindirs_with_mask(pio0, pio_sm, 0, (1u<<pin)); //read pins to input (0, mask)  
+  pio_sm_set_pindirs_with_mask(pio0, pio_sm, (1u<<dirpin), (1u<<dirpin)); //buf pins to output (pins, mask)    
+  pio_sm_set_pins_with_mask(pio0, pio_sm, 0, (1u<<dirpin)); //buf dir to 0, buffer input/HiZ on the bus
+  pio_gpio_init(pio0, dirpin);
+
   pio_sm_init       (pio0, pio_sm, pio_offset, &c);
-  pio_sm_set_pins   (pio0, pio_sm, 0);
+  //pio_sm_set_pins   (pio0, pio_sm, 1);
   pio_sm_set_enabled(pio0, pio_sm, true);
 
   // Grab pin and send an 8 usec low pulse to reset debug module
   // If we use the sdk functions to do this we get jitter :/
-  sio_hw->gpio_clr    = (1 << pin);
+  /*sio_hw->gpio_clr    = (1 << pin);
   sio_hw->gpio_oe_set = (1 << pin);
   iobank0_hw->io[pin].ctrl = GPIO_FUNC_SIO << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
   busy_wait_us(100); // ~8 usec
   sio_hw->gpio_oe_clr = (1 << pin);
   iobank0_hw->io[pin].ctrl = GPIO_FUNC_PIO0 << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
-
+*/
   // Enable debug output pin on target
-  //put(WCH_DM_SHDWCFGR, 0x5AA50400);
-  //put(WCH_DM_CFGR,     0x5AA50400);
+  ch32vswio_put(WCH_DM_SHDWCFGR, 0x5AA50400);
+  ch32vswio_put(WCH_DM_CFGR,     0x5AA50400);
 
   // Reset debug module on target
-  //put(DM_DMCONTROL, 0x00000000);
-  //put(DM_DMCONTROL, 0x00000001);
+  ch32vswio_put(DM_DMCONTROL, 0x00000000);
+  ch32vswio_put(DM_DMCONTROL, 0x00000001);
 }
 
 //------------------------------------------------------------------------------
@@ -85,7 +96,7 @@ uint32_t ch32vswio_get(uint32_t addr) {
   pio_sm_put_blocking(pio0, 0, ((~addr) << 1) | 1);
   uint32_t data = pio_sm_get_blocking(pio0, 0);
 #ifdef DUMP_COMMANDS
-  printf("get_dbg %15s 0x%08x\n", ch32swio_addr_to_regname(addr), data);
+  printf("get_dbg %15s 0x%08x\r\n", ch32swio_addr_to_regname(addr), data);
 #endif
   return data;
 }
@@ -95,7 +106,7 @@ uint32_t ch32vswio_get(uint32_t addr) {
 void ch32vswio_put(uint32_t addr, uint32_t data) {
   //cmd_count++;
 #ifdef DUMP_COMMANDS
-  printf("set_dbg %15s 0x%08x\n", ch32swio_addr_to_regname(addr), data);
+  printf("set_dbg %15s 0x%08x\r\n", ch32swio_addr_to_regname(addr), data);
 #endif
   pio_sm_put_blocking(pio0, 0, ((~addr) << 1) | 0);
   pio_sm_put_blocking(pio0, 0, ~data);

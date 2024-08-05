@@ -11,6 +11,7 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "tusb.h"
+#include "lib/picorvd/picoswio.h"
 
 void target_power(int x){
     if (x)
@@ -35,19 +36,21 @@ void arduino_ch32v003(void) {
 
     if(!tud_cdc_n_connected(1)) return;  
 
-    if(!system_config.rts){
+    /*if(!system_config.rts){
         //RTS is high, simulate arduino reset
         //uart_init();
-        swio_init();
+        //swio_init();
+        
         bin_tx_fifo_put(PROTOCOL_START);
         system_config.rts=1;
-    }
+    }*/
 
     char c;
 
     if(bin_rx_fifo_try_get(&c)) { //co-op multitask
         switch (c) {
             case PROTOCOL_TEST:
+                ch32vswio_reset(bio2bufiopin[BIO0], bio2bufdirpin[BIO0]);
                 bin_tx_fifo_put(PROTOCOL_ACK);
                 break;
             case PROTOCOL_POWER_ON:
@@ -67,13 +70,15 @@ void arduino_ch32v003(void) {
                     bin_rx_fifo_get_blocking(&c);
                     val|=(c<<24);
                 }
-                swio_write_reg(reg, val);
+                //swio_write_reg(reg, val);
+                ch32vswio_put(reg, val);
                 bin_tx_fifo_put(PROTOCOL_ACK);
                 break;
             case PROTOCOL_READ_REG:
                 //fread(&reg, sizeof(uint8_t), 1, uart);
                 bin_rx_fifo_get_blocking(&reg);
-                val = swio_read_reg(reg);
+                //val = swio_read_reg(reg);
+                val = ch32vswio_get(reg);
                 //fwrite(&val, sizeof(uint32_t), 1, uart);
                 for(uint8_t i=0;i<4;i++){
                     c=val&0xff;

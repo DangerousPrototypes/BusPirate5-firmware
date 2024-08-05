@@ -6,30 +6,49 @@
 #include "bigbuffer_test.h"
 #include "pirate/mem.h"
 
+// define function pointer that matches the signature of _test_temporary_allocations_1
+typedef bool (*bool_parameter_test_fn_t)(bool reversed_free_order);
+
+typedef struct _allocation_iteration_t {
+    size_t alloc; // how many bytes to allocate
+    size_t align; // required alignment
+    size_t count; // how many to allocate
+} allocation_iteration_t;
+
+typedef struct _bool_test_t {
+    bool_parameter_test_fn_t test_fn;
+    const char * fn_name;
+} bool_test_t;
+#define X_BOOL_TEST(fn) { .test_fn = fn, .fn_name = #fn }
+
+
+#define X_FN_ENTRY()        printf("bb_test @ %3d: >>>>> %s\n", __LINE__, __func__)
+#define X_FN_EXIT()         printf("bb_test @ %3d: <<<<< %s\n", __LINE__, __func__)
+#define X_DBGP(fmt, ...)    printf("bb_test @ %3d: " fmt "\n", __LINE__, ##__VA_ARGS__)
+#define X_SUCCESS(fmt, ...) printf("bb_test @ %3d: SUCCESS " fmt "\n", __LINE__, ##__VA_ARGS__)
+#define X_FAILURE(fmt, ...) printf("bb_test @ %3d: *FAILED* " fmt "\n", __LINE__, ##__VA_ARGS__)
 
 
 
-#define X_FN_ENTRY()     printf("bb_test @ %3d: >>>>> %s\n", __LINE__, __func__)
-#define X_FN_EXIT()      printf("bb_test @ %3d: <<<<< %s\n", __LINE__, __func__)
-#define X_DBGP(fmt, ...) printf("bb_test @ %3d: " fmt "\n", __LINE__, ##__VA_ARGS__)
 
-static bool _ensure_no_allocations(void) {
+
+static bool _verify_no_allocations(void) {
     X_FN_ENTRY();
 
-    big_buffer_general_state_t state = {0};
-    bool result = BigBuffer_DebugGetStatistics(&state);
-    if (result) {
-        if (state.temp_allocations_count != 0) {
-            X_DBGP("ERROR: Temp allocations not freed\n");
-            result = false;
-        }
-        if (state.long_lived_allocations_count != 0) {
-            X_DBGP("ERROR: Long-lived allocations not freed\n");
-            result = false;
-        }
-    }
+    bool success = true;
 
+    big_buffer_general_state_t state = {0};
+    BigBuffer_DebugGetStatistics(&state);
+    if (state.temp_allocations_count != 0) {
+        X_FAILURE("Temp allocations not freed\n");
+        success = false;
+    }
+    if (state.long_lived_allocations_count != 0) {
+        X_FAILURE("Long-lived allocations not freed\n");
+        success = false;
+    }
     X_FN_EXIT();
+    return success;
 }
 
 static bool _test_temporary_allocations_1(bool reversed_free_order) {
@@ -37,48 +56,190 @@ static bool _test_temporary_allocations_1(bool reversed_free_order) {
 
     bool success = true;
     void * allocations[32] = {NULL};
-
     if (success) {
-        success = _ensure_no_allocations();
+        success = _verify_no_allocations();
+        if (!success) {
+            X_FAILURE("_verify_no_allocations() failed at function entry\n");
+        }
     }
 
     // up to 32 allocations, and 136k available to allocate
-    // 32 * 4k = 128k in "spacer" allocations
-    // This leaves 8k for the other 32 allocations
-    // 8k / 32 = 256 bytes per allocation
+    // 31 * 4k = 124k in "spacer" allocations
+    // This leaves 12k for the other 32 allocations
+    // 12k / 32 = 256+128 bytes per allocation
     for (int i = 0; success && (i < 32); ++i) {
-        BigBuffer_DebugDumpCurrentState(false); printf("\n");
-        void* spacer = BigBuffer_AllocateTemporary(4096, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
-        if (spacer == NULL) {
-            X_DBGP("ERROR: Failed to allocate spacer buffer idx %d / 32\n", i);
-            BigBuffer_DebugDumpCurrentState(true); printf("\n");
-            success = false;
-            break; // out of for loop ...
+
+        void* spacer = NULL;
+        if (i != 31) {
+            spacer = BigBuffer_AllocateTemporary(4096, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
+            if (spacer == NULL) {
+                X_FAILURE("Unable to allocate spacer buffer idx %d / 32\n", i);
+                BigBuffer_DebugDumpCurrentState(true); printf("\n");
+                success = false;
+                break; // out of for loop ...
+            }
         }
-        allocations[i] = BigBuffer_AllocateTemporary(320, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
-        // allocations[i] = BigBuffer_AllocateTemporary(256, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
+        allocations[i] = BigBuffer_AllocateTemporary(384, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
         if (allocations[i] == NULL) {
-            X_DBGP("ERROR: Failed to allocate temporary buffer idx %d / 32\n", i);
+            X_FAILURE("Unable to allocate temporary buffer idx %d / 32\n", i);
             BigBuffer_DebugDumpCurrentState(true); printf("\n");
             success = false;
             break; // out of for loop ...
         }
+
         BigBuffer_FreeTemporary(spacer, BP_BIG_BUFFER_OWNER_SELFTEST);
     }
-    BigBuffer_DebugDumpCurrentState(true);
 
     for (int j = 0; j < 32; ++j) {
         int idx = reversed_free_order ? (31 - j) : j;
         BigBuffer_FreeTemporary(allocations[idx], BP_BIG_BUFFER_OWNER_SELFTEST);
     }
-    BigBuffer_DebugDumpCurrentState(true); printf("\n");
 
     if (success) {
-        success = _ensure_no_allocations();
+        success = _verify_no_allocations();
     }
+
     X_FN_EXIT();
     return success;
 }
+
+static bool _test_longlived_allocations_1(bool reversed_free_order) {
+
+    X_FN_ENTRY();
+    bool success = true;
+    if (success) {
+        success = _verify_no_allocations();
+        if (!success) {
+            X_FAILURE("_verify_no_allocations() failed at function entry\n");
+        }
+    }
+
+    static const allocation_iteration_t iterations[] = {
+        {  256u,    1u, 32u },
+        {  512u,    1u, 16u },
+        { 1024u,    1u,  8u },
+        { 2048u,    1u,  4u },
+        { 4096u,    1u,  2u },
+        { 8192u,    1u,  1u },
+    };
+    void * allocations[32u] = {NULL};
+
+    for (size_t j = 0; success && (j < count_of(iterations)); ++j) {
+
+        allocation_iteration_t iter = iterations[j];
+        assert(iter.count <= count_of(allocations));
+
+        for (; iter.align <= (128u*1024); iter.count >> 1, iter.align << 1) {
+            if (iter.count == 0) {
+                // special case for over-8k allocation alignment
+                // because the long-lived allocations can be up to 128k aligned (even if only 8k size)
+                iter.count = 1;
+            }
+
+            success = _verify_no_allocations();
+            if (!success) {
+                X_FAILURE("(%zd, %zd) _verify_no_allocations() failed\n", iter.alloc, iter.align);
+                break; // out of iteration adjustment loop
+            }
+
+            const size_t total_size = BigBuffer_GetAvailableLongLivedMemory(iter.align);
+            if (total_size != 8192u) {
+                X_FAILURE("(%zd, %zd) expected 8k of long-lived memory available, got %zd\n", iter.alloc, iter.align, total_size);
+                BigBuffer_DebugDumpCurrentState(true); printf("\n");
+                success = false;
+                break; // out of iteration adjustment loop
+            }
+
+            // clear allocations array
+            memset(allocations, 0, sizeof(allocations));
+
+            // Hard-coded that total available long-lived memory is 8k ... checked above
+            for (size_t i = 0; success && (i < iter.count); ++i) {
+
+                void * allocation = BigBuffer_AllocateLongLived(iter.alloc, iter.align, BP_BIG_BUFFER_OWNER_SELFTEST);
+                if (allocation == NULL) {
+                    X_FAILURE("(%zd, %zd) Unable to allocate long-lived buffer %zd\n", iter.alloc, iter.align, i);
+                    BigBuffer_DebugDumpCurrentState(true); printf("\n");
+                    success = false;
+                    break; // out of allocation for loop `i` ...
+                }
+                allocations[i] = allocation;
+            }
+
+            // All available memory (for given alignment) should have been allocated.
+            // Verify this...
+            if (success) {
+                size_t remaining_available = BigBuffer_GetAvailableLongLivedMemory(iter.align);
+                if (remaining_available != 0) {
+                    X_FAILURE("(%zd, %zd) Expected no additional allocations available, got %zd\n", iter.alloc, iter.align, remaining_available);
+                    BigBuffer_DebugDumpCurrentState(true); printf("\n");
+                    success = false;
+                }
+            }
+
+            // free all allocations so can test the next iteration variation
+            for (size_t i = 0; i < count_of(allocations); ++i) {
+                int idx = reversed_free_order ? (count_of(allocations) - 1 - j) : j;
+                BigBuffer_FreeLongLived(allocations[idx], BP_BIG_BUFFER_OWNER_SELFTEST);
+            }
+
+            if (success) {
+                success = _verify_no_allocations();
+                if (!success) {
+                    X_FAILURE("(%zd, %zd) _verify_no_allocations() failed\n", iter.alloc, iter.align);
+                    break; // out of iteration adjustment loop
+                }
+            }
+
+            // if successful, print a one-line "SUCCESS" message ... helps anchor last successful test in output
+            if (success) {
+                X_SUCCESS("LL_Alloc1(%s %4zd @ %6zd alignment, %zd count\n", reversed_free_order ? "true): " : "false):" , iter.alloc, iter.align, iter.count);
+            }
+        } // next alignment / count
+
+        // end of all alignments possible for this iteration....
+    }
+    
+    if (success) {
+        X_SUCCESS("ll-alloc-1(%s)\n", reversed_free_order ? "true" : "false");
+    } else {
+        X_FAILURE("ll-alloc-1(%s)\n", reversed_free_order ? "true" : "false");
+    }
+
+    X_FN_EXIT();
+}
+static bool _test_longlived_allocations_2(bool reversed_free_order) {
+
+    X_FN_ENTRY();
+    bool success = true;
+    if (success) {
+        success = _verify_no_allocations();
+        if (!success) {
+            X_DBGP("ERROR: _verify_no_allocations() failed at function entry\n");
+        }
+    }
+
+    X_FN_EXIT();
+}
+static bool _test_longlived_allocations_3(bool reversed_free_order) {
+
+    X_FN_ENTRY();
+    bool success = true;
+    if (success) {
+        success = _verify_no_allocations();
+        if (!success) {
+            X_DBGP("ERROR: _verify_no_allocations() failed at function entry\n");
+        }
+    }
+
+    X_FN_EXIT();
+}
+
+
+static const bool_test_t bool_tests[] = {
+    X_BOOL_TEST(_test_temporary_allocations_1),
+    X_BOOL_TEST(_test_longlived_allocations_1),
+};
 
 static bool _dispatch(void)
 {
@@ -86,15 +247,35 @@ static bool _dispatch(void)
     X_FN_ENTRY();
 
     if (success) {
-        success = _ensure_no_allocations();
-        BigBuffer_DebugDumpCurrentState(true); printf("\n");
+        success = _verify_no_allocations();
+        if (success) {
+            X_DBGP();
+            X_DBGP("Initial State:");
+            BigBuffer_DebugDumpCurrentState(true);
+            X_DBGP();
+        }
     }
-    if (success) {
-        success = _test_temporary_allocations_1(true);
+    
+    for (size_t idx = 0; idx < count_of(bool_tests); ++idx) {
+        const bool_test_t * t = &bool_tests[idx];
+        if (success) {
+            success = t->test_fn(true);
+            if (success) {
+                X_SUCCESS("%s(%s)\n", t->fn_name, "true");
+            } else {
+                X_FAILURE("%s(%s)\n", t->fn_name, "true");
+            }
+        }
+        if (success) {
+            success = t->test_fn(false);
+            if (success) {
+                X_SUCCESS("%s(%s)\n", t->fn_name, "false");
+            } else {
+                X_FAILURE("%s(%s)\n", t->fn_name, "false");
+            }
+        }
     }
-    if (success) {
-        success = _test_temporary_allocations_1(false);
-    }
+
     X_FN_EXIT();
 }
 

@@ -450,7 +450,7 @@ static big_buffer_allocation_instance_t* BigBuffer_FreeCommon(uintptr_t p, big_b
         return NULL;
     }
     if (p == 0u) { // permit the free'ing of a nullptr ...
-        printf("BB_Free: NULL pointer\n");
+        //printf("BB_Free: NULL pointer\n");
         return NULL;
     }
     if (p < s_State.buffer) {
@@ -486,7 +486,7 @@ static big_buffer_allocation_instance_t* BigBuffer_FreeCommon(uintptr_t p, big_b
     // all checks passed.  do NOT modify tracking data here, as it depends on type of allocation
     return allocated;
 }
-void BigBuffer_FreeTemporary(void* ptr, big_buffer_owner_t owner) {
+void BigBuffer_FreeTemporary(const void * ptr, big_buffer_owner_t owner) {
     CHECK_BIGBUF_INVARIANTS();
 
     big_buffer_allocation_instance_t* allocation = BigBuffer_FreeCommon((uintptr_t)ptr, owner);
@@ -509,7 +509,7 @@ void BigBuffer_FreeTemporary(void* ptr, big_buffer_owner_t owner) {
     CHECK_BIGBUF_INVARIANTS();
     return;
 }
-void BigBuffer_FreeLongLived(void* ptr, big_buffer_owner_t owner) {
+void BigBuffer_FreeLongLived(const void * ptr, big_buffer_owner_t owner) {
     CHECK_BIGBUF_INVARIANTS();
 
     big_buffer_allocation_instance_t* allocation = BigBuffer_FreeCommon((uintptr_t)ptr, owner);
@@ -534,21 +534,35 @@ void BigBuffer_FreeLongLived(void* ptr, big_buffer_owner_t owner) {
 }
 
 
-bool BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_out ) {
+void BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_out ) {
     static_assert(sizeof(s_State) == sizeof(big_buffer_general_state_t));
     CHECK_BIGBUF_INVARIANTS();
 
     memcpy(general_state_out, &s_State, sizeof(big_buffer_general_state_t));
-    return true;
+    return;
 }
-bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out ) {
+void BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out ) {
     static_assert(sizeof(s_State) == sizeof(state_out->general));
     static_assert(sizeof(s_Allocation) == sizeof(state_out->allocation));
     CHECK_BIGBUF_INVARIANTS();
 
     memcpy(&(state_out->general), &s_State, sizeof(big_buffer_general_state_t));
     memcpy(&(state_out->allocation[0]), &(s_Allocation[0]), sizeof(state_out->allocation));
-    return true;
+    return;
+}
+void BigBuffer_DebugDumpSummary(const big_buffer_general_state_t * state) {
+    DumpGeneralStateHeader();
+    DumpGeneralState(state);
+}
+void BigBuffer_DebugDumpState(const big_buffer_state_t * state) {
+    DumpGeneralStateHeader();
+    DumpGeneralState(&(state->general));
+    DumpAllocationInstanceHeader();
+    for (size_t j = 0; j < MAXIMUM_SUPPORTED_ALLOCATION_COUNT; ++j) {
+        if (state->allocation[j].result != 0u) {
+            DumpAllocationInstance(&(state->allocation[j]));
+        }
+    }
 }
 void BigBuffer_DebugDumpCurrentState(bool verbose) {
     DumpGeneralStateHeader();
@@ -615,7 +629,7 @@ uint8_t *mem_alloc(size_t size, big_buffer_owner_t owner)
     }
     return result;
 }
-void mem_free(uint8_t *ptr)
+void mem_free(uint8_t const * ptr)
 {
     BigBuffer_FreeTemporary(ptr, legacy_owner);
     BigBuffer_VerifyNoTemporaryAllocations();

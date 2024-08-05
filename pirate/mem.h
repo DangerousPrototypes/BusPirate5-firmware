@@ -23,10 +23,10 @@
 /// @brief Unique tag to indicate the owner of a big buffer allocation.
 typedef enum _big_buffer_owners {
 	BP_BIG_BUFFER_OWNER_NONE=0,
+    BP_BIG_BUFFER_OWNER_SELFTEST,
 	BP_BIG_BUFFER_OWNER_SCOPE,
 	BP_BIG_BUFFER_OWNER_LA,
 	BP_BIG_BUFFER_OWNER_DISKFORMAT,
-    BP_BIG_BUFFER_OWNER_SELFTEST,
 	MAXIMUM_BP_BIG_BUFFER_OWNER,
 } big_buffer_owner_t;
 
@@ -88,12 +88,12 @@ void* BigBuffer_AllocateLongLived(size_t countOfBytes, size_t requiredAlignment,
 /// @brief Frees a buffer previously allocated by `BigBuffer_AllocateTemporary()`.
 /// @note The owner must match ... this helps avoid a class of bugs that are otherwise
 ///       more difficult to catch / debug / track down.
-void BigBuffer_FreeTemporary(void* ptr, big_buffer_owner_t owner);
+void BigBuffer_FreeTemporary(const void * ptr, big_buffer_owner_t owner);
 
 /// @brief Frees a buffer previously allocated by `BigBuffer_AllocateLongLived()`.
 /// @note The owner must match ... this helps avoid a class of bugs that are otherwise
 ///       more difficult to catch / debug / track down.
-void BigBuffer_FreeLongLived(void* ptr, big_buffer_owner_t owner);
+void BigBuffer_FreeLongLived(const void * ptr, big_buffer_owner_t owner);
 
 /// @brief How many bytes of temporary memory are available with a given alignment?
 size_t BigBuffer_GetAvailableTemporaryMemory(size_t requiredAlignment);
@@ -111,7 +111,7 @@ size_t BigBuffer_GetAvailableLongLivedMemory(size_t requiredAlignment);
 /// @details Provides overview of BigBuffer state (high / low water marks, etc.)
 /// @note This API is /NOT/ performance-critical, as it is intended for
 ///       interactive display of information.
-bool BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_out );
+void BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_out );
 
 /// @brief provide detailed information on current BigBuffer usage
 /// @details The goal of this API is to help troubleshoot memory usage issues.
@@ -125,7 +125,10 @@ bool BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_ou
 ///
 /// @note This API is /NOT/ performance-critical, as it is intended for
 ///       interactive display of information.
-bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out );
+void BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out );
+
+void BigBuffer_DebugDumpSummary(const big_buffer_general_state_t * state);
+void BigBuffer_DebugDumpState(const big_buffer_state_t * state);
 
 /// @brief Prints the current state of the BigBuffer module
 /// @details This is intended for debugging purposes.  It will print the
@@ -157,7 +160,7 @@ void BigBuffer_DebugDumpCurrentState(bool verbose);
 uint8_t* mem_alloc(size_t size, big_buffer_owner_t owner) __attribute__((deprecated("use BigBuffer_AllocateTemporary() instead")));
 /// @brief Frees the allocated nand page buffer
 /// @param ptr pointer to the nand page buffer
-void     mem_free(uint8_t *ptr)                           __attribute__((deprecated("use BigBuffer_FreeTemporary() instead")));
+void     mem_free(const uint8_t * ptr)                    __attribute__((deprecated("use BigBuffer_FreeTemporary() instead")));
 
 // End of legacy memory allocation APIs
 ////////////////////////////////////////////////////////////////////////////////

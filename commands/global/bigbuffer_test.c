@@ -40,22 +40,23 @@ static bool _test_temporary_allocations_1(bool reversed_free_order) {
 
     if (success) {
         success = _ensure_no_allocations();
-        BigBuffer_DebugDumpCurrentState(true);
     }
 
-    // up to 32 allocations, and 138k available to allocate
+    // up to 32 allocations, and 136k available to allocate
     // 32 * 4k = 128k in "spacer" allocations
-    // This leaves 10k for the other 32 allocations
-    // 10k / 32 = 320 bytes per allocation
+    // This leaves 8k for the other 32 allocations
+    // 8k / 32 = 256 bytes per allocation
     for (int i = 0; success && (i < 32); ++i) {
+        BigBuffer_DebugDumpCurrentState(false); printf("\n");
         void* spacer = BigBuffer_AllocateTemporary(4096, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
         if (spacer == NULL) {
-            X_DBGP("ERROR: Failed to allocate temporary buffer idx %d / 32\n", i);
+            X_DBGP("ERROR: Failed to allocate spacer buffer idx %d / 32\n", i);
             BigBuffer_DebugDumpCurrentState(true); printf("\n");
             success = false;
             break; // out of for loop ...
         }
         allocations[i] = BigBuffer_AllocateTemporary(320, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
+        // allocations[i] = BigBuffer_AllocateTemporary(256, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
         if (allocations[i] == NULL) {
             X_DBGP("ERROR: Failed to allocate temporary buffer idx %d / 32\n", i);
             BigBuffer_DebugDumpCurrentState(true); printf("\n");
@@ -63,14 +64,15 @@ static bool _test_temporary_allocations_1(bool reversed_free_order) {
             break; // out of for loop ...
         }
         BigBuffer_FreeTemporary(spacer, BP_BIG_BUFFER_OWNER_SELFTEST);
-        BigBuffer_DebugDumpCurrentState(true); printf("\n");
     }
+    BigBuffer_DebugDumpCurrentState(true);
+
     for (int j = 0; j < 32; ++j) {
         int idx = reversed_free_order ? (31 - j) : j;
         BigBuffer_FreeTemporary(allocations[idx], BP_BIG_BUFFER_OWNER_SELFTEST);
     }
-
     BigBuffer_DebugDumpCurrentState(true); printf("\n");
+
     if (success) {
         success = _ensure_no_allocations();
     }

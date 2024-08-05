@@ -136,7 +136,8 @@ static void BigBuffer_VerifyInvariants(const char* file, const char* func, int l
         // loop 3x to allow connection of a debugger, else printed message is lost
         // if there was an `if (DebuggerConnected())` function, could have smarter behavior
         for (int i = 0; i < 3; ++i) {
-            printf("BB Invariant failed: %#08X at %s:%s:%d\n", error_flags, file, func, line);
+            printf("BB Invariant failed: %#08x at %s:%s:%d\n", error_flags, file, func, line);
+            BigBuffer_DebugDumpCurrentState(true);
             assert(false);
         }
     }
@@ -190,13 +191,14 @@ static void DumpGeneralState(const big_buffer_general_state_t * general_state) {
     return;
 }
 static void DumpAllocationInstanceHeader(void) {
-    printf("BB: Buffer*  | Req_Size | Req_Align | OwnerTag | Type\n");
-    //intf("BB: ..xxxx.. | ..xxxx.. |  ..xxxx.. | ..xxxx.. | .ss.\n");
+    printf("------------------------------------------------------\n");
+    printf("BB: Buffer*  |  Req_Size | Req_Align | OwnerTag | Type\n");
+    //intf("BB: ..xxxx.. |  ..xxxx.. |  ..xxxx.. | ..xxxx.. | .ss.\n");
     return;
 }
 static void DumpAllocationInstance(const big_buffer_allocation_instance_t* alloc_state) {
     printf(
-        "BB: %08x | %08x |  %08x | %08x | %4s\n",
+        "BB: %08x |  %08x |  %08x | %08x | %4s\n",
         alloc_state->result,
         alloc_state->requested_size,
         alloc_state->requested_alignment,
@@ -264,6 +266,9 @@ void BigBuffer_VerifyNoTemporaryAllocations(void) {
 //       this will simplify compiling this to nothing on release builds, and allow file / func / line numbers
 
 static uintptr_t BigBuffer_DetermineNewLowWaterMark(void) {
+    if (s_State.temp_allocations_count == 0) {
+        return s_State.buffer;
+    }
     // find the highest address allocated to tracked temporary allocations
     uint16_t allocations_found = 0u;
     uintptr_t new_low_water_mark = 0u;
@@ -280,6 +285,9 @@ static uintptr_t BigBuffer_DetermineNewLowWaterMark(void) {
     return new_low_water_mark;
 }
 static uintptr_t BigBuffer_DetermineNewHighWaterMark(void) {
+    if (s_State.long_lived_allocations_count == 0) {
+        return s_State.buffer + s_State.total_size;
+    }
     // find the lowest address allocated to tracked long-lived allocations
     uint16_t allocations_found = 0u;
     uintptr_t new_high_water_mark = s_State.buffer + s_State.total_size; // highest value ... when no long-lived allocations
@@ -483,7 +491,7 @@ void BigBuffer_FreeTemporary(void* ptr, big_buffer_owner_t owner) {
 
     big_buffer_allocation_instance_t* allocation = BigBuffer_FreeCommon((uintptr_t)ptr, owner);
     if (allocation == NULL) {
-        // already asserted in BigBuffer_FreeCommon()
+        // already asserted in BigBuffer_FreeCommon(), or was free'ing NULL
         return;
     }
     if (allocation->was_long_lived_allocation) {
@@ -506,7 +514,7 @@ void BigBuffer_FreeLongLived(void* ptr, big_buffer_owner_t owner) {
 
     big_buffer_allocation_instance_t* allocation = BigBuffer_FreeCommon((uintptr_t)ptr, owner);
     if (allocation == NULL) {
-        // already asserted in BigBuffer_FreeCommon()
+        // already asserted in BigBuffer_FreeCommon(), or was free'ing NULL
         return;
     }
     if (!allocation->was_long_lived_allocation) {

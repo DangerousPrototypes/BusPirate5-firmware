@@ -20,21 +20,22 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/// @brief Unique tag to indicate the owner of a big buffer allocation.
 typedef enum _big_buffer_owners {
 	BP_BIG_BUFFER_OWNER_NONE=0,
 	BP_BIG_BUFFER_OWNER_SCOPE,
 	BP_BIG_BUFFER_OWNER_LA,
 	BP_BIG_BUFFER_OWNER_DISKFORMAT,
-
+    BP_BIG_BUFFER_OWNER_SELFTEST,
 	MAXIMUM_BP_BIG_BUFFER_OWNER,
 } big_buffer_owner_t;
-static_assert(sizeof(big_buffer_owner_t) <= 4);
-// Ensures 16-bits or less; Allows to overload value stored in tracking structure
+
+// Ensures 16-bits or less; Allows to overload the value stored in tracking structure
 static_assert(MAXIMUM_BP_BIG_BUFFER_OWNER <= 0x10000);
 
 typedef struct _big_buffer_general_state {
     // uintptr_t allows cleaner addition/subtraction between pointers
-    static_assert(sizeof(uintptr_t) >= sizeof(size_t));
+    static_assert(sizeof(uintptr_t) == sizeof(size_t));
     uintptr_t buffer;
     size_t    total_size;
     uintptr_t high_watermark; // end of allocatable memory
@@ -50,7 +51,7 @@ typedef struct _big_buffer_allocation_instance {
     size_t      requested_alignment;
     uint32_t    owner_tag : 16; // big_buffer_owner_t ... limited to 16-bits
 	uint32_t    was_long_lived_allocation : 1;
-	uint32_t    : 15; // rfu
+	uint32_t    : 15; // reserved for future use
 } big_buffer_allocation_instance_t;
 
 #define MAXIMUM_SUPPORTED_ALLOCATION_COUNT 32
@@ -114,11 +115,14 @@ bool BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_ou
 
 /// @brief provide detailed information on current BigBuffer usage
 /// @details The goal of this API is to help troubleshoot memory usage issues.
-///          Example question and answer:
+///
+///          Example question:
 ///          Why is this mode failing to initialize?
+///          Example answer:
 ///          The mode requires 130k buffer, which reaches into the long-lived
-///          allocation space, but the entire 8k of the long-lived buffer is
-///          allocated by XXXX.
+///          allocation space.  However, the entire 8k of the long-lived buffer
+///          is allocated by XXXX.
+///
 /// @note This API is /NOT/ performance-critical, as it is intended for
 ///       interactive display of information.
 bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out );
@@ -139,25 +143,21 @@ void BigBuffer_DebugDumpCurrentState(bool verbose);
 ////////////////////////////////////////////////////////////////////////////////
 // LEGACY APIs ... these are deprecated and will soon be removed
 //
-// Stage 0: define the new APIs (above)
-// Stage 1: migrate all code to use the new APIs
-// Stage 2: mark the functions with deprecated attribute
-// Stage 3: wait appropriate time for braches to be updated
-// Stage 4: remove the deprecated functions entirely
-
-//#define DEPRECATE_MEM_ALLOC
-//#define DEPRECATE_MEM_FREE
-#define DEPRECATE_MEM_ALLOC __attribute__((deprecated("use BigBuffer_AllocateTemporary() instead")))
-#define DEPRECATE_MEM_FREE __attribute__((deprecated("use BigBuffer_FreeTemporary() instead")))
+// [x] Stage 0: define the new APIs (above)
+// [x] Stage 1: migrate all existing code to use the new APIs
+// [x] Stage 2: mark the functions with deprecated attribute
+// [ ] Stage 3: integrate into main branch
+// [ ] Stage 4: wait appropriate time for other braches to be updated
+// [ ] Stage 5: remove the deprecated functions entirely in main branch
 
 /// @brief Attempts to allocate a nand page buffer.
 /// @return Pointer to the buffer if available, NULL if not available
 /// @note Return value should always be checked against null.
 /// @note Max size: SPI_NAND_PAGE_SIZE + SPI_NAND_OOB_SIZE
-uint8_t* mem_alloc(size_t size, big_buffer_owner_t owner) DEPRECATE_MEM_ALLOC;
+uint8_t* mem_alloc(size_t size, big_buffer_owner_t owner) __attribute__((deprecated("use BigBuffer_AllocateTemporary() instead")));
 /// @brief Frees the allocated nand page buffer
 /// @param ptr pointer to the nand page buffer
-void     mem_free(uint8_t *ptr)                           DEPRECATE_MEM_FREE;
+void     mem_free(uint8_t *ptr)                           __attribute__((deprecated("use BigBuffer_FreeTemporary() instead")));
 
 // End of legacy memory allocation APIs
 ////////////////////////////////////////////////////////////////////////////////

@@ -1,9 +1,23 @@
 /**
  * @file		mem.c
- * @author		Andrew Loebs
+ * @author		Henry Gabryjelski
  * @brief		Implementation file of the memory management module
- *
- */
+ * @details     Big Buffer Memory Layout:
+ *              ( high )  __BIG_BUFFER_END__     -> Pointer just past the end of Big Buffer
+ *              ( ...  )  ...                    -> Long-lived allocations (if any)
+ *              ( v--^ )  s_State.high_watermark -> Pointer just past the last unallocated
+ *                                                  memory, equal to low water mark if all
+ *                                                  all memory allocated, or __BIG_BUFFER_END__
+ *                                                  -8k (long-lived allocations)
+ *              ( ...  )  ...                    -> Unallocated memory ...
+ *                                                Long-lived allocations grow from top
+ *                                                while temporary allocations grow from bottom
+ *              ( v--^ )  s_State.low_watermark  -> Pointer to the first unused byte of memory
+ *              ( ...  )  ...                    -> Temporary memory allocations
+ *              ( low  )  __BIG_BUFFER_START__   -> Guaranteed to be 32k aligned
+ **/
+
+
 // Modified by Ian Lesnet 18 Dec 2023 for Bus Pirate 5
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,18 +44,17 @@ typedef enum _big_buffer_invariant_error_flags {
     BIG_BUFFER_INVARIANT_CONSTANT_BIGBUF_POINTER           = 0x0001,
     BIG_BUFFER_INVARIANT_CONSTANT_BIGBUF_SIZE              = 0x0002,
     BIG_BUFFER_INVARIANT_CONSTANT_LONGTERM_MARKER          = 0x0004,
-    BIG_BUFFER_INVARIANT_LOW_WATERMARK_VALUE_TOO_LOW       = 0x0008,
-    BIG_BUFFER_INVARIANT_LOW_WATERMARK_VALUE_TOO_HIGH      = 0x0010,
-    BIG_BUFFER_INVARIANT_HIGH_WATERMARK_VALUE_TOO_LOW      = 0x0020,
-    BIG_BUFFER_INVARIANT_HIGH_WATERMARK_VALUE_TOO_HIGH     = 0x0040,
-    BIG_BUFFER_INVARIANT_WATERMARKS_CROSSED                = 0x0080,
+    BIG_BUFFER_INVARIANT_WATERMARKS_CROSSED                = 0x0008,
+    BIG_BUFFER_INVARIANT_LOW_WATERMARK_VALUE_TOO_LOW       = 0x0010,
+    BIG_BUFFER_INVARIANT_LOW_WATERMARK_VALUE_TOO_HIGH      = 0x0020,
+    BIG_BUFFER_INVARIANT_HIGH_WATERMARK_VALUE_TOO_LOW      = 0x0040,
+    BIG_BUFFER_INVARIANT_HIGH_WATERMARK_VALUE_TOO_HIGH     = 0x0080,
 
     BIG_BUFFER_INVARIANT_LOW_WATERMARK_AT_ZERO_TEMP_ALLOCS = 0x0100,
     BIG_BUFFER_INVARIANT_HIGH_WATERMARK_WITH_NO_ALLOCS     = 0x0200,
 
     BIG_BUFFER_INVARIANT_UNINITIALIZED_BUT_STORING_VALUES  = 0x8000,
 } big_buffer_invariant_error_flags_t;
-
 
 
 // Why?  Currently, the way the LA DMA works, it requires 4x 32k-aligned, contiguously allocated buffers.
@@ -208,18 +221,7 @@ static size_t FindUnusedTrackingEntryIndex(void) {
     } while (1);
 }
 
-/* Big Buffer Memory Layout:
-   (high)  __BIG_BUFFER_END__     -> Pointer just past the end of Big Buffer
-   (... )  ...                    -> Long-lived allocations (if any)
-   (... )  s_State.high_watermark -> Pointer just past the last unallocated memory,
-                                     or equal to low water mark if all memory allocated
-   (... )  ...                    -> Unallocated memory ...
-                                     Long-lived allocations grow from top
-                                     while temporary allocations grow from bottom
-   (... )  s_State.low_watermark  -> Pointer to the first unused byte of memory
-   (... )  ...                    -> Temporary memory allocations
-   (low )  __BIG_BUFFER_START__   -> Guaranteed to be 32k aligned
-*/
+
 
 void BigBuffer_Initialize(void) {
     CHECK_BIGBUF_INVARIANTS();
@@ -529,6 +531,7 @@ bool BigBuffer_DebugGetStatistics( big_buffer_general_state_t * general_state_ou
     CHECK_BIGBUF_INVARIANTS();
 
     memcpy(general_state_out, &s_State, sizeof(big_buffer_general_state_t));
+    return true;
 }
 bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out ) {
     static_assert(sizeof(s_State) == sizeof(state_out->general));
@@ -537,6 +540,7 @@ bool BigBuffer_DebugGetDetailedStatistics( big_buffer_state_t * state_out ) {
 
     memcpy(&(state_out->general), &s_State, sizeof(big_buffer_general_state_t));
     memcpy(&(state_out->allocation[0]), &(s_Allocation[0]), sizeof(state_out->allocation));
+    return true;
 }
 void BigBuffer_DebugDumpCurrentState(bool verbose) {
     DumpGeneralStateHeader();

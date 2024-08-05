@@ -1,3 +1,5 @@
+#pragma once
+
 #define MAX_COMMAND_LENGTH 9
 
 typedef struct command_result {
@@ -8,7 +10,7 @@ typedef struct command_result {
 	bool default_value;
 	bool error;
     bool help_flag;
-} command_result;
+} command_result_t;
 
 struct _command_struct
 {

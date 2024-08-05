@@ -54,7 +54,7 @@ static const struct ui_help_options options[]=
     {0,"-f",T_HELP_DUMMY_FILE_FLAG}, //-f flag, a file name string    
 };
 
-void dummy_handler(struct command_result *res)
+void dummy_handler(command_result_t *res)
 {
     uint32_t value; //somewhere to keep an integer value
     char file[13]; //somewhere to keep a string value (8.3 filename + 0x00 = 13 characters max)
@@ -248,10 +248,10 @@ void dummy_handler(struct command_result *res)
         printf("Hint: use the rm %s to delete\r\n", file);
     }
 
-    //bonus: you might notice we are handed a struct of type command_result from the command parser
+    //bonus: you might notice we are handed a struct of type command_result_t from the command parser
     // this is a way to return errors and other (future) data
     //I'm not sure it actually does anything right now, but it's there for future use
-    //command_result.error=true; //set the error flag
+    //command_result_t.error=true; //set the error flag
 
     //to set an error back to the command line parser and indicate an error for chaining purposes (; || &&)
     //system_config.error=true; //set the error flag

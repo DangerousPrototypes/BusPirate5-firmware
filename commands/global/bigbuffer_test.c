@@ -11,10 +11,9 @@
 
 #define X_FN_ENTRY()     printf("bb_test @ %3d: >>>>> %s\n", __LINE__, __func__)
 #define X_FN_EXIT()      printf("bb_test @ %3d: <<<<< %s\n", __LINE__, __func__)
-#define X_DBGP(fmt, ...) printf("bb_test @ %3d: " fmt, __LINE__, ##__VA_ARGS__)
+#define X_DBGP(fmt, ...) printf("bb_test @ %3d: " fmt "\n", __LINE__, ##__VA_ARGS__)
 
-static bool ensure_no_allocations(void)
-{
+static bool _ensure_no_allocations(void) {
     X_FN_ENTRY();
 
     big_buffer_general_state_t state = {0};
@@ -33,10 +32,67 @@ static bool ensure_no_allocations(void)
     X_FN_EXIT();
 }
 
-static bool x_dispatch(void)
-{
+static bool _test_temporary_allocations_1(bool reversed_free_order) {
     X_FN_ENTRY();
 
+    bool success = true;
+    void * allocations[32] = {NULL};
+
+    if (success) {
+        success = _ensure_no_allocations();
+        BigBuffer_DebugDumpCurrentState(true);
+    }
+
+    // up to 32 allocations, and 138k available to allocate
+    // 32 * 4k = 128k in "spacer" allocations
+    // This leaves 10k for the other 32 allocations
+    // 10k / 32 = 320 bytes per allocation
+    for (int i = 0; success && (i < 32); ++i) {
+        void* spacer = BigBuffer_AllocateTemporary(4096, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
+        if (spacer == NULL) {
+            X_DBGP("ERROR: Failed to allocate temporary buffer idx %d / 32\n", i);
+            BigBuffer_DebugDumpCurrentState(true); printf("\n");
+            success = false;
+            break; // out of for loop ...
+        }
+        allocations[i] = BigBuffer_AllocateTemporary(320, 1, BP_BIG_BUFFER_OWNER_SELFTEST);
+        if (allocations[i] == NULL) {
+            X_DBGP("ERROR: Failed to allocate temporary buffer idx %d / 32\n", i);
+            BigBuffer_DebugDumpCurrentState(true); printf("\n");
+            success = false;
+            break; // out of for loop ...
+        }
+        BigBuffer_FreeTemporary(spacer, BP_BIG_BUFFER_OWNER_SELFTEST);
+        BigBuffer_DebugDumpCurrentState(true); printf("\n");
+    }
+    for (int j = 0; j < 32; ++j) {
+        int idx = reversed_free_order ? (31 - j) : j;
+        BigBuffer_FreeTemporary(allocations[idx], BP_BIG_BUFFER_OWNER_SELFTEST);
+    }
+
+    BigBuffer_DebugDumpCurrentState(true); printf("\n");
+    if (success) {
+        success = _ensure_no_allocations();
+    }
+    X_FN_EXIT();
+    return success;
+}
+
+static bool _dispatch(void)
+{
+    bool success = true;
+    X_FN_ENTRY();
+
+    if (success) {
+        success = _ensure_no_allocations();
+        BigBuffer_DebugDumpCurrentState(true); printf("\n");
+    }
+    if (success) {
+        success = _test_temporary_allocations_1(true);
+    }
+    if (success) {
+        success = _test_temporary_allocations_1(false);
+    }
     X_FN_EXIT();
 }
 
@@ -55,7 +111,7 @@ void bigbuff_test_handler(command_result_t *res)
     res->success = true;
     res->error   = false;
 
-    x_dispatch();
+    _dispatch();
 
     X_FN_EXIT();
 }

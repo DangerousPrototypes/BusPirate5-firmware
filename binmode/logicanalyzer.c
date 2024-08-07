@@ -540,7 +540,7 @@ bool logic_analyzer_cleanup(void)
         pio_program_active=0;
     }
 
-    mem_free(la_buf);
+    BigBuffer_Free(la_buf, BP_BIG_BUFFER_OWNER_LA);
 
     logicanalyzer_reset_led();
 
@@ -550,19 +550,22 @@ bool logicanalyzer_setup(void)
 {
 
 
-    la_buf=mem_alloc(DMA_BYTES_PER_CHUNK*LA_DMA_COUNT, 0);
-    if(!la_buf || ((uint)la_buf != ((uint)la_buf & ~((1<<15)-1))))
+    // Each buffer must be aligned to DMA_BYTES_PER_CHUNK (32k)
+    // because the DMA channels are setup to wrap the low bits
+    // of the address (based on transfer count).
+    la_buf = BigBuffer_AllocateTemporary(DMA_BYTES_PER_CHUNK*LA_DMA_COUNT, DMA_BYTES_PER_CHUNK, BP_BIG_BUFFER_OWNER_LA);
+    if (!la_buf)
     {
         //printf("Failed to allocate buffer. Is the scope running?\r\n");
         return false;
     }
 
-    // high bus priority to the DMA
+    // high bus priority to the DMA channels
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
     
-    for(uint8_t i=0; i<count_of(la_dma); i++)
+    for (uint8_t i = 0; i < count_of(la_dma); i++)
     {
-        la_dma[i]= dma_claim_unused_channel(true);
+        la_dma[i] = dma_claim_unused_channel(true);
     }
 
     restart_dma();

@@ -106,8 +106,6 @@ void system_init(void)
 	system_config.clkport=0;
 	system_config.clkpin=0;
 
-	system_config.big_buffer_owner=BP_BIG_BUFFER_NONE;
-
 	system_config.rts=0;
 
 	system_config.binmode_select=0;

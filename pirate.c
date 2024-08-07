@@ -14,6 +14,7 @@
 #include "pirate/rgb.h"
 #include "pirate/shift.h"
 #include "pirate/bio.h"
+#include "pirate/mem.h"
 #include "pirate/button.h"
 #include "pirate/storage.h"
 #include "pirate/lcd.h"
@@ -52,8 +53,6 @@
 
 static mutex_t spi_mutex;
 
-uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = {0};
-
 void core1_entry(void);
 
 int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
@@ -64,18 +63,18 @@ int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
 
 int main(){
     char c;
-    
-    uint8_t bp_rev=mcu_detect_revision();
 
-    reserve_for_future_mode_specific_allocations[1] = 99;
-    reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
-    reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
+    // init big buffer memory pool
+    BigBuffer_Initialize();
+
+    uint8_t bp_rev = mcu_detect_revision();
+
 
     //init buffered IO pins
     bio_init(); 
 
     // setup SPI0 for on board peripherals
-    uint baud=spi_init(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
+    uint baud = spi_init(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
     gpio_set_function(BP_SPI_CDI, GPIO_FUNC_SPI);
     gpio_set_function(BP_SPI_CLK, GPIO_FUNC_SPI);
     gpio_set_function(BP_SPI_CDO, GPIO_FUNC_SPI);
@@ -188,7 +187,7 @@ int main(){
     //test for PCB revision
     //must be done after shift register setup
     // if firmware mismatch, turn all LEDs red
-    if(bp_rev!=BP5_REV){ //
+    if (bp_rev != BP5_REV) {
         //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP5_REV, mcu_detect_revision());
         rgb_irq_enable(false);
         while(true){ 

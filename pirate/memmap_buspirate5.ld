@@ -196,7 +196,7 @@ SECTIONS
     __scratch_y_source__ = LOADADDR(.scratch_y);
 
     .bss  : {
-        . = ALIGN(4);
+        . = ALIGN(32K);
         __bss_start__ = .;
         *(SORT_BY_ALIGNMENT(SORT_BY_NAME(.bss*)))
         *(COMMON)

@@ -49,8 +49,6 @@
 //#define		DISPLAY_USE_HD44780	// is always enabled
 //#define		DISPLAY_USE_ST7735
 
-#define BIG_BUFFER_SIZE (128 * 1024)
-
 // include platform
 #ifndef BP5_REV
     #error "No /platform/ file included in pirate.h"

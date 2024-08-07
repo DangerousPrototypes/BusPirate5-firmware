@@ -21,8 +21,8 @@ typedef struct _display
 	void (*display_settings)(void);		// display settings 
 	void (*display_help)(void);			// display protocol specific help
 	char display_name[10];				// friendly name (promptname)
-	uint32_t (*display_command)(struct command_result *result); // per mode command parser - ignored if 0
-	void (*display_lcd_update)(uint32_t flags);	// replacement for ui_lcd_update if non-0
+	uint32_t (*display_command)(struct command_result *result); // per mode command parser - ignored if null
+	void (*display_lcd_update)(uint32_t flags);	// replacement for ui_lcd_update if non-null
 } _display;
 
 extern struct _display displays[MAXDISPLAY];

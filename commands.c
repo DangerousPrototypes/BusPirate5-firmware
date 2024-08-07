@@ -33,6 +33,7 @@
 #include "commands/global/script.h"
 #include "commands/global/tutorial.h"
 #include "commands/global/button_scr.h"
+#include "commands/global/bigbuffer_test.h"
 #include "commands/global/smps.h"
 #include "commands/global/cls.h"
 #include "binmode/logicanalyzer.h"
@@ -87,6 +88,7 @@ const struct _command_struct commands[]=
     {"cls", true, &ui_display_clear, 0x00},
     {"smps", true, &smps_handler, 0x00},
     {"binmode", true, &cmd_binmode_handler, 0x00},
+    {"bb_test", true, &bigbuff_test_handler, 0x00},
 };
 
 const uint32_t commands_count=count_of(commands);

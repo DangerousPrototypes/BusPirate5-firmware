@@ -90,9 +90,10 @@ void i_info_handler(struct command_result *res){
 	//config file loaded
 	printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), t[T_CONFIG_FILE], ui_term_color_reset(), system_config.config_loaded_from_file?t[T_LOADED]:t[T_NOT_DETECTED]);
 
-	if(system_config.big_buffer_owner!=BP_BIG_BUFFER_NONE){
-		printf("%sBig buffer allocated to:%s #%d\r\n", ui_term_color_info(), ui_term_color_reset(), system_config.big_buffer_owner);
-	}
+	// TODO: Expose API for statistics on BigBuffer usage
+	// if(system_config.big_buffer_owner!=BP_BIG_BUFFER_OWNER_NONE){
+	// 	printf("%sBig buffer allocated to:%s #%d\r\n", ui_term_color_info(), ui_term_color_reset(), system_config.big_buffer_owner);
+	// }
 
 
 	// Installed modes

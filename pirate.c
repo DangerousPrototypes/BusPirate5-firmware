@@ -12,7 +12,9 @@
 #include "opt_args.h"
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
-#include "pirate/shift.h"
+#if (BP_VER == 5 || BP_VER == XL5)
+    #include "pirate/shift.h"
+#endif
 #include "pirate/bio.h"
 #include "pirate/button.h"
 #include "pirate/storage.h"
@@ -62,10 +64,18 @@ int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
     return 0;
 }
 
+void gpio_setup(uint8_t pin, bool direction, bool level){
+    gpio_set_dir(pin, direction); 
+    gpio_set_function(pin, GPIO_FUNC_SIO);  
+    gpio_put(CURRENT_EN_OVERRIDE, level);
+}
+
 int main(){
     char c;
     
-    uint8_t bp_rev=mcu_detect_revision();
+    #if (BP_VER == 5 || BP_VER==XL5)
+        uint8_t bp_rev=mcu_detect_revision();
+    #endif
 
     reserve_for_future_mode_specific_allocations[1] = 99;
     reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
@@ -81,10 +91,12 @@ int main(){
     gpio_set_function(BP_SPI_CDO, GPIO_FUNC_SPI);
 
     // init shift register pins
-    shift_init();
+    #if (BP_VER == 5 || BP_VER==XL5)
+        shift_init();
+    #endif
     
-    #ifdef BP5_REV
-        system_config.hardware_revision=BP5_REV;
+    #ifdef BP_REV
+        system_config.hardware_revision=BP_REV;
     #else
         #error "No platform revision defined. Check pirate.h."
     #endif
@@ -105,12 +117,34 @@ int main(){
     // TF flash card CS pin init
     storage_init();
 
-
-    // configure the defaults for shift register attached hardware
-    shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3|AMUX_S1|DISPLAY_RESET|DAC_CS|CURRENT_EN));
+    //initial pin states
+    #if (BP_VER == 5 || BP_VER==XL5)
+        // configure the defaults for shift register attached hardware
+        shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3|AMUX_S1|DISPLAY_RESET|CURRENT_EN));
+    #else
+        //todo: current detect
+        gpio_setup(CURRENT_EN_OVERRIDE, GPIO_OUT, 0);
+        gpio_setup(AMUX_S0, GPIO_OUT, 0);
+        gpio_setup(AMUX_S1, GPIO_OUT, 1);
+        gpio_setup(AMUX_S2, GPIO_OUT, 0);
+        gpio_setup(AMUX_S3, GPIO_OUT, 1);
+        //gpio_setup(DISPLAY_RESET, GPIO_OUT, 1);
+        gpio_setup(CURRENT_EN, GPIO_OUT, 1);
+        gpio_setup(LA_BPIO0, GPIO_IN, 0);
+        gpio_setup(LA_BPIO1, GPIO_IN, 0);
+        gpio_setup(LA_BPIO2, GPIO_IN, 0);
+        gpio_setup(LA_BPIO3, GPIO_IN, 0);
+        gpio_setup(LA_BPIO4, GPIO_IN, 0);
+        gpio_setup(LA_BPIO5, GPIO_IN, 0);
+        gpio_setup(LA_BPIO6, GPIO_IN, 0);
+        gpio_setup(LA_BPIO7, GPIO_IN, 0);
+    #endif
     pullups_init(); //uses shift register internally  
-    shift_output_enable(true); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
-       
+
+    #if(BP_VER == 5 || BP_VER==XL5)
+        shift_output_enable(true); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
+    #endif
+    //busy_wait_ms(10);
     //reset the LCD
     lcd_reset();
    
@@ -130,7 +164,7 @@ int main(){
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-    #if BP5_REV <= 9
+    #if (BP_VER == 5 && BP_REV <= 9)
         spi_set_baudrate(BP_SPI_PORT, BP_SPI_START_SPEED);
         storage_mount();
         if(storage_load_config()){
@@ -173,7 +207,7 @@ int main(){
 	psucmd_disable();    // disable psu and reset pin label, clear any errors
 
     // mount NAND flash here
-    #if BP5_REV >= 10
+    #if !(BP_VER == 5 && BP_REV <= 9)
         storage_mount();
         if(storage_load_config()){
             system_config.config_loaded_from_file=true;
@@ -185,19 +219,21 @@ int main(){
     // we need to have read any config files on the TF flash card before now
     icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
-    //test for PCB revision
-    //must be done after shift register setup
-    // if firmware mismatch, turn all LEDs red
-    if(bp_rev!=BP5_REV){ //
-        //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP5_REV, mcu_detect_revision());
-        rgb_irq_enable(false);
-        while(true){ 
-            rgb_set_all(0xff, 0, 0);
-            busy_wait_ms(500);
-            rgb_set_all(0, 0, 0);
-            busy_wait_ms(500);
-        }
-    }    
+    #if (BP_VER == 5)
+        //test for PCB revision
+        //must be done after shift register setup
+        // if firmware mismatch, turn all LEDs red
+        if(bp_rev!=BP_REV){ //
+            //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP_REV, mcu_detect_revision());
+            rgb_irq_enable(false);
+            while(true){ 
+                rgb_set_all(0xff, 0, 0);
+                busy_wait_ms(500);
+                rgb_set_all(0, 0, 0);
+                busy_wait_ms(500);
+            }
+        }    
+    #endif
 
     enum bp_statemachine{
         BP_SM_DISPLAY_MODE,
@@ -269,12 +305,13 @@ int main(){
                     }
                     // show welcome
                     //ui_info_print_info(&args, &res);
+
                     bp_state=BP_SM_COMMAND_PROMPT;
                 }else if(result.error){ // user hit enter but not a valid option
                     printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
                 }
                 //printf("\r\n\r\nVT100 compatible color mode? (Y/n)> "); 
-                button_irq_enable(0, &button_irq_callback); //enable button interrupt
+                //button_irq_enable(0, &button_irq_callback); //enable button interrupt
                 break;                 
             case BP_SM_GET_INPUT:
                 //helpers_mode_periodic();
@@ -330,7 +367,7 @@ int main(){
                     screensaver = add_alarm_in_ms(system_config.lcd_timeout*300000, ui_term_screensaver_enable, NULL, false);
                 }
                 bp_state=BP_SM_GET_INPUT;
-                button_irq_enable(0, &button_irq_callback);
+                //button_irq_enable(0, &button_irq_callback);
                 break;
             
             default:
@@ -382,6 +419,8 @@ void core1_entry(void){
 
     icm_core1_notify_completion(raw_init_message);
 
+        
+
     while(1){
         //service (thread safe) tinyusb tasks
         if(system_config.terminal_usb_enable){
@@ -420,7 +459,7 @@ void core1_entry(void){
             }
 
             //remains for legacy REV8 support of TF flash
-            #if BP5_REV<10
+            #if BP_REV<10
                 if(storage_detect())
                 {
 

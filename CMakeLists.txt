@@ -1,18 +1,22 @@
-# Generated Cmake Pico project file
-
 cmake_minimum_required(VERSION 3.13)
-
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 # initalize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
 #set(PICO_SDK_PATH "C:/pico113/pico-sdk")
- 
+#set(PICO_PLATFORM "rp2040") #compile for 5 rev8 and 5 rev10
+set(PICO_PLATFORM "rp2350") #compile for 5XL and 6
+
+# Add my_pico_w.h
+set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
+# Add my_pico_w.cmake
+set(PICO_BOARD_CMAKE_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
+# Add my_pico_w
+set(PICO_BOARD buspirate6)
+
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(cmake/pico_sdk_import.cmake)
-
-set(PICO_BOARD pico)
 
 project(bus_pirate C CXX ASM) 
 
@@ -20,7 +24,7 @@ project(bus_pirate C CXX ASM)
 pico_sdk_init()  
 
 #add_compile_definitions(BP_FIRMWARE_HASH=${BP_FIRMWARE_HASH})
-#add_compile_definitions(BP5_REV=8) 
+
 # build time in UTC ISO 8601
 FILE (WRITE ${CMAKE_BINARY_DIR}/timestamp.cmake "STRING(TIMESTAMP TIMEZ UTC)\n")
 FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(WRITE timestamp.h \"#ifndef TIMESTAMP_H\\n\")\n")
@@ -44,7 +48,7 @@ set(bp5_common
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
         pirate/bio.h pirate/bio.c pirate/storage.h pirate/storage.c
         pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h
-        pirate/lcd.h pirate/lcd.c pirate/shift.h pirate/shift.c
+        pirate/lcd.h pirate/lcd.c 
         pirate/amux.h pirate/amux.c pirate/rgb.h pirate/rgb.c
         pirate/intercore_helpers.c
 
@@ -168,35 +172,60 @@ set(bp5_common
         msc_disk.c msc_disk.h usb_descriptors.c
 )
 set(bp5_rev10
-        platform/bpi-rev10.h platform/bpi-rev10.c 
         #nand flash management and dhara
         dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
         nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
         nand/sys_time.c nand/sys_time.h
 )
 
-add_executable(bus_pirate5_rev8
-        ${bp5_common}
-        platform/bpi-rev8.h platform/bpi-rev8.c 
-        #tf card access control
-        fatfs/tf_card.c fatfs/tf_card.h
+if(${PICO_PLATFORM} MATCHES "rp2350")
+        add_executable(bus_pirate5_xl
+                ${bp5_common}
+                ${bp5_rev10}
+                platform/bpi-rev10.h platform/bpi-rev10.c 
+                pirate/shift.h pirate/shift.c
+                )
+        target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
+        target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
+
+        add_executable(bus_pirate6_rev1
+                ${bp5_common}
+                ${bp5_rev10}
+                platform/bpi6-rev1.h platform/bpi6-rev1.c 
+                )
+        target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_VER=6) 
+        target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_REV=10)  
+        
+        set(revisions
+        bus_pirate5_xl  
+        bus_pirate6_rev1
+        )        
+
+else()
+        add_executable(bus_pirate5_rev8
+                ${bp5_common}
+                platform/bpi-rev8.h platform/bpi-rev8.c 
+                #tf card access control
+                fatfs/tf_card.c fatfs/tf_card.h
+                pirate/shift.h pirate/shift.c
+                )
+        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VER=5) 
+        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_REV=8)
+
+        add_executable(bus_pirate5_rev10
+                ${bp5_common}
+                ${bp5_rev10}
+                platform/bpi-rev10.h platform/bpi-rev10.c 
+                pirate/shift.h pirate/shift.c
+                )
+        target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_VER=5)                
+        target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_REV=10)
+
+        set(revisions
+        bus_pirate5_rev8  
+        bus_pirate5_rev10
         )
-
-target_compile_definitions(bus_pirate5_rev8 PUBLIC BP5_REV=8)
-
-add_executable(bus_pirate5_rev10
-        ${bp5_common}
-        ${bp5_rev10}
-        )
-target_compile_definitions(bus_pirate5_rev10 PUBLIC BP5_REV=10)
-
-add_executable(bus_pirate5_rev10_2gbit
-        ${bp5_common}
-        ${bp5_rev10}
-        )
-target_compile_definitions(bus_pirate5_rev10_2gbit PUBLIC BP5_REV=10)
-target_compile_definitions(bus_pirate5_rev10_2gbit PUBLIC FLASH_MT29F2G01ABAFDWB)
-
+endif()
 
 
 set(stdlibs
@@ -222,12 +251,7 @@ set(stdlibs
         hardware_structs
         )        
 
-set(revisions
-        bus_pirate5_rev8  
-        bus_pirate5_rev10
-        bus_pirate5_rev10_2gbit
-        )
-        
+
 
 # Compile the various PIO programs to generate the header files
 foreach(revision ${revisions})
@@ -243,13 +267,16 @@ foreach(revision ${revisions})
 
         pico_set_program_name(${revision} ${revision})
         pico_set_program_version(${revision} "0.1.0")
-        pico_set_program_description(${revision} "Bus Pirate 5 Firmware for RP2040")
-
+        if(${PICO_PLATFORM} MATCHES "rp2350")
+                pico_set_program_description(${revision} "Bus Pirate 5XL/6 Firmware for RP2350")
+        else()
+                pico_set_program_description(${revision} "Bus Pirate 5 Firmware for RP2040")
+        endif()
         pico_enable_stdio_uart(${revision} 0)
         pico_enable_stdio_usb(${revision} 0)
 
         #XOSC fix?
-        target_compile_definitions(${revision} PUBLIC PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
+        target_compile_definitions(${revision} PUBLIC PICO_XOSC_STARTUP_DELAY_MULTIPLIER=172)
         # useful for debug builds
         target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=$<CONFIG:DEBUG>)
         target_compile_definitions(${revision} PUBLIC PICO_STACK_SIZE=4096)        
@@ -258,8 +285,11 @@ foreach(revision ${revisions})
         target_link_libraries(${revision} ${stdlibs} )
         target_include_directories(${revision} PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )
         pico_add_extra_outputs(${revision})
-
-        pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate5.ld)
+        #if(${PICO_PLATFORM} MATCHES "rp2350")
+        #        pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate6.ld)
+        #else()
+        #        pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate5.ld)
+        #endif()
 endforeach()
 
 string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
@@ -272,9 +302,13 @@ set(USE_LGPL3 TRUE CACHE BOOL "indicated if to include LGPL3 protected code")
 include(cmake/ansi_colours_import.cmake)
 if(USE_LGPL3)
 if(LEGACY_ANSI_COLOURS_ENABLED)
-        target_link_libraries(bus_pirate5_rev10_2gbit lib_ansi_colours)
-        target_link_libraries(bus_pirate5_rev10       lib_ansi_colours)
-        target_link_libraries(bus_pirate5_rev8        lib_ansi_colours)
+        if(${PICO_PLATFORM} MATCHES "rp2350")
+                target_link_libraries(bus_pirate5_xl         lib_ansi_colours)
+                target_link_libraries(bus_pirate6_rev1       lib_ansi_colours)
+        else()
+                target_link_libraries(bus_pirate5_rev10       lib_ansi_colours)
+                target_link_libraries(bus_pirate5_rev8        lib_ansi_colours)
+        endif()
 endif()
 endif()
 

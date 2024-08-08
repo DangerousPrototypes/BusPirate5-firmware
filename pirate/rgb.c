@@ -10,12 +10,12 @@
 
 // pairs of LEDs for a top left corner to bottom right corner fade
 // not all LEDs have a pair, they are included with a neighboring LED pair
-#if BP5_REV <= 9
+#if BP_REV <= 9
     const uint32_t groups_top_left[]={((1u<<1) | (1u<<2)), ((1u<<0) | (1u<<3)), ((1u<<4) | (1u<<5) | (1u<<15)), ((1u<<6) | (1u<<7) | (1u<<14)), ((1u<<8) | (1u<<13)), ((1u<<9) | (1u<<12)), ((1u<<10) | (1u<<11)) };
     const uint32_t groups_center_left[]={(1u<<3)|(1u<<4),(1u<<2)|(1u<<5),(1u<<1)|(1u<<6),(1u<<0)|(1u<<7)|(1u<<8)|(1<<9),(1u<<10)|(1u<<15),(1u<<11)|(1u<<14),(1u<<12)|(1u<<13)};  
     const uint32_t groups_center_clockwise[]={(1u<<13)|(1u<<14),(1u<<15), (1u<<0)|(1u<<1), (1u<<2)|(1u<<3), (1u<<4)|(1u<<5),(1u<<6)|(1u<<7),(1u<<8)|(1u<<9), (1u<<10),(1u<<11)|(1u<<12)};
     const uint32_t groups_top_down[]={0b0011001010011001,0b1100110101100110}; //MSB is last led in string...
-#elif BP5_REV >= 10
+#elif BP_REV >= 10
     const uint32_t groups_top_left[]={((1u<<2) | (1u<<3)), ((1u<<1) | (1u<<4)), ((1u<<0) | (1u<<17) | (1u<<5)), ((1u<<16) | (1u<<6)), ((1u<<15) | (1u<<7)), ((1u<<14) | (1u<<9) | (1u<<8)), ((1u<<13) | (1u<<10) | (1u<<5)), ((1u<<12)|(1u<<11))};
     const uint32_t groups_center_left[]={(1u<<4)|(1u<<5),(1u<<3)|(1u<<6),(1u<<2)|(1u<<7),(1u<<1)|(1u<<8), (1u<<0)|(1<<9), (1u<<17)|(1u<<10), (1u<<16)|(1u<<11), (1u<<12)|(1u<<15), (1u<<13)|(1u<<14)};  
     const uint32_t groups_center_clockwise[]={(1u<<14)|(1u<<15),(1u<<16), (1u<<17)|(1u<<0), (1u<<1)|(1u<<2), (1u<<3)|(1u<<4), (1u<<5)|(1u<<6), (1u<<7), (1u<<8)|(1u<<9), (1u<<10)|(1u<<11), (1u<<12)|(1u<<13)};
@@ -34,6 +34,10 @@ struct rgb_segment{
     uint8_t led_position;   
 };
 
+static PIO pio;
+static int sm;
+static uint offset;
+
 struct rgb_program{
     struct rgb_segment segment;
     bool (*handler)(struct rgb_segment *segment, uint8_t led);
@@ -43,7 +47,7 @@ struct rgb_program rgb_handlers[RGB_LEN];
 
 static inline void rgb_send(void){  
     for(int i=0; i<RGB_LEN; i++){
-        pio_sm_put_blocking(pio1, 3, ((leds[i]) << 8u));        
+        pio_sm_put_blocking(pio, sm, ((leds[i]) << 8u));        
     }
 }
 
@@ -251,12 +255,19 @@ void rgb_irq_enable(bool enable){
 void rgb_init(void)
 {
     // RGB LEDs driven by PIO0
-    gpio_set_function(RGB_CDO, GPIO_FUNC_PIO1);  
+    //gpio_set_function(RGB_CDO, GPIO_FUNC_PIO1);  
 
-    PIO pio = pio1;
-    int sm = 3;
-    uint offset = pio_add_program(pio, &ws2812_program);
+    //PIO pio = pio1;
+    //int sm = 3;
+    //uint offset = pio_add_program(pio, &ws2812_program);
 
+    #if (BP_VER == 6)
+        bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio, &sm, &offset, RGB_CDO, 16, true);
+    #else
+        bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio, &sm, &offset, RGB_CDO, 1, true);
+    #endif
+    hard_assert(success);
+    
     ws2812_program_init(pio, sm, offset, RGB_CDO, 800000, false);
 
     for (int i=0;i<RGB_LEN; i++){

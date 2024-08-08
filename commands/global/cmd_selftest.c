@@ -307,17 +307,60 @@ bool selftest_button(void){
     //debounce value selected somewhat arbitrarily
     static const uint32_t DEBOUNCE_DELAY_MS = 100;    
     //prompt to push button
-    printf("PUSH BUTTON TO COMPLETE: ");
+    printf("PUSH BUTTON: ");
     //wait for button to be pressed
     while(!button_get(0));
     busy_wait_ms(DEBOUNCE_DELAY_MS);
+    printf("OK\r\nRELEASE BUTTON: ");
     //then wait for button to be released
-    while( button_get(0));
-    busy_wait_ms(DEBOUNCE_DELAY_MS);
-
+    while(button_get(0));
     printf("OK\r\n");
     return false;
 }
+
+// test that the logic analyzer chip is mounted and with no shorts
+#if BP_VER == 6
+bool selftest_la_bpio(void){
+    uint32_t temp1, fails=0, iopin=0;
+    printf("LA_BPIO TEST (SHOULD BE 1)\r\n");
+    for(uint8_t lapin=LA_BPIO0; lapin<(LA_BPIO7+1); lapin++){
+        bio_output(iopin);
+        bio_put(iopin,1);
+        busy_wait_ms(1); //give it some time
+        temp1=gpio_get(lapin);
+        printf("LA_BPIO%d HIGH: %d ", iopin, temp1);
+        if(!temp1){
+            printf("ERROR!\r\n");
+            fails++;
+        }else{
+            printf("OK\r\n");
+        }
+        printf("LA_BPIO: 0:%d 1:%d 2:%d 3:%d 4:%d 5:%d 6:%d 7:%d\r\n", gpio_get(LA_BPIO0), gpio_get(LA_BPIO1), gpio_get(LA_BPIO2), gpio_get(LA_BPIO3), gpio_get(LA_BPIO4), gpio_get(LA_BPIO5), gpio_get(LA_BPIO6), gpio_get(LA_BPIO7));
+
+        //check other pins for possible shorts
+        for(uint8_t i=LA_BPIO0; i<(LA_BPIO7+1); i++){
+            if(lapin==i) continue;
+            temp1=gpio_get(i);
+            if(temp1){
+                printf("LA_BBIO%d SHORT->BIO%d (%d): ERROR!\r\n", lapin, i-LA_BPIO0, temp1);
+                fails++;
+            }
+        }
+        bio_input(iopin);
+        iopin++;
+
+        /*
+        while(true){
+            pullup_enable();
+            busy_wait_ms(1);
+            printf("LA_BPIO: 0:%d 1:%d 2:%d 3:%d 4:%d 5:%d 6:%d 7:%d\r\n", gpio_get(LA_BPIO0), gpio_get(LA_BPIO1), gpio_get(LA_BPIO2), gpio_get(LA_BPIO3), gpio_get(LA_BPIO4), gpio_get(LA_BPIO5), gpio_get(LA_BPIO6), gpio_get(LA_BPIO7));
+        }
+        */
+    }
+    if(fails) return true;
+    return false;
+}
+#endif
 
 
 void cmd_selftest(void){
@@ -335,7 +378,7 @@ void cmd_selftest(void){
     }
 
     //REV10 + check status of NAND flash
-    #if BP5_REV >= 10
+    #if BP_REV >= 10
         if(selftest_format_nand()) fails++;
     #endif        
 
@@ -367,6 +410,11 @@ void cmd_selftest(void){
 
     // BIO low test
     if(selftest_bio_low()) fails++;
+
+    //LA_BPIO test
+    #if BP_VER == 6
+        if(selftest_la_bpio()) fails++;
+    #endif
 
     // BIO pull-up high test
     if(selftest_pullup_high()) fails++;

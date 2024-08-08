@@ -23,20 +23,50 @@ struct psu_status_t psu_status;
 
 static void psu_fuse_reset(void){
     //reset current trigger
-    shift_clear_set_wait(CURRENT_RESET,0); //low to activate the pnp
+    #if (BP_VER == 5 || BP_VER==XL5)
+        shift_clear_set_wait(CURRENT_RESET,0); //low to activate the pnp
+    #else
+        gpio_put(CURRENT_RESET,0);
+    #endif
     busy_wait_ms(1);
-    shift_clear_set_wait(0, CURRENT_RESET); //high to disable  
+    #if (BP_VER == 5 || BP_VER==XL5)
+        shift_clear_set_wait(0, CURRENT_RESET); //high to disable  
+    #else
+        gpio_put(CURRENT_RESET,1);
+    #endif
 }
 
 //TODO: rename this function, it actually controls if the current limit circuit is connected to the VREG
 void psu_vreg_enable(bool enable){
-    if(enable) shift_clear_set_wait(CURRENT_EN,0); //low is on (PNP)
-    else shift_clear_set_wait(0,CURRENT_EN); //high is off
+    if(enable){
+        #if (BP_VER == 5 || BP_VER==XL5)
+            shift_clear_set_wait(CURRENT_EN,0); //low is on (PNP)
+        #else
+            gpio_put(CURRENT_EN,0);
+        #endif
+    }else{
+        #if (BP_VER == 5 || BP_VER==XL5)
+            shift_clear_set_wait(0,CURRENT_EN); //high is off
+        #else
+            gpio_put(CURRENT_EN,1);
+        #endif
+    }
 }
 
 void psu_current_limit_override(bool enable){
-    if(enable) shift_clear_set_wait(0, CURRENT_EN_OVERRIDE);
-    else shift_clear_set_wait(CURRENT_EN_OVERRIDE,0);
+    if(enable){
+        #if (BP_VER == 5 || BP_VER==XL5)
+            shift_clear_set_wait(0, CURRENT_EN_OVERRIDE);
+        #else
+            gpio_put(CURRENT_EN_OVERRIDE,1);
+        #endif
+    }else{
+        #if (BP_VER == 5 || BP_VER==XL5)
+            shift_clear_set_wait(CURRENT_EN_OVERRIDE,0);
+        #else
+            gpio_put(CURRENT_EN_OVERRIDE,0);
+        #endif
+    }
 }
 
 void psu_set_v(float volts, struct psu_status_t *psu){
@@ -66,13 +96,12 @@ void psu_set_i(float current, struct psu_status_t *psu){
 }
 
 void psu_dac_set(uint16_t v_dac, uint16_t i_dac){
-    //Current adjust is slice 4 channel a
-    //voltage adjust is slice 4 channel b
     uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
     uint v_chan_num= pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
     uint i_chan_num= pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);  
     pwm_set_chan_level(slice_num, v_chan_num, v_dac);
-    pwm_set_chan_level(slice_num, i_chan_num, i_dac);    
+    pwm_set_chan_level(slice_num, i_chan_num, i_dac);   
+    //printf("GPIO: %d, slice: %d, v_chan: %d, i_chan: %d",PSU_PWM_VREG_ADJ,slice_num,v_chan_num,i_chan_num); 
 }
 
 bool psu_fuse_ok(void){ 
@@ -169,8 +198,6 @@ void psu_init(void){
     gpio_set_dir(PSU_PWM_VREG_ADJ, GPIO_OUT);
     gpio_put(PSU_PWM_VREG_ADJ, 1);
 
-    //Current adjust is slice 4 channel a
-    //voltage adjust is slice 4 channel b
     uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
     uint v_chan_num= pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
     uint i_chan_num= pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);

@@ -4,6 +4,9 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "pirate/button.h"
+//#include "hardware/gpio.h"
+//#include "hardware/sync.h"
+#include "hardware/structs/iobank0.h"
 
 #define BP_BUTTON_SHORT_PRESS_MS 550
 
@@ -14,7 +17,11 @@ static volatile enum button_codes button_code = BP_BUTT_NO_PRESS;
 
 // poll the value of button button_id
 bool button_get(uint8_t button_id){
-    return gpio_get(EXT1);
+    #if(BP_VER==5)
+        return gpio_get(EXT1);
+    #else
+        return !gpio_get(EXT1);
+    #endif
 } 
 // check button press type
 enum button_codes button_check_press(uint8_t button_id) {
@@ -62,5 +69,9 @@ void button_irq_disable(uint8_t button_id){
 void button_init(void){
     gpio_set_function(EXT1, GPIO_FUNC_SIO);
     gpio_set_dir(EXT1, GPIO_IN);
-    gpio_pull_down(EXT1);
+    #if(BP_VER==5)
+        gpio_pull_down(EXT1);
+    #else
+        gpio_pull_up(EXT1);
+    #endif
 }

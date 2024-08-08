@@ -32,7 +32,7 @@ bool pwm_check_pin_is_available(const struct ui_prompt* menu, uint32_t* i)
     if((*i)>=count_of(bio2bufiopin)) return 0;
     
     //temp fix for power supply PWM sharing
-    #if BP5_REV <= 8
+    #if BP_REV <= 8
     if((*i)==0 || (*i)==1) return 0;
     #endif 
     

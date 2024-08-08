@@ -413,15 +413,7 @@ void lcd_screensaver_disable(void){
     lcd_backlight_enable(true);
 }
 
-void lcd_init(void){
-    gpio_set_function(DISPLAY_CS, GPIO_FUNC_SIO);
-    gpio_put(DISPLAY_CS, 1);
-    gpio_set_dir(DISPLAY_CS, GPIO_OUT);
 
-    gpio_set_function(DISPLAY_DP, GPIO_FUNC_SIO);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_set_dir(DISPLAY_DP, GPIO_OUT);
-}
 
 void lcd_configure(void){
     lcd_write_command(0x36);  //MADCTL (36h): Memory Data Access Control

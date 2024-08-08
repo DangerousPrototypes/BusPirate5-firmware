@@ -1,4 +1,3 @@
-void lcd_init(void);
 void lcd_configure(void);
 void lcd_clear(void);
 void ui_lcd_update(uint32_t update_flags);

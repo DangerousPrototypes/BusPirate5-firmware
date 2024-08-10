@@ -131,7 +131,7 @@ static uint z_rgb_sm_offset;
     //static const uint32_t PIXEL_MASK_SIDE  = 0b1....0;
 
     // clang-format off
-    #if BP_BOARD_REVISION <= 9
+    #if !defined(RGB_HAS_ALL_PIXELS)
         // Pixels that shine    orthogonal to OLED: idx     1,2,    5,6,  8,  10,11,      14,15,
         #define PIXEL_MASK_UPPER ( 0b1100110101100110 )
         // Pixels that shine    orthogonal to OLED: idx   0,    3,4,    7,  9,      12,13,
@@ -236,7 +236,7 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
     //    All the pixels facing upwards as one group, and all the pixels
     //    facing the sides as a second group.
 
-    #if BP_BOARD_REVISION <= 9
+    #if !defined(RGB_HAS_ALL_PIXELS)
         static const uint32_t groups_top_left[] = {
             // clang-format off
             ((1u <<  1) | (1u <<  2)             ),
@@ -272,7 +272,7 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
             ((1u << 11) | (1u << 12)),
             // clang-format on
         };
-    #elif BP_BOARD_REVISION >= 10
+    #else // defined(RGB_HAS_ALL_PIXELS)
         static const uint32_t groups_top_left[] = {
             // TODO: use grid mappings instead
             //       e.g., for iteration target from 255..0

@@ -5,12 +5,10 @@
 
 void pullup_enable(void){
 
+    #if (BP_VERSION == 5 && BP_BOARD_REVISION <= 8)
+        shift_clear_set_wait(0,PULLUP_EN);  
     #if (BP_VERSION == 5 || BP_VERSION==XL5)
-        #if BP_BOARD_REVISION <= 8
-            shift_clear_set_wait(0,PULLUP_EN);  
-        #else
-            shift_clear_set_wait(PULLUP_EN,0);
-        #endif
+        shift_clear_set_wait(PULLUP_EN,0);
     #elif (BP_VERSION==6)
         gpio_put(PULLUP_EN,0);        
     #else
@@ -19,12 +17,10 @@ void pullup_enable(void){
 }
 
 void pullup_disable(void){
-    #if (BP_VERSION == 5 || BP_VERSION==XL5)
-        #if BP_BOARD_REVISION <= 8
-            shift_clear_set_wait(PULLUP_EN,0); 
-        #else
-            shift_clear_set_wait(0,PULLUP_EN);
-        #endif
+    #if (BP_VERSION == 5 && BP_BOARD_REVISION <= 8)
+        shift_clear_set_wait(PULLUP_EN,0); 
+    #elif (BP_VERSION == 5 || BP_VERSION==XL5)
+        shift_clear_set_wait(0,PULLUP_EN);
     #elif (BP_VERSION==6)
         gpio_put(PULLUP_EN,1);
     #else

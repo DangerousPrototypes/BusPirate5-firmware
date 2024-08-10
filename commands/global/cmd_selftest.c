@@ -377,9 +377,13 @@ void cmd_selftest(void){
         return;
     }
 
-    //REV10 + check status of NAND flash
-    #if BP_BOARD_REVISION >= 10
+    // REV10 + check status of NAND flash
+    #if (BP_VERSION == 5 && BP_BOARD_REVISION < 10)
+        // NAND flash is not available on BP5 until Rev10
+    #elif (BP_VERSION == 5) || (BP_VERSION == XL5) || (BP_VERSION == 6)
         if(selftest_format_nand()) fails++;
+    #else
+        #error "Unknown Bus Pirate version"
     #endif        
 
     printf("SELF TEST STARTING\r\nDISABLE IRQ: ");

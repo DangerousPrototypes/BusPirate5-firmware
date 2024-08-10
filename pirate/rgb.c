@@ -21,6 +21,10 @@
 //
 #define COUNT_OF_PIXELS RGB_LEN // 18 for Rev10, 16 for Rev8
 
+static PIO pio;
+static int sm;
+static uint offset;
+
 #pragma region    // 8-bit scaled pixel coordinates and angle256
     /// @brief Scaled coordinates in range [0..255]
     typedef struct _coordin8 {
@@ -328,7 +332,7 @@ static inline void update_pixels(void) {
         // TODO: define symbolic constant for which PIO / state machine (no magic numbers!)
         //       e.g., #define WS2812_PIO  pio1
         //       e.g., #define WS2812_SM   3
-        pio_sm_put_blocking(pio1, 3, toSend);
+        pio_sm_put_blocking(pio, sm, toSend);
     }
 }
 
@@ -737,14 +741,7 @@ void rgb_irq_enable(bool enable){
     }
 }
 
-void rgb_init(void)
-{
-    // RGB LEDs driven by PIO0
-    //gpio_set_function(RGB_CDO, GPIO_FUNC_PIO1);  
-
-    //PIO pio = pio1;
-    //int sm = 3;
-    //uint offset = pio_add_program(pio, &ws2812_program);
+void rgb_init(void){
 
     #if (BP_VER == 6)
         bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio, &sm, &offset, RGB_CDO, 16, true);

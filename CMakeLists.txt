@@ -28,15 +28,16 @@ set(CMAKE_CXX_STANDARD 17)
 # initalize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
 #set(PICO_SDK_PATH "C:/pico113/pico-sdk")
-#set(PICO_PLATFORM "rp2040") #compile for 5 rev8 and 5 rev10
-set(PICO_PLATFORM "rp2350") #compile for 5XL and 6
+set(PICO_PLATFORM "rp2040") #compile for 5 rev8 and 5 rev10
+#set(PICO_PLATFORM "rp2350") #compile for 5XL and 6
 
 # Add my_pico_w.h
 set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards ) 
 # Add my_pico_w.cmake
 set(PICO_BOARD_CMAKE_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
 # Add my_pico_w
-set(PICO_BOARD buspirate6)
+#set(PICO_BOARD buspirate6)
+set(PICO_BOARD pico)
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(cmake/pico_sdk_import.cmake)
@@ -229,7 +230,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_VER=6) 
         target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_REV=10)  
         
-        set(revisions
+        set(revisions 
         bus_pirate5_xl  
         bus_pirate6_rev1
         )        
@@ -322,8 +323,9 @@ foreach(revision ${revisions})
         #if(${PICO_PLATFORM} MATCHES "rp2350")
         #        pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate6.ld)
         #else()
-        #        pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate5.ld)
+                #pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate5.ld)
         #endif()
+        #pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_default.ld)
 endforeach()
 
 string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")

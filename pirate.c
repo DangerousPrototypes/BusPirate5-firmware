@@ -74,8 +74,8 @@ void gpio_setup(uint8_t pin, bool direction, bool level){
 int main(){
     char c;
     
-    #if (BP_VERSION == 5 || BP_VERSION==XL5)
-        uint8_t BP_BOARD_REVISION=mcu_detect_revision();
+    #if (BP_VERSION == 5)
+        uint8_t detected_board_revision=mcu_detect_revision();
     #endif
 
     reserve_for_future_mode_specific_allocations[1] = 99;
@@ -142,8 +142,10 @@ int main(){
     #endif
     pullups_init(); //uses shift register internally  
 
-    #if(BP_VERSION == 5 || BP_VERSION==XL5)
+    #if (BP_VERSION == 5 || BP_VERSION == XL5)
         shift_output_enable(true); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
+    #else
+        // BUGBUG ... if above enabled level translator for BP5 / BP5XL, then where is that done for BP6?
     #endif
     //busy_wait_ms(10);
     //reset the LCD
@@ -208,7 +210,7 @@ int main(){
 	psucmd_disable();    // disable psu and reset pin label, clear any errors
 
     // mount NAND flash here
-    #if !(BP_VERSION == 5 && BP_BOARD_REVISION <= 9)
+    #if ((BP_VERSION == 5 && BP_BOARD_REVISION > 9) || BP_VERSION == XL5 || BP_VERSION == 6)
         storage_mount();
         if(storage_load_config()){
             system_config.config_loaded_from_file=true;
@@ -224,8 +226,8 @@ int main(){
         //test for PCB revision
         //must be done after shift register setup
         // if firmware mismatch, turn all LEDs red
-        if(BP_BOARD_REVISION!=BP_BOARD_REVISION){ //
-            //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP_BOARD_REVISION, mcu_detect_revision());
+        if(detected_board_revision!=BP_BOARD_REVISION){ //
+            //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP_BOARD_REVISION, detected_board_revision);
             rgb_irq_enable(false);
             while(true){ 
                 rgb_set_all(0xff, 0, 0);

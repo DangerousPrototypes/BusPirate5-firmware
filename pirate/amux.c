@@ -49,9 +49,9 @@ void amux_init(void){
 bool amux_select_input(uint16_t channel){
     if (scope_running) return false;// scope is using the analog subsystem
     //clear the amux control bits, set the amux channel bits
-    #if(BP_VERSION==5 || BP_VERSION==XL5)
+    #if (BP_VERSION==5 || BP_VERSION==XL5)
         shift_clear_set((0b1111<<1), (channel<<1)&0b11110, true);  
-    #else
+    #elif (BP_VERSION==6)
         //uint64_t value=(uint64_t)(channel<<AMUX_S0);
         //uint64_t mask=(uint64_t)(0b1111<<AMUX_S0);
         //gpio_put_masked(mask, value);
@@ -59,6 +59,8 @@ bool amux_select_input(uint16_t channel){
         gpio_put(AMUX_S1, (channel>>1)&1);
         gpio_put(AMUX_S2, (channel>>2)&1);
         gpio_put(AMUX_S3, (channel>>3)&1);
+    #else
+        #error "Unknown BP_VERSION"
     #endif
     return true;
 }

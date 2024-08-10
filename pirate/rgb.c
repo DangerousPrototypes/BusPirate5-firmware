@@ -21,6 +21,19 @@
 //
 #define COUNT_OF_PIXELS RGB_LEN // 18 for Rev10, 16 for Rev8
 
+#if (BP_VERSION == 6)
+    #define RGB_HAS_ALL_PIXELS
+#elif (BP_VERSION == XL5)
+    #define RGB_HAS_ALL_PIXELS
+#elif (BP_VERSION == 5 && BP_BOARD_REVISION >= 10)
+    #define RGB_HAS_ALL_PIXELS
+#elif (BP_VERSION == 5)
+    // do NOT define the symbol ... as a few pixels are missing vs. later boards
+#else
+    #error "Unknown BP_VERSION" // check logic to see if pixels have changed for new board
+#endif
+
+
 static PIO z_rgb_pio;
 static int z_rgb_sm;
 static uint z_rgb_sm_offset;
@@ -51,7 +64,8 @@ static uint z_rgb_sm_offset;
     static const coordin8_t pixel_coordin8[] = {
         //                        // SIDE      POSITION    FACING
         // clang-format off
-        #if BP_BOARD_REVISION >= 10
+        #if defined(RGB_HAS_ALL_PIXELS)
+        { .x =  90, .y = 255,  }, // bottom    left        side
         { .x = 127, .y = 255,  }, // bottom    center      out
         #endif
         { .x = 165, .y = 255,  }, // bottom    right       side
@@ -70,7 +84,7 @@ static uint z_rgb_sm_offset;
         { .x =   0, .y = 171,  }, // left      bottom      side    (by USB port)
         { .x =   0, .y = 202,  }, // left      bottom      out
         { .x =  52, .y = 255,  }, // bottom    left        out
-        #if BP_BOARD_REVISION >= 10
+        #if defined(RGB_HAS_ALL_PIXELS)
         { .x =  90, .y = 255,  }, // bottom    left        side
         #endif
         // clang-format on
@@ -84,7 +98,7 @@ static uint z_rgb_sm_offset;
     static const uint8_t pixel_angle256[] = {
         //                  // SIDE      POSITION    FACING
         // clang-format off
-        #if BP_BOARD_REVISION >= 10
+        #if defined(RGB_HAS_ALL_PIXELS)
         192,                // bottom    center      out
         #endif
         204,                // bottom    right       side
@@ -103,7 +117,7 @@ static uint z_rgb_sm_offset;
         141,                // left      bottom      side    (by USB port)
         150,                // left      bottom      out
         170,                // bottom    left        out
-        #if BP_BOARD_REVISION >= 10
+        #if defined(RGB_HAS_ALL_PIXELS)
         180,                // bottom    left        side
         #endif
         // clang-format on
@@ -744,6 +758,10 @@ void rgb_irq_enable(bool enable){
 void rgb_init(void){
 
     #if (BP_VERSION == 6)
+        // BUGBUG -- What are the magic numbers `16` and `1` down below?
+        //           Better to either give a local variable a descriptive name, 
+        //           or to use symbolic constants, as this appears to be a
+        //           board-specific item (e.g. did the GPIO changed for BP6?)
         bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &z_rgb_pio, &z_rgb_sm, &z_rgb_sm_offset, RGB_CDO, 16, true);
     #else
         bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &z_rgb_pio, &z_rgb_sm, &z_rgb_sm_offset, RGB_CDO,  1, true);

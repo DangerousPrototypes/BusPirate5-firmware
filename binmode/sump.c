@@ -46,10 +46,11 @@
 #include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and bytecode stuff to a single helper file
 #include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "modes.h"
-#include "mode/binio.h"
+//#include "mode/binio.h"
 #include "pirate/psu.h"
-#include "binio_helpers.h"
-#include "mode/logicanalyzer.h"
+//#include "binio_helpers.h"
+#include "binmode/logicanalyzer.h"
+#include "binmode/binio.h"
 
 #include "tusb.h"
 
@@ -85,7 +86,7 @@ static struct _sump {
     bool     cdc_connected;
     uint8_t  cmd[5];		// command
     uint8_t  cmd_pos;		// command buffer position
-    uint8_t  state;		// SUMP_STATE_*
+    volatile uint8_t  state;		// SUMP_STATE_*
     uint8_t  width;		// in bytes, 1 = 8 bits, 2 = 16 bits
     uint8_t  trigger_index;
     uint32_t pio_prog_offset;
@@ -198,8 +199,9 @@ static void sump_do_run(void)
     uint8_t state;
     uint32_t i, tmask = 0;
     bool tstart = false;
-
-    if (sump.width == 0) 
+    bool edge = false;
+    uint32_t trigger_value = sump.trigger[0].value;
+    if (sump.width == 0)
     {
         // invalid config, dump something nice
         sump.state = SUMP_STATE_DUMP;
@@ -216,7 +218,15 @@ static void sump_do_run(void)
 
     if (tstart && tmask) 
     {
-	    sump.state = SUMP_STATE_TRIGGER;
+        //test for 2 level triggering to achieve edge triggering
+        //same masks and opposite values on level 1 and 2
+        if ((sump.trigger[0].mask == sump.trigger[1].mask) &&
+            (sump.trigger[0].mask & sump.trigger[0].value) == (sump.trigger[1].mask & ~sump.trigger[1].value))
+        {
+            edge = true;
+            trigger_value = sump.trigger[1].value;
+        }
+        sump.state = SUMP_STATE_TRIGGER;
 	    //sump.trigger_index = 0;    
     } 
     else 
@@ -224,7 +234,7 @@ static void sump_do_run(void)
         sump.state = SUMP_STATE_SAMPLING;
     }
 
-    logic_analyzer_arm(freq, sump.delay_count, sump.trigger[0].mask, sump.trigger[0].value);   
+    logic_analyzer_arm(freq, sump.delay_count, sump.trigger[0].mask, trigger_value, edge);   
 
     return;
 }
@@ -546,21 +556,47 @@ void cdc_sump_task(void)
     //}
 }
 
-void sump_logic_analyzer(void){
+enum {
+    SLA_STATE_IDLE,
+    SLA_STATE_SERVICE,
+};
+
+void sump_logic_analyzer_setup(void){
+    system_config.binmode_usb_rx_queue_enable=false; 
+    system_config.binmode_usb_tx_queue_enable=false; 
+}
+
+void sump_logic_analyzer_cleanup(void){
+    system_config.binmode_usb_rx_queue_enable=true; 
+    system_config.binmode_usb_tx_queue_enable=true; 
+}
+
+const char sump_logic_analyzer_name[]="SUMP logic analyzer";
+
+void sump_logic_analyzer_service(void){
 #if TURBO_200MHZ
     set_sys_clock_khz(200000, true);
 #endif
+    static uint8_t state=SLA_STATE_IDLE;
 
-    cdc_sump_init();
-    cdc_sump_init_connect();
-    psu_enable(3.3,100, true);
-
-    while (1) {
-        //tud_task(); // tinyusb device task
-        cdc_sump_task();
-        // exit out on button press
-        if(button_get(0)) break;
+    switch(state){
+        case SLA_STATE_IDLE:
+            if(tud_cdc_n_connected(1)){
+                script_enabled();
+                cdc_sump_init();
+                cdc_sump_init_connect();
+                psu_enable(3.3,100, true);
+                state=SLA_STATE_SERVICE;
+            }
+            break;
+        case SLA_STATE_SERVICE:
+            cdc_sump_task();
+            if(!tud_cdc_n_connected(1) || button_get(0)){
+                logic_analyzer_cleanup();
+                psu_disable();
+                script_disabled();
+                state=SLA_STATE_IDLE;
+            }
+            break;
     }
-    logic_analyzer_cleanup();
-    psu_disable();
 }

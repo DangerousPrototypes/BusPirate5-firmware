@@ -189,6 +189,10 @@ void dummy_handler(struct command_result *res)
         result = f_write(&file_handle, buffer, strlen(buffer), &bytes_written); //write the data to the file
         if(result!=FR_OK){ 
             printf("Error writing to file %s\r\n", file);
+            FRESULT result2 = f_close(&file_handle); //close the file
+            if (result2!=FR_OK){
+                printf("Error closing file %s after error writing to file -- reboot recommended\r\n", file);
+            }
             system_config.error=true; //set the error flag
             return;
         }

@@ -1,3 +1,7 @@
+#pragma once
+
+#include "../pirate/rgb.h" // for `led_effect_t` enumeration
+
 typedef struct _pwm_config 
 {
     float period;
@@ -9,8 +13,6 @@ typedef struct _system_config
 {
 	bool config_loaded_from_file;
 	uint8_t hardware_revision;
-
-	bool binmode;
 
 	uint32_t terminal_language;
 
@@ -25,9 +27,12 @@ typedef struct _system_config
     uint32_t lcd_screensaver_active;
     uint32_t lcd_timeout;
 
-    uint32_t led_effect;
     uint32_t led_color;
-    uint32_t led_brightness;
+    uint32_t led_brightness_divisor;
+	union {
+		uint32_t led_effect_as_uint32; // for json, which needs this to be uint32 (sigh)
+    	led_effect_t led_effect;
+	};
     
 	uint8_t terminal_ansi_rows;
 	uint8_t terminal_ansi_columns;
@@ -97,6 +102,10 @@ typedef struct _system_config
 
 	bool rts;
 
+	bool binmode_usb_rx_queue_enable; 	//enable the binmode RX queue, disable to handle USB directly with tinyusb functions
+	bool binmode_usb_tx_queue_enable; 	//enable the binmode TX queue, disable to handle USB directly with tinyusb functions
+	uint8_t binmode_select;				//index of currently active binary mode
+	bool binmode_lock_terminal;			//disable terminal while in binmode
 
 } _system_config;
 

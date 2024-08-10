@@ -11,24 +11,13 @@
 #include "opt_args.h" //needed for same reason as bytecode and needs same fix
 #include "modes.h"
 
-void script_print(const char *str) 
-{
-    for(uint8_t i=0; i<strlen(str); i++)
-    {
-        bin_tx_fifo_put(str[i]);
-    }
-}
-
-void script_send(const char *c, uint32_t len) 
-{
-    for(uint8_t i=0; i<len; i++)
-    {
+void script_send(const char *c, uint32_t len){
+    for(uint8_t i=0; i<len; i++){
         bin_tx_fifo_put(c[i]);
     }
 }
 
-void script_reset(void) 
-{    
+void script_reset(void){    
     modes[system_config.mode].protocol_cleanup();   // switch to HiZ
     modes[0].protocol_setup_exc();			        // disables power supply etc.
 

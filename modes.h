@@ -51,6 +51,9 @@ enum
 #ifdef BP_USE_HWLED
 	HWLED,
 #endif
+#ifdef BP_USE_BINLOOPBACK
+	BINLOOPBACK,
+#endif
 	MAXPROTO
 };
 
@@ -73,6 +76,8 @@ typedef struct _mode
 	void (*protocol_periodic)(void);		// service to regular poll whether a byte has arrived or something interesting has happened
 	void (*protocol_macro)(uint32_t);		// macro
 	uint32_t (*protocol_setup)(void);			// setup UI
+	uint32_t (*binmode_get_config_length)(void);		// get binmode config length
+	uint32_t (*binmode_setup)(uint8_t *config);		// setup for binmode
 	uint32_t (*protocol_setup_exc)(void);		// real setup
 	void (*protocol_cleanup)(void);			// cleanup for HiZ
 	//const char*(*protocol_pins)(void);			// display pin config

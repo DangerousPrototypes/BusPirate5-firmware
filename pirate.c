@@ -43,12 +43,12 @@
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
 //#include "helpers.h"
-#include "mode/binio.h"
+#include "binmode/binmodes.h"
 #include "commands/global/p_pullups.h"
 #include "pirate/psu.h"
 #include "commands/global/w_psu.h"
 //#include "display/scope.h"
-#include "mode/logicanalyzer.h"
+//#include "mode/logicanalyzer.h"
 #include "msc_disk.h"
 #include "pirate/intercore_helpers.h"
 
@@ -235,12 +235,13 @@ int main(){
         }    
     #endif
 
+    binmode_setup();
+
     enum bp_statemachine{
         BP_SM_DISPLAY_MODE,
         BP_SM_GET_INPUT,
         BP_SM_PROCESS_COMMAND,
-        BP_SM_COMMAND_PROMPT,
-        BP_SM_SCRIPT_MODE
+        BP_SM_COMMAND_PROMPT
     };
     
     uint8_t bp_state=0;
@@ -250,9 +251,10 @@ int main(){
     bool has_been_connected = false;
     while(1){
 
-        if(script_entry()){ //enter scripting mode?
-            bp_state=BP_SM_SCRIPT_MODE; //reset and show prompt
-        }
+        //co-op multitask **when not actively doing anything**
+        //core 2 handles USB and other sensitive stuff, so it's not critical to co-op multitask
+        //but the terminal will not be responsive if the service is blocking
+        binmode_service();
 
         if (tud_cdc_n_connected(0)){
             if(!has_been_connected){
@@ -314,11 +316,11 @@ int main(){
                 //button_irq_enable(0, &button_irq_callback); //enable button interrupt
                 break;                 
             case BP_SM_GET_INPUT:
-                //helpers_mode_periodic();
                 //it seems like we need an array where we can add our function for periodic service?
                 displays[system_config.display].display_periodic();
                 modes[system_config.mode].protocol_periodic();
-                la_periodic();
+                
+                if(system_config.binmode_lock_terminal) break;
 
                 switch(ui_term_get_user_input()){
                     case 0x01:// user pressed a key
@@ -354,8 +356,6 @@ int main(){
                 system_config.error=ui_process_commands();   
                 bp_state=BP_SM_COMMAND_PROMPT;      
                 break;     
-            case BP_SM_SCRIPT_MODE:
-                script_mode();
             case BP_SM_COMMAND_PROMPT:
                 if(system_config.subprotocol_name){
                     printf("%s%s-(%s)>%s ", ui_term_color_prompt(), modes[system_config.mode].protocol_name, system_config.subprotocol_name, ui_term_color_reset());
@@ -429,7 +429,10 @@ void core1_entry(void){
 
         //service the terminal TX queue
         tx_fifo_service();
-        //bin_tx_fifo_service();
+        //optionally service the binmode TX queue if requested
+        if(system_config.binmode_usb_tx_queue_enable){
+            bin_tx_fifo_service();
+        }
 
         if(system_config.psu==1 && system_config.psu_irq_en==true && !psu_fuse_ok()){
             system_config.psu_irq_en=false;

@@ -17,12 +17,13 @@
 #include "ui/ui_help.h"
 #include "pirate/hwspi.h"
 #include "commands/spi/sniff.h"
+#include "usb_rx.h"
 
 // command configuration
 const struct _command_struct hwspi_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
     {"flash",0x00,&flash,T_HELP_CMD_FLASH}, // the help is shown in the -h *and* the list of mode apps
-	{"sniff",0x00,&sniff_handler,T_HELP_CMD_FLASH}, // the help is shown in the -h *and* the list of mode apps
+	{"sniff",0x00,&sniff_handler,0x00}, // the help is shown in the -h *and* the list of mode apps
 };
 const uint32_t hwspi_commands_count=count_of(hwspi_commands);
 
@@ -37,38 +38,6 @@ static struct _spi_mode_config mode_config;
 
 uint32_t spi_setup(void){
 	uint32_t temp;
-	// did the user leave us arguments?
-	// baudrate
-/*	if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	br=getint();
-	if((br>=1)&&(br<=7)) br<<=3;
-		else system_config.error=1;
-
-	// clock polarity
-	if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	spi_clock_polarity=getint()-1;
-	if(spi_clock_polarity<=1) spi_clock_polarity<<=1;
-		else system_config.error=1;
-
-	// clock phase
-	if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	spi_clock_phase=getint()-1;
-	if(spi_clock_phase<=1) spi_clock_phase=spi_clock_phase;
-		else system_config.error=1;
-
-	// cs behauviour
-	if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	csidle=getint()-1;
-	if(csidle<=1) csidle=csidle;
-		else system_config.error=1;
-*/
-	// did the user did it right?
-	//if(system_config.error)			// go interactive 
-	//{
 
 		static const struct prompt_item spi_speed_menu[]={{T_HWSPI_SPEED_MENU_1}};
 		static const struct prompt_item spi_bits_menu[]={{T_HWSPI_BITS_MENU_1}};		
@@ -87,12 +56,12 @@ uint32_t spi_setup(void){
 
 		const char config_file[]="bpspi.bp";
 
-		struct _mode_config_t config_t[]={
-			{"$.baudrate", &mode_config.baudrate},
-			{"$.data_bits", &mode_config.data_bits},
-			{"$.stop_bits", &mode_config.clock_polarity},
-			{"$.parity", &mode_config.clock_phase},
-			{"$.cs_idle", &mode_config.cs_idle}
+		const mode_config_t config_t[]={
+			{"$.baudrate",  &mode_config.baudrate,       MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.data_bits", &mode_config.data_bits,      MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.stop_bits", &mode_config.clock_polarity, MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.parity",    &mode_config.clock_phase,    MODE_CONFIG_FORMAT_DECIMAL, },
+			{"$.cs_idle",   &mode_config.cs_idle,        MODE_CONFIG_FORMAT_DECIMAL, },
 		};
 
 		if(storage_load_mode(config_file, config_t, count_of(config_t))){
@@ -129,17 +98,58 @@ uint32_t spi_setup(void){
 		if(result.exit) return 0;
 		mode_config.cs_idle=(uint8_t)(temp-1);
 
+		mode_config.binmode=false;
+
 	storage_save_mode(config_file, config_t, count_of(config_t));
 	//}
 	
 	return 1;
 }
 
+uint32_t spi_binmode_get_config_length(void){
+	return 8;
+}
+
+uint32_t spi_binmode_setup(uint8_t *config){
+	//spi config sequence:
+	//0x3b9aca0 4-8 CPOL=0 CPHA=0 CS=1
+	uint32_t temp=0;
+	char c;
+	bool error=false;
+	for(uint8_t i=0;i<4;i++){
+		temp=temp<<8;
+		temp|=config[i];
+	}	
+	if(temp>62500000) error=true;
+	else mode_config.baudrate=temp;
+
+	c=config[4];
+	if(c<4 || c>8) error=true;
+	else mode_config.data_bits=c;
+
+	c=config[5];
+	if(c>1) error=true;
+	else mode_config.clock_polarity=c;
+
+	c=config[6];
+	if(c>1) error=true;	
+	else mode_config.clock_phase=c;
+
+	c=config[7];
+	if(c>1) error=true;
+	else mode_config.cs_idle=c;
+
+	mode_config.binmode=true;
+	
+	return error;
+
+}
+
 uint32_t spi_setup_exc(void){		
 	//setup spi
 	mode_config.read_with_write=false;
 	mode_config.baudrate_actual=spi_init(M_SPI_PORT, mode_config.baudrate);
-	printf("\r\n%s%s:%s %ukHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
+	if(!mode_config.binmode) printf("\r\n%s%s:%s %ukHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
 	hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
 	system_bio_claim(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);

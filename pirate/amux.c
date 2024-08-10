@@ -8,8 +8,6 @@
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
 
-static uint8_t amux_current_channel=0xff;
-
 //lock_core_t core;
 spin_lock_t *adc_spin_lock;
 uint adc_spin_lock_num;
@@ -77,12 +75,18 @@ uint32_t amux_read(uint8_t channel){
 	return 0;
     adc_busy_wait(true);
     adc_select_input(AMUX_OUT_ADC);
-    //if(channel!=amux_current_channel){
-        amux_select_input(HW_ADC_MUX_GND); //to clear any charge from a floating pin
-        amux_select_input((uint16_t)channel);
-        amux_current_channel=channel;
-        busy_wait_us(60);
-    //}
+    amux_select_input(HW_ADC_MUX_GND); //to clear any charge from a floating pin
+    amux_select_input((uint16_t)channel);
+    busy_wait_us(60);
+    uint32_t ret=adc_read();
+    adc_busy_wait(false);
+    return ret;
+}
+
+uint32_t amux_read_present_channel(void){    
+    if (scope_running) // scope is using the analog subsystem
+	return 0;
+    adc_busy_wait(true);
     uint32_t ret=adc_read();
     adc_busy_wait(false);
     return ret;

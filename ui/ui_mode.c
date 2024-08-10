@@ -49,7 +49,7 @@ void ui_mode_enable_args(struct command_result *res){
 		static const struct ui_prompt mode_menu={
 			T_MODE_MODE_SELECTION,
 			0,
-			MAXPROTO,
+			count_of(modes),
 			T_MODE_MODE, 
 			0,0,0,
 			0,

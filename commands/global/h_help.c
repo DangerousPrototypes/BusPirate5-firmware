@@ -65,6 +65,7 @@ const struct ui_help_options global_commands[]={
 // enter a mode to use protocols
 {1,"",T_HELP_SECTION_MODE},
 	{0,"m", 	T_HELP_1_16},
+	{0,"binmode",T_CONFIG_BINMODE_SELECT},
 	{0,"(x)/(0)", T_HELP_2_1},
 	{0,"= x/| x",T_HELP_1_2},    
 

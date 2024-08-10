@@ -33,7 +33,10 @@
 #include "commands/global/script.h"
 #include "commands/global/tutorial.h"
 #include "commands/global/button_scr.h"
-#include "mode/logicanalyzer.h"
+#include "commands/global/smps.h"
+#include "commands/global/cls.h"
+#include "binmode/logicanalyzer.h"
+#include "commands/global/cmd_binmode.h"
 
 // command configuration
 const struct _command_struct commands[]=
@@ -81,6 +84,9 @@ const struct _command_struct commands[]=
     {"tutorial", true, &tutorial_handler, 0x00},
     {"script", true, &script_handler, 0x00},  
     {"button", true, &button_scr_handler, 0x00},
+    {"cls", true, &ui_display_clear, 0x00},
+    {"smps", true, &smps_handler, 0x00},
+    {"binmode", true, &cmd_binmode_handler, 0x00},
 };
 
 const uint32_t commands_count=count_of(commands);

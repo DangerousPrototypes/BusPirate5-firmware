@@ -97,7 +97,7 @@ void i_info_handler(struct command_result *res){
 
 	// Installed modes
 	printf("%s%s:%s", ui_term_color_info(), t[T_INFO_AVAILABLE_MODES], ui_term_color_reset());
-	for(i=0; i<MAXPROTO; i++){
+	for(i=0; i<count_of(modes); i++){
 		printf(" %s", modes[i].protocol_name);
 	}
 	printf("\r\n");

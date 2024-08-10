@@ -1,0 +1,92 @@
+.program singlewire
+.side_set 1
+
+// Debug interface runs off HSI/3, or 24 Mhz/3 = 8 Mhz
+// Default mode is 'normal'
+
+// Reset interface via 256T = 125 ns * 256 = 32 us
+
+// 
+
+// Fast mode:
+// 1    = low 1T to  2T, high 1T to  8T
+// 0    = low 4T to 32T, high 1T to  8T
+// Stop = high 10T
+
+// Normal mode:
+// 1    = low 1T to  4T, high 1T to 16T
+// 0    = low 6T to 64T, high 1T to 16T
+// Stop = high 18T
+
+// If T = 125 ns
+
+// Fast mode:
+// 1    = low 125ns to  250ns, high 125ns to 1000ns
+// 0    = low 500ns to 4000ns, high 125ns to 1000ns
+// Stop = high 1250 ns
+
+// Normal mode:
+// 1    = low 125ns to  500ns, high 125ns to 2000ns
+// 0    = low 750ns to 8000ns, high 125ns to 2000ns
+// Stop = high 2250 ns
+
+// So we must be in normal mode as if the stop bit is less than 2250 ns it doesn't work
+
+// Total stop bit time is 2500 ns, that includes the 300 ns at start: to ensure the bus
+// is pulled up
+
+// TODO - Block mode, use y as block counter
+; 0 input, 1 output
+.wrap_target
+
+start:
+
+  pull                 side 0 [2] // Pull the address from the fifo and let the bus pull high for 300 ns
+  out y, 24            side 1 [1] // Move high 24 bits of the address to y and send the start bit
+  nop                  side 0 [2] // End the start bit and pull up for 300 ns
+
+  //----------
+
+addr_loop:
+  out x, 1             side 1 [0] // Short pulses are 200 ns
+  jmp !x, addr_zero    side 1 [0]
+  nop                  side 1 [5] // Long pulses are 800 ns
+addr_zero:
+  jmp !osre addr_loop  side 0 [2] // End the bit and pull up for 300 ns
+
+  //----------
+  // Branch to either read or write based on the low bit of the address.
+
+  jmp !x, op_write     side 0 [0]
+  jmp op_read          side 0 [0]
+
+  //----------
+
+op_read:
+  set x 31             side 0 [0]
+
+read_loop:                        // Loop time 1100 ns
+  nop                  side 1 [1] // 000 ns - Start pulse. Target will drive pin low starting immediately and continue for ~800 ns to signal 0.
+  nop                  side 0 [2] // 200 ns - Release start pulse, wait for pin to rise if target isn't driving it
+  in pins, 1           side 0 [2] // 500 ns - Read pin and then wait for target to release it.
+  jmp x-- read_loop    side 0 [2] // 800 ns - Pin should be going high by now. 
+
+  nop                  side 0 [6]
+  jmp start            side 0 [10]
+
+  //----------
+
+op_write:
+  pull                 side 0 [1]
+
+write_loop:
+  out x, 1             side 1 [0]
+  jmp !x, data_zero    side 1 [0]
+  nop                  side 1 [5]
+data_zero:
+  jmp !osre write_loop side 0 [2] // End the bit and pull up for 300 ns
+
+  nop                  side 0 [6]
+  jmp start            side 0 [10]
+
+.wrap

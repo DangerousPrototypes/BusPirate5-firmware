@@ -73,6 +73,9 @@ set(bp5_common
         commands/global/script.c commands/global/script.h
         commands/global/tutorial.c commands/global/tutorial.h
         commands/global/button_scr.c commands/global/button_scr.h
+        commands/global/smps.c commands/global/smps.h
+        commands/global/cls.h commands/global/cls.c  
+        commands/global/cmd_binmode.h commands/global/cmd_binmode.c
         # HiZ
         mode/hiz.h mode/hiz.c
         # 1Wire
@@ -88,6 +91,7 @@ set(bp5_common
         commands/uart/bridge.h commands/uart/bridge.c
         commands/uart/simcard.h commands/uart/simcard.c
         lib/minmea/minmea.h lib/minmea/minmea.c lib/minmea/gps.h lib/minmea/gps.c
+        commands/uart/monitor.h commands/uart/monitor.c
 
         # Half duplex UART
         mode/hwhduart.h mode/hwhduart.c
@@ -157,8 +161,14 @@ set(bp5_common
         translation/en-us.h translation/zh-cn.h translation/pl-pl.h
 
         # binary mode
-        mode/binio.c mode/binio.h mode/binio_helpers.c mode/binio_helpers.h
-        mode/logicanalyzer.h mode/logicanalyzer.c mode/sump.c mode/sump.h
+        binmode/binmodes.c binmode/binmodes.h binmode/binio.c binmode/binio.h  
+        binmode/binio_helpers.c binmode/binio_helpers.h
+        mode/binloopback.c mode/binloopback.h
+        binmode/logicanalyzer.h binmode/logicanalyzer.c binmode/sump.c binmode/sump.h
+        binmode/dirtyproto.c binmode/dirtyproto.h
+        lib/arduino-ch32v003-swio/arduino_ch32v003.c lib/arduino-ch32v003-swio/arduino_ch32v003.h
+        lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c     
+        lib/picorvd/picoswio.c lib/picorvd/picoswio.h lib/picorvd/debug_defines.h
 
         # displays
         displays.c displays.h display/default.c display/default.h
@@ -263,7 +273,8 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw1wire.pio) 
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwuart.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/spisnif.pio)  
-        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/logicanalyzer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/binmode/logicanalyzer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/picorvd/ch32vswio.pio)
 
         pico_set_program_name(${revision} ${revision})
         pico_set_program_version(${revision} "0.1.0")

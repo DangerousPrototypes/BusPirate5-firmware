@@ -21,13 +21,13 @@
 //
 #define COUNT_OF_PIXELS RGB_LEN // 18 for Rev10, 16 for Rev8
 
-#if (BP_VERSION == 6)
+#if (BP_VERSION == BP6)
     #define RGB_HAS_ALL_PIXELS
-#elif (BP_VERSION == XL5)
+#elif (BP_VERSION == BP5XL)
     #define RGB_HAS_ALL_PIXELS
-#elif (BP_VERSION == 5 && BP_BOARD_REVISION >= 10)
+#elif (BP_VERSION == BP5 && BP_BOARD_REVISION >= 10)
     #define RGB_HAS_ALL_PIXELS
-#elif (BP_VERSION == 5)
+#elif (BP_VERSION == BP5)
     // do NOT define the symbol ... as a few pixels are missing vs. later boards
 #else
     #error "Unknown BP_VERSION" // check logic to see if pixels have changed for new board
@@ -757,7 +757,7 @@ void rgb_irq_enable(bool enable){
 
 void rgb_init(void){
 
-    #if (BP_VERSION == 6)
+    #if (BP_VERSION == BP6)
         // BUGBUG -- What are the magic numbers `16` and `1` down below?
         //           Better to either give a local variable a descriptive name, 
         //           or to use symbolic constants, as this appears to be a

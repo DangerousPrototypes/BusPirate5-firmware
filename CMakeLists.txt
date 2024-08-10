@@ -224,7 +224,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 platform/bpi-rev10.h platform/bpi-rev10.c 
                 pirate/shift.h pirate/shift.c
                 )
-        target_compile_definitions(bus_pirate5_xl PUBLIC BP_VERSION=XL5)
+        target_compile_definitions(bus_pirate5_xl PUBLIC BP_VERSION=BP5XL)
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_BOARD_REVISION=10)
 
         add_executable(bus_pirate6_rev1
@@ -232,7 +232,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${bp5_nandflash}
                 platform/bpi6-rev1.h platform/bpi6-rev1.c 
                 )
-        target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_VERSION=6) 
+        target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_VERSION=BP6) 
         target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_BOARD_REVISION=10)  
         
         set(revisions 
@@ -248,7 +248,7 @@ else()
                 fatfs/tf_card.c fatfs/tf_card.h
                 pirate/shift.h pirate/shift.c
                 )
-        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VERSION=5) 
+        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VERSION=BP5) 
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_BOARD_REVISION=8)
 
         add_executable(bus_pirate5_rev10
@@ -257,7 +257,7 @@ else()
                 platform/bpi-rev10.h platform/bpi-rev10.c 
                 pirate/shift.h pirate/shift.c
                 )
-        target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_VERSION=5)                
+        target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_VERSION=BP5)                
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_BOARD_REVISION=10)
 
         set(revisions

@@ -23,17 +23,17 @@ struct psu_status_t psu_status;
 
 static void psu_fuse_reset(void){
     //reset current trigger
-    #if (BP_VERSION == 5 || BP_VERSION==XL5)
+    #if (BP_VERSION == BP5 || BP_VERSION==BP5XL)
         shift_clear_set_wait(CURRENT_RESET,0); //low to activate the pnp
-    #elif (BP_VERSION==6)
+    #elif (BP_VERSION==BP6)
         gpio_put(CURRENT_RESET,0);
     #else
         #error "Unknown BP_VERSION"
     #endif
     busy_wait_ms(1);
-    #if (BP_VERSION == 5 || BP_VERSION==XL5)
+    #if (BP_VERSION == BP5 || BP_VERSION==BP5XL)
         shift_clear_set_wait(0, CURRENT_RESET); //high to disable  
-    #elif (BP_VERSION==6)
+    #elif (BP_VERSION==BP6)
         gpio_put(CURRENT_RESET,1);
     #else
         #error "Unknown BP_VERSION"
@@ -43,17 +43,17 @@ static void psu_fuse_reset(void){
 //TODO: rename this function, it actually controls if the current limit circuit is connected to the VREG
 void psu_vreg_enable(bool enable){
     if(enable){
-        #if (BP_VERSION == 5 || BP_VERSION==XL5)
+        #if (BP_VERSION == BP5 || BP_VERSION==BP5XL)
             shift_clear_set_wait(CURRENT_EN,0); //low is on (PNP)
-        #elif (BP_VERSION==6)
+        #elif (BP_VERSION==BP6)
             gpio_put(CURRENT_EN,0);
         #else
             #error "Unknown BP_VERSION"
         #endif
     }else{
-        #if (BP_VERSION == 5 || BP_VERSION==XL5)
+        #if (BP_VERSION == BP5 || BP_VERSION==BP5XL)
             shift_clear_set_wait(0,CURRENT_EN); //high is off
-        #elif (BP_VERSION==6)
+        #elif (BP_VERSION==BP6)
             gpio_put(CURRENT_EN,1);
         #else
             #error "Unknown BP_VERSION"
@@ -63,17 +63,17 @@ void psu_vreg_enable(bool enable){
 
 void psu_current_limit_override(bool enable){
     if(enable){
-        #if (BP_VERSION == 5 || BP_VERSION==XL5)
+        #if (BP_VERSION == BP5 || BP_VERSION==BP5XL)
             shift_clear_set_wait(0, CURRENT_EN_OVERRIDE);
-        #elif (BP_VERSION==6)
+        #elif (BP_VERSION==BP6)
             gpio_put(CURRENT_EN_OVERRIDE,1);
         #else
             #error "Unknown BP_VERSION"
         #endif
     }else{
-        #if (BP_VERSION == 5 || BP_VERSION==XL5)
+        #if (BP_VERSION == BP5 || BP_VERSION==BP5XL)
             shift_clear_set_wait(CURRENT_EN_OVERRIDE,0);
-        #elif (BP_VERSION==6)
+        #elif (BP_VERSION==BP6)
             gpio_put(CURRENT_EN_OVERRIDE,0);
         #else
             #error "Unknown BP_VERSION"

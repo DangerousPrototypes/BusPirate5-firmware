@@ -55,7 +55,7 @@
 #ifndef BP_BOARD_REVISION
     #error "No /platform/ file included in pirate.h"
 #else
-    #if BP_VERSION == 5
+    #if BP_VERSION == BP5
         #if BP_BOARD_REVISION == 8
             #include "platform/bpi-rev8.h"
         #elif BP_BOARD_REVISION == 9
@@ -65,9 +65,9 @@
         #else
             #error "Unknown platform version in pirate.h"
         #endif
-    #elif BP_VERSION == XL5
+    #elif BP_VERSION == BP5XL
         #include "platform/bpi-rev10.h"
-    #elif BP_VERSION == 6
+    #elif BP_VERSION == BP6
         #include "platform/bpi6-rev1.h"
     #else
         #error "Unknown platform version in pirate.h"

@@ -319,7 +319,7 @@ bool selftest_button(void){
 }
 
 // test that the logic analyzer chip is mounted and with no shorts
-#if BP_VER == 6
+#if BP_VERSION == 6
 bool selftest_la_bpio(void){
     uint32_t temp1, fails=0, iopin=0;
     printf("LA_BPIO TEST (SHOULD BE 1)\r\n");
@@ -378,7 +378,7 @@ void cmd_selftest(void){
     }
 
     //REV10 + check status of NAND flash
-    #if BP_REV >= 10
+    #if BP_BOARD_REVISION >= 10
         if(selftest_format_nand()) fails++;
     #endif        
 
@@ -412,7 +412,7 @@ void cmd_selftest(void){
     if(selftest_bio_low()) fails++;
 
     //LA_BPIO test
-    #if BP_VER == 6
+    #if BP_VERSION == 6
         if(selftest_la_bpio()) fails++;
     #endif
 

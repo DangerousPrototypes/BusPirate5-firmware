@@ -49,7 +49,7 @@ void amux_init(void){
 bool amux_select_input(uint16_t channel){
     if (scope_running) return false;// scope is using the analog subsystem
     //clear the amux control bits, set the amux channel bits
-    #if(BP_VER==5 || BP_VER==XL5)
+    #if(BP_VERSION==5 || BP_VERSION==XL5)
         shift_clear_set((0b1111<<1), (channel<<1)&0b11110, true);  
     #else
         //uint64_t value=(uint64_t)(channel<<AMUX_S0);

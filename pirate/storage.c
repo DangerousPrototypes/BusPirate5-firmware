@@ -92,13 +92,13 @@ void storage_unmount(void){
     f_unmount("");
     system_config.storage_available=false;
     system_config.storage_mount_error=0;
-#if BP_REV == 8 || BP_REV == 9
+#if BP_BOARD_REVISION == 8 || BP_BOARD_REVISION == 9
     printf("Storage removed\r\n");
 #endif
 }
 
 bool storage_detect(void){        
-    #if BP_REV==8 || BP_REV==9
+    #if BP_BOARD_REVISION==8 || BP_BOARD_REVISION==9
     //TF flash card detect is measured through the analog mux for lack of IO pins....
     //if we have low, storage not previously available, and we didn't error out, try to mount
     if(hw_adc_raw[HW_ADC_MUX_CARD_DETECT]<100 && 

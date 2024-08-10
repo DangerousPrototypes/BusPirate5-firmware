@@ -13,7 +13,7 @@ void lcd_init(void){
     gpio_put(DISPLAY_DP, 1);
     gpio_set_dir(DISPLAY_DP, GPIO_OUT);
 
-    #if (BP_VER >= 6)
+    #if (BP_VERSION >= 6)
         gpio_set_function(DISPLAY_BACKLIGHT, GPIO_FUNC_SIO);
         gpio_put(DISPLAY_BACKLIGHT, 0);
         gpio_set_dir(DISPLAY_BACKLIGHT, GPIO_OUT);
@@ -27,13 +27,13 @@ void lcd_init(void){
 void lcd_backlight_enable(bool enable){
     
     if(enable){
-        #if (BP_VER == 5 || BP_VER==XL5)
+        #if (BP_VERSION == 5 || BP_VERSION==XL5)
             shift_clear_set_wait( 0, (DISPLAY_BACKLIGHT)); 
         #else
             gpio_put(DISPLAY_BACKLIGHT,1);
         #endif
     }else{
-        #if (BP_VER == 5 || BP_VER==XL5)
+        #if (BP_VERSION == 5 || BP_VERSION==XL5)
             shift_clear_set_wait( (DISPLAY_BACKLIGHT), 0); 
         #else
             gpio_put(DISPLAY_BACKLIGHT,0);
@@ -43,13 +43,13 @@ void lcd_backlight_enable(bool enable){
 
 // perform a hardware reset of the LCD according to datasheet specs
 void lcd_reset(void){
-    #if (BP_VER == 5 || BP_VER==XL5)
+    #if (BP_VERSION == 5 || BP_VERSION==XL5)
         shift_clear_set_wait(DISPLAY_RESET,0);
     #else
         gpio_put(DISPLAY_RESET,0);
     #endif
     busy_wait_us(20);
-    #if (BP_VER == 5 || BP_VER==XL5)
+    #if (BP_VERSION == 5 || BP_VERSION==XL5)
         shift_clear_set_wait(0, DISPLAY_RESET);
     #else
         gpio_put(DISPLAY_RESET,1);

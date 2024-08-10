@@ -51,7 +51,7 @@ static uint offset;
     static const coordin8_t pixel_coordin8[] = {
         //                        // SIDE      POSITION    FACING
         // clang-format off
-        #if BP_REV >= 10
+        #if BP_BOARD_REVISION >= 10
         { .x = 127, .y = 255,  }, // bottom    center      out
         #endif
         { .x = 165, .y = 255,  }, // bottom    right       side
@@ -70,7 +70,7 @@ static uint offset;
         { .x =   0, .y = 171,  }, // left      bottom      side    (by USB port)
         { .x =   0, .y = 202,  }, // left      bottom      out
         { .x =  52, .y = 255,  }, // bottom    left        out
-        #if BP_REV >= 10
+        #if BP_BOARD_REVISION >= 10
         { .x =  90, .y = 255,  }, // bottom    left        side
         #endif
         // clang-format on
@@ -84,7 +84,7 @@ static uint offset;
     static const uint8_t pixel_angle256[] = {
         //                  // SIDE      POSITION    FACING
         // clang-format off
-        #if BP_REV >= 10
+        #if BP_BOARD_REVISION >= 10
         192,                // bottom    center      out
         #endif
         204,                // bottom    right       side
@@ -103,7 +103,7 @@ static uint offset;
         141,                // left      bottom      side    (by USB port)
         150,                // left      bottom      out
         170,                // bottom    left        out
-        #if BP_REV >= 10
+        #if BP_BOARD_REVISION >= 10
         180,                // bottom    left        side
         #endif
         // clang-format on
@@ -117,7 +117,7 @@ static uint offset;
     //static const uint32_t PIXEL_MASK_SIDE  = 0b1....0;
 
     // clang-format off
-    #if BP_REV <= 9
+    #if BP_BOARD_REVISION <= 9
         // Pixels that shine    orthogonal to OLED: idx     1,2,    5,6,  8,  10,11,      14,15,
         #define PIXEL_MASK_UPPER ( 0b1100110101100110 )
         // Pixels that shine    orthogonal to OLED: idx   0,    3,4,    7,  9,      12,13,
@@ -222,7 +222,7 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
     //    All the pixels facing upwards as one group, and all the pixels
     //    facing the sides as a second group.
 
-    #if BP_REV <= 9
+    #if BP_BOARD_REVISION <= 9
         static const uint32_t groups_top_left[] = {
             // clang-format off
             ((1u <<  1) | (1u <<  2)             ),
@@ -258,7 +258,7 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
             ((1u << 11) | (1u << 12)),
             // clang-format on
         };
-    #elif BP_REV >= 10
+    #elif BP_BOARD_REVISION >= 10
         static const uint32_t groups_top_left[] = {
             // TODO: use grid mappings instead
             //       e.g., for iteration target from 255..0
@@ -743,7 +743,7 @@ void rgb_irq_enable(bool enable){
 
 void rgb_init(void){
 
-    #if (BP_VER == 6)
+    #if (BP_VERSION == 6)
         bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio, &sm, &offset, RGB_CDO, 16, true);
     #else
         bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio, &sm, &offset, RGB_CDO, 1, true);

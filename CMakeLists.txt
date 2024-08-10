@@ -28,16 +28,21 @@ set(CMAKE_CXX_STANDARD 17)
 # initalize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
 #set(PICO_SDK_PATH "C:/pico113/pico-sdk")
-set(PICO_PLATFORM "rp2040") #compile for 5 rev8 and 5 rev10
-#set(PICO_PLATFORM "rp2350") #compile for 5XL and 6
 
 # Add my_pico_w.h
 set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards ) 
 # Add my_pico_w.cmake
 set(PICO_BOARD_CMAKE_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
 # Add my_pico_w
-#set(PICO_BOARD buspirate6)
-set(PICO_BOARD pico)
+#
+#set(BP_PICO_PLATFORM "rp2350")
+if(${BP_PICO_PLATFORM} MATCHES "rp2350")
+    set(PICO_PLATFORM "rp2350") #compile for 5XL and 6 
+    set(PICO_BOARD buspirate6)   
+else()
+    set(PICO_PLATFORM "rp2040") #compile for 5 rev8 and 5 rev10
+    set(PICO_BOARD buspirate5)
+endif()
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(cmake/pico_sdk_import.cmake)
@@ -205,7 +210,7 @@ set(bp5_common
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h
         msc_disk.c msc_disk.h usb_descriptors.c
 )
-set(bp5_rev10
+set(bp5_nandflash
         #nand flash management and dhara
         dhara/bytes.h dhara/error.c dhara/error.h dhara/journal.c dhara/journal.h dhara/map.c dhara/map.h dhara/nand.c dhara/nand.h
         nand/nand_ftl_diskio.c nand/nand_ftl_diskio.h nand/spi.c nand/spi.h nand/spi_nand.c nand/spi_nand.h 
@@ -215,7 +220,7 @@ set(bp5_rev10
 if(${PICO_PLATFORM} MATCHES "rp2350")
         add_executable(bus_pirate5_xl
                 ${bp5_common}
-                ${bp5_rev10}
+                ${bp5_nandflash}
                 platform/bpi-rev10.h platform/bpi-rev10.c 
                 pirate/shift.h pirate/shift.c
                 )
@@ -224,7 +229,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
 
         add_executable(bus_pirate6_rev1
                 ${bp5_common}
-                ${bp5_rev10}
+                ${bp5_nandflash}
                 platform/bpi6-rev1.h platform/bpi6-rev1.c 
                 )
         target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_VER=6) 
@@ -248,7 +253,7 @@ else()
 
         add_executable(bus_pirate5_rev10
                 ${bp5_common}
-                ${bp5_rev10}
+                ${bp5_nandflash}
                 platform/bpi-rev10.h platform/bpi-rev10.c 
                 pirate/shift.h pirate/shift.c
                 )

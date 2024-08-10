@@ -13,6 +13,7 @@
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
 #if (BP_VERSION == 5 || BP_VERSION == XL5)
+    // BP5 and BPXL5 have to use an external expander due to limited pins
     #include "pirate/shift.h"
 #endif
 #include "pirate/bio.h"

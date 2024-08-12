@@ -229,17 +229,17 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
 
-        add_executable(bus_pirate6_rev1
+        add_executable(bus_pirate6
                 ${bp5_common}
                 ${bp5_nandflash}
                 platform/bpi6-rev1.h platform/bpi6-rev1.c 
                 )
-        target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_VER=6) 
-        target_compile_definitions(bus_pirate6_rev1 PUBLIC BP_REV=10)  
+        target_compile_definitions(bus_pirate6 PUBLIC BP_VER=6) 
+        target_compile_definitions(bus_pirate6 PUBLIC BP_REV=10)  
         
         set(revisions 
         bus_pirate5_xl  
-        bus_pirate6_rev1
+        bus_pirate6
         )        
 
 else()
@@ -347,7 +347,7 @@ if(USE_LGPL3)
 if(LEGACY_ANSI_COLOURS_ENABLED)
         if(${PICO_PLATFORM} MATCHES "rp2350")
                 target_link_libraries(bus_pirate5_xl         lib_ansi_colours)
-                target_link_libraries(bus_pirate6_rev1       lib_ansi_colours)
+                target_link_libraries(bus_pirate6           lib_ansi_colours)
         else()
                 target_link_libraries(bus_pirate5_rev10       lib_ansi_colours)
                 target_link_libraries(bus_pirate5_rev8        lib_ansi_colours)

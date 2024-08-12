@@ -237,6 +237,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 )
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
+        target_compile_definitions(bus_pirate5_xl PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
         add_executable(bus_pirate6
                 ${bp5_common}
@@ -244,7 +245,8 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 platform/bpi6-rev1.h platform/bpi6-rev1.c 
                 )
         target_compile_definitions(bus_pirate6 PUBLIC BP_VER=6) 
-        target_compile_definitions(bus_pirate6 PUBLIC BP_REV=10)  
+        target_compile_definitions(bus_pirate6 PUBLIC BP_REV=10) 
+        target_compile_definitions(bus_pirate6 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}") 
         
         set(revisions 
         bus_pirate5_xl  
@@ -261,6 +263,7 @@ else()
                 )
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VER=5) 
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_REV=8)
+        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
         add_executable(bus_pirate5_rev10
                 ${bp5_common}
@@ -270,6 +273,7 @@ else()
                 )
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_VER=5)                
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_REV=10)
+        target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
         set(revisions
         bus_pirate5_rev8  

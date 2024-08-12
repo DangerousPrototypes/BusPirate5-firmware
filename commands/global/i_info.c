@@ -44,13 +44,14 @@ void i_info_handler(struct command_result *res){
 	printf("\r\n%sThis device complies with part 15 of the FCC Rules. Operation is subject to the following two conditions: (1) this device may not cause harmful interference, and (2) this device must accept any interference received, including interference that may cause undesired operation.%s\r\n\r\n", ui_term_color_info(), ui_term_color_reset());
 	
 	printf("\r\n%s\r\n", BP_HARDWARE_VERSION);
-	printf("%s %s%s%s (%s%s%s)\r\n", 
+	printf("%s %s%s%s @ %s (%s%s%s)\r\n", 
 		t[T_INFO_FIRMWARE], 
 		ui_term_color_num_float(),
 		BP_FIRMWARE_VERSION, 
 		ui_term_color_reset(),
+		BP_FIRMWARE_HASH,
 		ui_term_color_num_float(),
-		BP_FIRMWARE_HASH, 
+		BP_FIRMWARE_TIMESTAMP, 
 		ui_term_color_reset());
 	printf("%s%s%s %s %s%s%s %s, %s%s%s %s\r\n", 
 		ui_term_color_num_float(),

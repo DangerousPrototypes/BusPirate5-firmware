@@ -4,7 +4,10 @@
 
 #define BP_FIRMWARE_VERSION "main branch"
 #ifndef BP_FIRMWARE_HASH //this variable is for the current commit GIT hash
-#define BP_FIRMWARE_HASH _TIMEZ_
+#define BP_FIRMWARE_HASH "unknown"
+#endif
+#ifndef BP_FIRMWARE_TIMESTAMP //this variable is for the current commit GIT hash
+#define BP_FIRMWARE_TIMESTAMP _TIMEZ_
 #endif
 
 #define BP_SPI_START_SPEED 1000 * 1000

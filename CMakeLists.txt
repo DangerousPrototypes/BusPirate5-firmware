@@ -38,6 +38,13 @@ set(PICO_BOARD_CMAKE_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
 # Add my_pico_w
 #
 #set(BP_PICO_PLATFORM "rp2350")
+
+if(DEFINED ${GIT_COMMIT_HASH})
+    set(BP_FIRMWARE_HASH ${GIT_COMMIT_HASH})
+else()
+    set(BP_FIRMWARE_HASH "unknown")
+endif()
+
 if(${BP_PICO_PLATFORM} MATCHES "rp2350")
     set(PICO_PLATFORM "rp2350") #compile for 5XL and 6 
     set(PICO_BOARD buspirate6)   
@@ -46,6 +53,8 @@ else()
     set(PICO_BOARD buspirate5)
 endif()
 
+
+
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(cmake/pico_sdk_import.cmake)
 
@@ -53,8 +62,6 @@ project(bus_pirate C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()  
-
-#add_compile_definitions(BP_FIRMWARE_HASH=${BP_FIRMWARE_HASH})
 
 # build time in UTC ISO 8601
 FILE (WRITE ${CMAKE_BINARY_DIR}/timestamp.cmake "STRING(TIMESTAMP TIMEZ UTC)\n")

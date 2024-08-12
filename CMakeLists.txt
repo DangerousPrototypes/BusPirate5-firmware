@@ -44,6 +44,8 @@ if(DEFINED ${GIT_COMMIT_HASH})
 else()
     set(BP_FIRMWARE_HASH "unknown")
 endif()
+message(GIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
+message(BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
 if(${BP_PICO_PLATFORM} MATCHES "rp2350")
     set(PICO_PLATFORM "rp2350") #compile for 5XL and 6 

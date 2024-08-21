@@ -3,10 +3,13 @@
 #define BP_CONFIG
 
 #define BP_FIRMWARE_VERSION "main branch"
+
+static_assert(BP_FIRMWARE_HASH=="000000", "BP_FIRMWARE_HASH is not set");
+
 #ifndef BP_FIRMWARE_HASH //this variable is for the current commit GIT hash
 #define BP_FIRMWARE_HASH "unknown"
 #endif
-#ifndef BP_FIRMWARE_TIMESTAMP //this variable is for the current commit GIT hash
+#ifndef BP_FIRMWARE_TIMESTAMP //this variable is for the compile timestamp
 #define BP_FIRMWARE_TIMESTAMP _TIMEZ_
 #endif
 

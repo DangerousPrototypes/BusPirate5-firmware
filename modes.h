@@ -54,6 +54,9 @@ enum
 #ifdef BP_USE_BINLOOPBACK
 	BINLOOPBACK,
 #endif
+#ifdef BP_USE_HWLED
+	INFRARED,
+#endif
 	MAXPROTO
 };
 

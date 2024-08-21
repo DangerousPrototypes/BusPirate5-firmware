@@ -44,6 +44,9 @@
 #ifdef BP_USE_DIO
     #include "mode/dio.h"
 #endif
+#ifdef BP_USE_INFRARED
+    #include "mode/infrared.h"
+#endif
 #ifdef	BP_USE_LCDSPI
     #include "LCDSPI.h"
 #endif
@@ -68,7 +71,8 @@
 void nullfunc1(void){
     printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
 	system_config.error=1;
-}
+}   
+
 
 uint32_t nullfunc2(uint32_t c){	
 	(void) c;
@@ -124,7 +128,7 @@ void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next){
 // all modes and their interaction is handled here
 // buspirateNG.h has the conditional defines for modes
 
-struct _mode modes[MAXPROTO]={{
+struct _mode modes[]={{
 	nullfunc1_temp,				// start
 	nullfunc1_temp,				// start alternate
 	nullfunc1_temp,				// stop
@@ -570,6 +574,36 @@ struct _mode modes[MAXPROTO]={{
     hwled_commands,                   // mode specific commands
     &hwled_commands_count,                   // mode specific commands count    
     "LED",				// friendly name (promptname)
+},
+#endif
+#ifdef BP_USE_INFRARED
+{
+    nullfunc1_temp,				// start
+    nullfunc1_temp,				// start with read
+    nullfunc1_temp,				// stop
+    nullfunc1_temp,				// stop with read
+    infrared_write,				// send(/read) max 32 bit
+    infrared_read,				// read max 32 bit
+	nullfunc1_temp,				// set clk high
+	nullfunc1_temp,				// set clk low
+	nullfunc1_temp,				// set dat hi
+	nullfunc1_temp,				// set dat lo
+	nullfunc1_temp,				// toggle dat (remove?)
+	nullfunc1_temp,				// tick clk
+	nullfunc1_temp,				// read dat
+    noperiodic,				// service to regular poll whether a byte ahs arrived
+    infrared_macro,				// macro
+    infrared_setup,				// setup UI
+    nullfunc7_no_error,        // binmode get length of config data
+    nullfunc8_error,            // binmode setup    
+    infrared_setup_exc,				// real setup
+    infrared_cleanup,				// cleanup for HiZ
+    //infrared_pins,				// display pin config
+    infrared_settings,				// display settings
+    infrared_help,				// display small help about the protocol
+    infrared_commands,                   // mode specific commands
+    &infrared_commands_count,                   // mode specific commands count
+    "INFRARED",					// friendly name (promptname)
 },
 #endif
 #ifdef BP_USE_LA

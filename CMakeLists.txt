@@ -164,8 +164,12 @@ set(bp5_common
         # DIO
         mode/dio.h mode/dio.c
 
+        #Infrared
+        mode/infrared.h mode/infrared.c 
+        lib/pico_ir_nec/nec_transmit.c lib/pico_ir_nec/nec_transmit.h
+
         # DUMMY MODE
-        mode/dummy1.c mode/dummy1.h
+        mode/dummy1.c mode/dummy1.h 
 
         # UI
         ui/ui_button.c ui/ui_button.h
@@ -318,9 +322,11 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwuart.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/spisnif.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/binmode/logicanalyzer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_burst.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_control.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/picorvd/ch32vswio.pio)
 
-        pico_set_program_name(${revision} ${revision})
+        pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")
         if(${PICO_PLATFORM} MATCHES "rp2350")
                 pico_set_program_description(${revision} "Bus Pirate 5XL/6 Firmware for RP2350")

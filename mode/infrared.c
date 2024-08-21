@@ -22,11 +22,61 @@
 static uint32_t returnval;
 static int tx_sm;
 
+bool irtoy_test_pullup(int bio){
+	if(bio_get(bio)){
+		printf("OK\r\n");
+		return false;
+	}else{
+		printf("FAIL\r\n");
+		return true;
+	}
+}
+
+bool irtoy_test_rx(int bio){
+	pio_sm_put(pio0, 0xff, 0xff);
+	uint32_t timeout=0;
+	while(true){
+		if(!bio_get(BIO1)) return false;
+		timeout++;
+		if(timeout>10000) return true;			
+	}
+}
+//irtoy_test function
+void irtoy_test(struct command_result *res){
+	uint8_t fails=0;
+	printf("Test pull-ups\r\n");
+	printf("BIO1 / 20-60kHz learner: ");
+	fails += irtoy_test_pullup(BIO1);
+	printf("BIO3 / 38kHz barrier: ");
+	fails += irtoy_test_pullup(BIO3);
+	printf("BIO5 / 38kHz demodulator: ");
+	fails += irtoy_test_pullup(BIO5);
+	printf("BIO7 / 56kHz modulator: ");
+	fails += irtoy_test_pullup(BIO7);
+
+	printf("Test RX\r\n");
+	printf("BIO1 / 20-60kHz learner: ");
+	fails += irtoy_test_rx(BIO1);
+	printf("BIO3 / 38kHz barrier: ");
+	fails += irtoy_test_rx(BIO3);
+	printf("BIO5 / 38kHz demodulator: ");
+	fails += irtoy_test_rx(BIO5);
+	printf("BIO7 / 56kHz modulator: ");
+	fails += irtoy_test_rx(BIO7);
+
+	if(fails){
+		printf("\r\n%d FAILS :(\r\n");
+	}else{
+		printf("\r\nOK :)\r\n");
+	}	
+
+}
+
 // command configuration
 const struct _command_struct infrared_commands[]=
 {   //HiZ? Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help
-    //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+    {"test",false,&irtoy_test,0x00}, // the help is shown in the -h *and* the list of mode apps
 };
 const uint32_t infrared_commands_count=count_of(infrared_commands);
 
@@ -93,7 +143,7 @@ void infrared_write(struct _bytecode *result, struct _bytecode *next){
     // create a 32-bit frame and add it to the transmit FIFO
     uint32_t tx_frame = nec_encode_frame(tx_address, tx_data);
     pio_sm_put(pio0, tx_sm, tx_frame);
-    printf("RX: %02x, %02x\r\n", tx_address, tx_data);
+    printf("TX: %02x, %02x\r\n", tx_address, tx_data);
 }
 
 // This function is called when the user enters 'r' to read data
@@ -137,6 +187,7 @@ void infrared_macro(uint32_t macro){
 	{
 		// macro (0) is always a menu of macros
 		case 0: printf(" 0. This menu\r\n"); break;
+		case 
 	}
 }
 

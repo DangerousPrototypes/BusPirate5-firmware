@@ -319,7 +319,7 @@ bool selftest_button(void){
 }
 
 // test that the logic analyzer chip is mounted and with no shorts
-#if BP_VER == 6
+#if BP_VERSION == BP6
 bool selftest_la_bpio(void){
     uint32_t temp1, fails=0, iopin=0;
     printf("LA_BPIO TEST (SHOULD BE 1)\r\n");
@@ -377,9 +377,13 @@ void cmd_selftest(void){
         return;
     }
 
-    //REV10 + check status of NAND flash
-    #if BP_REV >= 10
+    // REV10 + check status of NAND flash
+    #if (BP_VERSION == BP5 && BP_BOARD_REVISION < 10)
+        // NAND flash is not available on BP5 until Rev10
+    #elif (BP_VERSION == BP5) || (BP_VERSION == BP5XL) || (BP_VERSION == BP6)
         if(selftest_format_nand()) fails++;
+    #else
+        #error "Unknown Bus Pirate version"
     #endif        
 
     printf("SELF TEST STARTING\r\nDISABLE IRQ: ");
@@ -412,7 +416,7 @@ void cmd_selftest(void){
     if(selftest_bio_low()) fails++;
 
     //LA_BPIO test
-    #if BP_VER == 6
+    #if BP_VERSION == BP6
         if(selftest_la_bpio()) fails++;
     #endif
 

@@ -17,10 +17,12 @@ static volatile enum button_codes button_code = BP_BUTT_NO_PRESS;
 
 // poll the value of button button_id
 bool button_get(uint8_t button_id){
-    #if(BP_VER==5)
+    #if (BP_VERSION==BP5)
         return gpio_get(EXT1);
-    #else
+    #elif ((BP_VERSION==BP6) || (BP_VERSION==BP5XL))
         return !gpio_get(EXT1);
+    #else
+        #error "Unknown BP_VERSION"
     #endif
 } 
 // check button press type
@@ -69,9 +71,11 @@ void button_irq_disable(uint8_t button_id){
 void button_init(void){
     gpio_set_function(EXT1, GPIO_FUNC_SIO);
     gpio_set_dir(EXT1, GPIO_IN);
-    #if(BP_VER==5)
+    #if(BP_VERSION==BP5)
         gpio_pull_down(EXT1);
-    #else
+    #elif ((BP_VERSION==BP6) || (BP_VERSION==BP5XL))
         gpio_pull_up(EXT1);
+    #else
+        #error "Unknown BP_VERSION"
     #endif
 }

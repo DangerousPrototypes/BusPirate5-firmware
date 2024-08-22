@@ -11,7 +11,7 @@
 #include "pirate.h"
 #include "diskio.h" /* Declarations of disk functions */
 
-#if BP_REV <= 9
+#if (BP_VERSION == BP5 && BP_BOARD_REVISION <= 9)
     #include "fatfs/tf_card.h"
 #else
     #include "../nand/nand_ftl_diskio.h"

@@ -12,7 +12,8 @@
 #include "opt_args.h"
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
-#if (BP_VER == 5 || BP_VER == XL5)
+#if (BP_VERSION == BP5 || BP_VERSION == BP5XL)
+    // BP5 and BPXL5 have to use an external expander due to limited pins
     #include "pirate/shift.h"
 #endif
 #include "pirate/bio.h"
@@ -73,8 +74,8 @@ void gpio_setup(uint8_t pin, bool direction, bool level){
 int main(){
     char c;
     
-    #if (BP_VER == 5 || BP_VER==XL5)
-        uint8_t bp_rev=mcu_detect_revision();
+    #if (BP_VERSION == BP5)
+        uint8_t detected_board_revision=mcu_detect_revision();
     #endif
 
     reserve_for_future_mode_specific_allocations[1] = 99;
@@ -91,12 +92,12 @@ int main(){
     gpio_set_function(BP_SPI_CDO, GPIO_FUNC_SPI);
 
     // init shift register pins
-    #if (BP_VER == 5 || BP_VER==XL5)
+    #if (BP_VERSION == BP5 || BP_VERSION==BP5XL)
         shift_init();
     #endif
     
-    #ifdef BP_REV
-        system_config.hardware_revision=BP_REV;
+    #ifdef BP_BOARD_REVISION
+        system_config.hardware_revision=BP_BOARD_REVISION;
     #else
         #error "No platform revision defined. Check pirate.h."
     #endif
@@ -118,7 +119,7 @@ int main(){
     storage_init();
 
     //initial pin states
-    #if (BP_VER == 5 || BP_VER==XL5)
+    #if (BP_VERSION == BP5 || BP_VERSION==BP5XL)
         // configure the defaults for shift register attached hardware
         shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3|AMUX_S1|DISPLAY_RESET|CURRENT_EN));
     #else
@@ -141,8 +142,10 @@ int main(){
     #endif
     pullups_init(); //uses shift register internally  
 
-    #if(BP_VER == 5 || BP_VER==XL5)
+    #if (BP_VERSION == BP5 || BP_VERSION == BP5XL)
         shift_output_enable(true); //enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
+    #else
+        // BUGBUG ... if above enabled level translator for BP5 / BP5XL, then where is that done for BP6?
     #endif
     //busy_wait_ms(10);
     //reset the LCD
@@ -164,7 +167,7 @@ int main(){
     // Now continue after init of all the pins and shift registers
     // Mount the TF flash card file system (and put into SPI mode)
     // This must be done before any other SPI communications
-    #if (BP_VER == 5 && BP_REV <= 9)
+    #if (BP_VERSION == BP5 && BP_BOARD_REVISION <= 9)
         spi_set_baudrate(BP_SPI_PORT, BP_SPI_START_SPEED);
         storage_mount();
         if(storage_load_config()){
@@ -207,7 +210,7 @@ int main(){
 	psucmd_disable();    // disable psu and reset pin label, clear any errors
 
     // mount NAND flash here
-    #if !(BP_VER == 5 && BP_REV <= 9)
+    #if ((BP_VERSION == BP5 && BP_BOARD_REVISION > 9) || BP_VERSION == BP5XL || BP_VERSION == BP6)
         storage_mount();
         if(storage_load_config()){
             system_config.config_loaded_from_file=true;
@@ -219,12 +222,12 @@ int main(){
     // we need to have read any config files on the TF flash card before now
     icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
-    #if (BP_VER == 5)
+    #if (BP_VERSION == BP5)
         //test for PCB revision
         //must be done after shift register setup
         // if firmware mismatch, turn all LEDs red
-        if(bp_rev!=BP_REV){ //
-            //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP_REV, mcu_detect_revision());
+        if(detected_board_revision!=BP_BOARD_REVISION){ //
+            //printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP_BOARD_REVISION, detected_board_revision);
             rgb_irq_enable(false);
             while(true){ 
                 rgb_set_all(0xff, 0, 0);
@@ -462,7 +465,7 @@ void core1_entry(void){
             }
 
             //remains for legacy REV8 support of TF flash
-            #if BP_REV<10
+            #if BP_BOARD_REVISION<10
                 if(storage_detect())
                 {
 

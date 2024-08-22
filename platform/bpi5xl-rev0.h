@@ -1,7 +1,7 @@
 #ifndef BP_HARDWARE_VERSION
 
-#define BP_HARDWARE_VERSION "Bus Pirate 5XL"
-#define BP_HARDWARE_MCU "RP2350A"
+#define BP_HARDWARE_VERSION "Bus Pirate 5XL REV0"
+#define BP_HARDWARE_MCU "RP2350"
 #define BP_HARDWARE_RAM "512KB"
 #define BP_HARDWARE_FLASH "128Mbit"
 #define BP_HARDWARE_PULLUP_VALUE "10K ohms"
@@ -141,9 +141,6 @@ extern const uint8_t bio2bufdirpin[8];
 //PWM based PSU control pins
 #define PSU_PWM_CURRENT_ADJ 22 //3A
 #define PSU_PWM_VREG_ADJ 23 //3B
-
-//First pin (base) of logic analyzer input
-#define LA_BPIO0 8
 
 // A single ADC pin is used to measure the source selected by a 74hct4067
 #define AMUX_OUT 28

@@ -582,10 +582,15 @@ void sump_logic_analyzer_service(void){
     switch(state){
         case SLA_STATE_IDLE:
             if(tud_cdc_n_connected(1)){
-                script_enabled();
+                #if BP_VERSION != 6
+                    script_enabled();
+                #endif                      
                 cdc_sump_init();
                 cdc_sump_init_connect();
-                psu_enable(3.3,100, true);
+                #if BP_VERSION == 6
+                if(system_config.mode == 0)
+                #endif
+                    psu_enable(3.3,100, true);
                 state=SLA_STATE_SERVICE;
             }
             break;
@@ -593,8 +598,13 @@ void sump_logic_analyzer_service(void){
             cdc_sump_task();
             if(!tud_cdc_n_connected(1) || button_get(0)){
                 logic_analyzer_cleanup();
-                psu_disable();
-                script_disabled();
+                #if BP_VERSION == 6
+                if(system_config.mode == 0)
+                #endif                
+                    psu_disable();
+                #if BP_VERSION != 6 
+                    script_disabled();
+                #endif   
                 state=SLA_STATE_IDLE;
             }
             break;

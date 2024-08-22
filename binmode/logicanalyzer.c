@@ -486,26 +486,23 @@ bool logic_analyzer_arm(float freq, uint32_t samples, uint32_t trigger_mask, uin
         }
     }
 
-    if(trigger_ok)
-    {
+    if(trigger_ok){
         if(trigger_direction & 1u<<trigger_pin) //high level trigger program
         {
             offset=pio_add_program(pio, &logicanalyzer_high_trigger_program);
             pio_program_active=&logicanalyzer_high_trigger_program;
-            logicanalyzer_high_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq, edge);
+            logicanalyzer_high_trigger_program_init(pio, sm, offset, LA_BPIO0, LA_BPIO0+trigger_pin, freq, edge);
         }
         else //low level trigger program
         {
             offset=pio_add_program(pio, &logicanalyzer_low_trigger_program);
             pio_program_active=&logicanalyzer_low_trigger_program;
-            logicanalyzer_low_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], bio2bufiopin[trigger_pin], freq, edge);           
+            logicanalyzer_low_trigger_program_init(pio, sm, offset, LA_BPIO0, LA_BPIO0+trigger_pin, freq, edge);           
         }
-    }
-    else    //else no trigger program
-    {
+    }else{    //else no trigger program
        offset=pio_add_program(pio, &logicanalyzer_no_trigger_program); 
        pio_program_active=&logicanalyzer_no_trigger_program;
-       logicanalyzer_no_trigger_program_init(pio, sm, offset, bio2bufiopin[BIO0], freq);
+       logicanalyzer_no_trigger_program_init(pio, sm, offset, LA_BPIO0, freq);
     }
     
 

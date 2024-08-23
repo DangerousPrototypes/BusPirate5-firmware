@@ -202,7 +202,7 @@ void legacy_protocol(void)
                     "CS"
                 };
 
-                spi_init(SPI1_BASE, 1000000); // 1MHz
+                spi_init(SPI1_BASE, 10000000); // 10MHz
                 hwspi_init(data_bits, cpol, cpha);
                 system_bio_claim(true, 6, 1, mpin_labels[0]);
                 system_bio_claim(true, 7, 1, mpin_labels[1]);
@@ -241,31 +241,24 @@ void legacy_protocol(void)
                 hwspi_select();
                 printf("\r\n>> "); 
                 int j = 0;
-                uint32_t total_bytes_spi = bytes_to_write > bytes_to_read ? bytes_to_write : bytes_to_read;
-                if (bytes_to_read)
-                {
-                    total_bytes_spi++;
-                }
+                uint32_t total_bytes_spi = bytes_to_write + bytes_to_read;
                 while (j < total_bytes_spi)
                 {
-                    if (j >= bytes_to_write)
-                    {
-                        tmpbuf[j] = 0x00;
-                    }
-                    printf("\r\n[%d] 0x%02X -> | ", j, tmpbuf[j]);
-                    tmpbuf[j] = hwspi_write_read(tmpbuf[j]);
-                    printf("<- 0x%02X", tmpbuf[j]);
+                    //printf("\r\n[%d] 0x%02X -> | ", j, tmpbuf[j]);
+                    tmpbuf[j] = hwspi_write_read(j >= bytes_to_write ? 0x00 : tmpbuf[j]);
+                    //printf("<- 0x%02X", tmpbuf[j]);
                     j++;
                 }
                 hwspi_deselect();
-
-                tmpbuf[0] = '\x01';
 
                 int bytes_sent = 0;
                 int chunk_size = 32;
                 int total_bytes = bytes_to_read + 1;
                 int total_cdc_bytes_sended = 0;
+                uint32_t delta = bytes_to_write  ? bytes_to_write - 1 : 1;
+                tmpbuf[delta] = '\x01';
                 tud_cdc_n_read_flush(1);
+                remain_bytes = 0;
                 while (bytes_sent < total_bytes) 
                 {
                     int bytes_left = total_bytes - bytes_sent;
@@ -275,7 +268,7 @@ void legacy_protocol(void)
                         tud_task();
                         tud_cdc_n_write_flush(1);
                     }
-                    total_cdc_bytes_sended += tud_cdc_n_write(1, tmpbuf + bytes_sent, current_chunk_size);
+                    total_cdc_bytes_sended += tud_cdc_n_write(1, tmpbuf + delta + bytes_sent, current_chunk_size);
                     tud_cdc_n_write_flush(1);
                     bytes_sent += current_chunk_size;
                 }
@@ -292,12 +285,19 @@ void legacy2third_mode(void){
     static uint32_t mode_active=0;
     if (mode_active == 0){
         mode_active++;
+        system_config.binmode_usb_rx_queue_enable=false; 
+        system_config.binmode_usb_tx_queue_enable=false; 
+    }
+    else if (mode_active == 1){
+        mode_active++;
         uint8_t binmode_args = 1;
         binmode_debug_level(&binmode_args);
         script_enabled();
         cdc_buff = (uint8_t*) mem_alloc(0x2000);
         remain_bytes = 0;
         legacy_protocol();
+        system_config.binmode_usb_rx_queue_enable=true; 
+        system_config.binmode_usb_tx_queue_enable=true; 
         mem_free(cdc_buff);
         hwspi_deinit();
         psu_disable();

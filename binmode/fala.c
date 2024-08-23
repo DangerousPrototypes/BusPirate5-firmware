@@ -10,20 +10,24 @@
 // #include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and
 // bytecode stuff to a single helper file #include "opt_args.h" //needed for same reason as bytecode and needs same fix
 // #include "modes.h"
-//  #include "mode/binio.h"
-// #include "pirate/psu.h"
-//  #include "binio_helpers.h"
 #include "binmode/binmodes.h"
 #include "binmode/logicanalyzer.h"
 #include "binmode/binio.h"
-
+#include "binmode/fala.h"
 #include "tusb.h"
 
+#define MAX_UART_PKT 64
 #define CDC_INTF 1
 
-static uint32_t mode_frequency = 1000000;
-static uint32_t mode_oversample = 8;
+FalaConfig fala_config = {
+    .base_frequency = 1000000,
+    .oversample = 8
+};
 
+// binmode name to display
+const char fala_name[] = "Follow along logic analyzer";
+
+// binmode setup on mode start
 void fala_setup(void) {
     system_config.binmode_usb_rx_queue_enable = false;
     system_config.binmode_usb_tx_queue_enable = false;
@@ -31,25 +35,23 @@ void fala_setup(void) {
         printf("Logic analyzer setup error, out of memory?\r\n");
     }
 }
-
+// binmode cleanup on exit
 void fala_cleanup(void) {
     logic_analyzer_cleanup();
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
 }
 
-const char fala_name[] = "Follow along logic analyzer";
-
+// start the logic analyzer
 void fala_start(void) {
-    // start the logic analyzer
     // configure and arm the logic analyzer
-    logic_analyzer_configure(mode_frequency * mode_oversample, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0x00, 0x00, false);
+    logic_analyzer_configure(fala_config.base_frequency * fala_config.oversample, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0x00, 0x00, false);
     logic_analyzer_arm(false);
 }
 
+// stop the logic analyzer
+// but keeps data available for dump
 void fala_stop(void) {
-    // stop the logic analyzer
-    // but keeps data available for dump
     logic_analyser_done();
 }
 
@@ -58,22 +60,22 @@ void fala_reset(void) {
     // logic_analyzer_cleanup();
 }
 
+// set the sampling rate
 void fala_set_freq(uint32_t freq) {
-    // set the sampling rate
     // store in fala struct for easy oversample adjustment
-    mode_frequency = freq;
+    fala_config.base_frequency = freq;
     printf("\r\nFollow Along Logic Analyzer capture: %dHz (%dx oversampling)\r\n",
-           freq * mode_oversample,
-           mode_oversample);
+           fala_config.base_frequency * fala_config.oversample,
+           fala_config.oversample);
     printf("Use the 'logic' command to change capture settings.\r\n");
 }
 
 // set oversampling rate
 void fala_set_oversample(uint32_t oversample_rate) {
     // set the sampling rate
-    mode_oversample = oversample_rate;
+    fala_config.oversample = oversample_rate;
 }
-#define MAX_UART_PKT 64
+
 // send notification packet at end of capture
 void fala_notify(void) {
     logic_analyzer_reset_ptr(); // put pointer back to end of data buffer (last sample first)
@@ -90,7 +92,7 @@ void fala_notify(void) {
                                0,
                                0,
                                'N',
-                               mode_frequency * mode_oversample,
+                               fala_config.base_frequency * fala_config.oversample,
                                fala_samples,
                                0);
         if (tud_cdc_n_write_available(CDC_INTF) >= sizeof(buf)) {
@@ -100,6 +102,7 @@ void fala_notify(void) {
     }
 }
 
+// output printed to user terminal
 void fala_print_result(void) {
     // send notification packet
     fala_notify();
@@ -109,21 +112,23 @@ void fala_print_result(void) {
     // show some info about the logic capture
     printf("Logic Analyzer: %d samples captured\r\n", fala_samples);
 
-    // print an 8 line logic analyzer graph of the last 80 samples
-    printf("Logic Analyzer Graph:\r\n");
-    fala_samples = fala_samples < 80 ? fala_samples : 80;
-    for (int bits = 0; bits < 8; bits++) {
-        logic_analyzer_reset_ptr();
-        uint8_t val;
-        for (int i = 0; i < fala_samples; i++) {
-            logicanalyzer_dump(&val);
-            if (val & (1 << bits)) {
-                printf("-"); // high
-            } else {
-                printf("_"); // low
+    // DEBUG: print an 8 line logic analyzer graph of the last 80 samples
+    if(fala_config.debug_level>1){
+        printf("[DEBUG] Logic Analyzer Graph:\r\n");
+        fala_samples = fala_samples < 80 ? fala_samples : 80;
+        for (int bits = 0; bits < 8; bits++) {
+            logic_analyzer_reset_ptr();
+            uint8_t val;
+            for (int i = 0; i < fala_samples; i++) {
+                logicanalyzer_dump(&val);
+                if (val & (1 << bits)) {
+                    printf("-"); // high
+                } else {
+                    printf("_"); // low
+                }
             }
+            printf("\r\n");
         }
-        printf("\r\n");
     }
 }
 

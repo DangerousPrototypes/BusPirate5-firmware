@@ -12,3 +12,4 @@ bool logic_analyzer_cleanup(void);
 void logicanalyzer_reset_led(void);
 uint32_t logic_analyzer_get_ptr(void);
 void logic_analyzer_reset_ptr(void);
+uint8_t logic_analyzer_read_ptr(uint32_t read_pointer);

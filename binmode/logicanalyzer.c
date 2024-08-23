@@ -53,6 +53,10 @@ uint8_t logicanalyzer_dump(uint8_t* txbuf) {
     return 1;
 }
 
+uint8_t logic_analyzer_read_ptr(uint32_t read_pointer) {
+    return la_buf[read_pointer];
+}
+
 //this will probably need a mutex
 void logic_analyser_done(void) {
     // turn off stuff!

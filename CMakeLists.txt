@@ -116,6 +116,7 @@ set(bp5_common
         commands/global/smps.c commands/global/smps.h
         commands/global/cls.h commands/global/cls.c  
         commands/global/cmd_binmode.h commands/global/cmd_binmode.c
+        commands/global/logic.h commands/global/logic.c
         # HiZ
         mode/hiz.h mode/hiz.c
         # 1Wire
@@ -214,6 +215,9 @@ set(bp5_common
         lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c     
         lib/picorvd/picoswio.c lib/picorvd/picoswio.h lib/picorvd/debug_defines.h
         binmode/fala.c binmode/fala.h
+
+        #toolbars
+        toolbars/logic_bar.c toolbars/logic_bar.h
 
         # displays
         displays.c displays.h display/default.c display/default.h

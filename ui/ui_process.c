@@ -17,7 +17,7 @@
 #include "string.h"
 #include "syntax.h"
 #include "pirate/intercore_helpers.h"
-#include "binmode/logicanalyzer.h"
+#include "binmode/binmodes.h"
 
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
 static const struct command_result result_blank;
@@ -29,57 +29,26 @@ bool ui_process_syntax(void) {
     }
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
     
-     // configure and arm the logic analyzer
-    if(!logicanalyzer_setup()) {
-        printf("Logic analyzer setup error\r\n");
-    }
-    logic_analyzer_configure(100000, 128000,0x00, 0x00, false);
-    logic_analyzer_arm(false);
+    //binmode hook
+    binmodes[system_config.binmode_select].binmode_hook_syntax_pre_run();
 
-    if (syntax_run()) {
-        icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
-        printf("Syntax execution error\r\n");
-        logic_analyser_done(); //TODO: show partial if execution error...
-        logic_analyzer_cleanup();
-        return true;
-    }
-    logic_analyser_done();
-
+    bool error = syntax_run();
+        
+    //binmode hook
+    binmodes[system_config.binmode_select].binmode_hook_syntax_post_run();
+    
     icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
-    if (syntax_post()) {
-        printf("Syntax post process error\r\n");
-        return true;
+    
+    if(error){
+        printf("Syntax execution error\r\n");
+    }else{
+        error=syntax_post();
+        if(error) printf("Syntax post process error\r\n");
     }
-    // printf("Bus Syntax: Success\r\n");
-    // show some info about the logic capture
-    printf("Logic Analyzer: %d samples captured\r\n", logic_analyzer_get_ptr());
-    //print first 255 samples in a table
-   /* printf("Last 255 samples:\r\n");
-    uint8_t val;
-    for (int i = 0; i < 255; i++) {
-        logicanalyzer_dump(&val);
-        printf("%x ", val);
-        if (i % 16 == 15) {
-            printf("\r\n");
-        }
-    }*/
-    //print an 8 line logic analyzer graph of the last 255 samples
-    printf("Logic Analyzer Graph:\r\n");
-    for(int bits=0; bits<8; bits++) {
-        logic_analyzer_reset_ptr();
-        uint8_t val;
-        for(int i=0; i<80; i++) {
-            logicanalyzer_dump(&val);
-            if(val & (1<<bits)) {
-                printf("-"); // high
-            } else {
-                printf("_"); // low
-            }
-        }
-        printf("\r\n");
-    }
-    logic_analyzer_cleanup();
-    return false;
+
+    binmodes[system_config.binmode_select].binmode_hook_syntax_post_output();
+
+    return error;
 }
 
 bool ui_process_macro(void) {

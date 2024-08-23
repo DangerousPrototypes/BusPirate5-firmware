@@ -24,9 +24,6 @@
 
 enum logicanalyzer_status { LA_IDLE = 0, LA_ARMED_INIT, LA_ARMED, LA_CAPTURE };
 
-#define DMA_BYTES_PER_CHUNK 32768
-#define LA_DMA_COUNT 4
-
 static void restart_dma();
 
 int la_dma[LA_DMA_COUNT];
@@ -171,7 +168,7 @@ bool logic_analyzer_configure(
     memset(la_buf, 0, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT);
 
     // This can be useful for debugging. The position of sampling always start at the beginning of the buffer
-    // restart_dma();
+    restart_dma();
 
     if (pio_program_active) {
         pio_remove_program(pio, pio_program_active, offset);
@@ -245,6 +242,7 @@ bool logic_analyzer_cleanup(void) {
     mem_free(la_buf);
 
     logicanalyzer_reset_led();
+    return true;
 }
 
 bool logicanalyzer_setup(void) {

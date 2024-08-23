@@ -213,6 +213,7 @@ set(bp5_common
         lib/arduino-ch32v003-swio/arduino_ch32v003.c lib/arduino-ch32v003-swio/arduino_ch32v003.h
         lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c     
         lib/picorvd/picoswio.c lib/picorvd/picoswio.h lib/picorvd/debug_defines.h
+        binmode/fala.c binmode/fala.h
 
         # displays
         displays.c displays.h display/default.c display/default.h

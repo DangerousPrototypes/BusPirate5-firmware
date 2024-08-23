@@ -549,6 +549,11 @@ void sump_logic_analyzer_setup(void) {
 void sump_logic_analyzer_cleanup(void) {
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
+    logic_analyzer_cleanup();
+    if (system_config.mode == 0 ) psu_disable();
+#if BP_VER != 6    
+    script_disabled();
+#endif
 }
 
 const char sump_logic_analyzer_name[] = "SUMP logic analyzer";

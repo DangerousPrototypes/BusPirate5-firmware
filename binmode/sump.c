@@ -541,6 +541,8 @@ enum {
     SLA_STATE_SERVICE,
 };
 
+static uint8_t state = SLA_STATE_IDLE;
+
 void sump_logic_analyzer_setup(void) {
     system_config.binmode_usb_rx_queue_enable = false;
     system_config.binmode_usb_tx_queue_enable = false;
@@ -549,7 +551,7 @@ void sump_logic_analyzer_setup(void) {
 void sump_logic_analyzer_cleanup(void) {
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
-    logic_analyzer_cleanup();
+    if(state != SLA_STATE_IDLE)   logic_analyzer_cleanup();
     if (system_config.mode == 0 ) psu_disable();
 #if BP_VER != 6    
     script_disabled();
@@ -562,7 +564,7 @@ void sump_logic_analyzer_service(void) {
 #if TURBO_200MHZ
     set_sys_clock_khz(200000, true);
 #endif
-    static uint8_t state = SLA_STATE_IDLE;
+
 
     switch (state) {
         case SLA_STATE_IDLE:

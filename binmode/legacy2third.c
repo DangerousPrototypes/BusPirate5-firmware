@@ -212,12 +212,19 @@ void legacy_protocol(void)
             break;
 
             case 0x03:
+                printf("\r\nhwspi_deselect");
+                hwspi_deselect();
+                CDC_SEND_STR(1, "\x01");
+            break;
+
+            case 0x02:
                 printf("\r\nhwspi_select");
                 hwspi_select();
                 CDC_SEND_STR(1, "\x01");
             break;
 
             case 0x04:
+            case 0x05:
                 uint16_t bytes_to_read = 0;
                 uint16_t bytes_to_write = 0;
                 static uint8_t tmpbuf[0x2000];
@@ -236,27 +243,44 @@ void legacy_protocol(void)
                 printf("\r\nbytes_to_write: %d", bytes_to_write);
                 printf("\r\nbytes_to_read: %d", bytes_to_read);
 
-                while (!read_buff(tmpbuf, bytes_to_write, DEFAULT_MAX_TRIES));
+                if (bytes_to_write)
+                {
+                    while (!read_buff(tmpbuf, bytes_to_write, DEFAULT_MAX_TRIES));
+                }
 
-                hwspi_select();
+                if (0x04 == op_byte)
+                {
+                    hwspi_select();
+                }
                 printf("\r\n>> "); 
                 int j = 0;
                 uint32_t total_bytes_spi = bytes_to_write + bytes_to_read;
                 while (j < total_bytes_spi)
                 {
-                    //printf("\r\n[%d] 0x%02X -> | ", j, tmpbuf[j]);
+                    printf("\r\n[%d] 0x%02X -> | ", j, tmpbuf[j]);
                     tmpbuf[j] = hwspi_write_read(j >= bytes_to_write ? 0x00 : tmpbuf[j]);
-                    //printf("<- 0x%02X", tmpbuf[j]);
+                    printf("<- 0x%02X", tmpbuf[j]);
                     j++;
                 }
-                hwspi_deselect();
+                if (0x04 == op_byte)
+                {
+                    hwspi_deselect();
+                }
 
                 int bytes_sent = 0;
                 int chunk_size = 32;
                 int total_bytes = bytes_to_read + 1;
                 int total_cdc_bytes_sended = 0;
-                uint32_t delta = bytes_to_write  ? bytes_to_write - 1 : 1;
-                tmpbuf[delta] = '\x01';
+                uint32_t delta = bytes_to_write  ? bytes_to_write - 1 : 0;
+                if (bytes_to_write)
+                {
+                    tmpbuf[delta] = '\x01';
+                }
+                else
+                {
+                    CDC_SEND_STR(1, "\x01");
+                    total_bytes--;
+                }
                 tud_cdc_n_read_flush(1);
                 remain_bytes = 0;
                 while (bytes_sent < total_bytes) 

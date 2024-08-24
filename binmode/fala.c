@@ -15,59 +15,20 @@
 #include "binmode/binio.h"
 #include "binmode/fala.h"
 #include "tusb.h"
+#include "ui/ui_term.h"
 
-#define MAX_UART_PKT 64
-#define CDC_INTF 1
-
-FalaConfig fala_config = {
-    .base_frequency = 1000000,
-    .oversample = 8
-};
-
-// binmode name to display
-const char fala_name[] = "Follow along logic analyzer";
-
-// binmode setup on mode start
-void fala_setup(void) {
-    system_config.binmode_usb_rx_queue_enable = false;
-    system_config.binmode_usb_tx_queue_enable = false;
-    if (!logicanalyzer_setup()) {
-        printf("Logic analyzer setup error, out of memory?\r\n");
-    }
-}
-// binmode cleanup on exit
-void fala_cleanup(void) {
-    logic_analyzer_cleanup();
-    system_config.binmode_usb_rx_queue_enable = true;
-    system_config.binmode_usb_tx_queue_enable = true;
-}
-
-// start the logic analyzer
-void fala_start(void) {
-    // configure and arm the logic analyzer
-    logic_analyzer_configure(fala_config.base_frequency * fala_config.oversample, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0x00, 0x00, false);
-    logic_analyzer_arm(false);
-}
-
-// stop the logic analyzer
-// but keeps data available for dump
-void fala_stop(void) {
-    logic_analyser_done();
-}
-
-void fala_reset(void) {
-    // reset the logic analyzer
-    // logic_analyzer_cleanup();
-}
+FalaConfig fala_config = { .base_frequency = 1000000, .oversample = 8 };
 
 // set the sampling rate
 void fala_set_freq(uint32_t freq) {
     // store in fala struct for easy oversample adjustment
     fala_config.base_frequency = freq;
-    printf("\r\nFollow Along Logic Analyzer capture: %dHz (%dx oversampling)\r\n",
+    printf("\r\n%sLogic analyzer speed:%s %dHz (%dx oversampling)\r\n",
+           ui_term_color_info(),
+           ui_term_color_reset(),
            fala_config.base_frequency * fala_config.oversample,
            fala_config.oversample);
-    printf("Use the 'logic' command to change capture settings.\r\n");
+    printf("%sUse the 'logic' command to change capture settings%s\r\n", ui_term_color_info(), ui_term_color_reset());
 }
 
 // set oversampling rate
@@ -76,51 +37,46 @@ void fala_set_oversample(uint32_t oversample_rate) {
     fala_config.oversample = oversample_rate;
 }
 
-// send notification packet at end of capture
-void fala_notify(void) {
-    logic_analyzer_reset_ptr(); // put pointer back to end of data buffer (last sample first)
-    uint32_t fala_samples = logic_analyzer_get_ptr();
-    // send notification packet
-    //$FALADATA;{pins};{trigger pins};{trigger mask};{edge trigger (bool)}; {capture speed in hz};{samples};{pre-samples
-    //(for trigger line)};
-    if (tud_cdc_n_connected(CDC_INTF)) {
-        uint8_t buf[MAX_UART_PKT];
-        uint8_t len = snprintf(buf,
-                               sizeof(buf),
-                               "$FALADATA;%d;%d;%d;%c;%d;%d;%d;\n",
-                               8,
-                               0,
-                               0,
-                               'N',
-                               fala_config.base_frequency * fala_config.oversample,
-                               fala_samples,
-                               0);
-        if (tud_cdc_n_write_available(CDC_INTF) >= sizeof(buf)) {
-            tud_cdc_n_write(CDC_INTF, buf, len);
-            tud_cdc_n_write_flush(CDC_INTF);
-        }
-    }
+// TODO: implement
+void fala_set_triggers(uint8_t trigger_pin, uint8_t trigger_level) {
+    // set the trigger pin and level
+}
+
+// start the logic analyzer
+void fala_start(void) {
+    // configure and arm the logic analyzer
+    logic_analyzer_configure(
+        fala_config.base_frequency * fala_config.oversample, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0x00, 0x00, false);
+    logic_analyzer_arm(false);
+    // delay cycles based on speed of the logic analyzer
+}
+
+// stop the logic analyzer
+// but keeps data available for dump
+void fala_stop(void) {
+    logic_analyser_done();
+    // delay cycles based on speed of the logic analyzer
 }
 
 // output printed to user terminal
 void fala_print_result(void) {
-    // send notification packet
-    fala_notify();
     // get samples count
-    logic_analyzer_reset_ptr(); // put pointer back to end of data buffer (last sample first)
-    uint32_t fala_samples = logic_analyzer_get_ptr();
+    uint32_t fala_samples = logic_analyzer_get_end_ptr();
     // show some info about the logic capture
-    printf("Logic Analyzer: %d samples captured\r\n", fala_samples);
+    printf("\r\n%sLogic analyzer:%s %d samples captured\r\n",
+           ui_term_color_info(),
+           ui_term_color_reset(),
+           fala_samples);
 
     // DEBUG: print an 8 line logic analyzer graph of the last 80 samples
-    if(fala_config.debug_level>1){
-        printf("[DEBUG] Logic Analyzer Graph:\r\n");
+    if (fala_config.debug_level > 1) {
+        printf("%s[DEBUG] Logic Analyzer Graph\r\n", ui_term_color_info());
         fala_samples = fala_samples < 80 ? fala_samples : 80;
         for (int bits = 0; bits < 8; bits++) {
             logic_analyzer_reset_ptr();
             uint8_t val;
             for (int i = 0; i < fala_samples; i++) {
-                logicanalyzer_dump(&val);
+                logic_analyzer_dump(&val);
                 if (val & (1 << bits)) {
                     printf("-"); // high
                 } else {
@@ -129,65 +85,82 @@ void fala_print_result(void) {
             }
             printf("\r\n");
         }
+        printf("%s[DEBUG] End of Logic Analyzer Graph%s\r\n", ui_term_color_info(), ui_term_color_reset());
     }
 }
 
-static uint32_t fala_dump_count;
+/****************************************************/
+// Hooks for notifying applications of new captures
 
-static uint fala_tx8(uint8_t* buf, uint len) {
-    uint32_t i, count;
-    count = fala_dump_count;
-    for (i = 0; i < len && count > 0; i++, count--) {
-        logicanalyzer_dump(&buf[i]);
+void (*fala_notify_hooks[2])();
+
+// test if anything is registered
+bool fala_has_hook(void) {
+    for (int i = 0; i < 2; i++) {
+        if (fala_notify_hooks[i] != NULL) {
+            return true;
+        }
     }
-    fala_dump_count -= i;
-    return i;
+    return false;
+}
+// register a hook to be called when the logic analyzer is done
+// set up the logic analyzer if it hasn't been already
+void fala_notify_register(void (*hook)()) {
+    if (!fala_has_hook()) {
+        if (!logicanalyzer_setup()) {
+            printf("\r\nLogic analyzer setup error, out of memory?\r\n");
+            return;
+        }
+    }
+
+    for (int i = 0; i < 2; i++) {
+        if (fala_notify_hooks[i] == NULL) {
+            fala_notify_hooks[i] = hook;
+            return;
+        }
+    }
 }
 
-enum fala_statemachine { FALA_IDLE = 0, FALA_DUMP };
-
-void fala_service(void) {
-    static enum fala_statemachine state = FALA_IDLE;
-
-    if (!tud_cdc_n_connected(CDC_INTF)) {
-        return;
+// remove a hook from the list
+// if no hooks are left, clean up the logic analyzer
+void fala_notify_unregister(void (*hook)()) {
+    for (int i = 0; i < 2; i++) {
+        if (fala_notify_hooks[i] == hook) {
+            fala_notify_hooks[i] = NULL;
+        }
     }
 
-    switch (state) {
-        case FALA_IDLE:
+    if (!fala_has_hook()) {
+        logic_analyzer_cleanup();
+    }
+}
 
-            if (!tud_cdc_n_available(CDC_INTF)) {
-                break;
-            }
+// call all the hooks
+void fala_notify_hook(void) {
+    fala_print_result();
+    for (int i = 0; i < 2; i++) {
+        if (fala_notify_hooks[i] != NULL) {
+            fala_notify_hooks[i]();
+        }
+    }
+}
 
-            uint8_t buf[64];
-            uint8_t len = tud_cdc_n_read(CDC_INTF, buf, sizeof(buf));
+// start the logic analyzer if a hook is registered
+void fala_start_hook(void) {
+    for (int i = 0; i < 2; i++) {
+        if (fala_notify_hooks[i] != NULL) {
+            fala_start();
+            return;
+        }
+    }
+}
 
-            if (len) {
-                for (uint8_t i = 0; i < len; i++) {
-                    switch (buf[i]) {
-                        case '?':
-                            fala_notify();
-                            break;
-                        case '+':
-                            // dump the buffer
-                            logic_analyzer_reset_ptr(); // put pointer back to end of data buffer (last sample first)
-                            fala_dump_count = logic_analyzer_get_ptr();
-                            state = FALA_DUMP;
-                            break;
-                    }
-                }
-            }
-            break;
-        case FALA_DUMP:
-            if (tud_cdc_n_write_available(CDC_INTF) >= sizeof(buf)) {
-                uint8_t len = fala_tx8(buf, sizeof(buf));
-                tud_cdc_n_write(CDC_INTF, buf, len);
-                tud_cdc_n_write_flush(CDC_INTF);
-            }
-            if (fala_dump_count == 0) {
-                state = FALA_IDLE;
-            }
-            break;
+// stop the logic analyzer if a hook is registered
+void fala_stop_hook(void) {
+    for (int i = 0; i < 2; i++) {
+        if (fala_notify_hooks[i] != NULL) {
+            fala_stop();
+            return;
+        }
     }
 }

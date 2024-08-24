@@ -15,6 +15,7 @@
 #include "msc_disk.h"
 #include "binmode/binmodes.h"
 #include "ui/ui_prompt.h"
+#include "ui/ui_term.h"
 
 
 // This array of strings is used to display help USAGE examples for the dummy command
@@ -71,7 +72,7 @@ void cmd_binmode_handler(struct command_result *res){
 
     binmode_number--;
     binmode_cleanup();
-    printf("\r\nBinmode selected: %s\r\n", binmodes[binmode_number].binmode_name);
+    printf("\r\n%sBinmode selected:%s %s\r\n", ui_term_color_info(), ui_term_color_reset(), binmodes[binmode_number].binmode_name);
     system_config.binmode_select = binmode_number;
     binmode_setup();
 

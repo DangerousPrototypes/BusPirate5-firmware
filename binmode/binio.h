@@ -1,6 +1,5 @@
 void script_print(const char *str);
-void script_enabled(void);
-void script_disabled(void);
+void binmode_terminal_lock(bool lock);
 uint32_t binmode_config(uint8_t *binmode_args);
 uint32_t binmode_write(uint8_t *binmode_args);
 uint32_t binmode_start(uint8_t *binmode_args);

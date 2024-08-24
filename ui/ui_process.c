@@ -18,6 +18,7 @@
 #include "syntax.h"
 #include "pirate/intercore_helpers.h"
 #include "binmode/binmodes.h"
+#include "binmode/fala.h"
 
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
 static const struct command_result result_blank;
@@ -30,12 +31,14 @@ bool ui_process_syntax(void) {
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
     
     //binmode hook
-    binmodes[system_config.binmode_select].binmode_hook_syntax_pre_run();
+    //binmodes[system_config.binmode_select].binmode_hook_syntax_pre_run();
+    fala_start_hook();
 
     bool error = syntax_run();
         
     //binmode hook
-    binmodes[system_config.binmode_select].binmode_hook_syntax_post_run();
+    //binmodes[system_config.binmode_select].binmode_hook_syntax_post_run();
+    fala_stop_hook();
     
     icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
     
@@ -46,7 +49,8 @@ bool ui_process_syntax(void) {
         if(error) printf("Syntax post process error\r\n");
     }
 
-    binmodes[system_config.binmode_select].binmode_hook_syntax_post_output();
+    //binmodes[system_config.binmode_select].binmode_hook_syntax_post_output();
+    fala_notify_hook();
 
     return error;
 }

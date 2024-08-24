@@ -446,7 +446,7 @@ static uint sump_tx8(uint8_t* buf, uint len) {
         // if (ptr == sump.buffer)
         // ptr = sump.buffer + SUMP_MEMORY_SIZE;
         //*buf++ = *(--ptr);
-        logicanalyzer_dump(&buf[i]);
+        logic_analyzer_dump(&buf[i]);
     }
     sump.read_count -= i;
     // printf("%s: ret=%u\n", __func__, i);
@@ -552,10 +552,7 @@ void sump_logic_analyzer_cleanup(void) {
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
     if(state != SLA_STATE_IDLE)   logic_analyzer_cleanup();
-    if (system_config.mode == 0 ) psu_disable();
-#if BP_VER != 6    
-    script_disabled();
-#endif
+    if (system_config.mode == 0||!tud_cdc_n_connected(0)) psu_disable();
 }
 
 const char sump_logic_analyzer_name[] = "SUMP logic analyzer";
@@ -564,19 +561,12 @@ void sump_logic_analyzer_service(void) {
 #if TURBO_200MHZ
     set_sys_clock_khz(200000, true);
 #endif
-
-
     switch (state) {
         case SLA_STATE_IDLE:
             if (tud_cdc_n_connected(1)) {
-#if BP_VER != 6
-                script_enabled();
-#endif
                 cdc_sump_init();
                 cdc_sump_init_connect();
-#if BP_VER == 6
                 if (system_config.mode == 0 || !tud_cdc_n_connected(0))
-#endif
                     psu_enable(3.3, 100, true);
                 state = SLA_STATE_SERVICE;
             }
@@ -585,13 +575,8 @@ void sump_logic_analyzer_service(void) {
             cdc_sump_task();
             if (!tud_cdc_n_connected(1) || button_get(0)) {
                 logic_analyzer_cleanup();
-#if BP_VER == 6
                 if (system_config.mode == 0 || !tud_cdc_n_connected(0))
-#endif
                     psu_disable();
-#if BP_VER != 6
-                script_disabled();
-#endif
                 state = SLA_STATE_IDLE;
             }
             break;

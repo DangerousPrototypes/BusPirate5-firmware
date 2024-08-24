@@ -11,6 +11,7 @@
 #include "ui/ui_const.h"
 #include "ui/ui_cmdln.h"
 #include "binmode/binmodes.h"
+#include "binmode/fala.h"
 
 bool ui_mode_list(const struct ui_prompt* menu) {
     for (uint8_t i = 0; i < (*menu).menu_items_count; i++) {
@@ -69,7 +70,7 @@ void ui_mode_enable_args(struct command_result* res) {
     modes[0].protocol_setup_exc();                                       // disables power suppy etc.
     system_config.mode = mode;                                           // setup the new mode
     uint32_t frequency = modes[system_config.mode].protocol_setup_exc(); // execute the mode setup
-	binmodes[system_config.binmode_select].binmode_hook_mode_exc(frequency);
+    fala_set_freq(frequency); //notify follow along logic analyzer of new frequency
 
     if (system_config.mode == 0){ // TODO: do something to show the mode (LED? LCD?)
         // gpio_clear(BP_MODE_LED_PORT, BP_MODE_LED_PIN);

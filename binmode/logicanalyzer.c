@@ -42,15 +42,26 @@ void logicanalyzer_reset_led(void) {
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_RGB_UPDATES);
 }
 
+uint32_t logic_analyzer_get_start_ptr(uint32_t sample_count) {
+    return ((la_ptr_reset - sample_count) & 0x1ffff);
+}
+
+uint32_t logic_analyzer_get_end_ptr(void) {
+    return la_ptr_reset;
+}
+
+uint32_t logic_analyzer_get_current_ptr(void){
+    return la_ptr;
+}
+
 void logic_analyzer_reset_ptr(void) {
     la_ptr = la_ptr_reset;
 }
 
-uint8_t logicanalyzer_dump(uint8_t* txbuf) {
+void logic_analyzer_dump(uint8_t* txbuf) {
     *txbuf = la_buf[la_ptr];
     la_ptr--;
     la_ptr &= 0x1ffff;
-    return 1;
 }
 
 uint8_t logic_analyzer_read_ptr(uint32_t read_pointer) {
@@ -97,10 +108,6 @@ void logic_analyser_done(void) {
 
     rgb_set_all(0x00, 0xff, 0); //,0x00FF00 green for dump
     la_sm_done = true;
-}
-
-uint32_t logic_analyzer_get_ptr(void){
-    return la_ptr;
 }
 
 uint32_t logic_analyzer_get_dma_tail(void) {

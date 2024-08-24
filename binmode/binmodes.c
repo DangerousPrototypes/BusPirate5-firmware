@@ -2,61 +2,49 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "binmode/binmodes.h"
+#include "binmode/binio.h"
 #include "system_config.h"
 #include "binmode/sump.h"
 #include "binmode/dirtyproto.h"
-#include "binmode/fala.h"
+#include "binmode/falaio.h"
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 
-void binmode_null_func_voi(void) {
+void binmode_null_func_void(void) {
     return;
 }
 
-void binmode_null_func_uint32(uint32_t temp) {
-    return;
-}
-
+//TODO: add setting for lock terminal or not
 const binmode_t binmodes[]={
-    {   sump_logic_analyzer_name, 
+    {   .lock_terminal=false,
+        .binmode_name=sump_logic_analyzer_name, 
         &sump_logic_analyzer_setup,
         &sump_logic_analyzer_service,
         &sump_logic_analyzer_cleanup, 
-        &binmode_null_func_uint32,
-        &binmode_null_func_voi,
-        &binmode_null_func_voi,
-        &binmode_null_func_voi, 
     },
-    {   dirtyproto_mode_name,
-        &binmode_null_func_voi,
+    {   .lock_terminal=true,
+        dirtyproto_mode_name,
+        &binmode_null_func_void,
         &dirtyproto_mode,
-        &binmode_null_func_voi, 
-        &binmode_null_func_uint32,
-        &binmode_null_func_voi,
-        &binmode_null_func_voi,
-        &binmode_null_func_voi,
+        &binmode_null_func_void, 
     },
-    {   arduino_ch32v003_name,
-        &binmode_null_func_voi,
+    {   .lock_terminal=true,
+        arduino_ch32v003_name,
+        &binmode_null_func_void,
         &arduino_ch32v003,
-        &binmode_null_func_voi,
-        &binmode_null_func_uint32,
-        &binmode_null_func_voi,
-        &binmode_null_func_voi,
-        &binmode_null_func_voi,                   
+        &binmode_null_func_void,             
     },
-    {
-        fala_name, 
-        &fala_setup,
-        &fala_service,
-        &fala_cleanup, 
-        &fala_set_freq,
-        &fala_start,
-        &fala_stop,
-        &fala_print_result 
+    {   .lock_terminal=false,
+        falaio_name, 
+        &falaio_setup,
+        &falaio_service,
+        &falaio_cleanup, 
     },    
 };
 
 inline void binmode_setup(void){
+    if(binmodes[system_config.binmode_select].lock_terminal){
+        binmode_terminal_lock(true);
+    }
     binmodes[system_config.binmode_select].binmode_setup();
 }
 
@@ -66,4 +54,7 @@ inline void binmode_service(void){
 
 inline void binmode_cleanup(void){
     binmodes[system_config.binmode_select].binmode_cleanup();
+    if(binmodes[system_config.binmode_select].lock_terminal){
+        binmode_terminal_lock(false);
+    }
 }

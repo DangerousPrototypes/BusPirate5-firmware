@@ -31,6 +31,16 @@
 #define LOGIC_BAR_VERTICAL_LABELS 2 // width of each vertical label
 #define LOGIC_BAR_GRAPH_WIDTH LOGIC_BAR_WIDTH - (LOGIC_BAR_VERTICAL_LABELS * 2)
 
+uint32_t la_freq = 1000, la_samples = 1000;
+uint32_t la_trigger_pin = 0, la_trigger_level = 0;
+char logic_graph_low_character = '_';
+char logic_graph_high_character = '#';
+
+void logic_bar_config(char low, char high) {
+    if(low!=0) logic_graph_low_character = low;
+    if(high!=0) logic_graph_high_character = high;
+}
+
 // wrangle the terminal into a state where we can draw a nice box
 void draw_prepare(void) {
     busy_wait_ms(1);
@@ -98,9 +108,9 @@ void graph_logic_lines_2(uint16_t position, uint32_t sample_ptr) {
             sample_ptr_temp &= 0x1ffff;
 
             if (sample & (0b1 << pins)) {
-                printf("*");
+                printf("%c", logic_graph_high_character);
             } else {
-                printf("_");
+                printf("%c", logic_graph_low_character);
             }
 
             // printf("\e[1B\e[1D"); // move one line down, one position left
@@ -229,9 +239,6 @@ void logic_bar_detach(void) {
 
     printf("\e[?25h\e[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); // back to bottom
 }
-
-uint32_t la_freq = 1000, la_samples = 1000;
-uint32_t la_trigger_pin = 0, la_trigger_level = 0;
 
 bool logic_bar_visible = false;
 

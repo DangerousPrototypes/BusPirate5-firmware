@@ -36,6 +36,8 @@ static const struct ui_help_options options[] = {
     { 0, "-i", T_HELP_LOGIC_INFO },       // info
     { 0, "-o", T_HELP_LOGIC_OVERSAMPLE }, // oversample
     { 0, "-f", T_HELP_LOGIC_FREQUENCY },  // frequency
+    { 0, "-0", T_HELP_LOGIC_LOW_CHAR },   // low char
+    { 0, "-1", T_HELP_LOGIC_HIGH_CHAR },  // high char
     { 0, "-d", T_HELP_LOGIC_DEBUG },      // debug
     { 0, "-h", T_HELP_FLAG },
 };
@@ -138,9 +140,23 @@ void logic_handler(struct command_result* res) {
     bool has_frequency = cmdln_args_find_flag_uint32('f', &arg, &frequency); // frequency: set sample rate
     uint32_t debug_level;
     bool has_debug = cmdln_args_find_flag_uint32('d', &arg, &debug_level); // debug: set debug level
+    char low_char[3];
+    bool has_low_char= cmdln_args_find_flag_string('0',&arg, sizeof(low_char), low_char); // low: set low char
+    char high_char[3];
+    bool has_high_char= cmdln_args_find_flag_string('1',&arg, sizeof(high_char), high_char); // high: set high char
+
+    if(has_low_char){
+        printf("Low char set to: %c\r\n", low_char[0]);
+        logic_bar_config(low_char[0], 0x00);
+    }
+
+    if(has_high_char){
+        printf("High char set to: %c\r\n", high_char[0]);
+        logic_bar_config(0x00, high_char[0]);
+    }
 
     //show help if nothing else is specified
-    if(!has_info && !has_oversample && !has_frequency && !has_debug){
+    if(!has_info && !has_oversample && !has_frequency && !has_debug && !has_low_char && !has_high_char){
         ui_help_show(true, usage, count_of(usage), options, count_of(options));
         return;
     }

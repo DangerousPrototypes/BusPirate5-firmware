@@ -11,5 +11,6 @@ void logic_bar_hide(void);
 void logic_bar_show(void);
 void logic_bar_navigate(void);
 void logic_bar_update(void);
+void logic_bar_config(char low, char high);
 
 #endif // LOGIC_BAR_H

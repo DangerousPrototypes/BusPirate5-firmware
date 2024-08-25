@@ -21,17 +21,8 @@ enum
 #ifdef BP_USE_HWI2C
 	HWI2C,
 #endif
-#ifdef BP_USE_LA
-	LA,
-#endif
 #ifdef BP_USE_HW2WIRE
 	HW2WIRE,
-#endif
-#ifdef BP_USE_SW2W
-	SW2W,
-#endif
-#ifdef BP_USE_SW3W
-	SW3W,
 #endif
 #ifdef BP_USE_DIO
 	DIO,
@@ -42,9 +33,6 @@ enum
 #ifdef BP_USE_LCDI2C	// future
 	LCDI2C,
 #endif
-#ifdef BP_USE_SW1WIRE
-	SW1WIRE,
-#endif
 #ifdef BP_USE_HW1WIRE
 	HW1WIRE,
 #endif
@@ -54,7 +42,7 @@ enum
 #ifdef BP_USE_BINLOOPBACK
 	BINLOOPBACK,
 #endif
-#ifdef BP_USE_HWLED
+#ifdef BP_USE_INFRARED
 	INFRARED,
 #endif
 	MAXPROTO

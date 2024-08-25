@@ -29,20 +29,15 @@
 #define		USB_PRODUCT	"BusPirate5"
 
 // enable modes
-//#define		BP_USE_SW1WIRE
 #define     BP_USE_HW1WIRE
 #define		BP_USE_HWUART
 #define     BP_USE_HWHDUART
 #define		BP_USE_HWI2C
-//#define		BP_USE_SWI2C
 #define		BP_USE_HWSPI
 #define		BP_USE_HW2WIRE
-//#define		BP_USE_SW2W
-//#define		BP_USE_SW3W
 #define     BP_USE_HWLED
 //#define		BP_USE_LCDSPI
 //#define		BP_USE_LCDI2C
-//#define		BP_USE_LA
 #define     BP_USE_DIO
 #define     BP_USE_INFRARED
 //#define 	BP_USE_DUMMY1

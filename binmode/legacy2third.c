@@ -35,6 +35,10 @@
 
 const char legacy2third_mode_name[]="Legacy Binary Mode For Third Parties (Flashrom and AVRdude)";
 
+#define TMPBUFF_SIZE 0x4000
+#define CDCBUFF_SIZE 0x4000
+
+uint8_t* tmpbuf;
 uint8_t* cdc_buff;
 uint32_t remain_bytes;
 #define DEFAULT_MAX_TRIES 100000
@@ -96,6 +100,7 @@ void cdc_full_flush(uint32_t cdc_id)
     remain_bytes = 0;
 }
 
+
 void legacy_protocol(void)
 {
     uint8_t op_byte;
@@ -117,7 +122,12 @@ void legacy_protocol(void)
         if (op_byte)
         {
             count_zero = 0; // ugly, but simple
-            if (op_byte >= 0x60 && op_byte <= 0x67) // this must be the first
+            if (op_byte >= 0x10 && op_byte <= 0x1F)
+            {
+                extended_info = op_byte;
+                op_byte = 0x10;
+            }
+            else if (op_byte >= 0x60 && op_byte <= 0x67) // this must be the first
             {
                 extended_info = op_byte;
                 op_byte = 0x60;
@@ -169,7 +179,8 @@ void legacy_protocol(void)
                 printf("\r\npsu...");
                 if (extended_info & 0b00001000)
                 {
-                    uint8_t args[] = { 0x03, 0x21, 0x00, 0x80 };
+                    //uint8_t args[] = { 0x03, 0x21, 0x00, 0x80 };
+                    uint8_t args[] = { 0x05, 0x00, 0x00, 0x80 }; // 5v 
                     uint32_t result = binmode_psu_enable(args);
                     if(result)
                     {
@@ -202,12 +213,13 @@ void legacy_protocol(void)
                     "CS"
                 };
 
-                spi_init(SPI1_BASE, 10000000); // 10MHz
+                spi_init(SPI1_BASE, 100000); // ~0.1MHz
                 hwspi_init(data_bits, cpol, cpha);
                 system_bio_claim(true, 6, 1, mpin_labels[0]);
                 system_bio_claim(true, 7, 1, mpin_labels[1]);
                 system_bio_claim(true, 4, 1, mpin_labels[2]);
                 system_bio_claim(true, 5, 1, mpin_labels[3]);
+                hwspi_select();
                 CDC_SEND_STR(1, "\x01");
             break;
 
@@ -223,13 +235,31 @@ void legacy_protocol(void)
                 CDC_SEND_STR(1, "\x01");
             break;
 
+            case 0x10:
+                printf("\r\nBulk SPI transfer");
+                memset(tmpbuf, 0, TMPBUFF_SIZE);
+                uint32_t bytes2read = (extended_info & 0x0F) + 1;
+                printf("\r\nbytes_to_read: %d", bytes2read);
+                CDC_SEND_STR(1, "\x01");
+                while (!read_buff(tmpbuf, bytes2read, DEFAULT_MAX_TRIES));
+                printf("\r\n>> ");
+                for (int i = 0; i < bytes2read; i++)
+                {
+                    printf("\r\n0x%02X | ", tmpbuf[i]);
+                    tmpbuf[i] = hwspi_write_read(tmpbuf[i]);
+                    printf("0x%02X ", tmpbuf[i]);
+                }
+                printf("\r\n");
+                tud_cdc_n_write(1, tmpbuf, bytes2read);
+                tud_cdc_n_write_flush(1);
+            break;
+
             case 0x04:
             case 0x05:
                 uint16_t bytes_to_read = 0;
                 uint16_t bytes_to_write = 0;
-                static uint8_t tmpbuf[0x2000];
 
-                memset(tmpbuf, 0, sizeof(tmpbuf));
+                memset(tmpbuf, 0, TMPBUFF_SIZE);
 
                 while (!read_buff(tmpbuf, 4, DEFAULT_MAX_TRIES));
 
@@ -242,6 +272,13 @@ void legacy_protocol(void)
                 bytes_to_read = (tmpbuf[2] << 8) | tmpbuf[3];
                 printf("\r\nbytes_to_write: %d", bytes_to_write);
                 printf("\r\nbytes_to_read: %d", bytes_to_read);
+
+                if (0x00 == bytes_to_read && 0x00 == bytes_to_write)
+                {
+                    // for AVRDUDE
+                    CDC_SEND_STR(1, "\x01");
+                    break;
+                }
 
                 if (bytes_to_write)
                 {
@@ -300,6 +337,77 @@ void legacy_protocol(void)
                 printf("\r\ntotal_cdc_bytes_sended: %d", total_cdc_bytes_sended);
                 tud_task();
             break;
+
+            case 0x06: // AVR EXTENDED COMMAND
+                CDC_SEND_STR(1, "\x01");
+                while (!read_buff(&op_byte, 1, DEFAULT_MAX_TRIES));
+                printf("\r\n-\r\nAVR op_byte=0x%02X", op_byte);
+                switch (op_byte)
+                {
+                    case 0x00:
+                        printf("\r\nAVR NOOP");
+                        CDC_SEND_STR(1, "\x01");
+                    break;
+
+                    case 0x01:
+                        printf("\r\nAVR VERSION");
+                        CDC_SEND_STR(1, "\x01\x00\x01");
+                    break;
+
+                    case 0x02:
+                        printf("\r\nAVR BULK READ");
+
+                        memset(tmpbuf, 0, TMPBUFF_SIZE);
+
+                        while (!read_buff(tmpbuf, 8, DEFAULT_MAX_TRIES));
+
+                        uint32_t addr = (tmpbuf[0] << 24) | (tmpbuf[1] << 16) | (tmpbuf[2] << 8) | tmpbuf[3];
+                        uint32_t len = (tmpbuf[4] << 24) | (tmpbuf[5] << 16) | (tmpbuf[6] << 8) | tmpbuf[7];
+
+                        printf("\r\naddr: 0x%08X, len: 0x%08X", addr, len);
+
+                        if ((addr > 0xFFFF) || (len > 0xFFFF) || ((addr + len) > 0xFFFF))
+                        {
+                            // error
+                            CDC_SEND_STR(1, "\x00");
+                            break;
+                        }
+                        CDC_SEND_STR(1, "\x01");
+
+                        printf("\r\n>> ");
+                        while (len > 0)
+                        {
+                            hwspi_write_read(0x20); // AVR_FETCH_LOW_BYTE_COMMAND
+                            hwspi_write_read((addr >> 8) & 0xFF);
+                            hwspi_write_read(addr & 0xFF);
+                            uint8_t byte_flash = hwspi_write_read(0x00);
+                            printf("\r\n0x%02X", byte_flash);
+                            tud_cdc_n_write_char(1, byte_flash); // Send the readed byte
+                            tud_cdc_n_write_flush(1);
+                            len--;
+                            if (len > 0)
+                            {
+                                hwspi_write_read(0x28); // AVR_FETCH_HIGH_BYTE_COMMAND
+                                hwspi_write_read((addr >> 8) & 0xFF);
+                                hwspi_write_read(addr & 0xFF);
+                                uint8_t byte_flash = hwspi_write_read(0x00);
+                                printf("\r\n0x%02X", byte_flash);
+                                tud_cdc_n_write_char(1, byte_flash);  // Send the readed byte
+                                tud_cdc_n_write_flush(1);
+                                len--;
+                            }
+                            addr++;
+                        }
+                        printf("\r\n");
+                    break;
+
+                    default:
+                        // error
+                        CDC_SEND_STR(1, "\x00");
+                    break;
+                }
+
+            break;
         }
     }
 }
@@ -317,8 +425,13 @@ void legacy2third_mode(void){
         uint8_t binmode_args = 1;
         binmode_debug_level(&binmode_args);
         script_enabled();
-        cdc_buff = (uint8_t*) mem_alloc(0x2000);
+        cdc_buff = (uint8_t*) mem_alloc(CDCBUFF_SIZE + TMPBUFF_SIZE);
+        printf("\r\ncdc_buff: 0x%08X\r\n", cdc_buff);
+        tmpbuf = cdc_buff + CDCBUFF_SIZE;
+        memset(cdc_buff, 0, CDCBUFF_SIZE);
+        memset(tmpbuf, 0, TMPBUFF_SIZE);
         remain_bytes = 0;
+        cdc_full_flush(1);
         legacy_protocol();
         system_config.binmode_usb_rx_queue_enable=true; 
         system_config.binmode_usb_tx_queue_enable=true; 

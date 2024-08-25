@@ -179,7 +179,7 @@ void hw2wire_cleanup(void){
 }*/
 
 void hw2wire_settings(void){
-	printf("HW2WIRE (speed)=(%d)", hw2wire_mode_config.baudrate_actual);
+	printf("HW2WIRE (speed)=(%d)", hw2wire_mode_config.baudrate);
 }
 
 void hw2wire_printI2Cflags(void){
@@ -235,4 +235,8 @@ static uint8_t checkshort(void){
 	temp=(bio_get(M_2WIRE_SDA)==0?1:0);
 	temp|=(bio_get(M_2WIRE_SCL)==0?2:0);
 	return (temp==3);			// there is only a short when both are 0 otherwise repeated start wont work
+}
+
+uint32_t hw2wire_get_speed(void){
+	return hw2wire_mode_config.baudrate;
 }

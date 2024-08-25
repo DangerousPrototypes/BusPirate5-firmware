@@ -109,21 +109,23 @@ uint32_t hwled_setup(void)
 uint32_t hwled_setup_exc(void){
 	switch(mode_config.device){
 		case M_LED_WS2812:
+			mode_config.baudrate=800000;
 			bio_buf_output(M_LED_SDO);
 			pio_loaded_offset = pio_add_program(pio, &ws2812_program);
-    		ws2812_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_LED_SDO], 800000, false);
+    		ws2812_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_LED_SDO], (float)mode_config.baudrate, false);
 			system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
 			break;
 		case M_LED_APA102:
+			mode_config.baudrate=(5 * 1000 * 1000);
 			bio_buf_output(M_LED_SDO);
 			bio_buf_output(M_LED_SCL);		
 			pio_loaded_offset = pio_add_program(pio, &apa102_mini_program);
-			#define SERIAL_FREQ (5 * 1000 * 1000)
-    		apa102_mini_program_init(pio, pio_state_machine, pio_loaded_offset, SERIAL_FREQ, bio2bufiopin[M_LED_SCL], bio2bufiopin[M_LED_SDO]);
+    		apa102_mini_program_init(pio, pio_state_machine, pio_loaded_offset, mode_config.baudrate, bio2bufiopin[M_LED_SCL], bio2bufiopin[M_LED_SDO]);
 			system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
 			system_bio_claim(true, M_LED_SCL, BP_PIN_MODE, pin_labels[1]);
 			break;
         case M_LED_WS2812_ONBOARD: //internal LEDs, stop any in-progress stuff
+			mode_config.baudrate=800000;
 			rgb_irq_enable(false);
 			rgb_set_all(0,0,0);
             break;
@@ -228,4 +230,8 @@ void hwled_settings(void){
 
 void hwled_help(void){
 	ui_help_mode_commands(hwled_commands, hwled_commands_count);
+}
+
+uint32_t hwled_get_speed(void){
+	return mode_config.baudrate;
 }

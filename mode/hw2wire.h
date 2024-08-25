@@ -18,10 +18,11 @@ void hw2wire_cleanup(void);
 void hw2wire_settings(void);
 void hw2wire_printI2Cflags(void);
 void hw2wire_help(void);
+uint32_t hw2wire_get_speed(void);
 
 typedef struct _hw2wire_mode_config{
 	uint32_t baudrate;
-	uint32_t baudrate_actual;
+	//uint32_t baudrate_actual;
 	uint32_t data_bits;
 	bool ack_pending;
 	bool read;

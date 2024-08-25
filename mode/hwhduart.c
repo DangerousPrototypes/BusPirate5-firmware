@@ -121,8 +121,6 @@ uint32_t hwhduart_setup_exc(void){
 	//half duplex
 	hwuart_pio_init(mode_config.data_bits, mode_config.parity, mode_config.stop_bits, mode_config.baudrate);
 	system_bio_claim(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
-
-    //printf("\r\nHalf Duplex UART is a work in progress.\r\nPlease reserve bug reports for later.\r\n");
 	return 1;
 }
 
@@ -264,7 +262,9 @@ void hwhduart_help(void){
 	ui_help_mode_commands(hwhduart_commands, hwhduart_commands_count);
 }
 
-
+uint32_t hwhduart_get_speed(void){
+	return mode_config.baudrate;
+}
 
 
 

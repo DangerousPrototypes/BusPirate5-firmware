@@ -41,15 +41,9 @@
 #ifdef	BP_USE_LCDI2C
     #include "LCDI2C.h"
 #endif
-#ifdef	BP_USE_LA
-    #include "LA.h"
-#endif
 #ifdef 	BP_USE_DUMMY1
     #include "mode/dummy1.h"
 #endif
-#ifdef 	BP_USE_DUMMY2
-    #include "dummy2.h"
-#endif 
 #ifdef BP_USE_BINLOOPBACK
     #include "mode/binloopback.h"
 #endif
@@ -116,6 +110,7 @@ void nullfunc1_temp(struct _bytecode *result, struct _bytecode *next){
 // all modes and their interaction is handled here
 // pirate.h has the conditional defines for modes
 struct _mode modes[]={{
+    .protocol_name="HiZ",				// friendly name (promptname)
     .protocol_start=nullfunc1_temp,				// start
     .protocol_start_alt=nullfunc1_temp,				// start with read
     .protocol_stop=nullfunc1_temp,				// stop
@@ -140,12 +135,13 @@ struct _mode modes[]={{
     .protocol_help=hiz_help,			// display protocol specific help
     .mode_commands=hiz_commands,		// mode specific commands //ignored if 0x00
     .mode_commands_count=&hiz_commands_count,		// mode specific commands count ignored if 0x00
-    .protocol_name="HiZ",				// friendly name (promptname)
+    .protocol_get_speed=nullfunc7_no_error,		// get the current speed setting of the protocol
     .protocol_command=NULL, // per mode command parser - ignored if 0
     .protocol_lcd_update=NULL	// replacement for ui_lcd_update if non-0
 },
 #ifdef BP_USE_HW1WIRE
 {
+    .protocol_name="1-WIRE",				// friendly name (promptname)
     .protocol_start=hw1wire_start,				// start
     .protocol_start_alt=hw1wire_start,				// start with read
     .protocol_stop=nullfunc1_temp,				// stop
@@ -170,11 +166,12 @@ struct _mode modes[]={{
     .protocol_help=&hw1wire_help,			// display protocol specific help
     .mode_commands=hw1wire_commands,		// mode specific commands //ignored if 0x00
     .mode_commands_count=&hw1wire_commands_count,		// mode specific commands count ignored if 0x00
-    .protocol_name="1-WIRE",				// friendly name (promptname)
+    .protocol_get_speed=hw1wire_get_speed,		// get the current speed setting of the protocol
 },
 #endif
 #ifdef BP_USE_HWUART
 {
+    .protocol_name="UART",				// friendly name (promptname)
     .protocol_start=hwuart_open,				// start
     .protocol_start_alt=hwuart_open_read,			// start with read
     .protocol_stop=hwuart_close,				// stop
@@ -200,11 +197,13 @@ struct _mode modes[]={{
     .protocol_help=hwuart_help,				// display small help about the protocol
     .mode_commands=hwuart_commands,				// mode specific commands
     .mode_commands_count=&hwuart_commands_count,				// mode specific commands count
-    .protocol_name="UART",				// friendly name (promptname)
+    .protocol_get_speed=hwuart_get_speed,		// get the current speed setting of the protocol
+
 },
 #endif
 #ifdef BP_USE_HWHDUART
 {
+    .protocol_name="HDUART",				// friendly name (promptname)
     .protocol_start=hwhduart_open,				// start
     .protocol_start_alt=hwhduart_start_alt,			// start with read
     .protocol_stop=hwhduart_close,				// stop
@@ -230,11 +229,13 @@ struct _mode modes[]={{
     .protocol_help=hwhduart_help,				// display small help about the protocol
     .mode_commands=hwhduart_commands,               // mode specific commands
     .mode_commands_count=&hwhduart_commands_count,       // mode specific commands count    
-    .protocol_name="HDUART",				// friendly name (promptname)
+    .protocol_get_speed=hwhduart_get_speed,		// get the current speed setting of the protocol
+
 },
 #endif
 #ifdef BP_USE_HWI2C
 {
+    .protocol_name="I2C",				// friendly name (promptname)
     .protocol_start=hwi2c_start,				// start
     .protocol_start_alt=hwi2c_start,				// start with read
     .protocol_stop=hwi2c_stop,				// stop
@@ -259,12 +260,14 @@ struct _mode modes[]={{
     .protocol_settings=hwi2c_settings,				// display settings
     .protocol_help=hwi2c_help,				// display small help about the protocol
     .mode_commands=hwi2c_commands,                   // mode specific commands
-    .mode_commands_count=&hwi2c_commands_count,                   // mode specific commands count    
-    .protocol_name="I2C",				// friendly name (promptname)
+    .mode_commands_count=&hwi2c_commands_count,                   // mode specific commands count   
+    .protocol_get_speed=hwi2c_get_speed,		// get the current speed setting of the protocol 
+
 },
 #endif
 #ifdef BP_USE_HWSPI
 {
+    .protocol_name="SPI",				// friendly name (promptname)
     .protocol_start=spi_start,				// start
     .protocol_start_alt=spi_startr,				// start with read
     .protocol_stop=spi_stop,				// stop
@@ -290,11 +293,12 @@ struct _mode modes[]={{
     .protocol_help=spi_help,				// display small help about the protocol
     .mode_commands=hwspi_commands,                   // mode specific commands
     .mode_commands_count=&hwspi_commands_count,                   // mode specific commands count
-    .protocol_name="SPI",				// friendly name (promptname)
+    .protocol_get_speed=spi_get_speed,		// get the current speed setting of the protocol
 },
 #endif
 #ifdef BP_USE_HW2WIRE
 {
+    .protocol_name="2WIRE",				// friendly name (promptname)
     .protocol_start=hw2wire_start,				// start
     .protocol_start_alt=hw2wire_start_alt,			// start with read
     .protocol_stop=hw2wire_stop,				// stop
@@ -320,71 +324,13 @@ struct _mode modes[]={{
     .protocol_help=hw2wire_help,				// display small help about the protocol
     .mode_commands=hw2wire_commands,               // mode specific commands
     .mode_commands_count=&hw2wire_commands_count,               // mode specific commands count
-    .protocol_name="2WIRE",				// friendly name (promptname)
-},
-#endif
-#ifdef BP_USE_LCDSPI
-{
-    .protocol_start=nullfunc1,				// start
-    .protocol_start_alt=nullfunc1,				// start with read
-    .protocol_stop=nullfunc1,				// stop
-    .protocol_stop_alt=nullfunc1,				// stop with read
-    .protocol_write=LCDSPI_send,				// send(/read) max 32 bit
-    .protocol_read=LCDSPI_read,				// read max 32 bit
-    .protocol_clkh=nullfunc1_temp,				// set clk high
-    .protocol_clkl=nullfunc1_temp,				// set clk low
-    .protocol_dath=nullfunc1_temp,				// set dat hi
-    .protocol_datl=nullfunc1_temp,				// set dat lo
-    .protocol_dats=nullfunc1_temp,				// toggle dat (remove?)
-    .protocol_tick_clock=nullfunc1_temp,				// tick clk
-    .protocol_bitr=nullfunc1_temp,				// read dat
-    .protocol_periodic=noperiodic,				// service to regular poll whether a byte ahs arrived
-    .protocol_macro=LCDSPI_macro,				// macro
-    .protocol_setup=LCDSPI_setup,				// setup UI
-    .binmode_get_config_length=nullfunc7_no_error,				// get binmode config length
-    .binmode_setup=nullfunc8_error,				// setup for binmode
-    .protocol_setup_exc=LCDSPI_setup_exc,				// real setup
-    .protocol_cleanup=LCDSPI_cleanup,				// cleanup for HiZ
-    //.protocol_pins=LCDSPI_pins,				// display pin config
-    .protocol_settings=LCDSPI_settings,				// display settings 
-    .protocol_help=nohelp,				// display small help about the protocol
-    .mode_commands=NULL,               // mode specific commands
-    .mode_commands_count=NULL,               // mode specific commands count
-    .protocol_name="LCDSPI",				// friendly name (promptname)
-},
-#endif
-#ifdef BP_USE_LCDI2C
-{
-    .protocol_start=nullfunc1,				// start
-    .protocol_start_alt=nullfunc1,				// start with read
-    .protocol_stop=nullfunc1,				// stop
-    .protocol_stop_alt=nullfunc1,				// stop with read
-    .protocol_write=LCDI2C_send,				// send(/read) max 32 bit
-    .protocol_read=LCDI2C_read,				// read max 32 bit
-    .protocol_clkh=nullfunc1_temp,				// set clk high
-    .protocol_clkl=nullfunc1_temp,				// set clk low
-    .protocol_dath=nullfunc1_temp,				// set dat hi
-    .protocol_datl=nullfunc1_temp,				// set dat lo
-    .protocol_dats=nullfunc1_temp,				// toggle dat (remove?)
-    .protocol_tick_clock=nullfunc1_temp,				// tick clk
-    .protocol_bitr=nullfunc1_temp,				// read dat
-    .protocol_periodic=noperiodic,				// service to regular poll whether a byte ahs arrived
-    .protocol_macro=LCDI2C_macro,				// macro
-    .protocol_setup=LCDI2C_setup,				// setup UI
-    .binmode_get_config_length=nullfunc7_no_error,				// get binmode config length
-    .binmode_setup=nullfunc8_error,				// setup for binmode
-    .protocol_setup_exc=LCDI2C_setup_exc,				// real setup
-    .protocol_cleanup=LCDI2C_cleanup,				// cleanup for HiZ
-    //.protocol_pins=LCDI2C_pins,				// display pin config
-    .protocol_settings=LCDI2C_settings,				// display settings 
-    .protocol_help=nohelp,				// display small help about the protocol
-    .mode_commands=NULL,               // mode specific commands
-    .mode_commands_count=0,               // mode specific commands count
-    .protocol_name="LCDI2C",				// friendly name (promptname)
+    .protocol_get_speed=hw2wire_get_speed,		// get the current speed setting of the protocol
+
 },
 #endif
 #ifdef BP_USE_DIO
 {
+    .protocol_name="DIO",				// friendly name (promptname)
     .protocol_start=nullfunc1_temp,				// start
     .protocol_start_alt=nullfunc1_temp,				// start with read
     .protocol_stop=nullfunc1_temp,				// stop
@@ -410,11 +356,12 @@ struct _mode modes[]={{
     .protocol_help=dio_help,				// display small help about the protocol
     .mode_commands=dio_commands,                   // mode specific commands
     .mode_commands_count=&dio_commands_count,                   // mode specific commands count
-    .protocol_name="DIO",				// friendly name (promptname)
+    .protocol_get_speed=dio_get_speed,		// get the current speed setting of the protocol
 },
 #endif
 #ifdef BP_USE_HWLED
 {
+    .protocol_name="LED",				// friendly name (promptname)
     .protocol_start=hwled_start,				// start
     .protocol_start_alt=hwled_start,				// start with read
     .protocol_stop=hwled_stop,				// stop
@@ -439,14 +386,15 @@ struct _mode modes[]={{
     .protocol_settings=hwled_settings,				// display settings
     .protocol_help=hwled_help,				// display small help about the protocol
     .mode_commands=hwled_commands,                   // mode specific commands
-    .mode_commands_count=&hwled_commands_count,                   // mode specific commands count    
-    .protocol_name="LED",				// friendly name (promptname)
+    .mode_commands_count=&hwled_commands_count,                   // mode specific commands count   
+    .protocol_get_speed=hwled_get_speed,		// get the current speed setting of the protocol 
     .protocol_command=NULL, // per mode command parser - ignored if 0
     .protocol_lcd_update=NULL,	// replacement for ui_lcd_update if non-0
 },
 #endif
 #ifdef BP_USE_INFRARED
 {
+    .protocol_name="INFRARED",					// friendly name (promptname)    
     .protocol_start=nullfunc1_temp,				// start
     .protocol_start_alt=nullfunc1_temp,				// start with read
     .protocol_stop=nullfunc1_temp,				// stop
@@ -472,11 +420,12 @@ struct _mode modes[]={{
     .protocol_help=infrared_help,				// display small help about the protocol
     .mode_commands=infrared_commands,                   // mode specific commands
     .mode_commands_count=&infrared_commands_count,                   // mode specific commands count
-    .protocol_name="INFRARED",					// friendly name (promptname)
+    .protocol_get_speed=infrared_get_speed,		// get the current speed setting of the protocol
 },
 #endif
 #ifdef BP_USE_DUMMY1
 {
+    .protocol_name="DUMMY1",				// friendly name (promptname)
     .protocol_start=dummy1_start,				// start
     .protocol_start_alt=dummy1_start,				// start with read
     .protocol_stop=dummy1_stop,				// stop
@@ -502,11 +451,12 @@ struct _mode modes[]={{
     .protocol_help=dummy1_help,				// display small help about the protocol
     .mode_commands=dummy1_commands,             // mode specific commands
     .mode_commands_count=&dummy1_commands_count,      // mode specific commands count    
-    .protocol_name="DUMMY1",				// friendly name (promptname)
+    .protocol_get_speed=nullfunc7_no_error,		// get the current speed setting of the protocol
 },
 #endif
 #ifdef BP_USE_BINLOOPBACK
 {
+    .protocol_name="BIN"				// friendly name (promptname)
     .protocol_start=binloopback_open,				// start
     .protocol_start_alt=binloopback_open_read,				// start with read
     .protocol_stop=binloopback_close,				// stop
@@ -532,7 +482,69 @@ struct _mode modes[]={{
     .protocol_help=hwled_help,				// display small help about the protocol
     .mode_commands=binloopback_commands,                   // mode specific commands
     .mode_commands_count=&binloopback_commands_count,                   // mode specific commands count    
-    .protocol_name="BIN"				// friendly name (promptname)
+    .protocol_get_speed=nullfunc7_no_error,		// get the current speed setting of the protocol
+},
+#endif
+#ifdef BP_USE_LCDSPI
+{
+    .protocol_name="LCDSPI",				// friendly name (promptname)
+    .protocol_start=nullfunc1,				// start
+    .protocol_start_alt=nullfunc1,				// start with read
+    .protocol_stop=nullfunc1,				// stop
+    .protocol_stop_alt=nullfunc1,				// stop with read
+    .protocol_write=LCDSPI_send,				// send(/read) max 32 bit
+    .protocol_read=LCDSPI_read,				// read max 32 bit
+    .protocol_clkh=nullfunc1_temp,				// set clk high
+    .protocol_clkl=nullfunc1_temp,				// set clk low
+    .protocol_dath=nullfunc1_temp,				// set dat hi
+    .protocol_datl=nullfunc1_temp,				// set dat lo
+    .protocol_dats=nullfunc1_temp,				// toggle dat (remove?)
+    .protocol_tick_clock=nullfunc1_temp,				// tick clk
+    .protocol_bitr=nullfunc1_temp,				// read dat
+    .protocol_periodic=noperiodic,				// service to regular poll whether a byte ahs arrived
+    .protocol_macro=LCDSPI_macro,				// macro
+    .protocol_setup=LCDSPI_setup,				// setup UI
+    .binmode_get_config_length=nullfunc7_no_error,				// get binmode config length
+    .binmode_setup=nullfunc8_error,				// setup for binmode
+    .protocol_setup_exc=LCDSPI_setup_exc,				// real setup
+    .protocol_cleanup=LCDSPI_cleanup,				// cleanup for HiZ
+    //.protocol_pins=LCDSPI_pins,				// display pin config
+    .protocol_settings=LCDSPI_settings,				// display settings 
+    .protocol_help=nohelp,				// display small help about the protocol
+    .mode_commands=NULL,               // mode specific commands
+    .mode_commands_count=NULL,               // mode specific commands count
+    .protocol_get_speed=nullfunc7_no_error,		// get the current speed setting of the protocol
+},
+#endif
+#ifdef BP_USE_LCDI2C
+{
+    .protocol_name="LCDI2C",				// friendly name (promptname)
+    .protocol_start=nullfunc1,				// start
+    .protocol_start_alt=nullfunc1,				// start with read
+    .protocol_stop=nullfunc1,				// stop
+    .protocol_stop_alt=nullfunc1,				// stop with read
+    .protocol_write=LCDI2C_send,				// send(/read) max 32 bit
+    .protocol_read=LCDI2C_read,				// read max 32 bit
+    .protocol_clkh=nullfunc1_temp,				// set clk high
+    .protocol_clkl=nullfunc1_temp,				// set clk low
+    .protocol_dath=nullfunc1_temp,				// set dat hi
+    .protocol_datl=nullfunc1_temp,				// set dat lo
+    .protocol_dats=nullfunc1_temp,				// toggle dat (remove?)
+    .protocol_tick_clock=nullfunc1_temp,				// tick clk
+    .protocol_bitr=nullfunc1_temp,				// read dat
+    .protocol_periodic=noperiodic,				// service to regular poll whether a byte ahs arrived
+    .protocol_macro=LCDI2C_macro,				// macro
+    .protocol_setup=LCDI2C_setup,				// setup UI
+    .binmode_get_config_length=nullfunc7_no_error,				// get binmode config length
+    .binmode_setup=nullfunc8_error,				// setup for binmode
+    .protocol_setup_exc=LCDI2C_setup_exc,				// real setup
+    .protocol_cleanup=LCDI2C_cleanup,				// cleanup for HiZ
+    //.protocol_pins=LCDI2C_pins,				// display pin config
+    .protocol_settings=LCDI2C_settings,				// display settings 
+    .protocol_help=nohelp,				// display small help about the protocol
+    .mode_commands=NULL,               // mode specific commands
+    .mode_commands_count=0,               // mode specific commands count
+    .protocol_get_speed=nullfunc7_no_error,		// get the current speed setting of the protocol
 },
 #endif
 

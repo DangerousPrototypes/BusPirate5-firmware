@@ -264,6 +264,10 @@ void hwuart_help(void){
 	ui_help_mode_commands(hwuart_commands, hwuart_commands_count);
 }
 
+uint32_t hwuart_get_speed(void){
+	return mode_config.baudrate_actual;
+}
+
 
 
 

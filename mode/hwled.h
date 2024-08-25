@@ -11,10 +11,12 @@ void hwled_cleanup(void);
 void hwled_settings(void);
 void hwled_printI2Cflags(void);
 void hwled_help(void);
+uint32_t hwled_get_speed(void);
 
 typedef struct _led_mode_config{
 	uint32_t num_leds;
 	uint32_t device;
+	uint32_t baudrate;
 } _led_mode_config;
 
 extern const struct _command_struct hwled_commands[];

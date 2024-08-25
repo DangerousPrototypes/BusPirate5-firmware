@@ -22,6 +22,8 @@ void dio_cleanup(void);
 // displayed in the 'i' command
 void dio_settings(void);
 
+uint32_t dio_get_speed(void);
+
 const char * dio_pins(void);
 
 // old bitwise commands not currently needed because we don't bitbang anymore

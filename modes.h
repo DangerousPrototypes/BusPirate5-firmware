@@ -3,14 +3,8 @@
 enum
 {
 	HIZ = 0,
-#ifdef BP_USE_DUMMY1
-	DUMMY1,
-#endif
-#ifdef BP_USE_DUMMY2
-	DUMMY2,
-#endif
-#ifdef BP_USE_HWSPI
-	HWSPI,
+#ifdef BP_USE_HW1WIRE
+	HW1WIRE,
 #endif
 #ifdef BP_USE_HWUART
 	HWUART,
@@ -24,26 +18,29 @@ enum
 #ifdef BP_USE_HW2WIRE
 	HW2WIRE,
 #endif
+#ifdef BP_USE_HWSPI
+	HWSPI,
+#endif
 #ifdef BP_USE_DIO
 	DIO,
+#endif
+#ifdef BP_USE_HWLED
+	HWLED,
+#endif
+#ifdef BP_USE_INFRARED
+	INFRARED,
+#endif
+#ifdef BP_USE_DUMMY1
+	DUMMY1,
+#endif
+#ifdef BP_USE_BINLOOPBACK
+	BINLOOPBACK,
 #endif
 #ifdef BP_USE_LCDSPI
 	LCDSPI,
 #endif
 #ifdef BP_USE_LCDI2C	// future
 	LCDI2C,
-#endif
-#ifdef BP_USE_HW1WIRE
-	HW1WIRE,
-#endif
-#ifdef BP_USE_HWLED
-	HWLED,
-#endif
-#ifdef BP_USE_BINLOOPBACK
-	BINLOOPBACK,
-#endif
-#ifdef BP_USE_INFRARED
-	INFRARED,
 #endif
 	MAXPROTO
 };
@@ -76,6 +73,7 @@ typedef struct _mode
 	void (*protocol_help)(void);			// display protocol specific help
 	const struct _command_struct (*mode_commands);		// mode specific commands //ignored if 0x00
 	const uint32_t (*mode_commands_count);		// mode specific commands count ignored if 0x00
+	uint32_t (*protocol_get_speed)(void);		// get the current speed setting of the protocol
 	char protocol_name[10];				// friendly name (promptname)
 	uint32_t (*protocol_command)(struct command_result *result); // per mode command parser - ignored if 0
 	void (*protocol_lcd_update)(uint32_t flags);	// replacement for ui_lcd_update if non-0

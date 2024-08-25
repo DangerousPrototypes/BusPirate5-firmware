@@ -18,7 +18,9 @@
 #include "pirate/bio.h" // Buffered pin IO functions
 #include "ui/ui_help.h"
 #include "lib/pico_ir_nec/nec_transmit.h" 
+#include "mode/infrared.h"
 
+static struct _infrared_mode_config mode_config;
 static uint32_t returnval;
 static int tx_sm;
 
@@ -111,7 +113,7 @@ uint32_t infrared_setup_exc(void){
     bio_buf_output(BIO4); //set gpio buffer to output
     // configure and enable the state machines
     tx_sm = nec_tx_init(pio0, bio2bufiopin[BIO4]);         // uses two state machines, 16 instructions and one IRQ
-	
+	mode_config.baudrate=38000;
     if(tx_sm < 0){
         printf("Failed to initialize PIO\r\n");
     }
@@ -204,64 +206,16 @@ uint32_t infrared_periodic(void)
 {
 
 }
-
-// Handler for mode START when user enters the '{' key
-// This is for full duplex SPI read/write and is not yet implemented
-void infrared_startr(void)
-{
-	printf("-DUMMY1- startr()");
-}
-
-// Handler for mode STOP when user enters the '}' key
-// This is for full duplex SPI read/write and is not yet implemented
-void infrared_stopr(void)
-{
-	printf("-DUMMY1- stopr()");
-}
-
-// These are old bitwise commands. 
-// They are not currently supported because we don't have any bitbanged code (yeah!)
-void infrared_clkh(void)
-{
-	printf("-DUMMY1- clkh()");
-}
-void infrared_clkl(void)
-{
-	printf("-DUMMY1- clkl()");
-}
-void infrared_dath(void)
-{
-	printf("-DUMMY1- dath()");
-}
-void infrared_datl(void)
-{
-	printf("-DUMMY1- datl()");
-}
-uint32_t infrared_dats(void)
-{
-	printf("-DUMMY1- dats()=%08X", returnval);
-	return returnval;
-}
-void infrared_clk(void)
-{
-	printf("-DUMMY1- clk()");
-}
-uint32_t infrared_bitr(void)
-{
-	printf("-DUMMY1- bitr()=%08X", returnval);
-	return returnval;
-}
-
-/*const char *infrared_pins(void)
-{
-	return "pin1\tpin2\tpin3\tpin4";
-}*/
 #endif
 
 void infrared_settings(void){
-	printf("DIO");
+	printf("INFRARED");
 }
 
 void infrared_help(void){
 	ui_help_mode_commands(infrared_commands, infrared_commands_count);
+}
+
+uint32_t infrared_get_speed(void){
+	return mode_config.baudrate;
 }

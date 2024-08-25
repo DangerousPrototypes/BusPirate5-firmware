@@ -24,16 +24,13 @@ void infrared_settings(void);
 
 const char * infrared_pins(void);
 
-// old bitwise commands not currently needed because we don't bitbang anymore
-void infrared_clkh(void);
-void infrared_clkl(void);
-void infrared_dath(void);
-void infrared_datl(void);
-uint32_t infrared_dats(void);
-void infrared_clk(void);
-uint32_t infrared_bitr(void);
-
 void infrared_help(void);
+
+uint32_t infrared_get_speed(void);
 
 extern const struct _command_struct infrared_commands[];
 extern const uint32_t infrared_commands_count;
+
+typedef struct _infrared_mode_config{
+	uint32_t baudrate;
+}_infrared_mode_config;

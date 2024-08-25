@@ -290,3 +290,6 @@ void spi_help(void){
 	ui_help_mode_commands(hwspi_commands, hwspi_commands_count);
 }
 
+uint32_t spi_get_speed(void){
+	return mode_config.baudrate_actual;
+}

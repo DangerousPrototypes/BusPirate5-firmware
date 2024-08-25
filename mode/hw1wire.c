@@ -95,3 +95,7 @@ void hw1wire_macro(uint32_t macro){
 void hw1wire_help(void){
 	ui_help_mode_commands(hw1wire_commands, hw1wire_commands_count);
 }
+
+uint32_t hw1wire_get_speed(void){
+	return 14286;
+}

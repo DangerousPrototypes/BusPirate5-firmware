@@ -170,7 +170,7 @@ void hwi2c_cleanup(void){
 }
 
 void hwi2c_settings(void){
-	printf("HWI2C (speed)=(%d)", mode_config.baudrate_actual);
+	printf("HWI2C (speed)=(%d)", mode_config.baudrate);
 }
 
 void hwi2c_printI2Cflags(void){
@@ -216,6 +216,10 @@ uint8_t hwi2c_checkshort(void){
 	temp=(bio_get(M_I2C_SDA)==0?1:0);
 	temp|=(bio_get(M_I2C_SCL)==0?2:0);
 	return (temp==3);			// there is only a short when both are 0 otherwise repeated start wont work
+}
+
+uint32_t hwi2c_get_speed(void){
+	return mode_config.baudrate;
 }
 
 

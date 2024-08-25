@@ -238,5 +238,5 @@ static uint8_t checkshort(void){
 }
 
 uint32_t hw2wire_get_speed(void){
-	return hw2wire_mode_config.baudrate;
+	return hw2wire_mode_config.baudrate * 1000;
 }

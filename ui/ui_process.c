@@ -30,14 +30,12 @@ bool ui_process_syntax(void) {
     }
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
     
-    //binmode hook
-    //binmodes[system_config.binmode_select].binmode_hook_syntax_pre_run();
+    //follow along logic analyzer hook
     fala_start_hook();
 
     bool error = syntax_run();
         
-    //binmode hook
-    //binmodes[system_config.binmode_select].binmode_hook_syntax_post_run();
+    //follow along logic analyzer hook
     fala_stop_hook();
     
     icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
@@ -49,7 +47,7 @@ bool ui_process_syntax(void) {
         if(error) printf("Syntax post process error\r\n");
     }
 
-    //binmodes[system_config.binmode_select].binmode_hook_syntax_post_output();
+    //follow along logic analyzer hook
     fala_notify_hook();
 
     return error;

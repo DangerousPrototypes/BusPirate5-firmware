@@ -69,8 +69,8 @@ void ui_mode_enable_args(struct command_result* res) {
     modes[system_config.mode].protocol_cleanup();                        // switch to HiZ
     modes[0].protocol_setup_exc();                                       // disables power suppy etc.
     system_config.mode = mode;                                           // setup the new mode
-    uint32_t frequency = modes[system_config.mode].protocol_setup_exc(); // execute the mode setup
-    fala_set_freq(frequency); //notify follow along logic analyzer of new frequency
+    modes[system_config.mode].protocol_setup_exc(); // execute the mode setup
+    fala_mode_change_hook(); //notify follow along logic analyzer of new frequency
 
     if (system_config.mode == 0){ // TODO: do something to show the mode (LED? LCD?)
         // gpio_clear(BP_MODE_LED_PORT, BP_MODE_LED_PIN);

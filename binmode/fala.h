@@ -22,5 +22,6 @@ void fala_stop_hook(void);
 void fala_notify_hook(void);
 void fala_notify_register(void (*hook)());
 void fala_notify_unregister(void (*hook)());
+void fala_mode_change_hook(void);
 
 #endif // FALA_H

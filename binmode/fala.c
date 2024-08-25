@@ -16,6 +16,9 @@
 #include "binmode/fala.h"
 #include "tusb.h"
 #include "ui/ui_term.h"
+#include "opt_args.h"
+#include "bytecode.h"
+#include "modes.h"
 
 FalaConfig fala_config = { .base_frequency = 1000000, .oversample = 8 };
 
@@ -163,4 +166,10 @@ void fala_stop_hook(void) {
             return;
         }
     }
+}
+
+// mode change, configure speed with mode function
+void fala_mode_change_hook(void){
+    fala_set_freq(modes[system_config.mode].protocol_get_speed());
+    fala_set_oversample(8);
 }

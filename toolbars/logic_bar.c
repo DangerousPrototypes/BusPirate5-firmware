@@ -43,6 +43,7 @@ void logic_bar_config(char low, char high) {
 
 // wrangle the terminal into a state where we can draw a nice box
 void draw_prepare(void) {
+    system_config.terminal_ansi_statusbar_pause = true;
     busy_wait_ms(1);
     system_config.terminal_hide_cursor = true; // prevent the status bar from showing the cursor again
     printf("%s", ui_term_cursor_hide());
@@ -51,7 +52,7 @@ void draw_prepare(void) {
 void draw_release(void) {
     system_config.terminal_hide_cursor = false;
     printf("%s", ui_term_cursor_show());
-    system_config.terminal_ansi_statusbar_pause = true;
+    system_config.terminal_ansi_statusbar_pause = false;
 }
 
 // TODO: move to a central dispatch
@@ -124,12 +125,12 @@ void logic_bar_redraw(uint32_t start_pos, uint32_t total_samples) {
     // find the start point
     uint32_t la_ptr =  logic_analyzer_get_end_ptr(); 
 
-    /*if (total_samples < LOGIC_BAR_GRAPH_WIDTH) {
+    if (total_samples < LOGIC_BAR_GRAPH_WIDTH) {
         // add zero padding...
     } else if (start_pos + (LOGIC_BAR_GRAPH_WIDTH) >
                total_samples) { // recenter if we;re off to the right side of the data
         start_pos = total_samples - LOGIC_BAR_GRAPH_WIDTH;
-    }*/
+    }
 
     uint32_t sample_ptr = logic_analyzer_get_start_ptr(total_samples);
     sample_ptr = (sample_ptr + start_pos) & 0x1ffff;

@@ -1,6 +1,6 @@
 # == DO NEVER EDIT THE NEXT LINES for Raspberry Pi Pico VS Code Extension to work ==
 if(WIN32)
-   set(USERHOME $ENV{USERPROFILE})
+    set(USERHOME $ENV{USERPROFILE})
 else()
     set(USERHOME $ENV{HOME})
 endif()
@@ -28,22 +28,10 @@ else()
     set(USERHOME $ENV{HOME})
 endif()
 if(WIN32)
-set(PICO_SDK_PATH ${USERHOME}/.pico-sdk/sdk/2.0.0)
-set(PICO_TOOLCHAIN_PATH ${USERHOME}/.pico-sdk/toolchain/13_2_Rel1)
-set(pioasm_HINT ${USERHOME}/.pico-sdk/tools/2.0.0/pioasm)
-if(EXISTS ${pioasm_HINT})
-    set(pioasm_DIR ${pioasm_HINT})
-endif()
-set(picotool_HINT ${USERHOME}/.pico-sdk/picotool/2.0.0/picotool)
-if(EXISTS ${picotool_HINT})
-    set(picotool_DIR ${picotool_HINT})
-endif()
-if(PICO_TOOLCHAIN_PATH MATCHES "RISCV")
-    set(PICO_PLATFORM rp2350-riscv CACHE STRING "Pico Platform")
-    if(PICO_TOOLCHAIN_PATH MATCHES "COREV")
-        set(PICO_COMPILER pico_riscv_gcc_zcb_zcmp)
-    endif()
-endif()
+set(sdkVersion 2.0.0)
+set(toolchainVersion 13_2_Rel1)
+set(picotoolVersion 2.0.0)
+include(${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 endif()
 # ====================================================================================
 cmake_minimum_required(VERSION 3.13)
@@ -139,6 +127,7 @@ set(bp5_common
         commands/global/smps.c commands/global/smps.h
         commands/global/cls.h commands/global/cls.c  
         commands/global/cmd_binmode.h commands/global/cmd_binmode.c
+        commands/global/logic.h commands/global/logic.c
         # HiZ
         mode/hiz.h mode/hiz.c
         # 1Wire
@@ -187,8 +176,12 @@ set(bp5_common
         # DIO
         mode/dio.h mode/dio.c
 
+        #Infrared
+        mode/infrared.h mode/infrared.c 
+        lib/pico_ir_nec/nec_transmit.c lib/pico_ir_nec/nec_transmit.h
+
         # DUMMY MODE
-        mode/dummy1.c mode/dummy1.h
+        mode/dummy1.c mode/dummy1.h 
 
         # UI
         ui/ui_button.c ui/ui_button.h
@@ -215,6 +208,7 @@ set(bp5_common
         # syntax and commands
         syntax.h syntax.c syntax_struct.h
         opt_args.h command_attributes.h bytecode.h
+        pio_config.h
 
         # FATfs
         fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c
@@ -233,6 +227,10 @@ set(bp5_common
         lib/arduino-ch32v003-swio/arduino_ch32v003.c lib/arduino-ch32v003-swio/arduino_ch32v003.h
         lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c     
         lib/picorvd/picoswio.c lib/picorvd/picoswio.h lib/picorvd/debug_defines.h
+        binmode/fala.c binmode/fala.h binmode/falaio.c binmode/falaio.h
+
+        #toolbars
+        toolbars/logic_bar.c toolbars/logic_bar.h
 
         # displays
         displays.c displays.h display/default.c display/default.h
@@ -342,9 +340,11 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwuart.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/spisnif.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/binmode/logicanalyzer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_burst.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_control.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/picorvd/ch32vswio.pio)
 
-        pico_set_program_name(${revision} ${revision})
+        pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")
         if(${PICO_PLATFORM} MATCHES "rp2350")
                 pico_set_program_description(${revision} "Bus Pirate 5XL/6 Firmware for RP2350")
@@ -364,11 +364,11 @@ foreach(revision ${revisions})
         target_link_libraries(${revision} ${stdlibs} )
         target_include_directories(${revision} PUBLIC ${CMAKE_CURRENT_LIST_DIR} . )
         pico_add_extra_outputs(${revision})
-        #if(${PICO_PLATFORM} MATCHES "rp2350")
-        #        pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate6.ld)
-        #else()
-                #pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_buspirate5.ld)
-        #endif()
+        if(${PICO_PLATFORM} MATCHES "rp2350")
+                pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/boards/memmap_default_rp2350.ld)
+        else()
+                pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/boards/memmap_default_rp2040.ld)
+        endif()
         #pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_default.ld)
 endforeach()
 

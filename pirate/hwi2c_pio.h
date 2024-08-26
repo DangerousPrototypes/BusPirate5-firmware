@@ -8,7 +8,7 @@
 
 #include "hwi2c.pio.h"
 
-void pio_i2c_init(PIO pio, uint sm, uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate);
+void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate);
 void pio_i2c_cleanup(void);
 
 // ---------------------------------------------------------------

@@ -1,0 +1,1 @@
+void logic_handler(struct command_result *res);

@@ -14,6 +14,7 @@ void spi_pins(void);
 void spi_settings(void);
 void spi_printSPIflags(void);
 void spi_help(void);
+uint32_t spi_get_speed(void);
 
 // special for binmode and lcd
 void spi_setcpol(uint32_t val);

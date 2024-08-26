@@ -3,41 +3,43 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
+#include "pico/stdlib.h"
+#include "pirate.h"
+#include "hardware/pio.h"
+#include "pio_config.h"
 #include "hwi2c_pio.h"
+
+static struct _pio_config pio_config;
 
 const int PIO_I2C_ICOUNT_LSB = 10;
 const int PIO_I2C_FINAL_LSB  = 9;
 const int PIO_I2C_DATA_LSB   = 1;
 const int PIO_I2C_NAK_LSB    = 0;
 
-static PIO hwi2c_pio;
-static uint hwi2c_pio_state_machine;
-static uint hwi2c_pio_loaded_offset;
+void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate){
+    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&i2c_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, dir_sda, 10, true);
+    hard_assert(success);
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
 
-void pio_i2c_init(PIO pio, uint sm, uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate){
-    hwi2c_pio=pio;
-    hwi2c_pio_state_machine=sm;
-    hwi2c_pio_loaded_offset = pio_add_program(hwi2c_pio, &i2c_program);
-    i2c_program_init(pio, hwi2c_pio_state_machine, hwi2c_pio_loaded_offset, sda, scl, dir_sda, dir_scl, baudrate);
+    i2c_program_init(pio_config.pio, pio_config.sm, pio_config.offset, sda, scl, dir_sda, dir_scl, baudrate);
 }
 
 void pio_i2c_cleanup(void){
-    pio_remove_program(hwi2c_pio, &i2c_program, hwi2c_pio_loaded_offset);
+    pio_remove_program_and_unclaim_sm(&i2c_program, pio_config.pio, pio_config.sm, pio_config.offset);
 }
 
 bool pio_i2c_check_error(void) {
-    return pio_interrupt_get(hwi2c_pio, hwi2c_pio_state_machine);
+    return pio_interrupt_get(pio_config.pio, pio_config.sm);
 }
 
 void pio_i2c_rx_enable(bool en) {
-    if (en) hw_set_bits(&hwi2c_pio->sm[hwi2c_pio_state_machine].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
-    else hw_clear_bits(&hwi2c_pio->sm[hwi2c_pio_state_machine].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
+    if (en) hw_set_bits(&pio_config.pio->sm[pio_config.sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
+    else hw_clear_bits(&pio_config.pio->sm[pio_config.sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
 }
 
 static inline uint32_t pio_i2c_wait_idle_timeout(uint32_t timeout){
-    hwi2c_pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + hwi2c_pio_state_machine);
-    while(!(hwi2c_pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + hwi2c_pio_state_machine))){
+    pio_config.pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm);
+    while(!(pio_config.pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm))){
         if(pio_i2c_check_error()){
             return 1; //TODO: MAKE MODE ERROR CODES
         }
@@ -54,7 +56,7 @@ static inline uint32_t pio_i2c_wait_idle_timeout(uint32_t timeout){
 
 
 static inline uint32_t pio_i2c_put16_or_timeout(uint16_t data, uint32_t timeout) {
-    while(pio_sm_is_tx_fifo_full(hwi2c_pio, hwi2c_pio_state_machine)){
+    while(pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)){
         timeout--;
         if(!timeout) return 2;
     }
@@ -64,7 +66,7 @@ static inline uint32_t pio_i2c_put16_or_timeout(uint16_t data, uint32_t timeout)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing"
     #endif
-        *(io_rw_16 *)&hwi2c_pio->txf[hwi2c_pio_state_machine] = data;
+        *(io_rw_16 *)&pio_config.pio->txf[pio_config.sm] = data;
     #ifdef __GNUC__
     #pragma GCC diagnostic pop
     #endif
@@ -82,7 +84,7 @@ static inline uint32_t pio_i2c_put_or_timeout(uint16_t data, uint32_t timeout){
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing"
     #endif
-        *(io_rw_16 *)&hwi2c_pio->txf[hwi2c_pio_state_machine] = data;
+        *(io_rw_16 *)&pio_config.pio->txf[pio_config.sm] = data;
     #ifdef __GNUC__
     #pragma GCC diagnostic pop
     #endif
@@ -91,7 +93,7 @@ static inline uint32_t pio_i2c_put_or_timeout(uint16_t data, uint32_t timeout){
 }
 
 uint8_t pio_i2c_get(void) {
-    return (uint8_t)pio_sm_get(hwi2c_pio, hwi2c_pio_state_machine);
+    return (uint8_t)pio_sm_get(pio_config.pio, pio_config.sm);
 }
 
 static inline uint32_t pio_i2c_put_instructions(const uint16_t *inst, uint8_t length, uint32_t timeout)    {
@@ -136,16 +138,16 @@ uint32_t pio_i2c_restart_timeout(uint32_t timeout) {
 
 
 void pio_i2c_resume_after_error() {
-    pio_sm_drain_tx_fifo(hwi2c_pio, hwi2c_pio_state_machine);
-    pio_sm_exec(hwi2c_pio, hwi2c_pio_state_machine, (hwi2c_pio->sm[hwi2c_pio_state_machine].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >> PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
-    pio_interrupt_clear(hwi2c_pio, hwi2c_pio_state_machine);
+    pio_sm_drain_tx_fifo(pio_config.pio, pio_config.sm);
+    pio_sm_exec(pio_config.pio, pio_config.sm, (pio_config.pio->sm[pio_config.sm].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >> PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
+    pio_interrupt_clear(pio_config.pio, pio_config.sm);
     pio_i2c_rx_enable(false); 
     pio_i2c_stop_timeout(0xff);
     pio_i2c_stop_timeout(0xff);
     pio_i2c_stop_timeout(0xff);
-    pio_sm_drain_tx_fifo(hwi2c_pio, hwi2c_pio_state_machine);
-    pio_sm_exec(hwi2c_pio, hwi2c_pio_state_machine, (hwi2c_pio->sm[hwi2c_pio_state_machine].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >> PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
-    pio_interrupt_clear(hwi2c_pio, hwi2c_pio_state_machine);
+    pio_sm_drain_tx_fifo(pio_config.pio, pio_config.sm);
+    pio_sm_exec(pio_config.pio, pio_config.sm, (pio_config.pio->sm[pio_config.sm].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >> PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
+    pio_interrupt_clear(pio_config.pio, pio_config.sm);
 }
 
 uint32_t pio_i2c_write_timeout(uint32_t data, uint32_t timeout){
@@ -164,13 +166,13 @@ uint32_t pio_i2c_read_timeout(uint32_t *data, bool ack, uint32_t timeout){
 
     error=pio_i2c_wait_idle_timeout(timeout);
     if(error) return error;   
-	while(!pio_sm_is_rx_fifo_empty(hwi2c_pio, hwi2c_pio_state_machine)){
+	while(!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)){
         (void)pio_i2c_get();
     }
     error=pio_i2c_put16_or_timeout((0xffu << 1) | (ack?0:(1u << 9) | (1u << 0)), timeout);
     if(error) return error;
     uint32_t to=timeout;
-    while(pio_sm_is_rx_fifo_empty(hwi2c_pio, hwi2c_pio_state_machine)){
+    while(pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)){
         to--;
         if(!to) return 2;
     }
@@ -188,7 +190,7 @@ uint32_t pio_i2c_write_blocking_timeout(uint8_t addr, uint8_t *txbuf, uint len, 
     if(pio_i2c_put16_or_timeout((addr << 1) | 1u, timeout)) return 1;
     uint32_t temp=timeout;
     while(len && !pio_i2c_check_error()){
-        if(!pio_sm_is_tx_fifo_full(hwi2c_pio, hwi2c_pio_state_machine)) {
+        if(!pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {
             --len;
             if(pio_i2c_put_or_timeout((*txbuf++ << PIO_I2C_DATA_LSB) | ((len == 0) << PIO_I2C_FINAL_LSB) | 1u, timeout)) return 1;
         }
@@ -210,7 +212,7 @@ uint32_t pio_i2c_read_blocking_timeout(uint8_t addr, uint8_t *rxbuf, uint len, u
     int err = 0;
     if(pio_i2c_start_timeout(timeout)) return 1;
     pio_i2c_rx_enable(true); 
-    while(!pio_sm_is_rx_fifo_empty(hwi2c_pio, hwi2c_pio_state_machine)){
+    while(!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)){
         (void)pio_i2c_get(); 
     }
     if(pio_i2c_put16_or_timeout((addr << 1) | 3u, timeout)) return 1;
@@ -219,12 +221,12 @@ uint32_t pio_i2c_read_blocking_timeout(uint8_t addr, uint8_t *rxbuf, uint len, u
     bool first = true;
     uint32_t temp=timeout;
     while((tx_remain || len) && !pio_i2c_check_error()){
-        if(tx_remain && !pio_sm_is_tx_fifo_full(hwi2c_pio, hwi2c_pio_state_machine)) {
+        if(tx_remain && !pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {
             --tx_remain;
             if(pio_i2c_put16_or_timeout( (0xffu << 1) | (tx_remain ? 0 : (1u << PIO_I2C_FINAL_LSB) | (1u << PIO_I2C_NAK_LSB)), timeout)) return 1;
             temp=timeout; //reset the counter
         }
-        if(!pio_sm_is_rx_fifo_empty(hwi2c_pio, hwi2c_pio_state_machine)) {
+        if(!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
             if(first) {
                 // Ignore returned address byte
                 (void)pio_i2c_get();
@@ -266,7 +268,7 @@ int pio_i2c_write_blocking(uint8_t addr, uint8_t *txbuf, uint len) {
     pio_i2c_rx_enable( false);
     pio_i2c_put16((addr << 2) | 1u);
     while (len && !pio_i2c_check_error()) {
-        if (!pio_sm_is_tx_fifo_full(hwi2c_pio, hwi2c_pio_state_machine)) {
+        if (!pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {
             --len;
             pio_i2c_put_or_err( (*txbuf++ << PIO_I2C_DATA_LSB) | ((len == 0) << PIO_I2C_FINAL_LSB) | 1u);
         }
@@ -285,7 +287,7 @@ int pio_i2c_read_blocking(uint8_t addr, uint8_t *rxbuf, uint len) {
     int err = 0;
     pio_i2c_start();
     pio_i2c_rx_enable( true); 
-    while (!pio_sm_is_rx_fifo_empty(hwi2c_pio, hwi2c_pio_state_machine))
+    while (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm))
         (void)pio_i2c_get();
     pio_i2c_put16((addr << 2) | 3u);
     uint32_t tx_remain = len; // Need to stuff 0xff bytes in to get clocks
@@ -293,11 +295,11 @@ int pio_i2c_read_blocking(uint8_t addr, uint8_t *rxbuf, uint len) {
     bool first = true;
 
     while ((tx_remain || len) && !pio_i2c_check_error()) {
-        if (tx_remain && !pio_sm_is_tx_fifo_full(hwi2c_pio, hwi2c_pio_state_machine)) {
+        if (tx_remain && !pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {
             --tx_remain;
             pio_i2c_put16( (0xffu << 1) | (tx_remain ? 0 : (1u << PIO_I2C_FINAL_LSB) | (1u << PIO_I2C_NAK_LSB)));
         }
-        if (!pio_sm_is_rx_fifo_empty(hwi2c_pio, hwi2c_pio_state_machine)) {
+        if (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
             if (first) {
                 // Ignore returned address byte
                 (void)pio_i2c_get();
@@ -325,7 +327,7 @@ int pio_i2c_read_blocking(uint8_t addr, uint8_t *rxbuf, uint len) {
 
 // If I2C is ok, block and push data. Otherwise fall straight through.
 void pio_i2c_put_or_err(uint16_t data) {
-    while (pio_sm_is_tx_fifo_full(hwi2c_pio, hwi2c_pio_state_machine))
+    while (pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm))
         if (pio_i2c_check_error())
             return;
     if (pio_i2c_check_error())
@@ -335,7 +337,7 @@ void pio_i2c_put_or_err(uint16_t data) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
-    *(io_rw_16 *)&hwi2c_pio->txf[hwi2c_pio_state_machine] = data;
+    *(io_rw_16 *)&pio_config.pio->txf[pio_config.sm] = data;
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
@@ -343,13 +345,13 @@ void pio_i2c_put_or_err(uint16_t data) {
 
 
 void pio_i2c_put16(uint16_t data) {
-    while (pio_sm_is_tx_fifo_full(hwi2c_pio, hwi2c_pio_state_machine));
+    while (pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm));
     // some versions of GCC dislike this
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
-    *(io_rw_16 *)&hwi2c_pio->txf[hwi2c_pio_state_machine] = data;
+    *(io_rw_16 *)&pio_config.pio->txf[pio_config.sm] = data;
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
@@ -382,8 +384,8 @@ void pio_i2c_repstart() {
 void pio_i2c_wait_idle() {
     uint32_t timeout=10000;
     // Finished when TX runs dry or SM hits an IRQ
-    hwi2c_pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + hwi2c_pio_state_machine);
-    while (!(hwi2c_pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + hwi2c_pio_state_machine) || pio_i2c_check_error()) && timeout){
+    pio_config.pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm);
+    while (!(pio_config.pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm) || pio_i2c_check_error()) && timeout){
         tight_loop_contents();
         timeout--;
     }

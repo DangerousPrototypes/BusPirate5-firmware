@@ -3,10 +3,11 @@
 #define BP_CONFIG
 
 #define BP_FIRMWARE_VERSION "main branch"
+
 #ifndef BP_FIRMWARE_HASH //this variable is for the current commit GIT hash
 #define BP_FIRMWARE_HASH "unknown"
 #endif
-#ifndef BP_FIRMWARE_TIMESTAMP //this variable is for the current commit GIT hash
+#ifndef BP_FIRMWARE_TIMESTAMP //this variable is for the compile timestamp
 #define BP_FIRMWARE_TIMESTAMP _TIMEZ_
 #endif
 
@@ -28,21 +29,17 @@
 #define		USB_PRODUCT	"BusPirate5"
 
 // enable modes
-//#define		BP_USE_SW1WIRE
 #define     BP_USE_HW1WIRE
 #define		BP_USE_HWUART
 #define     BP_USE_HWHDUART
 #define		BP_USE_HWI2C
-//#define		BP_USE_SWI2C
 #define		BP_USE_HWSPI
 #define		BP_USE_HW2WIRE
-//#define		BP_USE_SW2W
-//#define		BP_USE_SW3W
-#define 	BP_USE_DIO
 #define     BP_USE_HWLED
 //#define		BP_USE_LCDSPI
 //#define		BP_USE_LCDI2C
-//#define		BP_USE_LA
+#define     BP_USE_DIO
+#define     BP_USE_INFRARED
 //#define 	BP_USE_DUMMY1
 //#define 	BP_USE_DUMMY2
 #define     BP_USE_SCOPE
@@ -85,6 +82,7 @@
 void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);
 void spi_busy_wait(bool enable);
+
 
 // 1wire settings
 #define M_OW_PIO pio0

@@ -123,6 +123,7 @@ public waiting:
 
 
 % c-sdk {
+#include "pirate.h"
 
 /* Configure a PIO/sm for onewire */
 /* Note on pinctlz: GPIO pins have pulldown after reset. This enables
@@ -156,7 +157,9 @@ void onewire_program_init(
 
     gpio_init(pin);
     gpio_set_dir(pin, 0);
+    #if BP_VER==5
     gpio_pull_down(pin);
+    #endif
 
     gpio_init(dir);
     gpio_put(dir, 1);

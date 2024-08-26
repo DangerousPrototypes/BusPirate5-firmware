@@ -39,7 +39,7 @@ uint32_t hw1wire_setup(void){
 
 uint32_t hw1wire_setup_exc(void){
 	system_bio_claim(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
-	onewire_init(M_OW_PIO, M_OW_PIO_SM, bio2bufiopin[BIO3], bio2bufdirpin[BIO3]);
+	onewire_init(bio2bufiopin[BIO3], bio2bufdirpin[BIO3]);
     return 1;
 }
 
@@ -79,19 +79,18 @@ void hw1wire_cleanup(void){
 
 // MACROS
 void hw1wire_macro(uint32_t macro){
-	uint32_t result=0;
 	switch(macro){
 		case 0:		printf(" 0. Macro list\r\n");
 				break;
 		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
 				system_config.error=1;
 	}
-
-	if(result){
-		printf("Device not found\r\n");
-	}
 }
 
 void hw1wire_help(void){
 	ui_help_mode_commands(hw1wire_commands, hw1wire_commands_count);
+}
+
+uint32_t hw1wire_get_speed(void){
+	return 14286;
 }

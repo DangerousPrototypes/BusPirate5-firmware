@@ -191,3 +191,8 @@ void dio_settings(void){
 void dio_help(void){
 	ui_help_mode_commands(dio_commands, dio_commands_count);
 }
+
+//TODO: move this to PIO and have a speed setting...
+uint32_t dio_get_speed(void){
+	return 100000;
+}

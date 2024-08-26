@@ -155,6 +155,7 @@ uint32_t spi_setup_exc(void){
 	system_bio_claim(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
 	system_bio_claim(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);
 	system_bio_claim(true, M_SPI_CS, BP_PIN_MODE, pin_labels[3]);
+	return mode_config.baudrate_actual;
 }
 
 void spi_cleanup(void){
@@ -289,3 +290,6 @@ void spi_help(void){
 	ui_help_mode_commands(hwspi_commands, hwspi_commands_count);
 }
 
+uint32_t spi_get_speed(void){
+	return mode_config.baudrate_actual;
+}

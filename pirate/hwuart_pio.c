@@ -14,11 +14,11 @@
 #include "usb_tx.h"
 #include "hwuart.pio.h"
 #include "pirate/bio.h"
+#include "pio_config.h"
 
-static PIO pio = M_UART_PIO;
-static uint sm = M_UART_PIO_SM;
-static uint pio_loaded_offset_rx;
-static uint pio_loaded_offset_tx;
+static struct _pio_config pio_config_rx;
+static struct _pio_config pio_config_tx;
+
 uint8_t hwuart_data_bits;
 uint8_t hwuart_parity;
 uint8_t hwuart_stop_bits;
@@ -39,24 +39,29 @@ void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint3
     }
     bits--;
     
-    pio_loaded_offset_rx = pio_add_program(pio, &uart_rx_program);
-    uart_rx_program_init(pio, sm, pio_loaded_offset_rx, bio2bufiopin[M_UART_RXTX], bits, baud);
-    pio_loaded_offset_tx = pio_add_program(pio, &uart_tx_program);
-    uart_tx_program_init(pio, sm-1, pio_loaded_offset_tx, bio2bufdirpin[M_UART_RXTX], bits, baud);
+    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_rx_program, &pio_config_rx.pio, &pio_config_rx.sm, &pio_config_rx.offset, bio2bufiopin[M_UART_RXTX], 1, true);
+    hard_assert(success);
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_rx.pio), pio_config_rx.sm, pio_config_rx.offset);
+    uart_rx_program_init(pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, bio2bufiopin[M_UART_RXTX], bits, baud);
+
+    success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_tx_program, &pio_config_tx.pio, &pio_config_tx.sm, &pio_config_tx.offset, bio2bufiopin[M_UART_RXTX], 1, true);
+    hard_assert(success);
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_tx.pio), pio_config_tx.sm, pio_config_tx.offset);
+    uart_tx_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, bio2bufdirpin[M_UART_RXTX], bits, baud);
 
 }
 
 void hwuart_pio_deinit(void){
-    pio_remove_program(pio, &uart_rx_program, pio_loaded_offset_rx);
-    pio_remove_program(pio, &uart_tx_program, pio_loaded_offset_tx);
+    pio_remove_program_and_unclaim_sm(&uart_rx_program, pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset);
+    pio_remove_program_and_unclaim_sm(&uart_tx_program, pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset);
 }
 
 bool hwuart_pio_read(uint32_t *raw, uint8_t *cooked){
-    if(pio_sm_is_rx_fifo_empty(pio, sm)){
+    if(pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)){
         return false;
     }
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
-    (*raw) = pio->rxf[sm];
+    (*raw) = pio_config_rx.pio->rxf[pio_config_rx.sm];
     //TODO: change this based on UART settings
     //Detect parity error?
     (*cooked) = (uint8_t)((*raw) >> 22); //MSB is the parity bit...
@@ -97,8 +102,8 @@ void hwuart_pio_write(uint32_t data){
         //printf("2 stop ");
     }
     //printf("stop bit: %d parity bit: %d data bits: %d\n", hwuart_stop_bits, hwuart_parity, hwuart_data_bits);
-    pio_sm_set_enabled(pio, sm, false); //pause the RX state machine? maybe just discard the byte?
-    pio_sm_put_blocking(pio, sm-1, data);
-    pio_hwuart_wait_idle(pio, sm-1);//wait for the TX state machine to finish
-    pio_sm_set_enabled(pio, sm, true); //enable the RX state machine again
+    pio_sm_set_enabled(pio_config_rx.pio, pio_config_rx.sm, false); //pause the RX state machine? maybe just discard the byte?
+    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, data);
+    pio_hwuart_wait_idle(pio_config_tx.pio, pio_config_tx.sm);//wait for the TX state machine to finish
+    pio_sm_set_enabled(pio_config_rx.pio, pio_config_rx.sm, true); //enable the RX state machine again
 }

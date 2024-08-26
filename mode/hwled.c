@@ -16,6 +16,10 @@
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
+#include "pio_config.h"
+
+static struct _pio_config pio_config;
+
 
 // command configuration
 const struct _command_struct hwled_commands[]={   //Function Help
@@ -42,9 +46,6 @@ enum M_LED_DEVICE_TYPE{
 
 static struct _led_mode_config mode_config;
 
-static PIO pio = M_LED_PIO;
-static uint pio_state_machine = M_LED_PIO_SM;
-static uint pio_loaded_offset;
 static uint8_t device_cleanup;
 
 uint32_t hwled_setup(void)
@@ -107,23 +108,30 @@ uint32_t hwled_setup(void)
 }
 
 uint32_t hwled_setup_exc(void){
+	bool success;
 	switch(mode_config.device){
 		case M_LED_WS2812:
+			mode_config.baudrate=800000;
 			bio_buf_output(M_LED_SDO);
-			pio_loaded_offset = pio_add_program(pio, &ws2812_program);
-    		ws2812_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[M_LED_SDO], 800000, false);
+			success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, bio2bufiopin[M_LED_SDO], 1, true);
+			hard_assert(success);
+			printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+    		ws2812_program_init(pio_config.pio, pio_config.sm, pio_config.offset, bio2bufiopin[M_LED_SDO], (float)mode_config.baudrate, false);
 			system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
 			break;
 		case M_LED_APA102:
+			mode_config.baudrate=(5 * 1000 * 1000);
 			bio_buf_output(M_LED_SDO);
 			bio_buf_output(M_LED_SCL);		
-			pio_loaded_offset = pio_add_program(pio, &apa102_mini_program);
-			#define SERIAL_FREQ (5 * 1000 * 1000)
-    		apa102_mini_program_init(pio, pio_state_machine, pio_loaded_offset, SERIAL_FREQ, bio2bufiopin[M_LED_SCL], bio2bufiopin[M_LED_SDO]);
+			success = pio_claim_free_sm_and_add_program_for_gpio_range(&apa102_mini_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, bio2bufiopin[M_LED_SDO], 1, true);
+			hard_assert(success);
+			printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+    		apa102_mini_program_init(pio_config.pio, pio_config.sm, pio_config.offset, mode_config.baudrate, bio2bufiopin[M_LED_SCL], bio2bufiopin[M_LED_SDO]);
 			system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
 			system_bio_claim(true, M_LED_SCL, BP_PIN_MODE, pin_labels[1]);
 			break;
         case M_LED_WS2812_ONBOARD: //internal LEDs, stop any in-progress stuff
+			mode_config.baudrate=800000;
 			rgb_irq_enable(false);
 			rgb_set_all(0,0,0);
             break;
@@ -147,7 +155,7 @@ void hwled_start(struct _bytecode *result, struct _bytecode *next){
 		case M_LED_APA102:
 			for(uint8_t i=0; i<4; i++)
 			{
-				pio_sm_put_blocking(M_LED_PIO, pio_state_machine, 0x00);
+				pio_sm_put_blocking(pio_config.pio, pio_config.sm, 0x00);
 			}
 			result->data_message=t[T_HWLED_FRAME_START];
 			break;
@@ -166,7 +174,7 @@ void hwled_stop(struct _bytecode *result, struct _bytecode *next){
 		case M_LED_APA102:
 			for(uint8_t i=0; i<4; i++)
 			{
-				pio_sm_put_blocking(M_LED_PIO, pio_state_machine, 0xFF);
+				pio_sm_put_blocking(pio_config.pio, pio_config.sm, 0xFF);
 			}
 			result->data_message=t[T_HWLED_FRAME_STOP];
 			break;
@@ -180,10 +188,10 @@ void hwled_write(struct _bytecode *result, struct _bytecode *next){
 
 	switch(mode_config.device){
 		case M_LED_WS2812:
-			pio_sm_put_blocking(M_LED_PIO, pio_state_machine, (result->out_data << 8u));        
+			pio_sm_put_blocking(pio_config.pio, pio_config.sm, (result->out_data << 8u));        
 			break;
 		case M_LED_APA102:
-			pio_sm_put_blocking(M_LED_PIO, pio_state_machine, result->out_data);     
+			pio_sm_put_blocking(pio_config.pio, pio_config.sm, result->out_data);     
 			break;
         case M_LED_WS2812_ONBOARD: 
             rgb_put(result->out_data);
@@ -206,10 +214,10 @@ void hwled_macro(uint32_t macro){
 void hwled_cleanup(void){
 	switch(device_cleanup){
 		case M_LED_WS2812:
-			pio_remove_program(pio, &ws2812_program, pio_loaded_offset);
+			pio_remove_program_and_unclaim_sm(&ws2812_program, pio_config.pio, pio_config.sm, pio_config.offset);
 			break;
 		case M_LED_APA102:
-			pio_remove_program(pio, &apa102_mini_program, pio_loaded_offset);
+			pio_remove_program_and_unclaim_sm(&apa102_mini_program, pio_config.pio, pio_config.sm, pio_config.offset);
 			break;
 		case M_LED_WS2812_ONBOARD:
 			rgb_irq_enable(true);
@@ -228,4 +236,8 @@ void hwled_settings(void){
 
 void hwled_help(void){
 	ui_help_mode_commands(hwled_commands, hwled_commands_count);
+}
+
+uint32_t hwled_get_speed(void){
+	return mode_config.baudrate;
 }

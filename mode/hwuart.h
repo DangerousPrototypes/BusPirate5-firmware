@@ -12,6 +12,8 @@ void hwuart_settings(void);
 void hwuart_printerror(void);
 void hwuart_help(void);
 void hwuart_periodic(void);
+void hwuart_wait_done(void);
+uint32_t hwuart_get_speed(void);
 
 typedef struct _uart_mode_config{
 	uint32_t baudrate;

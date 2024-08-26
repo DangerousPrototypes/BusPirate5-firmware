@@ -35,6 +35,7 @@ const struct ui_help_options global_commands[]={
 	{0,"d", 	T_HELP_COMMAND_DISPLAY},
 	{0,"o", 	T_HELP_1_17},
 	{0,"l/L", 	T_HELP_1_15},
+	{0,"cls", T_HELP_CMD_CLS},
 
 //restart, firmware updates and diagnostic
 {1,"",T_HELP_SECTION_SYSTEM},
@@ -56,18 +57,22 @@ const struct ui_help_options global_commands[]={
 
 {1,"",T_HELP_SECTION_SCRIPT},
     {0,"script", T_HELP_CMD_SCRIPT},
+	{0, "tutorial", T_HELP_CMD_TUTORIAL},
     {0,"button", T_HELP_CMD_BUTTON},
     {0, "macro", T_HELP_CMD_MACRO},
-    {0, "tutorial", T_HELP_CMD_TUTORIAL},
+	{0,"(x)/(0)", T_HELP_2_1},    
     {0,"pause", T_HELP_CMD_PAUSE},    
 
+//tools and utilities
+{1,"",T_HELP_SECTION_TOOLS},
+	{0,"logic", T_HELP_CMD_LOGIC},
+	{0,"smps", T_HELP_CMD_SMPS},
+	{0,"= x/| x",T_HELP_1_2},   
 
 // enter a mode to use protocols
 {1,"",T_HELP_SECTION_MODE},
 	{0,"m", 	T_HELP_1_16},
 	{0,"binmode",T_CONFIG_BINMODE_SELECT},
-	{0,"(x)/(0)", T_HELP_2_1},
-	{0,"= x/| x",T_HELP_1_2},    
 
 //send and receive data in modes using bus syntax
 {1,"",T_HELP_SECTION_SYNTAX},

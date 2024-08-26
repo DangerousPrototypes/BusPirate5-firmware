@@ -49,11 +49,13 @@ void falaio_notify(void) {
 
 // binmode setup on mode start
 void falaio_setup(void) {
-    if(!fala_notify_register(&falaio_notify)) return false;
+    if(!fala_notify_register(&falaio_notify)){
+        printf("Failed to register notify function\r\n");
+        return;
+    }
     
     system_config.binmode_usb_rx_queue_enable = false;
     system_config.binmode_usb_tx_queue_enable = false;
-    
 }
 
 // binmode cleanup on exit

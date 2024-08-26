@@ -70,7 +70,9 @@ void ch32vswio_reset(int pin, int dirpin) {
   // 125 mhz / 12 = 96 nanoseconds per tick, close enough to 100 ns.
   sm_config_set_clkdiv      (&c, 12);
 
-  //gpio_pull_down(pin);
+  #if BP_VER==5
+  gpio_pull_down(pin);
+  #endif
   pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<pin)); //read pins to input (0, mask)  
   pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, (1u<<dirpin), (1u<<dirpin)); //buf pins to output (pins, mask)    
   pio_sm_set_pins_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<dirpin)); //buf dir to 0, buffer input/HiZ on the bus

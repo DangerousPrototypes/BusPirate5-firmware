@@ -8,7 +8,7 @@
 
 #include "hw2wire.pio.h"
 
-void pio_hw2wire_init(PIO pio, uint sm, uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate);
+void pio_hw2wire_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate);
 void pio_hw2wire_cleanup(void);
 
 void pio_hw2wire_put16(uint16_t data);

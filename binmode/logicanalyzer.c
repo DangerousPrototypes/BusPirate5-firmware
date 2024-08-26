@@ -167,7 +167,7 @@ void restart_dma() {
         dma_channel_configure(la_dma[i],
                               &la_dma_config,
                               (volatile uint8_t*)&la_buf[DMA_BYTES_PER_CHUNK * i],
-                              &pio->rxf[pio_config.sm],
+                              &pio_config.pio->rxf[pio_config.sm],
                               DMA_BYTES_PER_CHUNK,
                               false);
     }

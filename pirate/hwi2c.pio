@@ -75,7 +75,7 @@ do_exec:
 
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
-
+#include "pirate.h"
 
 static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda, uint pin_scl, uint buf_sda, uint buf_scl, uint32_t freq) {
     assert(pin_scl == pin_sda + 1); //wait uses pin ordered inputs, need to be consecutive
@@ -103,8 +103,10 @@ static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda,
     // Try to avoid glitching the bus while connecting the IOs. Get things set
     // up so that pin is driven down when PIO asserts OE low, and pulled up
     // otherwise.
+    #if BP_VER==5
     gpio_pull_down(pin_scl); //we pull down so we can output 0 when the buffer is an output without manipulating the actual scl/sda pin directions
     gpio_pull_down(pin_sda);
+    #endif
 
     uint32_t pin_pins = (1u << pin_sda) | (1u << pin_scl);
     uint32_t buf_pins = (1u << buf_sda) | (1u << buf_scl);

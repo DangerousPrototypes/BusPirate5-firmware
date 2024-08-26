@@ -11,6 +11,7 @@
 #include "hardware/pio.h"
 #include "hardware/clocks.h"    // for clock_get_hz()
 #include "nec_transmit.h"
+#include "pirate.h"
 
 // import the assembled PIO state machine programs
 #include "nec_carrier_burst.pio.h"
@@ -44,7 +45,7 @@ int nec_tx_init(uint pin_num) {
                                    38.222e3);                   // 38.222 kHz carrier
 
     // install the carrier_control program in the PIO shared instruction space
-    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&nec_carrier_control_program, &pio_config_control.pio, &pio_config_control.sm, &pio_config_control.offset, pin_num, 1, true);
+    success = pio_claim_free_sm_and_add_program_for_gpio_range(&nec_carrier_control_program, &pio_config_control.pio, &pio_config_control.sm, &pio_config_control.offset, pin_num, 1, true);
     hard_assert(success);
     if(!success) {
         return -1;

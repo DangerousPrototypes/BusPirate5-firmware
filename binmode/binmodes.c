@@ -44,7 +44,6 @@ const binmode_t binmodes[] = {
         .binmode_cleanup = falaio_cleanup,
     },
 };
-};
 
 inline void binmode_setup(void){
     if(binmodes[system_config.binmode_select].lock_terminal){

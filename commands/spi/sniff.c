@@ -54,7 +54,7 @@ bool pio_read(uint32_t *raw){
         return false;
     }
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
-    (*raw) = pio->rxf[pio_config.sm];
+    (*raw) = pio_config.pio->rxf[pio_config.sm];
     //TODO: change this based on UART settings
     //Detect parity error?
     return true;
@@ -65,7 +65,7 @@ bool pio_read_d1(uint32_t *raw){
         return false;
     }
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
-    (*raw) = pio->rxf[pio_config_d1.sm];
+    (*raw) = pio_config_d1.pio->rxf[pio_config_d1.sm];
     //TODO: change this based on UART settings
     //Detect parity error?
     return true;
@@ -82,7 +82,7 @@ void sniff_handler(struct command_result *res){
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
     spisnif_program_init(pio_config.pio, pio_config.sm, pio_config.offset, bio2bufiopin[BIO3], bio2bufiopin[BIO0], bio2bufiopin[BIO2]);
 
-    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&spisnif_2_program, &pio_config_d1.pio, &pio_config_d1.sm, &pio_config_d1.offset, bio2bufiopin[BIO0], 3, true);
+    success = pio_claim_free_sm_and_add_program_for_gpio_range(&spisnif_2_program, &pio_config_d1.pio, &pio_config_d1.sm, &pio_config_d1.offset, bio2bufiopin[BIO0], 3, true);
     hard_assert(success);
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_d1.pio), pio_config_d1.sm, pio_config_d1.offset);    
     spisnif_2_program_init(pio_config_d1.pio, pio_config_d1.sm, pio_config_d1.offset, bio2bufiopin[BIO3], bio2bufiopin[BIO1], bio2bufiopin[BIO2]);

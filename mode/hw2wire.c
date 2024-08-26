@@ -79,7 +79,7 @@ uint32_t hw2wire_setup(void){
 }
 
 uint32_t hw2wire_setup_exc(void){
-	pio_hw2wire_init(M_2WIRE_PIO, M_2WIRE_PIO_SM, bio2bufiopin[M_2WIRE_SDA], bio2bufiopin[M_2WIRE_SCL], bio2bufdirpin[M_2WIRE_SDA], bio2bufdirpin[M_2WIRE_SCL], hw2wire_mode_config.baudrate);
+	pio_hw2wire_init(bio2bufiopin[M_2WIRE_SDA], bio2bufiopin[M_2WIRE_SCL], bio2bufdirpin[M_2WIRE_SDA], bio2bufdirpin[M_2WIRE_SCL], hw2wire_mode_config.baudrate);
 	system_bio_claim(true, M_2WIRE_SDA, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_2WIRE_SCL, BP_PIN_MODE, pin_labels[1]);
 	system_bio_claim(true, M_2WIRE_RST, BP_PIN_MODE, pin_labels[2]);

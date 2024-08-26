@@ -44,7 +44,7 @@ void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint3
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_rx.pio), pio_config_rx.sm, pio_config_rx.offset);
     uart_rx_program_init(pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, bio2bufiopin[M_UART_RXTX], bits, baud);
 
-    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_tx_program, &pio_config_tx.pio, &pio_config_tx.sm, &pio_config_tx.offset, bio2bufiopin[M_UART_RXTX], 1, true);
+    success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_tx_program, &pio_config_tx.pio, &pio_config_tx.sm, &pio_config_tx.offset, bio2bufiopin[M_UART_RXTX], 1, true);
     hard_assert(success);
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_tx.pio), pio_config_tx.sm, pio_config_tx.offset);
     uart_tx_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, bio2bufdirpin[M_UART_RXTX], bits, baud);
@@ -57,11 +57,11 @@ void hwuart_pio_deinit(void){
 }
 
 bool hwuart_pio_read(uint32_t *raw, uint8_t *cooked){
-    if(pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.pio)){
+    if(pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)){
         return false;
     }
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
-    (*raw) = pio->rxf[pio_config_rx.sm];
+    (*raw) = pio_config_rx.pio->rxf[pio_config_rx.sm];
     //TODO: change this based on UART settings
     //Detect parity error?
     (*cooked) = (uint8_t)((*raw) >> 22); //MSB is the parity bit...

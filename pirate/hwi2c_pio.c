@@ -3,9 +3,11 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#include "pio_config.pio.h"
+#include "pico/stdlib.h"
+#include "pirate.h"
+#include "hardware/pio.h"
 #include "pio_config.h"
+#include "hwi2c_pio.h"
 
 static struct _pio_config pio_config;
 
@@ -13,10 +15,6 @@ const int PIO_I2C_ICOUNT_LSB = 10;
 const int PIO_I2C_FINAL_LSB  = 9;
 const int PIO_I2C_DATA_LSB   = 1;
 const int PIO_I2C_NAK_LSB    = 0;
-
-//static PIO pio_config.pio;
-//static uint pio_config.sm;
-//static uint pio_config.pio_loaded_offset;
 
 void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate){
     bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&i2c_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, dir_sda, 10, true);

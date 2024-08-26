@@ -5,7 +5,7 @@
 #include "system_config.h"
 #include "binmode/sump.h"
 #include "binmode/dirtyproto.h"
-#include "binmode/legacy2third.h"
+#include "binmode/legacy4third.h"
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 
 void binmode_null_func(void) {
@@ -31,9 +31,9 @@ const binmode_t binmodes[]={
     },
     {
         &binmode_null_func,
-        &legacy2third_mode,
+        &legacy4third_mode,
         &binmode_null_func, 
-        legacy2third_mode_name,   
+        legacy4third_mode_name,   
     },
 };
 

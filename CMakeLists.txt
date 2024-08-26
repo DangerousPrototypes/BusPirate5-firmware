@@ -229,7 +229,7 @@ set(bp5_common
         mode/binloopback.c mode/binloopback.h
         binmode/logicanalyzer.h binmode/logicanalyzer.c binmode/sump.c binmode/sump.h
         binmode/dirtyproto.c binmode/dirtyproto.h
-        binmode/legacy2third.c binmode/legacy2third.h
+        binmode/legacy4third.c binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c lib/arduino-ch32v003-swio/arduino_ch32v003.h
         lib/arduino-ch32v003-swio/swio.h lib/arduino-ch32v003-swio/swio.c     
         lib/picorvd/picoswio.c lib/picorvd/picoswio.h lib/picorvd/debug_defines.h

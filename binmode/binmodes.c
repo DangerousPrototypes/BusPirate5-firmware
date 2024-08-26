@@ -14,31 +14,36 @@ void binmode_null_func_void(void) {
 }
 
 //TODO: add setting for lock terminal or not
-const binmode_t binmodes[]={
-    {   .lock_terminal=false,
-        .binmode_name=sump_logic_analyzer_name, 
-        &sump_logic_analyzer_setup,
-        &sump_logic_analyzer_service,
-        &sump_logic_analyzer_cleanup, 
+const binmode_t binmodes[] = {
+    {
+        .lock_terminal = false,
+        .binmode_name = sump_logic_analyzer_name,
+        .binmode_setup = sump_logic_analyzer_setup,
+        .binmode_service = sump_logic_analyzer_service,
+        .binmode_cleanup = sump_logic_analyzer_cleanup,
     },
-    {   .lock_terminal=true,
-        dirtyproto_mode_name,
-        &binmode_null_func_void,
-        &dirtyproto_mode,
-        &binmode_null_func_void, 
+    {
+        .lock_terminal = true,
+        .binmode_name = dirtyproto_mode_name,
+        .binmode_setup = binmode_null_func_void,
+        .binmode_service = dirtyproto_mode,
+        .binmode_cleanup = binmode_null_func_void,
     },
-    {   .lock_terminal=true,
-        arduino_ch32v003_name,
-        &binmode_null_func_void,
-        &arduino_ch32v003,
-        &binmode_null_func_void,             
+    {
+        .lock_terminal = true,
+        .binmode_name = arduino_ch32v003_name,
+        .binmode_setup = binmode_null_func_void,
+        .binmode_service = arduino_ch32v003,
+        .binmode_cleanup = arduino_ch32v003_cleanup,
     },
-    {   .lock_terminal=false,
-        falaio_name, 
-        &falaio_setup,
-        &falaio_service,
-        &falaio_cleanup, 
-    },    
+    {
+        .lock_terminal = false,
+        .binmode_name = falaio_name,
+        .binmode_setup = falaio_setup,
+        .binmode_service = falaio_service,
+        .binmode_cleanup = falaio_cleanup,
+    },
+};
 };
 
 inline void binmode_setup(void){

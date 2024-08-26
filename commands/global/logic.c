@@ -84,9 +84,12 @@ void logic_handler(struct command_result* res) {
             printf("Logic analyzer already active\r\n");
             return;
         }
+        if(!logic_bar_start()){
+            printf("Logic analyzer failed to start\r\n");   
+            return;
+        }
         logic_active = true;
         logic_visible = true;
-        logic_bar_start();
         return;
     }
 

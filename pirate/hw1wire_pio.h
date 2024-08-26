@@ -21,7 +21,7 @@ struct owobj
     int LastDeviceFlag;
     unsigned char crc8;
 };
-void onewire_init(PIO pio, uint sm, uint pin, uint dir);
+void onewire_init(uint pin, uint dir);
 void onewire_cleanup(void);
 void pio_sm_trace(PIO pio, uint sm, uint usleep);
 void onewire_set_fifo_thresh(uint thresh);

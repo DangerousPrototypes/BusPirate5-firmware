@@ -34,6 +34,10 @@ bool ui_process_syntax(void) {
     fala_start_hook();
 
     bool error = syntax_run();
+
+    if(modes[system_config.mode].protocol_wait_done){
+        modes[system_config.mode].protocol_wait_done();
+    }
         
     //follow along logic analyzer hook
     fala_stop_hook();

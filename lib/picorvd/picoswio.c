@@ -11,6 +11,9 @@ Changed by: Ian Lesnet, 2024 Where Labs LLC for Bus Pirate 5
 #include "debug_defines.h"
 #include "hardware/pio.h"
 #include "picoswio.h"
+#include "pio_config.h"
+
+static struct _pio_config pio_config;
 
 #define DUMP_COMMANDS
 
@@ -23,6 +26,10 @@ static const int WCH_DM_PART     = 0x7F; // not in doc but appears to be part in
 const char* ch32swio_addr_to_regname(uint8_t addr);
 
 //------------------------------------------------------------------------------
+void ch32vswio_cleanup(void){
+  pio_remove_program_and_unclaim_sm(&singlewire_program, pio_config.pio, pio_config.sm, pio_config.offset);
+  pio_config.offset=0;
+}
 
 void ch32vswio_reset(int pin, int dirpin) {
   //CHECK(pin != -1);
@@ -36,21 +43,23 @@ void ch32vswio_reset(int pin, int dirpin) {
   gpio_set_slew_rate     (dirpin, GPIO_SLEW_RATE_SLOW);
   gpio_set_function      (dirpin, GPIO_FUNC_PIO0);
 
-  // Reset PIO module
-  pio0->ctrl = 0b000100010001;
-  pio_sm_set_enabled(pio0, pio_sm, false);
+  if(pio_config.offset) ch32vswio_cleanup(); //TODO: fix this hack...
 
-  // Upload PIO program
-  pio_clear_instruction_memory(pio0);
-  uint pio_offset = pio_add_program(pio0, &singlewire_program);
+  bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&singlewire_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, dirpin, 9, true);
+  hard_assert(success);
+  printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+
+  // Reset PIO module
+//  pio_config.pio->ctrl = 0b000100010001;
+  pio_sm_set_enabled(pio_config.pio, pio_config.sm, false);
 
   // Configure PIO module
   //TODO: side set pin is buffer direction, probably needs to be inverted
   //in pin should be buffer IO
   pio_sm_config c = pio_get_default_sm_config();
-  sm_config_set_wrap        (&c, pio_offset + singlewire_wrap_target, pio_offset + singlewire_wrap);
+  sm_config_set_wrap        (&c, pio_config.offset + singlewire_wrap_target, pio_config.offset + singlewire_wrap);
   //sm_config_set_sideset     (&c, 1, /*optional*/ false, /*pindirs*/ true);
-    sm_config_set_sideset     (&c, 1, /*optional*/ false, /*pindirs*/ false); //direct control of the buffer direction
+  sm_config_set_sideset     (&c, 1, /*optional*/ false, /*pindirs*/ false); //direct control of the buffer direction
   sm_config_set_out_pins    (&c, dirpin, 1);
   sm_config_set_in_pins     (&c, pin);
   sm_config_set_set_pins    (&c, dirpin, 1);
@@ -61,15 +70,15 @@ void ch32vswio_reset(int pin, int dirpin) {
   // 125 mhz / 12 = 96 nanoseconds per tick, close enough to 100 ns.
   sm_config_set_clkdiv      (&c, 12);
 
-  gpio_pull_down(pin);
-  pio_sm_set_pindirs_with_mask(pio0, pio_sm, 0, (1u<<pin)); //read pins to input (0, mask)  
-  pio_sm_set_pindirs_with_mask(pio0, pio_sm, (1u<<dirpin), (1u<<dirpin)); //buf pins to output (pins, mask)    
-  pio_sm_set_pins_with_mask(pio0, pio_sm, 0, (1u<<dirpin)); //buf dir to 0, buffer input/HiZ on the bus
-  pio_gpio_init(pio0, dirpin);
+  //gpio_pull_down(pin);
+  pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<pin)); //read pins to input (0, mask)  
+  pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, (1u<<dirpin), (1u<<dirpin)); //buf pins to output (pins, mask)    
+  pio_sm_set_pins_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<dirpin)); //buf dir to 0, buffer input/HiZ on the bus
+  pio_gpio_init(pio_config.pio, dirpin);
 
-  pio_sm_init       (pio0, pio_sm, pio_offset, &c);
+  pio_sm_init       (pio_config.pio, pio_config.sm, pio_config.offset, &c);
   //pio_sm_set_pins   (pio0, pio_sm, 1);
-  pio_sm_set_enabled(pio0, pio_sm, true);
+  pio_sm_set_enabled(pio_config.pio, pio_config.sm, true);
 
   // Grab pin and send an 8 usec low pulse to reset debug module
   // If we use the sdk functions to do this we get jitter :/
@@ -93,8 +102,8 @@ void ch32vswio_reset(int pin, int dirpin) {
 
 uint32_t ch32vswio_get(uint32_t addr) {
   //cmd_count++;
-  pio_sm_put_blocking(pio0, 0, ((~addr) << 1) | 1);
-  uint32_t data = pio_sm_get_blocking(pio0, 0);
+  pio_sm_put_blocking(pio_config.pio, pio_config.sm, ((~addr) << 1) | 1);
+  uint32_t data = pio_sm_get_blocking(pio_config.pio, pio_config.sm);
 #ifdef DUMP_COMMANDS
   printf("get_dbg %15s 0x%08x\r\n", ch32swio_addr_to_regname(addr), data);
 #endif
@@ -108,8 +117,8 @@ void ch32vswio_put(uint32_t addr, uint32_t data) {
 #ifdef DUMP_COMMANDS
   printf("set_dbg %15s 0x%08x\r\n", ch32swio_addr_to_regname(addr), data);
 #endif
-  pio_sm_put_blocking(pio0, 0, ((~addr) << 1) | 0);
-  pio_sm_put_blocking(pio0, 0, ~data);
+  pio_sm_put_blocking(pio_config.pio, pio_config.sm, ((~addr) << 1) | 0);
+  pio_sm_put_blocking(pio_config.pio, pio_config.sm, ~data);
 }
 /*
 //------------------------------------------------------------------------------

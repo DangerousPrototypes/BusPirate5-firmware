@@ -249,11 +249,12 @@ void logic_bar_update(void) {
     logic_bar_redraw(0, total_samples);
 }
 
-void logic_bar_start(void) {
+bool logic_bar_start(void) {
     //this should setup and activate hooks for fala if not already...
+    if(!fala_notify_register(&logic_bar_update)) return false;
     logic_bar_draw_frame();
-    fala_notify_register(&logic_bar_update);
     logic_bar_visible = true;
+    return true;
 }
 
 void logic_bar_stop(void) {

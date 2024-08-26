@@ -194,5 +194,5 @@ void dio_help(void){
 
 //TODO: move this to PIO and have a speed setting...
 uint32_t dio_get_speed(void){
-	return 10000000;
+	return 100000;
 }

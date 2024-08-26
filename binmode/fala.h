@@ -20,7 +20,7 @@ void fala_print_result(void);
 void fala_start_hook(void);
 void fala_stop_hook(void);
 void fala_notify_hook(void);
-void fala_notify_register(void (*hook)());
+bool fala_notify_register(void (*hook)());
 void fala_notify_unregister(void (*hook)());
 void fala_mode_change_hook(void);
 

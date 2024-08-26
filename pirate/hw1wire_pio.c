@@ -12,6 +12,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -24,19 +25,21 @@
 
 struct owobj owobj;
 
-void onewire_init(PIO pio, uint sm, uint pin, uint dir){
-    owobj.pio = pio;
-    owobj.sm = sm;
+void onewire_init(uint pin, uint dir){
+    //owobj.pio = pio;
+    //owobj.sm = sm;
     owobj.pin = pin;
     owobj.dir = dir;
-    owobj.offset = pio_add_program( owobj.pio, &onewire_program);
-    onewire_program_init( owobj.pio, owobj.sm, owobj.offset, owobj.pin, owobj.dir);
+    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&onewire_program, &owobj.pio, &owobj.sm, &owobj.offset, dir, 9, true);
+    hard_assert(success);
+    printf("pio %d, sm %d, offset %d\n", PIO_NUM(owobj.pio), owobj.sm, owobj.offset);
+    onewire_program_init(owobj.pio, owobj.sm, owobj.offset, owobj.pin, owobj.dir);
     onewire_set_fifo_thresh(8);
     pio_sm_set_enabled(owobj.pio, owobj.sm, true);
 }
 
 void onewire_cleanup(void){
-    pio_remove_program( owobj.pio, &onewire_program, owobj.offset);
+    pio_remove_program_and_unclaim_sm(&onewire_program, owobj.pio, owobj.sm, owobj.offset);
 }
  
 void onewire_set_fifo_thresh(uint thresh) {

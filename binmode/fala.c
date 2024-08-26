@@ -26,12 +26,6 @@ FalaConfig fala_config = { .base_frequency = 1000000, .oversample = 8 };
 void fala_set_freq(uint32_t freq) {
     // store in fala struct for easy oversample adjustment
     fala_config.base_frequency = freq;
-    printf("\r\n%sLogic analyzer speed:%s %dHz (%dx oversampling)\r\n",
-           ui_term_color_info(),
-           ui_term_color_reset(),
-           fala_config.base_frequency * fala_config.oversample,
-           fala_config.oversample);
-    printf("%sUse the 'logic' command to change capture settings%s\r\n", ui_term_color_info(), ui_term_color_reset());
 }
 
 // set oversampling rate
@@ -108,20 +102,33 @@ bool fala_has_hook(void) {
 }
 // register a hook to be called when the logic analyzer is done
 // set up the logic analyzer if it hasn't been already
-void fala_notify_register(void (*hook)()) {
+bool fala_notify_register(void (*hook)()) {
     if (!fala_has_hook()) {
+        #if BP_VER!=6
+            printf("%sWarning: What you see may not be what you get!%s\r\n", ui_term_color_error(), ui_term_color_reset());
+            printf("%sThis hardware version captures samples from behind the IO buffer.%s\r\n", ui_term_color_info(), ui_term_color_reset());
+            printf("%sWhen the buffers are outputs, the samples show the RP2040/RP2350 pin states.%s\r\n", ui_term_color_info(), ui_term_color_reset());
+            printf("%sThis may not match the buffer output and could make debugging difficult.%s\r\n", ui_term_color_info(), ui_term_color_reset());
+            printf("%sThis does not apply when the buffers are inputs or in HiZ mode.%s\r\n", ui_term_color_info(), ui_term_color_reset());
+            printf("%sPlease keep this in mind when debugging.%s\r\n", ui_term_color_info(), ui_term_color_reset());
+            //printf("%sContinue?%s", ui_term_color_error(), ui_term_color_reset());
+            //if (!ui_yes_no()) {
+            //    return false;
+            //}
+        #endif
         if (!logicanalyzer_setup()) {
             printf("\r\nLogic analyzer setup error, out of memory?\r\n");
-            return;
+            return false;
         }
     }
 
     for (int i = 0; i < 2; i++) {
         if (fala_notify_hooks[i] == NULL) {
             fala_notify_hooks[i] = hook;
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 // remove a hook from the list
@@ -140,7 +147,10 @@ void fala_notify_unregister(void (*hook)()) {
 
 // call all the hooks
 void fala_notify_hook(void) {
-    fala_print_result();
+    if(fala_has_hook()){
+        fala_print_result();
+    }
+    
     for (int i = 0; i < 2; i++) {
         if (fala_notify_hooks[i] != NULL) {
             fala_notify_hooks[i]();
@@ -172,4 +182,12 @@ void fala_stop_hook(void) {
 void fala_mode_change_hook(void){
     fala_set_freq(modes[system_config.mode].protocol_get_speed());
     fala_set_oversample(8);
+    if(fala_has_hook()){
+        printf("\r\n%sLogic analyzer speed:%s %dHz (%dx oversampling)\r\n",
+           ui_term_color_info(),
+           ui_term_color_reset(),
+           fala_config.base_frequency * fala_config.oversample,
+           fala_config.oversample);
+        printf("%sUse the 'logic' command to change capture settings%s\r\n", ui_term_color_info(), ui_term_color_reset());
+    }
 }

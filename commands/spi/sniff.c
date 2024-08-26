@@ -20,6 +20,10 @@
 #include "hardware/pio.h"
 #include "spisnif.pio.h"
 #include "usb_rx.h"
+#include "pio_config.h"
+
+static struct _pio_config pio_config;
+static struct _pio_config pio_config_d1;
 
 static const char * const usage[]= {
 /*    "flash [init|probe|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
@@ -45,31 +49,23 @@ static const struct ui_help_options options[]= {
     {0,"-v",T_HELP_FLASH_VERIFY_FLAG},//with verify (after write)*/
 };
 
-static PIO pio;
-static uint pio_state_machine;
-static uint pio_loaded_offset;
-
-static PIO pio;
-static uint pio_state_machine_d1;
-static uint pio_loaded_offset_d1;
-
 bool pio_read(uint32_t *raw){
-    if(pio_sm_is_rx_fifo_empty(pio, pio_state_machine)){
+    if(pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)){
         return false;
     }
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
-    (*raw) = pio->rxf[pio_state_machine];
+    (*raw) = pio->rxf[pio_config.sm];
     //TODO: change this based on UART settings
     //Detect parity error?
     return true;
 }
 
 bool pio_read_d1(uint32_t *raw){
-    if(pio_sm_is_rx_fifo_empty(pio, pio_state_machine_d1)){
+    if(pio_sm_is_rx_fifo_empty(pio_config_d1.pio, pio_config_d1.sm)){
         return false;
     }
     // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
-    (*raw) = pio->rxf[pio_state_machine_d1];
+    (*raw) = pio->rxf[pio_config_d1.sm];
     //TODO: change this based on UART settings
     //Detect parity error?
     return true;
@@ -80,16 +76,16 @@ void sniff_handler(struct command_result *res){
     char file[13];
 
     if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
-    pio=M_UART_PIO;
-    pio_state_machine=M_UART_PIO_SM;
-    pio_loaded_offset = pio_add_program(pio, &spisnif_program);
-    spisnif_program_init(pio, pio_state_machine, pio_loaded_offset, bio2bufiopin[BIO3], bio2bufiopin[BIO0], bio2bufiopin[BIO2]);
 
-    pio_state_machine_d1=M_UART_PIO_SM-1;
-    pio_loaded_offset_d1 = pio_add_program(pio, &spisnif_2_program);
-    spisnif_2_program_init(pio, pio_state_machine_d1, pio_loaded_offset_d1, bio2bufiopin[BIO3], bio2bufiopin[BIO1], bio2bufiopin[BIO2]);
+    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&spisnif_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, bio2bufiopin[BIO0], 3, true);
+    hard_assert(success);
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+    spisnif_program_init(pio_config.pio, pio_config.sm, pio_config.offset, bio2bufiopin[BIO3], bio2bufiopin[BIO0], bio2bufiopin[BIO2]);
 
-
+    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&spisnif_2_program, &pio_config_d1.pio, &pio_config_d1.sm, &pio_config_d1.offset, bio2bufiopin[BIO0], 3, true);
+    hard_assert(success);
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_d1.pio), pio_config_d1.sm, pio_config_d1.offset);    
+    spisnif_2_program_init(pio_config_d1.pio, pio_config_d1.sm, pio_config_d1.offset, bio2bufiopin[BIO3], bio2bufiopin[BIO1], bio2bufiopin[BIO2]);
 
     static const char pin_labels[][5] = {"DAT0","DAT1","SCLK","SCS"}; 
     
@@ -108,8 +104,10 @@ void sniff_handler(struct command_result *res){
         char c;
         if(rx_fifo_try_get(&c)) break;
     }
-    pio_remove_program(pio, &spisnif_program, pio_loaded_offset);
-    pio_remove_program(pio, &spisnif_2_program, pio_loaded_offset_d1);
+    pio_remove_program_and_unclaim_sm(&spisnif_program, pio_config.pio, pio_config.sm, pio_config.offset);
+
+    pio_remove_program_and_unclaim_sm(&spisnif_2_program, pio_config_d1.pio, pio_config_d1.sm, pio_config_d1.offset);
+
     system_bio_claim(false, BIO0, BP_PIN_MODE, 0);
     system_bio_claim(false, BIO1, BP_PIN_MODE, 0);
     system_bio_claim(false, BIO2, BP_PIN_MODE, 0);

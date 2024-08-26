@@ -185,6 +185,7 @@ set(bp5_common
         # syntax and commands
         syntax.h syntax.c syntax_struct.h
         opt_args.h command_attributes.h bytecode.h
+        pio_config.h
 
         # FATfs
         fatfs/diskio.c fatfs/diskio.h fatfs/ff.c fatfs/ff.h fatfs/ffconf.h fatfs/ffsystem.c fatfs/ffunicode.c

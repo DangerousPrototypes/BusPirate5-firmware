@@ -7,6 +7,7 @@
 #include "hardware/structs/iobank0.h"
 #include "hardware/regs/io_bank0.h"
 #include "pirate.h"
+#include "pio_config.h"
 
 #define PIO_PIN_0 1u<<0
 #define PIO_SIDE_0 1u<<11
@@ -16,19 +17,17 @@ const int PIO_HW2WIRE_FINAL_LSB  = 9;
 const int PIO_HW2WIRE_DATA_LSB   = 1;
 const int PIO_HW2WIRE_NAK_LSB    = 0;
 
-static PIO hw2wire_pio;
-static uint hw2wire_pio_state_machine;
-static uint hw2wire_pio_loaded_offset;
+static struct _pio_config pio_config;
 
-void pio_hw2wire_init(PIO pio, uint sm, uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate){
-    hw2wire_pio=pio;
-    hw2wire_pio_state_machine=sm;
-    hw2wire_pio_loaded_offset = pio_add_program(pio, &hw2wire_program);
-    hw2wire_program_init(pio, hw2wire_pio_state_machine, hw2wire_pio_loaded_offset, sda, scl, dir_sda, dir_scl, baudrate);
+void pio_hw2wire_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate){
+    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&hw2wire_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 1, true);
+    hard_assert(success);
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+    hw2wire_program_init(pio_config.pio, pio_config.sm, pio_config.offset, sda, scl, dir_sda, dir_scl, baudrate);
 }
 
 void pio_hw2wire_cleanup(void){
-    pio_remove_program(hw2wire_pio, &hw2wire_program, hw2wire_pio_loaded_offset);
+    pio_remove_program_and_unclaim_sm(&hw2wire_program, pio_config.pio, pio_config.sm, pio_config.offset);
 }
 
 bool pio_hw2wire_check_error(PIO pio, uint sm) {
@@ -65,26 +64,26 @@ void pio_hw2wire_put(PIO pio, uint sm, uint16_t data) {
 
 // put data and block until idle
 void pio_hw2wire_put16(uint16_t data) {
-    pio_hw2wire_rx_enable(hw2wire_pio, hw2wire_pio_state_machine, false);
-    pio_hw2wire_put(hw2wire_pio, hw2wire_pio_state_machine, data&0xff);
-    pio_hw2wire_wait_idle(hw2wire_pio, hw2wire_pio_state_machine); //blocking function
+    pio_hw2wire_rx_enable(pio_config.pio, pio_config.sm, false);
+    pio_hw2wire_put(pio_config.pio, pio_config.sm, data&0xff);
+    pio_hw2wire_wait_idle(pio_config.pio, pio_config.sm); //blocking function
 }
 
 // put 0xff, wait for read to complete
 void pio_hw2wire_get16(uint8_t *data) {
-    pio_hw2wire_rx_enable(hw2wire_pio, hw2wire_pio_state_machine, true);
-	while(!pio_sm_is_rx_fifo_empty(hw2wire_pio, hw2wire_pio_state_machine)) {
-        (void)pio_hw2wire_get(hw2wire_pio, hw2wire_pio_state_machine);
+    pio_hw2wire_rx_enable(pio_config.pio, pio_config.sm, true);
+	while(!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
+        (void)pio_hw2wire_get(pio_config.pio, pio_config.sm);
     }
-    pio_hw2wire_put(hw2wire_pio, hw2wire_pio_state_machine, (0b111111111));
-    while(pio_sm_is_rx_fifo_empty(hw2wire_pio, hw2wire_pio_state_machine));
-	(*data) = pio_hw2wire_get(hw2wire_pio, hw2wire_pio_state_machine);
+    pio_hw2wire_put(pio_config.pio, pio_config.sm, (0b111111111));
+    while(pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm));
+	(*data) = pio_hw2wire_get(pio_config.pio, pio_config.sm);
 }
 
 static inline void pio_hw2wire_put_instructions(const uint16_t *inst, uint8_t length) {
-    pio_hw2wire_rx_enable(hw2wire_pio, hw2wire_pio_state_machine, false);
+    pio_hw2wire_rx_enable(pio_config.pio, pio_config.sm, false);
     for(uint8_t i=0; i<length; i++){
-        pio_hw2wire_put(hw2wire_pio, hw2wire_pio_state_machine, inst[i]);
+        pio_hw2wire_put(pio_config.pio, pio_config.sm, inst[i]);
     }
 }
 

@@ -9,5 +9,6 @@
 
 // public API
 
-int nec_rx_init(PIO pio, uint pin);
-bool nec_decode_frame(uint32_t sm, uint8_t *p_address, uint8_t *p_data);
+int nec_rx_init(uint pin);
+void nec_rx_deinit(void);
+bool nec_decode_frame(uint32_t frame, uint8_t *p_address, uint8_t *p_data);

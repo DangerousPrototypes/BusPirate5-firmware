@@ -14,33 +14,34 @@
 // import the assembled PIO state machine program
 #include "nec_receive.pio.h"
 
+#include "pio_config.h"
+
+static struct _pio_config pio_config;
+
 // Claim an unused state machine on the specified PIO and configure it
 // to receive NEC IR frames on the given GPIO pin.
 //
 // Returns: the state machine number on success, otherwise -1
-int nec_rx_init(PIO pio, uint pin_num) {
+int nec_rx_init(uint pin_num) {
 
     // disable pull-up and pull-down on gpio pin
     gpio_disable_pulls(pin_num);
 
-    // install the program in the PIO shared instruction space
-    uint offset;
-    if (pio_can_add_program(pio, &nec_receive_program)) {
-        offset = pio_add_program(pio, &nec_receive_program);
-    } else {
-        return -1;      // the program could not be added
+    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&nec_receive_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, pin_num, 1, true);
+    hard_assert(success);
+    if(!success) {
+        return -1;
     }
-
-    // claim an unused state machine on this PIO
-    int sm = pio_claim_unused_sm(pio, true);
-    if (sm == -1) {
-        return -1;      // we were unable to claim a state machine
-    }
-
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+ 
     // configure and enable the state machine
-    nec_receive_program_init(pio, sm, offset, pin_num);
+    nec_receive_program_init(pio_config.pio, pio_config.sm, pio_config.offset, pin_num);
 
     return sm;
+}
+
+void nec_rx_deinit(void) {
+    pio_remove_program_and_unclaim_sm(&nec_receive_program, pio_config.pio, pio_config.sm, pio_config.offset);
 }
 
 

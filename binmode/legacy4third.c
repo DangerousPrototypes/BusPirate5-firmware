@@ -801,7 +801,6 @@ void legacy4third_mode(void){
             printf("\r\nCurrent: int = %u, dec = %u\n", current_integer, current_decimal);
         }
         
-        script_enabled();
         cdc_buff = (uint8_t*) mem_alloc(CDCBUFF_SIZE + TMPBUFF_SIZE, 0);
         if (binmode_debug)
         {
@@ -818,7 +817,6 @@ void legacy4third_mode(void){
         system_config.binmode_usb_tx_queue_enable=true; 
         mem_free(cdc_buff);
         reset_legacy();
-        script_disabled();
         /*
             uint8_t binmode_args = 0;
             binmode_reset_buspirate(&binmode_args);

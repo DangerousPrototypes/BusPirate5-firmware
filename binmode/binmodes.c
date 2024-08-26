@@ -45,10 +45,11 @@ const binmode_t binmodes[] = {
         .binmode_cleanup = falaio_cleanup,
     },
     {
-        &binmode_null_func,
-        &legacy4third_mode,
-        &binmode_null_func, 
-        legacy4third_mode_name,   
+        .lock_terminal = true,
+        .binmode_name = legacy4third_mode_name,
+        .binmode_setup = binmode_null_func_void,
+        .binmode_service = legacy4third_mode,
+        .binmode_cleanup = binmode_null_func_void, 
     },
 };
 

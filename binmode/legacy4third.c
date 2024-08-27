@@ -51,6 +51,7 @@ const char legacy4third_mode_name[]="Legacy Binary Mode for Flashrom and AVRdude
 #define TMPBUFF_SIZE 0x4000
 #define CDCBUFF_SIZE 0x4000
 #define DEFAULT_MAX_TRIES 100000
+#define CDC_SEND_STR(cdc_n, str) tud_cdc_n_write(cdc_n, (uint8_t*)str, sizeof(str) - 1); tud_cdc_n_write_flush(1);
 
 static uint8_t volts_integer;
 static uint8_t volts_decimal;
@@ -64,13 +65,8 @@ static uint32_t remain_bytes;
 void disable_psu_legacy(void)
 {
     uint8_t binmode_args = 0x00;
+    
     uint32_t result = binmode_psu_disable(&binmode_args);
-}
-
-void enable_psu_legacy(void)
-{
-    uint8_t args[] = { 0x05, 0x00, 0x00, 0x80 }; // 5v 
-    uint32_t result = binmode_psu_enable(args);
 }
 
 void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8_t cpah, uint8_t cs)
@@ -93,6 +89,7 @@ void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8
         cpah, 
         cs 
     };
+
     mode_change((uint8_t*)"SPI");
     binmode_config(spi_binmode_args);
     system_config.binmode_usb_rx_queue_enable=false; 
@@ -102,6 +99,7 @@ void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8
 void enable_debug_legacy(void)
 {
     uint8_t binmode_args = 1;
+
     binmode_debug_level(&binmode_args);
 }
 
@@ -153,8 +151,6 @@ uint32_t read_buff(uint8_t *buf, uint32_t len, uint32_t max_tries)
     return total_bytes_readed;
 }
 
-#define CDC_SEND_STR(cdc_n, str) tud_cdc_n_write(cdc_n, (uint8_t*)str, sizeof(str) - 1); tud_cdc_n_write_flush(1);
-
 void cdc_full_flush(uint32_t cdc_id)
 {
     tud_cdc_n_read_flush(cdc_id);
@@ -164,9 +160,10 @@ void cdc_full_flush(uint32_t cdc_id)
 
 void reset_legacy(void)
 {
+    uint8_t binmode_args = 0;
+
     hwspi_deinit();
     disable_psu_legacy();
-    uint8_t binmode_args = 0;
     binmode_pullup_disable(&binmode_args);
     binmode_reset(&binmode_args);
     mode_change((uint8_t*)"HiZ");
@@ -275,10 +272,9 @@ void legacy_protocol(void)
                 {
                     disable_psu_legacy();
                 }
-                else if (extended_info & 0b00001000)
+                else
                 {
-                    //uint8_t args[] = { 0x03, 0x21, 0x00, 0x80 };
-                    //uint8_t args[] = { 0x05, 0x00, 0x00, 0x80 }; // 5v 
+                    //uint8_t args[] = { 0x03, 0x21, 0x00, 0x80 }; // 3.3v 
                     uint8_t args[] = { 
                         volts_integer, 
                         volts_decimal, 
@@ -286,6 +282,7 @@ void legacy_protocol(void)
                         (uint8_t)(current_integer & 0xFF) 
                     }; 
                     uint32_t result = binmode_psu_enable(args);
+
                     if(result)
                     {
                         if (binmode_debug)
@@ -312,7 +309,7 @@ void legacy_protocol(void)
                     uint8_t binmode_args = 0;
                     binmode_pullup_disable(&binmode_args);
                 }
-                else if (extended_info & 0b00000100)
+                else
                 {
                     if (binmode_debug)
                     {
@@ -330,7 +327,7 @@ void legacy_protocol(void)
                         printf("\r\naux_disable");
                     }
                 }
-                else if (extended_info & 0b00000010)
+                else
                 {
                     if (binmode_debug)
                     {
@@ -347,7 +344,7 @@ void legacy_protocol(void)
                     }
                     cs_init = 0x00;
                 }
-                else if (extended_info & 0b00000001)
+                else
                 {
                     if (binmode_debug)
                     {
@@ -423,7 +420,7 @@ void legacy_protocol(void)
                         printf("\r\nSMP 0");
                     }
                 }
-                else if  (extended_info & 0x1) 
+                else
                 {
                     if (binmode_debug)
                     {
@@ -439,7 +436,7 @@ void legacy_protocol(void)
                         printf("\r\nCKE 0");
                     }
                 }
-                else if  (extended_info & 0x2)
+                else
                 {
                     if (binmode_debug)
                     {
@@ -455,7 +452,7 @@ void legacy_protocol(void)
                         printf("\r\nCKP 0");
                     }
                 }
-                else if  (extended_info & 0x4)
+                else
                 {
                     if (binmode_debug)
                     {
@@ -471,7 +468,7 @@ void legacy_protocol(void)
                         printf("\r\nHiZ");
                     }
                 }
-                else if  (extended_info & 0x8)
+                else
                 {
                     if (binmode_debug)
                     {

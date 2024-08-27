@@ -67,13 +67,13 @@ int64_t ui_term_screensaver_enable(alarm_id_t id, void *user_data){
 void gpio_setup(uint8_t pin, bool direction, bool level){
     gpio_set_dir(pin, direction); 
     gpio_set_function(pin, GPIO_FUNC_SIO);  
-    gpio_put(CURRENT_EN_OVERRIDE, level);
+    gpio_put(pin, level);
 }
 
 int main(){
     char c;
     
-    #if (BP_VER == 5 || BP_VER==XL5)
+    #if (BP_VER == 5)
         uint8_t bp_rev=mcu_detect_revision();
     #endif
 

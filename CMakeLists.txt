@@ -105,6 +105,8 @@ set(bp5_common
         commands/global/cls.h commands/global/cls.c  
         commands/global/cmd_binmode.h commands/global/cmd_binmode.c
         commands/global/logic.h commands/global/logic.c
+        commands/global/bug.c commands/global/bug.h
+        
         # HiZ
         mode/hiz.h mode/hiz.c
         # 1Wire

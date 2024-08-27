@@ -70,7 +70,7 @@ static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uin
         //pio_gpio_init(pio, pin+i);
         
     // Set the pin direction to input at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
+    //pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
 
     // trigger pin as jump pin
     sm_config_set_jmp_pin(&c, trigger);
@@ -103,7 +103,7 @@ static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint
         //pio_gpio_init(pio, pin+i);
         
     // Set the pin direction to input at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
+    //pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
 
     // trigger pin as jump pin
     sm_config_set_jmp_pin(&c, trigger);
@@ -136,7 +136,7 @@ static inline void logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint 
         //pio_gpio_init(pio, pin+i);
         
     // Set the pin direction to input at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
+    //pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
 
     // trigger pin as jump pin
     //sm_config_set_jmp_pin(&c, trigger);

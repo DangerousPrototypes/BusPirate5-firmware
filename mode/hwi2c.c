@@ -23,9 +23,6 @@ static const char pin_labels[][5]={
 
 static struct _i2c_mode_config mode_config;
 
-static PIO pio = M_I2C_PIO;
-static uint pio_state_machine = M_I2C_PIO_SM;
-
 // command configuration
 const struct _command_struct hwi2c_commands[]={   //Function Help
 // note: for now the allow_hiz flag controls if the mode provides it's own help

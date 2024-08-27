@@ -85,8 +85,6 @@ void spi_busy_wait(bool enable);
 
 
 // 1wire settings
-#define M_OW_PIO pio0
-#define M_OW_PIO_SM 3
 #define M_OW_OWD BIO3
 
 // UART settings
@@ -95,13 +93,9 @@ void spi_busy_wait(bool enable);
 #define M_UART_RX BIO5
 #define M_UART_RTS
 #define M_UART_CTS
-#define M_UART_PIO pio0
-#define M_UART_PIO_SM 3
 #define M_UART_RXTX BIO0
 
 // i2c settings
-#define M_I2C_PIO pio0
-#define M_I2C_PIO_SM 3
 #define M_I2C_SDA BIO0
 #define M_I2C_SCL BIO1
 
@@ -115,15 +109,11 @@ void spi_busy_wait(bool enable);
 #define M_SPI_DESELECT 1
 
 // 2wire settings
-#define M_2WIRE_PIO pio0
-#define M_2WIRE_PIO_SM 3  
 #define M_2WIRE_SDA BIO0
 #define M_2WIRE_SCL BIO1
 #define M_2WIRE_RST BIO2
 
 // LED settings
-#define M_LED_PIO pio0
-#define M_LED_PIO_SM 3
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 //only used on APA102
 

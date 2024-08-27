@@ -31,8 +31,9 @@ int nec_tx_init(uint pin_num) {
 
     // install the carrier_burst program in the PIO shared instruction space
     bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&nec_carrier_burst_program, &pio_config_burst.pio, &pio_config_burst.sm, &pio_config_burst.offset, pin_num, 1, true);
-    hard_assert(success);
+    //hard_assert(success);
     if(!success) {
+        printf("Failed to claim free state machine for carrier_burst program\r\n");
         return -1;
     }
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_burst.pio), pio_config_burst.sm, pio_config_burst.offset);

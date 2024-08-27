@@ -75,9 +75,9 @@ uint8_t logic_analyzer_read_ptr(uint32_t read_pointer) {
 void logic_analyser_done(void) {
     // turn off stuff!
     pio_interrupt_clear(pio_config.pio, 0);
-    irq_set_enabled(PIO0_IRQ_0, false);
+    irq_set_enabled(PIO0_IRQ_0+ (PIO_NUM(pio_config.pio)*2), false);
     // irq_set_enabled(pio_get_dreq(pio_config.pio, pio_config.sm, false), false);
-    irq_remove_handler(PIO0_IRQ_0, logic_analyser_done);
+    irq_remove_handler(PIO0_IRQ_0+ (PIO_NUM(pio_config.pio)*2), logic_analyser_done);
     pio_sm_set_enabled(pio_config.pio, pio_config.sm, false);
 
     if (pio_program_active) {
@@ -182,7 +182,7 @@ bool logic_analyzer_configure(
     memset(la_buf, 0, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT);
 
     // This can be useful for debugging. The position of sampling always start at the beginning of the buffer
-    restart_dma();
+    //restart_dma(); //this moved to below because the PIO isn't yet assigned
 
     if (pio_program_active) {
         pio_remove_program_and_unclaim_sm(pio_program_active, pio_config.pio, pio_config.sm, pio_config.offset);
@@ -200,34 +200,36 @@ bool logic_analyzer_configure(
             }
         }
     }
-
+    #define LA_BASE_PIN 8 //LA_BPIO0 //0
     if (trigger_ok) {
         if (trigger_direction & 1u << trigger_pin) // high level trigger program
         {
-            bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_high_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BPIO0, 8, true);
+            bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_high_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
             hard_assert(success);          
             pio_program_active = &logicanalyzer_high_trigger_program;
-            logicanalyzer_high_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BPIO0, LA_BPIO0 + trigger_pin, freq, edge);
+            logicanalyzer_high_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, LA_BASE_PIN + trigger_pin, freq, edge);
         } else // low level trigger program
         {
-            bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_low_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BPIO0, 8, true);
+            bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_low_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
             hard_assert(success);
             pio_program_active = &logicanalyzer_low_trigger_program;
-            logicanalyzer_low_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BPIO0, LA_BPIO0 + trigger_pin, freq, edge);
+            logicanalyzer_low_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, LA_BASE_PIN + trigger_pin, freq, edge);
         }
     } else { // else no trigger program
-        bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_no_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BPIO0, 8, true);
+        bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_no_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
         hard_assert(success);  
         pio_program_active = &logicanalyzer_no_trigger_program;
-        logicanalyzer_no_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BPIO0, freq);
+        logicanalyzer_no_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, freq);
     }
     printf("pio %d, sm %d, offset %d\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);  
+    
+    restart_dma(); //do after PIO and SM are assigned
 
     // interrupt on done notification
     pio_interrupt_clear(pio_config.pio, 0);
     pio_set_irq0_source_enabled(pio_config.pio, pis_interrupt0, true);
-    irq_set_exclusive_handler(PIO0_IRQ_0, logic_analyser_done);
-    irq_set_enabled(PIO0_IRQ_0, true);
+    irq_set_exclusive_handler(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio)*2), logic_analyser_done);
+    irq_set_enabled(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio)*2), true);
     irq_set_enabled(pio_get_dreq(pio_config.pio, pio_config.sm, false), true);
     // write sample count and enable sampling
     pio_sm_put_blocking(pio_config.pio, pio_config.sm, samples - 1);
@@ -278,6 +280,6 @@ bool logicanalyzer_setup(void) {
         la_dma[i] = dma_claim_unused_channel(true);
     }
 
-    restart_dma();
+    //restart_dma();
     return true;
 }

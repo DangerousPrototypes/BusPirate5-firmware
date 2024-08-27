@@ -156,14 +156,14 @@ void onewire_program_init(
     sm_config_set_in_shift(&c, true, true, 8); 
 
     gpio_init(pin);
-    gpio_set_dir(pin, 0);
+    gpio_set_dir(pin, 0); //input
     #if BP_VER==5
     gpio_pull_down(pin);
     #endif
 
     gpio_init(dir);
     gpio_put(dir, 1);
-    gpio_set_dir(dir, 1);
+    gpio_set_dir(dir, 1); //output
 
     pio_sm_set_pins_with_mask(pio, sm, 0, 1<<pin);
     pio_gpio_init(pio, pin);
@@ -179,6 +179,8 @@ void onewire_program_init(
     /* Preload register y with 1 to keep pinctlz = high when
        state machine starts running */
     /*pio_sm_exec(pio, sm, pio_encode_set(pio_y, 1));*/
+    gpio_disable_pulls(pin);
+    gpio_disable_pulls(dir);
 
     pio_sm_init(pio, sm, offset + onewire_offset_start, &c);
 }

@@ -13,8 +13,8 @@
 #include "pirate/psu.h"
 
 static const char* const usage[] = {
-    "demonstrate hardware buys",
-    "bug e9"
+    "replicate hardware bugs",
+    "Test errata E9: bug e9"
 };
 
 static const struct ui_help_options options[] = {

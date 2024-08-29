@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 FROM debian:latest AS bp5plus_builder_base
-=======
-FROM debian:latest AS bp5_builder_base
->>>>>>> eb10223 (updating to address pip changes)
 
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 

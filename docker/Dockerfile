@@ -1,4 +1,4 @@
-FROM ubuntu:latest AS bp5_builder_base
+FROM debian:latest AS bp5_builder_base
 
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
@@ -9,6 +9,7 @@ RUN apt-get update \
         curl \
         python3 \
         python3-pip \
+        cmake \
         build-essential \
         git \
         libnewlib-arm-none-eabi \
@@ -17,8 +18,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN python3 -m pip install cmake \
-    && git clone https://github.com/raspberrypi/pico-sdk.git /opt/pico-sdk \
+RUN git clone https://github.com/raspberrypi/pico-sdk.git /opt/pico-sdk \
     && git -C /opt/pico-sdk submodule update --init
 
 RUN curl -Lo gcc-arm-none-eabi.tar.bz2 "https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2" \

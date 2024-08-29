@@ -1,6 +1,6 @@
 services:
   dev:
-    image: wyatt3arp/buspirate_v5
+    image: wyatt3arp/buspirate_v5plus
     build: ./docker
     network_mode: host
     privileged: true

@@ -83,6 +83,19 @@ void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);
 void spi_busy_wait(bool enable);
 
+#if BP_VER ==6
+#define PIO_RGB_LED_PIO pio2
+#define PIO_RGB_LED_SM 0
+#else
+#define PIO_RGB_LED_PIO pio0
+#define PIO_RGB_LED_SM 0
+#endif
+
+#define PIO_LOGIC_ANALYZER_PIO pio0
+#define PIO_LOGIC_ANALYZER_SM 1
+
+#define PIO_MODE_PIO pio1
+// all SM reserved for mode
 
 // 1wire settings
 #define M_OW_OWD BIO3

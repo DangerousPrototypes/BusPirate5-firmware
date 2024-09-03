@@ -30,16 +30,22 @@ void onewire_init(uint pin, uint dir){
     //owobj.sm = sm;
     owobj.pin = pin;
     owobj.dir = dir;
-    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&onewire_program, &owobj.pio, &owobj.sm, &owobj.offset, dir, 9, true);
-    hard_assert(success);
+    //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&onewire_program, &owobj.pio, &owobj.sm, &owobj.offset, dir, 9, true);
+    //hard_assert(success);
+    owobj.pio = PIO_MODE_PIO;
+    owobj.sm = 0;
+    owobj.offset = pio_add_program(owobj.pio, &onewire_program);
+    #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("pio %d, sm %d, offset %d\n", PIO_NUM(owobj.pio), owobj.sm, owobj.offset);
+    #endif
     onewire_program_init(owobj.pio, owobj.sm, owobj.offset, owobj.pin, owobj.dir);
     onewire_set_fifo_thresh(8);
     pio_sm_set_enabled(owobj.pio, owobj.sm, true);
 }
 
 void onewire_cleanup(void){
-    pio_remove_program_and_unclaim_sm(&onewire_program, owobj.pio, owobj.sm, owobj.offset);
+    //pio_remove_program_and_unclaim_sm(&onewire_program, owobj.pio, owobj.sm, owobj.offset);
+    pio_remove_program(owobj.pio, &onewire_program, owobj.offset);
 }
  
 void onewire_set_fifo_thresh(uint thresh) {

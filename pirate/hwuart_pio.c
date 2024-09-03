@@ -39,21 +39,35 @@ void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint3
     }
     bits--;
     
-    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_rx_program, &pio_config_rx.pio, &pio_config_rx.sm, &pio_config_rx.offset, bio2bufiopin[M_UART_RXTX], 1, true);
-    hard_assert(success);
+    //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_rx_program, &pio_config_rx.pio, &pio_config_rx.sm, &pio_config_rx.offset, bio2bufiopin[M_UART_RXTX], 1, true);
+    //hard_assert(success);
+    pio_config_rx.pio = PIO_MODE_PIO;
+    pio_config_rx.sm = 0;
+    pio_config_rx.program = &uart_rx_program;
+    pio_config_rx.offset = pio_add_program(pio_config_rx.pio, pio_config_rx.program);
+    #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_rx.pio), pio_config_rx.sm, pio_config_rx.offset);
+    #endif    
     uart_rx_program_init(pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, bio2bufiopin[M_UART_RXTX], bits, baud);
 
-    success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_tx_program, &pio_config_tx.pio, &pio_config_tx.sm, &pio_config_tx.offset, bio2bufiopin[M_UART_RXTX], 1, true);
-    hard_assert(success);
+    //success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_tx_program, &pio_config_tx.pio, &pio_config_tx.sm, &pio_config_tx.offset, bio2bufiopin[M_UART_RXTX], 1, true);
+    //hard_assert(success);
+    pio_config_tx.pio = PIO_MODE_PIO;
+    pio_config_tx.sm = 1;
+    pio_config_tx.program = &uart_tx_program;
+    pio_config_tx.offset = pio_add_program(pio_config_tx.pio, pio_config_tx.program);
+    #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_tx.pio), pio_config_tx.sm, pio_config_tx.offset);
+    #endif    
     uart_tx_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, bio2bufdirpin[M_UART_RXTX], bits, baud);
 
 }
 
 void hwuart_pio_deinit(void){
-    pio_remove_program_and_unclaim_sm(&uart_rx_program, pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset);
-    pio_remove_program_and_unclaim_sm(&uart_tx_program, pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset);
+    //pio_remove_program_and_unclaim_sm(&uart_rx_program, pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset);
+    //pio_remove_program_and_unclaim_sm(&uart_tx_program, pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset);
+    pio_remove_program(pio_config_rx.pio, pio_config_rx.program, pio_config_rx.offset);
+    pio_remove_program(pio_config_tx.pio, pio_config_tx.program, pio_config_tx.offset);
 }
 
 bool hwuart_pio_read(uint32_t *raw, uint8_t *cooked){

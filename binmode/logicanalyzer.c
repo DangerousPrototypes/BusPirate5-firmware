@@ -39,7 +39,7 @@ volatile uint32_t la_sm_done = false;
 //PIO pio = pio0;
 //uint sm = 0;
 //static uint offset = 0;
-static const struct pio_program* pio_program_active;
+//static const struct pio_program* pio_program_active=0;
 
 void logicanalyzer_reset_led(void) {
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_RGB_UPDATES);
@@ -80,9 +80,9 @@ void logic_analyser_done(void) {
     irq_remove_handler(PIO0_IRQ_0+ (PIO_NUM(pio_config.pio)*2), logic_analyser_done);
     pio_sm_set_enabled(pio_config.pio, pio_config.sm, false);
 
-    if (pio_program_active) {
-        pio_remove_program_and_unclaim_sm(pio_program_active, pio_config.pio, pio_config.sm, pio_config.offset);
-        pio_program_active = 0;
+    if (pio_config.program) {
+        pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+        pio_config.program = 0;
     }
 
     busy_wait_ms(1);
@@ -184,9 +184,10 @@ bool logic_analyzer_configure(
     // This can be useful for debugging. The position of sampling always start at the beginning of the buffer
     //restart_dma(); //this moved to below because the PIO isn't yet assigned
 
-    if (pio_program_active) {
-        pio_remove_program_and_unclaim_sm(pio_program_active, pio_config.pio, pio_config.sm, pio_config.offset);
-        pio_program_active = 0;
+    if (pio_config.program) {
+        //pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+        pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
+        pio_config.program = 0;
     }
 
     uint8_t trigger_pin = 0;
@@ -200,29 +201,39 @@ bool logic_analyzer_configure(
             }
         }
     }
-    #define LA_BASE_PIN 8 //LA_BPIO0 //0
+
+    //TODO: make base pin configurable
+    #define LA_BASE_PIN 0 //LA_BPIO0 //0
+    pio_config.pio = PIO_MODE_PIO;
+    pio_config.sm = PIO_LOGIC_ANALYZER_SM;
+
     if (trigger_ok) {
         if (trigger_direction & 1u << trigger_pin) // high level trigger program
         {
-            bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_high_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
-            hard_assert(success);          
-            pio_program_active = &logicanalyzer_high_trigger_program;
+            //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_high_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
+            //hard_assert(success);    
+            pio_config.program = &logicanalyzer_high_trigger_program;                  
+            pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
             logicanalyzer_high_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, LA_BASE_PIN + trigger_pin, freq, edge);
         } else // low level trigger program
         {
-            bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_low_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
-            hard_assert(success);
-            pio_program_active = &logicanalyzer_low_trigger_program;
+            //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_low_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
+            //hard_assert(success);
+            pio_config.program = &logicanalyzer_low_trigger_program;
+            pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
             logicanalyzer_low_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, LA_BASE_PIN + trigger_pin, freq, edge);
         }
     } else { // else no trigger program
-        bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_no_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
-        hard_assert(success);  
-        pio_program_active = &logicanalyzer_no_trigger_program;
+        //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_no_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
+        //hard_assert(success);  
+        pio_config.program = &logicanalyzer_no_trigger_program; //move this before to simplify add program
+        pio_config.offset = pio_add_program(pio_config.pio, pio_config.program); 
         logicanalyzer_no_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, freq);
     }
+    #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("pio %d, sm %d, offset %d\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);  
-    
+    #endif
+
     restart_dma(); //do after PIO and SM are assigned
 
     // interrupt on done notification
@@ -254,9 +265,10 @@ bool logic_analyzer_cleanup(void) {
     }
 
     // pio_clear_instruction_memory(pio);
-    if (pio_program_active) {
-        pio_remove_program_and_unclaim_sm(pio_program_active, pio_config.pio, pio_config.sm, pio_config.offset);
-        pio_program_active = 0;
+    if (pio_config.program) {
+        //pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+        pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
+        pio_config.program = 0;
     }
 
     mem_free(la_buf);

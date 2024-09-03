@@ -745,14 +745,18 @@ void rgb_irq_enable(bool enable){
 }
 
 void rgb_init(void){
+    pio_config.pio = PIO_RGB_LED_PIO;
+    pio_config.sm = PIO_RGB_LED_SM;
 
+    gpio_set_function(RGB_CDO, GPIO_FUNC_PIO1);  
     #if (BP_VER == 6)
-        bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 16, true);
+        //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 16, true);
+        pio_set_gpio_base(pio_config.pio, 16);
     #else
-        bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 1, true);
+        //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 1, true);
     #endif
-    hard_assert(success);
-    
+    //hard_assert(success);
+    pio_config.offset = pio_add_program(pio_config.pio, &ws2812_program);
     ws2812_program_init(pio_config.pio, pio_config.sm, pio_config.offset, RGB_CDO, 800000, false);
 
     for (int i = 0; i < COUNT_OF_PIXELS; i++){

@@ -109,23 +109,33 @@ uint32_t hwled_setup(void)
 
 uint32_t hwled_setup_exc(void){
 	bool success;
+	pio_config.pio = PIO_MODE_PIO;
+	pio_config.sm = 0;
 	switch(mode_config.device){
 		case M_LED_WS2812:
 			mode_config.baudrate=800000;
 			bio_buf_output(M_LED_SDO);
-			success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, bio2bufiopin[M_LED_SDO], 1, true);
-			hard_assert(success);
+			//success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, bio2bufiopin[M_LED_SDO], 1, true);
+			//hard_assert(success);
+			pio_config.program = &ws2812_program;
+			pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
+			#ifdef BP_PIO_SHOW_ASSIGNMENT
 			printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
-    		ws2812_program_init(pio_config.pio, pio_config.sm, pio_config.offset, bio2bufiopin[M_LED_SDO], (float)mode_config.baudrate, false);
+			#endif
+			ws2812_program_init(pio_config.pio, pio_config.sm, pio_config.offset, bio2bufiopin[M_LED_SDO], (float)mode_config.baudrate, false);
 			system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
 			break;
 		case M_LED_APA102:
 			mode_config.baudrate=(5 * 1000 * 1000);
 			bio_buf_output(M_LED_SDO);
 			bio_buf_output(M_LED_SCL);		
-			success = pio_claim_free_sm_and_add_program_for_gpio_range(&apa102_mini_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, bio2bufiopin[M_LED_SDO], 1, true);
-			hard_assert(success);
+			//success = pio_claim_free_sm_and_add_program_for_gpio_range(&apa102_mini_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, bio2bufiopin[M_LED_SDO], 1, true);
+			//hard_assert(success);
+			pio_config.program = &apa102_mini_program;
+			pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
+			#ifdef BP_PIO_SHOW_ASSIGNMENT
 			printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+			#endif
     		apa102_mini_program_init(pio_config.pio, pio_config.sm, pio_config.offset, mode_config.baudrate, bio2bufiopin[M_LED_SCL], bio2bufiopin[M_LED_SDO]);
 			system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
 			system_bio_claim(true, M_LED_SCL, BP_PIN_MODE, pin_labels[1]);
@@ -214,10 +224,9 @@ void hwled_macro(uint32_t macro){
 void hwled_cleanup(void){
 	switch(device_cleanup){
 		case M_LED_WS2812:
-			pio_remove_program_and_unclaim_sm(&ws2812_program, pio_config.pio, pio_config.sm, pio_config.offset);
-			break;
 		case M_LED_APA102:
-			pio_remove_program_and_unclaim_sm(&apa102_mini_program, pio_config.pio, pio_config.sm, pio_config.offset);
+			//pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+			pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
 			break;
 		case M_LED_WS2812_ONBOARD:
 			rgb_irq_enable(true);

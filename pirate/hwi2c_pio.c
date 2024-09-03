@@ -17,15 +17,21 @@ const int PIO_I2C_DATA_LSB   = 1;
 const int PIO_I2C_NAK_LSB    = 0;
 
 void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate){
-    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&i2c_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, dir_sda, 10, true);
-    hard_assert(success);
+    //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&i2c_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, dir_sda, 10, true);
+    //hard_assert(success);
+    pio_config.pio = PIO_MODE_PIO;
+    pio_config.sm = 0;
+    pio_config.program = &i2c_program;
+    pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
+    #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
-
+    #endif
     i2c_program_init(pio_config.pio, pio_config.sm, pio_config.offset, sda, scl, dir_sda, dir_scl, baudrate);
 }
 
 void pio_i2c_cleanup(void){
-    pio_remove_program_and_unclaim_sm(&i2c_program, pio_config.pio, pio_config.sm, pio_config.offset);
+    //pio_remove_program_and_unclaim_sm(&i2c_program, pio_config.pio, pio_config.sm, pio_config.offset);
+    pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
 }
 
 bool pio_i2c_check_error(void) {

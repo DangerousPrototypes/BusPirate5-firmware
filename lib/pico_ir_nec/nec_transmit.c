@@ -30,14 +30,19 @@ static struct _pio_config pio_config_control;
 int nec_tx_init(uint pin_num) {
 
     // install the carrier_burst program in the PIO shared instruction space
-    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&nec_carrier_burst_program, &pio_config_burst.pio, &pio_config_burst.sm, &pio_config_burst.offset, pin_num, 1, true);
+    //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&nec_carrier_burst_program, &pio_config_burst.pio, &pio_config_burst.sm, &pio_config_burst.offset, pin_num, 1, true);
     //hard_assert(success);
-    if(!success) {
+    /*if(!success) {
         printf("Failed to claim free state machine for carrier_burst program\r\n");
         return -1;
-    }
+    }*/
+    pio_config_burst.pio = PIO_MODE_PIO;
+    pio_config_burst.sm = 0;
+    pio_config_burst.program = &nec_carrier_burst_program;
+    pio_config_burst.offset = pio_add_program(pio_config_burst.pio, pio_config_burst.program);
+    #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_burst.pio), pio_config_burst.sm, pio_config_burst.offset);
-
+    #endif
     // configure and enable the state machine
     nec_carrier_burst_program_init(pio_config_burst.pio,
                                    pio_config_burst.sm,
@@ -46,13 +51,18 @@ int nec_tx_init(uint pin_num) {
                                    38.222e3);                   // 38.222 kHz carrier
 
     // install the carrier_control program in the PIO shared instruction space
-    success = pio_claim_free_sm_and_add_program_for_gpio_range(&nec_carrier_control_program, &pio_config_control.pio, &pio_config_control.sm, &pio_config_control.offset, pin_num, 1, true);
+    /*success = pio_claim_free_sm_and_add_program_for_gpio_range(&nec_carrier_control_program, &pio_config_control.pio, &pio_config_control.sm, &pio_config_control.offset, pin_num, 1, true);
     hard_assert(success);
     if(!success) {
         return -1;
-    }
+    } */   
+    pio_config_control.pio = PIO_MODE_PIO;
+    pio_config_control.sm = 1;
+    pio_config_control.program = &nec_carrier_control_program;
+    pio_config_control.offset = pio_add_program(pio_config_control.pio, pio_config_control.program);
+    #ifdef BP_PIO_SHOW_ASSIGNMENT    
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_control.pio), pio_config_control.sm, pio_config_control.offset);    
-
+    #endif
     // configure and enable the state machine
     nec_carrier_control_program_init(pio_config_control.pio,
                                      pio_config_control.sm,
@@ -64,8 +74,10 @@ int nec_tx_init(uint pin_num) {
 }
 
 void nec_tx_deinit(void) {
-    pio_remove_program_and_unclaim_sm(&nec_carrier_burst_program, pio_config_burst.pio, pio_config_burst.sm, pio_config_burst.offset);
-    pio_remove_program_and_unclaim_sm(&nec_carrier_control_program, pio_config_control.pio, pio_config_control.sm, pio_config_control.offset);
+    //pio_remove_program_and_unclaim_sm(&nec_carrier_burst_program, pio_config_burst.pio, pio_config_burst.sm, pio_config_burst.offset);
+    //pio_remove_program_and_unclaim_sm(&nec_carrier_control_program, pio_config_control.pio, pio_config_control.sm, pio_config_control.offset);
+    pio_remove_program(pio_config_burst.pio, pio_config_burst.program, pio_config_burst.offset);
+    pio_remove_program(pio_config_control.pio, pio_config_control.program, pio_config_control.offset);
 }
 
 

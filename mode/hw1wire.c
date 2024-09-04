@@ -39,7 +39,7 @@ uint32_t hw1wire_setup(void){
 
 uint32_t hw1wire_setup_exc(void){
 	system_bio_claim(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
-	onewire_init(bio2bufiopin[BIO3], bio2bufdirpin[BIO3]);
+	onewire_init(bio2bufiopin[M_OW_OWD], bio2bufdirpin[M_OW_OWD]);
     return 1;
 }
 

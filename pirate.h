@@ -98,7 +98,7 @@ void spi_busy_wait(bool enable);
 // all SM reserved for mode
 
 // 1wire settings
-#define M_OW_OWD BIO3
+#define M_OW_OWD BIO0
 
 // UART settings
 #define M_UART_PORT uart0

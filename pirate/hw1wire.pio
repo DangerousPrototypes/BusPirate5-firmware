@@ -155,28 +155,28 @@ void onewire_program_init(
     sm_config_set_in_shift(&c, true, true, 8); 
 
     gpio_init(pin);
-    gpio_set_dir(pin, 0);
+    gpio_set_dir(pin, false); //input
     gpio_pull_down(pin);
 
     gpio_init(dir);
-    gpio_put(dir, 1);
-    gpio_set_dir(dir, 1);
-
-    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<pin);
-    pio_gpio_init(pio, pin);
+    gpio_put(dir, 1); //direction high
+    gpio_set_dir(dir, true); //output
+#if 0
+    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<pin); //pin to low
+    // pio_gpio_init(pio, pin);
     //   gpio_set_oeover(pin, GPIO_OVERRIDE_INVERT); // see above
     
-    pio_sm_set_pindirs_with_mask(pio, sm, 1<<dir, 1<<dir);
-    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<dir);
+    pio_sm_set_pindirs_with_mask(pio, sm, 1<<dir, 1<<dir); //dir to output
+    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<dir); //dir to low (input to rp2350)
     pio_gpio_init(pio, dir);
     //gpio_set_outover(dir, GPIO_OVERRIDE_INVERT);
 
-    pio_sm_set_pins_with_mask(pio, sm, 1<<dir, 1<<dir);
+    //pio_sm_set_pins_with_mask(pio, sm, 1<<dir, 1<<dir); //dir to high (output to 1-wire) ?????
 
     /* Preload register y with 1 to keep pinctlz = high when
        state machine starts running */
     /*pio_sm_exec(pio, sm, pio_encode_set(pio_y, 1));*/
-
+#endif
     pio_sm_init(pio, sm, offset + onewire_offset_start, &c);
 }
 

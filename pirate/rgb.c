@@ -748,11 +748,13 @@ void rgb_init(void){
     pio_config.pio = PIO_RGB_LED_PIO;
     pio_config.sm = PIO_RGB_LED_SM;
 
-    gpio_set_function(RGB_CDO, GPIO_FUNC_PIO1);  
+    
     #if (BP_VER == 6)
         //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 16, true);
+        gpio_set_function(RGB_CDO, GPIO_FUNC_PIO2);  
         pio_set_gpio_base(pio_config.pio, 16);
     #else
+        gpio_set_function(RGB_CDO, GPIO_FUNC_PIO0);  
         //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 1, true);
     #endif
     //hard_assert(success);

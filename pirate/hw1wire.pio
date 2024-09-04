@@ -153,30 +153,32 @@ void onewire_program_init(
     
     sm_config_set_out_shift(&c, true, true, 8); 
     sm_config_set_in_shift(&c, true, true, 8); 
-
+#if 0 //probably not needed because we already GPIO.IE=true
     gpio_init(pin);
     gpio_set_dir(pin, false); //input
     gpio_pull_down(pin);
 
     gpio_init(dir);
-    gpio_put(dir, 1); //direction high
+    //gpio_put(dir, 1); //direction high
+    gpio_put(dir, 0); //direction low (input to rp2xxx)
     gpio_set_dir(dir, true); //output
-#if 0
-    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<pin); //pin to low
-    // pio_gpio_init(pio, pin);
+#endif
+    //pio_sm_set_pins_with_mask(pio, sm, 0, 1<<pin); //pin to low
+    //pio_sm_set_pindirs_with_mask(pio, sm, 0, 1<<pin); //pin to input
+    // pio_gpio_init(pio, pin); //not needed for input
     //   gpio_set_oeover(pin, GPIO_OVERRIDE_INVERT); // see above
     
-    pio_sm_set_pindirs_with_mask(pio, sm, 1<<dir, 1<<dir); //dir to output
+    pio_sm_set_pindirs_with_mask(pio, sm, 1<<dir, (1<<dir) | (1<<pin)); //dir to output, pin to input
     pio_sm_set_pins_with_mask(pio, sm, 0, 1<<dir); //dir to low (input to rp2350)
     pio_gpio_init(pio, dir);
     //gpio_set_outover(dir, GPIO_OVERRIDE_INVERT);
 
-    //pio_sm_set_pins_with_mask(pio, sm, 1<<dir, 1<<dir); //dir to high (output to 1-wire) ?????
+    pio_sm_set_pins_with_mask(pio, sm, 1<<dir, 1<<dir); //dir to high (output to 1-wire) WHY?????
 
     /* Preload register y with 1 to keep pinctlz = high when
        state machine starts running */
     /*pio_sm_exec(pio, sm, pio_encode_set(pio_y, 1));*/
-#endif
+
     pio_sm_init(pio, sm, offset + onewire_offset_start, &c);
 }
 

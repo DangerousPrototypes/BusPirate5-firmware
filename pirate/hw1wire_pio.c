@@ -38,7 +38,7 @@ void onewire_init(uint pin, uint dir){
     #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("pio %d, sm %d, offset %d\n", PIO_NUM(owobj.pio), owobj.sm, owobj.offset);
     #endif
-    gpio_set_function(owobj.dir, GPIO_FUNC_PIO1); 
+    //gpio_set_function(owobj.dir, GPIO_FUNC_PIO1); 
     onewire_program_init(owobj.pio, owobj.sm, owobj.offset, owobj.pin, owobj.dir);
     onewire_set_fifo_thresh(8);
     pio_sm_set_enabled(owobj.pio, owobj.sm, true);

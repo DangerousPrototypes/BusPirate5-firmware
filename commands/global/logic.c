@@ -11,6 +11,7 @@
 #include "pirate/button.h"
 #include "binmode/fala.h"
 #include "toolbars/logic_bar.h"
+#include "binmode/logicanalyzer.h"
 
 static const char* const usage[] = {
     "logic analyzer usage",
@@ -22,6 +23,11 @@ static const char* const usage[] = {
     "show logic analyzer: logic show",
     "navigate logic analyzer: logic nav",
     "configure logic analyzer: logic -i -o 8 -f 1000000 -d 0",
+    #if BP_VER==6
+    "undocumented: set base pin (0=bufdir, 8=bufio, 20=follow along) -b: logic -b 20",
+    #else
+    "undocumented: set base pin (0=bufdir, 8=bufio) -b: logic -b 8",
+    #endif
 };
 
 static const struct ui_help_options options[] = {
@@ -133,6 +139,8 @@ void logic_handler(struct command_result* res) {
         return;
     }
 
+
+
     // todo: config object for LA (copy sump???)
     // pass config to logicanalyzer.c
     bool has_info = cmdln_args_find_flag('i' | 0x20); // info: show current settings
@@ -147,21 +155,27 @@ void logic_handler(struct command_result* res) {
     bool has_low_char= cmdln_args_find_flag_string('0',&arg, sizeof(low_char), low_char); // low: set low char
     char high_char[3];
     bool has_high_char= cmdln_args_find_flag_string('1',&arg, sizeof(high_char), high_char); // high: set high char
+    uint32_t base_channel;
+    bool has_base_channel = cmdln_args_find_flag_uint32('b', &arg, &base_channel); // base channel: set base channel
+
+    bool has_ok;
+
+    if(has_base_channel){
+        printf("Base channel set to: %d\r\n", base_channel);
+        logic_analyzer_set_base_pin(base_channel);
+        has_ok = true;
+    }
 
     if(has_low_char){
         printf("Low char set to: %c\r\n", low_char[0]);
         logic_bar_config(low_char[0], 0x00);
+        has_ok = true;
     }
 
     if(has_high_char){
         printf("High char set to: %c\r\n", high_char[0]);
         logic_bar_config(0x00, high_char[0]);
-    }
-
-    //show help if nothing else is specified
-    if(!has_info && !has_oversample && !has_frequency && !has_debug && !has_low_char && !has_high_char){
-        ui_help_show(true, usage, count_of(usage), options, count_of(options));
-        return;
+        has_ok = true;
     }
 
     if (has_debug) {
@@ -173,6 +187,7 @@ void logic_handler(struct command_result* res) {
         printf("Debug level set to: %d\r\n", debug_level);
         // update fala config struct
         fala_config.debug_level = debug_level;
+        has_ok = true;
     }
 
     if (has_oversample) {
@@ -184,12 +199,20 @@ void logic_handler(struct command_result* res) {
         printf("Oversample rate set to: %d\r\n", oversample);
         // update fala config struct
         fala_config.oversample = oversample;
+        has_ok = true;
     }
 
     if (has_frequency) {
         printf("Sample frequency set to: %dHz\r\n", frequency);
         // update fala config struct
         fala_config.base_frequency = frequency;
+        has_ok = true;
+    }
+
+        //show help if nothing else is specified
+    if(!has_ok){
+        ui_help_show(true, usage, count_of(usage), options, count_of(options));
+        return;
     }
 
     if (has_info || has_oversample || has_frequency) {

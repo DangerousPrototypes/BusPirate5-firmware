@@ -33,6 +33,7 @@ int la_dma[LA_DMA_COUNT];
 uint8_t* la_buf;
 uint32_t la_ptr = 0;
 uint32_t la_ptr_reset = 0;
+uint8_t la_base_pin = LA_BPIO0;
 volatile uint8_t la_status = LA_IDLE;
 volatile uint32_t la_sm_done = false;
 
@@ -40,6 +41,10 @@ volatile uint32_t la_sm_done = false;
 //uint sm = 0;
 //static uint offset = 0;
 //static const struct pio_program* pio_program_active=0;
+
+void logic_analyzer_set_base_pin(uint8_t base_pin) {
+    la_base_pin = base_pin;
+}
 
 void logicanalyzer_reset_led(void) {
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_RGB_UPDATES);
@@ -81,7 +86,8 @@ void logic_analyser_done(void) {
     pio_sm_set_enabled(pio_config.pio, pio_config.sm, false);
 
     if (pio_config.program) {
-        pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+        //pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+        pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
         pio_config.program = 0;
     }
 
@@ -202,9 +208,7 @@ bool logic_analyzer_configure(
         }
     }
 
-    //TODO: make base pin configurable
-    #define LA_BASE_PIN 0 //LA_BPIO0 //0
-    pio_config.pio = PIO_MODE_PIO;
+    pio_config.pio = PIO_LOGIC_ANALYZER_PIO;
     pio_config.sm = PIO_LOGIC_ANALYZER_SM;
 
     if (trigger_ok) {
@@ -214,21 +218,21 @@ bool logic_analyzer_configure(
             //hard_assert(success);    
             pio_config.program = &logicanalyzer_high_trigger_program;                  
             pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
-            logicanalyzer_high_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, LA_BASE_PIN + trigger_pin, freq, edge);
+            logicanalyzer_high_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, la_base_pin + trigger_pin, freq, edge);
         } else // low level trigger program
         {
             //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_low_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
             //hard_assert(success);
             pio_config.program = &logicanalyzer_low_trigger_program;
             pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
-            logicanalyzer_low_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, LA_BASE_PIN + trigger_pin, freq, edge);
+            logicanalyzer_low_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, la_base_pin + trigger_pin, freq, edge);
         }
     } else { // else no trigger program
         //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_no_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
         //hard_assert(success);  
         pio_config.program = &logicanalyzer_no_trigger_program; //move this before to simplify add program
         pio_config.offset = pio_add_program(pio_config.pio, pio_config.program); 
-        logicanalyzer_no_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, LA_BASE_PIN, freq);
+        logicanalyzer_no_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, freq);
     }
     #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("pio %d, sm %d, offset %d\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);  
@@ -291,6 +295,8 @@ bool logicanalyzer_setup(void) {
     for (uint8_t i = 0; i < count_of(la_dma); i++) {
         la_dma[i] = dma_claim_unused_channel(true);
     }
+
+    pio_config.program = 0;
 
     //restart_dma();
     return true;

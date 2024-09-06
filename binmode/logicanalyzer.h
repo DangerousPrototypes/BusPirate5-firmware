@@ -15,3 +15,4 @@ uint32_t logic_analyzer_get_current_ptr(void);
 uint32_t logic_analyzer_get_end_ptr(void);
 void logic_analyzer_reset_ptr(void);
 uint8_t logic_analyzer_read_ptr(uint32_t read_pointer);
+void logic_analyzer_set_base_pin(uint8_t base_pin);

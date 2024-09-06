@@ -109,11 +109,13 @@ set(bp5_common
         
         # HiZ
         mode/hiz.h mode/hiz.c
+
         # 1Wire
         mode/hw1wire.h mode/hw1wire.c
         pirate/hw1wire_pio.h pirate/hw1wire_pio.c
         commands/1wire/scan.h commands/1wire/scan.c
         commands/1wire/demos.h commands/1wire/demos.c
+        pirate/onewire_library.h pirate/onewire_library.c
 
         # UART
         mode/hwuart.h mode/hwuart.c
@@ -322,6 +324,7 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_control.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/picorvd/ch32vswio.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/pwm.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/onewire_library.pio)
 
         pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")

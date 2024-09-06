@@ -14,10 +14,16 @@
 #include "hardware/pio.h"
 #include "pico/binary_info.h"
 #include "hardware/clocks.h"
-#include "pirate/hw1wire_pio.h"
 #include "ui/ui_help.h"
 #include "commands/1wire/scan.h"
 #include "commands/1wire/demos.h"
+
+#define BP_OLD_HW1WIRE
+#ifdef BP_OLD_HW1WIRE
+#include "pirate/hw1wire_pio.h"
+#else
+#include "pirate/onewire_library.h"
+#endif
 
 // command configuration
 const struct _command_struct hw1wire_commands[]={   //Function Help
@@ -39,7 +45,11 @@ uint32_t hw1wire_setup(void){
 
 uint32_t hw1wire_setup_exc(void){
 	system_bio_claim(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
+#ifdef BP_OLD_HW1WIRE
 	onewire_init(bio2bufiopin[M_OW_OWD], bio2bufdirpin[M_OW_OWD]);
+#else
+	ow_init (8, bio2bufdirpin[M_OW_OWD], bio2bufiopin[M_OW_OWD]);
+#endif
     return 1;
 }
 
@@ -50,8 +60,11 @@ void hw1wire_start(struct _bytecode *result, struct _bytecode *next){
 		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
 		result->error=SRES_WARN; 
 	}
-	
+#ifdef BP_OLD_HW1WIRE
 	uint8_t device_detect=onewire_reset();
+#else
+	uint8_t device_detect=ow_reset();
+#endif
 
 	if(device_detect){
         //result->error_message=t[T_HW1WIRE_PRESENCE_DETECT];
@@ -63,16 +76,28 @@ void hw1wire_start(struct _bytecode *result, struct _bytecode *next){
 }
 
 void hw1wire_write(struct _bytecode *result, struct _bytecode *next){
-    onewire_tx_byte(result->out_data);
+#ifdef BP_OLD_HW1WIRE
+	onewire_tx_byte(result->out_data);    
     onewire_wait_for_idle();
+#else
+	ow_send(result->out_data);
+#endif
 }
 
 void hw1wire_read(struct _bytecode *result, struct _bytecode *next){
+#ifdef BP_OLD_HW1WIRE
     result->in_data=onewire_rx_byte();
+#else
+	result->in_data=ow_read();
+#endif
 }
 
 void hw1wire_cleanup(void){
+#ifdef BP_OLD_HW1WIRE
 	onewire_cleanup();
+#else
+	ow_cleanup();
+#endif
 	bio_init();
 	system_bio_claim(false, M_OW_OWD, BP_PIN_MODE,0);
 }

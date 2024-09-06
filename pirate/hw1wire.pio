@@ -14,7 +14,7 @@
 ;  - Requires 11 PIO instructions
 
 .program onewire
-.side_set 1 pindirs
+.side_set 1
 
 ; Some Notes:
 ;
@@ -143,8 +143,8 @@ void onewire_program_init(
 
     pio_sm_config c = onewire_program_get_default_config(offset);
     
-    sm_config_set_out_pins(&c, dir, 1);
-    sm_config_set_set_pins(&c, dir, 1);
+    //sm_config_set_out_pins(&c, dir, 1);
+    //sm_config_set_set_pins(&c, dir, 1);
     sm_config_set_in_pins(&c, pin);
     sm_config_set_sideset_pins(&c, dir);
     
@@ -170,10 +170,12 @@ void onewire_program_init(
     
     pio_sm_set_pindirs_with_mask(pio, sm, 1<<dir, (1<<dir) | (1<<pin)); //dir to output, pin to input
     pio_sm_set_pins_with_mask(pio, sm, 0, 1<<dir); //dir to low (input to rp2350)
+    
     pio_gpio_init(pio, dir);
     //gpio_set_outover(dir, GPIO_OVERRIDE_INVERT);
 
-    pio_sm_set_pins_with_mask(pio, sm, 1<<dir, 1<<dir); //dir to high (output to 1-wire) WHY?????
+    //pio_sm_set_pins_with_mask(pio, sm, 1<<dir, 1<<dir); //dir to high (output to 1-wire) WHY?????
+    pio_sm_set_pins_with_mask(pio, sm, 0, 1<<dir); //dir to high (output to 1-wire) WHY?????
 
     /* Preload register y with 1 to keep pinctlz = high when
        state machine starts running */

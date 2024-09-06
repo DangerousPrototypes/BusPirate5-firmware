@@ -1,0 +1,16 @@
+BasedOnStyle: Mozilla
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 4
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+NamespaceIndentation: All
+SortIncludes: false
+InsertBraces: true
+BreakBeforeBraces: Attach
+ColumnLimit: 120
+UseCRLF: true
+AlwaysBreakAfterReturnType: None
+AlwaysBreakAfterDefinitionReturnType: None

@@ -18,16 +18,28 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Note: this does some builds of the picotool SDK to make the CMake files work
+# If the version of the tool updates, this needs to as well
+# https://github.com/raspberrypi/pico-sdk/pull/1820#issuecomment-2291371915
+# https://github.com/raspberrypi/pico-sdk/pull/1820#issuecomment-2291611448
 RUN git clone https://github.com/raspberrypi/pico-sdk.git /opt/pico-sdk \
-    && git -C /opt/pico-sdk submodule update --init --recursive
+    && git -C /opt/pico-sdk submodule update --init --recursive \
+    && cd /opt/pico-sdk \
+    && git checkout 2.0.0 \
+    && mkdir -p build \
+    && cd build \
+    && cmake ../ \
+    && make picotoolBuild \
+    && cmake --install .
 
 RUN curl -Lo gcc-arm-none-eabi.tar.bz2 "https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2" \
     && mkdir /opt/gcc-arm-none-eabi \
     && tar xf gcc-arm-none-eabi.tar.bz2 --strip-components=1 -C /opt/gcc-arm-none-eabi \
     && rm -rf gcc-arm-none-eabi.tar.bz2
 
-ENV PATH=$PATH:/opt/gcc-arm-none-eabi/bin
-ENV PICO_SDK_PATH=/opt/pico-sdk
+ENV PATH=$PATH:/opt/gcc-arm-none-eabi/bin/
+ENV picotool_DIR=/opt/pico-sdk/build/_deps/picotool/
+ENV PICO_SDK_PATH=/opt/pico-sdk/
 
 COPY entrypoint.sh /.
 

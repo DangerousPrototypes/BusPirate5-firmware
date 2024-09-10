@@ -60,8 +60,8 @@ To run a build, perform the following actions on linux:
 git clone git@github.com:DangerousPrototypes/BusPirate5-firmware.git
 cd BusPirate5-firmware
 
-# build the environment
-docker compose build
+# OPTIONAL: build the environment, or you can just let it pull
+# docker compose build
 
 # run a build
 UID=$(id -u) GID=$(id -g) docker compose run dev build-clean

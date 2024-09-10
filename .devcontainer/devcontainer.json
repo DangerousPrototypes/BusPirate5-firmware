@@ -1,0 +1,6 @@
+{
+    "name": "BusPirate v5+ Build Environment",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "dev",
+    "workspaceFolder": "/project"
+}

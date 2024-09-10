@@ -6,6 +6,7 @@
 #include "system_config.h"
 #include "binmode/sump.h"
 #include "binmode/dirtyproto.h"
+#include "binmode/legacy4third.h"
 #include "binmode/falaio.h"
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 
@@ -42,6 +43,13 @@ const binmode_t binmodes[] = {
         .binmode_setup = falaio_setup,
         .binmode_service = falaio_service,
         .binmode_cleanup = falaio_cleanup,
+    },
+    {
+        .lock_terminal = true,
+        .binmode_name = legacy4third_mode_name,
+        .binmode_setup = binmode_null_func_void,
+        .binmode_service = legacy4third_mode,
+        .binmode_cleanup = binmode_null_func_void, 
     },
 };
 

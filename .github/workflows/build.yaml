@@ -45,7 +45,7 @@ jobs:
 
     - name: Configure CMake Linux & MacOS
       if: ${{ matrix.os != 'windows-latest'}}
-      run: UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
+      run: docker compose run dev build-clean
       # run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Configure CMake Windows

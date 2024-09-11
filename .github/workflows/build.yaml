@@ -21,11 +21,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # - name: Linux setup
-    #   if: ${{ matrix.os == 'ubuntu-latest' }}
-    #   run: |
-    #     sudo apt update && sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
-    #     echo "PICO_SDK_FETCH_FROM_GIT=TRUE" >> "$GITHUB_ENV"
+    - name: Linux setup
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt update && sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+        echo "PICO_SDK_FETCH_FROM_GIT=TRUE" >> "$GITHUB_ENV"
 
     - name: MacOS setup
       if: ${{ matrix.os == 'macos-latest'}}
@@ -42,11 +42,15 @@ jobs:
         cd "$Env:TEMP\pico-sdk"
         git submodule init
         git submodule update
+        git checkout 2.0.0
+        $env:picotool_DIR = '$Env:TEMP\pico-sdk\picotool\2.0.0\picotool'
+        $env:pioasm_DIR = '$Env:TEMP\pico-sdk\tools\2.0.0\pioasm'
+        $env:PICO_SDK_PATH = '$Env:TEMP\pico-sdk\sdk\2.0.0'
+        $env:PICO_TOOLCHAIN_PATH = '$Env:TEMP\pico-sdk\toolchain\13_2_Rel1'
 
     - name: Configure CMake Linux & MacOS
       if: ${{ matrix.os != 'windows-latest'}}
-      run: docker compose run dev build-clean
-      # run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Configure CMake Windows
       if: ${{ matrix.os == 'windows-latest'}}

@@ -63,7 +63,7 @@ set(bp5_common
         pirate/mcu.h pirate/mcu.c pirate/lsb.c pirate/lsb.h
         pirate/bio.h pirate/bio.c pirate/storage.h pirate/storage.c
         pirate/button.h pirate/button.c pirate/mem.c pirate/mem.h
-        pirate/lcd.h pirate/lcd.c 
+        pirate/lcd.h pirate/lcd.c
         pirate/amux.h pirate/amux.c pirate/rgb.h pirate/rgb.c
         pirate/intercore_helpers.c
 

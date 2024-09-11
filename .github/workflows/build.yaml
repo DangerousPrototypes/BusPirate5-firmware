@@ -53,6 +53,8 @@ jobs:
         $env:picotool_DIR = '$Env:TEMP\pico-sdk\picotool\2.0.0\picotool'
         $env:pioasm_DIR = '$Env:TEMP\pico-sdk\tools\2.0.0\pioasm'
         $env:PICO_SDK_PATH = '$Env:TEMP\pico-sdk\sdk\2.0.0'
+        del /F /Q ${{github.workspace}}/build
+        rmdir ${{github.workspace}}/build
         cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-gcc.exe -DCMAKE_CXX_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-g++.exe -G "Unix Makefiles"
 
     - name: Build

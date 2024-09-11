@@ -63,6 +63,13 @@ cd BusPirate5-firmware
 # OPTIONAL: build the environment, or you can just let it pull
 # docker compose build
 
+# NOTE: Dev containers on Windows might experience weirdness with users
+# CMake will throw an error and you'll need to issue a command to add:
+#
+# git config --global --add safe.directory /project/
+#
+# This is a VSCode extension issue: https://github.com/microsoft/vscode-remote-release/issues/7923
+
 # run a build
 UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
 # build stuff happens ...

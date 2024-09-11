@@ -49,7 +49,7 @@ jobs:
 
     - name: Configure CMake Windows
       if: ${{ matrix.os == 'windows-latest'}}
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-gcc.exe -DCMAKE_CXX_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-g++.exe -G "Unix Makefiles"
+      run: PICO_SDK_FETCH_FROM_GIT=1 cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-gcc.exe -DCMAKE_CXX_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-g++.exe -G "Unix Makefiles"
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --target ${{env.BUILD_TARGET}}

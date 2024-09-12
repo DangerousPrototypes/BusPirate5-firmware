@@ -60,11 +60,15 @@ To run a build, perform the following actions on linux:
 git clone git@github.com:DangerousPrototypes/BusPirate5-firmware.git
 cd BusPirate5-firmware
 
-# OPTIONAL: build the environment, or you can just let it pull
+# OPTIONAL: build the environment, or you can just let it pull - this will happen automatically in vscode using the devcontainers
 # docker compose build
+# 
+# NOTE: should you need to customize your users in docker for some reason:
+# docker compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)" --build-arg USERNAME="build" dev
 
 # run a build
-UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
+docker compose run dev build-clean
+
 # build stuff happens ...
 # [100%] Linking CXX executable bus_pirate5_rev10.elf
 # Memory region         Used Size  Region Size  %age Used
@@ -73,10 +77,11 @@ UID=$(id -u) GID=$(id -g) docker compose run dev build-clean
 #        SCRATCH_X:          4 KB         4 KB    100.00%
 #        SCRATCH_Y:          0 GB         4 KB      0.00%
 # [100%] Built target bus_pirate5_rev10
-# your build will be placed in ./build/
+#
+# your build will be placed in ./build/ - congrats!
 
 # Or drop into the container and run builds manually
-UID=$(id -u) GID=$(id -g) docker compose run dev
+docker compose run dev
 ```
 
 ### Building without LGPL3 protected component

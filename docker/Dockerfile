@@ -15,6 +15,7 @@ RUN apt-get update \
         libnewlib-arm-none-eabi \
         libnewlib-dev \
         libstdc++-arm-none-eabi-newlib \
+        sudo \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -40,6 +41,20 @@ RUN curl -Lo gcc-arm-none-eabi.tar.bz2 "https://developer.arm.com/-/media/Files/
 ENV PATH=$PATH:/opt/gcc-arm-none-eabi/bin/
 ENV picotool_DIR=/opt/pico-sdk/build/_deps/picotool/
 ENV PICO_SDK_PATH=/opt/pico-sdk/
+
+# modified from here
+# https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user
+ARG USERNAME
+ARG UID
+ARG GID
+
+# Create the user
+RUN groupadd --gid "${UID}" "${USERNAME}" \
+    && useradd --uid "${UID}" --gid "${GID}" -m "${USERNAME}" \
+    && echo "${USERNAME} ALL=\(root\) NOPASSWD:ALL" > /etc/sudoers.d/"${USERNAME}" \
+    && chmod 0440 /etc/sudoers.d/"${USERNAME}"
+
+USER $USERNAME
 
 COPY entrypoint.sh /.
 

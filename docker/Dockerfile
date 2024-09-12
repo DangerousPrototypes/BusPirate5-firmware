@@ -44,13 +44,13 @@ ENV PICO_SDK_PATH=/opt/pico-sdk/
 
 # modified from here
 # https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user
-ARG USERNAME
-ARG UID
-ARG GID
+ARG USERNAME=build
+ARG UID=1000
+ARG GID=1000
 
 # Create the user
 RUN groupadd --gid "${UID}" "${USERNAME}" \
-    && useradd --uid "${UID}" --gid "${GID}" -m "${USERNAME}" \
+    && useradd --uid "${UID}" --gid "${GID}" -m "${USERNAME}" -s /usr/bin/bash \
     && echo "${USERNAME} ALL=\(root\) NOPASSWD:ALL" > /etc/sudoers.d/"${USERNAME}" \
     && chmod 0440 /etc/sudoers.d/"${USERNAME}"
 

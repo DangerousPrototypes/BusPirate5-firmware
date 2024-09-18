@@ -76,17 +76,18 @@ uint8_t storage_mount(void){
     FRESULT fr;     /* FatFs return code */
     fr = f_mount(&fs, "", 1);
     if (fr != FR_OK) {
+        // BUGBUG: storage will NOT be available unless / until formatted by BP5, even if the storage is accessible.  Thus, cannot format the media from the host!
         system_config.storage_available=0;
         system_config.storage_mount_error=fr;
     }else{
         system_config.storage_available=1;
-        system_config.storage_fat_type=fs.fs_type;
-        system_config.storage_size=fs.csize * fs.n_fatent * BP_FLASH_DISK_BLOCK_SIZE * 1E-9; // 2048E-9; //512E-9;
+        system_config.storage_fat_type=fs.fs_type; // BUGBUG -- convert from FAT magic number to enum type
+        system_config.storage_size=fs.csize * fs.n_fatent * BP_FLASH_DISK_BLOCK_SIZE * 1E-9; // 2048E-9; //512E-9; // BUGBUG -- store as uint64_t (not float)
     }
     return fr;
 }
 
-void storage_unmount(void){
+void storage_unmount(void){ // BUGBUG -- Review when this is used, as it sets `system_config.storage_available = false`
     //make sure the low level storage is consistent
     disk_ioctl(fs.pdrv, CTRL_SYNC, 0);
     f_unmount("");

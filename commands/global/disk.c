@@ -329,6 +329,7 @@ uint8_t disk_format(void){
         printf("Mount error %d\r\n", system_config.storage_mount_error);
         return fr;
     }
+    // BUGBUG -- do not use floating point for storage size
     printf("Storage mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
     return fr;
 }

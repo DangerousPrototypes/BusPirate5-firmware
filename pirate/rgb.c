@@ -746,7 +746,7 @@ void rgb_irq_enable(bool enable){
 
 void rgb_init(void){
     pio_config.pio = PIO_RGB_LED_PIO;
-    pio_config.sm = PIO_RGB_LED_SM;
+    pio_config.sm  = PIO_RGB_LED_SM;
 
     
     #if (BP_VER == 6)

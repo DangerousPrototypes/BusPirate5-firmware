@@ -73,14 +73,14 @@ void i_info_handler(struct command_result *res){
 		ui_term_color_reset());
 	printf("%s\r\n", t[T_INFO_WEBSITE]);
 
-	// TF flash card information
+	// NAND/TF flash card information
 	if(system_config.storage_available){
 		printf("%s: %s%6.2fGB%s (%s %s)\r\n", 
 			t[T_INFO_TF_CARD],
 			ui_term_color_num_float(),
-			system_config.storage_size, 
+			system_config.storage_size,  // BUGBUG -- should be uint64_t (not float)
 			ui_term_color_reset(),
-			storage_fat_type_labels[system_config.storage_fat_type-1],
+			storage_fat_type_labels[system_config.storage_fat_type-1], // BUGBUG -- no array bounds checking!  Also, try to avoid using -1 index into array?
 			t[T_INFO_FILE_SYSTEM]
 		);
 

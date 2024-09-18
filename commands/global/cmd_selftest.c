@@ -23,7 +23,7 @@
 bool selftest_format_nand(void){
     uint32_t value;
     struct prompt_result presult;     
-    if(!system_config.storage_available){
+    if(!system_config.storage_available) {
         printf("No file system!\r\nFormat the Bus Pirate NAND flash?\r\nALL DATA WILL BE DESTROYED.\r\n y/n> ");
         cmdln_next_buf_pos();
         while(1){
@@ -35,7 +35,7 @@ bool selftest_format_nand(void){
             uint8_t fr = storage_format();
             if(fr){
                 storage_file_error(fr);
-                printf("FORMAT NAND FLASH: ERROR! 不好\r\n\r\n");
+                printf("FORMAT NAND FLASH: ERROR! 不好\r\n\r\n"); // Translation of 不好: (noun) "Fault", (adj.) "No Good", (verb) "Dislike"
                 return true;                              
             }else{
                 printf("FORMAT NAND FLASH: OK\r\n\r\n");

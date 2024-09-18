@@ -44,28 +44,28 @@ void system_init(void)
 	system_config.terminal_hide_cursor=false;
 	system_config.terminal_ansi_statusbar_pause=false;
 
-	system_config.storage_available=0;
-	system_config.storage_mount_error=3;
-	system_config.storage_fat_type=5;
-	system_config.storage_size=0;
+	system_config.storage_available=0;   // BUGBUG -- should be bool (not uint8_t)... Maybe rename to clearly indicate BOTH dhara + FAT initialization must succeed?
+	system_config.storage_mount_error=3; // BUGBUG -- look into using enum?
+	system_config.storage_fat_type=5;    // BUGBUG -- magic numbers to be replaced with enum / constants (storage_fat_type)
+	system_config.storage_size=0;        // BUGBUG -- currently float(!) ... store as uint64_t?
 
 	//start in auto format
-	system_config.display_format=df_auto;
+	system_config.display_format=df_auto; // BUGBUG -- struct should store as enum (not uint32_t)
 
-	system_config.hiz=1;
- 	system_config.mode=0;
- 	system_config.display=0;
+	system_config.hiz=1;                  // BUGBUG -- should be bool (not uint8_t)
+ 	system_config.mode=0;                 // BUGBUG -- look into using enum
+ 	system_config.display=0;              // BUGBUG -- look into using enum
 	system_config.subprotocol_name=0;
 	for(int i=0;i<HW_PINS;i++)
 	{
 		system_config.pin_labels[i]=0;
 	}
     //TODO: connect to a struct with info on each pin features and options, label automatically
-	system_config.pin_labels[0]=ui_const_pin_states[0];
-	system_config.pin_labels[9]=ui_const_pin_states[2];
+	system_config.pin_labels[0]=ui_const_pin_states[0]; // BUGBUG -- magic numbers to be replaced with enum / constants (pin states)
+	system_config.pin_labels[9]=ui_const_pin_states[2]; // BUGBUG -- magic numbers to be replaced with enum / constants (pin states)
 
     system_config.pin_func[0]=BP_PIN_VREF;
-    system_config.pin_func[9]=BP_PIN_GROUND;
+    system_config.pin_func[9]=BP_PIN_GROUND; // BUGBUG -- change magic number `9` to `HW_PINS-1`
     for(int i=1;i<HW_PINS-1; i++)
     {
         system_config.pin_func[i]=BP_PIN_IO;
@@ -76,20 +76,20 @@ void system_init(void)
     system_config.info_bar_changed=0;
 
 	system_config.num_bits=8;
-	system_config.bit_order=0;
+	system_config.bit_order=0;         // BUGBUG -- look into using enum (bit order)
 	system_config.write_with_read=0;
 	system_config.open_drain=0;
 
 	system_config.pullup_enabled=0;
 	system_config.mode_active=0;
-	system_config.pwm_active=0; //todo: store the period and duty cycle in array of structs
-	system_config.freq_active=0;//todo: store ranging info in array of structs
+	system_config.pwm_active=0;        // todo: store the period and duty cycle in array of structs
+	system_config.freq_active=0;       // todo: store ranging info in array of structs
 	system_config.aux_active=0;
 
-	system_config.psu=0;
+	system_config.psu=0;                       // BUGBUG -- should be bool (not uint8_t)
     system_config.psu_current_limit_en=false;     
-    system_config.psu_voltage=0;               
-    system_config.psu_current_limit=0;  
+    system_config.psu_voltage=0;               // BUGBUG -- rename so field includes units (1/10,000 V)?
+    system_config.psu_current_limit=0;         // BUGBUG -- rename so field includes units (1/10,000 A)?
     system_config.psu_current_error=false;
     system_config.psu_error=false;   
 	system_config.psu_irq_en=false;   
@@ -97,6 +97,7 @@ void system_init(void)
 	
 	system_config.error=0;
 
+	// BUGBUG -- consider using struct to store pin+port for MOSI/MISO/CS/CLK
 	system_config.mosiport=0;
 	system_config.mosipin=0;
 	system_config.misoport=0;
@@ -106,14 +107,14 @@ void system_init(void)
 	system_config.clkport=0;
 	system_config.clkpin=0;
 
-	system_config.big_buffer_owner=BP_BIG_BUFFER_NONE;
+	system_config.big_buffer_owner=BP_BIG_BUFFER_NONE;  // BUGBUG -- should this be removed with new allocation scheme?
 
-	system_config.rts=0;
+	system_config.rts=0;                                // BUGBUG -- rename field to indicate it's COM port ReadyToSend? (or whatever else it is supposed to be)
 
-	system_config.binmode_select=0;
-	system_config.binmode_lock_terminal=false;
-	system_config.binmode_usb_rx_queue_enable=true; 	//enable the binmode RX queue, disable to handle USB directly with tinyusb functions
-	system_config.binmode_usb_tx_queue_enable=true; 	//enable the binmode TX queue, disable to handle USB directly with tinyusb functions
+	system_config.binmode_select=0;                     // BUGBUG -- should be enum (not uint8_t)
+	system_config.binmode_lock_terminal=false;          // BUGBUG -- when should binmode be active w/o locking the terminal?
+	system_config.binmode_usb_rx_queue_enable=true; 	// enable the binmode RX queue, disable to handle USB directly with tinyusb functions
+	system_config.binmode_usb_tx_queue_enable=true; 	// enable the binmode TX queue, disable to handle USB directly with tinyusb functions
 
 }
 
@@ -134,7 +135,7 @@ bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const cha
     }
     else
     {
-        system_config.pin_labels[pin]=0;
+        system_config.pin_labels[pin]=NULL;
         system_config.pin_func[pin]=BP_PIN_IO;	
     }
 

@@ -149,27 +149,19 @@ bool tud_msc_test_unit_ready_cb(uint8_t lun)
 // Application update block count and block size
 void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_size)
 {
-  DRESULT res;
   (void) lun;
 
+  *block_count = 0;
+  *block_size  = 0;
 
-	if(system_config.storage_available)
+	if (system_config.storage_available)
 	{
-		if((res=disk_ioctl(0, GET_SECTOR_COUNT, block_count))){
-			//printf(" blockcount = unknown (storage inserted?) \r\n", *block_count);
-	  }
-    *block_size  = BP_FLASH_DISK_BLOCK_SIZE;
+    DRESULT res = disk_ioctl(0, GET_SECTOR_COUNT, block_count);
+    if (!res) {
+      // success! block_count is already set, just set block size
+      *block_size  = BP_FLASH_DISK_BLOCK_SIZE;
+    }
   }
-  else
-  {
-		*block_count = MSC_DEMO_DISK_BLOCK_NUM;
-	  *block_size  = MSC_DEMO_DISK_BLOCK_SIZE;
-  }
-
-
-
-	
-
 }
 
 // Invoked when received Start Stop Unit command
@@ -201,65 +193,49 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
 // Copy disk's data to buffer (up to bufsize) and return number of copied bytes.
 int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize)
 {
-  DRESULT res;
   (void) lun;
 	//printf(" READ lba %d +%d siz %d\r\n", lba, offset, bufsize);
 
+  int32_t bytes_read = 0;
 
-	if(system_config.storage_available)
-	{
-		if(res=disk_read(0, buffer, lba, (bufsize/BP_FLASH_DISK_BLOCK_SIZE)))		// assume no offset
-		{
-			printf(" READ ERROR %d \r\n", res);
-			bufsize=0;
-		}
+	if(system_config.storage_available) {
+    DRESULT res = disk_read(0, buffer, lba, (bufsize/BP_FLASH_DISK_BLOCK_SIZE));
+    if(!res) {
+      bytes_read = bufsize;
+    } else {
+      // printf(" READ ERROR %d \r\n", res);
+    }
 	}
-	else
-	{
-
-		uint8_t const* addr = msc_disk[lba] + offset;
-		memcpy(buffer, addr, bufsize);
-	}
-	
-  return bufsize;
+  return bytes_read;
 }
 
 // Callback invoked when received WRITE10 command.
 // Process data in buffer to disk's storage and return number of written bytes
 int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize)
 {
-  DRESULT res;
   (void) lun;
 
-
+  int32_t bytes_written = 0;
   //printf(" WRITE lba %d +%d siz %d\r\n", lba, offset, bufsize);
 
-	if(system_config.storage_available)
-	{	
-		if(res=disk_write(0, buffer, lba, (bufsize/BP_FLASH_DISK_BLOCK_SIZE)))		// assume no offset
-		{
-			printf(" WRITE ERROR %d \r\n", res);
-			bufsize=0;
-		}
+	if(system_config.storage_available) {	
+    DRESULT res = disk_write(0, buffer, lba, (bufsize/BP_FLASH_DISK_BLOCK_SIZE));
+		if(!res) { // assume no offset
+      bytes_written = bufsize;
+		} else {
+			//printf(" WRITE ERROR %d \r\n", res);
+    }
 	}
-	else
-	{
-
-#ifndef CFG_EXAMPLE_MSC_READONLY
-		uint8_t* addr = msc_disk[lba] + offset;
-  		memcpy(addr, buffer, bufsize);
-#else
-  		(void) lba; (void) offset; (void) buffer;
-#endif
-	
-	}
-
   return bufsize;
 }
 
 // Callback invoked when received an SCSI command not in built-in list below
-// - READ_CAPACITY10, READ_FORMAT_CAPACITY, INQUIRY, MODE_SENSE6, REQUEST_SENSE
-// - READ10 and WRITE10 has their own callbacks
+// - READ_CAPACITY10
+// - READ_FORMAT_CAPACITY
+// - INQUIRY
+// - MODE_SENSE6
+// - REQUEST_SENSE
+// - READ10 and WRITE10 have their own callbacks
 int32_t tud_msc_scsi_cb (uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, uint16_t bufsize)
 {
   // read10 & write10 has their own callback and MUST not be handled here
@@ -278,6 +254,9 @@ int32_t tud_msc_scsi_cb (uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, 
     break;
 
     default:
+
+      // TODO: print to debug port what is actually failing?
+
       // Set Sense = Invalid Command Operation
       tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x20, 0x00);
 

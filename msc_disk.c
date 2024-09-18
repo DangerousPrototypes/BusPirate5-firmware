@@ -215,6 +215,9 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
 {
   (void) lun;
 
+  // BUGBUG -- This is a hack to help track down FS corruption occuring on some Linux based hosts
+  return -1; // reject all writes from the host
+
   int32_t bytes_written = 0;
   //printf(" WRITE lba %d +%d siz %d\r\n", lba, offset, bufsize);
 
@@ -284,7 +287,8 @@ int32_t tud_msc_scsi_cb (uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, 
 
 bool tud_msc_is_writable_cb(uint8_t lun)
 {
-  return writable;
+  return false;
+  //return writable;
 }
 
 //eject and insert the usbms drive to force the host to sync its contents

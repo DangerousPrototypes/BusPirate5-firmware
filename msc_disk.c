@@ -40,76 +40,7 @@
 bool ejected = false;
 //latch the ejected status until read by the host
 static bool latch_ejected = false;
-
 static bool writable = true;
-
-enum
-{
-  MSC_DEMO_DISK_BLOCK_NUM  = 16, // 8KB is the smallest size that windows allow to mount
-  MSC_DEMO_DISK_BLOCK_SIZE = 512 //512
-};
-
-// Some MCU doesn't have enough 8KB SRAM to store the whole disk
-// We will use Flash as read-only disk with board that has
-// CFG_EXAMPLE_MSC_READONLY defined
-
-#define README_CONTENTS \
-"No storage mounted.\r\n\
-Kind regards,\r\n\
-Ian and Chris\r\n\r\n\
-https://buspirate.com/"
-
-static_assert(sizeof(README_CONTENTS) <= MSC_DEMO_DISK_BLOCK_SIZE, "README_CONTENTS too large for single-sector file");
-
-#define CFG_EXAMPLE_MSC_READONLY
-#ifdef CFG_EXAMPLE_MSC_READONLY
-const
-#endif
-uint8_t msc_disk[MSC_DEMO_DISK_BLOCK_NUM][MSC_DEMO_DISK_BLOCK_SIZE] =
-{
-  //------------- Block0: Boot Sector -------------//
-  // byte_per_sector    = DISK_BLOCK_SIZE; fat12_sector_num_16  = DISK_BLOCK_NUM;
-  // sector_per_cluster = 1; reserved_sectors = 1;
-  // fat_num            = 1; fat12_root_entry_num = 16;
-  // sector_per_fat     = 1; sector_per_track = 1; head_num = 1; hidden_sectors = 0;
-  // drive_number       = 0x80; media_type = 0xf8; extended_boot_signature = 0x29;
-  // filesystem_type    = "FAT12   "; volume_serial_number = 0x1234; volume_label = "TinyUSB MSC";
-  // FAT magic code at offset 510-511
-  {
-      0xEB, 0x3C, 0x90, 0x4D, 0x53, 0x44, 0x4F, 0x53, 0x35, 0x2E, 0x30, 0x00, 0x02, 0x01, 0x01, 0x00,
-      0x01, 0x10, 0x00, 0x10, 0x00, 0xF8, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x29, 0x34, 0x12, 0x00, 0x00, 'T' , 'i' , 'n' , 'y' , 'U' ,
-      'S' , 'B' , ' ' , 'M' , 'S' , 'C' , 0x46, 0x41, 0x54, 0x31, 0x32, 0x20, 0x20, 0x20, 0x00, 0x00,
-
-      // Zeroes until the 2 last bytes, which contain the FAT magic code
-      [MSC_DEMO_DISK_BLOCK_SIZE-2] = 0x55, 0xAA
-  },
-
-  //------------- Block1: FAT12 Table -------------//
-  {
-      0xF8, 0xFF, 0xFF, 0xFF, 0x0F // // first 2 entries must be F8FF, third entry is cluster end of readme file
-  },
-
-  //------------- Block2: Root Directory -------------//
-  {
-      // first entry is volume label
-      'B' , 'u' , 's' , ' ' , 'P' , 'i' , 'r' , 'a' , 't' , 'e' , ' ' , 0x08, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4F, 0x6D, 0x65, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      // second entry is readme file
-      'R' , 'E' , 'A' , 'D' , 'M' , 'E' , ' ' , ' ' , 'T' , 'X' , 'T' , 0x20, 0x00, 0xC6, 0x52, 0x6D,
-      0x65, 0x43, 0x65, 0x43, 0x00, 0x00, 0x88, 0x6D, 0x65, 0x43, 0x02, 0x00,
-      
-      (sizeof(README_CONTENTS)-1 >> (8*0)), // readme's files size (4 Bytes, little-endian)
-      (sizeof(README_CONTENTS)-1 >> (8*1)), // readme's files size (4 Bytes, little-endian)
-      (sizeof(README_CONTENTS)-1 >> (8*2)), // readme's files size (4 Bytes, little-endian)
-      (sizeof(README_CONTENTS)-1 >> (8*3)), // readme's files size (4 Bytes, little-endian)
-  },
-
-  //------------- Block3: Readme Content -------------//
-  {
-    README_CONTENTS
-  },
-};
 
 // Invoked when received SCSI_CMD_INQUIRY
 // Application fill vendor id, product id and revision with string up to 8, 16, 4 characters respectively
@@ -287,8 +218,8 @@ int32_t tud_msc_scsi_cb (uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, 
 
 bool tud_msc_is_writable_cb(uint8_t lun)
 {
-  return false;
-  //return writable;
+  return false && writable; // BUGBUG -- Hack to track down FS corruption on some Linux hosts
+  // return writable;
 }
 
 //eject and insert the usbms drive to force the host to sync its contents
@@ -310,12 +241,12 @@ void make_usbmsdrive_readonly(void)
   if (!writable)
     return;
   // eject the usb drive
-  tud_msc_start_stop_cb(0, 0, 0, 1);
+  tud_msc_start_stop_cb(0, 0, false, true);
   // make sure the storage is synced
   disk_ioctl(0, CTRL_SYNC, 0);
   writable = false;
   // insert the drive back
-  tud_msc_start_stop_cb(0, 0, 1, 1);
+  tud_msc_start_stop_cb(0, 0, true, true);
 }
 void make_usbmsdrive_writable(void)
 {

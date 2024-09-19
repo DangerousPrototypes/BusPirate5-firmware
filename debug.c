@@ -37,7 +37,7 @@ bool debug_rx(char *c)
     return false;
 }
 
-void debug_uart_init(int uart_number, bool dbrx, bool dbtx, bool terminal_label)
+void debug_uart_init(int uart_number, bool dbrx, bool dbtx, bool terminal_label) // BUGBUG -- no error return path!
 {   
     // Initialise debug UART
     uart_init(debug_uart[uart_number].uart, 115200);
@@ -53,7 +53,7 @@ void debug_uart_init(int uart_number, bool dbrx, bool dbtx, bool terminal_label)
         // Set the GPIO pin mux to the UART
         bio_set_function(debug_uart[uart_number].tx_pin, GPIO_FUNC_UART);
         //claim and label pin
-        system_bio_claim(true, debug_uart[uart_number].tx_pin, BP_PIN_DEBUG, debug_pin_labels[(terminal_label *2) + 0]);
+        system_bio_claim(true, debug_uart[uart_number].tx_pin, BP_PIN_DEBUG, debug_pin_labels[(terminal_label *2) + 0]); // BUGBUG -- unchecked error return value
     }
 
     if(dbrx)
@@ -66,7 +66,7 @@ void debug_uart_init(int uart_number, bool dbrx, bool dbtx, bool terminal_label)
         // Set the GPIO pin mux to the UART
         bio_set_function(debug_uart[uart_number].rx_pin, GPIO_FUNC_UART);
         //claim and label pin
-        system_bio_claim(true, debug_uart[uart_number].rx_pin, BP_PIN_DEBUG, debug_pin_labels[(terminal_label *2) + 1]);
+        system_bio_claim(true, debug_uart[uart_number].rx_pin, BP_PIN_DEBUG, debug_pin_labels[(terminal_label *2) + 1]); // BUGBUG -- unchecked error return value
     }
 }
 

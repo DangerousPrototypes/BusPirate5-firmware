@@ -196,7 +196,8 @@ uint8_t const desc_hs_configuration[] =
 #if defined(ENABLE_THIRD_CDC_PORT)
   // 3rd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, CFG_TUD_CDC_EP_BUFSIZE),
-#endif};
+#endif
+};
 
 // other speed configuration
 uint8_t desc_other_speed_config[CONFIG_TOTAL_LEN];

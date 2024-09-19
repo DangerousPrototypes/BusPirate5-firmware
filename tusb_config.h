@@ -96,11 +96,16 @@
 #endif
 
 //------------- CLASS -------------//
-#define CFG_TUD_CDC              2 // BUGBUG -- Remove unused defines?
-#define CFG_TUD_MSC              1 // BUGBUG -- Remove unused defines?
-#define CFG_TUD_HID              0 // BUGBUG -- Remove unused defines?
-#define CFG_TUD_MIDI             0 // BUGBUG -- Remove unused defines?
-#define CFG_TUD_VENDOR           0 // BUGBUG -- Remove unused defines?
+// This section defines the count of each type of interface
+#if defined(ENABLE_THIRD_CDC_PORT)
+  #define CFG_TUD_CDC              3
+#else
+  #define CFG_TUD_CDC              2
+#endif
+#define CFG_TUD_MSC              1
+#define CFG_TUD_HID              0
+#define CFG_TUD_MIDI             0
+#define CFG_TUD_VENDOR           0
 
 // Config descriptor indicates power in mA
 #define CFG_TUD_CONFIG_DESCRIPTOR_POWER_IN_mA 100 // BUGBUG -- Is this the correct value?

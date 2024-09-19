@@ -36,6 +36,9 @@
 #define USB_BCD   0x0200
 #define USB_VID   0x1209
 
+//#define ENABLE_THIRD_CDC_PORT 1
+
+
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
@@ -85,8 +88,10 @@ enum
 
   ITF_NUM_MSC,
 
+#if defined(ENABLE_THIRD_CDC_PORT)
   ITF_NUM_CDC_2,
   ITF_NUM_CDC_2_DATA,
+#endif
 
   ITF_NUM_TOTAL
 };
@@ -135,13 +140,19 @@ enum
   #define EPNUM_MSC_OUT     0x05
   #define EPNUM_MSC_IN      0x85
 
-  #define EPNUM_CDC_2_NOTIF   0x86
-  #define EPNUM_CDC_2_OUT     0x06
-  #define EPNUM_CDC_2_IN      0x87
+  #if defined(ENABLE_THIRD_CDC_PORT)
+    #define EPNUM_CDC_2_NOTIF   0x86
+    #define EPNUM_CDC_2_OUT     0x06
+    #define EPNUM_CDC_2_IN      0x87
+  #endif
 
 #endif
 
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN + TUD_CDC_DESC_LEN)
+#if defined(ENABLE_THIRD_CDC_PORT)
+  #define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN + TUD_CDC_DESC_LEN)
+#else
+  #define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN)
+#endif
 
 // full speed configuration
 uint8_t const desc_fs_configuration[] =
@@ -150,16 +161,22 @@ uint8_t const desc_fs_configuration[] =
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
 
   // 1st CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  // BUGBUG -- Magic numbers ... should define as USB_ENDPOINT_SIZE_CDC_0?
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
 
   // 2nd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  // BUGBUG -- Magic numbers ... should define as USB_ENDPOINT_SIZE_CDC_1?
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 6, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
 
   // Interface number, string index, EP Out & EP In address, EP size
+  // BUGBUG -- Magic numbers ... should define as USB_ENDPOINT_SIZE_MSC?
   TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
 
+#if defined(ENABLE_THIRD_CDC_PORT)
   // 3rd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  // BUGBUG -- Magic numbers ... should define as USB_ENDPOINT_SIZE_CDC_2?
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, 64),
+#endif
 };
 
 #if TUD_OPT_HIGH_SPEED
@@ -180,9 +197,10 @@ uint8_t const desc_hs_configuration[] =
   // Interface number, string index, EP Out & EP In address, EP size
   TUD_MSC_DESCRIPTOR(ITF_NUM_MSC,   5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 512),
 
+#if defined(ENABLE_THIRD_CDC_PORT)
   // 3rd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, 64),
-};
+#endif};
 
 // other speed configuration
 uint8_t desc_other_speed_config[CONFIG_TOTAL_LEN];
@@ -262,7 +280,9 @@ char const* string_desc_arr [] =
   "Bus Pirate CDC",                 // 4: Main   CDC Interface
   "Bus Pirate MSC",                 // 5: MSC Interface
   "Bus Pirate BIN",                 // 6: Binary CDC Interface
+#if defined(ENABLE_THIRD_CDC_PORT)
   "Bus Pirate DBG",                 // 7: Debug  CDC Interface
+#endif
 };
 // automatically update if an additional string is later added to the table
 #define STRING_DESC_ARR_ELEMENT_COUNT (sizeof(string_desc_arr)/sizeof(string_desc_arr[0]))

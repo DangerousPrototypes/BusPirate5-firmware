@@ -19,14 +19,17 @@
 // on a USB attached device is a nightmare. BP_DEBUG_ENABLED In the /platform/ folder
 // configuration file enables a UART debugging option. All user interface IO
 // will be routed to one of the two UARTs (selectable) on the Bus Pirate buffered IO pins
-// UART debug mode is way over engineered using DMA et al, and has some predelection for bugs
+// UART debug mode is way over engineered using DMA et al, and has some predilection for bugs
 // in status bar updates
+
+// BUGBUG -- Rename all functions here with `bp_usb_cdc_` prefix
+// BUGBUG -- make all internal functions and variables static
 
 void rx_uart_irq_handler(void);
 
 queue_t rx_fifo;
 queue_t bin_rx_fifo;
-#define RX_FIFO_LENGTH_IN_BITS 7 // 2^n buffer size. 2^3=8, 2^9=512
+#define RX_FIFO_LENGTH_IN_BITS 7 // 2^n buffer size. 2^3=8, 2^7=128, 2^9=512
 #define RX_FIFO_LENGTH_IN_BYTES (0x0001<<RX_FIFO_LENGTH_IN_BITS)
 char rx_buf[RX_FIFO_LENGTH_IN_BYTES]; 
 char bin_rx_buf[RX_FIFO_LENGTH_IN_BYTES]; 
@@ -52,7 +55,7 @@ void rx_uart_irq_handler(void){
     while(uart_is_readable(debug_uart[system_config.terminal_uart_number].uart)) {
         uint8_t c=uart_getc(debug_uart[system_config.terminal_uart_number].uart);
         queue2_add_blocking(&rx_fifo, &c);
-    }   
+    }
 }
 
 void rx_usb_init(void){
@@ -70,7 +73,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
         // while bytes available shove them in the buffer
         for(uint8_t i=0; i<count; i++) {
             queue2_add_blocking(&rx_fifo, &buf[i]);
-        }     
+        }
     }
 
     if(system_config.binmode_usb_rx_queue_enable && itf==1 && tud_cdc_n_available(1)){
@@ -79,8 +82,8 @@ void tud_cdc_rx_cb(uint8_t itf) {
         // while bytes available shove them in the buffer
         for(uint8_t i=0; i<count; i++) {
             queue2_add_blocking(&bin_rx_fifo, &buf[i]);           
-        }     
-    }    
+        }
+    }
 }
 
 // Invoked when cdc when line state changed e.g connected/disconnected

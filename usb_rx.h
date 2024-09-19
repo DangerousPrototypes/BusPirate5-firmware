@@ -1,3 +1,6 @@
+#pragma once
+
+// BUGBUG - rename these functions to have `bp_usb_cdc_` prefix
 void rx_fifo_init(void);
 void rx_uart_init_irq(void);
 void rx_usb_init(void);

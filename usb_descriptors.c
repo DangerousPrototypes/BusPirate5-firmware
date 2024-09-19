@@ -32,10 +32,7 @@
  * Auto ProductID layout's Bitmap:
  *   [MSB]         HID | MSC | CDC          [LSB]
  */
-#define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
-#define USB_PID  0x7332         /*(0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-                           _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )*/
-
+#define USB_PID   0x7332
 #define USB_BCD   0x0200
 #define USB_VID   0x1209
 
@@ -78,20 +75,19 @@ uint8_t const * tud_descriptor_device_cb(void)
 // Configuration Descriptor
 //--------------------------------------------------------------------+
 
-#define USB_TEST 1
-
 enum
 {
-  #ifndef USB_TEST
-  ITF_NUM_CDC = 0,
-  ITF_NUM_CDC_DATA,
-  #else
   ITF_NUM_CDC_0 = 0,
   ITF_NUM_CDC_0_DATA,
+
   ITF_NUM_CDC_1,
   ITF_NUM_CDC_1_DATA,
+
   ITF_NUM_MSC,
-  #endif
+
+  ITF_NUM_CDC_2,
+  ITF_NUM_CDC_2_DATA,
+
   ITF_NUM_TOTAL
 };
 
@@ -128,14 +124,6 @@ enum
   #define EPNUM_MSC_IN      0x84
 
 #else
-  #ifndef USB_TEST
-  #define EPNUM_CDC_NOTIF   0x81
-  #define EPNUM_CDC_OUT     0x02
-  #define EPNUM_CDC_IN      0x82
-
-  #define EPNUM_MSC_OUT     0x03
-  #define EPNUM_MSC_IN      0x83
-  #else
   #define EPNUM_CDC_0_NOTIF   0x81
   #define EPNUM_CDC_0_OUT     0x02
   #define EPNUM_CDC_0_IN      0x82
@@ -146,36 +134,32 @@ enum
 
   #define EPNUM_MSC_OUT     0x05
   #define EPNUM_MSC_IN      0x85
-  #endif
-  
 
+  #define EPNUM_CDC_2_NOTIF   0x86
+  #define EPNUM_CDC_2_OUT     0x06
+  #define EPNUM_CDC_2_IN      0x87
 
 #endif
 
-#ifndef USB_TEST
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN)
-#else
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN)
-#endif
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN + TUD_CDC_DESC_LEN)
 
 // full speed configuration
 uint8_t const desc_fs_configuration[] =
 {
   // Config number, interface count, string index, total length, attribute, power in mA
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
-  #ifndef USB_TEST
-  // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 64),
-  #else
+
   // 1st CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
 
   // 2nd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 6, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
 
-  #endif
   // Interface number, string index, EP Out & EP In address, EP size
   TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
+
+  // 3rd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, 64),
 };
 
 #if TUD_OPT_HIGH_SPEED
@@ -187,11 +171,17 @@ uint8_t const desc_hs_configuration[] =
   // Config number, interface count, string index, total length, attribute, power in mA
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
 
-  // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 512),
+  // 1st CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
+
+  // 2nd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 6, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
 
   // Interface number, string index, EP Out & EP In address, EP size
-  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 512),
+  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC,   5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 512),
+
+  // 3rd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, 64),
 };
 
 // other speed configuration
@@ -269,9 +259,10 @@ char const* string_desc_arr [] =
   "Bus Pirate",                     // 1: Manufacturer
   "Bus Pirate 5",                   // 2: Product
   "5buspirate",                     // 3: Serial -- now using chip ID (serial port can be remembered per device)
-  "Bus Pirate CDC",                 // 4: CDC Interface
+  "Bus Pirate CDC",                 // 4: Main   CDC Interface
   "Bus Pirate MSC",                 // 5: MSC Interface
-  "Bus Pirate BIN"                  // 6: Binary CDC Interface
+  "Bus Pirate BIN",                 // 6: Binary CDC Interface
+  "Bus Pirate DBG",                 // 7: Debug  CDC Interface
 };
 // automatically update if an additional string is later added to the table
 #define STRING_DESC_ARR_ELEMENT_COUNT (sizeof(string_desc_arr)/sizeof(string_desc_arr[0]))

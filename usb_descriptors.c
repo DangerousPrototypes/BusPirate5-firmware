@@ -158,24 +158,20 @@ enum
 uint8_t const desc_fs_configuration[] =
 {
   // Config number, interface count, string index, total length, attribute, power in mA
-  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
+  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, CFG_TUD_CONFIG_DESCRIPTOR_POWER_IN_mA),
 
   // 1st CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  // BUGBUG -- Magic numbers ... should define as USB_ENDPOINT_SIZE_CDC_0?
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, CFG_TUD_CDC_EP_BUFSIZE),
 
   // 2nd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  // BUGBUG -- Magic numbers ... should define as USB_ENDPOINT_SIZE_CDC_1?
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 6, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 6, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, CFG_TUD_CDC_EP_BUFSIZE),
 
   // Interface number, string index, EP Out & EP In address, EP size
-  // BUGBUG -- Magic numbers ... should define as USB_ENDPOINT_SIZE_MSC?
-  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
+  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC,   5, EPNUM_MSC_OUT, EPNUM_MSC_IN, CFG_TUD_MSC_EP_BUFSIZE),
 
 #if defined(ENABLE_THIRD_CDC_PORT)
   // 3rd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  // BUGBUG -- Magic numbers ... should define as USB_ENDPOINT_SIZE_CDC_2?
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, 64),
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, CFG_TUD_CDC_EP_BUFSIZE),
 #endif
 };
 
@@ -186,20 +182,20 @@ uint8_t const desc_fs_configuration[] =
 uint8_t const desc_hs_configuration[] =
 {
   // Config number, interface count, string index, total length, attribute, power in mA
-  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
+  TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, CFG_TUD_CONFIG_DESCRIPTOR_POWER_IN_mA),
 
   // 1st CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 4, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, CFG_TUD_CDC_EP_BUFSIZE),
 
   // 2nd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 6, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, 64),
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 6, EPNUM_CDC_1_NOTIF, 8, EPNUM_CDC_1_OUT, EPNUM_CDC_1_IN, CFG_TUD_CDC_EP_BUFSIZE),
 
   // Interface number, string index, EP Out & EP In address, EP size
-  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC,   5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 512),
+  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC,   5, EPNUM_MSC_OUT, EPNUM_MSC_IN, CFG_TUD_MSC_EP_BUFSIZE),
 
 #if defined(ENABLE_THIRD_CDC_PORT)
   // 3rd CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, 64),
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_1, 7, EPNUM_CDC_2_NOTIF, 8, EPNUM_CDC_2_OUT, EPNUM_CDC_2_IN, CFG_TUD_CDC_EP_BUFSIZE),
 #endif};
 
 // other speed configuration

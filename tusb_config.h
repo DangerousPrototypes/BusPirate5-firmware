@@ -96,24 +96,27 @@
 #endif
 
 //------------- CLASS -------------//
-#define CFG_TUD_CDC              2
-#define CFG_TUD_MSC              1
-#define CFG_TUD_HID              0
-#define CFG_TUD_MIDI             0
-#define CFG_TUD_VENDOR           0
+#define CFG_TUD_CDC              2 // BUGBUG -- Remove unused defines?
+#define CFG_TUD_MSC              1 // BUGBUG -- Remove unused defines?
+#define CFG_TUD_HID              0 // BUGBUG -- Remove unused defines?
+#define CFG_TUD_MIDI             0 // BUGBUG -- Remove unused defines?
+#define CFG_TUD_VENDOR           0 // BUGBUG -- Remove unused defines?
 
-// CDC FIFO size of TX and RX
-#define CFG_TUD_CDC_RX_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
-#define CFG_TUD_CDC_TX_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
+// Config descriptor indicates power in mA
+#define CFG_TUD_CONFIG_DESCRIPTOR_POWER_IN_mA 100 // BUGBUG -- Is this the correct value?
 
 // CDC Endpoint transfer buffer size, more is faster
-#define CFG_TUD_CDC_EP_BUFSIZE   (TUD_OPT_HIGH_SPEED ? 512 : 64)
+#define CFG_TUD_CDC_EP_BUFSIZE   64
+
+// CDC FIFO size of TX and RX
+#define CFG_TUD_CDC_RX_BUFSIZE   CFG_TUD_CDC_EP_BUFSIZE
+#define CFG_TUD_CDC_TX_BUFSIZE   CFG_TUD_CDC_EP_BUFSIZE
 
 // MSC Buffer size of Device Mass storage
-#define CFG_TUD_MSC_EP_BUFSIZE   2048
+#define CFG_TUD_MSC_EP_BUFSIZE   64 // BUGBUG -- Consider 512 or higher for better performance?
 
 #ifdef __cplusplus
- }
+}
 #endif
 
 #endif /* _TUSB_CONFIG_H_ */

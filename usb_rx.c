@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "tusb_config.h"
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "queue.h"
@@ -22,7 +23,7 @@
 // UART debug mode is way over engineered using DMA et al, and has some predilection for bugs
 // in status bar updates
 
-// BUGBUG -- Rename all functions here with `bp_usb_cdc_` prefix
+// BUGBUG -- Rename functions here with `bp_usb_cdc_` prefix (as appropriate)
 // BUGBUG -- make all internal functions and variables static
 
 void rx_uart_irq_handler(void);
@@ -31,11 +32,11 @@ queue_t rx_fifo;
 queue_t bin_rx_fifo;
 #define RX_FIFO_LENGTH_IN_BITS 7 // 2^n buffer size. 2^3=8, 2^7=128, 2^9=512
 #define RX_FIFO_LENGTH_IN_BYTES (0x0001<<RX_FIFO_LENGTH_IN_BITS)
-char rx_buf[RX_FIFO_LENGTH_IN_BYTES]; 
-char bin_rx_buf[RX_FIFO_LENGTH_IN_BYTES]; 
+char rx_buf[RX_FIFO_LENGTH_IN_BYTES];
+char bin_rx_buf[RX_FIFO_LENGTH_IN_BYTES];
 
 // init buffer (and IRQ for UART debug mode)
-void rx_fifo_init(void){
+void rx_fifo_init(void) { // BUGBUG -- need to update function name to reflect that it's initializing all the RX FIFOs
     queue2_init(&rx_fifo, rx_buf, RX_FIFO_LENGTH_IN_BYTES); //buffer size must be 2^n for queue AND DMA rollover
     queue2_init(&bin_rx_fifo, bin_rx_buf, RX_FIFO_LENGTH_IN_BYTES);
 }
@@ -46,6 +47,7 @@ void rx_uart_init_irq(void){
     irq_set_exclusive_handler(debug_uart[system_config.terminal_uart_number].irq, rx_uart_irq_handler);
     //irq_set_priority(debug_uart[system_config.terminal_uart_number].irq, 0xFF);
     irq_set_enabled(debug_uart[system_config.terminal_uart_number].irq, true);
+    // enable interrupt only when rx has data
     uart_set_irq_enables(debug_uart[system_config.terminal_uart_number].uart, true, false);
 }
 
@@ -65,10 +67,11 @@ void rx_usb_init(void){
 // USB (tinyUSB) interrupt handler
 // Invoked when CDC interface received data from host
 void tud_cdc_rx_cb(uint8_t itf) {
-    char buf[64];
 
-    if(itf==0 && tud_cdc_n_available(0)){
-        uint32_t count = tud_cdc_n_read(0, buf, 64);
+    char buf[64]; // BUGBUG -- Magic number 64 should be replaced with a constant
+
+    if(itf==0 && tud_cdc_n_available(0)) {           // BUGBUG -- Magic Number should be CDC_ITF_IDX_TERMINAL
+        uint32_t count = tud_cdc_n_read(0, buf, 64); // BUGBUG -- Magic Numbers 0 and 64 should be replaced
 
         // while bytes available shove them in the buffer
         for(uint8_t i=0; i<count; i++) {
@@ -76,14 +79,25 @@ void tud_cdc_rx_cb(uint8_t itf) {
         }
     }
 
-    if(system_config.binmode_usb_rx_queue_enable && itf==1 && tud_cdc_n_available(1)){
-        uint32_t count = tud_cdc_n_read(1, buf, 64);
+    if(system_config.binmode_usb_rx_queue_enable && itf==1 && tud_cdc_n_available(1)) { // BUGBUG -- Magic Number should be replaced
+        uint32_t count = tud_cdc_n_read(1, buf, 64); // BUGBUG -- Magic Numbers 1 and 64 should be replaced
 
         // while bytes available shove them in the buffer
         for(uint8_t i=0; i<count; i++) {
             queue2_add_blocking(&bin_rx_fifo, &buf[i]);           
         }
     }
+
+#if defined(ENABLE_THIRD_CDC_PORT)
+    // BUGBUG -- can we ignore received data from the third CDC port, or do we have
+    //           to handle it even if throwing the values away?
+    if(itf==2 && tud_cdc_n_available(2)) {           // BUGBUG -- Magic Number should be replaced
+        uint32_t count = tud_cdc_n_read(2, buf, 64); // BUGBUG -- Magic Numbers 0 and 64 should be replaced
+        // throw the data away ... debug port is send-only
+    }
+#endif
+
+
 }
 
 // Invoked when cdc when line state changed e.g connected/disconnected

@@ -134,7 +134,7 @@ bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const cha
     }
     else
     {
-        system_config.pin_labels[pin]=0;
+        system_config.pin_labels[pin]=NULL;
         system_config.pin_func[pin]=BP_PIN_IO;	
     }
 

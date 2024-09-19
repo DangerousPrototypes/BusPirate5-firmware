@@ -16,13 +16,13 @@ typedef struct _system_config
 
 	uint32_t terminal_language;
 
-	uint32_t terminal_usb_enable; 		//enable USB CDC terminal
+	uint32_t terminal_usb_enable;       //enable USB CDC terminal
+	uint32_t terminal_uart_enable;      //enable UART terminal on IO pins
+	uint32_t terminal_uart_number;      //which HW UART to use -- BUGBUG -- only values of 0 and 1 are supported; use Enum for clarity on allowed values?
 
-	uint32_t terminal_uart_enable; 		//enable UART terminal on IO pins
-	uint32_t terminal_uart_number; 	//which UART to use
-
-	uint32_t debug_uart_enable;			//initializes a UART for general developer use
-	uint32_t debug_uart_number;		//which UART to use
+	uint32_t debug_usb_enable;          //enable USB CDC for general developer use (debug output)
+	uint32_t debug_uart_enable;         //initializes a UART for general developer use
+	uint32_t debug_uart_number;         //which HW UART to use -- BUGBUG -- only values of 0 and 1 are supported; use Enum for clarity on allowed values?
 
     uint32_t lcd_screensaver_active;
     uint32_t lcd_timeout;

@@ -179,14 +179,6 @@ int main(){
     //rgb_init();
     //psucmd_init();
     //uart
-    //duplicate the terminal output on a debug uart on IO pins
-    if(system_config.terminal_uart_enable){
-        debug_uart_init(system_config.terminal_uart_number, true, true, true);
-    }
-    //a transmit only uart for developers to debug (on IO pins)
-    if(system_config.debug_uart_enable){
-        debug_uart_init(system_config.debug_uart_number, true, true, false);
-    }
  
     multicore_launch_core1(core1_entry);
 
@@ -393,9 +385,19 @@ bool lcd_update_request=false;
 bool lcd_update_force=false;
 
 // begin of code execution for the second core (core1)
-void core1_entry(void){ 
-    tx_fifo_init();
-    rx_fifo_init();
+void core1_entry(void){
+    //duplicate the terminal output on a debug uart on IO pins
+    if(system_config.terminal_uart_enable){
+        debug_uart_init(system_config.terminal_uart_number, true, true, true);
+    }
+    //a transmit only uart for developers to debug (on IO pins)
+    if(system_config.debug_uart_enable){
+        debug_uart_init(system_config.debug_uart_number, true, true, false);
+    }
+
+    tx_fifo_init(); // This is for the USB CDC terminals ... function renaming pending
+    rx_fifo_init(); // This is for the USB CDC terminals ... function renaming pending
+
 
     rgb_init();
 
@@ -405,10 +407,9 @@ void core1_entry(void){
         raw_init_message = icm_core1_get_raw_message();
     } while(get_embedded_message(raw_init_message) != BP_ICM_INIT_CORE1);
 
-    // USB init
-    if(system_config.terminal_usb_enable){
-        tusb_init();
-    }
+    // USB init is now unconditional (was previously conditional on system_config.terminal_usb_enable)
+    // However, tinyUSB is needed for the storage volume, as well as up to three USB CDC ports (terminal, binmode, debug)
+    tusb_init();
 
     lcd_irq_enable(BP_LCD_REFRESH_RATE_MS);
 
@@ -427,12 +428,14 @@ void core1_entry(void){
             tud_task(); // tinyusb device task
         }
 
-        //service the terminal TX queue
+        //service the terminal TX queue ... handles both USB CDC and UART output
         tx_fifo_service();
+
         //optionally service the binmode TX queue if requested
         if(system_config.binmode_usb_tx_queue_enable){
             bin_tx_fifo_service();
         }
+        // dbg_tx_fifo_service(); // BUGBUG -- service the debug TX queue ... handles both USB CDC and UART output
 
         if(system_config.psu==1 && system_config.psu_irq_en==true && !psu_fuse_ok()){
             system_config.psu_irq_en=false;
@@ -463,10 +466,7 @@ void core1_entry(void){
 
             //remains for legacy REV8 support of TF flash
             #if BP_REV<10
-                if(storage_detect())
-                {
-
-                }
+            storage_detect();
             #endif
             
             freq_measure_period_irq(); //update frequency periodically

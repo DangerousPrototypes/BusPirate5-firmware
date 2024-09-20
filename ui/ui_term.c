@@ -27,6 +27,7 @@ int ui_term_get_vt100_query(const char* query, char end_of_line, char* result, u
     char c;
 
     // Clear any stuff from buffer
+    // BUGBUG -- this discards COM port input!
     while (rx_fifo_try_get(&c))
         ;
 
@@ -60,6 +61,7 @@ void ui_term_detect(void) {
     uint32_t col = 0;
     uint8_t stage = 0;
 
+    // max_len += 
     // Position cursor at extreme corner and get the actual postion
     p = ui_term_get_vt100_query("\e7\e[999;999H\e[6n\e8", 'R', cp, 20);
 
@@ -112,19 +114,24 @@ void ui_term_detect(void) {
     }
 }
 
+// outputs maximum 32 + strlen(BP_HARDWARE_VERSION) characters
 void ui_term_init(void) {
+    // used_chars += 32 + strlen(BP_HARDWARE_VERSION)
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
-
-        printf("\x1b[?3l"); // 80 columns
-        printf("\x1b]0;%s\x1b\\", BP_HARDWARE_VERSION);
-        // reset all styling
-        printf("\e[0m");
-        // set cursor type
-        printf("\e[3 q");
-        // clear screen
-        printf("\e[2J");
+        // used_chars += 5
+        printf("\e[?3l"); // 80 columns
+        // used_chars += 6 + strlen(BP_HARDWARE_VERSION)
+        printf("\e]0;%s\e\\", BP_HARDWARE_VERSION);
+        // used_chars += 4
+        printf("\e[0m");   // reset all styling
+        // used_chars += 5
+        printf("\e[3 q");  // set cursor type
+        // used_chars += 4
+        printf("\e[2J");   // clear screen
+        // used_chars += 8       
         // set scroll region
-        printf("\e[%d;%dr", 1, system_config.terminal_ansi_rows - 4);
+        // BUGBUG - performs poorly when terminal has fewer than four rows
+        printf("\e[1;%hhur", system_config.terminal_ansi_rows - 4);
     }
 }
 
@@ -139,13 +146,16 @@ widly used
 
 */
 
+// outputs maximum 19 characters
 void ui_term_color_text(uint32_t rgb) {
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[38;2;255;255;255m") == 19
             printf("\x1b[38;2;%d;%d;%dm", (uint8_t)(rgb >> 16), (uint8_t)(rgb >> 8), (uint8_t)(rgb));
             break;
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // strlen("\x1b[38;5;255m") == 11
             printf("\x1b[38;5;%hhdm", ansi256_from_rgb(rgb));
             break;
 #endif
@@ -155,14 +165,17 @@ void ui_term_color_text(uint32_t rgb) {
     }
 }
 
+// outputs maximum 19 characters
 void ui_term_color_background(uint32_t rgb) {
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
-            printf("\x1b[48;2;%d;%d;%dm", (uint8_t)(rgb >> 16), (uint8_t)(rgb >> 8), (uint8_t)(rgb));
+            // strlen("\x1b[48;2;255;255;255m") == 19
+            printf("\x1b[48;2;%hhu;%hhu;%hhum", (uint8_t)(rgb >> 16), (uint8_t)(rgb >> 8), (uint8_t)(rgb));
             break;
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
-            printf("\x1b[48;5;%hhdm", ansi256_from_rgb(rgb));
+            // strlen("\x1b[48;5;255m") == 11
+            printf("\x1b[48;5;%hhum", ansi256_from_rgb(rgb));
             break;
 #endif
         case UI_TERM_NO_COLOR:
@@ -171,70 +184,127 @@ void ui_term_color_background(uint32_t rgb) {
     }
 }
 
+// maximum return value: 36
 uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_background) {
-    uint32_t count = 0;
+
+    uint32_t count;
 
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
-            count = printf("\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
+            // Maximum return value: 36
+            // A %hhu is a uint8_t, so maximum 3 characters each.
+            // "\x1b[38;2;%hhu;%hhu;%hhu;48;2;%hhu;%hhu;%hhum"
+            // "1   111111   31   31   3111111   31   31   31"
+            // 18 static characters + maximum 18 variable characters
+            count = printf("\x1b[38;2;%hhu;%hhu;%hhu;48;2;%hhu;%hhu;%hhum",
                            (uint8_t)(rgb_text >> 16),
                            (uint8_t)(rgb_text >> 8),
                            (uint8_t)(rgb_text),
                            (uint8_t)(rgb_background >> 16),
                            (uint8_t)(rgb_background >> 8),
                            (uint8_t)(rgb_background));
-            return count;
+            break;
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
-            count = printf("\x1b[38;5;%hhd;48;5;%hhdm", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
-            return count;
+            count = printf("\x1b[38;5;%hhu;48;5;%hhum", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
+            break;
 #endif
         case UI_TERM_NO_COLOR:
         default:
+            count = 0;
             break;
     }
 
-    return 0;
+    // TODO: assert count <= 36
+
+    return count;
 }
 
+// maximum return value: 36
 uint32_t ui_term_color_text_background_buf(char* buf, uint32_t rgb_text, uint32_t rgb_background) {
-    uint32_t count = 0;
+    uint32_t count;
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
+            // Must use %u for unsigned values.
+            // Note that variadic parameters are promoted to int, which is signed.
+            // Thus, the format must indicate unsigned to avoid UB (undefined behavior).
+
+            // Maximum return value: 36
+            // A %hhu is a uint8_t, so maximum 3 characters each.
+            // "\x1b[38;2;%hhu;%hhu;%hhu;48;2;%hhu;%hhu;%hhum"
+            // "1   111111   31   31   3111111   31   31   31"
+            // 18 static characters + maximum 18 variable characters
+
+            // The format string sends SGR (Select Graphic Rendition) command with two attributes provided.
+            // "\x1b[38;2;%u;%u;%u;48;2;%u;%u;%um"
+            //  \   /\/\/\ /\ /\ /\ /\/\ /\ /\ /|
+            //   \ /  | | V  V  V  V  | V  V  V |
+            //    V   | | |  |  |  |  | |  |  | \__ m     : Control sequence terminator
+            //    |   | | |  |  |  |  | |  |  |
+            //    |   | | |  |  |  |  | |  |  \____ ;%hhu : Third  color control segment, blue,  range [0..255]
+            //    |   | | |  |  |  |  | |  \_______ ;%hhu : Second color control segment, green, range [0..255]
+            //    |   | | |  |  |  |  | \__________ ;%hhu : First  color control segment, red,   range [0..255]
+            //    |   | | |  |  |  |  \____________ ;2    : indicates the FORMAT of the color ... 24-bit color with three control segments
+            //    |   | | |  |  |  |
+            //    |   | | |  |  |  \_______________ ;48   : SGR attribute: extended BACKGROUND color mode
+            //    |   | | |  |  |
+            //    |   | | |  |  \__________________ ;%hhu : Third  color control segment, blue,  range [0..255]
+            //    |   | | |  \_____________________ ;%hhu : Second color control segment, green, range [0..255]
+            //    |   | | \________________________ ;%hhu : First  color control segment, red,   range [0..255]
+            //    |   | \__________________________ ;2    : indicates the FORMAT of the color ... 24-bit color with three control segments
+            //    |   |
+            //    |   \____________________________ 38    : SGR attribute: extended FOREGROUND color mode
+            //    |
+            //    \________________________________ \x1b[ : Control sequence introducer (ESC + `[`)
             count = sprintf(buf,
-                            "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
+                            "\x1b[38;2;%hhu;%hhu;%hhu;48;2;%hhu;%hhu;%hhum",
                             (uint8_t)(rgb_text >> 16),
                             (uint8_t)(rgb_text >> 8),
                             (uint8_t)(rgb_text),
                             (uint8_t)(rgb_background >> 16),
                             (uint8_t)(rgb_background >> 8),
                             (uint8_t)(rgb_background));
-            return count;
+            break;
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // Maximum return value: 20
+            // A %hhu is a uint8_t, so maximum 3 characters each.
+            // "\x1b[38;5;%hhu;48;5;%hhum"
+            // "1   111111   3111111   31"
+            // 11111 11111 1111
+            // 14 static characters + maximum 6 variable characters
             count =
-                sprintf(buf, "\x1b[38;5;%hhd;48;5;%hhdm", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
-            return count;
+                sprintf(buf, "\x1b[38;5;%hhu;48;5;%hhum", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
+            break;
 #endif
         case UI_TERM_NO_COLOR:
         default:
+            // Maximum return value: 0
+            count = 0;
             break;
     }
-
-    return 0;
+    // TODO: assert count <= 36
+    return count;
 }
 
-#define UI_TERM_FULL_COLOR_CONCAT_TEXT(color) ("\x1b[38;2;" color "m")
-#define UI_TERM_FULL_COLOR_CONCAT_BACKGROUND(color) ("\x1b[48;2;" color "m")
-#define UI_TERM_256_COLOR_CONCAT_TEXT(color) ("\x1b[38;5;" color "m")
-#define UI_TERM_256_COLOR_CONCAT_BACKGROUND(color) ("\x1b[48;5;" color "m")
+// BUGBUG -- standardize on using `\e` instead of `\x1b` for escape character
 
+// color must be a stringified 24-bit RGB value of form "r;g;b" (note: no leading semicolon!)
+#define UI_TERM_FULL_COLOR_CONCAT_TEXT(color)       ("\x1b[38;2;" color "m")
+// color must be a stringified 24-bit RGB value of form "r;g;b" (note: no leading semicolon!)
+#define UI_TERM_FULL_COLOR_CONCAT_BACKGROUND(color) ("\x1b[48;2;" color "m")
+#define UI_TERM_256_COLOR_CONCAT_TEXT(color)        ("\x1b[38;5;" color "m")
+#define UI_TERM_256_COLOR_CONCAT_BACKGROUND(color)  ("\x1b[48;5;" color "m")
+
+// maximum string length returned == 4
 char* ui_term_color_reset(void) {
+    // returns const string of len 4 or 0
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
 #endif
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[0m") == 4
             return "\x1b[0m";
         case UI_TERM_NO_COLOR:
         default:
@@ -242,13 +312,17 @@ char* ui_term_color_reset(void) {
     }
 }
 
+// maximum string length returned == 19
 char* ui_term_color_prompt(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // strlen("\x1b[38;5;" "3" "m") == 10
             return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_PROMPT_TEXT);
 #endif
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[38;2;" "150;203;89" "m") == 18
+            // N.B. - changing colors could result in lenght of 19
             return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_PROMPT_TEXT);
         case UI_TERM_NO_COLOR:
         default:
@@ -256,13 +330,17 @@ char* ui_term_color_prompt(void) {
     }
 }
 
+// maximum string length returned == 19
 char* ui_term_color_info(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // strlen("\x1b[38;5;" "3" "m") == 10
             return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_INFO_TEXT);
 #endif
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[38;2;" "191;165;48" "m") == 18
+            // N.B. - changing colors could result in lenght of 19
             return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_INFO_TEXT);
         case UI_TERM_NO_COLOR:
         default:
@@ -270,13 +348,17 @@ char* ui_term_color_info(void) {
     }
 }
 
+// maximum string length returned == 19
 char* ui_term_color_notice(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // strlen("\x1b[38;5;" "3" "m") == 10
             return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_NOTICE_TEXT);
 #endif
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[38;2;" "191;165;48" "m") == 18
+            // N.B. - changing colors could result in lenght of 19
             return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_NOTICE_TEXT);
         case UI_TERM_NO_COLOR:
         default:
@@ -284,13 +366,17 @@ char* ui_term_color_notice(void) {
     }
 }
 
+// maximum string length returned == 19
 char* ui_term_color_warning(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // strlen("\x1b[38;5;" "3" "m") == 10
             return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_WARNING_TEXT);
 #endif
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[38;2;" "191;165;48" "m") == 18
+            // N.B. - changing colors could result in lenght of 19
             return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_WARNING_TEXT);
         case UI_TERM_NO_COLOR:
         default:
@@ -298,13 +384,17 @@ char* ui_term_color_warning(void) {
     }
 }
 
+// maximum string length returned == 19
 char* ui_term_color_error(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // strlen("\x1b[38;5;" "1" "m") == 10
             return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_ERROR_TEXT);
 #endif
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[38;2;" "191;48;48" "m") == 18
+            // N.B. - changing colors could result in lenght of 19
             return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_ERROR_TEXT);
         case UI_TERM_NO_COLOR:
         default:
@@ -312,13 +402,17 @@ char* ui_term_color_error(void) {
     }
 }
 
+// maximum string length returned == 19
 char* ui_term_color_num_float(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // strlen("\x1b[38;5;" "26" "m") == 10
             return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_NUM_FLOAT_TEXT);
 #endif
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[38;2;" "83;166;230" "m") == 18
+            // N.B. - changing colors could result in lenght of 19
             return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_NUM_FLOAT_TEXT);
         case UI_TERM_NO_COLOR:
         default:
@@ -326,13 +420,17 @@ char* ui_term_color_num_float(void) {
     }
 }
 
+// maximum string length returned == 19
 char* ui_term_color_pacman(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            // strlen("\x1b[38;5;" "3" "m") == 10
             return UI_TERM_256_COLOR_CONCAT_TEXT("3");
 #endif
         case UI_TERM_FULL_COLOR:
+            // strlen("\x1b[38;2;" "255;238;00" "m") == 18
+            // N.B. - changing colors could result in lenght of 19
             return UI_TERM_FULL_COLOR_CONCAT_TEXT("255;238;00");
         case UI_TERM_NO_COLOR:
         default:
@@ -340,9 +438,11 @@ char* ui_term_color_pacman(void) {
     }
 }
 
+// maximum string length returned == 6
 char* ui_term_cursor_hide(void) {
     return system_config.terminal_ansi_color ? "\e[?25l" : "";
 }
+// maximum string length returned == 6
 char* ui_term_cursor_show(void) {
     return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color ? "\e[?25h" : "";
 }
@@ -495,10 +595,11 @@ bool ui_term_cmdln_char_delete(void) {
 
 void ui_term_cmdln_fkey(char* c) {
     switch ((*c)) {
-        /*PF1 - Gold   ESC O P        ESC O P           F1
-        PF2 - Help   ESC O Q        ESC O Q           F2
-        PF3 - Next   ESC O R        ESC O R           F3
-        PF4 - DelBrk ESC O S        ESC O S          F4*/
+        /* PF1 - Gold   ESC O P        ESC O P           F1
+           PF2 - Help   ESC O Q        ESC O Q           F2
+           PF3 - Next   ESC O R        ESC O R           F3
+           PF4 - DelBrk ESC O S        ESC O S           F4
+           */
         case 'P':
             printf("F1");
             break;
@@ -633,29 +734,39 @@ int ui_term_cmdln_history(int ptr) {
     return (!ptr);
 }
 
+// outputs maximum 85 characters
 void ui_term_progress_bar(uint32_t current, uint32_t total) {
-    uint32_t pct = (current * 20) / (total);
+    uint32_t pct = (current * 20) / (total); // N.B. - actually calculates count of 5% increments
+    // max_output += 21 (1 + 19 + 1)
     printf("\r%s[", ui_term_color_prompt());
-    for (int8_t i = 0; i < 20; i++) {
+    // max_output += 39
+    for (int8_t i = 0; i < 20; i++) { // N.B. - each 5% increment output
         if (pct < i) {
+            // max_output += 1
             if (i % 2) {
                 printf(" ");
             } else {
                 printf("o");
             }
         } else if (pct == i) {
+            // max_output += 20 (1 + 19) .. only occurs once
             printf("%sc", ui_term_color_notice());
         } else if (pct > i) {
+            // max_output += 1
             printf("-");
         }
     }
+    // max_output += 25 (19 + 6)
     printf("%s]\r\e[1C", ui_term_color_prompt());
 }
 
+// outputs maximum 76 characters
 void ui_term_progress_bar_draw(ui_term_progress_bar_t* pb) {
     system_config.terminal_hide_cursor = true;
     busy_wait_ms(1);
+    // max_output += 31 (6 + 1 + 19 + 1 + 4)
     printf("%s\r%s[%s", ui_term_cursor_hide(), ui_term_color_prompt(), ui_term_color_reset());
+    // max_output += 20
     for (int8_t i = 0; i < 20; i++) {
         if (i % 2) {
             printf(" ");
@@ -663,24 +774,34 @@ void ui_term_progress_bar_draw(ui_term_progress_bar_t* pb) {
             printf("o");
         }
     }
+    // max_output += 25 (19 + 1 + 5)
     printf("%s]\r\e[1C", ui_term_color_prompt());
     pb->indicator_state = 1;
     pb->previous_pct = 0;
     pb->progress_cnt = 0;
 }
 
+// outputs maximum 62 characters
 void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progress_bar_t* pb) {
-    uint32_t pct = ((current) * 20) / (total);
-    uint32_t previous_pct = pct - pb->previous_pct;
+    uint32_t pct = ((current) * 20) / (total);      // range: [0..19]
+    uint32_t previous_pct = // BUGBUG -- rename this ... maybe `additional_pct`?  Represents 
+        (pct >= pb->previous_pct) ? // BUGFIX: prevent underflow
+        (pct -  pb->previous_pct) : // original calculation
+        0;  // BUGBUG -- what should be the value when percentage decreases?
 
     system_config.terminal_ansi_statusbar_pause = true;
+    // max_output += 38
     if ((previous_pct) > 0) {
+        // max_output += 19
+        printf("%s", ui_term_color_prompt());
+        // max_output += 19
         for (uint8_t i = 0; i < (previous_pct); i++) // advance this many positions
         {
-            printf("%s-", ui_term_color_prompt());
+            printf("-");
         }
     }
 
+    // max_output += 24
     if ((pb->progress_cnt > 600) || ((previous_pct) > 0)) // gone 5 loops without an advance
     {
         printf("%s%c\e[1D", ui_term_color_pacman(), (pb->indicator_state) ? 'C' : 'c'); // C and reset the cursor
@@ -694,8 +815,10 @@ void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progr
     pb->progress_cnt++;
 }
 
+// outputs maximum 12 characters
 void ui_term_progress_bar_cleanup(ui_term_progress_bar_t* pb) {
     system_config.terminal_hide_cursor = false;
+    // max_output += 12 (4 + 6 + 2)
     printf("%s%s\r\n", ui_term_color_reset(), ui_term_cursor_show());
 }
 

@@ -83,12 +83,15 @@ void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);
 void spi_busy_wait(bool enable);
 
-#if BP_VER ==6
-#define PIO_RGB_LED_PIO pio2
-#define PIO_RGB_LED_SM 0
+#if BP_VER == 6
+    // BP6 pixel data uses pin 36.
+    // Each PIO can only interact with 32 consecutive pins.
+    // The RGB Pixel pin is on pin 36
+    #define PIO_RGB_LED_PIO pio1 // BUGBUG -- compilation fails if set to PIO2???  May just be my environment?
+    #define PIO_RGB_LED_SM 0
 #else
-#define PIO_RGB_LED_PIO pio0
-#define PIO_RGB_LED_SM 0
+    #define PIO_RGB_LED_PIO pio0
+    #define PIO_RGB_LED_SM 0
 #endif
 
 #define PIO_LOGIC_ANALYZER_PIO pio0
@@ -102,8 +105,8 @@ void spi_busy_wait(bool enable);
 
 // UART settings
 #define M_UART_PORT uart0
-#define M_UART_TX BIO4
-#define M_UART_RX BIO5
+#define M_UART_TX   BIO4
+#define M_UART_RX   BIO5
 #define M_UART_RTS
 #define M_UART_CTS
 #define M_UART_RXTX BIO0
@@ -113,12 +116,12 @@ void spi_busy_wait(bool enable);
 #define M_I2C_SCL BIO1
 
 // SPI settings
-#define M_SPI_PORT spi1
-#define M_SPI_CLK BIO6
-#define M_SPI_CDO BIO7
-#define M_SPI_CDI BIO4
-#define M_SPI_CS BIO5
-#define M_SPI_SELECT 0
+#define M_SPI_PORT     spi1
+#define M_SPI_CLK      BIO6
+#define M_SPI_CDO      BIO7
+#define M_SPI_CDI      BIO4
+#define M_SPI_CS       BIO5
+#define M_SPI_SELECT   0
 #define M_SPI_DESELECT 1
 
 // 2wire settings

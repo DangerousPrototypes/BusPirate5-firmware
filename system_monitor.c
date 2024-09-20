@@ -26,6 +26,7 @@ bool monitor_get_current_char(uint8_t digit, char *c)
 }
 
 //if changed, return pointer to value string
+// maximum characters in string is 5 (+null terminator)
 bool monitor_get_current_ptr(char **c)
 {
     *c=current_value;
@@ -50,6 +51,7 @@ bool monitor_get_voltage_char(uint8_t pin, uint8_t digit, char *c)
     return false;
 }
 
+// returned string pointer is maximum 3 characters (+null terminator)
 bool monitor_get_voltage_ptr(uint8_t pin, char **c)
 {
     *c=voltages_value[pin];

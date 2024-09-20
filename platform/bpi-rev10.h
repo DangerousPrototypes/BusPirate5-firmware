@@ -9,6 +9,7 @@
 //font and pin colors
 // HEX 24bit RGB format
 //used in terminal
+//BUGBUG -- prefix should be BP_COLOR_RGB24_ to distinguish from ANSI_RGB_24_, ANSI_256_, LCD_RGB565_, etc.
 #define BP_COLOR_RED 0xdb3030 
 #define BP_COLOR_ORANGE 0xdb7530
 #define BP_COLOR_YELLOW 0xdbca30 
@@ -24,6 +25,19 @@
 
 //these have to be ASCII strings for the terminal
 //TODO: abuse pre-compiler to use 0x000000 format as above...
+
+//BUGBUG ... the ANSI_RGB_24 attribute sequence should be of the form: ";2;r;g;b", where:
+//           ';2' indicates the FORMAT of the color as 24-bit color with three control segments
+//           ';r' is the red   control segment, with `r` being a decimal value in range [0..255]
+//           ';g' is the green control segment, with `g` being a decimal value in range [0..255]
+//           ';b' is the blue  control segment, with `b` being a decimal value in range [0..255]
+//           Requires updating other macros to reflect the inclusion of ";2"
+//BUGBUG ... the ANSI_256 attribute sequence should be of the form: ";5;n", where:
+//           ';5' indicates the FORMAT of the color as 256-color with one control segment
+//           ';n' is the color index, with `n` being a decimal value in range [0..255]
+//           Requires updating other macros to reflect the inclusion of ";5"
+
+//BUGBUG -- prefix should be ANSI_RGB_24_ or ANSI_256_ to distinguish from BP_COLOR_RGB24_, LCD_RGB565_, etc.
 #define BP_COLOR_PROMPT_TEXT "150;203;89"
 #define BP_COLOR_256_PROMPT_TEXT "113"
 #define BP_COLOR_INFO_TEXT "191;165;48"
@@ -38,6 +52,7 @@
 #define BP_COLOR_256_NUM_FLOAT_TEXT "26"
 
 // LCD color pallet 5-6-5 RGB
+//BUGBUG -- prefix should be LCD_RGB565_ to standardize with BP_COLOR_RGB24_, ANSI_RGB_24_, ANSI_256_, etc.
 #define BP_LCD_COLOR_RED    0b1111100000000000
 #define BP_LCD_COLOR_ORANGE 0b1111100000000000
 #define BP_LCD_COLOR_YELLOW 0b1111100000000000
@@ -117,46 +132,58 @@ extern const uint8_t bio2bufdirpin[8];
 
 // SPI Defines
 // We are going to use SPI 0 for on-board peripherals
+// BUGBUG -- rename these to BP_PIN_SPI_*
 #define BP_SPI_PORT spi0
 #define BP_SPI_CDI 16
 #define BP_SPI_CLK  18
 #define BP_SPI_CDO 19
 
 // NAND flash is on the BP_SPI_PORT, define Chip Select
+// BUGBUG -- rename to BP_PIN_FLASH_STORAGE_CS
 #define FLASH_STORAGE_CS 26 
 
 // LCD is on the BP_SPI_PORT, define CS and DP pins
+// BUGBUG -- rename these to BP_PIN_DISPLAY_*
 #define DISPLAY_CS 25
 #define DISPLAY_DP 24
 
 // Two 74HC595 shift registers are on BP_SPI_PORT, define latch and enable pins
+// BUGBUG -- rename these to BP_PIN_SHIFT_*
 #define SHIFT_EN 21
 #define SHIFT_LATCH 20
 
 // Controller data out to SK6812 RGB LEDs
+// BUGBUG -- rename to BP_PIN_PIXEL_DATA
 #define RGB_CDO 17
 // The number of SK6812 LEDs in the string
+// BUGBUG -- rename to BP_PIXEL_COUNT
 #define RGB_LEN 18 
 
 //PWM based PSU control pins
+// BUGBUG -- rename these to BP_PIN_PSU_PWM_*
 #define PSU_PWM_CURRENT_ADJ 22 //3A
 #define PSU_PWM_VREG_ADJ 23 //3B
 
 //First pin (base) of logic analyzer input
+// BUGBUG -- rename to BP_PIN_LA_BPIO0
 #define LA_BPIO0 8
 
 // A single ADC pin is used to measure the source selected by a 74hct4067
+// BUGBUG -- rename these to BP_PIN_AMUX_*
 #define AMUX_OUT 28
 #define AMUX_OUT_ADC (AMUX_OUT - 26)
 
 // Current sense ADC
+// BUGBUG -- rename these to BP_PIN_CURRENT_SENSE_*
 #define CURRENT_SENSE 29
 #define CURRENT_SENSE_ADC (CURRENT_SENSE - 26)
 
-// Two pins for front buttons
+// One pin for front button
+// BUGBUG -- rename to BP_PIN_FRONT_BUTTON
 #define EXT1 27
 
 // The two 75hc595 shift registers control various hardware on the board
+// BUGBUG -- rename these to have a comon prefix, such as BP_SHIFT_*
 #define AMUX_EN             (1u<<0)
 #define AMUX_S0             (1u<<1)
 #define AMUX_S1             (1u<<2)
@@ -179,50 +206,58 @@ extern const uint8_t bio2bufdirpin[8];
 // ADC connections as they appear on the analog mux pins
 // will be disambiguated in the hw_pin_voltages_ordered'
 enum adc_mux{
-    HW_ADC_MUX_BPIO7, //0
-    HW_ADC_MUX_BPIO6, //1
-    HW_ADC_MUX_BPIO5, //2
-    HW_ADC_MUX_BPIO4, //3
-    HW_ADC_MUX_BPIO3, //4
-    HW_ADC_MUX_BPIO2, //5
-    HW_ADC_MUX_BPIO1, //6
-    HW_ADC_MUX_BPIO0, //7
-    HW_ADC_MUX_VUSB, //8
-    HW_ADC_MUX_CURRENT_DETECT,    //9
-    HW_ADC_MUX_VREG_OUT, //10
-    HW_ADC_MUX_VREF_VOUT, //11
-    HW_ADC_MUX_COUNT
+    HW_ADC_MUX_BPIO7,          //  0
+    HW_ADC_MUX_BPIO6,          //  1
+    HW_ADC_MUX_BPIO5,          //  2
+    HW_ADC_MUX_BPIO4,          //  3
+    HW_ADC_MUX_BPIO3,          //  4
+    HW_ADC_MUX_BPIO2,          //  5
+    HW_ADC_MUX_BPIO1,          //  6
+    HW_ADC_MUX_BPIO0,          //  7
+    HW_ADC_MUX_VUSB,           //  8
+    HW_ADC_MUX_CURRENT_DETECT, //  9
+    HW_ADC_MUX_VREG_OUT,       // 10
+    HW_ADC_MUX_VREF_VOUT,      // 11
+    HW_ADC_MUX_COUNT           // Total: 12 values
 };
-
 #define HW_ADC_MUX_GND 15
+static_assert(HW_ADC_MUX_COUNT < HW_ADC_MUX_GND, "HW_ADC_MUX_COUNT must be 12");
 
-#define bufio2amux(x) (7 - x)
+// BUGBUG -- make this an inline function that returns the enum type for (at least) better self-documentation
+#define bufio2amux(x) (7 - x) // converts buffer IO [0..8] number to enum value for HW_ADC_MUX_BPIOx
 
-//CURRENT SENSE is attached to a separate ADC, not through the mux
-//lets make a define for it (and space in the hw_adc_x arrays) at the end of HW_ADC_MUX_count
-#define HW_ADC_CURRENT_SENSE HW_ADC_MUX_COUNT
-#define HW_ADC_COUNT  (HW_ADC_MUX_COUNT+1)
+//CURRENT SENSE is attached to a separate ADC (not through the mux)
+//lets make a define for it (and space in the HW_ADC_hw_adc_x arrays) at the end of HW_ADC_MUX_count
+#define HW_ADC_CURRENT_SENSE  HW_ADC_MUX_COUNT
+#define HW_ADC_COUNT         (HW_ADC_MUX_COUNT+1) // size of the below buffers
 
 //the adc variable holds all the ADC readings
-extern uint16_t hw_adc_raw[];
-extern uint32_t hw_adc_voltage[];
-extern uint32_t *hw_pin_voltage_ordered[];
+extern uint16_t hw_adc_raw[];               // BUGBUG ... can we define size of the array here?  (HW_ADC_COUNT)
+extern uint32_t hw_adc_voltage[];           // BUGBUG ... can we define size of the array here?  (HW_ADC_COUNT)
+
+// this array references the pin voltages in the order that
+// they appear in terminal and LCD for easy loop writeout
+extern uint32_t *hw_pin_voltage_ordered[]; // BUGBUG: what's the safe way to index this array?  Wish could use C++ and strongly-typed indices to prevent errors.
 
 //convert raw ADC to volts, for pin with a /2 resistor divider (MUX inputs)
+// BUGBUG -- make this an inline function for (at least) better self-documentation, type safety, debugging, etc.
+// BUGBUG -- Valid indices for `X` is [0..HW_ADC_MUX_COUNT-1].  Document and assert this.
 #define hw_adc_to_volts_x2(X) ((6600*hw_adc_raw[X])/4096);
 //convert raw ADC to volts, for pin with no resistor divider (Current sense inputs)
+// BUGBUG -- make this an inline function for (at least) better self-documentation, type safety, debugging, etc.
+// BUGBUG -- ONLY valid value for `X` is HW_ADC_CURRENT_SENSE.  Document and assert this.
 #define hw_adc_to_volts_x1(X) ((3300*hw_adc_raw[X])/4096);
 
 //how many 595 shift registers are connected
-#define SHIFT_REG_COUNT 2
+#define SHIFT_REG_COUNT 2 // BUGBUG -- remove unused defines?
 
-#define BP_DEBUG_UART_0 uart0
+#define BP_DEBUG_UART_0    uart0
 #define BP_DEBUG_UART_0_TX BIO4
 #define BP_DEBUG_UART_0_RX BIO5
-#define BP_DEBUG_UART_1 uart1
+#define BP_DEBUG_UART_1    uart1
 #define BP_DEBUG_UART_1_TX BIO0 
 #define BP_DEBUG_UART_1_RX BIO1     
 
-#define BP_FLASH_DISK_BLOCK_SIZE 2048 //512
+#define BP_FLASH_DISK_BLOCK_SIZE 2048
 
 #endif

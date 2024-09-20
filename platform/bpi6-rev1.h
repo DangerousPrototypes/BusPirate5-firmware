@@ -223,6 +223,6 @@ extern uint32_t *hw_pin_voltage_ordered[];
 #define BP_DEBUG_UART_1_TX BIO0 
 #define BP_DEBUG_UART_1_RX BIO1     
 
-#define BP_FLASH_DISK_BLOCK_SIZE 2048 //512
+#define BP_FLASH_DISK_BLOCK_SIZE 2048
 
 #endif

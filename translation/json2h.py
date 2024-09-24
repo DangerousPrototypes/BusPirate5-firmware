@@ -5,17 +5,17 @@ import os
 
 # The enumeration values that should not be translated, as they are used
 # to select the UI language (and thus should be shown in the language they represent).
-DO_NOT_TRANSLATE_THESE_STRINGS = (
-    "T_CONFIG_LANGUAGE_ENGLISH", # "Language - English (US)"
-    "T_CONFIG_LANGUAGE_CHINESE", # "语言 - 中文（简体）"
-    "T_CONFIG_LANGUAGE_POLISH",  # "Język - polski (Polska)"
-    "T_CONFIG_LANGUAGE_BOSNIAN", # "Jezik - bosanski (latinica, Bosna i Hercegovina)"
-    "T_CONFIG_LANGUAGE_ITALIAN", # "Lingua - italiano (Italia)"
-	"T_CONFIG_LANGUAGE",         # "Language / Jezik / Lingua / 语言"
-)
+#    "T_CONFIG_LANGUAGE_ENGLISH", # "Language - English (US)"
+#    "T_CONFIG_LANGUAGE_CHINESE", # "语言 - 中文（简体）"
+#    "T_CONFIG_LANGUAGE_POLISH",  # "Język - polski (Polska)"
+#    "T_CONFIG_LANGUAGE_BOSNIAN", # "Jezik - bosanski (latinica, Bosna i Hercegovina)"
+#    "T_CONFIG_LANGUAGE_ITALIAN", # "Lingua - italiano (Italia)"
+#	"T_CONFIG_LANGUAGE",         # "Language / Jezik / Lingua / 语言"
+C_NON_TRANSLATED_IDENTIFIERS = r'^T_CONFIG_LANGUAGE(_[a-zA-Z0-9_]+)?$'
 
-
-
+# Variable names in C must start with letter or underscore,
+# may contain only letters, numbers, and underscores,
+# and may not exceed 32 characters.
 C_IDENTIFIER_REGEX = r'[a-zA-Z_][a-zA-Z0-9_]{0,31}'
 
 # N.B. - Until Python 3.7, a normal dictionary does not keep insertion order.
@@ -143,13 +143,22 @@ def convert_remaining_translations_to_h_files(json_directory, header_directory):
                         # BUGBUG -- store NULL to reduce duplicate strings
                         output_translation[key] = base_translation[key]
                     elif base_translation[key] == target_translation[key]:
-                        # print(f"  {file_name_without_extension}: Key `{key}` identical to base (this is OK).")
+                        # If the translation includes a key with a translated string that is identical to the base (en-us) string:
+                        # Technically this is not an error.  However, if the base string changes (e.g., for clarity or to fix a typo),
+                        # the translation .json might be missed in the update.
+                        # Therefore, it is likely better to remove the key from the .json file, unless wanting to explicitly "lock in"
+                        # a translation, even if the en-us string changes.
+                        # Uncomment the below line to print a warning for such keys, if wanting to identify them (e.g., for removal)
+                        # print(f"  {file_name_without_extension}: Key `{key}` identical to base (OK, but if not wanting to diverge from en-us, removal from .json is preferable")
                         # BUGBUG -- store NULL to reduce duplicate strings
-                        output_translation[key] = target_translation[key]
-                    elif key in DO_NOT_TRANSLATE_THESE_STRINGS:
-                        # This simply helps avoid accidentally translating a language selection string
-                        # as those should always be shown in the language they represent.
+                        output_translation[key] = base_translation[key]
+                    elif re.match(C_NON_TRANSLATED_IDENTIFIERS, key):
+                        # Certain strings, specifically those used to select a language, should never be translated.
+                        # These strings in the base language are either multi-lingual, or they are already in the
+                        # language they represent (and thus should not be translated).
+                        # Enforcing this here prevents accidentally translating these language selection strings.
                         print(f"  {file_name_without_extension}: Key `{key}` should not be translated from `{base_translation[key]}` to `{target_translation[key]}`.")
+                        output_translation[key] = base_translation[key]
                     else:
                         output_translation[key] = target_translation[key]
 

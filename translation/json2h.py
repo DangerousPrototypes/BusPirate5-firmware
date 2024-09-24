@@ -156,8 +156,7 @@ def convert_remaining_translations_to_h_files(json_directory, header_directory):
                 # Generate the replacement text for the translated text
                 translated_h=""
                 for key in output_translation:
-                    translated_h += f"\t[{key}]=\"{output_translation[key]}\",\n"
-                    # translated_h += f"\t[{key:<32}] = \"{output_translation[key]}\",\n"
+                    translated_h += f"    [ {key:<32} ] = \"{output_translation[key]}\",\n"
 
                 # Read the content of the template file
                 with open('translation.ht', 'r', encoding="utf8") as template_file:

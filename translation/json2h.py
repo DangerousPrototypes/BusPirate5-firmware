@@ -35,9 +35,6 @@ def get_dictionary_of_key_value_pairs_from_header(file_path):
     # matches[0] = ('T_FOO', 'Bar')
 
 
-    # Define the regular expression pattern to find the key-value pairs in the .h file
-    pattern = r'\[(.*?)\]="(.*?)"'
-
     # BUGBUG - Fails if the string has embedded double quotes:
     #          [T_SOMETHING]="This is a \"test\" string"
     #          Would only match "This is a " instead of the whole string.
@@ -53,28 +50,17 @@ def get_dictionary_of_key_value_pairs_from_header(file_path):
     #          [T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE]="This is a test string"
     #          [T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO]="Suppress local echo, don't echo back sent data",
     #        // ....-....1....-....2....-....3....-....4
-    better_pattern = r'\[([a-zA-Z_][a-zA-Z0-9_]{0,31})\]\s*=\s*\"(.*?)\"'
+    better_pattern = r'\[([a-zA-Z_][a-zA-Z0-9_]*)\]\s*=\s*\"(.*?)\"'
 
     key_value_pairs = {}
     with open(file_path, 'r', encoding="utf8") as file:
         lines = file.readlines()
     for line in lines:
-        matches = re.findall(pattern, line)
+        matches = re.findall(better_pattern, line)
         if matches:
             key, value = matches[0]
-
-            chk_matches = re.findall(better_pattern, line)
-            if not chk_matches:
-                print(f"WARNING: Key: `{key}` value `{value}` does not match improved pattern: `{line.strip()}`")
-            else:
-                chk_key, chk_value = chk_matches[0] 
-                mismatch = ""
-                if key != chk_key:
-                    mismatch += "Key: `{key}` vs. `{chk_key}`,"
-                if value != chk_value:
-                    mismatch += "Value: `{value}` vs. `{chk_value}`, "
-                if len(mismatch) > 0:
-                    print(f"WARNING: Mismatch: `{mismatch}` `{line.strip()}`")
+            if len(key) > 32:
+                print(f"WARNING: Key `{key}` is longer than 32 characters, but C requires identifiers to be 32 characters or less.")
 
             # Still use old key/value pair until test better pattern
             key_value_pairs[key]=value

@@ -293,18 +293,16 @@ static char const * const en_us[]={
 	//CONFIG MENU
 	[T_CONFIG_FILE]="Configuration file",
 	[T_CONFIG_CONFIGURATION_OPTIONS]="Configuration options",
-	[T_CONFIG_LANGUAGE]="Language",
+	[T_CONFIG_LANGUAGE]="Language / Jezik / Lingua / 语言",
 	[T_CONFIG_ANSI_COLOR_MODE]="ANSI color mode",
 	[T_CONFIG_ANSI_COLOR_FULLCOLOR]="ANSI Full-Color (16M colors)",
-#ifdef ANSI_COLOR_256
 	[T_CONFIG_ANSI_COLOR_256]="ANSI-256 color",
-#endif
 	[T_CONFIG_ANSI_TOOLBAR_MODE]="ANSI toolbar mode",
-	[T_CONFIG_LANGUAGE_ENGLISH]="English",
-	[T_CONFIG_LANGUAGE_CHINESE]="Chinese (simplified)",
-	[T_CONFIG_LANGUAGE_POLISH]="Polish",	
-	[T_CONFIG_LANGUAGE_BOSNIAN]="Bosnian",
-	[T_CONFIG_LANGUAGE_ITALIAN]="Italian",
+	[T_CONFIG_LANGUAGE_ENGLISH]="Language - English (US)", // do not translate ... always shown in own language
+	[T_CONFIG_LANGUAGE_CHINESE]="语言 - 中文（简体）",       // do not translate ... always shown in own language
+	[T_CONFIG_LANGUAGE_POLISH]="Język - polski (Polska)",  // do not translate ... always shown in own language
+	[T_CONFIG_LANGUAGE_BOSNIAN]="Jezik - bosanski (latinica, Bosna i Hercegovina)", // // do not translate ... always shown in own language
+	[T_CONFIG_LANGUAGE_ITALIAN]="Lingua - italiano (Italia)",  // // do not translate ... always shown in own language
 	[T_CONFIG_DISABLE]="Disable",
 	[T_CONFIG_ENABLE]="Enable",
     [T_CONFIG_SCREENSAVER]="LCD screensaver",

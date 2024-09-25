@@ -37,11 +37,11 @@
 #if CFG_TUD_MSC
 
 // whether host does safe-eject
-bool ejected = false;
+static volatile bool ejected = false;
 //latch the ejected status until read by the host
-static bool latch_ejected = false;
+static volatile bool latch_ejected = false;
 
-static bool writable = true;
+static volatile bool writable = true;
 
 enum
 {
@@ -136,9 +136,9 @@ bool tud_msc_test_unit_ready_cb(uint8_t lun)
 
   // RAM disk is ready until ejected
   if (ejected || latch_ejected) {
-    tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
-    latch_ejected = false;
-    return false;
+      latch_ejected = false;
+      tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
+      return false;
   }
   tud_msc_set_sense(lun, 0x00, 0x00, 0x00);
 
@@ -322,7 +322,10 @@ void eject_usbmsdrive(void)
   // eject the usb drive
   tud_msc_start_stop_cb(0, 0, 0, 1);
 }
-void make_usbmsdrive_readonly(void)
+
+// The drive is removed but not inserted back
+// To re-insert, call refresh_usbmsdrive()
+void prepare_usbmsdrive_readonly(void)
 {
   if (!writable)
     return;
@@ -331,8 +334,6 @@ void make_usbmsdrive_readonly(void)
   // make sure the storage is synced
   disk_ioctl(0, CTRL_SYNC, 0);
   writable = false;
-  // insert the drive back
-  tud_msc_start_stop_cb(0, 0, 1, 1);
 }
 void make_usbmsdrive_writable(void)
 {

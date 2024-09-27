@@ -36,10 +36,12 @@
 
 #if CFG_TUD_MSC
 
-// whether host does safe-eject
-static volatile bool ejected = false;
-//latch the ejected status until read by the host
-static volatile bool latch_ejected = false;
+enum medium_state { md_state_not_present, md_state_reset, md_state_medium_changed, md_state_ready };
+
+static volatile uint32_t medium_state = md_state_ready;
+
+static volatile bool eject_request = false;
+static volatile bool insert_request = false;
 
 static volatile bool writable = true;
 
@@ -128,21 +130,47 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
   memcpy(product_rev, rev, strlen(rev));
 }
 
+// This function will be called by core0
+static bool is_ejected()
+{
+    return medium_state == md_state_not_present;
+}
+// This function will be called by core0
+static bool is_inserted()
+{
+    return medium_state == md_state_ready;
+}
+
 // Invoked when received Test Unit Ready command.
 // return true allowing host to read/write this LUN e.g TF flash card inserted
 bool tud_msc_test_unit_ready_cb(uint8_t lun)
 {
-  (void) lun;
-
-  // RAM disk is ready until ejected
-  if (ejected || latch_ejected) {
-      latch_ejected = false;
-      tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
-      return false;
-  }
-  tud_msc_set_sense(lun, 0x00, 0x00, 0x00);
-
-  return true;
+    (void)lun;
+    if (insert_request && medium_state == md_state_not_present) {
+        medium_state = md_state_reset;
+    } else if (eject_request && medium_state == md_state_ready) {
+        medium_state = md_state_not_present;
+    }
+    switch (medium_state) {
+        case md_state_not_present:
+            tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
+            return false;
+            break;
+        case md_state_reset:
+            tud_msc_set_sense(lun, SCSI_SENSE_UNIT_ATTENTION, 0x29, 0x00);
+            medium_state = md_state_medium_changed;
+            return false;
+            break;
+        case md_state_medium_changed:
+            tud_msc_set_sense(lun, SCSI_SENSE_UNIT_ATTENTION, 0x28, 0x00);
+            medium_state = md_state_ready;
+            return false;
+            break;
+        case md_state_ready:
+            tud_msc_set_sense(lun, 0x00, 0x00, 0x00);
+            return true;
+            break;
+    }
 }
 
 // Invoked when received SCSI_CMD_READ_CAPACITY_10 and SCSI_CMD_READ_FORMAT_CAPACITY to determine the disk size
@@ -151,7 +179,6 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_siz
 {
   DRESULT res;
   (void) lun;
-
 
 	if(system_config.storage_available)
 	{
@@ -165,10 +192,6 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_siz
 		*block_count = MSC_DEMO_DISK_BLOCK_NUM;
 	  *block_size  = MSC_DEMO_DISK_BLOCK_SIZE;
   }
-
-
-
-	
 
 }
 
@@ -184,13 +207,22 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
   {
     if (start)
     {
-    	ejected = false;
-      // load disk storage
+        insert_request = true;
+        while(!is_inserted())
+        {
+            sleep_ms(10);
+        }
+        insert_request = false;
+        // load disk storage
     }else
     {
       // unload disk storage
-      latch_ejected = true;
-      ejected = true;
+      eject_request = true;
+      while(!is_ejected())
+      {
+          sleep_ms(1);
+      }
+      eject_request = false;
     }
   }
 
@@ -313,6 +345,8 @@ void refresh_usbmsdrive(void)
 {
   // eject the usb drive
   tud_msc_start_stop_cb(0, 0, 0, 1);
+  // make sure the storage is synced
+  disk_ioctl(0, CTRL_SYNC, 0);
   // insert the drive back
   tud_msc_start_stop_cb(0, 0, 1, 1);
 }

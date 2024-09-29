@@ -34,7 +34,7 @@ const struct _command_struct hwuart_commands[]={   //Function Help
 const uint32_t hwuart_commands_count=count_of(hwuart_commands);
 
 static const char pin_labels[][5]={
-	"TX->", 
+	"TX->",
 	"RX<-",
 	"RTS",
 	"CTS"
@@ -53,17 +53,17 @@ uint32_t hwuart_setup(void){
 	periodic_attributes.colon=0;     // value after :
 
 	static const struct prompt_item uart_speed_menu[]={{T_UART_SPEED_MENU_1}};
-	static const struct prompt_item uart_parity_menu[]={{T_UART_PARITY_MENU_1},{T_UART_PARITY_MENU_2},{T_UART_PARITY_MENU_3}};		
-	static const struct prompt_item uart_data_bits_menu[]={{T_UART_DATA_BITS_MENU_1}};		
-	static const struct prompt_item uart_stop_bits_menu[]={{T_UART_STOP_BITS_MENU_1},{T_UART_STOP_BITS_MENU_2}};		
-	static const struct prompt_item uart_blocking_menu[]={{T_UART_BLOCKING_MENU_1},{T_UART_BLOCKING_MENU_2}};		
+	static const struct prompt_item uart_parity_menu[]={{T_UART_PARITY_MENU_1},{T_UART_PARITY_MENU_2},{T_UART_PARITY_MENU_3}};
+	static const struct prompt_item uart_data_bits_menu[]={{T_UART_DATA_BITS_MENU_1}};
+	static const struct prompt_item uart_stop_bits_menu[]={{T_UART_STOP_BITS_MENU_1},{T_UART_STOP_BITS_MENU_2}};
+	static const struct prompt_item uart_blocking_menu[]={{T_UART_BLOCKING_MENU_1},{T_UART_BLOCKING_MENU_2}};
 
 	static const struct ui_prompt uart_menu[]={
 		{T_UART_SPEED_MENU,uart_speed_menu,count_of(uart_speed_menu),T_UART_SPEED_PROMPT, 1, 1000000, 115200, 	0,&prompt_int_cfg},
 		{T_UART_PARITY_MENU,uart_parity_menu,count_of(uart_parity_menu),T_UART_PARITY_PROMPT,0,0,1,		0,&prompt_list_cfg},
 		{T_UART_DATA_BITS_MENU,uart_data_bits_menu,count_of(uart_data_bits_menu),T_UART_DATA_BITS_PROMPT, 5, 8, 8,		0,&prompt_int_cfg},
 		{T_UART_STOP_BITS_MENU,uart_stop_bits_menu,count_of(uart_stop_bits_menu),T_UART_STOP_BITS_PROMPT, 0, 0, 1,		0,&prompt_list_cfg},
-		{T_UART_BLOCKING_MENU,uart_blocking_menu,count_of(uart_blocking_menu),T_UART_BLOCKING_PROMPT, 0, 0, 1,		0,&prompt_list_cfg}					
+		{T_UART_BLOCKING_MENU,uart_blocking_menu,count_of(uart_blocking_menu),T_UART_BLOCKING_PROMPT, 0, 0, 1,		0,&prompt_list_cfg}
 	};
 	prompt_result result;
 
@@ -78,12 +78,12 @@ uint32_t hwuart_setup(void){
 
 	if(storage_load_mode(config_file, config_t, count_of(config_t))){
 		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-		printf(" %s: %d %s\r\n", t[T_UART_SPEED_MENU], mode_config.baudrate, t[T_UART_BAUD]);			
+		printf(" %s: %d %s\r\n", t[T_UART_SPEED_MENU], mode_config.baudrate, t[T_UART_BAUD]);
 		printf(" %s: %d\r\n", t[T_UART_DATA_BITS_MENU], mode_config.data_bits);
 		printf(" %s: %s\r\n", t[T_UART_PARITY_MENU], t[uart_parity_menu[mode_config.parity].description]);
 		printf(" %s: %d\r\n", t[T_UART_STOP_BITS_MENU], mode_config.stop_bits);
 		bool user_value;
-		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
+		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;
 		if(user_value) return 1; //user said yes, use the saved settings
 	}
 
@@ -107,16 +107,16 @@ uint32_t hwuart_setup(void){
 	//block=(ui_prompt_int(UARTBLOCKINGMENU, 1, 2, 2)-1);
 
 	storage_save_mode(config_file, config_t, count_of(config_t));
-	
+
 	mode_config.async_print=false;
-	
+
 	return 1;
 }
 
 uint32_t hwuart_setup_exc(void){
 	//setup peripheral
 	mode_config.baudrate_actual=uart_init(M_UART_PORT, mode_config.baudrate);
-	printf("\r\n%s%s: %u %s%s", 
+	printf("\r\n%s%s: %u %s%s",
 		ui_term_color_notice(),
 		t[T_UART_ACTUAL_SPEED_BAUD],
 		mode_config.baudrate_actual,
@@ -143,7 +143,7 @@ void hwuart_periodic(void){
 	}
 }
 
-void hwuart_open(struct _bytecode *result, struct _bytecode *next){	
+void hwuart_open(struct _bytecode *result, struct _bytecode *next){
 	//clear FIFO and enable UART
 	while(uart_is_readable(M_UART_PORT)){
 		uart_getc(M_UART_PORT);
@@ -178,8 +178,8 @@ void hwuart_read(struct _bytecode *result, struct _bytecode *next){
 		timeout--;
 		if(!timeout){
 			result->error=SRES_ERROR;
-			result->error_message=t[T_UART_NO_DATA_READ];	
-			return;			
+			result->error_message=t[T_UART_NO_DATA_READ];
+			return;
 		}
 	}
 
@@ -278,4 +278,4 @@ uint32_t hwuart_get_speed(void){
 
 
 
-	
+

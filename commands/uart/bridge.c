@@ -15,7 +15,7 @@
 #include "ui/ui_cmdln.h"
 
 static const char * const usage[]= {
-    "bridge\t[-h(elp)] [-t(oolbar)]",   
+    "bridge\t[-h(elp)] [-t(oolbar)]",
     "Transparent UART bridge: bridge",
     "Exit: press Bus Pirate button"
 };
@@ -35,8 +35,8 @@ void uart_bridge_handler(struct command_result *res){
     bool pause_toolbar=!cmdln_args_find_flag('t'|0x20);
     if(pause_toolbar){
         system_config.terminal_ansi_statusbar_pause = true;
-    }    
-    
+    }
+
     printf("%s%s%s\r\n", ui_term_color_notice(), t[T_HELP_UART_BRIDGE_EXIT], ui_term_color_reset());
     while(true){
         char c;
@@ -48,7 +48,7 @@ void uart_bridge_handler(struct command_result *res){
             tx_fifo_put(&c);
         }
         //exit when button pressed.
-        if(button_get(0)) break;   
+        if(button_get(0)) break;
     }
 
     if(pause_toolbar){

@@ -19,7 +19,7 @@ typedef struct _uart_mode_config{
 	uint32_t baudrate;
 	uint32_t baudrate_actual;
 	uint32_t data_bits;
-	uint32_t stop_bits; 
+	uint32_t stop_bits;
 	uint32_t parity;
     uint32_t blocking;
 	bool async_print;

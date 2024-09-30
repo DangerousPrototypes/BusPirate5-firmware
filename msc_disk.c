@@ -36,14 +36,24 @@
 
 #if CFG_TUD_MSC
 
-enum medium_state { md_state_not_present, md_state_reset, md_state_medium_changed, md_state_ready };
+enum medium_state {
+    md_state_not_present_stage1,
+    md_state_not_present,
+    md_state_reset,
+    md_state_medium_changed,
+    md_state_ready_stage1,
+    md_state_ready
+};
 
 static volatile uint32_t medium_state = md_state_ready;
+static volatile uint32_t next_medium_state = md_state_ready;
 
 static volatile bool eject_request = false;
 static volatile bool insert_request = false;
+static volatile bool cmd_ack = false;
 
 static volatile bool writable = true;
+static volatile bool host_ejected = false;
 
 enum
 {
@@ -130,6 +140,11 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
   memcpy(product_rev, rev, strlen(rev));
 }
 
+
+static bool command_acknowledged()
+{
+    return cmd_ack;
+}
 // This function will be called by core0
 static bool is_ejected()
 {
@@ -140,37 +155,49 @@ static bool is_inserted()
 {
     return medium_state == md_state_ready;
 }
-
 // Invoked when received Test Unit Ready command.
 // return true allowing host to read/write this LUN e.g TF flash card inserted
 bool tud_msc_test_unit_ready_cb(uint8_t lun)
 {
     (void)lun;
-    if (insert_request && medium_state == md_state_not_present) {
-        medium_state = md_state_reset;
+    bool return_value = true;
+    medium_state = next_medium_state;
+    if (host_ejected) {
+        next_medium_state = medium_state = md_state_not_present;
+        host_ejected = false;
+    } else if (insert_request && medium_state == md_state_not_present) {
+        medium_state = md_state_medium_changed;
+        cmd_ack = true;
     } else if (eject_request && medium_state == md_state_ready) {
-        medium_state = md_state_not_present;
+        medium_state = md_state_not_present_stage1;
+        cmd_ack = true;
     }
     switch (medium_state) {
+        case md_state_not_present_stage1:
         case md_state_not_present:
             tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
-            return false;
+            next_medium_state = md_state_not_present;
+            return_value = false;
             break;
-        case md_state_reset:
-            tud_msc_set_sense(lun, SCSI_SENSE_UNIT_ATTENTION, 0x29, 0x00);
-            medium_state = md_state_medium_changed;
-            return false;
-            break;
+        // This state isn't implemented by my SD card reader
+        // case md_state_reset:
+        //     tud_msc_set_sense(lun, SCSI_SENSE_UNIT_ATTENTION, 0x29, 0x00);
+        //     medium_state = md_state_medium_changed;
+        //     return_value = false;
+        //     break;
         case md_state_medium_changed:
             tud_msc_set_sense(lun, SCSI_SENSE_UNIT_ATTENTION, 0x28, 0x00);
-            medium_state = md_state_ready;
-            return false;
+            next_medium_state = md_state_ready_stage1;
+            return_value = false;
             break;
+        case md_state_ready_stage1:
         case md_state_ready:
             tud_msc_set_sense(lun, 0x00, 0x00, 0x00);
-            return true;
+            next_medium_state = md_state_ready;
+            return_value = true;
             break;
     }
+    return return_value;
 }
 
 // Invoked when received SCSI_CMD_READ_CAPACITY_10 and SCSI_CMD_READ_FORMAT_CAPACITY to determine the disk size
@@ -205,27 +232,13 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
 
   if ( load_eject )
   {
-    if (start)
-    {
-        insert_request = true;
-        while(!is_inserted())
-        {
-            sleep_ms(10);
-        }
-        insert_request = false;
-        // load disk storage
-    }else
-    {
-      // unload disk storage
-      eject_request = true;
-      while(!is_ejected())
-      {
-          sleep_ms(1);
+      if (start) {
+          host_ejected = false;
+          // load disk storage
+      }else {
+          host_ejected = true;
       }
-      eject_request = false;
-    }
   }
-
   return true;
 }
 
@@ -289,6 +302,17 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
   return bufsize;
 }
 
+bool tud_msc_prevent_allow_medium_removal_cb(uint8_t lun, uint8_t prohibit_removal, uint8_t control)
+{
+    (void)lun;
+    if (prohibit_removal != 0) {
+      tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x24, 0x0);
+      return false;
+    } else {
+        tud_msc_set_sense(lun, 0, 0, 0);
+        return true;
+    }
+}
 // Callback invoked when received an SCSI command not in built-in list below
 // - READ_CAPACITY10, READ_FORMAT_CAPACITY, INQUIRY, MODE_SENSE6, REQUEST_SENSE
 // - READ10 and WRITE10 has their own callbacks
@@ -304,17 +328,13 @@ int32_t tud_msc_scsi_cb (uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, 
 
   switch (scsi_cmd[0])
   {
-    case SCSI_CMD_PREVENT_ALLOW_MEDIUM_REMOVAL:
-      // Host is about to read/write etc ... better not to disconnect disk
-      resplen = 0;
-    break;
 
     default:
-      // Set Sense = Invalid Command Operation
-      tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x20, 0x00);
+    // Set Sense = Invalid Command Operation
+    tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x20, 0x00);
 
-      // negative means error -> tinyusb could stall and/or response with failed status
-      resplen = -1;
+    // negative means error -> tinyusb could stall and/or response with failed status
+    resplen = -1;
     break;
   }
 
@@ -340,21 +360,44 @@ bool tud_msc_is_writable_cb(uint8_t lun)
   return writable;
 }
 
-//eject and insert the usbms drive to force the host to sync its contents
-void refresh_usbmsdrive(void)
+bool insert_or_eject_usbmsdrive(bool insert) 
 {
-  // eject the usb drive
-  tud_msc_start_stop_cb(0, 0, 0, 1);
-  // make sure the storage is synced
-  disk_ioctl(0, CTRL_SYNC, 0);
-  // insert the drive back
-  tud_msc_start_stop_cb(0, 0, 1, 1);
+    cmd_ack = false;
+    if (insert) {
+        insert_request = true;
+        while (!command_acknowledged()) {
+            sleep_ms(1);
+        }
+        insert_request = false;
+        // load disk storage
+    } else {
+        if (is_ejected())
+            return true;
+        // unload disk storage
+        eject_request = true;
+        while (!command_acknowledged()) {
+            sleep_ms(1);
+        }
+        eject_request = false;
+    }
+    return true;
 }
-//eject and insert the usbms drive to force the host to sync its contents
+
 void eject_usbmsdrive(void)
 {
-  // eject the usb drive
-  tud_msc_start_stop_cb(0, 0, 0, 1);
+    insert_or_eject_usbmsdrive(false);
+}
+void insert_usbmsdrive(void)
+{
+    insert_or_eject_usbmsdrive(true);
+}
+
+// eject and insert the usbms drive to force the host to sync its contents
+void refresh_usbmsdrive(void) {
+    // eject the usb drive
+    eject_usbmsdrive();
+    // insert the drive back
+    insert_usbmsdrive();
 }
 
 // The drive is removed but not inserted back
@@ -364,7 +407,7 @@ void prepare_usbmsdrive_readonly(void)
   if (!writable)
     return;
   // eject the usb drive
-  tud_msc_start_stop_cb(0, 0, 0, 1);
+  eject_usbmsdrive();
   // make sure the storage is synced
   disk_ioctl(0, CTRL_SYNC, 0);
   writable = false;
@@ -374,12 +417,12 @@ void make_usbmsdrive_writable(void)
   if(writable)
     return;
   // eject the usb drive
-  tud_msc_start_stop_cb(0, 0, 0, 1);
+  eject_usbmsdrive();
   //make sure the storage is synced
   disk_ioctl(0, CTRL_SYNC, 0);
   writable = true;
   //insert the drive back
-  tud_msc_start_stop_cb(0, 0, 1, 1);
+  insert_usbmsdrive();
 }
 
 #endif

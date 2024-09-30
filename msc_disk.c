@@ -237,6 +237,8 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
           // load disk storage
       }else {
           host_ejected = true;
+          if (writable)
+              disk_ioctl(0, CTRL_SYNC, 0);
       }
   }
   return true;

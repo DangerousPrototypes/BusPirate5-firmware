@@ -263,7 +263,7 @@ int main(){
                 //sync with the host 
                 storage_unmount();
                 storage_mount();
-                refresh_usbmsdrive();
+                insert_usbmsdrive();
             }
         }
         else{

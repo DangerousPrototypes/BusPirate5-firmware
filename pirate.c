@@ -261,7 +261,6 @@ int main(){
                 has_been_connected = true;
                 prepare_usbmsdrive_readonly();
                 //sync with the host 
-                storage_unmount();
                 storage_mount();
                 insert_usbmsdrive();
             }

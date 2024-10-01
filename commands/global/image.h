@@ -1,0 +1,1 @@
+void image_handler(struct command_result* res);

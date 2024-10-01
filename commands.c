@@ -38,6 +38,7 @@
 #include "commands/global/logic.h"
 #include "commands/global/cmd_binmode.h"
 #include "commands/global/bug.h"
+#include "commands/global/image.h"
 
 // command configuration
 const struct _command_struct commands[]=
@@ -89,6 +90,7 @@ const struct _command_struct commands[]=
     {"smps", true, &smps_handler, 0x00},
     {"binmode", true, &cmd_binmode_handler, 0x00},
     {"bug", true, &bug_handler, 0x00},
+    {"image", true, &image_handler, 0x00},
 };
 
 const uint32_t commands_count=count_of(commands);

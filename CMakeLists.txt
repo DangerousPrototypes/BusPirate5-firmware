@@ -106,6 +106,7 @@ set(bp5_common
         commands/global/cmd_binmode.h commands/global/cmd_binmode.c
         commands/global/logic.h commands/global/logic.c
         commands/global/bug.c commands/global/bug.h
+        commands/global/image.c commands/global/image.h
         
         # HiZ
         mode/hiz.h mode/hiz.c

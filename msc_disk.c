@@ -37,10 +37,18 @@
 #if CFG_TUD_MSC
 
 enum medium_state {
+    // this is a transient duplicate of md_state_not_present
+    // It prevents the program view to get ahead of the USB traffic
+    // since the Mode sense info is sent to the USB later, in response to
+    // another SCSCI command (REQUEST_SENSE)
     md_state_not_present_stage1,
     md_state_not_present,
     md_state_reset,
     md_state_medium_changed,
+    // this is a transient duplicate of md_state_ready
+    // It prevents the program view to get ahead of the USB traffic
+    // since the Mode sense info is sent to the USB later, in response to
+    // another SCSCI command (REQUEST_SENSE)
     md_state_ready_stage1,
     md_state_ready
 };
@@ -163,7 +171,8 @@ bool tud_msc_test_unit_ready_cb(uint8_t lun)
     bool return_value = true;
     medium_state = next_medium_state;
     if (host_ejected) {
-        next_medium_state = medium_state = md_state_not_present;
+        medium_state = md_state_not_present;
+        next_medium_state = medium_state;
         host_ejected = false;
     } else if (insert_request && medium_state == md_state_not_present) {
         medium_state = md_state_medium_changed;
@@ -237,8 +246,9 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
           // load disk storage
       }else {
           host_ejected = true;
-          if (writable)
+          if (writable) {
               disk_ioctl(0, CTRL_SYNC, 0);
+          }
       }
   }
   return true;
@@ -308,6 +318,9 @@ bool tud_msc_prevent_allow_medium_removal_cb(uint8_t lun, uint8_t prohibit_remov
 {
     (void)lun;
     if (prohibit_removal != 0) {
+      //This prevents the host OS (Windows) from caching state about the file system. 
+      //However it isn't verified. In any case, this isn't a promise we can keep. 
+      //the BP5 could be removed anytime. 
       tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x24, 0x0);
       return false;
     } else {
@@ -361,7 +374,9 @@ bool tud_msc_is_writable_cb(uint8_t lun)
 {
   return writable;
 }
-
+// Note that there are busy loop in this function
+// A small sleep value is necessary to insure that
+// the core can still process events. __wfe() will be called by sleep_ms
 bool insert_or_eject_usbmsdrive(bool insert) 
 {
     cmd_ack = false;
@@ -403,7 +418,9 @@ void refresh_usbmsdrive(void) {
 }
 
 // The drive is removed but not inserted back
-// To re-insert, call refresh_usbmsdrive()
+// because some actions (like re-init of the file system)
+// may be necessary
+// To re-insert, call insert_usbmsdrive()
 void prepare_usbmsdrive_readonly(void)
 {
   if (!writable)

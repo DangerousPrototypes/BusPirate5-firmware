@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "hardware/uart.h"
 #include "pirate.h"
+#include "pirate/bio.h"
 #include "system_config.h"
 #include "opt_args.h"
 #include "ui/ui_term.h"
@@ -15,7 +16,7 @@
 #include "ui/ui_cmdln.h"
 
 static const char * const usage[]= {
-    "bridge\t[-h(elp)] [-t(oolbar)]",   
+    "bridge\t[-h(elp)] [-t(oolbar)]",
     "Transparent UART bridge: bridge",
     "Exit: press Bus Pirate button"
 };
@@ -35,9 +36,10 @@ void uart_bridge_handler(struct command_result *res){
     bool pause_toolbar=!cmdln_args_find_flag('t'|0x20);
     if(pause_toolbar){
         system_config.terminal_ansi_statusbar_pause = true;
-    }    
-    
+    }
+
     printf("%s%s%s\r\n", ui_term_color_notice(), t[T_HELP_UART_BRIDGE_EXIT], ui_term_color_reset());
+    bio_put(M_UART_RTS, 0);
     while(true){
         char c;
         if(rx_fifo_try_get(&c)){
@@ -48,8 +50,9 @@ void uart_bridge_handler(struct command_result *res){
             tx_fifo_put(&c);
         }
         //exit when button pressed.
-        if(button_get(0)) break;   
+        if(button_get(0)) break;
     }
+    bio_put(M_UART_RTS, 1);
 
     if(pause_toolbar){
         system_config.terminal_ansi_statusbar_pause = toolbar_state;

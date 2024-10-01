@@ -374,6 +374,7 @@ bool tud_msc_is_writable_cb(uint8_t lun)
 {
   return writable;
 }
+
 // Note that there are busy loop in this function
 // A small sleep value is necessary to insure that
 // the core can still process events. __wfe() will be called by sleep_ms

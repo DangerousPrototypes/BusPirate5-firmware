@@ -259,10 +259,10 @@ int main(){
         if (tud_cdc_n_connected(0)){
             if(!has_been_connected){
                 has_been_connected = true;
-                make_usbmsdrive_readonly();
+                prepare_usbmsdrive_readonly();
                 //sync with the host 
-                storage_unmount();
                 storage_mount();
+                insert_usbmsdrive();
             }
         }
         else{

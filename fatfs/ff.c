@@ -5193,7 +5193,8 @@ FRESULT f_rename (
 				res = dir_remove(&djo);		/* Remove old entry */
 				if (res == FR_OK) {
 					res = sync_fs(fs);
-				}
+                    refresh_usbmsdrive();
+                }
 			}
 /* End of the critical section */
 		}
@@ -5510,8 +5511,8 @@ FRESULT f_setlabel (
 			}
 		}
 	}
-
-	LEAVE_FF(fs, res);
+    refresh_usbmsdrive();
+    LEAVE_FF(fs, res);
 }
 
 #endif /* !FF_FS_READONLY */

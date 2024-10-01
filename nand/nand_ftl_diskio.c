@@ -31,7 +31,10 @@ static mutex_t diskio_mutex;
 DSTATUS diskio_initialize(BYTE drv)
 {
     if (drv) return STA_NOINIT;			/* Supports only drive 0 */
-    mutex_init(&diskio_mutex);
+    if (!mutex_is_initialized(&diskio_mutex)){
+        mutex_init(&diskio_mutex);
+    }
+
     // init flash management stack
     int ret = spi_nand_init(&dhara_nand_parameters);
     if (SPI_NAND_RET_OK != ret) {
@@ -108,11 +111,12 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void *buff)
     dhara_error_t err;
 
    	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
-    mutex_enter_blocking(&diskio_mutex);
     switch (cmd) {
         case CTRL_SYNC:;
             ;
+            mutex_enter_blocking(&diskio_mutex);
             int ret = dhara_map_sync(&map, &err);
+            mutex_exit(&diskio_mutex);
             if (ret) {
                 //printf("dhara sync failed: %d, error: %d", ret, err);
                 return RES_ERROR;
@@ -140,6 +144,7 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void *buff)
             LBA_t *args = (LBA_t *)buff;
             LBA_t start = args[0];
             LBA_t end = args[1];
+            mutex_enter_blocking(&diskio_mutex);
             while (start <= end) {
                 int ret = dhara_map_trim(&map, start, &err);
                 if (ret) {
@@ -148,10 +153,10 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void *buff)
                 }
                 start++;
             }
+            mutex_exit(&diskio_mutex);
             break;
         default:
             return RES_PARERR;
     }
-    mutex_exit(&diskio_mutex);
     return RES_OK;
 }

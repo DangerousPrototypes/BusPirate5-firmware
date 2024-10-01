@@ -104,8 +104,8 @@ void spi_busy_wait(bool enable);
 #define M_UART_PORT uart0
 #define M_UART_TX BIO4
 #define M_UART_RX BIO5
-#define M_UART_RTS
-#define M_UART_CTS
+#define M_UART_CTS BIO6
+#define M_UART_RTS BIO7
 #define M_UART_RXTX BIO0
 
 // i2c settings

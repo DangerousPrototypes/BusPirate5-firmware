@@ -123,7 +123,7 @@ bool ui_process_commands(void) {
                     if (commands[user_cmd_id].help_text != 0x00) {
                         printf("%s%s%s\r\n",
                                ui_term_color_info(),
-                               t[commands[user_cmd_id].help_text],
+                               GET_T(commands[user_cmd_id].help_text),
                                ui_term_color_reset());
                         return false;
                     } else { // let app know we requested help
@@ -155,7 +155,7 @@ bool ui_process_commands(void) {
                                 (modes[system_config.mode].mode_commands[user_cmd_id].help_text != 0x00)) {
                                 printf("%s%s%s\r\n",
                                        ui_term_color_info(),
-                                       t[modes[system_config.mode].mode_commands[user_cmd_id].help_text],
+                                       GET_T(modes[system_config.mode].mode_commands[user_cmd_id].help_text),
                                        ui_term_color_reset());
                                 return false;
                             } else { // let app know we requested help
@@ -187,7 +187,7 @@ bool ui_process_commands(void) {
 
         // error no such command
         printf("%s", ui_term_color_notice());
-        printf(t[T_CMDLN_INVALID_COMMAND], command_string);
+        printf(GET_T(T_CMDLN_INVALID_COMMAND), command_string);
         printf("%s\r\n", ui_term_color_reset());
         return true;
 

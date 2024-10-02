@@ -83,7 +83,7 @@ uint32_t hwhduart_setup(void){
 		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
 		printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));			
 		printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
-		printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), t[uart_parity_menu[mode_config.parity].description]);
+		printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description));
 		printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
 		bool user_value;
 		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
@@ -141,26 +141,26 @@ void hwhduart_open(struct _bytecode *result, struct _bytecode *next){
 	//}
 
     mode_config.async_print=true;
-    result->data_message=t[T_UART_OPEN_WITH_READ];
+    result->data_message=GET_T(T_UART_OPEN_WITH_READ);
 }
 
 void hwhduart_open_read(struct _bytecode *result, struct _bytecode *next){    // start with read
     mode_config.async_print=true;
-    result->data_message=t[T_UART_OPEN_WITH_READ];
+    result->data_message=GET_T(T_UART_OPEN_WITH_READ);
 }
 
 void hwhduart_close(struct _bytecode *result, struct _bytecode *next){
 	mode_config.async_print=false;
-	result->data_message=t[T_UART_CLOSE];
+	result->data_message=GET_T(T_UART_CLOSE);
 }
 
 void hwhduart_start_alt(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HW2WIRE_RST_HIGH];
+	result->data_message=GET_T(T_HW2WIRE_RST_HIGH);
 	bio_input(M_2WIRE_RST);
 }
 
 void hwhduart_stop_alt(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HW2WIRE_RST_LOW];
+	result->data_message=GET_T(T_HW2WIRE_RST_LOW);
 	bio_output(M_2WIRE_RST);
 }
 
@@ -182,7 +182,7 @@ void hwhduart_read(struct _bytecode *result, struct _bytecode *next){
 		timeout--;
 		if(!timeout){
 			result->error=SRES_ERROR;
-			result->error_message=t[T_UART_NO_DATA_READ];	
+			result->error_message=GET_T(T_UART_NO_DATA_READ);	
 			return;			
 		}
 	}

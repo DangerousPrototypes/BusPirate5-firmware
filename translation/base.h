@@ -454,8 +454,6 @@ typedef enum _language_idx_t { // these are based on IETF codes for the translat
     COUNT_OF_LANGUAGE_IDX, // leave this as the final enum value
 } language_idx_t;
 
-extern char **t; // to be removed ... transitioning to accessor function GET_T()
-
 const char * GET_T(enum T_translations index);
 void translation_init(void);
 void translation_set(language_idx_t language);

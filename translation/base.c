@@ -9,9 +9,6 @@
 #include "translation/bs-ba.h"
 #include "translation/it-it.h"
 
-char **t; // to be removed when transitioned to accessor function
-
-
 // TODO: define a type for translation table (just to make it more readable than `const char * const *`)
 // TODO: how to typedef a constant array of pointers to constant characters?
 //       gcc warns about the assignment of `const char * const (*)[430]` to target type `const char * const *`
@@ -96,7 +93,6 @@ void translation_set(language_idx_t language)
         return;
     }
     current_language = language;
-    t = (char **) translation_tables[language]; // TODO: remove this line when transitioned to accessor function
 }
 
 //TODO: migrate from direct access to `t[]`, to using this accessor function instead.
@@ -124,9 +120,6 @@ const char * GET_T(enum T_translations index) {
     if (result == NULL) {
         // BUGBUG -- need to log an error here
         result = UTF8_POOP_EMOJI_STRING "?" UTF8_POOP_EMOJI_STRING;
-    } else if (result != t[index]) {
-        // BUGBUG -- print an error here and use poop emojis!
-        result = UTF8_POOP_EMOJI_STRING "MISMATCH" UTF8_POOP_EMOJI_STRING;
     }
 
     return result;
@@ -134,5 +127,4 @@ const char * GET_T(enum T_translations index) {
 
 void translation_init(void) {
     translation_set(language_idx_en_us);
-    t = (char **) &en_us; // TODO: remove this line when transitioned to accessor function
 }

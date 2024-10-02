@@ -280,7 +280,7 @@ void ui_config_main_menu(struct command_result *res)
         }
         temp2--;
         sub_prompts[temp].menu_action(temp, temp2);
-        printf("\r\n%s %sset to%s %s\r\n", t[sub_prompts[temp].description], ui_term_color_info(), ui_term_color_reset(), t[sub_prompts[temp].menu_items[temp2].description]);
+        printf("\r\n%s %sset to%s %s\r\n", GET_T(sub_prompts[temp].description), ui_term_color_info(), ui_term_color_reset(), GET_T(sub_prompts[temp].menu_items[temp2].description));
     }
 
     //if TF flash card is present, saves configuration settings

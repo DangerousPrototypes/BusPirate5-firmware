@@ -234,3 +234,9 @@ write_keys_into_enum_header_template('base.ht', 'base.h', base_translation)
 print(f"\n======================================================================")
 print(f"Parsing remaining json translations into corresponding .h files")
 convert_remaining_translations_to_h_files('.', '.')
+# To help with translations, the following debug flags can be used to
+# print additional information about entries in the .json files, such
+# as missing entries (likely need translation), identical entries (which
+# likely should either be set to JSON null, or removed from the .json
+# file altogether.
+# convert_remaining_translations_to_h_files('.', '.', DebugJsonConversion.DEFAULT)

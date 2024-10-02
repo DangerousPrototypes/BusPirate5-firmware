@@ -45,9 +45,14 @@ def process_bitmap(image_path):
         width, height = image.size
 
     image = image.convert("RGB")
+
+    # Flip the image 90 degrees (270 degrees counterclockwise) if width is less than height
+    if width < height:
+        image = image.transpose(Image.ROTATE_270)
+
     image = image.transpose(Image.FLIP_TOP_BOTTOM)  # Mirror the image horizontally
     #flip the image 90 degrees
-    image = image.transpose(Image.ROTATE_270)
+    #image = image.transpose(Image.ROTATE_270)
     pixel_data = convert_to_565(image)
     save_as_c_header(os.path.basename(image_path), pixel_data, width, height)
     print(f"Processed {image_path} and saved as C header.")

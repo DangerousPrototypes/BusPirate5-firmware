@@ -270,7 +270,7 @@ bool syntax_run(void)
         {
             case SYN_WRITE:
                 if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH) {
-                    in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+                    in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
                     in[in_cnt].error=SRES_ERROR;
                     return false;
                 }                
@@ -284,7 +284,7 @@ bool syntax_run(void)
                 break;
             case SYN_READ:        
                 if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH){
-                    in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+                    in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
                     in[in_cnt].error=SRES_ERROR;
                     return false;
                 }      
@@ -361,7 +361,7 @@ bool syntax_run(void)
                 
         if(in_cnt+1>=SYN_MAX_LENGTH)
         {
-            in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+            in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
             in[in_cnt].error=SRES_ERROR;
             return false;
         }    

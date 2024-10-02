@@ -94,7 +94,7 @@ uint32_t nullfunc8_error(uint8_t* config) {
 }
 
 void nohelp(void) {
-    printf(t[T_MODE_NO_HELP_AVAILABLE]);
+    printf("%s", GET_T(T_MODE_NO_HELP_AVAILABLE));
 }
 
 void noperiodic(void) {

@@ -56,17 +56,17 @@ void binloopback_periodic(void){
 
 void binloopback_open(struct _bytecode *result, struct _bytecode *next){	
     mode_config.async_print=false;
-    result->data_message=t[T_UART_OPEN];
+    result->data_message = GET_T(T_UART_OPEN);
 }
 
 void binloopback_open_read(struct _bytecode *result, struct _bytecode *next){    // start with read
     mode_config.async_print=true;
-    result->data_message=t[T_UART_OPEN_WITH_READ];
+    result->data_message = GET_T(T_UART_OPEN_WITH_READ);
 }
 
 void binloopback_close(struct _bytecode *result, struct _bytecode *next){
 	mode_config.async_print=false;
-	result->data_message=t[T_UART_CLOSE];
+	result->data_message = GET_T(T_UART_CLOSE);
 }
 
 void binloopback_write(struct _bytecode *result, struct _bytecode *next){
@@ -81,7 +81,7 @@ void binloopback_read(struct _bytecode *result, struct _bytecode *next){
 		timeout--;
 		if(!timeout){
 			result->error=SRES_ERROR;
-			result->error_message=t[T_UART_NO_DATA_READ];	
+			result->error_message = GET_T(T_UART_NO_DATA_READ);	
 			return;			
 		}
 	}

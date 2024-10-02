@@ -68,9 +68,9 @@ uint32_t spi_setup(void){
 			printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
 			printf(" %s%s:%s %d kHz\r\n",ui_term_color_info(), GET_T(T_HWSPI_SPEED_MENU), ui_term_color_reset(),mode_config.baudrate/1000);			
 			printf(" %s%s:%s %d\r\n", ui_term_color_info(), GET_T(T_HWSPI_BITS_MENU), ui_term_color_reset(), mode_config.data_bits);
-			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CLOCK_POLARITY_MENU), ui_term_color_reset(), t[spi_polarity_menu[mode_config.clock_polarity].description]);
-			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CLOCK_PHASE_MENU), ui_term_color_reset(), t[spi_phase_menu[mode_config.clock_phase].description]);
-			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CS_IDLE_MENU), ui_term_color_reset(), t[spi_idle_menu[mode_config.cs_idle].description]);
+			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CLOCK_POLARITY_MENU), ui_term_color_reset(), GET_T(spi_polarity_menu[mode_config.clock_polarity].description));
+			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CLOCK_PHASE_MENU), ui_term_color_reset(), GET_T(spi_phase_menu[mode_config.clock_phase].description));
+			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CS_IDLE_MENU), ui_term_color_reset(), GET_T(spi_idle_menu[mode_config.cs_idle].description));
 
 			bool user_value;
 			if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
@@ -189,25 +189,25 @@ void spi_set_cs(uint8_t cs){
 
 void spi_start(struct _bytecode *result, struct _bytecode *next){
 	mode_config.read_with_write=false;
-	result->data_message=t[T_HWSPI_CS_SELECT];
+	result->data_message = GET_T(T_HWSPI_CS_SELECT);
 	spi_set_cs(M_SPI_SELECT);
 }
 
 void spi_startr(struct _bytecode *result, struct _bytecode *next){
 	mode_config.read_with_write=true;
-	result->data_message=t[T_HWSPI_CS_SELECT];
+	result->data_message = GET_T(T_HWSPI_CS_SELECT);
 	spi_set_cs(M_SPI_SELECT);
 }
 
 void spi_stop(struct _bytecode *result, struct _bytecode *next){
 	mode_config.read_with_write=false;
-	result->data_message=t[T_HWSPI_CS_DESELECT];
+	result->data_message = GET_T(T_HWSPI_CS_DESELECT);
 	spi_set_cs(M_SPI_DESELECT);
 }
 
 void spi_stopr(struct _bytecode *result, struct _bytecode *next){
 	mode_config.read_with_write=false;
-	result->data_message=t[T_HWSPI_CS_DESELECT];
+	result->data_message = GET_T(T_HWSPI_CS_DESELECT);
 	spi_set_cs(M_SPI_DESELECT);
 }
 

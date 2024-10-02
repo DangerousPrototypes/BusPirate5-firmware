@@ -57,7 +57,7 @@ uint32_t hwi2c_setup(void){
 	if(storage_load_mode(config_file, config_t, count_of(config_t))){
 		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
 		printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);			
-		//printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), t[i2c_data_bits_menu[mode_config.data_bits].description]);
+		//printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[mode_config.data_bits].description));
 		
 		bool user_value;
 		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
@@ -84,13 +84,13 @@ uint32_t hwi2c_setup_exc(void){
 bool hwi2c_error(uint32_t error, struct _bytecode *result){
 	switch(error){
 		case 1:
-			result->error_message=t[T_HWI2C_I2C_ERROR];
+			result->error_message = GET_T(T_HWI2C_I2C_ERROR);
 			result->error=SRES_ERROR; 
 			pio_i2c_resume_after_error();
 			return true;
 			break;
 		case 2:
-			result->error_message=t[T_HWI2C_TIMEOUT];
+			result->error_message = GET_T(T_HWI2C_TIMEOUT);
 			result->error=SRES_ERROR; 
 			pio_i2c_resume_after_error();
 			return true;
@@ -101,9 +101,9 @@ bool hwi2c_error(uint32_t error, struct _bytecode *result){
 }
 
 void hwi2c_start(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HWI2C_START];
+	result->data_message = GET_T(T_HWI2C_START);
 	if(hwi2c_checkshort()){
-		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
+		result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
 		result->error=SRES_WARN; 
 	}
 	uint8_t error=pio_i2c_start_timeout(0xfffff);
@@ -113,7 +113,7 @@ void hwi2c_start(struct _bytecode *result, struct _bytecode *next){
 }
 
 void hwi2c_stop(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HWI2C_STOP];
+	result->data_message = GET_T(T_HWI2C_STOP);
 	uint32_t error=pio_i2c_stop_timeout( 0xffff);
 	hwi2c_error(error, result);
 }
@@ -127,7 +127,7 @@ void hwi2c_write(struct _bytecode *result, struct _bytecode *next){
 	}
 	uint32_t error=pio_i2c_write_timeout( result->out_data, 0xffff);
 	hwi2c_error(error, result);
-	result->data_message=(error?t[T_HWI2C_NACK]:t[T_HWI2C_ACK]);
+	result->data_message=(error? GET_T(T_HWI2C_NACK) : GET_T(T_HWI2C_ACK));
 }
 
 void hwi2c_read(struct _bytecode *result, struct _bytecode *next){
@@ -145,7 +145,7 @@ void hwi2c_read(struct _bytecode *result, struct _bytecode *next){
 	}
 	uint32_t error=pio_i2c_read_timeout( &result->in_data, ack, 0xffff);
     hwi2c_error(error, result);
-	result->data_message=(ack?t[T_HWI2C_ACK]:t[T_HWI2C_NACK]);
+	result->data_message=(ack? GET_T(T_HWI2C_ACK) : GET_T(T_HWI2C_NACK));
 }
 
 void hwi2c_macro(uint32_t macro){

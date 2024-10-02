@@ -89,7 +89,10 @@ void i_info_handler(struct command_result *res){
 	}
 
 	//config file loaded
-	printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_CONFIG_FILE), ui_term_color_reset(), system_config.config_loaded_from_file?t[T_LOADED]:t[T_NOT_DETECTED]);
+	do {
+		const char * string = system_config.config_loaded_from_file ? GET_T(T_LOADED) : GET_T(T_NOT_DETECTED);
+		printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_CONFIG_FILE), ui_term_color_reset(), string);
+	} while (0);
 
 	if(system_config.big_buffer_owner!=BP_BIG_BUFFER_NONE){
 		printf("%sBig buffer allocated to:%s #%d\r\n", ui_term_color_info(), ui_term_color_reset(), system_config.big_buffer_owner);
@@ -153,7 +156,7 @@ void i_info_handler(struct command_result *res){
 
         }
 
-		printf("%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_INFO_FREQUENCY_GENERATORS), ui_term_color_reset(), !system_config.pwm_active?t[T_OFF]:" ");
+		printf("%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_INFO_FREQUENCY_GENERATORS), ui_term_color_reset(), !system_config.pwm_active ? GET_T(T_OFF) : " ");
 		
         // PWMs
         if(system_config.pwm_active){

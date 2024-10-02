@@ -80,7 +80,7 @@ void ui_mode_enable_args(struct command_result* res) {
 
     printf("\r\n%s%s:%s %s",
            ui_term_color_info(),
-           t[T_MODE_MODE],
+           GET_T(T_MODE_MODE),
            ui_term_color_reset(),
            modes[system_config.mode].protocol_name);
 }
@@ -165,7 +165,7 @@ void ui_mode_enable(struct command_attributes *attributes, struct command_respon
         //gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
     }
 
-    printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_MODE], ui_term_color_reset(),
+    printf("\r\n%s%s:%s %s", ui_term_color_info(), GET_T(T_MODE_MODE), ui_term_color_reset(),
 modes[system_config.mode].protocol_name);
 
 }*/
@@ -229,7 +229,7 @@ void ui_mode_int_display_format(struct command_result* res) {
 
     printf("\r\n%s%s:%s %s",
            ui_term_color_info(),
-           t[T_MODE_MODE],
+           GET_T(T_MODE_MODE),
            ui_term_color_reset(),
            ui_const_display_formats[system_config.display_format]);
 }

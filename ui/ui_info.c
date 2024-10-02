@@ -92,7 +92,7 @@ void ui_info_print_pin_voltage(bool refresh)
 
 	}
 	//ground pin
-	printf("%s\r%s",t[T_GND],!refresh?"\n":""); //TODO: pin type struct and handle things like this automatically 
+	printf("%s\r%s",GET_T(T_GND),!refresh?"\n":""); //TODO: pin type struct and handle things like this automatically 
 	
 }
 

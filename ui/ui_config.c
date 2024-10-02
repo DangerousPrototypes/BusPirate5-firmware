@@ -287,7 +287,7 @@ void ui_config_main_menu(struct command_result *res)
     //TODO: present as an option to save or not
     if(storage_save_config())
     {
-        printf("\r\n\r\n%s%s:%s %s\r\n", ui_term_color_info(), t[T_CONFIG_FILE], ui_term_color_reset(), t[T_SAVED] );
+        printf("\r\n\r\n%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_CONFIG_FILE), ui_term_color_reset(), GET_T(T_SAVED) );
     }
 
 }

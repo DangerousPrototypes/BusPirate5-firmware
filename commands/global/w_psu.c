@@ -128,9 +128,9 @@ void psucmd_enable_handler(struct command_result *res){
         // current limit disabled
         printf("%s%s:%s%s\r\n",
         ui_term_color_notice(),
-        t[T_INFO_CURRENT_LIMIT],
+        GET_T(T_INFO_CURRENT_LIMIT),
         ui_term_color_reset(),
-        t[T_MODE_DISABLED]);
+        GET_T(T_MODE_DISABLED));
     }else{
         // x.xmA requested, closest value: x.xmA
         printf("%s%1.1f%smA%s requested, closest value: %s%3.1f%smA\r\n", 
@@ -141,9 +141,9 @@ void psucmd_enable_handler(struct command_result *res){
     // power supply: enabled
     printf("\r\n%s%s:%s%s\r\n",
         ui_term_color_notice(),
-        t[T_MODE_POWER_SUPPLY],
+        GET_T(T_MODE_POWER_SUPPLY),
         ui_term_color_reset(),
-        t[T_MODE_ENABLED]);
+        GET_T(T_MODE_ENABLED));
 
     // any error codes starting the PSU?
     if(psu_result!=PSU_OK){
@@ -193,9 +193,9 @@ void psucmd_disable_handler(struct command_result *res){
     psucmd_disable();
     printf("%s%s: %s%s\r\n",
         ui_term_color_notice(),
-        t[T_MODE_POWER_SUPPLY],
+        GET_T(T_MODE_POWER_SUPPLY),
         ui_term_color_reset(),
-        t[T_MODE_DISABLED]);        
+        GET_T(T_MODE_DISABLED));        
 }
 
 bool psucmd_init(void){       

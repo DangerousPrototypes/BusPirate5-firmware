@@ -418,7 +418,7 @@ void logic_bar(void) {
         la_active = true;
         /*amux_sweep();
         if (hw_adc_voltage[HW_ADC_MUX_VREG_OUT] < 100) {
-            printf("%s", t[T_WARN_VOUT_VREF_LOW]);
+            printf("%s", GET_T(T_WARN_VOUT_VREF_LOW));
         }*/
         return;
     }

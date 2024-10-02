@@ -80,9 +80,9 @@ uint32_t hwled_setup(void)
 		{
 			uint32_t temp;
 
-			printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-			printf(" %s: %s\r\n", t[T_HWLED_DEVICE_MENU], t[leds_type_menu[mode_config.device].description]);			
-			printf(" %s: %d\r\n", t[T_HWLED_NUM_LEDS_MENU], mode_config.num_leds);
+			printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+			printf(" %s: %s\r\n", GET_T(T_HWLED_DEVICE_MENU), t[leds_type_menu[mode_config.device].description]);			
+			printf(" %s: %d\r\n", GET_T(T_HWLED_NUM_LEDS_MENU), mode_config.num_leds);
 			bool user_value;
 			if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
 			if(user_value) return 1; //user said yes, use the saved settings
@@ -214,9 +214,9 @@ void hwled_write(struct _bytecode *result, struct _bytecode *next){
 
 void hwled_macro(uint32_t macro){
 	switch(macro){
-		case 0:		printf("%s\r\n", t[T_MODE_ERROR_NO_MACROS_AVAILABLE]);
+		case 0:		printf("%s\r\n", GET_T(T_MODE_ERROR_NO_MACROS_AVAILABLE));
 				break;
-		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+		default:	printf("%s\r\n", GET_T(T_MODE_ERROR_MACRO_NOT_DEFINED));
 				system_config.error=1;
 	}
 }

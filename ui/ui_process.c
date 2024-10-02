@@ -65,7 +65,7 @@ bool ui_process_macro(void) {
     if (result.success) {
         modes[system_config.mode].protocol_macro(temp);
     } else {
-        printf("%s\r\n", t[T_MODE_ERROR_PARSING_MACRO]);
+        printf("%s\r\n", GET_T(T_MODE_ERROR_PARSING_MACRO));
         return true;
     }
     return false;

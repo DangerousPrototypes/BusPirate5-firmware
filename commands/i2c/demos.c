@@ -23,7 +23,7 @@ void demo_tsl2561(struct command_result *res){
 	//0b11011100
 	uint16_t chan0, chan1;
 	char data[4];
-	printf("%s\r\n",t[T_HELP_I2C_TSL2561]);
+	printf("%s\r\n",GET_T(T_HELP_I2C_TSL2561));
 	//select register [0b01110010 0b11100000]
 	data[0]=0b11100000;
 	if(pio_i2c_write_blocking_timeout( 0b01110010, data, 1, 0xffff)) return;
@@ -55,7 +55,7 @@ void demo_ms5611(struct command_result *res){
 	//ADC read [0b11101110 0] [0b11101111 r:3]
 	float temperature;
 	float pressure;
-	printf("%s\r\n",t[T_HELP_I2C_MS5611]);
+	printf("%s\r\n",GET_T(T_HELP_I2C_MS5611));
 	if(ms5611_read_temperature_and_pressure_simple( &temperature, &pressure)){
 		res->error=1;
 		return;
@@ -65,7 +65,7 @@ void demo_ms5611(struct command_result *res){
 
 void demo_si7021(struct command_result *res){
 	uint8_t data[8];
-	printf("%s\r\n",t[T_HELP_I2C_SI7021]);
+	printf("%s\r\n",GET_T(T_HELP_I2C_SI7021));
 	// humidity
 	data[0]=0xf5;
 	if(pio_i2c_write_blocking_timeout( 0x80, data, 1, 0xffff)) return;

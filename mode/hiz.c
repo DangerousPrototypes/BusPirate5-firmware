@@ -14,7 +14,7 @@ const char *hiz_pins(void){
 }
 
 const char *hiz_error(void){
-	return t[T_MODE_ERROR_NO_EFFECT_HIZ];
+	return GET_T(T_MODE_ERROR_NO_EFFECT_HIZ);
 }
 
 void hiz_settings(void){

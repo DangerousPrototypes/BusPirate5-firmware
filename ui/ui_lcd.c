@@ -8,8 +8,8 @@
 #include "font/hunter-20pt-21h21w.h"
 #include "font/hunter-14pt-19h15w.h"
 #include "font/hunter-12pt-16h13w.h"
-#include "font/background.h"
-#include "font/background_image_v4.h"
+#include "display/background.h"
+#include "display/background_image_v4.h"
 #include "ui/ui_lcd.h"
 #include "ui/ui_flags.h"
 #include "system_monitor.h"
@@ -113,14 +113,16 @@ void lcd_write_background(const char *image)
     gpio_put(DISPLAY_DP, 1);
     gpio_put(DISPLAY_CS, 0);    
 
+    //Update October 2024: new image headers in pre-sorted pixel format for speed
+    // see image.py in the display folder to create new headers
     //TODO:pre-adjust the images so we can just DMA it.
-    for(uint32_t b=offset; b<(320*240*2+offset); b+=2){
+    //for(uint32_t b=offset; b<(320*240*2+offset); b+=2){
         //uint8_t *buff = (uint8_t *) &lcd_background_image[b];
-        pixel[0]=image[b+1];
-        pixel[1]=image[b];
-        spi_write_blocking(BP_SPI_PORT, pixel, 2);  
+        //pixel[0]=image[b+1];
+        //pixel[1]=image[b];
+        spi_write_blocking(BP_SPI_PORT, image, (320*240*2));  
  
-    }
+    //}
     
     gpio_put(DISPLAY_CS, 1);
     spi_busy_wait(false);

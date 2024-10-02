@@ -218,8 +218,8 @@ set(bp5_common
         displays.c displays.h display/default.c display/default.h
         ui/ui_lcd.c ui/ui_lcd.h display/scope.h display/scope.c
         font/font.h font/hunter-14pt-19h15w.h font/hunter-12pt-16h13w.h font/hunter-20pt-21h21w.h
-        font/hunter-23pt-24h24w.h font/background.h font/background_image_v4.h
-
+        font/hunter-23pt-24h24w.h display/background.h display/background_image_v4.h
+        display/robot16.h
         # USB
         queue.c queue.h
         usb_tx.c usb_tx.h usb_rx.c usb_rx.h

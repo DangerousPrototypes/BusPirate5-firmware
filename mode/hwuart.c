@@ -83,13 +83,13 @@ uint32_t hwuart_setup(void){
 	};
 
 	if(storage_load_mode(config_file, config_t, count_of(config_t))){
-		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-		printf(" %s: %d %s\r\n", t[T_UART_SPEED_MENU], mode_config.baudrate, t[T_UART_BAUD]);
-		printf(" %s: %d\r\n", t[T_UART_DATA_BITS_MENU], mode_config.data_bits);
-		printf(" %s: %s\r\n", t[T_UART_PARITY_MENU], t[uart_parity_menu[mode_config.parity].description]);
-		printf(" %s: %d\r\n", t[T_UART_STOP_BITS_MENU], mode_config.stop_bits);
-		printf(" %s: %s\r\n", t[T_UART_FLOW_CONTROL_MENU], !mode_config.flow_control ? t[T_UART_FLOW_CONTROL_MENU_1] : t[T_UART_FLOW_CONTROL_MENU_2]);
-		printf(" %s: %s\r\n", t[T_UART_INVERT_MENU], !mode_config.invert ? t[T_UART_INVERT_MENU_1] : t[T_UART_INVERT_MENU_2]);
+		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+		printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
+		printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
+		printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), t[uart_parity_menu[mode_config.parity].description]);
+		printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
+		printf(" %s: %s\r\n", GET_T(T_UART_FLOW_CONTROL_MENU), !mode_config.flow_control ? GET_T(T_UART_FLOW_CONTROL_MENU_1) : GET_T(T_UART_FLOW_CONTROL_MENU_2));
+		printf(" %s: %s\r\n", GET_T(T_UART_INVERT_MENU), !mode_config.invert ? GET_T(T_UART_INVERT_MENU_1) : GET_T(T_UART_INVERT_MENU_2));
 		bool user_value;
 		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;
 		if(user_value) return 1; //user said yes, use the saved settings
@@ -136,9 +136,9 @@ uint32_t hwuart_setup_exc(void){
 	mode_config.baudrate_actual=uart_init(M_UART_PORT, mode_config.baudrate);
 	printf("\r\n%s%s: %u %s%s",
 		ui_term_color_notice(),
-		t[T_UART_ACTUAL_SPEED_BAUD],
+		GET_T(T_UART_ACTUAL_SPEED_BAUD),
 		mode_config.baudrate_actual,
-		t[T_UART_BAUD],
+		GET_T(T_UART_BAUD),
 		ui_term_color_reset()
 	);
 	uart_set_format(M_UART_PORT,mode_config.data_bits, mode_config.stop_bits, mode_config.parity);
@@ -245,7 +245,7 @@ void hwuart_macro(uint32_t macro){
 		case 1:
             uart_bridge_handler(&result);
 			break;
-		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+		default:	printf("%s\r\n", GET_T(T_MODE_ERROR_MACRO_NOT_DEFINED));
 				system_config.error=1;
 	}
 }

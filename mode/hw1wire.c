@@ -107,7 +107,7 @@ void hw1wire_macro(uint32_t macro){
 	switch(macro){
 		case 0:		printf(" 0. Macro list\r\n");
 				break;
-		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+		default:	printf("%s\r\n", GET_T(T_MODE_ERROR_MACRO_NOT_DEFINED));
 				system_config.error=1;
 	}
 }

@@ -80,11 +80,11 @@ uint32_t hwhduart_setup(void){
 	};
 
 	if(storage_load_mode(config_file, config_t, count_of(config_t))){
-		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-		printf(" %s: %d %s\r\n", t[T_UART_SPEED_MENU], mode_config.baudrate, t[T_UART_BAUD]);			
-		printf(" %s: %d\r\n", t[T_UART_DATA_BITS_MENU], mode_config.data_bits);
-		printf(" %s: %s\r\n", t[T_UART_PARITY_MENU], t[uart_parity_menu[mode_config.parity].description]);
-		printf(" %s: %d\r\n", t[T_UART_STOP_BITS_MENU], mode_config.stop_bits);
+		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+		printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));			
+		printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
+		printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), t[uart_parity_menu[mode_config.parity].description]);
+		printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
 		bool user_value;
 		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
 		if(user_value) return 1; //user said yes, use the saved settings
@@ -197,7 +197,7 @@ void hwhduart_macro(uint32_t macro){
 		case 1:
             //uart_bridge_handler(&result);
 			break;
-		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+		default:	printf("%s\r\n", GET_T(T_MODE_ERROR_MACRO_NOT_DEFINED));
 				system_config.error=1;
 	}
 }

@@ -19,7 +19,7 @@
 void nand_spi_init(void)
 {
     uint64_t baudrate=spi_init(BP_SPI_PORT, 1000*1000*1);
-	//printf("\r\n%s%s:%s %uMHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(), baudrate/1000000);
+	//printf("\r\n%s%s:%s %uMHz",ui_term_color_notice(), GET_T(T_HWSPI_ACTUAL_SPEED_KHZ), ui_term_color_reset(), baudrate/1000000);
 	spi_set_format(BP_SPI_PORT,8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
 	
 	//set buffers to correct position

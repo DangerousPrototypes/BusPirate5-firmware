@@ -75,7 +75,7 @@ void ui_display_enable_args(struct command_result *res)
 		displays[system_config.display].display_setup();
 		displays[system_config.display].display_setup_exc();
         //(*response).error=true;
-		printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_DISPLAY], ui_term_color_reset(), displays[system_config.display].display_name);
+		printf("\r\n%s%s:%s %s", ui_term_color_info(), GET_T(T_MODE_DISPLAY), ui_term_color_reset(), displays[system_config.display].display_name);
         return;
     }
 
@@ -91,7 +91,7 @@ void ui_display_enable_args(struct command_result *res)
         //gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
     }
 
-	printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_DISPLAY], ui_term_color_reset(), displays[system_config.display].display_name);
+	printf("\r\n%s%s:%s %s", ui_term_color_info(), GET_T(T_MODE_DISPLAY), ui_term_color_reset(), displays[system_config.display].display_name);
 
 }
 
@@ -156,7 +156,7 @@ printf("result.error=%d result.no_value=%d result.exit=%d display=%d\n", result.
 	
 	system_config.display_format=(uint8_t)display;
 
-	printf("\r\n%s%s:%s %s", ui_term_color_info(), t[T_MODE_DISPLAY], ui_term_color_reset(), ui_const_display_formats[system_config.display_format]);
+	printf("\r\n%s%s:%s %s", ui_term_color_info(), GET_T(T_MODE_DISPLAY), ui_term_color_reset(), ui_const_display_formats[system_config.display_format]);
 }
 
 /* For Emacs:

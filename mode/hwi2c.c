@@ -55,9 +55,9 @@ uint32_t hwi2c_setup(void){
 	prompt_result result;
 
 	if(storage_load_mode(config_file, config_t, count_of(config_t))){
-		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-		printf(" %s: %dkHz\r\n", t[T_HWI2C_SPEED_MENU], mode_config.baudrate);			
-		//printf(" %s: %s\r\n", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[mode_config.data_bits].description]);
+		printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+		printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);			
+		//printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), t[i2c_data_bits_menu[mode_config.data_bits].description]);
 		
 		bool user_value;
 		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
@@ -153,7 +153,7 @@ void hwi2c_macro(uint32_t macro){
 	switch(macro){
 		case 0:		printf(" 0. Macro menu\r\n");
 				break;
-		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+		default:	printf("%s\r\n", GET_T(T_MODE_ERROR_MACRO_NOT_DEFINED));
 				system_config.error=1;
 	}
 }

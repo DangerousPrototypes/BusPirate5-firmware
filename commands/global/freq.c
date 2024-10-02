@@ -90,12 +90,12 @@ uint32_t freq_print(uint8_t pin, bool refresh)
     freq_display_ns(&freq_ns_value, &ns_friendly_value, &ns_friendly_units);
 
     printf("%s%s%s IO%s%d%s: %s%.2f%s%s %s%.2f%s%s (%s%.0f%sHz), %s%s:%s %s%.1f%s%%\r%s",
-        ui_term_color_info(), t[T_MODE_FREQ_FREQUENCY],  ui_term_color_reset(), 
+        ui_term_color_info(), GET_T(T_MODE_FREQ_FREQUENCY),  ui_term_color_reset(), 
         ui_term_color_num_float(), pin, ui_term_color_reset(),
         ui_term_color_num_float(),freq_friendly_value,ui_term_color_reset(), ui_const_freq_labels[freq_friendly_units],
         ui_term_color_num_float(),ns_friendly_value, ui_term_color_reset(), ui_const_freq_labels[ns_friendly_units],
         ui_term_color_num_float(),measured_period, ui_term_color_reset(), 
-        ui_term_color_info(), t[T_MODE_FREQ_DUTY_CYCLE], ui_term_color_reset(),
+        ui_term_color_info(), GET_T(T_MODE_FREQ_DUTY_CYCLE), ui_term_color_reset(),
         ui_term_color_num_float(), measured_duty_cycle * 100.f, ui_term_color_reset(), (refresh?"":"\n")
     ); 
 
@@ -109,7 +109,7 @@ uint32_t freq_configure_enable(void)
 {
     uint32_t pin;
 
-    printf("%s%s%s",ui_term_color_info(), t[T_MODE_FREQ_MEASURE_FREQUENCY], ui_term_color_reset());
+    printf("%s%s%s",ui_term_color_info(), GET_T(T_MODE_FREQ_MEASURE_FREQUENCY), ui_term_color_reset());
     
     static const struct ui_prompt_config freq_menu_enable_config={
         false,false,false,true,
@@ -147,8 +147,8 @@ uint32_t freq_configure_enable(void)
     system_set_active(true, (uint8_t)pin, &system_config.freq_active);
  
     printf("\r\n%s%s:%s %s on IO%s%d%s\r\n", 
-        ui_term_color_notice(),t[T_MODE_FREQ_MEASURE_FREQUENCY],ui_term_color_reset(),
-        t[T_MODE_ENABLED], ui_term_color_num_float(),(uint8_t)pin,ui_term_color_reset() 
+        ui_term_color_notice(),GET_T(T_MODE_FREQ_MEASURE_FREQUENCY),ui_term_color_reset(),
+        GET_T(T_MODE_ENABLED), ui_term_color_num_float(),(uint8_t)pin,ui_term_color_reset() 
     );
     
     //initial measurement
@@ -207,8 +207,8 @@ uint32_t freq_configure_disable(void)
     system_set_active(false, (uint8_t)pin, &system_config.freq_active);
 
     printf("\r\n%s%s:%s %s on IO%s%d%s", 
-        ui_term_color_notice(),t[T_MODE_FREQ_MEASURE_FREQUENCY],ui_term_color_reset(),
-        t[T_MODE_DISABLED], ui_term_color_num_float(),(uint8_t)pin,ui_term_color_reset() 
+        ui_term_color_notice(),GET_T(T_MODE_FREQ_MEASURE_FREQUENCY),ui_term_color_reset(),
+        GET_T(T_MODE_DISABLED), ui_term_color_num_float(),(uint8_t)pin,ui_term_color_reset() 
     );
         
     return 1;           

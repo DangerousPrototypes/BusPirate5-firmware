@@ -251,8 +251,10 @@ bool ui_config_menu(const struct ui_prompt * menu)
 {
     for (uint i = 0; i < count_of(sub_prompts); i++)
     {
-        printf(" %d. %s%s%s\r\n", i+1, ui_term_color_info(), t[sub_prompts[i].description], ui_term_color_reset()); 
-    }   
+        uint string_to_get = sub_prompts[i].description;
+        const char * string = GET_T(string_to_get);
+        printf(" %d. %s%s%s\r\n", i+1, ui_term_color_info(), string, ui_term_color_reset()); 
+    }
 }
 
 void ui_config_main_menu(struct command_result *res)

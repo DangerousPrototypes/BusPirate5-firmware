@@ -1,9 +1,5 @@
 #ifndef _TRANSLATION_BASE
 #define _TRANSLATION_BASE
-void translation_init(void);
-void translation_set(uint32_t language);
-
-extern char **t;
 
 enum T_translations{
     T_ON=0,
@@ -447,4 +443,22 @@ enum T_translations{
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };
+typedef enum _language_idx_t { // these are based on IETF codes for the translation
+    language_idx_en_us,
+    language_idx_pl_pl,
+    language_idx_bs_latn_ba,
+    language_idx_it_it,
+    // language_idx_zh_cmn_cn,
+
+    
+    COUNT_OF_LANGUAGE_IDX, // leave this as the final enum value
+} language_idx_t;
+
+extern char **t; // to be removed ... transitioning to accessor function GET_T()
+
+const char * GET_T(enum T_translations index);
+void translation_init(void);
+void translation_set(language_idx_t language);
+
+
 #endif

@@ -110,7 +110,7 @@ class DebugJsonConversion(Flag):
     DEFAULT = UNTRANSLATED | IDENTICAL
 
 
-def convert_remaining_translations_to_h_files(json_directory, header_directory, debug=DebugJsonConversion.ALL):
+def convert_remaining_translations_to_h_files(json_directory, header_directory, debug=DebugJsonConversion.NONE):
 
     # N.B. - Explicitly excludes en-us.json and en-us-POSIX.json
     for filename in os.listdir(json_directory):
@@ -210,7 +210,10 @@ def convert_remaining_translations_to_h_files(json_directory, header_directory, 
                         print(f"  These strings likely still require translation.  If intentionally not translating them,")
                         print(f"  add the key with the special json keyword `null`.")
                         for k in debug_untranslated:
-                            print(f"    [ {k:<32} ] = \"{base_translation[k]}\",")
+                            if re.match(C_NON_TRANSLATED_IDENTIFIERS, k):
+                                print(f"    [ {k:<32} ] = null,")
+                            else:
+                                print(f"    [ {k:<32} ] = \"{base_translation[k]}\",")
                         print("")
 
 # Get the file path from command line arguments

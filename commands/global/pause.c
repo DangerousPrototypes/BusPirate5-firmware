@@ -33,9 +33,9 @@ void pause_handler(struct command_result *res){
     bool exit_on_x=cmdln_args_find_flag('x'|0x20);
 
     //print option messages
-    if(pause_for_key) printf("%s\r\n", t[T_PRESS_ANY_KEY]);
-    if(pause_for_button) printf("%s\r\n", t[T_PRESS_BUTTON]);
-    if(exit_on_x) printf("%s\r\n", t[T_PRESS_X_TO_EXIT]);
+    if(pause_for_key) printf("%s\r\n", GET_T(T_PRESS_ANY_KEY));
+    if(pause_for_button) printf("%s\r\n", GET_T(T_PRESS_BUTTON));
+    if(exit_on_x) printf("%s\r\n", GET_T(T_PRESS_X_TO_EXIT));
     
     for(;;){
 
@@ -46,7 +46,7 @@ void pause_handler(struct command_result *res){
         if(rx_fifo_try_get(&c)){
             if(exit_on_x && ((c|0x20)=='x')) {
                 res->error=true;
-                printf("%s\r\n", t[T_EXIT]);
+                printf("%s\r\n", GET_T(T_EXIT));
                 return;
             }
             if(pause_for_key) return;

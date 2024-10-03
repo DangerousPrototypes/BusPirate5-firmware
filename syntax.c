@@ -270,7 +270,7 @@ bool syntax_run(void)
         {
             case SYN_WRITE:
                 if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH) {
-                    in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+                    in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
                     in[in_cnt].error=SRES_ERROR;
                     return false;
                 }                
@@ -284,7 +284,7 @@ bool syntax_run(void)
                 break;
             case SYN_READ:        
                 if(in_cnt+out[i].repeat >= SYN_MAX_LENGTH){
-                    in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+                    in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
                     in[in_cnt].error=SRES_ERROR;
                     return false;
                 }      
@@ -361,7 +361,7 @@ bool syntax_run(void)
                 
         if(in_cnt+1>=SYN_MAX_LENGTH)
         {
-            in[in_cnt].error_message=t[T_SYNTAX_EXCEEDS_MAX_SLOTS];
+            in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
             in[in_cnt].error=SRES_ERROR;
             return false;
         }    
@@ -400,9 +400,9 @@ bool syntax_post(void)
             case SYN_DELAY_US:
             case SYN_DELAY_MS:            
                 printf("\r\n%s%s:%s %s%d%s%s",
-                    ui_term_color_notice(),t[T_MODE_DELAY], ui_term_color_reset(),
+                    ui_term_color_notice(),GET_T(T_MODE_DELAY), ui_term_color_reset(),
                     ui_term_color_num_float(), in[i].repeat, ui_term_color_reset(),
-                    (in[i].command==SYN_DELAY_US? t[T_MODE_US] : t[T_MODE_MS])
+                    (in[i].command==SYN_DELAY_US? GET_T(T_MODE_US) : GET_T(T_MODE_MS))
                 );
                 break;    
             case SYN_READ:  
@@ -427,7 +427,7 @@ bool syntax_post(void)
             case SYN_ADC:      
                 received = (6600*in[i].in_data) / 4096;           
                 printf("\r\n%s%s IO%d:%s %s%d.%d%sV",
-                    ui_term_color_info(), t[T_MODE_ADC_VOLTAGE], in[i].bits, ui_term_color_reset(), ui_term_color_num_float(),
+                    ui_term_color_info(), GET_T(T_MODE_ADC_VOLTAGE), in[i].bits, ui_term_color_reset(), ui_term_color_num_float(),
                     ((received)/1000), (((received)%1000)/100),
                     ui_term_color_reset()); 
                 break;
@@ -436,32 +436,32 @@ bool syntax_post(void)
                 //break;
             case SYN_TICK_CLOCK:
                 printf("\r\n%s%s:%s %s%d%s", 
-                    ui_term_color_notice(), t[T_MODE_TICK_CLOCK], ui_term_color_reset(),
+                    ui_term_color_notice(), GET_T(T_MODE_TICK_CLOCK), ui_term_color_reset(),
                     ui_term_color_num_float(), in[i].repeat, ui_term_color_reset());
                 break;
             case SYN_SET_CLK_HIGH:
                 printf("\r\n%s%s:%s %s1%s", 
-                    ui_term_color_notice(), t[T_MODE_SET_CLK], ui_term_color_reset(),
+                    ui_term_color_notice(), GET_T(T_MODE_SET_CLK), ui_term_color_reset(),
                     ui_term_color_num_float(), ui_term_color_reset());
                 break;
             case SYN_SET_CLK_LOW:
                 printf("\r\n%s%s:%s %s0%s", 
-                    ui_term_color_notice(), t[T_MODE_SET_CLK], ui_term_color_reset(),
+                    ui_term_color_notice(), GET_T(T_MODE_SET_CLK), ui_term_color_reset(),
                     ui_term_color_num_float(), ui_term_color_reset());
                 break;
             case SYN_SET_DAT_HIGH:
                 printf("\r\n%s%s:%s %s1%s", 
-                    ui_term_color_notice(), t[T_MODE_SET_DAT], ui_term_color_reset(),
+                    ui_term_color_notice(), GET_T(T_MODE_SET_DAT), ui_term_color_reset(),
                     ui_term_color_num_float(), ui_term_color_reset());
                 break;  
             case SYN_SET_DAT_LOW:   
                 printf("\r\n%s%s:%s %s0%s", 
-                    ui_term_color_notice(), t[T_MODE_SET_DAT], ui_term_color_reset(),
+                    ui_term_color_notice(), GET_T(T_MODE_SET_DAT), ui_term_color_reset(),
                     ui_term_color_num_float(), ui_term_color_reset());
                 break;  
             case SYN_READ_DAT:
                 printf("\r\n%s%s:%s %s%d%s", 
-                    ui_term_color_notice(), t[T_MODE_READ_DAT], ui_term_color_reset(),
+                    ui_term_color_notice(), GET_T(T_MODE_READ_DAT), ui_term_color_reset(),
                     ui_term_color_num_float(), in[i].in_data, ui_term_color_reset());
                 break;                              
             default:

@@ -54,10 +54,10 @@ uint32_t hw1wire_setup_exc(void){
 }
 
 void hw1wire_start(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HW1WIRE_RESET];
+	result->data_message = GET_T(T_HW1WIRE_RESET);
 
 	if(bio_get(M_OW_OWD)==0){
-		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
+		result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
 		result->error=SRES_WARN; 
 	}
 #ifdef BP_OLD_HW1WIRE
@@ -67,9 +67,9 @@ void hw1wire_start(struct _bytecode *result, struct _bytecode *next){
 #endif
 
 	if(device_detect){
-        //result->error_message=t[T_HW1WIRE_PRESENCE_DETECT];
+        //result->error_message = GET_T(T_HW1WIRE_PRESENCE_DETECT);
     }else{
-        result->error_message=t[T_HW1WIRE_NO_DEVICE];
+        result->error_message = GET_T(T_HW1WIRE_NO_DEVICE);
 		result->error=SRES_ERROR;
 	}
         
@@ -107,7 +107,7 @@ void hw1wire_macro(uint32_t macro){
 	switch(macro){
 		case 0:		printf(" 0. Macro list\r\n");
 				break;
-		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+		default:	printf("%s\r\n", GET_T(T_MODE_ERROR_MACRO_NOT_DEFINED));
 				system_config.error=1;
 	}
 }

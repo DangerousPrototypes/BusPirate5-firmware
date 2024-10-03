@@ -160,7 +160,7 @@ bool value_ground(uint32_t *len, char *buf, uint32_t i)
         return false;
     }
 
-	*len+=sprintf(&buf[*len], "%s",t[T_GND]);
+	*len+=sprintf(&buf[*len], "%s",GET_T(T_GND));
     return true; 
 }
 struct _iopins 

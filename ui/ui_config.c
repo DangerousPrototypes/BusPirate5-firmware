@@ -251,8 +251,10 @@ bool ui_config_menu(const struct ui_prompt * menu)
 {
     for (uint i = 0; i < count_of(sub_prompts); i++)
     {
-        printf(" %d. %s%s%s\r\n", i+1, ui_term_color_info(), t[sub_prompts[i].description], ui_term_color_reset()); 
-    }   
+        uint string_to_get = sub_prompts[i].description;
+        const char * string = GET_T(string_to_get);
+        printf(" %d. %s%s%s\r\n", i+1, ui_term_color_info(), string, ui_term_color_reset()); 
+    }
 }
 
 void ui_config_main_menu(struct command_result *res)
@@ -278,14 +280,14 @@ void ui_config_main_menu(struct command_result *res)
         }
         temp2--;
         sub_prompts[temp].menu_action(temp, temp2);
-        printf("\r\n%s %sset to%s %s\r\n", t[sub_prompts[temp].description], ui_term_color_info(), ui_term_color_reset(), t[sub_prompts[temp].menu_items[temp2].description]);
+        printf("\r\n%s %sset to%s %s\r\n", GET_T(sub_prompts[temp].description), ui_term_color_info(), ui_term_color_reset(), GET_T(sub_prompts[temp].menu_items[temp2].description));
     }
 
     //if TF flash card is present, saves configuration settings
     //TODO: present as an option to save or not
     if(storage_save_config())
     {
-        printf("\r\n\r\n%s%s:%s %s\r\n", ui_term_color_info(), t[T_CONFIG_FILE], ui_term_color_reset(), t[T_SAVED] );
+        printf("\r\n\r\n%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_CONFIG_FILE), ui_term_color_reset(), GET_T(T_SAVED) );
     }
 
 }

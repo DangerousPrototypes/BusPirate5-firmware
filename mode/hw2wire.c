@@ -58,9 +58,9 @@ uint32_t hw2wire_setup(void){
 
 	if(storage_load_mode(config_file, config_t, count_of(config_t)))
 	{
-		printf("\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-		printf(" %s: %dkHz\r\n", t[T_HW2WIRE_SPEED_MENU], hw2wire_mode_config.baudrate);			
-		//printf(" %s: %s\r\n", t[T_HWI2C_DATA_BITS_MENU], t[i2c_data_bits_menu[hw2wire_mode_config.data_bits].description]);
+		printf("\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+		printf(" %s: %dkHz\r\n", GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate);			
+		//printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[hw2wire_mode_config.data_bits].description));
 		
 		bool user_value;
 		if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
@@ -88,26 +88,26 @@ uint32_t hw2wire_setup_exc(void){
 }
 
 void hw2wire_start(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HWI2C_START];
+	result->data_message = GET_T(T_HWI2C_START);
 	if(checkshort()){
-		result->error_message=t[T_HWI2C_NO_PULLUP_DETECTED];
+		result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
 		result->error=SRES_WARN; 
 	}
 	pio_hw2wire_start();
 }
 
 void hw2wire_start_alt(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HW2WIRE_RST_HIGH];
+	result->data_message = GET_T(T_HW2WIRE_RST_HIGH);
 	bio_input(M_2WIRE_RST);
 }
 
 void hw2wire_stop(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HWI2C_STOP];
+	result->data_message = GET_T(T_HWI2C_STOP);
 	pio_hw2wire_stop();
 }
 
 void hw2wire_stop_alt(struct _bytecode *result, struct _bytecode *next){
-	result->data_message=t[T_HW2WIRE_RST_LOW];
+	result->data_message = GET_T(T_HW2WIRE_RST_LOW);
 	bio_output(M_2WIRE_RST);
 }
 
@@ -156,7 +156,7 @@ void hw2wire_macro(uint32_t macro){
 	{
 		case 0:		printf(" 0. Macro menu\r\n");
 				break;
-		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+		default:	printf("%s\r\n", GET_T(T_MODE_ERROR_MACRO_NOT_DEFINED));
 				system_config.error=1;
 	}
 

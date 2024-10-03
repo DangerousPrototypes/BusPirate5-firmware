@@ -50,7 +50,7 @@ void hduart_bridge_handler(struct command_result *res){
     bio_output(BIO2);
     bio_put(BIO2, system_config.rts); 
     
-    printf("%s%s%s\r\n", ui_term_color_notice(),t[T_HELP_UART_BRIDGE_EXIT], ui_term_color_reset());
+    printf("%s%s%s\r\n", ui_term_color_notice(),GET_T(T_HELP_UART_BRIDGE_EXIT), ui_term_color_reset());
     while(true){
         char c;
         bio_put(BIO2, !system_config.rts); 

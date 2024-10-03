@@ -67,9 +67,9 @@ void uart_monitor_handler(struct command_result *res){
 	uart_init(uart1, speed);
 	printf("\r\n%s%s: %u %s%s", 
 		ui_term_color_notice(),
-		t[T_UART_ACTUAL_SPEED_BAUD],
+		GET_T(T_UART_ACTUAL_SPEED_BAUD),
 		speed,
-		t[T_UART_BAUD],
+		GET_T(T_UART_BAUD),
 		ui_term_color_reset()
 	);
 	uart_set_format(uart1,data_bits, stop_bits, parity);
@@ -98,7 +98,7 @@ void uart_monitor_handler(struct command_result *res){
 	system_bio_claim(true, BIO7, BP_PIN_MODE, pin_labels[3]);        
     
 
-    printf("%s%s%s\r\n", ui_term_color_notice(), t[T_HELP_UART_BRIDGE_EXIT], ui_term_color_reset());
+    printf("%s%s%s\r\n", ui_term_color_notice(), GET_T(T_HELP_UART_BRIDGE_EXIT), ui_term_color_reset());
     
     //add_repeating_timer_ms(-5000, uart_timer_callback, NULL, &uart_timer);
     busy_wait_ms(10);

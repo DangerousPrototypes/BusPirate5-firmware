@@ -25,7 +25,7 @@ bool ui_prompt_menu_int(const struct ui_prompt * menu)
 	for(uint i=0; i<(*menu).menu_items_count; i++)
 	{
 		printf(" %s\r\n", 
-				t[(*menu).menu_items[i].description]
+				GET_T((*menu).menu_items[i].description)
 			);
 	}
 	return true;	
@@ -35,7 +35,7 @@ bool ui_prompt_prompt_int(const struct ui_prompt * menu)
 {	
 	//prompt
 	printf(ui_term_color_prompt());
-	printf(t[(*menu).prompt_text], ui_term_color_reset(), (*menu).defval, ui_term_color_prompt());	
+	printf(GET_T((*menu).prompt_text), ui_term_color_reset(), (*menu).defval, ui_term_color_prompt());	
 	printf(" >%s ", ui_term_color_reset());
 
 	return true;
@@ -52,7 +52,7 @@ bool ui_prompt_menu_ordered_list(const struct ui_prompt* menu)
 	for(uint i=0; i<(*menu).menu_items_count; i++)
 	{
 		printf(" %d. %s%s%s%s\r\n", 
-				i+1, ui_term_color_info(), t[(*menu).menu_items[i].description], 
+				i+1, ui_term_color_info(), GET_T((*menu).menu_items[i].description), 
 				(*menu).defval==i+1?"*":"", ui_term_color_reset()
 			);
 	}
@@ -65,7 +65,7 @@ bool ui_prompt_prompt_ordered_list(const struct ui_prompt* menu)
 	printf("%s", ui_term_color_prompt());	
 	if((*menu).config->allow_prompt_text)
 	{
-		printf(t[(*menu).prompt_text]);
+		printf("%s", GET_T((*menu).prompt_text));
 	}
 	if( (*menu).config->allow_defval && (*menu).config->allow_prompt_defval )
 	{
@@ -101,7 +101,7 @@ bool ui_prompt_menu_bio_pin(const struct ui_prompt* menu)
 
 	if(defval<0) //we have at least one pin
 	{
-		printf("\x07%sError:%s%s\r\n",ui_term_color_error(), ui_term_color_reset(), t[T_MODE_ALL_PINS_IN_USE]);
+		printf("\x07%sError:%s%s\r\n",ui_term_color_error(), ui_term_color_reset(), GET_T(T_MODE_ALL_PINS_IN_USE));
 		return false;
 	}
 
@@ -183,7 +183,7 @@ bool ui_prompt_uint32(prompt_result *result, const struct ui_prompt* menu, uint3
 		*result=empty_result;
 
 		// description
-		printf("%s%s%s\r\n", ui_term_color_info(), t[(*menu).description], ui_term_color_reset()); 
+		printf("%s%s%s\r\n", ui_term_color_info(), GET_T((*menu).description), ui_term_color_reset()); 
 		// options
 		if(!(*menu).config->menu_print(menu))
 		{
@@ -194,7 +194,7 @@ bool ui_prompt_uint32(prompt_result *result, const struct ui_prompt* menu, uint3
 		// exit
 		if((*menu).config->allow_exit)
 		{
-			printf(" x. %s%s%s\r\n", ui_term_color_info() ,t[T_EXIT], ui_term_color_reset() ); 	
+			printf(" x. %s%s%s\r\n", ui_term_color_info() ,GET_T(T_EXIT), ui_term_color_reset() ); 	
 		}		
 		(*menu).config->menu_prompt(menu);
 
@@ -312,7 +312,7 @@ bool ui_prompt_any_key_continue(prompt_result *result, uint32_t delay, uint32_t 
 {
     *result=empty_result;
 	// press any key to continue
-	printf("%s%s%s\r\n%s", ui_term_color_notice(), t[T_PRESS_ANY_KEY_TO_EXIT], ui_term_color_reset(), ui_term_cursor_hide());
+	printf("%s%s%s\r\n%s", ui_term_color_notice(), GET_T(T_PRESS_ANY_KEY_TO_EXIT), ui_term_color_reset(), ui_term_cursor_hide());
 	char c;
     
 	do

@@ -65,12 +65,12 @@ uint32_t spi_setup(void){
 		};
 
 		if(storage_load_mode(config_file, config_t, count_of(config_t))){
-			printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), t[T_USE_PREVIOUS_SETTINGS], ui_term_color_reset());
-			printf(" %s%s:%s %d kHz\r\n",ui_term_color_info(), t[T_HWSPI_SPEED_MENU], ui_term_color_reset(),mode_config.baudrate/1000);			
-			printf(" %s%s:%s %d\r\n", ui_term_color_info(), t[T_HWSPI_BITS_MENU], ui_term_color_reset(), mode_config.data_bits);
-			printf(" %s%s:%s %s\r\n", ui_term_color_info(), t[T_HWSPI_CLOCK_POLARITY_MENU], ui_term_color_reset(), t[spi_polarity_menu[mode_config.clock_polarity].description]);
-			printf(" %s%s:%s %s\r\n", ui_term_color_info(), t[T_HWSPI_CLOCK_PHASE_MENU], ui_term_color_reset(), t[spi_phase_menu[mode_config.clock_phase].description]);
-			printf(" %s%s:%s %s\r\n", ui_term_color_info(), t[T_HWSPI_CS_IDLE_MENU], ui_term_color_reset(), t[spi_idle_menu[mode_config.cs_idle].description]);
+			printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+			printf(" %s%s:%s %d kHz\r\n",ui_term_color_info(), GET_T(T_HWSPI_SPEED_MENU), ui_term_color_reset(),mode_config.baudrate/1000);			
+			printf(" %s%s:%s %d\r\n", ui_term_color_info(), GET_T(T_HWSPI_BITS_MENU), ui_term_color_reset(), mode_config.data_bits);
+			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CLOCK_POLARITY_MENU), ui_term_color_reset(), GET_T(spi_polarity_menu[mode_config.clock_polarity].description));
+			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CLOCK_PHASE_MENU), ui_term_color_reset(), GET_T(spi_phase_menu[mode_config.clock_phase].description));
+			printf(" %s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_HWSPI_CS_IDLE_MENU), ui_term_color_reset(), GET_T(spi_idle_menu[mode_config.cs_idle].description));
 
 			bool user_value;
 			if(!ui_prompt_bool(&result, true, true, true, &user_value)) return 0;		
@@ -149,7 +149,7 @@ uint32_t spi_setup_exc(void){
 	//setup spi
 	mode_config.read_with_write=false;
 	mode_config.baudrate_actual=spi_init(M_SPI_PORT, mode_config.baudrate);
-	if(!mode_config.binmode) printf("\r\n%s%s:%s %ukHz",ui_term_color_notice(), t[T_HWSPI_ACTUAL_SPEED_KHZ], ui_term_color_reset(),mode_config.baudrate_actual/1000);
+	if(!mode_config.binmode) printf("\r\n%s%s:%s %ukHz",ui_term_color_notice(), GET_T(T_HWSPI_ACTUAL_SPEED_KHZ), ui_term_color_reset(),mode_config.baudrate_actual/1000);
 	hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
 	system_bio_claim(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
 	system_bio_claim(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
@@ -189,25 +189,25 @@ void spi_set_cs(uint8_t cs){
 
 void spi_start(struct _bytecode *result, struct _bytecode *next){
 	mode_config.read_with_write=false;
-	result->data_message=t[T_HWSPI_CS_SELECT];
+	result->data_message = GET_T(T_HWSPI_CS_SELECT);
 	spi_set_cs(M_SPI_SELECT);
 }
 
 void spi_startr(struct _bytecode *result, struct _bytecode *next){
 	mode_config.read_with_write=true;
-	result->data_message=t[T_HWSPI_CS_SELECT];
+	result->data_message = GET_T(T_HWSPI_CS_SELECT);
 	spi_set_cs(M_SPI_SELECT);
 }
 
 void spi_stop(struct _bytecode *result, struct _bytecode *next){
 	mode_config.read_with_write=false;
-	result->data_message=t[T_HWSPI_CS_DESELECT];
+	result->data_message = GET_T(T_HWSPI_CS_DESELECT);
 	spi_set_cs(M_SPI_DESELECT);
 }
 
 void spi_stopr(struct _bytecode *result, struct _bytecode *next){
 	mode_config.read_with_write=false;
-	result->data_message=t[T_HWSPI_CS_DESELECT];
+	result->data_message = GET_T(T_HWSPI_CS_DESELECT);
 	spi_set_cs(M_SPI_DESELECT);
 }
 
@@ -227,7 +227,7 @@ void spi_macro(uint32_t macro){
 				break;
 		case 1:	break;
 		case 3: ui_term_detect(); break;
-		default:	printf("%s\r\n", t[T_MODE_ERROR_MACRO_NOT_DEFINED]);
+		default:	printf("%s\r\n", GET_T(T_MODE_ERROR_MACRO_NOT_DEFINED));
 				system_config.error=1;
 	}
 }

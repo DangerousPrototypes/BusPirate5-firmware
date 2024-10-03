@@ -45,7 +45,7 @@ void i_info_handler(struct command_result *res){
 	
 	printf("\r\n%s\r\n", BP_HARDWARE_VERSION);
 	printf("%s %s%s%s @ %s (%s%s%s)\r\n", 
-		t[T_INFO_FIRMWARE], 
+		GET_T(T_INFO_FIRMWARE), 
 		ui_term_color_num_float(),
 		BP_FIRMWARE_VERSION, 
 		ui_term_color_reset(),
@@ -57,39 +57,42 @@ void i_info_handler(struct command_result *res){
 		ui_term_color_num_float(),
 		BP_HARDWARE_MCU, 
 		ui_term_color_reset(),
-		t[T_INFO_WITH], 
+		GET_T(T_INFO_WITH), 
 		ui_term_color_num_float(),
 		BP_HARDWARE_RAM, 
 		ui_term_color_reset(),
-		t[T_INFO_RAM], 
+		GET_T(T_INFO_RAM), 
 		ui_term_color_num_float(),
 		BP_HARDWARE_FLASH, 
 		ui_term_color_reset(),
-		t[T_INFO_FLASH]);
+		GET_T(T_INFO_FLASH));
 	printf("%s: %s%016llX%s\r\n", 
-		t[T_INFO_SN], 
+		GET_T(T_INFO_SN), 
 		ui_term_color_num_float(),
 		mcu_get_unique_id(),
 		ui_term_color_reset());
-	printf("%s\r\n", t[T_INFO_WEBSITE]);
+	printf("%s\r\n", GET_T(T_INFO_WEBSITE));
 
 	// TF flash card information
 	if(system_config.storage_available){
 		printf("%s: %s%6.2fGB%s (%s %s)\r\n", 
-			t[T_INFO_TF_CARD],
+			GET_T(T_INFO_TF_CARD),
 			ui_term_color_num_float(),
 			system_config.storage_size, 
 			ui_term_color_reset(),
 			storage_fat_type_labels[system_config.storage_fat_type-1],
-			t[T_INFO_FILE_SYSTEM]
+			GET_T(T_INFO_FILE_SYSTEM)
 		);
 
 	}else{
-		printf("%s: %s\r\n", t[T_INFO_TF_CARD], t[T_NOT_DETECTED]);
+		printf("%s: %s\r\n", GET_T(T_INFO_TF_CARD), GET_T(T_NOT_DETECTED));
 	}
 
 	//config file loaded
-	printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), t[T_CONFIG_FILE], ui_term_color_reset(), system_config.config_loaded_from_file?t[T_LOADED]:t[T_NOT_DETECTED]);
+	do {
+		const char * string = system_config.config_loaded_from_file ? GET_T(T_LOADED) : GET_T(T_NOT_DETECTED);
+		printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_CONFIG_FILE), ui_term_color_reset(), string);
+	} while (0);
 
 	if(system_config.big_buffer_owner!=BP_BIG_BUFFER_NONE){
 		printf("%sBig buffer allocated to:%s #%d\r\n", ui_term_color_info(), ui_term_color_reset(), system_config.big_buffer_owner);
@@ -97,21 +100,21 @@ void i_info_handler(struct command_result *res){
 
 
 	// Installed modes
-	printf("%s%s:%s", ui_term_color_info(), t[T_INFO_AVAILABLE_MODES], ui_term_color_reset());
+	printf("%s%s:%s", ui_term_color_info(), GET_T(T_INFO_AVAILABLE_MODES), ui_term_color_reset());
 	for(i=0; i<count_of(modes); i++){
 		printf(" %s", modes[i].protocol_name);
 	}
 	printf("\r\n");
 
 	// Current mode configuration
-	printf("%s%s:%s ", ui_term_color_info(), t[T_INFO_CURRENT_MODE], ui_term_color_reset());
+	printf("%s%s:%s ", ui_term_color_info(), GET_T(T_INFO_CURRENT_MODE), ui_term_color_reset());
 	//TODO: change to a return type and stick this in the fprint
 	modes[system_config.mode].protocol_settings();
 	printf("\r\n");
 
     printf("%s%s:%s %s\r\n", 
         ui_term_color_info(), 
-        t[T_INFO_DISPLAY_FORMAT], 
+        GET_T(T_INFO_DISPLAY_FORMAT), 
         ui_term_color_reset(), 
         ui_const_display_formats[system_config.display_format]);
 	
@@ -120,32 +123,32 @@ void i_info_handler(struct command_result *res){
         // Data settings and configuration
 		printf("%s%s:%s %d %s, %s %s\r\n",
 			ui_term_color_info(),
-			t[T_INFO_DATA_FORMAT], 
+			GET_T(T_INFO_DATA_FORMAT), 
 			ui_term_color_reset(),
 			system_config.num_bits, 
-			t[T_INFO_BITS], 
+			GET_T(T_INFO_BITS), 
 			ui_const_bit_orders[system_config.bit_order], 
-			t[T_INFO_BITORDER]);
+			GET_T(T_INFO_BITORDER));
 
-		printf("%s%s:%s %s\r\n", ui_term_color_info(), t[T_INFO_PULLUP_RESISTORS], ui_term_color_reset(), ui_const_pin_states[system_config.pullup_enabled]);
+		printf("%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_INFO_PULLUP_RESISTORS), ui_term_color_reset(), ui_const_pin_states[system_config.pullup_enabled]);
 
         if(system_config.psu && !system_config.psu_error){
             printf("%s%s:%s %s (%u.%uV/%u.%uV)\r\n", 
-                ui_term_color_info(), t[T_INFO_POWER_SUPPLY], ui_term_color_reset(), t[T_ON],
+                ui_term_color_info(), GET_T(T_INFO_POWER_SUPPLY), ui_term_color_reset(), GET_T(T_ON),
                 (*hw_pin_voltage_ordered[0])/1000, ((*hw_pin_voltage_ordered[0])%1000)/100, 
                 (system_config.psu_voltage)/10000, ((system_config.psu_voltage)%10000)/100);
 
             uint32_t isense=((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000)/4095)); //TODO: move this to a PSU function for all calls
             printf("%s%s:%s OK (%u.%umA/%u.%umA)\r\n", 
-                ui_term_color_info(), t[T_INFO_CURRENT_LIMIT], ui_term_color_reset(), 
+                ui_term_color_info(), GET_T(T_INFO_CURRENT_LIMIT), ui_term_color_reset(), 
                 (isense/1000), ((isense%1000)/100), 
                 (system_config.psu_current_limit)/10000, ((system_config.psu_current_limit)%10000)/100 );
         }else{
-            printf("%s%s:%s %s\r\n", ui_term_color_info(), t[T_INFO_POWER_SUPPLY], ui_term_color_reset(), t[T_OFF]);
+            printf("%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_INFO_POWER_SUPPLY), ui_term_color_reset(), GET_T(T_OFF));
 
             if(system_config.psu_error){
                 printf("%s%s:%s %s (exceeded %u.%umA)\r\n", 
-                    ui_term_color_info(), t[T_INFO_CURRENT_LIMIT], ui_term_color_reset(), 
+                    ui_term_color_info(), GET_T(T_INFO_CURRENT_LIMIT), ui_term_color_reset(), 
                     ui_const_pin_states[5],
                     (system_config.psu_current_limit)/10000, ((system_config.psu_current_limit)%10000)/100 );               
             }
@@ -153,7 +156,7 @@ void i_info_handler(struct command_result *res){
 
         }
 
-		printf("%s%s:%s %s\r\n", ui_term_color_info(), t[T_INFO_FREQUENCY_GENERATORS], ui_term_color_reset(), !system_config.pwm_active?t[T_OFF]:" ");
+		printf("%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_INFO_FREQUENCY_GENERATORS), ui_term_color_reset(), !system_config.pwm_active ? GET_T(T_OFF) : " ");
 		
         // PWMs
         if(system_config.pwm_active){

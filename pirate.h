@@ -88,11 +88,11 @@ void spi_busy_wait(bool enable);
 #define PIO_RGB_LED_SM 0
 #else
 #define PIO_RGB_LED_PIO pio0
-#define PIO_RGB_LED_SM 0
+#define PIO_RGB_LED_SM 1
 #endif
 
 #define PIO_LOGIC_ANALYZER_PIO pio0
-#define PIO_LOGIC_ANALYZER_SM 1
+#define PIO_LOGIC_ANALYZER_SM 0
 
 #define PIO_MODE_PIO pio1
 // all SM reserved for mode

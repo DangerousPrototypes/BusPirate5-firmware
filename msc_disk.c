@@ -412,11 +412,17 @@ bool insert_or_eject_usbmsdrive(bool insert)
 void eject_usbmsdrive(void)
 {
     no_more_host_lock = true;
-    while (host_lock) {
+    //use a loop count for timeout
+    uint32_t loop_count = 0; 
+    while (host_lock && (loop_count < 1000)) {
         sleep_ms(1);
+        loop_count++;
     }
     insert_or_eject_usbmsdrive(false);
     no_more_host_lock = false;
+    if (loop_count >= 1000) {
+        host_lock = false;
+    }
 }
 void insert_usbmsdrive(void)
 {

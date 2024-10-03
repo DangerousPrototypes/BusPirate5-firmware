@@ -28,14 +28,14 @@ void ui_help_options(const struct ui_help_options (*help), uint32_t count) {
             case 1: //heading
                 printf("\r\n%s%s%s\r\n",
                     ui_term_color_info(),
-                    t[help[i].description],
+                    GET_T(help[i].description),
                     ui_term_color_reset()
                 );
                 break;
             case 0: //help item
                 printf("%s%s%s\t%s%s%s\r\n",
                     ui_term_color_prompt(), help[i].command, ui_term_color_reset(),
-                    ui_term_color_info(), t[help[i].description], ui_term_color_reset()
+                    ui_term_color_info(), GET_T(help[i].description), ui_term_color_reset()
                 );
                 break;
             case '\n':
@@ -75,7 +75,7 @@ void ui_help_mode_commands_exec(const struct _command_struct *commands, uint32_t
             ui_term_color_prompt(),
             commands[i].command,
             ui_term_color_info(),
-            commands[i].help_text?t[commands[i].help_text]:"Description not set. Try -h for command help",
+            commands[i].help_text ? GET_T(commands[i].help_text) : "Description not set. Try -h for command help",
             ui_term_color_reset()
         );
     }
@@ -93,7 +93,7 @@ bool ui_help_check_vout_vref(void){
     amux_sweep();
     if(hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]<790) { //0.8V minimum output allowed to set on internal PSU when reading i could be 0.79
         ui_help_error(T_MODE_NO_VOUT_VREF_ERROR);
-        printf("%s%s%s\r\n", ui_term_color_info(), t[T_MODE_NO_VOUT_VREF_HINT], ui_term_color_reset());
+        printf("%s%s%s\r\n", ui_term_color_info(), GET_T(T_MODE_NO_VOUT_VREF_HINT), ui_term_color_reset());
         return false;
     }
     return true;
@@ -101,5 +101,5 @@ bool ui_help_check_vout_vref(void){
 
 //move to help?
 void ui_help_error(uint32_t error){
-    printf("\x07\r\n%sError:%s %s\r\n",ui_term_color_error(), ui_term_color_reset(), t[error]);
+    printf("\x07\r\n%sError:%s %s\r\n",ui_term_color_error(), ui_term_color_reset(), GET_T(error));
 }

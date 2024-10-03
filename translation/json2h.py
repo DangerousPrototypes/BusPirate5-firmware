@@ -2,6 +2,7 @@ import json
 import sys
 import re
 import os
+from enum import Enum, Flag, auto
 
 # The enumeration values that should not be translated, as they are used
 # to select the UI language (and thus should be shown in the language they represent).
@@ -25,6 +26,7 @@ C_IDENTIFIER_REGEX = r'[a-zA-Z_][a-zA-Z0-9_]{0,31}'
 if sys.version_info[0] < 3 or sys.version_info[0] == 3 and sys.version_info[1] < 7:
     print("This script requires Python 3.7 or later.")
     sys.exit(1)
+
 
 def get_dictionary_of_key_value_pairs_from_header(file_path):
     # Finds strings from the .h file to turn back into JSON:
@@ -99,7 +101,17 @@ def write_keys_into_enum_header_template(template_path, header_path, translation
         # Write the text to the file
         file.write(content_with_replacement)
 
-def convert_remaining_translations_to_h_files(json_directory, header_directory):
+class DebugJsonConversion(Flag):
+    NONE = 0
+    UNTRANSLATED = auto()
+    IDENTICAL = auto()
+    NULL_ENTRY = auto()
+    ALL = UNTRANSLATED | IDENTICAL | NULL_ENTRY
+    DEFAULT = UNTRANSLATED | IDENTICAL
+
+
+def convert_remaining_translations_to_h_files(json_directory, header_directory, debug=DebugJsonConversion.NONE):
+
     # N.B. - Explicitly excludes en-us.json and en-us-POSIX.json
     for filename in os.listdir(json_directory):
         if filename.endswith('.json') and filename != 'en-us.json':
@@ -109,6 +121,9 @@ def convert_remaining_translations_to_h_files(json_directory, header_directory):
 
                 target_translation = json.load(json_file)
                 output_translation={}
+                debug_untranslated = []
+                debug_identical = []
+                debug_null = []
 
                 file_name_without_extension = os.path.splitext(filename)[0]
                 variable_name = file_name_without_extension.replace("-", "_")
@@ -122,10 +137,16 @@ def convert_remaining_translations_to_h_files(json_directory, header_directory):
                     if key not in base_translation:
                         print(f"  {file_name_without_extension}: Key `{key}` exists only in the translation.")
 
-                # Generate a new dictionary with same insertion order as base_translation
+                # Loop through the base translations's keys
                 for key in base_translation:
                     if not key in target_translation:
-                        # print(f"  {file_name_without_extension}: Key `{key}` has no translation.")
+                        debug_untranslated.append(key)
+                        # BUGBUG -- store NULL to reduce duplicate strings
+                        output_translation[key] = base_translation[key]
+                    elif target_translation[key] is None:
+                        # null in the json means the string was previously reviewed for
+                        # translation, but an intentional choice was made to NOT translate it.
+                        debug_null.append(key)
                         # BUGBUG -- store NULL to reduce duplicate strings
                         output_translation[key] = base_translation[key]
                     elif base_translation[key] == target_translation[key]:
@@ -134,8 +155,7 @@ def convert_remaining_translations_to_h_files(json_directory, header_directory):
                         # the translation .json might be missed in the update.
                         # Therefore, it is likely better to remove the key from the .json file, unless wanting to explicitly "lock in"
                         # a translation, even if the en-us string changes.
-                        # Uncomment the below line to print a warning for such keys, if wanting to identify them (e.g., for removal)
-                        # print(f"  {file_name_without_extension}: Key `{key}` identical to base (OK, but if not wanting to diverge from en-us, removal from .json is preferable")
+                        debug_identical.append(key)
                         # BUGBUG -- store NULL to reduce duplicate strings
                         output_translation[key] = base_translation[key]
                     elif re.match(C_NON_TRANSLATED_IDENTIFIERS, key):
@@ -166,8 +186,35 @@ def convert_remaining_translations_to_h_files(json_directory, header_directory):
                     # Write the text to the file
                     output_file.write(content_with_replacement)
 
+                # Print additional debug information if requested
+                if debug:
+                    if len(debug_null) and DebugJsonConversion.NULL_ENTRY in debug:
+                        print("\n=============================================================================")
+                        print(f"  {file_name_without_extension}: {len(debug_null)} strings are explicitly not translated:")
+                        for k in debug_null:
+                            print(f"    [ {k:<32} ] = \"{base_translation[k]}\",")
+                        print("")
 
+                    if len(debug_identical) and DebugJsonConversion.IDENTICAL in debug:
+                        print("\n=============================================================================")
+                        print(f"  {file_name_without_extension}: {len(debug_identical)} strings are identical to the en-us string.")
+                        print(f"  Recommend to either: (a) replace with null in .json to indicate choice to not translate it, or")
+                        print(f"  (b) remove the entry entirely to indicate the string has not been translated (yet).")
+                        for k in debug_identical:
+                            print(f"    [ {k:<32} ] = \"{base_translation[k]}\",")
+                        print("")
 
+                    if len(debug_untranslated) and DebugJsonConversion.UNTRANSLATED in debug:
+                        print("\n=============================================================================")
+                        print(f"  {file_name_without_extension}: {len(debug_untranslated)} strings have no entry in the json.")
+                        print(f"  These strings likely still require translation.  If intentionally not translating them,")
+                        print(f"  add the key with the special json keyword `null`.")
+                        for k in debug_untranslated:
+                            if re.match(C_NON_TRANSLATED_IDENTIFIERS, k):
+                                print(f"    [ {k:<32} ] = null,")
+                            else:
+                                print(f"    [ {k:<32} ] = \"{base_translation[k]}\",")
+                        print("")
 
 # Get the file path from command line arguments
 #if len(sys.argv) < 2:
@@ -187,3 +234,9 @@ write_keys_into_enum_header_template('base.ht', 'base.h', base_translation)
 print(f"\n======================================================================")
 print(f"Parsing remaining json translations into corresponding .h files")
 convert_remaining_translations_to_h_files('.', '.')
+# To help with translations, the following debug flags can be used to
+# print additional information about entries in the .json files, such
+# as missing entries (likely need translation), identical entries (which
+# likely should either be set to JSON null, or removed from the .json
+# file altogether.
+# convert_remaining_translations_to_h_files('.', '.', DebugJsonConversion.DEFAULT)

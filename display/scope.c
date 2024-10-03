@@ -142,7 +142,7 @@ static void switch_buffers(void);
 const char *
 scope_error(void)
 {
-	return t[T_MODE_ERROR_NO_EFFECT_HIZ];
+	return GET_T(T_MODE_ERROR_NO_EFFECT_HIZ);
 }
 
 void

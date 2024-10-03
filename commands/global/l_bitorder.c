@@ -14,8 +14,8 @@ void bitorder_msb(void){
 void bitorder_msb_handler(struct command_result *res){
     bitorder_msb();
     printf("%s%s:%s %s 0b%s1%s0000000",
-        ui_term_color_notice(),t[T_MODE_BITORDER],ui_term_color_reset(),
-        t[T_MODE_BITORDER_MSB],	ui_term_color_info(),ui_term_color_reset()
+        ui_term_color_notice(),GET_T(T_MODE_BITORDER),ui_term_color_reset(),
+        GET_T(T_MODE_BITORDER_MSB),	ui_term_color_info(),ui_term_color_reset()
     );
 }
 
@@ -26,7 +26,7 @@ void bitorder_lsb(void){
 void bitorder_lsb_handler(struct command_result *res){
     bitorder_lsb();
     printf("%s%s:%s %s 0b0000000%s1%s",
-        ui_term_color_notice(),	t[T_MODE_BITORDER],	ui_term_color_reset(),
-        t[T_MODE_BITORDER_LSB],	ui_term_color_info(), ui_term_color_reset()
+        ui_term_color_notice(),	GET_T(T_MODE_BITORDER),	ui_term_color_reset(),
+        GET_T(T_MODE_BITORDER_LSB),	ui_term_color_info(), ui_term_color_reset()
     );    
 }

@@ -30,7 +30,7 @@ void nmea_decode_handler(struct command_result *res){
     if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
     if(!ui_help_check_vout_vref()) return;
 
-    printf("%s%s%s\r\n%s", ui_term_color_notice(), t[T_PRESS_ANY_KEY_TO_EXIT], ui_term_color_reset(), ui_term_cursor_hide());
+    printf("%s%s%s\r\n%s", ui_term_color_notice(), GET_T(T_PRESS_ANY_KEY_TO_EXIT), ui_term_color_reset(), ui_term_cursor_hide());
     
     while (true){
         char line[MINMEA_MAX_SENTENCE_LENGTH];

@@ -51,36 +51,36 @@
 // nulfuncs
 // these are the dummy functions when something ain't used
 void nullfunc1(void) {
-    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
 }
 
 uint32_t nullfunc2(uint32_t c) {
     (void)c;
-    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return 0x0000;
 }
 
 uint32_t nullfunc3(void) {
-    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return 0x0000;
 }
 
 void nullfunc4(uint32_t c) {
     (void)c;
-    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
 }
 
 const char* nullfunc5(void) {
-    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
 }
 
 uint32_t nullfunc6(uint8_t next_command) {
-    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return 0x0000;
 }
@@ -94,7 +94,7 @@ uint32_t nullfunc8_error(uint8_t* config) {
 }
 
 void nohelp(void) {
-    printf(t[T_MODE_NO_HELP_AVAILABLE]);
+    printf("%s", GET_T(T_MODE_NO_HELP_AVAILABLE));
 }
 
 void noperiodic(void) {
@@ -102,7 +102,7 @@ void noperiodic(void) {
 }
 
 void nullfunc1_temp(struct _bytecode* result, struct _bytecode* next) {
-    printf("%s\r\n", t[T_MODE_ERROR_NO_EFFECT]);
+    printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
 }
 

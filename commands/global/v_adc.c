@@ -36,7 +36,7 @@ uint32_t adc_print(uint8_t bio_pin, bool refresh){
 	//sweep adc
 	amux_sweep();
     printf("%s%s IO%d:%s %s%d.%d%sV\r%s",
-        ui_term_color_info(), t[T_MODE_ADC_VOLTAGE], bio_pin, ui_term_color_reset(), ui_term_color_num_float(),
+        ui_term_color_info(), GET_T(T_MODE_ADC_VOLTAGE), bio_pin, ui_term_color_reset(), ui_term_color_num_float(),
 		((*hw_pin_voltage_ordered[bio_pin+1])/1000), (((*hw_pin_voltage_ordered[bio_pin+1])%1000)/100),
 		 ui_term_color_reset(), (refresh?"":"\n")); 
     return 1;	
@@ -58,7 +58,7 @@ void adc_measure(struct command_result *res, bool refresh){
 	if(!has_value){ //show voltage on all pins
 		if(refresh){
 			//TODO: use the ui_prompt_continue function, but how to deal with the names and labels????
-			printf("%s%s%s\r\n%s", ui_term_color_notice(), t[T_PRESS_ANY_KEY_TO_EXIT], ui_term_color_reset(), ui_term_cursor_hide());
+			printf("%s%s%s\r\n%s", ui_term_color_notice(), GET_T(T_PRESS_ANY_KEY_TO_EXIT), ui_term_color_reset(), ui_term_cursor_hide());
 			system_config.terminal_hide_cursor=true;
 		}
 

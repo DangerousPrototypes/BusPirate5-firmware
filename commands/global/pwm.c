@@ -55,7 +55,7 @@ void pwm_configure_enable(struct command_result *res)
 {
     uint32_t pin;
 
-    printf("%s%s%s",ui_term_color_info(), t[T_MODE_PWM_GENERATE_FREQUENCY], ui_term_color_reset());
+    printf("%s%s%s",ui_term_color_info(), GET_T(T_MODE_PWM_GENERATE_FREQUENCY), ui_term_color_reset());
     
     static const struct ui_prompt_config freq_menu_enable_config={
         false,false,false,true,
@@ -112,8 +112,8 @@ void pwm_configure_enable(struct command_result *res)
     system_set_active(true, (uint8_t)pin, &system_config.pwm_active);    
 
     printf("\r\n%s%s:%s %s on IO%s%d%s\r\n", 
-        ui_term_color_notice(),t[T_MODE_PWM_GENERATE_FREQUENCY],ui_term_color_reset(),
-        t[T_MODE_ENABLED], ui_term_color_num_float(),(uint8_t)pin,ui_term_color_reset() 
+        ui_term_color_notice(),GET_T(T_MODE_PWM_GENERATE_FREQUENCY),ui_term_color_reset(),
+        GET_T(T_MODE_ENABLED), ui_term_color_num_float(),(uint8_t)pin,ui_term_color_reset() 
     );
  
 }
@@ -200,8 +200,8 @@ void pwm_configure_disable(struct command_result *res){
     system_set_active(false, (uint8_t)pin, &system_config.pwm_active);    
 
     printf("\r\n%s%s:%s %s on IO%s%d%s", 
-        ui_term_color_notice(),t[T_MODE_PWM_GENERATE_FREQUENCY],ui_term_color_reset(),
-        t[T_MODE_DISABLED], ui_term_color_num_float(),(uint8_t)pin,ui_term_color_reset() 
+        ui_term_color_notice(),GET_T(T_MODE_PWM_GENERATE_FREQUENCY),ui_term_color_reset(),
+        GET_T(T_MODE_DISABLED), ui_term_color_num_float(),(uint8_t)pin,ui_term_color_reset() 
     );
           
 }

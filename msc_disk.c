@@ -62,6 +62,8 @@ static volatile bool cmd_ack = false;
 
 static volatile bool writable = true;
 static volatile bool host_ejected = false;
+static volatile bool host_lock = false;
+static volatile bool no_more_host_lock = false;
 
 enum
 {
@@ -318,12 +320,18 @@ bool tud_msc_prevent_allow_medium_removal_cb(uint8_t lun, uint8_t prohibit_remov
 {
     (void)lun;
     if (prohibit_removal != 0) {
-      //This prevents the host OS (Windows) from caching state about the file system. 
-      //However it isn't verified. In any case, this isn't a promise we can keep. 
-      //the BP5 could be removed anytime. 
-      tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x24, 0x0);
-      return false;
+        if (writable && !no_more_host_lock) {
+            host_lock = true;
+            tud_msc_set_sense(lun, 0, 0, 0);
+            return true;
+        } else {
+            tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x24, 0x0);
+            return false;
+        }
     } else {
+        host_lock = false;
+        //sync the medium
+        disk_ioctl(0, CTRL_SYNC, 0);
         tud_msc_set_sense(lun, 0, 0, 0);
         return true;
     }
@@ -403,7 +411,12 @@ bool insert_or_eject_usbmsdrive(bool insert)
 
 void eject_usbmsdrive(void)
 {
+    no_more_host_lock = true;
+    while (host_lock) {
+        sleep_ms(1);
+    }
     insert_or_eject_usbmsdrive(false);
+    no_more_host_lock = false;
 }
 void insert_usbmsdrive(void)
 {

@@ -460,4 +460,6 @@ static char const * const en_us[]={
 
 };
 
+// Since en-us is the base language, the following static assert at least verifies the table size
+// However, it does not check that all values are set to non-null.
 static_assert(count_of(en_us)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing english translations!");

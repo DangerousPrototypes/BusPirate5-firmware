@@ -34,8 +34,8 @@ void pullups_enable_handler(struct command_result *res){
     
     amux_sweep();
     printf("%s%s:%s %s (%s @ %s%d.%d%sV)", 
-        ui_term_color_notice(), t[T_MODE_PULLUP_RESISTORS],	ui_term_color_reset(), 
-        t[T_MODE_ENABLED], BP_HARDWARE_PULLUP_VALUE, 
+        ui_term_color_notice(), GET_T(T_MODE_PULLUP_RESISTORS),	ui_term_color_reset(), 
+        GET_T(T_MODE_ENABLED), BP_HARDWARE_PULLUP_VALUE, 
         ui_term_color_num_float(), hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]/1000, 
         (hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]%1000)/100, ui_term_color_reset()
     );
@@ -59,8 +59,8 @@ void pullups_disable_handler(struct command_result *res){
     pullups_disable();
 
     printf("%s%s:%s %s",
-        ui_term_color_notice(),t[T_MODE_PULLUP_RESISTORS],ui_term_color_reset(),
-        t[T_MODE_DISABLED]
+        ui_term_color_notice(),GET_T(T_MODE_PULLUP_RESISTORS),ui_term_color_reset(),
+        GET_T(T_MODE_DISABLED)
     );
 }
 

@@ -14,7 +14,7 @@ const char *hiz_pins(void){
 }
 
 const char *hiz_error(void){
-	return t[T_MODE_ERROR_NO_EFFECT_HIZ];
+	return GET_T(T_MODE_ERROR_NO_EFFECT_HIZ);
 }
 
 void hiz_settings(void){
@@ -57,6 +57,6 @@ void hiz_help(void){
 	for(uint32_t i=0;i<hiz_commands_count;i++)
 	{
 		printf("%s%s%s\t%s%s\r\n", ui_term_color_prompt(), hiz_commands[i].command, 
-			ui_term_color_info(), hiz_commands[i].help_text?t[hiz_commands[i].help_text]:"Unavailable", ui_term_color_reset());
+			ui_term_color_info(), hiz_commands[i].help_text ? GET_T(hiz_commands[i].help_text) : "Unavailable", ui_term_color_reset());
 	}
 }

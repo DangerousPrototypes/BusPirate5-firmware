@@ -88,7 +88,7 @@ int printf_(const char* format, ...);
  * \return The number of characters that are WRITTEN into the buffer, not counting the terminating null character
  */
 #define sprintf sprintf_
-int sprintf_(char* buffer, const char* format, ...) __attribute__ ((deprecated));
+int sprintf_(char* buffer, const char* format, ...) __attribute__ ((error ("Use of sprintf() not allowed; please use snprintf() instead")));
 
 
 /**

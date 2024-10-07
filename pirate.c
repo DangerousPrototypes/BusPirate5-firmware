@@ -169,6 +169,11 @@ int main(){
         storage_mount();
         if(storage_load_config()){
             system_config.config_loaded_from_file=true;
+            //update LED
+            rgb_set_effect(system_config.led_effect);
+        }else{
+            //party mode/demo mode if no config file found
+            rgb_set_effect(LED_EFFECT_PARTY_MODE);
         }
         spi_set_baudrate(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
     #endif
@@ -211,6 +216,11 @@ int main(){
         storage_mount();
         if(storage_load_config()){
             system_config.config_loaded_from_file=true;
+            //update LED
+            rgb_set_effect(system_config.led_effect);
+        }else{
+            //party mode/demo mode if no config file found
+            rgb_set_effect(LED_EFFECT_PARTY_MODE);
         }
     #endif
 

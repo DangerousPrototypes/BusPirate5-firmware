@@ -43,10 +43,10 @@ static const struct prompt_item menu_items_led_effect[]=
 };
 static_assert(count_of(menu_items_led_effect) == MAX_LED_EFFECT, "menu_items_led_effect mismatch vs. enum of available effects");
 
-uint32_t ui_config_action_led_effect(uint32_t a, uint32_t b)
-{
+uint32_t ui_config_action_led_effect(uint32_t a, uint32_t b){
     if (b < count_of(menu_items_led_effect)) {
         system_config.led_effect = b;
+        rgb_set_effect(b);
     }
 }
 

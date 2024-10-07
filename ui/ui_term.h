@@ -15,7 +15,7 @@ bool ui_term_detect(void);
 void ui_term_color_text(uint32_t rgb);
 void ui_term_color_background(uint32_t rgb);
 uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_background);
-uint32_t ui_term_color_text_background_buf(char *buf, uint32_t rgb_text, uint32_t rgb_background);
+uint32_t ui_term_color_text_background_buf(char *buf, size_t len, uint32_t rgb_text, uint32_t rgb_background);
 char* ui_term_color_reset(void);
 char* ui_term_color_prompt(void);
 char* ui_term_color_info(void);

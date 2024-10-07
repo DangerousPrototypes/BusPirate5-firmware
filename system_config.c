@@ -31,7 +31,7 @@ void system_init(void)
     system_config.lcd_timeout=0;
     
 	// NOTE: LED effect is an enum.
-    system_config.led_effect=LED_EFFECT_SOLID;
+    system_config.led_effect=LED_EFFECT_DISABLED;
     system_config.led_color=0xFF0000u; // now stores actual RGB value directly (not an index)
     system_config.led_brightness_divisor=10; // Divisor for the led's brightness.   10 = 10%, 5 = 20%, 4 = 25%, etc.
 

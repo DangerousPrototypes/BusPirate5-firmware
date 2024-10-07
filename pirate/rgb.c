@@ -664,18 +664,28 @@ static bool rgb_scanner(void) {
     return false;
 }
 
-static bool pixel_timer_callback(struct repeating_timer *t){
-    static uint8_t mode=2;
+static led_effect_t effect=LED_EFFECT_DISABLED;
+bool rotate_effects=false;
 
-    uint32_t color_grb;
-    bool next=false;
-
-    if (system_config.led_effect < MAX_LED_EFFECT) {
-        mode = system_config.led_effect;
+void rgb_set_effect(led_effect_t new_effect){
+    if (new_effect < MAX_LED_EFFECT) {
+        //rgb_irq_enable(false);
+        if(new_effect == LED_EFFECT_PARTY_MODE){
+            rotate_effects=true;
+            effect = LED_EFFECT_ANGLE_WIPE;
+        }else{
+            rotate_effects=false;
+            effect = new_effect;
+        }
+        //rgb_irq_enable(true);
     }
+}
+
+static bool pixel_timer_callback(struct repeating_timer *t){
+    bool next=false;
     
     // clang-format off
-    switch(mode) {
+    switch(effect) {
         case LED_EFFECT_DISABLED:
             assign_pixel_color(PIXEL_MASK_ALL, PIXEL_COLOR_BLACK);
             update_pixels();  
@@ -708,16 +718,17 @@ static bool pixel_timer_callback(struct repeating_timer *t){
             break;
         case LED_EFFECT_PARTY_MODE:
             assert(!"Party mode should never be value of the *local* variable!");
+            //next=true;
             break;
     }
     // clang-format on
 
-    if (system_config.led_effect == LED_EFFECT_PARTY_MODE && next) {
+    if (rotate_effects && next) {
         static_assert(LED_EFFECT_DISABLED == 0, "LED_EFFECT_DISABLED must be zero");
         static_assert(MAX_LED_EFFECT-1 == LED_EFFECT_PARTY_MODE, "LED_EFFECT_PARTY_MODE must be the last effect");
-        ++mode;
-        if (mode >= LED_EFFECT_PARTY_MODE) {
-            mode = LED_EFFECT_DISABLED + 1;
+        ++effect;
+        if (effect > LED_EFFECT_GENTLE_GLOW) {
+            effect = LED_EFFECT_ANGLE_WIPE;
         }
     }
 
@@ -765,11 +776,6 @@ void rgb_init(void){
         pixels[i] = PIXEL_COLOR_BLACK;
     }
 
-    // Create a repeating timer that calls repeating_timer_callback.
-    // If the delay is negative (see below) then the next call to the callback will be exactly 500ms after the
-    // start of the call to the last callback
-    // Negative delay so means we will call repeating_timer_callback, and call it again
-    // 500ms later regardless of how long the callback took to execute
     rgb_irq_enable(true);
 };
 

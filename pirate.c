@@ -284,14 +284,18 @@ int main(){
 
         switch(bp_state){
             case BP_SM_DISPLAY_MODE:
-                
-                if(system_config.terminal_ansi_color){ //config file option loaded, wait for any key
+                // config file option loaded, wait for any key
+                // for ASCII mode terminal_ansi_color is always false
+                // this has the side effect of always prompting if the saved mode is ASCII
+                // this is a feature, not a bug - 
+                // it lets new users escape from ASCII mode without learning of the config menus
+                if(system_config.terminal_ansi_color){ 
                     char c;
                     result.error=false;
                     result.success=false;
 
                     if(rx_fifo_try_get(&c)){
-                        value='a';
+                        value='s';
                         result.success=true;
                     } 
                 }else{
@@ -300,17 +304,25 @@ int main(){
 
                 if(result.success){
                     switch(value){
-                        case 'y':
-                            system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
-                            system_config.terminal_ansi_statusbar=1;
-                        case 'a': // case were configuration already exists
-                            ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
-                            ui_term_init(); // Initialize VT100 if ANSI terminal
-                            ui_statusbar_update(UI_UPDATE_ALL);
-                            break;
-                        case 'n':
-                            system_config.terminal_ansi_statusbar=0;
+                        case 'n': // user requested ASCII mode
                             system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
+                            system_config.terminal_ansi_statusbar=false;
+                            printf("\r\n"); //make pretty    
+                            break;                    
+                        case 'y': // user requested VT100 mode
+                            // no configuration exists, default to status bar enabled                            
+                            system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
+                            system_config.terminal_ansi_statusbar=true;
+                        case 's': // case were configuration already exists
+                            ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
+                            // if something goes wrong with detection, the next function will skip internally
+                            ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
+                            // this sets the scroll region for the status bar (if enabled)
+                            // and does the initial painting of the full statusbar
+                            if(system_config.terminal_ansi_statusbar){
+                                ui_statusbar_init();
+                                ui_statusbar_update(UI_UPDATE_ALL);
+                            }
                             break;
                         default:
                             break;

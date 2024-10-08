@@ -65,7 +65,7 @@ void ui_term_detect(void) {
 
     // no reply, no terminal connected or doesn't support VT100
     if (p < 0) {
-        system_config.terminal_ansi_statusbar = 0;
+        system_config.terminal_ansi_statusbar = false;
         system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
         return;
     }
@@ -104,7 +104,7 @@ void ui_term_detect(void) {
     }
     if (row == 0 || col == 0) {
         // non-detection fallback
-        system_config.terminal_ansi_statusbar = 0;
+        system_config.terminal_ansi_statusbar = false;
         system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
     } else {
         system_config.terminal_ansi_rows = row;
@@ -113,8 +113,7 @@ void ui_term_detect(void) {
 }
 
 void ui_term_init(void) {
-    if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
-
+    if (system_config.terminal_ansi_color) {
         printf("\x1b[?3l"); // 80 columns
         printf("\x1b]0;%s\x1b\\", BP_HARDWARE_VERSION);
         // reset all styling
@@ -123,8 +122,6 @@ void ui_term_init(void) {
         printf("\e[3 q");
         // clear screen
         printf("\e[2J");
-        // set scroll region
-        printf("\e[%d;%dr", 1, system_config.terminal_ansi_rows - 4);
     }
 }
 

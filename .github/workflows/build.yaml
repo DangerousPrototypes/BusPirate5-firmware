@@ -56,9 +56,18 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --target ${{env.BUILD_TARGET}}
     
     - name: Save Artifacts
+      id: upload-artifact
       uses: actions/upload-artifact@v4
       with:
         name: firmware-${{ matrix.os }}
-        path: ${{github.workspace}}/build/*.uf2
+        path: |
+          ${{github.workspace}}/build/*.bin
+          ${{github.workspace}}/build/*.dis
+          ${{github.workspace}}/build/*.elf
+          ${{github.workspace}}/build/*.elf.map
+          ${{github.workspace}}/build/*.uf2
         retention-days: 7
         if-no-files-found: error
+
+    - name: Output Artifact ID
+      run: echo "Artifact ID: ${{ steps.upload-artifact.outputs.artifact_id }}"

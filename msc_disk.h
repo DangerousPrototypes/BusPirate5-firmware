@@ -1,3 +1,5 @@
+#pragma once
+
 /*
  * The MIT License (MIT)
  *
@@ -23,17 +25,17 @@
  *
  */
 
-// remove and insert the usbms drive to force the host to sync its contents
-void refresh_usbmsdrive(void);
+typedef enum _nand_volume_state_t {
+    NAND_VOLUME_STATE_EJECTED = 0,
+    NAND_VOLUME_STATE_SHARED_READONLY,
+    NAND_VOLUME_STATE_FW_EXCLUSIVE,
+    NAND_VOLUME_STATE_HOST_EXCLUSIVE,
+} nand_volume_state_t;
 
-//remove the usb drive and prepare to make it read only on the host
-void prepare_usbmsdrive_readonly(void);
+// transitions to new media state ... handles setting MCN flag when needed
+void set_nand_volume_state(nand_volume_state_t new_state, bool media_change_notification_required);
+nand_volume_state_t get_nand_volume_state(void);
 
-//insert the usbms drive to expose it to the host
-void insert_usbmsdrive(void);
+// indicates that the host requires a media change notification 
+void set_usbms_media_change_notification_required(void);
 
-// make the usb drive appear read write on the host
-void make_usbmsdrive_writable(void);
-
-//remove before jump to bootloader
-void eject_usbmsdrive(void);

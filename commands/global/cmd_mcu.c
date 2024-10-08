@@ -40,7 +40,8 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result *res){
 		return;
 	}
     printf("Later Alligator!");
-    eject_usbmsdrive();
-    busy_wait_ms(200);
+    // BUGBUG - How to explicitly close any open handles before reboot?
+    //          Maybe expose a command to force-close all open handles
+    //          and flush the media?
     cmd_mcu_jump_to_bootloader();
 }

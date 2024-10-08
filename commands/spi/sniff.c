@@ -26,6 +26,7 @@ static struct _pio_config pio_config;
 static struct _pio_config pio_config_d1;
 
 static const char * const usage[]= {
+    "This command has no help text. (yet)"
 /*    "flash [init|probe|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
     "Initialize and probe: flash probe",
     "Erase and program, with verify: flash write -f example.bin -e -v",

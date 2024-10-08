@@ -55,6 +55,7 @@ int ff_cre_syncobj(				   /* 1:Function succeeded, 0:Could not create the sync o
 				   FF_SYNC_t *sobj /* Pointer to return the created sync object */
 )
 {
+	FF_CORE0_ASSERT();
 	
 	/* PICO SDK */
 	if (vol >= FF_VOLUMES)
@@ -98,6 +99,7 @@ int ff_del_syncobj (	/* 1:Function succeeded, 0:Could not delete due to an error
 	FF_SYNC_t sobj		/* Sync object tied to the logical drive to be deleted */
 )
 {
+	FF_CORE0_ASSERT();
 	/* PICO SDK */
 	return 1;
 	/* Win32 */
@@ -131,6 +133,7 @@ int ff_req_grant (	/* 1:Got a grant to access the volume, 0:Could not get a gran
 	FF_SYNC_t sobj	/* Sync object to wait */
 )
 {
+	FF_CORE0_ASSERT();
 	/* PICO SDK */
 	return mutex_enter_timeout_ms(sobj, FR_TIMEOUT);
 	
@@ -163,6 +166,7 @@ void ff_rel_grant (
 	FF_SYNC_t sobj	/* Sync object to be signaled */
 )
 {
+	FF_CORE0_ASSERT();
 	/* PICO SDK */
 	mutex_exit(sobj);
 

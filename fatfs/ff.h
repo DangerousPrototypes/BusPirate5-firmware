@@ -19,6 +19,12 @@
 /----------------------------------------------------------------------------*/
 
 
+// DEFINE ASSERTION THAT FASTFAT CODE IS ONLY USED / CALLED FROM CORE 0
+
+// get_core_num() is defined in pico platform.h
+#define FF_CORE0_ASSERT() assert( get_core_num() == 0 )
+
+
 #ifndef FF_DEFINED
 #define FF_DEFINED	86606	/* Revision ID */
 

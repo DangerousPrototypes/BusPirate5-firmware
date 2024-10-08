@@ -52,12 +52,11 @@ int ui_term_get_vt100_query(const char* query, char end_of_line, char* result, u
     return -1;
 }
 
-// Determine the terminal rows and columns
-void ui_term_detect(void) {
+bool ui_term_detect_vt100(uint32_t *row, uint32_t *col) {
     uint8_t cp[20];
     int p;
-    uint32_t row = 0;
-    uint32_t col = 0;
+    uint32_t r = 0;
+    uint32_t c = 0;
     uint8_t stage = 0;
 
     // Position cursor at extreme corner and get the actual postion
@@ -65,9 +64,7 @@ void ui_term_detect(void) {
 
     // no reply, no terminal connected or doesn't support VT100
     if (p < 0) {
-        system_config.terminal_ansi_statusbar = false;
-        system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
-        return;
+        return false;
     }
     // Extract cursor position from response
     for (int i = 0; i < p; i++) {
@@ -82,34 +79,49 @@ void ui_term_detect(void) {
                     stage = 2;
                     break;
                 }
-                row *= 10;
-                row += cp[i] - 0x30;
+                r *= 10;
+                r += cp[i] - 0x30;
                 break;
             case 2: // Columns
                 if (cp[i] == 'R') {
                     stage = 3;
                     break;
                 }
-                col *= 10;
-                col += cp[i] - 0x30;
+                c *= 10;
+                c += cp[i] - 0x30;
                 break;
             default:
                 break;
         }
     }
 
-    // printf("Terminal: %d rows, %d cols\r\n", row, col);
+    // printf("Terminal: %d rows, %d cols\r\n", r, c);
+    if (r == 0 || c == 0) {
+        // non-detection fallback
+        return false;
+    }
+    *row = r;
+    *col = c;
+    return true;
+}
+
+bool ui_term_detect(void) {
+    uint32_t row = 0;
+    uint32_t col = 0;
+    if (!ui_term_detect_vt100(&row, &col)) {
+        system_config.terminal_ansi_statusbar = false;
+        system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
+        printf("VT100 terminal not detected!\r\nDefaulting to ASCII mode.\r\n");
+        return false;
+    }
+
     if (system_config.terminal_ansi_rows != row || system_config.terminal_ansi_columns != col) {
         printf("Screen Resolution changed\r\n");
     }
-    if (row == 0 || col == 0) {
-        // non-detection fallback
-        system_config.terminal_ansi_statusbar = false;
-        system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
-    } else {
-        system_config.terminal_ansi_rows = row;
-        system_config.terminal_ansi_columns = col;
-    }
+
+    system_config.terminal_ansi_rows = row;
+    system_config.terminal_ansi_columns = col;
+    return true;
 }
 
 void ui_term_init(void) {

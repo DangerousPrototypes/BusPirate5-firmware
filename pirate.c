@@ -314,7 +314,9 @@ int main(){
                             system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
                             system_config.terminal_ansi_statusbar=true;
                         case 's': // case were configuration already exists
-                            ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
+                            if(!ui_term_detect()){ // Do we detect a VT100 ANSI terminal? what is the size?
+                                break;
+                            } 
                             // if something goes wrong with detection, the next function will skip internally
                             ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
                             // this sets the scroll region for the status bar (if enabled)

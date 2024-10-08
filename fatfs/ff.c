@@ -987,6 +987,20 @@ static FRESULT chk_lock (	/* Check if the file can be accessed */
 	return (acc != 0 || Files[i].ctr == 0x100) ? FR_LOCKED : FR_OK;
 }
 
+static bool enq_any_writable_handles(void)
+{
+	UINT i;
+	bool result = false;
+	for (i = 0; i < FF_FS_LOCK; i++) {
+		// INTERNAL DETAIL: ctr set to 0x100 indicates the file handle
+		//                  is used for writing.  values less than 0x100
+		//                  indicate one or more read-only handles.
+		if (Files[i].fs && Files[i].ctr == 0x100) {
+			result = true;
+		}
+	}
+	return result;
+}
 
 static int enq_lock (void)	/* Check if an entry is available for a new object */
 {
@@ -4201,15 +4215,23 @@ FRESULT f_close (
 #if FF_FS_LOCK != 0
 			res = dec_lock(fp->obj.lockid);		/* Decrement file open counter */
 			if (res == FR_OK) fp->obj.fs = 0;	/* Invalidate file object */
+
+			// must be checked while holding the lock from `validate()` above
+			// return to shared read-only mode when last writable file handle is closed.
+			if (!enq_any_writable_handles() && get_nand_volume_state() == NAND_VOLUME_STATE_FW_EXCLUSIVE) {
+				// NOTE: Force a MCN even though state machine would detect this
+				//       change as requiring one.
+				set_nand_volume_state(NAND_VOLUME_STATE_SHARED_READONLY, true);
+			}
+
 #else
 			fp->obj.fs = 0;	/* Invalidate file object */
 #endif
+
 #if FF_FS_REENTRANT
 			unlock_fs(fs, FR_OK);		/* Unlock volume */
 #endif
 		}
-		//reconnect the MSD to refresh the file system on the PC side
-		if (fp->flag & FA_WRITE) refresh_usbmsdrive();
 	}
 	return res;
 }
@@ -5001,9 +5023,9 @@ FRESULT f_unlink (
 					res = remove_chain(&dj.obj, dclst, 0);
 #endif
 				}
-				if (res == FR_OK) res = sync_fs(fs);
-				//reconnect the MSD to refresh the file system on the PC side
-				refresh_usbmsdrive();
+				if (res == FR_OK) {
+					res = sync_fs(fs);
+				}
 			}
 		}
 		FREE_NAMBUF();
@@ -5085,8 +5107,6 @@ FRESULT f_mkdir (
 				}
 				if (res == FR_OK) {
 					res = sync_fs(fs);
-					//reconnect the MSD to refresh the file system on the PC side
-					refresh_usbmsdrive();
 				}
 			} else {
 				remove_chain(&sobj, dcl, 0);		/* Could not register, remove the allocated cluster */
@@ -5193,7 +5213,6 @@ FRESULT f_rename (
 				res = dir_remove(&djo);		/* Remove old entry */
 				if (res == FR_OK) {
 					res = sync_fs(fs);
-                    refresh_usbmsdrive();
                 }
 			}
 /* End of the critical section */
@@ -5511,7 +5530,6 @@ FRESULT f_setlabel (
 			}
 		}
 	}
-    refresh_usbmsdrive();
     LEAVE_FF(fs, res);
 }
 
@@ -5694,7 +5712,9 @@ FRESULT f_forward (
 
 /* Create partitions on the physical drive */
 
-static FRESULT create_partition (
+
+
+static FRESULT create_partition_internal (
 	BYTE drv,			/* Physical drive number */
 	const LBA_t plst[],	/* Partition list */
 	UINT sys,			/* System ID (for only MBR, temp setting) and bit8:GPT */
@@ -5833,10 +5853,26 @@ static FRESULT create_partition (
 
 	return FR_OK;
 }
+static FRESULT create_partition (
+	BYTE drv,			/* Physical drive number */
+	const LBA_t plst[],	/* Partition list */
+	UINT sys,			/* System ID (for only MBR, temp setting) and bit8:GPT */
+	BYTE* buf			/* Working buffer for a sector */
+)
+{
+	FRESULT result = create_partition_internal(drv, plst, sys, buf);
+
+	// Special-case NAND_VOLUME_STATE_... not file-handle-based,
+	// so cannot rely on closing of a handle to transition back to
+	// a shared volume.
+	// BUGBUG -- can this ever be called when there is already a valid volume,
+	//           and/or open file handles?
+	set_nand_volume_state(NAND_VOLUME_STATE_SHARED_READONLY, true);
+	return result;
+}
 
 
-
-FRESULT f_mkfs (
+FRESULT f_mkfs_internal (
 	const TCHAR* path,		/* Logical drive number */
 	const MKFS_PARM* opt,	/* Format options */
 	void* work,				/* Pointer to working buffer (null: use heap memory) */
@@ -6207,7 +6243,7 @@ FRESULT f_mkfs (
 
 			/* Ok, it is the valid cluster configuration */
 			break;
-		} while (1);
+		} while (1); // FAT12/FAT16/FAT32 retry creation with different cluster sizes if exceed maximums
 
 #if FF_USE_TRIM
 		lba[0] = b_vol; lba[1] = b_vol + sz_vol - 1;	/* Inform storage device that the volume area may be erased */
@@ -6328,7 +6364,24 @@ FRESULT f_mkfs (
 
 	LEAVE_MKFS(FR_OK);
 }
+FRESULT f_mkfs (
+	const TCHAR* path,		/* Logical drive number */
+	const MKFS_PARM* opt,	/* Format options */
+	void* work,				/* Pointer to working buffer (null: use heap memory) */
+	UINT len				/* Size of working buffer [byte] */
+)
+{
+	nand_volume_state_t old_state = get_nand_volume_state();	
+	FRESULT result = f_mkfs_internal(path, opt, work, len);
+	nand_volume_state_t new_state = get_nand_volume_state();
 
+	// by definition there are (should be) no valid file handles,
+	// and thus no writable file handles.  The media can therefore
+	// transition to shared readonly mode.  Force a MCN update.
+	set_nand_volume_state(NAND_VOLUME_STATE_SHARED_READONLY, true);
+
+	return result;
+}
 
 
 

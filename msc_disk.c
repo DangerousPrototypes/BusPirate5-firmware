@@ -24,44 +24,34 @@
  */
 
 #include <stdio.h>
+// #include <stdatomic.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
 #include "fatfs/ff.h"
 #include "fatfs/diskio.h"
+#include "msc_disk.h"
 //#include "fatfs/tf_card.h"
 #include "tusb.h"
 #include "assert.h"
 
 #if CFG_TUD_MSC
 
-enum medium_state {
-    // this is a transient duplicate of md_state_not_present
-    // It prevents the program view to get ahead of the USB traffic
-    // since the Mode sense info is sent to the USB later, in response to
-    // another SCSCI command (REQUEST_SENSE)
-    md_state_not_present_stage1,
-    md_state_not_present,
-    md_state_reset,
-    md_state_medium_changed,
-    // this is a transient duplicate of md_state_ready
-    // It prevents the program view to get ahead of the USB traffic
-    // since the Mode sense info is sent to the USB later, in response to
-    // another SCSCI command (REQUEST_SENSE)
-    md_state_ready_stage1,
-    md_state_ready
-};
+typedef enum _media_change_notification_step_t {
+  // list these in reverse order, so that can simply "count down" to zero
+  MCN_STEP_NONE = 0,
+  MCN_STEP_06_28_00, // Media may have changed
+  MCN_STEP_06_29_00, // Bus reset
+} media_change_notification_step_t;
+static const media_change_notification_step_t FIRST_MCN_STEP = MCN_STEP_06_29_00;
 
-static volatile uint32_t medium_state = md_state_ready;
-static volatile uint32_t next_medium_state = md_state_ready;
+nand_volume_state_t g_nand_volume_state = NAND_VOLUME_STATE_EJECTED;
+media_change_notification_step_t g_media_change_notification = MCN_STEP_NONE;
 
-static volatile bool eject_request = false;
-static volatile bool insert_request = false;
+/*
 static volatile bool cmd_ack = false;
-
-static volatile bool writable = true;
-static volatile bool host_ejected = false;
+*/
 
 enum
 {
@@ -107,7 +97,10 @@ uint8_t msc_disk[MSC_DEMO_DISK_BLOCK_NUM][MSC_DEMO_DISK_BLOCK_SIZE] =
 
   //------------- Block1: FAT12 Table -------------//
   {
-      0xF8, 0xFF, 0xFF, 0xFF, 0x0F // // first 2 entries must be F8FF, third entry is cluster end of readme file
+      0xF8, 0xFF,      // first 2 entries must be F8 and FF (legacy reasons)
+      0xFF,            // third entry: allocated to the readme file, and indicates end-of-cluster-chain
+      0xFF,            // fourth entry: end-of-cluster-chain
+      0x0F,            // ???
   },
 
   //------------- Block2: Root Directory -------------//
@@ -148,63 +141,44 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
   memcpy(product_rev, rev, strlen(rev));
 }
 
-
-static bool command_acknowledged()
-{
-    return cmd_ack;
-}
-// This function will be called by core0
-static bool is_ejected()
-{
-    return medium_state == md_state_not_present;
-}
-// This function will be called by core0
-static bool is_inserted()
-{
-    return medium_state == md_state_ready;
-}
 // Invoked when received Test Unit Ready command.
 // return true allowing host to read/write this LUN e.g TF flash card inserted
 bool tud_msc_test_unit_ready_cb(uint8_t lun)
 {
     (void)lun;
-    bool return_value = true;
-    medium_state = next_medium_state;
-    if (host_ejected) {
-        medium_state = md_state_not_present;
-        next_medium_state = medium_state;
-        host_ejected = false;
-    } else if (insert_request && medium_state == md_state_not_present) {
-        medium_state = md_state_medium_changed;
-        cmd_ack = true;
-    } else if (eject_request && medium_state == md_state_ready) {
-        medium_state = md_state_not_present_stage1;
-        cmd_ack = true;
-    }
-    switch (medium_state) {
-        case md_state_not_present_stage1:
-        case md_state_not_present:
-            tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
-            next_medium_state = md_state_not_present;
-            return_value = false;
-            break;
-        // This state isn't implemented by my SD card reader
-        // case md_state_reset:
-        //     tud_msc_set_sense(lun, SCSI_SENSE_UNIT_ATTENTION, 0x29, 0x00);
-        //     medium_state = md_state_medium_changed;
-        //     return_value = false;
-        //     break;
-        case md_state_medium_changed:
-            tud_msc_set_sense(lun, SCSI_SENSE_UNIT_ATTENTION, 0x28, 0x00);
-            next_medium_state = md_state_ready_stage1;
-            return_value = false;
-            break;
-        case md_state_ready_stage1:
-        case md_state_ready:
-            tud_msc_set_sense(lun, 0x00, 0x00, 0x00);
-            next_medium_state = md_state_ready;
+    bool return_value = false;
+
+    nand_volume_state_t state = get_nand_volume_state();
+    if ((state == NAND_VOLUME_STATE_EJECTED) ||
+        (state == NAND_VOLUME_STATE_FW_EXCLUSIVE)) {
+        // Do not allow access to the storage
+        tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
+        return_value = false;
+    } else if (state == NAND_VOLUME_STATE_HOST_EXCLUSIVE) {
+        // Do not interfere with host-exclusive access
+        tud_msc_set_sense(lun, 0, 0, 0);
+        return_value = true;
+    } else if (state == NAND_VOLUME_STATE_SHARED_READONLY) {
+        //         
+        if (g_media_change_notification == MCN_STEP_NONE) {
+            tud_msc_set_sense(lun, 0, 0, 0);
             return_value = true;
-            break;
+        } else if (g_media_change_notification == MCN_STEP_06_29_00) {
+            --g_media_change_notification;
+            tud_msc_set_sense(lun, 6, 29, 00);
+            return_value = false;
+        } else if (g_media_change_notification == MCN_STEP_06_28_00) {
+            --g_media_change_notification;
+            tud_msc_set_sense(lun, 6, 28, 00);
+            return_value = false;
+        }
+
+    } else {
+        // invalid state ... assert and set to FW_EXCLUSIVE mode?
+        assert(false);
+        tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3a, 0x00);
+        set_nand_volume_state(NAND_VOLUME_STATE_FW_EXCLUSIVE, false);
+        return_value = false;
     }
     return return_value;
 }
@@ -236,22 +210,20 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_siz
 // - Start = 1 : active mode, if load_eject = 1 : load disk storage
 bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject)
 {
-  (void) lun;
-  (void) power_condition;
+    (void) lun;
+    (void) power_condition;
 
-  if ( load_eject )
-  {
-      if (start) {
-          host_ejected = false;
-          // load disk storage
-      }else {
-          host_ejected = true;
-          if (writable) {
-              disk_ioctl(0, CTRL_SYNC, 0);
-          }
-      }
-  }
-  return true;
+    tud_msc_set_sense(lun, 0, 0, 0);
+
+    nand_volume_state_t state = get_nand_volume_state();
+    if (!start && load_eject) {
+        // TODO: Consider if this should be permitted in NAND_VOLUME_STATE_HOST_EXCLUSIVE, as way to exit that mode?
+        tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 24, 0); // INVALID_FIELD_IN_CDB
+    }
+    if (!start) { // spin down disk (stop) or eject media (depending on load_eject bit)
+        disk_ioctl(0, CTRL_SYNC, 0); // flush any cached sector writes
+    }
+    return true;
 }
 
 // Callback invoked when received READ10 command.
@@ -369,77 +341,69 @@ int32_t tud_msc_scsi_cb (uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, 
 
 bool tud_msc_is_writable_cb(uint8_t lun)
 {
-  return writable;
+    // the ONLY state where the host is allowed to write
+    // to the volume is when the host is the exclusive owner
+    nand_volume_state_t state = get_nand_volume_state();
+    return state == NAND_VOLUME_STATE_HOST_EXCLUSIVE;
 }
 
-// Note that there are busy loop in this function
-// A small sleep value is necessary to insure that
-// the core can still process events. __wfe() will be called by sleep_ms
-bool insert_or_eject_usbmsdrive(bool insert) 
+void set_nand_volume_state(nand_volume_state_t new_state, bool media_change_notification_required)
 {
-    cmd_ack = false;
-    if (insert) {
-        insert_request = true;
-        while (!command_acknowledged()) {
-            sleep_ms(1);
-        }
-        insert_request = false;
-        // load disk storage
-    } else {
-        if (is_ejected())
-            return true;
-        // unload disk storage
-        eject_request = true;
-        while (!command_acknowledged()) {
-            sleep_ms(1);
-        }
-        eject_request = false;
+    // This function encodes the following state transition table,
+    // to ensure the complexity of ensuring MCN occurs at least in
+    // the following cases:
+    //
+    //
+    //  | from \ to    | `ejected` | `shared R/O` | `FW Exc` | `Host Exc` |
+    //  |--------------|----------:|-------------:|---------:|-----------:|
+    //  | `ejected`    |    `Y`    |      `M`     |    `Y`   |     `M`    |
+    //  | `shared R/O` |    `Y`    |      `Y`     |    `Y`   |     `M`    |
+    //  | `FW Exc`     |    `Y`    |      `M`     |    `Y`   |     `M`    |
+    //  | `Host Exc`   |    `Y`    |      `M`     |    `Y`   |     `Y`    |
+    //
+    // Where `Y` indicates the state change is allowed w/o MCN,
+    // and `M` indicates the state change is allowed, but must set MCN.
+    // The `X` is a transition which will be evaluated at a later date
+    // and is currently disallowed.
+
+    static uint8_t set_nand_volume_state_called_from = 0u;
+    // TODO: If this can this be called from both cores, then needs a mutex
+    //       track this.
+    set_nand_volume_state_called_from |= 1u << get_core_num();
+
+    nand_volume_state_t old_state = g_nand_volume_state;
+
+    // check if the state transition requires a media change notification
+    if (media_change_notification_required) {
+        // Caller has explicitly requested a media change notification,
+        // even if not required by the state transition.
+    } else if (old_state == new_state) {
+        // no actual state change, so no media change notification required
+    } else if (new_state == NAND_VOLUME_STATE_SHARED_READONLY) {
+        // change from anything else to shared_readonly requires
+        // notifying the host of a media change
+        media_change_notification_required = true;
+    } else if (new_state == NAND_VOLUME_STATE_HOST_EXCLUSIVE) {
+        // change from anything else to host_exclusive requires
+        // notifying the host of a media change
+        media_change_notification_required = true;
     }
-    return true;
+
+    g_nand_volume_state = new_state;
+    if (media_change_notification_required) {
+        set_usbms_media_change_notification_required();
+    }
+
+}
+nand_volume_state_t get_nand_volume_state(void)
+{
+    return g_nand_volume_state;
 }
 
-void eject_usbmsdrive(void)
+// indicates that the host requires a media change notification 
+void set_usbms_media_change_notification_required(void)
 {
-    insert_or_eject_usbmsdrive(false);
-}
-void insert_usbmsdrive(void)
-{
-    insert_or_eject_usbmsdrive(true);
-}
-
-// eject and insert the usbms drive to force the host to sync its contents
-void refresh_usbmsdrive(void) {
-    // eject the usb drive
-    eject_usbmsdrive();
-    // insert the drive back
-    insert_usbmsdrive();
-}
-
-// The drive is removed but not inserted back
-// because some actions (like re-init of the file system)
-// may be necessary
-// To re-insert, call insert_usbmsdrive()
-void prepare_usbmsdrive_readonly(void)
-{
-  if (!writable)
-    return;
-  // eject the usb drive
-  eject_usbmsdrive();
-  // make sure the storage is synced
-  disk_ioctl(0, CTRL_SYNC, 0);
-  writable = false;
-}
-void make_usbmsdrive_writable(void)
-{
-  if(writable)
-    return;
-  // eject the usb drive
-  eject_usbmsdrive();
-  //make sure the storage is synced
-  disk_ioctl(0, CTRL_SYNC, 0);
-  writable = true;
-  //insert the drive back
-  insert_usbmsdrive();
+    g_media_change_notification = FIRST_MCN_STEP;
 }
 
 #endif

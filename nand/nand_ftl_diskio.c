@@ -8,12 +8,12 @@
 #include "pico/stdlib.h"
 #include "pico/mutex.h"
 #include "pirate.h"
-
 #include "../fatfs/ff.h"     // BYTE type
 #include "../fatfs/diskio.h" // types from the diskio driver
 
 
 #include "nand/nand_ftl_diskio.h"
+#include "msc_disk.h"
 
 #include "../dhara/map.h"
 #include "../dhara/nand.h"
@@ -92,18 +92,27 @@ DRESULT diskio_write(BYTE drv, const BYTE *buff, LBA_t sector, UINT count)
 
 	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
     mutex_enter_blocking(&diskio_mutex);
+    nand_volume_state_t old_state = get_nand_volume_state();    
+
     // write *count* consecutive sectors
-    for (int i = 0; i < count; i++) {
-        int ret = dhara_map_write(&map, sector, buff, &err);
-        if (ret) {
-            //printf("dhara write failed: %d, error: %d", ret, err);
-            return RES_ERROR;
+    int ret_error = 0;
+    for (int i = 0; (!ret_error) && (i < count); ++i) {
+        int ret_error = dhara_map_write(&map, sector, buff, &err);
+        if (!ret_error) {
+            buff += SPI_NAND_PAGE_SIZE; // sector size == page size
+            sector++;
         }
-        buff += SPI_NAND_PAGE_SIZE; // sector size == page size
-        sector++;
     }
+
+    // dhara_map_write() is called multiple times, so could have failed
+    // after changes were made to the media.  If was in shared_readonly,
+    // must change to fw_exclusive mode to prevent host-side corruption.
+    if (old_state == NAND_VOLUME_STATE_SHARED_READONLY) {
+        set_nand_volume_state(NAND_VOLUME_STATE_FW_EXCLUSIVE, false);
+    }
+
     mutex_exit(&diskio_mutex);
-    return RES_OK;
+    return ret_error ? RES_ERROR : RES_OK;
 }
 
 DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void *buff)

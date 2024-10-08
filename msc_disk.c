@@ -24,7 +24,7 @@
  */
 
 #include <stdio.h>
-// #include <stdatomic.h>
+#include <stdatomic.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
@@ -35,6 +35,7 @@
 //#include "fatfs/tf_card.h"
 #include "tusb.h"
 #include "assert.h"
+#include "pirate/rgb.h"
 
 #if CFG_TUD_MSC
 
@@ -60,9 +61,11 @@ static volatile bool cmd_ack = false;
 static bool handled_required_media_change_notifications(uint8_t lun) {
     bool result;
 
+    assert(get_core_num() == 1); // called only from core 1, from USB handler
+
     // this helper function doesn't report media is ejected....
     nand_volume_state_t state = get_nand_volume_state();
-    media_change_notification_step_t step = g_media_change_notification;
+    media_change_notification_step_t step = atomic_load(&g_media_change_notification);
 
     // must be from a tud_msc_...() callback, so can call tud_msc_set_sense()
     if ((state != NAND_VOLUME_STATE_HOST_EXCLUSIVE) &&
@@ -75,12 +78,14 @@ static bool handled_required_media_change_notifications(uint8_t lun) {
     } else if (step == MCN_STEP_06_29_00) {
         // Media may have changed
         tud_msc_set_sense(lun, 0x06, 0x29, 0x00);
-        --g_media_change_notification;
+        // use atomic CAS in case value was reset again by core0
+        atomic_compare_exchange_strong(&g_media_change_notification, &step, step-1);
         result = true;
     } else if (step == MCN_STEP_06_28_00) {
         // Bus reset
         tud_msc_set_sense(lun, 0x06, 0x28, 0x00);
-        --g_media_change_notification;
+        // use atomic CAS in case value was reset again by core0
+        atomic_compare_exchange_strong(&g_media_change_notification, &step, step-1);
         result = true;
     } else {
         assert(false);
@@ -275,8 +280,13 @@ bool tud_msc_is_writable_cb(uint8_t lun)
 
 void set_nand_volume_state(nand_volume_state_t new_state, bool media_change_notification_required)
 {
+    // at present, only Core0 should be changing the volume state.
+    // Core1 can only read state (e.g., for handling SCSI commands in usb handler).
+    // TODO: If this ever fires, may need to add mutex or similar...
+    assert( get_core_num() == 0 );
+
     // This function encodes the following state transition table,
-    // to ensure the complexity of ensuring MCN occurs at least in
+    // to ensure the complexity of ensuring MCN occurs AT LEAST for
     // the following cases:
     //
     //
@@ -291,13 +301,7 @@ void set_nand_volume_state(nand_volume_state_t new_state, bool media_change_noti
     // and `M` indicates the state change is allowed, but must set MCN.
     // The `X` is a transition which will be evaluated at a later date
     // and is currently disallowed.
-
-    static uint8_t set_nand_volume_state_called_from = 0u;
-    // TODO: If this can this be called from both cores, then needs a mutex
-    //       track this.
-    set_nand_volume_state_called_from |= 1u << get_core_num();
-
-    nand_volume_state_t old_state = g_nand_volume_state;
+    nand_volume_state_t old_state = atomic_load(&g_nand_volume_state);
 
     // check if the state transition requires a media change notification
     if (media_change_notification_required) {
@@ -315,7 +319,7 @@ void set_nand_volume_state(nand_volume_state_t new_state, bool media_change_noti
         media_change_notification_required = true;
     }
 
-    g_nand_volume_state = new_state;
+    atomic_store(&g_nand_volume_state, new_state);
     if (media_change_notification_required) {
         set_usbms_media_change_notification_required();
     }
@@ -323,13 +327,14 @@ void set_nand_volume_state(nand_volume_state_t new_state, bool media_change_noti
 }
 nand_volume_state_t get_nand_volume_state(void)
 {
+    nand_volume_state_t state = atomic_load(&g_nand_volume_state);
     return g_nand_volume_state;
 }
 
 // indicates that the host requires a media change notification 
 void set_usbms_media_change_notification_required(void)
 {
-    g_media_change_notification = FIRST_MCN_STEP;
+    atomic_store(&g_media_change_notification, FIRST_MCN_STEP);
 }
 
 #endif

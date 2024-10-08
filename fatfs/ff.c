@@ -3622,7 +3622,7 @@ static FRESULT validate (	/* Returns FR_OK or FR_INVALID_OBJECT */
 #if FF_FS_REENTRANT
 		if (lock_fs(obj->fs)) {	/* Obtain the filesystem object */
 			if (!(disk_status(obj->fs->pdrv) & STA_NOINIT)) { /* Test if the phsical drive is kept initialized */
-				res = FR_OK;
+				res = FR_OK; // success ... the fs lock is kept, so caller must unlock it.
 			} else {
 				unlock_fs(obj->fs, FR_OK);
 			}
@@ -3660,6 +3660,7 @@ FRESULT f_mount (
 	BYTE opt			/* Mode option 0:Do not mount (delayed mount), 1:Mount immediately */
 )
 {
+	FF_CORE0_ASSERT();
 	FATFS *cfs;
 	int vol;
 	FRESULT res;
@@ -3708,6 +3709,7 @@ FRESULT f_open (
 	BYTE mode			/* Access mode and file open mode flags */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj;
 	FATFS *fs;
@@ -3901,6 +3903,7 @@ FRESULT f_read (
 	UINT* br	/* Pointer to number of bytes read */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DWORD clst;
@@ -4002,6 +4005,7 @@ FRESULT f_write (
 	UINT* bw			/* Pointer to number of bytes written */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DWORD clst;
@@ -4121,6 +4125,7 @@ FRESULT f_sync (
 	FIL* fp		/* Pointer to the file object */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DWORD tm;
@@ -4202,6 +4207,7 @@ FRESULT f_close (
 	FIL* fp		/* Pointer to the file object to be closed */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 
@@ -4248,6 +4254,7 @@ FRESULT f_chdrive (
 	const TCHAR* path		/* Drive number to set */
 )
 {
+	FF_CORE0_ASSERT();
 	int vol;
 
 
@@ -4265,6 +4272,7 @@ FRESULT f_chdir (
 	const TCHAR* path	/* Pointer to the directory path */
 )
 {
+	FF_CORE0_ASSERT();
 #if FF_STR_VOLUME_ID == 2
 	UINT i;
 #endif
@@ -4328,6 +4336,7 @@ FRESULT f_getcwd (
 	UINT len		/* Size of buff in unit of TCHAR */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj;
 	FATFS *fs;
@@ -4428,6 +4437,7 @@ FRESULT f_lseek (
 	FSIZE_t ofs		/* File pointer from top of file */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DWORD clst, bcs;
@@ -4591,6 +4601,7 @@ FRESULT f_opendir (
 	const TCHAR* path	/* Pointer to the directory path */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DEF_NAMBUF
@@ -4656,6 +4667,7 @@ FRESULT f_closedir (
 	DIR *dp		/* Pointer to the directory object to be closed */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 
@@ -4687,6 +4699,7 @@ FRESULT f_readdir (
 	FILINFO* fno		/* Pointer to file information to return */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DEF_NAMBUF
@@ -4723,6 +4736,7 @@ FRESULT f_findnext (
 	FILINFO* fno	/* Pointer to the file information structure */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 
 
@@ -4750,6 +4764,7 @@ FRESULT f_findfirst (
 	const TCHAR* pattern	/* Pointer to the matching pattern */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 
 
@@ -4775,6 +4790,7 @@ FRESULT f_stat (
 	FILINFO* fno		/* Pointer to file information to return */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj;
 	DEF_NAMBUF
@@ -4811,6 +4827,7 @@ FRESULT f_getfree (
 	FATFS** fatfs		/* Pointer to return pointer to corresponding filesystem object */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DWORD nfree, clst, stat;
@@ -4899,6 +4916,7 @@ FRESULT f_truncate (
 	FIL* fp		/* Pointer to the file object */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DWORD ncl;
@@ -4949,6 +4967,7 @@ FRESULT f_unlink (
 	const TCHAR* path		/* Pointer to the file or directory path */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj, sdj;
 	DWORD dclst = 0;
@@ -5045,6 +5064,7 @@ FRESULT f_mkdir (
 	const TCHAR* path		/* Pointer to the directory path */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj;
 	FFOBJID sobj;
@@ -5052,6 +5072,7 @@ FRESULT f_mkdir (
 	DWORD dcl, pcl, tm;
 	DEF_NAMBUF
 
+	// BUGBUG -- this needs to change media state!
 
 	res = mount_volume(&path, &fs, FA_WRITE);	/* Get logical drive */
 	if (res == FR_OK) {
@@ -5130,6 +5151,7 @@ FRESULT f_rename (
 	const TCHAR* path_new	/* Pointer to the new name */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR djo, djn;
 	FATFS *fs;
@@ -5137,6 +5159,7 @@ FRESULT f_rename (
 	LBA_t sect;
 	DEF_NAMBUF
 
+	// BUGBUG -- this needs to change media state!
 
 	get_ldnumber(&path_new);						/* Snip the drive number of new name off */
 	res = mount_volume(&path_old, &fs, FA_WRITE);	/* Get logical drive of the old object */
@@ -5241,11 +5264,13 @@ FRESULT f_chmod (
 	BYTE mask			/* Attribute mask to change */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj;
 	FATFS *fs;
 	DEF_NAMBUF
 
+	// BUGBUG -- this needs to change media state!
 
 	res = mount_volume(&path, &fs, FA_WRITE);	/* Get logical drive */
 	if (res == FR_OK) {
@@ -5287,6 +5312,7 @@ FRESULT f_utime (
 	const FILINFO* fno	/* Pointer to the timestamp to be set */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj;
 	FATFS *fs;
@@ -5335,6 +5361,7 @@ FRESULT f_getlabel (
 	DWORD* vsn			/* Variable to store the volume serial number */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj;
 	FATFS *fs;
@@ -5428,6 +5455,7 @@ FRESULT f_setlabel (
 	const TCHAR* label	/* Volume label to set with heading logical drive number */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	DIR dj;
 	FATFS *fs;
@@ -5438,6 +5466,8 @@ FRESULT f_setlabel (
 #if FF_USE_LFN
 	DWORD dc;
 #endif
+
+	// BUGBUG -- this needs to change media state!
 
 	/* Get logical drive */
 	res = mount_volume(&label, &fs, FA_WRITE);
@@ -5549,6 +5579,7 @@ FRESULT f_expand (
 	BYTE opt		/* Operation mode 0:Find and prepare or 1:Find and allocate */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DWORD n, clst, stcl, scl, ncl, tcl, lclst;
@@ -5640,6 +5671,7 @@ FRESULT f_forward (
 	UINT* bf						/* Pointer to number of bytes forwarded */
 )
 {
+	FF_CORE0_ASSERT();
 	FRESULT res;
 	FATFS *fs;
 	DWORD clst;
@@ -6371,6 +6403,7 @@ FRESULT f_mkfs (
 	UINT len				/* Size of working buffer [byte] */
 )
 {
+	FF_CORE0_ASSERT();
 	nand_volume_state_t old_state = get_nand_volume_state();	
 	FRESULT result = f_mkfs_internal(path, opt, work, len);
 	nand_volume_state_t new_state = get_nand_volume_state();
@@ -6396,6 +6429,7 @@ FRESULT f_fdisk (
 	void* work			/* Pointer to the working buffer (null: use heap memory) */
 )
 {
+	FF_CORE0_ASSERT();
 	BYTE *buf = (BYTE*)work;
 	DSTATUS stat;
 
@@ -6431,6 +6465,7 @@ TCHAR* f_gets (
 	FIL* fp			/* Pointer to the file object */
 )
 {
+	FF_CORE0_ASSERT();
 	int nc = 0;
 	TCHAR *p = buff;
 	BYTE s[4];
@@ -6729,6 +6764,7 @@ int f_putc (
 	FIL* fp		/* Pointer to the file object */
 )
 {
+	FF_CORE0_ASSERT();
 	putbuff pb;
 
 
@@ -6749,6 +6785,7 @@ int f_puts (
 	FIL* fp				/* Pointer to the file object */
 )
 {
+	FF_CORE0_ASSERT();
 	putbuff pb;
 
 
@@ -6771,6 +6808,7 @@ int f_printf (
 )
 {
 	va_list arp;
+	FF_CORE0_ASSERT();
 	putbuff pb;
 	BYTE f, r;
 	UINT i, j, w;
@@ -6886,6 +6924,7 @@ FRESULT f_setcp (
 	WORD cp		/* Value to be set as active code page */
 )
 {
+	FF_CORE0_ASSERT();
 	static const WORD       validcp[] = {  437,   720,   737,   771,   775,   850,   852,   857,   860,   861,   862,   863,   864,   865,   866,   869,   932,   936,   949,   950, 0};
 	static const BYTE* const tables[] = {Ct437, Ct720, Ct737, Ct771, Ct775, Ct850, Ct852, Ct857, Ct860, Ct861, Ct862, Ct863, Ct864, Ct865, Ct866, Ct869, Dc932, Dc936, Dc949, Dc950, 0};
 	UINT i;

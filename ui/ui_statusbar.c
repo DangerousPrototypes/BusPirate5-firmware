@@ -302,3 +302,13 @@ void ui_statusbar_init(void){
         printf("\e[%d;%dr", 1, system_config.terminal_ansi_rows - 4);
     }
 }
+
+void ui_statusbar_deinit(void){
+    if(system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar){
+        printf("\e7\e[0;%dr", system_config.terminal_ansi_rows); //save cursor, disable region block
+        for(uint8_t i=0; i<4; i++){
+            printf("\e[%d;0H\e[K",system_config.terminal_ansi_rows-i); //clear screen
+        }
+        printf("\e8"); //restore cursor
+    }    
+}

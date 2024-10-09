@@ -5,13 +5,16 @@
 #include "system_config.h"
 #include "opt_args.h"
 #include "msc_disk.h"
+#include "ui/ui_statusbar.h"
 
 void cmd_mcu_reset(void){
  	mcu_reset();
 }
 
 void cmd_mcu_reset_handler(struct command_result *res){
- 	cmd_mcu_reset();
+    ui_statusbar_deinit();
+    busy_wait_ms(100);   
+    cmd_mcu_reset();
 }
 
 void cmd_mcu_jump_to_bootloader(void){
@@ -40,6 +43,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result *res){
 		return;
 	}
     printf("Later Alligator!");
+    ui_statusbar_deinit();
     eject_usbmsdrive();
     busy_wait_ms(200);
     cmd_mcu_jump_to_bootloader();

@@ -22,7 +22,7 @@ void ui_display_clear(struct command_result *res){
     if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
 
     if(!system_config.terminal_ansi_color){
-        printf("cls command is only supported in VT100 terminal mode\n");
+        printf("cls command is only supported in VT100 terminal mode");
         return;
     }
 

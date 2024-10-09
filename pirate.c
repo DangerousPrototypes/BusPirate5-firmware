@@ -51,6 +51,10 @@
 //#include "mode/logicanalyzer.h"
 #include "msc_disk.h"
 #include "pirate/intercore_helpers.h"
+//#include "display/robot16.h"
+#if (BP_SPLASH_ENABLED)
+    #include BP_SPLASH_FILE
+#endif
 
 static mutex_t spi_mutex;
 
@@ -197,13 +201,16 @@ int main(){
 
     // LCD setup
     lcd_configure();
-    monitor(system_config.psu);
+    #if (BP_SPLASH_ENABLED)
+    lcd_write_background(splash_data);
+    /*monitor(system_config.psu);
     if (modes[system_config.mode].protocol_lcd_update){
         modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
     } else if (displays[system_config.display].display_lcd_update){
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
-    }
+    }*/
     lcd_backlight_enable(true);
+    #endif
 
     translation_set(system_config.terminal_language); 
     
@@ -224,11 +231,6 @@ int main(){
         }
     #endif
 
-    // begin main loop on secondary core
-    // this will also setup the USB device
-    // we need to have read any config files on the TF flash card before now
-    icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
-
     #if (BP_VER == 5)
         //test for PCB revision
         //must be done after shift register setup
@@ -244,6 +246,24 @@ int main(){
             }
         }    
     #endif
+
+    #if (BP_SPLASH_ENABLED)
+    busy_wait_ms(1000); 
+    //draw background after showing splash screen
+    lcd_backlight_enable(false);
+    #endif
+    monitor(system_config.psu);
+    if (modes[system_config.mode].protocol_lcd_update){
+        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
+    } else if (displays[system_config.display].display_lcd_update){
+        displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
+    }
+    lcd_backlight_enable(true);
+
+    // begin main loop on secondary core
+    // this will also setup the USB device
+    // we need to have read any config files on the TF flash card before now
+    icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
     binmode_setup();
 

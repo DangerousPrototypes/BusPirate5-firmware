@@ -2,6 +2,8 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
+#define BP_SPLASH_ENABLED 1
+
 #define BP_FIRMWARE_VERSION "main branch"
 
 #ifndef BP_FIRMWARE_HASH //this variable is for the current commit GIT hash

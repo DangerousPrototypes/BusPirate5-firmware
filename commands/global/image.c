@@ -142,7 +142,7 @@ void process_bitmap(FIL *file_handle, bool draw) {
         return;
     }
 
-    printf("Drawing image on display...\r\n");
+    printf("Drawing image on display...\r\n"); 
 
     //check bits per pixel
     if(infoHeaderUnion.infoHeader.biBitCount != 24 && infoHeaderUnion.infoHeader.biBitCount != 16) {

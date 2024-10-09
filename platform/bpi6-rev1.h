@@ -1,5 +1,7 @@
 #ifndef BP_HARDWARE_VERSION
 
+#define BP_SPLASH_FILE "display/robot6x16.h"
+
 #define BP_HARDWARE_VERSION "Bus Pirate 6"
 #define BP_HARDWARE_MCU "RP2350B"
 #define BP_HARDWARE_RAM "512KB"

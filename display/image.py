@@ -48,7 +48,7 @@ def process_bitmap(image_path):
 
     # Flip the image 90 degrees (270 degrees counterclockwise) if width is less than height
     if width < height:
-        image = image.transpose(Image.ROTATE_270)
+        image = image.transpose(Image.ROTATE_90)
 
     image = image.transpose(Image.FLIP_TOP_BOTTOM)  # Mirror the image horizontally
     #flip the image 90 degrees

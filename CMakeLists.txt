@@ -238,6 +238,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${bp5_nandflash}
                 platform/bpi-rev10.h platform/bpi-rev10.c 
                 pirate/shift.h pirate/shift.c
+                display/robot5xx16.h
                 )
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
@@ -247,6 +248,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${bp5_common}
                 ${bp5_nandflash}
                 platform/bpi6-rev1.h platform/bpi6-rev1.c 
+                display/robot6x16.h
                 )
         target_compile_definitions(bus_pirate6 PUBLIC BP_VER=6) 
         target_compile_definitions(bus_pirate6 PUBLIC BP_REV=10) 
@@ -264,6 +266,7 @@ else()
                 #tf card access control
                 fatfs/tf_card.c fatfs/tf_card.h
                 pirate/shift.h pirate/shift.c
+                display/robot5x16.h 
                 )
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VER=5) 
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_REV=8)
@@ -274,6 +277,7 @@ else()
                 ${bp5_nandflash}
                 platform/bpi-rev10.h platform/bpi-rev10.c 
                 pirate/shift.h pirate/shift.c
+                display/robot5x16.h
                 )
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_VER=5)                
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_REV=10)

@@ -1,5 +1,7 @@
 #ifndef BP_HARDWARE_VERSION
 
+#define BP_SPLASH_FILE "display/robot5x16.h" //splash screen
+
 #define BP_HARDWARE_VERSION "Bus Pirate 5 REV8"
 #define BP_HARDWARE_MCU "RP2040"
 #define BP_HARDWARE_RAM "264KB"

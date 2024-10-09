@@ -296,3 +296,9 @@ void ui_statusbar_update(uint32_t update_flags)
     tx_sb_start(len);
 
 }
+
+void ui_statusbar_init(void){
+    if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
+        printf("\e[%d;%dr", 1, system_config.terminal_ansi_rows - 4);
+    }
+}

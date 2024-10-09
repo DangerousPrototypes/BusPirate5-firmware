@@ -51,6 +51,10 @@
 //#include "mode/logicanalyzer.h"
 #include "msc_disk.h"
 #include "pirate/intercore_helpers.h"
+//#include "display/robot16.h"
+#if (BP_SPLASH_ENABLED)
+    #include BP_SPLASH_FILE
+#endif
 
 static mutex_t spi_mutex;
 
@@ -197,13 +201,16 @@ int main(){
 
     // LCD setup
     lcd_configure();
-    monitor(system_config.psu);
+    #if (BP_SPLASH_ENABLED)
+    lcd_write_background(splash_data);
+    /*monitor(system_config.psu);
     if (modes[system_config.mode].protocol_lcd_update){
         modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
     } else if (displays[system_config.display].display_lcd_update){
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
-    }
+    }*/
     lcd_backlight_enable(true);
+    #endif
 
     translation_set(system_config.terminal_language); 
     
@@ -224,11 +231,6 @@ int main(){
         }
     #endif
 
-    // begin main loop on secondary core
-    // this will also setup the USB device
-    // we need to have read any config files on the TF flash card before now
-    icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
-
     #if (BP_VER == 5)
         //test for PCB revision
         //must be done after shift register setup
@@ -244,6 +246,24 @@ int main(){
             }
         }    
     #endif
+
+    #if (BP_SPLASH_ENABLED)
+    busy_wait_ms(1000); 
+    //draw background after showing splash screen
+    lcd_backlight_enable(false);
+    #endif
+    monitor(system_config.psu);
+    if (modes[system_config.mode].protocol_lcd_update){
+        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
+    } else if (displays[system_config.display].display_lcd_update){
+        displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
+    }
+    lcd_backlight_enable(true);
+
+    // begin main loop on secondary core
+    // this will also setup the USB device
+    // we need to have read any config files on the TF flash card before now
+    icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
     binmode_setup();
 
@@ -284,14 +304,18 @@ int main(){
 
         switch(bp_state){
             case BP_SM_DISPLAY_MODE:
-                
-                if(system_config.terminal_ansi_color){ //config file option loaded, wait for any key
+                // config file option loaded, wait for any key
+                // for ASCII mode terminal_ansi_color is always false
+                // this has the side effect of always prompting if the saved mode is ASCII
+                // this is a feature, not a bug - 
+                // it lets new users escape from ASCII mode without learning of the config menus
+                if(system_config.terminal_ansi_color){ 
                     char c;
                     result.error=false;
                     result.success=false;
 
                     if(rx_fifo_try_get(&c)){
-                        value='a';
+                        value='s';
                         result.success=true;
                     } 
                 }else{
@@ -300,17 +324,27 @@ int main(){
 
                 if(result.success){
                     switch(value){
-                        case 'y':
-                            system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
-                            system_config.terminal_ansi_statusbar=1;
-                        case 'a': // case were configuration already exists
-                            ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
-                            ui_term_init(); // Initialize VT100 if ANSI terminal
-                            ui_statusbar_update(UI_UPDATE_ALL);
-                            break;
-                        case 'n':
-                            system_config.terminal_ansi_statusbar=0;
+                        case 'n': // user requested ASCII mode
                             system_config.terminal_ansi_color=UI_TERM_NO_COLOR;
+                            system_config.terminal_ansi_statusbar=false;
+                            printf("\r\n"); //make pretty    
+                            break;                    
+                        case 'y': // user requested VT100 mode
+                            // no configuration exists, default to status bar enabled                            
+                            system_config.terminal_ansi_color=UI_TERM_FULL_COLOR;
+                            system_config.terminal_ansi_statusbar=true;
+                        case 's': // case were configuration already exists
+                            if(!ui_term_detect()){ // Do we detect a VT100 ANSI terminal? what is the size?
+                                break;
+                            } 
+                            // if something goes wrong with detection, the next function will skip internally
+                            ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
+                            // this sets the scroll region for the status bar (if enabled)
+                            // and does the initial painting of the full statusbar
+                            if(system_config.terminal_ansi_statusbar){
+                                ui_statusbar_init();
+                                ui_statusbar_update(UI_UPDATE_ALL);
+                            }
                             break;
                         default:
                             break;

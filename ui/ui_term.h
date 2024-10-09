@@ -10,7 +10,7 @@ typedef enum ui_term_type{
 } ui_term_type_e;
 
 void ui_term_init(void);
-void ui_term_detect(void);
+bool ui_term_detect(void);
 
 void ui_term_color_text(uint32_t rgb);
 void ui_term_color_background(uint32_t rgb);

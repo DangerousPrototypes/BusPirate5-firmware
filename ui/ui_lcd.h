@@ -1,7 +1,7 @@
 void lcd_configure(void);
 void lcd_clear(void);
 void ui_lcd_update(uint32_t update_flags);
-void lcd_write_background(const char *image);
+void lcd_write_background(const unsigned char *image);
 void lcd_screensaver_disable(void);
 void lcd_screensaver_enable(void);
 void lcd_set_bounding_box(uint16_t xs, uint16_t xe, uint16_t ys, uint16_t ye);

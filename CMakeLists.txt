@@ -266,7 +266,7 @@ else()
                 #tf card access control
                 fatfs/tf_card.c fatfs/tf_card.h
                 pirate/shift.h pirate/shift.c
-                display/robot5x16.h
+                display/robot5x16.h 
                 )
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VER=5) 
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_REV=8)

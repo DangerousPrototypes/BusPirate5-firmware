@@ -1,6 +1,6 @@
 #ifndef BP_HARDWARE_VERSION
 
-#include "display/robot5x16.h" //splash screen
+#define BP_SPLASH_FILE "display/robot5x16.h" //splash screen
 
 #define BP_HARDWARE_VERSION "Bus Pirate 5 REV8"
 #define BP_HARDWARE_MCU "RP2040"

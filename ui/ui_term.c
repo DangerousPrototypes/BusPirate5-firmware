@@ -131,7 +131,7 @@ void ui_term_init(void) {
         // reset all styling
         printf("\e[0m");
         // set cursor type
-        printf("\e[3 q");
+        //printf("\e[3 q");
         // clear screen
         printf("\e[2J");
     }

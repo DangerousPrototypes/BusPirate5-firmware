@@ -202,15 +202,14 @@ uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_backgroun
         default:
             break;
     }
-
     return 0;
 }
 
-uint32_t ui_term_color_text_background_buf(char* buf, uint32_t rgb_text, uint32_t rgb_background) {
+uint32_t ui_term_color_text_background_buf(char* buf, size_t buffLen, uint32_t rgb_text, uint32_t rgb_background) {
     uint32_t count = 0;
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
-            count = sprintf(buf,
+            count = snprintf(buf, buffLen,
                             "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
                             (uint8_t)(rgb_text >> 16),
                             (uint8_t)(rgb_text >> 8),
@@ -222,7 +221,7 @@ uint32_t ui_term_color_text_background_buf(char* buf, uint32_t rgb_text, uint32_
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
             count =
-                sprintf(buf, "\x1b[38;5;%hhd;48;5;%hhdm", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
+                snprintf(buf, buffLen, "\x1b[38;5;%hhd;48;5;%hhdm", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
             return count;
 #endif
         case UI_TERM_NO_COLOR:

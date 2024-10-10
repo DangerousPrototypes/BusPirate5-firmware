@@ -52,7 +52,7 @@
 #include "msc_disk.h"
 #include "pirate/intercore_helpers.h"
 //#include "display/robot16.h"
-#if (BP_SPLASH_ENABLED)
+#ifdef BP_SPLASH_ENABLED
     #include BP_SPLASH_FILE
 #endif
 
@@ -201,7 +201,7 @@ int main(){
 
     // LCD setup
     lcd_configure();
-    #if (BP_SPLASH_ENABLED)
+    #ifdef BP_SPLASH_ENABLED
     lcd_write_background(splash_data);
     /*monitor(system_config.psu);
     if (modes[system_config.mode].protocol_lcd_update){
@@ -247,7 +247,7 @@ int main(){
         }    
     #endif
 
-    #if (BP_SPLASH_ENABLED)
+    #ifdef BP_SPLASH_ENABLED
     busy_wait_ms(1000); 
     //draw background after showing splash screen
     lcd_backlight_enable(false);

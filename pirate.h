@@ -2,11 +2,11 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
-// 1 = enable splash screen at startup, increases firmware size and load time
-#define BP_SPLASH_ENABLED 0
+// enable splash screen at startup, increases firmware size and load time
+#define BP_SPLASH_ENABLED 
 
 // uncomment to disable unique com ports for manufacturing testing
-#define BP_MANUFACTURING_TEST_MODE
+//#define BP_MANUFACTURING_TEST_MODE
 
 #define BP_FIRMWARE_VERSION "main branch"
 

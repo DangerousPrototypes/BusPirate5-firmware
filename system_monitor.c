@@ -154,7 +154,7 @@ bool monitor(bool current_sense)
             current_sense=current_sense_temp; //TODO: maybe there is more variation here than we want and this hits needlessly
             
             char current_value_temp[6];
-            sprintf(current_value_temp, "%03u.%01u", (current_sense_temp/1000), ((current_sense_temp%1000)/100));
+            snprintf(current_value_temp, sizeof(current_value_temp), "%03u.%01u", (current_sense_temp/1000), ((current_sense_temp%1000)/100));
 
             for(uint8_t i=0; i<5; i++)
             {

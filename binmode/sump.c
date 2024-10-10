@@ -143,7 +143,7 @@ static void sump_do_meta(void) {
     uint32_t sysclk;
 
     sysclk = clock_get_hz(clk_sys) / SAMPLING_DIVIDER;
-    sprintf(cpu, "RP2040 %uMhz", sysclk / ONE_MHZ);
+    snprintf(cpu, sizeof(cpu), "RP2040 %uMhz", sysclk / ONE_MHZ);
     ptr = sump_add_metas(ptr, SUMP_META_NAME, "Bus Pirate 5");
     ptr = sump_add_metas(ptr, SUMP_META_FPGA_VERSION, "PIO+DMA!");
     ptr = sump_add_metas(ptr, SUMP_META_CPU_VERSION, cpu);

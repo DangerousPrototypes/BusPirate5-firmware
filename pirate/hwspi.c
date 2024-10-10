@@ -64,6 +64,8 @@ void hwspi_write(uint32_t data){
 
     // Don't leave overrun flag set
     spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
+
+    while(spi_is_busy(M_SPI_PORT)); //wait for idle
 }
 
 void hwspi_write_n(uint8_t *data, uint8_t count){

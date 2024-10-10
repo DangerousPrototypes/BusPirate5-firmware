@@ -86,6 +86,7 @@ uint32_t hwspi_write_read(uint8_t data){
 	while(!spi_is_writable(M_SPI_PORT));
 	spi_get_hw(M_SPI_PORT)->dr = (uint32_t)data;
     while(!spi_is_readable(M_SPI_PORT));	
+    while(spi_is_busy(M_SPI_PORT)); //wait for idle
 	return (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
 }
 

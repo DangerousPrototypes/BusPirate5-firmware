@@ -22,7 +22,9 @@
  * THE SOFTWARE.
  *
  */
-
+#include <stdio.h>
+#include "pico/stdlib.h"
+#include "pirate.h"
 #include "tusb.h"
 #include "pirate/mcu.h"
 
@@ -33,11 +35,11 @@
  *   [MSB]         HID | MSC | CDC          [LSB]
  */
 #define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
-#define USB_PID  0x7332         /*(0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
+//#define USB_PID  0x7332         /*(0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
                            _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )*/
 
 #define USB_BCD   0x0200
-#define USB_VID   0x1209
+//#define USB_VID   0x1209
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -298,6 +300,7 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
   if ( index == 0) { // supported language == English
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
+  #ifndef BP_MANUFACTURING_TEST_MODE
   } else if ( index == 3 ) { // special-case for USB Serial number
     //  1x  uint16_t for length/type
     // 16x  uint16_t to encode 64-bit value as hex (16x nibbles)
@@ -308,6 +311,7 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
       _desc_str[16-t] = nibble < 10 ? '0' + nibble : 'A' + nibble - 10;
     }
     chr_count = 16;
+  #endif
   } else if ( index >= STRING_DESC_ARR_ELEMENT_COUNT ) { // if not in table, return NULL
     return NULL;
   } else {

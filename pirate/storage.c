@@ -76,12 +76,12 @@ uint8_t storage_mount(void){
     FRESULT fr;     /* FatFs return code */
     fr = f_mount(&fs, "", 1);
     if (fr != FR_OK) {
-        system_config.storage_available=0;
+        set_nand_volume_state(NAND_VOLUME_STATE_EJECTED, false);
         system_config.storage_mount_error=fr;
-    }else{
-        system_config.storage_available=1;
+    } else {
         system_config.storage_fat_type=fs.fs_type;
-        system_config.storage_size=fs.csize * fs.n_fatent * BP_FLASH_DISK_BLOCK_SIZE * 1E-9; // 2048E-9; //512E-9;
+        system_config.storage_size=fs.csize * fs.n_fatent * BP_FLASH_DISK_BLOCK_SIZE * 1E-9; // 2048E-11; //512E-9;
+        set_nand_volume_state(NAND_VOLUME_STATE_SHARED_READONLY, true);
     }
     return fr;
 }
@@ -90,7 +90,7 @@ void storage_unmount(void){
     //make sure the low level storage is consistent
     disk_ioctl(fs.pdrv, CTRL_SYNC, 0);
     f_unmount("");
-    system_config.storage_available=false;
+    set_nand_volume_state(NAND_VOLUME_STATE_EJECTED, false);
     system_config.storage_mount_error=0;
 #if BP_REV == 8 || BP_REV == 9
     printf("Storage removed\r\n");
@@ -101,21 +101,23 @@ bool storage_detect(void){
     #if BP_REV==8 || BP_REV==9
     //TF flash card detect is measured through the analog mux for lack of IO pins....
     //if we have low, storage not previously available, and we didn't error out, try to mount
-    if(hw_adc_raw[HW_ADC_MUX_CARD_DETECT]<100 && 
-        system_config.storage_available==false && 
-        system_config.storage_mount_error==0
-    ){
-        if(storage_mount()==FR_OK){
+    nand_volume_state_t state = get_nand_volume_state();
+
+    if (hw_adc_raw[HW_ADC_MUX_CARD_DETECT]<100 && 
+        state == NAND_VOLUME_STATE_EJECTED &&
+        system_config.storage_mount_error == 0
+        ) {
+        if (storage_mount()==FR_OK) {
             printf("Storage mounted: %7.2f GB %s\r\n\r\n", system_config.storage_size,storage_fat_type_labels[system_config.storage_fat_type-1]);
-        }else{
+        } else {
             printf("Mount error %d\r\n", system_config.storage_mount_error);
         }
     }
 
     //card removed, unmount, look for fresh insert next time
-    if(hw_adc_raw[HW_ADC_MUX_CARD_DETECT]>=100 &&
-        (system_config.storage_available==true || system_config.storage_mount_error!=0)
-    ){
+    if (hw_adc_raw[HW_ADC_MUX_CARD_DETECT] >= 100 &&
+        (state != NAND_VOLUME_STATE_EJECTED || system_config.storage_mount_error != 0)
+        ) {
         storage_unmount();
     }
     #endif
@@ -172,12 +174,19 @@ uint32_t getint(const char *buf, int len, const char *path, uint32_t defvalue, i
 }
 
 uint32_t storage_save_mode(const char *filename, const mode_config_t *config, uint8_t count){
-    if(system_config.storage_available==0){
+    nand_volume_state_t state = get_nand_volume_state();
+    if (state == NAND_VOLUME_STATE_EJECTED) {
+        return 0;
+    } else if (state == NAND_VOLUME_STATE_HOST_EXCLUSIVE) {
+        // TODO: print warning? at least a debug print?
         return 0;
     }
+    // else in either NAND_VOLUME_STATE_SHARED_READONLY or NAND_VOLUME_STATE_FW_EXCLUSIVE
+    // so we should be able to write to the volume.
+
     FRESULT fr;     /* FatFs return code */
-    FIL fil;			/* File object needed for each open file */
-    fr = f_open(&fil, filename, FA_CREATE_ALWAYS | FA_WRITE);	
+    FIL fil;        /* File object needed for each open file */
+    fr = f_open(&fil, filename, FA_CREATE_ALWAYS | FA_WRITE);
     if (fr != FR_OK) {
         storage_file_error(fr);
         return 0;
@@ -195,13 +204,17 @@ uint32_t storage_save_mode(const char *filename, const mode_config_t *config, ui
     }
     f_printf(&fil,"}");
     /* Close the file */
-    f_close(&fil);  
+    f_close(&fil);
     return 1;
 }
 
 uint32_t storage_load_mode(const char *filename, const mode_config_t *config, uint8_t count){
     char json[512];
-    if (system_config.storage_available == 0) {
+    nand_volume_state_t state = get_nand_volume_state();
+    if (state == NAND_VOLUME_STATE_EJECTED) {
+        return 0;
+    } else if (state == NAND_VOLUME_STATE_HOST_EXCLUSIVE) {
+        // TODO: print warning? at least a debug print?
         return 0;
     }
     FRESULT fr;     /* FatFs return code */

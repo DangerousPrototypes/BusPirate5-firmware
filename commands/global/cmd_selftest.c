@@ -22,8 +22,8 @@
 
 bool selftest_format_nand(void){
     uint32_t value;
-    struct prompt_result presult;     
-    if(!system_config.storage_available){
+    struct prompt_result presult;
+    if (get_nand_volume_state() == NAND_VOLUME_STATE_EJECTED) {
         printf("No file system!\r\nFormat the Bus Pirate NAND flash?\r\nALL DATA WILL BE DESTROYED.\r\n y/n> ");
         cmdln_next_buf_pos();
         while(1){

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../pirate/rgb.h" // for `led_effect_t` enumeration
+#include "msc_disk.h"
 
 typedef struct _pwm_config 
 {
@@ -43,7 +44,6 @@ typedef struct _system_config
 	bool terminal_ansi_statusbar_pause;
 	uint8_t terminal_update;
 
-	uint8_t storage_available;
     uint8_t storage_mount_error;
     uint8_t storage_fat_type;
     float storage_size;

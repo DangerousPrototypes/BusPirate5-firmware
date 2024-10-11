@@ -74,7 +74,10 @@ void i_info_handler(struct command_result *res){
 	printf("%s\r\n", GET_T(T_INFO_WEBSITE));
 
 	// TF flash card information
-	if(system_config.storage_available){
+	nand_volume_state_t state = get_nand_volume_state();
+    if (state == NAND_VOLUME_STATE_SHARED_READONLY ||
+		state == NAND_VOLUME_STATE_FW_EXCLUSIVE
+		) {
 		printf("%s: %s%6.2fGB%s (%s %s)\r\n", 
 			GET_T(T_INFO_TF_CARD),
 			ui_term_color_num_float(),

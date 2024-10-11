@@ -88,7 +88,7 @@ uint32_t spi_setup(void){
 		
         ui_prompt_uint32(&result, &spi_menu[2], &temp);
 		if(result.exit) return 0;
-		mode_config.clock_polarity=(uint8_t)((temp-1)<<1);
+		mode_config.clock_polarity=(uint8_t)((temp-1));
 
 		ui_prompt_uint32(&result, &spi_menu[3], &temp);
 		if(result.exit) return 0;
@@ -239,7 +239,7 @@ void spi_pins(void)
 */
 
 void spi_settings(void){
-	printf("spi (baudrate, clock polarity, clock phase, cs)=(%dkHz, %d, %d, %d)", (mode_config.baudrate_actual/1000), (mode_config.clock_polarity>>1)+1, mode_config.clock_phase+1, mode_config.cs_idle+1);
+	printf("spi (baudrate, clock polarity, clock phase, cs)=(%dkHz, %d, %d, %d)", (mode_config.baudrate_actual/1000), mode_config.clock_polarity+1, mode_config.clock_phase+1, mode_config.cs_idle+1);
 }
 
 void spi_printSPIflags(void){

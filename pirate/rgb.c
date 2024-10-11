@@ -779,10 +779,23 @@ void rgb_init(void){
     rgb_irq_enable(true);
 };
 
-
-void rgb_set_all(uint8_t r, uint8_t g, uint8_t b){
+void rgb_set_masked(uint8_t r, uint8_t g, uint8_t b, uint32_t pixel_mask) {
     CPIXEL_COLOR color = { .r = r, .g = g, .b = b };
-    assign_pixel_color(PIXEL_MASK_ALL, color);
+    assign_pixel_color(pixel_mask, color);
+    update_pixels();
+}
+
+void rgb_set_all(uint8_t r, uint8_t g, uint8_t b) {
+    rgb_set_masked(r, g, b, PIXEL_MASK_ALL);
+}
+
+void rgb_set_pixels(uint32_t* colors, uint32_t count) {
+    if (count > COUNT_OF_PIXELS) {
+        count = COUNT_OF_PIXELS;
+    }
+    for (int i = 0; i < count; ++i) {
+        pixels[i] = color_from_uint32(colors[i]);
+    }
     update_pixels();
 }
 

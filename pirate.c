@@ -286,22 +286,6 @@ int main(){
         //but the terminal will not be responsive if the service is blocking
         binmode_service();
 
-        if (tud_cdc_n_connected(0)){
-            if(!has_been_connected){
-                has_been_connected = true;
-                prepare_usbmsdrive_readonly();
-                //sync with the host 
-                storage_mount();
-                insert_usbmsdrive();
-            }
-        }
-        else{
-            if (has_been_connected){
-                has_been_connected = false;
-            }
-            make_usbmsdrive_writable();
-        }
-
         switch(bp_state){
             case BP_SM_DISPLAY_MODE:
                 // config file option loaded, wait for any key

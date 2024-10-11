@@ -44,7 +44,8 @@ void system_init(void)
 	system_config.terminal_hide_cursor=false;
 	system_config.terminal_ansi_statusbar_pause=false;
 
-	system_config.storage_available=0;
+	set_nand_volume_state(NAND_VOLUME_STATE_EJECTED, false);
+
 	system_config.storage_mount_error=3;
 	system_config.storage_fat_type=5;
 	system_config.storage_size=0;

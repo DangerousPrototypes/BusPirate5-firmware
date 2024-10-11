@@ -33,7 +33,7 @@
 #error Wrong include file (ff.h).
 #endif
 
-
+#pragma region    // Constants and macros
 /* Limits and boundaries */
 #define MAX_DIR		0x200000		/* Max size of FAT directory */
 #define MAX_DIR_EX	0x10000000		/* Max size of exFAT directory */
@@ -224,7 +224,6 @@
 #define GPTE_LstLba			40		/* GPT PTE: Last LBA inclusive (QWORD) */
 #define GPTE_Flags			48		/* GPT PTE: Flags (QWORD) */
 #define GPTE_Name			56		/* GPT PTE: Name */
-
 
 /* Post process on fatal error in the file operations */
 #define ABORT(fs, res)		{ fp->err = (BYTE)(res); LEAVE_FF(fs, res); }
@@ -438,8 +437,9 @@ typedef struct {
 #define MERGE_2STR(a, b) a ## b
 #define MKCVTBL(hd, cp) MERGE_2STR(hd, cp)
 
+#pragma endregion // Constants and macros
 
-
+#pragma region    // Module private work area
 
 /*--------------------------------------------------------------------------
 
@@ -593,8 +593,9 @@ static const BYTE DbcTbl[] = MKCVTBL(TBL_DC, FF_CODE_PAGE);
 
 #endif
 
+#pragma endregion // Module private work area
 
-
+#pragma region    // Module private functions
 
 /*--------------------------------------------------------------------------
 
@@ -987,6 +988,20 @@ static FRESULT chk_lock (	/* Check if the file can be accessed */
 	return (acc != 0 || Files[i].ctr == 0x100) ? FR_LOCKED : FR_OK;
 }
 
+static bool enq_any_writable_handles(void)
+{
+	UINT i;
+	bool result = false;
+	for (i = 0; i < FF_FS_LOCK; i++) {
+		// INTERNAL DETAIL: ctr set to 0x100 indicates the file handle
+		//                  is used for writing.  values less than 0x100
+		//                  indicate one or more read-only handles.
+		if (Files[i].fs && Files[i].ctr == 0x100) {
+			result = true;
+		}
+	}
+	return result;
+}
 
 static int enq_lock (void)	/* Check if an entry is available for a new object */
 {
@@ -3608,7 +3623,7 @@ static FRESULT validate (	/* Returns FR_OK or FR_INVALID_OBJECT */
 #if FF_FS_REENTRANT
 		if (lock_fs(obj->fs)) {	/* Obtain the filesystem object */
 			if (!(disk_status(obj->fs->pdrv) & STA_NOINIT)) { /* Test if the phsical drive is kept initialized */
-				res = FR_OK;
+				res = FR_OK; // success ... the fs lock is kept, so caller must unlock it.
 			} else {
 				unlock_fs(obj->fs, FR_OK);
 			}
@@ -3625,7 +3640,27 @@ static FRESULT validate (	/* Returns FR_OK or FR_INVALID_OBJECT */
 	return res;
 }
 
+#pragma endregion    // Module private functions
 
+static bool TransitionBackToSharedReadonlyIfNoWritableFileHandles(void)
+{
+	bool result = false;
+	FF_CORE0_ASSERT(); // transition back to shared read-only helper function
+
+	// Normally, call to check if any writable file handles remain would need
+	// to be checked while holding a fs-wide lock.
+	//
+	// However, because have asserted that all FastFAT operations are occuring
+	// only from Core0, checking this condition is safe to do without the lock.
+	nand_volume_state_t state = get_nand_volume_state();
+	if (state == NAND_VOLUME_STATE_FW_EXCLUSIVE && !enq_any_writable_handles()) {
+		// return to shared read-only volume state, as firmware has no
+		// remaining file handles that permit writing.
+		set_nand_volume_state(NAND_VOLUME_STATE_SHARED_READONLY, true);
+		result = true;
+	}
+	return result;
+}
 
 
 /*---------------------------------------------------------------------------
@@ -3640,7 +3675,7 @@ static FRESULT validate (	/* Returns FR_OK or FR_INVALID_OBJECT */
 /* Mount/Unmount a Logical Drive                                         */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_mount (
+static FRESULT f_mount_internal (
 	FATFS* fs,			/* Pointer to the filesystem object (NULL:unmount)*/
 	const TCHAR* path,	/* Logical drive number to be mounted/unmounted */
 	BYTE opt			/* Mode option 0:Do not mount (delayed mount), 1:Mount immediately */
@@ -3680,7 +3715,22 @@ FRESULT f_mount (
 	res = mount_volume(&path, &fs, 0);	/* Force mounted the volume */
 	LEAVE_FF(fs, res);
 }
-
+FRESULT f_mount (
+	FATFS* fs,			/* Pointer to the filesystem object (NULL:unmount)*/
+	const TCHAR* path,	/* Logical drive number to be mounted/unmounted */
+	BYTE opt			/* Mode option 0:Do not mount (delayed mount), 1:Mount immediately */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_mount_internal(fs, path, opt);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+		set_nand_volume_state(NAND_VOLUME_STATE_SHARED_READONLY, true);
+	}
+	return result;
+}
 
 
 
@@ -3688,7 +3738,7 @@ FRESULT f_mount (
 /* Open or Create a File                                                 */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_open (
+static FRESULT f_open_internal (
 	FIL* fp,			/* Pointer to the blank file object */
 	const TCHAR* path,	/* Pointer to the file name */
 	BYTE mode			/* Access mode and file open mode flags */
@@ -3873,6 +3923,21 @@ FRESULT f_open (
 	LEAVE_FF(fs, res);
 }
 
+FRESULT f_open (
+	FIL* fp,			/* Pointer to the blank file object */
+	const TCHAR* path,	/* Pointer to the file name */
+	BYTE mode			/* Access mode and file open mode flags */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_open_internal(fp, path, mode);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 
 
@@ -3880,7 +3945,7 @@ FRESULT f_open (
 /* Read File                                                             */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_read (
+static FRESULT f_read_internal (
 	FIL* fp, 	/* Pointer to the file object */
 	void* buff,	/* Pointer to data buffer */
 	UINT btr,	/* Number of bytes to read */
@@ -3972,7 +4037,22 @@ FRESULT f_read (
 
 	LEAVE_FF(fs, FR_OK);
 }
-
+FRESULT f_read (
+	FIL* fp, 	/* Pointer to the file object */
+	void* buff,	/* Pointer to data buffer */
+	UINT btr,	/* Number of bytes to read */
+	UINT* br	/* Pointer to number of bytes read */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_read_internal(fp, buff, btr, br);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 
 
@@ -3981,7 +4061,7 @@ FRESULT f_read (
 /* Write File                                                            */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_write (
+static FRESULT f_write_internal (
 	FIL* fp,			/* Pointer to the file object */
 	const void* buff,	/* Pointer to the data to be written */
 	UINT btw,			/* Number of bytes to write */
@@ -4095,15 +4175,28 @@ FRESULT f_write (
 
 	LEAVE_FF(fs, FR_OK);
 }
-
-
-
+FRESULT f_write (
+	FIL* fp,			/* Pointer to the file object */
+	const void* buff,	/* Pointer to the data to be written */
+	UINT btw,			/* Number of bytes to write */
+	UINT* bw			/* Pointer to number of bytes written */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_write_internal(fp, buff, btw, bw);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE);
+	}
+	return result;
+}
 
 /*-----------------------------------------------------------------------*/
 /* Synchronize the File                                                  */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_sync (
+static FRESULT f_sync_internal (
 	FIL* fp		/* Pointer to the file object */
 )
 {
@@ -4174,7 +4267,19 @@ FRESULT f_sync (
 
 	LEAVE_FF(fs, res);
 }
-
+FRESULT f_sync (
+	FIL* fp		/* Pointer to the file object */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_sync_internal(fp);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 #endif /* !FF_FS_READONLY */
 
 
@@ -4184,7 +4289,7 @@ FRESULT f_sync (
 /* Close File                                                            */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_close (
+static FRESULT f_close_internal (
 	FIL* fp		/* Pointer to the file object to be closed */
 )
 {
@@ -4204,17 +4309,29 @@ FRESULT f_close (
 #else
 			fp->obj.fs = 0;	/* Invalidate file object */
 #endif
+
 #if FF_FS_REENTRANT
 			unlock_fs(fs, FR_OK);		/* Unlock volume */
 #endif
 		}
-		//reconnect the MSD to refresh the file system on the PC side
-		if (fp->flag & FA_WRITE) refresh_usbmsdrive();
 	}
 	return res;
 }
 
-
+FRESULT f_close (
+	FIL* fp		/* Pointer to the file object to be closed */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_close_internal(fp);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+		TransitionBackToSharedReadonlyIfNoWritableFileHandles();
+	}
+	return result;
+}
 
 
 #if FF_FS_RPATH >= 1
@@ -4222,7 +4339,7 @@ FRESULT f_close (
 /* Change Current Directory or Current Drive, Get Current Directory      */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_chdrive (
+static FRESULT f_chdrive_internal (
 	const TCHAR* path		/* Drive number to set */
 )
 {
@@ -4236,10 +4353,21 @@ FRESULT f_chdrive (
 
 	return FR_OK;
 }
+FRESULT f_chdrive (
+	const TCHAR* path		/* Drive number to set */
+)
+{
+	// wrapper function because of complex multi-exit-point code in most of these API functions
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_chdrive_internal(path);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
-
-
-FRESULT f_chdir (
+static FRESULT f_chdir_internal (
 	const TCHAR* path	/* Pointer to the directory path */
 )
 {
@@ -4298,10 +4426,22 @@ FRESULT f_chdir (
 
 	LEAVE_FF(fs, res);
 }
-
+FRESULT f_chdir (
+	const TCHAR* path	/* Pointer to the directory path */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_chdir_internal(path);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 #if FF_FS_RPATH >= 2
-FRESULT f_getcwd (
+static FRESULT f_getcwd_internal (
 	TCHAR* buff,	/* Pointer to the directory path */
 	UINT len		/* Size of buff in unit of TCHAR */
 )
@@ -4390,7 +4530,20 @@ FRESULT f_getcwd (
 	*tp = 0;
 	LEAVE_FF(fs, res);
 }
-
+FRESULT f_getcwd (
+	TCHAR* buff,	/* Pointer to the directory path */
+	UINT len		/* Size of buff in unit of TCHAR */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_getcwd_internal(buff, len);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 #endif /* FF_FS_RPATH >= 2 */
 #endif /* FF_FS_RPATH >= 1 */
 
@@ -4401,7 +4554,7 @@ FRESULT f_getcwd (
 /* Seek File Read/Write Pointer                                          */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_lseek (
+static FRESULT f_lseek_internal (
 	FIL* fp,		/* Pointer to the file object */
 	FSIZE_t ofs		/* File pointer from top of file */
 )
@@ -4556,7 +4709,20 @@ FRESULT f_lseek (
 
 	LEAVE_FF(fs, res);
 }
-
+FRESULT f_lseek (
+	FIL* fp,		/* Pointer to the file object */
+	FSIZE_t ofs		/* File pointer from top of file */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_lseek_internal(fp, ofs);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 
 #if FF_FS_MINIMIZE <= 1
@@ -4564,7 +4730,7 @@ FRESULT f_lseek (
 /* Create a Directory Object                                             */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_opendir (
+static FRESULT f_opendir_internal (
 	DIR* dp,			/* Pointer to directory object to create */
 	const TCHAR* path	/* Pointer to the directory path */
 )
@@ -4622,15 +4788,26 @@ FRESULT f_opendir (
 
 	LEAVE_FF(fs, res);
 }
-
-
-
+FRESULT f_opendir (
+	DIR* dp,			/* Pointer to directory object to create */
+	const TCHAR* path	/* Pointer to the directory path */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_opendir_internal(dp, path);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 /*-----------------------------------------------------------------------*/
 /* Close Directory                                                       */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_closedir (
+static FRESULT f_closedir_internal (
 	DIR *dp		/* Pointer to the directory object to be closed */
 )
 {
@@ -4652,7 +4829,19 @@ FRESULT f_closedir (
 	}
 	return res;
 }
-
+FRESULT f_closedir (
+	DIR *dp		/* Pointer to the directory object to be closed */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_closedir_internal(dp);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 
 
@@ -4660,7 +4849,7 @@ FRESULT f_closedir (
 /* Read Directory Entries in Sequence                                    */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_readdir (
+static FRESULT f_readdir_internal (
 	DIR* dp,			/* Pointer to the open directory object */
 	FILINFO* fno		/* Pointer to file information to return */
 )
@@ -4668,7 +4857,6 @@ FRESULT f_readdir (
 	FRESULT res;
 	FATFS *fs;
 	DEF_NAMBUF
-
 
 	res = validate(&dp->obj, &fs);	/* Check validity of the directory object */
 	if (res == FR_OK) {
@@ -4688,7 +4876,20 @@ FRESULT f_readdir (
 	}
 	LEAVE_FF(fs, res);
 }
-
+FRESULT f_readdir (
+	DIR* dp,			/* Pointer to the open directory object */
+	FILINFO* fno		/* Pointer to file information to return */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_closedir_internal(dp);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 
 #if FF_USE_FIND
@@ -4696,7 +4897,7 @@ FRESULT f_readdir (
 /* Find Next File                                                        */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_findnext (
+static FRESULT f_findnext_internal (
 	DIR* dp,		/* Pointer to the open directory object */
 	FILINFO* fno	/* Pointer to the file information structure */
 )
@@ -4714,14 +4915,27 @@ FRESULT f_findnext (
 	}
 	return res;
 }
-
+FRESULT f_findnext (
+	DIR* dp,		/* Pointer to the open directory object */
+	FILINFO* fno	/* Pointer to the file information structure */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_findnext_internal(dp, fno);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 
 /*-----------------------------------------------------------------------*/
 /* Find First File                                                       */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_findfirst (
+static FRESULT f_findfirst_internal (
 	DIR* dp,				/* Pointer to the blank directory object */
 	FILINFO* fno,			/* Pointer to the file information structure */
 	const TCHAR* path,		/* Pointer to the directory to open */
@@ -4730,7 +4944,6 @@ FRESULT f_findfirst (
 {
 	FRESULT res;
 
-
 	dp->pat = pattern;		/* Save pointer to pattern string */
 	res = f_opendir(dp, path);		/* Open the target directory */
 	if (res == FR_OK) {
@@ -4738,7 +4951,22 @@ FRESULT f_findfirst (
 	}
 	return res;
 }
-
+FRESULT f_findfirst (
+	DIR* dp,				/* Pointer to the blank directory object */
+	FILINFO* fno,			/* Pointer to the file information structure */
+	const TCHAR* path,		/* Pointer to the directory to open */
+	const TCHAR* pattern	/* Pointer to the matching pattern */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_findfirst_internal(dp, fno, path, pattern);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 #endif	/* FF_USE_FIND */
 
 
@@ -4748,7 +4976,7 @@ FRESULT f_findfirst (
 /* Get File Status                                                       */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_stat (
+static FRESULT f_stat_internal (
 	const TCHAR* path,	/* Pointer to the file path */
 	FILINFO* fno		/* Pointer to file information to return */
 )
@@ -4775,15 +5003,27 @@ FRESULT f_stat (
 
 	LEAVE_FF(dj.obj.fs, res);
 }
-
-
+FRESULT f_stat (
+	const TCHAR* path,	/* Pointer to the file path */
+	FILINFO* fno		/* Pointer to file information to return */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_stat_internal(path, fno);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 #if !FF_FS_READONLY
 /*-----------------------------------------------------------------------*/
 /* Get Number of Free Clusters                                           */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_getfree (
+static FRESULT f_getfree_internal (
 	const TCHAR* path,	/* Logical drive number */
 	DWORD* nclst,		/* Pointer to a variable to return number of free clusters */
 	FATFS** fatfs		/* Pointer to return pointer to corresponding filesystem object */
@@ -4865,15 +5105,28 @@ FRESULT f_getfree (
 
 	LEAVE_FF(fs, res);
 }
-
-
+FRESULT f_getfree (
+	const TCHAR* path,	/* Logical drive number */
+	DWORD* nclst,		/* Pointer to a variable to return number of free clusters */
+	FATFS** fatfs		/* Pointer to return pointer to corresponding filesystem object */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_getfree_internal(path, nclst, fatfs);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 
 /*-----------------------------------------------------------------------*/
 /* Truncate File                                                         */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_truncate (
+static FRESULT f_truncate_internal (
 	FIL* fp		/* Pointer to the file object */
 )
 {
@@ -4915,15 +5168,25 @@ FRESULT f_truncate (
 
 	LEAVE_FF(fs, res);
 }
-
-
-
+FRESULT f_truncate (
+	FIL* fp		/* Pointer to the file object */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_truncate_internal(fp);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 /*-----------------------------------------------------------------------*/
 /* Delete a File/Directory                                               */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_unlink (
+static FRESULT f_unlink_internal (
 	const TCHAR* path		/* Pointer to the file or directory path */
 )
 {
@@ -5001,9 +5264,9 @@ FRESULT f_unlink (
 					res = remove_chain(&dj.obj, dclst, 0);
 #endif
 				}
-				if (res == FR_OK) res = sync_fs(fs);
-				//reconnect the MSD to refresh the file system on the PC side
-				refresh_usbmsdrive();
+				if (res == FR_OK) {
+					res = sync_fs(fs);
+				}
 			}
 		}
 		FREE_NAMBUF();
@@ -5011,15 +5274,27 @@ FRESULT f_unlink (
 
 	LEAVE_FF(fs, res);
 }
-
-
+FRESULT f_unlink (
+	const TCHAR* path		/* Pointer to the file or directory path */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_unlink(path);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	TransitionBackToSharedReadonlyIfNoWritableFileHandles();
+	return result;
+}
 
 
 /*-----------------------------------------------------------------------*/
 /* Create a Directory                                                    */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_mkdir (
+static FRESULT f_mkdir_internal (
 	const TCHAR* path		/* Pointer to the directory path */
 )
 {
@@ -5030,6 +5305,7 @@ FRESULT f_mkdir (
 	DWORD dcl, pcl, tm;
 	DEF_NAMBUF
 
+	// BUGBUG -- this needs to change media state!
 
 	res = mount_volume(&path, &fs, FA_WRITE);	/* Get logical drive */
 	if (res == FR_OK) {
@@ -5085,8 +5361,6 @@ FRESULT f_mkdir (
 				}
 				if (res == FR_OK) {
 					res = sync_fs(fs);
-					//reconnect the MSD to refresh the file system on the PC side
-					refresh_usbmsdrive();
 				}
 			} else {
 				remove_chain(&sobj, dcl, 0);		/* Could not register, remove the allocated cluster */
@@ -5097,15 +5371,27 @@ FRESULT f_mkdir (
 
 	LEAVE_FF(fs, res);
 }
-
-
+FRESULT f_mkdir (
+	const TCHAR* path		/* Pointer to the directory path */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_mkdir_internal(path);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	TransitionBackToSharedReadonlyIfNoWritableFileHandles();
+	return result;
+}
 
 
 /*-----------------------------------------------------------------------*/
 /* Rename a File/Directory                                               */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_rename (
+static FRESULT f_rename_internal (
 	const TCHAR* path_old,	/* Pointer to the object name to be renamed */
 	const TCHAR* path_new	/* Pointer to the new name */
 )
@@ -5117,6 +5403,7 @@ FRESULT f_rename (
 	LBA_t sect;
 	DEF_NAMBUF
 
+	// BUGBUG -- this needs to change media state!
 
 	get_ldnumber(&path_new);						/* Snip the drive number of new name off */
 	res = mount_volume(&path_old, &fs, FA_WRITE);	/* Get logical drive of the old object */
@@ -5193,7 +5480,6 @@ FRESULT f_rename (
 				res = dir_remove(&djo);		/* Remove old entry */
 				if (res == FR_OK) {
 					res = sync_fs(fs);
-                    refresh_usbmsdrive();
                 }
 			}
 /* End of the critical section */
@@ -5203,7 +5489,21 @@ FRESULT f_rename (
 
 	LEAVE_FF(fs, res);
 }
-
+FRESULT f_rename (
+	const TCHAR* path_old,	/* Pointer to the object name to be renamed */
+	const TCHAR* path_new	/* Pointer to the new name */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_rename_internal(path_old, path_new);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	TransitionBackToSharedReadonlyIfNoWritableFileHandles();
+	return result;
+}
 #endif /* !FF_FS_READONLY */
 #endif /* FF_FS_MINIMIZE == 0 */
 #endif /* FF_FS_MINIMIZE <= 1 */
@@ -5216,7 +5516,7 @@ FRESULT f_rename (
 /* Change Attribute                                                      */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_chmod (
+static FRESULT f_chmod_internal (
 	const TCHAR* path,	/* Pointer to the file path */
 	BYTE attr,			/* Attribute bits */
 	BYTE mask			/* Attribute mask to change */
@@ -5227,6 +5527,7 @@ FRESULT f_chmod (
 	FATFS *fs;
 	DEF_NAMBUF
 
+	// BUGBUG -- this needs to change media state!
 
 	res = mount_volume(&path, &fs, FA_WRITE);	/* Get logical drive */
 	if (res == FR_OK) {
@@ -5255,15 +5556,27 @@ FRESULT f_chmod (
 
 	LEAVE_FF(fs, res);
 }
-
-
-
+FRESULT f_chmod (
+	const TCHAR* path,	/* Pointer to the file path */
+	BYTE attr,			/* Attribute bits */
+	BYTE mask			/* Attribute mask to change */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_chmod_internal(path, attr, mask);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 /*-----------------------------------------------------------------------*/
 /* Change Timestamp                                                      */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_utime (
+static FRESULT f_utime_internal (
 	const TCHAR* path,	/* Pointer to the file/directory name */
 	const FILINFO* fno	/* Pointer to the timestamp to be set */
 )
@@ -5300,9 +5613,21 @@ FRESULT f_utime (
 
 	LEAVE_FF(fs, res);
 }
-
+FRESULT f_utime (
+	const TCHAR* path,	/* Pointer to the file/directory name */
+	const FILINFO* fno	/* Pointer to the timestamp to be set */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_utime_internal(path, fno);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 #endif	/* FF_USE_CHMOD && !FF_FS_READONLY */
-
 
 
 #if FF_USE_LABEL
@@ -5310,7 +5635,7 @@ FRESULT f_utime (
 /* Get Volume Label                                                      */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_getlabel (
+static FRESULT f_getlabel_internal (
 	const TCHAR* path,	/* Logical drive number */
 	TCHAR* label,		/* Buffer to store the volume label */
 	DWORD* vsn			/* Variable to store the volume serial number */
@@ -5397,15 +5722,28 @@ FRESULT f_getlabel (
 
 	LEAVE_FF(fs, res);
 }
-
-
+FRESULT f_getlabel (
+	const TCHAR* path,	/* Logical drive number */
+	TCHAR* label,		/* Buffer to store the volume label */
+	DWORD* vsn			/* Variable to store the volume serial number */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_getlabel_internal(path, label, vsn);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 #if !FF_FS_READONLY
 /*-----------------------------------------------------------------------*/
 /* Set Volume Label                                                      */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_setlabel (
+static FRESULT f_setlabel_internal (
 	const TCHAR* label	/* Volume label to set with heading logical drive number */
 )
 {
@@ -5419,6 +5757,8 @@ FRESULT f_setlabel (
 #if FF_USE_LFN
 	DWORD dc;
 #endif
+
+	// BUGBUG -- this needs to change media state!
 
 	/* Get logical drive */
 	res = mount_volume(&label, &fs, FA_WRITE);
@@ -5511,10 +5851,22 @@ FRESULT f_setlabel (
 			}
 		}
 	}
-    refresh_usbmsdrive();
     LEAVE_FF(fs, res);
 }
-
+FRESULT f_setlabel (
+	const TCHAR* label	/* Volume label to set with heading logical drive number */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_setlabel_internal(label);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	TransitionBackToSharedReadonlyIfNoWritableFileHandles();
+	return result;
+}
 #endif /* !FF_FS_READONLY */
 #endif /* FF_USE_LABEL */
 
@@ -5525,7 +5877,7 @@ FRESULT f_setlabel (
 /* Allocate a Contiguous Blocks to the File                              */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_expand (
+static FRESULT f_expand_internal (
 	FIL* fp,		/* Pointer to the file object */
 	FSIZE_t fsz,	/* File size to be expanded to */
 	BYTE opt		/* Operation mode 0:Find and prepare or 1:Find and allocate */
@@ -5605,6 +5957,21 @@ FRESULT f_expand (
 
 	LEAVE_FF(fs, res);
 }
+FRESULT f_expand (
+	FIL* fp,		/* Pointer to the file object */
+	FSIZE_t fsz,	/* File size to be expanded to */
+	BYTE opt		/* Operation mode 0:Find and prepare or 1:Find and allocate */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_expand_internal(fp, fsz, opt);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 #endif /* FF_USE_EXPAND && !FF_FS_READONLY */
 
@@ -5615,7 +5982,7 @@ FRESULT f_expand (
 /* Forward Data to the Stream Directly                                   */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_forward (
+static FRESULT f_forward_internal (
 	FIL* fp, 						/* Pointer to the file object */
 	UINT (*func)(const BYTE*,UINT),	/* Pointer to the streaming function */
 	UINT btf,						/* Number of bytes to forward */
@@ -5678,6 +6045,22 @@ FRESULT f_forward (
 
 	LEAVE_FF(fs, FR_OK);
 }
+FRESULT f_forward (
+	FIL* fp, 						/* Pointer to the file object */
+	UINT (*func)(const BYTE*,UINT),	/* Pointer to the streaming function */
+	UINT btf,						/* Number of bytes to forward */
+	UINT* bf						/* Pointer to number of bytes forwarded */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_forward_internal(fp, func, btf, bf);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 #endif /* FF_USE_FORWARD */
 
 
@@ -5694,7 +6077,9 @@ FRESULT f_forward (
 
 /* Create partitions on the physical drive */
 
-static FRESULT create_partition (
+
+
+static FRESULT create_partition_internal (
 	BYTE drv,			/* Physical drive number */
 	const LBA_t plst[],	/* Partition list */
 	UINT sys,			/* System ID (for only MBR, temp setting) and bit8:GPT */
@@ -5833,10 +6218,28 @@ static FRESULT create_partition (
 
 	return FR_OK;
 }
+static FRESULT create_partition (
+	BYTE drv,			/* Physical drive number */
+	const LBA_t plst[],	/* Partition list */
+	UINT sys,			/* System ID (for only MBR, temp setting) and bit8:GPT */
+	BYTE* buf			/* Working buffer for a sector */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = create_partition_internal(drv, plst, sys, buf);
+
+	// Special-case NAND_VOLUME_STATE_... not file-handle-based,
+	// so cannot rely on closing of a handle to transition back to
+	// a shared volume.
+	// However, this operation does NOT create a file system,
+	// so only flag that a MCN is required.
+	set_usbms_media_change_notification_required();
+	return result;
+}
 
 
-
-FRESULT f_mkfs (
+FRESULT f_mkfs_internal (
 	const TCHAR* path,		/* Logical drive number */
 	const MKFS_PARM* opt,	/* Format options */
 	void* work,				/* Pointer to working buffer (null: use heap memory) */
@@ -6207,7 +6610,7 @@ FRESULT f_mkfs (
 
 			/* Ok, it is the valid cluster configuration */
 			break;
-		} while (1);
+		} while (1); // FAT12/FAT16/FAT32 retry creation with different cluster sizes if exceed maximums
 
 #if FF_USE_TRIM
 		lba[0] = b_vol; lba[1] = b_vol + sz_vol - 1;	/* Inform storage device that the volume area may be erased */
@@ -6328,7 +6731,29 @@ FRESULT f_mkfs (
 
 	LEAVE_MKFS(FR_OK);
 }
-
+FRESULT f_mkfs (
+	const TCHAR* path,		/* Logical drive number */
+	const MKFS_PARM* opt,	/* Format options */
+	void* work,				/* Pointer to working buffer (null: use heap memory) */
+	UINT len				/* Size of working buffer [byte] */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_mkfs_internal(path, opt, work, len);
+	if (result == FR_OK) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+		// by definition there are (should be) no valid file handles,
+		// and thus no writable file handles.  The media can therefore
+		// transition to shared readonly mode.  Force a MCN update.
+		set_nand_volume_state(NAND_VOLUME_STATE_SHARED_READONLY, true);
+	} else {
+		// failure, so don't override media state, but do set MCN flag
+		set_usbms_media_change_notification_required();
+	}
+	return result;
+}
 
 
 
@@ -6337,7 +6762,7 @@ FRESULT f_mkfs (
 /* Create Partition Table on the Physical Drive                          */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_fdisk (
+static FRESULT f_fdisk_internal (
 	BYTE pdrv,			/* Physical drive number */
 	const LBA_t ptbl[],	/* Pointer to the size table for each partitions */
 	void* work			/* Pointer to the working buffer (null: use heap memory) */
@@ -6357,7 +6782,24 @@ FRESULT f_fdisk (
 
 	LEAVE_MKFS(create_partition(pdrv, ptbl, 0x07, buf));
 }
+FRESULT f_fdisk (
+	BYTE pdrv,			/* Physical drive number */
+	const LBA_t ptbl[],	/* Pointer to the size table for each partitions */
+	void* work			/* Pointer to the working buffer (null: use heap memory) */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	FRESULT result = f_fdisk_internal(pdrv, ptbl, work);
 
+	// Special-case NAND_VOLUME_STATE_... not file-handle-based,
+	// so cannot rely on closing of a handle to transition back to
+	// a shared volume.
+	// However, this operation does NOT create a file system,
+	// so only flag that a MCN is required.
+	set_usbms_media_change_notification_required();
+	return result;
+}
 #endif /* FF_MULTI_PARTITION */
 #endif /* !FF_FS_READONLY && FF_USE_MKFS */
 
@@ -6372,7 +6814,7 @@ FRESULT f_fdisk (
 /* Get a String from the File                                            */
 /*-----------------------------------------------------------------------*/
 
-TCHAR* f_gets (
+static TCHAR* f_gets_internal (
 	TCHAR* buff,	/* Pointer to the buffer to store read string */
 	int len,		/* Size of string buffer (items) */
 	FIL* fp			/* Pointer to the file object */
@@ -6492,9 +6934,21 @@ TCHAR* f_gets (
 	*p = 0;		/* Terminate the string */
 	return nc ? buff : 0;	/* When no data read due to EOF or error, return with error. */
 }
-
-
-
+TCHAR* f_gets (
+	TCHAR* buff,	/* Pointer to the buffer to store read string */
+	int len,		/* Size of string buffer (items) */
+	FIL* fp			/* Pointer to the file object */
+)
+{
+	// wrapper function because of complex multi-exit-point code
+	FF_CORE0_ASSERT(); // FF API Entry Point
+	TCHAR* result = f_gets_internal(buff, len, fp);
+	if (result != NULL) {
+		nand_volume_state_t state = get_nand_volume_state();
+		assert(state == NAND_VOLUME_STATE_FW_EXCLUSIVE || state == NAND_VOLUME_STATE_SHARED_READONLY);
+	}
+	return result;
+}
 
 #if !FF_FS_READONLY
 #include <stdarg.h>
@@ -6676,9 +7130,8 @@ int f_putc (
 	FIL* fp		/* Pointer to the file object */
 )
 {
+	FF_CORE0_ASSERT(); // FF API Entry Point w/o wrapper
 	putbuff pb;
-
-
 	putc_init(&pb, fp);
 	putc_bfd(&pb, c);	/* Put the character */
 	return putc_flush(&pb);
@@ -6696,9 +7149,8 @@ int f_puts (
 	FIL* fp				/* Pointer to the file object */
 )
 {
+	FF_CORE0_ASSERT(); // FF API Entry Point w/o wrapper
 	putbuff pb;
-
-
 	putc_init(&pb, fp);
 	while (*str) putc_bfd(&pb, *str++);		/* Put the string */
 	return putc_flush(&pb);
@@ -6711,6 +7163,7 @@ int f_puts (
 /* Put a Formatted String to the File                                    */
 /*-----------------------------------------------------------------------*/
 
+
 int f_printf (
 	FIL* fp,			/* Pointer to the file object */
 	const TCHAR* fmt,	/* Pointer to the format string */
@@ -6718,6 +7171,7 @@ int f_printf (
 )
 {
 	va_list arp;
+	FF_CORE0_ASSERT(); // FF API Entry Point w/o wrapper
 	putbuff pb;
 	BYTE f, r;
 	UINT i, j, w;

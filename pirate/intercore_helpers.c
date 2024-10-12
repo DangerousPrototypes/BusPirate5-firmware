@@ -10,7 +10,6 @@
 // errors, and also makes it easier to later change to
 // alternative cross-core communication methods if needed.
 
-
 void icm_core0_send_message_synchronous(bp_icm_message_t message_id) {
 
     // NOTE: although split into multiple lines for readability,
@@ -39,12 +38,7 @@ void icm_core0_send_message_synchronous(bp_icm_message_t message_id) {
     //     bp_icm_message_t msg = message_id; // actual message
     // } bp_icm_raw_message_t;
 
-    bp_icm_raw_message_t raw_msg = {
-        .map = 0x80u,
-        .cnt = ++static_message_count,
-        .rfu = 0x00u,
-        .msg = message_id
-    };
+    bp_icm_raw_message_t raw_msg = { .map = 0x80u, .cnt = ++static_message_count, .rfu = 0x00u, .msg = message_id };
     multicore_fifo_push_blocking(raw_msg.raw);
 
     do {
@@ -52,6 +46,8 @@ void icm_core0_send_message_synchronous(bp_icm_message_t message_id) {
         // in the current design, any message other than
         // the one sent indicates a serious de-synchronization
         assert(response == raw_msg.raw);
-        if (response == raw_msg.raw) return;
+        if (response == raw_msg.raw) {
+            return;
+        }
     } while (1);
 }

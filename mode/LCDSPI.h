@@ -8,11 +8,10 @@ void LCDSPI_cleanup(void);
 void LCDSPI_pins(void);
 void LCDSPI_settings(void);
 
-enum
-{
-	HD44780=0,
+enum {
+    HD44780 = 0,
 #ifdef DISPLAY_USE_ST7735
-	ST7735,
+    ST7735,
 #endif
-	MAXDISPLAYS
+    MAXDISPLAYS
 };

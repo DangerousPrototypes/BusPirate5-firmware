@@ -26,14 +26,14 @@
 // remove and insert the usbms drive to force the host to sync its contents
 void refresh_usbmsdrive(void);
 
-//remove the usb drive and prepare to make it read only on the host
+// remove the usb drive and prepare to make it read only on the host
 void prepare_usbmsdrive_readonly(void);
 
-//insert the usbms drive to expose it to the host
+// insert the usbms drive to expose it to the host
 void insert_usbmsdrive(void);
 
 // make the usb drive appear read write on the host
 void make_usbmsdrive_writable(void);
 
-//remove before jump to bootloader
+// remove before jump to bootloader
 void eject_usbmsdrive(void);

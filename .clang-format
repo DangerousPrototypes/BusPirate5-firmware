@@ -14,3 +14,8 @@ ColumnLimit: 120
 UseCRLF: true
 AlwaysBreakAfterReturnType: None
 AlwaysBreakAfterDefinitionReturnType: None
+
+AlignConsecutiveBitFields:
+  Enabled:         false
+AllowShortEnumsOnASingleLine: false
+InsertTrailingCommas: Wrapped

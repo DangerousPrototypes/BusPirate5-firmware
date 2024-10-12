@@ -10,7 +10,6 @@
 #include "ST7735.h"
 #include "AUXpin.h"
 
-
 #define DELAY 0x80
 static const uint8_t 
   Bcmd[] = {                  // Initialization commands for 7735B screens
@@ -163,160 +162,154 @@ static const uint8_t
     ST7735_DISPON ,    DELAY, //  4: Main screen turn on, no args w/delay
       100 };                  //     100 ms delay
 
-
 uint8_t maxx, maxy;
 
-
-uint32_t ST7735_send(uint32_t d)
-{
-	ST7735_writedat(d);
-	return 0;
+uint32_t ST7735_send(uint32_t d) {
+    ST7735_writedat(d);
+    return 0;
 }
 
-uint32_t ST7735_read(void)
-{
-	return 0;
+uint32_t ST7735_read(void) {
+    return 0;
 }
 
-void ST7735_macro(uint32_t macro)
-{
-	uint32_t arg1;
-	uint32_t i;
+void ST7735_macro(uint32_t macro) {
+    uint32_t arg1;
+    uint32_t i;
 
-	cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-	consumewhitechars();
-	arg1=getint();
+    cmdtail = (cmdtail + 1) & (CMDBUFFSIZE - 1);
+    consumewhitechars();
+    arg1 = getint();
 
-	switch(macro)
-	{
-		case 0: printf("\r\n");
-			printf(" 1. init ST7735B\r\n");
-			printf(" 2. init ST7735R 160x128 green tab\r\n");
-			printf(" 3. init ST7735R 160x128 red tab\r\n");
-			printf(" 4. init ST7735R 128x128\r\n");
-			printf(" 5. init ST7735R 160x80\r\n");
-			printf(" 6. Clear screen\r\n");
-			printf(" 7. Send command\r\n");
-			break;
-		case 1:	ST7735_sendinitseq(Bcmd);
-			maxx=160;
-			maxy=128;
-			break;
-		case 2:	ST7735_sendinitseq(Rcmd1);
-			ST7735_sendinitseq(Rcmd2green);
-			ST7735_sendinitseq(Rcmd3);
-			maxx=160;
-			maxy=128;
-			break;
-		case 3:	ST7735_sendinitseq(Rcmd1);
-			ST7735_sendinitseq(Rcmd2red);
-			ST7735_sendinitseq(Rcmd3);
-			maxx=160;
-			maxy=128;
-			break;
-		case 4:	ST7735_sendinitseq(Rcmd1);
-			ST7735_sendinitseq(Rcmd2green144);
-			ST7735_sendinitseq(Rcmd3);
-			maxx=128;
-			maxy=128;
-			break;
-		case 5:	ST7735_sendinitseq(Rcmd1);
-			ST7735_sendinitseq(Rcmd2green160x80);
-			ST7735_sendinitseq(Rcmd3);
-			maxx=160;
-			maxy=80;
-			break;
-		case 6: ST7735_writecmd(0x2A);
-			ST7735_writedat(0x00);
-			ST7735_writedat(0x00);
-			ST7735_writedat(0x00);
-			ST7735_writedat(0x7F);
-			ST7735_writecmd(0x2B);
-			ST7735_writedat(0x00);
-			ST7735_writedat(0x00);
-			ST7735_writedat(0x00);
-			ST7735_writedat(0x7F);
-			ST7735_writecmd(0x2c);
-			for(i=0; i<2*maxx*maxy; i++) ST7735_writedat(0x00);
-			break;
-		case 7: ST7735_writecmd(arg1);
-			
-			break;
+    switch (macro) {
+        case 0:
+            printf("\r\n");
+            printf(" 1. init ST7735B\r\n");
+            printf(" 2. init ST7735R 160x128 green tab\r\n");
+            printf(" 3. init ST7735R 160x128 red tab\r\n");
+            printf(" 4. init ST7735R 128x128\r\n");
+            printf(" 5. init ST7735R 160x80\r\n");
+            printf(" 6. Clear screen\r\n");
+            printf(" 7. Send command\r\n");
+            break;
+        case 1:
+            ST7735_sendinitseq(Bcmd);
+            maxx = 160;
+            maxy = 128;
+            break;
+        case 2:
+            ST7735_sendinitseq(Rcmd1);
+            ST7735_sendinitseq(Rcmd2green);
+            ST7735_sendinitseq(Rcmd3);
+            maxx = 160;
+            maxy = 128;
+            break;
+        case 3:
+            ST7735_sendinitseq(Rcmd1);
+            ST7735_sendinitseq(Rcmd2red);
+            ST7735_sendinitseq(Rcmd3);
+            maxx = 160;
+            maxy = 128;
+            break;
+        case 4:
+            ST7735_sendinitseq(Rcmd1);
+            ST7735_sendinitseq(Rcmd2green144);
+            ST7735_sendinitseq(Rcmd3);
+            maxx = 128;
+            maxy = 128;
+            break;
+        case 5:
+            ST7735_sendinitseq(Rcmd1);
+            ST7735_sendinitseq(Rcmd2green160x80);
+            ST7735_sendinitseq(Rcmd3);
+            maxx = 160;
+            maxy = 80;
+            break;
+        case 6:
+            ST7735_writecmd(0x2A);
+            ST7735_writedat(0x00);
+            ST7735_writedat(0x00);
+            ST7735_writedat(0x00);
+            ST7735_writedat(0x7F);
+            ST7735_writecmd(0x2B);
+            ST7735_writedat(0x00);
+            ST7735_writedat(0x00);
+            ST7735_writedat(0x00);
+            ST7735_writedat(0x7F);
+            ST7735_writecmd(0x2c);
+            for (i = 0; i < 2 * maxx * maxy; i++) {
+                ST7735_writedat(0x00);
+            }
+            break;
+        case 7:
+            ST7735_writecmd(arg1);
 
-		default: printf("Macro not defined");
-			modeConfig.error=1;
-	}
+            break;
 
-
+        default:
+            printf("Macro not defined");
+            modeConfig.error = 1;
+    }
 }
 
-void ST7735_setup(void)
-{
-	// setup SPI
-	spi_setcpol(1<<1);
-	spi_setcpha(1);
-	spi_setbr(1<<3);
-	spi_setdff(SPI_CR1_DFF_8BIT);
-	spi_setlsbfirst(SPI_CR1_MSBFIRST);
-	spi_setcsidle(1);
-	spi_setup_exc();
+void ST7735_setup(void) {
+    // setup SPI
+    spi_setcpol(1 << 1);
+    spi_setcpha(1);
+    spi_setbr(1 << 3);
+    spi_setdff(SPI_CR1_DFF_8BIT);
+    spi_setlsbfirst(SPI_CR1_MSBFIRST);
+    spi_setcsidle(1);
+    spi_setup_exc();
 
-	setAUX(1);
-	spi_setcs(1);
+    setAUX(1);
+    spi_setcs(1);
 
-	maxx=0;
-	maxy=0;
+    maxx = 0;
+    maxy = 0;
 
-	printf("code (C) Adafuit");
+    printf("code (C) Adafuit");
 }
 
-void ST7735_cleanup(void)
-{
-	spi_cleanup();
+void ST7735_cleanup(void) {
+    spi_cleanup();
 }
 
-void ST7735_writedat(uint8_t d)
-{
-	setAUX(1);
-	spi_setcs(0);
-	spi_xfer(d);
-	spi_setcs(1);
-//	setAUX(1);
+void ST7735_writedat(uint8_t d) {
+    setAUX(1);
+    spi_setcs(0);
+    spi_xfer(d);
+    spi_setcs(1);
+    //	setAUX(1);
 }
-void ST7735_writecmd(uint8_t c)
-{
-	setAUX(0);
-	spi_setcs(0);
-	spi_xfer(c);
-	spi_setcs(1);
-//	setAUX(0);
+void ST7735_writecmd(uint8_t c) {
+    setAUX(0);
+    spi_setcs(0);
+    spi_xfer(c);
+    spi_setcs(1);
+    //	setAUX(0);
 }
 
-void ST7735_sendinitseq(const uint8_t *addr )
-{
-	uint8_t  numCommands, numArgs;
-	uint16_t ms;
+void ST7735_sendinitseq(const uint8_t* addr) {
+    uint8_t numCommands, numArgs;
+    uint16_t ms;
 
-	numCommands = *(addr++);			// Number of commands to follow
-	while(numCommands--) 
-	{						// For each command...
-		ST7735_writecmd(*(addr++));		//   Read, issue command
-		numArgs=*(addr++);			//   Number of args to follow
-		ms=numArgs&DELAY;			//   If hibit set, delay follows args
-		numArgs&=~DELAY;			//   Mask out delay bit
-		while(numArgs--) 
-		{					//   For each argument...
-			ST7735_writedat(*(addr++));	//     Read, issue argument
-		}		
+    numCommands = *(addr++);            // Number of commands to follow
+    while (numCommands--) {             // For each command...
+        ST7735_writecmd(*(addr++));     //   Read, issue command
+        numArgs = *(addr++);            //   Number of args to follow
+        ms = numArgs & DELAY;           //   If hibit set, delay follows args
+        numArgs &= ~DELAY;              //   Mask out delay bit
+        while (numArgs--) {             //   For each argument...
+            ST7735_writedat(*(addr++)); //     Read, issue argument
+        }
 
-		if(ms)
-		{
-			ms=*(addr++);			// Read post-command delay time (ms)
-			if(ms == 255) ms = 500;		// If 255, delay for 500 ms
-			busy_wait_ms(ms);
-		}
-	}
+        if (ms) {
+            ms = *(addr++); // Read post-command delay time (ms)
+            if (ms == 255) {
+                ms = 500; // If 255, delay for 500 ms
+            }
+            busy_wait_ms(ms);
+        }
+    }
 }
-
-
-

@@ -52,7 +52,7 @@ int ui_term_get_vt100_query(const char* query, char end_of_line, char* result, u
     return -1;
 }
 
-bool ui_term_detect_vt100(uint32_t *row, uint32_t *col) {
+bool ui_term_detect_vt100(uint32_t* row, uint32_t* col) {
     uint8_t cp[20];
     int p;
     uint32_t r = 0;
@@ -131,7 +131,7 @@ void ui_term_init(void) {
         // reset all styling
         printf("\e[0m");
         // set cursor type
-        //printf("\e[3 q");
+        // printf("\e[3 q");
         // clear screen
         printf("\e[2J");
     }
@@ -209,19 +209,23 @@ uint32_t ui_term_color_text_background_buf(char* buf, size_t buffLen, uint32_t r
     uint32_t count = 0;
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
-            count = snprintf(buf, buffLen,
-                            "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
-                            (uint8_t)(rgb_text >> 16),
-                            (uint8_t)(rgb_text >> 8),
-                            (uint8_t)(rgb_text),
-                            (uint8_t)(rgb_background >> 16),
-                            (uint8_t)(rgb_background >> 8),
-                            (uint8_t)(rgb_background));
+            count = snprintf(buf,
+                             buffLen,
+                             "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
+                             (uint8_t)(rgb_text >> 16),
+                             (uint8_t)(rgb_text >> 8),
+                             (uint8_t)(rgb_text),
+                             (uint8_t)(rgb_background >> 16),
+                             (uint8_t)(rgb_background >> 8),
+                             (uint8_t)(rgb_background));
             return count;
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
-            count =
-                snprintf(buf, buffLen, "\x1b[38;5;%hhd;48;5;%hhdm", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
+            count = snprintf(buf,
+                             buffLen,
+                             "\x1b[38;5;%hhd;48;5;%hhdm",
+                             ansi256_from_rgb(rgb_text),
+                             ansi256_from_rgb(rgb_background));
             return count;
 #endif
         case UI_TERM_NO_COLOR:

@@ -12,5 +12,3 @@ void falaio_notify(void);
 void falaio_service(void);
 
 #endif // FALAIO_H
-
-

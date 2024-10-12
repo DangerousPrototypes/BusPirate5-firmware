@@ -8,9 +8,9 @@ typedef struct {
     int gpio;
 } OW;
 
-bool ow_init (uint8_t bits_per_word, uint bufdir, uint inpin) ;
-void ow_send (uint data);
-uint8_t ow_read (void);
-bool ow_reset (void);
-int ow_romsearch (uint64_t *romcodes, int maxdevs, uint command);
-void ow_cleanup (void);
+bool ow_init(uint8_t bits_per_word, uint bufdir, uint inpin);
+void ow_send(uint data);
+uint8_t ow_read(void);
+bool ow_reset(void);
+int ow_romsearch(uint64_t* romcodes, int maxdevs, uint command);
+void ow_cleanup(void);

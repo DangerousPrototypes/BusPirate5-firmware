@@ -1,1 +1,1 @@
-void dummy_handler(struct command_result *res);
+void dummy_handler(struct command_result* res);

@@ -7,5 +7,3 @@ void disp_default_settings(void);
 void disp_default_help(void);
 void disp_default_lcd_update(uint32_t flags);
 #endif
-
-

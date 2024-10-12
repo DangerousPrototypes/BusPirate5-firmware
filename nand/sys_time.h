@@ -18,7 +18,7 @@
 void sys_time_init(void);
 
 /// @brief Increments the system time counter -- should only be called by interrupt!
-//void _sys_time_increment(void);
+// void _sys_time_increment(void);
 
 /// @brief Returns system time counter (which tracks milliseconds)
 uint32_t sys_time_get_ms(void);

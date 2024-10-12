@@ -21,8 +21,9 @@ void SW3W_pins(void);
 void SW3W_settings(void);
 void SW3W_help(void);
 
-#define SW3WPERIODMENU	"\r\nPeriodd in us (>20)\r\nperiod> "
-#define SW3WCSMENU	"\r\nCS mode\r\n 1. CS\r\n 2. !CS*\r\ncs> "
-#define SW3WODMENU	"\r\nSelect output type:\r\n 1. Normal (H=3.3V, L=GND)*\r\n 2. Open drain (H=Hi-Z, L=GND)\r\noutput> "
-#define SW3WCPOLMENU	"\r\nClock polarity\r\n 1. idle low\r\n 2. idle high*\r\ncpol> "
-#define SW3WCPHAMENU	"\r\nClock phase\r\n 1. leading edge\r\n 2. trailing edge*\r\ncpha> "
+#define SW3WPERIODMENU "\r\nPeriodd in us (>20)\r\nperiod> "
+#define SW3WCSMENU "\r\nCS mode\r\n 1. CS\r\n 2. !CS*\r\ncs> "
+#define SW3WODMENU                                                                                                     \
+    "\r\nSelect output type:\r\n 1. Normal (H=3.3V, L=GND)*\r\n 2. Open drain (H=Hi-Z, L=GND)\r\noutput> "
+#define SW3WCPOLMENU "\r\nClock polarity\r\n 1. idle low\r\n 2. idle high*\r\ncpol> "
+#define SW3WCPHAMENU "\r\nClock phase\r\n 1. leading edge\r\n 2. trailing edge*\r\ncpha> "

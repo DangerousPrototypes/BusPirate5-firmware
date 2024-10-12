@@ -1,1 +1,1 @@
-void nmea_decode_handler(struct command_result *res);
+void nmea_decode_handler(struct command_result* res);

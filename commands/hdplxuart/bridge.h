@@ -1,1 +1,1 @@
-void hduart_bridge_handler(struct command_result *res);
+void hduart_bridge_handler(struct command_result* res);

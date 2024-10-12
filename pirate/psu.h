@@ -1,5 +1,5 @@
 enum psu_errors {
-    PSU_OK=0,
+    PSU_OK = 0,
     PSU_ERROR_FUSE_TRIPPED,
     PSU_ERROR_VOUT_LOW,
     PSU_ERROR_BACKFLOW
@@ -22,7 +22,7 @@ extern struct psu_status_t psu_status;
 void psu_init(void);
 uint32_t psu_enable(float volts, float current, bool current_limit_override);
 void psu_disable(void);
-void psu_measure(uint32_t *vout, uint32_t *isense, uint32_t *vreg, bool *fuse);
+void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse);
 uint32_t psu_measure_vout(void);
 uint32_t psu_measure_vreg(void);
 uint32_t psu_measure_current(void);

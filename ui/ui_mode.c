@@ -35,8 +35,8 @@ void ui_mode_enable_args(struct command_result* res) {
         error = false;
     }
 
-    if (error){ // no integer found
-    
+    if (error) { // no integer found
+
         static const struct ui_prompt_config cfg = {
             true,                            // bool allow_prompt_text;
             false,                           // bool allow_prompt_defval;
@@ -53,7 +53,7 @@ void ui_mode_enable_args(struct command_result* res) {
 
         prompt_result result;
         ui_prompt_uint32(&result, &mode_menu, &mode);
-        if (result.exit){ // user bailed, stay in current mode
+        if (result.exit) { // user bailed, stay in current mode
             //(*response).error=true;
             return;
         }
@@ -61,18 +61,18 @@ void ui_mode_enable_args(struct command_result* res) {
     }
 
     // ok, start setup dialog
-    if (!modes[mode].protocol_setup()){ // user bailed on setup steps
+    if (!modes[mode].protocol_setup()) { // user bailed on setup steps
         //(*response).error=true;
         return;
     }
 
-    modes[system_config.mode].protocol_cleanup();                        // switch to HiZ
-    modes[0].protocol_setup_exc();                                       // disables power suppy etc.
-    system_config.mode = mode;                                           // setup the new mode
+    modes[system_config.mode].protocol_cleanup();   // switch to HiZ
+    modes[0].protocol_setup_exc();                  // disables power suppy etc.
+    system_config.mode = mode;                      // setup the new mode
     modes[system_config.mode].protocol_setup_exc(); // execute the mode setup
-    fala_mode_change_hook(); //notify follow along logic analyzer of new frequency
+    fala_mode_change_hook();                        // notify follow along logic analyzer of new frequency
 
-    if (system_config.mode == 0){ // TODO: do something to show the mode (LED? LCD?)
+    if (system_config.mode == 0) { // TODO: do something to show the mode (LED? LCD?)
         // gpio_clear(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
     } else {
         // gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);

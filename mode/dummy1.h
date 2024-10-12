@@ -1,8 +1,8 @@
 
-void dummy1_write(struct _bytecode *result, struct _bytecode *next);
-void dummy1_read(struct _bytecode *result, struct _bytecode *next);
-void dummy1_start(struct _bytecode *result, struct _bytecode *next);
-void dummy1_stop(struct _bytecode *result, struct _bytecode *next);
+void dummy1_write(struct _bytecode* result, struct _bytecode* next);
+void dummy1_read(struct _bytecode* result, struct _bytecode* next);
+void dummy1_start(struct _bytecode* result, struct _bytecode* next);
+void dummy1_stop(struct _bytecode* result, struct _bytecode* next);
 
 // full duplex commands not currently implemented
 void dummy1_startr(void);
@@ -22,7 +22,7 @@ void dummy1_cleanup(void);
 // displayed in the 'i' command
 void dummy1_settings(void);
 
-const char * dummy1_pins(void);
+const char* dummy1_pins(void);
 
 // old bitwise commands not currently needed because we don't bitbang anymore
 void dummy1_clkh(void);

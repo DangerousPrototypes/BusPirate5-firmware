@@ -25,7 +25,12 @@
 
 static struct _pio_config pio_config;
 
-enum logicanalyzer_status { LA_IDLE = 0, LA_ARMED_INIT, LA_ARMED, LA_CAPTURE };
+enum logicanalyzer_status {
+    LA_IDLE = 0,
+    LA_ARMED_INIT,
+    LA_ARMED,
+    LA_CAPTURE
+};
 
 static void restart_dma();
 
@@ -37,10 +42,10 @@ uint8_t la_base_pin = LA_BPIO0;
 volatile uint8_t la_status = LA_IDLE;
 volatile uint32_t la_sm_done = false;
 
-//PIO pio = pio0;
-//uint sm = 0;
-//static uint offset = 0;
-//static const struct pio_program* pio_program_active=0;
+// PIO pio = pio0;
+// uint sm = 0;
+// static uint offset = 0;
+// static const struct pio_program* pio_program_active=0;
 
 void logic_analyzer_set_base_pin(uint8_t base_pin) {
     la_base_pin = base_pin;
@@ -58,7 +63,7 @@ uint32_t logic_analyzer_get_end_ptr(void) {
     return la_ptr_reset;
 }
 
-uint32_t logic_analyzer_get_current_ptr(void){
+uint32_t logic_analyzer_get_current_ptr(void) {
     return la_ptr;
 }
 
@@ -76,17 +81,17 @@ uint8_t logic_analyzer_read_ptr(uint32_t read_pointer) {
     return la_buf[read_pointer];
 }
 
-//this will probably need a mutex
+// this will probably need a mutex
 void logic_analyser_done(void) {
     // turn off stuff!
     pio_interrupt_clear(pio_config.pio, 0);
-    irq_set_enabled(PIO0_IRQ_0+ (PIO_NUM(pio_config.pio)*2), false);
+    irq_set_enabled(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), false);
     // irq_set_enabled(pio_get_dreq(pio_config.pio, pio_config.sm, false), false);
-    irq_remove_handler(PIO0_IRQ_0+ (PIO_NUM(pio_config.pio)*2), logic_analyser_done);
+    irq_remove_handler(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), logic_analyser_done);
     pio_sm_set_enabled(pio_config.pio, pio_config.sm, false);
 
     if (pio_config.program) {
-        //pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+        // pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
         pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
         pio_config.program = 0;
     }
@@ -113,7 +118,7 @@ void logic_analyser_done(void) {
 
     // add the preceding chunks of DMA to find the location in the array
     // ready to dump
-    la_ptr_reset=la_ptr = ((DMA_BYTES_PER_CHUNK * tail_dma) + tail);
+    la_ptr_reset = la_ptr = ((DMA_BYTES_PER_CHUNK * tail_dma) + tail);
 
     rgb_set_all(0x00, 0xff, 0); //,0x00FF00 green for dump
     la_sm_done = true;
@@ -163,9 +168,10 @@ void restart_dma() {
         channel_config_set_read_increment(&la_dma_config, false);          // read fixed PIO address
         channel_config_set_write_increment(&la_dma_config, true);          // write to circular buffer
         channel_config_set_transfer_data_size(&la_dma_config, DMA_SIZE_8); // we have 8 IO pins
-        channel_config_set_dreq(&la_dma_config,
-                                pio_get_dreq(pio_config.pio, pio_config.sm, false)); // &pio0_hw->rxf[sm] paces the rate of transfer
-        channel_config_set_ring(&la_dma_config, true, 15);     // loop at 2 * 8 bytes
+        channel_config_set_dreq(
+            &la_dma_config,
+            pio_get_dreq(pio_config.pio, pio_config.sm, false)); // &pio0_hw->rxf[sm] paces the rate of transfer
+        channel_config_set_ring(&la_dma_config, true, 15);       // loop at 2 * 8 bytes
 
         int la_dma_next = (i + 1 < count_of(la_dma)) ? la_dma[i + 1] : la_dma[0];
         channel_config_set_chain_to(&la_dma_config, la_dma_next); // chain to next DMA
@@ -188,10 +194,10 @@ bool logic_analyzer_configure(
     memset(la_buf, 0, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT);
 
     // This can be useful for debugging. The position of sampling always start at the beginning of the buffer
-    //restart_dma(); //this moved to below because the PIO isn't yet assigned
+    // restart_dma(); //this moved to below because the PIO isn't yet assigned
 
     if (pio_config.program) {
-        //pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+        // pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
         pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
         pio_config.program = 0;
     }
@@ -214,37 +220,39 @@ bool logic_analyzer_configure(
     if (trigger_ok) {
         if (trigger_direction & 1u << trigger_pin) // high level trigger program
         {
-            //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_high_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
-            //hard_assert(success);    
-            pio_config.program = &logicanalyzer_high_trigger_program;                  
+            // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_high_trigger_program,
+            // &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true); hard_assert(success);
+            pio_config.program = &logicanalyzer_high_trigger_program;
             pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
-            logicanalyzer_high_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, la_base_pin + trigger_pin, freq, edge);
+            logicanalyzer_high_trigger_program_init(
+                pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, la_base_pin + trigger_pin, freq, edge);
         } else // low level trigger program
         {
-            //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_low_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
-            //hard_assert(success);
+            // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_low_trigger_program,
+            // &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true); hard_assert(success);
             pio_config.program = &logicanalyzer_low_trigger_program;
             pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
-            logicanalyzer_low_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, la_base_pin + trigger_pin, freq, edge);
+            logicanalyzer_low_trigger_program_init(
+                pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, la_base_pin + trigger_pin, freq, edge);
         }
     } else { // else no trigger program
-        //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_no_trigger_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true);
-        //hard_assert(success);  
-        pio_config.program = &logicanalyzer_no_trigger_program; //move this before to simplify add program
-        pio_config.offset = pio_add_program(pio_config.pio, pio_config.program); 
+        // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&logicanalyzer_no_trigger_program,
+        // &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true); hard_assert(success);
+        pio_config.program = &logicanalyzer_no_trigger_program; // move this before to simplify add program
+        pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
         logicanalyzer_no_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, freq);
     }
-    #ifdef BP_PIO_SHOW_ASSIGNMENT
-    printf("pio %d, sm %d, offset %d\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);  
-    #endif
+#ifdef BP_PIO_SHOW_ASSIGNMENT
+    printf("pio %d, sm %d, offset %d\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+#endif
 
-    restart_dma(); //do after PIO and SM are assigned
+    restart_dma(); // do after PIO and SM are assigned
 
     // interrupt on done notification
     pio_interrupt_clear(pio_config.pio, 0);
     pio_set_irq0_source_enabled(pio_config.pio, pis_interrupt0, true);
-    irq_set_exclusive_handler(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio)*2), logic_analyser_done);
-    irq_set_enabled(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio)*2), true);
+    irq_set_exclusive_handler(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), logic_analyser_done);
+    irq_set_enabled(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), true);
     irq_set_enabled(pio_get_dreq(pio_config.pio, pio_config.sm, false), true);
     // write sample count and enable sampling
     pio_sm_put_blocking(pio_config.pio, pio_config.sm, samples - 1);
@@ -270,7 +278,7 @@ bool logic_analyzer_cleanup(void) {
 
     // pio_clear_instruction_memory(pio);
     if (pio_config.program) {
-        //pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
+        // pio_remove_program_and_unclaim_sm(pio_config.program, pio_config.pio, pio_config.sm, pio_config.offset);
         pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
         pio_config.program = 0;
     }
@@ -298,6 +306,6 @@ bool logicanalyzer_setup(void) {
 
     pio_config.program = 0;
 
-    //restart_dma();
+    // restart_dma();
     return true;
 }

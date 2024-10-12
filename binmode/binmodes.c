@@ -14,7 +14,7 @@ void binmode_null_func_void(void) {
     return;
 }
 
-//TODO: add setting for lock terminal or not
+// TODO: add setting for lock terminal or not
 const binmode_t binmodes[] = {
     {
         .lock_terminal = false,
@@ -49,24 +49,24 @@ const binmode_t binmodes[] = {
         .binmode_name = legacy4third_mode_name,
         .binmode_setup = binmode_null_func_void,
         .binmode_service = legacy4third_mode,
-        .binmode_cleanup = binmode_null_func_void, 
+        .binmode_cleanup = binmode_null_func_void,
     },
 };
 
-inline void binmode_setup(void){
-    if(binmodes[system_config.binmode_select].lock_terminal){
+inline void binmode_setup(void) {
+    if (binmodes[system_config.binmode_select].lock_terminal) {
         binmode_terminal_lock(true);
     }
     binmodes[system_config.binmode_select].binmode_setup();
 }
 
-inline void binmode_service(void){
+inline void binmode_service(void) {
     binmodes[system_config.binmode_select].binmode_service();
 }
 
-inline void binmode_cleanup(void){
+inline void binmode_cleanup(void) {
     binmodes[system_config.binmode_select].binmode_cleanup();
-    if(binmodes[system_config.binmode_select].lock_terminal){
+    if (binmodes[system_config.binmode_select].lock_terminal) {
         binmode_terminal_lock(false);
     }
 }

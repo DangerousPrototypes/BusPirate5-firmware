@@ -29,29 +29,31 @@ bool ui_process_syntax(void) {
         return true;
     }
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
-    
-    //follow along logic analyzer hook
+
+    // follow along logic analyzer hook
     fala_start_hook();
 
     bool error = syntax_run();
 
-    if(modes[system_config.mode].protocol_wait_done){
+    if (modes[system_config.mode].protocol_wait_done) {
         modes[system_config.mode].protocol_wait_done();
     }
-        
-    //follow along logic analyzer hook
+
+    // follow along logic analyzer hook
     fala_stop_hook();
-    
+
     icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
-    
-    if(error){
+
+    if (error) {
         printf("Syntax execution error\r\n");
-    }else{
-        error=syntax_post();
-        if(error) printf("Syntax post process error\r\n");
+    } else {
+        error = syntax_post();
+        if (error) {
+            printf("Syntax post process error\r\n");
+        }
     }
 
-    //follow along logic analyzer hook
+    // follow along logic analyzer hook
     fala_notify_hook();
 
     return error;
@@ -109,7 +111,12 @@ bool ui_process_commands(void) {
             continue;
         }
 
-        enum COMMAND_TYPE { NONE = 0, GLOBAL, MODE, DISPLAY };
+        enum COMMAND_TYPE {
+            NONE = 0,
+            GLOBAL,
+            MODE,
+            DISPLAY
+        };
 
         // first search global commands
         uint32_t user_cmd_id = 0;

@@ -1,1 +1,1 @@
-void uart_monitor_handler(struct command_result *res);
+void uart_monitor_handler(struct command_result* res);

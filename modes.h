@@ -57,13 +57,13 @@ typedef struct _mode {
     void (*protocol_dats)(struct _bytecode* result, struct _bytecode* next);       // toggle dat (maybe remove?)
     void (*protocol_tick_clock)(struct _bytecode* result, struct _bytecode* next); // tick clk
     void (*protocol_bitr)(struct _bytecode* result, struct _bytecode* next);       // read dat pin
-    void (*protocol_periodic)(void); // service to poll for async data
-    void (*protocol_macro)(uint32_t);            // macro
-    uint32_t (*protocol_setup)(void);            // setup UI
-    uint32_t (*binmode_get_config_length)(void); // get binmode config length
-    uint32_t (*binmode_setup)(uint8_t* config);  // setup for binmode
-    uint32_t (*protocol_setup_exc)(void);        // real setup
-    void (*protocol_cleanup)(void);              // cleanup for HiZ
+    void (*protocol_periodic)(void);                                               // service to poll for async data
+    void (*protocol_macro)(uint32_t);                                              // macro
+    uint32_t (*protocol_setup)(void);                                              // setup UI
+    uint32_t (*binmode_get_config_length)(void);                                   // get binmode config length
+    uint32_t (*binmode_setup)(uint8_t* config);                                    // setup for binmode
+    uint32_t (*protocol_setup_exc)(void);                                          // real setup
+    void (*protocol_cleanup)(void);                                                // cleanup for HiZ
     // const char*(*protocol_pins)(void);			// display pin config
     void (*protocol_settings)(void);                             // display settings
     void (*protocol_help)(void);                                 // display protocol specific help

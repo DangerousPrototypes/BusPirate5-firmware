@@ -22,8 +22,8 @@ void SW2W_settings(void);
 
 void SW2W_setDATAmode(uint8_t input);
 
-#define SW2W_INPUT	1
-#define SW2W_OUTPUT	0
+#define SW2W_INPUT 1
+#define SW2W_OUTPUT 0
 
 #define SW2W_CLOCK_HIGH() gpio_set(BP_SW2W_CLK_PORT, BP_SW2W_CLK_PIN)
 #define SW2W_CLOCK_LOW() gpio_clear(BP_SW2W_CLK_PORT, BP_SW2W_CLK_PIN)
@@ -31,12 +31,19 @@ void SW2W_setDATAmode(uint8_t input);
 #define SW2W_DATA_HIGH() gpio_set(BP_SW2W_SDA_PORT, BP_SW2W_SDA_PIN)
 #define SW2W_DATA_LOW() gpio_clear(BP_SW2W_SDA_PORT, BP_SW2W_SDA_PIN)
 
-#define SW2W_DATA_OPENDRAIN() gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, BP_SW2W_SDA_PIN)
-#define SW2W_DATA_PUSHPULL() gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, BP_SW2W_SDA_PIN)
-#define SW2W_DATA_INPUT() gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT,BP_SW2W_SDA_PIN)
+#define SW2W_DATA_OPENDRAIN()                                                                                          \
+    gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, BP_SW2W_SDA_PIN)
+#define SW2W_DATA_PUSHPULL()                                                                                           \
+    gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, BP_SW2W_SDA_PIN)
+#define SW2W_DATA_INPUT() gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, BP_SW2W_SDA_PIN)
 #define SW2W_DATA_READ() gpio_get(BP_SW2W_SDA_PORT, BP_SW2W_SDA_PIN)
 
-#define SW2W_SETUP_OPENDRAIN() gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, BP_SW2W_SDA_PIN); gpio_set_mode(BP_SW2W_CLK_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, BP_SW2W_CLK_PIN)
-#define SW2W_SETUP_PUSHPULL() gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, BP_SW2W_SDA_PIN); gpio_set_mode(BP_SW2W_CLK_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, BP_SW2W_CLK_PIN)
-#define SW2W_SETUP_HIZ() gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT,BP_SW2W_SDA_PIN); gpio_set_mode(BP_SW2W_CLK_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT,BP_SW2W_CLK_PIN)
-
+#define SW2W_SETUP_OPENDRAIN()                                                                                         \
+    gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, BP_SW2W_SDA_PIN);              \
+    gpio_set_mode(BP_SW2W_CLK_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, BP_SW2W_CLK_PIN)
+#define SW2W_SETUP_PUSHPULL()                                                                                          \
+    gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, BP_SW2W_SDA_PIN);               \
+    gpio_set_mode(BP_SW2W_CLK_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, BP_SW2W_CLK_PIN)
+#define SW2W_SETUP_HIZ()                                                                                               \
+    gpio_set_mode(BP_SW2W_SDA_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, BP_SW2W_SDA_PIN);                           \
+    gpio_set_mode(BP_SW2W_CLK_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, BP_SW2W_CLK_PIN)

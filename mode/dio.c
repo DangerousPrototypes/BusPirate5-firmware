@@ -3,18 +3,20 @@
 // Bus Pirate 5 uses a three step process to get tight timings between operations.
 // This means it is no longer possible to just spit out data from printf directly from the mode.
 // All messages and data must be handed back in the result struct to be shown later.
-// Eventually I will make syntax processing optional for modes so you can opt for a more relaxed environment (ask me, I wont make it a priority until someone actually wants it)
+// Eventually I will make syntax processing optional for modes so you can opt for a more relaxed environment (ask me, I
+// wont make it a priority until someone actually wants it)
 // 1. The syntax system pre-processes the user input into a simple bytecode
 // 2. A loop hands each user command to a mode function below for actual IO or other actions
-// 3. A final loop post-processes the result and outputs to the user terminal 
+// 3. A final loop post-processes the result and outputs to the user terminal
 // To enable dummy mode open pirate.h and uncomment "#define BP_USE_DUMMY1"
-// The dummy functions are implemented in mode.c. To create a new mode make a copy of the dummy portion of the mode struck and link to your new functions
+// The dummy functions are implemented in mode.c. To create a new mode make a copy of the dummy portion of the mode
+// struck and link to your new functions
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "system_config.h" 
+#include "system_config.h"
 #include "opt_args.h"
-#include "bytecode.h" // Bytecode structure for data IO
+#include "bytecode.h"   // Bytecode structure for data IO
 #include "pirate/bio.h" // Buffered pin IO functions
 #include "ui/ui_help.h"
 #include "dummy1.h"
@@ -22,20 +24,20 @@
 static uint32_t returnval;
 
 // command configuration
-const struct _command_struct dio_commands[]=
-{   //HiZ? Function Help
-// note: for now the allow_hiz flag controls if the mode provides it's own help
+const struct _command_struct dio_commands[] = {
+    // HiZ? Function Help
+    // note: for now the allow_hiz flag controls if the mode provides it's own help
     //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
 };
-const uint32_t dio_commands_count=count_of(dio_commands);
+const uint32_t dio_commands_count = count_of(dio_commands);
 
 // Pin labels shown on the display and in the terminal status bar
 // No more than 4 characters long
 /*static const char pin_labels[][5]={
-	"OUT1",
-	"OUT2",
-	"OUT3",
-	"IN1"
+    "OUT1",
+    "OUT2",
+    "OUT3",
+    "IN1"
 };*/
 
 // Pre-setup step. Show user menus for any configuration options.
@@ -43,50 +45,49 @@ const uint32_t dio_commands_count=count_of(dio_commands);
 // Any previous mode may still be running. This is only a configuration step,
 // the user may cancel out of the menu and return to the previous mode.
 // Don't touch hardware yet, save the settings in variables for later.
-uint32_t dio_setup(void){
-	//printf("\r\n-DUMMY1- setup()\r\n");
-	return 1;
+uint32_t dio_setup(void) {
+    // printf("\r\n-DUMMY1- setup()\r\n");
+    return 1;
 }
 
 // Setup execution. This is where we actually configure any hardware.
-uint32_t dio_setup_exc(void){
-	return 1;
+uint32_t dio_setup_exc(void) {
+    return 1;
 }
 
 // Cleanup any configuration on exit.
-void dio_cleanup(void)
-{
-	// 1. Disable any hardware you used
-	bio_init();
+void dio_cleanup(void) {
+    // 1. Disable any hardware you used
+    bio_init();
 }
 
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
 // This function generally writes data out to the IO pins or a peripheral
-void dio_write(struct _bytecode *result, struct _bytecode *next){
-	static const char labels[][5]={"AUXL","AUXH"};
-	//your code
-	for(uint8_t i=0; i<8; i++){
-		// user data is in result->out_data
-		bio_output(i);
-		if(result->out_data & (0b1<<i)){
-			system_bio_claim(true, i, BP_PIN_IO, labels[1]);
-			bio_put(i, 1);
-		}else{
-			system_bio_claim(true, i, BP_PIN_IO, labels[0]);
-			bio_put(i, 0); 
-		}
-		system_set_active(true, i, &system_config.aux_active);		
-	}
+void dio_write(struct _bytecode* result, struct _bytecode* next) {
+    static const char labels[][5] = { "AUXL", "AUXH" };
+    // your code
+    for (uint8_t i = 0; i < 8; i++) {
+        // user data is in result->out_data
+        bio_output(i);
+        if (result->out_data & (0b1 << i)) {
+            system_bio_claim(true, i, BP_PIN_IO, labels[1]);
+            bio_put(i, 1);
+        } else {
+            system_bio_claim(true, i, BP_PIN_IO, labels[0]);
+            bio_put(i, 0);
+        }
+        system_set_active(true, i, &system_config.aux_active);
+    }
 }
 
 // This function is called when the user enters 'r' to read data
-void dio_read(struct _bytecode *result, struct _bytecode *next){
-	//your code
-	uint8_t data=0;
-	for(uint8_t i=0; i<8; i++){
-		data |= bio_get(i) << i;
-	}
-	result->in_data=data; //put the read value in in_data (up to 32 bits)
+void dio_read(struct _bytecode* result, struct _bytecode* next) {
+    // your code
+    uint8_t data = 0;
+    for (uint8_t i = 0; i < 8; i++) {
+        data |= bio_get(i) << i;
+    }
+    result->in_data = data; // put the read value in in_data (up to 32 bits)
 }
 
 // Handler for mode START when user enters the '[' key
@@ -113,14 +114,15 @@ void dio_stop(struct _bytecode *result, struct _bytecode *next)
 #endif
 // modes can have useful macros activated by (1) (eg macro 1)
 // macros are passed from the command line directly, not through the syntax system
-void dio_macro(uint32_t macro){
-	printf("-DUMMY1- macro(%d)\r\n", macro);
-	// your code
-	switch(macro)
-	{
-		// macro (0) is always a menu of macros
-		case 0: printf(" 0. This menu\r\n"); break;
-	}
+void dio_macro(uint32_t macro) {
+    printf("-DUMMY1- macro(%d)\r\n", macro);
+    // your code
+    switch (macro) {
+        // macro (0) is always a menu of macros
+        case 0:
+            printf(" 0. This menu\r\n");
+            break;
+    }
 }
 
 #if 0
@@ -184,15 +186,15 @@ uint32_t dio_bitr(void)
 }*/
 #endif
 
-void dio_settings(void){
-	printf("DIO");
+void dio_settings(void) {
+    printf("DIO");
 }
 
-void dio_help(void){
-	ui_help_mode_commands(dio_commands, dio_commands_count);
+void dio_help(void) {
+    ui_help_mode_commands(dio_commands, dio_commands_count);
 }
 
-//TODO: move this to PIO and have a speed setting...
-uint32_t dio_get_speed(void){
-	return 100000;
+// TODO: move this to PIO and have a speed setting...
+uint32_t dio_get_speed(void) {
+    return 100000;
 }

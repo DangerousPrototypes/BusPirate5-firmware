@@ -3,7 +3,7 @@
  * Modified 2024 by Ian Lesnet for Bus Pirate 5+
  *
  * SPDX-License-Identifier: BSD-3-Clause
-**/
+ **/
 #include <stdio.h>
 #include <stdlib.h>
 #include "pico/stdlib.h"
@@ -23,56 +23,52 @@ OW ow;
 // pio: The PIO hardware instance to use.
 // offset: The location of the onewire program in the PIO shared address space.
 // gpio: The pin to use for the bus (NB: see the README).
-bool ow_init (uint8_t bits_per_word, uint bufdir, uint inpin) {
+bool ow_init(uint8_t bits_per_word, uint bufdir, uint inpin) {
     ow.gpio = bufdir;
     ow.pio = PIO_MODE_PIO;
-    ow.sm = 0;    
-        
-    ow.offset = pio_add_program(ow.pio, &onewire_program);
-    ow.jmp_reset = onewire_reset_instr (ow.offset);   // assemble the bus reset instruction
+    ow.sm = 0;
 
-    gpio_init (inpin);               // enable the gpio and clear any output value
-    gpio_init (bufdir);
-    pio_gpio_init (ow.pio, bufdir);      // set the function to PIO output 
-    onewire_sm_init (ow.pio, ow.sm, ow.offset, bits_per_word, bufdir, inpin); // set 8 bits per word
+    ow.offset = pio_add_program(ow.pio, &onewire_program);
+    ow.jmp_reset = onewire_reset_instr(ow.offset); // assemble the bus reset instruction
+
+    gpio_init(inpin); // enable the gpio and clear any output value
+    gpio_init(bufdir);
+    pio_gpio_init(ow.pio, bufdir);                                           // set the function to PIO output
+    onewire_sm_init(ow.pio, ow.sm, ow.offset, bits_per_word, bufdir, inpin); // set 8 bits per word
     return true;
 }
 
-
 // cleanup PIO when done
-void ow_cleanup (void) {
-    pio_remove_program (ow.pio, &onewire_program, ow.offset);
+void ow_cleanup(void) {
+    pio_remove_program(ow.pio, &onewire_program, ow.offset);
 }
 
 // Send a binary word on the bus (LSB first).
 // ow: A pointer to an OW driver struct.
 // data: The word to be sent.
-void ow_send (uint data) {
-    pio_sm_put_blocking (ow.pio, ow.sm, (uint32_t)data);
-    pio_sm_get_blocking (ow.pio, ow.sm);  // discard the response
+void ow_send(uint data) {
+    pio_sm_put_blocking(ow.pio, ow.sm, (uint32_t)data);
+    pio_sm_get_blocking(ow.pio, ow.sm); // discard the response
 }
-
 
 // Read a binary word from the bus.
 // Returns: the word read (LSB first).
 // ow: pointer to an OW driver struct
-uint8_t ow_read (void) {
-    pio_sm_put_blocking (ow.pio, ow.sm, 0xff);    // generate read slots
-    return (uint8_t)(pio_sm_get_blocking (ow.pio, ow.sm) >> 24);  // shift response into bits 0..7
+uint8_t ow_read(void) {
+    pio_sm_put_blocking(ow.pio, ow.sm, 0xff);                   // generate read slots
+    return (uint8_t)(pio_sm_get_blocking(ow.pio, ow.sm) >> 24); // shift response into bits 0..7
 }
-
 
 // Reset the bus and detect any connected slaves.
 // Returns: true if any slaves responded.
 // ow: pointer to an OW driver struct
-bool ow_reset (void) {
-    pio_sm_exec_wait_blocking (ow.pio, ow.sm, ow.jmp_reset);
-    if ((pio_sm_get_blocking (ow.pio, ow.sm) & 1) == 0) {     // apply pin mask (see pio program)
-        return true;    // a slave pulled the bus low
+bool ow_reset(void) {
+    pio_sm_exec_wait_blocking(ow.pio, ow.sm, ow.jmp_reset);
+    if ((pio_sm_get_blocking(ow.pio, ow.sm) & 1) == 0) { // apply pin mask (see pio program)
+        return true;                                     // a slave pulled the bus low
     }
     return false;
 }
-
 
 // Find ROM codes (64-bit hardware addresses) of all connected devices.
 // See https://www.analog.com/en/app-notes/1wire-search-algorithm.html

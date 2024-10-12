@@ -11,7 +11,6 @@
 #include "ui_cmdln.h"
 
 // initializes the ui variables
-void ui_init(void)
-{
-	cmdln_init();
+void ui_init(void) {
+    cmdln_init();
 }

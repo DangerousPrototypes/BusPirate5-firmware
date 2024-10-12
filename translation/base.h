@@ -8,12 +8,11 @@ typedef enum _language_idx_t { // these are based on IETF codes for the translat
     language_idx_it_it,
     // language_idx_zh_cmn_cn,
 
-    
     COUNT_OF_LANGUAGE_IDX, // leave this as the final enum value
 } language_idx_t;
 
-enum T_translations{
-    T_ON=0,
+enum T_translations {
+    T_ON = 0,
     T_OFF,
     T_GND,
     T_INPUT,
@@ -452,10 +451,11 @@ enum T_translations{
     T_HELP_CMD_LOGIC,
     T_HELP_CMD_SMPS,
 
-	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
+    T_LAST_ITEM_ALWAYS_AT_THE_END // LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are
+                                  // missing translations
 };
 
-const char * GET_T(enum T_translations index);
+const char* GET_T(enum T_translations index);
 void translation_init(void);
 void translation_set(language_idx_t language);
 

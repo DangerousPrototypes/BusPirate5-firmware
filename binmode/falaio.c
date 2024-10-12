@@ -49,11 +49,11 @@ void falaio_notify(void) {
 
 // binmode setup on mode start
 void falaio_setup(void) {
-    if(!fala_notify_register(&falaio_notify)){
+    if (!fala_notify_register(&falaio_notify)) {
         printf("Failed to register notify function\r\n");
         return;
     }
-    
+
     system_config.binmode_usb_rx_queue_enable = false;
     system_config.binmode_usb_tx_queue_enable = false;
 }
@@ -77,7 +77,10 @@ static uint falaio_tx8(uint8_t* buf, uint len) {
     return i;
 }
 
-enum fala_statemachine { FALA_IDLE = 0, FALA_DUMP };
+enum fala_statemachine {
+    FALA_IDLE = 0,
+    FALA_DUMP
+};
 
 void falaio_service(void) {
     static enum fala_statemachine state = FALA_IDLE;

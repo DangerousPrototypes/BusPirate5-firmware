@@ -37,8 +37,12 @@ char logic_graph_low_character = '_';
 char logic_graph_high_character = '#';
 
 void logic_bar_config(char low, char high) {
-    if(low!=0) logic_graph_low_character = low;
-    if(high!=0) logic_graph_high_character = high;
+    if (low != 0) {
+        logic_graph_low_character = low;
+    }
+    if (high != 0) {
+        logic_graph_high_character = high;
+    }
 }
 
 // wrangle the terminal into a state where we can draw a nice box
@@ -123,7 +127,7 @@ void graph_logic_lines_2(uint16_t position, uint32_t sample_ptr) {
 void logic_bar_redraw(uint32_t start_pos, uint32_t total_samples) {
 
     // find the start point
-    uint32_t la_ptr =  logic_analyzer_get_end_ptr(); 
+    uint32_t la_ptr = logic_analyzer_get_end_ptr();
 
     if (total_samples < LOGIC_BAR_GRAPH_WIDTH) {
         // add zero padding...
@@ -217,24 +221,23 @@ void logic_bar_draw_frame(void) {
     draw_release();
 }
 
-//detach/release/stop/end the logic bar frame
+// detach/release/stop/end the logic bar frame
 void logic_bar_detach(void) {
     //  freeze terminal updates
     draw_prepare();
 
     // save cursor
-    //printf("\e7");
+    // printf("\e7");
 
     uint16_t position = draw_get_position_index(LOGIC_BAR_HEIGHT);
-    
+
     // set scroll region, disable line wrap
-    printf("\e[%d;%dr\e[7l\r\n\r\n", 1, position+LOGIC_BAR_HEIGHT);
-    
+    printf("\e[%d;%dr\e[7l\r\n\r\n", 1, position + LOGIC_BAR_HEIGHT);
 
     frame_blank(LOGIC_BAR_HEIGHT);
 
     // restore cursor
-    //printf("\e8");
+    // printf("\e8");
 
     draw_release();
 
@@ -244,31 +247,34 @@ void logic_bar_detach(void) {
 bool logic_bar_visible = false;
 
 void logic_bar_update(void) {
-    if(!logic_bar_visible) return;
+    if (!logic_bar_visible) {
+        return;
+    }
     uint32_t total_samples = logic_analyzer_get_end_ptr(); // TODO: REMOVE HACK
     logic_bar_redraw(0, total_samples);
 }
 
 bool logic_bar_start(void) {
-    //this should setup and activate hooks for fala if not already...
-    if(!fala_notify_register(&logic_bar_update)) return false;
+    // this should setup and activate hooks for fala if not already...
+    if (!fala_notify_register(&logic_bar_update)) {
+        return false;
+    }
     logic_bar_draw_frame();
     logic_bar_visible = true;
     return true;
 }
 
 void logic_bar_stop(void) {
-    //this should stop and cleanup fala if not already...
+    // this should stop and cleanup fala if not already...
     fala_notify_unregister(&logic_bar_update);
     logic_bar_detach();
     logic_bar_visible = false;
-
 }
 
 void logic_bar_hide(void) {
     logic_bar_detach();
     logic_bar_visible = false;
- }
+}
 
 void logic_bar_show(void) {
     logic_bar_draw_frame();
@@ -278,13 +284,15 @@ void logic_bar_show(void) {
 
 uint32_t sample_position = 0;
 void logic_bar_navigate(void) {
-    printf("\r\n%sCommands: <- and -> to scroll, x or q to exit%s\r\n", ui_term_color_info(), ui_term_color_reset()); //(r)un, (s)ave, 
+    printf("\r\n%sCommands: <- and -> to scroll, x or q to exit%s\r\n",
+           ui_term_color_info(),
+           ui_term_color_reset()); //(r)un, (s)ave,
     // find the start point
-    //for follow along logic analyzer: the end pointer = number of samples
-    //TODO: switch is using normal analyzer mode with fixed samples and triggers
+    // for follow along logic analyzer: the end pointer = number of samples
+    // TODO: switch is using normal analyzer mode with fixed samples and triggers
     uint32_t total_samples = logic_analyzer_get_end_ptr();
 
-    if(!logic_bar_visible){
+    if (!logic_bar_visible) {
         logic_bar_draw_frame();
         logic_bar_redraw(0, total_samples);
     }
@@ -304,7 +312,7 @@ void logic_bar_navigate(void) {
             case 'r':
             la_sample:
                 // logic_analyzer_arm((float)(la_freq * 1000), la_samples, la_trigger_pin, la_trigger_level, false);
-                //sample_position = 0;
+                // sample_position = 0;
                 /*while (!logic_analyzer_is_done()) {
                     char c;
                     if (rx_fifo_try_get(&c)) {
@@ -314,13 +322,13 @@ void logic_bar_navigate(void) {
                         }
                     }
                 }*/
-                //logic_bar_redraw(sample_position, total_samples);
-                // logicanalyzer_reset_led();
+                // logic_bar_redraw(sample_position, total_samples);
+                //  logicanalyzer_reset_led();
                 break;
             case 'q':
             case 'x':
             la_x:
-                //system_config.terminal_hide_cursor = false;
+                // system_config.terminal_hide_cursor = false;
                 printf("\e[?25h\e[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); // back to bottom
                 return;
                 break;
@@ -338,10 +346,10 @@ void logic_bar_navigate(void) {
                                 }
                                 logic_bar_redraw(sample_position, total_samples);
                                 break;
-                            case 'C':                                  // right
-                                if(total_samples < 76) { //not enough samples to scroll
+                            case 'C':                     // right
+                                if (total_samples < 76) { // not enough samples to scroll
                                     sample_position = 0;
-                                } else if (sample_position > (total_samples - 63)) {// samples - columns
+                                } else if (sample_position > (total_samples - 63)) { // samples - columns
                                     sample_position = total_samples - 63;
                                 } else {
                                     sample_position += 64;

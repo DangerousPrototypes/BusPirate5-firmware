@@ -12,12 +12,11 @@
 #include "../fatfs/ff.h"     // BYTE type
 #include "../fatfs/diskio.h" // types from the diskio driver
 
-
 #include "nand/nand_ftl_diskio.h"
 
 #include "../dhara/map.h"
 #include "../dhara/nand.h"
-//#include "shell.h"
+// #include "shell.h"
 #include "nand/spi_nand.h"
 
 // private variables
@@ -28,55 +27,57 @@ static struct dhara_nand dhara_nand_parameters = {};
 static mutex_t diskio_mutex;
 
 // public function definitions
-DSTATUS diskio_initialize(BYTE drv)
-{
-    if (drv) return STA_NOINIT;			/* Supports only drive 0 */
-    if (!mutex_is_initialized(&diskio_mutex)){
+DSTATUS diskio_initialize(BYTE drv) {
+    if (drv) {
+        return STA_NOINIT; /* Supports only drive 0 */
+    }
+    if (!mutex_is_initialized(&diskio_mutex)) {
         mutex_init(&diskio_mutex);
     }
 
     // init flash management stack
     int ret = spi_nand_init(&dhara_nand_parameters);
     if (SPI_NAND_RET_OK != ret) {
-        //printf("spi_nand_init failed, status: %d.", ret);
+        // printf("spi_nand_init failed, status: %d.", ret);
         return STA_NOINIT;
     }
     // init flash translation layer
     dhara_map_init(&map, &dhara_nand_parameters, page_buffer, 4);
     dhara_error_t err = DHARA_E_NONE;
     ret = dhara_map_resume(&map, &err);
-    //printf("dhara resume return: %d, error: %d", ret, err);
-    // map_resume will return a bad status in the case of an empty map, however this just
-    // means that the file system is empty
+    // printf("dhara resume return: %d, error: %d", ret, err);
+    //  map_resume will return a bad status in the case of an empty map, however this just
+    //  means that the file system is empty
 
     // TODO: Flag statuses from dhara that do not indicate an empty map
     initialized = true;
     return 0;
 }
 
-DSTATUS diskio_status(BYTE drv)
-{
-   	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
+DSTATUS diskio_status(BYTE drv) {
+    if (drv) {
+        return STA_NOINIT; /* Supports only drive 0 */
+    }
 
     if (!initialized) {
         return STA_NOINIT;
-    }
-    else {
+    } else {
         return 0;
     }
 }
 
-DRESULT diskio_read(BYTE drv, BYTE *buff, LBA_t sector, UINT count)
-{
+DRESULT diskio_read(BYTE drv, BYTE* buff, LBA_t sector, UINT count) {
     dhara_error_t err;
 
-	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
+    if (drv) {
+        return STA_NOINIT; /* Supports only drive 0 */
+    }
     mutex_enter_blocking(&diskio_mutex);
     // read *count* consecutive sectors
     for (int i = 0; i < count; i++) {
         int ret = dhara_map_read(&map, sector, buff, &err);
         if (ret) {
-            //printf("dhara read failed: %d, error: %d", ret, err);
+            // printf("dhara read failed: %d, error: %d", ret, err);
             return RES_ERROR;
         }
         buff += SPI_NAND_PAGE_SIZE; // sector size == page size
@@ -86,17 +87,18 @@ DRESULT diskio_read(BYTE drv, BYTE *buff, LBA_t sector, UINT count)
     return RES_OK;
 }
 
-DRESULT diskio_write(BYTE drv, const BYTE *buff, LBA_t sector, UINT count)
-{
+DRESULT diskio_write(BYTE drv, const BYTE* buff, LBA_t sector, UINT count) {
     dhara_error_t err;
 
-	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
+    if (drv) {
+        return STA_NOINIT; /* Supports only drive 0 */
+    }
     mutex_enter_blocking(&diskio_mutex);
     // write *count* consecutive sectors
     for (int i = 0; i < count; i++) {
         int ret = dhara_map_write(&map, sector, buff, &err);
         if (ret) {
-            //printf("dhara write failed: %d, error: %d", ret, err);
+            // printf("dhara write failed: %d, error: %d", ret, err);
             return RES_ERROR;
         }
         buff += SPI_NAND_PAGE_SIZE; // sector size == page size
@@ -106,11 +108,12 @@ DRESULT diskio_write(BYTE drv, const BYTE *buff, LBA_t sector, UINT count)
     return RES_OK;
 }
 
-DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void *buff)
-{
+DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void* buff) {
     dhara_error_t err;
 
-   	if (drv) return STA_NOINIT;		/* Supports only drive 0 */
+    if (drv) {
+        return STA_NOINIT; /* Supports only drive 0 */
+    }
     switch (cmd) {
         case CTRL_SYNC:;
             ;
@@ -118,37 +121,34 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void *buff)
             int ret = dhara_map_sync(&map, &err);
             mutex_exit(&diskio_mutex);
             if (ret) {
-                //printf("dhara sync failed: %d, error: %d", ret, err);
+                // printf("dhara sync failed: %d, error: %d", ret, err);
                 return RES_ERROR;
             }
             break;
         case GET_SECTOR_COUNT:;
             ;
             dhara_sector_t sector_count = dhara_map_capacity(&map);
-            //printf("dhara capacity: %d", sector_count);
-            LBA_t *sector_count_out = (LBA_t *)buff;
+            // printf("dhara capacity: %d", sector_count);
+            LBA_t* sector_count_out = (LBA_t*)buff;
             *sector_count_out = sector_count;
             break;
-        case GET_SECTOR_SIZE:
-            ;
-            WORD *sector_size_out = (WORD *)buff;
+        case GET_SECTOR_SIZE:;
+            WORD* sector_size_out = (WORD*)buff;
             *sector_size_out = SPI_NAND_PAGE_SIZE;
             break;
-        case GET_BLOCK_SIZE:
-            ;
-            DWORD *block_size_out = (DWORD *)buff;
+        case GET_BLOCK_SIZE:;
+            DWORD* block_size_out = (DWORD*)buff;
             *block_size_out = SPI_NAND_PAGES_PER_ERASE_BLOCK;
             break;
-        case CTRL_TRIM:
-            ;
-            LBA_t *args = (LBA_t *)buff;
+        case CTRL_TRIM:;
+            LBA_t* args = (LBA_t*)buff;
             LBA_t start = args[0];
             LBA_t end = args[1];
             mutex_enter_blocking(&diskio_mutex);
             while (start <= end) {
                 int ret = dhara_map_trim(&map, start, &err);
                 if (ret) {
-                    //printf("dhara trim failed: %d, error: %d", ret, err);
+                    // printf("dhara trim failed: %d, error: %d", ret, err);
                     return RES_ERROR;
                 }
                 start++;

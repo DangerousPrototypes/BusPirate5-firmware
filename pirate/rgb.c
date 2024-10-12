@@ -9,51 +9,49 @@
 #include "pirate/rgb.h"
 #include "pio_config.h"
 
-
-//        REV10                     REV8             
-//                                                    
-//    11 10  9  8  7            10  9  8  7  6        
-// 12    +-------+    6     11    +-------+     5    
-// 13    |       |    5     12    |       |     4    
-// USB   | OLED  |   []     USB   | OLED  |    []    
-// 14    |       |    4     13    |       |     3    
-// 15    +-------+    3     14    +-------+     2    
-//    16 17  0  1  2            15  x  x  0  1       
+//        REV10                     REV8
+//
+//    11 10  9  8  7            10  9  8  7  6
+// 12    +-------+    6     11    +-------+     5
+// 13    |       |    5     12    |       |     4
+// USB   | OLED  |   []     USB   | OLED  |    []
+// 14    |       |    4     13    |       |     3
+// 15    +-------+    3     14    +-------+     2
+//    16 17  0  1  2            15  x  x  0  1
 //
 #define COUNT_OF_PIXELS RGB_LEN // 18 for Rev10, 16 for Rev8
 
-//static PIO pio;
-//static int sm;
-//static uint offset;
+// static PIO pio;
+// static int sm;
+// static uint offset;
 
 static struct _pio_config pio_config;
 
-#pragma region    // 8-bit scaled pixel coordinates and angle256
-    /// @brief Scaled coordinates in range [0..255]
-    typedef struct _coordin8 {
-        uint8_t x;
-        uint8_t y;
-    } coordin8_t;
+#pragma region // 8-bit scaled pixel coordinates and angle256
+/// @brief Scaled coordinates in range [0..255]
+typedef struct _coordin8 {
+    uint8_t x;
+    uint8_t y;
+} coordin8_t;
 
-
-    /// @brief Each pixel's coordinate in a 256x256 grid, as
-    ///        extracted from the PCB layout and Pick'n'Place data.
-    /// @details The grid is oriented with the origin (0,0) at the
-    ///          upper left, similar to a PC screen.  Orient the PCB
-    ///          so the USB port is on the left, and the
-    ///          plank connector is on the right.
-    ///
-    ///            y
-    ///          x +---------------> +x
-    ///            |    11  10 ...
-    ///            |  12
-    ///            |  ...
-    ///            V
-    ///           +y
-    ///
-    static const coordin8_t pixel_coordin8[] = {
-        //                        // SIDE      POSITION    FACING
-        // clang-format off
+/// @brief Each pixel's coordinate in a 256x256 grid, as
+///        extracted from the PCB layout and Pick'n'Place data.
+/// @details The grid is oriented with the origin (0,0) at the
+///          upper left, similar to a PC screen.  Orient the PCB
+///          so the USB port is on the left, and the
+///          plank connector is on the right.
+///
+///            y
+///          x +---------------> +x
+///            |    11  10 ...
+///            |  12
+///            |  ...
+///            V
+///           +y
+///
+static const coordin8_t pixel_coordin8[] = {
+//                        // SIDE      POSITION    FACING
+// clang-format off
         #if BP_REV >= 10
         { .x = 127, .y = 255,  }, // bottom    center      out
         #endif
@@ -76,17 +74,17 @@ static struct _pio_config pio_config;
         #if BP_REV >= 10
         { .x =  90, .y = 255,  }, // bottom    left        side
         #endif
-        // clang-format on
-    };
+    // clang-format on
+};
 
-    /// @brief Angular position in 1/256th-circle units, as
-    ///        extracted from the PCB layout and Pick'n'Place data.
-    ///        From the center of the PCB, the zero angle is
-    ///        directly towards the center of the plank connector,
-    ///        with angles increasing in the anti-clockwise direction.
-    static const uint8_t pixel_angle256[] = {
-        //                  // SIDE      POSITION    FACING
-        // clang-format off
+/// @brief Angular position in 1/256th-circle units, as
+///        extracted from the PCB layout and Pick'n'Place data.
+///        From the center of the PCB, the zero angle is
+///        directly towards the center of the plank connector,
+///        with angles increasing in the anti-clockwise direction.
+static const uint8_t pixel_angle256[] = {
+//                  // SIDE      POSITION    FACING
+// clang-format off
         #if BP_REV >= 10
         192,                // bottom    center      out
         #endif
@@ -109,17 +107,17 @@ static struct _pio_config pio_config;
         #if BP_REV >= 10
         180,                // bottom    left        side
         #endif
-        // clang-format on
-    };
+    // clang-format on
+};
 
-    static_assert(count_of(pixel_coordin8) == COUNT_OF_PIXELS);
-    static_assert(count_of(pixel_angle256) == COUNT_OF_PIXELS);
+static_assert(count_of(pixel_coordin8) == COUNT_OF_PIXELS);
+static_assert(count_of(pixel_angle256) == COUNT_OF_PIXELS);
 
-    // Sadly, C still refuses to allow the following format in static_assert(), saying it's not constant.
-    //static const uint32_t PIXEL_MASK_UPPER = 0b0....1;
-    //static const uint32_t PIXEL_MASK_SIDE  = 0b1....0;
+// Sadly, C still refuses to allow the following format in static_assert(), saying it's not constant.
+// static const uint32_t PIXEL_MASK_UPPER = 0b0....1;
+// static const uint32_t PIXEL_MASK_SIDE  = 0b1....0;
 
-    // clang-format off
+// clang-format off
     #if BP_REV <= 9
         // Pixels that shine    orthogonal to OLED: idx     1,2,    5,6,  8,  10,11,      14,15,
         #define PIXEL_MASK_UPPER ( 0b1100110101100110 )
@@ -131,17 +129,16 @@ static struct _pio_config pio_config;
         // Pixels that shine    orthogonal to OLED: idx   1,    4,5,    8,  10,      13,14,     17
         #define PIXEL_MASK_SIDE  (0b100110010100110010)
     #endif
-    // clang-format on
+// clang-format on
 
-    static const uint32_t groups_top_down[] = {
-        PIXEL_MASK_UPPER,
-        PIXEL_MASK_SIDE,
-    }; // MSb is last led in string...
-    #define PIXEL_MASK_ALL ((1u << COUNT_OF_PIXELS) - 1)
-    static_assert(COUNT_OF_PIXELS < (sizeof(uint32_t)*8)-1, "Too many pixels for pixel mask definition to be valid");
-    static_assert((PIXEL_MASK_UPPER & PIXEL_MASK_SIDE) == 0, "Pixel cannot be both upper and side");
-    static_assert((PIXEL_MASK_UPPER | PIXEL_MASK_SIDE) == PIXEL_MASK_ALL, "Pixel must be either upper or side");
-
+static const uint32_t groups_top_down[] = {
+    PIXEL_MASK_UPPER,
+    PIXEL_MASK_SIDE,
+}; // MSb is last led in string...
+#define PIXEL_MASK_ALL ((1u << COUNT_OF_PIXELS) - 1)
+static_assert(COUNT_OF_PIXELS < (sizeof(uint32_t) * 8) - 1, "Too many pixels for pixel mask definition to be valid");
+static_assert((PIXEL_MASK_UPPER & PIXEL_MASK_SIDE) == 0, "Pixel cannot be both upper and side");
+static_assert((PIXEL_MASK_UPPER | PIXEL_MASK_SIDE) == PIXEL_MASK_ALL, "Pixel must be either upper or side");
 
 #pragma endregion
 
@@ -175,7 +172,7 @@ CPIXEL_COLOR pixels[COUNT_OF_PIXELS]; // store as RGB ... as it's the common for
 
 // C23 would allow this to be `constexpr`
 // here, `static const` relies on compiler to optimize this away to a literal `((uint32_t)0u)`
-static const CPIXEL_COLOR PIXEL_COLOR_BLACK = { .r=0x00, .g=0x00, .b=0x00 };
+static const CPIXEL_COLOR PIXEL_COLOR_BLACK = { .r = 0x00, .g = 0x00, .b = 0x00 };
 
 static CPIXEL_COLOR color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
     CPIXEL_COLOR c = { .r = r, .g = g, .b = b };
@@ -184,9 +181,9 @@ static CPIXEL_COLOR color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
 static CPIXEL_COLOR color_from_uint32(uint32_t c) {
     CPIXEL_COLOR result = {
         ._unused = (c >> 24) & 0xff, // carry the input data, to allow compiler to optimization this to a noop
-        .r =       (c >> 16) & 0xff,
-        .g =       (c >>  8) & 0xff,
-        .b =       (c >>  0) & 0xff,
+        .r = (c >> 16) & 0xff,
+        .g = (c >> 8) & 0xff,
+        .b = (c >> 0) & 0xff,
     };
     return result;
 }
@@ -202,32 +199,30 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
     return r;
 }
 
+#pragma region // Legacy pixel animation groups
 
+// Note that both the layout and overall count of pixels
+// has changed between revisions.  As a result, the count
+// of elements for any of these arrays may differ.
+//
+// groups_top_left[]:
+//    generally start at the top left corner of the device,
+//    and continue in a diagnol wipe to bottom right.
+//
+// groups_center_left[]:
+//    generally start at left center two pixels (by USB port),
+//    each of which flows towards the plank connector (in opposite directions)
+//
+// groups_center_clockwise[]:
+//    Similar to a clock, rotating around the device clockwise.
+//
+// groups_top_down[]:
+//    All the pixels facing upwards as one group, and all the pixels
+//    facing the sides as a second group.
 
-#pragma region    // Legacy pixel animation groups
-
-    // Note that both the layout and overall count of pixels
-    // has changed between revisions.  As a result, the count
-    // of elements for any of these arrays may differ.
-    //
-    // groups_top_left[]:
-    //    generally start at the top left corner of the device,
-    //    and continue in a diagnol wipe to bottom right.
-    //
-    // groups_center_left[]:
-    //    generally start at left center two pixels (by USB port),
-    //    each of which flows towards the plank connector (in opposite directions)
-    //
-    // groups_center_clockwise[]:
-    //    Similar to a clock, rotating around the device clockwise.
-    //
-    // groups_top_down[]:
-    //    All the pixels facing upwards as one group, and all the pixels
-    //    facing the sides as a second group.
-
-    #if BP_REV <= 9
-        static const uint32_t groups_top_left[] = {
-            // clang-format off
+#if BP_REV <= 9
+static const uint32_t groups_top_left[] = {
+    // clang-format off
             ((1u <<  1) | (1u <<  2)             ),
             ((1u <<  0) | (1u <<  3)             ),
             ((1u << 15) | (1u <<  4) | (1u <<  5)), // pair up 4/5
@@ -235,10 +230,10 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
             ((1u << 13) | (1u <<  8)             ),
             ((1u << 12) | (1u <<  9)             ),
             ((1u << 11) | (1u << 10)             ),
-            // clang-format on
-        };
-        static const uint32_t groups_center_left[] = {
-            // clang-format off
+    // clang-format on
+};
+static const uint32_t groups_center_left[] = {
+    // clang-format off
             ((1u <<  3) | (1u <<  4)                         ),
             ((1u <<  2) | (1u <<  5)                         ),
             ((1u <<  1) | (1u <<  6)                         ),
@@ -246,10 +241,10 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
             ((1u << 10) | (1u << 15)                         ),
             ((1u << 11) | (1u << 14)                         ),
             ((1u << 12) | (1u << 13)                         ),
-            // clang-format on
-        };  
-        static const uint32_t groups_center_clockwise[] = {
-            // clang-format off
+    // clang-format on
+};
+static const uint32_t groups_center_clockwise[] = {
+    // clang-format off
             ((1u << 13) | (1u << 14)),
             ((1u << 15)             ),
             ((1u <<  0) | (1u <<  1)),
@@ -259,14 +254,14 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
             ((1u <<  8) | (1u <<  9)),
             ((1u << 10)             ),
             ((1u << 11) | (1u << 12)),
-            // clang-format on
-        };
-    #elif BP_REV >= 10
-        static const uint32_t groups_top_left[] = {
-            // TODO: use grid mappings instead
-            //       e.g., for iteration target from 255..0
-            //             (x+y)/2 == iteration
-            // clang-format off
+    // clang-format on
+};
+#elif BP_REV >= 10
+static const uint32_t groups_top_left[] = {
+    // TODO: use grid mappings instead
+    //       e.g., for iteration target from 255..0
+    //             (x+y)/2 == iteration
+    // clang-format off
             (               (1u <<  2) | (1u <<  3)),
             (               (1u <<  1) | (1u <<  4)),
             ((1u << 17)   | (1u <<  0) | (1u <<  5)),
@@ -275,16 +270,16 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
             ((1u << 14)   | (1u <<  9) | (1u <<  8)),
             ((1u << 13)   | (1u << 10)             ),
             ((1u << 12)   | (1u << 11)             ),
-            // clang-format on
-        };
-        static const uint32_t groups_center_left[] = {
-            // TODO: use angular mappings instead
-            //       e.g., for iteration target from 255..0
-            //             // convert to angular range: [0..127] based on absolute offset from angle 0
-            //             uint8_t pix_a = (a256 > 127u) ? 256u - a256 : a256;
-            //             // scale it up to range [0..255]
-            //             pix_a *= 2u;
-            // clang-format off
+    // clang-format on
+};
+static const uint32_t groups_center_left[] = {
+    // TODO: use angular mappings instead
+    //       e.g., for iteration target from 255..0
+    //             // convert to angular range: [0..127] based on absolute offset from angle 0
+    //             uint8_t pix_a = (a256 > 127u) ? 256u - a256 : a256;
+    //             // scale it up to range [0..255]
+    //             pix_a *= 2u;
+    // clang-format off
             ((1u <<  4) | (1u <<  5)),
             ((1u <<  3) | (1u <<  6)),
             ((1u <<  2) | (1u <<  7)),
@@ -294,13 +289,13 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
             ((1u << 16) | (1u << 11)),
             ((1u << 15) | (1u << 12)),
             ((1u << 14) | (1u << 13)),
-            // clang-format on
-        };  
-        static const uint32_t groups_center_clockwise[] = {
-            // TODO: use angular mappings instead
-            //       e.g., for iteration target from 255..0
-            //             uint8_t pix_a = 256u - a256;
-            // clang-format off
+    // clang-format on
+};
+static const uint32_t groups_center_clockwise[] = {
+    // TODO: use angular mappings instead
+    //       e.g., for iteration target from 255..0
+    //             uint8_t pix_a = 256u - a256;
+    // clang-format off
             ((1u << 14) | (1u << 15)),
             ((1u << 16)             ),
             ((1u << 17) | (1u <<  0)),
@@ -311,13 +306,12 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
             ((1u <<  8) | (1u <<  9)),
             ((1u << 10) | (1u << 11)),
             ((1u << 12) | (1u << 13)),
-            // clang-format on
-        };
-    #endif
+    // clang-format on
+};
+#endif
 #pragma endregion // Legacy pixel animation groups
 
-
-static inline void update_pixels(void) {  
+static inline void update_pixels(void) {
     for (int i = 0; i < COUNT_OF_PIXELS; i++) {
 
         // little-endian, so 0x00GGRRBB  is stored as 0xBB 0xRR 0xGG 0x00
@@ -327,10 +321,7 @@ static inline void update_pixels(void) {
         c.r = c.r / system_config.led_brightness_divisor;
         c.g = c.g / system_config.led_brightness_divisor;
         c.b = c.b / system_config.led_brightness_divisor;
-        uint32_t toSend =
-            (c.g << 24) |
-            (c.r << 16) |
-            (c.b <<  8) ;
+        uint32_t toSend = (c.g << 24) | (c.r << 16) | (c.b << 8);
 
         // TODO: define symbolic constant for which PIO / state machine (no magic numbers!)
         //       e.g., #define WS2812_PIO  pio1
@@ -348,11 +339,11 @@ static CPIXEL_COLOR color_wheel(uint8_t pos) {
     uint8_t r, g, b;
 
     pos = 255 - pos;
-    if(pos < 85) {
+    if (pos < 85) {
         r = 255u - (pos * 3u);
         g = 0u;
         b = pos * 3;
-    } else if(pos < 170) {
+    } else if (pos < 170) {
         pos -= 85;
         r = 0u;
         g = pos * 3u;
@@ -366,45 +357,42 @@ static CPIXEL_COLOR color_wheel(uint8_t pos) {
     return color_from_rgb(r, g, b);
 }
 
-static void assign_pixel_color(uint32_t index_mask, CPIXEL_COLOR pixel_color){
-    for (int i = 0; i < COUNT_OF_PIXELS; i++){
+static void assign_pixel_color(uint32_t index_mask, CPIXEL_COLOR pixel_color) {
+    for (int i = 0; i < COUNT_OF_PIXELS; i++) {
         if (index_mask & (1u << i)) {
             pixels[i] = pixel_color;
         }
     }
 }
 
-//something like this to cycle, delay, return done
-//This needs some more documentation:
-//  groups            the pixel groups; a pointer to an array of index_masks,
-//                    each index_mask indicating which LEDs are considered
-//                    part of the group
-//  group_count       count of elements in the `groups` array
-//  color_wheel       a function pointer; Function must take a single byte
-//                    parameter and return a ***GRB-formatted*** color
-//                    -- BUGBUG -- Verify color order is as expected?
-//  color_count       the distinct seed values for color_wheel() parameter.
-//                    rgb_master() will ensure the parameter is always in
-//                    range [0..color_count-1]
-//  color_increment   the PER GROUP increment of colors for the color_wheel()
-//                    parameter
-//This function returns:
-//  false             if additional iterations are needed for the animation
-//  true              sufficient iterations have been completed
+// something like this to cycle, delay, return done
+// This needs some more documentation:
+//   groups            the pixel groups; a pointer to an array of index_masks,
+//                     each index_mask indicating which LEDs are considered
+//                     part of the group
+//   group_count       count of elements in the `groups` array
+//   color_wheel       a function pointer; Function must take a single byte
+//                     parameter and return a ***GRB-formatted*** color
+//                     -- BUGBUG -- Verify color order is as expected?
+//   color_count       the distinct seed values for color_wheel() parameter.
+//                     rgb_master() will ensure the parameter is always in
+//                     range [0..color_count-1]
+//   color_increment   the PER GROUP increment of colors for the color_wheel()
+//                     parameter
+// This function returns:
+//   false             if additional iterations are needed for the animation
+//   true              sufficient iterations have been completed
 //
-// HACKHACK -- to ensure a known starting state (reset the static variables)
-//             can call with group_count=0, cycles=0
-// TODO: Rename `color_wheel` to more appropriate, generic name
-static bool rgb_master(
-    const uint32_t *groups,
-    uint8_t group_count,
-    CPIXEL_COLOR (*color_wheel)(uint8_t color),
-    uint8_t color_count,
-    uint8_t color_increment,
-    uint8_t cycles,
-    uint8_t delay_ms
-    )
-{
+//  HACKHACK -- to ensure a known starting state (reset the static variables)
+//              can call with group_count=0, cycles=0
+//  TODO: Rename `color_wheel` to more appropriate, generic name
+static bool rgb_master(const uint32_t* groups,
+                       uint8_t group_count,
+                       CPIXEL_COLOR (*color_wheel)(uint8_t color),
+                       uint8_t color_count,
+                       uint8_t color_increment,
+                       uint8_t cycles,
+                       uint8_t delay_ms) {
     static uint8_t color_idx = 0;
     static uint16_t completed_cycles = 0;
 
@@ -416,7 +404,7 @@ static bool rgb_master(
         // color_count + (group_count * color_increment)
         // === 255 + (255 * 255) = 65010
         // This value could fit in uint16_t ... but just use PICO-native 32-bits
-        uint32_t tmp_color_idx = color_idx + (i*color_increment);
+        uint32_t tmp_color_idx = color_idx + (i * color_increment);
         tmp_color_idx %= color_count; // ensures safe to cast to uint8_t
 
         CPIXEL_COLOR rgb_color = color_wheel((uint8_t)tmp_color_idx);
@@ -425,14 +413,14 @@ static bool rgb_master(
     update_pixels();
     ++color_idx;
 
-    //finished one complete cycle
+    // finished one complete cycle
     if (color_idx == color_count) {
         color_idx = 0;
         ++completed_cycles;
         if (completed_cycles >= cycles) {
             completed_cycles = 0;
             return true;
-        }        
+        }
     }
 
     return false;
@@ -466,7 +454,7 @@ static bool animation_gentle_glow(void) {
 static bool animation_angular_wipe(CPIXEL_COLOR color) {
     static const uint16_t value_diffusion = 40u;
     static const uint16_t starting_value = 0u;
-    static const uint16_t ending_value = value_diffusion*4u + 256u;
+    static const uint16_t ending_value = value_diffusion * 4u + 256u;
     static const uint16_t default_frame_delay = 1u;
 
     static uint8_t frame_delay_count = 0;
@@ -498,7 +486,7 @@ static bool animation_angular_wipe(CPIXEL_COLOR color) {
         // For now, hard-coded to (X+Y)/2 for wipe
         // from upper left to lower right corner ...
         uint16_t pix_v = (((uint16_t)pixel_coordin8[i].x) + ((uint16_t)pixel_coordin8[i].y)) / 2u;
-        
+
         // shift from [0..255] to [2*value_diffusion .. 255 + 4*value_diffusion]
         // this allows smooth entry and exit diffusion effects
         pix_v += 2u * value_diffusion;
@@ -510,7 +498,8 @@ static bool animation_angular_wipe(CPIXEL_COLOR color) {
         // until migrate the FastLED color mixing,
         // background must be black for blur / diffusion effects
         if (diff < value_diffusion) {
-            static_assert(value_diffusion < 256u, "invalid brightness calculations when value_diffusion is too large (limited to uint8_t)");
+            static_assert(value_diffusion < 256u,
+                          "invalid brightness calculations when value_diffusion is too large (limited to uint8_t)");
             CPIXEL_COLOR dimmed_color = reduce_brightness(color, value_diffusion - diff, value_diffusion);
             assign_pixel_color(1u << i, dimmed_color);
         } else {
@@ -588,7 +577,8 @@ static bool animation_scanner(CPIXEL_COLOR color) {
 
 static bool rgb_scanner(void) {
 
-    static_assert(count_of(groups_center_left) < (sizeof(uint16_t)*8), "uint16_t too small to hold count_of(groups_center_left) elements");
+    static_assert(count_of(groups_center_left) < (sizeof(uint16_t) * 8),
+                  "uint16_t too small to hold count_of(groups_center_left) elements");
 
     // pixel_bitmask has a single bit set, which serves two purposes:
     // 1. when that bit shifts off the LSB, it indicates the end of the animation cycle
@@ -598,11 +588,12 @@ static bool rgb_scanner(void) {
     static uint16_t pixel_bitmask = 1u << (count_of(groups_center_left) - 1);
     static uint8_t frame_delay_count = 0u;
     static uint8_t color_idx = 0;
-    
+
     static const CPIXEL_COLOR background_pixel_color = { .r = 0x20, .g = 0x20, .b = 0x20 };
     // each loop of the animation, use the next color in this sequence.
     // when all the colors have been used, the animation is complete.
-    const CPIXEL_COLOR colors[]={
+    const CPIXEL_COLOR colors[] = {
+        // clang-format off
         { .r = 0xFF, .g = 0x00, .b = 0x00 },
         { .r = 0xD5, .g = 0x2A, .b = 0x00 },
         { .r = 0xAB, .g = 0x55, .b = 0x00 },
@@ -622,6 +613,7 @@ static bool rgb_scanner(void) {
         { .r = 0x7F, .g = 0x00, .b = 0x81 },
         { .r = 0xAB, .g = 0x00, .b = 0x55 },
         { .r = 0xD5, .g = 0x00, .b = 0x2B },
+        // clang-format on
     };
 
     // early exit from function when keeping current animation frame
@@ -640,7 +632,7 @@ static bool rgb_scanner(void) {
         assign_pixel_color(groups_center_left[i], color);
     }
     update_pixels();
-    
+
     // was this the last group to get the current color applied?
     if (pixel_bitmask == 0) {
         // set a longer delay before starting the next color
@@ -664,26 +656,26 @@ static bool rgb_scanner(void) {
     return false;
 }
 
-static led_effect_t effect=LED_EFFECT_DISABLED;
-bool rotate_effects=false;
+static led_effect_t effect = LED_EFFECT_DISABLED;
+bool rotate_effects = false;
 
-void rgb_set_effect(led_effect_t new_effect){
+void rgb_set_effect(led_effect_t new_effect) {
     if (new_effect < MAX_LED_EFFECT) {
-        //rgb_irq_enable(false);
-        if(new_effect == LED_EFFECT_PARTY_MODE){
-            rotate_effects=true;
+        // rgb_irq_enable(false);
+        if (new_effect == LED_EFFECT_PARTY_MODE) {
+            rotate_effects = true;
             effect = LED_EFFECT_ANGLE_WIPE;
-        }else{
-            rotate_effects=false;
+        } else {
+            rotate_effects = false;
             effect = new_effect;
         }
-        //rgb_irq_enable(true);
+        // rgb_irq_enable(true);
     }
 }
 
-static bool pixel_timer_callback(struct repeating_timer *t){
-    bool next=false;
-    
+static bool pixel_timer_callback(struct repeating_timer* t) {
+    bool next = false;
+
     // clang-format off
     switch(effect) {
         case LED_EFFECT_DISABLED:
@@ -725,7 +717,7 @@ static bool pixel_timer_callback(struct repeating_timer *t){
 
     if (rotate_effects && next) {
         static_assert(LED_EFFECT_DISABLED == 0, "LED_EFFECT_DISABLED must be zero");
-        static_assert(MAX_LED_EFFECT-1 == LED_EFFECT_PARTY_MODE, "LED_EFFECT_PARTY_MODE must be the last effect");
+        static_assert(MAX_LED_EFFECT - 1 == LED_EFFECT_PARTY_MODE, "LED_EFFECT_PARTY_MODE must be the last effect");
         ++effect;
         if (effect > LED_EFFECT_GENTLE_GLOW) {
             effect = LED_EFFECT_ANGLE_WIPE;
@@ -735,63 +727,56 @@ static bool pixel_timer_callback(struct repeating_timer *t){
     return true;
 }
 
-
-
 // ================================================================================
 // Exported functions (Pixel API) follows:
 
-
-void rgb_irq_enable(bool enable){
-    static bool enabled=false;
-    if(enable && !enabled)
-    {
+void rgb_irq_enable(bool enable) {
+    static bool enabled = false;
+    if (enable && !enabled) {
         add_repeating_timer_ms(-10, pixel_timer_callback, NULL, &rgb_timer);
-        enabled=true;
-    }
-    else if(!enable && enabled)
-    {
+        enabled = true;
+    } else if (!enable && enabled) {
         cancel_repeating_timer(&rgb_timer);
         enabled = false;
     }
 }
 
-void rgb_init(void){
+void rgb_init(void) {
     pio_config.pio = PIO_RGB_LED_PIO;
     pio_config.sm = PIO_RGB_LED_SM;
 
-    
-    #if (BP_VER == 6)
-        //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 16, true);
-        gpio_set_function(RGB_CDO, GPIO_FUNC_PIO2);  
-        pio_set_gpio_base(pio_config.pio, 16);
-    #else
-        gpio_set_function(RGB_CDO, GPIO_FUNC_PIO0);  
-        //bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, RGB_CDO, 1, true);
-    #endif
-    //hard_assert(success);
+#if (BP_VER == 6)
+    // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm,
+    // &pio_config.offset, RGB_CDO, 16, true);
+    gpio_set_function(RGB_CDO, GPIO_FUNC_PIO2);
+    pio_set_gpio_base(pio_config.pio, 16);
+#else
+    gpio_set_function(RGB_CDO, GPIO_FUNC_PIO0);
+    // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm,
+    // &pio_config.offset, RGB_CDO, 1, true);
+#endif
+    // hard_assert(success);
     pio_config.offset = pio_add_program(pio_config.pio, &ws2812_program);
     ws2812_program_init(pio_config.pio, pio_config.sm, pio_config.offset, RGB_CDO, 800000, false);
 
-    for (int i = 0; i < COUNT_OF_PIXELS; i++){
+    for (int i = 0; i < COUNT_OF_PIXELS; i++) {
         pixels[i] = PIXEL_COLOR_BLACK;
     }
 
     rgb_irq_enable(true);
 };
 
-
-void rgb_set_all(uint8_t r, uint8_t g, uint8_t b){
+void rgb_set_all(uint8_t r, uint8_t g, uint8_t b) {
     CPIXEL_COLOR color = { .r = r, .g = g, .b = b };
     assign_pixel_color(PIXEL_MASK_ALL, color);
     update_pixels();
 }
 
-//function to control LED from led mode onboard demo
+// function to control LED from led mode onboard demo
 #define DEMO_LED 1
-void rgb_put(uint32_t color)
-{
+void rgb_put(uint32_t color) {
     // first set each pixel to off
-    for (int i = 0; i < COUNT_OF_PIXELS; i++){
+    for (int i = 0; i < COUNT_OF_PIXELS; i++) {
         pixels[i] = PIXEL_COLOR_BLACK;
     }
     pixels[DEMO_LED] = color_from_uint32(color);

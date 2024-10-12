@@ -14,10 +14,7 @@
 #include "hardware/pio.h"
 #include "pwm.pio.h"
 
-static const char* const usage[] = {
-    "replicate hardware bugs",
-    "Test errata E9: bug e9"
-};
+static const char* const usage[] = { "replicate hardware bugs", "Test errata E9: bug e9" };
 
 static const struct ui_help_options options[] = {
     { 0, "-h", T_HELP_FLAG },
@@ -37,7 +34,7 @@ void pio_pwm_set_level(PIO pio, uint sm, uint32_t level) {
     pio_sm_put_blocking(pio, sm, level);
 }
 
-void bug_e9 (bool pullup, uint8_t bio_pin) {
+void bug_e9(bool pullup, uint8_t bio_pin) {
     printf("Disabling Bus Pirate pull-ups\r\n");
     pullup_disable();
     printf("Making IO0 buffer and GPIO input\r\n");
@@ -48,8 +45,8 @@ void bug_e9 (bool pullup, uint8_t bio_pin) {
     busy_wait_ms(10);
     printf("GPIO pin should be 0: %d\r\n", bio_get(bio_pin));
     printf("Making IO0 buffer and GPIO input\r\n");
-    bio_input(bio_pin);   
-    if(pullup){
+    bio_input(bio_pin);
+    if (pullup) {
         printf("Enabling Bus Pirate pull-ups\r\n");
         pullup_enable();
     }
@@ -59,7 +56,7 @@ void bug_e9 (bool pullup, uint8_t bio_pin) {
     pullup_disable();
     busy_wait_ms(10);
     printf("GPIO pin should be 0: %d\r\n", bio_get(bio_pin));
-    if(bio_get(bio_pin)){
+    if (bio_get(bio_pin)) {
         printf("Warning: GPIO is 1, E9 found\r\n");
     }
 }
@@ -74,7 +71,7 @@ void e9_qualify(void) {
     bio_buf_output(BIO3);
     bio_buf_output(BIO4);
     pwm_program_init(pio, sm, offset, bio2bufiopin[BIO3]);
-    //pio_pwm_set_period(pio, sm, (1u << 16) - 1);
+    // pio_pwm_set_period(pio, sm, (1u << 16) - 1);
     pio_pwm_set_period(pio, sm, (1u << 2) - 1);
 
     int level = 0;
@@ -83,7 +80,7 @@ void e9_qualify(void) {
         pio_pwm_set_level(pio, sm, level * level);
         level = (level + 1) % 256;
         sleep_ms(10);
-    }    
+    }
 }
 
 void bug_handler(struct command_result* res) {
@@ -96,27 +93,27 @@ void bug_handler(struct command_result* res) {
     if (cmdln_args_string_by_position(1, sizeof(bug_str), bug_str)) {
         if (strcmp(bug_str, "e9") == 0) {
             verb_e9 = true;
-        }else if (strcmp(bug_str, "qe9") == 0) {
+        } else if (strcmp(bug_str, "qe9") == 0) {
             e9_qualify();
         }
     }
 
-    //look for a flag
+    // look for a flag
     bool has_a = cmdln_args_find_flag('a');
 
-    if(verb_e9) {
+    if (verb_e9) {
 
         printf("Replicate bug E9\r\n");
         uint32_t vout, isense, vreg;
         bool fuse;
-        psu_measure(&vout, &isense, &vreg, &fuse); 
-        if(vout<800){
+        psu_measure(&vout, &isense, &vreg, &fuse);
+        if (vout < 800) {
             printf("Enable a power supply with the 'W' command.\r\n");
             return;
         }
 
-        if(has_a){
-            for(int i=0; i<8; i++){
+        if (has_a) {
+            for (int i = 0; i < 8; i++) {
                 printf("\r\nTest IO%d:\r\n", i);
                 bug_e9(true, i);
             }
@@ -132,14 +129,14 @@ void bug_handler(struct command_result* res) {
         printf("Set pulls disabled...\r\n");
         gpio_set_pulls(bio2bufiopin[BIO0], false, false);
         bug_e9(true, BIO0);
-        
+
         printf("\r\nTest 3:\r\n");
         bug_e9(true, BIO0);
         printf("GPIO.IE = false...\r\n");
         gpio_set_input_enabled(bio2bufiopin[BIO0], false);
         busy_wait_ms(10);
         printf("GPIO pin should be 0: %d\r\n", bio_get(BIO0));
-        if(bio_get(BIO0)){
+        if (bio_get(BIO0)) {
             printf("GPIO is 1, E9 found\r\n");
         }
 

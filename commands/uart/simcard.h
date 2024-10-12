@@ -1,1 +1,1 @@
-void simcard_handler(struct command_result *res);
+void simcard_handler(struct command_result* res);

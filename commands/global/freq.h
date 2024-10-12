@@ -1,5 +1,5 @@
-void freq_cont(struct command_result *res);
-void freq_single(struct command_result *res);
+void freq_cont(struct command_result* res);
+void freq_single(struct command_result* res);
 
 uint32_t freq_measure(int32_t pin, int refresh);
 uint32_t freq_configure_disable(void);

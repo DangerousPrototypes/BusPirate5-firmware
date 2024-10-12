@@ -15,16 +15,14 @@
 #include "fatfs/ffconf.h"
 
 // private function prototypes
-//static void clock_config(void);
+// static void clock_config(void);
 
 // private variables
 FATFS nand_fs; // file system object
 
 // application main function
-int nand_init(void)
-{
+int nand_init(void) {
     // setup clock
-    //clock_config();
+    // clock_config();
     sys_time_init();
-}  
-
+}

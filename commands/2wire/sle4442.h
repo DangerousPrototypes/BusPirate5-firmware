@@ -1,1 +1,1 @@
-void sle4442(struct command_result *res);
+void sle4442(struct command_result* res);

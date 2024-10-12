@@ -1,4 +1,4 @@
-struct _pio_config{
+struct _pio_config {
     PIO pio;
     int sm;
     uint offset;

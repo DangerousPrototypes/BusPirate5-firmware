@@ -551,8 +551,12 @@ void sump_logic_analyzer_setup(void) {
 void sump_logic_analyzer_cleanup(void) {
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
-    if(state != SLA_STATE_IDLE)   logic_analyzer_cleanup();
-    if (system_config.mode == 0||!tud_cdc_n_connected(0)) psu_disable();
+    if (state != SLA_STATE_IDLE) {
+        logic_analyzer_cleanup();
+    }
+    if (system_config.mode == 0 || !tud_cdc_n_connected(0)) {
+        psu_disable();
+    }
 }
 
 const char sump_logic_analyzer_name[] = "SUMP logic analyzer";
@@ -566,8 +570,9 @@ void sump_logic_analyzer_service(void) {
             if (tud_cdc_n_connected(1)) {
                 cdc_sump_init();
                 cdc_sump_init_connect();
-                if (system_config.mode == 0 || !tud_cdc_n_connected(0))
+                if (system_config.mode == 0 || !tud_cdc_n_connected(0)) {
                     psu_enable(3.3, 100, true);
+                }
                 state = SLA_STATE_SERVICE;
             }
             break;
@@ -575,8 +580,9 @@ void sump_logic_analyzer_service(void) {
             cdc_sump_task();
             if (!tud_cdc_n_connected(1) || button_get(0)) {
                 logic_analyzer_cleanup();
-                if (system_config.mode == 0 || !tud_cdc_n_connected(0))
+                if (system_config.mode == 0 || !tud_cdc_n_connected(0)) {
                     psu_disable();
+                }
                 state = SLA_STATE_IDLE;
             }
             break;

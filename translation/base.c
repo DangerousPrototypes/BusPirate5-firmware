@@ -4,12 +4,12 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "translation/en-us.h"
-//#include "translation/zh-cn.h"
+// #include "translation/zh-cn.h"
 #include "translation/pl-pl.h"
 #include "translation/bs-ba.h"
 #include "translation/it-it.h"
 
-typedef const char * const translation_table_t[T_LAST_ITEM_ALWAYS_AT_THE_END];
+typedef const char* const translation_table_t[T_LAST_ITEM_ALWAYS_AT_THE_END];
 
 // To add a new translation / dialect / language:
 // ======================================================================
@@ -72,28 +72,24 @@ typedef const char * const translation_table_t[T_LAST_ITEM_ALWAYS_AT_THE_END];
 //
 // TODO: lots of changes to make this more automatic at compile time
 
-
 // BUGBUG: Rename the source .json files to correspond to the proper IETF language tag, and regenerate the .h files.
 // BUGBUG: Update json2h.py to prefix the resulting variable name ... e.g., with `t_translation_table_` or similar.
-
-
 
 static language_idx_t current_language = language_idx_en_us;
 
 // N.B. - The translation table itself takes up RAM because it stores address of other variables.
 //        But this is only four bytes per language.  The actual string array should be in ROM.
 static const translation_table_t* translation_tables[COUNT_OF_LANGUAGE_IDX] = {
-    [language_idx_en_us]       = &en_us,       // en_US
-    [language_idx_pl_pl]       = &pl_pl,       // pl_PL,
-    [language_idx_bs_latn_ba]  = &bs_ba,       // bs_Latn_BA,
-    [language_idx_it_it]       = &it_it,       // it_IT,
+    [language_idx_en_us] = &en_us,      // en_US
+    [language_idx_pl_pl] = &pl_pl,      // pl_PL,
+    [language_idx_bs_latn_ba] = &bs_ba, // bs_Latn_BA,
+    [language_idx_it_it] = &it_it,      // it_IT,
     // [language_idx_zh_cmn_cn]   = &zh_cmn_CN,   // zh_cmn_CN,
 };
 
 #define UTF8_POOP_EMOJI_STRING "\xF0\x9F\x92\xA9" // poop emoji (💩) as a UTF-8 encoded, null-terminated string
 
-void translation_set(language_idx_t language)
-{
+void translation_set(language_idx_t language) {
     if (language >= COUNT_OF_LANGUAGE_IDX) {
         // log an error?  do nothing?
         return;
@@ -101,10 +97,10 @@ void translation_set(language_idx_t language)
     current_language = language;
 }
 
-const char * GET_T(enum T_translations index) {
-    const char * result = NULL;
+const char* GET_T(enum T_translations index) {
+    const char* result = NULL;
     if (index < T_LAST_ITEM_ALWAYS_AT_THE_END) {
-        translation_table_t * table = translation_tables[current_language];
+        translation_table_t* table = translation_tables[current_language];
         result = (*table)[index]; // parenthesis required!
     } else {
         // BUGBUG -- log error if this ever occurs
@@ -116,7 +112,7 @@ const char * GET_T(enum T_translations index) {
     // strings that are unchanged from the en-US version, which may reduce
     // the number of duplicate strings in ROM.
     if (result == NULL) {
-        translation_table_t * table = translation_tables[language_idx_en_us];
+        translation_table_t* table = translation_tables[language_idx_en_us];
         result = (*table)[index]; // parenthesis required!
     }
 

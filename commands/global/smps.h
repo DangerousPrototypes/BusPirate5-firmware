@@ -1,1 +1,1 @@
-void smps_handler(struct command_result *res);
+void smps_handler(struct command_result* res);

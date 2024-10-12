@@ -1,1 +1,1 @@
-void pause_handler(struct command_result *res);
+void pause_handler(struct command_result* res);

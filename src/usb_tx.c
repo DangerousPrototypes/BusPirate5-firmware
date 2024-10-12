@@ -41,8 +41,8 @@ void tx_fifo_init(void) {
                                                                     // rollover
 }
 
-void tx_sb_start(uint32_t len) {
-    tx_sb_buf_cnt = len;
+void tx_sb_start(uint32_t valid_characters_in_status_bar) {
+    tx_sb_buf_cnt = valid_characters_in_status_bar;
     tx_sb_buf_ready = true;
 }
 

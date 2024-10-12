@@ -74,8 +74,7 @@ void gpio_setup(uint8_t pin, bool direction, bool level) {
     gpio_put(pin, level);
 }
 
-int main() {
-    char c;
+static void main_system_initialization(void) {
 
 #if (BP_VER == 5)
     uint8_t bp_rev = mcu_detect_revision();
@@ -268,6 +267,9 @@ int main() {
     icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
 
     binmode_setup();
+}
+
+static void core0_infinite_loop(void) {
 
     enum bp_statemachine {
         BP_SM_DISPLAY_MODE,
@@ -440,15 +442,22 @@ int main() {
             bp_state = BP_SM_COMMAND_PROMPT;
         }
     }
-    return 0;
+    assert(false); // funtion should never exit / this point should be unreachable
 }
+
+void main(void) {
+    main_system_initialization();
+    core0_infinite_loop(); // this never should exit, but....
+    assert(false); // infinite loop above should never exit
+}
+
 
 // refresh interrupt flag, serviced in the loop outside interrupt
 bool lcd_update_request = false;
 bool lcd_update_force = false;
 
 // begin of code execution for the second core (core1)
-void core1_entry(void) {
+static void core1_initialization(void) {
     tx_fifo_init();
     rx_fifo_init();
 
@@ -473,6 +482,8 @@ void core1_entry(void) {
     }
 
     icm_core1_notify_completion(raw_init_message);
+}
+static void core1_infinite_loop(void) {
 
     while (1) {
         // service (thread safe) tinyusb tasks
@@ -487,7 +498,10 @@ void core1_entry(void) {
             bin_tx_fifo_service();
         }
 
-        if (system_config.psu == 1 && system_config.psu_irq_en == true && !psu_fuse_ok()) {
+        if (system_config.psu == 1 &&
+            system_config.psu_irq_en == true &&
+            !psu_fuse_ok()
+            ) {
             system_config.psu_irq_en = false;
             psucmd_irq_callback();
         }
@@ -513,6 +527,10 @@ void core1_entry(void) {
             }
 
             if (!system_config.lcd_screensaver_active) {
+                assert(system_config.display < MAXDISPLAY);
+                //assert(system_config.mode <= MAXMODE);
+
+                // BUGBUG -- comments describing intent here would be helpful
                 if (modes[system_config.mode].protocol_lcd_update) {
                     modes[system_config.mode].protocol_lcd_update(update_flags);
                 } else if (displays[system_config.display].display_lcd_update) {
@@ -566,6 +584,11 @@ void core1_entry(void) {
         }
 
     } // while(1)
+}
+void core1_entry(void) {
+    core1_initialization();
+    core1_infinite_loop();
+    assert(false); // infinite loop above should never exit
 }
 
 struct repeating_timer lcd_timer;

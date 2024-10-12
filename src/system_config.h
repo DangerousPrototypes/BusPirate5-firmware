@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../pirate/rgb.h" // for `led_effect_t` enumeration
+#include "./pirate/rgb.h" // for `led_effect_t` enumeration
 
 typedef struct _pwm_config {
     float period;

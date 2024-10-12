@@ -47,6 +47,9 @@ void tx_sb_start(uint32_t valid_characters_in_status_bar) {
 }
 
 void tx_fifo_service(void) {
+    uint core = get_core_num();
+    assert(core == 1); // tx fifo is drained from core1 only
+
 // state machine:
 #define IDLE 0
 #define STATUSBAR_DELAY 1
@@ -143,10 +146,16 @@ void tx_fifo_service(void) {
 }
 
 void tx_fifo_put(char* c) {
+    uint core = get_core_num();
+    assert(core == 0); // tx fifo should not be shared between cores
+    assert(core != 1); // tx fifo can deadlock if called from core1
     queue2_add_blocking(&tx_fifo, c);
 }
 
 void bin_tx_fifo_put(const char c) {
+    uint core = get_core_num();
+    assert(core == 0); // binmode fifo should not be shared between cores
+    assert(core != 1); // binmode fifo can deadlock if called from core1
     queue2_add_blocking(&bin_tx_fifo, &c);
 }
 
@@ -156,6 +165,9 @@ bool bin_tx_fifo_try_get(char* c) {
 
 // #if(0)
 void bin_tx_fifo_service(void) {
+    uint core = get_core_num();
+    assert(core == 1); // binmode fifo is drained from core1 only
+
     uint16_t bytes_available;
     char data[64];
     uint8_t i = 0;
@@ -186,149 +198,3 @@ bool bin_tx_not_empty(void) {
     queue_available_bytes(&bin_tx_fifo, &cnt);
     return TX_FIFO_LENGTH_IN_BYTES - cnt;
 }
-
-#if 0
-//This is old TX stuff uing DMA + UART
-// leaving it here for reference
-
-char tx_sb_buf[1024];
-uint16_t tx_sb_buf_cnt=0;
-bool tx_sb_buf_ready=false;
-
-uint8_t cnt=0;
-int chan;
-int chan_sb;
-bool chan_busy=false;
-uint16_t bytes_available;
-
-bool chan_caller_sb=false;
-
-void tx_fifo_init(void)
-{   
-    queue2_init(&tx_fifo, tx_buf, TX_FIFO_LENGTH_IN_BYTES); //buffer size must be 2^n for queue AND DMA rollover
-    
-        // Get a free channel, panic() if there are none
-        chan=dma_claim_unused_channel(true);
-        chan_sb=dma_claim_unused_channel(true);
-
-        dma_channel_config c=dma_channel_get_default_config(chan);
-        channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
-        channel_config_set_dreq(&c, DREQ_UART1_TX);
-        channel_config_set_read_increment(&c, true);
-        channel_config_set_ring(&c, false, TX_FIFO_LENGTH_IN_BITS); // ring size =2^n 2^3=8, 2^9=512
-        channel_config_set_write_increment(&c, false);
-        //channel_config_set_irq_quiet(&c,true); 	
-        // chain to the fifo DMA channel
-        //channel_config_set_chain_to(&c, chan_sb);        
-        dma_channel_configure(
-            chan,          // Channel to be configured
-            &c,            // The configuration we just created
-            &uart_get_hw(BP_DEBUG_UART)->dr,           // The initial write address
-            tx_fifo.data,           // The initial read address
-            0, // Number of transfers; in this case each is 1 byte.
-            false           // Start immediately.
-        );
-
-
-        c=dma_channel_get_default_config(chan_sb);
-        channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
-        channel_config_set_dreq(&c, DREQ_UART1_TX);
-        channel_config_set_read_increment(&c, true);
-        channel_config_set_write_increment(&c, false);
-        dma_channel_configure(
-            chan_sb,          // Channel to be configured
-            &c,            // The configuration we just created
-            &uart_get_hw(BP_DEBUG_UART)->dr,           // The initial write address
-            tx_sb_buf,           // The initial read address
-            0, // Number of transfers; in this case each is 1 byte.
-            false           // Start immediately.
-        );    
-        
-        // Tell the DMA to raise IRQ line 0 when the channel finishes a block
-        dma_channel_set_irq0_enabled(chan, true);
-        dma_channel_set_irq0_enabled(chan_sb, true);
-
-        // Configure the processor to run dma_handler() when DMA IRQ 0 is asserted
-        irq_set_exclusive_handler(DMA_IRQ_0, tx_fifo_handler);
-        irq_set_enabled(DMA_IRQ_0, true); 
-
-}
-
-void tx_fifo_service(void)
-{
-        //if busy, return here to avoid the spin lock in the byte check
-        if(chan_busy || dma_channel_is_busy(chan) || dma_channel_is_busy(chan_sb)) return;
- 
-    // TX FIFO has priority here
-    // This prevents the status bar from being wiped out by the VT100 setup commands 
-    // that might be pending in the TX FIFO
-    queue_available_bytes(&tx_fifo, &bytes_available);
-    
-    if(bytes_available)
-    {
-            chan_busy=true;
-            chan_caller_sb=false;
-            dma_channel_set_trans_count(chan, bytes_available, true);
-            // Wait blocking and update pointer for non-interrupt debugging
-            //dma_channel_wait_for_finish_blocking(chan);
-            //queue_update_read_pointer(&tx_fifo, &bytes_available);
-               
-        return;
-    }
-
-
-    if(tx_sb_buf_ready)
-    {
-            chan_busy=true;
-            chan_caller_sb=true;
-            dma_channel_set_read_addr(chan_sb, tx_sb_buf, false );
-            dma_channel_set_trans_count(chan_sb, tx_sb_buf_cnt, true);       
-        return;
-    }  
-     
-}
-
-
-// DMA interrupt handler for UART debug mode
-void tx_fifo_handler(void)
-{
-    //dma_channel_get_irq0_status()
-    if(dma_channel_get_irq0_status(chan_sb)) //called from status bar transfer
-    {
-        tx_sb_buf_cnt=0;
-        tx_sb_buf_ready=false;
-    }
-    else //called from fifo transfer
-    {
-        // DMA copy complete, free up the bytes consumed in the ring buffer
-        queue_update_read_pointer(&tx_fifo, &bytes_available);
-    }
-
-    //see if there are any other transfers pending
-    //if more data just start right now!
-    queue_available_bytes_unsafe(&tx_fifo, &bytes_available);
-    if(bytes_available)
-    {   
-        dma_hw->ints0 = 1u << chan_sb; 
-        dma_hw->ints0 = 1u << chan; // Disable interrupt, terrible documentation on this... 
-        chan_caller_sb=false;
-        dma_channel_set_trans_count(chan, bytes_available, true);
-    }
-    else if(tx_sb_buf_ready)
-    {
-        dma_hw->ints0 = 1u << chan; // Disable interrupt, terrible documentation on this... 
-        dma_hw->ints0 = 1u << chan_sb; 
-        dma_channel_set_read_addr(chan_sb, tx_sb_buf, false );
-        dma_channel_set_trans_count(chan_sb, tx_sb_buf_cnt, true);
-        return;          
-    }    
-    else
-    {
-        dma_hw->ints0 = 1u << chan; // Disable interrupt, terrible documentation on this... 
-        dma_hw->ints0 = 1u << chan_sb; 
-        //dma_irqn_acknowledge_channel(0,chan);
-        //dma_irqn_acknowledge_channel(0,chan_sb);        
-        chan_busy=false;
-    }
-}
-#endif

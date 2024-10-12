@@ -59,6 +59,11 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: firmware-${{ matrix.os }}
-        path: ${{github.workspace}}/build/*.uf2
+        path: |
+          ${{github.workspace}}/build/src/bus_pirate*.bin
+          ${{github.workspace}}/build/src/bus_pirate*.dis
+          ${{github.workspace}}/build/src/bus_pirate*.elf
+          ${{github.workspace}}/build/src/bus_pirate*.elf.map
+          ${{github.workspace}}/build/src/bus_pirate*.uf2
         retention-days: 7
         if-no-files-found: error

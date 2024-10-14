@@ -1,1 +1,0 @@
-void uart_monitor_handler(struct command_result *res);

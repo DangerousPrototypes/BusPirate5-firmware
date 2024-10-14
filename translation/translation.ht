@@ -1,7 +1,0 @@
-// en-us is our base language translation file
-#include "translation/base.h"
-static char const * const %%%variable_name%%%[]={
-%%%array_data%%%
-};
-
-static_assert(count_of(%%%variable_name%%%)==T_LAST_ITEM_ALWAYS_AT_THE_END, "Missing %%%variable_name%%% translations!");

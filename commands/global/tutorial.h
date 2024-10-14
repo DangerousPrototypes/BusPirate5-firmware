@@ -1,1 +1,0 @@
-void tutorial_handler(struct command_result *res);

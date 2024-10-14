@@ -1,1 +1,0 @@
-void onewire_test_ds18b20_conversion(struct command_result *res);

@@ -1,0 +1,158 @@
+;
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+; Example modified by Ian Lesnet for Bus Pirate 2024
+; 
+; SPDX-License-Identifier: BSD-3-Clause
+;
+.pio_version 0 // only requires PIO version 0
+.program logicanalyzer_no_trigger
+; get post trigger sample count
+    out x, 32
+; count down the samples
+capture:
+    in pins, 8
+    jmp x-- capture
+    irq 0
+
+
+.program logicanalyzer_high_trigger
+
+; sample and loop for trigger
+public edge_trigger_rising:
+wait_low:
+    in pins, 8
+    jmp pin wait_low
+public high_trigger:
+; get post trigger sample count
+    out x, 32
+.wrap_target    ; wait high
+    in pins, 8
+    jmp pin capture
+.wrap
+; count down the samples
+capture:
+    in pins, 8
+    jmp x-- capture
+    irq 0
+
+
+
+.program logicanalyzer_low_trigger
+public edge_trigger_falling:
+; sample and loop for trigger
+.wrap_target     ;wait high
+    in pins, 8
+    jmp pin low_trigger
+.wrap
+public low_trigger:
+; get post trigger sample count
+    out x, 32
+wait_low:
+    in pins, 8
+    jmp pin wait_low
+;count down the samples
+capture:
+    in pins,8
+    jmp x-- capture
+    irq 0
+
+% c-sdk {
+static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq, bool edge) {
+    pio_sm_set_enabled(pio, sm, false);
+    pio_sm_clear_fifos(pio, sm);
+    pio_sm_restart(pio, sm);    
+    
+    pio_sm_config c = logicanalyzer_high_trigger_program_get_default_config(offset);
+
+    sm_config_set_in_pins(&c, pin);
+    // Set this pin's GPIO function (connect PIO to the pad)
+    //for(uint8_t i=0; i<8; i++)
+        //pio_gpio_init(pio, pin+i);
+        
+    // Set the pin direction to input at the PIO
+    //pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
+
+    // trigger pin as jump pin
+    sm_config_set_jmp_pin(&c, trigger);
+
+    sm_config_set_out_shift(&c, false, true, 32);
+    sm_config_set_in_shift(&c, false, true, 8);
+
+	float div = clock_get_hz(clk_sys) / (freq * 2); //2 instructions per sample, run twice as fast as requested sampling rate  
+	sm_config_set_clkdiv(&c, div);
+
+    pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+
+    uint program_offset = offset + (edge ? logicanalyzer_high_trigger_offset_edge_trigger_rising : logicanalyzer_high_trigger_offset_high_trigger);
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, program_offset, &c);
+
+}
+
+static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq, bool edge) {
+    pio_sm_set_enabled(pio, sm, false);
+    pio_sm_clear_fifos(pio, sm);
+    pio_sm_restart(pio, sm);    
+    
+    pio_sm_config c = logicanalyzer_low_trigger_program_get_default_config(offset);
+
+    sm_config_set_in_pins(&c, pin);
+    // Set this pin's GPIO function (connect PIO to the pad)
+    //for(uint8_t i=0; i<8; i++)
+        //pio_gpio_init(pio, pin+i);
+        
+    // Set the pin direction to input at the PIO
+    //pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
+
+    // trigger pin as jump pin
+    sm_config_set_jmp_pin(&c, trigger);
+
+    sm_config_set_out_shift(&c, false, true, 32);
+    sm_config_set_in_shift(&c, false, true, 8);
+
+	float div = clock_get_hz(clk_sys) / (freq * 2); //2 instructions per sample, run twice as fast as requested sampling rate  
+	sm_config_set_clkdiv(&c, div);
+
+    pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+
+    uint program_offset = offset + (edge ? logicanalyzer_low_trigger_offset_edge_trigger_falling : logicanalyzer_low_trigger_offset_low_trigger);
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, program_offset, &c);
+
+}
+
+static inline void logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
+    pio_sm_set_enabled(pio, sm, false);
+    pio_sm_clear_fifos(pio, sm);
+    pio_sm_restart(pio, sm);    
+    
+    pio_sm_config c = logicanalyzer_no_trigger_program_get_default_config(offset);
+
+    sm_config_set_in_pins(&c, pin);
+    // Set this pin's GPIO function (connect PIO to the pad)
+    //for(uint8_t i=0; i<8; i++)
+        //pio_gpio_init(pio, pin+i);
+        
+    // Set the pin direction to input at the PIO
+    //pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, false);
+
+    // trigger pin as jump pin
+    //sm_config_set_jmp_pin(&c, trigger);
+
+    sm_config_set_out_shift(&c, false, true, 32);
+    sm_config_set_in_shift(&c, false, true, 8);
+
+    float div = clock_get_hz(clk_sys) / (freq * 2);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+    pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, offset, &c);
+ 
+}
+
+%}

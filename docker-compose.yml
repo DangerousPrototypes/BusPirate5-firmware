@@ -3,7 +3,7 @@ services:
     image: wyatt3arp/buspirate_v5plus
     build: ./docker
     network_mode: host
-    privileged: true
+    privileged: false
     tty: true
     stdin_open: true
     volumes:

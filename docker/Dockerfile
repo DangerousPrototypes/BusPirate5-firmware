@@ -18,6 +18,8 @@ RUN apt-get update \
         sudo \
         gdb-multiarch \
         openocd \
+        tio \
+        minicom \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -53,7 +55,7 @@ ARG GID=1000
 
 # Create the user
 RUN groupadd --gid "${UID}" "${USERNAME}" \
-    && useradd --uid "${UID}" --gid "${GID}" -m "${USERNAME}" -s /usr/bin/bash \
+    && useradd --uid "${UID}" --gid "${GID}" -m "${USERNAME}" -G dialout -s /usr/bin/bash \
     && echo "${USERNAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/"${USERNAME}" \
     && chmod 0440 /etc/sudoers.d/"${USERNAME}"
 

@@ -62,7 +62,7 @@ cd BusPirate5-firmware
 
 # OPTIONAL: build the environment, or you can just let it pull - this will happen automatically in vscode using the devcontainers
 # docker compose build
-# 
+#
 # NOTE: should you need to customize your users in docker for some reason:
 # docker compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)" --build-arg USERNAME="build" dev
 
@@ -82,6 +82,12 @@ docker compose run dev build-clean
 
 # Or drop into the container and run builds manually
 docker compose run dev
+
+# To debug using the containers
+cp docker/debug.env .env
+# edit your BP_PORT{#} environment variables to your USB devices
+# run the debug version of the services
+docker compose run dev-debug
 ```
 
 ### Building without LGPL3 protected component

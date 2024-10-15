@@ -1,5 +1,5 @@
 services:
-  dev:
+  base:
     image: wyatt3arp/buspirate_v5plus
     build: ./docker
     network_mode: host
@@ -8,5 +8,21 @@ services:
     stdin_open: true
     volumes:
       - .:/project
-      - /dev/bus/usb:/dev/bus/usb
     working_dir: '/project'
+
+  dev:
+    extends:
+      service: base
+    environment:
+      - MODE=development
+
+  dev-debug:
+    extends:
+      service: base
+    environment:
+      - MODE=debug
+    devices:
+      - ${BP_PORT0:-/dev/ttyACM0}
+      - ${BP_PORT1:-/dev/ttyACM1}
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb

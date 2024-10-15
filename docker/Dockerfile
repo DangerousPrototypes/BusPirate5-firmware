@@ -16,6 +16,8 @@ RUN apt-get update \
         libnewlib-dev \
         libstdc++-arm-none-eabi-newlib \
         sudo \
+        gdb-multiarch \
+        openocd \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -31,7 +33,8 @@ RUN git clone https://github.com/raspberrypi/pico-sdk.git /opt/pico-sdk \
     && cd build \
     && cmake ../ \
     && make picotoolBuild \
-    && cmake --install .
+    && cmake --install . \
+    && git checkout master
 
 RUN curl -Lo gcc-arm-none-eabi.tar.bz2 "https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2" \
     && mkdir /opt/gcc-arm-none-eabi \
@@ -51,7 +54,7 @@ ARG GID=1000
 # Create the user
 RUN groupadd --gid "${UID}" "${USERNAME}" \
     && useradd --uid "${UID}" --gid "${GID}" -m "${USERNAME}" -s /usr/bin/bash \
-    && echo "${USERNAME} ALL=\(root\) NOPASSWD:ALL" > /etc/sudoers.d/"${USERNAME}" \
+    && echo "${USERNAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/"${USERNAME}" \
     && chmod 0440 /etc/sudoers.d/"${USERNAME}"
 
 USER $USERNAME

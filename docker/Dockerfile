@@ -15,6 +15,11 @@ RUN apt-get update \
         libnewlib-arm-none-eabi \
         libnewlib-dev \
         libstdc++-arm-none-eabi-newlib \
+        sudo \
+        gdb-multiarch \
+        openocd \
+        tio \
+        minicom \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -30,7 +35,8 @@ RUN git clone https://github.com/raspberrypi/pico-sdk.git /opt/pico-sdk \
     && cd build \
     && cmake ../ \
     && make picotoolBuild \
-    && cmake --install .
+    && cmake --install . \
+    && git checkout master
 
 RUN curl -Lo gcc-arm-none-eabi.tar.bz2 "https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2" \
     && mkdir /opt/gcc-arm-none-eabi \
@@ -40,6 +46,20 @@ RUN curl -Lo gcc-arm-none-eabi.tar.bz2 "https://developer.arm.com/-/media/Files/
 ENV PATH=$PATH:/opt/gcc-arm-none-eabi/bin/
 ENV picotool_DIR=/opt/pico-sdk/build/_deps/picotool/
 ENV PICO_SDK_PATH=/opt/pico-sdk/
+
+# modified from here
+# https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user
+ARG USERNAME=build
+ARG UID=1000
+ARG GID=1000
+
+# Create the user
+RUN groupadd --gid "${UID}" "${USERNAME}" \
+    && useradd --uid "${UID}" --gid "${GID}" -m "${USERNAME}" -G dialout -s /usr/bin/bash \
+    && echo "${USERNAME} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/"${USERNAME}" \
+    && chmod 0440 /etc/sudoers.d/"${USERNAME}"
+
+USER $USERNAME
 
 COPY entrypoint.sh /.
 

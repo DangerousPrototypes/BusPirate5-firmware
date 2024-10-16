@@ -6,6 +6,7 @@ services:
     privileged: false
     tty: true
     stdin_open: true
+    user: "${UID}:${GID}"
     volumes:
       - .:/project
     working_dir: '/project'

@@ -1,7 +1,11 @@
 {
     "name": "BusPirate v5+ Build Environment",
+    "image": "wyatt3arp/buspirate_v5plus:latest",
     "dockerComposeFile": "../docker-compose.yml",
     "service": "dev",
     "workspaceFolder": "/project",
-    "remoteUser": "build"
+    "remoteUser": "build",
+    "mounts": [
+        "source=${localWorkspaceFolder}/,target=/project,type=bind,consistency=cached"
+    ]
 }

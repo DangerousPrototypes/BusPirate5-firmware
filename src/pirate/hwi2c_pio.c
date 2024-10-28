@@ -16,17 +16,23 @@ const int PIO_I2C_FINAL_LSB = 9;
 const int PIO_I2C_DATA_LSB = 1;
 const int PIO_I2C_NAK_LSB = 0;
 
-void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate) {
+void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate, bool clock_stretch) {
     // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&i2c_program, &pio_config.pio, &pio_config.sm,
     // &pio_config.offset, dir_sda, 10, true); hard_assert(success);
     pio_config.pio = PIO_MODE_PIO;
     pio_config.sm = 0;
-    pio_config.program = &i2c_program;
+    if(clock_stretch) {
+        pio_config.program = &i2c_clock_stretch_program;
+        i2c_clock_stretch_program_init(pio_config.pio, pio_config.sm, pio_config.offset, sda, scl, dir_sda, dir_scl, baudrate);
+    } else {
+        pio_config.program = &i2c_program;
+        i2c_program_init(pio_config.pio, pio_config.sm, pio_config.offset, sda, scl, dir_sda, dir_scl, baudrate);
+    }
     pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
 #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
 #endif
-    i2c_program_init(pio_config.pio, pio_config.sm, pio_config.offset, sda, scl, dir_sda, dir_scl, baudrate);
+    
 }
 
 void pio_i2c_cleanup(void) {
@@ -35,15 +41,16 @@ void pio_i2c_cleanup(void) {
 }
 
 bool pio_i2c_check_error(void) {
-    return pio_interrupt_get(pio_config.pio, pio_config.sm);
+    return false;
+    //return pio_interrupt_get(pio_config.pio, pio_config.sm);
 }
 
 void pio_i2c_rx_enable(bool en) {
-    if (en) {
+    //if (en) {
         hw_set_bits(&pio_config.pio->sm[pio_config.sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
-    } else {
-        hw_clear_bits(&pio_config.pio->sm[pio_config.sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
-    }
+    //} else {
+    //    hw_clear_bits(&pio_config.pio->sm[pio_config.sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
+    //}
 }
 
 static inline uint32_t pio_i2c_wait_idle_timeout(uint32_t timeout) {
@@ -167,6 +174,39 @@ void pio_i2c_resume_after_error() {
                     PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
     pio_interrupt_clear(pio_config.pio, pio_config.sm);
 }
+
+
+uint32_t pio_i2c_write_timeout_test(uint32_t data, uint32_t* result, uint32_t timeout) {
+    uint32_t error;
+
+    error = pio_i2c_wait_idle_timeout(timeout);
+    if (error) {
+        return error;
+    }
+
+    while (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
+        (void)pio_i2c_get();
+    }
+
+    error = pio_i2c_put_or_timeout((data << 1) | (1u), timeout);
+    if (error) {
+        return error; 
+    }
+
+    uint32_t to = timeout;
+    while (pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
+        to--;
+        if (!to) {
+            return 2;
+        }
+    }
+    (*result) = pio_i2c_get();
+
+    error = pio_i2c_wait_idle_timeout(timeout);
+    return error;
+}
+
+
 
 uint32_t pio_i2c_write_timeout(uint32_t data, uint32_t timeout) {
     uint32_t error;

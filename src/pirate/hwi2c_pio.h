@@ -8,7 +8,7 @@
 
 #include "hwi2c.pio.h"
 
-void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate);
+void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate, bool clock_stretch);
 void pio_i2c_cleanup(void);
 
 // ---------------------------------------------------------------
@@ -22,6 +22,7 @@ uint32_t pio_i2c_read_blocking_timeout(uint8_t addr, uint8_t* rxbuf, uint len, u
 uint32_t pio_i2c_write_blocking_timeout(uint8_t addr, uint8_t* txbuf, uint len, uint32_t timeout);
 uint32_t pio_i2c_transaction_blocking_timeout(
     uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout);
+uint32_t pio_i2c_write_timeout_test(uint32_t data, uint32_t* result, uint32_t timeout); 
 // ----------------------------------------------------------------------------
 // Low-level functions
 

@@ -26,25 +26,25 @@ void demo_tsl2561(struct command_result* res) {
     printf("%s\r\n", GET_T(T_HELP_I2C_TSL2561));
     // select register [0b01110010 0b11100000]
     data[0] = 0b11100000;
-    if (pio_i2c_write_blocking_timeout(0b01110010, data, 1, 0xffff)) {
+    if (pio_i2c_write_array_timeout(0b01110010, data, 1, 0xffff)) {
         return;
     }
     // start device [0b01110010 3]
     data[0] = 3;
-    if (pio_i2c_write_blocking_timeout(0b01110010, data, 1, 0xffff)) {
+    if (pio_i2c_write_array_timeout(0b01110010, data, 1, 0xffff)) {
         return;
     }
     busy_wait_ms(500);
     // select ID register [0b01110010 0b11101010]
     // read ID register [0b01110011 r] 7:4 0101 = TSL2561T 3:0 0 = revision
     data[0] = 0b11101010;
-    if (pio_i2c_transaction_blocking_timeout(0b01110010, data, 1, data, 1, 0xffff)) {
+    if (pio_i2c_transaction_array_timeout(0b01110010, data, 1, data, 1, 0xffff)) {
         return;
     }
     printf("ID: %d REV: %d\r\n", data[0] >> 4, data[0] & 0b1111);
     // select ADC register [0b01110010 0b11101100]
     data[0] = 0b11101100;
-    if (pio_i2c_transaction_blocking_timeout(0b01110010, data, 1, data, 4, 0xffff)) {
+    if (pio_i2c_transaction_array_timeout(0b01110010, data, 1, data, 4, 0xffff)) {
         return;
     }
     chan0 = data[1] << 8 | data[0];
@@ -76,11 +76,11 @@ void demo_si7021(struct command_result* res) {
     printf("%s\r\n", GET_T(T_HELP_I2C_SI7021));
     // humidity
     data[0] = 0xf5;
-    if (pio_i2c_write_blocking_timeout(0x80, data, 1, 0xffff)) {
+    if (pio_i2c_write_array_timeout(0x80, data, 1, 0xffff)) {
         return;
     }
     busy_wait_ms(23); // delay for max conversion time
-    if (pio_i2c_read_blocking_timeout(0x81, data, 2, 0xffff)) {
+    if (pio_i2c_read_array_timeout(0x81, data, 2, 0xffff)) {
         return;
     }
 
@@ -89,11 +89,11 @@ void demo_si7021(struct command_result* res) {
 
     // temperature [0x80 0xe0] [0x81 r:2]
     data[0] = 0xf3;
-    if (pio_i2c_write_blocking_timeout(0x80, data, 1, 0xffff)) {
+    if (pio_i2c_write_array_timeout(0x80, data, 1, 0xffff)) {
         return;
     }
     busy_wait_ms(100); // delay for max conversion time
-    if (pio_i2c_read_blocking_timeout(0x81, data, 2, 0xffff)) {
+    if (pio_i2c_read_array_timeout(0x81, data, 2, 0xffff)) {
         return;
     }
 
@@ -104,7 +104,7 @@ void demo_si7021(struct command_result* res) {
     data[0] = 0xfa;
     data[1] = 0xf0;
     uint8_t sn[8];
-    if (pio_i2c_transaction_blocking_timeout(0x80, data, 2, data, 8, 0xffff)) {
+    if (pio_i2c_transaction_array_timeout(0x80, data, 2, data, 8, 0xffff)) {
         return;
     }
     sn[2] = data[6];
@@ -114,7 +114,7 @@ void demo_si7021(struct command_result* res) {
 
     data[0] = 0xfc;
     data[1] = 0xc9;
-    if (pio_i2c_transaction_blocking_timeout(0x80, data, 2, data, 6, 0xffff)) {
+    if (pio_i2c_transaction_array_timeout(0x80, data, 2, data, 6, 0xffff)) {
         return;
     }
     sn[0] = data[1];

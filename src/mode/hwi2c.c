@@ -181,12 +181,12 @@ void hwi2c_stop(struct _bytecode* result, struct _bytecode* next) {
 void hwi2c_write(struct _bytecode* result, struct _bytecode* next) {
     // if a start was just sent, determine if this is a read or write address
     //  and configure the PIO I2C
-    if (mode_config.start_sent) {
+    /*if (mode_config.start_sent) {
         pio_i2c_rx_enable((result->out_data & 1u));
         mode_config.start_sent = false;
-    }
+    }*/
     uint32_t i2c_result;
-    uint32_t error = pio_i2c_write_timeout_test(result->out_data, &i2c_result, 0xffff);
+    uint32_t error = pio_i2c_write_timeout(result->out_data, &i2c_result, 0xffff);
     hwi2c_error(error, result);
     result->data_message = (i2c_result & 0b1 ? GET_T(T_HWI2C_NACK) : GET_T(T_HWI2C_ACK));
 }
@@ -230,10 +230,6 @@ void hwi2c_cleanup(void) {
 
 void hwi2c_settings(void) {
     hwi2c_show_settings();
-}
-
-void hwi2c_printI2Cflags(void) {
-    uint32_t temp;
 }
 
 void hwi2c_help(void) {

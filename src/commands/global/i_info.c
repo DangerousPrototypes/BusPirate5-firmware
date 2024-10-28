@@ -109,9 +109,10 @@ void i_info_handler(struct command_result* res) {
     printf("\r\n");
 
     // Current mode configuration
-    printf("%s%s:%s ", ui_term_color_info(), GET_T(T_INFO_CURRENT_MODE), ui_term_color_reset());
-    // TODO: change to a return type and stick this in the fprint
-    modes[system_config.mode].protocol_settings();
+    printf("%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_INFO_CURRENT_MODE), ui_term_color_reset(), modes[system_config.mode].protocol_name);
+    if(modes[system_config.mode].protocol_settings){
+        modes[system_config.mode].protocol_settings();
+    }
     printf("\r\n");
 
     printf("%s%s:%s %s\r\n",

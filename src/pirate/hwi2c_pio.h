@@ -8,19 +8,25 @@
 
 #include "hwi2c.pio.h"
 
+typedef enum {
+    HWI2C_OK = 0,
+    HWI2C_NACK = 1,
+    HWI2C_TIMEOUT = 2
+} hwi2c_status_t;
+
 void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate, bool clock_stretch);
 void pio_i2c_cleanup(void);
 
 // ---------------------------------------------------------------
 // Functions with timeout
-bool pio_i2c_start_timeout(uint32_t timeout);
-bool pio_i2c_stop_timeout(uint32_t timeout);
-bool pio_i2c_restart_timeout(uint32_t timeout);
-bool pio_i2c_write_timeout(uint32_t data, uint32_t* result, uint32_t timeout);
-bool pio_i2c_read_timeout(uint32_t* data, bool ack, uint32_t timeout);
-bool pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len, uint32_t timeout);
-bool pio_i2c_write_array_timeout(uint8_t addr, uint8_t* txbuf, uint len, uint32_t timeout);
-bool pio_i2c_transaction_array_timeout(
+hwi2c_status_t pio_i2c_start_timeout(uint32_t timeout);
+hwi2c_status_t pio_i2c_stop_timeout(uint32_t timeout);
+hwi2c_status_t pio_i2c_restart_timeout(uint32_t timeout);
+hwi2c_status_t pio_i2c_write_timeout(uint32_t out_data, uint32_t timeout);
+hwi2c_status_t pio_i2c_read_timeout(uint32_t* in_data, bool ack, uint32_t timeout);
+hwi2c_status_t pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len, uint32_t timeout);
+hwi2c_status_t pio_i2c_write_array_timeout(uint8_t addr, uint8_t* txbuf, uint len, uint32_t timeout);
+hwi2c_status_t pio_i2c_transaction_array_timeout(
     uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout);
 
 // ----------------------------------------------------------------------------

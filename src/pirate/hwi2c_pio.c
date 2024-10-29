@@ -6,6 +6,7 @@
  * **This is a heavily modified version of the PIO I2C driver from the Raspberry Pi Pico SDK.**
  * Modified by: Bus Pirate project 2022, 2023, 2024 (Ian Lesnet)
  */
+#include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "hardware/pio.h"
@@ -82,22 +83,22 @@ void pio_i2c_rx_enable(bool en) {
 }
 */
 // wait for state machine to be idle, return false if timeout
-static inline bool pio_i2c_wait_idle_timeout(uint32_t timeout) {
+static inline hwi2c_status_t pio_i2c_wait_idle_timeout(uint32_t timeout) {
     pio_config.pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm);
     while (!(pio_config.pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm))) {
         timeout--;
         if (!timeout) {
-            return false;
+            return HWI2C_TIMEOUT;
         }
     }
-    return true;
+    return HWI2C_OK;
 }
 
-static inline bool pio_i2c_put_timeout(uint16_t data, uint32_t timeout) {
+static inline hwi2c_status_t pio_i2c_put_timeout(uint16_t data, uint32_t timeout) {
     //this is a precaution, we should never leave with stuff in the fifo
     while (pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {
         timeout--;
-        if (!timeout) return false;
+        if (!timeout) return HWI2C_TIMEOUT;
     }
 
     // some versions of GCC dislike this
@@ -109,13 +110,13 @@ static inline bool pio_i2c_put_timeout(uint16_t data, uint32_t timeout) {
     #ifdef __GNUC__
     #pragma GCC diagnostic pop
     #endif
-    return true;
+    return HWI2C_OK;
 }
 
 // put to fifo, wait for slot, wait for empty
 // returns false on fail, true on success
-static inline bool pio_i2c_put_blocking_timeout(uint16_t data, uint32_t timeout) {
-    if(!pio_i2c_wait_idle_timeout(timeout)) return false;
+static inline hwi2c_status_t pio_i2c_put_blocking_timeout(uint16_t data, uint32_t timeout) {
+    if(!pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
 
     // some versions of GCC dislike this
     #ifdef __GNUC__
@@ -127,8 +128,8 @@ static inline bool pio_i2c_put_blocking_timeout(uint16_t data, uint32_t timeout)
     #pragma GCC diagnostic pop
     #endif
 
-    if(!pio_i2c_wait_idle_timeout(timeout)) return false;
-    return true;
+    if(!pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    return HWI2C_OK;
 }
 
 /*
@@ -137,14 +138,14 @@ static inline bool pio_i2c_put_blocking_timeout(uint16_t data, uint32_t timeout)
 */
 
 // put a sequence of instructions to the PIO, return false on fail, true on success
-static inline bool pio_i2c_put_instructions_timeout(const uint16_t* inst, uint8_t length, uint32_t timeout) {
+static inline hwi2c_status_t pio_i2c_put_instructions_timeout(const uint16_t* inst, uint8_t length, uint32_t timeout) {
     for (uint8_t i = 0; i < length; i++) {
-        if(!pio_i2c_put_blocking_timeout(inst[i], timeout)) return false;
+        if(pio_i2c_put_blocking_timeout(inst[i], timeout)) return HWI2C_TIMEOUT;
     }
-    return true;
+    return HWI2C_OK;
 }
 
-bool pio_i2c_start_timeout(uint32_t timeout) {
+hwi2c_status_t pio_i2c_start_timeout(uint32_t timeout) {
     const uint16_t start[] = {
         1u << PIO_I2C_ICOUNT_LSB,                      // Escape code for 2 instruction sequence
         set_scl_sda_program_instructions[I2C_SC1_SD0], // We are already in idle state, just pull SDA low
@@ -153,7 +154,7 @@ bool pio_i2c_start_timeout(uint32_t timeout) {
     return pio_i2c_put_instructions_timeout(start, count_of(start), timeout);
 }
 
-bool pio_i2c_stop_timeout(uint32_t timeout) {
+hwi2c_status_t pio_i2c_stop_timeout(uint32_t timeout) {
     const uint16_t stop[] = {
         2u << PIO_I2C_ICOUNT_LSB,
         set_scl_sda_program_instructions[I2C_SC0_SD0], // SDA is unknown; pull it down
@@ -163,7 +164,7 @@ bool pio_i2c_stop_timeout(uint32_t timeout) {
     return pio_i2c_put_instructions_timeout(stop, count_of(stop), timeout);
 };
 
-bool pio_i2c_restart_timeout(uint32_t timeout) {
+hwi2c_status_t pio_i2c_restart_timeout(uint32_t timeout) {
     const uint16_t restart[] = { 3u << PIO_I2C_ICOUNT_LSB,
                                  set_scl_sda_program_instructions[I2C_SC0_SD1],
                                  set_scl_sda_program_instructions[I2C_SC1_SD1],
@@ -177,83 +178,76 @@ bool pio_i2c_restart_timeout(uint32_t timeout) {
 *
 */
 // write an I2C byte, return false on fail, true on success
-// out_data is the byte to write, in_data is the byte to read and check for ACK or NACK
-bool pio_i2c_write_timeout(uint32_t out_data, uint32_t* in_data, uint32_t timeout) {
+hwi2c_status_t pio_i2c_transaction_timeout(uint32_t out_data, uint32_t* in_data, uint32_t timeout) {
 
-    if(!pio_i2c_wait_idle_timeout(timeout)) return false;
+    if(!pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
 
     //remove any data from the RX FIFO
     while (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
         (void)pio_i2c_get();
     }
 
-    if(!pio_i2c_put_blocking_timeout((out_data << 1) | (1u), timeout)) return false;
+    if(!pio_i2c_put_blocking_timeout(out_data, timeout)) return HWI2C_TIMEOUT;
 
     uint32_t to = timeout;
     while (pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
         to--;
-        if (!to) return false;
+        if (!to) return HWI2C_TIMEOUT;
     }
     (*in_data) = pio_i2c_get();
 
-    if(!pio_i2c_wait_idle_timeout(timeout)) return false;
+    if(!pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
     
-    return true;
+    return HWI2C_OK;
 }
 
-bool pio_i2c_read_timeout(uint32_t* in_data, bool ack, uint32_t timeout) {
+hwi2c_status_t pio_i2c_write_timeout(uint32_t out_data, uint32_t timeout) {
+    uint32_t in_data;
+    hwi2c_status_t i2c_result = pio_i2c_transaction_timeout((out_data << 1) | (1u), &in_data, timeout);
+    if(i2c_result != HWI2C_OK) return i2c_result;
+    return (in_data & 0b1) ? HWI2C_NACK : HWI2C_OK;
+}
 
-    if(!pio_i2c_wait_idle_timeout(timeout)) return false;
-
-    while (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
-        (void)pio_i2c_get();
-    }
-    if(!pio_i2c_put_timeout((0xff << 1) | (ack ? 0 : (1u << 0)), timeout)) return false;
-
-    uint32_t to = timeout;
-    while (pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
-        to--;
-        if (!to) return false;
-    }
-    (*in_data) = pio_i2c_get();
-    
-    if(!pio_i2c_wait_idle_timeout(timeout)) return false;
-    
-    return true;
+hwi2c_status_t pio_i2c_read_timeout(uint32_t* in_data, bool ack, uint32_t timeout) {
+    return pio_i2c_transaction_timeout((0xff << 1) | (ack ? 0 : (1u << 0)), in_data, timeout);
 }
 
 /*
 * functions for bulk I2C transactions
-* 
+* TODO: handle ACK NACK in a new way!
 */
 // write an array to I2C with start and stop, return false on fail, true on success
-bool pio_i2c_write_array_timeout(uint8_t addr, uint8_t* txbuf, uint len, uint32_t timeout) {
-    if (!pio_i2c_start_timeout(timeout)) return false;
-    if (!pio_i2c_put_timeout((addr << 1) | 1u, timeout)) return false;
+hwi2c_status_t pio_i2c_write_array_timeout(uint8_t addr, uint8_t* txbuf, uint len, uint32_t timeout) {
+    if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
+    hwi2c_status_t i2c_result = pio_i2c_write_timeout(addr, timeout);
+    if(i2c_result != HWI2C_OK) return i2c_result;
 
     uint32_t temp = timeout;
     while (len) {
         if (!pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {
             --len;
             //TODO: fix final bit
-            if (!pio_i2c_put_blocking_timeout((*txbuf++ << PIO_I2C_DATA_LSB) | ((len == 0) << PIO_I2C_FINAL_LSB) | 1u, timeout)) return false;
+            //if (pio_i2c_put_timeout((*txbuf++ << PIO_I2C_DATA_LSB) | ((len == 0) | 1u), timeout)) return HWI2C_TIMEOUT;
+            i2c_result = pio_i2c_write_timeout(*txbuf++, timeout);
+            if(i2c_result != HWI2C_OK) return i2c_result;
         }
         temp--;
-        if (!temp) return false;
+        if (!temp) return HWI2C_TIMEOUT;
     }
-    if (!pio_i2c_stop_timeout(timeout)) return false;
-    if (!pio_i2c_wait_idle_timeout(timeout)) return false;
-    return true;
+    if (pio_i2c_stop_timeout(timeout)) return HWI2C_TIMEOUT;
+    if (pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    return HWI2C_OK;
 }
 
 // read an array from I2C with start and stop, return false on fail, true on success
-bool pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len, uint32_t timeout) {
-    if (!pio_i2c_start_timeout(timeout)) return false;
-    pio_i2c_rx_enable(true);
+hwi2c_status_t pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len, uint32_t timeout) {
     while (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
         (void)pio_i2c_get();
     }
-    if (!pio_i2c_put_timeout((addr << 1) | 3u, timeout)) return false;
+    if (pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
+    hwi2c_status_t i2c_result = pio_i2c_write_timeout(addr | 1u, timeout);
+    if(i2c_result != HWI2C_OK) return i2c_result;
+
     uint32_t tx_remain = len; // Need to stuff 0xff bytes in to get clocks
 
     bool first = true;
@@ -261,8 +255,8 @@ bool pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len, uint32_t
     while ((tx_remain || len)) {
         if (tx_remain && !pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {
             --tx_remain;
-            if (!pio_i2c_put_timeout(
-                    (0xffu << 1) | (tx_remain ? 0 : (1u << PIO_I2C_FINAL_LSB) | (1u << PIO_I2C_NAK_LSB)), timeout)) return false;
+            // NACK the final byte of the read
+            if (pio_i2c_put_timeout((0xff << PIO_I2C_DATA_LSB) | (tx_remain ? 0 : 1u), timeout)) return HWI2C_TIMEOUT;
             temp = timeout; // reset the counter
         }
         if (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
@@ -277,21 +271,25 @@ bool pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len, uint32_t
         }
 
         temp--;
-        if (!temp) return false;
+        if (!temp) return HWI2C_TIMEOUT;
     }
-    if (!pio_i2c_stop_timeout(timeout)) return false;
-    if (pio_i2c_wait_idle_timeout(timeout)) return false;
-    return true;
+    if (pio_i2c_stop_timeout(timeout)) return HWI2C_TIMEOUT;
+    if (pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    return HWI2C_OK;
 }
 
 // one full I2C transaction with error and timeout
-bool pio_i2c_transaction_array_timeout(
-    uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout) {
-    if (!pio_i2c_write_array_timeout(addr, txbuf, txlen, timeout)) return false;
+hwi2c_status_t pio_i2c_transaction_array_timeout(uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout) {
+    
+    hwi2c_status_t i2c_result = pio_i2c_write_array_timeout(addr, txbuf, txlen, timeout);
+    if(i2c_result != HWI2C_OK) return i2c_result;
+
     if (rxlen > 0) {
-        if (!pio_i2c_read_array_timeout(addr, rxbuf, rxlen, timeout)) return false;
+        i2c_result = pio_i2c_read_array_timeout(addr, rxbuf, rxlen, timeout);
+        if(i2c_result != HWI2C_OK) return i2c_result;
     }
-    return true;
+    
+    return HWI2C_OK;
 }
 
 

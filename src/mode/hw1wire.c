@@ -87,6 +87,7 @@ void hw1wire_write(struct _bytecode* result, struct _bytecode* next) {
 void hw1wire_read(struct _bytecode* result, struct _bytecode* next) {
 #ifdef BP_OLD_HW1WIRE
     result->in_data = onewire_rx_byte();
+    onewire_wait_for_idle(); //temp test
 #else
     result->in_data = ow_read();
 #endif

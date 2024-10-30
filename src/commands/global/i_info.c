@@ -48,6 +48,7 @@ void i_info_handler(struct command_result* res) {
            ui_term_color_reset());
 
     printf("\r\n%s\r\n", BP_HARDWARE_VERSION);
+    printf("%s\r\n", GET_T(T_INFO_WEBSITE));
     printf("%s %s%s%s @ %s (%s%s%s)\r\n",
            GET_T(T_INFO_FIRMWARE),
            ui_term_color_num_float(),
@@ -72,7 +73,7 @@ void i_info_handler(struct command_result* res) {
            GET_T(T_INFO_FLASH));
     printf(
         "%s: %s%016llX%s\r\n", GET_T(T_INFO_SN), ui_term_color_num_float(), mcu_get_unique_id(), ui_term_color_reset());
-    printf("%s\r\n", GET_T(T_INFO_WEBSITE));
+
 
     // TF flash card information
     if (system_config.storage_available) {

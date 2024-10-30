@@ -54,24 +54,30 @@ static const struct prompt_item leds_type_menu[] = { { T_HWLED_DEVICE_MENU_1 },
                                                         { T_HWLED_DEVICE_MENU_3 } };
 static const struct prompt_item leds_num_menu[] = { { T_HWLED_NUM_LEDS_MENU_1 } };
 
-static const struct ui_prompt leds_menu[] = { { T_HWLED_DEVICE_MENU,
-                                                leds_type_menu,
-                                                count_of(leds_type_menu),
-                                                T_HWLED_DEVICE_PROMPT,
-                                                0,
-                                                0,
-                                                1,
-                                                0,
-                                                &prompt_list_cfg },
-                                                { T_HWLED_NUM_LEDS_MENU,
-                                                leds_num_menu,
-                                                count_of(leds_num_menu),
-                                                T_HWLED_NUM_LEDS_PROMPT,
-                                                1,
-                                                10000,
-                                                1,
-                                                0,
-                                                &prompt_int_cfg } };
+static const struct ui_prompt leds_menu[] = {
+    {
+        .description = T_HWLED_DEVICE_MENU,
+        .menu_items = leds_type_menu,
+        .menu_items_count = count_of(leds_type_menu),
+        .prompt_text = T_HWLED_DEVICE_PROMPT,
+        .minval = 0,
+        .maxval = 0,
+        .defval = 1,
+        .menu_action = 0,
+        .config = &prompt_list_cfg
+    },
+    {
+        .description = T_HWLED_NUM_LEDS_MENU,
+        .menu_items = leds_num_menu,
+        .menu_items_count = count_of(leds_num_menu),
+        .prompt_text = T_HWLED_NUM_LEDS_PROMPT,
+        .minval = 1,
+        .maxval = 10000,
+        .defval = 1,
+        .menu_action = 0,
+        .config = &prompt_int_cfg
+    }
+};
 
 uint32_t hwled_setup(void) {
 

@@ -38,38 +38,39 @@ uint32_t hwi2c_setup(void) {
     uint32_t temp;
 
     // menu items options
-    static const struct prompt_item i2c_clock_strech_menu[] = { { T_OFF }, {T_ON} };
+    static const struct prompt_item i2c_clock_stretch_menu[] = { { T_OFF }, {T_ON} };
     static const struct prompt_item i2c_data_bits_menu[] = { { T_HWI2C_DATA_BITS_MENU_1 },
                                                              { T_HWI2C_DATA_BITS_MENU_2 } };
     static const struct prompt_item i2c_speed_menu[] = { { T_HWI2C_SPEED_MENU_1 } };
 
-    static const struct ui_prompt i2c_menu[] = { { T_HWI2C_SPEED_MENU,
-                                                   i2c_speed_menu,
-                                                   count_of(i2c_speed_menu),
-                                                   T_HWI2C_SPEED_PROMPT,
-                                                   1,
-                                                   1000,
-                                                   400,
-                                                   0,
-                                                   &prompt_int_cfg },
-                                                 { T_HWI2C_DATA_BITS_MENU,
-                                                   i2c_data_bits_menu,
-                                                   count_of(i2c_data_bits_menu),
-                                                   T_HWI2C_DATA_BITS_PROMPT,
-                                                   0,
-                                                   1,
-                                                   0,
-                                                   0,
-                                                   &prompt_list_cfg },
-                                                { T_HWI2C_CLOCK_STRETCH_MENU,
-                                                   i2c_clock_strech_menu,
-                                                   count_of(i2c_clock_strech_menu),
-                                                   T_OFF,
-                                                   0,
-                                                   0,
-                                                   1,
-                                                   0,
-                                                   &prompt_list_cfg }  };
+    static const struct ui_prompt i2c_menu[] = { { .description = T_HWI2C_SPEED_MENU,
+                                                   .menu_items = i2c_speed_menu,
+                                                   .menu_items_count = count_of(i2c_speed_menu),
+                                                   .prompt_text = T_HWI2C_SPEED_PROMPT,
+                                                   .minval = 1,
+                                                   .maxval = 1000,
+                                                   .defval = 400,
+                                                   .menu_action = 0,
+                                                   .config = &prompt_int_cfg },
+                                                    { .description = T_HWI2C_DATA_BITS_MENU,
+                                                    .menu_items = i2c_data_bits_menu,
+                                                    .menu_items_count = count_of(i2c_data_bits_menu),
+                                                    .prompt_text = T_HWI2C_DATA_BITS_PROMPT,
+                                                    .minval = 0,
+                                                    .maxval = 1,
+                                                    .defval = 0,
+                                                    .menu_action = 0,
+                                                    .config = &prompt_list_cfg },
+                                                    { .description = T_HWI2C_CLOCK_STRETCH_MENU,
+                                                    .menu_items = i2c_clock_stretch_menu,
+                                                    .menu_items_count = count_of(i2c_clock_stretch_menu),
+                                                    .prompt_text = T_HWI2C_CLOCK_STRETCH_PROMPT,
+                                                    .minval = 0,
+                                                    .maxval = 1,
+                                                    .defval = 0,
+                                                    .menu_action = 0,
+                                                    .config = &prompt_list_cfg }
+                                                  };
 
     const char config_file[] = "bpi2c.bp";
 
@@ -174,12 +175,6 @@ void hwi2c_stop(struct _bytecode* result, struct _bytecode* next) {
 }
 
 void hwi2c_write(struct _bytecode* result, struct _bytecode* next) {
-    // if a start was just sent, determine if this is a read or write address
-    //  and configure the PIO I2C
-    /*if (mode_config.start_sent) {
-        pio_i2c_rx_enable((result->out_data & 1u));
-        mode_config.start_sent = false;
-    }*/
     hwi2c_status_t i2c_status = pio_i2c_write_timeout(result->out_data, 0xffff);
     hwi2c_error(i2c_status, result);
     result->data_message = (i2c_status != HWI2C_OK ? GET_T(T_HWI2C_NACK) : GET_T(T_HWI2C_ACK));

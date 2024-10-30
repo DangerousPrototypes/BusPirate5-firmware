@@ -147,12 +147,20 @@ bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
 }
 
 void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
-    result->data_message = GET_T(T_HWI2C_START);
     if (hwi2c_checkshort()) {
         result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
         result->error = SRES_WARN;
     }
-    hwi2c_status_t i2c_status = pio_i2c_start_timeout(0xfffff);
+
+    hwi2c_status_t i2c_status;
+    if(!mode_config.start_sent) {
+        result->data_message = GET_T(T_HWI2C_START);
+        i2c_status = pio_i2c_start_timeout(0xfffff);
+    }else{
+        result->data_message = GET_T(T_HWI2C_REPEATED_START);
+        i2c_status = pio_i2c_restart_timeout(0xfffff);
+    }
+
     if (!hwi2c_error(i2c_status, result)) {
         mode_config.start_sent = true;
     }
@@ -162,6 +170,7 @@ void hwi2c_stop(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_HWI2C_STOP);
     hwi2c_status_t i2c_status = pio_i2c_stop_timeout(0xffff);
     hwi2c_error(i2c_status, result);
+    mode_config.start_sent = false;
 }
 
 void hwi2c_write(struct _bytecode* result, struct _bytecode* next) {

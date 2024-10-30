@@ -127,6 +127,7 @@ static char const * const zh_cn[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HWI2C_CLOCK_STRETCH_MENU       ] = "Clock stretching",
     [ T_HWI2C_CLOCK_STRETCH_PROMPT     ] = "(OFF)",
     [ T_HWI2C_START                    ] = "I2C START",
+    [ T_HWI2C_REPEATED_START           ] = "I2C REPEATED START",
     [ T_HWI2C_STOP                     ] = "I2C STOP",
     [ T_HWI2C_ACK                      ] = "ACK",
     [ T_HWI2C_NACK                     ] = "NACK",

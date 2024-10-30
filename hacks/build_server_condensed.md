@@ -30,9 +30,11 @@ sudo git clone https://github.com/DangerousPrototypes/BusPirate5-firmware.git bp
 
 # Install build script and webhook
 ```
-cd ~ && mkdir webhook && pip install virtualenv && pip install argparse && pip install python-dotenv && apt install python3.10-venv && python3.10 -m venv env && sudo apt install build-essential libssl-dev libffi-dev python3-dev && source env/bin/activate && pip3 install flask && pip3 install github_webhook && pip3 install requests && sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT && sudo apt-get install iptables-persistent 
+cd ~ && mkdir webhook && pip install virtualenv && pip install argparse && pip install python-dotenv && apt install python3.10-venv && python3.10 -m venv env && sudo apt install build-essential libssl-dev libffi-dev python3-dev && source env/bin/activate && pip3 install flask && pip3 install github_webhook && pip3 install requests && pip3 install python-dotenv && sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT && sudo apt-get install iptables-persistent 
 
 screen
 
 python3 webhook.py
+
+CTRL+A+D
 ```

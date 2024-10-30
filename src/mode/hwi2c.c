@@ -34,13 +34,6 @@ const struct _command_struct hwi2c_commands[] = {
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 
-void hwi2c_show_settings(void) {
-    printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);
-    // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[mode_config.data_bits].description));
-    printf(" %s: %s\r\n", GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
-            (mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
-}
-
 uint32_t hwi2c_setup(void) {
     uint32_t temp;
 
@@ -101,8 +94,7 @@ uint32_t hwi2c_setup(void) {
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        hwi2c_show_settings();
-
+        hwi2c_settings();
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
             return 0;
@@ -222,7 +214,10 @@ void hwi2c_cleanup(void) {
 }
 
 void hwi2c_settings(void) {
-    hwi2c_show_settings();
+    printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);
+    // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[mode_config.data_bits].description));
+    printf(" %s: %s\r\n", GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
+            (mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
 }
 
 void hwi2c_help(void) {

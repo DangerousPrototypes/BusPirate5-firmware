@@ -187,7 +187,6 @@ uint32_t dio_bitr(void)
 #endif
 
 void dio_settings(void) {
-    printf("DIO");
 }
 
 void dio_help(void) {

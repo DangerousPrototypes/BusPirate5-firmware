@@ -21,7 +21,7 @@
 #include "commands/uart/simcard.h"
 #include "pirate/hwuart_pio.h"
 #include "commands/hdplxuart/bridge.h"
-
+#include "mode/hwhduart.h"
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
 
@@ -43,6 +43,62 @@ static const char pin_labels[][5] = {
     "RTS",
 };
 
+static const struct prompt_item uart_speed_menu[] = { { T_UART_SPEED_MENU_1 } };
+static const struct prompt_item uart_blocking_menu[] = { { T_UART_BLOCKING_MENU_1 }, { T_UART_BLOCKING_MENU_2 } };
+static const struct prompt_item uart_parity_menu[] = { { T_UART_PARITY_MENU_1 },
+                                                        { T_UART_PARITY_MENU_2 },
+                                                        { T_UART_PARITY_MENU_3 } };
+static const struct prompt_item uart_data_bits_menu[] = { { T_UART_DATA_BITS_MENU_1 } };
+static const struct prompt_item uart_stop_bits_menu[] = { { T_UART_STOP_BITS_MENU_1 },
+                                                            { T_UART_STOP_BITS_MENU_2 } };
+// static const struct prompt_item uart_blocking_menu[]={{T_UART_BLOCKING_MENU_1},{T_UART_BLOCKING_MENU_2}};
+
+static const struct ui_prompt uart_menu[] = { { T_UART_SPEED_MENU,
+                                                uart_speed_menu,
+                                                count_of(uart_speed_menu),
+                                                T_UART_SPEED_PROMPT,
+                                                1,
+                                                1000000,
+                                                115200,
+                                                0,
+                                                &prompt_int_cfg },
+                                                { T_UART_PARITY_MENU,
+                                                uart_parity_menu,
+                                                count_of(uart_parity_menu),
+                                                T_UART_PARITY_PROMPT,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                &prompt_list_cfg },
+                                                { T_UART_DATA_BITS_MENU,
+                                                uart_data_bits_menu,
+                                                count_of(uart_data_bits_menu),
+                                                T_UART_DATA_BITS_PROMPT,
+                                                5,
+                                                8,
+                                                8,
+                                                0,
+                                                &prompt_int_cfg },
+                                                { T_UART_STOP_BITS_MENU,
+                                                uart_stop_bits_menu,
+                                                count_of(uart_stop_bits_menu),
+                                                T_UART_STOP_BITS_PROMPT,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                &prompt_list_cfg },
+                                                { T_UART_BLOCKING_MENU,
+                                                uart_blocking_menu,
+                                                count_of(uart_blocking_menu),
+                                                T_UART_BLOCKING_PROMPT,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                &prompt_list_cfg } };
+
 uint32_t hwhduart_setup(void) {
     uint32_t temp;
     periodic_attributes.has_value = true;
@@ -55,61 +111,6 @@ uint32_t hwhduart_setup(void) {
     periodic_attributes.dot = 0;           // value after .
     periodic_attributes.colon = 0;         // value after :
 
-    static const struct prompt_item uart_speed_menu[] = { { T_UART_SPEED_MENU_1 } };
-    static const struct prompt_item uart_blocking_menu[] = { { T_UART_BLOCKING_MENU_1 }, { T_UART_BLOCKING_MENU_2 } };
-    static const struct prompt_item uart_parity_menu[] = { { T_UART_PARITY_MENU_1 },
-                                                           { T_UART_PARITY_MENU_2 },
-                                                           { T_UART_PARITY_MENU_3 } };
-    static const struct prompt_item uart_data_bits_menu[] = { { T_UART_DATA_BITS_MENU_1 } };
-    static const struct prompt_item uart_stop_bits_menu[] = { { T_UART_STOP_BITS_MENU_1 },
-                                                              { T_UART_STOP_BITS_MENU_2 } };
-    // static const struct prompt_item uart_blocking_menu[]={{T_UART_BLOCKING_MENU_1},{T_UART_BLOCKING_MENU_2}};
-
-    static const struct ui_prompt uart_menu[] = { { T_UART_SPEED_MENU,
-                                                    uart_speed_menu,
-                                                    count_of(uart_speed_menu),
-                                                    T_UART_SPEED_PROMPT,
-                                                    1,
-                                                    1000000,
-                                                    115200,
-                                                    0,
-                                                    &prompt_int_cfg },
-                                                  { T_UART_PARITY_MENU,
-                                                    uart_parity_menu,
-                                                    count_of(uart_parity_menu),
-                                                    T_UART_PARITY_PROMPT,
-                                                    0,
-                                                    0,
-                                                    1,
-                                                    0,
-                                                    &prompt_list_cfg },
-                                                  { T_UART_DATA_BITS_MENU,
-                                                    uart_data_bits_menu,
-                                                    count_of(uart_data_bits_menu),
-                                                    T_UART_DATA_BITS_PROMPT,
-                                                    5,
-                                                    8,
-                                                    8,
-                                                    0,
-                                                    &prompt_int_cfg },
-                                                  { T_UART_STOP_BITS_MENU,
-                                                    uart_stop_bits_menu,
-                                                    count_of(uart_stop_bits_menu),
-                                                    T_UART_STOP_BITS_PROMPT,
-                                                    0,
-                                                    0,
-                                                    1,
-                                                    0,
-                                                    &prompt_list_cfg },
-                                                  { T_UART_BLOCKING_MENU,
-                                                    uart_blocking_menu,
-                                                    count_of(uart_blocking_menu),
-                                                    T_UART_BLOCKING_PROMPT,
-                                                    0,
-                                                    0,
-                                                    1,
-                                                    0,
-                                                    &prompt_list_cfg } };
     prompt_result result;
 
     const char config_file[] = "bphwuart.bp";
@@ -139,10 +140,7 @@ uint32_t hwhduart_setup(void) {
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
-        printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
-        printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description));
-        printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
+        hwhduart_settings();
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
             return 0;
@@ -290,21 +288,10 @@ void hwhduart_cleanup(void) {
 }
 
 void hwhduart_settings(void) {
-    uint32_t par = 0;
-
-    switch (mode_config.parity) {
-        case UART_PARITY_NONE:
-            par = 1;
-            break;
-        case UART_PARITY_EVEN:
-            par = 2;
-            break;
-        case UART_PARITY_ODD:
-            par = 3;
-            break;
-    }
-    // printf("HWUSART (br parity numbits stopbits block)=(%d %d %d %d %d)", br, par, nbits, ((sbits>>12)+1),
-    // (block+1));
+    printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
+    printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
+    printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description));
+    printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
 }
 
 void hwhduart_printerror(void) {

@@ -211,7 +211,6 @@ uint32_t infrared_periodic(void)
 #endif
 
 void infrared_settings(void) {
-    printf("INFRARED");
 }
 
 void infrared_help(void) {

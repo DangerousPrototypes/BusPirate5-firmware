@@ -76,10 +76,9 @@ uint32_t hw2wire_setup(void) {
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
         printf("\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        printf(" %s: %dkHz\r\n", GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate);
         // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU),
         // GET_T(i2c_data_bits_menu[hw2wire_mode_config.data_bits].description));
-
+        hw2wire_settings();
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
             return 0;
@@ -206,7 +205,7 @@ void hw2wire_cleanup(void) {
 }*/
 
 void hw2wire_settings(void) {
-    printf("HW2WIRE (speed)=(%d)", hw2wire_mode_config.baudrate);
+    printf(" %s: %dkHz\r\n", GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate);
 }
 
 void hw2wire_printI2Cflags(void) {

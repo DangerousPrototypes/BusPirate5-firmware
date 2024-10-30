@@ -39,34 +39,6 @@ static const struct prompt_item spi_polarity_menu[] = { { T_HWSPI_CLOCK_POLARITY
 static const struct prompt_item spi_phase_menu[] = { { T_HWSPI_CLOCK_PHASE_MENU_1 }, { T_HWSPI_CLOCK_PHASE_MENU_2 } };
 static const struct prompt_item spi_idle_menu[] = { { T_HWSPI_CS_IDLE_MENU_1 }, { T_HWSPI_CS_IDLE_MENU_2 } };
 
-void spi_show_settings(void) {
-    printf(" %s%s:%s %d kHz\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_SPEED_MENU),
-           ui_term_color_reset(),
-           mode_config.baudrate / 1000);
-    printf(" %s%s:%s %d\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_BITS_MENU),
-           ui_term_color_reset(),
-           mode_config.data_bits);
-    printf(" %s%s:%s %s\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_CLOCK_POLARITY_MENU),
-           ui_term_color_reset(),
-           GET_T(spi_polarity_menu[mode_config.clock_polarity].description));
-    printf(" %s%s:%s %s\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_CLOCK_PHASE_MENU),
-           ui_term_color_reset(),
-           GET_T(spi_phase_menu[mode_config.clock_phase].description));
-    printf(" %s%s:%s %s\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_CS_IDLE_MENU),
-           ui_term_color_reset(),
-           GET_T(spi_idle_menu[mode_config.cs_idle].description));
-}
-
 uint32_t spi_setup(void) {
     uint32_t temp;
 
@@ -143,7 +115,7 @@ uint32_t spi_setup(void) {
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        spi_show_settings();
+        spi_settings();
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
             return 0;
@@ -356,8 +328,31 @@ void spi_pins(void)
 */
 
 void spi_settings(void) {
-    //printf("SPI\r\n");
-    spi_show_settings();
+   printf(" %s%s:%s %d kHz\r\n",
+           ui_term_color_info(),
+           GET_T(T_HWSPI_SPEED_MENU),
+           ui_term_color_reset(),
+           mode_config.baudrate / 1000);
+    printf(" %s%s:%s %d\r\n",
+           ui_term_color_info(),
+           GET_T(T_HWSPI_BITS_MENU),
+           ui_term_color_reset(),
+           mode_config.data_bits);
+    printf(" %s%s:%s %s\r\n",
+           ui_term_color_info(),
+           GET_T(T_HWSPI_CLOCK_POLARITY_MENU),
+           ui_term_color_reset(),
+           GET_T(spi_polarity_menu[mode_config.clock_polarity].description));
+    printf(" %s%s:%s %s\r\n",
+           ui_term_color_info(),
+           GET_T(T_HWSPI_CLOCK_PHASE_MENU),
+           ui_term_color_reset(),
+           GET_T(spi_phase_menu[mode_config.clock_phase].description));
+    printf(" %s%s:%s %s\r\n",
+           ui_term_color_info(),
+           GET_T(T_HWSPI_CS_IDLE_MENU),
+           ui_term_color_reset(),
+           GET_T(spi_idle_menu[mode_config.cs_idle].description));
 }
 
 void spi_printSPIflags(void) {

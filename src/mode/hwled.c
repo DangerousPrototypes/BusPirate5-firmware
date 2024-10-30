@@ -48,40 +48,33 @@ static struct _led_mode_config mode_config;
 
 static uint8_t device_cleanup;
 
-uint32_t hwled_setup(void) {
-    // speed
-    /*if(cmdtail!=cmdhead) cmdtail=(cmdtail+1)&(CMDBUFFSIZE-1);
-    consumewhitechars();
-    speed=getint();
-    if((speed>0)&&(speed<=2)) speed-=1;
-    else modeConfig.error=1;
-*/
-    // did the user did it right?
-    // if(modeConfig.error)			// go interactive
-    //{
-    static const struct prompt_item leds_type_menu[] = { { T_HWLED_DEVICE_MENU_1 },
-                                                         { T_HWLED_DEVICE_MENU_2 },
-                                                         { T_HWLED_DEVICE_MENU_3 } };
-    static const struct prompt_item leds_num_menu[] = { { T_HWLED_NUM_LEDS_MENU_1 } };
 
-    static const struct ui_prompt leds_menu[] = { { T_HWLED_DEVICE_MENU,
-                                                    leds_type_menu,
-                                                    count_of(leds_type_menu),
-                                                    T_HWLED_DEVICE_PROMPT,
-                                                    0,
-                                                    0,
-                                                    1,
-                                                    0,
-                                                    &prompt_list_cfg },
-                                                  { T_HWLED_NUM_LEDS_MENU,
-                                                    leds_num_menu,
-                                                    count_of(leds_num_menu),
-                                                    T_HWLED_NUM_LEDS_PROMPT,
-                                                    1,
-                                                    10000,
-                                                    1,
-                                                    0,
-                                                    &prompt_int_cfg } };
+static const struct prompt_item leds_type_menu[] = { { T_HWLED_DEVICE_MENU_1 },
+                                                        { T_HWLED_DEVICE_MENU_2 },
+                                                        { T_HWLED_DEVICE_MENU_3 } };
+static const struct prompt_item leds_num_menu[] = { { T_HWLED_NUM_LEDS_MENU_1 } };
+
+static const struct ui_prompt leds_menu[] = { { T_HWLED_DEVICE_MENU,
+                                                leds_type_menu,
+                                                count_of(leds_type_menu),
+                                                T_HWLED_DEVICE_PROMPT,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                &prompt_list_cfg },
+                                                { T_HWLED_NUM_LEDS_MENU,
+                                                leds_num_menu,
+                                                count_of(leds_num_menu),
+                                                T_HWLED_NUM_LEDS_PROMPT,
+                                                1,
+                                                10000,
+                                                1,
+                                                0,
+                                                &prompt_int_cfg } };
+
+uint32_t hwled_setup(void) {
+
     prompt_result result;
 
     const char config_file[] = "bpled.bp";
@@ -103,8 +96,7 @@ uint32_t hwled_setup(void) {
         uint32_t temp;
 
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        printf(" %s: %s\r\n", GET_T(T_HWLED_DEVICE_MENU), GET_T(leds_type_menu[mode_config.device].description));
-        printf(" %s: %d\r\n", GET_T(T_HWLED_NUM_LEDS_MENU), mode_config.num_leds);
+        hwled_settings();
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
             return 0;
@@ -275,7 +267,8 @@ void hwled_cleanup(void) {
 }
 
 void hwled_settings(void) {
-    // printf("HWI2C (speed)=(%d)", mode_config.baudrate_actual);
+    printf(" %s: %s\r\n", GET_T(T_HWLED_DEVICE_MENU), GET_T(leds_type_menu[mode_config.device].description));
+    printf(" %s: %d\r\n", GET_T(T_HWLED_NUM_LEDS_MENU), mode_config.num_leds);
 }
 
 void hwled_help(void) {

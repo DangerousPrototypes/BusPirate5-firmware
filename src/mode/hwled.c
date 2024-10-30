@@ -84,18 +84,11 @@ uint32_t hwled_setup(void) {
     prompt_result result;
 
     const char config_file[] = "bpled.bp";
-
     const mode_config_t config_t[] = {
-        {
-            "$.device",
-            &mode_config.device,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.num_leds",
-            &mode_config.num_leds,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
+        // clang-format off
+        { "$.device", &mode_config.device, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.num_leds", &mode_config.num_leds, MODE_CONFIG_FORMAT_DECIMAL },
+        // clang-format on
     };
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {

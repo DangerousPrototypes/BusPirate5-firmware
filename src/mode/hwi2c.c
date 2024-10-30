@@ -34,10 +34,18 @@ const struct _command_struct hwi2c_commands[] = {
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 
+void hwi2c_show_settings(void) {
+    printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);
+    // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[mode_config.data_bits].description));
+    printf(" %s: %s\r\n", GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
+            (mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
+}
+
 uint32_t hwi2c_setup(void) {
     uint32_t temp;
 
     // menu items options
+    static const struct prompt_item i2c_clock_strech_menu[] = { { T_OFF }, {T_ON} };
     static const struct prompt_item i2c_data_bits_menu[] = { { T_HWI2C_DATA_BITS_MENU_1 },
                                                              { T_HWI2C_DATA_BITS_MENU_2 } };
     static const struct prompt_item i2c_speed_menu[] = { { T_HWI2C_SPEED_MENU_1 } };
@@ -56,10 +64,19 @@ uint32_t hwi2c_setup(void) {
                                                    count_of(i2c_data_bits_menu),
                                                    T_HWI2C_DATA_BITS_PROMPT,
                                                    0,
+                                                   1,
+                                                   0,
+                                                   0,
+                                                   &prompt_list_cfg },
+                                                { T_HWI2C_CLOCK_STRETCH_MENU,
+                                                   i2c_clock_strech_menu,
+                                                   count_of(i2c_clock_strech_menu),
+                                                   T_OFF,
+                                                   0,
                                                    0,
                                                    1,
                                                    0,
-                                                   &prompt_list_cfg } };
+                                                   &prompt_list_cfg }  };
 
     const char config_file[] = "bpi2c.bp";
 
@@ -74,14 +91,17 @@ uint32_t hwi2c_setup(void) {
             &mode_config.data_bits,
             MODE_CONFIG_FORMAT_DECIMAL,
         },
+        {
+            "$.clock_stretch",
+            (uint32_t*)&mode_config.clock_stretch,
+            MODE_CONFIG_FORMAT_DECIMAL,
+        },        
     };
     prompt_result result;
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);
-        // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU),
-        // GET_T(i2c_data_bits_menu[mode_config.data_bits].description));
+        hwi2c_show_settings();
 
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
@@ -95,6 +115,11 @@ uint32_t hwi2c_setup(void) {
     if (result.exit) {
         return 0;
     }
+    ui_prompt_uint32(&result, &i2c_menu[2], &temp);
+    if (result.exit) {
+        return 0;
+    }    
+    mode_config.clock_stretch = (bool)(temp-1);
     // printf("Result: %d\r\n", mode_config.baudrate);
     // ui_prompt_uint32(&result, &i2c_menu[1], &temp);
     // if(result.exit) return 0;
@@ -105,25 +130,20 @@ uint32_t hwi2c_setup(void) {
 
 uint32_t hwi2c_setup_exc(void) {
     pio_i2c_init(bio2bufiopin[M_I2C_SDA],
-                 bio2bufiopin[M_I2C_SCL],
-                 bio2bufdirpin[M_I2C_SDA],
-                 bio2bufdirpin[M_I2C_SCL],
-                 mode_config.baudrate);
+                bio2bufiopin[M_I2C_SCL],
+                bio2bufdirpin[M_I2C_SDA],
+                bio2bufdirpin[M_I2C_SCL],
+                mode_config.baudrate,
+                mode_config.clock_stretch);           
     system_bio_claim(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
     system_bio_claim(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
     mode_config.start_sent = false;
     return 1;
 }
 
-bool hwi2c_error(uint32_t error, struct _bytecode* result) {
+bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
     switch (error) {
-        case 1:
-            result->error_message = GET_T(T_HWI2C_I2C_ERROR);
-            result->error = SRES_ERROR;
-            pio_i2c_resume_after_error();
-            return true;
-            break;
-        case 2:
+        case HWI2C_TIMEOUT:
             result->error_message = GET_T(T_HWI2C_TIMEOUT);
             result->error = SRES_ERROR;
             pio_i2c_resume_after_error();
@@ -140,28 +160,28 @@ void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
         result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
         result->error = SRES_WARN;
     }
-    uint8_t error = pio_i2c_start_timeout(0xfffff);
-    if (!hwi2c_error(error, result)) {
+    hwi2c_status_t i2c_status = pio_i2c_start_timeout(0xfffff);
+    if (!hwi2c_error(i2c_status, result)) {
         mode_config.start_sent = true;
     }
 }
 
 void hwi2c_stop(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_HWI2C_STOP);
-    uint32_t error = pio_i2c_stop_timeout(0xffff);
-    hwi2c_error(error, result);
+    hwi2c_status_t i2c_status = pio_i2c_stop_timeout(0xffff);
+    hwi2c_error(i2c_status, result);
 }
 
 void hwi2c_write(struct _bytecode* result, struct _bytecode* next) {
     // if a start was just sent, determine if this is a read or write address
     //  and configure the PIO I2C
-    if (mode_config.start_sent) {
+    /*if (mode_config.start_sent) {
         pio_i2c_rx_enable((result->out_data & 1u));
         mode_config.start_sent = false;
-    }
-    uint32_t error = pio_i2c_write_timeout(result->out_data, 0xffff);
-    hwi2c_error(error, result);
-    result->data_message = (error ? GET_T(T_HWI2C_NACK) : GET_T(T_HWI2C_ACK));
+    }*/
+    hwi2c_status_t i2c_status = pio_i2c_write_timeout(result->out_data, 0xffff);
+    hwi2c_error(i2c_status, result);
+    result->data_message = (i2c_status != HWI2C_OK ? GET_T(T_HWI2C_NACK) : GET_T(T_HWI2C_ACK));
 }
 
 void hwi2c_read(struct _bytecode* result, struct _bytecode* next) {
@@ -177,8 +197,8 @@ void hwi2c_read(struct _bytecode* result, struct _bytecode* next) {
                 break;
         }
     }
-    uint32_t error = pio_i2c_read_timeout(&result->in_data, ack, 0xffff);
-    hwi2c_error(error, result);
+    hwi2c_status_t i2c_status = pio_i2c_read_timeout((uint8_t *)&result->in_data, ack, 0xffff);
+    hwi2c_error(i2c_status, result);
     result->data_message = (ack ? GET_T(T_HWI2C_ACK) : GET_T(T_HWI2C_NACK));
 }
 
@@ -202,11 +222,7 @@ void hwi2c_cleanup(void) {
 }
 
 void hwi2c_settings(void) {
-    printf("HWI2C (speed)=(%d)", mode_config.baudrate);
-}
-
-void hwi2c_printI2Cflags(void) {
-    uint32_t temp;
+    hwi2c_show_settings();
 }
 
 void hwi2c_help(void) {

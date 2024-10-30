@@ -17,10 +17,6 @@ const char* hiz_error(void) {
     return GET_T(T_MODE_ERROR_NO_EFFECT_HIZ);
 }
 
-void hiz_settings(void) {
-    printf("HiZ ()=()");
-}
-
 void hiz_cleanup(void) {}
 
 uint32_t hiz_setup(void) {

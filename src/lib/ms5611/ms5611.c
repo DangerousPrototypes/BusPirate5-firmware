@@ -101,7 +101,7 @@ uint32_t ms5611_read_temperature_and_pressure_simple(float *temperature, float *
 	for(uint8_t i=0; i<5; i++)
 	{
 		data[0]= MS5611_RESET_COMMAND;
-		if(!pio_i2c_write_blocking_timeout(0b11101110, data, 1, 0xffff))
+		if(!pio_i2c_write_array_timeout(0b11101110, data, 1, 0xffff))
 		{
 			break;
 		}		
@@ -114,7 +114,7 @@ uint32_t ms5611_read_temperature_and_pressure_simple(float *temperature, float *
 	for( uint8_t i=0 ; i< MS5611_COEFFICIENT_NUMBERS ; i++)
 	{
 		data[0]= MS5611_PROM_ADDRESS_READ_ADDRESS_0 + i*2;
-		if(pio_i2c_transaction_blocking_timeout( 0b11101110, data, 1, data, 2, 0xffff))
+		if(pio_i2c_transaction_array_timeout( 0b11101110, data, 1, data, 2, 0xffff))
 		{
 			return 1;
 		} 			
@@ -123,13 +123,13 @@ uint32_t ms5611_read_temperature_and_pressure_simple(float *temperature, float *
 	
 	// First read temperature 0x50 + resolution = 0x58 4096 over sampling
 	data[0]= MS5611_START_TEMPERATURE_ADC_CONVERSION + 0x08;
-	if(pio_i2c_write_blocking_timeout(0b11101110, data, 1, 0xffff))
+	if(pio_i2c_write_array_timeout(0b11101110, data, 1, 0xffff))
 	{
 		return 1;
 	}
 	busy_wait_ms(10); //conversion time
 	data[0]= MS5611_READ_ADC;
-	if(pio_i2c_transaction_blocking_timeout(0b11101110, data, 1, data, 3, 0xffff))
+	if(pio_i2c_transaction_array_timeout(0b11101110, data, 1, data, 3, 0xffff))
 	{
 		return 1;
 	}	
@@ -138,13 +138,13 @@ uint32_t ms5611_read_temperature_and_pressure_simple(float *temperature, float *
 
 	// Now read pressure 0x40 + resolution = 0x48 4096 over sampling
 	data[0]= MS5611_START_PRESSURE_ADC_CONVERSION + 0x08;
-	if(pio_i2c_write_blocking_timeout(0b11101110, data, 1, 0xffff))
+	if(pio_i2c_write_array_timeout(0b11101110, data, 1, 0xffff))
 	{
 		return 1;
 	}
 	busy_wait_ms(10); //conversion time	
 	data[0]= MS5611_READ_ADC;
-	if(pio_i2c_transaction_blocking_timeout( 0b11101110, data, 1, data, 3, 0xffff))
+	if(pio_i2c_transaction_array_timeout( 0b11101110, data, 1, data, 3, 0xffff))
 	{
 		return 1;
 	}		

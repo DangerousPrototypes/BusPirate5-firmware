@@ -356,7 +356,7 @@ void spi_pins(void)
 */
 
 void spi_settings(void) {
-    printf("SPI\r\n");
+    //printf("SPI\r\n");
     spi_show_settings();
 }
 

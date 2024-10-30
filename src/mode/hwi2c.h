@@ -18,6 +18,7 @@ typedef struct _i2c_mode_config {
     uint32_t baudrate;
     // uint32_t baudrate_actual;
     uint32_t data_bits;
+    bool clock_stretch;
     bool ack_pending;
     bool read;
     bool start_sent;

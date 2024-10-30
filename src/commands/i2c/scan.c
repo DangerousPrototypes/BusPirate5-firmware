@@ -46,7 +46,6 @@ void i2c_search_addr(struct command_result* res) {
         return;
     }
     printf("I2C address search:\r\n");
-    pio_i2c_rx_enable(false);
     for (uint16_t i = 0; i < 256; i = i + 2) {
         bool i2c_w = i2c_search_check_addr(i);
         bool i2c_r = i2c_search_check_addr(i + 1);
@@ -83,31 +82,36 @@ void i2c_search_addr(struct command_result* res) {
 }
 
 bool i2c_search_check_addr(uint8_t address) {
-    uint16_t ack;
-    uint32_t error;
+    bool ack = false;
 
-    error = pio_i2c_start_timeout(0xfff);
-    if (error) {
+    hwi2c_status_t i2c_status = pio_i2c_start_timeout(0xfff);
+    if (i2c_status == HWI2C_TIMEOUT) {
         pio_i2c_resume_after_error();
     }
-    ack = pio_i2c_write_timeout(address, 0xfff);
+    i2c_status = pio_i2c_write_timeout(address, 0xfff);
 
-    if (ack) {
-        pio_i2c_resume_after_error();
+    switch(i2c_status){
+        case HWI2C_OK:
+            ack = true;
+            break;
+        case HWI2C_TIMEOUT:
+            pio_i2c_resume_after_error();
+            break;
     }
 
     // if read address then read one and NACK
-    if (!ack && (address & 0x1)) {
-        error = pio_i2c_read_timeout(&error, false, 0xfff);
-        if (error) {
+    if ((ack) && (address & 0x1)) {
+        uint8_t temp;
+        i2c_status = pio_i2c_read_timeout(&temp, false, 0xfff);
+        if (i2c_status==HWI2C_TIMEOUT) {
             pio_i2c_resume_after_error();
         }
     }
 
-    error = pio_i2c_stop_timeout(0xfff);
-    if (error) {
+    i2c_status = pio_i2c_stop_timeout(0xfff);
+    if (i2c_status==HWI2C_TIMEOUT) {
         pio_i2c_resume_after_error();
     }
 
-    return (!ack);
+    return ack;
 }

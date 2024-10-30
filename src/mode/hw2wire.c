@@ -199,7 +199,7 @@ void hw2wire_cleanup(void) {
 }*/
 
 void hw2wire_settings(void) {
-    printf(" %s: %dkHz\r\n", GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate);
+    ui_prompt_mode_settings_int(GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate, GET_T(T_KHZ));
 }
 
 void hw2wire_printI2Cflags(void) {

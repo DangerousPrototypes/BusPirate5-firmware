@@ -266,8 +266,8 @@ void hwled_cleanup(void) {
 }
 
 void hwled_settings(void) {
-    printf(" %s: %s\r\n", GET_T(T_HWLED_DEVICE_MENU), GET_T(leds_type_menu[mode_config.device].description));
-    printf(" %s: %d\r\n", GET_T(T_HWLED_NUM_LEDS_MENU), mode_config.num_leds);
+    ui_prompt_mode_settings_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(leds_type_menu[mode_config.device].description), 0x00);
+    ui_prompt_mode_settings_int(GET_T(T_HWLED_NUM_LEDS_MENU), mode_config.num_leds, 0x00);
 }
 
 void hwled_help(void) {

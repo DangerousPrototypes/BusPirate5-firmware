@@ -67,6 +67,9 @@ void ui_prompt_invalid_option(void);
 uint32_t ui_prompt_yes_no(void);
 bool ui_prompt_bool(prompt_result* result, bool defval_show, bool defval, bool allow_exit, bool* user_value);
 
+void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units);
+void ui_prompt_mode_settings_string(const char* label, const char* string, const char* units);
+
 // default prompt configurations for general purpose mode setup
 extern const struct ui_prompt_config prompt_int_cfg;
 extern const struct ui_prompt_config prompt_list_cfg;

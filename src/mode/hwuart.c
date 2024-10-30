@@ -335,16 +335,14 @@ void hwuart_cleanup(void) {
 }
 
 void hwuart_settings(void) {
-    printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
-    printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
-    printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description));
-    printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
-    printf(" %s: %s\r\n",
-            GET_T(T_UART_FLOW_CONTROL_MENU),
-            !mode_config.flow_control ? GET_T(T_UART_FLOW_CONTROL_MENU_1) : GET_T(T_UART_FLOW_CONTROL_MENU_2));
-    printf(" %s: %s\r\n",
-            GET_T(T_UART_INVERT_MENU),
-            !mode_config.invert ? GET_T(T_UART_INVERT_MENU_1) : GET_T(T_UART_INVERT_MENU_2));
+    ui_prompt_mode_settings_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
+    ui_prompt_mode_settings_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description), 0x00);
+    ui_prompt_mode_settings_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_UART_FLOW_CONTROL_MENU),
+            !mode_config.flow_control ? GET_T(T_UART_FLOW_CONTROL_MENU_1) : GET_T(T_UART_FLOW_CONTROL_MENU_2), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_UART_INVERT_MENU),
+            !mode_config.invert ? GET_T(T_UART_INVERT_MENU_1) : GET_T(T_UART_INVERT_MENU_2), 0x00);
 }
 
 void hwuart_printerror(void) {

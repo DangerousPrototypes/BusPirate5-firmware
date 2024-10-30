@@ -316,31 +316,11 @@ void spi_pins(void)
 */
 
 void spi_settings(void) {
-    printf(" %s%s:%s %d kHz\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_SPEED_MENU),
-           ui_term_color_reset(),
-           mode_config.baudrate / 1000);
-    printf(" %s%s:%s %d\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_BITS_MENU),
-           ui_term_color_reset(),
-           mode_config.data_bits);
-    printf(" %s%s:%s %s\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_CLOCK_POLARITY_MENU),
-           ui_term_color_reset(),
-           GET_T(spi_polarity_menu[mode_config.clock_polarity].description));
-    printf(" %s%s:%s %s\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_CLOCK_PHASE_MENU),
-           ui_term_color_reset(),
-           GET_T(spi_phase_menu[mode_config.clock_phase].description));
-    printf(" %s%s:%s %s\r\n",
-           ui_term_color_info(),
-           GET_T(T_HWSPI_CS_IDLE_MENU),
-           ui_term_color_reset(),
-           GET_T(spi_idle_menu[mode_config.cs_idle].description));
+    ui_prompt_mode_settings_int(GET_T(T_HWSPI_SPEED_MENU), mode_config.baudrate / 1000, GET_T(T_KHZ));
+    ui_prompt_mode_settings_int(GET_T(T_HWSPI_BITS_MENU), mode_config.data_bits, 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_POLARITY_MENU),GET_T(spi_polarity_menu[mode_config.clock_polarity].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_PHASE_MENU), GET_T(spi_phase_menu[mode_config.clock_phase].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(spi_idle_menu[mode_config.cs_idle].description), 0x00);
 }
 
 void spi_printSPIflags(void) {

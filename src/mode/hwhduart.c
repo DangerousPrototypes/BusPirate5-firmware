@@ -276,10 +276,15 @@ void hwhduart_cleanup(void) {
 }
 
 void hwhduart_settings(void) {
-    printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
-    printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
-    printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description));
-    printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
+    //printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD) );
+    ui_prompt_mode_settings_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
+    //printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
+    ui_prompt_mode_settings_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
+    //printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description));
+    ui_prompt_mode_settings_string(GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description), 0x00);
+    //printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
+    ui_prompt_mode_settings_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
+
 }
 
 void hwhduart_printerror(void) {

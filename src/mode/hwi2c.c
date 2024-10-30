@@ -208,10 +208,13 @@ void hwi2c_cleanup(void) {
 }
 
 void hwi2c_settings(void) {
-    printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);
+    //printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);
+    ui_prompt_mode_settings_int(GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate, GET_T(T_KHZ));
     // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[mode_config.data_bits].description));
-    printf(" %s: %s\r\n", GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
-            (mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
+    //printf(" %s: %s\r\n", GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
+    //        (mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
+    ui_prompt_mode_settings_string(GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
+            (mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)), 0x00);
 }
 
 void hwi2c_help(void) {

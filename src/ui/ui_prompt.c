@@ -366,3 +366,11 @@ uint32_t ui_prompt_yes_no(void) {
 
     return 3;
 }
+
+void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units) {
+    printf(" %s%s%s: %d %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), value, units);
+}
+
+void ui_prompt_mode_settings_string(const char* label, const char* string, const char* units) {
+    printf(" %s%s%s: %s %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), string, units);
+}

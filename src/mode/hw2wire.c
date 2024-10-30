@@ -39,44 +39,32 @@ uint32_t hw2wire_setup(void) {
                                                              { T_HWI2C_DATA_BITS_MENU_2 } };
     static const struct prompt_item i2c_speed_menu[] = { { T_HWI2C_SPEED_MENU_1 } };
 
-static const struct ui_prompt i2c_menu[] = {
-    {
-        .description = T_HW2WIRE_SPEED_MENU,
-        .menu_items = i2c_speed_menu,
-        .menu_items_count = count_of(i2c_speed_menu),
-        .prompt_text = T_HWI2C_SPEED_PROMPT,
-        .minval = 1,
-        .maxval = 1000,
-        .defval = 400,
-        .menu_action = 0,
-        .config = &prompt_int_cfg
-    },
-    {
-        .description = T_HWI2C_DATA_BITS_MENU,
-        .menu_items = i2c_data_bits_menu,
-        .menu_items_count = count_of(i2c_data_bits_menu),
-        .prompt_text = T_HWI2C_DATA_BITS_PROMPT,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    }
-};
+    static const struct ui_prompt i2c_menu[] = { { .description = T_HW2WIRE_SPEED_MENU,
+                                                   .menu_items = i2c_speed_menu,
+                                                   .menu_items_count = count_of(i2c_speed_menu),
+                                                   .prompt_text = T_HWI2C_SPEED_PROMPT,
+                                                   .minval = 1,
+                                                   .maxval = 1000,
+                                                   .defval = 400,
+                                                   .menu_action = 0,
+                                                   .config = &prompt_int_cfg },
+                                                 { .description = T_HWI2C_DATA_BITS_MENU,
+                                                   .menu_items = i2c_data_bits_menu,
+                                                   .menu_items_count = count_of(i2c_data_bits_menu),
+                                                   .prompt_text = T_HWI2C_DATA_BITS_PROMPT,
+                                                   .minval = 0,
+                                                   .maxval = 0,
+                                                   .defval = 1,
+                                                   .menu_action = 0,
+                                                   .config = &prompt_list_cfg } };
 
     const char config_file[] = "bp2wire.bp";
 
     const mode_config_t config_t[] = {
-        {
-            "$.baudrate",
-            &hw2wire_mode_config.baudrate,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.data_bits",
-            &hw2wire_mode_config.data_bits,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
+        // clang-format off
+        { "$.baudrate", &hw2wire_mode_config.baudrate, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.data_bits", &hw2wire_mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },
+        // clang-format on
     };
     prompt_result result;
 

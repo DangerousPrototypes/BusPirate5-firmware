@@ -41,95 +41,78 @@ static const char pin_labels[][5] = { "TX->", "RX<-", "RTS", "CTS" };
 
 static const struct prompt_item uart_speed_menu[] = { { T_UART_SPEED_MENU_1 } };
 static const struct prompt_item uart_parity_menu[] = { { T_UART_PARITY_MENU_1 },
-                                                        { T_UART_PARITY_MENU_2 },
-                                                        { T_UART_PARITY_MENU_3 } };
+                                                       { T_UART_PARITY_MENU_2 },
+                                                       { T_UART_PARITY_MENU_3 } };
 static const struct prompt_item uart_data_bits_menu[] = { { T_UART_DATA_BITS_MENU_1 } };
-static const struct prompt_item uart_stop_bits_menu[] = { { T_UART_STOP_BITS_MENU_1 },
-                                                            { T_UART_STOP_BITS_MENU_2 } };
+static const struct prompt_item uart_stop_bits_menu[] = { { T_UART_STOP_BITS_MENU_1 }, { T_UART_STOP_BITS_MENU_2 } };
 static const struct prompt_item uart_blocking_menu[] = { { T_UART_BLOCKING_MENU_1 }, { T_UART_BLOCKING_MENU_2 } };
 static const struct prompt_item uart_flow_control_menu[] = { { T_UART_FLOW_CONTROL_MENU_1 },
-                                                                { T_UART_FLOW_CONTROL_MENU_2 } };
+                                                             { T_UART_FLOW_CONTROL_MENU_2 } };
 static const struct prompt_item uart_invert_menu[] = { { T_UART_INVERT_MENU_1 }, { T_UART_INVERT_MENU_2 } };
 
-static const struct ui_prompt uart_menu[] = {
-    [0] = {
-        .description = T_UART_SPEED_MENU,
-        .menu_items = uart_speed_menu,
-        .menu_items_count = count_of(uart_speed_menu),
-        .prompt_text = T_UART_SPEED_PROMPT,
-        .minval = 1,
-        .maxval = 1000000,
-        .defval = 115200,
-        .menu_action = 0,
-        .config = &prompt_int_cfg
-    },
-    [1] = {
-        .description = T_UART_PARITY_MENU,
-        .menu_items = uart_parity_menu,
-        .menu_items_count = count_of(uart_parity_menu),
-        .prompt_text = T_UART_PARITY_PROMPT,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    },
-    [2] = {
-        .description = T_UART_DATA_BITS_MENU,
-        .menu_items = uart_data_bits_menu,
-        .menu_items_count = count_of(uart_data_bits_menu),
-        .prompt_text = T_UART_DATA_BITS_PROMPT,
-        .minval = 5,
-        .maxval = 8,
-        .defval = 8,
-        .menu_action = 0,
-        .config = &prompt_int_cfg
-    },
-    [3] = {
-        .description = T_UART_STOP_BITS_MENU,
-        .menu_items = uart_stop_bits_menu,
-        .menu_items_count = count_of(uart_stop_bits_menu),
-        .prompt_text = T_UART_STOP_BITS_PROMPT,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    },
-    [4] = {
-        .description = T_UART_BLOCKING_MENU,
-        .menu_items = uart_blocking_menu,
-        .menu_items_count = count_of(uart_blocking_menu),
-        .prompt_text = T_UART_BLOCKING_PROMPT,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    },
-    [5] = {
-        .description = T_UART_FLOW_CONTROL_MENU,
-        .menu_items = uart_flow_control_menu,
-        .menu_items_count = count_of(uart_flow_control_menu),
-        .prompt_text = T_UART_FLOW_CONTROL_PROMPT,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    },
-    [6] = {
-        .description = T_UART_INVERT_MENU,
-        .menu_items = uart_invert_menu,
-        .menu_items_count = count_of(uart_invert_menu),
-        .prompt_text = T_UART_INVERT_PROMPT,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    }
-};
+static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_SPEED_MENU,
+                                                      .menu_items = uart_speed_menu,
+                                                      .menu_items_count = count_of(uart_speed_menu),
+                                                      .prompt_text = T_UART_SPEED_PROMPT,
+                                                      .minval = 1,
+                                                      .maxval = 1000000,
+                                                      .defval = 115200,
+                                                      .menu_action = 0,
+                                                      .config = &prompt_int_cfg },
+                                              [1] = { .description = T_UART_PARITY_MENU,
+                                                      .menu_items = uart_parity_menu,
+                                                      .menu_items_count = count_of(uart_parity_menu),
+                                                      .prompt_text = T_UART_PARITY_PROMPT,
+                                                      .minval = 0,
+                                                      .maxval = 0,
+                                                      .defval = 1,
+                                                      .menu_action = 0,
+                                                      .config = &prompt_list_cfg },
+                                              [2] = { .description = T_UART_DATA_BITS_MENU,
+                                                      .menu_items = uart_data_bits_menu,
+                                                      .menu_items_count = count_of(uart_data_bits_menu),
+                                                      .prompt_text = T_UART_DATA_BITS_PROMPT,
+                                                      .minval = 5,
+                                                      .maxval = 8,
+                                                      .defval = 8,
+                                                      .menu_action = 0,
+                                                      .config = &prompt_int_cfg },
+                                              [3] = { .description = T_UART_STOP_BITS_MENU,
+                                                      .menu_items = uart_stop_bits_menu,
+                                                      .menu_items_count = count_of(uart_stop_bits_menu),
+                                                      .prompt_text = T_UART_STOP_BITS_PROMPT,
+                                                      .minval = 0,
+                                                      .maxval = 0,
+                                                      .defval = 1,
+                                                      .menu_action = 0,
+                                                      .config = &prompt_list_cfg },
+                                              [4] = { .description = T_UART_BLOCKING_MENU,
+                                                      .menu_items = uart_blocking_menu,
+                                                      .menu_items_count = count_of(uart_blocking_menu),
+                                                      .prompt_text = T_UART_BLOCKING_PROMPT,
+                                                      .minval = 0,
+                                                      .maxval = 0,
+                                                      .defval = 1,
+                                                      .menu_action = 0,
+                                                      .config = &prompt_list_cfg },
+                                              [5] = { .description = T_UART_FLOW_CONTROL_MENU,
+                                                      .menu_items = uart_flow_control_menu,
+                                                      .menu_items_count = count_of(uart_flow_control_menu),
+                                                      .prompt_text = T_UART_FLOW_CONTROL_PROMPT,
+                                                      .minval = 0,
+                                                      .maxval = 0,
+                                                      .defval = 1,
+                                                      .menu_action = 0,
+                                                      .config = &prompt_list_cfg },
+                                              [6] = { .description = T_UART_INVERT_MENU,
+                                                      .menu_items = uart_invert_menu,
+                                                      .menu_items_count = count_of(uart_invert_menu),
+                                                      .prompt_text = T_UART_INVERT_PROMPT,
+                                                      .minval = 0,
+                                                      .maxval = 0,
+                                                      .defval = 1,
+                                                      .menu_action = 0,
+                                                      .config = &prompt_list_cfg } };
 
 uint32_t hwuart_setup(void) {
     uint32_t temp;
@@ -146,38 +129,15 @@ uint32_t hwuart_setup(void) {
     prompt_result result;
 
     const char config_file[] = "bpuart.bp";
-
     const mode_config_t config_t[] = {
-        {
-            "$.baudrate",
-            &mode_config.baudrate,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.data_bits",
-            &mode_config.data_bits,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.stop_bits",
-            &mode_config.stop_bits,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.parity",
-            &mode_config.parity,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.flow_ctrl",
-            &mode_config.flow_control,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.invert",
-            &mode_config.invert,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
+        // clang-format off
+        { "$.baudrate", &mode_config.baudrate, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.stop_bits", &mode_config.stop_bits, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.parity", &mode_config.parity, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.flow_ctrl", &mode_config.flow_control, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.invert", &mode_config.invert, MODE_CONFIG_FORMAT_DECIMAL },
+        // clang-format off
     };
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {

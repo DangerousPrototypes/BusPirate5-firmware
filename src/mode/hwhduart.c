@@ -118,26 +118,12 @@ uint32_t hwhduart_setup(void) {
     const char config_file[] = "bphwuart.bp";
 
     const mode_config_t config_t[] = {
-        {
-            "$.baudrate",
-            &mode_config.baudrate,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.data_bits",
-            &mode_config.data_bits,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.stop_bits",
-            &mode_config.stop_bits,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
-        {
-            "$.parity",
-            &mode_config.parity,
-            MODE_CONFIG_FORMAT_DECIMAL,
-        },
+        // clang-format off
+        { "$.baudrate", &mode_config.baudrate, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.stop_bits", &mode_config.stop_bits, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.parity", &mode_config.parity, MODE_CONFIG_FORMAT_DECIMAL },
+        // clang-format on
     };
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {

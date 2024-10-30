@@ -197,7 +197,7 @@ void hwi2c_read(struct _bytecode* result, struct _bytecode* next) {
                 break;
         }
     }
-    hwi2c_status_t i2c_status = pio_i2c_read_timeout(&result->in_data, ack, 0xffff);
+    hwi2c_status_t i2c_status = pio_i2c_read_timeout((uint8_t *)&result->in_data, ack, 0xffff);
     hwi2c_error(i2c_status, result);
     result->data_message = (ack ? GET_T(T_HWI2C_ACK) : GET_T(T_HWI2C_NACK));
 }

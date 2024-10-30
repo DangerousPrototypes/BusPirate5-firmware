@@ -101,7 +101,7 @@ bool i2c_search_check_addr(uint8_t address) {
 
     // if read address then read one and NACK
     if ((ack) && (address & 0x1)) {
-        uint32_t temp;
+        uint8_t temp;
         i2c_status = pio_i2c_read_timeout(&temp, false, 0xfff);
         if (i2c_status==HWI2C_TIMEOUT) {
             pio_i2c_resume_after_error();

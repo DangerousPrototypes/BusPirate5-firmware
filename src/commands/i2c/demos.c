@@ -77,15 +77,17 @@ void demo_si7021(struct command_result* res) {
     // humidity
     data[0] = 0xf5;
     if (pio_i2c_write_array_timeout(0x80, data, 1, 0xffff)) {
+        printf("Error writing humidity register\r\n");
         return;
     }
     busy_wait_ms(23); // delay for max conversion time
     if (pio_i2c_read_array_timeout(0x81, data, 2, 0xffff)) {
+        printf("Error reading humidity data\r\n");
         return;
     }
 
     float f = (float)((float)(125 * (data[0] << 8 | data[1])) / 65536) - 6;
-    printf("Humidity: %.2f%% (%#04x %#04x) ", f, data[0], data[1]);
+    printf("Humidity: %.2f%% (%#04x %#04x)\r\n", f, data[0], data[1]);
 
     // temperature [0x80 0xe0] [0x81 r:2]
     data[0] = 0xf3;

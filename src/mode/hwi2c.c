@@ -64,10 +64,10 @@ uint32_t hwi2c_setup(void) {
                                                     { .description = T_HWI2C_CLOCK_STRETCH_MENU,
                                                     .menu_items = i2c_clock_stretch_menu,
                                                     .menu_items_count = count_of(i2c_clock_stretch_menu),
-                                                    .prompt_text = T_HWI2C_CLOCK_STRETCH_PROMPT,
+                                                    .prompt_text = T_OFF,
                                                     .minval = 0,
                                                     .maxval = 1,
-                                                    .defval = 0,
+                                                    .defval = 1,
                                                     .menu_action = 0,
                                                     .config = &prompt_list_cfg }
                                                   };

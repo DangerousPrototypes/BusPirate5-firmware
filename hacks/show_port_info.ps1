@@ -1,7 +1,32 @@
 Set-StrictMode -Version Latest
 
+# execute as follows:
+# First, load the script from a Windows Powershell prompt:
+#     . .\show_port_info.ps1
+# If necessary, permit the loading of the script (only after reviewing what the script does below):
+#     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+# Then, run the function that was defined by the script:
+#     Get-BusPirateDetails
+#
+# If something goes awry, you can execute the script with more verbose output:
+#     Get-BusPirateDetails -Verbose -Debug
 
-# Function to check if the PSObject has a property with a given name
+# Example output with a single BusPirate5 device connected:
+#
+# PS C:\Users\ian> Get-BusPirateDetails
+# InstanceId          : USB\VID_1209&PID_7331\FEDCBA9876543210
+# Serial              : FEDCBA9876543210
+# Location            : Port_#0003.Hub_#0007
+# InstanceID_Terminal : USB\VID_1209&PID_7331&MI_00\8&32E00187&0&0000
+# Port_Terminal       : COM55
+# InstanceID_Binary   : USB\VID_1209&PID_7331&MI_02\8&32E00187&0&0002
+# Port_Binary         : COM56
+# InstanceId_Storage  : USB\VID_1209&PID_7331&MI_04\8&32E00187&0&0004
+#
+# Which shows that, to connect to the terminal of this BP5, one should use COM55.
+# similarly, the binary serial port is using COM56.
+
+
 function Has-Property {
     param (
         [object]$Object,

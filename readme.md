@@ -38,7 +38,8 @@ Bus Pirate 5 is the universal serial interface tool designed by hackers, for hac
 
 This project uses `cmake` as the build system, so building the project only takes 2 steps:
 1. project configuration (needs to be ran once, or when you want to change configuration).  
-    `cmake -S . -B build -DPICO_SDK_FETCH_FROM_GIT=TRUE`  
+    `cmake -S . -B build  -DPICO_SDK_FETCH_FROM_GIT=TRUE`
+    `cmake -S . -B build6 -DPICO_SDK_FETCH_FROM_GIT=TRUE -DBP_PICO_PLATFORM=rp2350`
     you may want to add the flags `-DPICO_SDK_PATH=/path/to/pico-sdk -DPICO_SDK_FETCH_FROM_GIT=FALSE` if you want to use pico-sdk that is in your local path.  
     > NOTE: WINDOWS users: for some reason the automatic fetch fails because of git submodule, so you will need to clone pico-sdk your self, and then
     > apply the following commands inside the pico-sdk repo:  
@@ -48,8 +49,18 @@ This project uses `cmake` as the build system, so building the project only take
     > ```
     
 2. project build  
-    `cmake --build ./build --target bus_pirate5_rev10`  
-    you may set `bus_pirate5_rev10` to `bus_pirate5_rev8` if the have the development version.
+    `cmake --build ./build`
+    `cmake --build ./build6`
+    you may add a specific target, such as:
+    `cmake --build ./build --target bus_pirate5_rev8`
+    `cmake --build ./build --target bus_pirate5_rev10`
+    `cmake --build ./build6 --target bus_pirate5_xl`
+    `cmake --build ./build6 --target bus_pirate6`
+    you can manually clean via:
+    `cmake --build ./build --target clean`
+    `cmake --build ./build6 --target clean`
+    Finally, you can force a clean prior to building by adding `--clean-first`.
+
     
 ### build using docker
 Instructions on the forum provide additional details; however, this repo provides a docker compose image for you to just get running quickly in the event you want to try patching/hacking.

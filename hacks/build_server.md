@@ -43,10 +43,18 @@ source /etc/profile.d/pico-sdk.sh
 ```
 sudo git clone https://github.com/DangerousPrototypes/BusPirate5-firmware.git bp5-main
 cd bp5-main
-md build
-cd build 
+mkdir build
+mkdir build6
+
+pushd build 
 cmake ..
 make
+popd
+
+pushd build6
+cmake .. -DPICO_SDK_FETCH_FROM_GIT=TRUE -DBP_PICO_PLATFORM=rp2350
+make
+popd
 ```
 
 # Install build script and webhook

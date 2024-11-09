@@ -59,7 +59,7 @@ jobs:
     - name: Save Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: firmware-${{ matrix.os }}
+        name: firmware-${{ matrix.board }}-${{ matrix.os }}
         path: |
           ${{github.workspace}}/build/src/bus_pirate*.bin
           ${{github.workspace}}/build/src/bus_pirate*.dis

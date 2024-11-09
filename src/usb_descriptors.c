@@ -37,9 +37,41 @@
 #define _PID_MAP(itf, n) ((CFG_TUD_##itf) << (n))
 //#define USB_PID  0x7332         /*(0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
                            _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )*/
+/*
+ * CFG_TUD_xxx is defined as zero if the interface is not enabled.
+ * CFG_TUD_xxx is otherwise defined as the count of that type of interface. (????)
+ * 
+ * It therefore appears that the "Auto ProductID layout" is designed ONLY for
+ * devices that have, at most, a single instance of each of those interface types.
+ * Because the buspirate device has two CDC interfaces, the above method results
+ * in an unexpected "auto-PID", and thus should NOT be used:
+ * 
+ * _PID_MAP(CDC,  0) ==> _PID_MAP(CFG_TUD_CDC,  0) == _PID_MAP(2, 0) == 2 << 0 == 0x02  (!!! FAILS DUE TO MULTIPLE CDC INTERFACES !!!)
+ * _PID_MAP(MSC,  1) ==> _PID_MAP(CFG_TUD_MSC,  1) == _PID_MAP(1, 1) == 1 << 1 == 0x02  (!!!)
+ * _PID_MAP(HID,  2) ==> _PID_MAP(CFG_TUD_HID,  2) == _PID_MAP(0, 2) == 0 << 2 == 0x00
+ * _PID_MAP(MIDI, 3) ==> _PID_MAP(CFG_TUD_MIDI, 3) == _PID_MAP(0, 3) == 0 << 3 == 0x00
+ *
+ * Specifically, because CFG_TUD_CDC is defined as 2, _PID_MAP(CDC, 0) does not set
+ * the least significant bit (as expected per the second macro parameter), but instead
+ * sets the bit that is also used by _PID_MAP(MSC, 1).  The resulting USB_PID would
+ * therefore be: 0x4000 | 0x02 | 0x02 | 0x00 | 0x00 == 0x4002.  Decoding the bits
+ * would indicate that the device has a single MSC interface only (no CDC).
+ * 
+ * I have no idea where this "Auto ProductID layout" came from, but the macros
+ * are not defined to fail gracefully when multiple instances of an interface
+ * are present.  Moreover, at least for VID 0x1209, the above mapping would overlap
+ * with already-assigned VID/PID combinations.  Therefore, this appears to not only
+ * be dead code, but also dangerously incorrect code.
+ * 
+ * BusPirate has obtained two VID/PID combinations from https://pid.codes/.
+ * 0x1209 / 0x7331 - https://pid.codes/1209/7331/ - "Bus Pirate Next Gen CDC" 
+ * 0x1209 / 0x7332 - https://pid.codes/1209/7332/ - "Bus Pirate Next Gen Logic Analyzer"
+ *
+ * The code is now hard-coded to use the first of these.
+ *
+ */
 
 #define USB_BCD 0x0200
-// #define USB_VID   0x1209
 
 //--------------------------------------------------------------------+
 // Device Descriptors

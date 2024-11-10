@@ -23,9 +23,9 @@ echo 'export PICO_SDK_PATH=/opt/pico-sdk' | sudo tee -a /etc/profile.d/pico-sdk.
 source /etc/profile.d/pico-sdk.sh
 ```
 
-# Install BP5
+# Install BP5 (RP2040)
 ```
-sudo git clone https://github.com/DangerousPrototypes/BusPirate5-firmware.git bp5-main && cd bp5-main &&mkdir build && cd build  && cmake .. && make
+sudo git clone https://github.com/DangerousPrototypes/BusPirate5-firmware.git bp5-main && cd bp5-main && mkdir build_rp2040 && pushd build_rp2040  && cmake .. -DPICO_SDK_FETCH_FROM_GIT=TRUE && make && popd && mkdir build_rp2350 && pushd build_rp2350 && cmake .. -DPICO_SDK_FETCH_FROM_GIT=TRUE -DBP_PICO_PLATFORM=rp2350 && make && popd
 ```
 
 # Install build script and webhook

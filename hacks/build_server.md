@@ -43,15 +43,15 @@ source /etc/profile.d/pico-sdk.sh
 ```
 sudo git clone https://github.com/DangerousPrototypes/BusPirate5-firmware.git bp5-main
 cd bp5-main
-mkdir build
-mkdir build6
 
-pushd build 
-cmake ..
+mkdir build-rp2040
+pushd build-rp2040
+cmake .. -DPICO_SDK_FETCH_FROM_GIT=TRUE
 make
 popd
 
-pushd build6
+mkdir build-rp2350
+pushd build-rp2350
 cmake .. -DPICO_SDK_FETCH_FROM_GIT=TRUE -DBP_PICO_PLATFORM=rp2350
 make
 popd

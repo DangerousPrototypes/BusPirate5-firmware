@@ -292,7 +292,15 @@ uint8_t const* tud_descriptor_configuration_cb(uint8_t index) {
 char const* string_desc_arr[] = {
     (const char[]){ 0x09, 0x04 }, // 0: is supported language is English (0x0409)
     "Bus Pirate",                 // 1: Manufacturer
+#if (BP_VER == 5)
     "Bus Pirate 5",               // 2: Product
+#elif (BP_VER == XL5)
+    "Bus Pirate 5XL",             // 2: Product
+#elif (BP_VER == 6)
+    "Bus Pirate 6",               // 2: Product
+#else
+    #error "Unknown Bus Pirate version"
+#endif
     "5buspirate",                 // 3: Serial -- now using chip ID (serial port can be remembered per device)
     "Bus Pirate CDC",             // 4: CDC Interface
     "Bus Pirate MSC",             // 5: MSC Interface

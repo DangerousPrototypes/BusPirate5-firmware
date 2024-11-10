@@ -1,14 +1,20 @@
 Set-StrictMode -Version Latest
 
-# execute as follows:
-# First, load the script from a Windows Powershell prompt:
+# From a Windows command prompt:
+#     powershell.exe -NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command ". .\show_port_info.ps1; Get-BusPirateDetails"
+
+# From a Powershell command prompt:
+#     # First, load the script from a Windows Powershell prompt:
 #     . .\show_port_info.ps1
-# If necessary, permit the loading of the script (only after reviewing what the script does below):
+#     # If necessary, permit the loading of the script (only after reviewing what the script does below):
 #     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-# Then, run the function that was defined by the script:
+#     # Then, run the function that was defined by the script:
 #     Get-BusPirateDetails
+
+# If something goes awry:
+#     Execute the script with more verbose output, which you can
+#     then copy/paste into a GitHub issue:
 #
-# If something goes awry, you can execute the script with more verbose output:
 #     Get-BusPirateDetails -Verbose -Debug
 
 # Example output with a single BusPirate5 device connected:
@@ -25,7 +31,7 @@ Set-StrictMode -Version Latest
 #
 # Which shows that, to connect to the terminal of this BP5, one should use COM55.
 # similarly, the binary serial port is using COM56.
-
+#
 
 function Has-Property {
     param (
@@ -103,7 +109,7 @@ function Get-BusPirateDetails {
 
     Write-Verbose "Processing root device $($rootDevice.InstanceId)"
 
-    $resultObj = New-Object PSObject -Property @{ InstanceId = $device.InstanceId };
+    $resultObj = New-Object PSObject -Property @{ InstanceId = $rootDevice.InstanceId };
 
     # Hack ... the serial number is the tail end of the instance ID
     $serialNumber = ($rootDevice.InstanceId -split '\\')[-1];

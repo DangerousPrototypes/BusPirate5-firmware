@@ -370,6 +370,7 @@ static char const * const en_us[]={
 	[T_HELP_SLE4442_VALUE_FLAG]="Write value flag",
 	[T_HELP_SLE4442_CURRENT_PSC_FLAG]="Current Programmable Security Code (PSC) flag",
 	[T_HELP_SLE4442_NEW_PSC_FLAG]="New Programmable Security Code (PSC) flag",
+	[T_HELP_SLE4442_FILE_FLAG]="Dump file name flag",
 	[T_HELP_GCMD_W]="onboard power supply with programmable fuse",
 	[T_HELP_GCMD_W_DISABLE]="Disable onboard power supply",
 	[T_HELP_GCMD_W_ENABLE]="Enable onboard power supply, show configuration menu",

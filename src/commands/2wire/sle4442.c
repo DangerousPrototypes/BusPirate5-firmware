@@ -15,6 +15,9 @@
 #include "mode/hw2wire.h"
 #include "pirate/psu.h"
 #include "usb_rx.h"
+#include "fatfs/ff.h"
+#include "pirate/storage.h"
+
 
 #define SLE_CMD_READ_MEM 0x30
 #define SLE_CMD_WRITE_MEM 0x38
@@ -38,6 +41,7 @@ static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]
                                      "<current psc>] [-n <new psc>] [-h(elp)]",
                                      "Initialize and probe: sle4442 init",
                                      "Dump contents: sle4442 dump",
+                                     "Dump contents to file: sle4442 dump -f dump.bin",
                                      "Unlock card: sle4442 unlock -p 0xffffff",
                                      "Write a value: sle4442 write -a 0xff -v 0x55",
                                      "Erase memory: sle4442 erase",
@@ -55,6 +59,7 @@ static const struct ui_help_options options[] = {
     { 0, "-v", T_HELP_SLE4442_VALUE_FLAG },
     { 0, "-p", T_HELP_SLE4442_CURRENT_PSC_FLAG },
     { 0, "-n", T_HELP_SLE4442_NEW_PSC_FLAG },
+    { 0, "-f", T_HELP_SLE4442_FILE_FLAG },
 };
 
 uint32_t sle4442_ticks(void) {
@@ -330,6 +335,51 @@ void sle4442(struct command_result* res) {
             printf("0x%02x ", (uint8_t)ui_format_lsb(temp, 8));
         }
         printf("\r\n");
+
+        //file to read/write/verify
+        char file[13];
+        command_var_t arg;
+        bool file_flag = cmdln_args_find_flag_string('f'|0x20, &arg, sizeof(file), file);
+
+        if(file_flag){
+            //new file
+            FIL fil;		/* File object needed for each open file */
+            FRESULT fr;     /* FatFs return code */
+            UINT bw;
+
+            printf("Dumping to %s...\r\n", file);
+            //open file
+            fr = f_open(&fil, file, FA_WRITE | FA_CREATE_ALWAYS);	
+            if (fr != FR_OK) {
+                storage_file_error(fr);
+                res->error=true;
+                return;
+            }
+            char buf[256+4+4];
+            sle4442_write(SLE_CMD_READ_MEM, 0, 0);
+            for(uint i =0; i<256; i++){
+                uint8_t temp;
+                pio_hw2wire_get16(&temp);
+                buf[i]=(uint8_t)ui_format_lsb(temp, 8);
+            }
+            sle4442_read_secmem(&buf[256]);
+            sle4442_read_prtmem(&buf[256+4]);
+            //write to file
+            fr = f_write(&fil, buf, sizeof(buf), &bw);
+            if (fr != FR_OK|| bw != sizeof(buf)) {
+                storage_file_error(fr);
+                res->error=true;
+                return;
+            }
+            //close file
+            fr = f_close(&fil);
+            if (fr != FR_OK) {
+                storage_file_error(fr);
+                res->error=true;
+                return;
+            }
+            printf("Dump complete\r\n");
+        }
     }
 
     if (unlock || update_psc) {

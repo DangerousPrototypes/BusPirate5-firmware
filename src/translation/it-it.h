@@ -360,6 +360,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_SLE4442_VALUE_FLAG        ] = "Flag valore di scrittura",
     [ T_HELP_SLE4442_CURRENT_PSC_FLAG  ] = "Flag Codice di Sicurezza Programmabile (PSC) corrente",
     [ T_HELP_SLE4442_NEW_PSC_FLAG      ] = "Flag nuovo Codice di Sicurezza Programmabile (PSC)",
+    [ T_HELP_SLE4442_FILE_FLAG         ] = "Dump file name flag",
     [ T_HELP_GCMD_W                    ] = "alimentazione integrata con fusibile programmabile",
     [ T_HELP_GCMD_W_DISABLE            ] = "Disabilita l'alimentazione integrata",
     [ T_HELP_GCMD_W_ENABLE             ] = "Abilita l'alimentazione integrata, mostra il menu di configurazione",

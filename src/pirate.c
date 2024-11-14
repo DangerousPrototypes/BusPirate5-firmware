@@ -171,7 +171,7 @@ static void main_system_initialization(void) {
 #if (BP_VER == 5 && BP_REV <= 9)
     spi_set_baudrate(BP_SPI_PORT, BP_SPI_START_SPEED);
     storage_mount();
-    if (storage_load_config()) {
+    if (!button_get(0) && storage_load_config()) {
         system_config.config_loaded_from_file = true;
         // update LED
         rgb_set_effect(system_config.led_effect);
@@ -219,7 +219,7 @@ static void main_system_initialization(void) {
 // mount NAND flash here
 #if !(BP_VER == 5 && BP_REV <= 9)
     storage_mount();
-    if (storage_load_config()) {
+    if (!button_get(0) && storage_load_config()) {
         system_config.config_loaded_from_file = true;
         // update LED
         rgb_set_effect(system_config.led_effect);

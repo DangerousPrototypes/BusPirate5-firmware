@@ -41,11 +41,13 @@ static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]
                                      "<current psc>] [-n <new psc>] [-h(elp)]",
                                      "Initialize and probe: sle4442 init",
                                      "Dump contents: sle4442 dump",
-                                     "Dump contents to file: sle4442 dump -f dump.bin",
                                      "Unlock card: sle4442 unlock -p 0xffffff",
                                      "Write a value: sle4442 write -a 0xff -v 0x55",
                                      "Erase memory: sle4442 erase",
-                                     "Update PSC: sle4442 psc -p 0xffffff -n 0x000000" };
+                                     "Update PSC: sle4442 psc -p 0xffffff -n 0x000000",
+                                    "Dump contents to file: sle4442 dump -f dump.bin", 
+                                    "Dump format: DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"
+                                    }; 
 
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_SLE4442 }, // command help

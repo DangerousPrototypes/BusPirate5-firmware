@@ -212,8 +212,6 @@ static void main_system_initialization(void) {
     lcd_backlight_enable(true);
 #endif
 
-    translation_set(system_config.terminal_language);
-
     // turn everything off
     bio_init();       // make all pins safe
     psucmd_disable(); // disable psu and reset pin label, clear any errors
@@ -230,6 +228,8 @@ static void main_system_initialization(void) {
         rgb_set_effect(LED_EFFECT_PARTY_MODE);
     }
 #endif
+
+    translation_set(system_config.terminal_language);
 
 #if (BP_VER == 5)
     // test for PCB revision

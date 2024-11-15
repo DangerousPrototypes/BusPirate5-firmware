@@ -21,6 +21,8 @@
 #include "ui/ui_help.h"
 #include "dummy1.h"
 
+static const char labels[][5] = { "AUXL", "AUXH" };
+
 static uint32_t returnval;
 
 // command configuration
@@ -32,15 +34,6 @@ const struct _mode_command_struct dio_commands[] = {
     },*/
 };
 const uint32_t dio_commands_count = count_of(dio_commands);
-
-// Pin labels shown on the display and in the terminal status bar
-// No more than 4 characters long
-/*static const char pin_labels[][5]={
-    "OUT1",
-    "OUT2",
-    "OUT3",
-    "IN1"
-};*/
 
 // Pre-setup step. Show user menus for any configuration options.
 // The Bus Pirate hardware is not "clean" and reset at this point.
@@ -54,6 +47,14 @@ uint32_t dio_setup(void) {
 
 // Setup execution. This is where we actually configure any hardware.
 uint32_t dio_setup_exc(void) {
+    for (uint8_t i = 0; i < 8; i++) {
+        // user data is in result->out_data
+        bio_output(i);
+        system_bio_claim(true, i, BP_PIN_IO, labels[0]);
+        bio_put(i, 0);
+        system_set_active(true, i, &system_config.aux_active);
+    }    
+    
     return 1;
 }
 
@@ -66,20 +67,21 @@ void dio_cleanup(void) {
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
 // This function generally writes data out to the IO pins or a peripheral
 void dio_write(struct _bytecode* result, struct _bytecode* next) {
-    static const char labels[][5] = { "AUXL", "AUXH" };
+    
     // your code
     for (uint8_t i = 0; i < 8; i++) {
         // user data is in result->out_data
-        bio_output(i);
+        //bio_output(i);
         if (result->out_data & (0b1 << i)) {
             system_bio_claim(true, i, BP_PIN_IO, labels[1]);
-            bio_put(i, 1);
+            //bio_put(i, 1);
         } else {
             system_bio_claim(true, i, BP_PIN_IO, labels[0]);
-            bio_put(i, 0);
+            //bio_put(i, 0);
         }
-        system_set_active(true, i, &system_config.aux_active);
+        //system_set_active(true, i, &system_config.aux_active);
     }
+    gpio_put_masked((0xff<<8), ((uint32_t)result->out_data << 8u));
 }
 
 // This function is called when the user enters 'r' to read data

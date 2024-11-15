@@ -187,13 +187,12 @@ void hwled_start(struct _bytecode* result, struct _bytecode* next) {
     switch (mode_config.device) {
         case M_LED_WS2812:
         case M_LED_WS2812_ONBOARD:
-            busy_wait_us(50); // 50ms delay to reset
+            hwled_wait_idle();  //wait until the FIFO is empty and the state machine is idle 
+            busy_wait_us(100); // 50ms delay to reset
             result->data_message = GET_T(T_HWLED_RESET);
             break;
         case M_LED_APA102:
-            for (uint8_t i = 0; i < 4; i++) {
-                pio_sm_put_blocking(pio_config.pio, pio_config.sm, 0x00);
-            }
+            pio_sm_put_blocking(pio_config.pio, pio_config.sm, 0x00000000);
             result->data_message = GET_T(T_HWLED_FRAME_START);
             break;
         default:
@@ -205,13 +204,12 @@ void hwled_stop(struct _bytecode* result, struct _bytecode* next) {
     switch (mode_config.device) {
         case M_LED_WS2812:
         case M_LED_WS2812_ONBOARD:
-            busy_wait_us(50); // 50ms delay to reset
+            hwled_wait_idle();  //wait until the FIFO is empty and the state machine is idle    
+            busy_wait_us(100); // 50ms delay to reset
             result->data_message = GET_T(T_HWLED_RESET);
             break;
         case M_LED_APA102:
-            for (uint8_t i = 0; i < 4; i++) {
-                pio_sm_put_blocking(pio_config.pio, pio_config.sm, 0xFF);
-            }
+            pio_sm_put_blocking(pio_config.pio, pio_config.sm, 0xFFFFFFFF);
             result->data_message = GET_T(T_HWLED_FRAME_STOP);
             break;
         default:
@@ -227,7 +225,7 @@ void hwled_write(struct _bytecode* result, struct _bytecode* next) {
             pio_sm_put_blocking(pio_config.pio, pio_config.sm, (result->out_data << 8u));
             break;
         case M_LED_APA102:
-            pio_sm_put_blocking(pio_config.pio, pio_config.sm, result->out_data);
+            pio_sm_put_blocking(pio_config.pio, pio_config.sm, ((0xff<<24)|result->out_data));
             break;
         case M_LED_WS2812_ONBOARD:
             rgb_put(result->out_data);
@@ -278,4 +276,22 @@ void hwled_help(void) {
 
 uint32_t hwled_get_speed(void) {
     return mode_config.baudrate;
+}
+
+void hwled_wait_idle(void){
+    //wait until the FIFO is empty and the state machine is idle
+    uint32_t timeout = 100000;
+    
+    uint32_t SM_STALL_MASK = 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm);
+
+    pio_config.pio->fdebug = SM_STALL_MASK;
+
+    while (!(pio_config.pio->fdebug & SM_STALL_MASK)) {
+        timeout--;
+        if (!timeout) {
+            printf("Timeout, error!");
+            return;
+        }
+    }
+    return;
 }

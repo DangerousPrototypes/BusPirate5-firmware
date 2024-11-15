@@ -393,6 +393,7 @@ struct _mode modes[] = {
         .protocol_get_speed = hwled_get_speed,        // get the current speed setting of the protocol
         .protocol_command = NULL,                     // per mode command parser - ignored if 0
         .protocol_lcd_update = NULL,                  // replacement for ui_lcd_update if non-0
+        .protocol_wait_done = hwled_wait_idle,        // wait for the protocol to finish
     },
 #endif
 #ifdef BP_USE_INFRARED

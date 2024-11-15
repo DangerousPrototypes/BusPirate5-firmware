@@ -11,18 +11,17 @@ typedef struct command_result {
 } command_result;
 
 struct _global_command_struct {
-    char command[MAX_COMMAND_LENGTH];
-    bool allow_hiz;
-    void (*func)(struct command_result* res);
-    uint32_t help_text;
+    char command[MAX_COMMAND_LENGTH]; //command line string to execute command
+    bool allow_hiz; //allow execution in high impedance mode
+    void (*func)(struct command_result* res); //function to execute
+    uint32_t help_text; // translation string to show when -h is used, 0x00 = command can manage it's own extended help
 };
 
 struct _mode_command_struct {
-    char command[MAX_COMMAND_LENGTH];
-    void (*func)(struct command_result* res);
-    uint32_t description_text;
-    bool supress_fala_capture;
-    //bool supress_system_help; //do any actually use this? maybe remove this option
+    char command[MAX_COMMAND_LENGTH]; //command line string to execute command
+    void (*func)(struct command_result* res); //function to execute
+    uint32_t description_text; // shown in help and command lists
+    bool supress_fala_capture; //global follow along logic analyzer is disabled, can be managed within the command
 };
 
 struct command_response {

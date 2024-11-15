@@ -12,6 +12,6 @@ bool ui_help_show(bool help_flag,
                   const struct ui_help_options* options,
                   uint32_t count_of_options);
 bool ui_help_check_vout_vref(void);
-void ui_help_mode_commands(const struct _command_struct* commands, uint32_t count);
+void ui_help_mode_commands(const struct _mode_command_struct* commands, uint32_t count);
 void ui_help_error(uint32_t error);
-void ui_help_mode_commands_exec(const struct _command_struct* commands, uint32_t count, const char* mode);
+void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uint32_t count, const char* mode);

@@ -207,7 +207,6 @@ ui/ui_button.c
 ui/ui_button.h
 ui/ui_cmdln.c
 ui/ui_cmdln.h
-ui/ui_command.h
 ui/ui_config.c
 ui/ui_config.h
 ui/ui_const.c
@@ -253,13 +252,12 @@ usb_rx.c
 usb_tx.c
 wavegen.c
 bytecode.h
-command_attributes.h
 commands.h
 debug.h
 displays.h
 modes.h
 msc_disk.h
-opt_args.h
+command_struct.h
 pio_config.h
 pirate.h
 queue.h

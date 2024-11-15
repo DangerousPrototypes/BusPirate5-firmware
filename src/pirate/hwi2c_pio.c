@@ -213,7 +213,7 @@ hwi2c_status_t pio_i2c_write_timeout(uint8_t out_data, uint32_t timeout) {
 
 hwi2c_status_t pio_i2c_read_timeout(uint8_t* in_data, bool ack, uint32_t timeout) {
     uint32_t in_data32;
-    hwi2c_status_t i2c_result = pio_i2c_transaction_timeout((0xffu << 1) | (ack ? 0 : (1u)), &in_data32, timeout);
+    hwi2c_status_t i2c_result = pio_i2c_transaction_timeout(((uint32_t)0xffu << 1) | (ack ? 0 : (1u)), &in_data32, timeout);
     (*in_data)= (in_data32>>1);
     return i2c_result;
 }

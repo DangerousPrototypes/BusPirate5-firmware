@@ -15,10 +15,11 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "hardware/pio.h"
 #include "pirate/hw1wire_pio.h"
 #include "ui/ui_help.h"
+#include "binmode/fala.h"
 
 static const char* const usage[] = {
     "scan\t[-h(elp)]",
@@ -178,6 +179,10 @@ void onewire_test_romsearch(struct command_result* res) {
 
     /* Full  romsearch */
     printf("1-Wire ROM search:\r\n");
+    
+    //we manually control any FALA capture
+    fala_start_hook();
+
     char* romno;
     ret = OWFirst(&search_owobj);
     devcount = 0;
@@ -192,6 +197,11 @@ void onewire_test_romsearch(struct command_result* res) {
         printf(")\r\n");
         ret = OWNext(&search_owobj);
     }
+    
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
+    
     if (devcount == 0) {
         printf("No devices found\r\n");
     }

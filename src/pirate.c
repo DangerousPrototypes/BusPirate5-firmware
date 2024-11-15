@@ -9,7 +9,7 @@
 #include "ws2812.pio.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
 #if (BP_VER == 5 || BP_VER == XL5)

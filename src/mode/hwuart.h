@@ -27,5 +27,5 @@ typedef struct _uart_mode_config {
     uint32_t invert;
 } _uart_mode_config;
 
-extern const struct _command_struct hwuart_commands[];
+extern const struct _mode_command_struct hwuart_commands[];
 extern const uint32_t hwuart_commands_count;

@@ -29,6 +29,6 @@ typedef struct _hw2wire_mode_config {
     bool start_sent;
 } _hw2wire_mode_config;
 
-extern const struct _command_struct hw2wire_commands[];
+extern const struct _mode_command_struct hw2wire_commands[];
 extern const uint32_t hw2wire_commands_count;
 extern struct _hw2wire_mode_config hw2wire_mode_config;

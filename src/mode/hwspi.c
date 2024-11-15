@@ -4,7 +4,7 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "mode/hwspi.h"
 #include "pirate/bio.h"
@@ -20,11 +20,17 @@
 #include "usb_rx.h"
 
 // command configuration
-const struct _command_struct hwspi_commands[] = {
-    // Function Help
-    // note: for now the allow_hiz flag controls if the mode provides it's own help
-    { "flash", 0x00, &flash, T_HELP_CMD_FLASH }, // the help is shown in the -h *and* the list of mode apps
-    { "sniff", 0x00, &sniff_handler, 0x00 },     // the help is shown in the -h *and* the list of mode apps
+const struct _mode_command_struct hwspi_commands[] = {
+    {   .command="flash", 
+        .func=&flash, 
+        .description_text=T_HELP_CMD_FLASH, 
+        .supress_fala_capture=true
+    },
+    {   .command="sniff", 
+        .func=&sniff_handler, 
+        .description_text=T_SPI_CMD_SNIFF, 
+        .supress_fala_capture=true
+    },    
 };
 const uint32_t hwspi_commands_count = count_of(hwspi_commands);
 

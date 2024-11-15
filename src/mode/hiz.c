@@ -2,12 +2,13 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "ui/ui_term.h"
 #include "hiz.h"
 #include "pirate/bio.h"
 #include "commands/global/w_psu.h"
 #include "commands/global/p_pullups.h"
+#include "ui/ui_help.h"
 
 const char* hiz_pins(void) {
     return "-\t-\t-\t-\t-\t-\t-\t-";
@@ -39,23 +40,17 @@ uint32_t hiz_setup_exec(void) {
 }
 
 // command configuration
-const struct _command_struct hiz_commands[] = {
-    // HiZ? Function Help
-    // note: for now the allow_hiz flag controls if the mode provides it's own help
-    //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+const struct _mode_command_struct hiz_commands[] = {
+    /*{ .command="", 
+        .func=&function, 
+        .description_text=T_MODE_COMMAND_DESCRIPTION, 
+        .supress_fala_capture=false
+    },*/
 };
 const uint32_t hiz_commands_count = count_of(hiz_commands);
 
 void hiz_help(void) {
     printf("%sHiZ is a safe mode.\r\nIO pins, power and pull-ups are disabled.\r\n", ui_term_color_info());
     printf("To enter an active mode type 'm' and press enter.\r\n");
-    printf("\r\nAvailable mode commands:\r\n");
-    for (uint32_t i = 0; i < hiz_commands_count; i++) {
-        printf("%s%s%s\t%s%s\r\n",
-               ui_term_color_prompt(),
-               hiz_commands[i].command,
-               ui_term_color_info(),
-               hiz_commands[i].help_text ? GET_T(hiz_commands[i].help_text) : "Unavailable",
-               ui_term_color_reset());
-    }
+    ui_help_mode_commands(hiz_commands, hiz_commands_count);
 }

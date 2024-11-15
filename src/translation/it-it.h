@@ -453,5 +453,8 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_SECTION_TOOLS             ] = "tools and utilities",
     [ T_HELP_CMD_LOGIC                 ] = "Logic analyzer",
     [ T_HELP_CMD_SMPS                  ] = "Switch mode power supply (plank required)",
+    [ T_INFRARED_CMD_TEST              ] = "Test IR RX/TX Toy plank",
+    [ T_UART_CMD_TEST                  ] = "Test Dual RS232 plank",
+    [ T_SPI_CMD_SNIFF                  ] = "SPI sniffer",
 
 };

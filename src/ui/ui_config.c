@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "modes.h"
 #include "hardware/uart.h"

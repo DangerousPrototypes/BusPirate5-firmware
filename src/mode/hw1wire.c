@@ -4,7 +4,7 @@
 #include <string.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "mode/hw1wire.h"
 #include "pirate/bio.h"
@@ -26,14 +26,17 @@
 #endif
 
 // command configuration
-const struct _command_struct hw1wire_commands[] = {
-    // Function Help
-    // note: for now the allow_hiz flag controls if the mode provides it's own help
-    { "scan",
-      false,
-      &onewire_test_romsearch,
-      T_HELP_1WIRE_SCAN }, // the help is shown in the -h *and* the list of mode apps
-    { "ds18b20", false, &onewire_test_ds18b20_conversion, T_HELP_1WIRE_DS18B20 },
+const struct _mode_command_struct hw1wire_commands[] = {
+    {   .command="scan", 
+        .func=&onewire_test_romsearch, 
+        .description_text=T_HELP_1WIRE_SCAN, 
+        .supress_fala_capture=true
+    },
+    {   .command="ds18b20", 
+        .func=&onewire_test_ds18b20_conversion, 
+        .description_text=T_HELP_1WIRE_DS18B20,
+        .supress_fala_capture=true
+    },
 };
 const uint32_t hw1wire_commands_count = count_of(hw1wire_commands);
 
@@ -120,5 +123,5 @@ void hw1wire_help(void) {
 }
 
 uint32_t hw1wire_get_speed(void) {
-    return 14286;
+    return 220000;
 }

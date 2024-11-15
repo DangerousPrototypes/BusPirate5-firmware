@@ -4,7 +4,7 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
 #include "fatfs/diskio.h"

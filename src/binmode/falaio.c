@@ -7,7 +7,7 @@
 #include "usb_tx.h"
 #include "system_config.h"
 // #include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and
-// bytecode stuff to a single helper file #include "opt_args.h" //needed for same reason as bytecode and needs same fix
+// bytecode stuff to a single helper file #include "command_struct.h" //needed for same reason as bytecode and needs same fix
 // #include "modes.h"
 #include "binmode/binmodes.h"
 #include "binmode/logicanalyzer.h"

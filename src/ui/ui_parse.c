@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <math.h>
 #include "pirate.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "ui/ui_prompt.h" //needed for prompt_result struct
 #include "ui/ui_parse.h"
 #include "ui/ui_const.h"

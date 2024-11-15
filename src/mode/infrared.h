@@ -28,7 +28,7 @@ void infrared_help(void);
 
 uint32_t infrared_get_speed(void);
 
-extern const struct _command_struct infrared_commands[];
+extern const struct _mode_command_struct infrared_commands[];
 extern const uint32_t infrared_commands_count;
 
 typedef struct _infrared_mode_config {

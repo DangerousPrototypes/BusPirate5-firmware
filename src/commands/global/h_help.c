@@ -5,7 +5,7 @@
 #include "pirate.h"
 #include "ui/ui_term.h"
 #include "ui/ui_const.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "ui/ui_help.h"
 #include "bytecode.h"
 #include "modes.h"

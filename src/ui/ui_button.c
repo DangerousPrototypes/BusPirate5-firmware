@@ -4,7 +4,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "pirate/button.h"
-#include "opt_args.h"       // File system related
+#include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
 #include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions

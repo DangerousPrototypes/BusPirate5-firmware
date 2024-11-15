@@ -6,12 +6,13 @@
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "lib/i2c_address_list/dev_i2c_addresses.h"
 #include "ui/ui_help.h"
 #include "ui/ui_cmdln.h"
+#include "binmode/fala.h"
 
 static const char* const usage[] = {
     "scan\t[-v(erbose)] [-h(elp)]",
@@ -46,6 +47,10 @@ void i2c_search_addr(struct command_result* res) {
         return;
     }
     printf("I2C address search:\r\n");
+
+    //we manually control any FALA capture
+    fala_start_hook();
+
     for (uint16_t i = 0; i < 256; i = i + 2) {
         bool i2c_w = i2c_search_check_addr(i);
         bool i2c_r = i2c_search_check_addr(i + 1);
@@ -77,6 +82,10 @@ void i2c_search_addr(struct command_result* res) {
             }
         }
     }
+
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
 
     printf("%s\r\nFound %d addresses, %d W/R pairs.\r\n", ui_term_color_reset(), device_count, device_pairs);
 }

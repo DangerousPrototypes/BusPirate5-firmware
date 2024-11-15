@@ -458,6 +458,9 @@ enum T_translations{
     T_HELP_SECTION_TOOLS,
     T_HELP_CMD_LOGIC,
     T_HELP_CMD_SMPS,
+    T_INFRARED_CMD_TEST,
+    T_UART_CMD_TEST,
+    T_SPI_CMD_SNIFF,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

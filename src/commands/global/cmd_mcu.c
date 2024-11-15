@@ -3,7 +3,7 @@
 #include "pirate.h"
 #include "pirate/mcu.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "msc_disk.h"
 #include "ui/ui_statusbar.h"
 

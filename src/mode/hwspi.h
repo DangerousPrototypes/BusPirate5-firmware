@@ -41,5 +41,5 @@ typedef struct _spi_mode_config {
     bool binmode;
 } _spi_mode_config;
 
-extern const struct _command_struct hwspi_commands[];
+extern const struct _mode_command_struct hwspi_commands[];
 extern const uint32_t hwspi_commands_count;

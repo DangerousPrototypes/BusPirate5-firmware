@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "mode/hw2wire.h"
 #include "pirate/bio.h"
@@ -15,7 +15,6 @@
 #include "pirate/hw2wire_pio.h"
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
-#include "ui/ui_command.h"
 #include "ui/ui_format.h"
 #include "ui/ui_help.h"
 #include "commands/2wire/sle4442.h"
@@ -25,9 +24,12 @@ struct _hw2wire_mode_config hw2wire_mode_config;
 static uint8_t checkshort(void);
 
 // command configuration
-const struct _command_struct hw2wire_commands[] = {
-    // note: for now the allow_hiz flag controls if the mode provides it's own help
-    { "sle4442", false, &sle4442, T_HELP_SLE4442 }, // the help is shown in the -h *and* the list of mode apps
+const struct _mode_command_struct hw2wire_commands[] = {
+    {   .command="sle4442", 
+        .func=&sle4442, 
+        .description_text=T_HELP_SLE4442, 
+        .supress_fala_capture=true
+    },
 };
 const uint32_t hw2wire_commands_count = count_of(hw2wire_commands);
 

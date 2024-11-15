@@ -15,7 +15,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"   // Bytecode structure for data IO
 #include "pirate/bio.h" // Buffered pin IO functions
 #include "ui/ui_help.h"
@@ -83,10 +83,12 @@ void irtoy_test(struct command_result* res) {
 }
 
 // command configuration
-const struct _command_struct infrared_commands[] = {
-    // HiZ? Function Help
-    // note: for now the allow_hiz flag controls if the mode provides it's own help
-    { "test", false, &irtoy_test, 0x00 }, // the help is shown in the -h *and* the list of mode apps
+const struct _mode_command_struct infrared_commands[] = {
+    {   .command="test", 
+        .func=&irtoy_test, 
+        .description_text=T_INFRARED_CMD_TEST, 
+        .supress_fala_capture=false
+    },
 };
 const uint32_t infrared_commands_count = count_of(infrared_commands);
 

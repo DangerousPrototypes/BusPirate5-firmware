@@ -249,8 +249,7 @@ set(bp5_common
         syntax.h
         syntax.c
         syntax_struct.h
-        opt_args.h
-        command_attributes.h
+        command_struct.h
         bytecode.h
         pio_config.h
 

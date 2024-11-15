@@ -4,7 +4,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "pico/multicore.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "commands.h"
 #include "bytecode.h"
 #include "modes.h"
@@ -153,12 +153,15 @@ bool ui_process_commands(void) {
             if (modes[system_config.mode].mode_commands_count) {
                 for (int i = 0; i < *modes[system_config.mode].mode_commands_count; i++) {
                     if (strcmp(command_string, modes[system_config.mode].mode_commands[i].command) == 0) {
+                        //struct mode_command_t *cmd = &modes[system_config.mode].mode_commands[i];
                         user_cmd_id = i;
                         command_type = MODE;
                         // mode help handler (optional, set config in modes command struct)
                         if (cmdln_args_find_flag('h')) {
+                            // mode commands must supply their own help text
+                            result.help_flag = true;
                             // show auto short help
-                            if (modes[system_config.mode].mode_commands[user_cmd_id].allow_hiz &&
+                            /*if (modes[system_config.mode].mode_commands[user_cmd_id].allow_hiz &&
                                 (modes[system_config.mode].mode_commands[user_cmd_id].help_text != 0x00)) {
                                 printf("%s%s%s\r\n",
                                        ui_term_color_info(),
@@ -167,9 +170,25 @@ bool ui_process_commands(void) {
                                 return false;
                             } else { // let app know we requested help
                                 result.help_flag = true;
-                            }
+                            }*/
                         }
+                        
+                        //for all mode commands we run FALA, unless it is disabled
+                        //if(cmd->supress_fala_capture){
+                        //    fala_start_hook();
+                        //}
+                        if(!modes[system_config.mode].mode_commands[user_cmd_id].supress_fala_capture){
+                            fala_start_hook();
+                        }
+                        
+                        //execute the mode command
                         modes[system_config.mode].mode_commands[user_cmd_id].func(&result);
+                        
+                        //stop FALA
+                        if(!modes[system_config.mode].mode_commands[user_cmd_id].supress_fala_capture){
+                            fala_stop_hook();
+                            fala_notify_hook();
+                        }
                         goto cmd_ok;
                     }
                 }

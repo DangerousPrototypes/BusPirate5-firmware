@@ -15,10 +15,11 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "hardware/pio.h"
 #include "pirate/hw1wire_pio.h"
 #include "ui/ui_help.h"
+#include "binmode/fala.h"
 
 static const char* const ds18b20_usage[] = {
     "ds18b20\t[-h(elp)]",
@@ -40,9 +41,12 @@ void onewire_test_ds18b20_conversion(struct command_result* res) {
     unsigned char buf[9];
     int32_t temp;
 
+    //we manually control any FALA capture
+    fala_start_hook();
+
     if (!onewire_reset()) {
         res->error = true;
-        return;
+        goto ds18b20_cleanup;
     }
 
     onewire_tx_byte(0xcc);   // Skip ROM command
@@ -54,7 +58,7 @@ void onewire_test_ds18b20_conversion(struct command_result* res) {
 
     if (!onewire_reset()) {
         res->error = true;
-        return;
+        goto ds18b20_cleanup;
     }
 
     onewire_tx_byte(0xcc); // Skip ROM command
@@ -65,7 +69,7 @@ void onewire_test_ds18b20_conversion(struct command_result* res) {
 
     if (!onewire_reset()) {
         res->error = true;
-        return;
+        goto ds18b20_cleanup;
     }
 
     onewire_tx_byte(0xcc); // Skip ROM command
@@ -74,6 +78,10 @@ void onewire_test_ds18b20_conversion(struct command_result* res) {
         buf[i] = onewire_rx_byte();
         printf(" %.2x", buf[i]);
     }
+
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
 
     if (calc_crc8_buf(buf, 8) != buf[8]) {
         printf("\r\nCRC Fail\r\n");
@@ -86,5 +94,11 @@ void onewire_test_ds18b20_conversion(struct command_result* res) {
     }
     printf("\r\nTemperature: %.3f\r\n", (float)temp / 16);
 
+    return;
+
+ds18b20_cleanup:
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
     return;
 }

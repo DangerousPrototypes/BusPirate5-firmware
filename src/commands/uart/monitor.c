@@ -5,7 +5,7 @@
 #include "hardware/uart.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "bytecode.h"
@@ -20,13 +20,11 @@ static const char pin_labels[][5] = { "TX->", "RX<-", "CTS", "RTS"
 
 };
 
-static const char* const usage[] = { "bridge\t[-h(elp)] [-t(oolbar)]",
-                                     "Transparent UART bridge: bridge",
-                                     "Exit: press Bus Pirate button" };
+static const char* const usage[] = { "test\t[-h(elp)] [-t(oolbar)]",
+                                     "Test Dual RS232 plank: test"};
 
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_UART_BRIDGE }, // command help
-    { 0, "-t", T_HELP_UART_BRIDGE_TOOLBAR },
+    { 1, "", T_UART_CMD_TEST }, // command help
     { 0, "-h", T_HELP_FLAG }, // help
 };
 

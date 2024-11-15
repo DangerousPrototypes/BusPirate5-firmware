@@ -13,7 +13,7 @@
 #include "ui/ui_lcd.h"
 #include "ui/ui_flags.h"
 #include "system_monitor.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "commands.h"
 #include "bytecode.h"
 #include "modes.h"

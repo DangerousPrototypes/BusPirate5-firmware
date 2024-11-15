@@ -67,7 +67,7 @@ typedef struct _mode {
     // const char*(*protocol_pins)(void);			// display pin config
     void (*protocol_settings)(void);                             // display settings
     void (*protocol_help)(void);                                 // display protocol specific help
-    const struct _command_struct(*mode_commands);                // mode specific commands //ignored if 0x00
+    const struct _mode_command_struct(*mode_commands);                // mode specific commands //ignored if 0x00
     const uint32_t(*mode_commands_count);                        // mode specific commands count ignored if 0x00
     void (*protocol_wait_done)(void);                            // wait for the protocol to finish
     uint32_t (*protocol_get_speed)(void);                        // get the current speed setting of the protocol

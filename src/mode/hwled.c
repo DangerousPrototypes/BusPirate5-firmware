@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "mode/hwled.h"
 #include "pirate/bio.h"
@@ -21,10 +21,12 @@
 static struct _pio_config pio_config;
 
 // command configuration
-const struct _command_struct hwled_commands[] = {
-    // Function Help
-    // note: for now the allow_hiz flag controls if the mode provides it's own help
-    //{"sle4442",false,&sle4442,T_HELP_SLE4442}, // the help is shown in the -h *and* the list of mode apps
+const struct _mode_command_struct hwled_commands[] = {
+    /*{ .command="", 
+        .func=&function, 
+        .description_text=T_MODE_COMMAND_DESCRIPTION, 
+        .supress_fala_capture=false
+    },*/
 };
 const uint32_t hwled_commands_count = count_of(hwled_commands);
 

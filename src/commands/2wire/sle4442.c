@@ -4,12 +4,11 @@
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "pirate/hw2wire_pio.h"
 #include "pirate/bio.h"
 #include "ui/ui_cmdln.h"
 #include "ui/ui_help.h"
-#include "ui/ui_command.h"
 #include "ui/ui_format.h"
 #include "bytecode.h"
 #include "mode/hw2wire.h"
@@ -17,7 +16,7 @@
 #include "usb_rx.h"
 #include "fatfs/ff.h"
 #include "pirate/storage.h"
-
+#include "binmode/fala.h"
 
 #define SLE_CMD_READ_MEM 0x30
 #define SLE_CMD_WRITE_MEM 0x38
@@ -263,20 +262,23 @@ void sle4442(struct command_result* res) {
         return;
     }
 
+    //we manually control any FALA capture
+    fala_start_hook();
+
     uint8_t data[4];
     if (!sle4442_reset(data)) {
         printf("Card not found\r\n");
-        return;
+        goto sle4442_cleanup;
     }
 
     if (!sle4442_atr_decode(data)) {
         printf("Card not supported\r\n");
-        return;
+        goto sle4442_cleanup;
     }
 
     if (!sle4442_read_secmem(data)) {
         printf("Error reading security memory\r\n");
-        return;
+        goto sle4442_cleanup;
     }
     sle4442_decode_secmem(data);
 
@@ -286,11 +288,11 @@ void sle4442(struct command_result* res) {
         command_var_t arg;
         if (!cmdln_args_find_flag_uint32('p', &arg, &psc)) {
             printf("Specify a 24 bit PSC with the -p flag (-p 0xffffff)\r\n");
-            return;
+            goto sle4442_cleanup;
         }
 
         if (!sle4442_unlock(psc)) {
-            return;
+            goto sle4442_cleanup;
         }
         char c;
         // disable any current system control
@@ -320,7 +322,7 @@ void sle4442(struct command_result* res) {
             // correct passcode
             if (!sle4442_unlock(psc)) {
                 printf("Glitch failed to unlock card\r\n");
-                return;
+                goto sle4442_cleanup;
             }
         }
     }
@@ -355,7 +357,7 @@ void sle4442(struct command_result* res) {
             if (fr != FR_OK) {
                 storage_file_error(fr);
                 res->error=true;
-                return;
+                goto sle4442_cleanup;
             }
             char buf[256+4+4];
             sle4442_write(SLE_CMD_READ_MEM, 0, 0);
@@ -371,14 +373,14 @@ void sle4442(struct command_result* res) {
             if (fr != FR_OK|| bw != sizeof(buf)) {
                 storage_file_error(fr);
                 res->error=true;
-                return;
+                goto sle4442_cleanup;
             }
             //close file
             fr = f_close(&fil);
             if (fr != FR_OK) {
                 storage_file_error(fr);
                 res->error=true;
-                return;
+                goto sle4442_cleanup;
             }
             printf("Dump complete\r\n");
         }
@@ -390,7 +392,7 @@ void sle4442(struct command_result* res) {
         command_var_t arg;
         if (!cmdln_args_find_flag_uint32('p', &arg, &psc)) {
             printf("Specify a 24 bit PSC with the -p flag (-p 0xffffff)\r\n");
-            return;
+            goto sle4442_cleanup;
         }
         printf("Unlocking with PSC: 0x%06X\r\n", psc);
         // if(data[0]==0){ //should still have secmem from init
@@ -407,7 +409,7 @@ void sle4442(struct command_result* res) {
             security_bit = 0b110;
         } else {
             printf("Card cannot be unlocked. Remaining attempts: 0\r\n");
-            return;
+            goto sle4442_cleanup;
         }
         printf("Using free security bit: 0x%02X\r\n", security_bit);
 
@@ -434,7 +436,7 @@ void sle4442(struct command_result* res) {
         } else {
             printf("Failed to unlock card\r\n");
             sle4442_decode_secmem(data);
-            return;
+            goto sle4442_cleanup;
         }
     }
 
@@ -443,14 +445,14 @@ void sle4442(struct command_result* res) {
         command_var_t arg;
         if (!cmdln_args_find_flag_uint32('n', &arg, &new_psc)) {
             printf("Specify a new 24 bit PSC with the -n flag (-n 0xffffff)\r\n");
-            return;
+            goto sle4442_cleanup;
         }
         printf("Updating with PSC: 0x%06X\r\n", new_psc);
         // update security memory
         if (!sle4442_update_psc(new_psc, data)) {
             sle4442_decode_secmem(data);
             printf("Failed to update PSC\r\n");
-            return;
+            goto sle4442_cleanup;
         }
         sle4442_write(SLE_CMD_WRITE_SECMEM, 0, 0xff);
         sle4442_ticks();
@@ -472,11 +474,11 @@ void sle4442(struct command_result* res) {
         uint32_t val = 0, addr = 0;
         if (!cmdln_args_find_flag_uint32('v', &arg, &val)) {
             printf("Specify 8bit write value -v flag (-v 0xffffffff)\r\n");
-            return;
+            goto sle4442_cleanup;
         }
         if (!cmdln_args_find_flag_uint32('a', &arg, &addr)) {
             printf("Specify 8bit address -a flag (-a 0x32)\r\n");
-            return;
+            goto sle4442_cleanup;
         }
         printf("Writing 0x%02x to 0x%02x\r\n", val, addr);
         sle4442_write(SLE_CMD_WRITE_MEM, addr, val);
@@ -488,7 +490,7 @@ void sle4442(struct command_result* res) {
         uint32_t prtmem = 0;
         if (!cmdln_args_find_flag_uint32('v', &arg, &prtmem)) {
             printf("Specify 32bit protection value -v flag (-v 0xffffffff)\r\n");
-            return;
+            goto sle4442_cleanup;
         }
         printf("Writing Protection Memory\r\n");
         sle4442_write(SLE_CMD_WRITE_PRTMEM, 0, prtmem);
@@ -502,4 +504,9 @@ void sle4442(struct command_result* res) {
         sle4442_read_prtmem(data);
         printf("Protection memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", data[0], data[1], data[2], data[3]);
     }
+
+sle4442_cleanup:
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
 }

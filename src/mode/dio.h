@@ -37,5 +37,5 @@ uint32_t dio_bitr(void);
 
 void dio_help(void);
 
-extern const struct _command_struct dio_commands[];
+extern const struct _mode_command_struct dio_commands[];
 extern const uint32_t dio_commands_count;

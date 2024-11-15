@@ -3,7 +3,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pirate.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "fatfs/ff.h"
 #include "pirate/storage.h"
 #include "bytecode.h"

@@ -4,7 +4,7 @@
 #include "pirate.h"
 #include "pirate/amux.h"
 #include "ui/ui_term.h"
-#include "opt_args.h" //remove?
+#include "command_struct.h" //remove?
 #include "ui/ui_help.h"
 #include "display/scope.h"
 #include "system_config.h"
@@ -68,7 +68,7 @@ bool ui_help_show(bool help_flag,
     return false;
 }
 
-void ui_help_mode_commands_exec(const struct _command_struct* commands, uint32_t count, const char* mode) {
+void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uint32_t count, const char* mode) {
     // printf("\r\nAvailable mode commands:\r\n");
     printf(
         "\r\n%s%s%s mode commands:%s\r\n", ui_term_color_prompt(), mode, ui_term_color_info(), ui_term_color_reset());
@@ -77,12 +77,12 @@ void ui_help_mode_commands_exec(const struct _command_struct* commands, uint32_t
                ui_term_color_prompt(),
                commands[i].command,
                ui_term_color_info(),
-               commands[i].help_text ? GET_T(commands[i].help_text) : "Description not set. Try -h for command help",
+               commands[i].description_text ? GET_T(commands[i].description_text) : "Description not set. Try -h for command help",
                ui_term_color_reset());
     }
 }
 
-void ui_help_mode_commands(const struct _command_struct* commands, uint32_t count) {
+void ui_help_mode_commands(const struct _mode_command_struct* commands, uint32_t count) {
     ui_help_mode_commands_exec(commands, count, modes[system_config.mode].protocol_name);
 }
 

@@ -19,5 +19,5 @@ typedef struct _binloopback_mode_config {
     bool async_print;
 } _binloopback_mode_config;
 
-extern const struct _command_struct binloopback_commands[];
+extern const struct _mode_command_struct binloopback_commands[];
 extern const uint32_t binloopback_commands_count;

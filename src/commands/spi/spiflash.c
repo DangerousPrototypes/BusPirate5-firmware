@@ -6,7 +6,7 @@
 #include "hardware/spi.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"

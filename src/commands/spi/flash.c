@@ -3,7 +3,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pirate.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "fatfs/ff.h"
 #include "pirate/storage.h"
 #include "bytecode.h"
@@ -12,11 +12,10 @@
 #include "lib/sfud/inc/sfud_def.h"
 #include "spiflash.h"
 #include "ui/ui_cmdln.h"
-// #include "ui/ui_prompt.h"
-// #include "ui/ui_const.h"
 #include "ui/ui_help.h"
 #include "system_config.h"
 #include "pirate/amux.h"
+#include "binmode/fala.h"
 
 static const char* const usage[] = {
     "flash [init|probe|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
@@ -130,6 +129,9 @@ void flash(struct command_result* res) {
     uint32_t start_address = 0;
     uint32_t end_address;
 
+    //we manually control any FALA capture
+    fala_start_hook();    
+
     spiflash_probe(); // always do by default
     printf("\r\nInitializing SPI flash...\r\n");
     if (spiflash_init(&flash_info) && !override_flag) {
@@ -138,57 +140,63 @@ void flash(struct command_result* res) {
         command_var_t arg;
         if (!cmdln_args_find_flag_uint32('b', &arg, &end_address)) {
             printf("Specify read length with the -b flag (-b 0x00ffff)\r\n");
-            return;
+            goto flash_cleanup;
         }
         printf("Force read of unknown flash chip\r\n");
         printf("Using command 0x03, reading %d bytes\r\n", end_address - start_address);
         spiflash_force_dump(start_address, end_address, sizeof(data), data, &flash_info, file);
-        return;
+        goto flash_cleanup;
     } else {
-        return;
+        goto flash_cleanup;
     }
 
     if (erase || erase_flag || test) {
         if (!spiflash_erase(&flash_info)) {
-            return;
+            goto flash_cleanup;
         }
         if (verify_flag || test) {
             if (!spiflash_erase_verify(start_address, end_address, sizeof(data), data, &flash_info)) {
-                return;
+                goto flash_cleanup;
             }
         }
     }
 
     if (test) {
         if (!spiflash_write_test(start_address, end_address, sizeof(data), data, &flash_info)) {
-            return;
+            goto flash_cleanup;
         }
         if (!spiflash_write_verify(start_address, end_address, sizeof(data), data, &flash_info)) {
-            return;
+            goto flash_cleanup;
         }
     }
 
     if (write) {
         if (!spiflash_load(start_address, end_address, sizeof(data), data, &flash_info, file)) {
-            return;
+            goto flash_cleanup;
         }
         if (verify_flag) {
             uint8_t data2[256];
             if (!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, file)) {
-                return;
+                goto flash_cleanup;
             }
         }
     }
 
     if (read) {
         if (!spiflash_dump(start_address, end_address, sizeof(data), data, &flash_info, file)) {
-            return;
+            goto flash_cleanup;
         }
     }
 
     if (verify) {
         if (!spiflash_verify(start_address, end_address, sizeof(data), data, data, &flash_info, file)) {
-            return;
+            goto flash_cleanup;
         }
     }
+
+flash_cleanup:
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
+
 }

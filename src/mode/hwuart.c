@@ -4,13 +4,12 @@
 #include "hardware/uart.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "mode/hwuart.h"
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
-#include "command_attributes.h"
 #include "ui/ui_format.h"
 #include "pirate/storage.h"
 #include "usb_rx.h"
@@ -24,16 +23,22 @@ static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
 
 // command configuration
-const struct _command_struct hwuart_commands[] = {
-    // Function Help
-    // note: for now the allow_hiz flag controls if the mode provides it's own help
-    { "gps", false, &nmea_decode_handler, T_HELP_UART_NMEA }, // the help is shown in the -h *and* the list of mode apps
-    { "bridge",
-      false,
-      &uart_bridge_handler,
-      T_HELP_UART_BRIDGE },                            // the help is shown in the -h *and* the list of mode apps
-    { "monitor", false, &uart_monitor_handler, 0x00 }, // the help is shown in the -h *and* the list of mode apps
-
+const struct _mode_command_struct hwuart_commands[] = {
+    {   .command="gps", 
+        .func=&nmea_decode_handler, 
+        .description_text=T_HELP_UART_NMEA, 
+        .supress_fala_capture=true
+    },
+    {   .command="bridge", 
+        .func=&uart_bridge_handler, 
+        .description_text=T_HELP_UART_BRIDGE, 
+        .supress_fala_capture=true
+    },
+    {   .command="test", 
+        .func=&uart_monitor_handler, 
+        .description_text=T_UART_CMD_TEST, 
+        .supress_fala_capture=false
+    },
 };
 const uint32_t hwuart_commands_count = count_of(hwuart_commands);
 

@@ -3,7 +3,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 

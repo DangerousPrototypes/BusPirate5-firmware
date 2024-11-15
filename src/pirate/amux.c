@@ -3,7 +3,7 @@
 #include "hardware/adc.h"
 #include "pirate.h"
 #include "pirate/shift.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "display/scope.h"
 #include "hardware/sync.h"
 #include "pico/lock_core.h"

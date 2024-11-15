@@ -27,7 +27,7 @@ void hw1wire_macro(uint32_t macro);
 void hw1wire_help(void);
 uint32_t hw1wire_get_speed(void);
 
-extern const struct _command_struct hw1wire_commands[];
+extern const struct _mode_command_struct hw1wire_commands[];
 extern const uint32_t hw1wire_commands_count;
 /*/
 unsigned char OWReset(void);

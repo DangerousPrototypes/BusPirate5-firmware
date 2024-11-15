@@ -2,10 +2,9 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
-#include "command_attributes.h" //fix ui_format and get rid of this only struct...
 #include "ui/ui_format.h"
 #include "pirate/lsb.h"
 #include "ui/ui_const.h"

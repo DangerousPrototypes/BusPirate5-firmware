@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "system_config.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "pirate/bio.h"
@@ -24,13 +24,27 @@ static const char pin_labels[][5] = {
 static struct _i2c_mode_config mode_config;
 
 // command configuration
-const struct _command_struct hwi2c_commands[] = {
-    // Function Help
-    // note: for now the allow_hiz flag controls if the mode provides it's own help
-    { "scan", 0x00, &i2c_search_addr, T_HELP_I2C_SCAN }, // the help is shown in the -h *and* the list of mode apps
-    { "si7021", 0x00, &demo_si7021, T_HELP_I2C_SI7021 },
-    { "ms5611", 0x00, &demo_ms5611, T_HELP_I2C_MS5611 },
-    { "tsl2561", 0x00, &demo_tsl2561, T_HELP_I2C_TSL2561 },
+const struct _mode_command_struct hwi2c_commands[] = {
+    {   .command="scan", 
+        .func=&i2c_search_addr, 
+        .description_text=T_HELP_I2C_SCAN, 
+        .supress_fala_capture=true
+    },
+    {   .command="si7021", 
+        .func=&demo_si7021, 
+        .description_text=T_HELP_I2C_SI7021, 
+        .supress_fala_capture=true
+    },
+    {   .command="ms5611", 
+        .func=&demo_ms5611, 
+        .description_text=T_HELP_I2C_MS5611, 
+        .supress_fala_capture=true
+    },
+    {   .command="tsl2561", 
+        .func=&demo_tsl2561, 
+        .description_text=T_HELP_I2C_TSL2561, 
+        .supress_fala_capture=true
+    },
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 

@@ -3,7 +3,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "pirate/amux.h"
-#include "opt_args.h"
+#include "command_struct.h"
 #include "display/scope.h"
 
 static char voltages_value[HW_PINS - 1][4];

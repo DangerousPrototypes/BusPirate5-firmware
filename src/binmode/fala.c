@@ -59,10 +59,16 @@ void fala_stop(void) {
 void fala_print_result(void) {
     // get samples count
     uint32_t fala_samples = logic_analyzer_get_end_ptr();
-    // show some info about the logic capture
-    printf(
-        "\r\n%sLogic analyzer:%s %d samples captured\r\n", ui_term_color_info(), ui_term_color_reset(), fala_samples);
 
+    if(fala_samples == 0xffffffff) {
+        printf(
+        "\r\n%sLogic analyzer:%s operation too long, buffer invalid\r\n", ui_term_color_info(), ui_term_color_reset());
+    }else{
+        // show some info about the logic capture
+        printf(
+        "\r\n%sLogic analyzer:%s %d (0x%08x) samples captured\r\n", ui_term_color_info(), ui_term_color_reset(), fala_samples, fala_samples);
+    }
+    
     // DEBUG: print an 8 line logic analyzer graph of the last 80 samples
     if (fala_config.debug_level > 1) {
         printf("%s[DEBUG] Logic Analyzer Graph\r\n", ui_term_color_info());

@@ -25,6 +25,9 @@ const char falaio_name[] = "Follow along logic analyzer";
 void falaio_notify(void) {
     // get samples count
     uint32_t fala_samples = logic_analyzer_get_end_ptr();
+    if(fala_samples == 0xffffffff) { //buffer wrapped, handle this later, for now set samples to 0
+        fala_samples = 0;
+    }
     // send notification packet
     //$FALADATA;{pins};{trigger pins};{trigger mask};{edge trigger (bool)}; {capture speed in hz};{samples};{pre-samples
     //(for trigger line)};

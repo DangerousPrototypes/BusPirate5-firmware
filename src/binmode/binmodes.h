@@ -1,6 +1,7 @@
 void binmode_setup(void);
 void binmode_service(void);
 void binmode_cleanup(void);
+void binmode_load_save_config(bool save);
 
 enum {
     BINMODE_USE_SUMPLA = 0,
@@ -13,8 +14,10 @@ enum {
 
 typedef struct _binmode {
     bool lock_terminal;
+    bool can_save_config;
     const char* binmode_name;
     void (*binmode_setup)(void);
+    void (*binmode_setup_message)(void);
     void (*binmode_service)(void);
     void (*binmode_cleanup)(void);
     void (*binmode_hook_mode_exc)(void);

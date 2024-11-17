@@ -9,6 +9,7 @@
 #include "binmode/legacy4third.h"
 #include "binmode/falaio.h"
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
+#include "pirate/storage.h" // File system related
 
 void binmode_null_func_void(void) {
     return;
@@ -18,6 +19,7 @@ void binmode_null_func_void(void) {
 const binmode_t binmodes[] = {
     {
         .lock_terminal = false,
+        .can_save_config = true,
         .binmode_name = sump_logic_analyzer_name,
         .binmode_setup = sump_logic_analyzer_setup,
         .binmode_service = sump_logic_analyzer_service,
@@ -25,6 +27,7 @@ const binmode_t binmodes[] = {
     },
     {
         .lock_terminal = true,
+        .can_save_config = false,
         .binmode_name = dirtyproto_mode_name,
         .binmode_setup = binmode_null_func_void,
         .binmode_service = dirtyproto_mode,
@@ -32,6 +35,7 @@ const binmode_t binmodes[] = {
     },
     {
         .lock_terminal = true,
+        .can_save_config = false,
         .binmode_name = arduino_ch32v003_name,
         .binmode_setup = binmode_null_func_void,
         .binmode_service = arduino_ch32v003,
@@ -39,13 +43,16 @@ const binmode_t binmodes[] = {
     },
     {
         .lock_terminal = false,
+        .can_save_config = true,
         .binmode_name = falaio_name,
         .binmode_setup = falaio_setup,
+        .binmode_setup_message = falaio_setup_message,
         .binmode_service = falaio_service,
         .binmode_cleanup = falaio_cleanup,
     },
     {
         .lock_terminal = true,
+        .can_save_config = false,
         .binmode_name = legacy4third_mode_name,
         .binmode_setup = binmode_null_func_void,
         .binmode_service = legacy4third_mode,
@@ -68,5 +75,21 @@ inline void binmode_cleanup(void) {
     binmodes[system_config.binmode_select].binmode_cleanup();
     if (binmodes[system_config.binmode_select].lock_terminal) {
         binmode_terminal_lock(false);
+    }
+}
+
+void binmode_load_save_config(bool save) {
+    const char config_file[] = "bpbinmod.bp";
+    uint32_t binmode_select = system_config.binmode_select;
+    const mode_config_t config_t[] = {
+        // clang-format off
+        { "$.binmode", &binmode_select, MODE_CONFIG_FORMAT_DECIMAL },
+        // clang-format off
+    };
+    if (save) {
+        storage_save_mode(config_file, config_t, count_of(config_t));
+    } else {
+        storage_load_mode(config_file, config_t, count_of(config_t));
+        system_config.binmode_select = binmode_select;
     }
 }

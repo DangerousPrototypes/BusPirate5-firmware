@@ -265,7 +265,7 @@ static void main_system_initialization(void) {
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
     icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
-
+    binmode_load_save_config(false);
     binmode_setup();
 }
 

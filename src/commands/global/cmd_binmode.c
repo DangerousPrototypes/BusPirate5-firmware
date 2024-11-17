@@ -43,6 +43,8 @@ bool binmode_check_range(const struct ui_prompt* menu, uint32_t* value) {
 void cmd_binmode_handler(struct command_result* res) {
     // we can use the ui_help_show function to display the help text we configured above
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+        // Current binmode 
+        printf("%sActive binmode:%s %s\r\n", ui_term_color_info(), ui_term_color_reset(), binmodes[system_config.binmode_select].binmode_name);
         return;
     }
 
@@ -68,7 +70,28 @@ void cmd_binmode_handler(struct command_result* res) {
            ui_term_color_reset(),
            binmodes[binmode_number].binmode_name);
     system_config.binmode_select = binmode_number;
+
+    // optional: save system config options
+    // NOTE: to be a saved mode, the mode MUST NOT output anything to the terminal
+    // only modes that have been verified can be saved
+    // outputting text before the terminal is open will cause crash on startup
+    if(binmodes[system_config.binmode_select].can_save_config) {
+        printf("\r\n%sSave setting?%s", ui_term_color_info(), ui_term_color_reset());
+        bool user_value;
+        ui_prompt_bool(&result, true, true, false, &user_value);
+        if (user_value) {
+            binmode_load_save_config(true); //save config
+        }
+    }
+
+    //defer setup
     binmode_setup();
 
-    // optional: save system config options?
+    if (binmodes[system_config.binmode_select].binmode_setup_message) {
+        printf("\r\n");
+        binmodes[system_config.binmode_select].binmode_setup_message();
+    }
+    
 }
+
+

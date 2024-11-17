@@ -17,6 +17,7 @@
 #include "ui/ui_info.h"
 #include "commands/global/freq.h"
 #include "timestamp.h"
+#include "binmode/binmodes.h"
 /*
 static const char * const usage[]=
 {
@@ -95,6 +96,9 @@ void i_info_handler(struct command_result* res) {
         printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_CONFIG_FILE), ui_term_color_reset(), string);
     } while (0);
 
+    // Current binmode 
+    printf("%sActive binmode:%s %s\r\n", ui_term_color_info(), ui_term_color_reset(), binmodes[system_config.binmode_select].binmode_name);
+
     if (system_config.big_buffer_owner != BP_BIG_BUFFER_NONE) {
         printf("%sBig buffer allocated to:%s #%d\r\n",
                ui_term_color_info(),
@@ -115,6 +119,7 @@ void i_info_handler(struct command_result* res) {
         modes[system_config.mode].protocol_settings();
     }
     printf("\r\n");
+
 
     printf("%s%s:%s %s\r\n",
            ui_term_color_info(),

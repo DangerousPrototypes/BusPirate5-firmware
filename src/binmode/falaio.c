@@ -14,6 +14,7 @@
 #include "binmode/binio.h"
 #include "binmode/fala.h"
 #include "tusb.h"
+#include "ui/ui_term.h"
 
 #define MAX_UART_PKT 64
 #define CDC_INTF 1
@@ -59,6 +60,33 @@ void falaio_setup(void) {
 
     system_config.binmode_usb_rx_queue_enable = false;
     system_config.binmode_usb_tx_queue_enable = false;
+
+    //show the notification at setup
+    //fala_mode_change_hook();
+}
+
+void falaio_setup_message(void){
+#if BP_VER != 6
+    printf("%sWarning: What you see may not be what you get!%s\r\n", ui_term_color_error(), ui_term_color_reset());
+    printf("%sThis hardware version captures samples from behind the IO buffer.%s\r\n",
+            ui_term_color_info(),
+            ui_term_color_reset());
+    printf("%sWhen the buffers are outputs, the samples show the RP2040/RP2350 pin states.%s\r\n",
+            ui_term_color_info(),
+            ui_term_color_reset());
+    printf("%sThis may not match the buffer output and could make debugging difficult.%s\r\n",
+            ui_term_color_info(),
+            ui_term_color_reset());
+    printf("%sThis does not apply when the buffers are inputs or in HiZ mode.%s\r\n",
+            ui_term_color_info(),
+            ui_term_color_reset());
+    printf("%sPlease keep this in mind when debugging.%s\r\n\r\n", ui_term_color_info(), ui_term_color_reset());
+    // printf("%sContinue?%s", ui_term_color_error(), ui_term_color_reset());
+    // if (!ui_yes_no()) {
+    //     return false;
+    // }
+#endif
+    fala_mode_change_hook();
 }
 
 // binmode cleanup on exit

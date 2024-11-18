@@ -148,6 +148,8 @@ uint32_t hwled_setup_exc(void) {
                                 bio2bufiopin[M_LED_SDO],
                                 (float)mode_config.baudrate,
                                 false);
+            // BUGBUG -- Ignores return value of system_bio_claim() (!!!)
+            // BUGBUG -- only attempts to call system_bio_claim() __AFTER__ it's in use(!!!)
             system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
             break;
         case M_LED_APA102:
@@ -167,6 +169,19 @@ uint32_t hwled_setup_exc(void) {
                                      mode_config.baudrate,
                                      bio2bufiopin[M_LED_SCL],
                                      bio2bufiopin[M_LED_SDO]);
+            // BUGBUG -- Ignores return value of system_bio_claim() (!!!)
+            // BUGBUG -- only attempts to call system_bio_claim() __AFTER__ it's in use(!!!)
+            // Correct order of operations:
+            //   1. try to claim resources via system_bio_claim()
+            //      a. if fails
+            //         i.  release any claimed resources
+            //         ii. return failure
+            //   2. set buffered output via bio_buf_output()
+            //      a. if fails
+            //         i.   disable any set buffered output
+            //         ii.  release any claimed resources
+            //         iii. return failure
+            //   3. initialize the PIO to use the claimed resources
             system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
             system_bio_claim(true, M_LED_SCL, BP_PIN_MODE, pin_labels[1]);
             break;
@@ -188,7 +203,7 @@ void hwled_start(struct _bytecode* result, struct _bytecode* next) {
         case M_LED_WS2812:
         case M_LED_WS2812_ONBOARD:
             hwled_wait_idle();  //wait until the FIFO is empty and the state machine is idle 
-            busy_wait_us(100); // 50ms delay to reset
+            busy_wait_us(50); // 50us delay to reset
             result->data_message = GET_T(T_HWLED_RESET);
             break;
         case M_LED_APA102:
@@ -205,7 +220,7 @@ void hwled_stop(struct _bytecode* result, struct _bytecode* next) {
         case M_LED_WS2812:
         case M_LED_WS2812_ONBOARD:
             hwled_wait_idle();  //wait until the FIFO is empty and the state machine is idle    
-            busy_wait_us(100); // 50ms delay to reset
+            busy_wait_us(50); // 50us delay to reset
             result->data_message = GET_T(T_HWLED_RESET);
             break;
         case M_LED_APA102:
@@ -218,13 +233,29 @@ void hwled_stop(struct _bytecode* result, struct _bytecode* next) {
 }
 
 void hwled_write(struct _bytecode* result, struct _bytecode* next) {
-    uint32_t temp;
-
+    // Protocol-specific:
+    // * parameter `next` is unused
+    // * parameter `result->out_data` contains a 24-bit RGB value to send
+    //   NOTE: for WS2812, the top 8 bits are cleared to zero.
+    //   NOTE: for APA102, the top 8 bits are forced to 0xFF (full brightness).
+    // UNDOCUMENTED: 
+    //   Order in which the bytes are sent is NOT documented here.
+    //   Caller must test to determin the proper RGB value order for their hardware.
     switch (mode_config.device) {
+        // TODO: add support for RGBW   (RGB + white)?
+        // TODO: add support for RGBWW  (RGB + cool white + warm white)?
+        // TODO: add support for RGBWWA (RGB + cool white + warm white + amber)?
         case M_LED_WS2812:
+            // NOTE: Only supporting 24-bit RGB values for now.
+            //       As a hack, callers can likely use RGBW by packing
+            //       three pixels' data into four 24-bit values:
+            //       0x00R1G1B1 0x00W1R2G2 0x00B2W2R3 0x00G3B3W3
             pio_sm_put_blocking(pio_config.pio, pio_config.sm, (result->out_data << 8u));
             break;
         case M_LED_APA102:
+            // TODO: only set to full brightness if the top bits from caller are zero
+            //       otherwise, allow the caller to set the global brightness bits for
+            //       more advanced brightness setting.
             pio_sm_put_blocking(pio_config.pio, pio_config.sm, ((0xff<<24)|result->out_data));
             break;
         case M_LED_WS2812_ONBOARD:
@@ -278,15 +309,25 @@ uint32_t hwled_get_speed(void) {
     return mode_config.baudrate;
 }
 
-void hwled_wait_idle(void){
-    //wait until the FIFO is empty and the state machine is idle
-    uint32_t timeout = 100000;
-    
+bool hwled_is_idle(void) {
+    // Correct way to detect the state machine is idle because of an empty FIFO:
+    // 1. Clear the (latching) state machine stall bit
+    // 2. Check if the state machine TX fifo is empty
+    // 3. THEN check if the state machine stall bit is set
     uint32_t SM_STALL_MASK = 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm);
+    pio_config.pio->fdebug = SM_STALL_MASK; // writing a 1 clears the bit
 
-    pio_config.pio->fdebug = SM_STALL_MASK;
+    // NOTE: the order of these operations *DOES* matter!
+    bool result =
+        pio_sm_is_tx_fifo_empty(pio_config.pio, pio_config.sm) &&
+        (pio_config.pio->fdebug & SM_STALL_MASK);
+    return result;
+}
 
-    while (!(pio_config.pio->fdebug & SM_STALL_MASK)) {
+// NOTE: Function must have no parameters ... this is a protocol entry point.
+void hwled_wait_idle(void) {
+    uint32_t timeout = 100000;
+    while (!hwled_is_idle()) {
         timeout--;
         if (!timeout) {
             printf("Timeout, error!");

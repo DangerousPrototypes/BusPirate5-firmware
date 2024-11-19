@@ -1,1 +1,0 @@
-void i2c_search_addr(struct command_result *res);

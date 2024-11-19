@@ -1,1 +1,0 @@
-void wavegen_args (struct command_result *res);

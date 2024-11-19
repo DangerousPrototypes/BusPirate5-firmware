@@ -18,6 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, macos-latest ]
+        board: [ rp2040, rp2350 ]
 
     steps:
     - uses: actions/checkout@v4
@@ -46,11 +47,11 @@ jobs:
 
     - name: Configure CMake Linux & MacOS
       if: ${{ matrix.os != 'windows-latest'}}
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBP_PICO_PLATFORM=${{matrix.board}}
 
     - name: Configure CMake Windows
       if: ${{ matrix.os == 'windows-latest'}}
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-gcc.exe -DCMAKE_CXX_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-g++.exe -G "Unix Makefiles"
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBP_PICO_PLATFORM=${{matrix.board}} -DCMAKE_C_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-gcc.exe -DCMAKE_CXX_COMPILER=C:\ProgramData\chocolatey\bin\arm-none-eabi-g++.exe -G "Unix Makefiles"
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --target ${{env.BUILD_TARGET}}
@@ -58,7 +59,12 @@ jobs:
     - name: Save Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: firmware-${{ matrix.os }}
-        path: ${{github.workspace}}/build/*.uf2
+        name: firmware-${{ matrix.board }}-${{ matrix.os }}
+        path: |
+          ${{github.workspace}}/build/src/bus_pirate*.bin
+          ${{github.workspace}}/build/src/bus_pirate*.dis
+          ${{github.workspace}}/build/src/bus_pirate*.elf
+          ${{github.workspace}}/build/src/bus_pirate*.elf.map
+          ${{github.workspace}}/build/src/bus_pirate*.uf2
         retention-days: 7
         if-no-files-found: error

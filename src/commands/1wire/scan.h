@@ -1,0 +1,1 @@
+void onewire_test_romsearch(struct command_result* res);

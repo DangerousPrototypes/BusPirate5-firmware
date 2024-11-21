@@ -277,26 +277,137 @@ bool syntax_compile(void) {
     return false;
 }
 
-/* to make it faster later use this struct of functions to run the commands...
-struct _syntax_run syn_run[]=
-{
-    SYN_WRITE=0,
-    SYN_START_ALT,
-    SYN_READ,
-    SYN_START,
-    SYN_STOP,
-    SYN_DELAY_US,
-    SYN_DELAY_MS,
-    SYN_AUX_LOW,
-    SYN_AUX_HIGH,
-    SYN_AUX_INPUT,
-    SYN_ADC,
-    SYN_FREQ
+typedef void (*syntax_func_ptr_t)(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command );
+
+void syntax_run_write(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
+        in[*in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
+        in[*in_cnt].error = SRES_ERROR;
+        return;
+    }
+    for (uint16_t j = 0; j < out->repeat; j++) {
+        if (j > 0) {
+            (*in_cnt)++;
+            in[*in_cnt] = *out;
+        }
+        modes[system_config.mode].protocol_write(&in[*in_cnt], NULL);
+    }
 }
-*/
+
+void syntax_run_read(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
+        in[*in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
+        in[*in_cnt].error = SRES_ERROR;
+        return;
+    }
+    for (uint16_t j = 0; j < out->repeat; j++) {
+        if (j > 0) {
+            (*in_cnt)++;
+            in[*in_cnt] = *out;
+        }
+        modes[system_config.mode].protocol_read(
+            &in[*in_cnt], (current_command + 1 < out_cnt && j + 1 == out[current_command].repeat) ? &out[current_command + 1] : NULL);
+    }
+}
+
+void syntax_run_start(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    modes[system_config.mode].protocol_start(&in[*in_cnt], NULL);
+}
+
+void syntax_run_start_alt(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    modes[system_config.mode].protocol_start_alt(&in[*in_cnt], NULL);
+}
+
+void syntax_run_stop(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    modes[system_config.mode].protocol_stop(&in[*in_cnt], NULL);
+}
+
+void syntax_run_stop_alt(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    modes[system_config.mode].protocol_stop_alt(&in[*in_cnt], NULL);
+}
+
+void syntax_run_delay_us(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    busy_wait_us_32(out[current_command].repeat);
+}
+
+void syntax_run_delay_ms(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    busy_wait_ms(out[current_command].repeat);
+}
+
+void syntax_run_aux_output(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    bio_output(out[current_command].bits);
+    bio_put((uint8_t)out[current_command].bits, (bool)out[current_command].out_data);
+    system_bio_claim(
+        true,
+        out[current_command].bits,
+        BP_PIN_IO,
+        labels[out[current_command].out_data]); // this should be moved to a cleanup function to reduce overhead
+    system_set_active(true, out[current_command].bits, &system_config.aux_active);
+}
+
+void syntax_run_aux_input(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    bio_input(out[current_command].bits);
+    in[*in_cnt].in_data = bio_get(out[current_command].bits);
+    system_bio_claim(false, out[current_command].bits, BP_PIN_IO, 0);
+    system_set_active(false, out[current_command].bits, &system_config.aux_active);  
+}
+
+void syntax_run_adc(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    in[*in_cnt].in_data = amux_read_bio(out[current_command].bits);
+}
+
+void syntax_run_tick_clock(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    for (uint16_t j = 0; j < out[current_command].repeat; j++) {
+        modes[system_config.mode].protocol_tick_clock(&in[*in_cnt], NULL);
+    }
+}
+
+void syntax_run_set_clk_high(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    modes[system_config.mode].protocol_clkh(&in[*in_cnt], NULL);
+}
+
+void syntax_run_set_clk_low(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    modes[system_config.mode].protocol_clkl(&in[*in_cnt], NULL);
+}
+
+void syntax_run_set_dat_high(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    modes[system_config.mode].protocol_dath(&in[*in_cnt], NULL);
+}
+
+void syntax_run_set_dat_low(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    modes[system_config.mode].protocol_datl(&in[*in_cnt], NULL);
+}
+
+void syntax_run_read_dat(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+    //TODO: reality check out slots, actually repeat the read?
+    for (uint16_t j = 0; j < out[current_command].repeat; j++) {
+        modes[system_config.mode].protocol_bitr(&in[*in_cnt], NULL);
+    }
+}
+
+//a struct of function pointers to run the commands
+syntax_func_ptr_t syntax_run_func[]={
+    [SYN_WRITE]=syntax_run_write,
+    [SYN_READ]=syntax_run_read,
+    [SYN_START]=syntax_run_start,
+    [SYN_START_ALT]=syntax_run_start_alt,
+    [SYN_STOP]=syntax_run_stop,
+    [SYN_STOP_ALT]=syntax_run_stop_alt,
+    [SYN_DELAY_US]=syntax_run_delay_us,
+    [SYN_DELAY_MS]=syntax_run_delay_ms,
+    [SYN_AUX_OUTPUT]=syntax_run_aux_output,
+    [SYN_AUX_INPUT]=syntax_run_aux_input,
+    [SYN_ADC]=syntax_run_adc,
+    [SYN_TICK_CLOCK]=syntax_run_tick_clock,
+    [SYN_SET_CLK_HIGH]=syntax_run_set_clk_high,
+    [SYN_SET_CLK_LOW]=syntax_run_set_clk_low,
+    [SYN_SET_DAT_HIGH]=syntax_run_set_dat_high,
+    [SYN_SET_DAT_LOW]=syntax_run_set_dat_low,
+    [SYN_READ_DAT]=syntax_run_read_dat
+};
 static const char labels[][5] = { "AUXL", "AUXH" };
 bool syntax_run(void) {
-    uint32_t i, received;
+    uint32_t current_command;
 
     if (!out_cnt) {
         return true;
@@ -304,105 +415,15 @@ bool syntax_run(void) {
 
     in_cnt = 0;
 
-    for (i = 0; i < out_cnt; i++) {
-        in[in_cnt] = out[i];
+    for (current_command = 0; current_command < out_cnt; current_command++) {
+        in[in_cnt] = out[current_command];
 
-        switch (out[i].command) {
-            case SYN_WRITE:
-                if (in_cnt + out[i].repeat >= SYN_MAX_LENGTH) {
-                    in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
-                    in[in_cnt].error = SRES_ERROR;
-                    return false;
-                }
-                for (uint16_t j = 0; j < out[i].repeat; j++) {
-                    if (j > 0) {
-                        in_cnt++;
-                        in[in_cnt] = out[i];
-                    }
-                    modes[system_config.mode].protocol_write(&in[in_cnt], NULL);
-                }
-                break;
-            case SYN_READ:
-                if (in_cnt + out[i].repeat >= SYN_MAX_LENGTH) {
-                    in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
-                    in[in_cnt].error = SRES_ERROR;
-                    return false;
-                }
-                for (uint16_t j = 0; j < out[i].repeat; j++) {
-                    if (j > 0) {
-                        in_cnt++;
-                        in[in_cnt] = out[i];
-                    }
-                    modes[system_config.mode].protocol_read(
-                        &in[in_cnt], (i + 1 < out_cnt && j + 1 == out[i].repeat) ? &out[i + 1] : NULL);
-                }
-                break;
-            case SYN_START:
-                modes[system_config.mode].protocol_start(&in[in_cnt], NULL);
-                break;
-            case SYN_START_ALT:
-                modes[system_config.mode].protocol_start_alt(&in[in_cnt], NULL);
-                break;
-            case SYN_STOP:
-                modes[system_config.mode].protocol_stop(&in[in_cnt], NULL);
-                break;
-            case SYN_STOP_ALT:
-                modes[system_config.mode].protocol_stop_alt(&in[in_cnt], NULL);
-                break;
-            case SYN_DELAY_US:
-                busy_wait_us_32(out[i].repeat);
-                break;
-            case SYN_DELAY_MS:
-                busy_wait_ms(out[i].repeat);
-                break;
-            case SYN_AUX_OUTPUT:
-                bio_output(out[i].bits);
-                bio_put((uint8_t)out[i].bits, (bool)out[i].out_data);
-                system_bio_claim(
-                    true,
-                    out[i].bits,
-                    BP_PIN_IO,
-                    labels[out[i].out_data]); // this should be moved to a cleanup function to reduce overhead
-                system_set_active(true, out[i].bits, &system_config.aux_active);
-                break;
-            case SYN_AUX_INPUT:
-                bio_input(out[i].bits);
-                in[in_cnt].in_data = bio_get(out[i].bits);
-                system_bio_claim(false, out[i].bits, BP_PIN_IO, 0);
-                system_set_active(false, out[i].bits, &system_config.aux_active);
-                break;
-            case SYN_ADC:
-                // sweep adc
-                in[in_cnt].in_data = amux_read_bio(out[i].bits);
-                break;
-            // case SYN_FREQ: break;
-            case SYN_TICK_CLOCK:
-                for (uint16_t j = 0; j < out[i].repeat; j++) {
-                    modes[system_config.mode].protocol_tick_clock(&in[in_cnt], NULL);
-                }
-                break;
-            case SYN_SET_CLK_HIGH:
-                modes[system_config.mode].protocol_clkh(&in[in_cnt], NULL);
-                break;
-            case SYN_SET_CLK_LOW:
-                modes[system_config.mode].protocol_clkl(&in[in_cnt], NULL);
-                break;
-            case SYN_SET_DAT_HIGH:
-                modes[system_config.mode].protocol_dath(&in[in_cnt], NULL);
-                break;
-            case SYN_SET_DAT_LOW:
-                modes[system_config.mode].protocol_datl(&in[in_cnt], NULL);
-                break;
-            case SYN_READ_DAT:
-                for (uint16_t j = 0; j < out[i].repeat; j++) {
-                    modes[system_config.mode].protocol_bitr(&in[in_cnt], NULL);
-                }
-                break;
-            default:
-                printf("Unknown internal code %d\r\n", out[i].command);
-                return true;
-                break;
+        if (in[current_command].command >= count_of(syntax_run_func)) {
+            printf("Unknown internal code %d\r\n", out[current_command].command);
+            return true;
         }
+
+        syntax_run_func[in[current_command].command](in, out, &in_cnt, current_command);
 
         if (in_cnt + 1 >= SYN_MAX_LENGTH) {
             in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);

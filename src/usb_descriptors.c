@@ -28,18 +28,15 @@
 #include "tusb.h"
 #include "pirate/mcu.h"
 
-/* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
- * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
+/*
+ * BusPirate has obtained two VID/PID combinations from https://pid.codes/.
+ * 0x1209 / 0x7331 - https://pid.codes/1209/7331/ - "Bus Pirate Next Gen CDC" 
+ * 0x1209 / 0x7332 - https://pid.codes/1209/7332/ - "Bus Pirate Next Gen Logic Analyzer"
  *
- * Auto ProductID layout's Bitmap:
- *   [MSB]         HID | MSC | CDC          [LSB]
+ * The firmware is hard-coded to use the first of these.
  */
-#define _PID_MAP(itf, n) ((CFG_TUD_##itf) << (n))
-//#define USB_PID  0x7332         /*(0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-                           _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )*/
 
 #define USB_BCD 0x0200
-// #define USB_VID   0x1209
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -260,7 +257,15 @@ uint8_t const* tud_descriptor_configuration_cb(uint8_t index) {
 char const* string_desc_arr[] = {
     (const char[]){ 0x09, 0x04 }, // 0: is supported language is English (0x0409)
     "Bus Pirate",                 // 1: Manufacturer
+#if (BP_VER == 5)
     "Bus Pirate 5",               // 2: Product
+#elif (BP_VER == XL5)
+    "Bus Pirate 5XL",             // 2: Product
+#elif (BP_VER == 6)
+    "Bus Pirate 6",               // 2: Product
+#else
+    #error "Unknown Bus Pirate version"
+#endif
     "5buspirate",                 // 3: Serial -- now using chip ID (serial port can be remembered per device)
     "Bus Pirate CDC",             // 4: CDC Interface
     "Bus Pirate MSC",             // 5: MSC Interface

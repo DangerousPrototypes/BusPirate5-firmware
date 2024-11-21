@@ -15,6 +15,29 @@
 #include "pirate/bio.h"
 #include "pirate/amux.h"
 
+//TODO: big cleanup...
+// Create a nice struct to pass around everything
+// divide into three or four files
+// use fancy pointers for everything 
+// some rational return codes instead of true/false
+
+//A. syntax begins with bus start [ or /
+//B. some kind of final byte before stop flag? look ahead?
+//1. Compile loop: process all commands to bytecode
+//2. Run loop: run the bytecode all at once
+//3. Post-process loop: process output into UI
+//mode commands:
+//start
+//stop
+//write
+//read
+//global commands:
+//delay
+//aux pins
+//adc
+//pwm?
+//freq?
+
 #define SYN_MAX_LENGTH 1024
 
 const struct command_attributes attributes_empty;
@@ -36,6 +59,31 @@ struct _output_info {
 
 void postprocess_mode_write(struct _bytecode* in, struct _output_info* info);
 void postprocess_format_print_number(struct _bytecode* in, uint32_t* value, bool read);
+
+struct _syntax_compile_commands_t{
+    char symbol;
+    uint8_t code;
+};
+
+const struct _syntax_compile_commands_t syntax_compile_commands[] = {
+    {'r', SYN_READ},
+    {'[', SYN_START},
+    {'{', SYN_START_ALT},
+    {']', SYN_STOP},
+    {'}', SYN_STOP_ALT},
+    {'d', SYN_DELAY_US},
+    {'D', SYN_DELAY_MS},
+    {'^', SYN_TICK_CLOCK},
+    {'/', SYN_SET_CLK_HIGH},
+    {'\\', SYN_SET_CLK_LOW},
+    {'_', SYN_SET_DAT_LOW},
+    {'-', SYN_SET_DAT_HIGH},
+    {'.', SYN_READ_DAT},
+    {'a', SYN_AUX_OUTPUT},
+    {'A', SYN_AUX_OUTPUT},
+    {'@', SYN_AUX_INPUT},
+    {'v', SYN_ADC}
+};
 
 bool syntax_compile(void) {
     uint32_t pos = 0;
@@ -76,7 +124,6 @@ bool syntax_compile(void) {
             out[out_cnt].command = SYN_WRITE;
             out[out_cnt].number_format = result.number_format;
             goto compiler_get_attributes;
-
         }
         
         //if string, parse it
@@ -87,17 +134,14 @@ bool syntax_compile(void) {
             i = 0;
             while (cmdln_try_peek(i, &c)) {
                 if (c == '"') {
-                    error = false;
-                    break;
+                    goto compile_get_string;
                 }
                 i++;
             }
+            printf("Error: string missing terminating '\"'");
+            return true;
 
-            if (error) {
-                printf("Error: string missing terminating '\"'");
-                return true;
-            }
-
+compile_get_string:
             if((out_cnt+i)>=SYN_MAX_LENGTH){
                 printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
                 return true;
@@ -117,72 +161,19 @@ bool syntax_compile(void) {
             continue;
         } 
         
-        uint8_t cmd;
-        switch (c) {
-            case 'r':
-                cmd = SYN_READ;
-                break; // read
-            case '[':
-                cmd = SYN_START;
-                break; // start //system_config.write_with_read=false;
-            case '{':
-                cmd = SYN_START_ALT;
-                break; // start with read write //system_config.write_with_read=true;
-            case ']':
-                cmd = SYN_STOP;
-                break; // stop
-            case '}':
-                cmd = SYN_STOP_ALT;
-                break; // stop
-            case 'd':
-                cmd = SYN_DELAY_US;
-                break; // delay us
-            case 'D':
-                cmd = SYN_DELAY_MS;
-                break; // delay ms
-            case '^':
-                cmd = SYN_TICK_CLOCK;
-                break; // tick clock
-            case '/':
-                cmd = SYN_SET_CLK_HIGH;
-                break; // set clk high
-            case '\\':
-                cmd = SYN_SET_CLK_LOW;
-                break; // set clk low
-            case '_':
-                cmd = SYN_SET_DAT_LOW;
-                break; // set dat low
-            case '-':
-                cmd = SYN_SET_DAT_HIGH;
-                break; // set dat high
-            case '.':
-                cmd = SYN_READ_DAT;
-                break; // read bit
-            case 'a':
-                cmd = SYN_AUX_OUTPUT;
-                out[out_cnt].out_data = 0;
-                break; // aux low
-            case 'A':
-                cmd = SYN_AUX_OUTPUT;
-                out[out_cnt].out_data = 1;
-                break; // aux HIGH
-            case '@':
-                cmd = SYN_AUX_INPUT;
-                break; // aux INPUT
-            case 'v':
-                cmd = SYN_ADC;
-                break; // voltage report once
-            // case 'f': cmd=SYN_FREQ; break; //measure frequency once
-            default:
-                printf("Unknown syntax '%c' at position %d\r\n", c, pos);
-                return true;
-                break;
+        uint8_t cmd=0xff;
+        for (i = 0; i < count_of(syntax_compile_commands); i++) {
+            if (c == syntax_compile_commands[i].symbol) {
+                out[out_cnt].command  = syntax_compile_commands[i].code;
+                // parsing an int value from the command line sets the pointer to the next value
+                // if it's another command, we need to do that manually now to keep the pointer
+                // where the next parsing function expects it
+                cmdln_try_discard(1);
+                goto compiler_get_attributes;
+            }
         }
-        out[out_cnt].command = cmd;
-        // parsing an int value from the command line sets the pointer to the next value
-        // if it's another command, we need to do that manually now to keep the pointer
-        // where the next parsing function expects it
-        cmdln_try_discard(1);
+        printf("Unknown syntax '%c' at position %d\r\n", c, pos);
+        return true;     
 
 compiler_get_attributes:
 
@@ -721,42 +712,3 @@ void postprocess_format_print_number(struct _bytecode* in, uint32_t* value, bool
     // printf("\r\n");
 }
 
-/*
-//A. syntax begins with bus start [ or /
-//B. some kind of final byte before stop flag? look ahead?
-//1. Compile loop: process all commands to bytecode
-//2. Run loop: run the bytecode all at once
-//3. Post-process loop: process output into UI
-
-//mode commands:
-//start
-//stop
-//write
-//read
-
-//global commands
-//delay
-//aux pins
-//adc
-//pwm?
-//freq?
-
-struct __attribute__((packed, aligned(sizeof(uint64_t)))) _bytecode_output{
-    uint8_t command; //255 command options
-    uint8_t bits; //0-32 bits?
-    uint16_t repeat; //0-0xffff repeat
-    uint32_t data; //32 data bits
-};
-
-
-//need a way to generate multiple results from a single repeated command
-//track by command ID? sequence number?
-//struct _bytecode_result{
-//    uint8_t error;   // mode flags errors. Bits to halt execution / warnings? (w/config override?)
-//    uint8_t command; // copied from above for post-process
-//    uint8_t bits;    //copied from above for post-process
-//    uint16_t repeat; //copied from above for post-process
-//    uint32_t data; //copied from above for post-process
-//    uint32_t result; //up to 32bits results? BUT: how to deal with repeated reads????
-//}
-*/

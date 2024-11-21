@@ -13,10 +13,18 @@ struct _bytecode {
 
     const char* error_message;
     const char* data_message;
+    // The following fields appear to be overloaded by the individual protocols.  Thus,
+    // they have NO DEFINED MEANING outside of the protocol-specific convention, which
+    // is allowed to vary between protocols.
+    //
+    // As one example, HWLED protocol uses only the `out_data` field, and even then,
+    // the value stored depends on the protocol:
+    //     * WS2812: 24 least significant bits: RGB value (top 8 bits are forced to be zero before used).
+    //     * APA102: 24 least significant bits: RGB value (top 8 bits are currently forced to 0xFF for full-brightness).
     uint32_t bits;     // 0-32 bits?
     uint32_t repeat;   // 0-0xffff repeat
-    uint32_t out_data; // 32 data bits
-    uint32_t in_data;  // up to 32bits results? BUT: how to deal with repeated reads????
+    uint32_t out_data; // 32 data bits (to be sent over wire(s))
+    uint32_t in_data;  // 32 data bits (read from the wire(s))
 };
 static_assert(
     sizeof(struct _bytecode) <= 28,

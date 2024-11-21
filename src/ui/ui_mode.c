@@ -69,7 +69,12 @@ void ui_mode_enable_args(struct command_result* res) {
     modes[system_config.mode].protocol_cleanup();   // switch to HiZ
     modes[0].protocol_setup_exc();                  // disables power suppy etc.
     system_config.mode = mode;                      // setup the new mode
-    modes[system_config.mode].protocol_setup_exc(); // execute the mode setup
+    if(!modes[system_config.mode].protocol_setup_exc()){ // execute the mode setup
+        printf("\r\nFailed to setup mode %s", modes[system_config.mode].protocol_name);
+        //something went wrong
+        modes[0].protocol_setup_exc();
+        system_config.mode = 0;
+    }
     fala_mode_change_hook();                        // notify follow along logic analyzer of new frequency
 
     if (system_config.mode == 0) { // TODO: do something to show the mode (LED? LCD?)

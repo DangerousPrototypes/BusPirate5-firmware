@@ -57,18 +57,11 @@ bool syntax_compile(void) {
         pin_func[i - 1] = system_config.pin_func[i]; //=BP_PIN_IO;
     }
 
-    if (cmdln_try_peek(0, &c)) {
-        if (c == '>') {
-            cmdln_try_discard(1);
-        }
-        pos++;
-    }
-
     while (cmdln_try_peek(0, &c)) {
         pos++;
 
-        if (c <= ' ' || c > '~') {
-            // out of ascii range
+        if (c <= ' ' || c > '~' || c =='>') {
+            // out of ascii range, or > syntax indication character
             cmdln_try_discard(1);
             continue;
         }
@@ -80,18 +73,14 @@ bool syntax_compile(void) {
                 printf("Error parsing integer at position %d\r\n", pos);
                 return true;
             }
-            // if(system_config.write_with_read)
-            //{
-            // out[out_cnt].command=SYN_START_ALT;
-            //}
-            // else
-            //{
             out[out_cnt].command = SYN_WRITE;
-            //}
-
             out[out_cnt].number_format = result.number_format;
+            goto compiler_get_attributes;
 
-        } else if (c == '"') {
+        }
+        
+        //if string, parse it
+        if (c == '"') {
             cmdln_try_remove(&c); // remove "
             // sanity check! is there a terminating "?
             error = true;
@@ -109,111 +98,93 @@ bool syntax_compile(void) {
                 return true;
             }
 
-            uint8_t k, row_length;
-            k = row_length = 8;
-
-            // attributes->has_string=true; //show ASCII chars
-            // attributes->number_format=df_hex; //force hex display
+            if((out_cnt+i)>=SYN_MAX_LENGTH){
+                printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
+                return true;
+            }            
 
             while (i--) {
                 cmdln_try_remove(&c);
-                // if(system_config.write_with_read)
-                //{
-                // out[out_cnt].command=SYN_START_ALT;
-                //}
-                // else
-                //{
                 out[out_cnt].command = SYN_WRITE;
-                //}
-
                 out[out_cnt].out_data = c;
                 out[out_cnt].has_repeat = false;
                 out[out_cnt].repeat = 1;
                 out[out_cnt].number_format = df_ascii;
                 out[out_cnt].bits = system_config.num_bits;
-
                 out_cnt++;
-
-                /*if(out_cnt>=SYN_MAX_LENGTH)
-                {
-                    printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
-                    return true;
-                } */
             }
-
             cmdln_try_remove(&c); // consume the final "
             continue;
-        } else {
-            uint8_t cmd;
-
-            switch (c) {
-                case 'r':
-                    cmd = SYN_READ;
-                    break; // read
-                case '[':
-                    cmd = SYN_START;
-                    break; // start //system_config.write_with_read=false;
-                case '{':
-                    cmd = SYN_START_ALT;
-                    break; // start with read write //system_config.write_with_read=true;
-                case ']':
-                    cmd = SYN_STOP;
-                    break; // stop
-                case '}':
-                    cmd = SYN_STOP_ALT;
-                    break; // stop
-                case 'd':
-                    cmd = SYN_DELAY_US;
-                    break; // delay us
-                case 'D':
-                    cmd = SYN_DELAY_MS;
-                    break; // delay ms
-                case '^':
-                    cmd = SYN_TICK_CLOCK;
-                    break; // tick clock
-                case '/':
-                    cmd = SYN_SET_CLK_HIGH;
-                    break; // set clk high
-                case '\\':
-                    cmd = SYN_SET_CLK_LOW;
-                    break; // set clk low
-                case '_':
-                    cmd = SYN_SET_DAT_LOW;
-                    break; // set dat low
-                case '-':
-                    cmd = SYN_SET_DAT_HIGH;
-                    break; // set dat high
-                case '.':
-                    cmd = SYN_READ_DAT;
-                    break; // read bit
-                case 'a':
-                    cmd = SYN_AUX_OUTPUT;
-                    out[out_cnt].out_data = 0;
-                    break; // aux low
-                case 'A':
-                    cmd = SYN_AUX_OUTPUT;
-                    out[out_cnt].out_data = 1;
-                    break; // aux HIGH
-                case '@':
-                    cmd = SYN_AUX_INPUT;
-                    break; // aux INPUT
-                case 'v':
-                    cmd = SYN_ADC;
-                    break; // voltage report once
-                // case 'f': cmd=SYN_FREQ; break; //measure frequency once
-                default:
-                    printf("Unknown syntax '%c' at position %d\r\n", c, pos);
-                    return true;
-                    break;
-            }
-
-            out[out_cnt].command = cmd;
-
-            // parsing an int value from the command line sets the pointer to the next value
-            // if it's another command, we need to do that manually now to keep the pointer
-            // where the next parsing function expects it
-            cmdln_try_discard(1);
+        } 
+        
+        uint8_t cmd;
+        switch (c) {
+            case 'r':
+                cmd = SYN_READ;
+                break; // read
+            case '[':
+                cmd = SYN_START;
+                break; // start //system_config.write_with_read=false;
+            case '{':
+                cmd = SYN_START_ALT;
+                break; // start with read write //system_config.write_with_read=true;
+            case ']':
+                cmd = SYN_STOP;
+                break; // stop
+            case '}':
+                cmd = SYN_STOP_ALT;
+                break; // stop
+            case 'd':
+                cmd = SYN_DELAY_US;
+                break; // delay us
+            case 'D':
+                cmd = SYN_DELAY_MS;
+                break; // delay ms
+            case '^':
+                cmd = SYN_TICK_CLOCK;
+                break; // tick clock
+            case '/':
+                cmd = SYN_SET_CLK_HIGH;
+                break; // set clk high
+            case '\\':
+                cmd = SYN_SET_CLK_LOW;
+                break; // set clk low
+            case '_':
+                cmd = SYN_SET_DAT_LOW;
+                break; // set dat low
+            case '-':
+                cmd = SYN_SET_DAT_HIGH;
+                break; // set dat high
+            case '.':
+                cmd = SYN_READ_DAT;
+                break; // read bit
+            case 'a':
+                cmd = SYN_AUX_OUTPUT;
+                out[out_cnt].out_data = 0;
+                break; // aux low
+            case 'A':
+                cmd = SYN_AUX_OUTPUT;
+                out[out_cnt].out_data = 1;
+                break; // aux HIGH
+            case '@':
+                cmd = SYN_AUX_INPUT;
+                break; // aux INPUT
+            case 'v':
+                cmd = SYN_ADC;
+                break; // voltage report once
+            // case 'f': cmd=SYN_FREQ; break; //measure frequency once
+            default:
+                printf("Unknown syntax '%c' at position %d\r\n", c, pos);
+                return true;
+                break;
         }
+        out[out_cnt].command = cmd;
+        // parsing an int value from the command line sets the pointer to the next value
+        // if it's another command, we need to do that manually now to keep the pointer
+        // where the next parsing function expects it
+        cmdln_try_discard(1);
+
+compiler_get_attributes:
 
         if (ui_parse_get_dot(&out[out_cnt].bits)) {
             out[out_cnt].has_bits = true;
@@ -231,7 +202,7 @@ bool syntax_compile(void) {
 
         if (out[out_cnt].command >= SYN_AUX_OUTPUT) {
             if (out[out_cnt].has_bits == false) {
-                printf("Error: missing IO number for command %c at position %d. Try %c.0[0xff\r\n", c, pos);
+                printf("Error: missing IO number for command %c at position %d. Try %c.0\r\n", c, pos);
                 return true;
             }
 
@@ -249,11 +220,8 @@ bool syntax_compile(void) {
                        ui_term_color_reset(),
                        pos,
                        out[out_cnt].bits);
-                // printf("IO%d already in use. Error at position %d\r\n",c,pos);
                 return true;
             }
-
-            // pin_func[out[out_cnt].bits]=cmd;
             // AUX high and low need to set function until changed to read again...
         }
 
@@ -277,7 +245,7 @@ bool syntax_compile(void) {
     return false;
 }
 
-typedef void (*syntax_func_ptr_t)(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command );
+typedef void (*syntax_run_func_ptr_t)(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command );
 
 void syntax_run_write(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
     if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
@@ -386,7 +354,7 @@ void syntax_run_read_dat(struct _bytecode* in, struct _bytecode* out, uint32_t* 
 }
 
 //a struct of function pointers to run the commands
-syntax_func_ptr_t syntax_run_func[]={
+syntax_run_func_ptr_t syntax_run_func[]={
     [SYN_WRITE]=syntax_run_write,
     [SYN_READ]=syntax_run_read,
     [SYN_START]=syntax_run_start,
@@ -442,138 +410,149 @@ bool syntax_run(void) {
     return false;
 }
 
+
+void syntax_post_write(struct _bytecode* in, struct _output_info* info) {
+    postprocess_mode_write(&in[i], &info);
+}
+
+void syntax_post_delay_us_ms(struct _bytecode* in, struct _output_info* info) {
+    printf("\r\n%s%s:%s %s%d%s%s",
+              ui_term_color_notice(),   
+                GET_T(T_MODE_DELAY),
+                ui_term_color_reset(),
+                ui_term_color_num_float(),
+                in[i].repeat,
+                ui_term_color_reset(),
+                (in[i].command == SYN_DELAY_US ? GET_T(T_MODE_US) : GET_T(T_MODE_MS)));
+}
+
+void syntax_post_read(struct _bytecode* in, struct _output_info* info) {
+    postprocess_mode_write(&in[i], &info);
+}
+
+void syntax_post_start_stop(struct _bytecode* in, struct _output_info* info) {
+    if (in[i].data_message) {
+        printf("\r\n%s", in[i].data_message);
+    }
+}
+
+void syntax_post_aux_output(struct _bytecode* in, struct _output_info* info) {
+    printf("\r\nIO%s%d%s set to%s OUTPUT: %s%d%s",
+              ui_term_color_num_float(),
+                in[i].bits,
+                ui_term_color_notice(),
+                ui_term_color_reset(),
+                ui_term_color_num_float(),
+                (in[i].out_data),
+                ui_term_color_reset());
+}
+
+void syntax_post_aux_input(struct _bytecode* in, struct _output_info* info) {
+    printf("\r\nIO%s%d%s set to%s INPUT: %s%d%s",
+              ui_term_color_num_float(),
+                in[i].bits,
+                ui_term_color_notice(),
+                ui_term_color_reset(),
+                ui_term_color_num_float(),
+                in[i].in_data,
+                ui_term_color_reset());
+}
+
+void syntax_post_adc(struct _bytecode* in, struct _output_info* info) {
+    uint32_t received = (6600 * in[i].in_data) / 4096;
+    printf("\r\n%s%s IO%d:%s %s%d.%d%sV",
+              ui_term_color_info(),
+                GET_T(T_MODE_ADC_VOLTAGE),
+                in[i].bits,
+                ui_term_color_reset(),
+                ui_term_color_num_float(),
+                ((received) / 1000),
+                (((received) % 1000) / 100),
+                ui_term_color_reset());
+}
+
+void syntax_post_tick_clock(struct _bytecode* in, struct _output_info* info) {
+    printf("\r\n%s%s:%s %s%d%s",
+                ui_term_color_notice(),
+                GET_T(T_MODE_TICK_CLOCK),
+                ui_term_color_reset(),
+                ui_term_color_num_float(),
+                in[i].repeat,
+                ui_term_color_reset());
+}
+
+void syntax_post_set_clk_high_low(struct _bytecode* in, struct _output_info* info) {
+    printf("\r\n%s%s:%s %s%d%s",
+                ui_term_color_notice(),
+                GET_T(T_MODE_SET_CLK),
+                ui_term_color_reset(),
+                ui_term_color_num_float(),
+                in[i].out_data,
+                ui_term_color_reset());
+}
+
+void syntax_post_set_dat_high_low(struct _bytecode* in, struct _output_info* info) {
+    printf("\r\n%s%s:%s %s%d%s",
+                ui_term_color_notice(),
+                GET_T(T_MODE_SET_DAT),
+                ui_term_color_reset(),
+                ui_term_color_num_float(),
+                in[i].out_data,
+                ui_term_color_reset());
+} 
+
+void syntax_post_read_dat(struct _bytecode* in, struct _output_info* info) {
+    printf("\r\n%s%s:%s %s%d%s",
+                ui_term_color_notice(),
+                GET_T(T_MODE_READ_DAT),
+                ui_term_color_reset(),
+                ui_term_color_num_float(),
+                in[i].in_data,
+                ui_term_color_reset());
+}
+
+typedef void (*syntax_post_func_ptr_t)(struct _bytecode* in, struct _output_info* info);
+
+syntax_post_func_ptr_t syntax_post_func[] = {
+    [SYN_WRITE] = syntax_post_write,
+    [SYN_READ] = syntax_post_read,
+    [SYN_START] = syntax_post_start_stop,
+    [SYN_START_ALT] = syntax_post_start_stop,
+    [SYN_STOP] = syntax_post_start_stop,
+    [SYN_STOP_ALT] = syntax_post_start_stop,
+    [SYN_DELAY_US] = syntax_post_delay_us_ms,
+    [SYN_DELAY_MS] = syntax_post_delay_us_ms,
+    [SYN_AUX_OUTPUT] = syntax_post_aux_output,
+    [SYN_AUX_INPUT] = syntax_post_aux_input,
+    [SYN_ADC] = syntax_post_adc,
+    [SYN_TICK_CLOCK] = syntax_post_tick_clock,
+    [SYN_SET_CLK_HIGH] = syntax_post_set_clk_high_low,
+    [SYN_SET_CLK_LOW] = syntax_post_set_clk_high_low,
+    [SYN_SET_DAT_HIGH] = syntax_post_set_dat_high_low,
+    [SYN_SET_DAT_LOW] = syntax_post_set_dat_high_low,
+    [SYN_READ_DAT] = syntax_post_read_dat
+};
+
+
+
 bool syntax_post(void) {
-    uint32_t i, received;
+    uint32_t current_command, received;
     static struct _output_info info;
 
-    if (!in_cnt) {
-        return true;
-    }
-
+    if (!in_cnt) return true;
+    
     info.previous_command = 0xff; // set invalid command so output display works
-
-    for (i = 0; i < in_cnt; i++) {
-        switch (in[i].command) {
-            case SYN_WRITE:
-                postprocess_mode_write(&in[i], &info);
-                // printf("write %d\r\n",&in[i]);
-                break;
-            case SYN_DELAY_US:
-            case SYN_DELAY_MS:
-                printf("\r\n%s%s:%s %s%d%s%s",
-                       ui_term_color_notice(),
-                       GET_T(T_MODE_DELAY),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       in[i].repeat,
-                       ui_term_color_reset(),
-                       (in[i].command == SYN_DELAY_US ? GET_T(T_MODE_US) : GET_T(T_MODE_MS)));
-                break;
-            case SYN_READ:
-                postprocess_mode_write(&in[i], &info);
-                break;
-            case SYN_START:
-            case SYN_START_ALT:
-            case SYN_STOP:
-            case SYN_STOP_ALT:
-                if (in[i].data_message) {
-                    printf("\r\n%s", in[i].data_message);
-                }
-                break;
-            case SYN_AUX_OUTPUT:
-                printf("\r\nIO%s%d%s set to%s OUTPUT: %s%d%s",
-                       ui_term_color_num_float(),
-                       in[i].bits,
-                       ui_term_color_notice(),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       (in[i].out_data),
-                       ui_term_color_reset());
-                break;
-            case SYN_AUX_INPUT:
-                printf("\r\nIO%s%d%s set to%s INPUT: %s%d%s",
-                       ui_term_color_num_float(),
-                       in[i].bits,
-                       ui_term_color_notice(),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       in[i].in_data,
-                       ui_term_color_reset());
-                break;
-            case SYN_ADC:
-                received = (6600 * in[i].in_data) / 4096;
-                printf("\r\n%s%s IO%d:%s %s%d.%d%sV",
-                       ui_term_color_info(),
-                       GET_T(T_MODE_ADC_VOLTAGE),
-                       in[i].bits,
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       ((received) / 1000),
-                       (((received) % 1000) / 100),
-                       ui_term_color_reset());
-                break;
-                // case SYN_FREQ:
-
-                // break;
-            case SYN_TICK_CLOCK:
-                printf("\r\n%s%s:%s %s%d%s",
-                       ui_term_color_notice(),
-                       GET_T(T_MODE_TICK_CLOCK),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       in[i].repeat,
-                       ui_term_color_reset());
-                break;
-            case SYN_SET_CLK_HIGH:
-                printf("\r\n%s%s:%s %s1%s",
-                       ui_term_color_notice(),
-                       GET_T(T_MODE_SET_CLK),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       ui_term_color_reset());
-                break;
-            case SYN_SET_CLK_LOW:
-                printf("\r\n%s%s:%s %s0%s",
-                       ui_term_color_notice(),
-                       GET_T(T_MODE_SET_CLK),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       ui_term_color_reset());
-                break;
-            case SYN_SET_DAT_HIGH:
-                printf("\r\n%s%s:%s %s1%s",
-                       ui_term_color_notice(),
-                       GET_T(T_MODE_SET_DAT),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       ui_term_color_reset());
-                break;
-            case SYN_SET_DAT_LOW:
-                printf("\r\n%s%s:%s %s0%s",
-                       ui_term_color_notice(),
-                       GET_T(T_MODE_SET_DAT),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       ui_term_color_reset());
-                break;
-            case SYN_READ_DAT:
-                printf("\r\n%s%s:%s %s%d%s",
-                       ui_term_color_notice(),
-                       GET_T(T_MODE_READ_DAT),
-                       ui_term_color_reset(),
-                       ui_term_color_num_float(),
-                       in[i].in_data,
-                       ui_term_color_reset());
-                break;
-            default:
-                printf("\r\nUnimplemented command '%c'", in[i].command + 0x30);
-                // return true;
-                break;
+    for (current_command = 0; current_command < in_cnt; current_command++) {
+        if (in[current_command].command >= count_of(syntax_post_func)) {
+            printf("Unknown internal code %d\r\n", in[current_command].command);
+            continue;
         }
-        info.previous_command = in[i].command;
 
-        if (in[i].error) {
-            printf(" (%s)", in[i].error_message);
+        syntax_post_func[in[current_command].command](&in[current_command], &info);
+        info.previous_command = in[current_command].command;
+
+        if (in[current_command].error) {
+            printf(" (%s)", in[current_command].error_message);
         }
     }
     printf("\r\n");

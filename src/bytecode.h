@@ -51,12 +51,17 @@ struct _bytecode_result {
     const char* message;
 };
 
-enum SYNTAX_RESULT {
-    SRES_NONE = 0,
-    SRES_DEBUG,
-    SRES_INFO,
-    SRES_WARN,
-    SRES_ERROR
+typedef enum {
+    SSTATUS_OK,
+    SSTATUS_ERROR
+} SYNTAX_STATUS;
+
+enum SYNTAX_ERRORS {
+    SERR_NONE = 0,
+    SERR_DEBUG,
+    SERR_INFO,
+    SERR_WARN,
+    SERR_ERROR
 };
 
 enum SYNTAX {

@@ -37,32 +37,18 @@
 //adc
 //pwm?
 //freq?
-
-struct _syntax_run syn_run[]={
-    SYN_WRITE=0,
-    SYN_START_ALT,
-    SYN_READ,
-    SYN_START,
-    SYN_STOP,
-    SYN_DELAY_US,
-    SYN_DELAY_MS,
-    SYN_AUX_LOW,
-    SYN_AUX_HIGH,
-    SYN_AUX_INPUT,
-    SYN_ADC,
-};
-
 #define SYN_MAX_LENGTH 1024
-/* TO DELETE?*/
-//const struct command_attributes attributes_empty;
-//const struct command_response response_empty;
-//struct command_attributes attributes;
 
-struct _bytecode out[SYN_MAX_LENGTH];
-struct _bytecode in[SYN_MAX_LENGTH];
-const struct _bytecode bytecode_empty;
-uint32_t out_cnt = 0;
-uint32_t in_cnt = 0;
+
+struct _syntax_io {
+    struct _bytecode out[SYN_MAX_LENGTH];
+    struct _bytecode in[SYN_MAX_LENGTH];
+    uint32_t out_cnt;
+    uint32_t in_cnt;
+} syntax_io = { .out_cnt = 0, .in_cnt = 0 };
+
+// empty bytecode for quick zero init
+const struct _bytecode bytecode_empty; 
 
 struct _output_info {
     uint8_t previous_command;
@@ -99,17 +85,17 @@ const struct _syntax_compile_commands_t syntax_compile_commands[] = {
     {'v', SYN_ADC}
 };
 
-bool syntax_compile(void) {
-    uint32_t pos = 0;
+SYNTAX_STATUS syntax_compile(void) {
+    uint32_t current_position = 0;
+    uint32_t generated_in_cnt = 0;
     uint32_t i;
     char c;
-    bool error = false;
-    uint32_t slot_cnt = 0;
-    out_cnt = 0;
-    in_cnt = 0;
+
+    syntax_io.out_cnt = 0;
+    syntax_io.in_cnt = 0;
     for (i = 0; i < SYN_MAX_LENGTH; i++) {
-        out[i] = bytecode_empty;
-        in[i] = bytecode_empty;
+        syntax_io.out[i] = bytecode_empty;
+        syntax_io.in[i] = bytecode_empty;
     }
 
     // we need to track pin functions to avoid blowing out any existing pins
@@ -120,7 +106,7 @@ bool syntax_compile(void) {
     }
 
     while (cmdln_try_peek(0, &c)) {
-        pos++;
+        current_position++;
 
         if (c <= ' ' || c > '~' || c =='>') {
             // out of ascii range, or > syntax indication character
@@ -131,13 +117,13 @@ bool syntax_compile(void) {
         // if number parse it
         if (c >= '0' && c <= '9') {
             struct prompt_result result;
-            ui_parse_get_int(&result, &out[out_cnt].out_data);
+            ui_parse_get_int(&result, &syntax_io.out[syntax_io.out_cnt].out_data);
             if (result.error) {
-                printf("Error parsing integer at position %d\r\n", pos);
-                return true;
+                printf("Error parsing integer at position %d\r\n", current_position);
+                return SSTATUS_ERROR;
             }
-            out[out_cnt].command = SYN_WRITE;
-            out[out_cnt].number_format = result.number_format;
+            syntax_io.out[syntax_io.out_cnt].command = SYN_WRITE;
+            syntax_io.out[syntax_io.out_cnt].number_format = result.number_format;
             goto compiler_get_attributes;
         }
         
@@ -148,36 +134,41 @@ bool syntax_compile(void) {
             i = 0;
             while (cmdln_try_peek(i, &c)) {
                 if (c == '"') {
-                    if((out_cnt+i)>=SYN_MAX_LENGTH){
+                    if((syntax_io.out_cnt+i)>=SYN_MAX_LENGTH){
                         printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
-                        return true;
+                        return SSTATUS_ERROR;
                     }      
                     goto compile_get_string;
                 }
                 i++;
             }
             printf("Error: string missing terminating '\"'");
-            return true;
+            return SSTATUS_ERROR;
 
 compile_get_string:
             while (i--) {
                 cmdln_try_remove(&c);
-                out[out_cnt].command = SYN_WRITE;
-                out[out_cnt].out_data = c;
-                out[out_cnt].has_repeat = false;
-                out[out_cnt].repeat = 1;
-                out[out_cnt].number_format = df_ascii;
-                out[out_cnt].bits = system_config.num_bits;
-                out_cnt++;
+                syntax_io.out[syntax_io.out_cnt].command = SYN_WRITE;
+                syntax_io.out[syntax_io.out_cnt].out_data = c;
+                syntax_io.out[syntax_io.out_cnt].has_repeat = false;
+                syntax_io.out[syntax_io.out_cnt].repeat = 1;
+                syntax_io.out[syntax_io.out_cnt].number_format = df_ascii;
+                syntax_io.out[syntax_io.out_cnt].bits = system_config.num_bits;
+                syntax_io.out_cnt++;
+                generated_in_cnt++;
             }
             cmdln_try_remove(&c); // consume the final "
+            if (generated_in_cnt >= SYN_MAX_LENGTH) {
+                printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
+                return SSTATUS_ERROR;
+            }
             continue;
         } 
         
         uint8_t cmd=0xff;
         for (i = 0; i < count_of(syntax_compile_commands); i++) {
             if (c == syntax_compile_commands[i].symbol) {
-                out[out_cnt].command  = syntax_compile_commands[i].code;
+                syntax_io.out[syntax_io.out_cnt].command  = syntax_compile_commands[i].code;
                 // parsing an int value from the command line sets the pointer to the next value
                 // if it's another command, we need to do that manually now to keep the pointer
                 // where the next parsing function expects it
@@ -185,68 +176,70 @@ compile_get_string:
                 goto compiler_get_attributes;
             }
         }
-        printf("Unknown syntax '%c' at position %d\r\n", c, pos);
-        return true;     
+        printf("Unknown syntax '%c' at position %d\r\n", c, current_position);
+        return SSTATUS_ERROR;     
 
 compiler_get_attributes:
 
-        if (ui_parse_get_dot(&out[out_cnt].bits)) {
-            out[out_cnt].has_bits = true;
+        if (ui_parse_get_dot(&syntax_io.out[syntax_io.out_cnt].bits)) {
+            syntax_io.out[syntax_io.out_cnt].has_bits = true;
         } else {
-            out[out_cnt].has_bits = false;
-            out[out_cnt].bits = system_config.num_bits;
+            syntax_io.out[syntax_io.out_cnt].has_bits = false;
+            syntax_io.out[syntax_io.out_cnt].bits = system_config.num_bits;
         }
 
-        if (ui_parse_get_colon(&out[out_cnt].repeat)) {
-            out[out_cnt].has_repeat = true;
+        if (ui_parse_get_colon(&syntax_io.out[syntax_io.out_cnt].repeat)) {
+            syntax_io.out[syntax_io.out_cnt].has_repeat = true;
         } else {
-            out[out_cnt].has_repeat = false;
-            out[out_cnt].repeat = 1;
+            syntax_io.out[syntax_io.out_cnt].has_repeat = false;
+            syntax_io.out[syntax_io.out_cnt].repeat = 1;
         }
 
-        if (out[out_cnt].command >= SYN_AUX_OUTPUT) {
-            if (out[out_cnt].has_bits == false) {
-                printf("Error: missing IO number for command %c at position %d. Try %c.0\r\n", c, pos);
-                return true;
+        if (syntax_io.out[syntax_io.out_cnt].command >= SYN_AUX_OUTPUT) {
+            if (syntax_io.out[syntax_io.out_cnt].has_bits == false) {
+                printf("Error: missing IO number for command %c at position %d. Try %c.0\r\n", c, current_position);
+                return SSTATUS_ERROR;
             }
 
-            if (out[out_cnt].bits >= count_of(bio2bufiopin)) {
+            if (syntax_io.out[syntax_io.out_cnt].bits >= count_of(bio2bufiopin)) {
                 printf("%sError:%s pin IO%d is invalid\r\n",
                        ui_term_color_error(),
                        ui_term_color_reset(),
-                       out[out_cnt].bits);
-                return true;
+                       syntax_io.out[syntax_io.out_cnt].bits);
+                return SSTATUS_ERROR;
             }
 
-            if (out[out_cnt].command != SYN_ADC && pin_func[out[out_cnt].bits] != BP_PIN_IO) {
+            if (syntax_io.out[syntax_io.out_cnt].command != SYN_ADC && pin_func[syntax_io.out[syntax_io.out_cnt].bits] != BP_PIN_IO) {
                 printf("%sError:%s at position %d IO%d is already in use\r\n",
                        ui_term_color_error(),
                        ui_term_color_reset(),
-                       pos,
-                       out[out_cnt].bits);
-                return true;
+                       current_position,
+                       syntax_io.out[syntax_io.out_cnt].bits);
+                return SSTATUS_ERROR;
             }
             // AUX high and low need to set function until changed to read again...
         }
 
-        if (out[out_cnt].command == SYN_DELAY_US || out[out_cnt].command == SYN_DELAY_MS ||
-            out[out_cnt].command == SYN_TICK_CLOCK) // delays repeat but don't take up slots
+        //track the number of "in" slots that will be used to avoid overflow
+        //TODO: this does not account for strings....
+        if (syntax_io.out[syntax_io.out_cnt].command == SYN_DELAY_US || syntax_io.out[syntax_io.out_cnt].command == SYN_DELAY_MS ||
+            syntax_io.out[syntax_io.out_cnt].command == SYN_TICK_CLOCK) // delays repeat but don't take up slots
         {
-            slot_cnt += 1;
+            generated_in_cnt += 1;
         } else {
-            slot_cnt += out[out_cnt].repeat;
+            generated_in_cnt += syntax_io.out[syntax_io.out_cnt].repeat;
         }
 
-        if (slot_cnt >= SYN_MAX_LENGTH) {
+        if (generated_in_cnt >= SYN_MAX_LENGTH) {
             printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
-            return true;
+            return SSTATUS_ERROR;
         }
 
-        out_cnt++;
+        syntax_io.out_cnt++;
     }
 
-    in_cnt = 0;
-    return false;
+    syntax_io.in_cnt = 0;
+    return SSTATUS_OK;
 }
 
 typedef void (*syntax_run_func_ptr_t)(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position );
@@ -254,7 +247,7 @@ typedef void (*syntax_run_func_ptr_t)(struct _bytecode* in, struct _bytecode* ou
 void syntax_run_write(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
         in[*in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
-        in[*in_cnt].error = SRES_ERROR;
+        in[*in_cnt].error = SERR_ERROR;
         return;
     }
     for (uint16_t j = 0; j < out->repeat; j++) {
@@ -269,7 +262,7 @@ void syntax_run_write(struct _bytecode* in, struct _bytecode* out, uint32_t* in_
 void syntax_run_read(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
         in[*in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
-        in[*in_cnt].error = SRES_ERROR;
+        in[*in_cnt].error = SERR_ERROR;
         return;
     }
     for (uint16_t j = 0; j < out->repeat; j++) {
@@ -378,40 +371,39 @@ syntax_run_func_ptr_t syntax_run_func[]={
     [SYN_READ_DAT]=syntax_run_read_dat
 };
 static const char labels[][5] = { "AUXL", "AUXH" };
-bool syntax_run(void) {
+SYNTAX_STATUS syntax_run(void) {
     uint32_t current_position;
 
-    if (!out_cnt) {
-        return true;
+    if (!syntax_io.out_cnt) return SSTATUS_ERROR;
+
+    syntax_io.in_cnt = 0;
+
+    for (current_position = 0; current_position < syntax_io.out_cnt; current_position++) {
+        syntax_io.in[syntax_io.in_cnt] = syntax_io.out[current_position];
+
+        if (syntax_io.in[current_position].command >= count_of(syntax_run_func)) {
+            printf("Unknown internal code %d\r\n", syntax_io.out[current_position].command);
+            return SSTATUS_ERROR;
+        }
+
+        syntax_run_func[syntax_io.in[current_position].command](in, out, &in_cnt, current_position);
+
+        if (syntax_io.in_cnt + 1 >= SYN_MAX_LENGTH) {
+            syntax_io.in[syntax_io.in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
+            syntax_io.in[syntax_io.in_cnt].error = SERR_ERROR;
+            return SSTATUS_OK; // halt execution, but let the post process show the error.
+        }
+
+        // this will pick up any errors from the void functions
+        if (syntax_io.in[syntax_io.in_cnt].error >= SERR_ERROR) {
+            syntax_io.in_cnt++; //is this needed?
+            return SSTATUS_OK; // halt execution, but let the post process show the error.
+        }
+
+        syntax_io.in_cnt++;
     }
 
-    in_cnt = 0;
-
-    for (current_position = 0; current_position < out_cnt; current_position++) {
-        in[in_cnt] = out[current_position];
-
-        if (in[current_position].command >= count_of(syntax_run_func)) {
-            printf("Unknown internal code %d\r\n", out[current_position].command);
-            return true;
-        }
-
-        syntax_run_func[in[current_position].command](in, out, &in_cnt, current_position);
-
-        if (in_cnt + 1 >= SYN_MAX_LENGTH) {
-            in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
-            in[in_cnt].error = SRES_ERROR;
-            return false;
-        }
-
-        if (in[in_cnt].error >= SRES_ERROR) {
-            in_cnt++;
-            return false; // halt execution, but let the post process show the error.
-        }
-
-        in_cnt++;
-    }
-
-    return false;
+    return SSTATUS_OK;
 }
 
 
@@ -537,29 +529,29 @@ syntax_post_func_ptr_t syntax_post_func[] = {
     [SYN_READ_DAT] = syntax_post_read_dat
 };
 
-bool syntax_post(void) {
+SYNTAX_STATUS syntax_post(void) {
     uint32_t current_position, received;
     static struct _output_info info;
 
-    if (!in_cnt) return true;
+    if (!syntax_io.in_cnt) return SSTATUS_ERROR;
     
     info.previous_command = 0xff; // set invalid command so output display works
-    for (current_position = 0; current_position < in_cnt; current_position++) {
-        if (in[current_position].command >= count_of(syntax_post_func)) {
-            printf("Unknown internal code %d\r\n", in[current_position].command);
+    for (current_position = 0; current_position < syntax_io.in_cnt; current_position++) {
+        if (syntax_io.in[current_position].command >= count_of(syntax_post_func)) {
+            printf("Unknown internal code %d\r\n", syntax_io.in[current_position].command);
             continue;
         }
 
-        syntax_post_func[in[current_position].command](&in[current_position], &info);
-        info.previous_command = in[current_position].command;
+        syntax_post_func[syntax_io.in[current_position].command](&syntax_io.in[current_position], &info);
+        info.previous_command = syntax_io.in[current_position].command;
 
-        if (in[current_position].error) {
-            printf(" (%s)", in[current_position].error_message);
+        if (syntax_io.in[current_position].error) {
+            printf(" (%s)", syntax_io.in[current_position].error_message);
         }
     }
     printf("\r\n");
-    in_cnt = 0;
-    return false;
+    syntax_io.in_cnt = 0;
+    return SSTATUS_OK;
 }
 
 void postprocess_mode_write(struct _bytecode* in, struct _output_info* info) {

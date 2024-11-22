@@ -294,7 +294,7 @@ void hwuart_read(struct _bytecode* result, struct _bytecode* next) {
     while (!uart_is_readable(M_UART_PORT)) {
         timeout--;
         if (!timeout) {
-            result->error = SRES_ERROR;
+            result->error = SERR_ERROR;
             result->error_message = GET_T(T_UART_NO_DATA_READ);
             return;
         }
@@ -304,7 +304,7 @@ void hwuart_read(struct _bytecode* result, struct _bytecode* next) {
     if (uart_is_readable(M_UART_PORT)) {
         result->in_data = uart_getc(M_UART_PORT);
     } else {
-        result->error = SRES_ERROR;
+        result->error = SERR_ERROR;
         result->error_message = GET_T(T_UART_NO_DATA_READ);
     }
     bio_put(M_UART_RTS, 1);

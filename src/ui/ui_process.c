@@ -23,17 +23,19 @@
 // const structs are init'd with 0s, we'll make them here and copy in the main loop
 static const struct command_result result_blank;
 
-bool ui_process_syntax(void) {
-    if (syntax_compile()) {
+SYNTAX_STATUS ui_process_syntax(void) {
+
+    SYNTAX_STATUS result = syntax_compile();
+    if (result !=SSTATUS_OK) {
         printf("Syntax compile error\r\n");
-        return true;
+        return result;
     }
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
 
     // follow along logic analyzer hook
     fala_start_hook();
 
-    bool error = syntax_run();
+    result = syntax_run();
 
     if (modes[system_config.mode].protocol_wait_done) {
         modes[system_config.mode].protocol_wait_done();
@@ -44,11 +46,11 @@ bool ui_process_syntax(void) {
 
     icm_core0_send_message_synchronous(BP_ICM_ENABLE_LCD_UPDATES);
 
-    if (error) {
+    if (result != SSTATUS_OK) {
         printf("Syntax execution error\r\n");
     } else {
-        error = syntax_post();
-        if (error) {
+        result = syntax_post();
+        if (result != SSTATUS_OK) {
             printf("Syntax post process error\r\n");
         }
     }
@@ -56,7 +58,7 @@ bool ui_process_syntax(void) {
     // follow along logic analyzer hook
     fala_notify_hook();
 
-    return error;
+    return result;
 }
 
 bool ui_process_macro(void) {
@@ -73,18 +75,12 @@ bool ui_process_macro(void) {
     return false;
 }
 
+//returns error = true or false
 bool ui_process_commands(void) {
     char c, d;
     struct _command_info_t cp;
     cp.nextptr = 0;
 
-    /*    cmdln_info();
-        cmdln_info_uint32();
-        command_var_t arg;
-        uint32_t value;
-        if(cmdln_args_find_flag_uint32('t', &arg, &value)) printf("Value -t: %d\r\n", value);
-
-        return false;*/
     while (true) {
         if (!cmdln_find_next_command(&cp)) {
             return false;
@@ -96,7 +92,7 @@ bool ui_process_commands(void) {
             case '{':
             case ']':
             case '}':
-                return ui_process_syntax(); // first character is { [ or >, process as syntax
+                return (ui_process_syntax()==SSTATUS_ERROR)?true:false; // first character is { [ or >, process as syntax
                 break;
             case '(':
                 return ui_process_macro(); // first character is (, mode macro
@@ -153,30 +149,15 @@ bool ui_process_commands(void) {
             if (modes[system_config.mode].mode_commands_count) {
                 for (int i = 0; i < *modes[system_config.mode].mode_commands_count; i++) {
                     if (strcmp(command_string, modes[system_config.mode].mode_commands[i].command) == 0) {
-                        //struct mode_command_t *cmd = &modes[system_config.mode].mode_commands[i];
                         user_cmd_id = i;
                         command_type = MODE;
-                        // mode help handler (optional, set config in modes command struct)
+                        // mode help handler
                         if (cmdln_args_find_flag('h')) {
                             // mode commands must supply their own help text
                             result.help_flag = true;
-                            // show auto short help
-                            /*if (modes[system_config.mode].mode_commands[user_cmd_id].allow_hiz &&
-                                (modes[system_config.mode].mode_commands[user_cmd_id].help_text != 0x00)) {
-                                printf("%s%s%s\r\n",
-                                       ui_term_color_info(),
-                                       GET_T(modes[system_config.mode].mode_commands[user_cmd_id].help_text),
-                                       ui_term_color_reset());
-                                return false;
-                            } else { // let app know we requested help
-                                result.help_flag = true;
-                            }*/
                         }
                         
                         //for all mode commands we run FALA, unless it is disabled
-                        //if(cmd->supress_fala_capture){
-                        //    fala_start_hook();
-                        //}
                         if(!modes[system_config.mode].mode_commands[user_cmd_id].supress_fala_capture){
                             fala_start_hook();
                         }

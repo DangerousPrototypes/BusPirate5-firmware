@@ -1,3 +1,3 @@
-bool syntax_compile(void);
-bool syntax_run(void);
-bool syntax_post(void);
+SYNTAX_STATUS syntax_compile(void);
+SYNTAX_STATUS syntax_run(void);
+SYNTAX_STATUS syntax_post(void);

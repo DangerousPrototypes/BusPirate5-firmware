@@ -62,7 +62,7 @@ void hw1wire_start(struct _bytecode* result, struct _bytecode* next) {
 
     if (bio_get(M_OW_OWD) == 0) {
         result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
-        result->error = SRES_WARN;
+        result->error = SERR_WARN;
     }
 #ifdef BP_OLD_HW1WIRE
     uint8_t device_detect = onewire_reset();
@@ -74,7 +74,7 @@ void hw1wire_start(struct _bytecode* result, struct _bytecode* next) {
         // result->error_message = GET_T(T_HW1WIRE_PRESENCE_DETECT);
     } else {
         result->error_message = GET_T(T_HW1WIRE_NO_DEVICE);
-        result->error = SRES_ERROR;
+        result->error = SERR_ERROR;
     }
 }
 

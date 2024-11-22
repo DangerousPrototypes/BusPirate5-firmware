@@ -84,7 +84,7 @@ void binloopback_read(struct _bytecode* result, struct _bytecode* next) {
     while (!bin_tx_fifo_try_get(&c)) {
         timeout--;
         if (!timeout) {
-            result->error = SRES_ERROR;
+            result->error = SERR_ERROR;
             result->error_message = GET_T(T_UART_NO_DATA_READ);
             return;
         }

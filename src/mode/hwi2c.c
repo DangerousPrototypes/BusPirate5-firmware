@@ -142,7 +142,7 @@ bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
     switch (error) {
         case HWI2C_TIMEOUT:
             result->error_message = GET_T(T_HWI2C_TIMEOUT);
-            result->error = SRES_ERROR;
+            result->error = SERR_ERROR;
             pio_i2c_resume_after_error();
             return true;
             break;
@@ -154,7 +154,7 @@ bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
 void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
     if (hwi2c_checkshort()) {
         result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
-        result->error = SRES_WARN;
+        result->error = SERR_WARN;
     }
 
     hwi2c_status_t i2c_status;

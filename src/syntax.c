@@ -38,12 +38,26 @@
 //pwm?
 //freq?
 
-#define SYN_MAX_LENGTH 1024
+struct _syntax_run syn_run[]={
+    SYN_WRITE=0,
+    SYN_START_ALT,
+    SYN_READ,
+    SYN_START,
+    SYN_STOP,
+    SYN_DELAY_US,
+    SYN_DELAY_MS,
+    SYN_AUX_LOW,
+    SYN_AUX_HIGH,
+    SYN_AUX_INPUT,
+    SYN_ADC,
+};
 
-const struct command_attributes attributes_empty;
-const struct command_response response_empty;
-struct command_attributes attributes;
-struct prompt_result result;
+#define SYN_MAX_LENGTH 1024
+/* TO DELETE?*/
+//const struct command_attributes attributes_empty;
+//const struct command_response response_empty;
+//struct command_attributes attributes;
+
 struct _bytecode out[SYN_MAX_LENGTH];
 struct _bytecode in[SYN_MAX_LENGTH];
 const struct _bytecode bytecode_empty;
@@ -116,6 +130,7 @@ bool syntax_compile(void) {
 
         // if number parse it
         if (c >= '0' && c <= '9') {
+            struct prompt_result result;
             ui_parse_get_int(&result, &out[out_cnt].out_data);
             if (result.error) {
                 printf("Error parsing integer at position %d\r\n", pos);
@@ -130,10 +145,13 @@ bool syntax_compile(void) {
         if (c == '"') {
             cmdln_try_remove(&c); // remove "
             // sanity check! is there a terminating "?
-            error = true;
             i = 0;
             while (cmdln_try_peek(i, &c)) {
                 if (c == '"') {
+                    if((out_cnt+i)>=SYN_MAX_LENGTH){
+                        printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
+                        return true;
+                    }      
                     goto compile_get_string;
                 }
                 i++;
@@ -142,11 +160,6 @@ bool syntax_compile(void) {
             return true;
 
 compile_get_string:
-            if((out_cnt+i)>=SYN_MAX_LENGTH){
-                printf("Syntax exceeds available space (%d slots)\r\n", SYN_MAX_LENGTH);
-                return true;
-            }            
-
             while (i--) {
                 cmdln_try_remove(&c);
                 out[out_cnt].command = SYN_WRITE;
@@ -236,9 +249,9 @@ compiler_get_attributes:
     return false;
 }
 
-typedef void (*syntax_run_func_ptr_t)(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command );
+typedef void (*syntax_run_func_ptr_t)(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position );
 
-void syntax_run_write(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_write(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
         in[*in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
         in[*in_cnt].error = SRES_ERROR;
@@ -253,7 +266,7 @@ void syntax_run_write(struct _bytecode* in, struct _bytecode* out, uint32_t* in_
     }
 }
 
-void syntax_run_read(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_read(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
         in[*in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
         in[*in_cnt].error = SRES_ERROR;
@@ -265,81 +278,81 @@ void syntax_run_read(struct _bytecode* in, struct _bytecode* out, uint32_t* in_c
             in[*in_cnt] = *out;
         }
         modes[system_config.mode].protocol_read(
-            &in[*in_cnt], (current_command + 1 < out_cnt && j + 1 == out[current_command].repeat) ? &out[current_command + 1] : NULL);
+            &in[*in_cnt], (current_position + 1 < out_cnt && j + 1 == out[current_position].repeat) ? &out[current_position + 1] : NULL);
     }
 }
 
-void syntax_run_start(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_start(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     modes[system_config.mode].protocol_start(&in[*in_cnt], NULL);
 }
 
-void syntax_run_start_alt(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_start_alt(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     modes[system_config.mode].protocol_start_alt(&in[*in_cnt], NULL);
 }
 
-void syntax_run_stop(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_stop(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     modes[system_config.mode].protocol_stop(&in[*in_cnt], NULL);
 }
 
-void syntax_run_stop_alt(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_stop_alt(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     modes[system_config.mode].protocol_stop_alt(&in[*in_cnt], NULL);
 }
 
-void syntax_run_delay_us(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
-    busy_wait_us_32(out[current_command].repeat);
+void syntax_run_delay_us(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
+    busy_wait_us_32(out[current_position].repeat);
 }
 
-void syntax_run_delay_ms(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
-    busy_wait_ms(out[current_command].repeat);
+void syntax_run_delay_ms(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
+    busy_wait_ms(out[current_position].repeat);
 }
 
-void syntax_run_aux_output(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
-    bio_output(out[current_command].bits);
-    bio_put((uint8_t)out[current_command].bits, (bool)out[current_command].out_data);
+void syntax_run_aux_output(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
+    bio_output(out[current_position].bits);
+    bio_put((uint8_t)out[current_position].bits, (bool)out[current_position].out_data);
     system_bio_claim(
         true,
-        out[current_command].bits,
+        out[current_position].bits,
         BP_PIN_IO,
-        labels[out[current_command].out_data]); // this should be moved to a cleanup function to reduce overhead
-    system_set_active(true, out[current_command].bits, &system_config.aux_active);
+        labels[out[current_position].out_data]); // this should be moved to a cleanup function to reduce overhead
+    system_set_active(true, out[current_position].bits, &system_config.aux_active);
 }
 
-void syntax_run_aux_input(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
-    bio_input(out[current_command].bits);
-    in[*in_cnt].in_data = bio_get(out[current_command].bits);
-    system_bio_claim(false, out[current_command].bits, BP_PIN_IO, 0);
-    system_set_active(false, out[current_command].bits, &system_config.aux_active);  
+void syntax_run_aux_input(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
+    bio_input(out[current_position].bits);
+    in[*in_cnt].in_data = bio_get(out[current_position].bits);
+    system_bio_claim(false, out[current_position].bits, BP_PIN_IO, 0);
+    system_set_active(false, out[current_position].bits, &system_config.aux_active);  
 }
 
-void syntax_run_adc(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
-    in[*in_cnt].in_data = amux_read_bio(out[current_command].bits);
+void syntax_run_adc(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
+    in[*in_cnt].in_data = amux_read_bio(out[current_position].bits);
 }
 
-void syntax_run_tick_clock(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
-    for (uint16_t j = 0; j < out[current_command].repeat; j++) {
+void syntax_run_tick_clock(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
+    for (uint16_t j = 0; j < out[current_position].repeat; j++) {
         modes[system_config.mode].protocol_tick_clock(&in[*in_cnt], NULL);
     }
 }
 
-void syntax_run_set_clk_high(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_set_clk_high(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     modes[system_config.mode].protocol_clkh(&in[*in_cnt], NULL);
 }
 
-void syntax_run_set_clk_low(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_set_clk_low(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     modes[system_config.mode].protocol_clkl(&in[*in_cnt], NULL);
 }
 
-void syntax_run_set_dat_high(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_set_dat_high(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     modes[system_config.mode].protocol_dath(&in[*in_cnt], NULL);
 }
 
-void syntax_run_set_dat_low(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_set_dat_low(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     modes[system_config.mode].protocol_datl(&in[*in_cnt], NULL);
 }
 
-void syntax_run_read_dat(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_command) {
+void syntax_run_read_dat(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
     //TODO: reality check out slots, actually repeat the read?
-    for (uint16_t j = 0; j < out[current_command].repeat; j++) {
+    for (uint16_t j = 0; j < out[current_position].repeat; j++) {
         modes[system_config.mode].protocol_bitr(&in[*in_cnt], NULL);
     }
 }
@@ -366,7 +379,7 @@ syntax_run_func_ptr_t syntax_run_func[]={
 };
 static const char labels[][5] = { "AUXL", "AUXH" };
 bool syntax_run(void) {
-    uint32_t current_command;
+    uint32_t current_position;
 
     if (!out_cnt) {
         return true;
@@ -374,15 +387,15 @@ bool syntax_run(void) {
 
     in_cnt = 0;
 
-    for (current_command = 0; current_command < out_cnt; current_command++) {
-        in[in_cnt] = out[current_command];
+    for (current_position = 0; current_position < out_cnt; current_position++) {
+        in[in_cnt] = out[current_position];
 
-        if (in[current_command].command >= count_of(syntax_run_func)) {
-            printf("Unknown internal code %d\r\n", out[current_command].command);
+        if (in[current_position].command >= count_of(syntax_run_func)) {
+            printf("Unknown internal code %d\r\n", out[current_position].command);
             return true;
         }
 
-        syntax_run_func[in[current_command].command](in, out, &in_cnt, current_command);
+        syntax_run_func[in[current_position].command](in, out, &in_cnt, current_position);
 
         if (in_cnt + 1 >= SYN_MAX_LENGTH) {
             in[in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
@@ -403,7 +416,7 @@ bool syntax_run(void) {
 
 
 void syntax_post_write(struct _bytecode* in, struct _output_info* info) {
-    postprocess_mode_write(&in[i], &info);
+    postprocess_mode_write(in, info);
 }
 
 void syntax_post_delay_us_ms(struct _bytecode* in, struct _output_info* info) {
@@ -412,49 +425,49 @@ void syntax_post_delay_us_ms(struct _bytecode* in, struct _output_info* info) {
                 GET_T(T_MODE_DELAY),
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
-                in[i].repeat,
+                in->repeat,
                 ui_term_color_reset(),
-                (in[i].command == SYN_DELAY_US ? GET_T(T_MODE_US) : GET_T(T_MODE_MS)));
+                (in->command == SYN_DELAY_US ? GET_T(T_MODE_US) : GET_T(T_MODE_MS)));
 }
 
 void syntax_post_read(struct _bytecode* in, struct _output_info* info) {
-    postprocess_mode_write(&in[i], &info);
+    postprocess_mode_write(in, info);
 }
 
 void syntax_post_start_stop(struct _bytecode* in, struct _output_info* info) {
-    if (in[i].data_message) {
-        printf("\r\n%s", in[i].data_message);
+    if (in->data_message) {
+        printf("\r\n%s", in->data_message);
     }
 }
 
 void syntax_post_aux_output(struct _bytecode* in, struct _output_info* info) {
     printf("\r\nIO%s%d%s set to%s OUTPUT: %s%d%s",
               ui_term_color_num_float(),
-                in[i].bits,
+                in->bits,
                 ui_term_color_notice(),
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
-                (in[i].out_data),
+                (in->out_data),
                 ui_term_color_reset());
 }
 
 void syntax_post_aux_input(struct _bytecode* in, struct _output_info* info) {
     printf("\r\nIO%s%d%s set to%s INPUT: %s%d%s",
               ui_term_color_num_float(),
-                in[i].bits,
+                in->bits,
                 ui_term_color_notice(),
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
-                in[i].in_data,
+                in->in_data,
                 ui_term_color_reset());
 }
 
 void syntax_post_adc(struct _bytecode* in, struct _output_info* info) {
-    uint32_t received = (6600 * in[i].in_data) / 4096;
+    uint32_t received = (6600 * in->in_data) / 4096;
     printf("\r\n%s%s IO%d:%s %s%d.%d%sV",
               ui_term_color_info(),
                 GET_T(T_MODE_ADC_VOLTAGE),
-                in[i].bits,
+                in->bits,
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
                 ((received) / 1000),
@@ -468,7 +481,7 @@ void syntax_post_tick_clock(struct _bytecode* in, struct _output_info* info) {
                 GET_T(T_MODE_TICK_CLOCK),
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
-                in[i].repeat,
+                in->repeat,
                 ui_term_color_reset());
 }
 
@@ -478,7 +491,7 @@ void syntax_post_set_clk_high_low(struct _bytecode* in, struct _output_info* inf
                 GET_T(T_MODE_SET_CLK),
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
-                in[i].out_data,
+                in->out_data,
                 ui_term_color_reset());
 }
 
@@ -488,7 +501,7 @@ void syntax_post_set_dat_high_low(struct _bytecode* in, struct _output_info* inf
                 GET_T(T_MODE_SET_DAT),
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
-                in[i].out_data,
+                in->out_data,
                 ui_term_color_reset());
 } 
 
@@ -498,7 +511,7 @@ void syntax_post_read_dat(struct _bytecode* in, struct _output_info* info) {
                 GET_T(T_MODE_READ_DAT),
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
-                in[i].in_data,
+                in->in_data,
                 ui_term_color_reset());
 }
 
@@ -524,26 +537,24 @@ syntax_post_func_ptr_t syntax_post_func[] = {
     [SYN_READ_DAT] = syntax_post_read_dat
 };
 
-
-
 bool syntax_post(void) {
-    uint32_t current_command, received;
+    uint32_t current_position, received;
     static struct _output_info info;
 
     if (!in_cnt) return true;
     
     info.previous_command = 0xff; // set invalid command so output display works
-    for (current_command = 0; current_command < in_cnt; current_command++) {
-        if (in[current_command].command >= count_of(syntax_post_func)) {
-            printf("Unknown internal code %d\r\n", in[current_command].command);
+    for (current_position = 0; current_position < in_cnt; current_position++) {
+        if (in[current_position].command >= count_of(syntax_post_func)) {
+            printf("Unknown internal code %d\r\n", in[current_position].command);
             continue;
         }
 
-        syntax_post_func[in[current_command].command](&in[current_command], &info);
-        info.previous_command = in[current_command].command;
+        syntax_post_func[in[current_position].command](&in[current_position], &info);
+        info.previous_command = in[current_position].command;
 
-        if (in[current_command].error) {
-            printf(" (%s)", in[current_command].error_message);
+        if (in[current_position].error) {
+            printf(" (%s)", in[current_position].error_message);
         }
     }
     printf("\r\n");

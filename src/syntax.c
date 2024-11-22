@@ -16,10 +16,7 @@
 #include "pirate/amux.h"
 
 //TODO: big cleanup...
-// Create a nice struct to pass around everything
 // divide into three or four files
-// use fancy pointers for everything 
-// some rational return codes instead of true/false
 
 //A. syntax begins with bus start [ or /
 //B. some kind of final byte before stop flag? look ahead?
@@ -241,112 +238,122 @@ compiler_get_attributes:
     syntax_io.in_cnt = 0;
     return SSTATUS_OK;
 }
+/*
+*
+*   Run/execute the syntax_io bytecode
+*
+*/
+static const char labels[][5] = { "AUXL", "AUXH" };
 
-typedef void (*syntax_run_func_ptr_t)(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position );
+typedef void (*syntax_run_func_ptr_t)(struct _syntax_io* syntax_io, uint32_t current_position );
 
-void syntax_run_write(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
-        in[*in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
-        in[*in_cnt].error = SERR_ERROR;
+void syntax_run_write(struct _syntax_io* syntax_io, uint32_t current_position) {
+    if (syntax_io->in_cnt + syntax_io->out[current_position].repeat >= SYN_MAX_LENGTH) {
+        syntax_io->in[syntax_io->in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
+        syntax_io->in[syntax_io->in_cnt].error = SERR_ERROR;
         return;
     }
-    for (uint16_t j = 0; j < out->repeat; j++) {
+    for (uint16_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
         if (j > 0) {
-            (*in_cnt)++;
-            in[*in_cnt] = *out;
+            syntax_io->in_cnt++;
+            syntax_io->in[syntax_io->in_cnt] = syntax_io->out[current_position];
         }
-        modes[system_config.mode].protocol_write(&in[*in_cnt], NULL);
+        modes[system_config.mode].protocol_write(&syntax_io->in[syntax_io->in_cnt], NULL);
     }
 }
 
-void syntax_run_read(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    if (*in_cnt + out->repeat >= SYN_MAX_LENGTH) {
-        in[*in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
-        in[*in_cnt].error = SERR_ERROR;
+void syntax_run_read(struct _syntax_io* syntax_io, uint32_t current_position) {
+    if (syntax_io->in_cnt + syntax_io->out->repeat >= SYN_MAX_LENGTH) {
+        syntax_io->in[syntax_io->in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
+        syntax_io->in[syntax_io->in_cnt].error = SERR_ERROR;
         return;
     }
-    for (uint16_t j = 0; j < out->repeat; j++) {
+    for (uint16_t j = 0; j < syntax_io->out->repeat; j++) {
         if (j > 0) {
-            (*in_cnt)++;
-            in[*in_cnt] = *out;
+            syntax_io->in_cnt++;
+            syntax_io->in[syntax_io->in_cnt] = syntax_io->out[current_position];
         }
         modes[system_config.mode].protocol_read(
-            &in[*in_cnt], (current_position + 1 < out_cnt && j + 1 == out[current_position].repeat) ? &out[current_position + 1] : NULL);
+            &syntax_io->in[syntax_io->in_cnt], 
+            ((current_position + 1 < syntax_io->out_cnt) && 
+            (j + 1 == syntax_io->out[current_position].repeat)) ? 
+            &syntax_io->out[current_position + 1] : NULL
+        );
     }
 }
 
-void syntax_run_start(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    modes[system_config.mode].protocol_start(&in[*in_cnt], NULL);
+void syntax_run_start(struct _syntax_io* syntax_io, uint32_t current_position) {
+    modes[system_config.mode].protocol_start(&syntax_io->in[syntax_io->in_cnt], NULL);
 }
 
-void syntax_run_start_alt(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    modes[system_config.mode].protocol_start_alt(&in[*in_cnt], NULL);
+void syntax_run_start_alt(struct _syntax_io* syntax_io, uint32_t current_position) {
+    modes[system_config.mode].protocol_start_alt(&syntax_io->in[syntax_io->in_cnt], NULL);
 }
 
-void syntax_run_stop(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    modes[system_config.mode].protocol_stop(&in[*in_cnt], NULL);
+void syntax_run_stop(struct _syntax_io* syntax_io, uint32_t current_position) {
+    modes[system_config.mode].protocol_stop(&syntax_io->in[syntax_io->in_cnt], NULL);
 }
 
-void syntax_run_stop_alt(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    modes[system_config.mode].protocol_stop_alt(&in[*in_cnt], NULL);
+void syntax_run_stop_alt(struct _syntax_io* syntax_io, uint32_t current_position) {
+    modes[system_config.mode].protocol_stop_alt(&syntax_io->in[syntax_io->in_cnt], NULL);
 }
 
-void syntax_run_delay_us(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    busy_wait_us_32(out[current_position].repeat);
+void syntax_run_delay_us(struct _syntax_io* syntax_io, uint32_t current_position) {
+    busy_wait_us_32(syntax_io->out[current_position].repeat);
 }
 
-void syntax_run_delay_ms(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    busy_wait_ms(out[current_position].repeat);
+void syntax_run_delay_ms(struct _syntax_io* syntax_io, uint32_t current_position) {
+    busy_wait_ms(syntax_io->out[current_position].repeat);
 }
 
-void syntax_run_aux_output(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    bio_output(out[current_position].bits);
-    bio_put((uint8_t)out[current_position].bits, (bool)out[current_position].out_data);
+void syntax_run_aux_output(struct _syntax_io* syntax_io, uint32_t current_position) {
+    bio_output(syntax_io->out[current_position].bits);
+    bio_put((uint8_t)syntax_io->out[current_position].bits, (bool)syntax_io->out[current_position].out_data);
     system_bio_claim(
         true,
-        out[current_position].bits,
+        syntax_io->out[current_position].bits,
         BP_PIN_IO,
-        labels[out[current_position].out_data]); // this should be moved to a cleanup function to reduce overhead
-    system_set_active(true, out[current_position].bits, &system_config.aux_active);
+        labels[syntax_io->out[current_position].out_data]); // this should be moved to a cleanup function to reduce overhead
+    system_set_active(true, syntax_io->out[current_position].bits, &system_config.aux_active);
 }
 
-void syntax_run_aux_input(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    bio_input(out[current_position].bits);
-    in[*in_cnt].in_data = bio_get(out[current_position].bits);
-    system_bio_claim(false, out[current_position].bits, BP_PIN_IO, 0);
-    system_set_active(false, out[current_position].bits, &system_config.aux_active);  
+void syntax_run_aux_input(struct _syntax_io* syntax_io, uint32_t current_position) {
+    bio_input(syntax_io->out[current_position].bits);
+    syntax_io->in[syntax_io->in_cnt].in_data = bio_get(syntax_io->out[current_position].bits);
+    system_bio_claim(false, syntax_io->out[current_position].bits, BP_PIN_IO, 0);
+    system_set_active(false, syntax_io->out[current_position].bits, &system_config.aux_active);  
 }
 
-void syntax_run_adc(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    in[*in_cnt].in_data = amux_read_bio(out[current_position].bits);
+void syntax_run_adc(struct _syntax_io* syntax_io, uint32_t current_position) {
+    syntax_io->in[syntax_io->in_cnt].in_data = amux_read_bio(syntax_io->out[current_position].bits);
 }
 
-void syntax_run_tick_clock(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    for (uint16_t j = 0; j < out[current_position].repeat; j++) {
-        modes[system_config.mode].protocol_tick_clock(&in[*in_cnt], NULL);
+void syntax_run_tick_clock(struct _syntax_io* syntax_io, uint32_t current_position) {
+    for (uint16_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
+        modes[system_config.mode].protocol_tick_clock(&syntax_io->in[syntax_io->in_cnt], NULL);
     }
 }
 
-void syntax_run_set_clk_high(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    modes[system_config.mode].protocol_clkh(&in[*in_cnt], NULL);
+void syntax_run_set_clk_high(struct _syntax_io* syntax_io, uint32_t current_position) {
+    modes[system_config.mode].protocol_clkh(&syntax_io->in[syntax_io->in_cnt], NULL);
 }
 
-void syntax_run_set_clk_low(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    modes[system_config.mode].protocol_clkl(&in[*in_cnt], NULL);
+void syntax_run_set_clk_low(struct _syntax_io* syntax_io, uint32_t current_position) {
+    modes[system_config.mode].protocol_clkl(&syntax_io->in[syntax_io->in_cnt], NULL);
 }
 
-void syntax_run_set_dat_high(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    modes[system_config.mode].protocol_dath(&in[*in_cnt], NULL);
+void syntax_run_set_dat_high(struct _syntax_io* syntax_io, uint32_t current_position) {
+    modes[system_config.mode].protocol_dath(&syntax_io->in[syntax_io->in_cnt], NULL);
 }
 
-void syntax_run_set_dat_low(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
-    modes[system_config.mode].protocol_datl(&in[*in_cnt], NULL);
+void syntax_run_set_dat_low(struct _syntax_io* syntax_io, uint32_t current_position) {
+    modes[system_config.mode].protocol_datl(&syntax_io->in[syntax_io->in_cnt], NULL);
 }
 
-void syntax_run_read_dat(struct _bytecode* in, struct _bytecode* out, uint32_t* in_cnt, uint32_t current_position) {
+void syntax_run_read_dat(struct _syntax_io* syntax_io, uint32_t current_position) {
     //TODO: reality check out slots, actually repeat the read?
-    for (uint16_t j = 0; j < out[current_position].repeat; j++) {
-        modes[system_config.mode].protocol_bitr(&in[*in_cnt], NULL);
+    for (uint16_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
+        modes[system_config.mode].protocol_bitr(&syntax_io->in[syntax_io->in_cnt], NULL);
     }
 }
 
@@ -370,7 +377,7 @@ syntax_run_func_ptr_t syntax_run_func[]={
     [SYN_SET_DAT_LOW]=syntax_run_set_dat_low,
     [SYN_READ_DAT]=syntax_run_read_dat
 };
-static const char labels[][5] = { "AUXL", "AUXH" };
+
 SYNTAX_STATUS syntax_run(void) {
     uint32_t current_position;
 
@@ -386,7 +393,7 @@ SYNTAX_STATUS syntax_run(void) {
             return SSTATUS_ERROR;
         }
 
-        syntax_run_func[syntax_io.in[current_position].command](in, out, &in_cnt, current_position);
+        syntax_run_func[syntax_io.in[current_position].command](&syntax_io, current_position);
 
         if (syntax_io.in_cnt + 1 >= SYN_MAX_LENGTH) {
             syntax_io.in[syntax_io.in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);

@@ -159,7 +159,6 @@ uint32_t hwled_setup_exc(void) {
                 return 0;
             }
             mode_config.baudrate = (5 * 1000 * 1000);
-            mode_config.baudrate = 800000;
             bio_buf_output(M_LED_SDO);
             bio_buf_output(M_LED_SCL);
             // success = pio_claim_free_sm_and_add_program_for_gpio_range(&apa102_mini_program, &pio_config.pio,
@@ -188,6 +187,7 @@ uint32_t hwled_setup_exc(void) {
     }
     device_cleanup = mode_config.device;
     system_config.subprotocol_name = led_device_type[mode_config.device];
+    system_config.num_bits=32;
     return 1;
 }
 
@@ -196,7 +196,7 @@ void hwled_start(struct _bytecode* result, struct _bytecode* next) {
         case M_LED_WS2812:
         case M_LED_WS2812_ONBOARD:
             hwled_wait_idle();  //wait until the FIFO is empty and the state machine is idle 
-            busy_wait_us(50); // 50us delay to reset
+            busy_wait_us(65); // >50us delay to reset
             result->data_message = GET_T(T_HWLED_RESET);
             break;
         case M_LED_APA102:
@@ -213,7 +213,7 @@ void hwled_stop(struct _bytecode* result, struct _bytecode* next) {
         case M_LED_WS2812:
         case M_LED_WS2812_ONBOARD:
             hwled_wait_idle();  //wait until the FIFO is empty and the state machine is idle    
-            busy_wait_us(50); // 50us delay to reset
+            busy_wait_us(65); // >50us delay to reset
             result->data_message = GET_T(T_HWLED_RESET);
             break;
         case M_LED_APA102:
@@ -250,10 +250,11 @@ void hwled_write(struct _bytecode* result, struct _bytecode* next) {
             //       otherwise, allow the caller to set the global brightness bits for
             //       more advanced brightness setting.
             if ((result->out_data & 0xE0000000) == 0) {
-                pio_sm_put_blocking(pio_config.pio, pio_config.sm, ((0xff<<24)|result->out_data));
-            }else{
+                result->out_data|=(0xff<<24);
+                //pio_sm_put_blocking(pio_config.pio, pio_config.sm, ((0xff<<24)|result->out_data));
+            }//else{
                 pio_sm_put_blocking(pio_config.pio, pio_config.sm, result->out_data);
-            }
+            //}
             break;
         case M_LED_WS2812_ONBOARD:
             rgb_put(result->out_data);

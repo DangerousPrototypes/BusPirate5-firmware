@@ -61,13 +61,13 @@ static mutex_t spi_mutex;
 uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = { 0 };
 
 void core1_entry(void);
-
+/*
 int64_t ui_term_screensaver_enable(alarm_id_t id, void* user_data) {
     system_config.lcd_screensaver_active = true;
     lcd_screensaver_enable();
     return 0;
 }
-
+*/
 void gpio_setup(uint8_t pin, bool direction, bool level) {
     gpio_set_dir(pin, direction);
     gpio_set_function(pin, GPIO_FUNC_SIO);
@@ -204,9 +204,7 @@ static void main_system_initialization(void) {
 #ifdef BP_SPLASH_ENABLED
     lcd_write_background(splash_data);
     /*monitor(system_config.psu);
-    if (modes[system_config.mode].protocol_lcd_update){
-        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
-    } else if (displays[system_config.display].display_lcd_update){
+    if (displays[system_config.display].display_lcd_update){
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }*/
     lcd_backlight_enable(true);
@@ -254,9 +252,7 @@ static void main_system_initialization(void) {
     lcd_backlight_enable(false);
 #endif
     monitor(system_config.psu);
-    if (modes[system_config.mode].protocol_lcd_update) {
-        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
-    } else if (displays[system_config.display].display_lcd_update) {
+    if (displays[system_config.display].display_lcd_update) {
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
     lcd_backlight_enable(true);
@@ -281,8 +277,11 @@ static void core0_infinite_loop(void) {
     uint8_t bp_state = 0;
     uint32_t value;
     struct prompt_result result;
-    alarm_id_t screensaver;
+    //alarm_id_t screensaver;
     bool has_been_connected = false;
+
+    lcd_screensaver_alarm_reset(); //setup the screensaver timer (if configured)
+
     while (1) {
 
         // co-op multitask **when not actively doing anything**
@@ -326,6 +325,7 @@ static void core0_infinite_loop(void) {
                 }
 
                 if (result.success) {
+                    lcd_screensaver_alarm_reset();
                     switch (value) {
                         case 'n': // user requested ASCII mode
                             system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
@@ -370,29 +370,18 @@ static void core0_infinite_loop(void) {
                 if (system_config.binmode_lock_terminal) {
                     break;
                 }
+                
+                uint8_t key_pressed = (uint8_t)ui_term_get_user_input();
+                
+                //all keys deal with screensaver
+                if(key_pressed) { //0x01 is a key press, 0xff is enter
+                    lcd_screensaver_alarm_reset();
+                }
 
-                switch (ui_term_get_user_input()) {
-                    case 0x01: // user pressed a key
-                        if (system_config.lcd_timeout) {
-                            if (system_config.lcd_screensaver_active) {
-                                lcd_screensaver_disable();
-                                system_config.lcd_screensaver_active = false;
-                            } else {
-                                cancel_alarm(screensaver);
-                            }
-                            // TODO: figure out how to just reset the timer instead...
-                            screensaver = add_alarm_in_ms(
-                                system_config.lcd_timeout * 300000, ui_term_screensaver_enable, NULL, false);
-                        }
-                        break;
-                    case 0xff: // user pressed enter
-                        if (system_config.lcd_timeout) {
-                            cancel_alarm(screensaver);
-                        }
-                        printf("\r\n");
-                        bp_state = BP_SM_PROCESS_COMMAND;
-                        button_irq_disable(0);
-                        break;
+                if (key_pressed==0xff) { //enter
+                    printf("\r\n");
+                    bp_state = BP_SM_PROCESS_COMMAND;
+                    button_irq_disable(0); 
                 }
 
                 enum button_codes press_code = button_check_press(0);
@@ -420,10 +409,6 @@ static void core0_infinite_loop(void) {
                            ui_term_color_reset());
                 }
                 cmdln_next_buf_pos();
-                if (system_config.lcd_timeout) {
-                    screensaver =
-                        add_alarm_in_ms(system_config.lcd_timeout * 300000, ui_term_screensaver_enable, NULL, false);
-                }
                 bp_state = BP_SM_GET_INPUT;
                 // button_irq_enable(0, &button_irq_callback);
                 break;
@@ -531,9 +516,7 @@ static void core1_infinite_loop(void) {
                 //assert(system_config.mode <= MAXMODE);
 
                 // BUGBUG -- comments describing intent here would be helpful
-                if (modes[system_config.mode].protocol_lcd_update) {
-                    modes[system_config.mode].protocol_lcd_update(update_flags);
-                } else if (displays[system_config.display].display_lcd_update) {
+                if (displays[system_config.display].display_lcd_update) {
                     displays[system_config.display].display_lcd_update(update_flags);
                 }
             }

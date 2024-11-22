@@ -138,7 +138,6 @@ struct _mode modes[] = {
         .mode_commands_count = &hiz_commands_count,      // mode specific commands count ignored if 0x00
         .protocol_get_speed = nullfunc7_no_error,        // get the current speed setting of the protocol
         .protocol_command = NULL,                        // per mode command parser - ignored if 0
-        .protocol_lcd_update = NULL                      // replacement for ui_lcd_update if non-0
     },
 #ifdef BP_USE_HW1WIRE
     {
@@ -392,7 +391,6 @@ struct _mode modes[] = {
         .mode_commands_count = &hwled_commands_count, // mode specific commands count
         .protocol_get_speed = hwled_get_speed,        // get the current speed setting of the protocol
         .protocol_command = NULL,                     // per mode command parser - ignored if 0
-        .protocol_lcd_update = NULL,                  // replacement for ui_lcd_update if non-0
         .protocol_wait_done = hwled_wait_idle,        // wait for the protocol to finish
     },
 #endif

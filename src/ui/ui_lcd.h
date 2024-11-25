@@ -10,6 +10,7 @@ void lcd_write_data(uint8_t data);
 void lcd_enable(void);
 void lcd_disable(void);
 void menu_update(uint8_t current, uint8_t next);
+void lcd_screensaver_alarm_reset(void);
 
 extern const uint8_t colors_pallet[][2];
 // Setup the text and background pixel colors

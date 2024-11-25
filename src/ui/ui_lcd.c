@@ -226,8 +226,7 @@ void ui_lcd_update(uint32_t update_flags) {
         lcd_paint_background();
     }
 
-    if (update_flags & UI_UPDATE_NAMES) // names
-    {
+    if (update_flags & UI_UPDATE_NAMES || update_flags & UI_UPDATE_FORCE){ // names
         uint16_t left_margin = lcd_get_col(&layout, layout.font_default, 1); // put us in the first column
         // IO pin name loop
         uint16_t top_margin = layout.vout_top_pad;
@@ -243,8 +242,7 @@ void ui_lcd_update(uint32_t update_flags) {
         }
     }
 
-    if (update_flags & UI_UPDATE_LABELS) // labels
-    {
+    if (update_flags & UI_UPDATE_LABELS || update_flags & UI_UPDATE_FORCE){ // labels
         uint16_t left_margin = lcd_get_col(&layout, layout.font_default, 2); // put us in the second column
         // IO pin label loop
         uint16_t top_margin = layout.vout_top_pad;
@@ -262,7 +260,7 @@ void ui_lcd_update(uint32_t update_flags) {
         }
     }
 
-    if (update_flags & UI_UPDATE_VOLTAGES) {
+    if (update_flags & UI_UPDATE_VOLTAGES || update_flags & UI_UPDATE_FORCE) {
         uint16_t left_margin = lcd_get_col(&layout, layout.font_default, 3); // put us in the third column
         uint8_t font_width = layout.font_default->lookup[0].width + layout.font_default->right_padding;
         uint16_t left_margin_skip_two_chars = (font_width * 2) + left_margin;
@@ -406,21 +404,42 @@ void lcd_enable(void) {
     lcd_write_command(0x29);
 }
 
+// TODO: move screensaver to displays file
 void lcd_screensaver_enable(void) {
     lcd_backlight_enable(false);
     lcd_clear();
 }
 
 void lcd_screensaver_disable(void) {
-    monitor_force_update();
-    //monitor(system_config.psu);
-    if (modes[system_config.mode].protocol_lcd_update) {
-        modes[system_config.mode].protocol_lcd_update(UI_UPDATE_ALL);
-    } else if (displays[system_config.display].display_lcd_update) {
-        displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
+    monitor(system_config.psu);
+    if (displays[system_config.display].display_lcd_update) {
+        displays[system_config.display].display_lcd_update(UI_UPDATE_ALL|UI_UPDATE_FORCE);
     }
-    lcd_backlight_enable(true);
+    lcd_backlight_enable(true);    
 }
+
+alarm_id_t screensaver_alarm;
+
+int64_t lcd_screensaver_alarm_callback(alarm_id_t id, void* user_data) {
+    system_config.lcd_screensaver_active = true;
+    lcd_screensaver_enable();
+    return 0;
+}
+
+void lcd_screensaver_alarm_reset(void) {
+    if (system_config.lcd_timeout) {
+        if (system_config.lcd_screensaver_active) {
+            lcd_screensaver_disable();
+            system_config.lcd_screensaver_active = false;
+        } else {
+            cancel_alarm(screensaver_alarm);
+        }
+        // TODO: figure out how to just reset the timer instead...
+        screensaver_alarm = add_alarm_in_ms( 
+            system_config.lcd_timeout * (5 * 60 * 1000), lcd_screensaver_alarm_callback, NULL, false);
+    }
+}
+
 
 void lcd_configure(void) {
     lcd_write_command(0x36);    // MADCTL (36h): Memory Data Access Control

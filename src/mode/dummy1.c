@@ -110,13 +110,13 @@ void dummy1_write(struct _bytecode* result, struct _bytecode* next) {
     if (result->out_data == 0xff) {
         /*
         Error result codes.
-        SRES_NONE
-        SRES_DEBUG Displays error_message, does not halt execution
-        SRES_INFO Displays error_message, does not halt execution
-        SRES_WARN Displays error_message, does not halt execution
-        SRES_ERROR Displays error_message, halts execution
+        SERR_NONE
+        SERR_DEBUG Displays error_message, does not halt execution
+        SERR_INFO Displays error_message, does not halt execution
+        SERR_WARN Displays error_message, does not halt execution
+        SERR_ERROR Displays error_message, halts execution
         */
-        result->error = SRES_ERROR; // mode error halts execution
+        result->error = SERR_ERROR; // mode error halts execution
         result->error_message = err;
         return;
     }

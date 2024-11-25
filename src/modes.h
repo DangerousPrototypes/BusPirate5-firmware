@@ -73,7 +73,7 @@ typedef struct _mode {
     uint32_t (*protocol_get_speed)(void);                        // get the current speed setting of the protocol
     char protocol_name[10];                                      // friendly name (promptname)
     uint32_t (*protocol_command)(struct command_result* result); // per mode command parser - ignored if 0
-    void (*protocol_lcd_update)(uint32_t flags);                 // replacement for ui_lcd_update if non-0
+    //void (*protocol_lcd_update)(uint32_t flags);                 // replacement for ui_lcd_update if non-0
 } _mode;
 
 extern struct _mode modes[MAXPROTO];

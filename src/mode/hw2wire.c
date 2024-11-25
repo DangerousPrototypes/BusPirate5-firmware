@@ -114,7 +114,7 @@ void hw2wire_start(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_HWI2C_START);
     if (checkshort()) {
         result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
-        result->error = SRES_WARN;
+        result->error = SERR_WARN;
     }
     pio_hw2wire_start();
 }

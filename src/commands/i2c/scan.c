@@ -39,8 +39,8 @@ void i2c_search_addr(struct command_result* res) {
     uint16_t device_count = 0;
     uint16_t device_pairs = 0;
 
-    if (hwi2c_checkshort()) {
-        ui_help_error(T_HWI2C_NO_PULLUP_DETECTED);
+    if (!ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL)){
+        //ui_help_error(T_HWI2C_NO_PULLUP_DETECTED);
         // printf("No pull-up or short circuit. Enable power (W) and pull-up resistors (P)\r\n");
         system_config.error = 1;
         res->error = true;

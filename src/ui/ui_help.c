@@ -10,6 +10,7 @@
 #include "system_config.h"
 #include "bytecode.h"
 #include "modes.h"
+#include "pirate/bio.h"
 
 // displays the help
 // NOTE: update if the count of "\r\n" prints in the switch statement below changes
@@ -95,11 +96,36 @@ bool ui_help_check_vout_vref(void) {
     amux_sweep();
     if (hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] <
         790) { // 0.8V minimum output allowed to set on internal PSU when reading i could be 0.79
-        ui_help_error(T_MODE_NO_VOUT_VREF_ERROR);
-        printf("%s%s%s\r\n", ui_term_color_info(), GET_T(T_MODE_NO_VOUT_VREF_HINT), ui_term_color_reset());
         return false;
     }
     return true;
+}
+
+bool ui_help_sanity_check(bool vout, uint8_t pullup_mask) {
+    bool ok=true;
+
+    if (vout) {
+        if (!ui_help_check_vout_vref()) {
+            ui_help_error(T_MODE_NO_VOUT_VREF_ERROR);
+            printf("%s%s%s\r\n", ui_term_color_info(), GET_T(T_MODE_NO_VOUT_VREF_HINT), ui_term_color_reset());
+            ok=false;
+        }
+    }
+
+    if (pullup_mask) {
+        uint8_t temp; 
+        for (uint8_t i = 0; i < 8; i++) {
+            if (pullup_mask & (1 << i)) {
+                temp |= (bio_get(i)<<i);
+            }
+        }
+        if (temp != pullup_mask) {
+            ui_help_error(T_MODE_NO_PULLUP_ERROR);
+            printf("%s%s%s\r\n", ui_term_color_info(), GET_T(T_MODE_NO_PULLUP_HINT), ui_term_color_reset());
+            ok=false;
+        }
+    }
+    return ok;
 }
 
 // move to help?

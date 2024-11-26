@@ -307,30 +307,9 @@ uint32_t hwled_get_speed(void) {
     return mode_config.baudrate;
 }
 
-bool hwled_is_idle(void) {
-    // Correct way to detect the state machine is idle because of an empty FIFO:
-    // 1. Clear the (latching) state machine stall bit
-    // 2. Check if the state machine TX fifo is empty
-    // 3. THEN check if the state machine stall bit is set
-    uint32_t SM_STALL_MASK = 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm);
-    pio_config.pio->fdebug = SM_STALL_MASK; // writing a 1 clears the bit
-
-    // NOTE: the order of these operations *DOES* matter!
-    bool result =
-        pio_sm_is_tx_fifo_empty(pio_config.pio, pio_config.sm) &&
-        (pio_config.pio->fdebug & SM_STALL_MASK);
-    return result;
-}
-
 // NOTE: Function must have no parameters ... this is a protocol entry point.
 void hwled_wait_idle(void) {
-    uint32_t timeout = 100000;
-    while (!hwled_is_idle()) {
-        timeout--;
-        if (!timeout) {
-            printf("Timeout, error!");
-            return;
-        }
+    if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, 100000)){
+        printf("Timeout, error!");
     }
-    return;
 }

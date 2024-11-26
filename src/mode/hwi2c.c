@@ -152,7 +152,7 @@ bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
 }
 
 void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
-    if (hwi2c_checkshort()) {
+    if (!ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL)){
         result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
         result->error = SERR_WARN;
     }
@@ -263,13 +263,6 @@ void hwi2c_help(void) {
     printf("\tGND\t------------------ GND\r\n\r\n");
 
     ui_help_mode_commands(hwi2c_commands, hwi2c_commands_count);
-}
-
-uint8_t hwi2c_checkshort(void) {
-    uint8_t temp;
-    temp = (bio_get(M_I2C_SDA) == 0 ? 1 : 0);
-    temp |= (bio_get(M_I2C_SCL) == 0 ? 2 : 0);
-    return (temp == 3); // there is only a short when both are 0 otherwise repeated start wont work
 }
 
 uint32_t hwi2c_get_speed(void) {

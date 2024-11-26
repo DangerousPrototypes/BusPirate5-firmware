@@ -13,7 +13,10 @@
 #include "ui/ui_cmdln.h"
 #include "syntax.h"
 #include "pirate/bio.h"
-#include "pirate/amux.h"
+#include "pirate/amux.h"'
+
+// print the in and out arrays, other debug info
+#define SYNTAX_DEBUG
 
 //TODO: big cleanup...
 // divide into three or four files
@@ -235,6 +238,12 @@ compiler_get_attributes:
         syntax_io.out_cnt++;
     }
 
+    #ifdef SYNTAX_DEBUG
+    for(i=0; i<syntax_io.out_cnt; i++){
+        printf("%d:%d\r\n", syntax_io.out[i].command, syntax_io.out[i].repeat);
+    }
+    #endif
+
     syntax_io.in_cnt = 0;
     return SSTATUS_OK;
 }
@@ -268,7 +277,10 @@ void syntax_run_read(struct _syntax_io* syntax_io, uint32_t current_position) {
         syntax_io->in[syntax_io->in_cnt].error = SERR_ERROR;
         return;
     }
-    for (uint16_t j = 0; j < syntax_io->out->repeat; j++) {
+    #ifdef SYNTAX_DEBUG
+        printf("[DEBUG] repeat %d, pos %d, cmd: %d\r\n", syntax_io->out[current_position].repeat, current_position, syntax_io->out[current_position].command);
+    #endif
+    for (uint16_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
         if (j > 0) {
             syntax_io->in_cnt++;
             syntax_io->in[syntax_io->in_cnt] = syntax_io->out[current_position];
@@ -388,12 +400,12 @@ SYNTAX_STATUS syntax_run(void) {
     for (current_position = 0; current_position < syntax_io.out_cnt; current_position++) {
         syntax_io.in[syntax_io.in_cnt] = syntax_io.out[current_position];
 
-        if (syntax_io.in[current_position].command >= count_of(syntax_run_func)) {
+        if (syntax_io.out[current_position].command >= count_of(syntax_run_func)) {
             printf("Unknown internal code %d\r\n", syntax_io.out[current_position].command);
             return SSTATUS_ERROR;
         }
 
-        syntax_run_func[syntax_io.in[current_position].command](&syntax_io, current_position);
+        syntax_run_func[syntax_io.out[current_position].command](&syntax_io, current_position);
 
         if (syntax_io.in_cnt + 1 >= SYN_MAX_LENGTH) {
             syntax_io.in[syntax_io.in_cnt].error_message = GET_T(T_SYNTAX_EXCEEDS_MAX_SLOTS);
@@ -409,6 +421,17 @@ SYNTAX_STATUS syntax_run(void) {
 
         syntax_io.in_cnt++;
     }
+
+    #ifdef SYNTAX_DEBUG
+    printf("Out:\r\n");
+    for(uint32_t i=0; i<syntax_io.out_cnt; i++){
+        printf("%d:%d\r\n", syntax_io.out[i].command, syntax_io.out[i].repeat);
+    }
+    printf("In:\r\n");
+    for (uint32_t i = 0; i < syntax_io.in_cnt; i++) {
+        printf("%d:%d\r\n", syntax_io.in[i].command, syntax_io.in[i].repeat);
+    }
+    #endif
 
     return SSTATUS_OK;
 }
@@ -553,7 +576,7 @@ SYNTAX_STATUS syntax_post(void) {
         info.previous_command = syntax_io.in[current_position].command;
 
         if (syntax_io.in[current_position].error) {
-            printf(" (%s)", syntax_io.in[current_position].error_message);
+            printf("(%s) ", syntax_io.in[current_position].error_message);
         }
     }
     printf("\r\n");

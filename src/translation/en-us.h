@@ -49,6 +49,8 @@ static char const * const en_us[]={
 	[T_MODE_READ_DAT]="Read data",
 	[T_MODE_NO_VOUT_VREF_ERROR]="No voltage detected on VOUT/VREF pin",
 	[T_MODE_NO_VOUT_VREF_HINT]="Hint: Use W to enable power, or attach an external supply",
+	[T_MODE_NO_PULLUP_ERROR]="Pull-up not detected on IO pin",
+	[T_MODE_NO_PULLUP_HINT]="Hint: Use P to enable pull-up resistors, or use external pull-up",
 	//FREQ
 	[T_MODE_PWM_GENERATE_FREQUENCY]="Generate frequency",
     [T_MODE_FREQ_MEASURE_FREQUENCY]="Frequency measurement",
@@ -134,7 +136,8 @@ static char const * const en_us[]={
 	[T_HWI2C_STOP]="I2C STOP",
 	[T_HWI2C_ACK]="ACK",
 	[T_HWI2C_NACK]="NACK",
-	[T_HWI2C_NO_PULLUP_DETECTED]="no pull-up. Enable power (W) and pull-up resistors (P)",
+	[T_HWI2C_NO_PULLUP_DETECTED]="no pull-up detected",
+	[T_HWI2C_NO_VOUT_DETECTED]="no power detected",
 	[T_HWI2C_TIMEOUT]="I2C timeout",
 	[T_HWI2C_I2C_ERROR]="I2C bus error",
 	//2WIRE

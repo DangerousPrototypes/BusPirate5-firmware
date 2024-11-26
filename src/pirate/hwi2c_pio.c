@@ -52,7 +52,7 @@ static inline uint32_t pio_i2c_get(void) {
 
 void pio_i2c_resume_after_error() {
     pio_sm_drain_tx_fifo(pio_config.pio, pio_config.sm);
-    //TODO: perhaps drain the RX as well?
+    //drain the RX as well
     while (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
         (void)pio_i2c_get();
     }
@@ -60,38 +60,12 @@ void pio_i2c_resume_after_error() {
                 pio_config.sm,
                 (pio_config.pio->sm[pio_config.sm].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >>
                     PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
-
-    /*pio_interrupt_clear(pio_config.pio, pio_config.sm);
-    pio_i2c_rx_enable(false);
-    pio_i2c_stop_timeout(0xff);
-    pio_i2c_stop_timeout(0xff);
-    pio_i2c_stop_timeout(0xff);
-    pio_sm_drain_tx_fifo(pio_config.pio, pio_config.sm);
-    pio_sm_exec(pio_config.pio,
-                pio_config.sm,
-                (pio_config.pio->sm[pio_config.sm].execctrl & PIO_SM0_EXECCTRL_WRAP_BOTTOM_BITS) >>
-                    PIO_SM0_EXECCTRL_WRAP_BOTTOM_LSB);
-    pio_interrupt_clear(pio_config.pio, pio_config.sm);*/
 }
 
-
-/* This should no longer be needed
-void pio_i2c_rx_enable(bool en) {
-    //if (en) {
-        hw_set_bits(&pio_config.pio->sm[pio_config.sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
-    //} else {
-    //    hw_clear_bits(&pio_config.pio->sm[pio_config.sm].shiftctrl, PIO_SM0_SHIFTCTRL_AUTOPUSH_BITS);
-    //}
-}
-*/
 // wait for state machine to be idle, return false if timeout
 static inline hwi2c_status_t pio_i2c_wait_idle_timeout(uint32_t timeout) {
-    pio_config.pio->fdebug = 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm);
-    while (!(pio_config.pio->fdebug & 1u << (PIO_FDEBUG_TXSTALL_LSB + pio_config.sm))) {
-        timeout--;
-        if (!timeout) {
-            return HWI2C_TIMEOUT;
-        }
+    if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, timeout)) {
+        return HWI2C_TIMEOUT;
     }
     return HWI2C_OK;
 }

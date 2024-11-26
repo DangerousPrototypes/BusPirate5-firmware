@@ -112,7 +112,7 @@ uint32_t hw2wire_setup_exc(void) {
 
 void hw2wire_start(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_HWI2C_START);
-    if (checkshort()) {
+    if (!ui_help_sanity_check(true, 1<<M_2WIRE_SDA|1<<M_2WIRE_SCL) ) {
         result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
         result->error = SERR_WARN;
     }

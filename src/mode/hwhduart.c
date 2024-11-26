@@ -198,6 +198,10 @@ void hwhduart_open(struct _bytecode* result, struct _bytecode* next) {
     // while(uart_is_readable(M_UART_PORT)){
     //	uart_getc(M_UART_PORT);
     // }
+    if (!ui_help_sanity_check(true, 1<<M_UART_RXTX) ) {
+        result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
+        result->error = SERR_WARN;
+    }    
 
     mode_config.async_print = true;
     result->data_message = GET_T(T_UART_OPEN_WITH_READ);

@@ -25,6 +25,10 @@ static const struct command_result result_blank;
 
 SYNTAX_STATUS ui_process_syntax(void) {
 
+    if(modes[system_config.mode].protocol_preflight_sanity_check){
+        modes[system_config.mode].protocol_preflight_sanity_check();
+    }
+
     SYNTAX_STATUS result = syntax_compile();
     if (result !=SSTATUS_OK) {
         printf("Syntax compile error\r\n");
@@ -160,6 +164,11 @@ bool ui_process_commands(void) {
                         //for all mode commands we run FALA, unless it is disabled
                         if(!modes[system_config.mode].mode_commands[user_cmd_id].supress_fala_capture){
                             fala_start_hook();
+                        }
+
+                        //do a sanity check before executing the command
+                        if(!result.help_flag && modes[system_config.mode].protocol_preflight_sanity_check){
+                            modes[system_config.mode].protocol_preflight_sanity_check();
                         }
                         
                         //execute the mode command

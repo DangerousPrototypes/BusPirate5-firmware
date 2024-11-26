@@ -19,6 +19,7 @@ void hw2wire_settings(void);
 void hw2wire_printI2Cflags(void);
 void hw2wire_help(void);
 uint32_t hw2wire_get_speed(void);
+bool hw2wire_preflight_sanity_check(void);
 
 typedef struct _hw2wire_mode_config {
     uint32_t baudrate;

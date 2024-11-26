@@ -124,6 +124,10 @@ uint32_t infrared_setup_exc(void) {
     return 1;
 }
 
+bool infrared_preflight_sanity_check(void){
+    ui_help_sanity_check(true, 0);
+}
+
 // Cleanup any configuration on exit.
 void infrared_cleanup(void) {
     nec_tx_deinit();

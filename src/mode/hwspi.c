@@ -249,6 +249,10 @@ void spi_cleanup(void) {
     system_config.clkpin = 0;
 }
 
+bool spi_preflight_sanity_check(void){
+    ui_help_sanity_check(true, 0x00);
+}
+
 void spi_set_cs(uint8_t cs) {
     if (cs == M_SPI_SELECT) { // 'start'
         if (mode_config.cs_idle) {

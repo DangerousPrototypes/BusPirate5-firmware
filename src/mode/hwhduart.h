@@ -15,6 +15,7 @@ void hwhduart_printerror(void);
 void hwhduart_help(void);
 void hwhduart_periodic(void);
 uint32_t hwhduart_get_speed(void);
+bool hwhduart_preflight_sanity_check(void);
 
 /*
 typedef struct _uart_mode_config{

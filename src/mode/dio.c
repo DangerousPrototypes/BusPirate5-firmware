@@ -58,6 +58,10 @@ uint32_t dio_setup_exc(void) {
     return 1;
 }
 
+bool dio_preflight_sanity_check(void){
+    return ui_help_sanity_check(true, 0);
+}
+
 // Cleanup any configuration on exit.
 void dio_cleanup(void) {
     // 1. Disable any hardware you used

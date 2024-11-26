@@ -18,6 +18,7 @@ uint32_t dio_periodic(void);
 uint32_t dio_setup(void);
 uint32_t dio_setup_exc(void);
 void dio_cleanup(void);
+bool dio_preflight_sanity_check(void);
 
 // displayed in the 'i' command
 void dio_settings(void);

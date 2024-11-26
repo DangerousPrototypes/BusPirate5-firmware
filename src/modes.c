@@ -138,6 +138,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hiz_commands_count,      // mode specific commands count ignored if 0x00
         .protocol_get_speed = nullfunc7_no_error,        // get the current speed setting of the protocol
         .protocol_command = NULL,                        // per mode command parser - ignored if 0
+        .protocol_preflight_sanity_check = NULL,         // sanity check before executing syntax
     },
 #ifdef BP_USE_HW1WIRE
     {
@@ -168,6 +169,7 @@ struct _mode modes[] = {
         .mode_commands = hw1wire_commands,               // mode specific commands //ignored if 0x00
         .mode_commands_count = &hw1wire_commands_count,  // mode specific commands count ignored if 0x00
         .protocol_get_speed = hw1wire_get_speed,         // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = hw1wire_preflight_sanity_check, // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_HWUART
@@ -200,6 +202,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwuart_commands_count, // mode specific commands count
         .protocol_get_speed = hwuart_get_speed,        // get the current speed setting of the protocol
         .protocol_wait_done = hwuart_wait_done,        // wait for the protocol to finish
+        .protocol_preflight_sanity_check=hwuart_preflight_sanity_check, // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_HWHDUART
@@ -231,6 +234,7 @@ struct _mode modes[] = {
         .mode_commands = hwhduart_commands,              // mode specific commands
         .mode_commands_count = &hwhduart_commands_count, // mode specific commands count
         .protocol_get_speed = hwhduart_get_speed,        // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = hwhduart_preflight_sanity_check, // sanity check before executing syntax
 
     },
 #endif
@@ -263,6 +267,7 @@ struct _mode modes[] = {
         .mode_commands = hwi2c_commands,              // mode specific commands
         .mode_commands_count = &hwi2c_commands_count, // mode specific commands count
         .protocol_get_speed = hwi2c_get_speed,        // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = hwi2c_preflight_sanity_check, // sanity check before executing syntax
 
     },
 #endif
@@ -295,6 +300,7 @@ struct _mode modes[] = {
         .mode_commands = hwspi_commands,              // mode specific commands
         .mode_commands_count = &hwspi_commands_count, // mode specific commands count
         .protocol_get_speed = spi_get_speed,          // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = spi_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_HW2WIRE
@@ -326,7 +332,7 @@ struct _mode modes[] = {
         .mode_commands = hw2wire_commands,              // mode specific commands
         .mode_commands_count = &hw2wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw2wire_get_speed,        // get the current speed setting of the protocol
-
+        .protocol_preflight_sanity_check = hw2wire_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_DIO
@@ -358,6 +364,7 @@ struct _mode modes[] = {
         .mode_commands = dio_commands,              // mode specific commands
         .mode_commands_count = &dio_commands_count, // mode specific commands count
         .protocol_get_speed = dio_get_speed,        // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = dio_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_HWLED
@@ -392,6 +399,7 @@ struct _mode modes[] = {
         .protocol_get_speed = hwled_get_speed,        // get the current speed setting of the protocol
         .protocol_command = NULL,                     // per mode command parser - ignored if 0
         .protocol_wait_done = hwled_wait_idle,        // wait for the protocol to finish
+        .protocol_preflight_sanity_check = hwled_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_INFRARED
@@ -423,6 +431,7 @@ struct _mode modes[] = {
         .mode_commands = infrared_commands,              // mode specific commands
         .mode_commands_count = &infrared_commands_count, // mode specific commands count
         .protocol_get_speed = infrared_get_speed,        // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = infrared_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_DUMMY1

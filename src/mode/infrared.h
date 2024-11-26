@@ -18,6 +18,7 @@ uint32_t infrared_periodic(void);
 uint32_t infrared_setup(void);
 uint32_t infrared_setup_exc(void);
 void infrared_cleanup(void);
+bool infrared_preflight_sanity_check(void);
 
 // displayed in the 'i' command
 void infrared_settings(void);

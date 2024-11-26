@@ -13,7 +13,7 @@
 #include "ui/ui_cmdln.h"
 #include "syntax.h"
 #include "pirate/bio.h"
-#include "pirate/amux.h"'
+#include "pirate/amux.h"
 
 // print the in and out arrays, other debug info
 #define SYNTAX_DEBUG

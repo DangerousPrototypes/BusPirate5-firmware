@@ -110,12 +110,12 @@ uint32_t hw2wire_setup_exc(void) {
     bio_put(M_2WIRE_RST, 0); // preload the RST pin to be 0 when output
 }
 
+bool hw2wire_preflight_sanity_check(void){
+    return ui_help_sanity_check(true, 1<<M_2WIRE_SDA|1<<M_2WIRE_SCL);
+}
+
 void hw2wire_start(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_HWI2C_START);
-    if (!ui_help_sanity_check(true, 1<<M_2WIRE_SDA|1<<M_2WIRE_SCL) ) {
-        result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
-        result->error = SERR_WARN;
-    }
     pio_hw2wire_start();
 }
 

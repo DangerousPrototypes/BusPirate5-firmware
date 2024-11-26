@@ -138,6 +138,10 @@ uint32_t hwi2c_setup_exc(void) {
     return 1;
 }
 
+bool hwi2c_preflight_sanity_check(void) {
+    return ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL);
+}
+
 bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
     switch (error) {
         case HWI2C_TIMEOUT:
@@ -152,10 +156,6 @@ bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
 }
 
 void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
-    if (!ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL)){
-        result->error_message = GET_T(T_HWI2C_NO_PULLUP_DETECTED);
-        result->error = SERR_WARN;
-    }
 
     hwi2c_status_t i2c_status;
     if(!mode_config.start_sent) {

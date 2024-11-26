@@ -15,6 +15,7 @@ void spi_settings(void);
 void spi_printSPIflags(void);
 void spi_help(void);
 uint32_t spi_get_speed(void);
+bool spi_preflight_sanity_check(void);
 
 // special for binmode and lcd
 void spi_setcpol(uint32_t val);

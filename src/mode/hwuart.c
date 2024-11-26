@@ -248,6 +248,10 @@ uint32_t hwuart_setup_exc(void) {
     return 1;
 }
 
+bool hwuart_preflight_sanity_check(void){
+    return ui_help_sanity_check(true, 0x00);
+}
+
 void hwuart_periodic(void) {
     if (mode_config.async_print && uart_is_readable(M_UART_PORT)) {
         // printf("ASYNC: %d\r\n", uart_getc(M_UART_PORT));
@@ -258,12 +262,7 @@ void hwuart_periodic(void) {
     }
 }
 
-void hwuart_open(struct _bytecode* result, struct _bytecode* next) {
-    if (!ui_help_sanity_check(true, 0x00) ) {
-        result->error_message = GET_T(T_HWI2C_NO_VOUT_DETECTED);
-        result->error = SERR_WARN;
-    }
-    
+void hwuart_open(struct _bytecode* result, struct _bytecode* next) {    
     // clear FIFO and enable UART
     bio_put(M_UART_RTS, 0);
     while (uart_is_readable(M_UART_PORT)) {
@@ -285,12 +284,7 @@ void hwuart_close(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_UART_CLOSE);
 }
 
-void hwuart_write(struct _bytecode* result, struct _bytecode* next) {
-    if (!ui_help_sanity_check(true, 0x00) ) {
-        result->error_message = GET_T(T_HWI2C_NO_VOUT_DETECTED);
-        result->error = SERR_WARN;
-    }
-        
+void hwuart_write(struct _bytecode* result, struct _bytecode* next) {       
     if (mode_config.blocking) {
         uart_putc_raw(M_UART_PORT, result->out_data);
     } else {

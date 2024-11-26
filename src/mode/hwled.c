@@ -191,6 +191,10 @@ uint32_t hwled_setup_exc(void) {
     return 1;
 }
 
+bool hwled_preflight_sanity_check(void){
+    return ui_help_sanity_check(true, 0x00);
+}
+
 void hwled_start(struct _bytecode* result, struct _bytecode* next) {
     switch (mode_config.device) {
         case M_LED_WS2812:

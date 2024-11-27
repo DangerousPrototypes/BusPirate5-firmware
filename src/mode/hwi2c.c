@@ -266,5 +266,5 @@ void hwi2c_help(void) {
 }
 
 uint32_t hwi2c_get_speed(void) {
-    return mode_config.baudrate;
+    return (mode_config.baudrate * 1000);
 }

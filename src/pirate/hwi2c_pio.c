@@ -104,7 +104,11 @@ static inline hwi2c_status_t pio_i2c_put_blocking_timeout(uint16_t data, uint32_
     #pragma GCC diagnostic pop
     #endif
 
-    if(pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    //if(pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    //return HWI2C_OK;
+    if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, timeout)) {
+        return HWI2C_TIMEOUT;
+    }
     return HWI2C_OK;
 }
 
@@ -157,7 +161,10 @@ hwi2c_status_t pio_i2c_restart_timeout(uint32_t timeout) {
 // in_data is the 9 bit RX including the ACK/NACK bit
 hwi2c_status_t pio_i2c_transaction_timeout(uint32_t out_data, uint32_t* in_data, uint32_t timeout) {
 
-    if(pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    //if(pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, timeout)) {
+        return HWI2C_TIMEOUT;
+    }
 
     //remove any data from the RX FIFO
     while (!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
@@ -173,7 +180,10 @@ hwi2c_status_t pio_i2c_transaction_timeout(uint32_t out_data, uint32_t* in_data,
     }
     (*in_data) = pio_i2c_get();
 
-    if(pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    //if(pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, timeout)) {
+        return HWI2C_TIMEOUT;
+    }
     
     return HWI2C_OK;
 }

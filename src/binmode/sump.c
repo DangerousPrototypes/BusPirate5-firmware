@@ -231,7 +231,7 @@ static void sump_do_run(void) {
         sump.state = SUMP_STATE_SAMPLING;
     }
 
-    logic_analyzer_configure(freq, sump.delay_count, sump.trigger[0].mask, trigger_value, edge);
+    logic_analyzer_configure(freq, sump.delay_count, sump.trigger[0].mask, trigger_value, edge, true);
     logic_analyzer_arm(true);
     return;
 }

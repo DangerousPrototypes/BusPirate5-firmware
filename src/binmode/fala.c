@@ -43,30 +43,29 @@ void fala_set_triggers(uint8_t trigger_pin, uint8_t trigger_level) {
 void fala_start(void) {
     // configure and arm the logic analyzer
     logic_analyzer_configure(
-        fala_config.base_frequency * fala_config.oversample, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0x00, 0x00, false);
+        fala_config.base_frequency * fala_config.oversample, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0x00, 0x00, false, false);
     logic_analyzer_arm(false);
-    // delay cycles based on speed of the logic analyzer
 }
 
 // stop the logic analyzer
 // but keeps data available for dump
 void fala_stop(void) {
     logic_analyser_done();
-    // delay cycles based on speed of the logic analyzer
 }
 
 // output printed to user terminal
 void fala_print_result(void) {
     // get samples count
-    uint32_t fala_samples = logic_analyzer_get_end_ptr();
+    //uint32_t fala_samples = logic_analyzer_get_end_ptr();
+    uint32_t fala_samples = logic_analyzer_get_samples_from_zero();
 
-    if(fala_samples == 0xffffffff) {
+    if(fala_samples > (DMA_BYTES_PER_CHUNK * LA_DMA_COUNT)){
         printf(
-        "\r\n%sLogic analyzer:%s operation too long, buffer invalid\r\n", ui_term_color_info(), ui_term_color_reset());
+        "\r\n%sLogic analyzer:%s invalid sample count\r\n", ui_term_color_info(), ui_term_color_reset());
     }else{
         // show some info about the logic capture
         printf(
-        "\r\n%sLogic analyzer:%s %d (0x%08x) samples captured\r\n", ui_term_color_info(), ui_term_color_reset(), fala_samples, fala_samples);
+        "\r\n%sLogic analyzer:%s %d samples captured\r\n", ui_term_color_info(), ui_term_color_reset(), fala_samples);
     }
 
     // DEBUG: print an 8 line logic analyzer graph of the last 80 samples

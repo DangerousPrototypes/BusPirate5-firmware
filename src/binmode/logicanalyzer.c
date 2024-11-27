@@ -41,6 +41,10 @@ uint32_t la_ptr_reset = 0;
 uint8_t la_base_pin = LA_BPIO0;
 volatile uint8_t la_status = LA_IDLE;
 volatile uint32_t la_sm_done = false;
+bool irq_handler_installed = true;
+//this is a sample count variable for FALA and triggerless captures
+// for triggers, it is the number of samples after 0 
+uint32_t samples_from_zero = 0;
 
 // PIO pio = pio0;
 // uint sm = 0;
@@ -53,6 +57,12 @@ void logic_analyzer_set_base_pin(uint8_t base_pin) {
 
 void logicanalyzer_reset_led(void) {
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_RGB_UPDATES);
+}
+
+//returns the number of samples in the buffer counting from the 0 sample
+//is equivalent to the number of samples when no trigger is set
+uint32_t logic_analyzer_get_samples_from_zero(void) {
+    return samples_from_zero;
 }
 
 uint32_t logic_analyzer_get_start_ptr(uint32_t sample_count) {
@@ -87,7 +97,9 @@ void logic_analyser_done(void) {
     pio_interrupt_clear(pio_config.pio, 0);
     irq_set_enabled(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), false);
     // irq_set_enabled(pio_get_dreq(pio_config.pio, pio_config.sm, false), false);
-    irq_remove_handler(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), logic_analyser_done);
+    if(irq_handler_installed){
+        irq_remove_handler(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), logic_analyser_done);
+    }
     pio_sm_set_enabled(pio_config.pio, pio_config.sm, false);
 
     if (pio_config.program) {
@@ -112,13 +124,17 @@ void logic_analyser_done(void) {
     if (tail_dma == -1) {
         return;
     }
-
+    
     // transfer count is the words remaining in the stalled transfer, dma deincrements on start (-1)
     int32_t tail = DMA_BYTES_PER_CHUNK - dma_channel_hw_addr(la_dma[tail_dma])->transfer_count - 1;
 
     // add the preceding chunks of DMA to find the location in the array
     // ready to dump
-    la_ptr_reset = la_ptr = ((DMA_BYTES_PER_CHUNK * tail_dma) + tail);
+    samples_from_zero = la_ptr_reset = la_ptr = ((DMA_BYTES_PER_CHUNK * tail_dma) + tail);
+
+    if(tail_dma==0 && tail==-1){
+        samples_from_zero=DMA_BYTES_PER_CHUNK*LA_DMA_COUNT;
+    }
 
     rgb_set_all(0x00, 0xff, 0); //,0x00FF00 green for dump
     la_sm_done = true;
@@ -189,9 +205,11 @@ void restart_dma() {
 }
 
 bool logic_analyzer_configure(
-    float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction, bool edge) {
+    float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction, bool edge, bool interrupt) {
     la_sm_done = false;
     memset(la_buf, 0, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT);
+
+    irq_handler_installed=interrupt;
 
     // This can be useful for debugging. The position of sampling always start at the beginning of the buffer
     // restart_dma(); //this moved to below because the PIO isn't yet assigned
@@ -251,9 +269,11 @@ bool logic_analyzer_configure(
     // interrupt on done notification
     pio_interrupt_clear(pio_config.pio, 0);
     pio_set_irq0_source_enabled(pio_config.pio, pis_interrupt0, true);
-    irq_set_exclusive_handler(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), logic_analyser_done);
-    irq_set_enabled(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), true);
-    irq_set_enabled(pio_get_dreq(pio_config.pio, pio_config.sm, false), true);
+    if(irq_handler_installed) {
+        irq_set_exclusive_handler(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), logic_analyser_done);
+        irq_set_enabled(PIO0_IRQ_0 + (PIO_NUM(pio_config.pio) * 2), true);
+        irq_set_enabled(pio_get_dreq(pio_config.pio, pio_config.sm, false), true);
+    }
     // write sample count and enable sampling
     pio_sm_put_blocking(pio_config.pio, pio_config.sm, samples - 1);
     return true;

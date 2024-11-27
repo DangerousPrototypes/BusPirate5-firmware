@@ -16,7 +16,7 @@
 #include "pirate/amux.h"
 
 // print the in and out arrays, other debug info
-#define SYNTAX_DEBUG
+//#define SYNTAX_DEBUG
 
 //TODO: big cleanup...
 // divide into three or four files

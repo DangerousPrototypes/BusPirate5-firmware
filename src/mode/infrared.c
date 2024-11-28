@@ -21,6 +21,9 @@
 #include "ui/ui_help.h"
 #include "lib/pico_ir_nec/nec_transmit.h"
 #include "mode/infrared.h"
+#include "ui/ui_prompt.h"
+#include "pirate/storage.h"
+#include "ui/ui_term.h"
 
 static struct _infrared_mode_config mode_config;
 static uint32_t returnval;
@@ -94,32 +97,137 @@ const uint32_t infrared_commands_count = count_of(infrared_commands);
 
 // Pin labels shown on the display and in the terminal status bar
 // No more than 4 characters long
-/*static const char pin_labels[][5]={
-    "OUT1",
-    "OUT2",
-    "OUT3",
-    "IN1"
-};*/
+static const char pin_labels[][5]={
+    "LERN",
+    "BARR",
+    "IRTX",
+    "38k",
+    "56k"
+};
 
+static const char ir_protocol_type[][7] = {
+    "RC5",
+};
+
+static const struct prompt_item infrared_rx_sensor_menu[] = { { T_IR_RX_SENSOR_MENU_LEARNER },
+                                                        { T_IR_RX_SENSOR_MENU_BARRIER },
+                                                        { T_IR_RX_SENSOR_MENU_38K_DEMOD },
+                                                        {T_IR_RX_SENSOR_MENU_56K_DEMOD} };
+static const struct prompt_item infrared_protocol_menu[] = { { T_IR_PROTOCOL_MENU_RC5 } };
+
+static const struct prompt_item infrared_tx_speed_menu[] = { { T_IR_TX_SPEED_MENU_1 } };
+
+static const struct ui_prompt infrared_menu[] = {
+    {
+        .description = T_IR_RX_SENSOR_MENU,
+        .menu_items = infrared_rx_sensor_menu,
+        .menu_items_count = count_of(infrared_rx_sensor_menu),
+        .prompt_text = T_IR_RX_SENSOR_MENU,
+        .minval = 0,
+        .maxval = 0,
+        .defval = 3,
+        .menu_action = 0,
+        .config = &prompt_list_cfg
+    },
+    {   .description = T_IR_TX_SPEED_MENU,
+        .menu_items = infrared_tx_speed_menu,
+        .menu_items_count = count_of(infrared_tx_speed_menu),
+        .prompt_text = T_IR_TX_SPEED_PROMPT,
+        .minval = 20,
+        .maxval = 60,
+        .defval = 38,
+        .menu_action = 0,
+        .config = &prompt_int_cfg 
+    },    
+    {
+        .description = T_IR_PROTOCOL_MENU,
+        .menu_items = infrared_protocol_menu,
+        .menu_items_count = count_of(infrared_protocol_menu),
+        .prompt_text = T_IR_PROTOCOL_MENU,
+        .minval = 0,
+        .maxval = 0,
+        .defval = 1,
+        .menu_action = 0,
+        .config = &prompt_list_cfg
+    },        
+};
+
+static struct _infrared_mode_config mode_config;
 // Pre-setup step. Show user menus for any configuration options.
 // The Bus Pirate hardware is not "clean" and reset at this point.
 // Any previous mode may still be running. This is only a configuration step,
 // the user may cancel out of the menu and return to the previous mode.
 // Don't touch hardware yet, save the settings in variables for later.
 uint32_t infrared_setup(void) {
-    // printf("\r\n-DUMMY1- setup()\r\n");
+    prompt_result result;
+
+    const char config_file[] = "bpirrxtx.bp";
+    const mode_config_t config_t[] = {
+        // clang-format off
+        { "$.sensor", &mode_config.rx_sensor, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.freq", &mode_config.tx_freq, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.protocol", &mode_config.protocol, MODE_CONFIG_FORMAT_DECIMAL },
+        // clang-format on
+    };
+
+    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+
+        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+        infrared_settings();
+        bool user_value;
+        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
+            return 0;
+        }
+        if (user_value) {
+            return 1; // user said yes, use the saved settings
+        }
+    }
+
+    ui_prompt_uint32(&result, &infrared_menu[0], &mode_config.rx_sensor);
+    if (result.exit) {
+        return 0;
+    }
+    mode_config.rx_sensor--;
+
+    ui_prompt_uint32(&result, &infrared_menu[1], &mode_config.tx_freq);
+    if (result.exit) {
+        return 0;
+    }
+
+    ui_prompt_uint32(&result, &infrared_menu[2], &mode_config.protocol);
+    if (result.exit) {
+        return 0;
+    }
+    mode_config.protocol--;
+
+    storage_save_mode(config_file, config_t, count_of(config_t));
+
     return 1;
 }
 
 // Setup execution. This is where we actually configure any hardware.
 uint32_t infrared_setup_exc(void) {
-    bio_buf_output(BIO4); // set gpio buffer to output
+    bio_input(BIO1); // 20-60kHz learner
+    bio_input(BIO3); // 38kHz barrier
+    bio_input(BIO5); // 36-40kHz demodulator
+    bio_input(BIO7); // 56kHz modulator
+    bio_buf_output(BIO4); // IR TX
+
+    //claim and label pins
+    system_bio_claim(true, BIO1, BP_PIN_IO, pin_labels[0]);
+    system_bio_claim(true, BIO3, BP_PIN_IO, pin_labels[1]);
+    system_bio_claim(true, BIO4, BP_PIN_IO, pin_labels[2]);
+    system_bio_claim(true, BIO5, BP_PIN_IO, pin_labels[3]);
+    system_bio_claim(true, BIO7, BP_PIN_IO, pin_labels[4]);
+
+
     // configure and enable the state machines
     tx_sm = nec_tx_init(bio2bufiopin[BIO4]); // uses two state machines, 16 instructions and one IRQ
-    mode_config.baudrate = 38000;
     if (tx_sm < 0) {
         printf("Failed to initialize PIO\r\n");
     }
+
+    system_config.num_bits=16;
 
     return 1;
 }
@@ -131,35 +239,28 @@ bool infrared_preflight_sanity_check(void){
 // Cleanup any configuration on exit.
 void infrared_cleanup(void) {
     nec_tx_deinit();
+    // unclaim pins
+    system_bio_claim(false, BIO1, BP_PIN_IO, pin_labels[0]);
+    system_bio_claim(false, BIO3, BP_PIN_IO, pin_labels[1]);
+    system_bio_claim(false, BIO4, BP_PIN_IO, pin_labels[2]);
+    system_bio_claim(false, BIO5, BP_PIN_IO, pin_labels[3]);
+    system_bio_claim(false, BIO7, BP_PIN_IO, pin_labels[4]);
     // 1. Disable any hardware you used
     bio_init();
+    system_config.num_bits=8;
 }
 
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
 // This function generally writes data out to the IO pins or a peripheral
 void infrared_write(struct _bytecode* result, struct _bytecode* next) {
-    static const char labels[][5] = { "AUXL", "AUXH" };
-    // your code
-    /*for(uint8_t i=0; i<8; i++){
-        // user data is in result->out_data
-        bio_output(i);
-        if(result->out_data & (0b1<<i)){
-            system_bio_claim(true, i, BP_PIN_IO, labels[1]);
-            bio_put(i, 1);
-        }else{
-            system_bio_claim(true, i, BP_PIN_IO, labels[0]);
-            bio_put(i, 0);
-        }
-        system_set_active(true, i, &system_config.aux_active);
-    }*/
-
     // transmit and receive frames
     uint8_t tx_address = result->out_data >> 8;
     uint8_t tx_data = result->out_data;
     // create a 32-bit frame and add it to the transmit FIFO
     uint32_t tx_frame = nec_encode_frame(tx_address, tx_data);
     nec_send_frame(tx_frame);
-    printf("TX: %02x, %02x\r\n", tx_address, tx_data);
+    //TODO: frame delay if next command is a write or something?
+    nec_tx_wait_idle();
 }
 
 // This function is called when the user enters 'r' to read data
@@ -172,28 +273,6 @@ void infrared_read(struct _bytecode* result, struct _bytecode* next) {
     result->in_data=data; //put the read value in in_data (up to 32 bits)*/
 }
 
-// Handler for mode START when user enters the '[' key
-#if 0
-void infrared_start(struct _bytecode *result, struct _bytecode *next)
-{
-	static const char message[]="-DUMMY1- start()"; //The message to show the user
-	
-	bio_put(BIO4, 1); //your code
-	
-	result->data_message=message; //return a reference to the message to show the user
-}
-
-// Handler for mode STOP when user enters the ']' key
-void infrared_stop(struct _bytecode *result, struct _bytecode *next)
-{
-	static const char message[]="-DUMMY1- stop()"; //The message to show the user
-	
-	bio_put(BIO4, 0); //your code
-	
-	result->data_message=message; //return a reference to the message to show the user
-
-}
-#endif
 // modes can have useful macros activated by (1) (eg macro 1)
 // macros are passed from the command line directly, not through the syntax system
 void infrared_macro(uint32_t macro) {
@@ -216,13 +295,17 @@ uint32_t infrared_periodic(void)
 }
 #endif
 
-void infrared_settings(void) {
-}
-
 void infrared_help(void) {
     ui_help_mode_commands(infrared_commands, infrared_commands_count);
 }
 
 uint32_t infrared_get_speed(void) {
-    return mode_config.baudrate;
+    return mode_config.tx_freq * 1000;
+}
+
+void infrared_settings(void) {
+    ui_prompt_mode_settings_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rx_sensor_menu[mode_config.rx_sensor].description), 0x00);
+    ui_prompt_mode_settings_int(GET_T(T_IR_TX_SPEED_MENU), mode_config.tx_freq, GET_T(T_KHZ));
+    ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_menu[mode_config.protocol].description), 0x00);
+
 }

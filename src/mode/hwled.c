@@ -293,6 +293,7 @@ void hwled_cleanup(void) {
     }
     // pio_clear_instruction_memory(pio);
     system_config.subprotocol_name = 0x00;
+    system_config.num_bits=8;
     system_bio_claim(false, M_LED_SDO, BP_PIN_MODE, 0);
     system_bio_claim(false, M_LED_SCL, BP_PIN_MODE, 0);
     bio_init();

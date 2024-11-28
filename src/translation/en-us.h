@@ -160,6 +160,17 @@ static char const * const en_us[]={
 	[T_HW1WIRE_RESET]="1-Wire RESET",
 	[T_HW1WIRE_PRESENCE_DETECT]="Presence detected",
 	[T_HW1WIRE_NO_DEVICE]="No device detected",
+	//INFRARED
+	[T_IR_RX_SENSOR_MENU]="RX sensor",
+	[T_IR_RX_SENSOR_MENU_LEARNER]="20-60kHz learner",
+	[T_IR_RX_SENSOR_MENU_BARRIER]="38kHz barrier",
+	[T_IR_RX_SENSOR_MENU_38K_DEMOD]="36-40kHz demodulator",
+	[T_IR_RX_SENSOR_MENU_56K_DEMOD]="56kHz demodulator",
+	[T_IR_TX_SPEED_MENU]="TX modulation",
+	[T_IR_TX_SPEED_MENU_1]="20kHz to 60kHz",
+	[T_IR_TX_SPEED_PROMPT]="kHz (%s%dkHz*%s)",
+	[T_IR_PROTOCOL_MENU]="Protocol",
+	[T_IR_PROTOCOL_MENU_RC5]="RC5",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",

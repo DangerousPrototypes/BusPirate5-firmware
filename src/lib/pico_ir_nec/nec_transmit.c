@@ -93,3 +93,7 @@ void nec_send_frame(uint32_t tx_frame) {
     // send the frame
     pio_sm_put(pio_config_control.pio, pio_config_control.sm, tx_frame);
 }
+
+bool nec_tx_wait_idle(void){
+    return pio_sm_wait_idle(pio_config_control.pio, pio_config_control.sm, 0xfffff);
+}

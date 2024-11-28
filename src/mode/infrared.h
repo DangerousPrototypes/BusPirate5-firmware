@@ -33,5 +33,7 @@ extern const struct _mode_command_struct infrared_commands[];
 extern const uint32_t infrared_commands_count;
 
 typedef struct _infrared_mode_config {
-    uint32_t baudrate;
+    uint32_t rx_sensor;
+    uint32_t protocol;
+    uint32_t tx_freq;
 } _infrared_mode_config;

@@ -1,0 +1,21 @@
+# BusPirate 5 / 5XL / 6 -- OPTIONAL udev rules
+#
+# copy this file to `/etc/udev/rules.conf/88-buspirate.rules
+#
+# This file is ENTIRELY optional.  It does the following:
+#
+# 1. Sets the group owner to `dialout`
+#
+# 2. Sets the permissions to 0660 to allow `dialout` group read/write access
+#
+# 2. Creates two symlinks with friendlier names:
+#    /dev/buspirate-%n      :=  serial console (interactive use)
+#    /dev/buspirate-bin-%n  :=  binary mode interfaces
+#
+# Note that the `%n` value will correspond to the `/dev/tty%n` value.
+# (There is no simple way to force these to number sequentially from
+# zero without holes in the numbering.)
+#
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7331", ENV{ID_USB_INTERFACE_NUM}=="00",  SYMLINK+="buspirate-%n",     MODE="660", GROUP="dialout"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7331", ENV{ID_USB_INTERFACE_NUM}=="02",  SYMLINK+="buspirate-bin-%n", MODE="660", GROUP="dialout"

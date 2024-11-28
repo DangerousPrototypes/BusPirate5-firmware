@@ -91,6 +91,8 @@ void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);
 void spi_busy_wait(bool enable);
 
+//#define BP_PIO_SHOW_ASSIGNMENT
+
 #if BP_VER == 6
 #define PIO_RGB_LED_PIO pio2
 #define PIO_RGB_LED_SM 0

@@ -12,7 +12,7 @@ void infrared_stopr(void);
 void infrared_macro(uint32_t macro);
 
 // a periodic service call for doing things async.
-uint32_t infrared_periodic(void);
+void infrared_periodic(void);
 
 // setup functions
 uint32_t infrared_setup(void);

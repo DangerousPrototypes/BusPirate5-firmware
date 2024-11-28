@@ -201,6 +201,8 @@ set(bp5_common
         mode/infrared.c 
         lib/pico_ir_nec/nec_transmit.c
         lib/pico_ir_nec/nec_transmit.h
+        lib/pico_ir_nec/nec_receive.c
+        lib/pico_ir_nec/nec_receive.h
 
         # DUMMY MODE
         mode/dummy1.c
@@ -457,6 +459,7 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/binmode/logicanalyzer.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_burst.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_control.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_receive.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/picorvd/ch32vswio.pio)
         #pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/pwm.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/onewire_library.pio)

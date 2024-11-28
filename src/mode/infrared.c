@@ -20,6 +20,7 @@
 #include "pirate/bio.h" // Buffered pin IO functions
 #include "ui/ui_help.h"
 #include "lib/pico_ir_nec/nec_transmit.h"
+#include "lib/pico_ir_nec/nec_receive.h"
 #include "mode/infrared.h"
 #include "ui/ui_prompt.h"
 #include "pirate/storage.h"
@@ -108,6 +109,8 @@ static const char pin_labels[][5]={
 static const char ir_protocol_type[][7] = {
     "RC5",
 };
+
+static const uint8_t ir_rx_pins[] = {BIO1, BIO3, BIO5, BIO7};
 
 static const struct prompt_item infrared_rx_sensor_menu[] = { { T_IR_RX_SENSOR_MENU_LEARNER },
                                                         { T_IR_RX_SENSOR_MENU_BARRIER },
@@ -224,11 +227,14 @@ uint32_t infrared_setup_exc(void) {
     // configure and enable the state machines
     tx_sm = nec_tx_init(bio2bufiopin[BIO4]); // uses two state machines, 16 instructions and one IRQ
     if (tx_sm < 0) {
-        printf("Failed to initialize PIO\r\n");
+        printf("Failed to initialize TX PIO\r\n");
+    }
+    tx_sm = nec_rx_init(bio2bufiopin[ir_rx_pins[mode_config.rx_sensor]]); 
+    if (tx_sm < 0) {
+        printf("Failed to initialize RX PIO\r\n");
     }
 
     system_config.num_bits=16;
-
     return 1;
 }
 
@@ -239,6 +245,7 @@ bool infrared_preflight_sanity_check(void){
 // Cleanup any configuration on exit.
 void infrared_cleanup(void) {
     nec_tx_deinit();
+    nec_rx_deinit();
     // unclaim pins
     system_bio_claim(false, BIO1, BP_PIN_IO, pin_labels[0]);
     system_bio_claim(false, BIO3, BP_PIN_IO, pin_labels[1]);
@@ -286,14 +293,20 @@ void infrared_macro(uint32_t macro) {
     }
 }
 
-#if 0
+
 // The Bus Pirate will make a periodic call to this function (if linked in modes.c)
 // Useful for checking async stuff like bytes in a UART
-uint32_t infrared_periodic(void)
-{
-
+void infrared_periodic(void){
+    uint32_t rx_frame;
+    uint8_t rx_address;
+    uint8_t rx_data;
+    nec_rx_status_t result = nec_get_frame(&rx_frame, &rx_address, &rx_data);
+    if (result == NEC_RX_FRAME_OK) {
+        printf("\r\nReceived: 0x%02x, 0x%02x", rx_address, rx_data);
+    }else if (result == NEC_RX_FRAME_ERROR) {
+        printf("\r\nReceived: 0x%08x (invalid frame)", rx_frame);
+    }
 }
-#endif
 
 void infrared_help(void) {
     ui_help_mode_commands(infrared_commands, infrared_commands_count);

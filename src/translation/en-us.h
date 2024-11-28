@@ -171,6 +171,7 @@ static char const * const en_us[]={
 	[T_IR_TX_SPEED_PROMPT]="kHz (%s%dkHz*%s)",
 	[T_IR_PROTOCOL_MENU]="Protocol",
 	[T_IR_PROTOCOL_MENU_RC5]="RC5",
+	[T_IR_PROTOCOL_MENU_NEC]="NEC",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",

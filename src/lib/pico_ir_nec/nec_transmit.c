@@ -94,6 +94,11 @@ void nec_send_frame(uint32_t tx_frame) {
     pio_sm_put(pio_config_control.pio, pio_config_control.sm, tx_frame);
 }
 
+void nec_write(uint32_t address, uint32_t data) {
+    // create a 32-bit frame and add it to the transmit FIFO
+    nec_send_frame(nec_encode_frame((uint8_t)address, (uint8_t)data));
+}
+
 bool nec_tx_wait_idle(void){
     return pio_sm_wait_idle(pio_config_control.pio, pio_config_control.sm, 0xfffff);
 }

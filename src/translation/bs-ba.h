@@ -167,6 +167,7 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_IR_TX_SPEED_PROMPT             ] = "kHz (%s%dkHz*%s)",
     [ T_IR_PROTOCOL_MENU               ] = "Protocol",
     [ T_IR_PROTOCOL_MENU_RC5           ] = "RC5",
+    [ T_IR_PROTOCOL_MENU_NEC           ] = "NEC",
     [ T_CMDLN_INVALID_COMMAND          ] = "Nevažeća naredba: %s. Unesite ? za pomoć.",
     [ T_CMDLN_NO_HELP                  ] = "Pomoć trenutno nije dostupna za ovu naredbu.",
     [ T_CMDLN_LS                       ] = "ls {direktorij} - listing datoteka u trenutnoj lokaciji ili {direktorij} lokaciji.",

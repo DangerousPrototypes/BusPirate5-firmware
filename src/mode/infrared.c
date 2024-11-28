@@ -25,6 +25,7 @@
 #include "ui/ui_prompt.h"
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
+#include "pirate/rc5_pio.h"
 
 static struct _infrared_mode_config mode_config;
 static uint32_t returnval;
@@ -96,6 +97,35 @@ const struct _mode_command_struct infrared_commands[] = {
 };
 const uint32_t infrared_commands_count = count_of(infrared_commands);
 
+// an array of all the IR protocol functions
+typedef struct _ir_protocols {
+    int (*irtx_init)(uint pin_num);      
+    void (*irtx_deinit)(void);   
+    void (*irtx_write)(uint32_t address, uint32_t data);     // write
+    bool (*irtx_wait_idle)(void);
+    int (*irrx_init)(uint pin_num);
+    void (*irrx_deinit)(void); 
+    nec_rx_status_t (*irrx_read)(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data);      // read
+} ir_protocols;
+static const ir_protocols ir_protocol[] = {
+    {   .irtx_init = nec_tx_init, 
+        .irtx_deinit = nec_tx_deinit,
+        .irtx_write = nec_write,
+        .irtx_wait_idle = nec_tx_wait_idle,
+        .irrx_init = nec_rx_init,
+        .irrx_deinit = nec_rx_deinit,
+        .irrx_read = nec_get_frame 
+    },
+    {   .irtx_init = rc5_tx_init,
+        .irtx_deinit = rc5_tx_deinit,
+        .irtx_write = rc5_send,
+        .irtx_wait_idle = rc5_tx_wait_idle,
+        .irrx_init = rc5_rx_init,
+        .irrx_deinit = rc5_rx_deinit,
+        .irrx_read = rc5_receive 
+    }
+};  
+
 // Pin labels shown on the display and in the terminal status bar
 // No more than 4 characters long
 static const char pin_labels[][5]={
@@ -107,6 +137,7 @@ static const char pin_labels[][5]={
 };
 
 static const char ir_protocol_type[][7] = {
+    "NEC",
     "RC5",
 };
 
@@ -116,7 +147,8 @@ static const struct prompt_item infrared_rx_sensor_menu[] = { { T_IR_RX_SENSOR_M
                                                         { T_IR_RX_SENSOR_MENU_BARRIER },
                                                         { T_IR_RX_SENSOR_MENU_38K_DEMOD },
                                                         {T_IR_RX_SENSOR_MENU_56K_DEMOD} };
-static const struct prompt_item infrared_protocol_menu[] = { { T_IR_PROTOCOL_MENU_RC5 } };
+static const struct prompt_item infrared_protocol_menu[] = { { T_IR_PROTOCOL_MENU_NEC },
+                                                            { T_IR_PROTOCOL_MENU_RC5 } };   
 
 static const struct prompt_item infrared_tx_speed_menu[] = { { T_IR_TX_SPEED_MENU_1 } };
 
@@ -225,15 +257,15 @@ uint32_t infrared_setup_exc(void) {
 
 
     // configure and enable the state machines
-    tx_sm = nec_tx_init(bio2bufiopin[BIO4]); // uses two state machines, 16 instructions and one IRQ
-    if (tx_sm < 0) {
+    int status = ir_protocol[mode_config.protocol].irtx_init(bio2bufiopin[BIO4]); // uses two state machines, 16 instructions and one IRQ
+    if (status < 0) {
         printf("Failed to initialize TX PIO\r\n");
     }
-    tx_sm = nec_rx_init(bio2bufiopin[ir_rx_pins[mode_config.rx_sensor]]); 
-    if (tx_sm < 0) {
+    status = ir_protocol[mode_config.protocol].irrx_init(bio2bufiopin[ir_rx_pins[mode_config.rx_sensor]]);
+    if (status < 0) {
         printf("Failed to initialize RX PIO\r\n");
     }
-
+    system_config.subprotocol_name = ir_protocol_type[mode_config.protocol];
     system_config.num_bits=16;
     return 1;
 }
@@ -244,8 +276,8 @@ bool infrared_preflight_sanity_check(void){
 
 // Cleanup any configuration on exit.
 void infrared_cleanup(void) {
-    nec_tx_deinit();
-    nec_rx_deinit();
+    ir_protocol[mode_config.protocol].irtx_deinit();
+    ir_protocol[mode_config.protocol].irrx_deinit();
     // unclaim pins
     system_bio_claim(false, BIO1, BP_PIN_IO, pin_labels[0]);
     system_bio_claim(false, BIO3, BP_PIN_IO, pin_labels[1]);
@@ -264,10 +296,13 @@ void infrared_write(struct _bytecode* result, struct _bytecode* next) {
     uint8_t tx_address = result->out_data >> 8;
     uint8_t tx_data = result->out_data;
     // create a 32-bit frame and add it to the transmit FIFO
-    uint32_t tx_frame = nec_encode_frame(tx_address, tx_data);
-    nec_send_frame(tx_frame);
+    ir_protocol[mode_config.protocol].irtx_write(tx_address, tx_data);
+
+    //uint32_t tx_frame = nec_encode_frame(tx_address, tx_data);
+    //nec_send_frame(tx_frame);
     //TODO: frame delay if next command is a write or something?
-    nec_tx_wait_idle();
+    //nec_tx_wait_idle();
+    ir_protocol[mode_config.protocol].irtx_wait_idle();
 }
 
 // This function is called when the user enters 'r' to read data
@@ -278,6 +313,7 @@ void infrared_read(struct _bytecode* result, struct _bytecode* next) {
         data |= bio_get(i) << i;
     }
     result->in_data=data; //put the read value in in_data (up to 32 bits)*/
+    rc5_test();
 }
 
 // modes can have useful macros activated by (1) (eg macro 1)
@@ -297,15 +333,16 @@ void infrared_macro(uint32_t macro) {
 // The Bus Pirate will make a periodic call to this function (if linked in modes.c)
 // Useful for checking async stuff like bytes in a UART
 void infrared_periodic(void){
-    uint32_t rx_frame;
+    /*uint32_t rx_frame;
     uint8_t rx_address;
     uint8_t rx_data;
-    nec_rx_status_t result = nec_get_frame(&rx_frame, &rx_address, &rx_data);
+    //nec_rx_status_t result = nec_get_frame(&rx_frame, &rx_address, &rx_data);
+    nec_rx_status_t result = ir_protocol[mode_config.protocol].irrx_read(&rx_frame, &rx_address, &rx_data);
     if (result == NEC_RX_FRAME_OK) {
         printf("\r\nReceived: 0x%02x, 0x%02x", rx_address, rx_data);
     }else if (result == NEC_RX_FRAME_ERROR) {
         printf("\r\nReceived: 0x%08x (invalid frame)", rx_frame);
-    }
+    }*/
 }
 
 void infrared_help(void) {

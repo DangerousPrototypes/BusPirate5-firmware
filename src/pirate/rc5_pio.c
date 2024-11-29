@@ -80,9 +80,17 @@ void rc5_test(void) {
     pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0x0ff0a55a);
     pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0x12345678);
     pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, true);
-
-    for (int i = 0; i < 3; ++i)
-        printf("%08x\n", pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm));
+    uint32_t timeout=0xffffff;
+    for (int i = 0; i < 3; ++i){
+        while(timeout){
+            if(!pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)){
+                printf("%08x\n", pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm));
+                timeout=0xffffff;
+                break;
+            }
+            timeout--;
+        }
+    }
 }
 
 bool rc5_tx_wait_idle(void){

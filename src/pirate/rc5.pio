@@ -78,7 +78,7 @@ static inline void manchester_rx_program_init(PIO pio, uint sm, uint offset, uin
     pio_sm_config c = manchester_rx_program_get_default_config(offset);
     sm_config_set_in_pins(&c, pin); // for WAIT
     sm_config_set_jmp_pin(&c, pin); // for JMP
-    sm_config_set_in_shift(&c, true, true, 32);
+    sm_config_set_in_shift(&c, true, true, 14);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
     sm_config_set_clkdiv(&c, div);
     pio_sm_init(pio, sm, offset, &c);

@@ -28,6 +28,7 @@
 #include "pirate/rc5_pio.h"
 
 static struct _infrared_mode_config mode_config;
+static uint8_t device_cleanup;
 static uint32_t returnval;
 static int tx_sm;
 
@@ -265,6 +266,7 @@ uint32_t infrared_setup_exc(void) {
     if (status < 0) {
         printf("Failed to initialize RX PIO\r\n");
     }
+    device_cleanup = mode_config.protocol;
     system_config.subprotocol_name = ir_protocol_type[mode_config.protocol];
     system_config.num_bits=16;
     return 1;
@@ -276,8 +278,8 @@ bool infrared_preflight_sanity_check(void){
 
 // Cleanup any configuration on exit.
 void infrared_cleanup(void) {
-    ir_protocol[mode_config.protocol].irtx_deinit();
-    ir_protocol[mode_config.protocol].irrx_deinit();
+    ir_protocol[device_cleanup].irtx_deinit();
+    ir_protocol[device_cleanup].irrx_deinit();
     // unclaim pins
     system_bio_claim(false, BIO1, BP_PIN_IO, pin_labels[0]);
     system_bio_claim(false, BIO3, BP_PIN_IO, pin_labels[1]);
@@ -333,7 +335,7 @@ void infrared_macro(uint32_t macro) {
 // The Bus Pirate will make a periodic call to this function (if linked in modes.c)
 // Useful for checking async stuff like bytes in a UART
 void infrared_periodic(void){
-    /*uint32_t rx_frame;
+    uint32_t rx_frame;
     uint8_t rx_address;
     uint8_t rx_data;
     //nec_rx_status_t result = nec_get_frame(&rx_frame, &rx_address, &rx_data);
@@ -342,7 +344,7 @@ void infrared_periodic(void){
         printf("\r\nReceived: 0x%02x, 0x%02x", rx_address, rx_data);
     }else if (result == NEC_RX_FRAME_ERROR) {
         printf("\r\nReceived: 0x%08x (invalid frame)", rx_frame);
-    }*/
+    }
 }
 
 void infrared_help(void) {

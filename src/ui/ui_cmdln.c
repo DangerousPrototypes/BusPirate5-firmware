@@ -465,6 +465,13 @@ bool cmdln_find_next_command(struct _command_info_t* cp) {
     memset(cp->command, 0x00, 9);
     while (true) {
         bool got_pos1 = cmdln_try_peek(cp->endptr, &c);
+        
+        //consume white space
+        if(got_pos1 && c == ' ') {
+            cp->endptr++;
+            continue;
+        }
+        
         bool got_pos2 = cmdln_try_peek(cp->endptr + 1, &d);
         if (!got_pos1) {
 #ifdef UI_CMDLN_ARGS_DEBUG

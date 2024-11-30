@@ -73,7 +73,7 @@ int nec_tx_init(uint pin_num) {
     return pio_config_control.sm;
 }
 
-void nec_tx_deinit(void) {
+void nec_tx_deinit(uint pin_num) {
     //pio_remove_program_and_unclaim_sm(&nec_carrier_burst_program, pio_config_burst.pio, pio_config_burst.sm, pio_config_burst.offset);
     //pio_remove_program_and_unclaim_sm(&nec_carrier_control_program, pio_config_control.pio, pio_config_control.sm, pio_config_control.offset);
     pio_remove_program(pio_config_burst.pio, pio_config_burst.program, pio_config_burst.offset);

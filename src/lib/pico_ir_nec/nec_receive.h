@@ -16,6 +16,6 @@ typedef enum {
 
 // public API
 int nec_rx_init(uint pin);
-void nec_rx_deinit(void);
+void nec_rx_deinit(uint pin_num);
 bool nec_decode_frame(uint32_t *frame, uint8_t *p_address, uint8_t *p_data);
 nec_rx_status_t nec_get_frame(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data) ;

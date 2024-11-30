@@ -101,11 +101,11 @@ const uint32_t infrared_commands_count = count_of(infrared_commands);
 // an array of all the IR protocol functions
 typedef struct _ir_protocols {
     int (*irtx_init)(uint pin_num);      
-    void (*irtx_deinit)(void);   
+    void (*irtx_deinit)(uint pin_num);   
     void (*irtx_write)(uint32_t address, uint32_t data);     // write
     bool (*irtx_wait_idle)(void);
     int (*irrx_init)(uint pin_num);
-    void (*irrx_deinit)(void); 
+    void (*irrx_deinit)(uint pin_num); 
     nec_rx_status_t (*irrx_read)(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data);      // read
 } ir_protocols;
 static const ir_protocols ir_protocol[] = {
@@ -278,8 +278,8 @@ bool infrared_preflight_sanity_check(void){
 
 // Cleanup any configuration on exit.
 void infrared_cleanup(void) {
-    ir_protocol[device_cleanup].irtx_deinit();
-    ir_protocol[device_cleanup].irrx_deinit();
+    ir_protocol[device_cleanup].irtx_deinit(bio2bufiopin[BIO4]);
+    ir_protocol[device_cleanup].irrx_deinit(bio2bufiopin[ir_rx_pins[mode_config.rx_sensor]]);
     // unclaim pins
     system_bio_claim(false, BIO1, BP_PIN_IO, pin_labels[0]);
     system_bio_claim(false, BIO3, BP_PIN_IO, pin_labels[1]);

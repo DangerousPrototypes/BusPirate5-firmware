@@ -16,6 +16,8 @@ void bio_init(void) {
             continue;
         }
 
+        gpio_set_inover(1u << bio2bufiopin[i], GPIO_OVERRIDE_NORMAL);
+        gpio_set_outover(1u << bio2bufiopin[i], GPIO_OVERRIDE_NORMAL);
         gpio_set_drive_strength(bio2bufiopin[i], GPIO_DRIVE_STRENGTH_2MA);
         gpio_set_dir(bio2bufiopin[i], GPIO_IN);
         gpio_set_function(bio2bufiopin[i], GPIO_FUNC_SIO);
@@ -30,7 +32,8 @@ void bio_init(void) {
         if (system_config.pin_func[i + 1] == BP_PIN_DEBUG) {
             continue;
         }
-
+        gpio_set_inover(1u << bio2bufdirpin[i], GPIO_OVERRIDE_NORMAL);
+        gpio_set_outover(1u << bio2bufdirpin[i], GPIO_OVERRIDE_NORMAL);
         gpio_put(bio2bufdirpin[i], BUFDIR_INPUT);
         gpio_set_dir(bio2bufdirpin[i], GPIO_OUT);
         gpio_set_function(bio2bufdirpin[i], GPIO_FUNC_SIO);

@@ -48,7 +48,7 @@ int nec_rx_init(uint pin_num) {
     return pio_config.sm;
 }
 
-void nec_rx_deinit(void) {
+void nec_rx_deinit(uint pin_num) {
     //pio_remove_program_and_unclaim_sm(&nec_receive_program, pio_config.pio, pio_config.sm, pio_config.offset);
     pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
 }

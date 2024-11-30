@@ -35,7 +35,7 @@ int rc5_rx_init(uint pin_num) {
         printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_rx.pio), pio_config_rx.sm, pio_config_rx.offset);
     #endif
 
-    manchester_rx_program_init(pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, pin_num, 18520.833f);
+    manchester_rx_program_init(pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, pin_num, 36000.0f/64.0f);
     return 0;
 }
 
@@ -50,7 +50,7 @@ int rc5_tx_init(uint pin_num) {
         printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_rc5_carrier.pio), pio_config_rc5_carrier.sm, pio_config_rc5_carrier.offset);
     #endif
 
-    rc5_carrier_program_init(pio_config_rc5_carrier.pio, pio_config_rc5_carrier.sm, pio_config_rc5_carrier.offset, pin_num, 38000.0f);
+    rc5_carrier_program_init(pio_config_rc5_carrier.pio, pio_config_rc5_carrier.sm, pio_config_rc5_carrier.offset, pin_num, 36000.0f);
     //start rc5 control program
     pio_config_tx.pio = PIO_MODE_PIO;
     pio_config_tx.sm = 1;
@@ -61,16 +61,17 @@ int rc5_tx_init(uint pin_num) {
         printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_tx.pio), pio_config_tx.sm, pio_config_tx.offset);
     #endif
 
-    manchester_tx_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, pin_num, 18520.833f);
+    manchester_tx_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, 36000.0f/64.0f);
     return 0;
 }
 
-void rc5_rx_deinit(void) {
+void rc5_rx_deinit(uint pin_num) {
     //pio_remove_program_and_unclaim_sm(pio_config_tx.program, pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset);
     pio_remove_program(pio_config_rx.pio, pio_config_rx.program, pio_config_rx.offset);
+    gpio_set_inover(1u << pin_num, GPIO_OVERRIDE_NORMAL);
 }
 
-void rc5_tx_deinit(void) {
+void rc5_tx_deinit(uint pin_num) {
     //pio_remove_program_and_unclaim_sm(pio_config_tx.program, pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset);
     pio_remove_program(pio_config_tx.pio, pio_config_tx.program, pio_config_tx.offset);
 }

@@ -20,6 +20,7 @@
 
 static struct _pio_config pio_config_rx;
 static struct _pio_config pio_config_tx;
+static struct _pio_config pio_config_rc5_carrier;
 
 int rc5_rx_init(uint pin_num) {
     // disable pull-up and pull-down on gpio pin
@@ -39,8 +40,20 @@ int rc5_rx_init(uint pin_num) {
 }
 
 int rc5_tx_init(uint pin_num) {
+    // start rc5 carrier program
+    pio_config_rc5_carrier.pio = PIO_MODE_PIO;
+    pio_config_rc5_carrier.sm = 0;
+    pio_config_rc5_carrier.program = &rc5_carrier_program;
+    pio_config_rc5_carrier.offset = pio_add_program(pio_config_rc5_carrier.pio, pio_config_rc5_carrier.program);
+
+    #ifdef BP_PIO_SHOW_ASSIGNMENT
+        printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_rc5_carrier.pio), pio_config_rc5_carrier.sm, pio_config_rc5_carrier.offset);
+    #endif
+
+    rc5_carrier_program_init(pio_config_rc5_carrier.pio, pio_config_rc5_carrier.sm, pio_config_rc5_carrier.offset, pin_num, 38000.0f);
+    //start rc5 control program
     pio_config_tx.pio = PIO_MODE_PIO;
-    pio_config_tx.sm = 0;
+    pio_config_tx.sm = 1;
     pio_config_tx.program = &manchester_tx_program;
     pio_config_tx.offset = pio_add_program(pio_config_tx.pio, pio_config_tx.program);
 

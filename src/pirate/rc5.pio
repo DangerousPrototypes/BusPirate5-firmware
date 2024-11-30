@@ -6,32 +6,20 @@
 .pio_version 0 // only requires PIO version 0
 
 
-.program rc5_carrier_burst
-
-; Generate bursts of carrier.
-;
-; Repeatedly wait for an IRQ to be set then clear it and generate 21 cycles of
-; carrier with 25% duty cycle
-;
-.define NUM_CYCLES 32               ; how many carrier cycles to generate
-.define BURST_IRQ 7                 ; which IRQ should trigger a carrier burst
-.define public TICKS_PER_LOOP 4     ; the number of instructions in the loop (for timing)
+.program rc5_carrier
+.define public TICKS_PER_LOOP 2     ; the number of instructions in the loop (for timing)
 
 .wrap_target
-    set X, (NUM_CYCLES - 1)         ; initialise the loop counter
-    wait 1 irq BURST_IRQ            ; wait for the IRQ then clear it
-cycle_loop:
-    set pins, 1                     ; set the pin high (1 cycle)
-    set pins, 0 [1]                 ; set the pin low (2 cycles)
-    jmp X--, cycle_loop             ; (1 more cycle)
+    set pins, 1                 ; set the pin high 
+    set pins, 0                 ; set the pin low 
 .wrap
 
 
 % c-sdk {
-static inline void rc5_carrier_burst_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
+static inline void rc5_carrier_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
     // Create a new state machine configuration
     //
-    pio_sm_config c = nec_carrier_burst_program_get_default_config (offset);
+    pio_sm_config c = rc5_carrier_program_get_default_config (offset);
 
     // Map the SET pin group to one pin, namely the `pin`
     // parameter to this function.
@@ -42,13 +30,13 @@ static inline void rc5_carrier_burst_program_init(PIO pio, uint sm, uint offset,
     //
     pio_gpio_init (pio, pin);
 
-    // Set the pin direction to output at the PIO
+    // Set the pin direction to input at the PIO
     //
-    pio_sm_set_consecutive_pindirs (pio, sm, pin, 1, true);
+    pio_sm_set_consecutive_pindirs (pio, sm, pin, 1, false);
 
     // Set the clock divider to generate the required frequency
     //
-    float div = clock_get_hz (clk_sys) / (freq * rc5_carrier_burst_TICKS_PER_LOOP);
+    float div = clock_get_hz (clk_sys) / (freq * rc5_carrier_TICKS_PER_LOOP);
     sm_config_set_clkdiv (&c, div);
 
     // Apply the configuration to the state machine
@@ -68,17 +56,16 @@ static inline void rc5_carrier_burst_program_init(PIO pio, uint sm, uint offset,
 ; (each part lasting half a bit period, or 6 cycles) and a '1' is encoded as a
 ; low-high sequence.
 ;
-; Side-set bit 0 must be mapped to the GPIO used for TX.
 ; Autopull must be enabled -- this program does not care about the threshold.
 ; The program starts at the public label 'start'.
-
 .wrap_target
 do_1:
-    nop         side 0 [5] ; Low for 6 cycles (5 delay, +1 for nop)
-    jmp get_bit side 1 [3] ; High for 4 cycles. 'get_bit' takes another 2 cycles
+    set pindirs, 0 [5]      ; Set pin as input (1 + 5 = 6 cycles low)
+    set pindirs, 1 [2]      ; Set pin as output (1 + 2 + 1 + 2 = 6 cycles high)
+    jmp get_bit             ; 
 do_0:
-    nop         side 1 [5] ; Output high for 6 cycles
-    nop         side 0 [3] ; Output low for 4 cycles
+    set pindirs, 1 [5]      ; Set pin as output (1 + 5 = 6 cycles high)
+    set pindirs, 0 [2]      ; Set pin as input (1 + 2 + 1 + 2 = 6 cycles low)
 public start:
 get_bit:
     out x, 1               ; Always shift out one bit from OSR to X, so we can
@@ -92,15 +79,10 @@ static inline void manchester_tx_program_init(PIO pio, uint sm, uint offset, uin
     pio_gpio_init(pio, pin);
 
     pio_sm_config c = manchester_tx_program_get_default_config(offset);
-    sm_config_set_sideset_pins(&c, pin);
+    sm_config_set_set_pins(&c, pin, 1);
     sm_config_set_out_shift(&c, true, true, 32);
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
-    //float div = clock_get_hz (clk_sys) / tick_rate;
-    //sm_config_set_clkdiv (&c, div);
-
     sm_config_set_clkdiv(&c, div);
-    pio_sm_init(pio, sm, offset + manchester_tx_offset_start, &c);
-
+    pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);
 }
 %}

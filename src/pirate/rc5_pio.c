@@ -34,7 +34,7 @@ int rc5_rx_init(uint pin_num) {
         printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_rx.pio), pio_config_rx.sm, pio_config_rx.offset);
     #endif
 
-    manchester_rx_program_init(pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, pin_num, 1.f);
+    manchester_rx_program_init(pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, pin_num, 18520.833f);
     return 0;
 }
 
@@ -48,7 +48,7 @@ int rc5_tx_init(uint pin_num) {
         printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_tx.pio), pio_config_tx.sm, pio_config_tx.offset);
     #endif
 
-    manchester_tx_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, pin_num, 1.f);
+    manchester_tx_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, pin_num, 18520.833f);
     return 0;
 }
 
@@ -84,7 +84,7 @@ void rc5_test(void) {
     for (int i = 0; i < 3; ++i){
         while(timeout){
             if(!pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)){
-                printf("%08x\n", pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm));
+                printf("%08x\r\n", pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm));
                 timeout=0xffffff;
                 break;
             }

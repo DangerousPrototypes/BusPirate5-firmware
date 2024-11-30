@@ -1,0 +1,104 @@
+; RC5 IR transmission using Manchester encoding
+; Side-set bit 0 must be mapped to the GPIO used for TX.
+; Autopull must be enabled -- this program does not care about the threshold.
+; The program starts at the public label 'start'.
+
+.side_set 1 ; Use side-set to control the GPIO pin
+
+.wrap_target
+do_1:
+    set y, 31                ; Set Y to 31 (32 pulses)
+bit_1_loop:
+    nop         side 1 [1]   ; High for 2 cycles (1 delay, +1 for nop)
+    nop         side 0 [1]   ; Low for 2 cycles (1 delay, +1 for nop)
+    jmp y-- bit_1_loop       ; Loop until 32 pulses are sent
+    jmp get_bit              ; Get the next bit
+do_0:
+    set y, 31                ; Set Y to 31 (32 pulses)
+bit_0_loop:
+    nop         side 1 [1]   ; High for 2 cycles (1 delay, +1 for nop)
+    nop         side 0 [1]   ; Low for 2 cycles (1 delay, +1 for nop)
+    jmp y-- bit_0_loop       ; Loop until 32 pulses are sent
+    jmp get_bit              ; Get the next bit
+public start:
+get_bit:
+    out x, 1                 ; Always shift out one bit from OSR to X, so we can
+    jmp !x do_0              ; branch on it. Autopull refills the OSR when empty.
+.wrap
+
+% c-sdk {
+static inline void rc5_tx_program_init(PIO pio, uint sm, uint offset, uint pin, float div) {
+    pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+    pio_gpio_init(pio, pin);
+
+    pio_sm_config c = rc5_tx_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+    sm_config_set_out_shift(&c, true, true, 32);
+    sm_config_set_clkdiv(&c, div);
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
+
+
+#include "pico/stdlib.h"
+#include "hardware/pio.h"
+#include "rc5.pio.h"
+
+static inline void rc5_tx_program_init(PIO pio, uint sm, uint offset, uint pin, float div) {
+    pio_sm_set_pins_with_mask(pio, sm, 0, 1u << pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+    pio_gpio_init(pio, pin);
+
+    pio_sm_config c = rc5_tx_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+    sm_config_set_out_shift(&c, true, true, 32);
+    sm_config_set_clkdiv(&c, div);
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+void send_rc5_code(PIO pio, uint sm, uint32_t rc5_code) {
+    pio_sm_put_blocking(pio, sm, rc5_code);
+}
+
+int main() {
+    stdio_init_all();
+
+    PIO pio = pio0;
+    uint sm = 0;
+    uint pin = 2; // GPIO pin for IR transmission
+    uint offset = pio_add_program(pio, &rc5_tx_program);
+    float div = 1.0f; // No clock divider for modulation
+
+    rc5_tx_program_init(pio, sm, offset, pin, div);
+
+    uint32_t rc5_code = 0x1F7C; // Example RC5 code
+    send_rc5_code(pio, sm, rc5_code);
+
+    return 0;
+}
+
+
+
+; NO SIDE SET for max delay values
+; count pulses a bit better, what to do about the 3 extra clock on each bit?
+.wrap_target
+do_off:
+    set y, 62           [28]     ; make up for 3 used cycles
+off_loop:
+    jmp y-- off_loop [31]      ; Loop until 32 pulses are sent
+    jmp !x get_bit             ; Get the next bit
+do_on:
+    set y, 31                ; Set Y to 31 (32 pulses)
+on_loop:
+    pins 1 [31]   ; High for 32 cycles (1 delay, +1 for nop)
+    pins 0 [30]   ; Low for 32 cycles (1 delay, +1 for nop)
+    jmp y-- on_loop     ; Loop until 32 pulses are sent
+    jmp !x  do_off              ; Get the next bit
+public start:
+get_bit:
+    out x, 1                 ; Always shift out one bit from OSR to X, so we can
+    jmp !x do_on              ; branch on it. Autopull refills the OSR when empty.
+.wrap

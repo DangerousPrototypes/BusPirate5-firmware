@@ -72,7 +72,7 @@ static inline void rc5_carrier_program_init(PIO pio, uint sm, uint offset, uint 
 ; The program starts at the public label 'start'.
 .define BURST_IRQ 7                     ; the IRQ used to trigger a carrier burst
 .define public TICKS_PER_LOOP 16         ; the number of instructions in the loop (for timing)
-.define public NUM_BITS 32               ; the number of bits to transmit per frame
+.define public NUM_BITS 14               ; the number of bits to transmit per frame
 .wrap_target
 do_1:
     nop [7]                 ; low 6 cycles
@@ -117,27 +117,16 @@ static inline void manchester_tx_program_init(PIO pio, uint sm, uint offset, flo
 ; Autopush must be enabled.
 ; Before enabling the SM, it should be placed in a 'wait 1, pin` state, so that
 ; it will not start sampling until the initial line idle state ends.
-.define public TICKS_PER_LOOP 16         ; the number of instructions in the loop (for timing)
-.define public NUM_BITS 32               ; the number of bits to receive per frame
-
-public entry_point:
-    set y (NUM_BITS-1)  ; initialize the bit counter, with some delay to avoid triggering on previous bit
-    wait 0 pin 0       ; Wait for the 1->0 transition - this is the middle of the start bit
-    in x, 1 [6]        ; Emit a 1, sleep 1/2 of a bit
-   
+.define public TICKS_PER_LOOP 16         ; the number of instructions in the loop (for timing) **2samples per bit = 16 not 8**
+.define public NUM_BITS 14               ; the number of bits to receive per frame
 .wrap_target
-check_end:
-    jmp y-- next_bit ; end of 14 bits
-    jmp entry_point  ; end of 32 bits
-next_bit:
-    jmp pin start_of_1 ; If signal is 1 again, it's another 1 bit, otherwise it's a 0 (inverted)
-start_of_0:            ; We are 0.25 bits into a 0 - signal is high
-    wait 1 pin 0       ; Wait for the 0->1 transition - at this point we are 0.5 into the bit (inverted)
-    in null, 1 [11]    ; Emit a 0, sleep 3/4 of a bit
-    jmp check_end
-start_of_1:            ; We are 0.25 bits into a 1 - signal is 1   
-    wait 0 pin 0       ; Wait for the 1->0 transition - at this point we are 0.5 into the bit (inverted)
-    in x, 1 [12]       ; Emit a 1, sleep 3/4 of a bit
+get_bit:
+    in pins, 1 [6]       ; Read the bit, sleep 3/4 of a bit
+    jmp y-- get_bit      ; collect all the bits
+public entry_point:
+    set y ((NUM_BITS*2)-2)  ; initialize the bit counter, with some delay to avoid triggering on previous bit
+    in x, 1             ; Insert the invisible first half of the start bit
+    wait 0 pin 0 [2]       ; Wait for the 1->0 transition - this is the middle of the start bit   
 .wrap
 
 
@@ -149,7 +138,7 @@ static inline void manchester_rx_program_init(PIO pio, uint sm, uint offset, uin
     pio_sm_config c = manchester_rx_program_get_default_config(offset);
     sm_config_set_in_pins(&c, pin); // for WAIT
     sm_config_set_jmp_pin(&c, pin); // for JMP
-    sm_config_set_in_shift(&c, false, true, manchester_rx_NUM_BITS);
+    sm_config_set_in_shift(&c, false, true, (manchester_rx_NUM_BITS*2));
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
     //sm_config_set_clkdiv(&c, div);
     float div = clock_get_hz (clk_sys) / (freq * manchester_rx_TICKS_PER_LOOP);

@@ -86,23 +86,41 @@ void rc5_send(uint32_t *data) {
     pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, rc5_frame);
 }
 
-nec_rx_status_t rc5_receive(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data) {
+nec_rx_status_t rc5_receive(uint32_t *rx_frame) {
     if (pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
-        return NEC_RX_NO_FRAME;
+        return IR_RX_NO_FRAME;
     }
-    (*rx_frame) = pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm);
+    // we get a 32 bit word with the raw pin samples
+    uint32_t manchester_frame = pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm);
+    // Manchester decoding
+    // we need to decode the manchester frame to get the raw RC5 frame
+    #define RC5_0 0b01 //these are inverted because the sensor pulls low for active IR signal
+    #define RC5_1 0b10
+    uint16_t rc5_frame = 0;
+    for (int i = 0; i < 14; i++) {
+        rc5_frame <<= 1;
+        uint8_t mc_bit = (manchester_frame >> (26 - (2 * i))) & 0b11; // Extract 2 bits
+        if (mc_bit == RC5_1) {
+            rc5_frame |= 1; // Logical '1'
+        } else if (mc_bit != RC5_0) {
+            // Invalid Manchester encoding
+            //printf("\r\nInvalid Manchester encoding (0x%08x)", manchester_frame);
+            return IR_RX_FRAME_ERROR; // Indicate an error
+        }
+    }
+    (*rx_frame) = rc5_frame;
     printf("\r\n(0x%04x) SB1:%d SB2:%d Toggle:%d Address: %d (0x%02x) Command: %d (0x%02x)", 
-    (*rx_frame), ((*rx_frame) >> 13) & 1, ((*rx_frame) >> 12) & 1, ((*rx_frame) >> 11) & 1, 
-    ((*rx_frame) >> 6) & 0x1f, ((*rx_frame) >> 6) & 0x1f, (*rx_frame) & 0x3f, (*rx_frame) & 0x3f);
-    return NEC_RX_FRAME_OK;
+    rc5_frame, (rc5_frame >> 13) & 1, (rc5_frame >> 12) & 1, (rc5_frame >> 11) & 1, 
+    (rc5_frame >> 6) & 0x1f, (rc5_frame >> 6) & 0x1f, rc5_frame & 0x3f, rc5_frame & 0x3f);
+    return IR_RX_FRAME_OK;
 }
 /*
 nec_rx_status_t rc5_receive(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data) {
     if (pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
-        return NEC_RX_NO_FRAME;
+        return IR_RX_NO_FRAME;
     }
-    (*rx_frame) = pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm);
-    return NEC_RX_FRAME_OK;
+    rc5_frame = pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm);
+    return IR_RX_FRAME_OK;
 }
 */
 

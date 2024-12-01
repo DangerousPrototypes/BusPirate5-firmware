@@ -53,21 +53,24 @@ void nec_rx_deinit(uint pin_num) {
     pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
 }
 
-nec_rx_status_t nec_get_frame(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data) {
+nec_rx_status_t nec_get_frame(uint32_t *rx_frame) {
     // display any frames in the receive FIFO
     if(pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
-        return NEC_RX_NO_FRAME;
+        return IR_RX_NO_FRAME;
     }
 
     (*rx_frame) = pio_sm_get(pio_config.pio, pio_config.sm);
 
-    if (nec_decode_frame(rx_frame, rx_address, rx_data)) {
-        //printf("\treceived: %02x, %02x", rx_address, rx_data);
-        return NEC_RX_FRAME_OK;
-    } else {
-        //printf("\treceived: %08x", rx_frame);
-        return NEC_RX_FRAME_ERROR;
+    uint8_t rx_address, rx_data;
+    if (nec_decode_frame(rx_frame, &rx_address, &rx_data)) {
+        printf("\r\n(0x%08x) Address: %d (0x%02x) Command: %d (0x%02x)", (*rx_frame), rx_address, rx_address, rx_data, rx_data);
+        return IR_RX_FRAME_OK;
+    }else{
+        //printf("\r\n(0x%08x) invalid frame", (*rx_frame));
+        return IR_RX_FRAME_ERROR;
     }
+
+
 
 }
 

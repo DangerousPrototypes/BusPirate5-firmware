@@ -107,7 +107,7 @@ typedef struct _ir_protocols {
     bool (*irtx_wait_idle)(void);
     int (*irrx_init)(uint pin_num);
     void (*irrx_deinit)(uint pin_num); 
-    nec_rx_status_t (*irrx_read)(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data);      // read
+    nec_rx_status_t (*irrx_read)(uint32_t *rx_frame);      // read
 } ir_protocols;
 static const ir_protocols ir_protocol[] = {
     {   .irtx_init = nec_tx_init, 
@@ -330,15 +330,7 @@ void infrared_macro(uint32_t macro) {
 // Useful for checking async stuff like bytes in a UART
 void infrared_periodic(void){
     uint32_t rx_frame;
-    uint8_t rx_address;
-    uint8_t rx_data;
-    //nec_rx_status_t result = nec_get_frame(&rx_frame, &rx_address, &rx_data);
-    nec_rx_status_t result = ir_protocol[mode_config.protocol].irrx_read(&rx_frame, &rx_address, &rx_data);
-    if (result == NEC_RX_FRAME_OK) {
-        printf("\r\nReceived: 0x%02x, 0x%02x", rx_address, rx_data);
-    }else if (result == NEC_RX_FRAME_ERROR) {
-        printf("\r\nReceived: 0x%08x (invalid frame)", rx_frame);
-    }
+    nec_rx_status_t result = ir_protocol[mode_config.protocol].irrx_read(&rx_frame);
 }
 
 void infrared_help(void) {

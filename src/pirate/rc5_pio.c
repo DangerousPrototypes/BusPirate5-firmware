@@ -76,8 +76,14 @@ void rc5_tx_deinit(uint pin_num) {
     pio_remove_program(pio_config_tx.pio, pio_config_tx.program, pio_config_tx.offset);
 }
 
-void rc5_send(uint32_t address, uint32_t data) {
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, data);
+void rc5_send(uint32_t *data) {
+    //RC5 frame format: S1 S2 T A4 A3 A2 A1 A0 C5 C4 C3 C2 C1 C0
+    // 14bits total. S1=1, S2=1, T=toggle bit, A=address (5), C=command (6)
+    // for Extended RC5 S2 is command bit 7. S1 has to be inverted to be backwards compatible
+    (*data) =((*data) | ((1u<<13)|(1u<<12))); //set S1 and S2
+    //need to align the 14 bits to the left of the 32 bit word
+    uint32_t rc5_frame = (*data) << 18;
+    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, rc5_frame);
 }
 
 nec_rx_status_t rc5_receive(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data) {
@@ -85,14 +91,27 @@ nec_rx_status_t rc5_receive(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx
         return NEC_RX_NO_FRAME;
     }
     (*rx_frame) = pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm);
+    printf("\r\n(0x%04x) SB1:%d SB2:%d Toggle:%d Address: %d (0x%02x) Command: %d (0x%02x)", 
+    (*rx_frame), ((*rx_frame) >> 13) & 1, ((*rx_frame) >> 12) & 1, ((*rx_frame) >> 11) & 1, 
+    ((*rx_frame) >> 6) & 0x1f, ((*rx_frame) >> 6) & 0x1f, (*rx_frame) & 0x3f, (*rx_frame) & 0x3f);
     return NEC_RX_FRAME_OK;
 }
+/*
+nec_rx_status_t rc5_receive(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data) {
+    if (pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
+        return NEC_RX_NO_FRAME;
+    }
+    (*rx_frame) = pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm);
+    return NEC_RX_FRAME_OK;
+}
+*/
+
 
 void rc5_test(void) {
     pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0);
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0x0ff0a55a);
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0x12345678);
+    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0xf0f0f0ff);
+    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0xf0f0a55f);
+    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0xf234567f);
     pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, true);
     uint32_t timeout=0xffffff;
     for (int i = 0; i < 3; ++i){

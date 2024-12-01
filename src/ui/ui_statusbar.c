@@ -279,6 +279,9 @@ void ui_statusbar_init(void) {
 
 void ui_statusbar_deinit(void) {
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
+        system_config.terminal_ansi_statusbar = 0;
+        system_config.terminal_ansi_statusbar_update = false;
+        busy_wait_ms(100); // wait for the last statusbar update to finish
         printf("\e7\e[0;%dr", system_config.terminal_ansi_rows); // save cursor, disable region block
         for (uint8_t i = 0; i < 4; i++) {
             printf("\e[%d;0H\e[K", system_config.terminal_ansi_rows - i); // clear screen

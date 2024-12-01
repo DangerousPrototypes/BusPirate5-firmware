@@ -43,6 +43,7 @@ bool irtoy_test_pullup(int bio) {
 }
 
 bool irtoy_test_rx(int bio) {
+
     uint32_t tx_frame = nec_encode_frame(0xff, 0xff);
     pio_sm_put(pio0, tx_sm, tx_frame);
     uint32_t timeout = 0;
@@ -102,7 +103,7 @@ const uint32_t infrared_commands_count = count_of(infrared_commands);
 typedef struct _ir_protocols {
     int (*irtx_init)(uint pin_num);      
     void (*irtx_deinit)(uint pin_num);   
-    void (*irtx_write)(uint32_t address, uint32_t data);     // write
+    void (*irtx_write)(uint32_t *data);     // write
     bool (*irtx_wait_idle)(void);
     int (*irrx_init)(uint pin_num);
     void (*irrx_deinit)(uint pin_num); 
@@ -294,16 +295,9 @@ void infrared_cleanup(void) {
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
 // This function generally writes data out to the IO pins or a peripheral
 void infrared_write(struct _bytecode* result, struct _bytecode* next) {
-    // transmit and receive frames
-    uint8_t tx_address = result->out_data >> 8;
-    uint8_t tx_data = result->out_data;
-    // create a 32-bit frame and add it to the transmit FIFO
-    ir_protocol[mode_config.protocol].irtx_write(tx_address, tx_data);
-
-    //uint32_t tx_frame = nec_encode_frame(tx_address, tx_data);
-    //nec_send_frame(tx_frame);
+    // each protocol has its own write function
+    ir_protocol[mode_config.protocol].irtx_write(&result->out_data);
     //TODO: frame delay if next command is a write or something?
-    //nec_tx_wait_idle();
     ir_protocol[mode_config.protocol].irtx_wait_idle();
 }
 

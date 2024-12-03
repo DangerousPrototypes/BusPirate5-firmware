@@ -11,7 +11,7 @@
 #include "tusb.h"
 #include "pirate/bio.h"
 #include "system_config.h"
-#include "debug.h"
+#include "debug_uart.h"
 
 // USB TX:
 // This file contains the code for the user interface ring buffer

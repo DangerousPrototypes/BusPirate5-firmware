@@ -253,7 +253,7 @@ usb_tx.c
 wavegen.c
 bytecode.h
 commands.h
-debug.h
+debug_uart.h
 displays.h
 modes.h
 msc_disk.h

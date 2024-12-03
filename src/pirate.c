@@ -32,7 +32,7 @@
 #include "queue.h"
 #include "usb_tx.h"
 #include "usb_rx.h"
-#include "debug.h"
+#include "debug_uart.h"
 #include "ui/ui_cmdln.h"
 #include "bytecode.h"
 #include "modes.h"

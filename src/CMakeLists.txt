@@ -357,10 +357,19 @@ set(bp5_nandflash
         nand/sys_time.h
 )
 
+set (bp5_rtt
+        lib/rtt/Config/SEGGER_RTT_Conf.h
+        lib/rtt/RTT/SEGGER_RTT.c
+        lib/rtt/RTT/SEGGER_RTT.h
+        lib/rtt/RTT/SEGGER_RTT_printf.c
+)
+
+
 if(${PICO_PLATFORM} MATCHES "rp2350")
         add_executable(bus_pirate5_xl
                 ${bp5_common}
                 ${bp5_nandflash}
+                ${bp5_rtt}
                 platform/bpi-rev10.h
                 platform/bpi-rev10.c 
                 pirate/shift.h
@@ -374,6 +383,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         add_executable(bus_pirate6
                 ${bp5_common}
                 ${bp5_nandflash}
+                ${bp5_rtt}
                 platform/bpi6-rev1.h
                 platform/bpi6-rev1.c
                 display/robot6x16.h
@@ -390,6 +400,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
 else()
         add_executable(bus_pirate5_rev8
                 ${bp5_common}
+                ${bp5_rtt}
                 platform/bpi-rev8.h
                 platform/bpi-rev8.c
                 #tf card access control
@@ -406,6 +417,7 @@ else()
         add_executable(bus_pirate5_rev10
                 ${bp5_common}
                 ${bp5_nandflash}
+                ${bp5_rtt}
                 platform/bpi-rev10.h
                 platform/bpi-rev10.c
                 pirate/shift.h

@@ -234,8 +234,8 @@ Revision: $Rev: 24316 $
                                                 );                             \
                                }
   #else
-    #define SEGGER_RTT_LOCK()
-    #define SEGGER_RTT_UNLOCK()
+//    #define SEGGER_RTT_LOCK()
+//    #define SEGGER_RTT_UNLOCK()
   #endif
 #endif
 
@@ -411,6 +411,14 @@ void OS_SIM_LeaveCriticalSection(void);
 
 #define SEGGER_RTT_UNLOCK()       OS_SIM_LeaveCriticalSection();                                    \
                                 }
+#endif
+
+
+#if !defined(SEGGER_RTT_LOCK)
+  #error "Macro SEGGER_RTT_LOCK() must be defined ... see src/lib/rtt/Config/SEGGER_RTT_Conf.h"
+#endif
+#if !defined(SEGGER_RTT_UNLOCK)
+  #error "Macro SEGGER_RTT_UNLOCK() must be defined ... see src/lib/rtt/Config/SEGGER_RTT_Conf.h"
 #endif
 
 /*********************************************************************

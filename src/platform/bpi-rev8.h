@@ -1,5 +1,7 @@
 #ifndef BP_HARDWARE_VERSION
 
+#include <stdint.h>
+
 #define BP_SPLASH_FILE "display/robot5x16.h" //splash screen
 
 #define BP_HARDWARE_VERSION "Bus Pirate 5 REV8"

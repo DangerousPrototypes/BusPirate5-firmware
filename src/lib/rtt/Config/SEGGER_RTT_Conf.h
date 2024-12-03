@@ -154,6 +154,7 @@ Revision: $Rev: 24316 $
 */
 #if ((defined(__SES_ARM) || defined(__SES_RISCV) || defined(__CROSSWORKS_ARM) || defined(__GNUC__) || defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))
   #if (defined(__ARM_ARCH_6M__) || defined(__ARM_ARCH_8M_BASE__))
+    // e.g.: RP2040 / BusPirate5
     #define SEGGER_RTT_LOCK()   {                                                                   \
                                     unsigned int _SEGGER_RTT__LockState;                                         \
                                   __asm volatile ("mrs   %0, primask  \n\t"                         \
@@ -171,6 +172,7 @@ Revision: $Rev: 24316 $
                                                   );                                                \
                                 }
   #elif (defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__) || defined(__ARM_ARCH_8M_MAIN__))
+    // e.g.: RP2350 / BusPirate6 / BusPirate5XL
     #ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY
       #define SEGGER_RTT_MAX_INTERRUPT_PRIORITY   (0x20)
     #endif
@@ -414,23 +416,19 @@ void OS_SIM_LeaveCriticalSection(void);
 #endif
 
 
-#if !defined(SEGGER_RTT_LOCK)
-  #error "Macro SEGGER_RTT_LOCK() must be defined ... see src/lib/rtt/Config/SEGGER_RTT_Conf.h"
-#endif
-#if !defined(SEGGER_RTT_UNLOCK)
-  #error "Macro SEGGER_RTT_UNLOCK() must be defined ... see src/lib/rtt/Config/SEGGER_RTT_Conf.h"
-#endif
-
 /*********************************************************************
 *
 *       RTT lock configuration fallback
+*       -- DO NOT FALLBACK TO NOTHING --
+*       -- Require explicit 
+*     
 */
-#ifndef   SEGGER_RTT_LOCK
-  #define SEGGER_RTT_LOCK()                // Lock RTT (nestable)   (i.e. disable interrupts)
-#endif
 
-#ifndef   SEGGER_RTT_UNLOCK
-  #define SEGGER_RTT_UNLOCK()              // Unlock RTT (nestable) (i.e. enable previous interrupt lock state)
+#if !defined(SEGGER_RTT_LOCK)
+  #error "Macro SEGGER_RTT_LOCK()   __MUST__  be defined ... see src/lib/rtt/Config/SEGGER_RTT_Conf.h" // must be nestable lock, i.e. disable interrupts
+#endif
+#if !defined(SEGGER_RTT_UNLOCK)
+  #error "Macro SEGGER_RTT_UNLOCK() __MUST__  be defined ... see src/lib/rtt/Config/SEGGER_RTT_Conf.h" // must enable previous lock state, i.e., re-enable prior interrupt state
 #endif
 
 #endif

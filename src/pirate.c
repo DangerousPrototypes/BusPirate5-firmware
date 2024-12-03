@@ -75,6 +75,7 @@ void gpio_setup(uint8_t pin, bool direction, bool level) {
 }
 
 static void main_system_initialization(void) {
+    SEGGER_RTT_Init();
 
 #if (BP_VER == 5)
     uint8_t bp_rev = mcu_detect_revision();

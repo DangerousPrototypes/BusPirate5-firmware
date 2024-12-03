@@ -84,6 +84,7 @@
 
 #include "translation/base.h"
 #include "printf-4.0.0/printf.h"
+#include "lib/rtt/RTT/SEGGER_RTT.h"
 #include <stdint.h>
 #include <stdbool.h>
 

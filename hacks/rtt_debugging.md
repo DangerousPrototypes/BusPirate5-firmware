@@ -17,6 +17,7 @@ force the VTRef voltage (to 3.3V?).
 * [ ] Document connections using Pi Probe.
 * [ ] Document connections using RP2040 with probe firmware.
 * [ ] Document connections using JLink.
+* [ ] Determine how to install OpenOCD 0.12.0+dev on Ubuntu 24.04 LTS, for RP2350 support.
 
 ## Prerequisites and Presumptions
 
@@ -34,7 +35,22 @@ At least three shell windows required.
 ### Shell #1 -- OpenOCD server
 
 1. Start OpenOCD
-`openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 5000"`
+
+    `openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 5000"`
+
+
+For BP5XL / BP6 (RP2350 based boards), a pre-release version
+of OpenOCD is required.  For me, it was
+necessary to run
+from the installed scripts folder. As a result, programming required
+a full path to the `elf` firmware binary.  YMMV.
+
+
+```
+pushd ~/.pico-sdk/openocd/0.12.0+dev/scripts
+
+../openocd -f ./interface/cmsis-dap.cfg -f ./target/rp2350.cfg -c "adapter speed 5000"
+```
 
 ### Shell #2 -- Interacting with OpenOCD
 
@@ -74,7 +90,24 @@ rtt server start 4321 0
 
 </details>
 
+### Shell #2 for RP2350
 
+This requires a pre-release version of OpenOCD 0.12.0
+
+<details><summary>As a single script...</summary><P/>
+
+```
+program /home/henrygab/build_rp2350/src/bus_pirate6.elf
+reset halt
+rp2350.dap.core1 arp_reset assert 0
+rp2350.dap.core0 arp_reset assert 0
+sleep 500
+rtt setup 0x20000000 0x100000 "SEGGER RTT"
+rtt start
+rtt server start 4321 0
+```
+
+</details>
 
 ### Shells #3 and higher -- View RTT output
 

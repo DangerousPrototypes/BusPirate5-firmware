@@ -40,32 +40,46 @@ At least three shell windows required.
 
 1. Connect to OpenOCD
 `telnet localhost 4444`
-2. Program the newly-built binary via OpenOCD
+2. Optionally, program the newly-built binary via OpenOCD
 `program ./build_rp2040/src/bus_pirate5_rev10.elf`
 3. Reset and halt the cores
 `reset halt`
 4. deassert reset on core1, then on core0
-`rp2040.core1 arp_reset assert 0`
-`rp2040.core0 arp_reset assert 0`
+```
+rp2040.core1 arp_reset assert 0
+rp2040.core0 arp_reset assert 0
+```
 5. sleep to allow firmware to initialize RTT structure
 `sleep 500`
-6. Setup `rtt` configuration to search from above memory address for channel 0 configuration (***is this the likely error?***)
-`rtt setup 0x20000000 0x10000 "SEGGER RTT"`
+6. Setup and start `rtt`
+```
+rtt setup 0x20000000 0x100000 "SEGGER RTT"
+rtt start
+```
 7. Start the rtt server, with one port per channel
-`rtt server start 4320 0`
-`rtt server start 4321 1`
+`rtt server start 4321 0`
+
+<details><summary>As a single script...</summary><P/>
+
+```
+program ./build_rp2040/src/bus_pirate5_rev10.elf
+reset halt
+rp2040.core1 arp_reset assert 0
+rp2040.core0 arp_reset assert 0
+sleep 500
+rtt setup 0x20000000 0x100000 "SEGGER RTT"
+rtt start
+rtt server start 4321 0
+```
+
+</details>
+
+
 
 ### Shells #3 and higher -- View RTT output
 
 Connect to RTT channel 0
-`telnet localhost 4320`
-
--OR-
-
-Connect to RTT channel 1
 `telnet localhost 4321`
-
-etc.
 
 Note: Channel 0 is technically bi-directional, but currently only used for output.
 

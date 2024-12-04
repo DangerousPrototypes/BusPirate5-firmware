@@ -432,11 +432,23 @@ static void core0_infinite_loop(void) {
 
 void main(void) {
     SEGGER_RTT_Init();
+
+    // For now, always add output boot category messages (error, warning, info, verbose)
+    _DEBUG_ENABLED_CATEGORIES |= DEBUG_CATEGORY_TO_MASK(BP_DEBUG_CAT_EARLY_BOOT);
+    _DEBUG_LEVELS[E_DEBUG_CAT_EARLY_BOOT] = BP_DEBUG_LEVEL_VERBOSE;
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: main_system_initialization()\n"
+        );
     main_system_initialization();
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: entering core0_infinite_loop()\n"
+        );
+
     core0_infinite_loop(); // this never should exit, but....
     assert(false); // infinite loop above should never exit
 }
-
 
 // refresh interrupt flag, serviced in the loop outside interrupt
 bool lcd_update_request = false;

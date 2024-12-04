@@ -75,7 +75,6 @@ void gpio_setup(uint8_t pin, bool direction, bool level) {
 }
 
 static void main_system_initialization(void) {
-    SEGGER_RTT_Init();
 
 #if (BP_VER == 5)
     uint8_t bp_rev = mcu_detect_revision();
@@ -432,6 +431,7 @@ static void core0_infinite_loop(void) {
 }
 
 void main(void) {
+    SEGGER_RTT_Init();
     main_system_initialization();
     core0_infinite_loop(); // this never should exit, but....
     assert(false); // infinite loop above should never exit

@@ -242,8 +242,12 @@ set(bp5_common
         ui/ui_term.h
         ui/ui_statusbar.c
         ui/ui_statusbar.h
+
+        # Debug
         debug_uart.c
         debug_uart.h
+        debug_rtt.c
+        debug_rtt.h
 
         # JSON parser for saved settings
         mjson/mjson.h

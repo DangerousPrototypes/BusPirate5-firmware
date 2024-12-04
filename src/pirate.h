@@ -84,9 +84,9 @@
 
 #include "translation/base.h"
 #include "printf-4.0.0/printf.h"
-#include "lib/rtt/RTT/SEGGER_RTT.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include "debug_rtt.h"
 
 void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);

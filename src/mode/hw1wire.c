@@ -58,11 +58,14 @@ uint32_t hw1wire_setup_exc(void) {
 }
 
 bool hw1wire_preflight_sanity_check(void) {
-    return ui_help_sanity_check(true, 1<<M_OW_OWD);
+    //return ui_help_sanity_check(true, 1<<M_OW_OWD);
+    return true;
 }
 
 void hw1wire_start(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_HW1WIRE_RESET);
+
+    ui_help_sanity_check(true, 1<<M_OW_OWD);
 
 #ifdef BP_OLD_HW1WIRE
     uint8_t device_detect = onewire_reset();

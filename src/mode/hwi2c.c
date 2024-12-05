@@ -139,7 +139,8 @@ uint32_t hwi2c_setup_exc(void) {
 }
 
 bool hwi2c_preflight_sanity_check(void) {
-    return ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL);
+    //return ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL);
+    return true;
 }
 
 bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
@@ -159,6 +160,7 @@ void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
 
     hwi2c_status_t i2c_status;
     if(!mode_config.start_sent) {
+        ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL);
         result->data_message = GET_T(T_HWI2C_START);
         i2c_status = pio_i2c_start_timeout(0xfffff);
     }else{

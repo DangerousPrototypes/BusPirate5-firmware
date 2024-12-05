@@ -119,7 +119,10 @@ bool ui_help_sanity_check(bool vout, uint8_t pullup_mask) {
                 temp |= (bio_get(i)<<i);
             }
         }
-        if (temp != pullup_mask) {
+        //NOTE: to avoid too many false positives, 
+        // we only check that at least one pin is pulled up
+        // this is identical to the v3.x behavior
+        if (!temp) {
             ui_help_error(T_MODE_NO_PULLUP_ERROR);
             printf("%s%s%s\r\n", ui_term_color_info(), GET_T(T_MODE_NO_PULLUP_HINT), ui_term_color_reset());
             ok=false;

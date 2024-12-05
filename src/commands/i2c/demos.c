@@ -32,36 +32,43 @@ void demo_tsl2561(struct command_result* res) {
     // select register [0b01110010 0b11100000]
     data[0] = 0b11100000;
     if (pio_i2c_write_array_timeout(0b01110010, data, 1, 0xffff)) {
-        goto tsl2561_cleanup;
+        goto tsl2561_error;
     }
     // start device [0b01110010 3]
     data[0] = 3;
     if (pio_i2c_write_array_timeout(0b01110010, data, 1, 0xffff)) {
-        goto tsl2561_cleanup;
+        goto tsl2561_error;
     }
     busy_wait_ms(500);
     // select ID register [0b01110010 0b11101010]
     // read ID register [0b01110011 r] 7:4 0101 = TSL2561T 3:0 0 = revision
     data[0] = 0b11101010;
     if (pio_i2c_transaction_array_timeout(0b01110010, data, 1, data, 1, 0xffff)) {
-        goto tsl2561_cleanup;
+        goto tsl2561_error;
     }
     printf("ID: %d REV: %d\r\n", data[0] >> 4, data[0] & 0b1111);
     // select ADC register [0b01110010 0b11101100]
     data[0] = 0b11101100;
     if (pio_i2c_transaction_array_timeout(0b01110010, data, 1, data, 4, 0xffff)) {
-        goto tsl2561_cleanup;
+        goto tsl2561_error;
     }
+    fala_stop_hook();
+
     chan0 = data[1] << 8 | data[0];
     chan1 = data[3] << 8 | data[2];
 
     uint32_t lux1 = a_tsl2561_calculate_lux(0, 2, chan0, chan1);
 
     printf("Chan0: %d Chan1: %d LUX: %d\r\n", chan0, chan1, lux1);
+    goto tsl2561_cleanup;
 
+tsl2561_error:
+    pio_i2c_stop_timeout(0xffff); //force both lines back high
+    res->error = 1;
+    fala_stop_hook();
+    printf("Device not detected (no ACK)\r\n");
 tsl2561_cleanup:
     //we manually control any FALA capture
-    fala_stop_hook();
     fala_notify_hook();
 }
 
@@ -79,14 +86,20 @@ void demo_ms5611(struct command_result* res) {
     fala_start_hook();
 
     if (ms5611_read_temperature_and_pressure_simple(&temperature, &pressure)) {
-        res->error = 1;
-        goto ms5611_cleanup;
+        goto ms5611_error;
     }
-    printf("Temperature: %f\r\nPressure: %f\r\n", temperature, pressure);
+    fala_stop_hook();
 
+    printf("Temperature: %f\r\nPressure: %f\r\n", temperature, pressure);
+    goto ms5611_cleanup;
+
+ms5611_error:
+    pio_i2c_stop_timeout(0xffff); //force both lines back high
+    res->error = 1;
+    fala_stop_hook();
+    printf("Device not detected (no ACK)\r\n");
 ms5611_cleanup:
     //we manually control any FALA capture
-    fala_stop_hook();
     fala_notify_hook();
 }
 
@@ -101,12 +114,12 @@ void demo_si7021(struct command_result* res) {
     data[0] = 0xf5;
     if (pio_i2c_write_array_timeout(0x80, data, 1, 0xffff)) {
         printf("Error writing humidity register\r\n");
-        goto si7021_cleanup;
+        goto si7021_error;
     }
     busy_wait_ms(23); // delay for max conversion time
     if (pio_i2c_read_array_timeout(0x81, data, 2, 0xffff)) {
         printf("Error reading humidity data\r\n");
-        goto si7021_cleanup;
+        goto si7021_error;
     }
 
     float f = (float)((float)(125 * (data[0] << 8 | data[1])) / 65536) - 6;
@@ -115,11 +128,11 @@ void demo_si7021(struct command_result* res) {
     // temperature [0x80 0xe0] [0x81 r:2]
     data[0] = 0xf3;
     if (pio_i2c_write_array_timeout(0x80, data, 1, 0xffff)) {
-        goto si7021_cleanup;
+        goto si7021_error;
     }
     busy_wait_ms(100); // delay for max conversion time
     if (pio_i2c_read_array_timeout(0x81, data, 2, 0xffff)) {
-        goto si7021_cleanup;
+        goto si7021_error;
     }
 
     f = (float)((float)(175.72 * (data[0] << 8 | data[1])) / 65536) - 46.85;
@@ -130,7 +143,7 @@ void demo_si7021(struct command_result* res) {
     data[1] = 0xf0;
     uint8_t sn[8];
     if (pio_i2c_transaction_array_timeout(0x80, data, 2, data, 8, 0xffff)) {
-        goto si7021_cleanup;
+        goto si7021_error;
     }
     sn[2] = data[6];
     sn[3] = data[4];
@@ -140,8 +153,10 @@ void demo_si7021(struct command_result* res) {
     data[0] = 0xfc;
     data[1] = 0xc9;
     if (pio_i2c_transaction_array_timeout(0x80, data, 2, data, 6, 0xffff)) {
-        goto si7021_cleanup;
+        goto si7021_error;
     }
+    fala_stop_hook();
+
     sn[0] = data[1];
     sn[1] = data[0];
     sn[6] = data[4];
@@ -155,8 +170,15 @@ void demo_si7021(struct command_result* res) {
            sn[2],
            sn[1],
            sn[0]);
+    
+    goto si7021_cleanup;
+
+si7021_error:    
+    pio_i2c_stop_timeout(0xffff); //force both lines back high
+    res->error = 1;
+    fala_stop_hook();
+    printf("Device not detected (no ACK)\r\n");       
 si7021_cleanup:
     //we manually control any FALA capture
-    fala_stop_hook();
     fala_notify_hook();
 }

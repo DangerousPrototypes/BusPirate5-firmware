@@ -42,6 +42,7 @@ uint8_t la_base_pin = LA_BPIO0;
 volatile uint8_t la_status = LA_IDLE;
 volatile uint32_t la_sm_done = false;
 bool irq_handler_installed = true;
+bool status_leds_enabled = false;
 //this is a sample count variable for FALA and triggerless captures
 // for triggers, it is the number of samples after 0 
 uint32_t samples_from_zero = 0;
@@ -53,6 +54,10 @@ uint32_t samples_from_zero = 0;
 
 void logic_analyzer_set_base_pin(uint8_t base_pin) {
     la_base_pin = base_pin;
+}
+
+void logic_analyzer_enable_status_leds(bool enable) {
+    status_leds_enabled = enable;
 }
 
 void logicanalyzer_reset_led(void) {
@@ -135,8 +140,9 @@ void logic_analyser_done(void) {
     if(tail_dma==0 && tail==-1){
         samples_from_zero=DMA_BYTES_PER_CHUNK*LA_DMA_COUNT;
     }
-
-    rgb_set_all(0x00, 0xff, 0); //,0x00FF00 green for dump
+    if(status_leds_enabled){
+        rgb_set_all(0x00, 0xff, 0); //,0x00FF00 green for dump
+    }
     la_sm_done = true;
 }
 
@@ -168,7 +174,9 @@ bool logic_analyzer_is_done(void) {
 
     if (la_status == LA_ARMED && tail != logic_analyzer_get_dma_tail()) {
         la_status = LA_CAPTURE;
-        rgb_set_all(0xab, 0x7f, 0); // 0xAB7F00 yellow for capture in progress.
+        if(status_leds_enabled){
+            rgb_set_all(0xab, 0x7f, 0); // 0xAB7F00 yellow for capture in progress.
+        }
     }
     if (la_sm_done) {
         la_status = LA_IDLE;
@@ -281,6 +289,7 @@ bool logic_analyzer_configure(
 
 void logic_analyzer_arm(bool led_indicator_enable) {
     la_status = LA_ARMED_INIT;
+    status_leds_enabled = led_indicator_enable;
     if (led_indicator_enable) {
         icm_core0_send_message_synchronous(BP_ICM_ENABLE_RGB_UPDATES);
         busy_wait_ms(5);

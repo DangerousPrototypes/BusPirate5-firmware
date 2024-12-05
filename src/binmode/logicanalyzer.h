@@ -10,6 +10,7 @@ bool logic_analyzer_configure(
     float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction, bool edge, bool interrupt);
 void logic_analyzer_arm(bool led_indicator_enable);
 bool logic_analyzer_cleanup(void);
+void logic_analyzer_enable_status_leds(bool enable);
 void logicanalyzer_reset_led(void);
 uint32_t logic_analyzer_get_start_ptr(uint32_t sample_count);
 uint32_t logic_analyzer_get_current_ptr(void);

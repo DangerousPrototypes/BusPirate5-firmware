@@ -773,7 +773,7 @@ void rgb_set_all(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 // function to control LED from led mode onboard demo
-#define DEMO_LED 1
+#define DEMO_LED 0
 void rgb_put(uint32_t color) {
     // first set each pixel to off
     for (int i = 0; i < COUNT_OF_PIXELS; i++) {

@@ -17,6 +17,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "pio_config.h"
+#include "binmode/logicanalyzer.h"
 
 static struct _pio_config pio_config;
 
@@ -177,9 +178,14 @@ uint32_t hwled_setup_exc(void) {
             
             break;
         case M_LED_WS2812_ONBOARD: // internal LEDs, stop any in-progress stuff
-            mode_config.baudrate = 800000;
             rgb_irq_enable(false);
             rgb_set_all(0, 0, 0);
+            pio_config.pio = PIO_RGB_LED_PIO;
+            pio_config.sm = PIO_RGB_LED_SM;
+            mode_config.baudrate = 800000;
+            #if BP_VER == 5
+                logic_analyzer_set_base_pin(RGB_CDO);
+            #endif
             break;
         default:
             printf("\r\nError: Invalid device type");
@@ -192,6 +198,9 @@ uint32_t hwled_setup_exc(void) {
 }
 
 bool hwled_preflight_sanity_check(void){
+    if (mode_config.device == M_LED_WS2812_ONBOARD) {
+        return true;
+    }
     return ui_help_sanity_check(true, 0x00);
 }
 
@@ -288,10 +297,12 @@ void hwled_cleanup(void) {
             pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
             break;
         case M_LED_WS2812_ONBOARD:
+            #if BP_VER == 5
+                logic_analyzer_set_base_pin(LA_BPIO0);
+            #endif        
             rgb_irq_enable(true);
             break;
     }
-    // pio_clear_instruction_memory(pio);
     system_config.subprotocol_name = 0x00;
     system_config.num_bits=8;
     system_bio_claim(false, M_LED_SDO, BP_PIN_MODE, 0);
@@ -314,7 +325,7 @@ uint32_t hwled_get_speed(void) {
 
 // NOTE: Function must have no parameters ... this is a protocol entry point.
 void hwled_wait_idle(void) {
-    if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, 100000)){
+    if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, 0xffffff)){
         printf("Timeout, error!");
-    }
+    }        
 }

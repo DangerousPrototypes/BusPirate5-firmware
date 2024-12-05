@@ -156,7 +156,7 @@ void logic_handler(struct command_result* res) {
     uint32_t base_channel;
     bool has_base_channel = cmdln_args_find_flag_uint32('b', &arg, &base_channel); // base channel: set base channel
 
-    bool has_ok;
+    bool has_ok=false;
 
     if (has_base_channel) {
         printf("Base channel set to: %d\r\n", base_channel);

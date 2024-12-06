@@ -289,6 +289,7 @@ void infrared_cleanup(void) {
     system_bio_claim(false, BIO7, BP_PIN_IO, pin_labels[4]);
     // 1. Disable any hardware you used
     bio_init();
+    system_config.subprotocol_name = 0x00;
     system_config.num_bits=8;
 }
 
@@ -309,7 +310,7 @@ void infrared_read(struct _bytecode* result, struct _bytecode* next) {
         data |= bio_get(i) << i;
     }
     result->in_data=data; //put the read value in in_data (up to 32 bits)*/
-    rc5_test();
+    //rc5_test();
 }
 
 // modes can have useful macros activated by (1) (eg macro 1)

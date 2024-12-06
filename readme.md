@@ -28,7 +28,7 @@ VT100 terminal emulation supports color and a live statusbar view of the voltage
 - 1-5volt output power supply - 0-500mA current limit, current sense, resettable fuse and protection circuit
 - 1Gbit NAND flash - Store settings and files. Appears as a USB drive.
 - LCD - A beautiful 240x320 pixel color IPS (all angle viewing) LCD acts as a pin label, while also showing the voltage on each pin and the current consumption of the programmable power supply unit
-- 18 RGB LEDs - It's customary to have an indicator LED, so to check that box we added 16 SK6812 RGB LEDs.
+- 18 RGB LEDs - It's customary to have an indicator LED, so to check that box we added 18 SK6812 RGB LEDs.
 - Just one button - 18 party LEDs but just one button!
 - 1-Wire, I2C, SPI, UART, MIDI, serial LEDs supported, more to come!
 

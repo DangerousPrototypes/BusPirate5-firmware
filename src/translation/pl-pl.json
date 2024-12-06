@@ -77,7 +77,7 @@
     "T_HWI2C_TIMEOUT": "Przekroczenie limitu czasu I2C",
     "T_HWI2C_I2C_ERROR": "Błąd magistrali I2C",
     "T_HWLED_DEVICE_MENU": "Rodzaj LED",
-    "T_HWLED_DEVICE_MENU_3": "LEDy na płytce (16 SK6812s)",
+    "T_HWLED_DEVICE_MENU_3": "LEDy na płytce (18 SK6812s)",
     "T_HWLED_DEVICE_PROMPT": "Typ",
     "T_HWLED_NUM_LEDS_MENU": "Ilość LEDów w pasku",
     "T_HWLED_NUM_LEDS_MENU_1": "1 do 10000",

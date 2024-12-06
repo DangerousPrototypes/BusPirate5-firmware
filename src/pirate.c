@@ -32,7 +32,7 @@
 #include "queue.h"
 #include "usb_tx.h"
 #include "usb_rx.h"
-#include "debug.h"
+#include "debug_uart.h"
 #include "ui/ui_cmdln.h"
 #include "bytecode.h"
 #include "modes.h"
@@ -78,6 +78,9 @@ static void main_system_initialization(void) {
 
 #if (BP_VER == 5)
     uint8_t bp_rev = mcu_detect_revision();
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: mcu_detect_revision: %d\n", bp_rev
+        );
 #endif
 
     reserve_for_future_mode_specific_allocations[1] = 99;
@@ -85,9 +88,15 @@ static void main_system_initialization(void) {
     reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
 
     // init buffered IO pins
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: buffered IO\n"
+        );
     bio_init();
 
     // setup SPI0 for on board peripherals
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: setup SPI0\n"
+        );
     uint baud = spi_init(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
     gpio_set_function(BP_SPI_CDI, GPIO_FUNC_SPI);
     gpio_set_function(BP_SPI_CLK, GPIO_FUNC_SPI);
@@ -95,6 +104,9 @@ static void main_system_initialization(void) {
 
 // init shift register pins
 #if (BP_VER == 5 || BP_VER == XL5)
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: shift register pins\n"
+        );
     shift_init();
 #endif
 
@@ -109,18 +121,33 @@ static void main_system_initialization(void) {
     mutex_init(&spi_mutex);
 
     // init psu pins
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: PSU\n"
+        );
     psucmd_init();
 
     // LCD pin init
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: LCD\n"
+        );
     lcd_init();
 
     // ADC pin init
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: ADC\n"
+        );
     amux_init();
 
     // TF flash card CS pin init
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: Storage\n"
+        );
     storage_init();
 
 // initial pin states
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: Pin states\n"
+        );
 #if (BP_VER == 5 || BP_VER == XL5)
     // configure the defaults for shift register attached hardware
     shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3 | AMUX_S1 | DISPLAY_RESET | CURRENT_EN));
@@ -142,33 +169,60 @@ static void main_system_initialization(void) {
     gpio_setup(LA_BPIO6, GPIO_IN, 0);
     gpio_setup(LA_BPIO7, GPIO_IN, 0);
 #endif
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: Pullups\n"
+        );
     pullups_init(); // uses shift register internally
 
 #if (BP_VER == 5 || BP_VER == XL5)
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: BP5 / BP5XL - shift output enable\n"
+        );
+
     shift_output_enable(
         true); // enable shift register outputs, also enabled level translator so don't do RGB LEDs before here!
 #endif
     // busy_wait_ms(10);
     // reset the LCD
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: LCD reset\n"
+        );
     lcd_reset();
 
     // input button init
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: button init\n"
+        );
     button_init();
 
     // setup the system_config defaults and the initial pin label references
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: system init()\n"
+        );
     system_init();
 
     // setup the UI command buffers
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: ui_init()\n"
+        );
     ui_init();
 
     // voltage and current monitor for toolbar and display
     // highly optimized to only update changed characters
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: monitor_init()\n"
+        );
+
     monitor_init();
 
 // Now continue after init of all the pins and shift registers
 // Mount the TF flash card file system (and put into SPI mode)
 // This must be done before any other SPI communications
 #if (BP_VER == 5 && BP_REV <= 9)
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: BP5 w/TF Flash: storage mount\n"
+        );
     spi_set_baudrate(BP_SPI_PORT, BP_SPI_START_SPEED);
     storage_mount();
     if (storage_load_config()) {
@@ -190,18 +244,35 @@ static void main_system_initialization(void) {
     // uart
     // duplicate the terminal output on a debug uart on IO pins
     if (system_config.terminal_uart_enable) {
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: Enabling full console UART %d\n",
+            system_config.terminal_uart_number
+            );
         debug_uart_init(system_config.terminal_uart_number, true, true, true);
     }
     // a transmit only uart for developers to debug (on IO pins)
     if (system_config.debug_uart_enable) {
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: Enabling debug-only UART %d (output only)\n",
+            system_config.debug_uart_number
+            );
         debug_uart_init(system_config.debug_uart_number, true, true, false);
     }
 
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: Launching Core1\n"
+        );
     multicore_launch_core1(core1_entry);
 
     // LCD setup
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: configuring LCD\n"
+        );
     lcd_configure();
 #ifdef BP_SPLASH_ENABLED
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: showing splash\n"
+        );
     lcd_write_background(splash_data);
     /*monitor(system_config.psu);
     if (displays[system_config.display].display_lcd_update){
@@ -211,22 +282,44 @@ static void main_system_initialization(void) {
 #endif
 
     // turn everything off
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: make pins safe and PSU disable\n"
+        );
     bio_init();       // make all pins safe
     psucmd_disable(); // disable psu and reset pin label, clear any errors
 
 // mount NAND flash here
 #if !(BP_VER == 5 && BP_REV <= 9)
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: Mounting SPI Flash\n"
+        );
     storage_mount();
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: loading config file\n"
+        );
     if (storage_load_config()) {
+
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: Config found, setting pixel effect to %d\n",
+            system_config.led_effect
+            );
         system_config.config_loaded_from_file = true;
         // update LED
         rgb_set_effect(system_config.led_effect);
     } else {
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: No config found, setting pixel effect to PARTY MODE\n"
+            );
         // party mode/demo mode if no config file found
         rgb_set_effect(LED_EFFECT_PARTY_MODE);
     }
 #endif
 
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: translation set to %d\n",
+        system_config.terminal_language
+        );
     translation_set(system_config.terminal_language);
 
 #if (BP_VER == 5)
@@ -234,8 +327,10 @@ static void main_system_initialization(void) {
     // must be done after shift register setup
     //  if firmware mismatch, turn all LEDs red
     if (bp_rev != BP_REV) { //
-        // printf("Error: PCB revision does not match firmware. Expected %d, found %d.\r\n", BP_REV,
-        // mcu_detect_revision());
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_FATAL, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: FATAL: PCB revision does not match firmware. Expected %d, found %d.\n",
+            BP_REV, bp_rev
+            );
         rgb_irq_enable(false);
         while (true) {
             rgb_set_all(0xff, 0, 0);
@@ -260,8 +355,19 @@ static void main_system_initialization(void) {
     // begin main loop on secondary core
     // this will also setup the USB device
     // we need to have read any config files on the TF flash card before now
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: ICM - Sync init core1\n"
+        );
     icm_core0_send_message_synchronous(BP_ICM_INIT_CORE1);
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: loading binmode configuration\n"
+        );
     binmode_load_save_config(false);
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: binmode_setup()\n"
+        );
     binmode_setup();
 }
 
@@ -291,6 +397,7 @@ static void core0_infinite_loop(void) {
 
         if (tud_cdc_n_connected(0)) {
             if (!has_been_connected) {
+                PRINT_INFO("New terminal connection detected ... making USB storage read-only.\n");
                 has_been_connected = true;
                 prepare_usbmsdrive_readonly();
                 // sync with the host
@@ -299,6 +406,7 @@ static void core0_infinite_loop(void) {
             }
         } else {
             if (has_been_connected) {
+                PRINT_INFO("Terminal disconnected ... ensuring USB storage is writable.\n");
                 has_been_connected = false;
             }
             make_usbmsdrive_writable();
@@ -321,6 +429,7 @@ static void core0_infinite_loop(void) {
                         result.success = true;
                     }
                 } else {
+                    PRINT_VERBOSE("Prompting to allow VT100 mode.\n");
                     ui_prompt_vt100_mode(&result, &value);
                 }
 
@@ -357,6 +466,7 @@ static void core0_infinite_loop(void) {
 
                     bp_state = BP_SM_COMMAND_PROMPT;
                 } else if (result.error) { // user hit enter but not a valid option
+                    PRINT_VERBOSE("Repeating prompt to allow VT100 mode.\n");
                     printf("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
                 }
                 // printf("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
@@ -431,11 +541,24 @@ static void core0_infinite_loop(void) {
 }
 
 void main(void) {
+    SEGGER_RTT_Init();
+
+    // For now, always add output boot category messages (error, warning, info, verbose)
+    _DEBUG_ENABLED_CATEGORIES |= DEBUG_CATEGORY_TO_MASK(BP_DEBUG_CAT_EARLY_BOOT);
+    _DEBUG_LEVELS[E_DEBUG_CAT_EARLY_BOOT] = BP_DEBUG_LEVEL_VERBOSE;
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: main_system_initialization()\n"
+        );
     main_system_initialization();
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: entering core0_infinite_loop()\n"
+        );
+
     core0_infinite_loop(); // this never should exit, but....
     assert(false); // infinite loop above should never exit
 }
-
 
 // refresh interrupt flag, serviced in the loop outside interrupt
 bool lcd_update_request = false;

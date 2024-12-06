@@ -72,7 +72,7 @@
   "T_HWI2C_I2C_ERROR": "I2C bus greška",
   "T_HWLED_DEVICE_MENU": "LED tip",
   "T_HWLED_DEVICE_MENU_2": "APA102/SK9822 (clock i data interface)",
-  "T_HWLED_DEVICE_MENU_3": "LEDovi na ploči (16 SK6812s)",
+  "T_HWLED_DEVICE_MENU_3": "LEDovi na ploči (18 SK6812s)",
   "T_HWLED_NUM_LEDS_MENU": "Broj LEDova u traci",
   "T_HWLED_NUM_LEDS_MENU_1": "1 do 10000",
   "T_HWLED_NUM_LEDS_PROMPT": "LEDovi (%s%d*%s)",

@@ -5,7 +5,7 @@
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "system_config.h"
-#include "debug.h"
+#include "debug_uart.h"
 #include "usb_rx.h"
 
 // clang-format off

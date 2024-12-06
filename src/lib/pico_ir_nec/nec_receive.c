@@ -74,6 +74,12 @@ nec_rx_status_t nec_get_frame(uint32_t *rx_frame) {
 
 }
 
+void nec_rx_drain_fifo(void) {
+    while(!pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
+        pio_sm_get(pio_config.pio, pio_config.sm);
+    }
+}
+
 // Validate a 32-bit frame and store the address and data at the locations
 // provided.
 //

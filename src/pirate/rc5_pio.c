@@ -114,33 +114,10 @@ nec_rx_status_t rc5_receive(uint32_t *rx_frame) {
     (rc5_frame >> 6) & 0x1f, (rc5_frame >> 6) & 0x1f, rc5_frame & 0x3f, rc5_frame & 0x3f);
     return IR_RX_FRAME_OK;
 }
-/*
-nec_rx_status_t rc5_receive(uint32_t *rx_frame, uint8_t *rx_address, uint8_t *rx_data) {
-    if (pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
-        return IR_RX_NO_FRAME;
-    }
-    rc5_frame = pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm);
-    return IR_RX_FRAME_OK;
-}
-*/
 
-
-void rc5_test(void) {
-    pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0xf0f0f0ff);
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0xf0f0a55f);
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0xf234567f);
-    pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, true);
-    uint32_t timeout=0xffffff;
-    for (int i = 0; i < 3; ++i){
-        while(timeout){
-            if(!pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)){
-                printf("%08x\r\n", pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm));
-                timeout=0xffffff;
-                break;
-            }
-            timeout--;
-        }
+void rc5_drain_fifo(void) {
+    while (!pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
+        pio_sm_get_blocking(pio_config_rx.pio, pio_config_rx.sm);
     }
 }
 

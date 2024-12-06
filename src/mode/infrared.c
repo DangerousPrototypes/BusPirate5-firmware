@@ -32,6 +32,38 @@ static uint8_t device_cleanup;
 static uint32_t returnval;
 static int tx_sm;
 
+// an array of all the IR protocol functions
+typedef struct _ir_protocols {
+    int (*irtx_init)(uint pin_num);      
+    void (*irtx_deinit)(uint pin_num);   
+    void (*irtx_write)(uint32_t *data);     // write
+    bool (*irtx_wait_idle)(void);
+    int (*irrx_init)(uint pin_num);
+    void (*irrx_deinit)(uint pin_num); 
+    nec_rx_status_t (*irrx_read)(uint32_t *rx_frame);      // read
+    void (*irrx_drain_fifo)(void);
+} ir_protocols;
+static const ir_protocols ir_protocol[] = {
+    {   .irtx_init = nec_tx_init, 
+        .irtx_deinit = nec_tx_deinit,
+        .irtx_write = nec_write,
+        .irtx_wait_idle = nec_tx_wait_idle,
+        .irrx_init = nec_rx_init,
+        .irrx_deinit = nec_rx_deinit,
+        .irrx_read = nec_get_frame,
+        .irrx_drain_fifo = nec_rx_drain_fifo 
+    },
+    {   .irtx_init = rc5_tx_init,
+        .irtx_deinit = rc5_tx_deinit,
+        .irtx_write = rc5_send,
+        .irtx_wait_idle = rc5_tx_wait_idle,
+        .irrx_init = rc5_rx_init,
+        .irrx_deinit = rc5_rx_deinit,
+        .irrx_read = rc5_receive, 
+        .irrx_drain_fifo = rc5_drain_fifo
+    }
+};  
+
 bool irtoy_test_pullup(int bio) {
     if (bio_get(bio)) {
         printf("OK\r\n");
@@ -43,24 +75,31 @@ bool irtoy_test_pullup(int bio) {
 }
 
 bool irtoy_test_rx(int bio) {
-
-    uint32_t tx_frame = nec_encode_frame(0xff, 0xff);
-    pio_sm_put(pio0, tx_sm, tx_frame);
+    // each protocol has its own write function
+    uint32_t tx_frame = 0xffff;
+    ir_protocol[mode_config.protocol].irtx_write(&tx_frame);
+    //wait for idle
+    ir_protocol[mode_config.protocol].irtx_wait_idle();
     uint32_t timeout = 0;
+    bool fail = 0;
     while (true) {
-        if (!bio_get(bio)) {
-            printf("OK\r\n");
-            return 0;
+        //wait for valid data
+        if (ir_protocol[mode_config.protocol].irrx_read(&tx_frame) == IR_RX_FRAME_OK) {
+            printf("\r\nOK\r\n");
+            break;
         }
         timeout++;
         if (timeout > 10000) {
             printf("FAIL\r\n");
-            return 1;
+            fail = 1;
+            break;
         }
     }
+    return fail;
 }
 // irtoy_test function
 void irtoy_test(struct command_result* res) {
+
     uint8_t fails = 0;
     printf("Test pull-ups\r\n");
     printf("BIO1 / 20-60kHz learner: ");
@@ -87,6 +126,8 @@ void irtoy_test(struct command_result* res) {
     } else {
         printf("\r\nOK :)\r\n");
     }
+
+    printf("\r\n");
 }
 
 // command configuration
@@ -98,35 +139,6 @@ const struct _mode_command_struct infrared_commands[] = {
     },
 };
 const uint32_t infrared_commands_count = count_of(infrared_commands);
-
-// an array of all the IR protocol functions
-typedef struct _ir_protocols {
-    int (*irtx_init)(uint pin_num);      
-    void (*irtx_deinit)(uint pin_num);   
-    void (*irtx_write)(uint32_t *data);     // write
-    bool (*irtx_wait_idle)(void);
-    int (*irrx_init)(uint pin_num);
-    void (*irrx_deinit)(uint pin_num); 
-    nec_rx_status_t (*irrx_read)(uint32_t *rx_frame);      // read
-} ir_protocols;
-static const ir_protocols ir_protocol[] = {
-    {   .irtx_init = nec_tx_init, 
-        .irtx_deinit = nec_tx_deinit,
-        .irtx_write = nec_write,
-        .irtx_wait_idle = nec_tx_wait_idle,
-        .irrx_init = nec_rx_init,
-        .irrx_deinit = nec_rx_deinit,
-        .irrx_read = nec_get_frame 
-    },
-    {   .irtx_init = rc5_tx_init,
-        .irtx_deinit = rc5_tx_deinit,
-        .irtx_write = rc5_send,
-        .irtx_wait_idle = rc5_tx_wait_idle,
-        .irrx_init = rc5_rx_init,
-        .irrx_deinit = rc5_rx_deinit,
-        .irrx_read = rc5_receive 
-    }
-};  
 
 // Pin labels shown on the display and in the terminal status bar
 // No more than 4 characters long

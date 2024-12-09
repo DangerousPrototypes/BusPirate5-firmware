@@ -34,38 +34,38 @@ void pio_pwm_set_level(PIO pio, uint sm, uint32_t level) {
     pio_sm_put_blocking(pio, sm, level);
 }
 
-bool bug_e9_seems_fixed(bool pullup, uint8_t bio_pin) {
+bool bug_e9_seems_fixed(bool pullup, uint8_t bio_pin, bool verbose) {
     bool bug_seems_fixed = false;
-    printf("Disabling Bus Pirate pull-ups\r\n");
+    if(verbose) printf("Disabling Bus Pirate pull-ups\r\n");
     pullup_disable();
-    printf("Making IO0 buffer and GPIO input\r\n");
+    if(verbose) printf("Making IO0 buffer and GPIO input\r\n");
     bio_input(bio_pin);
     busy_wait_ms(10);
-    printf("Making IO0 buffer an output\r\n");
+    if(verbose) printf("Making IO0 buffer an output\r\n");
     bio_buf_output(bio_pin);
     busy_wait_ms(10);
 
     bool pin_state = bio_get(bio_pin);
-    printf("GPIO pin should be 0: %d\r\n", bio_get(bio_pin));
+    if(verbose) printf("GPIO pin should be 0: %d\r\n", bio_get(bio_pin));
     if (pin_state) {
-        printf("Warning: GPIO is 1, cannot test for E9\r\n");
+        printf("Warning: GPIO %d is 1, cannot test for E9\r\n", bio_pin);
     } else {
-        printf("Making IO0 buffer and GPIO input\r\n");
+        if(verbose) printf("Making IO0 buffer and GPIO input\r\n");
         bio_input(bio_pin);
         if (pullup) {
-            printf("Enabling Bus Pirate pull-ups\r\n");
+            if(verbose) printf("Enabling Bus Pirate pull-ups\r\n");
             pullup_enable();
         }
-        printf("Making IO0 buffer an output\r\n");
+        if(verbose) printf("Making IO0 buffer an output\r\n");
         bio_buf_output(bio_pin);
-        printf("Disabling Bus Pirate pull-ups\r\n");
+        if(verbose) printf("Disabling Bus Pirate pull-ups\r\n");
         pullup_disable();
         busy_wait_ms(10);
 
         pin_state = bio_get(bio_pin);
-        printf("GPIO pin should be 0: %d\r\n", pin_state);
+        if(verbose) printf("GPIO pin should be 0: %d\r\n", pin_state);
         if (pin_state) {
-            printf("Warning: GPIO is 1, E9 found\r\n");
+            if(verbose) printf("Warning: GPIO is 1, E9 found\r\n");
         } else {
             bug_seems_fixed = true;
         }
@@ -128,7 +128,7 @@ void bug_handler(struct command_result* res) {
         if (has_a) {
             for (int i = 0; i < 8; i++) {
                 printf("\r\nTest IO%d:\r\n", i);
-                bool current_pin_fixed = bug_e9_seems_fixed(true, i);
+                bool current_pin_fixed = bug_e9_seems_fixed(true, i, true);
                 e9_seems_fixed = e9_seems_fixed && current_pin_fixed;
             }
         } else {
@@ -137,17 +137,17 @@ void bug_handler(struct command_result* res) {
             printf("\r\nTest 1:\r\n");
             printf("Pull-down disabled...\r\n");
             gpio_disable_pulls(bio2bufiopin[BIO0]);
-            tmp = bug_e9_seems_fixed(true, BIO0);
+            tmp = bug_e9_seems_fixed(true, BIO0, true);
             e9_seems_fixed = e9_seems_fixed && tmp;
 
             printf("\r\nTest 2:\r\n");
             printf("Set pulls disabled...\r\n");
             gpio_set_pulls(bio2bufiopin[BIO0], false, false);
-            tmp = bug_e9_seems_fixed(true, BIO0);
+            tmp = bug_e9_seems_fixed(true, BIO0, true);
             e9_seems_fixed = e9_seems_fixed && tmp;
 
             printf("\r\nTest 3:\r\n");
-            tmp = bug_e9_seems_fixed(true, BIO0);
+            tmp = bug_e9_seems_fixed(true, BIO0, true);
             e9_seems_fixed = e9_seems_fixed && tmp;
             printf("GPIO.IE = false...\r\n");
             gpio_set_input_enabled(bio2bufiopin[BIO0], false);
@@ -161,7 +161,7 @@ void bug_handler(struct command_result* res) {
             printf("\r\nTest 4:\r\n");
             printf("Strong low test...\r\n");
             gpio_set_input_enabled(bio2bufiopin[BIO0], true);
-            tmp = bug_e9_seems_fixed(false, BIO0);
+            tmp = bug_e9_seems_fixed(false, BIO0, true);
             e9_seems_fixed = e9_seems_fixed && tmp;
         }
 

@@ -38,10 +38,10 @@ bool bug_e9_seems_fixed(bool pullup, uint8_t bio_pin, bool verbose) {
     bool bug_seems_fixed = false;
     if(verbose) printf("Disabling Bus Pirate pull-ups\r\n");
     pullup_disable();
-    if(verbose) printf("Making IO0 buffer and GPIO input\r\n");
+    if(verbose) printf("Making IO%d buffer and GPIO input\r\n", bio_pin);
     bio_input(bio_pin);
     busy_wait_ms(10);
-    if(verbose) printf("Making IO0 buffer an output\r\n");
+    if(verbose) printf("Making IO%d buffer an output\r\n", bio_pin);
     bio_buf_output(bio_pin);
     busy_wait_ms(10);
 
@@ -50,13 +50,13 @@ bool bug_e9_seems_fixed(bool pullup, uint8_t bio_pin, bool verbose) {
     if (pin_state) {
         printf("Warning: GPIO %d is 1, cannot test for E9\r\n", bio_pin);
     } else {
-        if(verbose) printf("Making IO0 buffer and GPIO input\r\n");
+        if(verbose) printf("Making IO%d buffer and GPIO input\r\n", bio_pin);
         bio_input(bio_pin);
         if (pullup) {
             if(verbose) printf("Enabling Bus Pirate pull-ups\r\n");
             pullup_enable();
         }
-        if(verbose) printf("Making IO0 buffer an output\r\n");
+        if(verbose) printf("Making IO%d buffer an output\r\n", bio_pin);
         bio_buf_output(bio_pin);
         if(verbose) printf("Disabling Bus Pirate pull-ups\r\n");
         pullup_disable();
@@ -65,11 +65,12 @@ bool bug_e9_seems_fixed(bool pullup, uint8_t bio_pin, bool verbose) {
         pin_state = bio_get(bio_pin);
         if(verbose) printf("GPIO pin should be 0: %d\r\n", pin_state);
         if (pin_state) {
-            if(verbose) printf("Warning: GPIO is 1, E9 found\r\n");
+            if(verbose) printf("Warning: GPIO is 1, E9 found for IO%d\r\n", bio_pin);
         } else {
             bug_seems_fixed = true;
         }
     }
+    bio_input(bio_pin);
     return bug_seems_fixed;
 }
 

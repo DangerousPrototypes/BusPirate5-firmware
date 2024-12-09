@@ -35,7 +35,8 @@
     typedef enum _bp_debug_category_enum_t {
         E_DEBUG_CAT_CATCHALL         =  0u, // (((uint32_t)1u) <<  0u), // for messages that are not (yet) categorized
         E_DEBUG_CAT_EARLY_BOOT       =  1u, // (((uint32_t)1u) <<  1u), // early-in-boot (initialization)
-        // E_DEBUG_CAT_ONBOARD_PIXELS   = XXu, // (((uint32_t)1u) << XXu), // onboard RGB pixels
+        E_DEBUG_CAT_ONBOARD_PIXELS   =  2u, // (((uint32_t)1u) <<  2u), // onboard RGB pixels
+        E_DEBUG_CAT_ONBOARD_STORAGE  =  3u, // (((uint32_t)1u) << XXu), // lcdi2c mode specific
         // E_DEBUG_CAT_USB_HID          = XXu, // (((uint32_t)1u) << XXu), // USB based HID interactions
         // E_DEBUG_CAT_USB_CDC          = XXu, // (((uint32_t)1u) << XXu), // USB based serial port
         // E_DEBUG_CAT_USB_MSC          = XXu, // (((uint32_t)1u) << XXu), // USB based mass storage commands
@@ -92,7 +93,8 @@
 
 #define BP_DEBUG_CAT_CATCHALL         ((bp_debug_category_t){ E_DEBUG_CAT_CATCHALL         }) // for messages that are not (yet) categorized
 #define BP_DEBUG_CAT_EARLY_BOOT       ((bp_debug_category_t){ E_DEBUG_CAT_EARLY_BOOT       }) // early-in-boot (initialization)
-// #define BP_DEBUG_CAT_ONBOARD_PIXELS   ((bp_debug_category_t){ E_DEBUG_CAT_ONBOARD_PIXELS   }) // onboard RGB pixels
+#define BP_DEBUG_CAT_ONBOARD_PIXELS   ((bp_debug_category_t){ E_DEBUG_CAT_ONBOARD_PIXELS   }) // onboard RGB pixels
+#define BP_DEBUG_CAT_ONBOARD_STORAGE  ((bp_debug_category_t){ E_DEBUG_CAT_ONBOARD_STORAGE  }) // onboard storage (e.g., to root cause FS corruption)
 // #define BP_DEBUG_CAT_USB_HID          ((bp_debug_category_t){ E_DEBUG_CAT_USB_HID          }) // USB based HID interactions
 // #define BP_DEBUG_CAT_USB_CDC          ((bp_debug_category_t){ E_DEBUG_CAT_USB_CDC          }) // USB based serial port
 // #define BP_DEBUG_CAT_USB_MSC          ((bp_debug_category_t){ E_DEBUG_CAT_USB_MSC          }) // USB based mass storage commands
@@ -121,36 +123,36 @@
 extern uint32_t         _DEBUG_ENABLED_CATEGORIES; // mask of enabled categories
 extern bp_debug_level_t _DEBUG_LEVELS[32]; // up to 32 categories, each with a debug level
 
-
-#define DEBUG_CATEGORY_TO_MASK(_CAT) \
-    ( (uint32_t) (((uint32_t)1u) << (uint32_t)(_CAT).category) )
-
+// Both attribute *AND* `static inline` are required to ensure inlining,
+// which is necessary to minimize overhead when a debug print is disabled.
+__attribute__((always_inline))
+static inline bool bp_debug_should_print(bp_debug_level_t level, bp_debug_category_t category) {
+    // ALWAYS print fatal messages, regardless of category or variable settings.
+    if (level.level == (BP_DEBUG_LEVEL_FATAL).level) {
+        return true;
+    }
+    // The global (catch-all) category level applies to all categories.
+    if (level.level <= _DEBUG_LEVELS[0].level) {
+        return true;
+    }
+    // Is the debug print level too high (vs. the category-specific level)?
+    if (level.level > _DEBUG_LEVELS[category.category].level) {
+        // the level is higher than the category-specific level enabled
+        return false;
+    }
+    // Finally, check if the category is enabled in the flags.
+    uint32_t category_mask = ( (uint32_t) (((uint32_t)1u) << category.category) );
+    return ((category_mask & _DEBUG_ENABLED_CATEGORIES) != 0);
+}
 
 // This is the underlying debug macro logic, also used by the other debug macros.
 #define BP_DEBUG_PRINT(_LEVEL, _CATEGORY, ...) \
-    do {                                                                                    \
-        const bp_debug_level_t    level    = (_LEVEL);                                            \
-        const bp_debug_category_t category = (_CATEGORY);                                         \
-        bool output = false;                                                                \
-        if (level.level == (BP_DEBUG_LEVEL_FATAL).level) {                                  \
-            output = true;                                                                  \
-        } else                                                                              \
-        if (level.level <= _DEBUG_LEVELS[0].level) {                                        \
-            output = true;                                                                  \
-        } else                                                                              \
-        if ((level.level <= _DEBUG_LEVELS[category.category].level) &&                      \
-            ((_DEBUG_ENABLED_CATEGORIES & DEBUG_CATEGORY_TO_MASK(category)) != 0)) {        \
-            output = true;                                                                  \
-        }                                                                                   \
-        if (output) {                                                                       \
-            SEGGER_RTT_printf(0, __VA_ARGS__);                                              \
-        }                                                                                   \
+    do {                                                \
+        if (bp_debug_should_print(_LEVEL, _CATEGORY)) { \
+            SEGGER_RTT_printf(0, __VA_ARGS__);          \
+        }                                               \
     } while (0);
 
-
-
- #define _BP_STRINGIFY( L )  #L 
- #define MakeString( L ) _BP_STRINGIFY( L )
 
 // USAGE:
 // * Files can immediately use the PRINT_* macros.  This will use the `CATCHALL` category.
@@ -167,11 +169,9 @@ extern bp_debug_level_t _DEBUG_LEVELS[32]; // up to 32 categories, each with a d
 //   be used to specify another category, if needed.
 //
 #if defined(BP_DEBUG_OVERRIDE_DEFAULT_CATEGORY)
-    // #pragma message( "Override cateory for PRINT_* macros: " MakeString(BP_DEBUG_OVERRIDE_DEFAULT_CATEGORY) )
     #define BP_DEBUG_DEFAULT_CATEGORY BP_DEBUG_OVERRIDE_DEFAULT_CATEGORY
 #else
-    // #pragma message( "Using default catch-all category for PRINT_* macros: " MakeString(BP_DEBUG_CAT_CATCHALL) )
-    #define BP_DEBUG_DEFAULT_CATEGORY BP_DEBUG_CAT_CATCHALL
+    #define BP_DEBUG_DEFAULT_CATEGORY BP_DEBUG_CAT_TEMP
 #endif
 
 #if defined(DISABLE_DEBUG_PRINT_MACROS)

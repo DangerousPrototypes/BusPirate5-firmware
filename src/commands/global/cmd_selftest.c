@@ -17,8 +17,22 @@
 #include "pirate/amux.h"
 #include "display/scope.h"
 #include "pirate/intercore_helpers.h"
+#include "commands/global/bug.h"
 
 #define SELF_TEST_LOW_LIMIT 300
+
+bool selftest_rp2350_e9_fix(void){
+    bool fail = false;
+    printf("TEST RP2350 E9 BUG FIX\r\n");
+    for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
+        if(!bug_e9_seems_fixed(true, i, false)){
+            printf("ERROR: BIO%d shows E9 behavior\r\n", i);
+            fail = true;
+        }
+    }
+    bio_init();
+    return fail;
+}
 
 bool selftest_format_nand(void) {
     uint32_t value;
@@ -479,6 +493,12 @@ void cmd_selftest(void) {
 // LA_BPIO test
 #if BP_VER == 6
     if (selftest_la_bpio()) {
+        fails++;
+    }
+#endif
+#if (BP_VER == 6 || BP_VER == XL5)
+    if(selftest_rp2350_e9_fix()){
+        printf("RP2350 E9 silicon bug detected, try \"bug e9 -a\" to confirm\r\n");
         fails++;
     }
 #endif

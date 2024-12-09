@@ -1,3 +1,5 @@
+#define BP_DEBUG_OVERRIDE_DEFAULT_CATEGORY BP_DEBUG_CAT_ONBOARD_PIXELS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "pico/stdlib.h"
@@ -660,12 +662,16 @@ static led_effect_t effect = LED_EFFECT_DISABLED;
 bool rotate_effects = false;
 
 void rgb_set_effect(led_effect_t new_effect) {
-    if (new_effect < MAX_LED_EFFECT) {
+    if (new_effect >= MAX_LED_EFFECT) {
+        PRINT_ERROR("RGB: Ignoring attempt to set invalid effect index %d (valid range: 0..%d)", new_effect, MAX_LED_EFFECT - 1);
+    } else {
         // rgb_irq_enable(false);
         if (new_effect == LED_EFFECT_PARTY_MODE) {
+            PRINT_INFO("RGB: LED effect set to party mode (rotating effects)");
             rotate_effects = true;
             effect = LED_EFFECT_ANGLE_WIPE;
         } else {
+            PRINT_INFO("RGB: LED effect set to mode %d", new_effect);
             rotate_effects = false;
             effect = new_effect;
         }
@@ -719,9 +725,10 @@ static bool pixel_timer_callback(struct repeating_timer* t) {
         static_assert(LED_EFFECT_DISABLED == 0, "LED_EFFECT_DISABLED must be zero");
         static_assert(MAX_LED_EFFECT - 1 == LED_EFFECT_PARTY_MODE, "LED_EFFECT_PARTY_MODE must be the last effect");
         ++effect;
-        if (effect > LED_EFFECT_GENTLE_GLOW) {
+        if (effect >= LED_EFFECT_PARTY_MODE) {
             effect = LED_EFFECT_ANGLE_WIPE;
         }
+        PRINT_VERBOSE("RGB: Party Mode: next effect %d", effect);
     }
 
     return true;
@@ -733,9 +740,11 @@ static bool pixel_timer_callback(struct repeating_timer* t) {
 void rgb_irq_enable(bool enable) {
     static bool enabled = false;
     if (enable && !enabled) {
+        PRINT_INFO("rgb: rgb_irq_enable() - Enabling timer IRQ\n");
         add_repeating_timer_ms(-10, pixel_timer_callback, NULL, &rgb_timer);
         enabled = true;
     } else if (!enable && enabled) {
+        PRINT_INFO("rgb: rgb_irq_enable() - Disabling timer IRQ\n");
         cancel_repeating_timer(&rgb_timer);
         enabled = false;
     }
@@ -745,12 +754,16 @@ void rgb_init(void) {
     pio_config.pio = PIO_RGB_LED_PIO;
     pio_config.sm = PIO_RGB_LED_SM;
 
+    PRINT_INFO("RGB: rgb_init() - PIO %d, SM %d, GPIO %d", PIO_RGB_LED_PIO, PIO_RGB_LED_SM, RGB_CDO);
+
 #if (BP_VER == 6)
     // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm,
     // &pio_config.offset, RGB_CDO, 16, true);
+    _Static_assert(PIO_RGB_LED_PIO == pio2, "RGB: Mismatch between PIO_RGB_LED_PIO and next line for BP6 board");
     gpio_set_function(RGB_CDO, GPIO_FUNC_PIO2);
     pio_set_gpio_base(pio_config.pio, 16);
 #else
+    _Static_assert(PIO_RGB_LED_PIO == pio0, "RGB: Mismatch between PIO_RGB_LED_PIO and next line for non-BP6 board");
     gpio_set_function(RGB_CDO, GPIO_FUNC_PIO0);
     // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm,
     // &pio_config.offset, RGB_CDO, 1, true);
@@ -767,18 +780,19 @@ void rgb_init(void) {
 };
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b) {
+    PRINT_INFO("RGB: rgb_set_all() - Set all pixels to RGB 0x%02x 0x%02x 0x%02x", r, g, b);
     CPIXEL_COLOR color = { .r = r, .g = g, .b = b };
     assign_pixel_color(PIXEL_MASK_ALL, color);
     update_pixels();
 }
 
 // function to control LED from led mode onboard demo
-#define DEMO_LED 0
+#define DEMO_LED 1
 void rgb_put(uint32_t color) {
+    CPIXEL_COLOR rgb = color_from_uint32(color);
+    PRINT_INFO("RGB: rgb_put() - Set single pixel color to RGB 0x%02x 0x%02x 0x%02x (0x%08x)", rgb.r, rgb.g, rgb.b, color);
     // first set each pixel to off
-    for (int i = 0; i < COUNT_OF_PIXELS; i++) {
-        pixels[i] = PIXEL_COLOR_BLACK;
-    }
-    pixels[DEMO_LED] = color_from_uint32(color);
+    assign_pixel_color(PIXEL_MASK_ALL, PIXEL_COLOR_BLACK);
+    pixels[DEMO_LED] = rgb;
     update_pixels();
 };

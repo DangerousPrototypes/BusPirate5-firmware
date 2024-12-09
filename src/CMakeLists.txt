@@ -515,7 +515,7 @@ foreach(revision ${revisions})
         #pico_set_linker_script(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/memmap_default.ld)
 endforeach()
 
-string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--print-memory-usage")
+string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--cref,--print-memory-usage")
 
 
 # by default this project uses LGPL3 libraries, if you do not want to comply

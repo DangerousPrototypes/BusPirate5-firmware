@@ -1,6 +1,5 @@
 build/**
-build_rp2040/**
-build_rp2350/**
+build_*/**
 .vscode/**
 .env
 

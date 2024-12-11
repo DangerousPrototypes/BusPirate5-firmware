@@ -14,7 +14,7 @@
 #define BP_FIRMWARE_HASH "unknown"
 #endif
 #ifndef BP_FIRMWARE_TIMESTAMP // this variable is for the compile timestamp
-#define BP_FIRMWARE_TIMESTAMP _TIMEZ_
+    #define BP_FIRMWARE_TIMESTAMP ( __DATE__ " " __TIME__ )
 #endif
 
 #define BP_SPI_START_SPEED 1000 * 1000

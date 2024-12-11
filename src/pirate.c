@@ -616,8 +616,23 @@ void main(void) {
 
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_WARNING, BP_DEBUG_CAT_EARLY_BOOT,"\n");
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_WARNING, BP_DEBUG_CAT_EARLY_BOOT,
-        "Init: =========== rebooted ===========\n"
+        "Init: =========== %s ===========\n",
+        BP_HARDWARE_VERSION
         );
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_WARNING, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: Firmware %s @ %s (%s)\n",
+        BP_FIRMWARE_VERSION,
+        BP_FIRMWARE_HASH,
+        BP_FIRMWARE_TIMESTAMP
+        );
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_WARNING, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: %s with %s RAM, %s FLASH, S/N %08X%08X\n",
+           BP_HARDWARE_MCU,
+           BP_HARDWARE_RAM,
+           BP_HARDWARE_FLASH,
+           (uint32_t)(mcu_get_unique_id() >> 32),
+           (uint32_t)(mcu_get_unique_id() & 0xFFFFFFFFu)
+           );
     main_system_initialization();
 
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,

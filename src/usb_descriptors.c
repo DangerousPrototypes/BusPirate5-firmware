@@ -27,6 +27,7 @@
 #include "pirate.h"
 #include "tusb.h"
 #include "pirate/mcu.h"
+#include "system_config.h"
 
 /*
  * BusPirate has obtained two VID/PID combinations from https://pid.codes/.
@@ -295,8 +296,9 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     if (index == 0) { // supported language == English
         memcpy(&_desc_str[1], string_desc_arr[0], 2);
         chr_count = 1;
-#ifndef BP_MANUFACTURING_TEST_MODE
-    } else if (index == 3) { // special-case for USB Serial number
+    } else if (index == 3 && !system_config.disable_unique_usb_serial_number) {
+        // if unique serial number is disabled, will use default value from string table `5buspirate`
+
         //  1x  uint16_t for length/type
         // 16x  uint16_t to encode 64-bit value as hex (16x nibbles)
         static_assert(MAXIMUM_DESCRIPTOR_STRING_ELEMENT_COUNT >= 17);
@@ -306,7 +308,6 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
             _desc_str[16 - t] = nibble < 10 ? '0' + nibble : 'A' + nibble - 10;
         }
         chr_count = 16;
-#endif
     } else if (index >= STRING_DESC_ARR_ELEMENT_COUNT) { // if not in table, return NULL
         return NULL;
     } else {

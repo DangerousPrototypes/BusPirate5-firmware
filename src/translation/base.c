@@ -92,9 +92,10 @@ static const translation_table_t* translation_tables[COUNT_OF_LANGUAGE_IDX] = {
 void translation_set(language_idx_t language) {
     if (language >= COUNT_OF_LANGUAGE_IDX) {
         // log an error?  do nothing?
-        return;
+    } else {
+        current_language = language;
     }
-    current_language = language;
+    return;
 }
 
 const char* GET_T(enum T_translations index) {

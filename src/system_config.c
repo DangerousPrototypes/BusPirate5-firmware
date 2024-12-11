@@ -16,6 +16,11 @@
 struct _system_config system_config;
 
 void system_init(void) {
+    memset(&system_config, 0, sizeof(_system_config));
+    // Note: setting values to zero / false is redundant, but... it's OK to be explicit.
+
+    system_config.disable_unique_usb_serial_number = false;
+
     system_config.terminal_language = 0;
     system_config.config_loaded_from_file = false;
     system_config.terminal_usb_enable = true; // enable USB CDC terminal

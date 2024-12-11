@@ -89,13 +89,33 @@ static const translation_table_t* translation_tables[COUNT_OF_LANGUAGE_IDX] = {
 
 #define UTF8_POOP_EMOJI_STRING "\xF0\x9F\x92\xA9" // poop emoji (💩) as a UTF-8 encoded, null-terminated string
 
-void translation_set(language_idx_t language) {
-    if (language >= COUNT_OF_LANGUAGE_IDX) {
+void translation_set(language_idx_t language_idx) {
+    if (language_idx >= COUNT_OF_LANGUAGE_IDX) {
         // log an error?  do nothing?
     } else {
-        current_language = language;
+        current_language = language_idx;
     }
     return;
+}
+
+const char* get_current_language_name(void) {
+    return get_language_name(current_language);
+}
+language_idx_t get_current_language_idx(void) {
+    return current_language;
+}
+const char* get_language_name(language_idx_t language_idx) {
+    if (language_idx == language_idx_en_us) {
+        return GET_T(T_CONFIG_LANGUAGE_ENGLISH);
+    } else if (language_idx == language_idx_pl_pl) {
+        return GET_T(T_CONFIG_LANGUAGE_POLISH);
+    } else if (language_idx == language_idx_bs_latn_ba) {
+        return GET_T(T_CONFIG_LANGUAGE_BOSNIAN);
+    } else if (language_idx == language_idx_it_it) {
+        return GET_T(T_CONFIG_LANGUAGE_ITALIAN);
+    } else {
+        return UTF8_POOP_EMOJI_STRING "UNKNOWN" UTF8_POOP_EMOJI_STRING;
+    }
 }
 
 const char* GET_T(enum T_translations index) {

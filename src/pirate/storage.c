@@ -233,7 +233,16 @@ uint32_t storage_load_mode(const char* filename, const mode_config_t* config, ui
     f_close(&fil);
     return 1;
 }
-
+bool storage_file_exists(const char* filepath) {
+    bool result = false;
+    FIL fil = {0};
+    FRESULT fr = f_open(&fil, filepath, FA_READ | FA_OPEN_EXISTING);
+    if (fr == FR_OK) {
+        result = true;
+        f_close(&fil);
+    }
+    return result;
+}
 bool storage_ls(const char* location, const char* ext, const uint8_t flags) {
     FRESULT fr;
     DIR dir;
@@ -291,20 +300,22 @@ const char system_config_file[] = "bpconfig.bp";
 
 const mode_config_t system_config_json[] = {
     // clang-format off
-    {"$.terminal_language",       &system_config.terminal_language,       MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.terminal_ansi_color",     &system_config.terminal_ansi_color,     MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.terminal_ansi_statusbar", &system_config.terminal_ansi_statusbar, MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.display_format",          &system_config.display_format,          MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.lcd_screensaver_active",  &system_config.lcd_screensaver_active,  MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.lcd_timeout",             &system_config.lcd_timeout,             MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.led_effect",              &system_config.led_effect_as_uint32,    MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.led_color",               &system_config.led_color,               MODE_CONFIG_FORMAT_HEXSTRING, },
-    {"$.led_brightness_divisor",  &system_config.led_brightness_divisor,  MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.terminal_usb_enable",     &system_config.terminal_usb_enable,     MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.terminal_uart_enable",    &system_config.terminal_uart_enable,    MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.terminal_uart_number",    &system_config.terminal_uart_number,    MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.debug_uart_enable",       &system_config.debug_uart_enable,       MODE_CONFIG_FORMAT_DECIMAL,   },
-    {"$.debug_uart_number",       &system_config.debug_uart_number,       MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_language",           &system_config.terminal_language,                MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_ansi_color",         &system_config.terminal_ansi_color,              MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_ansi_statusbar",     &system_config.terminal_ansi_statusbar,          MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.display_format",              &system_config.display_format,                   MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.lcd_screensaver_active",      &system_config.lcd_screensaver_active,           MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.lcd_timeout",                 &system_config.lcd_timeout,                      MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.led_effect",                  &system_config.led_effect_as_uint32,             MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.led_color",                   &system_config.led_color,                        MODE_CONFIG_FORMAT_HEXSTRING, },
+    {"$.led_brightness_divisor",      &system_config.led_brightness_divisor,           MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_usb_enable",         &system_config.terminal_usb_enable,              MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_uart_enable",        &system_config.terminal_uart_enable,             MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.terminal_uart_number",        &system_config.terminal_uart_number,             MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.debug_uart_enable",           &system_config.debug_uart_enable,                MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.debug_uart_number",           &system_config.debug_uart_number,                MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.disable_usb_serial_number",   &system_config.disable_unique_usb_serial_number, MODE_CONFIG_FORMAT_DECIMAL,   },
+    //....-....1....-....2....-....3
     // clang-format on
 };
 

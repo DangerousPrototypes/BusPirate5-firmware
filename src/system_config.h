@@ -9,7 +9,11 @@ typedef struct _pwm_config {
 } _pwm_config;
 
 typedef struct _system_config {
+    // NOTE: Most settings are uint32_t due to desire to standardize the JSON parsing.
+    // TODO: Put _persisted_ settings into a separate struct.
     bool config_loaded_from_file;
+    uint32_t disable_unique_usb_serial_number;
+
     uint8_t hardware_revision;
 
     uint32_t terminal_language;

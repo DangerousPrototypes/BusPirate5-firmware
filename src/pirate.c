@@ -201,6 +201,9 @@ static void main_system_initialization(void) {
         "Init: system init()\n"
         );
     system_init();
+#ifdef BP_MANUFACTURING_TEST_MODE
+    system_config.disable_unique_usb_serial_number = 1;
+#endif
 
     // setup the UI command buffers
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
@@ -543,8 +546,9 @@ static void core0_infinite_loop(void) {
 void main(void) {
     SEGGER_RTT_Init();
 
-    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-        "Init: main_system_initialization()\n"
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_WARNING, BP_DEBUG_CAT_EARLY_BOOT,"\n");
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_WARNING, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: =========== rebooted ===========\n"
         );
     main_system_initialization();
 
@@ -640,8 +644,10 @@ static void core1_infinite_loop(void) {
                 }
             }
 
-            if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar &&
-                system_config.terminal_ansi_statusbar_update && !system_config.terminal_ansi_statusbar_pause) {
+            if (system_config.terminal_ansi_color &&
+                system_config.terminal_ansi_statusbar &&
+                system_config.terminal_ansi_statusbar_update &&
+                !system_config.terminal_ansi_statusbar_pause) {
                 ui_statusbar_update(update_flags);
             }
 

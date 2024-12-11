@@ -19,6 +19,9 @@ void system_init(void) {
     memset(&system_config, 0, sizeof(_system_config));
     // Note: setting values to zero / false is redundant, but... it's OK to be explicit.
 
+    // Which settings are persisted?
+    // (bpconfig.bp ... see storage.c):
+
     system_config.disable_unique_usb_serial_number = false;
 
     system_config.terminal_language = 0;

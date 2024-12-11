@@ -73,6 +73,41 @@ void gpio_setup(uint8_t pin, bool direction, bool level) {
     gpio_set_function(pin, GPIO_FUNC_SIO);
     gpio_put(pin, level);
 }
+static bool should_disable_unique_usb_serial_number(void) {
+
+    bool result = false;
+#ifdef BP_MANUFACTURING_TEST_MODE
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: manufacturing mode ... disabling unique USB serial number\n"
+        );
+    result = true;
+#endif
+    if (system_config.disable_unique_usb_serial_number) {
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: system_config.disable_unique_usb_serial_number is TRUE\n"
+            );
+        result = true;
+    } else
+    if (system_config.storage_fat_type == 0) {
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: Storage unformatted ... disabling unique USB serial number\n"
+            );
+        result = true;
+    } else
+    // if (!system_config.config_loaded_from_file) {
+    //     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+    //         "Init: no configuration ... disabling unique USB serial number\n"
+    //         );
+    //     result = true;
+    // } else
+    if (storage_file_exists("FACTORY.USB")) {
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: `\\FACTORY.USB` file exists ... disabling unique USB serial number\n"
+            );
+        result = true;
+    }
+    return result;
+}
 
 static void main_system_initialization(void) {
 
@@ -299,12 +334,13 @@ static void main_system_initialization(void) {
     // Stored configuration settings (if available) now loaded.
     // //////////////////////////////////////////////////////////////////////
 
-    // TODO: check runtime conditions that would disable USB serial number
-    //       so can change the below compile-time setting to runtime detection
-    //       This must be finalized prior to Core1 initializing USB stack.
-#ifdef BP_MANUFACTURING_TEST_MODE
-    system_config.disable_unique_usb_serial_number = 1;
-#endif
+    // May rely on storage and/or system_config settings...
+    if (should_disable_unique_usb_serial_number()) {
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: Disabling unique USB serial number\n"
+            );
+        system_config.disable_unique_usb_serial_number = true;
+    }
 
     translation_set(system_config.terminal_language);
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,

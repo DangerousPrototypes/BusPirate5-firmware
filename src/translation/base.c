@@ -98,12 +98,6 @@ void translation_set(language_idx_t language_idx) {
     return;
 }
 
-const char* get_current_language_name(void) {
-    return get_language_name(current_language);
-}
-language_idx_t get_current_language_idx(void) {
-    return current_language;
-}
 const char* get_language_name(language_idx_t language_idx) {
     if (language_idx == language_idx_en_us) {
         return GET_T(T_CONFIG_LANGUAGE_ENGLISH);
@@ -116,6 +110,13 @@ const char* get_language_name(language_idx_t language_idx) {
     } else {
         return UTF8_POOP_EMOJI_STRING "UNKNOWN" UTF8_POOP_EMOJI_STRING;
     }
+}
+
+const char* get_current_language_name(void) {
+    return get_language_name(current_language);
+}
+language_idx_t get_current_language_idx(void) {
+    return current_language;
 }
 
 const char* GET_T(enum T_translations index) {

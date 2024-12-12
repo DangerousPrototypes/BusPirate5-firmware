@@ -121,6 +121,30 @@ enum T_translations{
     T_UART_INVERT_MENU_1,
     T_UART_INVERT_MENU_2,
     T_UART_INVERT_PROMPT,
+    T_UART_GLITCH_TRG_MENU,
+    T_UART_GLITCH_TRG_MENU_1,
+    T_UART_GLITCH_TRG_PROMPT,
+    T_UART_GLITCH_DLY_MENU,
+    T_UART_GLITCH_DLY_MENU_1,
+    T_UART_GLITCH_DLY_PROMPT,
+    T_UART_GLITCH_VRY_MENU,
+    T_UART_GLITCH_VRY_MENU_1,
+    T_UART_GLITCH_VRY_PROMPT,
+    T_UART_GLITCH_CYC_MENU,
+    T_UART_GLITCH_CYC_MENU_1,
+    T_UART_GLITCH_CYC_PROMPT,
+    T_UART_GLITCH_FAIL_MENU,
+    T_UART_GLITCH_FAIL_MENU_1,
+    T_UART_GLITCH_FAIL_PROMPT,
+    T_UART_GLITCH_CNT_MENU,
+    T_UART_GLITCH_CNT_MENU_1,
+    T_UART_GLITCH_CNT_PROMPT,
+    T_UART_GLITCH_GLITCHED,
+    T_UART_GLITCH_CANCELLED,
+    T_UART_GLITCH_DONE,
+    T_UART_TOOL_TIMEOUT,
+    T_UART_GLITCH_UNKNOWN,
+    T_UART_GLITCH_SETUP_ERR,
     T_UART_ACTUAL_SPEED_BAUD,
     T_UART_BAUD,
     T_UART_OPEN,
@@ -443,6 +467,7 @@ enum T_translations{
     T_HELP_UART_BRIDGE_TOOLBAR,
     T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO,
     T_HELP_UART_NMEA,
+    T_HELP_UART_GLITCH_EXIT,
     T_HELP_SECTION_SCRIPT,
     T_HELP_CMD_SCRIPT,
     T_HELP_CMD_BUTTON,
@@ -479,6 +504,8 @@ enum T_translations{
     T_INFRARED_CMD_TEST,
     T_UART_CMD_TEST,
     T_SPI_CMD_SNIFF,
+    T_HELP_UART_GLITCH,
+    T_HELP_UART_GLITCH_CONFIG,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };
@@ -486,8 +513,5 @@ enum T_translations{
 const char * GET_T(enum T_translations index);
 void translation_init(void);
 void translation_set(language_idx_t language);
-const char* get_current_language_name(void);
-language_idx_t get_current_language_idx(void);
-const char* get_language_name(language_idx_t language_idx);
 
 #endif

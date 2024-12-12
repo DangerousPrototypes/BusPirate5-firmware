@@ -60,7 +60,7 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_SPEE
                                                       .menu_items_count = count_of(uart_speed_menu),
                                                       .prompt_text = T_UART_SPEED_PROMPT,
                                                       .minval = 1,
-                                                      .maxval = 1000000,
+                                                      .maxval = 7372800,
                                                       .defval = 115200,
                                                       .menu_action = 0,
                                                       .config = &prompt_int_cfg },

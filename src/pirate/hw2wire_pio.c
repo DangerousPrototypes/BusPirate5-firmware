@@ -146,7 +146,6 @@ void pio_hw2wire_set_mask(uint32_t pin_mask, uint32_t pin_value) {
         }
     }
     // this is a bit of a hack: minimum instructions is 2, so we need to pad the instruction with a no-op
-    // for now, send the same instruction twice
     uint16_t set[] = { 1u << PIO_HW2WIRE_ICOUNT_LSB, // Escape code for 3 instruction sequence
                        0xa042,                       // NOP padding
                        instruction };

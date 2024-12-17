@@ -41,6 +41,7 @@
 #define BP_USE_HWI2C
 #define BP_USE_HWSPI
 #define BP_USE_HW2WIRE
+#define BP_USE_HW3WIRE
 #define BP_USE_HWLED
 // #define		BP_USE_LCDSPI
 // #define		BP_USE_LCDI2C

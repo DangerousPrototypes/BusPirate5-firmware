@@ -26,6 +26,9 @@
 #ifdef BP_USE_HW2WIRE
 #include "mode/hw2wire.h"
 #endif
+#ifdef BP_USE_HW3WIRE
+#include "mode/hw3wire.h"
+#endif
 #ifdef BP_USE_HWLED
 #include "mode/hwled.h"
 #endif
@@ -333,6 +336,38 @@ struct _mode modes[] = {
         .mode_commands_count = &hw2wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw2wire_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw2wire_preflight_sanity_check,      // sanity check before executing syntax
+    },
+#endif
+#ifdef BP_USE_HW3WIRE
+    {
+        .protocol_name = "3WIRE",                        // friendly name (promptname)
+        .protocol_start = hw3wire_start,                 // start
+        .protocol_start_alt = hw3wire_start_alt,         // start with read
+        .protocol_stop = hw3wire_stop,                   // stop
+        .protocol_stop_alt = hw3wire_stop_alt,           // stop with read
+        .protocol_write = hw3wire_write,                 // send(/read) max 32 bit
+        .protocol_read = hw3wire_read,                   // read max 32 bit
+        .protocol_clkh = hw3wire_set_clk_high,           // set clk high
+        .protocol_clkl = hw3wire_set_clk_low,            // set clk low
+        .protocol_dath = hw3wire_set_dat_high,           // set dat hi
+        .protocol_datl = hw3wire_set_dat_low,            // set dat lo
+        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
+        .protocol_tick_clock = hw3wire_tick_clock,       // tick clk
+        .protocol_bitr = hw3wire_read_bit,               // read dat
+        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
+        .protocol_macro = hw3wire_macro,                 // macro
+        .protocol_setup = hw3wire_setup,                 // setup UI
+        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
+        .binmode_setup = nullfunc8_error,                // setup for binmode
+        .protocol_setup_exc = hw3wire_setup_exc,         // real setup
+        .protocol_cleanup = hw3wire_cleanup,             // cleanup for HiZ
+        //.protocol_pins=HWI2C_pins,				// display pin config
+        .protocol_settings = hw3wire_settings,          // display settings
+        .protocol_help = hw3wire_help,                  // display small help about the protocol
+        .mode_commands = hw3wire_commands,              // mode specific commands
+        .mode_commands_count = &hw3wire_commands_count, // mode specific commands count
+        .protocol_get_speed = hw3wire_get_speed,        // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = hw3wire_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_DIO

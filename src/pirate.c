@@ -431,6 +431,11 @@ static void main_system_initialization(void) {
         "Init: binmode_setup()\n"
         );
     binmode_setup();
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: main_system_initialization() complete()\n"
+        );
+
 }
 
 static void core0_infinite_loop(void) {
@@ -639,6 +644,7 @@ void main(void) {
         "Init: entering core0_infinite_loop()\n"
         );
 
+    bp_mark_system_initialized();
     core0_infinite_loop(); // this never should exit, but....
     assert(false); // infinite loop above should never exit
 }
@@ -813,6 +819,7 @@ void core1_entry(void) {
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: starting core1_infinite_loop()\n"
         );
+    bp_mark_system_initialized();
     core1_infinite_loop();
     assert(false); // infinite loop above should never exit
 }

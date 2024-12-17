@@ -1,6 +1,58 @@
 
 #include "debug_rtt.h"
 
+bool _SYSTEM_INITIALIZATION_COMPLETED = false;
+bool _SYSTEM_INITIALIZATION_COMPLETED_BY_CORE[2] = { false, false };
+
+void bp_mark_system_initialized(void) {
+    unsigned int core = get_core_num();
+    if (core == 0) {
+        _SYSTEM_INITIALIZATION_COMPLETED_BY_CORE[0] = true;
+        if (_SYSTEM_INITIALIZATION_COMPLETED_BY_CORE[1]) {
+            _SYSTEM_INITIALIZATION_COMPLETED = true;
+        }
+    } else if (core == 1) {
+        _SYSTEM_INITIALIZATION_COMPLETED_BY_CORE[1] = true;
+        if (_SYSTEM_INITIALIZATION_COMPLETED_BY_CORE[0]) {
+            _SYSTEM_INITIALIZATION_COMPLETED = true;
+        }
+    }
+}
+bool bp_is_system_initialized(void) {
+    return _SYSTEM_INITIALIZATION_COMPLETED;
+}
+
+// PICO SDK defines the following (weak) functions for handling assert() / hard_assert() failures:
+//
+//     void __assert_func(const char *file, int line, const char *func, const char *failedexpr);
+//     void hard_assertion_failure(void);
+//
+// Override these functions with our own versions so that information is also stored in RTT
+// and via terminal output.
+
+void __assert_func(const char *file, int line, const char *func, const char *failedexpr) {
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_FATAL, BP_DEBUG_CAT_CATCHALL,
+        "assertion \"%s\" failed: file \"%s\", line %d%s%s\n",
+        failedexpr, file, line, func ? ", function: " : "",
+        func ? func : ""
+        );
+    printf(
+        "assertion \"%s\" failed: file \"%s\", line %d%s%s\n",
+        failedexpr, file, line, func ? ", function: " : "",
+        func ? func : ""
+        );
+    exit(1);
+}
+void hard_assertion_failure(void) {
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_FATAL, BP_DEBUG_CAT_CATCHALL,
+        "hard_assert() failed\n"
+        );
+    panic("Hard assert");
+}
+
+
+
+
 
 // In C, there does not appear to be a way to use the
 // typesafe versions of the enum values.  :(

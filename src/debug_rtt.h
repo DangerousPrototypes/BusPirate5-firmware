@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pirate.h"
+#include "pico.h" // needed for at least `get_core_num()`
 #include "lib/rtt/RTT/SEGGER_RTT.h"
 
 // To add a new "category" of debug messages which can be enabled/disabled
@@ -193,3 +194,38 @@ static inline bool bp_debug_should_print(bp_debug_level_t level, bp_debug_catego
 #define PRINT_DEBUG(...)   BP_DEBUG_PRINT(BP_DEBUG_LEVEL_DEBUG,   BP_DEBUG_DEFAULT_CATEGORY, __VA_ARGS__)
 
 #endif
+
+// Some assertions are only valid AFTER the system is fully initialized.
+// For example, anything that typically must run on core1 ... during
+// initialization, allow it to run on core0.  Once both cores are in
+// their infinite loops, then the system is fully initialized.
+void bp_mark_system_initialized(void);
+bool bp_is_system_initialized(void);
+
+#ifdef NDEBUG
+
+// These assertions only assert after the system is fully initialized.
+#define BP_ASSERT_CORE0() \
+    do {                                                                  \
+        if ((get_core_num() != 0) && bp_is_system_initialized()) {        \
+            PRINT_FATAL("ASSERTION FAILED: %s:%d\n", __FILE__, __LINE__); \
+            hard_assert(false);                                           \
+        }                                                                 \
+    } while (0)
+#define BP_ASSERT_CORE1() \
+    do {                                                                  \
+        if ((get_core_num() != 1) && bp_is_system_initialized()) {        \
+            PRINT_FATAL("ASSERTION FAILED: %s:%d\n", __FILE__, __LINE__); \
+            hard_assert(false);                                           \
+        }                                                                 \
+    } while (0)
+
+#else
+
+// These assertions only assert after the system is fully initialized.
+#define BP_ASSERT_CORE0() assert((get_core_num() == 0) || !bp_is_system_initialized())
+#define BP_ASSERT_CORE1() assert((get_core_num() == 1) || !bp_is_system_initialized())
+
+#endif
+
+

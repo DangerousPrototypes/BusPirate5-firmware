@@ -219,13 +219,20 @@ bool bp_is_system_initialized(void);
             hard_assert(false);                                           \
         }                                                                 \
     } while (0)
+#define BP_ASSERT(_COND) \
+    do {                                                                  \
+        if (!(_COND)) {                                                   \
+            PRINT_FATAL("ASSERTION FAILED: %s:%d\n", __FILE__, __LINE__); \
+            hard_assert(false);                                           \
+        }                                                                 \
+    } while (0)
 
 #else
 
 // These assertions only assert after the system is fully initialized.
 #define BP_ASSERT_CORE0() assert((get_core_num() == 0) || !bp_is_system_initialized())
 #define BP_ASSERT_CORE1() assert((get_core_num() == 1) || !bp_is_system_initialized())
-
+#define BP_ASSERT(_COND)  assert(_COND)
 #endif
 
 

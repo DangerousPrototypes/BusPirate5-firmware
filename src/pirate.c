@@ -847,13 +847,16 @@ void lcd_irq_enable(int16_t repeat_interval) {
 }
 
 // gives protected access to spi (core safe)
-void spi_busy_wait(bool enable) {
+void spi_busy_wait_internal(bool enable, const char *file, int line) {
+
     if (!enable) {
-        // the check is to protect against the first csel_deselect call not matched by a csel_select
-        if (lock_is_owner_id_valid(spi_mutex.owner)) {
-            mutex_exit(&spi_mutex);
-        }
+
+        BP_ASSERT(lock_get_caller_owner_id() == spi_mutex.owner);
+        mutex_exit(&spi_mutex);
+
     } else {
+
         mutex_enter_blocking(&spi_mutex);
+        BP_ASSERT(lock_get_caller_owner_id() == spi_mutex.owner);
     }
 }

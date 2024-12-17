@@ -79,6 +79,6 @@ bp_debug_level_t _DEBUG_LEVELS[32] = {
     [E_DEBUG_CAT_ONBOARD_PIXELS ] = BP_DEBUG_LEVEL_VERBOSE,
     [E_DEBUG_CAT_ONBOARD_STORAGE] = BP_DEBUG_LEVEL_VERBOSE,
     // add others here, in order of enumeration value
-    [E_DEBUG_CAT_TEMP           ] = BP_DEBUG_LEVEL_NEVER, // Print EVERYTHING in TEMP category by default
+    [E_DEBUG_CAT_TEMP           ] = BP_DEBUG_LEVEL_DEBUG,
 }; // up to 32 categories, each with a debug level
 

@@ -180,8 +180,13 @@ typedef union {
 
 // private function prototypes
 static void csel_setup(void);
-static void csel_deselect(void);
-static void csel_select(void);
+//static void csel_deselect(void);
+// static void csel_select(void);
+#define csel_select()   csel_select_internal(__FILE__, __LINE__)
+#define csel_deselect() csel_deselect_internal(__FILE__, __LINE__)
+static void csel_select_internal(const char* file, int line);
+static void csel_deselect_internal(const char* file, int line);
+
 
 static int spi_nand_reset(void);
 static int read_id(nand_identity_t* identity_out);
@@ -216,7 +221,6 @@ int spi_nand_init(struct dhara_nand* dhara_parameters_out) {
     memset(dhara_parameters_out, 0, sizeof(struct dhara_nand));
 
     // initialize chip select
-    csel_deselect();
     csel_setup();
 
     // reset
@@ -497,15 +501,15 @@ static void csel_setup(void) {
     // gpio_set_dir(FLASH_STORAGE_CS, GPIO_OUT);
 }
 
-static void csel_deselect(void) {
+static void csel_deselect_internal(const char* file, int line) {
     // LL_GPIO_SetOutputPin(CSEL_PORT, CSEL_PIN);
     gpio_put(FLASH_STORAGE_CS, 1);
-    spi_busy_wait(false);
+    spi_busy_wait_internal(false, file, line);
 }
 
-static void csel_select(void) {
+static void csel_select_internal(const char* file, int line) {
     // LL_GPIO_ResetOutputPin(CSEL_PORT, CSEL_PIN);
-    spi_busy_wait(true);
+    spi_busy_wait_internal(true, file, line);
     gpio_put(FLASH_STORAGE_CS, 0);
 }
 

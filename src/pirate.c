@@ -723,6 +723,8 @@ static void core1_infinite_loop(void) {
         if (system_config.binmode_usb_tx_queue_enable) {
             bin_tx_fifo_service();
         }
+        // also receive input from RTT, if available
+        rx_from_rtt_terminal();
 
         if (system_config.psu == 1 &&
             system_config.psu_irq_en == true &&

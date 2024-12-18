@@ -496,7 +496,7 @@ static void core0_infinite_loop(void) {
                         result.success = true;
                     }
                 } else {
-                    PRINT_VERBOSE("Prompting to allow VT100 mode.\n");
+                    // PRINT_VERBOSE("Prompting to allow VT100 mode.\n"); // prints repeatedly ... much too verbose
                     ui_prompt_vt100_mode(&result, &value);
                 }
 

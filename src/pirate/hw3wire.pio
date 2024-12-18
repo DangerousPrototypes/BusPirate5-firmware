@@ -21,7 +21,7 @@
 do_byte:
     set x, 7            side 0b0; Loop 8 times
 bitloop:
-    out pins, 1         [7] ; Serialise write data (all-ones if reading)
+    out pins, 1             [7] ; Serialise write data (all-ones if reading)
     nop             side 0b1 [6] ; SCL rising edge (was 2)
     in pins, 1             [7] ; Sample read data in middle of SCL pulse
     jmp x-- bitloop side 0b0 [7] ; SCL falling edge
@@ -29,6 +29,7 @@ bitloop:
 public entry_point:
 .wrap_target
     out x, 6                   ; Unpack Instr count
+    out y, 2                   ; Unpack the NAK ignore bit
     jmp !x do_byte             ; Instr == 0, this is a data record.
     out null, 32               ; Instr > 0, remainder of this OSR is invalid
 do_exec:

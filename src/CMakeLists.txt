@@ -188,6 +188,13 @@ set(bp5_common
         commands/2wire/sle4442.c
         commands/2wire/sle4442.h
 
+        # 3WIRE
+        mode/hw3wire.h
+        mode/hw3wire.c
+        pirate/hw3wire_pio.h
+        pirate/hw3wire_pio.c
+
+
         # LED
         mode/hwled.c
         mode/hwled.h
@@ -468,6 +475,7 @@ set(stdlibs
 foreach(revision ${revisions})
         ADD_DEPENDENCIES (${revision} timestamp)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw2wire.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw3wire.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwi2c.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/ws2812.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/apa102.pio) 

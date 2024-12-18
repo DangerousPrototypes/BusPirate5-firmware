@@ -24,12 +24,10 @@ bool hw3wire_preflight_sanity_check(void);
 typedef struct _hw3wire_mode_config {
     uint32_t baudrate;
     // uint32_t baudrate_actual;
-    uint32_t data_bits;
-    bool ack_pending;
-    bool read;
-    bool start_sent;
+    uint32_t cs_idle;
+    bool read_with_write;
 } _hw3wire_mode_config;
 
 extern const struct _mode_command_struct hw3wire_commands[];
 extern const uint32_t hw3wire_commands_count;
-extern struct _hw3wire_mode_config hw3wire_mode_config;
+//extern struct _hw3wire_mode_config hw3wire_mode_config;

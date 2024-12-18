@@ -503,7 +503,7 @@ struct _mode modes[] = {
 #ifdef BP_USE_BINLOOPBACK
     {
         .protocol_name = "BIN"                                   // friendly name (promptname)
-                             .protocol_start = binloopback_open, // start
+        .protocol_start = binloopback_open, // start
         .protocol_start_alt = binloopback_open_read,             // start with read
         .protocol_stop = binloopback_close,                      // stop
         .protocol_stop_alt = binloopback_close,                  // stop with read

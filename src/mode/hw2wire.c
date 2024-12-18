@@ -154,18 +154,22 @@ void hw2wire_tick_clock(struct _bytecode* result, struct _bytecode* next) {
 
 void hw2wire_set_clk_high(struct _bytecode* result, struct _bytecode* next) {
     pio_hw2wire_set_mask(1 << M_2WIRE_SCL, 1 << M_2WIRE_SCL);
+    result->out_data = 1;
 }
 
 void hw2wire_set_clk_low(struct _bytecode* result, struct _bytecode* next) {
     pio_hw2wire_set_mask(1 << M_2WIRE_SCL, 0);
+    result->out_data = 0;
 }
 
 void hw2wire_set_dat_high(struct _bytecode* result, struct _bytecode* next) {
     pio_hw2wire_set_mask(1 << M_2WIRE_SDA, 1 << M_2WIRE_SDA);
+    result->out_data = 1;
 }
 
 void hw2wire_set_dat_low(struct _bytecode* result, struct _bytecode* next) {
     pio_hw2wire_set_mask(1 << M_2WIRE_SDA, 0);
+    result->out_data = 0;
 }
 
 void hw2wire_read_bit(struct _bytecode* result, struct _bytecode* next) {

@@ -6,9 +6,7 @@
 #ifndef _PIO_I2C_H
 #define _PIO_I2C_H
 
-#include "hw2wire.pio.h"
-
-void pio_hw3wire_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate);
+void pio_hw3wire_init(uint mosi, uint sclk, uint miso, uint32_t freq);
 void pio_hw3wire_cleanup(void);
 
 void pio_hw3wire_put16(uint16_t data);

@@ -123,6 +123,7 @@ void pio_hw2wire_set_mask(uint32_t pin_mask, uint32_t pin_value) {
     0xff00, //  2: set    pins, 0         side 1 [7] 0b1111111100000000
     0xff01, //  3: set    pins, 1         side 1 [7] 0b1111111100000001
     */
+   //bit 0 is the pin IO output (MOSI)
     uint32_t instruction = 0xf700;
     if (pin_mask & 1u << 0) {
         if (pin_value & 1u << 0) {
@@ -134,7 +135,7 @@ void pio_hw2wire_set_mask(uint32_t pin_mask, uint32_t pin_value) {
             instruction |= PIO_PIN_0;
         }
     }
-
+    //bit 1 is side set pin IO output (SCLK)
     if (pin_mask & 1u << 1) {
         if (pin_value & 1u << 1) {
             instruction |= PIO_SIDE_0;

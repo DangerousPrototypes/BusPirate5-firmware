@@ -138,6 +138,14 @@ void spi_busy_wait(bool enable);
 #define M_2WIRE_SCL BIO1
 #define M_2WIRE_RST BIO2
 
+// 3wire settings
+#define M_3WIRE_MOSI BIO7
+#define M_3WIRE_SCLK BIO6
+#define M_3WIRE_MISO BIO4
+#define M_3WIRE_CS BIO5
+#define M_3WIRE_SELECT 0
+#define M_3WIRE_DESELECT 1
+
 // LED settings
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 // only used on APA102

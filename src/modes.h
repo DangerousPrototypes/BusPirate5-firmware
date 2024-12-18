@@ -19,6 +19,9 @@ enum {
 #ifdef BP_USE_HWSPI
     HWSPI,
 #endif
+#ifdef BP_USE_HW3WIRE
+    HW3WIRE,
+#endif
 #ifdef BP_USE_DIO
     DIO,
 #endif

@@ -107,7 +107,7 @@ void pio_hw3wire_set_mask(uint32_t pin_mask, uint32_t pin_value) {
         }
     } else {
         // retain the current state of the pin
-        if (!(iobank0_hw->io[0].status & (1u << IO_BANK0_GPIO0_STATUS_OUTTOPAD_MSB))) {
+        if ((iobank0_hw->io[15].status & (1u << IO_BANK0_GPIO15_STATUS_OUTTOPAD_MSB))) {
             instruction |= PIO_PIN_0;
         }
     }
@@ -131,11 +131,11 @@ void pio_hw3wire_set_mask(uint32_t pin_mask, uint32_t pin_value) {
 
 void pio_hw3wire_clock_tick(void) {
     uint32_t instruction = 0xf700;
-    if (!(iobank0_hw->io[0].status & (1u << IO_BANK0_GPIO0_STATUS_OUTTOPAD_MSB))) {
+    if ((iobank0_hw->io[15].status & (1u << IO_BANK0_GPIO15_STATUS_OUTTOPAD_MSB))) {
         instruction |= PIO_PIN_0;
     }
     uint16_t tick_clock[] = {
-        2u << PIO_hw3wire_ICOUNT_LSB, // Escape code for 3 instruction sequence
+        2u << PIO_HW3WIRE_ICOUNT_LSB, // Escape code for 3 instruction sequence
         instruction,                  // base state, clock low
         instruction | PIO_SIDE_0,     // Release clock
         instruction                   // lower clock

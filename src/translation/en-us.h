@@ -12,6 +12,7 @@ static char const * const en_us[]={
 	[T_HZ]="Hz",
 	[T_KHZ]="kHz",
 	[T_MHZ]="MHz",
+	[T_SPEED]="Speed",
 	[T_WARN_VOUT_VREF_LOW]="VOUT/VREF pin is not powered. Use W to enable power, or attach an external supply",
 	[T_USE_PREVIOUS_SETTINGS]="Use previous settings?",
 	[T_MODE_ERROR_NO_EFFECT]="ERROR: command has no effect here",
@@ -144,6 +145,8 @@ static char const * const en_us[]={
 	[T_HW2WIRE_SPEED_MENU]="2WIRE speed",
 	[T_HW2WIRE_RST_LOW]="RST LOW",
 	[T_HW2WIRE_RST_HIGH]="RST HIGH",
+	//3WIRE
+	[T_HW3WIRE_SPEED_MENU_1]="1 to 3900kHz",
     //LEDs
 	[T_HWLED_DEVICE_MENU]="LED type",
 	[T_HWLED_DEVICE_MENU_1]="WS2812/SK6812/'NeoPixel' (single wire interface)",

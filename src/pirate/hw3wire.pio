@@ -47,6 +47,7 @@ static inline void hw3wire_program_init(PIO pio, uint sm, uint offset, uint mosi
 
     // IO mapping
     sm_config_set_out_pins(&c, mosi, 1);
+    sm_config_set_set_pins(&c, mosi, 1);
     sm_config_set_in_pins(&c, miso);
     sm_config_set_sideset_pins(&c, sclk);
 
@@ -55,7 +56,7 @@ static inline void hw3wire_program_init(PIO pio, uint sm, uint offset, uint mosi
 
     //with delays, there are 32 instructions per bit IO
     //we should maybe reduce this to have more accuracy around 1MHz
-	float div = clock_get_hz(clk_sys) / (32 * 1000 * (float)freq); 
+	float div = clock_get_hz(clk_sys) / (32 * (float)freq); 
 	sm_config_set_clkdiv(&c, div);
 
     uint32_t pins = (1u << mosi) | (1u<<sclk) | (1u<<miso);

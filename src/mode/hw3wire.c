@@ -34,7 +34,7 @@ const struct _mode_command_struct hw3wire_commands[] = {
 const uint32_t hw3wire_commands_count = count_of(hw3wire_commands);
 
 
-static const struct prompt_item hw3wire_speed_menu[] = { { T_HWSPI_SPEED_MENU_1 } };
+static const struct prompt_item hw3wire_speed_menu[] = { { T_HW3WIRE_SPEED_MENU_1 } };
 static const struct prompt_item hw3wire_bits_menu[] = { { T_HWSPI_BITS_MENU_1 } };
 static const struct prompt_item hw3wire_polarity_menu[] = { { T_HWSPI_CLOCK_POLARITY_MENU_1 },
                                                         { T_HWSPI_CLOCK_POLARITY_MENU_2 } };
@@ -44,12 +44,12 @@ static const struct prompt_item hw3wire_idle_menu[] = { { T_HWSPI_CS_IDLE_MENU_1
 uint32_t hw3wire_setup(void) {
     uint32_t temp;
 
-    static const struct ui_prompt hw3wire_menu[] = { { .description = T_HWSPI_SPEED_MENU,
+    static const struct ui_prompt hw3wire_menu[] = { { .description = T_SPEED,
                                                    .menu_items = hw3wire_speed_menu,
                                                    .menu_items_count = count_of(hw3wire_speed_menu),
                                                    .prompt_text = T_HWSPI_SPEED_PROMPT,
                                                    .minval = 1,
-                                                   .maxval = 80000,
+                                                   .maxval = 3900,
                                                    .defval = 100,
                                                    .menu_action = 0,
                                                    .config = &prompt_int_cfg },
@@ -287,21 +287,14 @@ void hw3wire_macro(uint32_t macro) {
     }
 }
 
-
-/*void hw3wire_pins(void){
-    printf("-\t-\tSCL\tSDA");
-}*/
-
 void hw3wire_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate/1000, GET_T(T_KHZ));
-}
-
-void hw3wire_printI2Cflags(void) {
-    uint32_t temp;
+    ui_prompt_mode_settings_int(GET_T(T_SPEED), mode_config.baudrate/1000, GET_T(T_KHZ));
+    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(hw3wire_idle_menu[mode_config.cs_idle].description), 0x00);
 }
 
 void hw3wire_help(void) {
-    printf("%s3 wire SPI-like bus with individual pin control, data out, clock, data in, and CS\r\n", ui_term_color_info());
+    printf("%s3 wire SPI-like bus with individual pin control (/\\_-^.)\r\n", ui_term_color_info());
+    printf("Pins: data out, clock, data in, and CS\r\n");
     printf("[ & ] Toggle CS low and HIGH\r\n");
     ui_help_mode_commands(hw3wire_commands, hw3wire_commands_count);
 /*printf("\r\nAvailable mode commands:\r\n");
@@ -339,13 +332,6 @@ ui_term_color_reset());
 	printf("{BP}\tSCL\t----+------------- SCL  {DUT}\r\n");
 	printf("\tGND\t------------------ GND\r\n");
 #endif
-}
-
-static uint8_t checkshort(void) {
-    uint8_t temp;
-    temp = (bio_get(M_2WIRE_SDA) == 0 ? 1 : 0);
-    temp |= (bio_get(M_2WIRE_SCL) == 0 ? 2 : 0);
-    return (temp == 3); // there is only a short when both are 0 otherwise repeated start wont work
 }
 
 uint32_t hw3wire_get_speed(void) {

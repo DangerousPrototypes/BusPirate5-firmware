@@ -1,7 +1,7 @@
 void rx_fifo_init(void);
 void rx_uart_init_irq(void);
 void rx_usb_init(void);
-void rx_fifo_service(void);
+void rx_from_rtt_terminal(void); // get terminal input from RTT until queue full or RTT input is empty
 
 void rx_fifo_add(char* c);
 bool rx_fifo_try_get(char* c);

@@ -242,6 +242,8 @@ enum T_translations{
     T_HELP_CAPTURE_LA,
     T_HELP_CMD_FLASH,
     T_HELP_CMD_LABEL,
+    T_HELP_CMD_IMAGE,
+    T_HELP_CMD_DUMP,
     T_HELP_1_2,
     T_HELP_1_3,
     T_HELP_1_4,

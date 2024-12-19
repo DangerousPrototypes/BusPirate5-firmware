@@ -91,7 +91,9 @@
 
 void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);
-void spi_busy_wait(bool enable);
+
+#define spi_busy_wait(ENABLE) spi_busy_wait_internal(ENABLE, __FILE__, __LINE__)
+void spi_busy_wait_internal(bool enable, const char *file, int line);
 
 //#define BP_PIO_SHOW_ASSIGNMENT
 

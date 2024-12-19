@@ -431,6 +431,11 @@ static void main_system_initialization(void) {
         "Init: binmode_setup()\n"
         );
     binmode_setup();
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: main_system_initialization() complete()\n"
+        );
+
 }
 
 static void core0_infinite_loop(void) {
@@ -491,7 +496,7 @@ static void core0_infinite_loop(void) {
                         result.success = true;
                     }
                 } else {
-                    PRINT_VERBOSE("Prompting to allow VT100 mode.\n");
+                    // PRINT_VERBOSE("Prompting to allow VT100 mode.\n"); // prints repeatedly ... much too verbose
                     ui_prompt_vt100_mode(&result, &value);
                 }
 
@@ -639,6 +644,7 @@ void main(void) {
         "Init: entering core0_infinite_loop()\n"
         );
 
+    bp_mark_system_initialized();
     core0_infinite_loop(); // this never should exit, but....
     assert(false); // infinite loop above should never exit
 }
@@ -717,6 +723,8 @@ static void core1_infinite_loop(void) {
         if (system_config.binmode_usb_tx_queue_enable) {
             bin_tx_fifo_service();
         }
+        // also receive input from RTT, if available
+        rx_from_rtt_terminal();
 
         if (system_config.psu == 1 &&
             system_config.psu_irq_en == true &&
@@ -813,6 +821,7 @@ void core1_entry(void) {
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: starting core1_infinite_loop()\n"
         );
+    bp_mark_system_initialized();
     core1_infinite_loop();
     assert(false); // infinite loop above should never exit
 }
@@ -838,13 +847,16 @@ void lcd_irq_enable(int16_t repeat_interval) {
 }
 
 // gives protected access to spi (core safe)
-void spi_busy_wait(bool enable) {
+void spi_busy_wait_internal(bool enable, const char *file, int line) {
+
     if (!enable) {
-        // the check is to protect against the first csel_deselect call not matched by a csel_select
-        if (lock_is_owner_id_valid(spi_mutex.owner)) {
-            mutex_exit(&spi_mutex);
-        }
+
+        BP_ASSERT(lock_get_caller_owner_id() == spi_mutex.owner);
+        mutex_exit(&spi_mutex);
+
     } else {
+
         mutex_enter_blocking(&spi_mutex);
+        BP_ASSERT(lock_get_caller_owner_id() == spi_mutex.owner);
     }
 }

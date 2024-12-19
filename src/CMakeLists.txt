@@ -379,20 +379,6 @@ set (bp5_rtt
 
 
 if(${PICO_PLATFORM} MATCHES "rp2350")
-        add_executable(bus_pirate5_xl
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
-                platform/bpi-rev10.h
-                platform/bpi-rev10.c 
-                pirate/shift.h
-                pirate/shift.c
-                display/robot5xx16.h
-                )
-        target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
-        target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
-        target_compile_definitions(bus_pirate5_xl PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
-
         add_executable(bus_pirate6
                 ${bp5_common}
                 ${bp5_nandflash}
@@ -410,23 +396,20 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 bus_pirate6
         )        
 
-else()
-        add_executable(bus_pirate5_rev8
+        add_executable(bus_pirate5_xl
                 ${bp5_common}
+                ${bp5_nandflash}
                 ${bp5_rtt}
-                platform/bpi-rev8.h
-                platform/bpi-rev8.c
-                #tf card access control
-                fatfs/tf_card.c
-                fatfs/tf_card.h
+                platform/bpi-rev10.h
+                platform/bpi-rev10.c 
                 pirate/shift.h
                 pirate/shift.c
-                display/robot5x16.h
+                display/robot5xx16.h
                 )
-        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VER=5) 
-        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_REV=8)
-        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
-
+        target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
+        target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
+        target_compile_definitions(bus_pirate5_xl PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
+else()
         add_executable(bus_pirate5_rev10
                 ${bp5_common}
                 ${bp5_nandflash}
@@ -445,6 +428,22 @@ else()
                 bus_pirate5_rev8  
                 bus_pirate5_rev10
         )
+
+        add_executable(bus_pirate5_rev8
+                ${bp5_common}
+                ${bp5_rtt}
+                platform/bpi-rev8.h
+                platform/bpi-rev8.c
+                #tf card access control
+                fatfs/tf_card.c
+                fatfs/tf_card.h
+                pirate/shift.h
+                pirate/shift.c
+                display/robot5x16.h
+                )
+        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VER=5) 
+        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_REV=8)
+        target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 endif()
 
 

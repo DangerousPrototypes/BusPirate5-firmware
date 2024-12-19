@@ -47,8 +47,7 @@ void tx_sb_start(uint32_t valid_characters_in_status_bar) {
 }
 
 void tx_fifo_service(void) {
-    uint core = get_core_num();
-    assert(core == 1); // tx fifo is drained from core1 only
+    BP_ASSERT_CORE1(); // tx fifo is drained from core1 only
 
 // state machine:
 #define IDLE 0

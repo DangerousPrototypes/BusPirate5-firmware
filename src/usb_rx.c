@@ -59,6 +59,32 @@ void rx_usb_init(void) {
     tusb_init();
 }
 
+
+// Get data from host over RTT, and pushes to RX queue until either queue is full or RTT input is empty.
+// If RX queue is full, store the last character in a local static variable.  Always use that character
+// (if positive) first when entering the function.  Thus, no RTT input characters are ever lost.
+void rx_from_rtt_terminal(void) {
+    static int last_character = -1;
+
+    // if prior callback left a prior character, use it first.
+    int current_character = (last_character >= 0) ? last_character : SEGGER_RTT_GetKey();
+    last_character = -1;
+
+    // Still might not be any characters available, but if one was obtained...
+    while (current_character >= 0) {
+        // Try to add it to the RX FIFO...
+        if (!queue2_try_add(&rx_fifo, (char*)&current_character)) {
+            // and if that fails, store the character for the next time
+            // this function is called
+            last_character = current_character;
+            break; // out of the while() loop b/c out of RX FIFO buffer
+        }
+        // Else, there was a character, and it got added to the RX FIFO.
+        // So, try to get another character....
+        current_character = SEGGER_RTT_GetKey();
+    }
+}
+
 // USB (tinyUSB) interrupt handler
 // Invoked when CDC interface received data from host
 void tud_cdc_rx_cb(uint8_t itf) {

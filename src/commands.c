@@ -38,6 +38,7 @@
 #include "commands/global/cmd_binmode.h"
 #include "commands/global/bug.h"
 #include "commands/global/image.h"
+#include "commands/global/dump.h"
 
 // command configuration
 const struct _global_command_struct commands[] = {
@@ -90,6 +91,7 @@ const struct _global_command_struct commands[] = {
 { .command="binmode",   .allow_hiz=true, .func=&cmd_binmode_handler, .help_text=0x00 },
 { .command="bug",   .allow_hiz=true, .func=&bug_handler, .help_text=0x00 },
 { .command="image", .allow_hiz=true, .func=&image_handler, .help_text=0x00 },
+{ .command="dump",  .allow_hiz=false, .func=&dump_handler, .help_text=0x00 },
     // clang-format on
 };
 

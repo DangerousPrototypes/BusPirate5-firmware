@@ -54,6 +54,8 @@ const struct ui_help_options global_commands[] = {
     { 0, "hex", T_HELP_CMD_HEX }, //     Print HEX file contents
     { 0, "format", T_HELP_CMD_FORMAT },
     { 0, "label", T_HELP_CMD_LABEL },
+    { 0, "image", T_HELP_CMD_IMAGE },
+    { 0, "dump", T_HELP_CMD_DUMP },
 
     { 1, "", T_HELP_SECTION_SCRIPT },
     { 0, "script", T_HELP_CMD_SCRIPT },

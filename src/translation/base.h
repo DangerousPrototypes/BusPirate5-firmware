@@ -242,6 +242,8 @@ enum T_translations{
     T_HELP_CAPTURE_LA,
     T_HELP_CMD_FLASH,
     T_HELP_CMD_LABEL,
+    T_HELP_CMD_IMAGE,
+    T_HELP_CMD_DUMP,
     T_HELP_1_2,
     T_HELP_1_3,
     T_HELP_1_4,
@@ -484,8 +486,5 @@ enum T_translations{
 const char * GET_T(enum T_translations index);
 void translation_init(void);
 void translation_set(language_idx_t language);
-const char* get_current_language_name(void);
-language_idx_t get_current_language_idx(void);
-const char* get_language_name(language_idx_t language_idx);
 
 #endif

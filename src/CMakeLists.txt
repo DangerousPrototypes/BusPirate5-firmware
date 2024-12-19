@@ -105,6 +105,8 @@ set(bp5_common
         commands/global/bug.h
         commands/global/image.c
         commands/global/image.h
+        commands/global/dump.c
+        commands/global/dump.h
         
         # HiZ
         mode/hiz.h

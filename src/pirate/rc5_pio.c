@@ -109,6 +109,7 @@ nec_rx_status_t rc5_receive(uint32_t *rx_frame) {
         }
     }
     (*rx_frame) = rc5_frame;
+    //TODO: seperate these out to we can use the function without the printf
     printf("\r\n(0x%04x) SB1:%d SB2:%d Toggle:%d Address: %d (0x%02x) Command: %d (0x%02x)", 
     rc5_frame, (rc5_frame >> 13) & 1, (rc5_frame >> 12) & 1, (rc5_frame >> 11) & 1, 
     (rc5_frame >> 6) & 0x1f, (rc5_frame >> 6) & 0x1f, rc5_frame & 0x3f, rc5_frame & 0x3f);

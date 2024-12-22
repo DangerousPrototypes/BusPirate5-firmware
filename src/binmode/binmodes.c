@@ -8,6 +8,8 @@
 #include "binmode/dirtyproto.h"
 #include "binmode/legacy4third.h"
 #include "binmode/falaio.h"
+#include "binmode/irtoy-irman.h"
+#include "binmode/irtoy-air.h"
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 #include "pirate/storage.h" // File system related
 
@@ -15,7 +17,6 @@ void binmode_null_func_void(void) {
     return;
 }
 
-// TODO: add setting for lock terminal or not
 const binmode_t binmodes[] = {
     {
         .lock_terminal = false,
@@ -57,6 +58,22 @@ const binmode_t binmodes[] = {
         .binmode_setup = binmode_null_func_void,
         .binmode_service = legacy4third_mode,
         .binmode_cleanup = binmode_null_func_void,
+    },
+    {
+        .lock_terminal = true,
+        .can_save_config = false,
+        .binmode_name = irtoy_irman_name,
+        .binmode_setup = irtoy_irman_setup,
+        .binmode_cleanup = irtoy_irman_cleanup,
+        .binmode_service = irtoy_irman_service,
+    },
+    {
+        .lock_terminal = true,
+        .can_save_config = false,
+        .binmode_name = irtoy_air_name,
+        .binmode_setup = irtoy_air_setup,
+        .binmode_cleanup = irtoy_air_cleanup,
+        .binmode_service = irtoy_air_service,
     },
 };
 

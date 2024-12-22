@@ -9,7 +9,7 @@
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"    // for clock_get_hz()
-#include "lib/pico_ir_nec/nec_receive.h"
+#include "mode/infrared-struct.h"
 #include "rc5.pio.h"
 #include "pirate/rc5_pio.h"
 
@@ -86,7 +86,7 @@ void rc5_send(uint32_t *data) {
     pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, rc5_frame);
 }
 
-nec_rx_status_t rc5_receive(uint32_t *rx_frame) {
+ir_rx_status_t rc5_receive(uint32_t *rx_frame) {
     if (pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
         return IR_RX_NO_FRAME;
     }

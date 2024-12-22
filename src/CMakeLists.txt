@@ -214,6 +214,7 @@ set(bp5_common
         lib/pico_ir_nec/nec_receive.h
         pirate/rc5_pio.c
         pirate/rc5_pio.h
+        mode/infrared-struct.h
 
         # DUMMY MODE
         mode/dummy1.c
@@ -314,6 +315,10 @@ set(bp5_common
         binmode/fala.h
         binmode/falaio.c
         binmode/falaio.h
+        binmode/irtoy-air.h
+        binmode/irtoy-air.c
+        binmode/irtoy-irman.h
+        binmode/irtoy-irman.c
 
         #toolbars
         toolbars/logic_bar.c

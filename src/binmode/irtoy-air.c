@@ -10,11 +10,10 @@
 // bytecode stuff to a single helper file #include "command_struct.h" //needed for same reason as bytecode and needs same fix
 // #include "modes.h"
 #include "binmode/binmodes.h"
-#include "binmode/logicanalyzer.h"
-#include "binmode/binio.h"
-#include "binmode/fala.h"
 #include "tusb.h"
 #include "ui/ui_term.h"
+#include "binmode/binio_helpers.h"
+
 
 #define MAX_UART_PKT 64
 #define CDC_INTF 1
@@ -45,6 +44,7 @@ void irtoy_air_cleanup(void) {
 void irtoy_air_rx(void){
     static bool active=false;
     char temp[10];
+#if 0
     if(!active){
         //check FIFO for data, else just return
         if(!PIOFIFO()) return;
@@ -66,6 +66,7 @@ void irtoy_air_rx(void){
             active=false;
         }
     }     
+#endif
         
 }
 
@@ -82,7 +83,7 @@ void irtoy_air_service(void){
 
     //need to be careful about PIO fifo overflow here
     if (!tud_cdc_n_connected(CDC_INTF)) {
-        rc5_drain_fifo();
+        //rc5_drain_fifo();
         return;
     }
    

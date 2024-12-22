@@ -1,4 +1,3 @@
-// This is an example mode for Bus Pirate 5
 // How modes work:
 // Bus Pirate 5 uses a three step process to get tight timings between operations.
 // This means it is no longer possible to just spit out data from printf directly from the mode.
@@ -19,6 +18,7 @@
 #include "bytecode.h"   // Bytecode structure for data IO
 #include "pirate/bio.h" // Buffered pin IO functions
 #include "ui/ui_help.h"
+#include "infrared-struct.h"
 #include "lib/pico_ir_nec/nec_transmit.h"
 #include "lib/pico_ir_nec/nec_receive.h"
 #include "mode/infrared.h"
@@ -26,6 +26,7 @@
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "pirate/rc5_pio.h"
+
 
 static struct _infrared_mode_config mode_config;
 static uint8_t device_cleanup;
@@ -40,7 +41,7 @@ typedef struct _ir_protocols {
     bool (*irtx_wait_idle)(void);
     int (*irrx_init)(uint pin_num);
     void (*irrx_deinit)(uint pin_num); 
-    nec_rx_status_t (*irrx_read)(uint32_t *rx_frame);      // read
+    ir_rx_status_t (*irrx_read)(uint32_t *rx_frame);      // read
     void (*irrx_drain_fifo)(void);
 } ir_protocols;
 static const ir_protocols ir_protocol[] = {
@@ -343,7 +344,7 @@ void infrared_macro(uint32_t macro) {
 // Useful for checking async stuff like bytes in a UART
 void infrared_periodic(void){
     uint32_t rx_frame;
-    nec_rx_status_t result = ir_protocol[mode_config.protocol].irrx_read(&rx_frame);
+    ir_rx_status_t result = ir_protocol[mode_config.protocol].irrx_read(&rx_frame);
 }
 
 void infrared_help(void) {

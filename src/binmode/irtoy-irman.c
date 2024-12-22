@@ -13,9 +13,11 @@
 #include "binmode/binio.h"
 #include "tusb.h"
 #include "ui/ui_term.h"
+#include "mode/infrared-struct.h"
 #include "pirate/rc5_pio.h"
 #include "lib/pico_ir_nec/nec_receive.h"
 #include "pirate/bio.h"
+#include "binmode/binio_helpers.h"
 
 #define MAX_UART_PKT 64
 #define CDC_INTF 1

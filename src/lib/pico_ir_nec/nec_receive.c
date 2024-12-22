@@ -9,7 +9,7 @@
 #include "pirate.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"    // for clock_get_hz()
-
+#include "mode/infrared-struct.h"
 #include "nec_receive.h"
 
 // import the assembled PIO state machine program
@@ -53,7 +53,7 @@ void nec_rx_deinit(uint pin_num) {
     pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
 }
 
-nec_rx_status_t nec_get_frame(uint32_t *rx_frame) {
+ir_rx_status_t nec_get_frame(uint32_t *rx_frame) {
     // display any frames in the receive FIFO
     if(pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
         return IR_RX_NO_FRAME;

@@ -45,30 +45,7 @@ void tx_fifo_init(void) {
 
 void tx_sb_start(uint32_t valid_characters_in_status_bar) {
 
-    // BUGBUG -- This is currently called from both cores.
-    //           This means the buffer is being updated from both cores ...
-    //           and there is no lock / protection on the buffer.
-
-    // // Something updated the status bar buffer.
-    // // Which core is this on?
-    // static uint prior_core = 0xFFFFu;
-    // uint core = get_core_num();
-    // if (prior_core == 0xFFFFu) {
-    //     prior_core = core;
-    // } else if (prior_core > 2) {
-    //     --prior_core;
-    // } else if (prior_core == 2) {
-    //     prior_core = core;
-    // }
-
-    // if ((prior_core < 2) && (prior_core != core)) {
-    //     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_FATAL, BP_DEBUG_CAT_CATCHALL,
-    //         "tx_sb_start() is called from multiple cores\n"
-    //         );
-    //     // prior_core = 10; // limit how often we see this message
-    //     prior_core = core; // show this every time it changes
-    // }
-
+    BP_ASSERT_CORE1();
     BP_ASSERT(valid_characters_in_status_bar <= MAXIMUM_STATUS_BAR_BUFFER_BYTES);
     tx_sb_buf_cnt = valid_characters_in_status_bar;
     tx_sb_buf_ready = true;

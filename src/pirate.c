@@ -522,7 +522,7 @@ static void core0_infinite_loop(void) {
                             // and does the initial painting of the full statusbar
                             if (system_config.terminal_ansi_statusbar) {
                                 ui_statusbar_init();
-                                ui_statusbar_update(UI_UPDATE_ALL);
+                                ui_statusbar_update_blocking();
                             }
                             break;
                         default:
@@ -768,7 +768,7 @@ static void core1_infinite_loop(void) {
                 system_config.terminal_ansi_statusbar &&
                 system_config.terminal_ansi_statusbar_update &&
                 !system_config.terminal_ansi_statusbar_pause) {
-                ui_statusbar_update(update_flags);
+                ui_statusbar_update_from_core1(update_flags);
             }
 
 #if (BP_VER == 5 && BP_REV <= 9)

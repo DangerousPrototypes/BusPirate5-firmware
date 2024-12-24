@@ -11,6 +11,7 @@
 #include "ui/ui_flags.h"
 #include "system_monitor.h"
 #include "display/scope.h"
+#include "pirate/intercore_helpers.h"
 
 uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
     uint32_t len = 0;
@@ -209,8 +210,13 @@ uint32_t ui_statusbar_value(char* buf, size_t buffLen) {
 
     return (do_update ? len : 0);
 }
+void ui_statusbar_update_blocking() {
+    BP_ASSERT_CORE0(); // if called from core1, this will deadlock
+    icm_core0_send_message_synchronous(BP_ICM_FORCE_LCD_UPDATE);
+}
+void ui_statusbar_update_from_core1(uint32_t update_flags) {
+    BP_ASSERT_CORE1();
 
-void ui_statusbar_update(uint32_t update_flags) {
     uint32_t len = 0;
     size_t buffLen = sizeof(tx_sb_buf);
 

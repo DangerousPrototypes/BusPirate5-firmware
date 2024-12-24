@@ -17,6 +17,7 @@ static const char* const usage[] = {
 static const struct ui_help_options options[] = {};
 
 void ui_display_clear(struct command_result* res) {
+    BP_ASSERT_CORE0();
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
     }
@@ -30,6 +31,6 @@ void ui_display_clear(struct command_result* res) {
     ui_term_init();   // Initialize VT100 if ANSI terminal
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
         ui_statusbar_init();
-        ui_statusbar_update(UI_UPDATE_ALL);
+        ui_statusbar_update_blocking();
     }
 }

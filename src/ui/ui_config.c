@@ -153,6 +153,8 @@ uint32_t ui_config_action_ansi_color(uint32_t a, uint32_t b) {
 }
 
 uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b) {
+    BP_ASSERT_CORE0();
+
     // NOTE: `b` is treated as a boolean value
     b = !!b;
 
@@ -164,7 +166,7 @@ uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b) {
         }
         ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
         ui_term_init();   // Initialize VT100 if ANSI terminal
-        ui_statusbar_update(UI_UPDATE_ALL);
+        ui_statusbar_update_blocking();
     }
 }
 

@@ -118,6 +118,6 @@ void system_init(void);
 
 // TODO: Refactor to type-safe parameters
 //       system_pin_update_purpose_and_label() is only called directly to update the BP_VOUT pin label
-void system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label);
-void system_bio_claim(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label);
+void system_pin_update_purpose_and_label(bool enable, uint8_t pin, enum bp_pin_func func, const char* label);
+void system_bio_update_purpose_and_label(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label);
 void system_set_active(bool active, uint8_t bio_pin, uint8_t* function_register);

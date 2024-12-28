@@ -47,7 +47,7 @@ void hduart_bridge_handler(struct command_result* res) {
 
     bool suppress_local_echo = cmdln_args_find_flag('s' | 0x20);
 
-    system_bio_claim(true, BIO2, BP_PIN_MODE, label);
+    system_bio_update_purpose_and_label(true, BIO2, BP_PIN_MODE, label);
     bio_output(BIO2);
     bio_put(BIO2, system_config.rts);
 
@@ -71,7 +71,7 @@ void hduart_bridge_handler(struct command_result* res) {
     }
 
     bio_input(BIO2);
-    system_bio_claim(false, BIO2, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO2, BP_PIN_MODE, 0);
 
     if (pause_toolbar) {
         system_config.terminal_ansi_statusbar_pause = toolbar_state;

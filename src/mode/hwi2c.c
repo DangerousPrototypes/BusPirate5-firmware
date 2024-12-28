@@ -132,8 +132,8 @@ uint32_t hwi2c_setup_exc(void) {
                 bio2bufdirpin[M_I2C_SCL],
                 mode_config.baudrate,
                 mode_config.clock_stretch);           
-    system_bio_claim(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
     mode_config.start_sent = false;
     return 1;
 }
@@ -219,8 +219,8 @@ void hwi2c_macro(uint32_t macro) {
 void hwi2c_cleanup(void) {
     pio_i2c_cleanup();
     bio_init();
-    system_bio_claim(false, M_I2C_SDA, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_I2C_SCL, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_I2C_SDA, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_I2C_SCL, BP_PIN_MODE, 0);
 }
 
 void hwi2c_settings(void) {

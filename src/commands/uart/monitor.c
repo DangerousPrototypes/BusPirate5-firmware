@@ -76,8 +76,8 @@ void uart_monitor_handler(struct command_result* res) {
     // assign peripheral to io pins
     bio_set_function(BIO0, GPIO_FUNC_UART); // tx
     bio_set_function(BIO1, GPIO_FUNC_UART); // rx
-    system_bio_claim(true, BIO0, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, BIO1, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, BIO0, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, BIO1, BP_PIN_MODE, pin_labels[1]);
 
     // set buffers to correct position
     bio_buf_input(BIO2);  // cts uart1 input
@@ -89,10 +89,10 @@ void uart_monitor_handler(struct command_result* res) {
     bio_set_function(BIO3, GPIO_FUNC_UART);
     bio_set_function(BIO6, GPIO_FUNC_UART);
     bio_set_function(BIO7, GPIO_FUNC_UART);
-    system_bio_claim(true, BIO2, BP_PIN_MODE, pin_labels[2]);
-    system_bio_claim(true, BIO3, BP_PIN_MODE, pin_labels[3]);
-    system_bio_claim(true, BIO6, BP_PIN_MODE, pin_labels[2]);
-    system_bio_claim(true, BIO7, BP_PIN_MODE, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, BIO2, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, BIO3, BP_PIN_MODE, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, BIO6, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, BIO7, BP_PIN_MODE, pin_labels[3]);
 
     printf("%s%s%s\r\n", ui_term_color_notice(), GET_T(T_HELP_UART_BRIDGE_EXIT), ui_term_color_reset());
 

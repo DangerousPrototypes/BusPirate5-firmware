@@ -48,7 +48,7 @@ uint32_t hw1wire_setup(void) {
 }
 
 uint32_t hw1wire_setup_exc(void) {
-    system_bio_claim(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_OW_OWD, BP_PIN_MODE, pin_labels[0]);
 #ifdef BP_OLD_HW1WIRE
     onewire_init(bio2bufiopin[M_OW_OWD], bio2bufdirpin[M_OW_OWD]);
 #else
@@ -106,7 +106,7 @@ void hw1wire_cleanup(void) {
     ow_cleanup();
 #endif
     bio_init();
-    system_bio_claim(false, M_OW_OWD, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_OW_OWD, BP_PIN_MODE, 0);
 }
 
 // MACROS

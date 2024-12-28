@@ -121,14 +121,14 @@ void system_init(void) {
         true; // enable the binmode TX queue, disable to handle USB directly with tinyusb functions
 }
 
-void system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label) {
+void system_pin_update_purpose_and_label(bool enable, uint8_t pin, enum bp_pin_func func, const char* label) {
     if (system_config.pin_func[pin] == BP_PIN_DEBUG) {
         // BUGBUG: Hard assert here instead of just debug output?
         //         Note that if this is called, the calling code is very likely to be attempting to mess with the pin state.
         //         It's possible that the RP2040/RP2350 lock out GPIO access when a peripheral (such as the UART) is configured
         //         to use the pin, but even then, the calling code would be expecting changes that just aren't going to happen.
         //         Thus, probably better to have a hard_assert() here?
-        PRINT_FATAL("system_pin_claim: attempt to update pin %d, which is used for debug UART\n", pin);
+        PRINT_FATAL("system_pin_update_purpose_and_label: attempt to update pin %d, which is used for debug UART\n", pin);
         return;
     }
     if (enable) {
@@ -144,8 +144,8 @@ void system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const cha
     return;
 }
 
-void system_bio_claim(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label) {
-    return system_pin_claim(enable, bio_pin + 1, func, label);
+void system_bio_update_purpose_and_label(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label) {
+    return system_pin_update_purpose_and_label(enable, bio_pin + 1, func, label);
 }
 
 // BUGBUG -- rename this function to system_track_active_bio_pin() to more accurately

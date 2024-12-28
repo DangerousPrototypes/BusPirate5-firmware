@@ -60,10 +60,10 @@ uint32_t dummy1_setup_exc(void) {
     // 2. Claim IO pins that are used by your hardware/protocol
     // The Bus Pirate won't let the user manipulate these pins
     //  or use PWM/FREQ/etc on these pins while claimed.
-    system_bio_claim(true, BIO4, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, BIO5, BP_PIN_MODE, pin_labels[1]);
-    system_bio_claim(true, BIO6, BP_PIN_MODE, pin_labels[2]);
-    system_bio_claim(true, BIO7, BP_PIN_MODE, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, BIO4, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, BIO5, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, BIO6, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, BIO7, BP_PIN_MODE, pin_labels[3]);
     printf("-DUMMY1- setup_exc()\r\n");
     return 1;
 }
@@ -74,10 +74,10 @@ void dummy1_cleanup(void) {
     bio_init();
 
     // 2. Release the IO pins and reset the labels
-    system_bio_claim(false, BIO4, BP_PIN_MODE, 0);
-    system_bio_claim(false, BIO5, BP_PIN_MODE, 0);
-    system_bio_claim(false, BIO6, BP_PIN_MODE, 0);
-    system_bio_claim(false, BIO7, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO4, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO5, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO6, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO7, BP_PIN_MODE, 0);
     printf("-DUMMY1- cleanup()\r\n");
 }
 

@@ -103,9 +103,9 @@ uint32_t hw2wire_setup_exc(void) {
                      bio2bufdirpin[M_2WIRE_SDA],
                      bio2bufdirpin[M_2WIRE_SCL],
                      hw2wire_mode_config.baudrate);
-    system_bio_claim(true, M_2WIRE_SDA, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, M_2WIRE_SCL, BP_PIN_MODE, pin_labels[1]);
-    system_bio_claim(true, M_2WIRE_RST, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, M_2WIRE_SDA, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_2WIRE_SCL, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, M_2WIRE_RST, BP_PIN_MODE, pin_labels[2]);
     pio_hw2wire_reset();
     bio_put(M_2WIRE_RST, 0); // preload the RST pin to be 0 when output
 }
@@ -195,9 +195,9 @@ void hw2wire_macro(uint32_t macro) {
 void hw2wire_cleanup(void) {
     pio_hw2wire_cleanup();
     bio_init();
-    system_bio_claim(false, M_2WIRE_SDA, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_2WIRE_SCL, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_2WIRE_RST, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_2WIRE_SDA, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_2WIRE_SCL, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_2WIRE_RST, BP_PIN_MODE, 0);
 }
 
 /*void hw2wire_pins(void){

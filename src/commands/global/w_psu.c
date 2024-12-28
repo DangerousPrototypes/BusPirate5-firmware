@@ -35,7 +35,7 @@ void psucmd_irq_callback(void) {
     system_config.psu_error = true;
     system_config.error = true;
     system_config.info_bar_changed = true;
-    system_pin_claim(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[5]);
+    system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[5]);
 }
 
 // zero return code = success
@@ -43,7 +43,7 @@ uint32_t psucmd_enable(float volts, float current, bool current_limit_override) 
     system_config.psu = 0;
     system_config.pin_labels[0] = 0;
     system_config.pin_changed = 0xff;
-    system_pin_claim(false, BP_VOUT, 0, 0);
+    system_pin_update_purpose_and_label(false, BP_VOUT, 0, 0);
 
     uint32_t psu_result = psu_enable(volts, current, current_limit_override);
 
@@ -64,7 +64,7 @@ uint32_t psucmd_enable(float volts, float current, bool current_limit_override) 
     system_config.psu_error = false;
     system_config.psu_current_error = false;
     system_config.info_bar_changed = true;
-    system_pin_claim(true, BP_VOUT, BP_PIN_VOUT, ui_const_pin_states[1]);
+    system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VOUT, ui_const_pin_states[1]);
     monitor_clear_current(); // reset current so the LCD gets all characters
 
     // since we dont have any more pins, the over current detect system is read through the
@@ -211,7 +211,7 @@ void psucmd_disable(void) {
     system_config.psu = 0;
     system_config.info_bar_changed = true;
     monitor_clear_current(); // reset current so the LCD gets all characters next time
-    system_pin_claim(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[0]); // change back to vref type pin
+    system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[0]); // change back to vref type pin
 }
 
 void psucmd_disable_handler(struct command_result* res) {

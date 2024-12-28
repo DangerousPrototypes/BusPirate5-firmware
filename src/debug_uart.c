@@ -50,7 +50,7 @@ void debug_uart_init(int uart_number, bool dbrx, bool dbtx, bool terminal_label)
         // Set the GPIO pin mux to the UART
         bio_set_function(debug_uart[uart_number].tx_pin, GPIO_FUNC_UART);
         // claim and label pin
-        system_bio_claim(
+        system_bio_update_purpose_and_label(
             true, debug_uart[uart_number].tx_pin, BP_PIN_DEBUG, debug_pin_labels[(terminal_label * 2) + 0]);
     }
 
@@ -63,7 +63,7 @@ void debug_uart_init(int uart_number, bool dbrx, bool dbtx, bool terminal_label)
         // Set the GPIO pin mux to the UART
         bio_set_function(debug_uart[uart_number].rx_pin, GPIO_FUNC_UART);
         // claim and label pin
-        system_bio_claim(
+        system_bio_update_purpose_and_label(
             true, debug_uart[uart_number].rx_pin, BP_PIN_DEBUG, debug_pin_labels[(terminal_label * 2) + 1]);
     }
 }

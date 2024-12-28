@@ -121,45 +121,64 @@ void system_init(void) {
         true; // enable the binmode TX queue, disable to handle USB directly with tinyusb functions
 }
 
-bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label) {
-    // #ifdef BP_DEBUG_ENABLED
-    // don't blow up our debug UART settings
+void system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label) {
     if (system_config.pin_func[pin] == BP_PIN_DEBUG) {
-        return false;
+        // BUGBUG: Hard assert here instead of just debug output?
+        //         Note that if this is called, the calling code is very likely to be attempting to mess with the pin state.
+        //         It's possible that the RP2040/RP2350 lock out GPIO access when a peripheral (such as the UART) is configured
+        //         to use the pin, but even then, the calling code would be expecting changes that just aren't going to happen.
+        //         Thus, probably better to have a hard_assert() here?
+        PRINT_FATAL("system_pin_claim: attempt to update pin %d, which is used for debug UART\n", pin);
+        return;
     }
-    // #endif
-
     if (enable) {
         system_config.pin_labels[pin] = label;
         system_config.pin_func[pin] = func;
     } else {
-        system_config.pin_labels[pin] = 0;
+        system_config.pin_labels[pin] = NULL;
         system_config.pin_func[pin] = BP_PIN_IO;
     }
 
+    // Mark the need to update the UI (labels) for this pin.
     system_config.pin_changed |= (0x01 << ((uint8_t)pin));
-    return true;
+    return;
 }
 
-bool system_bio_claim(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label) {
+void system_bio_claim(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label) {
     return system_pin_claim(enable, bio_pin + 1, func, label);
 }
 
-bool system_set_active(bool active, uint8_t bio_pin, uint8_t* function_register) {
-    /*#ifdef BP_DEBUG_ENABLED
-        if(bio_pin==BP_DEBUG_UART_TX || bio_pin==BP_DEBUG_UART_RX)
-        {
-            return false;
-        }
-    #endif	 */
+// BUGBUG -- rename this function to system_track_active_bio_pin() to more accurately
+//           reflect that it's not setting pins as active.
+void system_set_active(bool active, uint8_t bio_pin, uint8_t* function_register) {
     if (system_config.pin_func[bio_pin + 1] == BP_PIN_DEBUG) {
-        return false;
+        // BUGBUG: Hard assert here instead of just debug output?
+        //         Note that if this is called, the calling code is very likely to be attempting to mess with the pin state.
+        //         It's possible that the RP2040/RP2350 lock out GPIO access when a peripheral (such as the UART) is configured
+        //         to use the pin, but even then, the calling code would be expecting changes that just aren't going to happen.
+        //         Thus, probably better to have a hard_assert() here?
+        PRINT_FATAL("system_set_active: attempt to set bio_pin %d active, which is used for debug UART\n", bio_pin);
+        return;
     }
+
+    // NOTE: tracks which pin(s) are used for a given function
+    //       code today uses only the following registers to track this:
+    //       * system_config.pwm_active
+    //       * system_config.aux_active
+    //       * system_config.freq_active
+    // Rework this to pass in a type-safe enumeration of which function register to update.
+    // Having this in an enumeration also allows additional checks that can catch code errors
+    // more rapidly.  For example, a single pin must be used for at most one function at a time.
+    //
+    // Thus could catch code errors early as follows:
+    //     assert( (system_config.pwm_active & system_config.aux_active ) == 0 );
+    //     assert( (system_config.pwm_active & system_config.freq_active) == 0 );
+    //     assert( (system_config.aux_active & system_config.freq_active) == 0 );
 
     if (active) {
         (*function_register) |= (0x01 << ((uint8_t)bio_pin));
     } else {
         (*function_register) &= ~(0x01 << ((uint8_t)bio_pin));
     }
-    return true;
+    return;
 }

@@ -73,7 +73,7 @@ typedef struct _system_config {
     uint8_t pwm_active;                    // pwm active, one bit per PWN channel/pin
     _pwm_config freq_config[BIO_MAX_PINS]; // holds PWM or FREQ settings for easier display later
     uint8_t freq_active;                   // freq measure active, one bit per channel/pin
-    uint8_t aux_active;                    // user controlled auc pins are outputs, resets when input
+    uint8_t aux_active;                    // user controlled aux pins are outputs, resets when used as inputs
 
     uint8_t psu; // psu (0=off, 1=on)
                  // uint8_t psu_dat_bits_readable;  // dac bits in human readable format
@@ -115,7 +115,9 @@ typedef struct _system_config {
 extern struct _system_config system_config;
 
 void system_init(void);
-bool system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label);
-bool system_bio_claim(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label);
-bool system_set_active(bool active, uint8_t bio_pin, uint8_t* function_register);
-bool system_load_config(void);
+
+// TODO: Refactor to type-safe parameters
+//       system_pin_update_purpose_and_label() is only called directly to update the BP_VOUT pin label
+void system_pin_claim(bool enable, uint8_t pin, enum bp_pin_func func, const char* label);
+void system_bio_claim(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label);
+void system_set_active(bool active, uint8_t bio_pin, uint8_t* function_register);

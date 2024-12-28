@@ -52,13 +52,13 @@ This project uses `cmake` as the build system, so building the project only take
     
 2. project build
     ```bash
-    cmake --build ./build_rp2040 --target all
-    cmake --build ./build_rp2350 --target all
+    cmake --build ./build_rp2040 --parallel --target all
+    cmake --build ./build_rp2350 --parallel --target all
     # you may add a specific target, such as:
-    cmake --build ./build_rp2040 --target bus_pirate5_rev8
-    cmake --build ./build_rp2040 --target bus_pirate5_rev10
-    cmake --build ./build_rp2350 --target bus_pirate5_xl
-    cmake --build ./build_rp2350 --target bus_pirate6
+    cmake --build ./build_rp2040 --parallel --target bus_pirate5_rev8
+    cmake --build ./build_rp2040 --parallel --target bus_pirate5_rev10
+    cmake --build ./build_rp2350 --parallel --target bus_pirate5_xl
+    cmake --build ./build_rp2350 --parallel --target bus_pirate6
     ```
     You can also manually clean using `--target clean`, or
     force a clean prior to building by using `--clean-first`.

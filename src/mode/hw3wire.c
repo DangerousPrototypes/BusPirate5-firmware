@@ -179,10 +179,10 @@ uint32_t hw3wire_setup_exc(void) {
                      bio2bufiopin[M_3WIRE_SCLK],
                      bio2bufiopin[M_3WIRE_MISO],                     
                      mode_config.baudrate);
-    system_bio_claim(true, M_3WIRE_MOSI, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, M_3WIRE_SCLK, BP_PIN_MODE, pin_labels[1]);
-    system_bio_claim(true, M_3WIRE_MISO, BP_PIN_MODE, pin_labels[2]);
-    system_bio_claim(true, M_3WIRE_CS, BP_PIN_MODE, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, M_3WIRE_MOSI, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_3WIRE_SCLK, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, M_3WIRE_MISO, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, M_3WIRE_CS, BP_PIN_MODE, pin_labels[3]);
     //pio_hw3wire_reset();
     //bio_put(M_2WIRE_RST, 0); // preload the RST pin to be 0 when output
     hw3wire_set_cs(M_3WIRE_DESELECT);
@@ -191,10 +191,10 @@ uint32_t hw3wire_setup_exc(void) {
 void hw3wire_cleanup(void) {
     pio_hw3wire_cleanup();
     bio_init();
-    system_bio_claim(false, M_3WIRE_MOSI, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_3WIRE_SCLK, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_3WIRE_MISO, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_3WIRE_CS, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_3WIRE_MOSI, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_3WIRE_SCLK, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_3WIRE_MISO, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_3WIRE_CS, BP_PIN_MODE, 0);
 }
 
 bool hw3wire_preflight_sanity_check(void){

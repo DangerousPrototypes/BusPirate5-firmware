@@ -321,7 +321,7 @@ void syntax_run_delay_ms(struct _syntax_io* syntax_io, uint32_t current_position
 void syntax_run_aux_output(struct _syntax_io* syntax_io, uint32_t current_position) {
     bio_output(syntax_io->out[current_position].bits);
     bio_put((uint8_t)syntax_io->out[current_position].bits, (bool)syntax_io->out[current_position].out_data);
-    system_bio_claim(
+    system_bio_update_purpose_and_label(
         true,
         syntax_io->out[current_position].bits,
         BP_PIN_IO,
@@ -332,7 +332,7 @@ void syntax_run_aux_output(struct _syntax_io* syntax_io, uint32_t current_positi
 void syntax_run_aux_input(struct _syntax_io* syntax_io, uint32_t current_position) {
     bio_input(syntax_io->out[current_position].bits);
     syntax_io->in[syntax_io->in_cnt].in_data = bio_get(syntax_io->out[current_position].bits);
-    system_bio_claim(false, syntax_io->out[current_position].bits, BP_PIN_IO, 0);
+    system_bio_update_purpose_and_label(false, syntax_io->out[current_position].bits, BP_PIN_IO, 0);
     system_set_active(false, syntax_io->out[current_position].bits, &system_config.aux_active);  
 }
 

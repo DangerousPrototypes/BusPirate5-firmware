@@ -102,7 +102,7 @@ void pwm_configure_enable(struct command_result* res) {
     pwm_set_enabled(slice_num, true);
 
     // register the freq active, apply the pin label
-    system_bio_claim(true, (uint8_t)pin, BP_PIN_PWM, ui_const_pin_states[3]);
+    system_bio_update_purpose_and_label(true, (uint8_t)pin, BP_PIN_PWM, ui_const_pin_states[3]);
     system_set_active(true, (uint8_t)pin, &system_config.pwm_active);
 
     printf("\r\n%s%s:%s %s on IO%s%d%s\r\n",
@@ -179,7 +179,7 @@ void pwm_configure_disable(struct command_result* res) {
     bio_input((uint8_t)pin);
 
     // unregister, remove pin label
-    system_bio_claim(false, (uint8_t)pin, 0, 0);
+    system_bio_update_purpose_and_label(false, (uint8_t)pin, 0, 0);
     system_set_active(false, (uint8_t)pin, &system_config.pwm_active);
 
     printf("\r\n%s%s:%s %s on IO%s%d%s",

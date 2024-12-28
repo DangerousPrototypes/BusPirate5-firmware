@@ -409,10 +409,10 @@ void legacy_protocol(void) {
 
                 spi_init(SPI1_BASE, 100000); // ~0.1MHz
                 hwspi_init(data_bits, cpol, cpha);
-                system_bio_claim(true, 6, 1, mpin_labels[0]);
-                system_bio_claim(true, 7, 1, mpin_labels[1]);
-                system_bio_claim(true, 4, 1, mpin_labels[2]);
-                system_bio_claim(true, 5, 1, mpin_labels[3]);
+                system_bio_update_purpose_and_label(true, 6, 1, mpin_labels[0]);
+                system_bio_update_purpose_and_label(true, 7, 1, mpin_labels[1]);
+                system_bio_update_purpose_and_label(true, 4, 1, mpin_labels[2]);
+                system_bio_update_purpose_and_label(true, 5, 1, mpin_labels[3]);
                 */
             } break;
 

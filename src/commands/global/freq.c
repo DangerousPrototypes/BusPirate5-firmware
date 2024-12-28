@@ -150,7 +150,7 @@ uint32_t freq_configure_enable(void) {
     }
 
     // register the freq active, apply the pin label
-    system_bio_claim(true, (uint8_t)pin, BP_PIN_FREQ, ui_const_pin_states[4]);
+    system_bio_update_purpose_and_label(true, (uint8_t)pin, BP_PIN_FREQ, ui_const_pin_states[4]);
     system_set_active(true, (uint8_t)pin, &system_config.freq_active);
 
     printf("\r\n%s%s:%s %s on IO%s%d%s\r\n",
@@ -208,7 +208,7 @@ uint32_t freq_configure_disable(void) {
     bio_input((uint8_t)pin);
 
     // unregister, remove pin label
-    system_bio_claim(false, (uint8_t)pin, 0, 0);
+    system_bio_update_purpose_and_label(false, (uint8_t)pin, 0, 0);
     system_set_active(false, (uint8_t)pin, &system_config.freq_active);
 
     printf("\r\n%s%s:%s %s on IO%s%d%s",

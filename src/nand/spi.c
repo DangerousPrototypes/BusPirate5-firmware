@@ -41,10 +41,10 @@ baudrate/1000000); spi_set_format(BP_SPI_PORT,8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB
     // 8bit and lsb/msb handled in UI.c
     //dff=SPI_CR1_DFF_8BIT;
     //lsbfirst=SPI_CR1_MSBFIRST;
-    system_bio_claim(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
-    system_bio_claim(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);
-    system_bio_claim(true, M_SPI_CS, BP_PIN_MODE, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, M_SPI_CS, BP_PIN_MODE, pin_labels[3]);
 
 }
 */

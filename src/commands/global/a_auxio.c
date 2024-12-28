@@ -68,7 +68,7 @@ void auxio(struct command_result* res, bool output, bool level) {
                ui_term_color_num_float(),
                level,
                ui_term_color_reset());
-        system_bio_claim(true, pin, BP_PIN_IO, labels[level]);
+        system_bio_update_purpose_and_label(true, pin, BP_PIN_IO, labels[level]);
         system_set_active(true, pin, &system_config.aux_active);
     } else { // input
         bio_input(pin);
@@ -80,7 +80,7 @@ void auxio(struct command_result* res, bool output, bool level) {
                ui_term_color_num_float(),
                bio_get(pin),
                ui_term_color_reset());
-        system_bio_claim(false, pin, BP_PIN_IO, 0);
+        system_bio_update_purpose_and_label(false, pin, BP_PIN_IO, 0);
         system_set_active(false, pin, &system_config.aux_active);
     }
     return;

@@ -15,7 +15,7 @@ static const char ui_const_freq_slugs[][4] = { "ns", "us", "ms", "hz", "khz", "m
 // Pretty labels to display frequency and period
 static const char ui_const_freq_labels[][4] = { "ns", "us", "ms", "Hz", "kHz", "MHz", "%" };
 // short version of freq labels to show in constrained spaces (eg toolbar)
-static const char ui_const_freq_labels_short[][1] = { "n", "u", "m", "H", "K", "M", "%" };
+static const char ui_const_freq_labels_short[][2] = { "n", "u", "m", "H", "K", "M", "%" };
 // global constants
 static const char ui_const_bit_orders[][4] = { "MSB", "LSB" };
 

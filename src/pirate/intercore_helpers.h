@@ -15,6 +15,7 @@
 //
 typedef uint8_t bp_icm_message_t;
 #define BP_ICM_INIT_CORE1 ((bp_icm_message_t)0xA5)          // Used to synchronize Core0 and Core1 intialization.
+#define BP_ICM_UPDATE_STATUS_BAR  ((bp_icm_message_t)0xC0)  // Core0 requests update of the status bar
 #define BP_ICM_DISABLE_LCD_UPDATES ((bp_icm_message_t)0xF0) // disables LCD updates / IRQ
 #define BP_ICM_ENABLE_LCD_UPDATES ((bp_icm_message_t)0xF1)  // enables LCD updates / IRQ
 #define BP_ICM_FORCE_LCD_UPDATE ((bp_icm_message_t)0xF2)    // enable LCD updates / IRQ and force an update

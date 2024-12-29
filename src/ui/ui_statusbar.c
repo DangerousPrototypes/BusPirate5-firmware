@@ -212,7 +212,8 @@ uint32_t ui_statusbar_value(char* buf, size_t buffLen) {
 }
 void ui_statusbar_update_blocking() {
     BP_ASSERT_CORE0(); // if called from core1, this will deadlock
-    icm_core0_send_message_synchronous(BP_ICM_FORCE_LCD_UPDATE);
+    system_config.terminal_ansi_statusbar_update = true;
+    icm_core0_send_message_synchronous(BP_ICM_UPDATE_STATUS_BAR);
 }
 void ui_statusbar_update_from_core1(uint32_t update_flags) {
     BP_ASSERT_CORE1();

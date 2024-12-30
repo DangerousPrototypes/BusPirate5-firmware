@@ -164,7 +164,8 @@ void lcd_write_string(
         // depending on how the font fits in the bitmap,
         // there may or may not be enough right hand padding between characters
         // this adds a configurable amount of space
-        for (uint8_t pad = 0; pad < (*font).lookup[adjusted_c].height * (*font).right_padding; pad++) {
+        uint16_t needed_padding = (*font).lookup[adjusted_c].height * (*font).right_padding;
+        for (uint16_t pad = 0; pad < needed_padding; pad++) {
             spi_write_blocking(BP_SPI_PORT, back_color, 2);
         }
         (c)++;

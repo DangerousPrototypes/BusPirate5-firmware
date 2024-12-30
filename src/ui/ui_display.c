@@ -13,7 +13,7 @@
 #include "ui/ui_cmdln.h"
 
 bool ui_display_list(const struct ui_prompt* menu) {
-    for (uint8_t i = 0; i < (*menu).menu_items_count; i++) {
+    for (uint i = 0; i < (*menu).menu_items_count; i++) {
         printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), displays[i].display_name, ui_term_color_reset());
     }
 }

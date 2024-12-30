@@ -14,7 +14,7 @@
 #include "binmode/fala.h"
 
 bool ui_mode_list(const struct ui_prompt* menu) {
-    for (uint8_t i = 0; i < (*menu).menu_items_count; i++) {
+    for (uint i = 0; i < (*menu).menu_items_count; i++) {
         printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), modes[i].protocol_name, ui_term_color_reset());
     }
 }
@@ -180,7 +180,7 @@ bool int_display_menu(const struct ui_prompt* menu) {
            ui_term_color_info(),
            ui_const_display_formats[system_config.display_format],
            ui_term_color_reset());
-    for (uint8_t i = 0; i < (*menu).menu_items_count; i++) {
+    for (uint i = 0; i < (*menu).menu_items_count; i++) {
         printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), ui_const_display_formats[i], ui_term_color_reset());
     }
 }

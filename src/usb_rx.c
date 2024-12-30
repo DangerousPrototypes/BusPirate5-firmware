@@ -115,7 +115,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
         uint32_t count = tud_cdc_n_read(1, buf, 64);
 
         // while bytes available shove them in the buffer
-        for (uint8_t i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < count; i++) {
             queue2_add_blocking(&bin_rx_fifo, &buf[i]); // BUGBUG -- blocking call from ISR!
         }
     }

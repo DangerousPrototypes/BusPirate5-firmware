@@ -197,7 +197,7 @@ compiler_get_attributes:
 
         if (syntax_io.out[syntax_io.out_cnt].command >= SYN_AUX_OUTPUT) {
             if (syntax_io.out[syntax_io.out_cnt].has_bits == false) {
-                printf("Error: missing IO number for command %c at position %d. Try %c.0\r\n", c, current_position);
+                printf("Error: missing IO number for command %c at position %d. Try %c.0\r\n", c, current_position, c);
                 return SSTATUS_ERROR;
             }
 

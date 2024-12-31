@@ -820,8 +820,32 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   int koff, klen, voff, vlen, t, t2, k, off = 0, len = 0, comma = 0;
   if (n < 2) return len;
   len += fn("{", 1, userdata);
+
+  // Determine maximum path length from either buffer.
+  // Required because `alloca()` allocates memory by
+  // expanding the current stack frame, but does not
+  // release memory until the function returns.
+  // Allocating once (and only once) thus helps avoid
+  // stack overflow.
+  size_t max_path_length = 1;
+  do {
+    off = 0;
+    while ((off = mjson_next(s, n, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
+      size_t current_path_length = (size_t) klen + 1;
+      if (current_path_length > max_path_length) max_path_length = current_path_length;
+    }
+    off = 0;
+    while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
+      size_t current_path_length = (size_t) klen + 1;
+      if (current_path_length > max_path_length) max_path_length = current_path_length;
+    }
+  } while (0);
+  char * path = (char *) alloca(max_path_length);
+
+  // first update `s` where the keys exist in both `s` and `s2`
+  off = 0;
   while ((off = mjson_next(s, n, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-    char *path = (char *) alloca((size_t) klen + 1);
+    memset(path, 0, max_path_length);
     const char *val;
     memcpy(path, "$.", 2);
     memcpy(path + 2, s + koff + 1, (size_t) (klen - 2));
@@ -842,10 +866,11 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
     }
     comma = 1;
   }
+
   // Add missing keys
   off = 0;
   while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-    char *path = (char *) alloca((size_t) klen + 1);
+    memset(path, 0, max_path_length);
     const char *val;
     if (t == MJSON_TOK_NULL) continue;
     memcpy(path, "$.", 2);

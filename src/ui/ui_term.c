@@ -687,7 +687,7 @@ void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progr
 
     system_config.terminal_ansi_statusbar_pause = true;
     if ((previous_pct) > 0) {
-        for (uint8_t i = 0; i < (previous_pct); i++) // advance this many positions
+        for (uint32_t i = 0; i < (previous_pct); i++) // advance this many positions
         {
             printf("%s-", ui_term_color_prompt());
         }

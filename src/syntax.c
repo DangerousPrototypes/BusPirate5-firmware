@@ -197,7 +197,7 @@ compiler_get_attributes:
 
         if (syntax_io.out[syntax_io.out_cnt].command >= SYN_AUX_OUTPUT) {
             if (syntax_io.out[syntax_io.out_cnt].has_bits == false) {
-                printf("Error: missing IO number for command %c at position %d. Try %c.0\r\n", c, current_position);
+                printf("Error: missing IO number for command %c at position %d. Try %c.0\r\n", c, current_position, c);
                 return SSTATUS_ERROR;
             }
 
@@ -262,7 +262,7 @@ void syntax_run_write(struct _syntax_io* syntax_io, uint32_t current_position) {
         syntax_io->in[syntax_io->in_cnt].error = SERR_ERROR;
         return;
     }
-    for (uint16_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
+    for (uint32_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
         if (j > 0) {
             syntax_io->in_cnt++;
             syntax_io->in[syntax_io->in_cnt] = syntax_io->out[current_position];
@@ -280,7 +280,7 @@ void syntax_run_read(struct _syntax_io* syntax_io, uint32_t current_position) {
     #ifdef SYNTAX_DEBUG
         printf("[DEBUG] repeat %d, pos %d, cmd: %d\r\n", syntax_io->out[current_position].repeat, current_position, syntax_io->out[current_position].command);
     #endif
-    for (uint16_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
+    for (uint32_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
         if (j > 0) {
             syntax_io->in_cnt++;
             syntax_io->in[syntax_io->in_cnt] = syntax_io->out[current_position];
@@ -341,7 +341,7 @@ void syntax_run_adc(struct _syntax_io* syntax_io, uint32_t current_position) {
 }
 
 void syntax_run_tick_clock(struct _syntax_io* syntax_io, uint32_t current_position) {
-    for (uint16_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
+    for (uint32_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
         modes[system_config.mode].protocol_tick_clock(&syntax_io->in[syntax_io->in_cnt], NULL);
     }
 }
@@ -364,7 +364,7 @@ void syntax_run_set_dat_low(struct _syntax_io* syntax_io, uint32_t current_posit
 
 void syntax_run_read_dat(struct _syntax_io* syntax_io, uint32_t current_position) {
     //TODO: reality check out slots, actually repeat the read?
-    for (uint16_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
+    for (uint32_t j = 0; j < syntax_io->out[current_position].repeat; j++) {
         modes[system_config.mode].protocol_bitr(&syntax_io->in[syntax_io->in_cnt], NULL);
     }
 }

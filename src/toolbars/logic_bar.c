@@ -162,7 +162,7 @@ void logic_bar_redraw(uint32_t start_pos, uint32_t total_samples) {
 // add blank space
 void frame_blank(uint16_t height) {
     // add space to draw the box
-    for (uint8_t i = 0; i < height; i++) {
+    for (uint16_t i = 0; i < height; i++) {
         printf("\r\n"); // make space!
     }
 }

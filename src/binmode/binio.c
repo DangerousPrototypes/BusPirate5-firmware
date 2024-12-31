@@ -50,7 +50,7 @@
 uint8_t binmode_debug = 0;
 
 void script_print(const char* str) {
-    for (uint8_t i = 0; i < strlen(str); i++) {
+    for (size_t i = 0; i < strlen(str); i++) {
         bin_tx_fifo_put(str[i]);
     }
 }

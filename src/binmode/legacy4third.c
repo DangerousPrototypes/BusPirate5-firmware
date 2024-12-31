@@ -677,7 +677,7 @@ void legacy4third_mode(void) {
 
         cdc_buff = (uint8_t*)mem_alloc(CDCBUFF_SIZE + TMPBUFF_SIZE, 0);
         if (binmode_debug) {
-            printf("\r\ncdc_buff: 0x%08X\r\n", cdc_buff);
+            printf("\r\ncdc_buff: %p\r\n", cdc_buff);
         }
         printf("\r\nDone! Just execute flashrom or avrdude using the binary com port\r\n");
         tmpbuf = cdc_buff + CDCBUFF_SIZE;

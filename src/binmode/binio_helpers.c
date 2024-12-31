@@ -12,7 +12,7 @@
 #include "modes.h"
 
 void script_send(const char* c, uint32_t len) {
-    for (uint8_t i = 0; i < len; i++) {
+    for (uint32_t i = 0; i < len; i++) {
         bin_tx_fifo_put(c[i]);
     }
 }

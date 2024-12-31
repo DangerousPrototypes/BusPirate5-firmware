@@ -279,8 +279,8 @@ bool setup_hardware() {
     bio_set_function(M_UART_GLITCH_RDY, GPIO_FUNC_SIO);
     bio_output(M_UART_GLITCH_TRG);
     bio_input(M_UART_GLITCH_RDY);
-    system_bio_claim(true, M_UART_GLITCH_TRG, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, M_UART_GLITCH_RDY, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, M_UART_GLITCH_TRG, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_UART_GLITCH_RDY, BP_PIN_MODE, pin_labels[1]);
 
     // set the trigger low right away
     bio_put(M_UART_GLITCH_TRG, 0);
@@ -295,8 +295,8 @@ void teardown_hardware() {
     PRINT_INFO("glitch::Entering teardown_hardware()\r\n");
     bio_put(M_UART_RTS, 1);
 
-    system_bio_claim(false, M_UART_GLITCH_TRG, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_UART_GLITCH_RDY, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_UART_GLITCH_TRG, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_UART_GLITCH_RDY, BP_PIN_MODE, 0);
 
     // kill the timer
     ticker_kill();

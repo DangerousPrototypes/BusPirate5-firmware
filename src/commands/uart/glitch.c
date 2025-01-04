@@ -34,9 +34,10 @@
  ************************************************************/
 
 #include <stdio.h>
-#include "pico/stdlib.h"
-#include "pico/time.h"
 #include <stdint.h>
+#include <string.h>
+#include "pico/stdlib.h"
+//#include "pico/time.h"
 #include "hardware/uart.h"
 #include "pirate.h"
 #include "pirate/bio.h"
@@ -49,7 +50,10 @@
 #include "ui/ui_prompt.h"
 #include "bytecode.h"
 #include "pirate/button.h"
-#include <string.h>
+
+#include "hardware/pio.h"
+#include "pio_config.h"
+#include "glitch.pio.h"
 
 // uncomment below if all of the definitions in src/debug_rtt.c/h have
 // been done for this
@@ -62,7 +66,7 @@
 static const char* const usage[] = { "glitch\t[-h(elp)] [-c(onfig)]",
                                      "UART glitch generator",
                                      "Exit: press Bus Pirate button" };
-
+// config struct
 typedef struct _uart_glitch_config {
     uint32_t glitch_trg;        // character sent from BP UART to trigger the glitch
     uint32_t glitch_delay;      // how long (us) after trigger stop bit to fire trigger
@@ -72,19 +76,24 @@ typedef struct _uart_glitch_config {
     uint32_t retry_count;       // number of times to try glitching before quitting
 } _uart_glitch_config;
 
+static struct _uart_glitch_config uart_glitch_config;
+
+// help text
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_UART_GLITCH }, // command help
     { 0, "-t", T_HELP_UART_BRIDGE_TOOLBAR },
     { 0, "-h", T_HELP_FLAG }, // help
 };
 
+// LCD display pin text
 static const char pin_labels[][5] = { "TRG", "RDY" };
 
-static struct _uart_glitch_config uart_glitch_config;
-
-
+// timer stuffs
 static repeating_timer_t ticker;
 static uint32_t tick_count_ms = 0;
+
+// pio struct
+static struct _pio_config glitch_pio;
 
 /*************************************************
  *    CONFIGURATION PARAMETERS FOR GLITCHING     *
@@ -279,8 +288,8 @@ bool setup_hardware() {
     bio_set_function(M_UART_GLITCH_RDY, GPIO_FUNC_SIO);
     bio_output(M_UART_GLITCH_TRG);
     bio_input(M_UART_GLITCH_RDY);
-    system_bio_update_purpose_and_label(true, M_UART_GLITCH_TRG, BP_PIN_MODE, pin_labels[0]);
-    system_bio_update_purpose_and_label(true, M_UART_GLITCH_RDY, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, M_UART_GLITCH_TRG, BP_PIN_IO, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_UART_GLITCH_RDY, BP_PIN_IO, pin_labels[1]);
 
     // set the trigger low right away
     bio_put(M_UART_GLITCH_TRG, 0);
@@ -288,6 +297,21 @@ bool setup_hardware() {
     // set up timer
     ticker_init();
 
+    glitch_pio.pio = PIO_MODE_PIO;
+    glitch_pio.sm = 0;
+    glitch_pio.program = &uart_glitch_program;
+    glitch_pio.offset = pio_add_program(glitch_pio.pio, glitch_pio.program);
+
+    uart_glitch_program_init(glitch_pio.pio,
+                             glitch_pio.sm,
+                             glitch_pio.offset,
+                             bio2bufiopin[M_UART_GLITCH_TRG],
+                             bio2bufiopin[M_UART_TX]);
+
+    printf("%sglitch install: pio %d, sm %d, offset %d, program 0x%08x%s\n",
+            ui_term_color_info(),
+            glitch_pio.pio, glitch_pio.sm, glitch_pio.offset, glitch_pio.program,
+            ui_term_color_reset());
     return (true);
 }
 
@@ -300,6 +324,13 @@ void teardown_hardware() {
 
     // kill the timer
     ticker_kill();
+
+    pio_remove_program(glitch_pio.pio, glitch_pio.program, glitch_pio.offset);
+
+    printf("%sglitch remove: pio %d, sm %d, offset %d, program 0x%08x%s\n",
+            ui_term_color_info(),
+            glitch_pio.pio, glitch_pio.sm, glitch_pio.offset, glitch_pio.program,
+            ui_term_color_reset());
 }
 
 void uart_glitch_handler(struct command_result* res) {
@@ -388,8 +419,8 @@ void uart_glitch_handler(struct command_result* res) {
         // delay before turning on the output.  Remember! The
         // timer is starting right after we stuff the character
         // into the buffer, not after it's actually sent
-        busy_wait_us(this_glitch_time);
-        bio_put(M_UART_GLITCH_TRG, 1);
+        //busy_wait_us(this_glitch_time);
+        //bio_put(M_UART_GLITCH_TRG, 1);
 
         // wait for a char to be RX'd.  Allow the button
         // to break us out, if necessary
@@ -420,7 +451,7 @@ void uart_glitch_handler(struct command_result* res) {
             // short delay to wait for next character
             busy_wait_us_32(100);
         }
-        bio_put(M_UART_GLITCH_TRG, 0);
+        //bio_put(M_UART_GLITCH_TRG, 0);
 
         printf("Attempt %d at %dus RX: %s\r\n", tries + 1, this_glitch_time, resp_string);
 

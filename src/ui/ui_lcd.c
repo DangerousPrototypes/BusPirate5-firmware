@@ -106,7 +106,7 @@ const struct display_layout layout = {
     6,                    // uint8_t io_col_right_pad; //6 pixels padding space between columns
     28,                   // uint8_t io_row_height;
     LCD_RED,              // enum lcd_colors io_name_color;
-    LCD_GREEN,            // enum lcd_colors io_label_color;
+    LCD_WHITE,            // enum lcd_colors io_label_color;
     LCD_RED               // enum lcd_colors io_value_color;
 };
 

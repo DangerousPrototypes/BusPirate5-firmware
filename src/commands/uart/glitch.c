@@ -302,8 +302,8 @@ bool setup_hardware() {
     uart_glitch_program_init(glitch_pio.pio,
                              glitch_pio.sm,
                              glitch_pio.offset,
-                             bio2bufiopin[M_UART_GLITCH_TRG]/*,
-                             bio2bufiopin[M_UART_TX]*/);
+                             bio2bufiopin[M_UART_GLITCH_TRG],
+                             bio2bufiopin[M_UART_TX]);
 
     system_bio_update_purpose_and_label(true, M_UART_GLITCH_TRG, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_UART_GLITCH_RDY, BP_PIN_IO, pin_labels[1]);

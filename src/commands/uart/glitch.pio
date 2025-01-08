@@ -4,24 +4,28 @@
 
 .program uart_glitch
 
-;jump_target:
-;    set pins 1 [10]
-;    set pins 0 [9]
-;    jmp jump_target
-
 .wrap_target
-    set x 31
-    set y 2
+    pull                    ; get the "on" time of the glitch pulse
+    mov x OSR               ; store it in X
+    pull                    ; get the number of edges in the trigger character
+    mov y OSR               ; store it in Y
+    pull                    ; get the delay before starting glitch pulse (just hold on for now)
 
 return_loop:
-    wait 0 pin 0
-    wait 1 pin 0
-    jmp y-- return_loop
-    set pins 1
+    wait 0 pin 0            ; idle state of TX line is high, wait for it to go low
+    wait 1 pin 0            ; wait for it to go back up
+    jmp y-- return_loop     ; decrement
+
+    mov y OSR               ; now set the delay time to the y register
+
+delay_loop:
+    jmp y-- delay_loop      ; decrement delay before turning on the output
+
+    set pins 1              ; OK, turn it on now
 
 high_loop:
-    jmp x-- high_loop
-    set pins 0
+    jmp x-- high_loop       ; decrement the glitch pulse high time
+    set pins 0              ; turn it off
 
 .wrap
 
@@ -36,7 +40,7 @@ static inline void uart_glitch_program_init(PIO pio, uint sm, uint offset, uint 
     pio_gpio_init(pio, glitch_pin);
     pio_sm_set_consecutive_pindirs(pio, sm, glitch_pin, 1, true);
     pio_sm_set_consecutive_pindirs(pio, sm, tx_pin, 1, false);
-
+    
     pio_sm_init(pio, sm, offset, &c);
     
     pio_sm_set_enabled(pio, sm, true);

@@ -71,6 +71,7 @@ typedef struct _uart_glitch_config {
     uint32_t glitch_trg;        // character sent from BP UART to trigger the glitch
     uint32_t glitch_delay;      // how long (us) after trigger stop bit to fire trigger
     uint32_t glitch_wander;     // amount of time (us) to vary glitch timing
+    uint32_t glitch_time;       // amount of time (us) to have output on
     uint32_t glitch_recycle;    // minimum time (ms) between one glitch cycle and the next
     uint32_t fail_resp;         // first character response from device on bad password
     uint32_t retry_count;       // number of times to try glitching before quitting
@@ -101,8 +102,12 @@ static struct _pio_config glitch_pio;
  * .glitch_trg - the ASCII character code that
  *    starts the glitch cycle.  Typcially a
  *    carraige return (ASCII code 13, '\n')
+ * .glitch_delay - amount of time from end of 
+ *    send char to start of glitch output on
  * .glitch_wander - the amount of time of time to
  *    vary the glitch timing in microseconds
+ * .glitch_time - amount of time to keep glitch
+ *    output high
  * .glitch_cyc - a short delay between turning off
  *    the glitch output and sending the character
  *    again.
@@ -114,6 +119,7 @@ static struct _pio_config glitch_pio;
 static const struct prompt_item uart_glitch_trg_menu[] = { { T_UART_GLITCH_TRG_MENU_1 } };
 static const struct prompt_item uart_glitch_dly_menu[] = { { T_UART_GLITCH_DLY_MENU_1 } };
 static const struct prompt_item uart_glitch_vry_menu[] = { { T_UART_GLITCH_VRY_MENU_1 } };
+static const struct prompt_item uart_glitch_lng_menu[] = { { T_UART_GLITCH_LNG_MENU_1 } };
 static const struct prompt_item uart_glitch_cyc_menu[] = { { T_UART_GLITCH_CYC_MENU_1 } };
 static const struct prompt_item uart_glitch_fail_menu[] = { { T_UART_GLITCH_FAIL_MENU_1 } };
 static const struct prompt_item uart_glitch_cnt_menu[] = { { T_UART_GLITCH_CNT_MENU_1 } };
@@ -132,7 +138,7 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_GLIT
                                                       .menu_items_count = count_of(uart_glitch_dly_menu),
                                                       .prompt_text = T_UART_GLITCH_DLY_PROMPT,
                                                       .minval = 1,
-                                                      .maxval = 255,
+                                                      .maxval = 500,
                                                       .defval = 1,
                                                       .menu_action = 0,
                                                       .config = &prompt_int_cfg },
@@ -145,7 +151,16 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_GLIT
                                                       .defval = 1,
                                                       .menu_action = 0,
                                                       .config = &prompt_int_cfg },
-                                              [3] = { .description = T_UART_GLITCH_CYC_MENU,
+                                              [3] = { .description = T_UART_GLITCH_LNG_MENU,
+                                                      .menu_items = uart_glitch_lng_menu,
+                                                      .menu_items_count = count_of(uart_glitch_lng_menu),
+                                                      .prompt_text = T_UART_GLITCH_LNG_PROMPT,
+                                                      .minval = 1,
+                                                      .maxval = 500,
+                                                      .defval = 1,
+                                                      .menu_action = 0,
+                                                      .config = &prompt_int_cfg },
+                                              [4] = { .description = T_UART_GLITCH_CYC_MENU,
                                                       .menu_items = uart_glitch_cyc_menu,
                                                       .menu_items_count = count_of(uart_glitch_cyc_menu),
                                                       .prompt_text = T_UART_GLITCH_CYC_PROMPT,
@@ -154,7 +169,7 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_GLIT
                                                       .defval = 10,
                                                       .menu_action = 0,
                                                       .config = &prompt_int_cfg },
-                                              [4] = { .description = T_UART_GLITCH_FAIL_MENU,
+                                              [5] = { .description = T_UART_GLITCH_FAIL_MENU,
                                                       .menu_items = uart_glitch_fail_menu,
                                                       .menu_items_count = count_of(uart_glitch_fail_menu),
                                                       .prompt_text = T_UART_GLITCH_FAIL_PROMPT,
@@ -163,7 +178,7 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_GLIT
                                                       .defval = 35,
                                                       .menu_action = 0,
                                                       .config = &prompt_int_cfg },
-                                              [5] = { .description = T_UART_GLITCH_CNT_MENU,
+                                              [6] = { .description = T_UART_GLITCH_CNT_MENU,
                                                       .menu_items = uart_glitch_cnt_menu,
                                                       .menu_items_count = count_of(uart_glitch_cnt_menu),
                                                       .prompt_text = T_UART_GLITCH_CNT_PROMPT,
@@ -178,6 +193,7 @@ void glitch_settings(void) {
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_TRG_MENU), uart_glitch_config.glitch_trg, "(ASCII)");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_DLY_MENU), uart_glitch_config.glitch_delay, "us");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_VRY_MENU), uart_glitch_config.glitch_wander, "us");
+    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_LNG_MENU), uart_glitch_config.glitch_time, "us");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_CYC_MENU), uart_glitch_config.glitch_recycle, "ms");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_FAIL_MENU), uart_glitch_config.fail_resp, "(ASCII)");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_CNT_MENU), uart_glitch_config.retry_count, 0x00);
@@ -193,6 +209,7 @@ uint32_t uart_glitch_setup(void) {
         { "$.trigger", &uart_glitch_config.glitch_trg, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.delay", &uart_glitch_config.glitch_delay, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.wander", &uart_glitch_config.glitch_wander, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.time", &uart_glitch_config.glitch_time, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.recycle", &uart_glitch_config.glitch_recycle, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.failchar", &uart_glitch_config.fail_resp, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.retries", &uart_glitch_config.retry_count, MODE_CONFIG_FORMAT_DECIMAL },
@@ -234,15 +251,22 @@ uint32_t uart_glitch_setup(void) {
     if (result.exit) {
         return 0;
     }
-    uart_glitch_config.glitch_recycle = temp;
+    uart_glitch_config.glitch_time = temp;
+
 
     ui_prompt_uint32(&result, &uart_menu[4], &temp);
     if (result.exit) {
         return 0;
     }
-    uart_glitch_config.fail_resp = temp;
+    uart_glitch_config.glitch_recycle = temp;
 
     ui_prompt_uint32(&result, &uart_menu[5], &temp);
+    if (result.exit) {
+        return 0;
+    }
+    uart_glitch_config.fail_resp = temp;
+
+    ui_prompt_uint32(&result, &uart_menu[6], &temp);
     if (result.exit) {
         return 0;
     }
@@ -272,7 +296,7 @@ static inline uint32_t get_ticks() {
 }
 
 /********************************************************
- * Bus Pirate pins 0 and 1 are used for glitchhing:
+ * Bus Pirate pins 0 and 1 are used for glitching:
  * - Pin 0 is the triggered glitch output (to be used to
  *   do the actual glitching by some other device)
  * - Pin 1 is an input used for the external glitching
@@ -283,10 +307,6 @@ static inline uint32_t get_ticks() {
 bool setup_hardware() {
     PRINT_INFO("glitch::Entering setup_hardware()\r\n");
     bio_put(M_UART_RTS, 0);
-
-    //bio_set_function(M_UART_GLITCH_TRG, GPIO_FUNC_SIO);
-    //bio_set_function(M_UART_GLITCH_RDY, GPIO_FUNC_SIO);
-
 
     // set the trigger low right away
     bio_put(M_UART_GLITCH_TRG, 0);
@@ -309,12 +329,6 @@ bool setup_hardware() {
     system_bio_update_purpose_and_label(true, M_UART_GLITCH_RDY, BP_PIN_IO, pin_labels[1]);
     bio_output(M_UART_GLITCH_TRG);
     bio_input(M_UART_GLITCH_RDY);
-
-    printf("%sglitch install: pio %d, sm %d, offset %d, pin %d\n",
-            ui_term_color_info(),
-            glitch_pio.pio, glitch_pio.sm, glitch_pio.offset, bio2bufiopin[M_UART_GLITCH_TRG],
-            ui_term_color_reset());
-    return (true);
 }
 
 void teardown_hardware() {
@@ -328,11 +342,6 @@ void teardown_hardware() {
     ticker_kill();
 
     pio_remove_program(glitch_pio.pio, glitch_pio.program, glitch_pio.offset);
-
-    printf("%sglitch remove: pio %d, sm %d, offset %d, program 0x%08x%s\n",
-            ui_term_color_info(),
-            glitch_pio.pio, glitch_pio.sm, glitch_pio.offset, glitch_pio.program,
-            ui_term_color_reset());
 }
 
 void uart_glitch_handler(struct command_result* res) {
@@ -363,7 +372,24 @@ void uart_glitch_handler(struct command_result* res) {
 
     printf("\r\n%sHardware setup!%s\r\n", ui_term_color_info(), ui_term_color_reset());
 
-    printf("\r\n%s%s%s\r\n", ui_term_color_notice(), GET_T(T_HELP_UART_GLITCH_EXIT), ui_term_color_reset());
+    // get the number of edges in the trigger character
+    uint32_t edges = 0;
+    bool last_was_high = false;
+    for (uint8_t ii = 0; ii < 8; ++ii) {
+        if (uart_glitch_config.glitch_trg & (1U << ii)) {
+            ++edges;
+            if (last_was_high) {
+                --edges;
+            }
+            last_was_high = true;
+        }
+        else {
+            last_was_high = false;
+        }
+    }
+
+    PRINT_DEBUG("glitch::Trigger UART edge count: %d\r\n", edges);
+    PRINT_DEBUG("glitch::Hardware setup done!\r\n");
 
     bool glitched = false;
     bool tool_timeout = false;
@@ -377,9 +403,11 @@ void uart_glitch_handler(struct command_result* res) {
     char resp_string[40];
     size_t resp_count;
     uint32_t tick_start = 0;
-    uint32_t glitch_min_time = uart_glitch_config.glitch_delay - uart_glitch_config.glitch_wander;
-    uint32_t glitch_max_time = uart_glitch_config.glitch_delay + uart_glitch_config.glitch_wander;
-    uint32_t this_glitch_time = glitch_min_time;
+    uint32_t glitch_min_delay = uart_glitch_config.glitch_delay;
+    uint32_t glitch_max_delay = uart_glitch_config.glitch_delay + uart_glitch_config.glitch_wander;
+    uint32_t this_glitch_delay = glitch_min_delay;
+
+    if (glitch_max_delay > 500)  glitch_max_delay = 500;
 
     // The main glitch loop starts here
     // keep going until we either:
@@ -415,6 +443,15 @@ void uart_glitch_handler(struct command_result* res) {
             break;
         }
         */
+
+        // set up the FIFO for the PIO:
+        // first item is the "on" time for the glitch pulse
+        // second item is the number of edges for the trigger character
+        // third item is the delay before firing the pulse
+        // TODO - remove multiplier and modify PIO clock divisor instead; that will increase ranges
+        pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, uart_glitch_config.glitch_time * 124);
+        pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, edges);
+        pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, this_glitch_delay * 124);
 
         // serial out the trigger character
         PRINT_DEBUG("glitch::UART-ing char\r\n");
@@ -455,9 +492,8 @@ void uart_glitch_handler(struct command_result* res) {
             // short delay to wait for next character
             busy_wait_us_32(100);
         }
-        //bio_put(M_UART_GLITCH_TRG, 0);
 
-        printf("Attempt %d at %dus RX: %s\r\n", tries + 1, this_glitch_time, resp_string);
+        printf("Attempt %d at %dus RX: %s\r\n", tries + 1, this_glitch_delay, resp_string);
 
         // parse through the response.  if our "normal bad password response" 
         // character is present, then we didn't glitch :/
@@ -481,8 +517,8 @@ void uart_glitch_handler(struct command_result* res) {
 
         // increment glitch delay time.  If we hit max, then
         // reset to min and increment glitch count
-        if (++this_glitch_time > glitch_max_time) {
-            this_glitch_time = glitch_min_time;
+        if (++this_glitch_delay > glitch_max_delay) {
+            this_glitch_delay = glitch_min_delay;
 
             if (++tries >= uart_glitch_config.retry_count) {
                 done = true;

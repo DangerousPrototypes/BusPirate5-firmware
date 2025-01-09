@@ -40,9 +40,11 @@ static inline void uart_glitch_program_init(PIO pio, uint sm, uint offset, uint 
     pio_gpio_init(pio, glitch_pin);
     pio_sm_set_consecutive_pindirs(pio, sm, glitch_pin, 1, true);
     pio_sm_set_consecutive_pindirs(pio, sm, tx_pin, 1, false);
-    
+
+    float div = (float)clock_get_hz(clk_sys) / (2e7);
+    sm_config_set_clkdiv(&c, div);
+
     pio_sm_init(pio, sm, offset, &c);
-    
     pio_sm_set_enabled(pio, sm, true);
 }
 %}

@@ -284,12 +284,9 @@ bool setup_hardware() {
     PRINT_INFO("glitch::Entering setup_hardware()\r\n");
     bio_put(M_UART_RTS, 0);
 
-    bio_set_function(M_UART_GLITCH_TRG, GPIO_FUNC_SIO);
-    bio_set_function(M_UART_GLITCH_RDY, GPIO_FUNC_SIO);
-    bio_output(M_UART_GLITCH_TRG);
-    bio_input(M_UART_GLITCH_RDY);
-    system_bio_update_purpose_and_label(true, M_UART_GLITCH_TRG, BP_PIN_IO, pin_labels[0]);
-    system_bio_update_purpose_and_label(true, M_UART_GLITCH_RDY, BP_PIN_IO, pin_labels[1]);
+    //bio_set_function(M_UART_GLITCH_TRG, GPIO_FUNC_SIO);
+    //bio_set_function(M_UART_GLITCH_RDY, GPIO_FUNC_SIO);
+
 
     // set the trigger low right away
     bio_put(M_UART_GLITCH_TRG, 0);
@@ -305,12 +302,12 @@ bool setup_hardware() {
     uart_glitch_program_init(glitch_pio.pio,
                              glitch_pio.sm,
                              glitch_pio.offset,
-                             bio2bufiopin[M_UART_GLITCH_TRG],
-                             bio2bufiopin[M_UART_TX]);
+                             bio2bufiopin[M_UART_GLITCH_TRG]/*,
+                             bio2bufiopin[M_UART_TX]*/);
 
-    printf("%sglitch install: pio %p, sm %d, offset %d, program 0x%p%s\n",
+    printf("%sglitch install: pio %p, sm %d, offset %d, pin %d%s\n",
             ui_term_color_info(),
-            glitch_pio.pio, glitch_pio.sm, glitch_pio.offset, glitch_pio.program,
+            glitch_pio.pio, glitch_pio.sm, glitch_pio.offset, bio2bufiopin[M_UART_GLITCH_TRG],
             ui_term_color_reset());
     return (true);
 }
@@ -327,9 +324,9 @@ void teardown_hardware() {
 
     pio_remove_program(glitch_pio.pio, glitch_pio.program, glitch_pio.offset);
 
-    printf("%sglitch remove: pio %p, sm %d, offset %d, program 0x%p%s\n",
+    printf("%sglitch remove: pio %p, sm %d, offset %d, pin %d%s\n",
             ui_term_color_info(),
-            glitch_pio.pio, glitch_pio.sm, glitch_pio.offset, glitch_pio.program,
+            glitch_pio.pio, glitch_pio.sm, glitch_pio.offset, bio2bufiopin[M_UART_GLITCH_TRG],
             ui_term_color_reset());
 }
 
@@ -396,6 +393,7 @@ void uart_glitch_handler(struct command_result* res) {
     while (!glitched && !cancelled && !done && !tool_timeout) {
         // check for external device ready; allow BP button to
         // exit
+        /*
         tick_start = get_ticks();
         while (!bio_get(M_UART_GLITCH_RDY) && !cancelled && !tool_timeout) {
             if (button_get(0)) {
@@ -411,6 +409,7 @@ void uart_glitch_handler(struct command_result* res) {
         if (tool_timeout) {
             break;
         }
+        */
 
         // serial out the trigger character
         PRINT_DEBUG("glitch::UART-ing char\r\n");

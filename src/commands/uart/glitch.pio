@@ -1,0 +1,38 @@
+;
+;
+;
+
+.program uart_glitch
+
+.wrap_target
+set x 31
+set y 2
+
+return_loop:
+    wait 0 pin 0
+    wait 1 pin 0
+    jmp y-- return_loop
+    set pins 1
+
+high_loop:
+    jmp x-- high_loop
+    set pins 0
+
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+static inline void uart_glitch_program_init(PIO pio, uint sm, uint offset, uint glitch_pin, uint tx_pin) {
+    pio_sm_config c = uart_glitch_program_get_default_config(offset);
+
+    sm_config_set_set_pins (&c, glitch_pin, 1);
+    sm_config_set_in_pins (&c, tx_pin);
+
+    float div = clock_get_hz(clk_sys) / (1e6);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

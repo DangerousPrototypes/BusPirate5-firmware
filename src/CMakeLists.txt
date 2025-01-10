@@ -141,6 +141,8 @@ set(bp5_common
         lib/minmea/gps.c
         commands/uart/monitor.h
         commands/uart/monitor.c
+        commands/uart/glitch.h
+        commands/uart/glitch.c
 
         # Half duplex UART
         mode/hwhduart.h
@@ -492,6 +494,7 @@ foreach(revision ${revisions})
         #pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/pwm.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/onewire_library.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pio_pwm/pwm.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/commands/uart/glitch.pio)
 
         pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")

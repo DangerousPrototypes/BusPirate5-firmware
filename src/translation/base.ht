@@ -1,6 +1,11 @@
 #ifndef _TRANSLATION_BASE
 #define _TRANSLATION_BASE
 
+// WARNING -- DO NOT DIRECTLY EDIT `translation/base.h` -- WARNING
+// ===============================================================
+// The `base.h` header file is auto-generated based
+// on `base.ht` and `en-us.h` by the `json2h.py` script.
+
 typedef enum _language_idx_t { // these are based on IETF codes for the translation
     language_idx_en_us,
     language_idx_pl_pl,

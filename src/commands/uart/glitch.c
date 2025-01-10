@@ -303,6 +303,8 @@ static inline uint32_t get_ticks() {
  *   device to indicate its readiness.  For example, an
  *   EMP type device may need some time to recharge before
  *   its ready again.
+ * 
+ * Enable PIO and get ready to go
  *******************************************************/
 bool setup_hardware() {
     PRINT_INFO("glitch::Entering setup_hardware()\r\n");
@@ -330,9 +332,15 @@ bool setup_hardware() {
     bio_output(M_UART_GLITCH_TRG);
     bio_input(M_UART_GLITCH_RDY);
 
+    // turn off output right away
+    bio_put(M_UART_GLITCH_TRG, 0);
+
     return (true);
 }
 
+/********************************************************
+ * Deallocate the 2 IO pins and remove the PIO program
+ *******************************************************/
 void teardown_hardware() {
     PRINT_INFO("glitch::Entering teardown_hardware()\r\n");
     bio_put(M_UART_RTS, 1);
@@ -346,6 +354,9 @@ void teardown_hardware() {
     pio_remove_program(glitch_pio.pio, glitch_pio.program, glitch_pio.offset);
 }
 
+/******************************************************
+ * Main glitch handler.  Do the stuff
+ *****************************************************/
 void uart_glitch_handler(struct command_result* res) {
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
@@ -428,7 +439,6 @@ void uart_glitch_handler(struct command_result* res) {
     while (!glitched && !cancelled && !done && !tool_timeout) {
         // check for external device ready; allow BP button to
         // exit
-        /*
         tick_start = get_ticks();
         while (!bio_get(M_UART_GLITCH_RDY) && !cancelled && !tool_timeout) {
             if (button_get(0)) {
@@ -444,7 +454,6 @@ void uart_glitch_handler(struct command_result* res) {
         if (tool_timeout) {
             break;
         }
-        */
 
         // set up the FIFO for the PIO:
         // first item is the "on" time for the glitch pulse
@@ -459,14 +468,9 @@ void uart_glitch_handler(struct command_result* res) {
         PRINT_DEBUG("glitch::UART-ing char\r\n");
         uart_putc_raw(M_UART_PORT, trigger_char);
 
-        // delay before turning on the output.  Remember! The
-        // timer is starting right after we stuff the character
-        // into the buffer, not after it's actually sent
-        //busy_wait_us(this_glitch_time);
-        //bio_put(M_UART_GLITCH_TRG, 1);
-
         // wait for a char to be RX'd.  Allow the button
         // to break us out, if necessary
+        busy_wait_us_32(500);
         while (!uart_is_readable(M_UART_PORT) && !cancelled) {
             if (button_get(0)) {
                 cancelled = true;
@@ -495,7 +499,7 @@ void uart_glitch_handler(struct command_result* res) {
             busy_wait_us_32(100);
         }
 
-        printf("Attempt %d at %dus RX: %s\r\n", tries + 1, this_glitch_delay, resp_string);
+        printf("Attempt %3d at %dus RX: %s\r\n", tries + 1, this_glitch_delay, resp_string);
 
         // parse through the response.  if our "normal bad password response" 
         // character is present, then we didn't glitch :/

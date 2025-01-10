@@ -302,8 +302,8 @@ bool setup_hardware() {
     uart_glitch_program_init(glitch_pio.pio,
                              glitch_pio.sm,
                              glitch_pio.offset,
-                             bio2bufiopin[M_UART_GLITCH_TRG]/*,
-                             bio2bufiopin[M_UART_TX]*/);
+                             bio2bufiopin[M_UART_GLITCH_TRG],
+                             bio2bufiopin[M_UART_TX]);
 
     printf("%sglitch install: pio %p, sm %d, offset %d, pin %d%s\n",
             ui_term_color_info(),

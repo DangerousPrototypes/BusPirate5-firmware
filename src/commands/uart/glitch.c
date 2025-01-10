@@ -383,7 +383,7 @@ void uart_glitch_handler(struct command_result* res) {
         return;
     }
 
-    printf("\r\n%sHardware setup!%s\r\n", ui_term_color_info(), ui_term_color_reset());
+    printf("\r\n%sUART glitching.  Press Bus Pirate button to exit.%s\r\n", ui_term_color_info(), ui_term_color_reset());
 
     // get the number of edges in the trigger character
     uint32_t edges = 0;

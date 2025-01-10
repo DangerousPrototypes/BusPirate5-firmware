@@ -1,0 +1,109 @@
+.pio_version 0 // only requires PIO version 0
+.program ir_in_low_counter
+.side_set 1 opt 
+public entry_point:
+    pull side 0b1       ;pull counter reset value, stall other counter
+    mov x, osr          ;save counter value in x
+    wait 1 pin 0        ;stall until the pin initially goes high
+.wrap_target
+reset:
+    wait 0 pin 0        ;stall and wait for IR mark (low from demodulator)
+    mov y, x side 0b1   ;side set pin to high, other counter stalls
+wait_for_high:
+    jmp pin low_high    ;pin goes high, stop counting, push count
+    jmp y-- wait_for_high   ;loop until counter hits 0
+    jmp counter_push    ;skip the side set, do not enable the other counter    
+low_high:
+    nop side 0b0        ;side set to 0, enable other counter only if not timeout    
+counter_push:
+    mov isr, y          ;get timer value
+    push noblock  
+.wrap
+
+.program ir_in_high_counter
+public entry_point:
+    pull                ;pull counter reset value
+    mov x, osr          ;save counter value in x
+.wrap_target
+reset:
+    wait 0 pin 0        ;stall and wait for side set pin in low counter
+    mov y, x            ;reload counter
+wait_for_high:
+    jmp pin low_high    ;pin goes high, stop counting, push count
+    jmp y-- wait_for_high   ;loop until counter hits 0
+low_high:
+    mov isr, y          ;get timer value, enable other counter
+    push noblock
+.wrap
+
+
+
+% c-sdk {
+
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+#include "pirate.h"
+
+static inline void ir_in_low_counter_program_init(PIO pio, uint sm, uint offset, uint pin_demod, uint pin_pio2pio, float freq) {
+    //get state machine configuration
+    pio_sm_config c = ir_in_low_counter_program_get_default_config (offset);
+
+    //in pin is demodulator output
+    sm_config_set_in_pins(&c, pin_demod);
+    //jmp pin is demodulator output
+    sm_config_set_jmp_pin(&c, pin_demod);
+    //side set pin is free IO to control the other counter
+    sm_config_set_sideset_pins(&c, pin_pio2pio);
+
+    //pio_gpio_init(pio, pin_demod);
+    pio_gpio_init(pio, pin_pio2pio);
+
+    // pin to input to PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_demod, 1, false); //input
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_pio2pio, 1, true); //output
+    
+    sm_config_set_in_shift(&c, false, false, 32);
+    sm_config_set_out_shift(&c, false, false, 32);
+
+    //one big RX FIFO
+    //sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+
+    float div = clock_get_hz (clk_sys) / (freq * 2);
+    sm_config_set_clkdiv (&c, div);
+
+    pio_sm_init (pio, sm, offset+ ir_in_low_counter_offset_entry_point, &c);
+
+    pio_sm_put(pio, sm, 0x0000ffff);
+
+    pio_sm_set_enabled (pio, sm, true);
+}
+
+static inline void ir_in_high_counter_program_init(PIO pio, uint sm, uint offset, uint pin_pio2pio, float freq) {
+    //get state machine configuration
+    pio_sm_config c = ir_in_high_counter_program_get_default_config (offset);
+
+    //in pin is low program side set pin
+    sm_config_set_in_pins(&c, pin_pio2pio);
+    //jmp pin is low program side set pin
+    sm_config_set_jmp_pin(&c, pin_pio2pio);
+
+    //pio_gpio_init(pio, pin_pio2pio);
+
+    // pin to input to PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_pio2pio, 1, false); //input
+
+    //one big RX FIFO
+    //sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+    sm_config_set_in_shift(&c, false, false, 16);
+    sm_config_set_out_shift(&c, false, false, 16);    
+
+    float div = clock_get_hz (clk_sys) / (freq * 2);
+    sm_config_set_clkdiv (&c, div);
+
+    pio_sm_init (pio, sm, offset+ir_in_high_counter_offset_entry_point, &c);
+
+    pio_sm_put(pio, sm, 0x0000ffff);
+
+    pio_sm_set_enabled (pio, sm, true);
+}
+%}

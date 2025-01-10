@@ -116,6 +116,8 @@ void spi_busy_wait_internal(bool enable, const char *file, int line);
 
 // UART settings
 #define M_UART_PORT uart0
+#define M_UART_GLITCH_TRG BIO0
+#define M_UART_GLITCH_RDY BIO1
 #define M_UART_TX BIO4
 #define M_UART_RX BIO5
 #define M_UART_CTS BIO6

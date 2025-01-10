@@ -141,6 +141,8 @@ set(bp5_common
         lib/minmea/gps.c
         commands/uart/monitor.h
         commands/uart/monitor.c
+        commands/uart/glitch.h
+        commands/uart/glitch.c
 
         # Half duplex UART
         mode/hwhduart.h

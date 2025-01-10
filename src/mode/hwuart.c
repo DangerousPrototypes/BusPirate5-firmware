@@ -18,6 +18,7 @@
 #include "commands/uart/nmea.h"
 #include "commands/uart/bridge.h"
 #include "commands/uart/monitor.h"
+#include "commands/uart/glitch.h"
 
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
@@ -37,6 +38,11 @@ const struct _mode_command_struct hwuart_commands[] = {
     {   .command="test", 
         .func=&uart_monitor_handler, 
         .description_text=T_UART_CMD_TEST, 
+        .supress_fala_capture=false
+    },
+    {   .command="glitch", 
+        .func=&uart_glitch_handler, 
+        .description_text=T_HELP_UART_GLITCH, 
         .supress_fala_capture=false
     },
 };

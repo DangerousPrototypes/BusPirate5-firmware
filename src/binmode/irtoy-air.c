@@ -13,6 +13,7 @@
 #include "tusb.h"
 #include "ui/ui_term.h"
 #include "binmode/binio_helpers.h"
+#include "mode/infrared-struct.h"
 #include "pirate/irio_pio.h"
 #include "pirate/bio.h"
 #include "pirate/psu.h"
@@ -34,7 +35,11 @@ void irtoy_air_setup(void) {
     bio_buf_output(BIO0);
     //bio_output(BIO0);
     psu_enable(5, 0, true);
-    pio_irio_init(bio2bufiopin[BIO5], bio2bufiopin[BIO0], 100000);
+    
+    // Desired period in microseconds
+    float desired_period_us = 1.0f;
+
+    pio_irio_init(bio2bufiopin[BIO5], bio2bufiopin[BIO0], desired_period_us);
     
 }
 

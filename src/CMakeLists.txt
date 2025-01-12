@@ -215,6 +215,8 @@ set(bp5_common
         pirate/rc5_pio.c
         pirate/rc5_pio.h
         mode/infrared-struct.h
+        lib/picofreq/picofreq.c
+        lib/picofreq/picofreq.h
 
         # DUMMY MODE
         mode/dummy1.c

@@ -40,10 +40,12 @@ low_high:
 .side_set 1
 .wrap_target 
 public entry_point:
+    set pindirs, 1 side 0b0 ;set pin to output
     out x, 16 side 0b0      ;pulse duration
 mark:
     jmp x-- mark side 0b1   ;loop until counter hits 0 
-    out x, 16    side 0b0   ;space duration
+    set pindirs, 0 side 0b1 ;set pin to input
+    out x, 16    side 0b1   ;space duration
 space:
     jmp x-- space side 0b0  ;loop until counter hits 0
 .wrap
@@ -53,7 +55,7 @@ high:
     set pins, 1 [2] ; set the pin high (2 cycle) 
 .wrap_target
 public entry_point:
-    set pins, 0     ; set the pin low (1 + 1 cycles)
+    set pins, 0     ; set the pin low (1 + 1 cycles) 
     jmp pin high     ; only high if pin is high
 .wrap
 

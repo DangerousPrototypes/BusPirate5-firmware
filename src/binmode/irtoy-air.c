@@ -39,7 +39,7 @@ void irtoy_air_setup(void) {
     // Desired period in microseconds
     float desired_period_us = 1.0f;
 
-    pio_irio_init(bio2bufiopin[BIO5], bio2bufiopin[BIO0], desired_period_us);
+    pio_irio_init(bio2bufiopin[BIO5], bio2bufiopin[BIO0], bio2bufiopin[BIO4], desired_period_us);
     
 }
 

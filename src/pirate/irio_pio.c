@@ -38,12 +38,12 @@ void pio_irio_init(uint pin_demod, uint pin_pio2pio, uint pin_tx, float desired_
     //ir_in_high_counter_program_init(pio_config_high.pio, pio_config_high.sm, pio_config_high.offset, pin_pio2pio, divider);
 
     bio_buf_output(BIO4); //set the buffer to output, maybe this should be done above?
-    bio_buf_output(BIO2);
+    //bio_buf_output(BIO2);
     pio_config_tx.pio = PIO_MODE_PIO;
     pio_config_tx.sm = 2;
     pio_config_tx.program = &ir_out_program;
     pio_config_tx.offset = pio_add_program(pio_config_tx.pio, pio_config_tx.program);   
-    ir_out_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, bio2bufiopin[BIO2], divider);
+    ir_out_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, pin_tx, divider);
 
 
     //freq_counter_init(bio2bufiopin[BIO1]);
@@ -190,11 +190,12 @@ void pio_irio_mode_tx_write(uint32_t *data){
     //configure the PWM for the desired frequency
     //if(pwm_freq_set(36000, bio2bufiopin[BIO4])) printf("Error setting PWM frequency\r\n");
     uint offset = pio_add_program(PIO_MODE_PIO, &ir_out_carrier_program);   
-    ir_out_carrier_program_init(PIO_MODE_PIO, 3, offset, bio2bufiopin[BIO4], bio2bufiopin[BIO2], 36000.0f);
+    //ir_out_carrier_program_init(PIO_MODE_PIO, 3, offset, bio2bufiopin[BIO4], bio2bufiopin[BIO2], 36000.0f);
+    ir_out_carrier_program_init(PIO_MODE_PIO, 3, offset, bio2bufiopin[BIO4], 36000.0f);
 
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
-    for(uint8_t i=0; i<32; i++){
-        pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, 0x01ff01ff);
+    for(uint8_t i=0; i<6; i++){
+        pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, *data<<16|*data);
     }    
     printf("Data: %u\r\n", *data);
 

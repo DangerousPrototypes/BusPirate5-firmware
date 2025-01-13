@@ -37,24 +37,22 @@ low_high:
 .wrap
 
 .program ir_out
-.side_set 1
+.side_set 1 pindirs
 .wrap_target 
 public entry_point:
-    out x, 16 side 0b0      ;pulse duration
+    out x, 16  side 0b0         ;pulse duration
 mark:
-    jmp x-- mark side 0b1   ;loop until counter hits 0 
-    out x, 16    side 0b0   ;space duration
+    jmp x-- mark side 0b1 [1];loop until counter hits 0 
+    out x, 16 side 0b1    [1]  ;space duration
 space:
-    jmp x-- space side 0b0  ;loop until counter hits 0
+    jmp x-- space side 0b0 [1];loop until counter hits 0
 .wrap
 
 .program ir_out_carrier
-high:
-    set pins, 1 [2] ; set the pin high (2 cycle) 
 .wrap_target
 public entry_point:
-    set pins, 0     ; set the pin low (1 + 1 cycles)
-    jmp pin high     ; only high if pin is high
+    set pins, 1 
+    set pins, 0
 .wrap
 
 
@@ -64,16 +62,15 @@ public entry_point:
 #include "hardware/gpio.h"
 #include "pirate.h"
 
-static inline void ir_out_carrier_program_init(PIO pio, uint sm, uint offset, uint pin_tx, uint pin_pio2pio, float freq) {
+static inline void ir_out_carrier_program_init(PIO pio, uint sm, uint offset, uint pin_tx, float freq) {
     //get state machine configuration
     pio_sm_config c = ir_out_carrier_program_get_default_config (offset);
 
-    sm_config_set_jmp_pin(&c, pin_pio2pio);
     sm_config_set_set_pins(&c, pin_tx, 1);
     pio_gpio_init(pio, pin_tx);
 
     // pin to input to PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, pin_tx, 1, true); //output
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_tx, 1, false); //input
     
     //sm_config_set_in_shift(&c, false, false, 32);
     //sm_config_set_out_shift(&c, false, true, 32);
@@ -82,7 +79,7 @@ static inline void ir_out_carrier_program_init(PIO pio, uint sm, uint offset, ui
     //sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
     // Set the clock divider for the state machine configuration
-    float div = clock_get_hz(clk_sys) / (4 * (float)freq); 
+    float div = clock_get_hz(clk_sys) / (2 * (float)freq); 
 	sm_config_set_clkdiv(&c, div);
 
     pio_sm_init (pio, sm, offset + ir_out_carrier_offset_entry_point, &c);
@@ -90,22 +87,22 @@ static inline void ir_out_carrier_program_init(PIO pio, uint sm, uint offset, ui
     pio_sm_set_enabled (pio, sm, true);
 }
 
-static inline void ir_out_program_init(PIO pio, uint sm, uint offset, uint pin_pio2pio, float divider) {
+static inline void ir_out_program_init(PIO pio, uint sm, uint offset, uint pin_tx, float divider) {
     //get state machine configuration
     pio_sm_config c = ir_out_program_get_default_config (offset);
 
     //side set pindir to control PWM output
-    sm_config_set_sideset_pins(&c, pin_pio2pio);
-    pio_gpio_init(pio, pin_pio2pio);
+    sm_config_set_sideset_pins(&c, pin_tx);
+    pio_gpio_init(pio, pin_tx);
 
     // pin to input to PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, pin_pio2pio, 1, true); //output
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_tx, 1, false); //input
     
     //sm_config_set_in_shift(&c, false, false, 32);
     sm_config_set_out_shift(&c, false, true, 32);
 
     //one big RX FIFO
-    //sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
 
     // Set the clock divider for the state machine configuration
     sm_config_set_clkdiv(&c, divider);

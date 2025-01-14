@@ -29,6 +29,10 @@ void infrared_help(void);
 
 uint32_t infrared_get_speed(void);
 
+//for pausing the PIO programs while other programs use the hardware
+void infrared_setup_resume(void);
+void infrared_cleanup_temp(void);
+
 extern const struct _mode_command_struct infrared_commands[];
 extern const uint32_t infrared_commands_count;
 

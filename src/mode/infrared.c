@@ -27,6 +27,7 @@
 #include "ui/ui_term.h"
 #include "pirate/rc5_pio.h"
 #include "commands/infrared/tvbgone.h"
+#include "pirate/irio_pio.h"
 
 
 static struct _infrared_mode_config mode_config;
@@ -46,6 +47,15 @@ typedef struct _ir_protocols {
     void (*irrx_drain_fifo)(void);
 } ir_protocols;
 static const ir_protocols ir_protocol[] = {
+    {   .irtx_init = pio_irio_mode_tx_init, 
+        .irtx_deinit = pio_irio_mode_tx_deinit,
+        .irtx_write = pio_irio_mode_tx_write,
+        .irtx_wait_idle = pio_irio_mode_wait_idle,
+        .irrx_init = pio_irio_mode_init,
+        .irrx_deinit = pio_irio_mode_deinit,
+        .irrx_read = pio_irio_mode_get_frame, 
+        .irrx_drain_fifo = pio_irio_mode_drain_fifo 
+    },
     {   .irtx_init = nec_tx_init, 
         .irtx_deinit = nec_tx_deinit,
         .irtx_write = nec_write,
@@ -158,6 +168,7 @@ static const char pin_labels[][5]={
 };
 
 static const char ir_protocol_type[][7] = {
+    "RAW",
     "NEC",
     "RC5",
 };
@@ -168,12 +179,24 @@ static const struct prompt_item infrared_rx_sensor_menu[] = { { T_IR_RX_SENSOR_M
                                                         { T_IR_RX_SENSOR_MENU_BARRIER },
                                                         { T_IR_RX_SENSOR_MENU_38K_DEMOD },
                                                         {T_IR_RX_SENSOR_MENU_56K_DEMOD} };
-static const struct prompt_item infrared_protocol_menu[] = { { T_IR_PROTOCOL_MENU_NEC },
+static const struct prompt_item infrared_protocol_menu[] = { {T_IR_PROTOCOL_MENU_RAW}, 
+                                                            { T_IR_PROTOCOL_MENU_NEC },
                                                             { T_IR_PROTOCOL_MENU_RC5 } };   
 
 static const struct prompt_item infrared_tx_speed_menu[] = { { T_IR_TX_SPEED_MENU_1 } };
 
 static const struct ui_prompt infrared_menu[] = {
+    {
+        .description = T_IR_PROTOCOL_MENU,
+        .menu_items = infrared_protocol_menu,
+        .menu_items_count = count_of(infrared_protocol_menu),
+        .prompt_text = T_IR_PROTOCOL_MENU,
+        .minval = 0,
+        .maxval = 0,
+        .defval = 1,
+        .menu_action = 0,
+        .config = &prompt_list_cfg
+    },       
     {
         .description = T_IR_RX_SENSOR_MENU,
         .menu_items = infrared_rx_sensor_menu,
@@ -195,17 +218,7 @@ static const struct ui_prompt infrared_menu[] = {
         .menu_action = 0,
         .config = &prompt_int_cfg 
     },    
-    {
-        .description = T_IR_PROTOCOL_MENU,
-        .menu_items = infrared_protocol_menu,
-        .menu_items_count = count_of(infrared_protocol_menu),
-        .prompt_text = T_IR_PROTOCOL_MENU,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    },        
+     
 };
 
 static struct _infrared_mode_config mode_config;
@@ -220,9 +233,9 @@ uint32_t infrared_setup(void) {
     const char config_file[] = "bpirrxtx.bp";
     const mode_config_t config_t[] = {
         // clang-format off
+        { "$.protocol", &mode_config.protocol, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.sensor", &mode_config.rx_sensor, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.freq", &mode_config.tx_freq, MODE_CONFIG_FORMAT_DECIMAL },
-        { "$.protocol", &mode_config.protocol, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };
 
@@ -239,22 +252,22 @@ uint32_t infrared_setup(void) {
         }
     }
 
-    ui_prompt_uint32(&result, &infrared_menu[0], &mode_config.rx_sensor);
+    ui_prompt_uint32(&result, &infrared_menu[0], &mode_config.protocol);
     if (result.exit) {
         return 0;
     }
+    mode_config.protocol--;  
+    
+    ui_prompt_uint32(&result, &infrared_menu[1], &mode_config.rx_sensor);
+    if (result.exit) {
+        return 0;
+    }    
     mode_config.rx_sensor--;
 
-    ui_prompt_uint32(&result, &infrared_menu[1], &mode_config.tx_freq);
+    ui_prompt_uint32(&result, &infrared_menu[2], &mode_config.tx_freq);
     if (result.exit) {
         return 0;
-    }
-
-    ui_prompt_uint32(&result, &infrared_menu[2], &mode_config.protocol);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.protocol--;
+    }     
 
     storage_save_mode(config_file, config_t, count_of(config_t));
 
@@ -381,8 +394,7 @@ uint32_t infrared_get_speed(void) {
 }
 
 void infrared_settings(void) {
+    ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_menu[mode_config.protocol].description), 0x00);
     ui_prompt_mode_settings_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rx_sensor_menu[mode_config.rx_sensor].description), 0x00);
     ui_prompt_mode_settings_int(GET_T(T_IR_TX_SPEED_MENU), mode_config.tx_freq, GET_T(T_KHZ));
-    ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_menu[mode_config.protocol].description), 0x00);
-
 }

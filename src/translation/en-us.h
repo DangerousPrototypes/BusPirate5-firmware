@@ -173,6 +173,7 @@ static char const * const en_us[]={
 	[T_IR_TX_SPEED_MENU_1]="20kHz to 60kHz",
 	[T_IR_TX_SPEED_PROMPT]="kHz (%s%dkHz*%s)",
 	[T_IR_PROTOCOL_MENU]="Protocol",
+	[T_IR_PROTOCOL_MENU_RAW]="RAW (aIR format)",
 	[T_IR_PROTOCOL_MENU_RC5]="RC5",
 	[T_IR_PROTOCOL_MENU_NEC]="NEC",
 	[T_IR_CMD_TV_BGONE]="TV-B-Gone, turn off many brands of TV",

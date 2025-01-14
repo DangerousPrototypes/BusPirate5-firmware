@@ -1,0 +1,11 @@
+void pio_irio_init(uint pin_demod, uint pin_pio2pio, uint pin_tx, float desired_period_us);
+void pio_irio_cleanup(void);
+void pio_irio_get(void);
+int pio_irio_mode_init(uint pin_num);
+void pio_irio_mode_deinit(uint pin_num);
+ir_rx_status_t pio_irio_mode_get_frame(uint32_t *rx_frame);
+void pio_irio_mode_tx_write(uint32_t *data);
+int pio_irio_mode_tx_init(uint pin_num);
+void pio_irio_mode_drain_fifo(void);
+bool pio_irio_mode_wait_idle(void);
+void pio_irio_mode_tx_deinit(uint pin_num);

@@ -170,6 +170,7 @@ static char const * const pl_pl[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_IR_PROTOCOL_MENU               ] = "Protocol",
     [ T_IR_PROTOCOL_MENU_RC5           ] = "RC5",
     [ T_IR_PROTOCOL_MENU_NEC           ] = "NEC",
+    [ T_IR_CMD_TV_BGONE                ] = "TV-B-Gone, turn off many brands of TV",
     [ T_CMDLN_INVALID_COMMAND          ] = "Niepoprawne polecenie: %s. Użyj ? aby użyskać pomoc.",
     [ T_CMDLN_NO_HELP                  ] = "Pomoc dla tego polecenia jest aktualnie niedostępna.",
     [ T_CMDLN_LS                       ] = "ls {katalog} - listuje pliki w aktualnej lokacji albo {katalogu}.",

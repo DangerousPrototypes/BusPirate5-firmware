@@ -12,7 +12,7 @@
 #include "system_config.h"
 #include "ui/ui_cmdln.h"
 #include "displays.h"
-
+/*
 struct ui_help_topics {
     uint8_t topic_id;
     const char* description;
@@ -39,7 +39,7 @@ const struct ui_help_topics help_topics[] = {
     { HELP_TOPIC_MODE, T_HELP_SECTION_MODE},
     { HELP_TOPIC_SYNTAX, T_HELP_SECTION_SYNTAX},
 };
-
+*/
 const struct ui_help_options global_commands[] = {
     { 1, "", T_HELP_SECTION_IO }, // work with pins, input, output measurement
     { 0, "w/W", T_HELP_1_21 },    // note that pin functions need power on the buffer

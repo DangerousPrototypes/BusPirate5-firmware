@@ -215,6 +215,9 @@ set(bp5_common
         pirate/rc5_pio.c
         pirate/rc5_pio.h
         mode/infrared-struct.h
+        commands/infrared/tvbgone.c
+        commands/infrared/tvbgone.h
+        commands/infrared/tvbgone-codes.h
 
         # DUMMY MODE
         mode/dummy1.c

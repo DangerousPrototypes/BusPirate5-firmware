@@ -170,6 +170,7 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_IR_PROTOCOL_MENU               ] = "Protocol",
     [ T_IR_PROTOCOL_MENU_RC5           ] = "RC5",
     [ T_IR_PROTOCOL_MENU_NEC           ] = "NEC",
+    [ T_IR_CMD_TV_BGONE                ] = "TV-B-Gone, turn off many brands of TV",
     [ T_CMDLN_INVALID_COMMAND          ] = "Nevažeća naredba: %s. Unesite ? za pomoć.",
     [ T_CMDLN_NO_HELP                  ] = "Pomoć trenutno nije dostupna za ovu naredbu.",
     [ T_CMDLN_LS                       ] = "ls {direktorij} - listing datoteka u trenutnoj lokaciji ili {direktorij} lokaciji.",

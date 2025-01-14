@@ -1,0 +1,1 @@
+void tvbgone_player(struct command_result *res);

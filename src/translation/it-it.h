@@ -170,6 +170,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_IR_PROTOCOL_MENU               ] = "Protocol",
     [ T_IR_PROTOCOL_MENU_RC5           ] = "RC5",
     [ T_IR_PROTOCOL_MENU_NEC           ] = "NEC",
+    [ T_IR_CMD_TV_BGONE                ] = "TV-B-Gone, turn off many brands of TV",
     [ T_CMDLN_INVALID_COMMAND          ] = "Comando non valido: %s. Digita ? per ottenere aiuto.",
     [ T_CMDLN_NO_HELP                  ] = "Aiuto non disponibile al momento per questo comando.",
     [ T_CMDLN_LS                       ] = "ls <directory> - elenca i file nella cartella corrente o nella cartella <directory>.",

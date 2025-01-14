@@ -26,6 +26,7 @@
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "pirate/rc5_pio.h"
+#include "commands/infrared/tvbgone.h"
 
 
 static struct _infrared_mode_config mode_config;
@@ -138,6 +139,11 @@ const struct _mode_command_struct infrared_commands[] = {
         .description_text=T_INFRARED_CMD_TEST, 
         .supress_fala_capture=false
     },
+    {   .command="tvbgone",
+        .func=&tvbgone_player,
+        .description_text=T_IR_CMD_TV_BGONE,  
+        .supress_fala_capture=true
+    }
 };
 const uint32_t infrared_commands_count = count_of(infrared_commands);
 
@@ -290,6 +296,23 @@ bool infrared_preflight_sanity_check(void){
     ui_help_sanity_check(true, 0);
 }
 
+void infrared_setup_resume(void){
+    // configure and enable the state machines
+    int status = ir_protocol[mode_config.protocol].irtx_init(bio2bufiopin[BIO4]); // uses two state machines, 16 instructions and one IRQ
+    if (status < 0) {
+        printf("Failed to initialize TX PIO\r\n");
+    }
+    status = ir_protocol[mode_config.protocol].irrx_init(bio2bufiopin[ir_rx_pins[mode_config.rx_sensor]]);
+    if (status < 0) {
+        printf("Failed to initialize RX PIO\r\n");
+    }
+}
+
+void infrared_cleanup_temp(void) {
+    ir_protocol[device_cleanup].irtx_deinit(bio2bufiopin[BIO4]);
+    ir_protocol[device_cleanup].irrx_deinit(bio2bufiopin[ir_rx_pins[mode_config.rx_sensor]]);
+}
+
 // Cleanup any configuration on exit.
 void infrared_cleanup(void) {
     ir_protocol[device_cleanup].irtx_deinit(bio2bufiopin[BIO4]);
@@ -305,6 +328,8 @@ void infrared_cleanup(void) {
     system_config.subprotocol_name = 0x00;
     system_config.num_bits=8;
 }
+
+
 
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
 // This function generally writes data out to the IO pins or a peripheral

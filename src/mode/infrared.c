@@ -28,6 +28,8 @@
 #include "pirate/rc5_pio.h"
 #include "commands/infrared/tvbgone.h"
 #include "pirate/irio_pio.h"
+#include "commands/infrared/irtxrx.h"
+
 
 
 static struct _infrared_mode_config mode_config;
@@ -153,7 +155,19 @@ const struct _mode_command_struct infrared_commands[] = {
         .func=&tvbgone_player,
         .description_text=T_IR_CMD_TV_BGONE,  
         .supress_fala_capture=true
-    }
+    },
+    {
+        .command="irtx",
+        .func=&irtx_handler,
+        .description_text=T_IR_CMD_IRTX,  
+        .supress_fala_capture=false
+    },
+    {
+        .command="irrx",
+        .func=&irrx_handler,
+        .description_text=T_IR_CMD_IRRX,  
+        .supress_fala_capture=false
+    }    
 };
 const uint32_t infrared_commands_count = count_of(infrared_commands);
 

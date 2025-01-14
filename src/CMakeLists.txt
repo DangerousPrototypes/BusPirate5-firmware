@@ -220,6 +220,8 @@ set(bp5_common
         commands/infrared/tvbgone-codes.h
         lib/picofreq/picofreq.c
         lib/picofreq/picofreq.h
+        commands/infrared/irtxrx.c
+        commands/infrared/irtxrx.h
 
         # DUMMY MODE
         mode/dummy1.c

@@ -177,6 +177,8 @@ static char const * const en_us[]={
 	[T_IR_PROTOCOL_MENU_RC5]="RC5",
 	[T_IR_PROTOCOL_MENU_NEC]="NEC",
 	[T_IR_CMD_TV_BGONE]="TV-B-Gone, turn off many brands of TV",
+	[T_IR_CMD_IRRX]="Receive and record IR signals",
+	[T_IR_CMD_IRTX]="Transmit IR signals",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",

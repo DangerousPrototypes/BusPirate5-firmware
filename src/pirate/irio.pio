@@ -36,16 +36,19 @@ low_high:
     push noblock
 .wrap
 
+; program for IR MARK/SPACE output timing
+; an extra us of time is added while pulling the next timing value
+; subtract 1 before pushing the times into the FIFO
 .program ir_out
 .side_set 1 pindirs
 .wrap_target 
 public entry_point:
-    out x, 16  side 0b0         ;pulse duration
+    out x, 16  side 0b0   [1]   ;pulse duration
 mark:
-    jmp x-- mark side 0b1 [1];loop until counter hits 0 
-    out x, 16 side 0b1    [1]  ;space duration
+    jmp x-- mark side 0b1 [1]   ;loop until counter hits 0 
+    out x, 16 side 0b1    [1]   ;space duration
 space:
-    jmp x-- space side 0b0 [1];loop until counter hits 0
+    jmp x-- space side 0b0 [1]  ;loop until counter hits 0
 .wrap
 
 .program ir_out_carrier
@@ -136,7 +139,7 @@ static inline void ir_in_low_counter_program_init(PIO pio, uint sm, uint offset,
     pio_gpio_init(pio, pin_pio2pio);
 
     sm_config_set_in_shift(&c, false, false, 32);
-    sm_config_set_out_shift(&c, false, false, 32);
+    //sm_config_set_out_shift(&c, false, false, 32);
 
     //one big RX FIFO
     //sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
@@ -168,7 +171,7 @@ static inline void ir_in_high_counter_program_init(PIO pio, uint sm, uint offset
     //one big RX FIFO
     //sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
     sm_config_set_in_shift(&c, false, false, 32);
-    sm_config_set_out_shift(&c, false, false, 32);  
+    //sm_config_set_out_shift(&c, false, false, 32);  
 
     //one big RX FIFO
     //sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);  

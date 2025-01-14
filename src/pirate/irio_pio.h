@@ -9,3 +9,4 @@ int pio_irio_mode_tx_init(uint pin_num);
 void pio_irio_mode_drain_fifo(void);
 bool pio_irio_mode_wait_idle(void);
 void pio_irio_mode_tx_deinit(uint pin_num);
+void pio_irio_raw_tx_write(float mod_freq, uint16_t pairs, uint32_t *buffer);

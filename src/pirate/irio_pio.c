@@ -29,13 +29,13 @@ void pio_irio_init(uint pin_demod, uint pin_pio2pio, uint pin_tx, float desired_
     pio_config_low.sm = 0;
     pio_config_low.program = &ir_in_low_counter_program;
     pio_config_low.offset = pio_add_program(pio_config_low.pio, pio_config_low.program);
-    //ir_in_low_counter_program_init(pio_config_low.pio, pio_config_low.sm, pio_config_low.offset, pin_demod, pin_pio2pio, divider);
+    ir_in_low_counter_program_init(pio_config_low.pio, pio_config_low.sm, pio_config_low.offset, pin_demod, pin_pio2pio, divider);
 
     pio_config_high.pio = PIO_MODE_PIO;
     pio_config_high.sm = 1;
     pio_config_high.program = &ir_in_high_counter_program;
     pio_config_high.offset = pio_add_program(pio_config_high.pio, pio_config_high.program);
-    //ir_in_high_counter_program_init(pio_config_high.pio, pio_config_high.sm, pio_config_high.offset, pin_pio2pio, divider);
+    ir_in_high_counter_program_init(pio_config_high.pio, pio_config_high.sm, pio_config_high.offset, pin_pio2pio, divider);
 
     bio_buf_output(BIO4); //set the buffer to output, maybe this should be done above?
     //bio_buf_output(BIO2);
@@ -195,7 +195,7 @@ void pio_irio_mode_tx_write(uint32_t *data){
 
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
     for(uint8_t i=0; i<6; i++){
-        pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, *data<<16|*data);
+        pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, (*data-1)<<16|(*data-1));
     }    
     printf("Data: %u\r\n", *data);
 
@@ -209,6 +209,24 @@ void pio_irio_mode_tx_write(uint32_t *data){
     uint slice_num = pwm_gpio_to_slice_num(bio2bufiopin[BIO4]);
     uint chan_num = pwm_gpio_to_channel(bio2bufiopin[BIO4]);
     pwm_set_enabled(slice_num, false);*/
+    return;
+}
+
+//sends raw array of 32bit values. 
+//upper 16 bits are the mark, lower 16 bits are the space
+void pio_irio_raw_tx_write(float mod_freq, uint16_t pairs, uint32_t *buffer){
+    
+    //configure the PWM for the desired frequency
+    uint offset = pio_add_program(PIO_MODE_PIO, &ir_out_carrier_program);   
+    ir_out_carrier_program_init(PIO_MODE_PIO, 3, offset, bio2bufiopin[BIO4], mod_freq);
+
+    //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
+    for(uint8_t i=0; i<pairs; i++){
+        pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, buffer[i]);
+    }    
+    //wait for end of transmission
+    pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff);
+    pio_remove_program(PIO_MODE_PIO, &ir_out_carrier_program, offset);
     return;
 }
 

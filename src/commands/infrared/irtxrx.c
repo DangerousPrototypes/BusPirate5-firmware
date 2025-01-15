@@ -18,6 +18,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "pirate/irio_pio.h"
+#include "usb_rx.h"
 
 static const char* const usage[] = {
     "Record and transmit IR signals"
@@ -102,7 +103,7 @@ bool irtx_transmit(char* buffer){
 	}
 	printf(";\r\n\r\n");		
 	printf("Parsed AIR packet: modulation frequency %dkHz, %d MARK/SPACE pairs\r\nTransmitting...", mod_freq, datacnt);
-	pio_irio_raw_tx_write((float)(mod_freq*1000), datacnt, data);
+	pio_irio_raw_write_frame((float)(mod_freq*1000), datacnt, data);
 	printf("done\r\n");
 	return true;
 }
@@ -213,69 +214,104 @@ void irrx_handler(struct command_result *res){
 	}
 
 	while(true){
+		uint32_t buffer[128];
+		uint16_t pairs=0;
+		float mod_freq;
+		uint8_t air_buffer[512];
 		//wait for complete IR packet from irio_pio
-		printf("\r\nListening for IR packets...\r\n");
-
+		printf("\r\nListening for IR packets (any key to exit)...\r\n");
+		//drain the FIFO so we can sync and not get garbage
+		pio_irio_mode_drain_fifo();
 		//display captured packet
-		irio_rx_raw_timing(&mod_freq, &datacnt, data);
-		printf("\r\n$%u:", mod_freq);
-		for(uint16_t i=0; i<datacnt; i++){
-			printf("%u,%u,", data[i]>>16, data[i]&0xffff);
+		while(true){
+			if(pio_irio_raw_get_frame(&mod_freq, &pairs, buffer)) break;
+			// any key to exit
+			char c;
+		    if (rx_fifo_try_get(&c)) {
+				printf("Exiting...\r\n");
+				goto exit_irrx_handler;
+			}
+		}
+		uint8_t mod_freq_int=(uint8_t)(mod_freq/1000);
+		uint16_t sn_cnt = snprintf(air_buffer, sizeof(air_buffer), "$%u:", mod_freq_int);
+		for(uint16_t i=0; i<pairs; i++){
+			sn_cnt+=snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,%u,", (uint16_t)(buffer[i]>>16), (uint16_t)(buffer[i]&0xffff));
+		}
+		sn_cnt += snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, ";\r\n");
+		if(sn_cnt>sizeof(air_buffer)){
+			printf("AIR packet too long, max 512 characters\r\n");
+			res->error = true;
+			//goto exit_irrx_handler;
+		}
+		printf("\r\n%s\r\n", air_buffer);
+
+		//for debugging
+		/*
+		printf("\r\n$%u:", mod_freq_int);
+		for(uint16_t i=0; i<pairs; i++){
+			printf("%u,%u,", buffer[i]>>16, buffer[i]&0xffff);
 		}
 		printf(";\r\n\r\n");
+		*/
+
 		//display mod_freq, mark/space pairs	
-		printf("Modulation frequency %dkHz, %d MARK/SPACE pairs\r\n\r\n", mod_freq, datacnt);
+		printf("Modulation frequency %dkHz, %d MARK/SPACE pairs\r\n\r\n", mod_freq_int, pairs);
 		//s to save (if -f flag), space for next, x to exit
-
-
-		while(true){
-			if(save_file){
-				printf("\'s\' to save, ");
-			}
-			printf("space for next, \'x\' to exit > \r\n");
-			//use a prompt function to get the user input?
-			//if 's', save to file
-			//if 'x', exit
-			//if space, continue
-			switch(c){
-				case 's':
-					if(!save_file){
-						printf("No file specified with the -f flag, cannot save\r\n");
-						break;
+menu_irrx_handler:
+		if(save_file){
+			printf("\'s\' to save, ");
+		}
+		printf("space for next, \'x\' to exit > ");
+		//use a prompt function to get the user input?
+		//if 's', save to file
+		//if 'x', exit
+		//if space, continue
+		char c;
+		while(!rx_fifo_try_get(&c)){
+			//wait for input
+		}
+		printf("%c\r\n", c);
+		switch(c){
+			case 's':
+				if(!save_file){
+					printf("No file specified with the -f flag, cannot save\r\n");
+					break;
+				}
+				//write to file
+				printf("Saving to file %s\r\n", file);
+				//write the data to the file
+				UINT bytes_written; // somewhere to store the number of bytes written
+				result = f_write(&file_handle, air_buffer, strlen(air_buffer), &bytes_written); // write the data to the file
+				if (result != FR_OK) {
+					printf("Error writing to file %s\r\n", file);
+					FRESULT result2 = f_close(&file_handle); // close the file
+					if (result2 != FR_OK) {
+						printf("Error closing file %s after error writing to file\r\n", file);
 					}
-					//write to file
-					printf("Saving to file %s\r\n", file);
-					//write the data to the file
-					UINT bytes_written; // somewhere to store the number of bytes written
-					result = f_write(&file_handle, buffer, strlen(buffer), &bytes_written); // write the data to the file
+					res->error = true; // set the error flag
+					return;
+				}
+				break;
+			case 'x':
+exit_irrx_handler:
+				//close file
+				if(save_file){
+					result = f_close(&file_handle); // close the file
 					if (result != FR_OK) {
-						printf("Error writing to file %s\r\n", file);
-						FRESULT result2 = f_close(&file_handle); // close the file
-						if (result2 != FR_OK) {
-							printf("Error closing file %s after error writing to file -- reboot recommended\r\n", file);
-						}
+						printf("Error closing file %s\r\n", file);
 						res->error = true; // set the error flag
 						return;
 					}
-					break;
-				case 'x':
-					//close file
-					if(save_file){
-						result = f_close(&file_handle); // close the file
-						if (result != FR_OK) {
-							printf("Error closing file %s\r\n", file);
-							res->error = true; // set the error flag
-							return;
-						}
-					}
-					return;
-				case ' ':
-					break;
-				default:
-					printf("Invalid input\r\n");
-					break;
-			}
+				}
+				return;
+			case ' ':
+				break;
+			default:
+				printf("Invalid input\r\n");
+				goto menu_irrx_handler;
+				break;
 		}
+
 	}
 
 }

@@ -124,6 +124,12 @@ bool pio_irio_mode_wait_idle(void){
 }
 
 void pio_irio_mode_drain_fifo(void){
+    while(!pio_sm_is_rx_fifo_empty(pio_config_low.pio, pio_config_low.sm)){
+        uint16_t temp = (uint16_t)pio_sm_get(pio_config_low.pio, pio_config_low.sm);
+    }    
+    while(!pio_sm_is_rx_fifo_empty(pio_config_high.pio, pio_config_high.sm)){
+        uint16_t temp = (uint16_t)pio_sm_get(pio_config_high.pio, pio_config_high.sm);
+    }
     return;
 }
 
@@ -135,62 +141,10 @@ void pio_irio_mode_tx_deinit(uint pin_num){
     return;
 }
 
-// return 0 success, 1 too low, 2 too high
-uint8_t pwm_freq_set(int freq_hz_value, uint pin) {
-// calculate PWM values
-// reverse calculate actual frequency/period
-// from: https://forums.raspberrypi.com/viewtopic.php?t=317593#p1901340
-    #define TOP_MAX 65534
-    #define DIV_MIN ((0x01 << 4) + 0x0) // 0x01.0
-    #define DIV_MAX ((0xFF << 4) + 0xF) // 0xFF.F
-    uint32_t clock = 125000000; //TODO: get this from the system
-    // Calculate a div value for frequency desired
-    uint32_t div = (clock << 4) / freq_hz_value / (TOP_MAX + 1);
-    if (div < DIV_MIN) {
-        div = DIV_MIN;
-    }
-    // Determine what period that gives us
-    uint32_t period = (clock << 4) / div / freq_hz_value;
-    // We may have had a rounding error when calculating div so it may
-    // be lower than it should be, which in turn causes the period to
-    // be higher than it should be, higher than can be used. In which
-    // case we increase the div until the period becomes usable.
-    while ((period > (TOP_MAX + 1)) && (div <= DIV_MAX)) {
-        period = (clock << 4) / ++div / freq_hz_value;
-    }
-    // Check if the result is usable
-    if (period <= 1) {
-        return 2; // too high
-    } else if (div > DIV_MAX) {
-        return 1; // too low
-    } else {
-        // Determine the top value we will be setting
-        uint32_t top = period - 1;
-        // pin and PWM setup
-        gpio_set_function(pin, GPIO_FUNC_SIO);
-        gpio_set_dir(pin, GPIO_IN);
-        uint slice_num = pwm_gpio_to_slice_num(pin);
-        uint chan_num = pwm_gpio_to_channel(pin);
-        pwm_set_clkdiv_int_frac(slice_num, div >> 4, div & 0b1111);
-        pwm_set_wrap(slice_num, top);
-        // start with v adjust high (lowest voltage output)
-        pwm_set_chan_level(slice_num, chan_num, top>>1);
-        // enable output
-        gpio_set_function(pin, GPIO_FUNC_PWM);
-        pwm_set_enabled(slice_num, true);
-        printf("Freq %u, Div %u, Period %u, Top %u\r\n", freq_hz_value, div, period, top);
-    }
-
-    return 0;
-}
-
-
 void pio_irio_mode_tx_write(uint32_t *data){
     
     //configure the PWM for the desired frequency
-    //if(pwm_freq_set(36000, bio2bufiopin[BIO4])) printf("Error setting PWM frequency\r\n");
     uint offset = pio_add_program(PIO_MODE_PIO, &ir_out_carrier_program);   
-    //ir_out_carrier_program_init(PIO_MODE_PIO, 3, offset, bio2bufiopin[BIO4], bio2bufiopin[BIO2], 36000.0f);
     ir_out_carrier_program_init(PIO_MODE_PIO, 3, offset, bio2bufiopin[BIO4], 36000.0f);
 
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
@@ -202,19 +156,12 @@ void pio_irio_mode_tx_write(uint32_t *data){
     //wait for end of transmission
     pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff);
     pio_remove_program(PIO_MODE_PIO, &ir_out_carrier_program, offset);
-    //disable the PWM
-    /*gpio_set_function(bio2bufiopin[BIO4], GPIO_FUNC_SIO);
-    gpio_put(bio2bufiopin[BIO4], 0);
-    gpio_set_dir(bio2bufiopin[BIO4], GPIO_OUT);
-    uint slice_num = pwm_gpio_to_slice_num(bio2bufiopin[BIO4]);
-    uint chan_num = pwm_gpio_to_channel(bio2bufiopin[BIO4]);
-    pwm_set_enabled(slice_num, false);*/
     return;
 }
 
 //sends raw array of 32bit values. 
 //upper 16 bits are the mark, lower 16 bits are the space
-void pio_irio_raw_tx_write(float mod_freq, uint16_t pairs, uint32_t *buffer){
+void pio_irio_raw_write_frame(float mod_freq, uint16_t pairs, uint32_t *buffer){
     
     //configure the PWM for the desired frequency
     uint offset = pio_add_program(PIO_MODE_PIO, &ir_out_carrier_program);   
@@ -235,6 +182,60 @@ enum {
     AIR_MARK,
     AIR_SPACE
 };
+
+
+//On timeout, the PIO program increments the counter from 0 to 0xffff
+//however there is no such issue during a normal transition
+//so only reincrement on timeout
+// returns true if a frame is ready, false if no frame is ready
+bool pio_irio_raw_get_frame(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
+    static uint8_t state = AIR_IDLE;
+    uint16_t temp;
+
+    switch(state){
+        case AIR_IDLE:
+            //when IDLE, drain any high data in the FIFO
+            while(!pio_sm_is_rx_fifo_empty(pio_config_high.pio, pio_config_high.sm)){
+                temp = (uint16_t)pio_sm_get(pio_config_high.pio, pio_config_high.sm);
+            }
+            if(!pio_sm_is_rx_fifo_empty(pio_config_low.pio, pio_config_low.sm)){
+                temp = (uint16_t)pio_sm_get(pio_config_low.pio, pio_config_low.sm);
+                if(temp!=0xffff) temp=(uint16_t)(0xffff-temp);
+                *pairs=0;
+                buffer[*pairs] = temp<<16; 
+                *mod_freq=36000.0f; //todo: actual frequency measurement
+                state = AIR_SPACE;
+            }
+            break;
+        case AIR_SPACE:
+            if(!pio_sm_is_rx_fifo_empty(pio_config_high.pio, pio_config_high.sm)){
+                temp = (uint16_t)pio_sm_get(pio_config_high.pio, pio_config_high.sm);
+                if(temp!=0xffff) temp=(uint16_t)(0xffff-temp); 
+                buffer[*pairs] |= temp;
+                (*pairs)++;
+                state = AIR_MARK;
+            }
+            break;
+        case AIR_MARK:
+            //last was space, if another space, end of sequence
+            if(!pio_sm_is_rx_fifo_empty(pio_config_high.pio, pio_config_high.sm)){
+                temp = (uint16_t)pio_sm_get(pio_config_high.pio, pio_config_high.sm);
+                state = AIR_IDLE;
+                return true;
+            }
+            if(!pio_sm_is_rx_fifo_empty(pio_config_low.pio, pio_config_low.sm)){
+                temp = (uint16_t)pio_sm_get(pio_config_low.pio, pio_config_low.sm);
+                if(temp!=0xffff) temp=(uint16_t)(0xffff-temp); 
+                buffer[*pairs] = temp<<16;
+                state = AIR_SPACE;
+            }
+            break;
+    }
+
+    return false;
+}
+
+
 
 //On timeout, the PIO program increments the counter from 0 to 0xffff
 //however there is no such issue during a normal transition

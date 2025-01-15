@@ -48,6 +48,8 @@ typedef struct _ir_protocols {
     ir_rx_status_t (*irrx_read)(uint32_t *rx_frame);      // read
     void (*irrx_drain_fifo)(void);
     uint32_t mod_freq;
+    char display_name[4];
+    uint8_t num_bits;
 } ir_protocols;
 static const ir_protocols ir_protocol[] = {
     {   .irtx_init = pio_irio_tx_init, 
@@ -58,7 +60,9 @@ static const ir_protocols ir_protocol[] = {
         .irrx_deinit = pio_irio_rx_deinit,
         .irrx_read = pio_irio_mode_get_frame, 
         .irrx_drain_fifo = pio_irio_mode_drain_fifo, 
-        .mod_freq = 0
+        .mod_freq = 0,
+        .display_name = "RAW",
+        .num_bits = 32
     },
     {   .irtx_init = nec_tx_init, 
         .irtx_deinit = nec_tx_deinit,
@@ -68,7 +72,9 @@ static const ir_protocols ir_protocol[] = {
         .irrx_deinit = nec_rx_deinit,
         .irrx_read = nec_get_frame,
         .irrx_drain_fifo = nec_rx_drain_fifo ,
-        .mod_freq = 38000
+        .mod_freq = 38000,
+        .display_name = "NEC",
+        .num_bits = 16
     },
     {   .irtx_init = rc5_tx_init,
         .irtx_deinit = rc5_tx_deinit,
@@ -78,7 +84,9 @@ static const ir_protocols ir_protocol[] = {
         .irrx_deinit = rc5_rx_deinit,
         .irrx_read = rc5_receive, 
         .irrx_drain_fifo = rc5_drain_fifo,
-        .mod_freq = 36000
+        .mod_freq = 36000,
+        .display_name = "RC5",
+        .num_bits = 16
     }
 };  
 
@@ -185,13 +193,7 @@ static const char pin_labels[][5]={
     "56k"
 };
 
-static const char ir_protocol_type[][7] = {
-    "RAW",
-    "NEC",
-    "RC5",
-};
-
-static const uint8_t ir_rx_pins[] = {BIO1, BIO3, BIO5, BIO7};
+static const uint8_t ir_rx_pins[] = {BIO3, BIO5, BIO7};
 
 static const struct prompt_item infrared_rx_sensor_menu[] = { //{ T_IR_RX_SENSOR_MENU_LEARNER },
                                                         { T_IR_RX_SENSOR_MENU_BARRIER },
@@ -278,7 +280,7 @@ uint32_t infrared_setup(void) {
 
     if(ir_protocol[mode_config.protocol].mod_freq){
         mode_config.tx_freq = ir_protocol[mode_config.protocol].mod_freq;
-        printf("\r\n\r\n%s%s TX modulation%s: %ukHz\r\n", ui_term_color_info(), ir_protocol_type[mode_config.protocol], ui_term_color_reset(), mode_config.tx_freq/1000);
+        printf("\r\n\r\n%s%s TX modulation%s: %ukHz\r\n", ui_term_color_info(), ir_protocol[mode_config.protocol].display_name, ui_term_color_reset(), mode_config.tx_freq/1000);
     }else{
         ui_prompt_uint32(&result, &infrared_menu[2], &mode_config.tx_freq);
         if (result.exit) {
@@ -325,8 +327,9 @@ uint32_t infrared_setup_exc(void) {
         printf("Failed to initialize RX PIO\r\n");
     }
     device_cleanup = mode_config.protocol;
-    system_config.subprotocol_name = ir_protocol_type[mode_config.protocol];
-    system_config.num_bits=16;
+    //system_config.subprotocol_name = ir_protocol_type[mode_config.protocol];
+    system_config.subprotocol_name = ir_protocol[mode_config.protocol].display_name;
+    system_config.num_bits=ir_protocol[mode_config.protocol].num_bits;
     return 1;
 }
 

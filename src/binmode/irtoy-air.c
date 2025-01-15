@@ -39,14 +39,14 @@ void irtoy_air_setup(void) {
     // Desired period in microseconds
     float desired_period_us = 1.0f;
 
-    pio_irio_init(bio2bufiopin[BIO5], bio2bufiopin[BIO0], bio2bufiopin[BIO4], desired_period_us);
+    //pio_irio_init(bio2bufiopin[BIO5], bio2bufiopin[BIO0], bio2bufiopin[BIO4], desired_period_us);
     
 }
 
 // binmode cleanup on exit
 void irtoy_air_cleanup(void) {
     psu_disable();
-    pio_irio_cleanup();
+    //pio_irio_cleanup();
     bio_init();
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
@@ -97,7 +97,7 @@ ASCII decimals representing the lengths of pulse and no-pulse in uS (anyone thin
 */
 // Use PIO to count 1uS ticks for each pulse and no-pulse, with timeout?
 void irtoy_air_service(void){
-    while(true) pio_irio_get();
+    //while(true) pio_irio_get();
     return;
 
     //need to be careful about PIO fifo overflow here

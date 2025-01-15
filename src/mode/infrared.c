@@ -39,7 +39,7 @@ static int tx_sm;
 
 // an array of all the IR protocol functions
 typedef struct _ir_protocols {
-    int (*irtx_init)(uint pin_num);      
+    int (*irtx_init)(uint pin_num, uint32_t mod_freq); // init    
     void (*irtx_deinit)(uint pin_num);   
     void (*irtx_write)(uint32_t *data);     // write
     bool (*irtx_wait_idle)(void);
@@ -47,16 +47,18 @@ typedef struct _ir_protocols {
     void (*irrx_deinit)(uint pin_num); 
     ir_rx_status_t (*irrx_read)(uint32_t *rx_frame);      // read
     void (*irrx_drain_fifo)(void);
+    uint32_t mod_freq;
 } ir_protocols;
 static const ir_protocols ir_protocol[] = {
-    {   .irtx_init = pio_irio_mode_tx_init, 
-        .irtx_deinit = pio_irio_mode_tx_deinit,
+    {   .irtx_init = pio_irio_tx_init, 
+        .irtx_deinit = pio_irio_tx_deinit,
         .irtx_write = pio_irio_mode_tx_write,
         .irtx_wait_idle = pio_irio_mode_wait_idle,
-        .irrx_init = pio_irio_mode_init,
-        .irrx_deinit = pio_irio_mode_deinit,
+        .irrx_init = pio_irio_rx_init,
+        .irrx_deinit = pio_irio_rx_deinit,
         .irrx_read = pio_irio_mode_get_frame, 
-        .irrx_drain_fifo = pio_irio_mode_drain_fifo 
+        .irrx_drain_fifo = pio_irio_mode_drain_fifo, 
+        .mod_freq = 0
     },
     {   .irtx_init = nec_tx_init, 
         .irtx_deinit = nec_tx_deinit,
@@ -65,7 +67,8 @@ static const ir_protocols ir_protocol[] = {
         .irrx_init = nec_rx_init,
         .irrx_deinit = nec_rx_deinit,
         .irrx_read = nec_get_frame,
-        .irrx_drain_fifo = nec_rx_drain_fifo 
+        .irrx_drain_fifo = nec_rx_drain_fifo ,
+        .mod_freq = 38000
     },
     {   .irtx_init = rc5_tx_init,
         .irtx_deinit = rc5_tx_deinit,
@@ -74,7 +77,8 @@ static const ir_protocols ir_protocol[] = {
         .irrx_init = rc5_rx_init,
         .irrx_deinit = rc5_rx_deinit,
         .irrx_read = rc5_receive, 
-        .irrx_drain_fifo = rc5_drain_fifo
+        .irrx_drain_fifo = rc5_drain_fifo,
+        .mod_freq = 36000
     }
 };  
 
@@ -189,7 +193,7 @@ static const char ir_protocol_type[][7] = {
 
 static const uint8_t ir_rx_pins[] = {BIO1, BIO3, BIO5, BIO7};
 
-static const struct prompt_item infrared_rx_sensor_menu[] = { { T_IR_RX_SENSOR_MENU_LEARNER },
+static const struct prompt_item infrared_rx_sensor_menu[] = { //{ T_IR_RX_SENSOR_MENU_LEARNER },
                                                         { T_IR_RX_SENSOR_MENU_BARRIER },
                                                         { T_IR_RX_SENSOR_MENU_38K_DEMOD },
                                                         {T_IR_RX_SENSOR_MENU_56K_DEMOD} };
@@ -218,7 +222,7 @@ static const struct ui_prompt infrared_menu[] = {
         .prompt_text = T_IR_RX_SENSOR_MENU,
         .minval = 0,
         .maxval = 0,
-        .defval = 3,
+        .defval = 2,
         .menu_action = 0,
         .config = &prompt_list_cfg
     },
@@ -271,6 +275,16 @@ uint32_t infrared_setup(void) {
         return 0;
     }
     mode_config.protocol--;  
+
+    if(ir_protocol[mode_config.protocol].mod_freq){
+        mode_config.tx_freq = ir_protocol[mode_config.protocol].mod_freq;
+        printf("\r\n\r\n%s%s TX modulation%s: %ukHz\r\n", ui_term_color_info(), ir_protocol_type[mode_config.protocol], ui_term_color_reset(), mode_config.tx_freq/1000);
+    }else{
+        ui_prompt_uint32(&result, &infrared_menu[2], &mode_config.tx_freq);
+        if (result.exit) {
+            return 0;
+        }     
+    }    
     
     ui_prompt_uint32(&result, &infrared_menu[1], &mode_config.rx_sensor);
     if (result.exit) {
@@ -278,10 +292,7 @@ uint32_t infrared_setup(void) {
     }    
     mode_config.rx_sensor--;
 
-    ui_prompt_uint32(&result, &infrared_menu[2], &mode_config.tx_freq);
-    if (result.exit) {
-        return 0;
-    }     
+
 
     storage_save_mode(config_file, config_t, count_of(config_t));
 
@@ -305,7 +316,7 @@ uint32_t infrared_setup_exc(void) {
 
 
     // configure and enable the state machines
-    int status = ir_protocol[mode_config.protocol].irtx_init(bio2bufiopin[BIO4]); // uses two state machines, 16 instructions and one IRQ
+    int status = ir_protocol[mode_config.protocol].irtx_init(bio2bufiopin[BIO4], mode_config.tx_freq); // uses two state machines, 16 instructions and one IRQ
     if (status < 0) {
         printf("Failed to initialize TX PIO\r\n");
     }
@@ -325,7 +336,7 @@ bool infrared_preflight_sanity_check(void){
 
 void infrared_setup_resume(void){
     // configure and enable the state machines
-    int status = ir_protocol[mode_config.protocol].irtx_init(bio2bufiopin[BIO4]); // uses two state machines, 16 instructions and one IRQ
+    int status = ir_protocol[mode_config.protocol].irtx_init(bio2bufiopin[BIO4], mode_config.tx_freq); // uses two state machines, 16 instructions and one IRQ
     if (status < 0) {
         printf("Failed to initialize TX PIO\r\n");
     }

@@ -201,8 +201,8 @@ void tvbgone_player(struct command_result *res){
 	printf("\r\nDone!\r\n");
     
 	pwm_set_enabled(slice_num, false);
-	gpio_set_function(bio2bufiopin[BIO4], GPIO_FUNC_SIO);
-    gpio_set_dir(bio2bufiopin[BIO4], GPIO_IN);
+	//gpio_set_function(bio2bufiopin[BIO4], GPIO_FUNC_SIO);
+    //gpio_set_dir(bio2bufiopin[BIO4], GPIO_IN);
 
 	//resume normal IR mode
 	infrared_setup_resume();

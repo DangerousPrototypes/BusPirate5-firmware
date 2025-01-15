@@ -39,7 +39,7 @@ int rc5_rx_init(uint pin_num) {
     return 0;
 }
 
-int rc5_tx_init(uint pin_num) {
+int rc5_tx_init(uint pin_num, uint32_t mod_freq) {
     // start rc5 carrier program
     pio_config_rc5_carrier.pio = PIO_MODE_PIO;
     pio_config_rc5_carrier.sm = 0;

@@ -99,7 +99,7 @@ ASCII decimals representing the lengths of pulse and no-pulse in uS (anyone thin
 void irtoy_air_service(void){
     //while(true) pio_irio_get();
     return;
-
+#if 0
     //need to be careful about PIO fifo overflow here
     if (!tud_cdc_n_connected(CDC_INTF)) {
         //rc5_drain_fifo();
@@ -114,7 +114,7 @@ void irtoy_air_service(void){
         return;
     }
     const char version[4] = {'V', (HARDWARE_VERSION + 0x30), FIRMWARE_VERSION_H, FIRMWARE_VERSION_L};
-    
+
     switch (c) {
         case 'V':
         case 'v':// Acquire Version
@@ -124,6 +124,8 @@ void irtoy_air_service(void){
             break;
 
     }
+
+    #endif
 
 }
 

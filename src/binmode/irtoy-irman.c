@@ -86,7 +86,7 @@ void irtoy_irman_rx(void) {
 }
 
 void irtoy_irman_service(void){
-
+    static const char ok[2]="OK";
     if (!tud_cdc_n_connected(CDC_INTF)) {
         rc5_drain_fifo();
         return;
@@ -104,7 +104,6 @@ void irtoy_irman_service(void){
     switch (c) {
         case 'r': //IRMAN decoder mode
         case 'R':
-            const char ok[2]="OK";
             script_send(ok, 2);
             break;
         case 'V':

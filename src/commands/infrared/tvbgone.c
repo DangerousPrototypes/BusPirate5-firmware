@@ -41,6 +41,7 @@ Ported to RP2040 by Ian Lesnet 2024 (see you in another 15 years?)
 #include "hardware/pwm.h"
 #include "hardware/gpio.h"
 #include "pirate/bio.h"
+#include "ui/ui_help.h"
 
 
 const unsigned char num_NAcodes = NUM_NA_CODES; //NUM_ELEM(NApowerCodes);
@@ -109,8 +110,21 @@ static uint8_t pwm_freq_find(
     return 0;
 }
 
+static const char* const usage[] = {
+    "tvbgone",
+	"Turn off TVs: tvbgone",
+	"Based on TV B Gone by Mitch Altman and a 2009 kit version by Limor Fried",
+};
+
+static const struct ui_help_options options[] = {
+	{ 1, "", T_IR_CMD_TV_BGONE },    //Transmit IR signals (aIR format)
+    { 0, "-h", T_HELP_FLAG },			//Show help
+};
 
 void tvbgone_player(struct command_result *res){
+	if (ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options))) {
+        return;
+    }
 
 	//clean up the PIO stuff:
 	infrared_cleanup_temp();

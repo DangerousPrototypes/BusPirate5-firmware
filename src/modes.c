@@ -465,6 +465,7 @@ struct _mode modes[] = {
         .protocol_help = infrared_help,                  // display small help about the protocol
         .mode_commands = infrared_commands,              // mode specific commands
         .mode_commands_count = &infrared_commands_count, // mode specific commands count
+        .protocol_wait_done = infrared_wait_idle,        // wait for the protocol to finish
         .protocol_get_speed = infrared_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = infrared_preflight_sanity_check,      // sanity check before executing syntax
     },

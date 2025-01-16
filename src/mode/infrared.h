@@ -27,6 +27,8 @@ const char* infrared_pins(void);
 
 void infrared_help(void);
 
+void infrared_wait_idle(void);
+
 uint32_t infrared_get_speed(void);
 
 //for pausing the PIO programs while other programs use the hardware

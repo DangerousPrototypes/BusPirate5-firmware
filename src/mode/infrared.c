@@ -285,7 +285,8 @@ uint32_t infrared_setup(void) {
         ui_prompt_uint32(&result, &infrared_menu[2], &mode_config.tx_freq);
         if (result.exit) {
             return 0;
-        }     
+        }
+        mode_config.tx_freq*=1000;     
     }    
     
     ui_prompt_uint32(&result, &infrared_menu[1], &mode_config.rx_sensor);
@@ -378,7 +379,7 @@ void infrared_write(struct _bytecode* result, struct _bytecode* next) {
     // each protocol has its own write function
     ir_protocol[mode_config.protocol].irtx_write(&result->out_data);
     //TODO: frame delay if next command is a write or something?
-    ir_protocol[mode_config.protocol].irtx_wait_idle();
+    //ir_protocol[mode_config.protocol].irtx_wait_idle();
 }
 
 // This function is called when the user enters 'r' to read data
@@ -390,6 +391,10 @@ void infrared_read(struct _bytecode* result, struct _bytecode* next) {
     }
     result->in_data=data; //put the read value in in_data (up to 32 bits)*/
     //rc5_test();
+}
+
+void infrared_wait_idle(void) {
+    ir_protocol[mode_config.protocol].irtx_wait_idle();
 }
 
 // modes can have useful macros activated by (1) (eg macro 1)
@@ -424,5 +429,5 @@ uint32_t infrared_get_speed(void) {
 void infrared_settings(void) {
     ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_menu[mode_config.protocol].description), 0x00);
     ui_prompt_mode_settings_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rx_sensor_menu[mode_config.rx_sensor].description), 0x00);
-    ui_prompt_mode_settings_int(GET_T(T_IR_TX_SPEED_MENU), mode_config.tx_freq, GET_T(T_KHZ));
+    ui_prompt_mode_settings_int(GET_T(T_IR_TX_SPEED_MENU), mode_config.tx_freq/1000, GET_T(T_KHZ));
 }

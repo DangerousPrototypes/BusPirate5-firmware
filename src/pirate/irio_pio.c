@@ -98,7 +98,12 @@ void pio_irio_rx_deinit(uint pin_num){
 //wait for end of transmission
 bool pio_irio_mode_wait_idle(void){
     //wait for end of transmission
-    return pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff);
+    if(pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff)){
+        pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
+        pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
+        return true;
+    }
+    return false;
 }
 
 //drain both RX FIFOs for sync
@@ -117,8 +122,10 @@ void pio_irio_mode_drain_fifo(void){
 
 //push a single 16bit MARK and 16bit SPACE to the FIFO
 void pio_irio_mode_tx_write(uint32_t *data){
+    uint16_t mark = (*data)>>16;
+    uint16_t space = (*data)&0xffff;
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, (*data-1)<<16|(*data-1));
+    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, (mark-1)<<16|(space-1));
     return;
 }
 
@@ -227,9 +234,15 @@ ir_rx_status_t pio_irio_mode_get_frame(uint32_t *rx_frame) {
         case AIR_SPACE:
             if(!pio_sm_is_rx_fifo_empty(pio_config_rx_space.pio, pio_config_rx_space.sm)){
                 high = (uint16_t)pio_sm_get(pio_config_rx_space.pio, pio_config_rx_space.sm);
-                if(high!=0xffff) high=(uint16_t)(0xffff-high); 
-                printf("%u,", high);
-                state = AIR_MARK;
+                if(high!=0xffff){
+                    high=(uint16_t)(0xffff-high); 
+                    state = AIR_MARK;
+                    printf("%u,", high);
+                }else{
+                    state = AIR_IDLE; //timeout, note final space and go to idle
+                    printf("%u;\r\n", high);
+                }
+                
             }
             break;
         case AIR_MARK:

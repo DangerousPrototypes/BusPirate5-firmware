@@ -20,12 +20,34 @@
 #include "pirate/irio_pio.h"
 #include "usb_rx.h"
 
-static const char* const usage[] = {
-    "Record and transmit IR signals"
+static const char* const usage_tx[] = {
+    "irtx [aIR packet] [-f <file>]",
+	"aIR format: $<modulation freq (kHz)>:<MARK1>,<SPACE1>,...<MARKn>,<SPACEn>,;",
+	"Transmit: irtx $38:900,1800,900,65535,;",
+	"Transmit from file: irtx -f example.air",
 };
 
-static const struct ui_help_options options[] = {
-    { 0, "-h", T_HELP_FLAG },
+static const struct ui_help_options options_tx[] = {
+	{ 1, "", T_IR_CMD_IRTX },    //Transmit IR signals (aIR format)
+	{ 0, "-f", T_HELP_IRTX_FILE_FLAG }, //Transmit one or more aIR packets from a file
+    { 0, "-h", T_HELP_FLAG },			//Show help
+};
+
+static const char* const usage_rx[] = {
+    "irrx [-f <file>] [-s <sensor>]",
+	"aIR format: $<modulation freq (kHz)>:<MARK1>,<SPACE1>,...<MARKn>,<SPACEn>,;",
+	"Receive (interactive): irrx",
+	"Receive, save to file (interactive): irrx -f example.air",
+	"Receive, specify sensor (interactive): irrx -s 56D",
+	"Sensors: 38kHz barrier (38B), 36-40kHz/56kHz demodulator (38D*/56D)",
+	"*default",
+};
+
+static const struct ui_help_options options_rx[] = {
+	{ 1, "", T_IR_CMD_IRRX },    //Receive, save and transmit IR signals (aIR format)
+	{ 0, "-f", T_HELP_IRRX_FILE_FLAG }, //Specify filename for saved signals
+	{ 0, "-s", T_HELP_IRRX_SENSOR_FLAG }, //Specify sensor for received signals
+    { 0, "-h", T_HELP_FLAG },			//Show help
 };
 
 //returns true (success) false (failed)
@@ -109,7 +131,7 @@ bool irtx_transmit(char* buffer){
 }
 
 void irtx_handler(struct command_result *res){
-    if (ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options))) {
+    if (ui_help_show(res->help_flag, usage_tx, count_of(usage_tx), options_tx, count_of(options_tx))) {
         return;
     }
 
@@ -185,17 +207,17 @@ void irtx_handler(struct command_result *res){
 			}
 			pio_irio_tx_deinit(bio2bufiopin[BIO4]); //tear down IR PIO programs
 			infrared_setup_resume(); //reinit IR PIO programs
+			return;
 		}
-		return;
 	}
 
 	printf("Nothing to do, showing help\r\n");
 	//nothing to do, show help
-	ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options));
+	ui_help_show(true, usage_tx, count_of(usage_tx), options_tx, count_of(options_tx));
 }
 
 void irrx_handler(struct command_result *res){
-	if (ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options))) {
+	if (ui_help_show(res->help_flag, usage_rx, count_of(usage_rx), options_rx, count_of(options_rx))) {
         return;
     }
 

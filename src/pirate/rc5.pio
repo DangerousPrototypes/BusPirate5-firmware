@@ -42,7 +42,7 @@ static inline void rc5_carrier_program_init(PIO pio, uint sm, uint offset, uint 
     //
     pio_gpio_init (pio, pin);
 
-    // Set the pin direction to input at the PIO
+    // Set the pin direction to output from the PIO
     //
     pio_sm_set_consecutive_pindirs (pio, sm, pin, 1, true);
 

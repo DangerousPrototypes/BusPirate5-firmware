@@ -263,7 +263,7 @@ void irrx_handler(struct command_result *res){
 		float mod_freq;
 		uint8_t air_buffer[512];
 		//wait for complete IR packet from irio_pio
-		printf("\r\nListening for IR packets (any key to exit)...\r\n");
+		printf("\r\nListening for IR packets (x to exit)...\r\n");
 		//drain the FIFO so we can sync and not get garbage
 		pio_irio_mode_drain_fifo();
 		//display captured packet
@@ -272,8 +272,10 @@ void irrx_handler(struct command_result *res){
 			// any key to exit
 			char c;
 		    if (rx_fifo_try_get(&c)) {
-				printf("Exiting...\r\n");
-				goto exit_irrx_handler;
+				if(c=='x'){
+					printf("Exiting...\r\n");
+					goto exit_irrx_handler;
+				}
 			}
 		}
 		uint8_t mod_freq_int=(uint8_t)(mod_freq/1000);
@@ -306,7 +308,7 @@ menu_irrx_handler:
 		if(save_file){
 			printf("\'s\' to save, ");
 		}
-		printf("\'t\' to re-transmit, space for next, \'x\' to exit > ");
+		printf("\'r\' or \'t\' to re-transmit, space for next, \'x\' to exit > ");
 		printf("%s", ui_term_color_reset());
 		//use a prompt function to get the user input?
 		//if 's', save to file
@@ -335,6 +337,7 @@ menu_irrx_handler:
 				}
 				goto menu_irrx_handler;
 				break;
+			case 'r':
 			case 't': //retransmit this packet	
 				printf("\r\nTransmitting...");
 				pio_irio_tx_frame_raw((float)(mod_freq), pairs, buffer);

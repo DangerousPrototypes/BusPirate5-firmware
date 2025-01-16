@@ -49,6 +49,10 @@ int pio_irio_tx_init(uint pin_num, uint32_t mod_freq){
 void pio_irio_tx_deinit(uint pin_num){
     pio_remove_program(pio_config_tx.pio, pio_config_tx.program, pio_config_tx.offset);
     pio_remove_program(pio_config_tx_carrier.pio, pio_config_tx_carrier.program, pio_config_tx_carrier.offset);
+    pio_sm_clear_fifos(pio_config_tx.pio, pio_config_tx.sm);
+    pio_sm_clear_fifos(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm);
+    pio_sm_restart(pio_config_tx.pio, pio_config_tx.sm);
+    pio_sm_restart(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm);
 }
 
 void _pio_irio_rx_init(uint pin_demod, uint pin_pio2pio, float desired_period_us){
@@ -85,6 +89,10 @@ int pio_irio_rx_init(uint pin_num){
 void pio_irio_rx_deinit(uint pin_num){
     pio_remove_program(pio_config_rx_mark.pio, pio_config_rx_mark.program, pio_config_rx_mark.offset);
     pio_remove_program(pio_config_rx_space.pio, pio_config_rx_space.program, pio_config_rx_space.offset);
+    pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
+    pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
+    pio_sm_restart(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
+    pio_sm_restart(pio_config_rx_space.pio, pio_config_rx_space.sm);
 }
 
 //wait for end of transmission
@@ -95,12 +103,15 @@ bool pio_irio_mode_wait_idle(void){
 
 //drain both RX FIFOs for sync
 void pio_irio_mode_drain_fifo(void){
+    pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
+    pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
+    /*
     while(!pio_sm_is_rx_fifo_empty(pio_config_rx_mark.pio, pio_config_rx_mark.sm)){
         uint16_t temp = (uint16_t)pio_sm_get(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
     }    
     while(!pio_sm_is_rx_fifo_empty(pio_config_rx_space.pio, pio_config_rx_space.sm)){
         uint16_t temp = (uint16_t)pio_sm_get(pio_config_rx_space.pio, pio_config_rx_space.sm);
-    }
+    }*/
     return;
 }
 
@@ -129,7 +140,9 @@ void pio_irio_tx_frame_raw(float mod_freq, uint16_t pairs, uint32_t *buffer){
         pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, buffer[i]);
     }    
     //wait for end of transmission
-    pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff);
+    if(!pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff)){
+        printf("PIO TX timeout\r\n");
+    }
     return;
 }
 
@@ -150,9 +163,10 @@ bool pio_irio_rx_frame_raw(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
     switch(state){
         case AIR_IDLE:
             //when IDLE, drain any high data in the FIFO
-            while(!pio_sm_is_rx_fifo_empty(pio_config_rx_space.pio, pio_config_rx_space.sm)){
-                temp = (uint16_t)pio_sm_get(pio_config_rx_space.pio, pio_config_rx_space.sm);
-            }
+            //while(!pio_sm_is_rx_fifo_empty(pio_config_rx_space.pio, pio_config_rx_space.sm)){
+            //    temp = (uint16_t)pio_sm_get(pio_config_rx_space.pio, pio_config_rx_space.sm);
+            //}
+            pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
             if(!pio_sm_is_rx_fifo_empty(pio_config_rx_mark.pio, pio_config_rx_mark.sm)){
                 temp = (uint16_t)pio_sm_get(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
                 if(temp!=0xffff) temp=(uint16_t)(0xffff-temp);
@@ -202,9 +216,7 @@ ir_rx_status_t pio_irio_mode_get_frame(uint32_t *rx_frame) {
     switch(state){
         case AIR_IDLE:
             //when IDLE, drain any high data in the FIFO
-            while(!pio_sm_is_rx_fifo_empty(pio_config_rx_space.pio, pio_config_rx_space.sm)){
-                high = (uint16_t)pio_sm_get(pio_config_rx_space.pio, pio_config_rx_space.sm);
-            }
+            pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
             if(!pio_sm_is_rx_fifo_empty(pio_config_rx_mark.pio, pio_config_rx_mark.sm)){
                 low = (uint16_t)pio_sm_get(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
                 if(low!=0xffff) low=(uint16_t)(0xffff-low); 

@@ -51,6 +51,8 @@ int nec_rx_init(uint pin_num) {
 void nec_rx_deinit(uint pin_num) {
     //pio_remove_program_and_unclaim_sm(&nec_receive_program, pio_config.pio, pio_config.sm, pio_config.offset);
     pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
+    pio_sm_clear_fifos(pio_config.pio, pio_config.sm);
+    pio_sm_restart(pio_config.pio, pio_config.sm);
 }
 
 ir_rx_status_t nec_get_frame(uint32_t *rx_frame) {

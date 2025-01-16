@@ -113,11 +113,11 @@ void irtoy_air_service(void){
     if (!bin_rx_fifo_try_get(&c)){
         return;
     }
-
+    const char version[4] = {'V', (HARDWARE_VERSION + 0x30), FIRMWARE_VERSION_H, FIRMWARE_VERSION_L};
+    
     switch (c) {
         case 'V':
         case 'v':// Acquire Version
-            const char version[4] = {'V', (HARDWARE_VERSION + 0x30), FIRMWARE_VERSION_H, FIRMWARE_VERSION_L};
             script_send(version, 4);
             break;           
         default:

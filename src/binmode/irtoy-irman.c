@@ -87,6 +87,7 @@ void irtoy_irman_rx(void) {
 
 void irtoy_irman_service(void){
     static const char ok[2]="OK";
+    static const char version[4] = {'V', (HARDWARE_VERSION + 0x30), FIRMWARE_VERSION_H, FIRMWARE_VERSION_L};
     if (!tud_cdc_n_connected(CDC_INTF)) {
         rc5_drain_fifo();
         return;
@@ -108,7 +109,6 @@ void irtoy_irman_service(void){
             break;
         case 'V':
         case 'v':// Acquire Version
-            const char version[4] = {'V', (HARDWARE_VERSION + 0x30), FIRMWARE_VERSION_H, FIRMWARE_VERSION_L};
             script_send(version, 4);
             break;            
         default:

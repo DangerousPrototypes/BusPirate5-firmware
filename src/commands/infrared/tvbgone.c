@@ -181,13 +181,15 @@ void tvbgone_player(struct command_result *res){
 			//PWM for ON time
 			//IRTX_TRIS&=(~IRTX_PIN);//IR LED output
 			//make GPIO output
-			gpio_set_dir(bio2bufiopin[BIO4], GPIO_OUT);
+			//gpio_set_dir(bio2bufiopin[BIO4], GPIO_OUT);
+			pwm_set_enabled(slice_num, true);
 			delayint10US(NApowerCodes[tvbg.codecnt]->times[tvbg.timetableindex]);//on time is first table entry
 
 			//pause PWM for OFF time
 			//IRTX_TRIS|=IRTX_PIN;//IR LED input (no PWM)
 			//make GPIO input
-			gpio_set_dir(bio2bufiopin[BIO4], GPIO_IN);
+			//gpio_set_dir(bio2bufiopin[BIO4], GPIO_IN);
+			pwm_set_enabled(slice_num, false);
 			delayint10US(NApowerCodes[tvbg.codecnt]->times[(tvbg.timetableindex+1)]);//off time is next entry
 
 		}//for pairs loop

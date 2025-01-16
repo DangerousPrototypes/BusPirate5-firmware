@@ -311,11 +311,11 @@ uint32_t infrared_setup_exc(void) {
     bio_buf_output(BIO4); // IR TX
 
     //claim and label pins
-    system_bio_claim(true, BIO1, BP_PIN_IO, pin_labels[0]);
-    system_bio_claim(true, BIO3, BP_PIN_IO, pin_labels[1]);
-    system_bio_claim(true, BIO4, BP_PIN_IO, pin_labels[2]);
-    system_bio_claim(true, BIO5, BP_PIN_IO, pin_labels[3]);
-    system_bio_claim(true, BIO7, BP_PIN_IO, pin_labels[4]);
+    system_bio_update_purpose_and_label(true, BIO1, BP_PIN_IO, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, BIO3, BP_PIN_IO, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, BIO4, BP_PIN_IO, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, BIO5, BP_PIN_IO, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, BIO7, BP_PIN_IO, pin_labels[4]);
 
 
     // configure and enable the state machines
@@ -360,11 +360,11 @@ void infrared_cleanup(void) {
     ir_protocol[device_cleanup].irtx_deinit(bio2bufiopin[BIO4]);
     ir_protocol[device_cleanup].irrx_deinit(bio2bufiopin[ir_rx_pins[mode_config.rx_sensor]]);
     // unclaim pins
-    system_bio_claim(false, BIO1, BP_PIN_IO, pin_labels[0]);
-    system_bio_claim(false, BIO3, BP_PIN_IO, pin_labels[1]);
-    system_bio_claim(false, BIO4, BP_PIN_IO, pin_labels[2]);
-    system_bio_claim(false, BIO5, BP_PIN_IO, pin_labels[3]);
-    system_bio_claim(false, BIO7, BP_PIN_IO, pin_labels[4]);
+    system_bio_update_purpose_and_label(false, BIO1, BP_PIN_IO, pin_labels[0]);
+    system_bio_update_purpose_and_label(false, BIO3, BP_PIN_IO, pin_labels[1]);
+    system_bio_update_purpose_and_label(false, BIO4, BP_PIN_IO, pin_labels[2]);
+    system_bio_update_purpose_and_label(false, BIO5, BP_PIN_IO, pin_labels[3]);
+    system_bio_update_purpose_and_label(false, BIO7, BP_PIN_IO, pin_labels[4]);
     // 1. Disable any hardware you used
     bio_init();
     system_config.subprotocol_name = 0x00;

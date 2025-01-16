@@ -102,7 +102,7 @@ void pwm_configure_enable(struct command_result* res) {
     pwm_set_enabled(slice_num, true);
 
     // register the freq active, apply the pin label
-    system_bio_claim(true, (uint8_t)pin, BP_PIN_PWM, ui_const_pin_states[3]);
+    system_bio_update_purpose_and_label(true, (uint8_t)pin, BP_PIN_PWM, ui_const_pin_states[3]);
     system_set_active(true, (uint8_t)pin, &system_config.pwm_active);
 
     printf("\r\n%s%s:%s %s on IO%s%d%s\r\n",
@@ -179,7 +179,7 @@ void pwm_configure_disable(struct command_result* res) {
     bio_input((uint8_t)pin);
 
     // unregister, remove pin label
-    system_bio_claim(false, (uint8_t)pin, 0, 0);
+    system_bio_update_purpose_and_label(false, (uint8_t)pin, 0, 0);
     system_set_active(false, (uint8_t)pin, &system_config.pwm_active);
 
     printf("\r\n%s%s:%s %s on IO%s%d%s",
@@ -201,7 +201,7 @@ uint8_t pwm_freq_find(
 #define TOP_MAX 65534
 #define DIV_MIN ((0x01 << 4) + 0x0) // 0x01.0
 #define DIV_MAX ((0xFF << 4) + 0xF) // 0xFF.F
-    uint32_t clock = 125000000;
+    uint32_t clock = clock_get_hz (clk_sys);
     // Calculate a div value for frequency desired
     uint32_t div = (clock << 4) / *freq_hz_value / (TOP_MAX + 1);
     if (div < DIV_MIN) {

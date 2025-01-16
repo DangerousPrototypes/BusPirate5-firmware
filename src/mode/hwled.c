@@ -134,9 +134,7 @@ uint32_t hwled_setup_exc(void) {
     pio_config.sm = 0;
     switch (mode_config.device) {
         case M_LED_WS2812:
-            if(!system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0])){
-                printf("\r\nError: Unable to claim SDO pin");
-            }
+            system_bio_update_purpose_and_label(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
             mode_config.baudrate = 800000;
             bio_buf_output(M_LED_SDO);
             // success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio,
@@ -154,11 +152,8 @@ uint32_t hwled_setup_exc(void) {
                                 false);            
             break;
         case M_LED_APA102:
-            if(!(system_bio_claim(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]) &&
-                system_bio_claim(true, M_LED_SCL, BP_PIN_MODE, pin_labels[1]))){
-                printf("\r\nError: Unable to claim SDO or SCL pin");
-                return 0;
-            }
+            system_bio_update_purpose_and_label(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
+            system_bio_update_purpose_and_label(true, M_LED_SCL, BP_PIN_MODE, pin_labels[1]);
             mode_config.baudrate = (5 * 1000 * 1000);
             bio_buf_output(M_LED_SDO);
             bio_buf_output(M_LED_SCL);
@@ -305,8 +300,8 @@ void hwled_cleanup(void) {
     }
     system_config.subprotocol_name = 0x00;
     system_config.num_bits=8;
-    system_bio_claim(false, M_LED_SDO, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_LED_SCL, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_LED_SDO, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_LED_SCL, BP_PIN_MODE, 0);
     bio_init();
 }
 

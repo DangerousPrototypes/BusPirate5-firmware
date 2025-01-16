@@ -179,7 +179,7 @@ uint32_t hwhduart_setup_exc(void) {
     // setup peripheral
     // half duplex
     hwuart_pio_init(mode_config.data_bits, mode_config.parity, mode_config.stop_bits, mode_config.baudrate);
-    system_bio_claim(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
     return 1;
 }
 
@@ -270,7 +270,7 @@ void hwhduart_cleanup(void) {
     // disable peripheral
     // half duplex
     hwuart_pio_deinit();
-    system_bio_claim(false, M_UART_RXTX, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_UART_RXTX, BP_PIN_MODE, 0);
 
     // reset all pins to safe mode (done before mode change, but we do it here to be safe)
     bio_init();

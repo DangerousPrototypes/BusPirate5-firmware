@@ -202,23 +202,34 @@ static inline bool bp_debug_should_print(bp_debug_level_t level, bp_debug_catego
 void bp_mark_system_initialized(void);
 bool bp_is_system_initialized(void);
 
-#ifdef NDEBUG
-
-// These assertions only assert after the system is fully initialized.
+// Verify execution is on Core0 ... but only warn if system is not fully initialized.
 #define BP_ASSERT_CORE0() \
-    do {                                                                  \
-        if ((get_core_num() != 0) && bp_is_system_initialized()) {        \
-            PRINT_FATAL("ASSERTION FAILED: %s:%d\n", __FILE__, __LINE__); \
-            hard_assert(false);                                           \
-        }                                                                 \
+    do {                                                                                       \
+        if (get_core_num() != 0) {                                                             \
+            if (bp_is_system_initialized()) {                                                  \
+                PRINT_FATAL("Not on Core0: %s:%d\n", __FILE__, __LINE__);                      \
+                hard_assert(false);                                                            \
+            } else {                                                                           \
+                PRINT_FATAL("Warning: Not on Core0 during init: %s:%d\n", __FILE__, __LINE__); \
+            }                                                                                  \
+        }                                                                                      \
     } while (0)
+
+// Verify execution is on Core1 ... but only warn if system is not fully initialized.
 #define BP_ASSERT_CORE1() \
-    do {                                                                  \
-        if ((get_core_num() != 1) && bp_is_system_initialized()) {        \
-            PRINT_FATAL("ASSERTION FAILED: %s:%d\n", __FILE__, __LINE__); \
-            hard_assert(false);                                           \
-        }                                                                 \
+    do {                                                                                       \
+        if (get_core_num() != 1) {                                                             \
+            if (bp_is_system_initialized()) {                                                  \
+                PRINT_FATAL("Not on Core1: %s:%d\n", __FILE__, __LINE__);                      \
+                hard_assert(false);                                                            \
+            } else {                                                                           \
+                PRINT_FATAL("Warning: Not on Core1 during init: %s:%d\n", __FILE__, __LINE__); \
+            }                                                                                  \
+        }                                                                                      \
     } while (0)
+
+// Ensures an assertion is checked and file/line number are printed (even in NDEBUG compilation).
+// If used hard_assert() directly, file/line number would not be shown.
 #define BP_ASSERT(_COND) \
     do {                                                                  \
         if (!(_COND)) {                                                   \
@@ -226,13 +237,3 @@ bool bp_is_system_initialized(void);
             hard_assert(false);                                           \
         }                                                                 \
     } while (0)
-
-#else
-
-// These assertions only assert after the system is fully initialized.
-#define BP_ASSERT_CORE0() assert((get_core_num() == 0) || !bp_is_system_initialized())
-#define BP_ASSERT_CORE1() assert((get_core_num() == 1) || !bp_is_system_initialized())
-#define BP_ASSERT(_COND)  assert(_COND)
-#endif
-
-

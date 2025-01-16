@@ -31,7 +31,7 @@ void cmd_convert_base(uint32_t value, uint32_t num_bits) {
     printf(" %s=", ui_term_color_reset());
     ui_format_print_number_3(value, num_bits, df_bin);
     if (value >= ' ' && value <= '~') {
-        printf("= '%c' ", value);
+        printf("= '%c' ", (char)value);
     }
 }
 

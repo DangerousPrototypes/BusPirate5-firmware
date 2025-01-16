@@ -289,6 +289,6 @@ void ui_format_print_number(uint32_t d) {
         printf(".%d", system_config.num_bits);
     }
     if (system_config.num_bits == 8 && d >= ' ' && d <= '~') { // ASCII
-        printf(" (\'%c\')", ((d >= 0x20) && (d < 0x7E) ? d : 0x20));
+        printf(" (\'%c\')", (char)d);
     }
 }

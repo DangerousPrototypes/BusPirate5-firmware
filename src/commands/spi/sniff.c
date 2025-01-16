@@ -100,10 +100,10 @@ void sniff_handler(struct command_result* res) {
 
     static const char pin_labels[][5] = { "DAT0", "DAT1", "SCLK", "SCS" };
 
-    system_bio_claim(true, BIO0, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, BIO1, BP_PIN_MODE, pin_labels[1]);
-    system_bio_claim(true, BIO2, BP_PIN_MODE, pin_labels[2]);
-    system_bio_claim(true, BIO3, BP_PIN_MODE, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, BIO0, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, BIO1, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, BIO2, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, BIO3, BP_PIN_MODE, pin_labels[3]);
     printf("Any key to exit\r\n");
     while (true) {
         if (pio_read(&value)) {
@@ -121,8 +121,8 @@ void sniff_handler(struct command_result* res) {
 
     pio_remove_program_and_unclaim_sm(&spisnif_2_program, pio_config_d1.pio, pio_config_d1.sm, pio_config_d1.offset);
 
-    system_bio_claim(false, BIO0, BP_PIN_MODE, 0);
-    system_bio_claim(false, BIO1, BP_PIN_MODE, 0);
-    system_bio_claim(false, BIO2, BP_PIN_MODE, 0);
-    system_bio_claim(false, BIO3, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO0, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO1, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO2, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO3, BP_PIN_MODE, 0);
 }

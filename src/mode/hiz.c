@@ -34,7 +34,7 @@ uint32_t hiz_setup_exec(void) {
     system_config.pwm_active = 0;
     system_config.aux_active = 0;
     for (int i = 0; i < count_of(bio2bufiopin); i++) {
-        system_bio_claim(false, i, BP_PIN_IO, 0);
+        system_bio_update_purpose_and_label(false, i, BP_PIN_IO, 0);
     }
     return 1;
 }

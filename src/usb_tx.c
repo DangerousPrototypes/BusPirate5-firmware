@@ -30,18 +30,23 @@ queue_t bin_tx_fifo;
 char tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));
 char bin_tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));
 
-char tx_sb_buf[1024];
+#define MAXIMUM_STATUS_BAR_BUFFER_BYTES 1024
+char tx_sb_buf[MAXIMUM_STATUS_BAR_BUFFER_BYTES];
 uint16_t tx_sb_buf_cnt = 0;
 uint16_t tx_sb_buf_index = 0;
 bool tx_sb_buf_ready = false;
 
 void tx_fifo_init(void) {
+    // OK to call from either core
     queue2_init(&tx_fifo, tx_buf, TX_FIFO_LENGTH_IN_BYTES); // buffer size must be 2^n for queue AND DMA rollover
     queue2_init(&bin_tx_fifo, bin_tx_buf, TX_FIFO_LENGTH_IN_BYTES); // buffer size must be 2^n for queue AND DMA
                                                                     // rollover
 }
 
 void tx_sb_start(uint32_t valid_characters_in_status_bar) {
+
+    BP_ASSERT_CORE1();
+    BP_ASSERT(valid_characters_in_status_bar <= MAXIMUM_STATUS_BAR_BUFFER_BYTES);
     tx_sb_buf_cnt = valid_characters_in_status_bar;
     tx_sb_buf_ready = true;
 }
@@ -145,27 +150,22 @@ void tx_fifo_service(void) {
 }
 
 void tx_fifo_put(char* c) {
-    uint core = get_core_num();
-    assert(core == 0); // tx fifo should not be shared between cores
-    assert(core != 1); // tx fifo can deadlock if called from core1
+    BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
     queue2_add_blocking(&tx_fifo, c);
 }
 
 void bin_tx_fifo_put(const char c) {
-    uint core = get_core_num();
-    assert(core == 0); // binmode fifo should not be shared between cores
-    assert(core != 1); // binmode fifo can deadlock if called from core1
+    BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
     queue2_add_blocking(&bin_tx_fifo, &c);
 }
 
 bool bin_tx_fifo_try_get(char* c) {
+    BP_ASSERT_CORE1(); // tx fifo is drained from core1 only
     return queue2_try_remove(&bin_tx_fifo, c);
 }
 
-// #if(0)
 void bin_tx_fifo_service(void) {
-    uint core = get_core_num();
-    assert(core == 1); // binmode fifo is drained from core1 only
+    BP_ASSERT_CORE1(); // tx fifo is drained from core1 only
 
     uint16_t bytes_available;
     char data[64];
@@ -190,10 +190,12 @@ void bin_tx_fifo_service(void) {
     tud_cdc_n_write(1, &data, i);
     tud_cdc_n_write_flush(1);
 }
-// #endif
 
 bool bin_tx_not_empty(void) {
+    // OK to check empty from either core
     uint16_t cnt;
+    // gets the number of additional bytes that can be added to the queue
     queue_available_bytes(&bin_tx_fifo, &cnt);
-    return TX_FIFO_LENGTH_IN_BYTES - cnt;
+    // If that differs from the total size of the queue, then it's not empty
+    return cnt != TX_FIFO_LENGTH_IN_BYTES;
 }

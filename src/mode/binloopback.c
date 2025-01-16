@@ -75,13 +75,13 @@ void binloopback_close(struct _bytecode* result, struct _bytecode* next) {
 
 void binloopback_write(struct _bytecode* result, struct _bytecode* next) {
     char c = result->out_data;
-    bin_rx_fifo_add(&c);
+    bin_rx_fifo_add(&c); // ?? BUGBUG -- should this be bin_tx_fifo_add() ??
 }
 
 void binloopback_read(struct _bytecode* result, struct _bytecode* next) {
     uint32_t timeout = 0xfff;
     char c;
-    while (!bin_tx_fifo_try_get(&c)) {
+    while (!bin_tx_fifo_try_get(&c)) { // ?? BUGBUG -- should this be bin_rx_fifo_try_get() ??
         timeout--;
         if (!timeout) {
             result->error = SERR_ERROR;

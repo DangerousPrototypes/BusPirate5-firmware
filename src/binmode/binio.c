@@ -50,7 +50,7 @@
 uint8_t binmode_debug = 0;
 
 void script_print(const char* str) {
-    for (uint8_t i = 0; i < strlen(str); i++) {
+    for (size_t i = 0; i < strlen(str); i++) {
         bin_tx_fifo_put(str[i]);
     }
 }
@@ -519,7 +519,7 @@ uint32_t binmode_pwm_enable(uint8_t* binmode_args) {
     pwm_set_enabled(slice_num, true);
 
     // register the freq active, apply the pin label
-    system_bio_claim(true, (uint8_t)binmode_args[0], BP_PIN_PWM, ui_const_pin_states[3]);
+    system_bio_update_purpose_and_label(true, (uint8_t)binmode_args[0], BP_PIN_PWM, ui_const_pin_states[3]);
     system_set_active(true, (uint8_t)binmode_args[0], &system_config.pwm_active);
     return 0;
 }
@@ -542,7 +542,7 @@ uint32_t binmode_pwm_disable(uint8_t* binmode_args) {
     bio_input((uint8_t)binmode_args[0]);
 
     // unregister, remove pin label
-    system_bio_claim(false, (uint8_t)binmode_args[0], 0, 0);
+    system_bio_update_purpose_and_label(false, (uint8_t)binmode_args[0], 0, 0);
     system_set_active(false, (uint8_t)binmode_args[0], &system_config.pwm_active);
 
     if (binmode_debug) {
@@ -596,7 +596,7 @@ uint32_t binmode_pwm_raw(uint8_t* binmode_args) {
     pwm_set_enabled(slice_num, true);
 
     // register the freq active, apply the pin label
-    system_bio_claim(true, (uint8_t)binmode_args[0], BP_PIN_PWM, ui_const_pin_states[3]);
+    system_bio_update_purpose_and_label(true, (uint8_t)binmode_args[0], BP_PIN_PWM, ui_const_pin_states[3]);
     system_set_active(true, (uint8_t)binmode_args[0], &system_config.pwm_active);
     return 0;
 }

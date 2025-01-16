@@ -223,10 +223,10 @@ uint32_t spi_setup_exc(void) {
                mode_config.baudrate_actual / 1000);
     }
     hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
-    system_bio_claim(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
-    system_bio_claim(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
-    system_bio_claim(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);
-    system_bio_claim(true, M_SPI_CS, BP_PIN_MODE, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, M_SPI_CS, BP_PIN_MODE, pin_labels[3]);
     spi_set_cs(M_SPI_DESELECT);
     return mode_config.baudrate_actual;
 }
@@ -235,10 +235,10 @@ void spi_cleanup(void) {
     // disable peripheral
     hwspi_deinit();
     // release pin claims
-    system_bio_claim(false, M_SPI_CLK, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_SPI_CDO, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_SPI_CDI, BP_PIN_MODE, 0);
-    system_bio_claim(false, M_SPI_CS, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_SPI_CLK, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_SPI_CDO, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
     // update system_config pins
     system_config.misoport = 0;
     system_config.mosiport = 0;

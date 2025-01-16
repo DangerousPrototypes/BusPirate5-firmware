@@ -23,7 +23,12 @@
 
 MEMORY
 {
+    /* Something isn't working to show non-default flash,
+       even with SDK 2.1 ... so just manually provide the
+       16MB flash size.
     INCLUDE "pico_flash_region.ld"
+    */
+    FLASH(rx) : ORIGIN = 0x10000000, LENGTH = 16384k
     RAM(rwx) : ORIGIN =  0x20000000, LENGTH = 256k
     SCRATCH_X(rwx) : ORIGIN = 0x20040000, LENGTH = 4k
     SCRATCH_Y(rwx) : ORIGIN = 0x20041000, LENGTH = 4k
@@ -213,11 +218,10 @@ SECTIONS
         __end__ = .;
         end = __end__;
         KEEP(*(.heap*))
-        /* historically on GCC sbrk was growing past __HeapLimit to __StackLimit, however
-           to be more compatible, we now set __HeapLimit explicitly to where the end of the heap is */
-        . = ORIGIN(RAM) + LENGTH(RAM);
-        __HeapLimit = .;
     } > RAM
+    /* historically on GCC sbrk was growing past __HeapLimit to __StackLimit, however
+        to be more compatible, we now set __HeapLimit explicitly to where the end of the heap is */
+    __HeapLimit = ORIGIN(RAM) + LENGTH(RAM);
 
     /* Start and end symbols must be word-aligned */
     .scratch_x : {

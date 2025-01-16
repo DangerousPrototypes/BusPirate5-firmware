@@ -68,13 +68,13 @@ static uint32_t hex_dump(
         if (!bytes_read) {
             // Flush last line
             if (flag_ascii) {
-                uint8_t rem = buf_off % row_size;
+                uint16_t rem = buf_off % row_size;
                 if (rem) {
-                    for (uint8_t j = 0; j < row_size - rem; j++) {
+                    for (uint16_t j = 0; j < row_size - rem; j++) {
                         printf("   ");
                     }
                     printf(" |");
-                    for (uint8_t j = 0; j < rem; j++) {
+                    for (uint16_t j = 0; j < rem; j++) {
                         printf("%c", PRINTABLE(buf[line_start_off + j]));
                     }
                     printf("|");
@@ -82,7 +82,7 @@ static uint32_t hex_dump(
             }
             break;
         }
-        for (uint16_t i = 0; i < bytes_read; i++) {
+        for (UINT i = 0; i < bytes_read; i++) {
             if (print_addr) {
                 print_addr = false;
                 printf("%04x  ", shown_off);
@@ -93,7 +93,7 @@ static uint32_t hex_dump(
             if (!(buf_off % row_size)) {
                 if (flag_ascii) {
                     printf(" |");
-                    for (uint8_t j = 0; j < row_size; j++) {
+                    for (uint16_t j = 0; j < row_size; j++) {
                         printf("%c", PRINTABLE(buf[line_start_off + j]));
                     }
                     printf("|");

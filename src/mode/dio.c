@@ -50,7 +50,7 @@ uint32_t dio_setup_exc(void) {
     for (uint8_t i = 0; i < 8; i++) {
         // user data is in result->out_data
         bio_output(i);
-        system_bio_claim(true, i, BP_PIN_IO, labels[0]);
+        system_bio_update_purpose_and_label(true, i, BP_PIN_IO, labels[0]);
         bio_put(i, 0);
         system_set_active(true, i, &system_config.aux_active);
     }    
@@ -77,10 +77,10 @@ void dio_write(struct _bytecode* result, struct _bytecode* next) {
         // user data is in result->out_data
         //bio_output(i);
         if (result->out_data & (0b1 << i)) {
-            system_bio_claim(true, i, BP_PIN_IO, labels[1]);
+            system_bio_update_purpose_and_label(true, i, BP_PIN_IO, labels[1]);
             //bio_put(i, 1);
         } else {
-            system_bio_claim(true, i, BP_PIN_IO, labels[0]);
+            system_bio_update_purpose_and_label(true, i, BP_PIN_IO, labels[0]);
             //bio_put(i, 0);
         }
         //system_set_active(true, i, &system_config.aux_active);

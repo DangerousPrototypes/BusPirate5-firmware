@@ -59,11 +59,64 @@ public entry_point:
 .wrap
 
 
+; program for measuring modulation frequency
+; mini logic analyzer
+; preload X with the number of bits to sample
+.program measure_mod_freq
+.define NOTICE_IRQ 0
+public entry_point:
+.wrap_target
+    mov y, x          ;save counter value in y
+    wait 0 pin 0      ;stall and wait for IR mark (low from learner)
+    wait 1 pin 0      ;stall and wait for IR space (high from learner)
+    wait 0 pin 0      ;stall and wait for IR mark (low from learner)
+    wait 1 pin 0      ;stall and wait for IR space (high from learner)
+    wait 0 pin 0      ;stall and wait for IR mark (low from learner)
+loop:
+    in pins, 1           ;take one bit sample
+    jmp y-- loop        ;loop until counter hits 0
+    irq wait NOTICE_IRQ ;notify the end of the measurement
+.wrap
+
+
 % c-sdk {
 
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "pirate.h"
+
+#define MEASURE_MOD_FREQ_FIFO_DEPTH 8  //8 word fifo + the stalled word in isr
+
+static inline void measure_mod_freq_program_init(PIO pio, uint sm, uint offset, uint pin_learner, float div) {
+    //get state machine configuration
+    pio_sm_config c = measure_mod_freq_program_get_default_config(offset);
+
+    //in pin is learner output
+    sm_config_set_in_pins(&c, pin_learner);
+
+    // pin to input to PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_learner, 1, false); //input
+    
+    sm_config_set_in_shift(&c, false, true, 32);
+    //sm_config_set_out_shift(&c, false, false, 32);
+
+    //one big RX FIFO
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+
+    // Set the clock divider for the state machine configuration
+    sm_config_set_clkdiv(&c, div);
+
+    //put (32*4)-1 in the FIFO
+    pio_sm_put(pio, sm, (32*MEASURE_MOD_FREQ_FIFO_DEPTH)-1);
+    //encode a pull
+    pio_sm_exec(pio, sm, pio_encode_pull(false, false));
+    //encode mov x, osr
+    pio_sm_exec(pio, sm, pio_encode_mov(pio_x, pio_osr));
+
+    pio_sm_init (pio, sm, offset + measure_mod_freq_offset_entry_point, &c);
+
+    pio_sm_set_enabled (pio, sm, true);
+}
 
 static inline void ir_out_carrier_program_init(PIO pio, uint sm, uint offset, uint pin_tx, float freq) {
     //get state machine configuration

@@ -13,6 +13,7 @@
 
 static struct _pio_config pio_config_rx_mark;
 static struct _pio_config pio_config_rx_space;
+static struct _pio_config pio_config_rx_mod_freq;
 static struct _pio_config pio_config_tx;
 static struct _pio_config pio_config_tx_carrier;
 
@@ -55,7 +56,7 @@ void pio_irio_tx_deinit(uint pin_num){
     pio_sm_restart(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm);
 }
 
-void _pio_irio_rx_init(uint pin_demod, uint pin_pio2pio, float desired_period_us){
+void _pio_irio_rx_init(uint pin_demod, uint pin_pio2pio, uint pin_learner, float desired_period_us){
     // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&i2c_program, &pio_config.pio, &pio_config.sm,
     // &pio_config.offset, dir_sda, 10, true); hard_assert(success);
     #define INSTRUCTIONS_PER_CYCLE 2
@@ -76,6 +77,16 @@ void _pio_irio_rx_init(uint pin_demod, uint pin_pio2pio, float desired_period_us
     pio_config_rx_space.program = &ir_in_high_counter_program;
     pio_config_rx_space.offset = pio_add_program(pio_config_rx_space.pio, pio_config_rx_space.program);
     ir_in_high_counter_program_init(pio_config_rx_space.pio, pio_config_rx_space.sm, pio_config_rx_space.offset, pin_pio2pio, divider);
+    printf("Divider: %f\r\n", divider);
+    divider = (float)clock_freq_hz * 0.2f / (1000000.0f*INSTRUCTIONS_PER_CYCLE);
+    printf("Divider: %f\r\n", divider);
+    pio_config_rx_mod_freq.pio = PIO_LOGIC_ANALYZER_PIO;
+    pio_config_rx_mod_freq.sm = 2;
+    pio_config_rx_mod_freq.program = &measure_mod_freq_program;
+    pio_config_rx_mod_freq.offset = pio_add_program(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.program);
+    measure_mod_freq_program_init(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm, pio_config_rx_mod_freq.offset, pin_learner, divider);
+
+
 }
 
 //helper function to load for Bus Pirate INFRARED mode
@@ -83,7 +94,7 @@ int pio_irio_rx_init(uint pin_num){
     bio_buf_output(BIO0); //inter statemachine communication pin
     // Desired period in microseconds
     float desired_period_us = 1.0f;
-    _pio_irio_rx_init(pin_num, bio2bufiopin[BIO0], desired_period_us);   
+    _pio_irio_rx_init(pin_num, bio2bufiopin[BIO0], bio2bufiopin[BIO1], desired_period_us);   
 }
 
 void pio_irio_rx_deinit(uint pin_num){
@@ -120,8 +131,103 @@ void pio_irio_mode_drain_fifo(void){
     return;
 }
 
+void pio_irio_get_rx_mod_freq(float *mod_freq){
+    //put 4*32 into the FIFO
+
+    pio_sm_clear_fifos(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm);
+    pio_interrupt_clear(pio_config_rx_mod_freq.pio, 0);
+
+    while(true){
+
+        // Poll the IRQ status
+        while(!pio_interrupt_get(pio_config_rx_mod_freq.pio, 0));
+
+        typedef enum _transition_state{
+            SPACE,
+            MARK,
+            DONE,
+            ERROR
+        }transition_state;
+
+        transition_state state=SPACE;
+        uint32_t mark=0, space=0;
+        //instead of getting 8 words directly, we drain the FIFO so it works
+        //without change if the PIO is set for 4 or 8 deep FIFO
+        while(!pio_sm_is_rx_fifo_empty(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm)){
+            uint32_t temp = pio_sm_get_blocking(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm);
+
+            //we want to count the 0s and then the first string of 1s
+            //this will give us the modulation duration, which we can use to calculate the frequency
+            //00000000000000000000000000000000 00011111111111111111111111111111 
+            //11111111111111111111111111111111 11111111111111111111111111111111 
+            //11111111110000000000000000000000 00000000000011111111111111111111 
+            //11111111111111111111111111111111 11111111111111111111111111111111
+            for (int j = 31; j >= 0; j--) {
+                uint32_t mask = 1 << j;
+                switch(state){
+                    case SPACE:
+                        if (temp & mask) {
+                            if(space==0){ 
+                                state=ERROR;
+                            }else{
+                                state=MARK;
+                                mark++;
+                            }
+                            break;
+                        }
+                        space++;
+                        break;
+                    case MARK:
+                        if (temp & mask) {
+                            mark++;
+                        } else {
+                            state=DONE;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+
+            }
+
+
+            //write a function to printf the binary representation of a 32bit number
+            for (int i = 31; i >= 0; i--) {
+                uint32_t mask = 1 << i;
+                if (temp & mask) {
+                    printf("1");
+                } else {
+                    printf("0");
+                }
+            }
+            printf(" ");
+        }
+
+        float us = (float)(mark+space)/5.0f;
+        float hz = 1000000.0f/us;
+
+        if(state!=DONE){
+            printf("\r\nERROR: incomplete capture. SPACE: %d, MARK: %d, TOTAL: %d, us: %f\r\n", space, mark, mark+space, us);
+        }else{
+            printf("\r\nSPACE: %d, MARK: %d, TOTAL: %d, us: %f\r\n", space, mark, mark+space, us);
+            printf("Modulation frequency: %fHz, %fkHz\r\n", hz, (float)(hz/1000.0f));
+
+        }
+
+        busy_wait_ms(2000);
+                
+        // Clear the IRQ
+        pio_interrupt_clear(pio_config_rx_mod_freq.pio, 0);
+        //printf("%b %b %b %b\r\n", pio_sm_get(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm), pio_sm_get(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm), pio_sm_get(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm), pio_sm_get(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm));
+    }
+}
+
 //push a single 16bit MARK and 16bit SPACE to the FIFO
 void pio_irio_mode_tx_write(uint32_t *data){
+    
+    float mod_freq;
+    pio_irio_get_rx_mod_freq(&mod_freq);
+
     uint16_t mark = (*data)>>16;
     uint16_t space = (*data)&0xffff;
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
@@ -135,6 +241,8 @@ void pio_irio_tx_mod_freq(float mod_freq){
     pio_sm_set_clkdiv(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm, div);
     busy_wait_us(1);//takes effect in 3 cycles...
 }
+
+
 
 //sends raw array of 32bit values. 
 //upper 16 bits are the mark, lower 16 bits are the space

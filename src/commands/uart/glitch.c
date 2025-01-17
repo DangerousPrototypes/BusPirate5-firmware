@@ -345,7 +345,7 @@ static inline uint32_t get_ticks() {
  * 
  * Enable PIO and get ready to go
  *******************************************************/
-bool setup_hardware() {
+bool setup_uart_glitch_hardware() {
     PRINT_INFO("glitch::Entering setup_hardware()\r\n");
     bio_put(M_UART_RTS, 0);
 
@@ -377,7 +377,7 @@ bool setup_hardware() {
 /********************************************************
  * Deallocate the 2 IO pins and remove the PIO program
  *******************************************************/
-void teardown_hardware() {
+void teardown_uart_glitch_hardware() {
     PRINT_INFO("glitch::Entering teardown_hardware()\r\n");
     bio_put(M_UART_RTS, 1);
 
@@ -411,7 +411,7 @@ void uart_glitch_handler(struct command_result* res) {
     }
 
     // set up and enable the two hardware pins, start the PIO program
-    if (!setup_hardware())
+    if (!setup_uart_glitch_hardware())
     {
         return;
     }
@@ -424,7 +424,7 @@ void uart_glitch_handler(struct command_result* res) {
     // that's what the goofy last_was_high thing is all about.
     uint32_t edges = 0;
     bool last_was_high = false;
-    for (uint8_t ii = 0; ii < 8; ++ii) {
+    for (size_t ii = 0; ii < 8; ++ii) {
         if (uart_glitch_config.glitch_trg & (1U << ii)) {
             ++edges;
             if (last_was_high) {
@@ -596,5 +596,5 @@ void uart_glitch_handler(struct command_result* res) {
     }
     
     // we're done, release the two hardware pins and PIO program
-    teardown_hardware();
+    teardown_uart_glitch_hardware();
 }

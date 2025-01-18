@@ -1,0 +1,1234 @@
+{
+    "T_ON": {
+        "Localized": "Wł.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_OFF": {
+        "Localized": "Wył.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_EXIT": {
+        "Localized": "Wyjście",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_LOADED": {
+        "Localized": "Załadowano",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_SAVED": {
+        "Localized": "Zapisano",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_USE_PREVIOUS_SETTINGS": {
+        "Localized": "Użyć poprzednich ustawień?",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_NO_EFFECT": {
+        "Localized": "BŁĄD: polecenie nie ma tutaj efektu",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_NO_EFFECT_HIZ": {
+        "Localized": "Polecenienie ma efektu w trybie HiZ, naciśnij 'm' aby wybrać tryb",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_NO_HELP_AVAILABLE": {
+        "Localized": "Brak dostępnej pomocy",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PRESS_ANY_KEY_TO_EXIT": {
+        "Localized": "Naciśnij jakiś klawisz aby wyjść",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_MODE_SELECTION": {
+        "Localized": "Wybór trybu",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_MODE": {
+        "Localized": "Tryb",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_NUMBER_DISPLAY_FORMAT": {
+        "Localized": "Numeryczny format wyśwetlania",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_INVALID_OPTION": {
+        "Localized": "Nieprawidłowa opcja",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_CHOOSE_AVAILABLE_PIN": {
+        "Localized": "Wybierz dostępny pin:",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ALL_PINS_IN_USE": {
+        "Localized": "Wszystkie piny w użyciu",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_PULLUP_RESISTORS": {
+        "Localized": "Rezystory Pull-up",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_POWER_SUPPLY": {
+        "Localized": "Zasilanie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_DISABLED": {
+        "Localized": "Wyłączone",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ENABLED": {
+        "Localized": "Włączone",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_BITORDER": {
+        "Localized": "Kolejność bitów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_DELAY": {
+        "Localized": "Opóźnienie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_PARSING_MACRO": {
+        "Localized": "Błąd parsowania makra",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_NO_MACROS_AVAILABLE": {
+        "Localized": "Brak dostępnych makr",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_MACRO_NOT_DEFINED": {
+        "Localized": "Makro nie zdefiniowane",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_PWM_GENERATE_FREQUENCY": {
+        "Localized": "Wygeneruj częstotliwość",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_MEASURE_FREQUENCY": {
+        "Localized": "Pomiar częstotliwości",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_FREQUENCY": {
+        "Localized": "Częstotliwość",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_DUTY_CYCLE": {
+        "Localized": "Cykl pracy częstotliwości",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PSU_DAC_ERROR": {
+        "Localized": "Błąd DAC PSU, uruchom self-test",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PSU_CURRENT_LIMIT_ERROR": {
+        "Localized": "Natężenie ponad limit, wyłączono zasilanie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PSU_SHORT_ERROR": {
+        "Localized": "Potencjalne zwarcie, wyłączono zasilanie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PSU_ALREADY_DISABLED_ERROR": {
+        "Localized": "Zasilanie już wyłączone",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_SYNTAX_EXCEEDS_MAX_SLOTS": {
+        "Localized": "Wynik przekracza dostępną przestrzeń (%d slotów)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "d"
+        ]
+    },
+    "T_HWSPI_SPEED_MENU": {
+        "Localized": "Prędkość SPI",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_SPEED_MENU_1": {
+        "Localized": "1 do 62500kHz",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_BITS_MENU": {
+        "Localized": "Bity danych",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_BITS_MENU_1": {
+        "Localized": "4 do 8 bitów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_BITS_PROMPT": {
+        "Localized": "Bity/Bitów (%s%d*%s)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s",
+            "d",
+            "s"
+        ]
+    },
+    "T_HWSPI_CLOCK_POLARITY_MENU": {
+        "Localized": "Polaryzacja zegara",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_POLARITY_PROMPT": {
+        "Localized": "Polaryzacja",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_PHASE_MENU": {
+        "Localized": "Faza zegara",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_PHASE_PROMPT": {
+        "Localized": "Faza",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_ACTUAL_SPEED_KHZ": {
+        "Localized": "Faktyczna prędkość",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_SELECT": {
+        "Localized": "CS Włączone",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_DESELECT": {
+        "Localized": "CS Wyłączone",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_SPEED_MENU": {
+        "Localized": "Prędkość UART",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_SPEED_MENU_1": {
+        "Localized": "1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 itd.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_SPEED_PROMPT": {
+        "Localized": "Szerokość transmisji (%s%d*%s)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s",
+            "d",
+            "s"
+        ]
+    },
+    "T_UART_PARITY_MENU": {
+        "Localized": "Parzystość",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_PARITY_MENU_1": {
+        "Localized": "Brak",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_PARITY_MENU_2": {
+        "Localized": "Parzyste",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_PARITY_MENU_3": {
+        "Localized": "Nieparzyste",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_PARITY_PROMPT": {
+        "Localized": "Parzystość",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_DATA_BITS_MENU": {
+        "Localized": "Bity danych",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_DATA_BITS_MENU_1": {
+        "Localized": "5 do 8 bitów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_DATA_BITS_PROMPT": {
+        "Localized": "(%s%d*%s) Bity/Bitów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s",
+            "d",
+            "s"
+        ]
+    },
+    "T_UART_STOP_BITS_MENU": {
+        "Localized": "Bity zatrzymania",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_STOP_BITS_PROMPT": {
+        "Localized": "Bity",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_MENU": {
+        "Localized": "Używaj funkcji blokujących?",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_MENU_1": {
+        "Localized": "Nie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_MENU_2": {
+        "Localized": "Tak",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_PROMPT": {
+        "Localized": "Blokowanie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_ACTUAL_SPEED_BAUD": {
+        "Localized": "Faktyczna szerokość transmisji",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BAUD": {
+        "Localized": "szerokość transmisji",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_OPEN": {
+        "Localized": "UART OTWARTY",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_OPEN_WITH_READ": {
+        "Localized": "UART OTWARTY (ASYNC READ)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_CLOSE": {
+        "Localized": "UART ZAMKNIĘTY",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_NO_DATA_READ": {
+        "Localized": "Brak danych do odczytu",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_NO_DATA_TIMEOUT": {
+        "Localized": "Odczyt danych przekroczył limit czasu",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_SPEED_MENU": {
+        "Localized": "Prędkość I2C",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_SPEED_MENU_1": {
+        "Localized": "1kHz do 1000kHz",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_DATA_BITS_MENU": {
+        "Localized": "Bity danych",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_DATA_BITS_PROMPT": {
+        "Localized": "Bitów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_NO_PULLUP_DETECTED": {
+        "Localized": "Nie wykryto rezystorów pull-up. Użyj P aby je włączyć",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_TIMEOUT": {
+        "Localized": "Przekroczenie limitu czasu I2C",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_I2C_ERROR": {
+        "Localized": "Błąd magistrali I2C",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_DEVICE_MENU": {
+        "Localized": "Rodzaj LED",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_DEVICE_MENU_3": {
+        "Localized": "LEDy na płytce (18 SK6812s)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_DEVICE_PROMPT": {
+        "Localized": "Typ",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_NUM_LEDS_MENU": {
+        "Localized": "Ilość LEDów w pasku",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_NUM_LEDS_MENU_1": {
+        "Localized": "1 do 10000",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_NUM_LEDS_PROMPT": {
+        "Localized": "LEDy (%s%d*%s)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s",
+            "d",
+            "s"
+        ]
+    },
+    "T_HWLED_FRAME_START": {
+        "Localized": "RAMKA STARTu (0x00000000)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_FRAME_STOP": {
+        "Localized": "RAMKA STOPu (0xFFFFFFFF)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HW1WIRE_PRESENCE_DETECT": {
+        "Localized": "Wykryto urządzenie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HW1WIRE_NO_DEVICE": {
+        "Localized": "Nie wykryto urządzenia",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_INVALID_COMMAND": {
+        "Localized": "Niepoprawne polecenie: %s. Użyj ? aby użyskać pomoc.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s"
+        ]
+    },
+    "T_CMDLN_NO_HELP": {
+        "Localized": "Pomoc dla tego polecenia jest aktualnie niedostępna.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_LS": {
+        "Localized": "ls {katalog} - listuje pliki w aktualnej lokacji albo {katalogu}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_CD": {
+        "Localized": "cd {katalog} - przechodzi do {katalogu}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_MKDIR": {
+        "Localized": "mkdir {katalog} - tworzy {katalog}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_RM": {
+        "Localized": "rm {plik/katalog} - usuwa plik lub (zawartość) katalog/katalogu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_CAT": {
+        "Localized": "cat {plik} - wyświetla zawartość {pliku}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_MODE": {
+        "Localized": "m - zmienia tryb protokołu, pokazuje menu wyboru.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PSU_EN": {
+        "Localized": "W - włącza zasilanie na płytce, pokazuje menu konfiguracji.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_RESET": {
+        "Localized": "# - resetuje i restartuje Bus Pirate'a.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_BOOTLOAD": {
+        "Localized": "$ - resetuje i wchodzi w tryb bootloadera do aktualizacji.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_INT_FORMAT": {
+        "Localized": "= {wartość} - konwertuje {wartość} do BIN/DEC/HEX/ASCII.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_INT_INVERSE": {
+        "Localized": "| {wartość} - inwertuje bity {wartośći}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_HELP": {
+        "Localized": "? - pokazuje pomoc dla polecenia i składni.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_CONFIG_MENU": {
+        "Localized": "c - otwieramenu konfiguacji Bus Pirate'a.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_FREQ_ONE": {
+        "Localized": "f {IOx} - jednorazowo mierzy częstotliwość na pinie {IOx}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_FREQ_CONT": {
+        "Localized": "F {IOx} - mierzy częstotliwość na pinie {IOx} w sposób ciągły.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PWM_CONFIG": {
+        "Localized": "G - konfiguruje generator częstotliwości (PWM) na dostępnym pinie IOx.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PWM_DIS": {
+        "Localized": "g {IOx} - wyłącza generator częstotliwości (PWM) na pinie {IOx}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_HELP_MODE": {
+        "Localized": "h - pokazuje ekran pomocy specyficzny dla trybu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_INFO": {
+        "Localized": "i - pokazuje informację o Bus Pirate'cie i ekran statusu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_BITORDER_MSB": {
+        "Localized": "l - ustawia kolejność wyjścia na Najbardziej Znaczący Bit (MSB).",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_BITORDER_LSB": {
+        "Localized": "L - ustawia kolejność wyjścia na Najmniej Znaczący Bit (LSB).",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_DISPLAY_FORMAT": {
+        "Localized": "o - konfiguruje format wyświetlania numerów.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PULLUPS_EN": {
+        "Localized": "P - włącza rezystory pull-up na płytce.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PULLUPS_DIS": {
+        "Localized": "p - wyłącza rezystory pull-up na płytce.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PSU_DIS": {
+        "Localized": "w - wyłącza zasilanie na płytce.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_ADC_CONT": {
+        "Localized": "V {IOx} - mierzy napięcie na pinie {IOx} w sposób ciągły. Pomiń numer pinu aby mierzyć na wszystkich pinach.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_ADC_ONE": {
+        "Localized": "v {IOx} - jednorazowo mierzy napięciena pinie {IOx}. Pomiń numer pinu aby zmierzyć jednorazowo na wszystkich pinach.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_SELFTEST": {
+        "Localized": "~ - przeprowadza self-test fabryczny. Odłącz wszystkie urządzenia i zmień na tryb HiZ przed rozpoczęciem testu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_AUX_IN": {
+        "Localized": "@ {IOx} - ustawia pin {IOx} jako wejściowy, czyta stan pinu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_AUX_LOW": {
+        "Localized": "a {IOx} - ustawia pin {IOx} jako wyjściowy i stan niski.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_AUX_HIGH": {
+        "Localized": "A {IOx} - ustawia pin {IOx} jako wyjściowy i stan wysoki.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_DUMP": {
+        "Localized": "dump {plik} {urządzenie} - zrzuca zawarość pamięci flash {urządzenia} do {pliku}. Uwaga: aktualnie eksperymentalna funkcja, która działa tylko z 25LC020 w trybie SPI.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_LOAD": {
+        "Localized": "load {plik} {urządzenie} - wczytuje zawartość {pliku} do pamięci flash {urządzenia}. Uwaga: aktualnie eksperymentalna funkcja, która działa tylko z 25LC020 w trybie SPI.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_GREATER_THAN": {
+        "Localized": "Uruchom Składnię Magistrali (patrz Bus Syntax)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_SYNTAX_ADC": {
+        "Localized": "Mierzy volty na IO.x\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_LS": {
+        "Localized": "Listuj pliki",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_CD": {
+        "Localized": "Zmień katalog",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_MKDIR": {
+        "Localized": "Twórz katalog",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_RM": {
+        "Localized": "Usuń plik/katalog",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_CAT": {
+        "Localized": "Pokaż zawartość pliku",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_2": {
+        "Localized": "Konwertuje x/odwraca x\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_3": {
+        "Localized": "Wewnętrzny test (self-test)\\t\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_4": {
+        "Localized": "Resetuj Bus Pirate'a\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_5": {
+        "Localized": "Przejdź do bootloadera\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_6": {
+        "Localized": "Opóźnij 1 us/MS (d:4 aby powtórzyć)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_7": {
+        "Localized": "Ustaw stan pinu IO.x (low/HI/READ)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_COMMAND_AUX": {
+        "Localized": "Ustaw stan pinu IO x (low/HI/READ)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_9": {
+        "Localized": "Menu konfiguracyjne\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_22": {
+        "Localized": "Pokaż wolty na pinie IOx (jednorazowo/CIĄGLE)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_10": {
+        "Localized": "Pokaż wolty na wszystkich pinach IOs (jednorazowo/CIĄGLE)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_11": {
+        "Localized": "Zmierz częstotliwość na pinie IOx (jednorazowo/CIĄGLE)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_23": {
+        "Localized": "Monitoruj częstotliwość (wył./WŁ.)\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_12": {
+        "Localized": "Generuj częstotliwość (wył./WŁ.)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_14": {
+        "Localized": "Wersja/Status\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_15": {
+        "Localized": "Kolejność bitów (msb/LSB)\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_16": {
+        "Localized": "Zmień tryb\\t\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_17": {
+        "Localized": "Ustaw format wyświetlania numerów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_18": {
+        "Localized": "Rezystory Pull-up (wył./WŁ.)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_19": {
+        "Localized": "-\\t\\t\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_20": {
+        "Localized": "Pokaż wolty/stany\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_21": {
+        "Localized": "Zasilanie (wył./WŁ.)\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_1": {
+        "Localized": "Mode macro x/list all\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_3": {
+        "Localized": "Uruchom",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_4": {
+        "Localized": "Zatrzymaj",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_7": {
+        "Localized": "Wyślij stringa",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_8": {
+        "Localized": "",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_9": {
+        "Localized": "",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_10": {
+        "Localized": "Wyślij wartość",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_11": {
+        "Localized": "Przeczytaj",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_18": {
+        "Localized": "Bit przeczytany",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_19": {
+        "Localized": "Powtórz np. r:10",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_20": {
+        "Localized": "Ilość bitów do zapisu/odczytu np. 0x55.2",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_21": {
+        "Localized": "Makra użytkownika x/pokaż wszystkie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_22": {
+        "Localized": "Makra użytkownika przypisz x",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_HINT": {
+        "Localized": "Multiplikuj polecenia przy użyciu ; || &&.\\r\\n\\r\\nPatrz -h dla pomocy polecenia: ls -h",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_WITH": {
+        "Localized": "z",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_TF_CARD": {
+        "Localized": "Karta SD/TF",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_FILE_SYSTEM": {
+        "Localized": "System Plików",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_NOT_DETECTED": {
+        "Localized": "Nie Wykryto",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_AVAILABLE_MODES": {
+        "Localized": "Dostępne tryby",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_CURRENT_MODE": {
+        "Localized": "Aktywny tryb",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_POWER_SUPPLY": {
+        "Localized": "Zasilanie",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_CURRENT_LIMIT": {
+        "Localized": "Limit natężenia",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_PULLUP_RESISTORS": {
+        "Localized": "Rezystory pull-up",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_FREQUENCY_GENERATORS": {
+        "Localized": "Generatory częstotliwości",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_DISPLAY_FORMAT": {
+        "Localized": "Format wyświetlania",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_DATA_FORMAT": {
+        "Localized": "Format danych",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_BITS": {
+        "Localized": "bity/bitów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_BITORDER": {
+        "Localized": "kolejność bitów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_FILE": {
+        "Localized": "Plik konfiguracyjny",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_CONFIGURATION_OPTIONS": {
+        "Localized": "Opcje konfiguracyjne",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_ANSI_COLOR_MODE": {
+        "Localized": "Tryb kolorowy ANSI",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_ANSI_TOOLBAR_MODE": {
+        "Localized": "Tryb ANSI toolbar",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_DISABLE": {
+        "Localized": "Wyłącz",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_ENABLE": {
+        "Localized": "Włącz",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_SCREENSAVER": {
+        "Localized": "Wygaszacz ekranu LCD",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_SCREENSAVER_5": {
+        "Localized": "5 minut",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_SCREENSAVER_10": {
+        "Localized": "10 minut",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_SCREENSAVER_15": {
+        "Localized": "15 minut",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT": {
+        "Localized": "Efekt LED",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_SOLID": {
+        "Localized": "Stały",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_SCANNER": {
+        "Localized": "Skaner",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR": {
+        "Localized": "Kolor LED",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_RAINBOW": {
+        "Localized": "Tęcza",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_RED": {
+        "Localized": "Czerwony",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_ORANGE": {
+        "Localized": "Pomarańczowy",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_YELLOW": {
+        "Localized": "Żółty",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_GREEN": {
+        "Localized": "Zielony",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_BLUE": {
+        "Localized": "Niebieski",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_PURPLE": {
+        "Localized": "Fioletowy",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_PINK": {
+        "Localized": "Różowy",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_BRIGHTNESS": {
+        "Localized": "Jasność LEDów",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_BRIGHTNESS_100": {
+        "Localized": "100% ***UWAGA: uszkodzi port USB bez zewnętrznego zasilacza***",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    }
+}

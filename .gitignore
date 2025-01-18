@@ -3,3 +3,4 @@ build_*/**
 .vscode/**
 .env
 
+src/translation/history/new__en-us.json

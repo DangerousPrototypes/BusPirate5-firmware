@@ -1,0 +1,362 @@
+{
+    "T_ON": {
+        "Localized": "已开启",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_OFF": {
+        "Localized": "已关闭",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_NO_EFFECT": {
+        "Localized": "错误：该指令在当前模式无效",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_NO_EFFECT_HIZ": {
+        "Localized": "该指令在当前HiZ模式无效，请按m键选择模式",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_NO_HELP_AVAILABLE": {
+        "Localized": "没有可用的帮助",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PRESS_ANY_KEY_TO_EXIT": {
+        "Localized": "按任意键退出页面",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_MODE": {
+        "Localized": "模式",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_INVALID_OPTION": {
+        "Localized": "该选择无效！",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_CHOOSE_AVAILABLE_PIN": {
+        "Localized": "请选择可用的pin：",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ALL_PINS_IN_USE": {
+        "Localized": "所有pins都被选用了！",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_PULLUP_RESISTORS": {
+        "Localized": "上拉电阻",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_POWER_SUPPLY": {
+        "Localized": "电源",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_DISABLED": {
+        "Localized": "不可用",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ENABLED": {
+        "Localized": "可用",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_PWM_GENERATE_FREQUENCY": {
+        "Localized": "生成频率",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_MEASURE_FREQUENCY": {
+        "Localized": "频率测试",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_FREQUENCY": {
+        "Localized": "频率",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_DUTY_CYCLE": {
+        "Localized": "占空比/工作周期",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_SPEED_MENU": {
+        "Localized": "SPI通信速率",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_BITS_MENU": {
+        "Localized": "数据位",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_POLARITY_MENU": {
+        "Localized": "时钟极性",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_POLARITY_MENU_1": {
+        "Localized": "低怠速",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_POLARITY_MENU_2": {
+        "Localized": "高怠速",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_POLARITY_PROMPT": {
+        "Localized": "极性",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_PHASE_MENU": {
+        "Localized": "时钟相位",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_IDLE_PROMPT": {
+        "Localized": "片选/芯片选择",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_ACTUAL_SPEED_KHZ": {
+        "Localized": "实际速度",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_SELECT": {
+        "Localized": "芯片选择 Select",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_DESELECT": {
+        "Localized": "芯片选择 Deselect",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_SPEED_MENU": {
+        "Localized": "UART 速",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_MENU": {
+        "Localized": "使用屏蔽功能？Use blocking functions?",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_PROMPT": {
+        "Localized": "屏蔽Block",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_ACTUAL_SPEED_BAUD": {
+        "Localized": "实际速度",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BAUD": {
+        "Localized": "baud波特率",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_3": {
+        "Localized": "自检测试",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_4": {
+        "Localized": "重启Bus Pirate",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_5": {
+        "Localized": "切换到系统启动加载器",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_6": {
+        "Localized": "Delay 1 us/ms",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_12": {
+        "Localized": "生成频率（关/开）",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_14": {
+        "Localized": "版本详情/statusinfo",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_16": {
+        "Localized": "切换模式",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_18": {
+        "Localized": "上拉电阻（关/开）",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_21": {
+        "Localized": "电源（关/开）",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_FIRMWARE": {
+        "Localized": "固件",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_BOOTLOADER": {
+        "Localized": "系统启动加载器",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_RAM": {
+        "Localized": "RAM随机储存器",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_SN": {
+        "Localized": "S/N序列号",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_TF_CARD": {
+        "Localized": "TF卡",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_FILE_SYSTEM": {
+        "Localized": "文件系统",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_NOT_DETECTED": {
+        "Localized": "未侦察到",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_AVAILABLE_MODES": {
+        "Localized": "可选用的模式",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_CURRENT_MODE": {
+        "Localized": "主动模式",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_POWER_SUPPLY": {
+        "Localized": "电源",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_CURRENT_LIMIT": {
+        "Localized": "限制电流",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_PULLUP_RESISTORS": {
+        "Localized": "上拉电阻",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_FREQUENCY_GENERATORS": {
+        "Localized": "频率生成器",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_DISPLAY_FORMAT": {
+        "Localized": "显示格式",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_DATA_FORMAT": {
+        "Localized": "数据格式",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_BITS": {
+        "Localized": "比特位",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_BITORDER": {
+        "Localized": "比特位次序",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    }
+}

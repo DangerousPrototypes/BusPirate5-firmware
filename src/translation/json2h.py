@@ -349,8 +349,6 @@ if sys.version_info[0] < 3 or sys.version_info[0] == 3 and sys.version_info[1] <
 # still place the files in the correct location.
 class MyDirs:
     Scripts          = os.path.dirname(os.path.abspath(__file__))
-    Old              = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'old')
-    New              = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     History          = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'history')
     Templates        = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     GeneratedHeaders = os.path.dirname(os.path.abspath(__file__))
@@ -358,9 +356,6 @@ print(f"{'Script':>13}: {MyDirs.Scripts}")
 print(f"{'History':>13}: {MyDirs.History}")
 print(f"{'Templates':>13}: {MyDirs.Templates}")
 print(f"{'Generated':>13}: {MyDirs.GeneratedHeaders}")
-
-
-
 
 def get_dictionary_of_key_value_pairs_from_header(file_path):
     key_value_pairs = {}
@@ -420,6 +415,7 @@ class DebugJsonConversion(Flag):
     ALL = NULL_ENTRY | UNTRANSLATED | IDENTICAL | FORMAT_STRINGS | OUTDATED
     DEFAULT = IDENTICAL | FORMAT_STRINGS | OUTDATED
 
+# BUGBUG -- This function is ***WAY*** too large, and should be broken into smaller parts.
 def convert_remaining_translations_to_h_files(json_directory_path, header_directory_path, base_translation, debug=DebugJsonConversion.DEFAULT):
     if not isinstance(base_translation, dict):
         raise TypeError("base_translation must be a dictionary")
@@ -589,6 +585,31 @@ def convert_remaining_translations_to_h_files(json_directory_path, header_direct
     return
 
 class format_specifiers_iterable:
+    """
+    An iterable class to parse and iterate over format specifiers in a given C-style format string,
+    returning strings with the data type portion of each format specifier.
+    In particular, the leading '%', and any flag/width/precision are dropped, leaving only the
+    data type and data length modifier (if any).  This allows for easily determining if two
+    format strings can be used interchangeably, without modifying the arguments passed to printf().
+
+    Methods:
+        __init__(format_string):
+            Initializes the iterable with the given format string.
+        __iter__():
+            Initializes the iterator and returns the iterable object.
+        __next__():
+            Returns the next format specifier in the format string, handling additional integer arguments for width/precision.
+    Usage:
+        fs = format_specifiers_iterable("This is a % s format string with %+9.3f format specifiers %d")
+        for fspec in fs:
+            print(fspec)
+
+        outputs the following:
+            s
+            f
+            d
+
+    """
     def __init__(self, format_string):
         self._format_string = format_string
         self._additional_ints = 0
@@ -671,16 +692,6 @@ def do_format_specifiers_use_same_datatype(specifier1, specifier2):
     dt2 = C_FORMAT_SPECIFIERS_TO_DATA_TYPE[specifier2]
     return dt1 == dt2
 
-def is_new_format_specifier_compatible_with_prior_format_specifier(old, new):
-    if do_format_specifiers_use_same_datatype(old, new):
-        return True
-    # TODO: check if the data type of one specifier is compatible with the other.
-        # Allow new specifier to be a larger integral type than the old specifier
-        # e.g., char -> int -> long -> longlong
-        # e.g., uchar -> uint -> ulong -> ulonglong
-        # e.g., double -> ldouble
-    return False
-
 def format_specifier_self_test():
     # These are all the format specifier + length modifier combinations.
     # Can be combined with flags, width, and/or precision options.
@@ -753,8 +764,7 @@ def read_json_file(file_path):
 #if len(sys.argv) < 2:
 #    print("Usage: python script.py <us-en.h>")
 #    sys.exit(1)
-
-format_specifier_self_test()
+#format_specifier_self_test()
 #sys.exit(0)
 
 

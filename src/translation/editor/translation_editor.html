@@ -49,16 +49,7 @@
 
     <h2>Languages</h2>
     <div id="tabs">
-        <ul>
-            <li><a href="#tabs-pl-pl">PL-PL</a></li>
-            <li><a href="#tabs-bs-ba">BS-BA</a></li>
-            <li><a href="#tabs-it-it">IT-IT</a></li>
-            <li><a href="#tabs-zh-cn">ZH-CN</a></li>
-        </ul>
-        <div id="tabs-pl-pl">PL-PL Lorem ipsum PL-PL</div>
-        <div id="tabs-bs-ba">BS-BA Lorem ipsum BS-BA</div>
-        <div id="tabs-it-it">IT-IT Lorem ipsum IT-IT</div>
-        <div id="tabs-zh-cn">ZH-CN Lorem ipsum ZH-CN</div>
+        <ul id="tab_labels"></ul>
    </div>
 
     <script>
@@ -118,6 +109,14 @@
             $.each(known_translations, function(index, value) {
                 $translations.append($('<option>').text(value));
             });
+
+            $.each(known_translations, function(index, value) {
+                $('#tab_labels').append($('<li>').append($('<a>').attr('href', `#tabs-${value}`).text(value.toUpperCase())));
+                $('#tabs').append($('<div>').attr('id', `tabs-${value}`).text(`${value} Lorem ipsum ${value}`));
+            });
+
+            // Next: load the translated data into each tab...
+
             $( "#tabs" ).tabs();
 
         });

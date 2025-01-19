@@ -6,6 +6,7 @@
     <title>Translation Editor</title>
     <script src="./jquery-3.7.1.js"></script>
     <link href="./jquery-ui-1.14.1.dark/jquery-ui.css" rel="stylesheet">
+    <script src="./jquery-ui-1.14.1.dark/jquery-ui.js"> </script>
     <style>
         table {
             width: 100%;
@@ -17,6 +18,10 @@
         }
         th {
             background-color: #f2f2f2;
+        }
+        body {
+            background-color: #333;
+            color: #fff;
         }
     </style>
 </head>
@@ -39,9 +44,22 @@
         <tbody>
         </tbody>
     </table>
-    <div id="debugOutput">
-        <label for="Debug Output">Debug Output:</label>
-    </div>
+    <!-- Tabs -->
+    <h2 class="demoHeaders">Tabs</h2>
+
+    <h2>Languages</h2>
+    <div id="tabs">
+        <ul>
+            <li><a href="#tabs-pl-pl">PL-PL</a></li>
+            <li><a href="#tabs-bs-ba">BS-BA</a></li>
+            <li><a href="#tabs-it-it">IT-IT</a></li>
+            <li><a href="#tabs-zh-cn">ZH-CN</a></li>
+        </ul>
+        <div id="tabs-pl-pl">PL-PL Lorem ipsum PL-PL</div>
+        <div id="tabs-bs-ba">BS-BA Lorem ipsum BS-BA</div>
+        <div id="tabs-it-it">IT-IT Lorem ipsum IT-IT</div>
+        <div id="tabs-zh-cn">ZH-CN Lorem ipsum ZH-CN</div>
+   </div>
 
     <script>
         const known_translations = ['pl-pl', 'bs-ba', 'it-it', 'zh-cn'];
@@ -93,11 +111,15 @@
             });
         }
 
+        $(function() {
+        });
         $(document).ready(function() {
             var $translations = $('#language_selection');
             $.each(known_translations, function(index, value) {
                 $translations.append($('<option>').text(value));
             });
+            $( "#tabs" ).tabs();
+
         });
     </script>
 </body>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Editor</title>
+    <script src="./jquery-3.7.1.js"></script>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Translation Editor</h1>
+    <table id="translationTable">
+        <thead>
+            <tr>
+                <th>Key</th>
+                <th>Localized</th>
+                <th>EN_US</th>
+                <th>Comments</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        $(document).ready(function() {
+            $.when(
+                $.getJSON('../history/en-us.json'),
+                $.getJSON('../templates/pl-pl.json')
+            ).done(function(enUsData, plPlData) {
+                var enUs = enUsData[0];
+                var plPl = plPlData[0];
+
+                var $tbody = $('#translationTable tbody');
+                $.each(plPl, function(key, value) {
+                    var localized = value.Localized || '';
+                    // var enUsValue = enUs[key] ? enUs[key].EN_US : '';
+                    var enUsValue = value.EN_US || '';
+                    var comments = value.Comments || '';
+
+                    var $row = $('<tr>');
+                    $row.append($('<td>').text(key));
+                    $row.append($('<td>').text(localized));
+                    $row.append($('<td>').text(enUsValue));
+                    $row.append($('<td>').text(comments));
+                    $tbody.append($row);
+                });
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                alert('Failed to load data: ' + textStatus + ' - ' + errorThrown);
+            });
+        });
+    </script>
+</body>
+</html>

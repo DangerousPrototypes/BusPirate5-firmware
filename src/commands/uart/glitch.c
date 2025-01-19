@@ -490,9 +490,9 @@ void uart_glitch_handler(struct command_result* res) {
         // third item is the delay before firing the pulse
         // NOTE - multiplication by 19 is for scaling; future version may allow
         // fractional microsecond timing
-        pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, uart_glitch_config.glitch_time * 19);
+        pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, uart_glitch_config.glitch_time);
         pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, edges);
-        pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, this_glitch_delay * 19);
+        pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, this_glitch_delay);
 
         // serial out the trigger character.  The stop bit transition is the
         // trigger used by PIO to start timing

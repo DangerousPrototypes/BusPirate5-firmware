@@ -21,6 +21,7 @@
 </head>
 <body>
     <h1>Translation Editor</h1>
+    <button id="loadDataButton">Load Data</button>
     <table id="translationTable">
         <thead>
             <tr>
@@ -39,7 +40,7 @@
     </div>
 
     <script>
-        $(document).ready(function() {
+        function loadData() {
             $.when(
                 $.getJSON('../history/en-us.json'),
                 $.getJSON('../templates/pl-pl.json')
@@ -48,9 +49,9 @@
                 var plPl = plPlData[0];
 
                 var $tbody = $('#translationTable tbody');
+                $tbody.empty(); // Clear existing rows
                 $.each(plPl, function(key, value) {
                     var localized = value.Localized || '';
-                    // var enUsValue = enUs[key] ? enUs[key].EN_US : '';
                     var enUsValue = value.EN_US || '';
                     var currentEnUsValue = enUs[key] ? enUs[key].Localized : '';
                     var comments = value.Comments || '';
@@ -67,6 +68,9 @@
             }).fail(function(jqXHR, textStatus, errorThrown) {
                 alert('Failed to load data: ' + textStatus + ' - ' + errorThrown);
             });
+        }
+        $('#loadDataButton').on('click', loadData);
+        $(document).ready(function() {
         });
     </script>
 </body>

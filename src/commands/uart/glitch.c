@@ -67,8 +67,8 @@
 // maximum number of characters to receive in glitch loop
 #define RX_CHAR_LIMIT 20
 
-static const char* const usage[] = { "glitch\t[-h(elp)]",
-                                     "UART glitch generator",
+static const char* const usage[] = { "glitch\t[-h(elp)] [-c(onfig)]",
+                                     "UART glitch generator.  Note that times are in terms of nanoseconds * 10; therefore, a setting of 3 = 30ns",
                                      "Exit: press Bus Pirate button" };
 // config struct
 typedef struct _uart_glitch_config {
@@ -88,6 +88,7 @@ static struct _uart_glitch_config uart_glitch_config;
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_UART_GLITCH }, // command help
     { 0, "-h", T_HELP_FLAG }, // help
+    { 0, "-c", T_HELP_LOGIC_INFO } // show config
 };
 
 // LCD display pin text
@@ -145,7 +146,7 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_GLIT
                                                       .menu_items_count = count_of(uart_glitch_dly_menu),
                                                       .prompt_text = T_UART_GLITCH_DLY_PROMPT,
                                                       .minval = 1,
-                                                      .maxval = 5000,
+                                                      .maxval = 5000000,
                                                       .defval = 1,
                                                       .menu_action = 0,
                                                       .config = &prompt_int_cfg },
@@ -162,8 +163,8 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_GLIT
                                                       .menu_items = uart_glitch_lng_menu,
                                                       .menu_items_count = count_of(uart_glitch_lng_menu),
                                                       .prompt_text = T_UART_GLITCH_LNG_PROMPT,
-                                                      .minval = 1,
-                                                      .maxval = 5000,
+                                                      .minval = 0,
+                                                      .maxval = 5000000,
                                                       .defval = 1,
                                                       .menu_action = 0,
                                                       .config = &prompt_int_cfg },
@@ -207,9 +208,9 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_GLIT
 
 void glitch_settings(void) {
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_TRG_MENU), uart_glitch_config.glitch_trg, "(ASCII)");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_DLY_MENU), uart_glitch_config.glitch_delay, "us");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_VRY_MENU), uart_glitch_config.glitch_wander, "us");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_LNG_MENU), uart_glitch_config.glitch_time, "us");
+    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_DLY_MENU), uart_glitch_config.glitch_delay, "us*10");
+    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_VRY_MENU), uart_glitch_config.glitch_wander, "us*10");
+    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_LNG_MENU), uart_glitch_config.glitch_time, "us*10");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_CYC_MENU), uart_glitch_config.glitch_recycle, "ms");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_FAIL_MENU), uart_glitch_config.fail_resp, "(ASCII)");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_CNT_MENU), uart_glitch_config.retry_count, 0x00);
@@ -400,6 +401,11 @@ void uart_glitch_handler(struct command_result* res) {
         return;
     }
 
+    if (cmdln_args_find_flag('c')) {
+        glitch_settings();
+        return;
+    }
+
     // Go get/set up config for glitching
     if (!uart_glitch_setup()) {
         printf("%s%s%s\r\n", ui_term_color_error(), GET_T(T_UART_GLITCH_SETUP_ERR), ui_term_color_reset());
@@ -538,7 +544,7 @@ void uart_glitch_handler(struct command_result* res) {
             busy_wait_us_32(500);
         }
 
-        printf("Attempt %3d at %2dus RX: %s\r\n", tries + 1, this_glitch_delay, resp_string);
+        printf("Attempt %3d, delay %dus RX: %s\r\n", tries + 1, this_glitch_delay * 10, resp_string);
 
         // parse through the response.  if our "normal bad password response" 
         // character is present, then we didn't glitch :/

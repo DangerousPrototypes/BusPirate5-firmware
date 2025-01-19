@@ -24,6 +24,7 @@
     <table id="translationTable">
         <thead>
             <tr>
+                <th>Old</th>
                 <th>Key</th>
                 <th>Localized</th>
                 <th>EN_US</th>
@@ -51,6 +52,7 @@
                     var comments = value.Comments || '';
 
                     var $row = $('<tr>');
+                    $row.append($('<td>').text(''));
                     $row.append($('<td>').text(key));
                     $row.append($('<td>').text(localized));
                     $row.append($('<td>').text(enUsValue));

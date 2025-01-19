@@ -76,9 +76,9 @@ static const char* const usage[] = { "glitch\t[-h(elp)] [-c(onfig)]",
 // config struct
 typedef struct _uart_glitch_config {
     uint32_t glitch_trg;        // character sent from BP UART to trigger the glitch
-    uint32_t glitch_delay;      // how long (us) after trigger stop bit to fire trigger
-    uint32_t glitch_wander;     // amount of time (us) to vary glitch timing
-    uint32_t glitch_time;       // amount of time (us) to have output on
+    uint32_t glitch_delay;      // how long (ns*10) after trigger stop bit to fire trigger
+    uint32_t glitch_wander;     // amount of time (ns*10) to vary glitch timing
+    uint32_t glitch_time;       // amount of time (ns*10) to have output on
     uint32_t glitch_recycle;    // minimum time (ms) between one glitch cycle and the next
     uint32_t fail_resp;         // first character response from device on bad password
     uint32_t retry_count;       // number of times to try glitching before quitting
@@ -211,9 +211,9 @@ static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_GLIT
 
 void glitch_settings(void) {
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_TRG_MENU), uart_glitch_config.glitch_trg, "(ASCII)");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_DLY_MENU), uart_glitch_config.glitch_delay, "us*10");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_VRY_MENU), uart_glitch_config.glitch_wander, "us*10");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_LNG_MENU), uart_glitch_config.glitch_time, "us*10");
+    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_DLY_MENU), uart_glitch_config.glitch_delay, "ns*10");
+    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_VRY_MENU), uart_glitch_config.glitch_wander, "ns*10");
+    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_LNG_MENU), uart_glitch_config.glitch_time, "ns*10");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_CYC_MENU), uart_glitch_config.glitch_recycle, "ms");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_FAIL_MENU), uart_glitch_config.fail_resp, "(ASCII)");
     ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_CNT_MENU), uart_glitch_config.retry_count, 0x00);
@@ -498,7 +498,7 @@ void uart_glitch_handler(struct command_result* res) {
         // second item is the number of edges for the trigger character
         // third item is the delay before firing the pulse
         // Note that timing is in terms of ns * 10 for items 1 and 3; so if value is
-        // 7, then 70us.
+        // 7, then 70ns.
         pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, uart_glitch_config.glitch_time);
         pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, edges);
         pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, this_glitch_delay);
@@ -547,7 +547,7 @@ void uart_glitch_handler(struct command_result* res) {
             busy_wait_us_32(500);
         }
 
-        printf("Attempt %3d, delay %dus RX: %s\r\n", tries + 1, this_glitch_delay * 10, resp_string);
+        printf("Attempt %3d, delay %dns RX: %s\r\n", tries + 1, this_glitch_delay * 10, resp_string);
 
         // parse through the response.  if our "normal bad password response" 
         // character is present, then we didn't glitch :/

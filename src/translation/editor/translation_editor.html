@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Translation Editor</title>
     <script src="./jquery-3.7.1.js"></script>
+    <link href="./jquery-ui-1.14.1.dark/jquery-ui.css" rel="stylesheet">
     <style>
         table {
             width: 100%;
@@ -21,6 +22,9 @@
 </head>
 <body>
     <h1>Translation Editor</h1>
+    <h2>Select Language</h2>
+    <select id="language_selection">
+    </select>
     <button id="loadDataButton">Load Data</button>
     <table id="translationTable">
         <thead>
@@ -40,10 +44,29 @@
     </div>
 
     <script>
-        function loadData() {
+        const known_translations = ['pl-pl', 'bs-ba', 'it-it', 'zh-cn'];
+        
+        function select_translation() {
+            var filename = document.getElementById("language_selection").value;
+            if (known_translations.includes(filename)) {
+                return filename + '.json';
+            } else {
+                alert('Invalid file name. Please enter one of the following: \n    ' + known_translations.join('\n    '));
+                return null;
+            }
+        }
+
+        $('#loadDataButton').on('click', function() {
+            filename = select_translation();
+            if (filename) {
+                loadData(filename);
+            }
+        });
+
+        function loadData(filename) {
             $.when(
                 $.getJSON('../history/en-us.json'),
-                $.getJSON('../templates/pl-pl.json')
+                $.getJSON(`../templates/${filename}`)
             ).done(function(enUsData, plPlData) {
                 var enUs = enUsData[0];
                 var plPl = plPlData[0];
@@ -69,8 +92,12 @@
                 alert('Failed to load data: ' + textStatus + ' - ' + errorThrown);
             });
         }
-        $('#loadDataButton').on('click', loadData);
+
         $(document).ready(function() {
+            var $translations = $('#language_selection');
+            $.each(known_translations, function(index, value) {
+                $translations.append($('<option>').text(value));
+            });
         });
     </script>
 </body>

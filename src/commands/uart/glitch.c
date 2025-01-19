@@ -32,7 +32,10 @@
  *
  * This module is used to time either of those two attacks.
  *
- * A PIO program handles the actual timing and output control
+ * A PIO SM handles the actual timing and output control.
+ * The SM is set to run at 100MHz, so each instruction is 10
+ * nanoseconds.  There is a bit of error in the actual timing
+ * in terms of an extra cycle or so.
  ************************************************************/
 
 #include <stdio.h>
@@ -494,8 +497,8 @@ void uart_glitch_handler(struct command_result* res) {
         // first item is the "on" time for the glitch pulse
         // second item is the number of edges for the trigger character
         // third item is the delay before firing the pulse
-        // NOTE - multiplication by 19 is for scaling; future version may allow
-        // fractional microsecond timing
+        // Note that timing is in terms of ns * 10 for items 1 and 3; so if value is
+        // 7, then 70us.
         pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, uart_glitch_config.glitch_time);
         pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, edges);
         pio_sm_put_blocking(glitch_pio.pio, glitch_pio.sm, this_glitch_delay);

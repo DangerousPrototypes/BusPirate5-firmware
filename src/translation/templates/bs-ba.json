@@ -1,0 +1,1170 @@
+{
+    "T_EXIT": {
+        "Localized": "Izlaz",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_LOADED": {
+        "Localized": "Učitano",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_SAVED": {
+        "Localized": "Spremljeno",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_USE_PREVIOUS_SETTINGS": {
+        "Localized": "Koristi prethodne postavke?",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_NO_EFFECT": {
+        "Localized": "GREŠKA: naredba nema efekta ovdje",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_NO_EFFECT_HIZ": {
+        "Localized": "Naredba nema efekta u HiZ modu, pritisnite 'm' za izabir moda",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_NO_HELP_AVAILABLE": {
+        "Localized": "Pomoć nije dostupna",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PRESS_ANY_KEY_TO_EXIT": {
+        "Localized": "Pritisnite bilo koju tipku za izlaz",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_MODE_SELECTION": {
+        "Localized": "Izbor moda",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_MODE": {
+        "Localized": "Mod",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_NUMBER_DISPLAY_FORMAT": {
+        "Localized": "Format prikaza brojeva",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_INVALID_OPTION": {
+        "Localized": "Nevažeći izbor",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_CHOOSE_AVAILABLE_PIN": {
+        "Localized": "Izaberite slobodan pin:",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ALL_PINS_IN_USE": {
+        "Localized": "Svi pinovi u upotrebi",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_PULLUP_RESISTORS": {
+        "Localized": "Pull-up otpornik",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_POWER_SUPPLY": {
+        "Localized": "Napajanje",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_DISABLED": {
+        "Localized": "Onemogućeno",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ENABLED": {
+        "Localized": "Omogućeno",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ADC_VOLTAGE": {
+        "Localized": "Volta na",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_PARSING_MACRO": {
+        "Localized": "Greška u parsiranju makroa",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_NO_MACROS_AVAILABLE": {
+        "Localized": "Nema dostupnih makroa",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_ERROR_MACRO_NOT_DEFINED": {
+        "Localized": "Makro nije definisan",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_PWM_GENERATE_FREQUENCY": {
+        "Localized": "Generiši frekvenciju",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_MEASURE_FREQUENCY": {
+        "Localized": "Mjerenje frekvencije",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_FREQUENCY": {
+        "Localized": "Frekvencija",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_MODE_FREQ_DUTY_CYCLE": {
+        "Localized": "Radni ciklus",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PSU_DAC_ERROR": {
+        "Localized": "PSU DAC greška, molimo pokrenite self-test",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PSU_CURRENT_LIMIT_ERROR": {
+        "Localized": "Struja iznad granice, napajanje onemogućeno",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PSU_SHORT_ERROR": {
+        "Localized": "Moguć kratki spoj, napajanje onemogućeno",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_PSU_ALREADY_DISABLED_ERROR": {
+        "Localized": "Napajanje već onemogućeno",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_SYNTAX_EXCEEDS_MAX_SLOTS": {
+        "Localized": "Rezultati prekoračuju dostupni prostor (%d slotova)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "d"
+        ]
+    },
+    "T_HWSPI_SPEED_MENU": {
+        "Localized": "SPI brzina",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_SPEED_MENU_1": {
+        "Localized": "1 do 62500kHz",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_BITS_MENU": {
+        "Localized": "Data bita",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_BITS_MENU_1": {
+        "Localized": "4 do 8 bita",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_BITS_PROMPT": {
+        "Localized": "Bita (%s%d*%s)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s",
+            "d",
+            "s"
+        ]
+    },
+    "T_HWSPI_CLOCK_POLARITY_MENU": {
+        "Localized": "Clock polaritet",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_POLARITY_MENU_1": {
+        "Localized": "Prazan LOW",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_POLARITY_MENU_2": {
+        "Localized": "Prazan HIGH",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_POLARITY_PROMPT": {
+        "Localized": "Polaritet",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_PHASE_MENU": {
+        "Localized": "Clock faza",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CLOCK_PHASE_PROMPT": {
+        "Localized": "Faza",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_IDLE_MENU": {
+        "Localized": "Čip select",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_IDLE_MENU_1": {
+        "Localized": "Aktivan HIGH (CS)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_IDLE_MENU_2": {
+        "Localized": "Aktivan LOW (/CS)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_ACTUAL_SPEED_KHZ": {
+        "Localized": "Stvarna brzina",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_SELECT": {
+        "Localized": "CS Omogućen",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWSPI_CS_DESELECT": {
+        "Localized": "CS Onemogućen",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_SPEED_MENU": {
+        "Localized": "UART brzina",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_PARITY_MENU": {
+        "Localized": "Paritet",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_PARITY_MENU_2": {
+        "Localized": "Paran",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_PARITY_MENU_3": {
+        "Localized": "Neparan",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_PARITY_PROMPT": {
+        "Localized": "Paritet",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_DATA_BITS_MENU": {
+        "Localized": "Data bita",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_DATA_BITS_MENU_1": {
+        "Localized": "5 do 8 bita",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_DATA_BITS_PROMPT": {
+        "Localized": "Bita (%s%d*%s)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s",
+            "d",
+            "s"
+        ]
+    },
+    "T_UART_STOP_BITS_MENU": {
+        "Localized": "Stop bita",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_STOP_BITS_PROMPT": {
+        "Localized": "Bita",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_MENU": {
+        "Localized": "Koristite blokirajuće funkcije?",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_MENU_1": {
+        "Localized": "Ne",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_MENU_2": {
+        "Localized": "Da",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_BLOCKING_PROMPT": {
+        "Localized": "Blokiraj",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_ACTUAL_SPEED_BAUD": {
+        "Localized": "Stvarna brzina",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_NO_DATA_READ": {
+        "Localized": "Nema podataka za čiranje",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_UART_NO_DATA_TIMEOUT": {
+        "Localized": "Timeout čitanja podataka",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_SPEED_MENU": {
+        "Localized": "I2C brzina",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_SPEED_MENU_1": {
+        "Localized": "1kHz do 1000kHz",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_DATA_BITS_MENU": {
+        "Localized": "Data bita",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_DATA_BITS_PROMPT": {
+        "Localized": "Bita",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_NO_PULLUP_DETECTED": {
+        "Localized": "pull-up nije detektovan. Koristite P da omogućite pull-up otpornike na ploči",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWI2C_I2C_ERROR": {
+        "Localized": "I2C bus greška",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_DEVICE_MENU": {
+        "Localized": "LED tip",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_DEVICE_MENU_2": {
+        "Localized": "APA102/SK9822 (clock i data interface)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_DEVICE_MENU_3": {
+        "Localized": "LEDovi na ploči (18 SK6812s)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_NUM_LEDS_MENU": {
+        "Localized": "Broj LEDova u traci",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_NUM_LEDS_MENU_1": {
+        "Localized": "1 do 10000",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HWLED_NUM_LEDS_PROMPT": {
+        "Localized": "LEDovi (%s%d*%s)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s",
+            "d",
+            "s"
+        ]
+    },
+    "T_HW1WIRE_PRESENCE_DETECT": {
+        "Localized": "Uređaj detektovan",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HW1WIRE_NO_DEVICE": {
+        "Localized": "Nema detektovanog uređaja",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_INVALID_COMMAND": {
+        "Localized": "Nevažeća naredba: %s. Unesite ? za pomoć.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": [
+            "s"
+        ]
+    },
+    "T_CMDLN_NO_HELP": {
+        "Localized": "Pomoć trenutno nije dostupna za ovu naredbu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_LS": {
+        "Localized": "ls {direktorij} - listing datoteka u trenutnoj lokaciji ili {direktorij} lokaciji.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_CD": {
+        "Localized": "cd {direktorij} - premjestite se u {direktorij} lokaciju.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_MKDIR": {
+        "Localized": "mkdir {direktorij} - kreirajte {direktorij}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_RM": {
+        "Localized": "rm {datoteka/direktorij} - uklonite datoteku ili (prazan) direktorij.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_CAT": {
+        "Localized": "cat {datoteka} - prikažite sadržaj {datoteka}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_MODE": {
+        "Localized": "m - promjenite protokol mod, prikažite izbornik.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PSU_EN": {
+        "Localized": "W - omogućite napojnu jedinicu na ploči, prikažite konfiguracijski izbornik.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_RESET": {
+        "Localized": "# - poništite postavke i ponovno pokrenite Bus Pirate.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_BOOTLOAD": {
+        "Localized": "$ - poništite postavke i otvorite bootloader mod za ažuriranje.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_INT_FORMAT": {
+        "Localized": "= {vrijednost} - konvertujte {vrijednost} u BIN/DEC/HEX/ASCII.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_INT_INVERSE": {
+        "Localized": "| {vrijednost} - invertirajte bite u {vrijednost}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_HELP": {
+        "Localized": "? - prikažite pomoć za naredbe i sintaksu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_CONFIG_MENU": {
+        "Localized": "c - otvorite Bus Pirate konfiguracijski izbornik.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_FREQ_ONE": {
+        "Localized": "f {IOx} - izmjerite frekvenciju na {IOx} jedanput.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_FREQ_CONT": {
+        "Localized": "F {IOx} - izmjerite frekvenciju na {IOx} kontinualno.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PWM_CONFIG": {
+        "Localized": "G - konfigurišite frekvencijski generator (PWM) na slobodnom IOx pinu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PWM_DIS": {
+        "Localized": "g {IOx} - onemogućite frekvencijski generator (PWM) na pinu {IOx}.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_HELP_MODE": {
+        "Localized": "h - prikažite ekran pomoći za izabrani mod.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_INFO": {
+        "Localized": "i - prikažite Bus Pirate informacijski i status ekran.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_BITORDER_MSB": {
+        "Localized": "l - zadajte Most Significant Bit red ispisa.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_BITORDER_LSB": {
+        "Localized": "L - zadajte Least Significant Bit red ispisa.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_DISPLAY_FORMAT": {
+        "Localized": "o - podesite format ispisa brojeva.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PULLUPS_EN": {
+        "Localized": "P - omogućite pull-up otpornike na ploči.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PULLUPS_DIS": {
+        "Localized": "p - onemogućite pull-up otpornike na ploči.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_PSU_DIS": {
+        "Localized": "w - onemogućite napojnu jedinicu na ploči.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_ADC_CONT": {
+        "Localized": "V {IOx} - kontinualno mjerenje napona na pinu {IOx}. Unesite bez broja pina za mjerenje napona na svim pinovima.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_ADC_ONE": {
+        "Localized": "v {IOx} - jednokratno mjerenje napona na pinu {IOx}. Unesite bez broja pina za jednokratno mjerenje napona na svim pinovima.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_SELFTEST": {
+        "Localized": "~ - izvršite fabrički self-test. Odspojite sve priključene uređaje i pređite u HiZ mod prije pokretanja testa.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_AUX_IN": {
+        "Localized": "@ {IOx} - postavite pin {IOx} kao ulaz, pročitajte stanje.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_AUX_LOW": {
+        "Localized": "a {IOx} - postavite pin {IOx} kao izlaz i LOW.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_AUX_HIGH": {
+        "Localized": "A {IOx} - postavite pin {IOx} kao izlaz i HIGH.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_DUMP": {
+        "Localized": "dump {datoteka} {uređaj} - zapišite sadržaj flash {uređaj} u {datoteka}. Upozorenje: trenutno radi kao prototip samo sa 25LC020 u SPI modu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CMDLN_LOAD": {
+        "Localized": "load {datoteka} {uređaj} - učitajte saržaj {datoteka} na flash {uređaj}. Upozorenje: trenutno radi kao prototip sa 25LC020 u SPI modu.",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_GREATER_THAN": {
+        "Localized": "Pokrenite Bus sintaksa (vidjeti: Bus sintaksa)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_SYNTAX_ADC": {
+        "Localized": "Mjeri napon na IO.x\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_LS": {
+        "Localized": "Izlistaj datoteke",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_CD": {
+        "Localized": "Promjeni direktorij",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_MKDIR": {
+        "Localized": "Napravi direktorij",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_RM": {
+        "Localized": "Ukloni datoteku/Direktorij",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_CMD_CAT": {
+        "Localized": "Ispiši sadržaj datoteke",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_2": {
+        "Localized": "Konvertuj x/obrni x\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_3": {
+        "Localized": "Selftest\\t\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_4": {
+        "Localized": "Poništi postavke na Bus Pirate\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_5": {
+        "Localized": "Prebaci na bootloader\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_6": {
+        "Localized": "Odloži 1 us/MS (d:4 za ponavljanje)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_7": {
+        "Localized": "Postavi IO.x stanje (low/HI/READ)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_COMMAND_AUX": {
+        "Localized": "Postavi IO x stanje (low/HI/READ)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_9": {
+        "Localized": "Konfiguracijski izbornik\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_22": {
+        "Localized": "Prikaži napon na IOx (jednom/CONT)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_10": {
+        "Localized": "Prikaži napon na svim IO (jednom/CONT)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_11": {
+        "Localized": "Izmjeri frekvenciju na IOx (jednom/CONT)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_23": {
+        "Localized": "Prati frekvenciju (off/ON)\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_12": {
+        "Localized": "Generiši frekvenciju (off/ON)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_14": {
+        "Localized": "Versioninfo/statusinfo\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_15": {
+        "Localized": "Bitorder (msb/LSB)\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_16": {
+        "Localized": "Promjeni mod\\t\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_17": {
+        "Localized": "Zadaj format prikaza brojeva",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_18": {
+        "Localized": "Pull-up otpornik (off/ON)",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_19": {
+        "Localized": "-\\t\\t\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_20": {
+        "Localized": "Prikaži napon/stanja\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_1_21": {
+        "Localized": "Napajanje (off/ON)\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_1": {
+        "Localized": "Makro mod x/prikaži sve\\t",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_3": {
+        "Localized": "Start",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_4": {
+        "Localized": "Stop",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_7": {
+        "Localized": "Pošalji string",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_8": {
+        "Localized": "",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_9": {
+        "Localized": "",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_10": {
+        "Localized": "Pošalji vrijednost",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_11": {
+        "Localized": "Čitaj",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_18": {
+        "Localized": "Čitaj bit",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_19": {
+        "Localized": "Ponovi npr. r:10",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_20": {
+        "Localized": "Pročitaj/zapiši bita npr. 0x55.2",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_21": {
+        "Localized": "Korisnički makro x/izlistaj sve",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_2_22": {
+        "Localized": "Korisnički makro dodijeli x",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_HELP_HINT": {
+        "Localized": "Uvežite više naredbi sa ; || &&.\\r\\n\\r\\nProbajte -h pomoć: ls -h",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_WITH": {
+        "Localized": "sa",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_AVAILABLE_MODES": {
+        "Localized": "Dostupni modovi",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_CURRENT_MODE": {
+        "Localized": "Aktivni mod",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_POWER_SUPPLY": {
+        "Localized": "Napajanje",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_CURRENT_LIMIT": {
+        "Localized": "Granica struje",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_PULLUP_RESISTORS": {
+        "Localized": "Pull-up otpornik",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_FREQUENCY_GENERATORS": {
+        "Localized": "Generatori frekvencija",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_DISPLAY_FORMAT": {
+        "Localized": "Format prikaza",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_DATA_FORMAT": {
+        "Localized": "Format podataka",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_INFO_BITS": {
+        "Localized": "biti",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_FILE": {
+        "Localized": "Konfiguracijska datoteka",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_CONFIGURATION_OPTIONS": {
+        "Localized": "Konfiguracijske opcije",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_DISABLE": {
+        "Localized": "Onemogući",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_ENABLE": {
+        "Localized": "Omogući",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_SCREENSAVER_5": {
+        "Localized": "5 minuta",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_SCREENSAVER_10": {
+        "Localized": "10 minuta",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_SCREENSAVER_15": {
+        "Localized": "15 minuta",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT": {
+        "Localized": "LED efektri",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_SOLID": {
+        "Localized": "Jednobojno",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_ANGLEWIPE": {
+        "Localized": "Ugaono kruženje",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_CENTERWIPE": {
+        "Localized": "Centrirano kruženje",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE": {
+        "Localized": "Kruženje u smijeru kazaljke",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE": {
+        "Localized": "Prelaz odozgo",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_SCANNER": {
+        "Localized": "Skener",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_CYCLE": {
+        "Localized": "Ludnica mod",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR": {
+        "Localized": "LED boja",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_RAINBOW": {
+        "Localized": "Duga",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_RED": {
+        "Localized": "Crvena",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_ORANGE": {
+        "Localized": "Narandžasta",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_YELLOW": {
+        "Localized": "Žuta",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_GREEN": {
+        "Localized": "Zelena",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_BLUE": {
+        "Localized": "Plava",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_PURPLE": {
+        "Localized": "Ljubičasta",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_COLOR_PINK": {
+        "Localized": "Roza",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_BRIGHTNESS": {
+        "Localized": "LED svjetlina",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    },
+    "T_CONFIG_LEDS_BRIGHTNESS_100": {
+        "Localized": "100% ***UPOZORENJE: doći će do oštećenja bez vanjskog USB napajanja***",
+        "EN_US": null,
+        "Comments": null,
+        "DataTypes": []
+    }
+}

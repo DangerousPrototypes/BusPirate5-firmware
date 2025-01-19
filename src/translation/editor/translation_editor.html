@@ -27,32 +27,26 @@
 </head>
 <body>
     <h1>Translation Editor</h1>
-    <h2>Select Language</h2>
-    <select id="language_selection">
-    </select>
-    <button id="loadDataButton">Load Data</button>
-    <table id="translationTable">
-        <thead>
-            <tr>
-                <th>Old</th>
-                <th>Key</th>
-                <th>Localized</th>
-                <th>EN_US</th>
-                <th>Comments</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
-    <!-- Tabs -->
-    <h2 class="demoHeaders">Tabs</h2>
-
     <h2>Languages</h2>
     <div id="tabs">
         <ul id="tab_labels"></ul>
    </div>
 
     <script>
+        // TODO:
+        // * [ ] Create a new translation (all empty, but based on current en_us)
+        // * [ ] Enable word-wrap for localized and en-us columns
+        // * [ ] Detect when any row's value was changed for a translation
+        // * [ ] add filters to datagrid
+        //   * [ ] Filter by "old" checkbox
+        //   * [ ] Filter ID
+        // * [ ] Mark rows that no longer exist in en-us with error marker
+        // * [ ] Mark rows having different format specifiers with error marker
+        // * [ ] For outdated rows, show the old en_us value as a tooltip?
+        // * [ ] automatically update list of known translations?
+        //
+        // * [ ] SAVE THE CURRENT TRANSLATION DATA TO OUTPUT TAB (w/a copy to clipboard button?)
+
         const known_translations = ['pl-pl', 'bs-ba', 'it-it', 'zh-cn'];
         
         function select_translation() {
@@ -68,54 +62,66 @@
         $('#loadDataButton').on('click', function() {
             filename = select_translation();
             if (filename) {
-                loadData(filename);
+                var $tbody = $('#translationTable tbody');
+                loadData(filename, $tbody);
             }
         });
 
-        function loadData(filename) {
+        function loadData(filename, tbody) {
             $.when(
                 $.getJSON('../history/en-us.json'),
                 $.getJSON(`../templates/${filename}`)
-            ).done(function(enUsData, plPlData) {
+            ).done(function(enUsData, translated_data) {
                 var enUs = enUsData[0];
-                var plPl = plPlData[0];
-
-                var $tbody = $('#translationTable tbody');
-                $tbody.empty(); // Clear existing rows
-                $.each(plPl, function(key, value) {
+                var translated = translated_data[0];
+                
+                tbody.empty(); // Clear existing rows
+                $.each(translated, function(id, value) {
                     var localized = value.Localized || '';
                     var enUsValue = value.EN_US || '';
-                    var currentEnUsValue = enUs[key] ? enUs[key].Localized : '';
+                    var currentEnUsValue = enUs[id] ? enUs[id].Localized : '';
                     var comments = value.Comments || '';
                     var isOld = !(enUsValue == currentEnUsValue);
 
                     var $row = $('<tr>');
                     $row.append($('<td>').append($('<input>').attr('type', 'checkbox').prop('checked', isOld)));
-                    $row.append($('<td>').text(key));
+                    $row.append($('<td>').text(id));
                     $row.append($('<td>').append($('<input>').attr('type', 'text').val(localized)));
                     $row.append($('<td>').text(currentEnUsValue));
                     $row.append($('<td>').append($('<input>').attr('type', 'text').val(comments)));
-                    $tbody.append($row);
+                    tbody.append($row);
                 });
             }).fail(function(jqXHR, textStatus, errorThrown) {
                 alert('Failed to load data: ' + textStatus + ' - ' + errorThrown);
             });
         }
 
+        function add_table_structure(table) {
+            table.append($('<thead>').append(
+                $('<tr>')
+                .append($('<th>').text('Old'))
+                .append($('<th>').text('ID'))
+                .append($('<th>').text('Localized'))
+                .append($('<th>').text('EN_US'))
+                .append($('<th>').text('Comments'))
+            ));
+        }
+
         $(function() {
         });
         $(document).ready(function() {
-            var $translations = $('#language_selection');
             $.each(known_translations, function(index, value) {
-                $translations.append($('<option>').text(value));
-            });
+                $section = `tabs-${value}`;
+                $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#" + $section).text(value.toUpperCase())));
+                $('#tabs').append($('<div>').attr('id', $section));
+                $tabdata = $(`#${$section}`);
+                $table = $('<table>').attr('id', `translation-${value}`);
+                add_table_structure($table);
+                $tabdata.append($table);
+                loadData(`${value}.json`, $table);
 
-            $.each(known_translations, function(index, value) {
-                $('#tab_labels').append($('<li>').append($('<a>').attr('href', `#tabs-${value}`).text(value.toUpperCase())));
-                $('#tabs').append($('<div>').attr('id', `tabs-${value}`).text(`${value} Lorem ipsum ${value}`));
+                
             });
-
-            // Next: load the translated data into each tab...
 
             $( "#tabs" ).tabs();
 

@@ -83,9 +83,9 @@
                     var $row = $('<tr>');
                     $row.append($('<td>').append($('<input>').attr('type', 'checkbox').prop('checked', isOld)));
                     $row.append($('<td>').text(key));
-                    $row.append($('<td>').text(localized));
+                    $row.append($('<td>').append($('<input>').attr('type', 'text').val(localized)));
                     $row.append($('<td>').text(currentEnUsValue));
-                    $row.append($('<td>').text(comments));
+                    $row.append($('<td>').append($('<input>').attr('type', 'text').val(comments)));
                     $tbody.append($row);
                 });
             }).fail(function(jqXHR, textStatus, errorThrown) {

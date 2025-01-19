@@ -34,6 +34,9 @@
         <tbody>
         </tbody>
     </table>
+    <div id="debugOutput">
+        <label for="Debug Output">Debug Output:</label>
+    </div>
 
     <script>
         $(document).ready(function() {
@@ -49,13 +52,15 @@
                     var localized = value.Localized || '';
                     // var enUsValue = enUs[key] ? enUs[key].EN_US : '';
                     var enUsValue = value.EN_US || '';
+                    var currentEnUsValue = enUs[key] ? enUs[key].Localized : '';
                     var comments = value.Comments || '';
+                    var isOld = !(enUsValue == currentEnUsValue);
 
                     var $row = $('<tr>');
-                    $row.append($('<td>').text(''));
+                    $row.append($('<td>').append($('<input>').attr('type', 'checkbox').prop('checked', isOld)));
                     $row.append($('<td>').text(key));
                     $row.append($('<td>').text(localized));
-                    $row.append($('<td>').text(enUsValue));
+                    $row.append($('<td>').text(currentEnUsValue));
                     $row.append($('<td>').text(comments));
                     $tbody.append($row);
                 });

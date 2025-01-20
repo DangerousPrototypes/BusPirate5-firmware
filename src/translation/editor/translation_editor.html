@@ -171,6 +171,20 @@
             }, 4);
         }
 
+        function copy_export_json_to_clipboard(translation_id) {
+            const export_maps = get_export_data(translation_id);
+            console.log('Exporting data for ' + translation_id, export_maps);
+            const jsonified_data = map_to_json(export_maps);
+            console.log('JSONified data: ', jsonified_data);
+            navigator.clipboard.writeText(jsonified_data).then(function() {
+                console.log('Copied to clipboard');
+                // should have some sort of overlay that fades away
+                // that confirms the export was successful....
+            }, function() {
+                console.log('Failed to copy to clipboard');
+            });
+        }
+
         $(document).ready(function() {
 
             let promises_of_loaded_data = [];
@@ -197,12 +211,8 @@
                     $('#tabs').append($('<div>').attr('id', $section));
                     let $tabdata = $(`#${$section}`);
                     // Add a button to tabdata to export the data
-                    $tabdata.append(
-                        $('<button>').text('Export').click(function() {
-                        let export_data = get_export_data(value);
-                        console.log('Exporting data for ' + value, export_data);
-                        let jsonified_data = map_to_json(export_data);
-                        console.log('JSONified data: ', jsonified_data);
+                    $tabdata.append($('<button>').text('Export to clipboard').click(function() {
+                        copy_export_json_to_clipboard(value);
                     }));
 
                     let $table = $('<table>').attr('id', `translation-${value}`);
@@ -213,13 +223,9 @@
                 $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#tabs-new").text('New')));
                 $('#tabs').append($('<div>').attr('id', 'tabs-new'));
                 let $tabdata = $('#tabs-new');
-                $tabdata.append(
-                        $('<button>').text('Export').click(function() {
-                        let export_data = get_export_data('new');
-                        console.log('Exporting data for new', export_data);
-                        let jsonified_data = map_to_json(export_data);
-                        console.log('JSONified data: ', jsonified_data);
-                    }));
+                $tabdata.append($('<button>').text('Export to clipboard').click(function() {
+                        copy_export_json_to_clipboard('new');
+                }));
 
                 let $table = $('<table>').attr('id', 'translation-new');
                 add_table_structure($table);

@@ -34,51 +34,41 @@
 
     <script>
         const known_translations = ['pl-pl', 'bs-ba', 'it-it', 'zh-cn'];
-        
-        function select_translation() {
-            var filename = document.getElementById("language_selection").value;
-            if (known_translations.includes(filename)) {
-                return filename + '.json';
-            } else {
-                alert('Invalid file name. Please enter one of the following: \n    ' + known_translations.join('\n    '));
-                return null;
-            }
-        }
+        loaded_data = {};
 
-        $('#loadDataButton').on('click', function() {
-            filename = select_translation();
-            if (filename) {
-                var $tbody = $('#translationTable tbody');
-                loadData(filename, $tbody);
-            }
-        });
-
-        function loadData(filename, tbody) {
-            $.when(
-                $.getJSON('../history/en-us.json'),
-                $.getJSON(`../templates/${filename}`)
-            ).done(function(enUsData, translated_data) {
-                var enUs = enUsData[0];
-                var translated = translated_data[0];
-                
-                tbody.empty(); // Clear existing rows
-                $.each(translated, function(id, value) {
-                    var localized = value.Localized || '';
-                    var enUsValue = value.EN_US || '';
-                    var currentEnUsValue = enUs[id] ? enUs[id].Localized : '';
-                    var comments = value.Comments || '';
-                    var isOld = !(enUsValue == currentEnUsValue);
-
-                    var $row = $('<tr>');
-                    $row.append($('<td>').append($('<input>').attr('type', 'checkbox').prop('checked', isOld)));
-                    $row.append($('<td>').text(id));
-                    $row.append($('<td>').append($('<input>').attr('type', 'text').val(localized)));
-                    $row.append($('<td>').text(currentEnUsValue));
-                    $row.append($('<td>').append($('<input>').attr('type', 'text').val(comments)));
-                    tbody.append($row);
-                });
+        function load_data(id, path) {
+            // returns a promise
+            let promise = $.ajax({
+                url: path,
+                dataType: 'json'
+            });
+            promise.done(function(data) {
+                loaded_data[id] = data;
             }).fail(function(jqXHR, textStatus, errorThrown) {
-                alert('Failed to load data: ' + textStatus + ' - ' + errorThrown);
+                alert(`Failed to load data ${id} from ${path}: ` + textStatus + ' - ' + errorThrown);
+            });
+            return promise;
+        }
+       
+        function load_data_to_table(translation_id, tbody) {
+            var en_us = loaded_data['en-us'];
+            var translated = loaded_data[translation_id];
+                
+            tbody.empty(); // Clear existing rows
+            $.each(translated, function(id, value) {
+                var localized = value.Localized || '';
+                var en_us_value = value.EN_US || '';
+                var current_en_us_value = en_us[id] ? en_us[id].Localized : '';
+                var comments = value.Comments || '';
+                var is_old = !(en_us_value == current_en_us_value);
+
+                var $row = $('<tr>');
+                $row.append($('<td>').append($('<input>').attr('type', 'checkbox').prop('checked', is_old)));
+                $row.append($('<td>').text(id));
+                $row.append($('<td>').append($('<input>').attr('type', 'text').val(localized)));
+                $row.append($('<td>').text(current_en_us_value));
+                $row.append($('<td>').append($('<input>').attr('type', 'text').val(comments)));
+                tbody.append($row);
             });
         }
 
@@ -93,25 +83,45 @@
             ));
         }
 
-        $(function() {
-        });
         $(document).ready(function() {
-            $.each(known_translations, function(index, value) {
-                $section = `tabs-${value}`;
-                $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#" + $section).text(value.toUpperCase())));
-                $('#tabs').append($('<div>').attr('id', $section));
-                $tabdata = $(`#${$section}`);
-                $table = $('<table>').attr('id', `translation-${value}`);
-                add_table_structure($table);
-                $tabdata.append($table);
-                loadData(`${value}.json`, $table);
 
-                
+            let promises_of_loaded_data = [];
+            
+            promises_of_loaded_data.push( load_data('en-us', `../history/en-us.json`) );
+            $.each(known_translations, function(index, value) {
+                promises_of_loaded_data.push( load_data(value, `../templates/${value}.json`) );
+            });
+            console.log("Promises of loaded data: ", promises_of_loaded_data);
+
+            // wait for all the data to be loaded...
+            $.when(...promises_of_loaded_data).done(function() {
+                console.log("Loaded all data: ", loaded_data);
+
+                $.each(promises_of_loaded_data, function(index, value) {
+                    console.log(`Loaded data: ${value}`);
+                    loaded_data[value.responseJSON.language] = value.responseJSON.data;
+                });
+
+                $.each(known_translations, function(index, value) {
+                    $section = `tabs-${value}`;
+                    $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#" + $section).text(value.toUpperCase())));
+                    $('#tabs').append($('<div>').attr('id', $section));
+                    $tabdata = $(`#${$section}`);
+                    $table = $('<table>').attr('id', `translation-${value}`);
+                    add_table_structure($table);
+                    $tabdata.append($table);
+                    load_data_to_table(value, $table);
+                });
+                $( "#tabs" ).tabs();
+
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                alert('Failed to load data: ' + textStatus + ' - ' + errorThrown);
             });
 
-            $( "#tabs" ).tabs();
-
         });
+
+
+
     </script>
 </body>
 </html>

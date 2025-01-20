@@ -1,7 +1,7 @@
 {
     "T_EXIT": {
         "Localized": "Esci",
-        "EN_US": null,
+        "EN_US": "Exit",
         "Comments": null,
         "DataTypes": []
     },
@@ -19,217 +19,229 @@
     },
     "T_WARN_VOUT_VREF_LOW": {
         "Localized": "Il pin VOUT/VREF non è alimentato. Utilizza W per abilitare l'alimentazione o collega un'alimentazione esterna",
-        "EN_US": null,
+        "EN_US": "VOUT/VREF pin is not powered. Use W to enable power, or attach an external supply",
         "Comments": null,
         "DataTypes": []
     },
     "T_USE_PREVIOUS_SETTINGS": {
         "Localized": "Utilizzare le impostazioni precedenti?",
-        "EN_US": null,
+        "EN_US": "Use previous settings?",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_ERROR_NO_EFFECT": {
         "Localized": "ERRORE: il comando non ha effetto qui",
-        "EN_US": null,
+        "EN_US": "ERROR: command has no effect here",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_ERROR_NO_EFFECT_HIZ": {
         "Localized": "Il comando non ha effetto in modalità HiZ, premere 'm' per scegliere una modalità",
-        "EN_US": null,
+        "EN_US": "Command has no effect in HiZ mode, press 'm' to choose a mode",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_NO_HELP_AVAILABLE": {
         "Localized": "Nessun aiuto disponibile",
-        "EN_US": null,
+        "EN_US": "No help available",
         "Comments": null,
         "DataTypes": []
     },
     "T_PRESS_ANY_KEY_TO_EXIT": {
         "Localized": "Premere un tasto per uscire",
-        "EN_US": null,
+        "EN_US": "Press any key to exit",
         "Comments": null,
         "DataTypes": []
     },
     "T_PRESS_ANY_KEY": {
         "Localized": "Premere un tasto",
-        "EN_US": null,
+        "EN_US": "Press any key",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_MODE_SELECTION": {
         "Localized": "Selezione modalità",
-        "EN_US": null,
+        "EN_US": "Mode selection",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_MODE": {
         "Localized": "Modalità",
-        "EN_US": null,
+        "EN_US": "Mode",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_NUMBER_DISPLAY_FORMAT": {
         "Localized": "Formato visualizzazione numero",
-        "EN_US": null,
+        "EN_US": "Number display format",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_INVALID_OPTION": {
         "Localized": "Opzione non valida",
-        "EN_US": null,
+        "EN_US": "Invalid option",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_CHOOSE_AVAILABLE_PIN": {
         "Localized": "Scegliere il pin disponibile:",
-        "EN_US": null,
+        "EN_US": "Choose available pin:",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_ALL_PINS_IN_USE": {
         "Localized": "Tutti i pin sono in uso",
-        "EN_US": null,
+        "EN_US": "All pins in use",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_PULLUP_RESISTORS": {
         "Localized": "Resistenze di pull-up",
-        "EN_US": null,
+        "EN_US": "Pull-up resistors",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_POWER_SUPPLY": {
         "Localized": "Alimentazione",
-        "EN_US": null,
+        "EN_US": "Power supply",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_DISABLED": {
         "Localized": "Disabilitato",
-        "EN_US": null,
+        "EN_US": "Disabled",
         "Comments": null,
         "DataTypes": []
     },
+    "T_MODE_DISPLAY": {
+        "Localized": null,
+        "EN_US": "Display"
+    },
     "T_MODE_DISPLAY_SELECTION": {
         "Localized": "Selezione display",
-        "EN_US": null,
+        "EN_US": "Display selection",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_ENABLED": {
         "Localized": "Abilitato",
-        "EN_US": null,
+        "EN_US": "Enabled",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_BITORDER": {
         "Localized": "Ordine dei bit",
-        "EN_US": null,
+        "EN_US": "Bitorder",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_DELAY": {
         "Localized": "Ritardo",
-        "EN_US": null,
+        "EN_US": "Delay",
         "Comments": null,
         "DataTypes": []
     },
+    "T_MODE_US": {
+        "Localized": null,
+        "EN_US": "us"
+    },
+    "T_MODE_MS": {
+        "Localized": null,
+        "EN_US": "ms"
+    },
     "T_MODE_ERROR_PARSING_MACRO": {
         "Localized": "Errore durante l'analisi della macro",
-        "EN_US": null,
+        "EN_US": "Error parsing macro",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_ERROR_NO_MACROS_AVAILABLE": {
         "Localized": "Nessun macro disponibile",
-        "EN_US": null,
+        "EN_US": "No macros available",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_ERROR_MACRO_NOT_DEFINED": {
         "Localized": "Macro non definita",
-        "EN_US": null,
+        "EN_US": "Macro not defined",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_SET_CLK": {
         "Localized": "Imposta ora",
-        "EN_US": null,
+        "EN_US": "Set clock",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_SET_DAT": {
         "Localized": "Imposta data",
-        "EN_US": null,
+        "EN_US": "Set data",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_READ_DAT": {
         "Localized": "Leggi data",
-        "EN_US": null,
+        "EN_US": "Read data",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_NO_VOUT_VREF_ERROR": {
         "Localized": "Nessuna tensione rilevata sul pin VOUT/VREF",
-        "EN_US": null,
+        "EN_US": "No voltage detected on VOUT/VREF pin",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_NO_VOUT_VREF_HINT": {
         "Localized": "Suggerimento: Utilizza W per abilitare l'alimentazione o collega un'alimentazione esterna",
-        "EN_US": null,
+        "EN_US": "Hint: Use W to enable power, or attach an external supply",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_PWM_GENERATE_FREQUENCY": {
         "Localized": "Genera frequenza",
-        "EN_US": null,
+        "EN_US": "Generate frequency",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_FREQ_MEASURE_FREQUENCY": {
         "Localized": "Misura frequenza",
-        "EN_US": null,
+        "EN_US": "Frequency measurement",
         "Comments": null,
         "DataTypes": []
     },
     "T_MODE_FREQ_FREQUENCY": {
         "Localized": "Frequenza",
-        "EN_US": null,
+        "EN_US": "Frequency",
         "Comments": null,
         "DataTypes": []
     },
     "T_PSU_DAC_ERROR": {
         "Localized": "Errore DAC del PSU, eseguire l'auto-test",
-        "EN_US": null,
+        "EN_US": "PSU DAC error, please run self-test",
         "Comments": null,
         "DataTypes": []
     },
     "T_PSU_CURRENT_LIMIT_ERROR": {
         "Localized": "Corrente oltre il limite, alimentazione disabilitata",
-        "EN_US": null,
+        "EN_US": "Current over limit, power supply disabled",
         "Comments": null,
         "DataTypes": []
     },
     "T_PSU_SHORT_ERROR": {
         "Localized": "Potenziale corto circuito, alimentazione disabilitata",
-        "EN_US": null,
+        "EN_US": "Potential short circuit, power supply disabled",
         "Comments": null,
         "DataTypes": []
     },
     "T_PSU_ALREADY_DISABLED_ERROR": {
         "Localized": "Alimentazione già disabilitata",
-        "EN_US": null,
+        "EN_US": "Power supply already disabled",
         "Comments": null,
         "DataTypes": []
     },
     "T_SYNTAX_EXCEEDS_MAX_SLOTS": {
         "Localized": "Il risultato supera lo spazio disponibile (%d slot)",
-        "EN_US": null,
+        "EN_US": "Result exceeds available space (%d slots)",
         "Comments": null,
         "DataTypes": [
             "d"
@@ -237,217 +249,221 @@
     },
     "T_HWSPI_SPEED_MENU": {
         "Localized": "Velocità SPI",
-        "EN_US": null,
+        "EN_US": "SPI speed",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_SPEED_MENU_1": {
         "Localized": "1 a 62500kHz",
-        "EN_US": null,
+        "EN_US": "1 to 62500kHz",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_BITS_MENU": {
         "Localized": "Bit dati",
-        "EN_US": null,
+        "EN_US": "Data bits",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_BITS_MENU_1": {
         "Localized": "4 a 8 bit",
-        "EN_US": null,
+        "EN_US": "4 to 8 bits",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CLOCK_POLARITY_MENU": {
         "Localized": "Polarità del clock",
-        "EN_US": null,
+        "EN_US": "Clock polarity",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CLOCK_POLARITY_MENU_1": {
         "Localized": "Inattivo BASSO",
-        "EN_US": null,
+        "EN_US": "Idle LOW",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CLOCK_POLARITY_MENU_2": {
         "Localized": "Inattivo ALTO",
-        "EN_US": null,
+        "EN_US": "Idle HIGH",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CLOCK_POLARITY_PROMPT": {
         "Localized": "Polarità",
-        "EN_US": null,
+        "EN_US": "Polarity",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CLOCK_PHASE_MENU": {
         "Localized": "Fase del clock",
-        "EN_US": null,
+        "EN_US": "Clock phase",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CLOCK_PHASE_MENU_1": {
         "Localized": "FRONTE di salita",
-        "EN_US": null,
+        "EN_US": "LEADING edge",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CLOCK_PHASE_MENU_2": {
         "Localized": "FRONTE di discesa",
-        "EN_US": null,
+        "EN_US": "TRAILING edge",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CLOCK_PHASE_PROMPT": {
         "Localized": "Fase",
-        "EN_US": null,
+        "EN_US": "Phase",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CS_IDLE_MENU_1": {
         "Localized": "Attivo ALTO (CS)",
-        "EN_US": null,
+        "EN_US": "Active HIGH (CS)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CS_IDLE_MENU_2": {
         "Localized": "Attivo BASSO (/CS)",
-        "EN_US": null,
+        "EN_US": "Active LOW (/CS)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_ACTUAL_SPEED_KHZ": {
         "Localized": "Velocità effettiva",
-        "EN_US": null,
+        "EN_US": "Actual speed",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CS_SELECT": {
         "Localized": "CS abilitato",
-        "EN_US": null,
+        "EN_US": "CS Enabled",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWSPI_CS_DESELECT": {
         "Localized": "CS disabilitato",
-        "EN_US": null,
+        "EN_US": "CS Disabled",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_SPEED_MENU": {
         "Localized": "Velocità UART",
-        "EN_US": null,
+        "EN_US": "UART speed",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_SPEED_MENU_1": {
         "Localized": "1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 ecc",
-        "EN_US": null,
+        "EN_US": "1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 etc",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_PARITY_MENU": {
         "Localized": "Parità",
-        "EN_US": null,
+        "EN_US": "Parity",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_PARITY_MENU_1": {
         "Localized": "Nessuna",
-        "EN_US": null,
+        "EN_US": "None",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_PARITY_MENU_2": {
         "Localized": "Pari",
-        "EN_US": null,
+        "EN_US": "Even",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_PARITY_MENU_3": {
         "Localized": "Dispari",
-        "EN_US": null,
+        "EN_US": "Odd",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_PARITY_PROMPT": {
         "Localized": "Parità",
-        "EN_US": null,
+        "EN_US": "Parity",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_DATA_BITS_MENU": {
         "Localized": "Bit dati",
-        "EN_US": null,
+        "EN_US": "Data bits",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_DATA_BITS_MENU_1": {
         "Localized": "5 a 8 bit",
-        "EN_US": null,
+        "EN_US": "5 to 8 bits",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_STOP_BITS_MENU": {
         "Localized": "Bit di stop",
-        "EN_US": null,
+        "EN_US": "Stop bits",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_STOP_BITS_PROMPT": {
         "Localized": "Bit",
-        "EN_US": null,
+        "EN_US": "Bits",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_BLOCKING_MENU": {
         "Localized": "Utilizzare funzioni bloccanti?",
-        "EN_US": null,
+        "EN_US": "Use blocking functions?",
         "Comments": null,
         "DataTypes": []
     },
+    "T_UART_BLOCKING_MENU_1": {
+        "Localized": null,
+        "EN_US": "No"
+    },
     "T_UART_BLOCKING_MENU_2": {
         "Localized": "Sì",
-        "EN_US": null,
+        "EN_US": "Yes",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_BLOCKING_PROMPT": {
         "Localized": "Bloccante",
-        "EN_US": null,
+        "EN_US": "Block",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_ACTUAL_SPEED_BAUD": {
         "Localized": "Velocità effettiva",
-        "EN_US": null,
+        "EN_US": "Actual speed",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_OPEN": {
         "Localized": "UART APERTA",
-        "EN_US": null,
+        "EN_US": "UART OPEN",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_OPEN_WITH_READ": {
         "Localized": "UART APERTA (LETTURA ASINCRONA)",
-        "EN_US": null,
+        "EN_US": "UART OPEN (ASYNC READ)",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_CLOSE": {
         "Localized": "UART CHIUSA",
-        "EN_US": null,
+        "EN_US": "UART CLOSE",
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_NO_DATA_READ": {
         "Localized": "Nessun dato da leggere",
-        "EN_US": null,
+        "EN_US": "No data to read",
         "Comments": null,
         "DataTypes": []
     },
@@ -459,21 +475,33 @@
     },
     "T_HWI2C_SPEED_MENU": {
         "Localized": "Velocità I2C",
-        "EN_US": null,
+        "EN_US": "I2C speed",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWI2C_SPEED_MENU_1": {
         "Localized": "1kHz a 1000kHz",
-        "EN_US": null,
+        "EN_US": "1kHz to 1000kHz",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWI2C_DATA_BITS_MENU": {
         "Localized": "Bit dati",
-        "EN_US": null,
+        "EN_US": "Data bits",
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HWI2C_DATA_BITS_MENU_1": {
+        "Localized": null,
+        "EN_US": "8"
+    },
+    "T_HWI2C_DATA_BITS_MENU_2": {
+        "Localized": null,
+        "EN_US": "10"
+    },
+    "T_HWI2C_DATA_BITS_PROMPT": {
+        "Localized": null,
+        "EN_US": "Bits"
     },
     "T_HWI2C_NO_PULLUP_DETECTED": {
         "Localized": "nessun pull-up. Abilita l'alimentazione (W) e le resistenze di pull-up (P)",
@@ -483,79 +511,83 @@
     },
     "T_HWI2C_TIMEOUT": {
         "Localized": "Timeout I2C",
-        "EN_US": null,
+        "EN_US": "I2C timeout",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWI2C_I2C_ERROR": {
         "Localized": "Errore bus I2C",
-        "EN_US": null,
+        "EN_US": "I2C bus error",
         "Comments": null,
         "DataTypes": []
     },
     "T_HW2WIRE_SPEED_MENU": {
         "Localized": "Velocità 2WIRE",
-        "EN_US": null,
+        "EN_US": "2WIRE speed",
         "Comments": null,
         "DataTypes": []
     },
     "T_HW2WIRE_RST_LOW": {
         "Localized": "RST BASSO",
-        "EN_US": null,
+        "EN_US": "RST LOW",
         "Comments": null,
         "DataTypes": []
     },
     "T_HW2WIRE_RST_HIGH": {
         "Localized": "RST ALTO",
-        "EN_US": null,
+        "EN_US": "RST HIGH",
         "Comments": null,
         "DataTypes": []
     },
+    "T_HW3WIRE_SPEED_MENU_1": {
+        "Localized": "1 a 3900kHz",
+        "EN_US": "1 to 3900kHz"
+    },
     "T_HWLED_DEVICE_MENU": {
         "Localized": "Tipo LED",
-        "EN_US": null,
+        "EN_US": "LED type",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWLED_DEVICE_MENU_1": {
         "Localized": "WS2812/SK6812/'NeoPixel' (interfaccia a singolo filo)",
-        "EN_US": null,
+        "EN_US": "WS2812/SK6812/'NeoPixel' (single wire interface)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWLED_DEVICE_MENU_2": {
         "Localized": "APA102/SK9822 (interfaccia clock e dati)",
-        "EN_US": null,
+        "EN_US": "APA102/SK9822 (clock and data interface)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWLED_DEVICE_MENU_3": {
         "Localized": "LED onboard (18 SK6812s)",
-        "EN_US": null,
+        "EN_US": "Onboard LEDs (18 SK6812s)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWLED_DEVICE_PROMPT": {
         "Localized": "Tipo",
-        "EN_US": null,
+        "EN_US": "Type",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWLED_NUM_LEDS_MENU": {
         "Localized": "Numero di LED nella striscia",
-        "EN_US": null,
+        "EN_US": "Number of LEDs in the strip",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWLED_NUM_LEDS_MENU_1": {
         "Localized": "1 a 10000",
-        "EN_US": null,
+        "EN_US": "1 to 10000",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWLED_NUM_LEDS_PROMPT": {
         "Localized": "LED (%s%d*%s)",
-        "EN_US": null,
+        "EN_US": "LEDs (%s%d*%s)",
         "Comments": null,
         "DataTypes": [
             "s",
@@ -565,37 +597,37 @@
     },
     "T_HWLED_FRAME_START": {
         "Localized": "INIZIO FRAME (0x00000000)",
-        "EN_US": null,
+        "EN_US": "START FRAME (0x00000000)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HWLED_FRAME_STOP": {
         "Localized": "FINE FRAME (0xFFFFFFFF)",
-        "EN_US": null,
+        "EN_US": "STOP FRAME (0xFFFFFFFF)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HW1WIRE_RESET": {
         "Localized": "RESET 1-Wire",
-        "EN_US": null,
+        "EN_US": "1-Wire RESET",
         "Comments": null,
         "DataTypes": []
     },
     "T_HW1WIRE_PRESENCE_DETECT": {
         "Localized": "Presenza rilevata",
-        "EN_US": null,
+        "EN_US": "Presence detected",
         "Comments": null,
         "DataTypes": []
     },
     "T_HW1WIRE_NO_DEVICE": {
         "Localized": "Nessun dispositivo rilevato",
-        "EN_US": null,
+        "EN_US": "No device detected",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_INVALID_COMMAND": {
         "Localized": "Comando non valido: %s. Digita ? per ottenere aiuto.",
-        "EN_US": null,
+        "EN_US": "Invalid command: %s. Type ? for help.",
         "Comments": null,
         "DataTypes": [
             "s"
@@ -603,319 +635,319 @@
     },
     "T_CMDLN_NO_HELP": {
         "Localized": "Aiuto non disponibile al momento per questo comando.",
-        "EN_US": null,
+        "EN_US": "Help not currently available for this command.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_LS": {
         "Localized": "ls <directory> - elenca i file nella cartella corrente o nella cartella <directory>.",
-        "EN_US": null,
+        "EN_US": "ls <directory> - list files in the current location or <directory> location.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_CD": {
         "Localized": "cd <directory> - passa alla cartella <directory>.",
-        "EN_US": null,
+        "EN_US": "cd <directory> - change to <directory> location.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_MKDIR": {
         "Localized": "mkdir <directory> - crea <directory>.",
-        "EN_US": null,
+        "EN_US": "mkdir <directory> - create <directory>.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_RM": {
         "Localized": "rm <file/cartella> - rimuove il file o la cartella (vuota).",
-        "EN_US": null,
+        "EN_US": "rm <file/directory> - remove file or (empty) directory.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_CAT": {
         "Localized": "cat <file> - stampa il contenuto di <file>.",
-        "EN_US": null,
+        "EN_US": "cat <file> - print the contents of <file>.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_MODE": {
         "Localized": "m - cambia modalità protocollo. m <numero modalità> per saltare il menu.",
-        "EN_US": null,
+        "EN_US": "m - change protocol mode. m <mode number> to skip the menu.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_PSU_EN": {
         "Localized": "W - abilita l'alimentazione integrata, mostra il menu di configurazione.",
-        "EN_US": null,
+        "EN_US": "W - enable onboard power supply, show configuration menu.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_RESET": {
         "Localized": "# - resetta e riavvia Bus Pirate.",
-        "EN_US": null,
+        "EN_US": "# - reset and restart the Bus Pirate.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_BOOTLOAD": {
         "Localized": "$ - resetta ed entra in modalità bootloader per gli aggiornamenti.",
-        "EN_US": null,
+        "EN_US": "$ - reset and enter bootloader mode for updates.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_INT_FORMAT": {
         "Localized": "= <valore> - converte <valore> in BIN/DEC/HEX/ASCII.",
-        "EN_US": null,
+        "EN_US": "= <value> - convert <value> to BIN/DEC/HEX/ASCII.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_INT_INVERSE": {
         "Localized": "| <valore> - inverte i bit in <valore>.",
-        "EN_US": null,
+        "EN_US": "| <value> - inverse the bits in <value>.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_HELP": {
         "Localized": "? - mostra l'aiuto sui comandi e la sintassi.",
-        "EN_US": null,
+        "EN_US": "? - show command and syntax help.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_CONFIG_MENU": {
         "Localized": "c - apri il menu di configurazione del Bus Pirate.",
-        "EN_US": null,
+        "EN_US": "c - open Bus Pirate configuration menu.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_FREQ_ONE": {
         "Localized": "f <IOx> - misura la frequenza una volta su <IOx>.",
-        "EN_US": null,
+        "EN_US": "f <IOx> - measure frequency on <IOx> once.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_FREQ_CONT": {
         "Localized": "F <IOx> - misura continuamente la frequenza su <IOx>.",
-        "EN_US": null,
+        "EN_US": "F <IOx> - measure frequency on <IOx> continuously.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_PWM_CONFIG": {
         "Localized": "G - configura il generatore di frequenza (PWM) su un pin IOx disponibile.",
-        "EN_US": null,
+        "EN_US": "G - configure frequency generator (PWM) on an available IOx pin.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_PWM_DIS": {
         "Localized": "g <IOx> - disabilita il generatore di frequenza (PWM) sul pin <IOx>.",
-        "EN_US": null,
+        "EN_US": "g <IOx> - disable frequency generator (PWM) on pin <IOx>.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_HELP_MODE": {
         "Localized": "h - mostra la schermata di aiuto specifica della modalità.",
-        "EN_US": null,
+        "EN_US": "h - show mode specific help screen.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_HELP_DISPLAY": {
         "Localized": "hd - mostra la schermata di aiuto specifica della modalità di visualizzazione.",
-        "EN_US": null,
+        "EN_US": "hd - show display mode specific help screen.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_INFO": {
         "Localized": "i - mostra le informazioni e lo stato del Bus Pirate.",
-        "EN_US": null,
+        "EN_US": "i - show Bus Pirate info and status screen.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_BITORDER_MSB": {
         "Localized": "l - imposta l'ordine di uscita del bit più significativo (MSB).",
-        "EN_US": null,
+        "EN_US": "l - set Most Significant Bit output order.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_BITORDER_LSB": {
         "Localized": "L - imposta l'ordine di uscita del bit meno significativo (LSB).",
-        "EN_US": null,
+        "EN_US": "L - set Least Significant Bit ouput order.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_DISPLAY_FORMAT": {
         "Localized": "o - configura il formato di visualizzazione del numero.",
-        "EN_US": null,
+        "EN_US": "o - configure number output display format.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_PULLUPS_EN": {
         "Localized": "P - abilita le resistenze di pull-up integrate.",
-        "EN_US": null,
+        "EN_US": "P - enable onboard pull-up resistors.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_PULLUPS_DIS": {
         "Localized": "p - disabilita le resistenze di pull-up integrate.",
-        "EN_US": null,
+        "EN_US": "p - disable onboard pull-up resistors.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_PSU_DIS": {
         "Localized": "w - disabilita l'alimentazione integrata.",
-        "EN_US": null,
+        "EN_US": "w - disable onboard power supply.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_ADC_CONT": {
         "Localized": "V <IOx> - misura la tensione in modo continuo sul pin <IOx>. Omettere il numero del pin per misurare la tensione su tutti i pin.",
-        "EN_US": null,
+        "EN_US": "V <IOx> - continuous voltage measurement on pin <IOx>. Omit the pin number to measure voltage on all pins.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_ADC_ONE": {
         "Localized": "v <IOx> - misura la tensione una volta sul pin <IOx>. Omettere il numero del pin per misurare la tensione su tutti i pin una volta.",
-        "EN_US": null,
+        "EN_US": "v <IOx> - single voltage measurement on pin <IOx>. Omit the pin number to measure voltage on all pins once.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_SELFTEST": {
         "Localized": "~ - esegui un auto-test di fabbrica. Disconnetti tutti i dispositivi collegati e passa alla modalità HiZ prima di avviare il test.",
-        "EN_US": null,
+        "EN_US": "~ - perform a factory self-test. Disconnect any attached devices and change to HiZ mode before starting the test.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_AUX_IN": {
         "Localized": "@ <IOx> - rendi il pin <IOx> di ingresso, leggi lo stato del pin.",
-        "EN_US": null,
+        "EN_US": "@ <IOx> - make pin <IOx> input, read the pin state.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_AUX_LOW": {
         "Localized": "a <IOx> - rendi il pin <IOx> di uscita e basso.",
-        "EN_US": null,
+        "EN_US": "a <IOx> - make pin <IOx> output and low.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_AUX_HIGH": {
         "Localized": "A <IOx> - rendi il pin <IOx> di uscita e alto.",
-        "EN_US": null,
+        "EN_US": "A <IOx> - make pin <IOx> output and high.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_DUMP": {
         "Localized": "dump <file> <dispositivo> - scarica i contenuti del flash <dispositivo> su <file>. Avviso: attualmente è un prototipo che funziona solo con 25LC020 in modalità SPI.",
-        "EN_US": null,
+        "EN_US": "dump <file> <device> - dump contents of flash <device> to <file>. Warning: currently a prototype that only works with 25LC020 in SPI mode.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_LOAD": {
         "Localized": "load <file> <dispositivo> - carica i contenuti di <file> su flash <dispositivo>. Avviso: attualmente è un prototipo che funziona solo con 25LC020 in modalità SPI.",
-        "EN_US": null,
+        "EN_US": "load <file> <device> - load contents of <file> to flash <device>. Warning: currently a prototype that only works with 25LC020 in SPI mode.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_DISPLAY": {
         "Localized": "d - cambia la modalità di visualizzazione, mostra il menu di selezione.",
-        "EN_US": null,
+        "EN_US": "d - change display mode, show selection menu.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_LOGIC": {
         "Localized": "logic <frequenza in kHz> <campioni> <pin di trigger> <livello di trigger> - analizzatore logico. <frequenza> 1kHz-62500kHz, <pin di trigger> 0:7, <livello di trigger> 0:1.",
-        "EN_US": null,
+        "EN_US": "logic <frequency in kHz> <samples> <trigger pin> <trigger level> - logic analyzer. <frequency> 1kHz-62500kHz, <trigger pin> 0:7, <trigger level> 0:1.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_HEX": {
         "Localized": "esadecimale <file> - stampa i contenuti di <file> in esadecimale",
-        "EN_US": null,
+        "EN_US": "hex <file> - print contents of <file> in HEX",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_IO": {
         "Localized": "lavora con i pin, ingresso, misurazion uscita",
-        "EN_US": null,
+        "EN_US": "work with pins, input, output measurement",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_CAPTURE": {
         "Localized": "misura segnali analogici e digitali",
-        "EN_US": null,
+        "EN_US": "measure analog and digital signals",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_CONFIGURE": {
         "Localized": "configura il terminale, LED, display e modalità",
-        "EN_US": null,
+        "EN_US": "configure the terminal, LEDs, display and mode",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_SYSTEM": {
         "Localized": "riavvio, aggiornamenti firmware e diagnostica",
-        "EN_US": null,
+        "EN_US": "restart, firmware updates and diagnostic",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_FILES": {
         "Localized": "elenca i file e naviga nell'archivio",
-        "EN_US": null,
+        "EN_US": "list files and navigate the storage",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_PROGRAMS": {
         "Localized": "comandi utili e mini-programmi",
-        "EN_US": null,
+        "EN_US": "useful commands and mini-programs",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_MODE": {
         "Localized": "entra in una modalità per utilizzare i protocolli",
-        "EN_US": null,
+        "EN_US": "enter a mode to use protocols",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_SYNTAX": {
         "Localized": "invia e ricevi dati nelle modalità utilizzando la sintassi del bus",
-        "EN_US": null,
+        "EN_US": "send and receive data in modes using bus syntax",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SECTION_HELP": {
         "Localized": "ottieni ulteriore aiuto",
-        "EN_US": null,
+        "EN_US": "get more help",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GREATER_THAN": {
         "Localized": "Esegui la sintassi del bus",
-        "EN_US": null,
+        "EN_US": "Run bus syntax",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYNTAX_ADC": {
         "Localized": "Misura tensione su IO.x",
-        "EN_US": null,
+        "EN_US": "Measure volts on IO.x",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CMD_LS": {
         "Localized": "Elenco file",
-        "EN_US": null,
+        "EN_US": "List files",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CMD_CD": {
         "Localized": "Cambia cartella",
-        "EN_US": null,
+        "EN_US": "Change directory",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CMD_MKDIR": {
         "Localized": "Crea caretlla",
-        "EN_US": null,
+        "EN_US": "Make directory",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CMD_RM": {
         "Localized": "Rimuovi file/cartella",
-        "EN_US": null,
+        "EN_US": "Remove file/directory",
         "Comments": null,
         "DataTypes": []
     },
@@ -927,37 +959,37 @@
     },
     "T_HELP_CMD_FORMAT": {
         "Localized": "Formatta disco di archiviazione (FAT16)",
-        "EN_US": null,
+        "EN_US": "Format storage disk (FAT16)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CMD_CAT": {
         "Localized": "Stampa i contenuti del file come testo",
-        "EN_US": null,
+        "EN_US": "Print file contents as text",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CMD_HEX": {
         "Localized": "Stampa i contenuti del file in esadecimale",
-        "EN_US": null,
+        "EN_US": "Print file contents in HEX",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CAPTURE_SCOPE": {
         "Localized": "Interfaccia oscilloscopio",
-        "EN_US": null,
+        "EN_US": "Oscilloscope interface",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CAPTURE_LA": {
         "Localized": "Interfaccia analizzatore logico",
-        "EN_US": null,
+        "EN_US": "Logic analyzer interface",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_CMD_FLASH": {
         "Localized": "Cancella, scrivi, leggi e verifica chip flash SPI",
-        "EN_US": null,
+        "EN_US": "Erase, write, read and verify SPI flash chips",
         "Comments": null,
         "DataTypes": []
     },
@@ -969,247 +1001,251 @@
     },
     "T_HELP_1_3": {
         "Localized": "Auto test",
-        "EN_US": null,
+        "EN_US": "Self test",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_4": {
         "Localized": "Resetta il Bus Pirate",
-        "EN_US": null,
+        "EN_US": "Reset the Bus Pirate",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_5": {
         "Localized": "Vai alla modalità bootloader",
-        "EN_US": null,
+        "EN_US": "Jump to bootloader",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_6": {
         "Localized": "Ritardo 1 us/MS (d:4 per ripetere)",
-        "EN_US": null,
+        "EN_US": "Delay 1 us/MS (d:4 to repeat)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_7": {
         "Localized": "Imposta lo stato IO.x (basso/ALTO/LEGGI)",
-        "EN_US": null,
+        "EN_US": "Set IO.x state (low/HI/READ)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_COMMAND_AUX": {
         "Localized": "Imposta lo stato IO x (basso/ALTO/LEGGI)",
-        "EN_US": null,
+        "EN_US": "Set IO x state (low/HI/READ)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_COMMAND_DISPLAY": {
         "Localized": "Cambia la modalità di visualizzazione del display",
-        "EN_US": null,
+        "EN_US": "Change screen display mode",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_9": {
         "Localized": "Configura terminale, lingua, LED",
-        "EN_US": null,
+        "EN_US": "Configure terminal, language, LEDs",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_22": {
         "Localized": "Mostra tensione su IOx (una volta/CONT)",
-        "EN_US": null,
+        "EN_US": "Show volts on IOx (once/CONT)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_10": {
         "Localized": "Mostra tensione tutti gli IO (una volta/CONT)",
-        "EN_US": null,
+        "EN_US": "Show volts all IOs (once/CONT)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_11": {
         "Localized": "Misura frequenza su IOx (una volta/CONT)",
-        "EN_US": null,
+        "EN_US": "Measure freq on IOx (once/CONT)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_23": {
         "Localized": "Monitora frequenza (OFF/ON)",
-        "EN_US": null,
+        "EN_US": "Monitor freq (off/ON)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_12": {
         "Localized": "Genera frequenza (OFF/ON)",
-        "EN_US": null,
+        "EN_US": "Generate frequency (off/ON)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_HELP_GENERAL": {
         "Localized": "Aiuto globale, della modalità e della visualizzazione. Prova '?', '? mode' e '? display'",
-        "EN_US": null,
+        "EN_US": "Global, mode and display help. Try '?', '? mode' and '? display'",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_HELP_DISPLAY": {
         "Localized": "Aiuto con una modalità di visualizzazione, ad es. oscilloscopio",
-        "EN_US": null,
+        "EN_US": "Help with a display mode such as the scope",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_HELP_COMMAND": {
         "Localized": "Aggiungi -h per l'aiuto del comando: ls -h",
-        "EN_US": null,
+        "EN_US": "Add -h for command help: ls -h",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_14": {
         "Localized": "Versione Bus Pirate e informazioni sullo stato",
-        "EN_US": null,
+        "EN_US": "Bus Pirate version and status info",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_15": {
         "Localized": "Ordine dei bit (MSB/LSB)",
-        "EN_US": null,
+        "EN_US": "Bitorder (msb/LSB)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_16": {
         "Localized": "Cambia a una modalità di protocollo come I2C",
-        "EN_US": null,
+        "EN_US": "Change to a protocol mode such as I2C",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_17": {
         "Localized": "Scegli come vengono visualizzati i numeri",
-        "EN_US": null,
+        "EN_US": "Choose how numbers are displayed",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_18": {
         "Localized": "Resistenze di pull-up (OFF/ON)",
-        "EN_US": null,
+        "EN_US": "Pull-up resistors (off/ON)",
         "Comments": null,
         "DataTypes": []
     },
+    "T_HELP_1_19": {
+        "Localized": null,
+        "EN_US": "-"
+    },
     "T_HELP_1_20": {
         "Localized": "Mostra tensioni/stati",
-        "EN_US": null,
+        "EN_US": "Show volts/states",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1_21": {
         "Localized": "Alimentazione (OFF/ON)",
-        "EN_US": null,
+        "EN_US": "Power supply (off/ON)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_1": {
         "Localized": "Macro di modalità x/elenco completo",
-        "EN_US": null,
+        "EN_US": "Mode macro x/list all",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_3": {
         "Localized": "Start/Start II (dipendente dalla modalità)",
-        "EN_US": null,
+        "EN_US": "Start/Start II (mode dependent)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_4": {
         "Localized": "Stop/Stop II (dipendente dalla modalità)",
-        "EN_US": null,
+        "EN_US": "Stop/Stop II (mode dependent)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_7": {
         "Localized": "Scrivi stringa",
-        "EN_US": null,
+        "EN_US": "Write string",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_8": {
         "Localized": "Scrivi valore (decimale)",
-        "EN_US": null,
+        "EN_US": "Write value (decimal)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_9": {
         "Localized": "Scrivi valore (esadecimale)",
-        "EN_US": null,
+        "EN_US": "Write value (hex)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_10": {
         "Localized": "Scrivi valore (binario)",
-        "EN_US": null,
+        "EN_US": "Write value (binary)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_11": {
         "Localized": "Leggi",
-        "EN_US": null,
+        "EN_US": "Read",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYN_CLOCK_HIGH": {
         "Localized": "Clock alto",
-        "EN_US": null,
+        "EN_US": "Clock high",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYN_CLOCK_LOW": {
         "Localized": "Clock basso",
-        "EN_US": null,
+        "EN_US": "Clock low",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYN_DATA_HIGH": {
         "Localized": "Dati alti",
-        "EN_US": null,
+        "EN_US": "Data high",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYN_DATA_LOW": {
         "Localized": "Dati bassi",
-        "EN_US": null,
+        "EN_US": "Data low",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYN_DATA_READ": {
         "Localized": "Leggi lo stato del pin dati",
-        "EN_US": null,
+        "EN_US": "Read data pin state",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_18": {
         "Localized": "Lettura bit",
-        "EN_US": null,
+        "EN_US": "Bit read",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_19": {
         "Localized": "Ripeti ad esempio r:10",
-        "EN_US": null,
+        "EN_US": "Repeat e.g. r:10",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_20": {
         "Localized": "Bit da leggere/scrivere ad esempio 0x55.2",
-        "EN_US": null,
+        "EN_US": "Bits to read/write e.g. 0x55.2",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_21": {
         "Localized": "Macro utente x/elenco completo",
-        "EN_US": null,
+        "EN_US": "User macro x/list all",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_2_22": {
         "Localized": "Assegna macro utente x",
-        "EN_US": null,
+        "EN_US": "User macro assign x",
         "Comments": null,
         "DataTypes": []
     },
@@ -1239,37 +1275,37 @@
     },
     "T_HELP_FLASH_READ": {
         "Localized": "Leggi il chip flash su file. flash read -f <file>",
-        "EN_US": null,
+        "EN_US": "Read flash chip to file. flash read -f <file>",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_FLASH_VERIFY": {
         "Localized": "Verifica il chip flash rispetto al file. flash verify -f <file>",
-        "EN_US": null,
+        "EN_US": "Verify flash chip against file. flash verify -f <file>",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_FLASH_TEST": {
         "Localized": "Cancella e scrive l'intero chip con dati fittizzi, verifica. flash test",
-        "EN_US": null,
+        "EN_US": "Erase and write full chip with dummy data, verify. flash test",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_FLASH_PROBE": {
         "Localized": "Sonda il chip flash per ID e informazioni SFDP. flash probe",
-        "EN_US": null,
+        "EN_US": "Probe flash chip for ID and SFDP info. flash probe",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_FLASH_INIT": {
         "Localized": "Resetta e inizializza il chip flash. Predefinito se non vengono fornite opzioni. flash",
-        "EN_US": null,
+        "EN_US": "Reset and initialize flash chip. Default if no options given. flash",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_FLASH_FILE_FLAG": {
         "Localized": "Flag file. File da scrivere, leggere o verificare. flash verify -f <file>",
-        "EN_US": null,
+        "EN_US": "File flag. File to write, read or verify. flash verify -f <file>",
         "Comments": null,
         "DataTypes": []
     },
@@ -1281,13 +1317,13 @@
     },
     "T_HELP_FLASH_VERIFY_FLAG": {
         "Localized": "Flag verifica. Aggiungi verifica dopo la scrittura o la cancellazione. flash write -f <file> -v",
-        "EN_US": null,
+        "EN_US": "Verify flag. Add verify after write or erase. flash write -f <file> -v",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_WITH": {
         "Localized": "con",
-        "EN_US": null,
+        "EN_US": "with",
         "Comments": null,
         "DataTypes": []
     },
@@ -1299,649 +1335,693 @@
     },
     "T_NOT_DETECTED": {
         "Localized": "Non rilevato",
-        "EN_US": null,
+        "EN_US": "Not Detected",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_AVAILABLE_MODES": {
         "Localized": "Modalità disponibili",
-        "EN_US": null,
+        "EN_US": "Available modes",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_CURRENT_MODE": {
         "Localized": "Modalità attiva",
-        "EN_US": null,
+        "EN_US": "Active mode",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_POWER_SUPPLY": {
         "Localized": "Alimentazione",
-        "EN_US": null,
+        "EN_US": "Power supply",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_CURRENT_LIMIT": {
         "Localized": "Limite di corrente",
-        "EN_US": null,
+        "EN_US": "Current limit",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_PULLUP_RESISTORS": {
         "Localized": "Resistenze di pull-up",
-        "EN_US": null,
+        "EN_US": "Pull-up resistors",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_FREQUENCY_GENERATORS": {
         "Localized": "Generatori di frequenza",
-        "EN_US": null,
+        "EN_US": "Frequency generators",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_DISPLAY_FORMAT": {
         "Localized": "Formato display",
-        "EN_US": null,
+        "EN_US": "Display format",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_DATA_FORMAT": {
         "Localized": "Formato dati",
-        "EN_US": null,
+        "EN_US": "Data format",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_BITS": {
         "Localized": "bit",
-        "EN_US": null,
+        "EN_US": "bits",
         "Comments": null,
         "DataTypes": []
     },
     "T_INFO_BITORDER": {
         "Localized": "ordine bit",
-        "EN_US": null,
+        "EN_US": "bitorder",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_FILE": {
         "Localized": "File di configurazione",
-        "EN_US": null,
+        "EN_US": "Configuration file",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_CONFIGURATION_OPTIONS": {
         "Localized": "Opzioni di configurazione",
-        "EN_US": null,
+        "EN_US": "Configuration options",
         "Comments": null,
         "DataTypes": []
     },
+    "T_CONFIG_LANGUAGE": {
+        "Localized": null,
+        "EN_US": "Language / Jezik / Lingua / 语言"
+    },
     "T_CONFIG_ANSI_COLOR_MODE": {
         "Localized": "Modalità colore ANSI",
-        "EN_US": null,
+        "EN_US": "ANSI color mode",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_ANSI_TOOLBAR_MODE": {
         "Localized": "Modalità barra degli strumenti ANSI",
-        "EN_US": null,
+        "EN_US": "ANSI toolbar mode",
         "Comments": null,
         "DataTypes": []
     },
+    "T_CONFIG_LANGUAGE_ENGLISH": {
+        "Localized": null,
+        "EN_US": "Language - English (US)"
+    },
+    "T_CONFIG_LANGUAGE_CHINESE": {
+        "Localized": null,
+        "EN_US": "语言 - 中文（简体）"
+    },
+    "T_CONFIG_LANGUAGE_POLISH": {
+        "Localized": null,
+        "EN_US": "Język - polski (Polska)"
+    },
+    "T_CONFIG_LANGUAGE_BOSNIAN": {
+        "Localized": null,
+        "EN_US": "Jezik - bosanski (latinica, Bosna i Hercegovina)"
+    },
+    "T_CONFIG_LANGUAGE_ITALIAN": {
+        "Localized": null,
+        "EN_US": "Lingua - italiano (Italia)"
+    },
     "T_CONFIG_DISABLE": {
         "Localized": "Disabilita",
-        "EN_US": null,
+        "EN_US": "Disable",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_ENABLE": {
         "Localized": "Abilita",
-        "EN_US": null,
+        "EN_US": "Enable",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_SCREENSAVER": {
         "Localized": "Screensaver LCD",
-        "EN_US": null,
+        "EN_US": "LCD screensaver",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_SCREENSAVER_5": {
         "Localized": "5 minuti",
-        "EN_US": null,
+        "EN_US": "5 minutes",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_SCREENSAVER_10": {
         "Localized": "10 minuti",
-        "EN_US": null,
+        "EN_US": "10 minutes",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_SCREENSAVER_15": {
         "Localized": "15 minuti",
-        "EN_US": null,
+        "EN_US": "15 minutes",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_EFFECT": {
         "Localized": "Effetto LED",
-        "EN_US": null,
+        "EN_US": "LED effect",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_EFFECT_SOLID": {
         "Localized": "Solido",
-        "EN_US": null,
+        "EN_US": "Solid",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_EFFECT_ANGLEWIPE": {
         "Localized": "Pulizia angolare",
-        "EN_US": null,
+        "EN_US": "Angle wipe",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_EFFECT_CENTERWIPE": {
         "Localized": "Pulizia centrale",
-        "EN_US": null,
+        "EN_US": "Center wipe",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE": {
         "Localized": "Pulizia oraria",
-        "EN_US": null,
+        "EN_US": "Clockwise wipe",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE": {
         "Localized": "Pulizia dall'alto verso il basso",
-        "EN_US": null,
+        "EN_US": "Top side wipe",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_EFFECT_CYCLE": {
         "Localized": "Modalità party",
-        "EN_US": null,
+        "EN_US": "Party mode",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR": {
         "Localized": "Colore LED",
-        "EN_US": null,
+        "EN_US": "LED color",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR_RAINBOW": {
         "Localized": "Arcobaleno",
-        "EN_US": null,
+        "EN_US": "Rainbow",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR_RED": {
         "Localized": "Rosso",
-        "EN_US": null,
+        "EN_US": "Red",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR_ORANGE": {
         "Localized": "Arancione",
-        "EN_US": null,
+        "EN_US": "Orange",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR_YELLOW": {
         "Localized": "Giallo",
-        "EN_US": null,
+        "EN_US": "Yellow",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR_GREEN": {
         "Localized": "Verde",
-        "EN_US": null,
+        "EN_US": "Green",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR_BLUE": {
         "Localized": "Blu",
-        "EN_US": null,
+        "EN_US": "Blue",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR_PURPLE": {
         "Localized": "Viola",
-        "EN_US": null,
+        "EN_US": "Purple",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_COLOR_PINK": {
         "Localized": "Rosa",
-        "EN_US": null,
+        "EN_US": "Pink",
         "Comments": null,
         "DataTypes": []
     },
     "T_CONFIG_LEDS_BRIGHTNESS": {
         "Localized": "Luminosità LED",
-        "EN_US": null,
+        "EN_US": "LED brightness",
         "Comments": null,
         "DataTypes": []
     },
+    "T_CONFIG_LEDS_BRIGHTNESS_10": {
+        "Localized": null,
+        "EN_US": "10%"
+    },
+    "T_CONFIG_LEDS_BRIGHTNESS_20": {
+        "Localized": null,
+        "EN_US": "20%"
+    },
+    "T_CONFIG_LEDS_BRIGHTNESS_30": {
+        "Localized": null,
+        "EN_US": "30%"
+    },
+    "T_CONFIG_LEDS_BRIGHTNESS_40": {
+        "Localized": null,
+        "EN_US": "40%"
+    },
+    "T_CONFIG_LEDS_BRIGHTNESS_50": {
+        "Localized": null,
+        "EN_US": "50%"
+    },
     "T_CONFIG_LEDS_BRIGHTNESS_100": {
         "Localized": "100% *** ATTENZIONE: danneggerà la porta USB senza alimentazione esterna",
-        "EN_US": null,
+        "EN_US": "100% ***WARNING: will damage USB port without external power supply***",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DUMMY_COMMANDS": {
         "Localized": "Comandi fittizzi validi in posizione 1",
-        "EN_US": null,
+        "EN_US": "Dummy commands valid in position 1",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DUMMY_INIT": {
         "Localized": "Comando di inizializzazione fittizio",
-        "EN_US": null,
+        "EN_US": "Dummy init command",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DUMMY_TEST": {
         "Localized": "Comando di test fittizio",
-        "EN_US": null,
+        "EN_US": "Dummy test command",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DUMMY_FLAGS": {
         "Localized": "Flag falsi",
-        "EN_US": null,
+        "EN_US": "Dummy flags",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DUMMY_B_FLAG": {
         "Localized": "-b richiede il pulsante Bus Pirate da premere. Non richiede parametri",
-        "EN_US": null,
+        "EN_US": "-b require Bus Pirate button to be pushed. Takes no parameters",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DUMMY_I_FLAG": {
         "Localized": "-i <numero intero>. Richiede parametro numerico intero",
-        "EN_US": null,
+        "EN_US": "-i <integer>. Requires integer number parameter",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DUMMY_FILE_FLAG": {
         "Localized": "-f <file>. Crea/scrivi/leggi <file>. Richiede parametro stringa file",
-        "EN_US": null,
+        "EN_US": "-f <file>. Create/write/read <file>. Requires file string parameter",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442": {
         "Localized": "Interfaccia per scheda smart SLE4442",
-        "EN_US": null,
+        "EN_US": "SLE4442 smart card interface",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_INIT": {
         "Localized": "Inizializza la scheda con ISO7816-3 ATR. Azione predefinita",
-        "EN_US": null,
+        "EN_US": "Initialize card with ISO7816-3 ATR. Default action",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_DUMP": {
         "Localized": "Visualizza memoria principale, di sicurezza e protetta",
-        "EN_US": null,
+        "EN_US": "Display main, security and protect memory",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_UNLOCK": {
         "Localized": "Sblocca la scheda con il Codice di Sicurezza Programmabile (PSC)",
-        "EN_US": null,
+        "EN_US": "Unlock card with Programmable Security Code (PSC)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_WRITE": {
         "Localized": "Scrivi dati sulla scheda (richiede sblocco)",
-        "EN_US": null,
+        "EN_US": "Write data to card (requires unlock)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_ERASE": {
         "Localized": "Cancella dati nell'intervallo 0x32-0x255 (richiede sblocco)",
-        "EN_US": null,
+        "EN_US": "Erase data from range 0x32-0x255 (requires unlock)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_PSC": {
         "Localized": "Cambia il Codice di Sicurezza Programmabile (PSC)",
-        "EN_US": null,
+        "EN_US": "Change Programmable Security Code (PSC)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_ADDRESS_FLAG": {
         "Localized": "Flag indirizzo di scrittura",
-        "EN_US": null,
+        "EN_US": "Write address flag",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_VALUE_FLAG": {
         "Localized": "Flag valore di scrittura",
-        "EN_US": null,
+        "EN_US": "Write value flag",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_CURRENT_PSC_FLAG": {
         "Localized": "Flag Codice di Sicurezza Programmabile (PSC) corrente",
-        "EN_US": null,
+        "EN_US": "Current Programmable Security Code (PSC) flag",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SLE4442_NEW_PSC_FLAG": {
         "Localized": "Flag nuovo Codice di Sicurezza Programmabile (PSC)",
-        "EN_US": null,
+        "EN_US": "New Programmable Security Code (PSC) flag",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_W": {
         "Localized": "alimentazione integrata con fusibile programmabile",
-        "EN_US": null,
+        "EN_US": "onboard power supply with programmable fuse",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_W_DISABLE": {
         "Localized": "Disabilita l'alimentazione integrata",
-        "EN_US": null,
+        "EN_US": "Disable onboard power supply",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_W_ENABLE": {
         "Localized": "Abilita l'alimentazione integrata, mostra il menu di configurazione",
-        "EN_US": null,
+        "EN_US": "Enable onboard power supply, show configuration menu",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_W_VOLTS": {
         "Localized": "Tensione, 0,8-5,0 volt",
-        "EN_US": null,
+        "EN_US": "Voltage, 0.8-5.0volts",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_W_CURRENT_LIMIT": {
         "Localized": "Limite di corrente, 0-500mA",
-        "EN_US": null,
+        "EN_US": "Current limit, 0-500mA",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_P": {
         "Localized": "resistenze di pull-up integrate",
-        "EN_US": null,
+        "EN_US": "onboard pull-up resistors",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_HELP": {
         "Localized": "aiuto per i comandi e le modalità Bus Pirate",
-        "EN_US": null,
+        "EN_US": "help for Bus Pirate commands and modes",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYS_COMMAND": {
         "Localized": "Comandi per accedere al sistema di aiuto",
-        "EN_US": null,
+        "EN_US": "Commands to access the help system",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYS_DISPLAY": {
         "Localized": "Mostra l'aiuto sulla modalità di visualizzazione (ad es. oscilloscopio)",
-        "EN_US": null,
+        "EN_US": "Show display mode help (such as oscilloscope)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYS_MODE": {
         "Localized": "Mostra comandi e aiuto specifici della modalità",
-        "EN_US": null,
+        "EN_US": "Show mode specific commands and help",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_SYS_HELP": {
         "Localized": "Come utilizzare il sistema di aiuto",
-        "EN_US": null,
+        "EN_US": "How to use the help system",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_SELFTEST": {
         "Localized": "esegui un'autotest completo del sistema",
-        "EN_US": null,
+        "EN_US": "run a complete system self-test",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_SELFTEST_CMD": {
         "Localized": "Esegui autotest",
-        "EN_US": null,
+        "EN_US": "Run self-test",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_GCMD_SELFTEST_H_FLAG": {
         "Localized": "Aiuto autotest",
-        "EN_US": null,
+        "EN_US": "Self-test help",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_AUXIO": {
         "Localized": "imposta lo stato del pin IO, leggi i pin di input",
-        "EN_US": null,
+        "EN_US": "set IO pin state, read input pins",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_AUXIO_LOW": {
         "Localized": "Output, basso/0. Riserva il pin per l'output",
-        "EN_US": null,
+        "EN_US": "Output, low/0. Reserves pin for output",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_AUXIO_HIGH": {
         "Localized": "Output, alto/1. Riserva il pin per l'output",
-        "EN_US": null,
+        "EN_US": "Output, high/1. Reserves pin for output",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_AUXIO_INPUT": {
         "Localized": "Input, leggi stato. Rilascia il pin riservato",
-        "EN_US": null,
+        "EN_US": "Input, read state. Releases reserved pin",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_AUXIO_IO": {
         "Localized": "Numero pin IO, 0-7",
-        "EN_US": null,
+        "EN_US": "IO pin number, 0-7",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_HEX": {
         "Localized": "Stampa i contenuti del file in formato esadecimale",
-        "EN_US": null,
+        "EN_US": "Print file contents in HEX format",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_HEX_FILE": {
         "Localized": "Nome del file in formato 8.3 (esempio1.bin)",
-        "EN_US": null,
+        "EN_US": "Name of file in 8.3 format (example1.bin)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_HEX_ADDR": {
         "Localized": "Mostra l'offset dell'indirizzo",
-        "EN_US": null,
+        "EN_US": "Show address offset",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_HEX_ASCII": {
         "Localized": "Mostra anche il dump ASCII",
-        "EN_US": null,
+        "EN_US": "Show also ASCII dump",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_HEX_SIZE": {
         "Localized": "Imposta la dimensione della riga in byte",
-        "EN_US": null,
+        "EN_US": "Set line size in bytes",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_CAT": {
         "Localized": "Stampa i contenuti del file come testo",
-        "EN_US": null,
+        "EN_US": "print file contents as text",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_CAT_FILE": {
         "Localized": "Nome del file in formato 8.3 (esempio1.txt)",
-        "EN_US": null,
+        "EN_US": "Name of file in 8.3 format (example1.txt)",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_MKDIR": {
         "Localized": "Crea una cartella su archiviazione interna",
-        "EN_US": null,
+        "EN_US": "create directory on internal storage",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_MKDIR_DIR": {
         "Localized": "Nome della cartella, max 8 caratteri",
-        "EN_US": null,
+        "EN_US": "Directory name, 8 characters max",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_CD": {
         "Localized": "Cambia cartella su archiviazione locale",
-        "EN_US": null,
+        "EN_US": "change to a directory on local storage",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_CD_DIR": {
         "Localized": "Nome della cartella, max 8 caratteri",
-        "EN_US": null,
+        "EN_US": "Directory name, 8 characters max",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_RM": {
         "Localized": "Elimina file o cartella su archiviazione locale",
-        "EN_US": null,
+        "EN_US": "delete file or directory on local storage",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_RM_FILE": {
         "Localized": "Nome del file da eliminare, formato 8.3",
-        "EN_US": null,
+        "EN_US": "Name of file to delete, 8.3 format",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_RM_DIR": {
         "Localized": "Nome della cartella da eliminare, max 8 caratteri",
-        "EN_US": null,
+        "EN_US": "Name of directory to delete, 8 characters max",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_LS": {
         "Localized": "Elenca file e cartelle su archiviazione locale",
-        "EN_US": null,
+        "EN_US": "list files and directories on local storage",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_LS_DIR": {
         "Localized": "Elenco contenuti di questa cartella, opzionale",
-        "EN_US": null,
+        "EN_US": "List contents of this directory, optional",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_FORMAT": {
         "Localized": "Cancella e formatta l'archiviazione interna nel formato FAT16",
-        "EN_US": null,
+        "EN_US": "erase and format internal storage in FAT16 format",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_DISK_FORMAT_CMD": {
         "Localized": "Tutti i dati verranno persi, rispondi 's' due volte per continuare",
-        "EN_US": null,
+        "EN_US": "All data will be lost, answer 'y' twice to continue",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_VADC": {
         "Localized": "misura la tensione sui pin IO",
-        "EN_US": null,
+        "EN_US": "measure voltage on IO pins",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_VADC_SINGLE": {
         "Localized": "Misurazione singola",
-        "EN_US": null,
+        "EN_US": "Single measurement",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_VADC_CONTINUOUS": {
         "Localized": "Misurazione continua",
-        "EN_US": null,
+        "EN_US": "Continuous measurement",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_VADC_IO": {
         "Localized": "Numero pin IO, 0-7",
-        "EN_US": null,
+        "EN_US": "IO pin number, 0-7",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_I2C_SCAN": {
         "Localized": "scansione degli indirizzi I2C, con opzionale numero di parte",
-        "EN_US": null,
+        "EN_US": "scan I2C addresses, with optional part number",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_I2C_SCAN_VERBOSE": {
         "Localized": "Modalità dettagliata, stampa potenziali numeri di parte",
-        "EN_US": null,
+        "EN_US": "Verbose mode, print potential part numbers",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_FLAG": {
         "Localized": "Ottieni aiuto aggiuntivo",
-        "EN_US": null,
+        "EN_US": "Get additional help",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_I2C_SI7021": {
         "Localized": "Leggi temperatura e umidità dal sensore SI7021/HTU21/SHT21",
-        "EN_US": null,
+        "EN_US": "Read temperature and humidity from SI7021/HTU21/SHT21 sensor",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_I2C_MS5611": {
         "Localized": "Leggi temperatura e pressione dal sensore MS5611",
-        "EN_US": null,
+        "EN_US": "Read temperature and pressure from MS5611 sensor",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_I2C_TSL2561": {
         "Localized": "Leggi l'intensità luminosa (LUX) dal sensore TSL2561",
-        "EN_US": null,
+        "EN_US": "Read light intensity (LUX) from TSL2561 sensor",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1WIRE_SCAN": {
         "Localized": "scansiona per dispositivi 1-Wire",
-        "EN_US": null,
+        "EN_US": "scan for 1-Wire devices",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_1WIRE_DS18B20": {
         "Localized": "Interroga il sensore di temperatura DS18B20",
-        "EN_US": null,
+        "EN_US": "Query DS18B20 temperature sensor",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_UART_BRIDGE": {
         "Localized": "apre UART con IO dati grezzi, modalità bridge USB-seriale",
-        "EN_US": null,
+        "EN_US": "open UART with raw data IO, usb to serial bridge mode",
         "Comments": null,
         "DataTypes": []
     },
     "T_HELP_UART_NMEA": {
         "Localized": "analizza i dati GPS NMEA",
-        "EN_US": null,
+        "EN_US": "parse NMEA GPS data",
         "Comments": null,
         "DataTypes": []
     }

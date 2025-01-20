@@ -92,23 +92,23 @@
 
             // is the information different from what was loaded?
             // only editable field is Localized
-            let should_save = false;
-            if (localized != as_loaded.Localized) {
-                should_save = true;
-            }
-            // but, also want to update the tracked EN_US string when....
-            // * `is_old` was set when originally loaded
-            //   (e.g., as_loaded.EN_US != current_en_us_base)
-            //   AND 
-            // * `is_old` checkbox was cleared by the user
-            //   which indicates they want to keep the translation
-            //   (including when it's an empty string)
-            if ((as_loaded.EN_US != current_en_us_base) && is_old) {
-                should_save = true;
-            }
+            let log = id === "T_ON";
+            console.log("ID: ", id, "log", log, " is_old: ", is_old, " localized: ", localized, " current_en_us_base: ", current_en_us_base, " as_loaded: ", as_loaded);
 
-            if (!should_save) {
-                return null;
+            // empty translation ...
+            if ((localized === undefined) || (localized === '') || (localized === current_en_us_base)) {
+                // if not "is_old", then store null translation for the current en_us string
+                // else do not store anything
+                if (!is_old) {
+                    return { 
+                        'ID': id,
+                        'Localized': null,
+                        'EN_US': current_en_us_base,
+                        'Comments': as_loaded.Comments
+                    };
+                } else {
+                    return null;
+                }
             }
             return { 
                 'ID': id,
@@ -121,9 +121,13 @@
 
         function get_export_data(translation_id) {
             var en_us_data = loaded_data['en-us'];
+            console.log("EN_US_DATA: ", en_us_data)
             var original_data = loaded_data[translation_id];
             var result = {};
-            en_us_data.each(function(id, en_row) {
+            // loop through each key/value pair in dictionary en_us_data
+            // and find the corresponding row in the table
+            // if the row has been modified, add it to the result
+            $.each(en_us_data, function(id, en_row) {
                 var $row = $(`#translation-${translation_id} tr`).filter(function() {
                     return $(this).find('td:nth-child(2)').text() === id;
                 });
@@ -135,7 +139,6 @@
                 }
             });
             return result;
-
         }
 
 
@@ -164,10 +167,11 @@
                     $('#tabs').append($('<div>').attr('id', $section));
                     let $tabdata = $(`#${$section}`);
                     // Add a button to tabdata to export the data
-                    $tabdata.append($('<button>').text('Export').click(function() {
+                    $tabdata.append(
+                        $('<button>').text('Export').click(function() {
                         let export_data = get_export_data(value);
                         console.log('Exporting data for ' + value, export_data);
-                    });
+                    }));
 
                     let $table = $('<table>').attr('id', `translation-${value}`);
                     add_table_structure($table);

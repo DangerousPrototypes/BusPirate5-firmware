@@ -90,11 +90,6 @@
             const comments = row.find('td:nth-child(5) input').val();
             const as_loaded = loaded_data[translation_id][id];
 
-            // is the information different from what was loaded?
-            // only editable field is Localized
-            let log = id === "T_ON";
-            console.log("ID: ", id, "log", log, " is_old: ", is_old, " localized: ", localized, " current_en_us_base: ", current_en_us_base, " as_loaded: ", as_loaded);
-
             // empty translation ...
             if ((localized === undefined) || (localized === '') || (localized === current_en_us_base)) {
                 // if not "is_old", then store null translation for the current en_us string
@@ -106,10 +101,20 @@
                         'EN_US': current_en_us_base,
                         'Comments': as_loaded.Comments
                     };
-                } else {
-                    return null;
+                }
+                return null;
+            }
+            // Don't update the source translation if the string wasn't changed
+            if (is_old && (as_loaded?.Localized === localized)) {
+                // return without updating the source EN_US string
+                return {
+                    'ID': id,
+                    'Localized': localized,
+                    'EN_US': as_loaded?.EN_US,
+                    'Comments': as_loaded?.Comments
                 }
             }
+            // else save the translated text with the current en_us string
             return { 
                 'ID': id,
                 'Localized': localized === '' ? null : localized,

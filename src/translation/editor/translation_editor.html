@@ -95,32 +95,35 @@
                 // if not "is_old", then store null translation for the current en_us string
                 // else do not store anything
                 if (!is_old) {
-                    return { 
-                        'ID': id,
-                        'Localized': null,
-                        'EN_US': current_en_us_base,
-                        'Comments': as_loaded.Comments
-                    };
+                    const myMap = new Map([
+                        ['ID', id],
+                        ['Localized', null],
+                        ['EN_US', current_en_us_base],
+                        ['Comments', as_loaded?.Comments]
+                    ]);
+                    return myMap;
                 }
                 return null;
             }
             // Don't update the source translation if the string wasn't changed
             if (is_old && (as_loaded?.Localized === localized)) {
                 // return without updating the source EN_US string
-                return {
-                    'ID': id,
-                    'Localized': localized,
-                    'EN_US': as_loaded?.EN_US,
-                    'Comments': as_loaded?.Comments
-                }
+                const myMap = new Map([
+                        ['ID', id],
+                        ['Localized', null],
+                        ['EN_US', as_loaded?.EN_US],
+                        ['Comments', as_loaded?.Comments]
+                ]);
+                return myMap;
             }
             // else save the translated text with the current en_us string
-            return { 
-                'ID': id,
-                'Localized': localized === '' ? null : localized,
-                'EN_US': current_en_us_base,
-                'Comments': as_loaded.Comments
-            };
+            const myMap = new Map([
+                        ['ID', id],
+                        ['Localized', localized === '' ? null : localized],
+                        ['EN_US', current_en_us_base],
+                        ['Comments', as_loaded?.Comments]
+            ]);
+            return myMap;
         }
 
 
@@ -128,7 +131,7 @@
             var en_us_data = loaded_data['en-us'];
             console.log("EN_US_DATA: ", en_us_data)
             var original_data = loaded_data[translation_id];
-            var result = {};
+            var result = new Map();
             // loop through each key/value pair in dictionary en_us_data
             // and find the corresponding row in the table
             // if the row has been modified, add it to the result
@@ -139,7 +142,7 @@
                 if ($row.length > 0) {
                     var row_as_object = convert_row_data_to_object(translation_id, $row);
                     if (row_as_object) {
-                        result[id] = row_as_object;
+                        result.set(id, row_as_object);
                     }
                 }
             });

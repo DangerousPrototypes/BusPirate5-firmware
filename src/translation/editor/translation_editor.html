@@ -171,7 +171,6 @@
             }, 4);
         }
 
-
         $(document).ready(function() {
 
             let promises_of_loaded_data = [];
@@ -190,6 +189,7 @@
                     console.log(`Loaded data: ${value}`);
                     loaded_data[value.responseJSON.language] = value.responseJSON.data;
                 });
+                loaded_data['new'] = loaded_data['en-us']; // hack to allow for a new translation
 
                 $.each(known_translations, function(index, value) {
                     let $section = `tabs-${value}`;
@@ -203,7 +203,6 @@
                         console.log('Exporting data for ' + value, export_data);
                         let jsonified_data = map_to_json(export_data);
                         console.log('JSONified data: ', jsonified_data);
-
                     }));
 
                     let $table = $('<table>').attr('id', `translation-${value}`);
@@ -214,6 +213,14 @@
                 $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#tabs-new").text('New')));
                 $('#tabs').append($('<div>').attr('id', 'tabs-new'));
                 let $tabdata = $('#tabs-new');
+                $tabdata.append(
+                        $('<button>').text('Export').click(function() {
+                        let export_data = get_export_data('new');
+                        console.log('Exporting data for new', export_data);
+                        let jsonified_data = map_to_json(export_data);
+                        console.log('JSONified data: ', jsonified_data);
+                    }));
+
                 let $table = $('<table>').attr('id', 'translation-new');
                 add_table_structure($table);
                 load_data_to_table('en-us', $table);

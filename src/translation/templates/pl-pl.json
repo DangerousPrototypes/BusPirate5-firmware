@@ -1,7 +1,7 @@
 {
     "T_ON": {
         "Localized": "Wł.",
-        "EN_US": null,
+        "EN_US": "ON",
         "Comments": null,
         "DataTypes": []
     },
@@ -939,18 +939,6 @@
     },
     "T_HELP_2_7": {
         "Localized": "Wyślij stringa",
-        "EN_US": null,
-        "Comments": null,
-        "DataTypes": []
-    },
-    "T_HELP_2_8": {
-        "Localized": "",
-        "EN_US": null,
-        "Comments": null,
-        "DataTypes": []
-    },
-    "T_HELP_2_9": {
-        "Localized": "",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []

@@ -103,7 +103,7 @@
             // * `is_old` checkbox was cleared by the user
             //   which indicates they want to keep the translation
             //   (including when it's an empty string)
-            if ((as_loaded.EN_US != current_en_us_base) &&is_old !) {
+            if ((as_loaded.EN_US != current_en_us_base) && is_old) {
                 should_save = true;
             }
 
@@ -163,6 +163,12 @@
                     $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#" + $section).text(value.toUpperCase())));
                     $('#tabs').append($('<div>').attr('id', $section));
                     let $tabdata = $(`#${$section}`);
+                    // Add a button to tabdata to export the data
+                    $tabdata.append($('<button>').text('Export').click(function() {
+                        let export_data = get_export_data(value);
+                        console.log('Exporting data for ' + value, export_data);
+                    });
+
                     let $table = $('<table>').attr('id', `translation-${value}`);
                     add_table_structure($table);
                     $tabdata.append($table);

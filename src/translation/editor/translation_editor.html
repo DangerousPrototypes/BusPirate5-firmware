@@ -60,7 +60,6 @@
                 const localized = value.Localized || '';
                 const en_us_value = value.EN_US || '';
                 const current_en_us_value = en_row.Localized;
-                const comments = value.Comments || '';
                 const is_old = !(en_us_value == current_en_us_value);
 
                 var $row = $('<tr>');
@@ -68,7 +67,6 @@
                 $row.append($('<td>').text(id));
                 $row.append($('<td>').append($('<input>').attr('type', 'text').val(localized)));
                 $row.append($('<td>').text(current_en_us_value));
-                $row.append($('<td>').append($('<input>').attr('type', 'text').val(comments)));
                 tbody.append($row);
             });
         }
@@ -80,34 +78,62 @@
                 .append($('<th>').text('ID'))
                 .append($('<th>').text('Localized'))
                 .append($('<th>').text('EN_US'))
-                .append($('<th>').text('Comments'))
             ));
         }
 
 
-        function convert_row_data_to_json(translation_id, row) {
-            var result = {};
-
+        function convert_row_data_to_object(translation_id, row) {
+            const is_old = row.find('td:nth-child(1) input').prop('checked');
             const id = row.find('td:nth-child(2)').text();
-            const localized = row.find('td:nth-child(3) input').val();
+            const localized = row.find('td:nth-child(3) input').val().trim();
             const current_en_us_base = row.find('td:nth-child(4)').text();
             const comments = row.find('td:nth-child(5) input').val();
+            const as_loaded = loaded_data[translation_id][id];
 
             // is the information different from what was loaded?
+            // only editable field is Localized
             let should_save = false;
+            if (localized != as_loaded.Localized) {
+                should_save = true;
+            }
+            // but, also want to update the tracked EN_US string when....
+            // * `is_old` was set when originally loaded
+            //   (e.g., as_loaded.EN_US != current_en_us_base)
+            //   AND 
+            // * `is_old` checkbox was cleared by the user
+            //   which indicates they want to keep the translation
+            //   (including when it's an empty string)
+            if ((as_loaded.EN_US != current_en_us_base) &&is_old !) {
+                should_save = true;
+            }
 
-
-
-            return result;
+            if (!should_save) {
+                return null;
+            }
+            return { 
+                'ID': id,
+                'Localized': localized === '' ? null : localized,
+                'EN_US': current_en_us_base,
+                'Comments': as_loaded.Comments
+            };
         }
 
 
-        function export_data(translation_id) {
+        function get_export_data(translation_id) {
             var en_us_data = loaded_data['en-us'];
             var original_data = loaded_data[translation_id];
             var result = {};
-            
-            // TODO: create the exported data ... even if nothing has changed.
+            en_us_data.each(function(id, en_row) {
+                var $row = $(`#translation-${translation_id} tr`).filter(function() {
+                    return $(this).find('td:nth-child(2)').text() === id;
+                });
+                if ($row.length > 0) {
+                    var row_as_object = convert_row_data_to_object(translation_id, $row);
+                    if (row_as_object) {
+                        result[id] = row_as_object;
+                    }
+                }
+            });
             return result;
 
         }
@@ -150,6 +176,7 @@
                 load_data_to_table('en-us', $table);
                 // set the text for each row to be empty string
                 $table.find('input[type="text"]').val('');
+                $table.find('input[type="checkbox"]').prop('checked', true);
                 $tabdata.append($table)
 
                 $( "#tabs" ).tabs();

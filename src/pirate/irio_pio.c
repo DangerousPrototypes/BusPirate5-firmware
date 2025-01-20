@@ -269,6 +269,8 @@ bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
                     (*pairs)++;
                     state = AIR_MARK;
                 }else{
+                    buffer[*pairs] |= temp;
+                    (*pairs)++;
                     irio_pio_get_freq_mod(mod_freq);
                     state = AIR_RESET; //timeout, note final space and go to idle
                     return true;

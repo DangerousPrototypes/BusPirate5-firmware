@@ -1,5 +1,6 @@
 ;
-;
+; PIO State Machine to handle timing and "on" time of a glitching
+; device.
 ;
 
 .program uart_glitch
@@ -11,10 +12,10 @@
     mov y OSR               ; store it in Y
     pull                    ; get the delay before starting glitch pulse (just hold on for now)
 
-return_loop:
+trigger_loop:
     wait 0 pin 0            ; idle state of TX line is high, wait for it to go low
     wait 1 pin 0            ; wait for it to go back up
-    jmp y-- return_loop     ; decrement
+    jmp y-- trigger_loop     ; decrement
 
     mov y OSR               ; now set the delay time to the y register
 
@@ -41,7 +42,8 @@ static inline void uart_glitch_program_init(PIO pio, uint sm, uint offset, uint 
     pio_sm_set_consecutive_pindirs(pio, sm, glitch_pin, 1, true);
     pio_sm_set_consecutive_pindirs(pio, sm, tx_pin, 1, false);
 
-    float div = (float)clock_get_hz(clk_sys) / (2e7);
+    // 100MHz = 10ns per instruction
+    float div = (float)clock_get_hz(clk_sys) / (100e6);
     sm_config_set_clkdiv(&c, div);
 
     pio_sm_init(pio, sm, offset, &c);

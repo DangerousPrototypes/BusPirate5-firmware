@@ -108,7 +108,7 @@ void irio_pio_rx_deinit(uint pin_num){
 }
 
 //wait for end of transmission
-bool irio_pio_mode_wait_idle(void){
+bool irio_pio_tx_wait_idle(void){
     //wait for end of transmission
     if(pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff)){
         pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
@@ -119,14 +119,14 @@ bool irio_pio_mode_wait_idle(void){
 }
 
 //drain both RX FIFOs for sync
-void irio_pio_mode_drain_fifo(void){
+void irio_pio_rxtx_drain_fifo(void){
     pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
     pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
     return;
 }
 
 //push a single 16bit MARK and 16bit SPACE to the FIFO
-void irio_pio_mode_tx_write(uint32_t *data){
+void irio_pio_tx_write(uint32_t *data){
     uint16_t mark = (*data)>>16;
     uint16_t space = (*data)&0xffff;
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
@@ -135,7 +135,7 @@ void irio_pio_mode_tx_write(uint32_t *data){
 }
 
 //change the modulation frequency of the TX carrier without resetting the PIO
-void irio_pio_tx_mod_freq(float mod_freq){
+void irio_pio_tx_set_mod_freq(float mod_freq){
     float div = clock_get_hz(clk_sys) / (2 * (float)mod_freq); 
     pio_sm_set_clkdiv(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm, div);
     busy_wait_us(1);//takes effect in 3 cycles...
@@ -143,9 +143,9 @@ void irio_pio_tx_mod_freq(float mod_freq){
 
 //sends raw array of 32bit values. 
 //upper 16 bits are the mark, lower 16 bits are the space
-void irio_pio_tx_frame_raw(float mod_freq, uint16_t pairs, uint32_t *buffer){
+void irio_pio_tx_frame_write(float mod_freq, uint16_t pairs, uint32_t *buffer){
     //configure the PWM for the desired frequency
-    irio_pio_tx_mod_freq(mod_freq);
+    irio_pio_tx_set_mod_freq(mod_freq);
 
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
     for(uint8_t i=0; i<pairs; i++){
@@ -158,7 +158,7 @@ void irio_pio_tx_frame_raw(float mod_freq, uint16_t pairs, uint32_t *buffer){
     return;
 }
 
-void irio_pio_reset_freq_mod(void){
+void irio_pio_rx_reset_mod_freq(void){
     pio_sm_clear_fifos(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm);
     pio_interrupt_clear(pio_config_rx_mod_freq.pio, 0);
 }
@@ -168,13 +168,13 @@ bool irio_pio_get_freq_mod(float *mod_freq){
     if(!pio_interrupt_get(pio_config_rx_mod_freq.pio, 0)) return false;
 
     typedef enum _transition_state{
-        SPACE,
         MARK,
+        SPACE,
         DONE,
         ERROR
     }transition_state;
 
-    transition_state state=SPACE;
+    transition_state state=MARK;
     uint32_t mark=0, space=0;
     //instead of getting 8 words directly, we drain the FIFO so it works
     //without change if the PIO is set for 4 or 8 deep FIFO
@@ -190,21 +190,21 @@ bool irio_pio_get_freq_mod(float *mod_freq){
         for (int j = 31; j >= 0; j--) {
             uint32_t mask = 1 << j;
             switch(state){
-                case SPACE:
+                case MARK:
                     if (temp & mask) {
-                        if(space==0){ 
+                        if(mark==0){ 
                             state=ERROR;
                         }else{
-                            state=MARK;
-                            mark++;
+                            state=SPACE;
+                            space++;
                         }
                         break;
                     }
-                    space++;
+                    mark++;
                     break;
-                case MARK:
+                case SPACE:
                     if (temp & mask) {
-                        mark++;
+                        space++;
                     } else {
                         state=DONE;
                     }
@@ -229,7 +229,7 @@ bool irio_pio_get_freq_mod(float *mod_freq){
 //however there is no such issue during a normal transition
 //so only reincrement on timeout
 // returns true if a frame is ready, false if no frame is ready
-bool irio_pio_rx_frame_raw(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
+bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
     enum {
         AIR_RESET,
         AIR_IDLE,
@@ -242,7 +242,7 @@ bool irio_pio_rx_frame_raw(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
 
     switch(state){
         case AIR_RESET:
-            irio_pio_reset_freq_mod();
+            irio_pio_rx_reset_mod_freq();
             state = AIR_IDLE;
             break;
         case AIR_IDLE:
@@ -298,7 +298,7 @@ bool irio_pio_rx_frame_raw(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
 //On timeout, the PIO program increments the counter from 0 to 0xffff
 //however there is no such issue during a normal transition
 //so only reincrement on timeout
-ir_rx_status_t irio_pio_mode_get_frame(uint32_t *rx_frame) {
+ir_rx_status_t irio_pio_rx_frame_printf(uint32_t *rx_frame) {
     enum {
         AIR_RESET,
         AIR_IDLE,
@@ -311,7 +311,7 @@ ir_rx_status_t irio_pio_mode_get_frame(uint32_t *rx_frame) {
 
     switch(state){
         case AIR_RESET:
-            irio_pio_reset_freq_mod();
+            irio_pio_rx_reset_mod_freq();
             state = AIR_IDLE;
             break;
         case AIR_IDLE:

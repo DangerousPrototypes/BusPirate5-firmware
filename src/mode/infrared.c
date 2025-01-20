@@ -54,12 +54,12 @@ typedef struct _ir_protocols {
 static const ir_protocols ir_protocol[] = {
     {   .irtx_init = irio_pio_tx_init, 
         .irtx_deinit = irio_pio_tx_deinit,
-        .irtx_write = irio_pio_mode_tx_write,
-        .irtx_wait_idle = irio_pio_mode_wait_idle,
+        .irtx_write = irio_pio_tx_write,
+        .irtx_wait_idle = irio_pio_tx_wait_idle,
         .irrx_init = irio_pio_rx_init,
         .irrx_deinit = irio_pio_rx_deinit,
-        .irrx_read = irio_pio_mode_get_frame, 
-        .irrx_drain_fifo = irio_pio_mode_drain_fifo, 
+        .irrx_read = irio_pio_rx_frame_printf, 
+        .irrx_drain_fifo = irio_pio_rxtx_drain_fifo, 
         .mod_freq = 0,
         .display_name = "RAW",
         .num_bits = 32

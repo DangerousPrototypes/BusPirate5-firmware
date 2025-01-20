@@ -126,7 +126,7 @@ bool irtx_transmit(char* buffer){
 	}
 	printf(";%s\r\n\r\n", ui_term_color_reset());		
 	printf("Parsed AIR packet: modulation frequency %dkHz, %d MARK/SPACE pairs\r\nTransmitting...", mod_freq, datacnt);
-	irio_pio_tx_frame_raw((float)(mod_freq*1000), datacnt, data);
+	irio_pio_tx_frame_write((float)(mod_freq*1000), datacnt, data);
 	printf("done\r\n");
 	return true;
 }
@@ -288,10 +288,10 @@ void irrx_handler(struct command_result *res){
 		//wait for complete IR packet from irio_pio
 		printf("\r\nListening for IR packets (x to exit)...\r\n");
 		//drain the FIFO so we can sync and not get garbage
-		irio_pio_mode_drain_fifo();
+		irio_pio_rxtx_drain_fifo();
 		//display captured packet
 		while(true){
-			if(irio_pio_rx_frame_raw(&mod_freq, &pairs, buffer)) break;
+			if(irio_pio_rx_frame_buf(&mod_freq, &pairs, buffer)) break;
 			// any key to exit
 			char c;
 		    if (rx_fifo_try_get(&c)) {
@@ -363,7 +363,7 @@ menu_irrx_handler:
 			case 'r':
 			case 't': //retransmit this packet	
 				printf("\r\nTransmitting...");
-				irio_pio_tx_frame_raw((float)(mod_freq), pairs, buffer);
+				irio_pio_tx_frame_write((float)(mod_freq), pairs, buffer);
 				printf("done\r\n\r\n");		
 				goto menu_irrx_handler;
 				break;

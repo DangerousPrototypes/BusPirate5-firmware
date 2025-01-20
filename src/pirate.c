@@ -311,6 +311,7 @@ static void main_system_initialization(void) {
             );
         // party mode/demo mode if no config file found
         rgb_set_effect(LED_EFFECT_PARTY_MODE);
+        system_config.led_effect = LED_EFFECT_PARTY_MODE;
     }
 #else
     // Now continue after init of all the pins and shift registers

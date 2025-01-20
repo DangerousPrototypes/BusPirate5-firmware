@@ -83,6 +83,18 @@
             ));
         }
 
+
+        function export_data(translation_id) {
+            var en_us_data = loaded_data['en-us'];
+            var original_data = loaded_data[translation_id];
+            var result = {};
+            
+            // TODO: create the exported data ... even if nothing has changed.
+            return result;
+
+        }
+
+
         $(document).ready(function() {
 
             let promises_of_loaded_data = [];
@@ -112,6 +124,16 @@
                     $tabdata.append($table);
                     load_data_to_table(value, $table);
                 });
+                $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#tabs-new").text('New')));
+                $('#tabs').append($('<div>').attr('id', 'tabs-new'));
+                $tabdata = $('#tabs-new');
+                $table = $('<table>').attr('id', 'translation-new');
+                add_table_structure($table);
+                load_data_to_table('en-us', $table);
+                // set the text for each row to be empty string
+                $table.find('input[type="text"]').val('');
+                $tabdata.append($table)
+
                 $( "#tabs" ).tabs();
 
             }).fail(function(jqXHR, textStatus, errorThrown) {

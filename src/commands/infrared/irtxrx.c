@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "bytecode.h"
@@ -125,7 +126,7 @@ bool irtx_transmit(char* buffer){
 	}
 	printf(";%s\r\n\r\n", ui_term_color_reset());		
 	printf("Parsed AIR packet: modulation frequency %dkHz, %d MARK/SPACE pairs\r\nTransmitting...", mod_freq, datacnt);
-	pio_irio_tx_frame_raw((float)(mod_freq*1000), datacnt, data);
+	irio_pio_tx_frame_raw((float)(mod_freq*1000), datacnt, data);
 	printf("done\r\n");
 	return true;
 }
@@ -157,7 +158,7 @@ void irtx_handler(struct command_result *res){
 		TCHAR* bufptr;
 		//result = f_read(&file_handle, buffer, sizeof(buffer), &bytes_read);
 		infrared_cleanup_temp(); //tear down current IR PIO programs
-		pio_irio_tx_init(bio2bufiopin[BIO4], 38000); //setup IR PIO programs, actual freq will be set in irtx_packet
+		irio_pio_tx_init(bio2bufiopin[BIO4], 38000); //setup IR PIO programs, actual freq will be set in irtx_packet
 		while(f_gets(buffer, sizeof(buffer), &file_handle)){
 			/*if(bufptr ==0) {
 				printf("Error reading file %s\r\n", file);
@@ -170,7 +171,7 @@ void irtx_handler(struct command_result *res){
 				break;
 			}
 		}	
-		pio_irio_tx_deinit(bio2bufiopin[BIO4]); //tear down IR PIO programs
+		irio_pio_tx_deinit(bio2bufiopin[BIO4]); //tear down IR PIO programs
 		infrared_setup_resume(); //reinit IR PIO programs	
 		//close the file
 		result = f_close(&file_handle);
@@ -200,12 +201,12 @@ void irtx_handler(struct command_result *res){
 			
 			//printf("%s", buffer);
 			infrared_cleanup_temp(); //tear down current IR PIO programs
-			pio_irio_tx_init(bio2bufiopin[BIO4], 38000); //setup IR PIO programs, actual freq will be set in irtx_packet
+			irio_pio_tx_init(bio2bufiopin[BIO4], 38000); //setup IR PIO programs, actual freq will be set in irtx_packet
 			if(!irtx_transmit(buffer)){
 				printf("Error parsing AIR packet\r\n");
 				res->error = true;
 			}
-			pio_irio_tx_deinit(bio2bufiopin[BIO4]); //tear down IR PIO programs
+			irio_pio_tx_deinit(bio2bufiopin[BIO4]); //tear down IR PIO programs
 			infrared_setup_resume(); //reinit IR PIO programs
 			return;
 		}
@@ -276,8 +277,8 @@ void irrx_handler(struct command_result *res){
 	//tear down current IR PIO programs
 	infrared_cleanup_temp();
 	//setup IR PIO programs
-	pio_irio_rx_init(bio2bufiopin[ir_rx_pins[rx_sensor].bio]);
-	pio_irio_tx_init(bio2bufiopin[BIO4], 36000);
+	irio_pio_rx_init(bio2bufiopin[ir_rx_pins[rx_sensor].bio]);
+	irio_pio_tx_init(bio2bufiopin[BIO4], 36000);
 
 	while(true){
 		uint32_t buffer[128];
@@ -287,10 +288,10 @@ void irrx_handler(struct command_result *res){
 		//wait for complete IR packet from irio_pio
 		printf("\r\nListening for IR packets (x to exit)...\r\n");
 		//drain the FIFO so we can sync and not get garbage
-		pio_irio_mode_drain_fifo();
+		irio_pio_mode_drain_fifo();
 		//display captured packet
 		while(true){
-			if(pio_irio_rx_frame_raw(&mod_freq, &pairs, buffer)) break;
+			if(irio_pio_rx_frame_raw(&mod_freq, &pairs, buffer)) break;
 			// any key to exit
 			char c;
 		    if (rx_fifo_try_get(&c)) {
@@ -300,7 +301,7 @@ void irrx_handler(struct command_result *res){
 				}
 			}
 		}
-		uint8_t mod_freq_int=(uint8_t)(mod_freq/1000);
+		uint8_t mod_freq_int=(uint8_t)roundf(mod_freq/1000.0f);
 		uint16_t sn_cnt = snprintf(air_buffer, sizeof(air_buffer), "$%u:", mod_freq_int);
 		for(uint16_t i=0; i<pairs; i++){
 			sn_cnt+=snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,%u,", (uint16_t)(buffer[i]>>16), (uint16_t)(buffer[i]&0xffff));
@@ -362,7 +363,7 @@ menu_irrx_handler:
 			case 'r':
 			case 't': //retransmit this packet	
 				printf("\r\nTransmitting...");
-				pio_irio_tx_frame_raw((float)(mod_freq), pairs, buffer);
+				irio_pio_tx_frame_raw((float)(mod_freq), pairs, buffer);
 				printf("done\r\n\r\n");		
 				goto menu_irrx_handler;
 				break;
@@ -371,8 +372,8 @@ menu_irrx_handler:
 			case 'x':
 exit_irrx_handler:
 				//resume IR PIO programs
-				pio_irio_rx_deinit(bio2bufiopin[ir_rx_pins[rx_sensor].bio]);
-				pio_irio_tx_deinit(bio2bufiopin[BIO4]);
+				irio_pio_rx_deinit(bio2bufiopin[ir_rx_pins[rx_sensor].bio]);
+				irio_pio_tx_deinit(bio2bufiopin[BIO4]);
 				infrared_setup_resume();
 				//close file
 				if(save_file){

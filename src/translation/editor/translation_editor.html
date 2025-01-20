@@ -85,13 +85,23 @@
         function convert_row_data_to_object(translation_id, row) {
             const is_old = row.find('td:nth-child(1) input').prop('checked');
             const id = row.find('td:nth-child(2)').text();
-            const localized = row.find('td:nth-child(3) input').val().trim();
-            const current_en_us_base = row.find('td:nth-child(4)').text();
-            const comments = row.find('td:nth-child(5) input').val();
+            let localized = row.find('td:nth-child(3) input').val().trim();
+            let current_en_us_base = row.find('td:nth-child(4)').text().trim();
             const as_loaded = loaded_data[translation_id][id];
-
+            const loaded_localized = as_loaded?.Localized;
+            const loaded_en_us_base = as_loaded?.EN_US;
+            localized = (localized === undefined || localized === null || localized === '') ? null : localized;
+            current_en_us_base = (current_en_us_base === undefined || current_en_us_base === null || current_en_us_base === '') ? null : current_en_us_base;
+            
+            let log = id === 'T_OFF';
+            if (log) {
+                console.log("ID: ", id, "  is_old: ", is_old, "  localized: ", localized, "  loaded_localized: ", loaded_localized, "  current_en_us_base: ", current_en_us_base);
+            }
             // empty translation ...
-            if ((localized === undefined) || (localized === '') || (localized === current_en_us_base)) {
+            if ((localized === null) && (loaded_localized === null)) {
+                return null;
+            }
+            if (localized === null || localized === current_en_us_base) {
                 // if not "is_old", then store null translation for the current en_us string
                 // else do not store anything
                 if (!is_old) {
@@ -106,11 +116,11 @@
                 return null;
             }
             // Don't update the source translation if the string wasn't changed
-            if (is_old && (as_loaded?.Localized === localized)) {
+            if (is_old && (loaded_localized === localized)) {
                 // return without updating the source EN_US string
                 const myMap = new Map([
                         ['ID', id],
-                        ['Localized', null],
+                        ['Localized', loaded_localized],
                         ['EN_US', as_loaded?.EN_US],
                         ['Comments', as_loaded?.Comments]
                 ]);
@@ -148,6 +158,22 @@
             });
             return result;
         }
+        // Well, got map of maps ... which solves the output staying in the same order when iterated over.
+        // Converting to JSON in this same order?
+        // Iterate over each [k,v] pair in the outer map (e.g., [k = 'T_ON', v = Map(...)).
+        // 
+        // If the `v` is itself a map, recurse to get its string representation
+        // Else, use JSON.stringify()?
+
+        // Use JSON.stringify() with a replacer function, to dump the Map as though it were an object.
+        function map_to_json(export_data) {
+            return JSON.stringify(export_data, function(key, value) {
+                if (value instanceof Map) {
+                    return Object.fromEntries(value);
+                }
+                return value;
+            }, 2);
+        }
 
 
         $(document).ready(function() {
@@ -179,6 +205,9 @@
                         $('<button>').text('Export').click(function() {
                         let export_data = get_export_data(value);
                         console.log('Exporting data for ' + value, export_data);
+                        let jsonified_data = map_to_json(export_data);
+                        console.log('JSONified data: ', jsonified_data);
+
                     }));
 
                     let $table = $('<table>').attr('id', `translation-${value}`);

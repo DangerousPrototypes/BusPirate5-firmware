@@ -712,7 +712,7 @@ static void core1_initialization(void) {
 }
 static void core1_infinite_loop(void) {
 
-    uint32_t core0_requested_update_flags = 0;
+    //uint32_t core0_requested_update_flags = 0;
     while (1) {
 
         // service (thread safe) tinyusb tasks
@@ -739,8 +739,8 @@ static void core1_infinite_loop(void) {
 
         if (lcd_update_request) {
             monitor(system_config.psu); // TODO: fix monitor to return bool up_volts and up_current
-            uint32_t update_flags = core0_requested_update_flags;
-            core0_requested_update_flags = 0;
+            uint32_t update_flags = 0;//core0_requested_update_flags;
+            //core0_requested_update_flags = 0;
             if (lcd_update_force) {
                 lcd_update_force = false;
                 update_flags |= UI_UPDATE_FORCE | UI_UPDATE_ALL;
@@ -791,8 +791,9 @@ static void core1_infinite_loop(void) {
             bp_icm_raw_message_t raw_message = icm_core1_get_raw_message();
             switch (get_embedded_message(raw_message)) {
                 case BP_ICM_UPDATE_STATUS_BAR:
-                    lcd_update_request = true;
-                    core0_requested_update_flags |= UI_UPDATE_ALL;
+                    //lcd_update_request = true;
+                    //core0_requested_update_flags |= UI_UPDATE_ALL;
+                    ui_statusbar_update_from_core1(UI_UPDATE_ALL);
                     break;
                 case BP_ICM_DISABLE_LCD_UPDATES:
                     lcd_irq_disable();

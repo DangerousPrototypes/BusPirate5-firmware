@@ -34,7 +34,7 @@
 
     <script>
         const known_translations = ['pl-pl', 'bs-ba', 'it-it', 'zh-cn'];
-        loaded_data = {};
+        loaded_data = {}; // intentionally global
 
         function load_data(id, path) {
             // returns a promise
@@ -55,12 +55,13 @@
             var translated = loaded_data[translation_id];
                 
             tbody.empty(); // Clear existing rows
-            $.each(translated, function(id, value) {
-                var localized = value.Localized || '';
-                var en_us_value = value.EN_US || '';
-                var current_en_us_value = en_us[id] ? en_us[id].Localized : '';
-                var comments = value.Comments || '';
-                var is_old = !(en_us_value == current_en_us_value);
+            $.each(en_us, function(id, en_row) {
+                let value = translated[id] || {};
+                const localized = value.Localized || '';
+                const en_us_value = value.EN_US || '';
+                const current_en_us_value = en_row.Localized;
+                const comments = value.Comments || '';
+                const is_old = !(en_us_value == current_en_us_value);
 
                 var $row = $('<tr>');
                 $row.append($('<td>').append($('<input>').attr('type', 'checkbox').prop('checked', is_old)));
@@ -81,6 +82,23 @@
                 .append($('<th>').text('EN_US'))
                 .append($('<th>').text('Comments'))
             ));
+        }
+
+
+        function convert_row_data_to_json(translation_id, row) {
+            var result = {};
+
+            const id = row.find('td:nth-child(2)').text();
+            const localized = row.find('td:nth-child(3) input').val();
+            const current_en_us_base = row.find('td:nth-child(4)').text();
+            const comments = row.find('td:nth-child(5) input').val();
+
+            // is the information different from what was loaded?
+            let should_save = false;
+
+
+
+            return result;
         }
 
 
@@ -115,19 +133,19 @@
                 });
 
                 $.each(known_translations, function(index, value) {
-                    $section = `tabs-${value}`;
+                    let $section = `tabs-${value}`;
                     $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#" + $section).text(value.toUpperCase())));
                     $('#tabs').append($('<div>').attr('id', $section));
-                    $tabdata = $(`#${$section}`);
-                    $table = $('<table>').attr('id', `translation-${value}`);
+                    let $tabdata = $(`#${$section}`);
+                    let $table = $('<table>').attr('id', `translation-${value}`);
                     add_table_structure($table);
                     $tabdata.append($table);
                     load_data_to_table(value, $table);
                 });
                 $('#tab_labels').append($('<li>').append($('<a>').attr('href', "#tabs-new").text('New')));
                 $('#tabs').append($('<div>').attr('id', 'tabs-new'));
-                $tabdata = $('#tabs-new');
-                $table = $('<table>').attr('id', 'translation-new');
+                let $tabdata = $('#tabs-new');
+                let $table = $('<table>').attr('id', 'translation-new');
                 add_table_structure($table);
                 load_data_to_table('en-us', $table);
                 // set the text for each row to be empty string

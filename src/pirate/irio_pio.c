@@ -336,7 +336,7 @@ ir_rx_status_t irio_pio_rx_frame_printf(uint32_t *rx_frame) {
                     printf("%u,", high);
                 }else{
                     state = AIR_RESET; //timeout, note final space and go to idle
-                    printf("%u;\r\n", high);
+                    printf("%u,;\r\n", high);
                 }
                 
             }
@@ -345,7 +345,7 @@ ir_rx_status_t irio_pio_rx_frame_printf(uint32_t *rx_frame) {
             //last was space, if another space, end of sequence
             if(!pio_sm_is_rx_fifo_empty(pio_config_rx_space.pio, pio_config_rx_space.sm)){
                 high = (uint16_t)pio_sm_get(pio_config_rx_space.pio, pio_config_rx_space.sm);
-                printf(";\r\n");
+                printf(",;\r\n");
                 state = AIR_RESET;
             }
             if(!pio_sm_is_rx_fifo_empty(pio_config_rx_mark.pio, pio_config_rx_mark.sm)){

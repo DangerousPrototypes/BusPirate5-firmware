@@ -93,10 +93,6 @@
             localized = (localized === undefined || localized === null || localized === '') ? null : localized;
             current_en_us_base = (current_en_us_base === undefined || current_en_us_base === null || current_en_us_base === '') ? null : current_en_us_base;
             
-            let log = id === 'T_OFF';
-            if (log) {
-                console.log("ID: ", id, "  is_old: ", is_old, "  localized: ", localized, "  loaded_localized: ", loaded_localized, "  current_en_us_base: ", current_en_us_base);
-            }
             // empty translation ...
             if ((localized === null) && (loaded_localized === null)) {
                 return null;
@@ -106,10 +102,10 @@
                 // else do not store anything
                 if (!is_old) {
                     const myMap = new Map([
-                        ['ID', id],
                         ['Localized', null],
                         ['EN_US', current_en_us_base],
-                        ['Comments', as_loaded?.Comments]
+                        ['Comments', as_loaded?.Comments],
+                        ['DataTypes', as_loaded?.DataTypes]
                     ]);
                     return myMap;
                 }
@@ -119,19 +115,19 @@
             if (is_old && (loaded_localized === localized)) {
                 // return without updating the source EN_US string
                 const myMap = new Map([
-                        ['ID', id],
                         ['Localized', loaded_localized],
                         ['EN_US', as_loaded?.EN_US],
-                        ['Comments', as_loaded?.Comments]
+                        ['Comments', as_loaded?.Comments],
+                        ['DataTypes', as_loaded?.DataTypes]
                 ]);
                 return myMap;
             }
             // else save the translated text with the current en_us string
             const myMap = new Map([
-                        ['ID', id],
                         ['Localized', localized === '' ? null : localized],
                         ['EN_US', current_en_us_base],
-                        ['Comments', as_loaded?.Comments]
+                        ['Comments', as_loaded?.Comments],
+                        ['DataTypes', as_loaded?.DataTypes]
             ]);
             return myMap;
         }
@@ -172,7 +168,7 @@
                     return Object.fromEntries(value);
                 }
                 return value;
-            }, 2);
+            }, 4);
         }
 
 

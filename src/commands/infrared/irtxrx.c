@@ -52,6 +52,7 @@ static const struct ui_help_options options_rx[] = {
 };
 
 //returns true (success) false (failed)
+//TODO: check for cnt overflow! this is a potential buffer overflow
 bool irtx_transmit(char* buffer){
 	//parse the csv formatted values into 16 bit value pairs
 	uint32_t data[128];
@@ -65,6 +66,7 @@ bool irtx_transmit(char* buffer){
 			return false;
 		}
 		cnt++;
+
 	}
 	cnt++;
 
@@ -82,38 +84,41 @@ bool irtx_transmit(char* buffer){
 
 	//parse the ascii values into 16 bit values, shove in a 32bit word
 	//would be much nicer to use pointers here, but it would be a glob of unreadable slop
+	bool mark=true;
 	while(true){
 		uint16_t value=0;
 		while(buffer[cnt]!=','){
 			if(buffer[cnt]==0x00||buffer[cnt]<'0'||buffer[cnt]>'9'){
-				printf("Unable to find end of MARK data (,) in AIR packet\r\n");
+				printf("Unable to find end of MARK/SPACE data (,) in AIR packet\r\n");
 				return false;
 			}
 			value*=10;
 			value+=buffer[cnt]-0x30;
 			cnt++;
 		}
-		data[datacnt] = (value<<16);//upper 16 bits are the mark
-		cnt++;
-		value=0;
-		while(buffer[cnt]!=','){
-			if(buffer[cnt]==0x00||buffer[cnt]<'0'||buffer[cnt]>'9'){
-				printf("Unable to find end of SPACE data (,) in AIR packet\r\n");
+		if(mark){
+			data[datacnt] = (value<<16);//upper 16 bits are the mark
+			mark = false;
+		}else{
+			data[datacnt] |= value;
+			datacnt++;
+			if(datacnt>=count_of(data)){
+				printf("Too many MARK/SPACE pairs in AIR packet, max 127\r\n");
 				return false;
-			}
-			value*=10;
-			value+=buffer[cnt]-0x30;
-			cnt++;
-		}	
-		data[datacnt] |= value;
-		datacnt++;
-		if(datacnt>127){
-			printf("Too many MARK/SPACE pairs in AIR packet, max 127\r\n");
-			return false;
+			}			
+			mark = true;
 		}
-		cnt++;
+		cnt++; //if 0x00 will be tossed in the next loop
 		if(buffer[cnt]==';'){
 			//found end of AIR packet
+            if(!mark){ //end with a SPACE if not included in AIR packet
+                data[datacnt] |= 0xffff;
+                datacnt++;
+                if(datacnt>=count_of(data)){
+                    printf("Too many MARK/SPACE pairs in AIR packet, max 127\r\n");
+					return false;
+                }                
+            }			
 			break;
 		}
 	}

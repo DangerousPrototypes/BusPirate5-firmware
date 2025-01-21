@@ -308,10 +308,10 @@ void irrx_handler(struct command_result *res){
 		}
 		uint8_t mod_freq_int=(uint8_t)roundf(mod_freq/1000.0f);
 		uint16_t sn_cnt = snprintf(air_buffer, sizeof(air_buffer), "$%u:", mod_freq_int);
-		for(uint16_t i=0; i<pairs; i++){
+		for(uint16_t i=0; i<pairs-1; i++){
 			sn_cnt+=snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,%u,", (uint16_t)(buffer[i]>>16), (uint16_t)(buffer[i]&0xffff));
 		}
-		sn_cnt += snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, ";\r\n");
+		sn_cnt += snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,;\r\n", buffer[pairs-1]>>16);
 		if(sn_cnt>sizeof(air_buffer)){
 			printf("AIR packet too long, max 512 characters\r\n");
 			res->error = true;

@@ -86,7 +86,7 @@ void _irio_pio_rx_init(uint pin_demod, uint pin_pio2pio, uint pin_learner, float
     pio_config_rx_mod_freq.program = &measure_mod_freq_program;
     pio_config_rx_mod_freq.offset = pio_add_program(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.program);
     measure_mod_freq_program_init(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm, pio_config_rx_mod_freq.offset, pin_learner, divider);
-
+    irio_pio_rx_reset_mod_freq();
 
 }
 

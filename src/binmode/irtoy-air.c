@@ -142,14 +142,18 @@ static bool air_decode_transmit(char* air_buffer, uint32_t air_len, uint32_t *da
 
 	//debug: show loaded data packet
 	//printf("Read: %s", buffer);
-	printf("\r\n$%u:", mod_freq);
+	/*
+    printf("\r\n$%u:", mod_freq);
 	for(uint16_t i=0; i<data_cnt; i++){
 		printf("%u,%u,", data[i]>>16, data[i]&0xffff);
 	}
 	printf(";\r\n\r\n");		
 	printf("Parsed AIR packet: modulation frequency %dkHz, %d MARK/SPACE pairs\r\nTransmitting...", mod_freq, data_cnt);
+    */
+    irio_pio_rx_deinit(bio2bufiopin[BIO5]);
 	irio_pio_tx_frame_write((float)(mod_freq*1000), data_cnt, data);
-	printf("done\r\n");
+    irio_pio_rx_init(bio2bufiopin[BIO5]);
+	//printf("done\r\n");
 	return AIR_OK;
 }
 

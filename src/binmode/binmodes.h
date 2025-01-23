@@ -17,6 +17,11 @@ enum {
 typedef struct _binmode {
     bool lock_terminal;
     bool can_save_config;
+    bool reset_to_hiz;
+    bool pullup_enabled;
+    bool button_to_exit;
+    float psu_en_voltage;
+    float psu_en_current;
     const char* binmode_name;
     void (*binmode_setup)(void);
     void (*binmode_setup_message)(void);

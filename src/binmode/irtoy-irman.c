@@ -25,9 +25,13 @@
 // binmode name to display
 const char irtoy_irman_name[] = "IRMAN IR decoder (LIRC, etc)";
 
+static const char pin_labels[][5]={
+    "38k",
+};
 
 // binmode setup on mode start
 void irtoy_irman_setup(void) {
+    system_bio_update_purpose_and_label(true, BIO5, BP_PIN_IO, pin_labels[0]);
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
     rc5_rx_init(bio2bufiopin[BIO5]);
@@ -35,6 +39,7 @@ void irtoy_irman_setup(void) {
 
 // binmode cleanup on exit
 void irtoy_irman_cleanup(void) {
+    system_bio_update_purpose_and_label(false, BIO5, BP_PIN_IO, pin_labels[0]);
     rc5_rx_deinit(bio2bufiopin[BIO5]);
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;

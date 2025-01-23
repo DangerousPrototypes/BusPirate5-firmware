@@ -26,25 +26,36 @@
 // binmode name to display
 const char irtoy_air_name[] = "AIR capture (AnalysIR, etc)";
 //TODO: binmode reset to Hiz option, power supply, etc?
+
+static const char pin_labels[][5]={
+    "LERN",
+    "IRTX",
+    "38k",
+};
+
 // binmode setup on mode start
 void irtoy_air_setup(void) {
-    // time counter
-    // learner counter
+    system_bio_update_purpose_and_label(true, BIO1, BP_PIN_IO, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, BIO4, BP_PIN_IO, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, BIO5, BP_PIN_IO, pin_labels[2]);
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
     //setup buffers, pass correct pin numbers
     bio_buf_output(BIO0);
     bio_buf_output(BIO4);
-    psu_enable(5, 0, true);
+    //psu_enable(5, 0, true);
     irio_pio_tx_init(bio2bufiopin[BIO4], 38000);
     irio_pio_rx_init(bio2bufiopin[BIO5]);
 }
 
 // binmode cleanup on exit
 void irtoy_air_cleanup(void) {
+    system_bio_update_purpose_and_label(false, BIO1, BP_PIN_IO, pin_labels[0]);
+    system_bio_update_purpose_and_label(false, BIO4, BP_PIN_IO, pin_labels[1]);
+    system_bio_update_purpose_and_label(false, BIO5, BP_PIN_IO, pin_labels[2]);
     irio_pio_rx_deinit(bio2bufiopin[BIO5]);
     irio_pio_tx_deinit(bio2bufiopin[BIO4]);
-    psu_disable();
+    //psu_disable();
     bio_init();
     system_config.binmode_usb_rx_queue_enable = true;
     system_config.binmode_usb_tx_queue_enable = true;
@@ -236,6 +247,11 @@ void irtoy_air_service(void){
     modulation.measured_sample_count = 1;
     modulation.always_LF = '\n';
 
+    //let's talk about this loop
+    //ideally we'd be co-op multitasking, but we're not
+    //to multitask we'd need to make the buffer and air_buffer static
+    //which would eat a lot of memory
+    //instead we just do a never ending loop here
     while(true){
         //need to be careful about PIO fifo overflow here
         if (!tud_cdc_n_connected(CDC_INTF)) {

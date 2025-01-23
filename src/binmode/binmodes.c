@@ -5,7 +5,7 @@
 #include "bytecode.h"
 #include "command_struct.h"
 #include "modes.h"
-#include "pirate/psu.h"
+//#include "pirate/psu.h"
 #include "pirate/pullup.h"
 #include "binmode/binio.h"
 #include "system_config.h"
@@ -18,6 +18,8 @@
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 #include "pirate/storage.h" // File system related
 #include "usb_rx.h"
+#include "ui/ui_const.h"
+#include "commands/global/w_psu.h"
 
 void binmode_null_func_void(void) {
     return;
@@ -138,7 +140,9 @@ inline void binmode_setup(void) {
         if(binmodes[system_config.binmode_select].psu_en_current==0) {
             i_override = true;
         }
-        psu_enable(binmodes[system_config.binmode_select].psu_en_voltage, binmodes[system_config.binmode_select].psu_en_current, i_override);
+        psucmd_enable(binmodes[system_config.binmode_select].psu_en_voltage, binmodes[system_config.binmode_select].psu_en_current, i_override);
+        //system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VOUT, ui_const_pin_states[1]);
+        //monitor_clear_current(); // reset current so the LCD gets all characters
      }
 
 
@@ -170,6 +174,15 @@ inline void binmode_cleanup(void) {
     binmodes[system_config.binmode_select].binmode_cleanup();
     if (binmodes[system_config.binmode_select].lock_terminal) {
         binmode_terminal_lock(false);
+    }
+
+    if(binmodes[system_config.binmode_select].psu_en_voltage>0) {
+        //psu_disable();
+        psucmd_disable();
+    }
+
+    if(binmodes[system_config.binmode_select].pullup_enabled) {
+        pullup_disable();
     }
 }
 

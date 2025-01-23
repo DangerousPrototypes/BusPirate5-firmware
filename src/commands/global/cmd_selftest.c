@@ -18,6 +18,7 @@
 #include "display/scope.h"
 #include "pirate/intercore_helpers.h"
 #include "commands/global/bug.h"
+#include "usb_rx.h"
 
 #define SELF_TEST_LOW_LIMIT 300
 
@@ -354,15 +355,34 @@ bool selftest_button(void) {
     // debounce value selected somewhat arbitrarily
     static const uint32_t DEBOUNCE_DELAY_MS = 100;
     // prompt to push button
-    printf("PUSH BUTTON: ");
+    printf("PUSH BUTTON (ANY KEY SKIPS): ");
     // wait for button to be pressed
-    while (!button_get(0))
-        ;
+    while (true){
+        if(button_get(0)){
+            break;
+        }   
+        //or press key to exit
+        char c;
+		if (rx_fifo_try_get(&c)) {
+            printf("SKIPPED\r\n");
+            return true;
+        }
+    }
+
     busy_wait_ms(DEBOUNCE_DELAY_MS);
-    printf("OK\r\nRELEASE BUTTON: ");
+    printf("OK\r\nRELEASE BUTTON (ANY KEY SKIPS): ");
     // then wait for button to be released
-    while (button_get(0))
-        ;
+    while (true){
+        if(!button_get(0)){
+            break;
+        }   
+        //or press key to exit
+        char c;
+		if (rx_fifo_try_get(&c)) {
+            printf("SKIPPED\r\n");
+            return true;
+        }
+    }
     printf("OK\r\n");
     return false;
 }

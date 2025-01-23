@@ -164,7 +164,7 @@ void irio_pio_rx_reset_mod_freq(void){
 }
 
 //false = no interrupt, true = interrupt
-bool irio_pio_get_freq_mod(float *mod_freq){
+bool irio_pio_get_freq_mod(float *mod_freq, uint16_t *us){
     if(!pio_interrupt_get(pio_config_rx_mod_freq.pio, 0)) return false;
 
     typedef enum _transition_state{
@@ -219,8 +219,8 @@ bool irio_pio_get_freq_mod(float *mod_freq){
     if(state!=DONE){ //there was an error
         *mod_freq=0.0f;
     }else{
-        float us = (float)(mark+space)/5.0f;
-        *mod_freq = 1000000.0f/us;
+        *us = (mark+space);
+        *mod_freq = 1000000.0f/((float)(mark+space)/5.0f);
     }
     return true;        
 }
@@ -229,7 +229,7 @@ bool irio_pio_get_freq_mod(float *mod_freq){
 //however there is no such issue during a normal transition
 //so only reincrement on timeout
 // returns true if a frame is ready, false if no frame is ready
-bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
+bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint32_t *buffer) {
     enum {
         AIR_RESET,
         AIR_IDLE,
@@ -271,7 +271,7 @@ bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
                 }else{
                     buffer[*pairs] |= temp;
                     (*pairs)++;
-                    irio_pio_get_freq_mod(mod_freq);
+                    irio_pio_get_freq_mod(mod_freq, us);
                     state = AIR_RESET; //timeout, note final space and go to idle
                     return true;
                 } 
@@ -281,7 +281,7 @@ bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *pairs, uint32_t *buffer) {
             //last was space, if another space, end of sequence
             if(!pio_sm_is_rx_fifo_empty(pio_config_rx_space.pio, pio_config_rx_space.sm)){
                 temp = (uint16_t)pio_sm_get(pio_config_rx_space.pio, pio_config_rx_space.sm);
-                irio_pio_get_freq_mod(mod_freq);
+                irio_pio_get_freq_mod(mod_freq, us);
                 state = AIR_RESET;
                 return true;
             }
@@ -323,7 +323,8 @@ ir_rx_status_t irio_pio_rx_frame_printf(uint32_t *rx_frame) {
                 low = (uint16_t)pio_sm_get(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
                 if(low!=0xffff) low=(uint16_t)(0xffff-low); 
                 float mod_freq;
-                irio_pio_get_freq_mod(&mod_freq);
+                uint16_t us;
+                irio_pio_get_freq_mod(&mod_freq, &us);
                 uint8_t mod_freq_int=(uint8_t)roundf(mod_freq/1000.0f);
                 printf("$%u:%u,", mod_freq_int, low);
                 state = AIR_SPACE;

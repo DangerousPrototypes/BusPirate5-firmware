@@ -289,6 +289,7 @@ void irrx_handler(struct command_result *res){
 		uint32_t buffer[128];
 		uint16_t pairs=0;
 		float mod_freq;
+		uint16_t us;
 		uint8_t air_buffer[512];
 		//wait for complete IR packet from irio_pio
 		printf("\r\nListening for IR packets (x to exit)...\r\n");
@@ -296,7 +297,7 @@ void irrx_handler(struct command_result *res){
 		irio_pio_rxtx_drain_fifo();
 		//display captured packet
 		while(true){
-			if(irio_pio_rx_frame_buf(&mod_freq, &pairs, buffer)) break;
+			if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer)) break;
 			// any key to exit
 			char c;
 		    if (rx_fifo_try_get(&c)) {

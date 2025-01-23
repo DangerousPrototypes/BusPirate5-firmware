@@ -153,6 +153,46 @@ static bool air_decode_transmit(char* air_buffer, uint32_t air_len, uint32_t *da
 	return AIR_OK;
 }
 
+typedef struct _IR_PULSE {
+    uint8_t identifier_mark_or_space;
+    uint8_t entry_count;
+    uint8_t pulse_length_lsb; // lsb bit 0 also stores mark(1)/space(0)
+    uint8_t pulse_length_msb;
+    uint8_t always_LF; // always '\n'
+} IR_PULSE;
+
+static void ir_rx_pulse_packet(IR_PULSE *pulse_buffer, bool is_mark, uint16_t pulse_length){
+    if(is_mark){
+        pulse_buffer->identifier_mark_or_space = '+'; //mark
+        pulse_length = pulse_length |= 0x0001; //always set low bit for mark
+    }else{
+        pulse_buffer->identifier_mark_or_space = '-'; //space
+        pulse_length = pulse_length &= 0xfffe; //always clear low bit for space
+    }
+    pulse_buffer->pulse_length_msb = (uint8_t)(pulse_length >> 8);
+    pulse_buffer->pulse_length_lsb = (uint8_t)(pulse_length);
+    for(uint8_t j=0; j<sizeof(IR_PULSE); j++){
+        bin_tx_fifo_put(((uint8_t*)pulse_buffer)[j]);
+    }
+    pulse_buffer->entry_count++;
+}
+
+typedef struct _IR_MODULATION {
+    uint8_t identifier_modulation; // always 'M'
+    uint8_t measured_sample_count;
+    uint8_t period_sum_useconds_lsb;
+    uint8_t period_sum_useconds_msb;
+    uint8_t always_LF; // always '\n'
+} IR_MODULATION;
+
+static void ir_rx_modulation_packet(IR_MODULATION *modulation_buffer, uint16_t period_sum_useconds){
+    modulation_buffer->period_sum_useconds_msb = (uint8_t)(period_sum_useconds >> 8);
+    modulation_buffer->period_sum_useconds_lsb = (uint8_t)(period_sum_useconds);
+    for(uint8_t j=0; j<sizeof(IR_MODULATION); j++){
+        bin_tx_fifo_put(((uint8_t*)modulation_buffer)[j]);
+    }
+}
+
 /*
 $36:420,280,168,280,168,616,168,448,168,448,168,280,168,280,168,280,168,280,168,616,168,616,168,448,168,616,168,280,168,280,168,280,168,448,168,90804,;
 $ start character
@@ -163,12 +203,21 @@ ASCII decimals representing the lengths of pulse and no-pulse in uS (anyone thin
 // Use PIO to count 1uS ticks for each pulse and no-pulse, with timeout?
 void irtoy_air_service(void){
     float mod_freq;
+    uint16_t us;
     uint16_t pairs;
     uint32_t buffer[128];
     uint8_t air_buffer[512];
     bool frame_found=false;
     uint16_t air_cnt;
     bool send_id;
+
+    IR_PULSE pulse;
+    pulse.always_LF = '\n';
+
+    IR_MODULATION modulation;
+    modulation.identifier_modulation = 'M';
+    modulation.measured_sample_count = 5;
+    modulation.always_LF = '\n';
 
     while(true){
         //need to be careful about PIO fifo overflow here
@@ -183,10 +232,9 @@ void irtoy_air_service(void){
                 bin_tx_fifo_put(version[i]);
             }
         }
-        char c;
 
-
-        if(irio_pio_rx_frame_buf(&mod_freq, &pairs, buffer) ){
+        if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer) ){
+            #if 0
             //create the AIR packet
             uint8_t mod_freq_int = (uint8_t)roundf(mod_freq / 1000.0f);
             uint16_t sn_cnt = snprintf(air_buffer, sizeof(air_buffer), "$%u:", mod_freq_int);
@@ -203,9 +251,21 @@ void irtoy_air_service(void){
             for (uint32_t i = 0; i < sn_cnt; i++) {
                 bin_tx_fifo_put(air_buffer[i]);
             }
+            #endif
 
+            //uint8_t mod_freq_int = (uint8_t)roundf(mod_freq / 1000.0f);
+            pulse.entry_count=0;
+            for (uint16_t i = 0; i < (pairs); i++) {
+                ir_rx_pulse_packet(&pulse, true, (uint16_t)(buffer[i] >> 16));
+                ir_rx_pulse_packet(&pulse, false, (uint16_t)(buffer[i] & 0xffff));
+            }
+            //ir_rx_pulse_packet(&pulse, true, (uint16_t)(buffer[pairs-1] >> 16)); 
+            //have us, want nano seconds
+            us = (us *1000) / 5; //convert to 1ns ticks
+            ir_rx_modulation_packet(&modulation, us);         
         }
-
+        
+        char c;
         while(bin_rx_fifo_try_get(&c)){
             if(c=='$'){ //beginning of frame
                 frame_found=true;

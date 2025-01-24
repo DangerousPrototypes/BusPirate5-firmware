@@ -393,12 +393,18 @@ set (bp5_rtt
         lib/rtt/RTT/SEGGER_RTT_printf.c
 )
 
+set (rp2350_common
+        commands/global/opt.h 
+        commands/global/opt.c
+)
+
 
 if(${PICO_PLATFORM} MATCHES "rp2350")
         add_executable(bus_pirate6
                 ${bp5_common}
                 ${bp5_nandflash}
                 ${bp5_rtt}
+                ${rp2350_common}
                 platform/bpi6-rev1.h
                 platform/bpi6-rev1.c
                 display/robot6x16.h
@@ -416,6 +422,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${bp5_common}
                 ${bp5_nandflash}
                 ${bp5_rtt}
+                ${rp2350_common}
                 platform/bpi-rev10.h
                 platform/bpi-rev10.c 
                 pirate/shift.h

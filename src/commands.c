@@ -39,6 +39,9 @@
 #include "commands/global/bug.h"
 #include "commands/global/image.h"
 #include "commands/global/dump.h"
+#if BP_VER !=5
+#include "commands/global/otp.h"
+#endif
 
 // command configuration
 const struct _global_command_struct commands[] = {
@@ -92,6 +95,9 @@ const struct _global_command_struct commands[] = {
 { .command="bug",   .allow_hiz=true, .func=&bug_handler, .help_text=0x00 },
 { .command="image", .allow_hiz=true, .func=&image_handler, .help_text=0x00 },
 { .command="dump",  .allow_hiz=false, .func=&dump_handler, .help_text=0x00 },
+#if BP_VER != 5
+{ .command="otp",   .allow_hiz=true, .func=&otp_handler, .help_text=0x00 },
+#endif
     // clang-format on
 };
 

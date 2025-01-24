@@ -51,6 +51,7 @@
 // #define 	BP_USE_DUMMY2
 #define BP_USE_SCOPE
 // #define     BP_USE_BINLOOPBACK
+ #define     BP_USE_JTAG
 
 // enable display support
 // #define		DISPLAY_USE_HD44780	// is always enabled

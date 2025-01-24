@@ -225,6 +225,10 @@ set(bp5_common
         commands/infrared/irtxrx.c
         commands/infrared/irtxrx.h
 
+        # JTAG
+        mode/jtag.h
+        mode/jtag.c
+
         # DUMMY MODE
         mode/dummy1.c
         mode/dummy1.h 

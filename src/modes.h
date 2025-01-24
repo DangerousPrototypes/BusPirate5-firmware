@@ -31,6 +31,9 @@ enum {
 #ifdef BP_USE_INFRARED
     INFRARED,
 #endif
+#ifdef BP_USE_JTAG
+    JTAG,
+#endif
 #ifdef BP_USE_DUMMY1
     DUMMY1,
 #endif

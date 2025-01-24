@@ -89,7 +89,7 @@ void otp_handler(struct command_result* res) {
     for (int i=0; i < sizeof(initial_data); i++) {
         if (initial_data[i] != 0) {
             printf("ERROR: This example requires empty OTP rows to run - change the ecc_row and raw_row variables to an empty row and recompile\n");
-            return 0;
+            //return 0;
         }
     }
 

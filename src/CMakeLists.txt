@@ -394,8 +394,8 @@ set (bp5_rtt
 )
 
 set (rp2350_common
-        commands/global/opt.h 
-        commands/global/opt.c
+        commands/global/otp.h 
+        commands/global/otp.c
 )
 
 

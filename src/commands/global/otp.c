@@ -79,16 +79,16 @@ void otp_handler(struct command_result* res) {
     cmd.flags = ecc_row;
     ret = rom_func_otp_access(initial_data, sizeof(initial_data)/2, cmd);
     if (ret) {
-        printf("ERROR: Initial ECC Row Read failed with error %d\n", ret);
+        printf("ERROR: Initial ECC Row Read failed with error %d\r\n", ret);
     }
     cmd.flags = raw_row;
     ret = rom_func_otp_access(initial_data+(sizeof(initial_data)/2), sizeof(initial_data)/2, cmd);
     if (ret) {
-        printf("ERROR: Initial Raw Row Read failed with error %d\n", ret);
+        printf("ERROR: Initial Raw Row Read failed with error %d\r\n", ret);
     }
     for (int i=0; i < sizeof(initial_data); i++) {
         if (initial_data[i] != 0) {
-            printf("ERROR: This example requires empty OTP rows to run - change the ecc_row and raw_row variables to an empty row and recompile\n");
+            printf("ERROR: This example requires empty OTP rows to run - change the ecc_row and raw_row variables to an empty row and recompile\r\n");
             //return 0;
         }
     }
@@ -99,9 +99,9 @@ void otp_handler(struct command_result* res) {
         cmd.flags = ecc_row | OTP_CMD_ECC_BITS | OTP_CMD_WRITE_BITS;
         ret = rom_func_otp_access(ecc_write_data, sizeof(ecc_write_data), cmd);
         if (ret) {
-            printf("ERROR: ECC Write failed with error %d\n", ret);
+            printf("ERROR: ECC Write failed with error %d\r\n", ret);
         } else {
-            printf("ECC Write succeeded\n");
+            printf("ECC Write succeeded\r\n");
         }
 
         // Read it back
@@ -109,9 +109,9 @@ void otp_handler(struct command_result* res) {
         cmd.flags = ecc_row | OTP_CMD_ECC_BITS;
         ret = rom_func_otp_access(ecc_read_data, sizeof(ecc_read_data), cmd);
         if (ret) {
-            printf("ERROR: ECC Read failed with error %d\n", ret);
+            printf("ERROR: ECC Read failed with error %d\r\n", ret);
         } else {
-            printf("ECC Data read is \"%s\"\n", ecc_read_data);
+            printf("ECC Data read is \"%s\"\r\n", ecc_read_data);
         }
 
         // Set some bits, to demonstrate ECC error correction
@@ -119,16 +119,16 @@ void otp_handler(struct command_result* res) {
         cmd.flags = ecc_row;
         ret = rom_func_otp_access(ecc_toggle_buffer, sizeof(ecc_toggle_buffer), cmd);
         if (ret) {
-            printf("ERROR: Raw read of ECC data failed with error %d\n", ret);
+            printf("ERROR: Raw read of ECC data failed with error %d\r\n", ret);
         } else {
             ecc_toggle_buffer[0] = 'x'; // will fail to recover, as flips 2 bits from 'H' (100_1000 -> 111_1000)
             ecc_toggle_buffer[24] = 't'; // will recover, as only flips 1 bit from 'T' (101_0100 -> 111_0100)
             cmd.flags = ecc_row | OTP_CMD_WRITE_BITS;
             ret = rom_func_otp_access(ecc_toggle_buffer, sizeof(ecc_toggle_buffer), cmd);
             if (ret) {
-                printf("ERROR: Raw overwrite of ECC data failed with error %d\n", ret);
+                printf("ERROR: Raw overwrite of ECC data failed with error %d\r\n", ret);
             } else {
-                printf("Raw overwrite of ECC data succeeded\n");
+                printf("Raw overwrite of ECC data succeeded\r\n");
             }
         }
 
@@ -137,9 +137,9 @@ void otp_handler(struct command_result* res) {
         cmd.flags = ecc_row | OTP_CMD_ECC_BITS;
         ret = rom_func_otp_access(ecc_toggled_read_data, sizeof(ecc_toggled_read_data), cmd);
         if (ret) {
-            printf("ERROR: ECC Read failed with error %d\n", ret);
+            printf("ERROR: ECC Read failed with error %d\r\n", ret);
         } else {
-            printf("ECC Data read is now \"%s\"\n", ecc_toggled_read_data);
+            printf("ECC Data read is now \"%s\"\r\n", ecc_toggled_read_data);
         }
 
         // Attempt to write a different ECC value to OTP - should fail
@@ -147,13 +147,13 @@ void otp_handler(struct command_result* res) {
         cmd.flags = ecc_row | OTP_CMD_ECC_BITS | OTP_CMD_WRITE_BITS;
         ret = rom_func_otp_access(ecc_overwrite_data, sizeof(ecc_overwrite_data), cmd);
         if (ret == BOOTROM_ERROR_UNSUPPORTED_MODIFICATION) {
-            printf("Overwrite of ECC data failed as expected\n");
+            printf("Overwrite of ECC data failed as expected\r\n");
         } else {
             printf("ERROR: ");
             if (ret) {
-                printf("Overwrite failed with error %d\n", ret);
+                printf("Overwrite failed with error %d\r\n", ret);
             } else {
-                printf("Overwrite succeeded\n");
+                printf("Overwrite succeeded\r\n");
             }
         }
     }
@@ -165,9 +165,9 @@ void otp_handler(struct command_result* res) {
         cmd.flags = raw_row | OTP_CMD_WRITE_BITS;
         ret = rom_func_otp_access(raw_write_data, sizeof(raw_write_data), cmd);
         if (ret) {
-            printf("ERROR: Raw Write failed with error %d\n", ret);
+            printf("ERROR: Raw Write failed with error %d\r\n", ret);
         } else {
-            printf("Raw Write succeeded\n");
+            printf("Raw Write succeeded\r\n");
         }
 
         // Read it back
@@ -175,13 +175,13 @@ void otp_handler(struct command_result* res) {
         cmd.flags = raw_row;
         ret = rom_func_otp_access(raw_read_data, sizeof(raw_read_data), cmd);
         if (ret) {
-            printf("ERROR: Raw Read failed with error %d\n", ret);
+            printf("ERROR: Raw Read failed with error %d\r\n", ret);
         } else {
             // Remove the null bytes
             for (int i=0; i < sizeof(raw_read_data)/4; i++) {
                 memcpy(raw_read_data + i*3, raw_read_data + i*4, 3);
             }
-            printf("Raw Data read is \"%s\"\n", raw_read_data);
+            printf("Raw Data read is \"%s\"\r\n", raw_read_data);
         }
 
         // Attempt to write a different raw value to OTP - should succeed, provided no bits are cleared
@@ -197,9 +197,9 @@ void otp_handler(struct command_result* res) {
         cmd.flags = raw_row | OTP_CMD_WRITE_BITS;
         ret = rom_func_otp_access(raw_overwrite_data, sizeof(raw_overwrite_data), cmd);
         if (ret) {
-            printf("ERROR: Raw Overwrite failed with error %d\n", ret);
+            printf("ERROR: Raw Overwrite failed with error %d\r\n", ret);
         } else {
-            printf("Raw Overwrite succeeded\n");
+            printf("Raw Overwrite succeeded\r\n");
         }
 
         // Read it back
@@ -211,9 +211,9 @@ void otp_handler(struct command_result* res) {
             memcpy(raw_read_data_again + i*3, raw_read_data_again + i*4, 3);
         }
         if (ret) {
-            printf("ERROR: Raw Read failed with error %d\n", ret);
+            printf("ERROR: Raw Read failed with error %d\r\n", ret);
         } else {
-            printf("Raw Data read is now \"%s\"\n", raw_read_data_again);
+            printf("Raw Data read is now \"%s\"\r\n", raw_read_data_again);
         }
     }
 
@@ -221,20 +221,20 @@ void otp_handler(struct command_result* res) {
     // Lock the OTP page, to prevent any more reads or writes until the next reset
     int page = lock_row / 0x40;
     otp_hw->sw_lock[page] = 0xf;
-    printf("OTP Software Lock Done\n");
+    printf("OTP Software Lock Done\r\n");
 
     // Attempt to read it back again - should fail
     unsigned char read_data_locked[8] = {0};
     cmd.flags = lock_row | (lock_row == ecc_row ? OTP_CMD_ECC_BITS : 0);
     ret = rom_func_otp_access(read_data_locked, sizeof(read_data_locked), cmd);
     if (ret == BOOTROM_ERROR_NOT_PERMITTED) {
-        printf("Locked read failed as expected\n");
+        printf("Locked read failed as expected\r\n");
     } else {
         printf("ERROR: ");
         if (ret) {
-            printf("Locked read failed with error %d\n", ret);
+            printf("Locked read failed with error %d\r\n", ret);
         } else {
-            printf("Locked read succeeded. Data read is \"%s\"\n", read_data_locked);
+            printf("Locked read succeeded. Data read is \"%s\"\r\n", read_data_locked);
         }
     }
 

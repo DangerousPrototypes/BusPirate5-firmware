@@ -65,6 +65,7 @@ void otp_handler(struct command_result* res) {
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
     }
+    return;
 
     otp_cmd_t cmd;
     int8_t ret;

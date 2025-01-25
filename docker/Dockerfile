@@ -30,7 +30,7 @@ RUN apt-get update \
 RUN git clone https://github.com/raspberrypi/pico-sdk.git /opt/pico-sdk \
     && git -C /opt/pico-sdk submodule update --init --recursive \
     && cd /opt/pico-sdk \
-    && git checkout 2.0.0 \
+    && git checkout 2.1.0 \
     && mkdir -p build \
     && cd build \
     && cmake ../ \

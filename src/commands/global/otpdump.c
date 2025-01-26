@@ -89,7 +89,7 @@ static_assert(sizeof(OTP_RAW_READ_RESULT) == sizeof(uint32_t), "");
 typedef struct _OTP_READ_RESULT {
     OTP_RAW_READ_RESULT as_raw;
     uint16_t read_with_ecc;
-    uint16_t read_via_bootrom;
+    uint16_t read_via_bootrom; // recommended to use this as "truth" if no errors
     bool data_ok;
     bool err_permissions;
     bool err_possible_ecc_mismatch;
@@ -103,17 +103,36 @@ static char map_to_printable_char(uint8_t c) {
     if (c >= ' ' && c <= '~') {
         return (char)c;
     }
-    return ' ';
+    return '.';
 }
 static void print_otp_read_result(const OTP_READ_RESULT * data, uint16_t row) {    
+    uint16_t row_data =
+        (!data->err_from_bootrom         ) ? data->read_via_bootrom :
+        (!data->err_possible_ecc_mismatch) ? data->read_with_ecc    :
+        data->read_via_bootrom;
     printf("%s", ui_term_color_info());
-    printf("0x%03" PRIX16 ": %04" PRIX16, row, data->read_with_ecc);
-    printf(" == %02" PRIX8 " %02" PRIX8 " [%02" PRIX8 "]   ( %c %c )",
+    printf("Row 0x%03" PRIX16 ":", row);
+    printf(" %04" PRIX16, data->read_via_bootrom);
+
+    if (data->read_via_bootrom != data->read_with_ecc) {
+        printf(" %s!==%s ", ui_term_color_warning(), ui_term_color_info());
+    } else {
+        printf(" === ");
+    }
+    printf("%04" PRIX16, data->read_with_ecc);
+
+    if (((data->read_via_bootrom >> 8)    != data->as_raw.msb) ||
+        ((data->read_via_bootrom & 0xFFu) != data->as_raw.lsb)) {
+        printf(" %s=?=%s ", ui_term_color_warning(), ui_term_color_info());
+    } else {
+        printf(" === ");
+    }
+    printf("%02" PRIX8 " %02" PRIX8 " [%02" PRIX8 "] (%c%c)",
         data->as_raw.lsb,
         data->as_raw.msb,
         data->as_raw.correction,
-        map_to_printable_char(data->as_raw.lsb),
-        map_to_printable_char(data->as_raw.msb)
+        map_to_printable_char(row_data & 0xFFu),
+        map_to_printable_char(row_data >> 8)
         );
     if (data->err_permissions) {
         printf("%s", ui_term_color_error());

@@ -22,6 +22,7 @@
 //#include "msc_disk.h"
 #include "pico/bootrom.h"
 #include "hardware/structs/otp.h"
+#include "ui/ui_term.h"
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
@@ -51,6 +52,44 @@ static const struct ui_help_options options[] = {
     { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer*/
     { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string
 };
+/*
+void print_otp_data(uint8_t* data, uint32_t len) {
+    int j=0;
+    for(int i=0; i<len; i++){
+        if(j<3){
+            if(j<2) printf("%02X (%c) ", data[i], data[i]>=' ' && data[i]<='~'? data[i] : '-');
+            else printf("[%02X] ", data[i], data[i]>=' ' && data[i]<='~'? data[i] : '-');
+            j++;
+        }else{
+            j=0;
+        }
+    }
+    printf("\r\n");
+}
+*/
+void print_otp_data(uint8_t* data, uint32_t len, bool ecc) {
+    printf("%s", ui_term_color_info());
+    for (int i = 0; i < len; i++) {
+        if (i % 4 == 3) { //skip every 4th byte, is blank
+            // Print a new line every 4 * 4 byte iterations
+            if (ecc && (i + 1) % 16 == 0) {
+                printf("\r\n");
+            }else if (!ecc && (i + 1) % 12 == 0) {
+                printf("\r\n");
+            }
+            continue;
+        }
+
+        if(ecc && i % 4 == 2){ //print EEC
+            printf("%s[%02X]%s ", ui_term_color_reset(), data[i], ui_term_color_info());
+        } else {
+            printf("%02X (%c) ", data[i], data[i] >= ' ' && data[i] <= '~' ? data[i] : '-');
+        }
+
+
+    }
+
+}
 
 void otp_handler(struct command_result* res) {
     uint32_t value; // somewhere to keep an integer value
@@ -65,34 +104,132 @@ void otp_handler(struct command_result* res) {
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
     }
-    return;
-
+ 
+    // command line options:
+    //-e (ecc)
+    //-a (start address)
+    //-b (byte count)
+    //-s (search for non-blank otp)
+    
+    command_var_t arg; // this struct will contain additional information about the integer
+    if (cmdln_args_find_flag('s')) {
+        printf("Search flag set\r\n");
+        printf("Searching for non-blank rows:\r\n");
+        unsigned char row[4] = {0};
+        uint32_t start_row = 0;
+        otp_cmd_t cmd;
+        int8_t ret;
+        for(uint32_t i=0; i<0xFFF; i++){
+            cmd.flags = i;
+            ret = rom_func_otp_access(row, 4, cmd);
+            if (ret) {
+                printf("ERROR: Row Read failed with error %d at %02X\r\n", ret, row);
+            }else{
+                bool blank = true;
+                for(int j=0; j<3; j++){
+                    if(row[j] != 0){
+                        printf("Row 0x%04X: %02X %02X %02X\r\n", i, row[0], row[1], row[2]);
+                        break;
+                    }
+                }
+            }
+        }
+        return;
+    }    
+    
+    
+    uint32_t start_row = 0;
+    bool s_flag = cmdln_args_find_flag_uint32('a', &arg, &start_row);
+    if (s_flag) {
+        printf("Start row: 0x%04X\r\n", start_row);
+    }
+    int32_t row_count = 4;
+    bool r_flag = cmdln_args_find_flag_uint32('r', &arg, &row_count);
+    if (r_flag) {
+        printf("Row count: %d\r\n", row_count);
+    }
+    bool ecc = cmdln_args_find_flag('e');
+    if (ecc) {
+        printf("ECC reads\r\n");
+    }else{
+        printf("Raw reads\r\n");
+    }
+    
+    if(!((s_flag && r_flag))){
+        printf("ERROR: -a and -r flags are required\r\n");
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+        return;
+    }
+    #define OTP_READ_ROWS 4
     otp_cmd_t cmd;
     int8_t ret;
+    unsigned char otp_data[(OTP_READ_ROWS*4)] = {0};
+    while(row_count){
+        cmd.flags = start_row;
+        uint8_t read_bytes;
+        if(ecc){
+            read_bytes = (row_count<OTP_READ_ROWS)? (row_count * OTP_READ_ROWS) : 16;
+        }else{
+            read_bytes = (row_count<(OTP_READ_ROWS-1))? (row_count * OTP_READ_ROWS) : 12;
+        }
+        ret = rom_func_otp_access(otp_data, read_bytes, cmd);
+        if (ret) {
+            printf("ERROR: Row Read failed with error %d at %d\r\n", ret, start_row);
+        }else{
+            print_otp_data(otp_data, read_bytes, ecc);
+        }
+        start_row+=OTP_READ_ROWS;
+        row_count-=OTP_READ_ROWS;
+        if(row_count<=0) break;
+    }
 
+    return;
     // Row to write ECC data
-    uint16_t ecc_row = 0x400;
+    //uint16_t ecc_row = 0x400;
     // Row to write raw data
-    uint16_t raw_row = 0x410;
-
+    //uint16_t raw_row = 0x410;
+#if 0
     // Check rows are empty - else the rest of the tests won't behave as expected
     unsigned char initial_data[32] = {0};
     cmd.flags = ecc_row;
-    ret = rom_func_otp_access(initial_data, sizeof(initial_data)/2, cmd);
+    ret = rom_func_otp_access(initial_data, sizeof(initial_data), cmd);
     if (ret) {
         printf("ERROR: Initial ECC Row Read failed with error %d\r\n", ret);
-    }
-    cmd.flags = raw_row;
-    ret = rom_func_otp_access(initial_data+(sizeof(initial_data)/2), sizeof(initial_data)/2, cmd);
-    if (ret) {
-        printf("ERROR: Initial Raw Row Read failed with error %d\r\n", ret);
-    }
-    for (int i=0; i < sizeof(initial_data); i++) {
-        if (initial_data[i] != 0) {
-            printf("ERROR: This example requires empty OTP rows to run - change the ecc_row and raw_row variables to an empty row and recompile\r\n");
-            //return 0;
+    }else{
+        print_otp_data(initial_data, sizeof(initial_data), true);
+        // Read it back
+        unsigned char ecc_read_data[16] = {0};
+        cmd.flags = ecc_row | OTP_CMD_ECC_BITS;
+        ret = rom_func_otp_access(ecc_read_data, sizeof(ecc_read_data), cmd);
+        if (ret) {
+            printf("ERROR: ECC Read failed with error %d\r\n", ret);
+        } else {
+            printf("\r\nECC Data read is \"%s\"\r\n", ecc_read_data);
         }
     }
+
+    cmd.flags = raw_row;
+    ret = rom_func_otp_access(initial_data, sizeof(initial_data), cmd);
+    if (ret) {
+        printf("ERROR: Initial Raw Row Read failed with error %d\r\n", ret);
+    }else{
+        print_otp_data(initial_data, sizeof(initial_data), false);
+        // Read it back
+        unsigned char raw_read_data[20] = {0};
+        cmd.flags = raw_row;
+        ret = rom_func_otp_access(raw_read_data, sizeof(raw_read_data), cmd);
+        if (ret) {
+            printf("ERROR: Raw Read failed with error %d\r\n", ret);
+        } else {
+            // Remove the null bytes
+            for (int i=0; i < sizeof(raw_read_data)/4; i++) {
+                memcpy(raw_read_data + i*3, raw_read_data + i*4, 3);
+            }
+            printf("\r\nRaw Data read is \"%s\"\r\n", raw_read_data);
+        }        
+    }
+
+    return;
 
     if (ecc_row) {
         // Write an ECC value to OTP - the buffer must have a multiple of 2 length for ECC data
@@ -241,7 +378,7 @@ void otp_handler(struct command_result* res) {
 
 
 
-
+#endif
 
 
 

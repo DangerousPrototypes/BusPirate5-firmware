@@ -55,6 +55,10 @@
 #ifdef BP_SPLASH_ENABLED
 #include BP_SPLASH_FILE
 #endif
+#if BP_VER != 5
+#include "hardware/regs/addressmap.h"
+#include "hardware/regs/otp.h"
+#endif
 
 static mutex_t spi_mutex;
 
@@ -108,6 +112,15 @@ static bool should_disable_unique_usb_serial_number(void) {
     }
     return result;
 }
+static void softlock_all_otp(void) {
+    // lock all OTP pages as read-only
+#if BP_VER != 5
+    uint32_t * otp_soft_lock_register = ((uint32_t*)(OTP_BASE+REG_ALIAS_SET_BITS));
+    for (uint32_t offset = 0; offset < 64; ++offset) {
+        otp_soft_lock_register[offset] = 0x5; // read-only
+    }
+#endif // BP_VER != 5
+}
 
 static void main_system_initialization(void) {
 
@@ -116,6 +129,12 @@ static void main_system_initialization(void) {
         );
     tx_fifo_init();
     rx_fifo_init();
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: softlock OTP\n"
+        );
+    softlock_all_otp();
+
 
 #if (BP_VER == 5)
     uint8_t bp_rev = mcu_detect_revision();

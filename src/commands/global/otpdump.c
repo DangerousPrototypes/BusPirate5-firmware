@@ -297,10 +297,6 @@ void otpdump_handler(struct command_result* res) {
     if (ui_help_show(res->help_flag, usage, count_of(usage), &cmdline_options[0], count_of(cmdline_options))) {
         return;
     }
-    printf("%sWarning:%s Command format is very likely to change ... do not rely on this yet.\r\n",
-        ui_term_color_warning(), ui_term_color_reset()
-        );
-
     PARSED_OTP_COMMAND_OPTIONS options;
     parse_otp_command_line(&options, res);
     if (res->error) {

@@ -465,8 +465,6 @@ void uart_glitch_handler(struct command_result* res) {
     uint32_t glitch_max_delay = uart_glitch_config.glitch_delay + uart_glitch_config.glitch_wander;
     uint32_t this_glitch_delay = glitch_min_delay;
 
-    if (glitch_max_delay > 500)  glitch_max_delay = 500;
-
     // keep going until we've either:
     // + successfuly glitched
     // + BP button was pressed
@@ -571,7 +569,7 @@ void uart_glitch_handler(struct command_result* res) {
 
         // increment glitch delay time.  If we hit max, then
         // reset to min and increment glitch count
-        if (++this_glitch_delay > glitch_max_delay) {
+        if ((++this_glitch_delay) > glitch_max_delay) {
             this_glitch_delay = glitch_min_delay;
 
             if (++tries >= uart_glitch_config.retry_count) {

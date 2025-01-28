@@ -107,6 +107,8 @@ set(bp5_common
         commands/global/image.h
         commands/global/dump.c
         commands/global/dump.h
+        commands/global/ovrclk.c 
+        commands/global/ovrclk.h        
         
         # HiZ
         mode/hiz.h

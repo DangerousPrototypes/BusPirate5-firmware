@@ -28,8 +28,8 @@
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = {
-    "otp -r <start row> -c <maximum row count> -s <show only non-blank rows>",
-    "",
+    "otpdump -r <start row> -c <maximum row count> -s <show only non-blank rows>",
+    "show all non-blank rows: otpdump -r 0x000 -c 0xfff -s",
     // start row  == starting row address to show data
     // row count  == maximum number of rows to search
     // only blank == do not show OTP that are all-zero

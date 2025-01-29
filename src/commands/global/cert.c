@@ -53,6 +53,36 @@ static const struct ui_help_options options[] = {
     { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string*/
 };
 
+void print_x509_info(const mbedtls_x509_crt *cert) {
+    char buf[1024];
+
+    // Print the subject name
+    mbedtls_x509_dn_gets(buf, sizeof(buf), &cert->subject);
+    printf("Subject: %s\r\n", buf);
+
+    // Print the issuer name
+    mbedtls_x509_dn_gets(buf, sizeof(buf), &cert->issuer);
+    printf("Issuer: %s\r\n", buf);
+
+    // Print the validity period
+    const mbedtls_x509_time *valid_from = &cert->valid_from;
+    const mbedtls_x509_time *valid_to = &cert->valid_to;
+    printf("Valid from: %04d-%02d-%02d %02d:%02d:%02d\r\n",
+           valid_from->year, valid_from->mon, valid_from->day,
+           valid_from->hour, valid_from->min, valid_from->sec);
+    printf("Valid to: %04d-%02d-%02d %02d:%02d:%02d\r\n",
+           valid_to->year, valid_to->mon, valid_to->day,
+           valid_to->hour, valid_to->min, valid_to->sec);
+
+    // Print the serial number
+    mbedtls_x509_serial_gets(buf, sizeof(buf), &cert->serial);
+    printf("Serial Number: %s\r\n", buf);
+
+    // Print the public key
+    //mbedtls_pk_write_pubkey_pem(&cert->pk, (unsigned char *)buf, sizeof(buf));
+    //printf("Public Key: %s\n", buf);
+}
+
 void cert_handler(struct command_result* res) {
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
@@ -61,6 +91,7 @@ void cert_handler(struct command_result* res) {
     //openssl req -x509 -newkey rsa:4096 -nodes \
           -out ./nginx/config/cert.pem \
           -keyout ./nginx/config/key.pem -days 365
+    // openssl rsa -in key.pem -pubout > key.pub
 
     const char *cert_pem = "-----BEGIN CERTIFICATE-----\n\
 MIIF3TCCA8WgAwIBAgIUPNMkwDcT1pkDihebaQfebG/5CxMwDQYJKoZIhvcNAQEL\n\
@@ -97,58 +128,20 @@ ogeb1DKjKhB3iCbU23yiyN0wxRmKEPTxlxoEsisx8/7PXtqY48K41m//1yavuLeY\n\
 wrK6PPSRSHUXxZmvLVLMf0M=\n\
 -----END CERTIFICATE-----";
 
-    const char *public_key_pem = "-----BEGIN PRIVATE KEY-----\n\
-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\n\
-BTD2tLHZW6/ljMbUQy2lsFdL++ZlJg==\n\
------END PRIVATE KEY-----";
+    const char *public_key_pem = "-----BEGIN PUBLIC KEY-----\n\
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEApqU0p1cr4SMhCRIVD5o8\n\
+XTnsMk93JmRNV+y3JxKhmKBWtilLY/W+s/ods34LKmyLdeGb/3gyt/0lvZpqfNtJ\n\
+EceXBNm1MzV1c9+N5wYmtenjv6p9QxJnxhSk5LePMoVr8xTOAknFjpSw7+2+oVwx\n\
+Wt4l9Yv9Mb4uEjdaOrdz6EhBOAI3QypTfIOdJbBxHTEJlfifTry+vD/iMvwO351H\n\
+rshd0noGdk//aWub4J5YjwlQMzE5eDllkYa+V7H8nRoWlHFNlvC6X0odXBEY5e9h\n\
+IkjJBX0GtpYta0toh3An/QE9OQiZ1OVjTHff6uIMmeyu8qGqrJJ1WGFSIJWyMChy\n\
+uJ/01GUJ5jUqPuPdYZMS5Iaywuy4y1bU+Swu0qfGW2FrOdU6eMeP6gZxMwl6/Tqy\n\
+LiDmnLw4xsm5eRuR78tT2rshmKaqxG/3SLASpvFZVCQhLDfK28XBnxk7gbrFb+r+\n\
+uRHc7MQlrjTbJSb1ZeX+mps1pEyzVtzHBb+yA/dMv4kD38m6HeQimFKN83ywOZBy\n\
+VUfT+b1vYCriFlGRO+UPXF5EqvrfRMR3PIzoVmaUrxTXf6oZEYuQeGcSE1AN2+Wk\n\
+ER2bhxRBazcfKEQbbxFyAAjeSDRYVEbsmyongtMyhWtCvr0eswB087/06uEJlKgx\n\
+m3jsnIbZ901lFgAcIQKyq4cCAwEAAQ==\n\
+-----END PUBLIC KEY-----";
 
 
     mbedtls_x509_crt cert;
@@ -181,6 +174,8 @@ BTD2tLHZW6/ljMbUQy2lsFdL++ZlJg==\n\
         printf("Failed to verify certificate: %s\r\n", error_buf);
         return;
     }
+
+    print_x509_info(&cert);
 
     printf("Certificate verified successfully\n");
 

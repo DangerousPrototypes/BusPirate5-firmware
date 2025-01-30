@@ -48,7 +48,6 @@ a full path to the `elf` firmware binary.  YMMV.
 
 ```
 pushd ~/.pico-sdk/openocd/0.12.0+dev/scripts
-
 ../openocd -f ./interface/cmsis-dap.cfg -f ./target/rp2350.cfg -c "adapter speed 5000"
 ```
 
@@ -103,7 +102,7 @@ This requires a pre-release version of OpenOCD 0.12.0
 ```
 reset halt
 rtt stop
-program /home/henrygab/build_rp2350/src/bus_pirate6.elf
+program /home/henrygab/bp5/build_rp2350/src/bus_pirate6.elf
 reset halt
 rp2350.dap.core1 arp_reset assert 0
 rp2350.dap.core0 arp_reset assert 0

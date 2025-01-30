@@ -104,12 +104,19 @@ def CanonicalizeTranslationRecord(object):
     elif isinstance(object, dict):
         if not 'Localized' in object:
             raise ValueError("'Localized' is a mandatory key")
+        if not 'EN_US' in object:
+            object['EN_US'] = None
+        if not 'Comments' in object:
+            object['Comments'] = None
+        if not 'DataTypes' in object:
+            if object['Localized'] is None:
+                object['DataTypes'] = []
+            else:
+                object['DataTypes'] = list(format_specifiers_iterable(object['Localized']))
         for k, v in object.items():
             match k:
                 case 'Localized':
-                    if v is None:
-                        raise ValueError("'Localized' value cannot be None")
-                    if not isinstance(v, str):
+                    if v is not None and not isinstance(v, str):
                         raise TypeError("'Localized' value must be a string")
                 case 'EN_US':
                     if v is not None and not isinstance(v, str):
@@ -129,9 +136,10 @@ def CanonicalizeTranslationRecord(object):
                 case _:
                     print(f"WARNING: Unknown key '{k}' with value '{v}'")
                     # raise ValueError(f"Unknown key '{k}' with value '{v}'")
-        datatypes = list(format_specifiers_iterable(object['Localized']))
-        if object['DataTypes'] != datatypes:
-            raise ValueError(f"DataTypes in object does not match actual format specifiers in the Localized string")
+        if object['Localized'] is not None:
+            datatypes = list(format_specifiers_iterable(object['Localized']))
+            if object['DataTypes'] != datatypes:
+                raise ValueError(f"DataTypes in object does not match actual format specifiers in the Localized string")
         return object
     else:
         raise TypeError("object must be either a string or a dictionary")

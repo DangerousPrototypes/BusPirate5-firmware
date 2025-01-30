@@ -23,6 +23,58 @@
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/error.h"
+#include "cert.h"
+
+
+    const char *cert_pem = "-----BEGIN CERTIFICATE-----\n\
+MIIF3TCCA8WgAwIBAgIUPNMkwDcT1pkDihebaQfebG/5CxMwDQYJKoZIhvcNAQEL\n\
+BQAwfjELMAkGA1UEBhMCVVMxDTALBgNVBAgMBElPV0ExEjAQBgNVBAcMCU1VU0NB\n\
+VElORTEXMBUGA1UECgwOV0hFUkUgTEFCUyBMTEMxEzARBgNVBAsMCkJVUyBQSVJB\n\
+VEUxHjAcBgNVBAMMFWh0dHBzOi8vYnVzcGlyYXRlLmNvbTAeFw0yNTAxMjkxNDI5\n\
+NTZaFw0yNjAxMjkxNDI5NTZaMH4xCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARJT1dB\n\
+MRIwEAYDVQQHDAlNVVNDQVRJTkUxFzAVBgNVBAoMDldIRVJFIExBQlMgTExDMRMw\n\
+EQYDVQQLDApCVVMgUElSQVRFMR4wHAYDVQQDDBVodHRwczovL2J1c3BpcmF0ZS5j\n\
+b20wggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQCmpTSnVyvhIyEJEhUP\n\
+mjxdOewyT3cmZE1X7LcnEqGYoFa2KUtj9b6z+h2zfgsqbIt14Zv/eDK3/SW9mmp8\n\
+20kRx5cE2bUzNXVz343nBia16eO/qn1DEmfGFKTkt48yhWvzFM4CScWOlLDv7b6h\n\
+XDFa3iX1i/0xvi4SN1o6t3PoSEE4AjdDKlN8g50lsHEdMQmV+J9OvL68P+Iy/A7f\n\
+nUeuyF3SegZ2T/9pa5vgnliPCVAzMTl4OWWRhr5XsfydGhaUcU2W8LpfSh1cERjl\n\
+72EiSMkFfQa2li1rS2iHcCf9AT05CJnU5WNMd9/q4gyZ7K7yoaqsknVYYVIglbIw\n\
+KHK4n/TUZQnmNSo+491hkxLkhrLC7LjLVtT5LC7Sp8ZbYWs51Tp4x4/qBnEzCXr9\n\
+OrIuIOacvDjGybl5G5Hvy1PauyGYpqrEb/dIsBKm8VlUJCEsN8rbxcGfGTuBusVv\n\
+6v65EdzsxCWuNNslJvVl5f6amzWkTLNW3McFv7ID90y/iQPfybod5CKYUo3zfLA5\n\
+kHJVR9P5vW9gKuIWUZE75Q9cXkSq+t9ExHc8jOhWZpSvFNd/qhkRi5B4ZxITUA3b\n\
+5aQRHZuHFEFrNx8oRBtvEXIACN5INFhURuybKieC0zKFa0K+vR6zAHTzv/Tq4QmU\n\
+qDGbeOychtn3TWUWABwhArKrhwIDAQABo1MwUTAdBgNVHQ4EFgQUSjnuX4w0PMfn\n\
+hHu6UvC5MqdfplAwHwYDVR0jBBgwFoAUSjnuX4w0PMfnhHu6UvC5MqdfplAwDwYD\n\
+VR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAgEALZH+P93QP7zjczdifdt4\n\
+/hOBrFHjtsktMq5pDBNxrLPdTEJ0EK6IWN+Tj51P31Kn1yJn6xqYFrykMIT0JXBG\n\
+YF8/iGvq+vDnc4FWuxrOVtpyeUGxxW0gblvlgrqDPA+y08lCvnZvzjsZAzYZiEry\n\
+o29EKqhp/VvR2DWJUSkta4bDqn+EAH3JbKVa/avQp8eNVizLfTEVb8nRLNtwV+lE\n\
+i+KyYHwQhVyAFjdSwaT18kP0fFw9kBCDNOmJuPyH8kB3trQMcy2TpDd+3379m+mv\n\
+YfHFpm9NXdQXnJcGmA7nV2REG6CDgF9g5mPDFEGYh6z25zcwEzVUL9BfrZ73fhf2\n\
+fjdhOH7N2zjOdPX8IwuG/SJbUC4UNH5fTt80hQsMo33cL7ukbn//SraCQuP479WI\n\
+QoiUHOXZO8hDLnCs31iE6BTlrDaLyrd6PgTlXmlfhzGeHtQ9/alv+j2WEtWm661Q\n\
+K1w26UicqvVfLbtqCy0PiDgMGE2Wz3bct1v3qy698+sNSrTP/MNmwvTxvIrhgNh3\n\
+GOPbbu5h9DOtZdim5+KGnEk9JQRI90AOuCcW2eiu8Z0JZhRV3v6MMmIFvE4odB0x\n\
+ogeb1DKjKhB3iCbU23yiyN0wxRmKEPTxlxoEsisx8/7PXtqY48K41m//1yavuLeY\n\
+wrK6PPSRSHUXxZmvLVLMf0M=\n\
+-----END CERTIFICATE-----";
+
+    const char *public_key_pem = "-----BEGIN PUBLIC KEY-----\n\
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEApqU0p1cr4SMhCRIVD5o8\n\
+XTnsMk93JmRNV+y3JxKhmKBWtilLY/W+s/ods34LKmyLdeGb/3gyt/0lvZpqfNtJ\n\
+EceXBNm1MzV1c9+N5wYmtenjv6p9QxJnxhSk5LePMoVr8xTOAknFjpSw7+2+oVwx\n\
+Wt4l9Yv9Mb4uEjdaOrdz6EhBOAI3QypTfIOdJbBxHTEJlfifTry+vD/iMvwO351H\n\
+rshd0noGdk//aWub4J5YjwlQMzE5eDllkYa+V7H8nRoWlHFNlvC6X0odXBEY5e9h\n\
+IkjJBX0GtpYta0toh3An/QE9OQiZ1OVjTHff6uIMmeyu8qGqrJJ1WGFSIJWyMChy\n\
+uJ/01GUJ5jUqPuPdYZMS5Iaywuy4y1bU+Swu0qfGW2FrOdU6eMeP6gZxMwl6/Tqy\n\
+LiDmnLw4xsm5eRuR78tT2rshmKaqxG/3SLASpvFZVCQhLDfK28XBnxk7gbrFb+r+\n\
+uRHc7MQlrjTbJSb1ZeX+mps1pEyzVtzHBb+yA/dMv4kD38m6HeQimFKN83ywOZBy\n\
+VUfT+b1vYCriFlGRO+UPXF5EqvrfRMR3PIzoVmaUrxTXf6oZEYuQeGcSE1AN2+Wk\n\
+ER2bhxRBazcfKEQbbxFyAAjeSDRYVEbsmyongtMyhWtCvr0eswB087/06uEJlKgx\n\
+m3jsnIbZ901lFgAcIQKyq4cCAwEAAQ==\n\
+-----END PUBLIC KEY-----";
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { /*"dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
@@ -88,62 +140,6 @@ void cert_handler(struct command_result* res) {
         return;
     }
 
-    //openssl req -x509 -newkey rsa:4096 -nodes \
-          -out ./nginx/config/cert.pem \
-          -keyout ./nginx/config/key.pem -days 365
-    // openssl rsa -in key.pem -pubout > key.pub
-
-    const char *cert_pem = "-----BEGIN CERTIFICATE-----\n\
-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\n\
-wrK6PPSRSHUXxZmvLVLMf0M=\n\
------END CERTIFICATE-----";
-
-    const char *public_key_pem = "-----BEGIN PUBLIC KEY-----\n\
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEApqU0p1cr4SMhCRIVD5o8\n\
-XTnsMk93JmRNV+y3JxKhmKBWtilLY/W+s/ods34LKmyLdeGb/3gyt/0lvZpqfNtJ\n\
-EceXBNm1MzV1c9+N5wYmtenjv6p9QxJnxhSk5LePMoVr8xTOAknFjpSw7+2+oVwx\n\
-Wt4l9Yv9Mb4uEjdaOrdz6EhBOAI3QypTfIOdJbBxHTEJlfifTry+vD/iMvwO351H\n\
-rshd0noGdk//aWub4J5YjwlQMzE5eDllkYa+V7H8nRoWlHFNlvC6X0odXBEY5e9h\n\
-IkjJBX0GtpYta0toh3An/QE9OQiZ1OVjTHff6uIMmeyu8qGqrJJ1WGFSIJWyMChy\n\
-uJ/01GUJ5jUqPuPdYZMS5Iaywuy4y1bU+Swu0qfGW2FrOdU6eMeP6gZxMwl6/Tqy\n\
-LiDmnLw4xsm5eRuR78tT2rshmKaqxG/3SLASpvFZVCQhLDfK28XBnxk7gbrFb+r+\n\
-uRHc7MQlrjTbJSb1ZeX+mps1pEyzVtzHBb+yA/dMv4kD38m6HeQimFKN83ywOZBy\n\
-VUfT+b1vYCriFlGRO+UPXF5EqvrfRMR3PIzoVmaUrxTXf6oZEYuQeGcSE1AN2+Wk\n\
-ER2bhxRBazcfKEQbbxFyAAjeSDRYVEbsmyongtMyhWtCvr0eswB087/06uEJlKgx\n\
-m3jsnIbZ901lFgAcIQKyq4cCAwEAAQ==\n\
------END PUBLIC KEY-----";
-
-
     mbedtls_x509_crt cert;
     mbedtls_pk_context public_key;
 
@@ -176,6 +172,22 @@ m3jsnIbZ901lFgAcIQKyq4cCAwEAAQ==\n\
     }
 
     print_x509_info(&cert);
+
+ #if 1   // Verify the certificate signature using the public key
+    ret = mbedtls_pk_verify(
+        &public_key,
+        MBEDTLS_MD_SHA256,
+        cert.raw.p, cert.raw.len - cert.sig.len,
+        cert.sig.p, cert.sig.len
+    );
+    if (ret != 0) {
+        char error_buf[100];
+        mbedtls_strerror(ret, error_buf, 100);
+        printf("Failed to verify certificate: %s\r\n", error_buf);
+        return;
+    }
+#endif
+    
 
     printf("Certificate verified successfully\n");
 

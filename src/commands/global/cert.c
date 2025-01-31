@@ -23,7 +23,9 @@
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/error.h"
+#include "mbedtls/md_internal.h"
 #include "cert.h"
+#include "mbedtls/md.h"
 
 
     const char *cert_pem = "-----BEGIN CERTIFICATE-----\n\
@@ -108,6 +110,7 @@ static const struct ui_help_options options[] = {
 void print_x509_info(const mbedtls_x509_crt *cert) {
     char buf[1024];
 
+
     // Print the subject name
     mbedtls_x509_dn_gets(buf, sizeof(buf), &cert->subject);
     printf("Subject: %s\r\n", buf);
@@ -142,6 +145,7 @@ void cert_handler(struct command_result* res) {
 
     mbedtls_x509_crt cert;
     mbedtls_pk_context public_key;
+    unsigned char hash[32];
 
     mbedtls_x509_crt_init(&cert);
     mbedtls_pk_init(&public_key);
@@ -161,7 +165,7 @@ void cert_handler(struct command_result* res) {
         printf("Failed to parse public key: %s\r\n", error_buf);
         return;
     }
-
+/*
     uint32_t flags;
     ret = mbedtls_x509_crt_verify(&cert, &cert, NULL, NULL, &flags, NULL, NULL);
     if (ret != 0) {
@@ -170,24 +174,39 @@ void cert_handler(struct command_result* res) {
         printf("Failed to verify certificate: %s\r\n", error_buf);
         return;
     }
+*/
 
-    print_x509_info(&cert);
+    // Compute the SHA-256 hash of the TBS (to-be-signed) part of the certificate
+    printf("Verifying the SHA-256 signature");
+    const mbedtls_md_info_t *mdinfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+    ret = mbedtls_md(
+        //mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
+        mdinfo,
+        cert.tbs.p, cert.tbs.len, hash);
+    if (ret != 0) {
+        char error_buf[100];
+        mbedtls_strerror(ret, error_buf, 100);
+        printf("Failed to create hash: %s\r\n", error_buf);
+        return;
+    }
 
- #if 1   // Verify the certificate signature using the public key
+    printf("Hash done\r\n");
+
+    // Verify the certificate signature using the public key
     ret = mbedtls_pk_verify(
         &public_key,
-        MBEDTLS_MD_SHA256,
-        cert.raw.p, cert.raw.len - cert.sig.len,
+        mdinfo->type,
+        hash, 0,
         cert.sig.p, cert.sig.len
     );
     if (ret != 0) {
         char error_buf[100];
         mbedtls_strerror(ret, error_buf, 100);
-        printf("Failed to verify certificate: %s\r\n", error_buf);
+        printf("Failed to verify: %s\r\n", error_buf);
         return;
     }
-#endif
-    
+
+    print_x509_info(&cert); 
 
     printf("Certificate verified successfully\n");
 

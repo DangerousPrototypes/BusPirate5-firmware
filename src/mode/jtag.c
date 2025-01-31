@@ -13,14 +13,15 @@
 #include "ui/ui_help.h"
 #include "pirate/hwspi.h"
 #include "usb_rx.h"
+#include "commands/jtag/bluetag.h"
 
 // command configuration
 const struct _mode_command_struct jtag_commands[] = {
-    /*{   .command="bluetag", 
-        .func=&flash, 
+    {   .command="bluetag", 
+        .func=&bluetag_handler, 
         .description_text=T_HELP_CMD_FLASH, 
         .supress_fala_capture=true
-    },*/
+    },
  
 };
 const uint32_t jtag_commands_count = count_of(jtag_commands);

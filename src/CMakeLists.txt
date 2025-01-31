@@ -230,6 +230,11 @@ set(bp5_common
         # JTAG
         mode/jtag.h
         mode/jtag.c
+        commands/jtag/bluetag.c
+        commands/jtag/bluetag.h
+        lib/bluetag/src/blueTag.c
+        lib/bluetag/src/blueTag.h
+        lib/bluetag/src/jep106.inc
 
         # DUMMY MODE
         mode/dummy1.c

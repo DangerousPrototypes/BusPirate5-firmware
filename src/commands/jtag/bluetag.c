@@ -22,6 +22,7 @@
 #include "msc_disk.h"
 #include "lib/bluetag/src/blueTag.h"
 #include "usb_rx.h"
+#include "mode/jtag.h"
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
@@ -109,13 +110,26 @@ static void showMenu(void)
     printf(" [ Note 2: Try deactivating 'pin pulsing' (p) if valid pinout isn't found ]\r\n\r\n");
 }
 
+//TODO: use our prompt function to get channels
+static uint32_t get_channels(uint32_t minChannels, uint32_t maxChannels)
+{
+    int x=minChannels;//debug
+    printf("\tEnter number of channels hooked up (Min %d, Max %d): ", minChannels, maxChannels);
+    //x = getIntFromSerial();
+    while(x < 4 || x > maxChannels)
+    {
+        printf("\tEnter a valid value: ");
+        //x = getIntFromSerial();       
+    }
+    printf("\tNumber of channels set to: %d\n\n",x);
+    return(x);
+}
+
 // to maintain mergability with the upstream project,
 // I'm reproducing some of the control functions here
 static void bluetag_cli(void){
-    // GPIO init
-    //initChannels();
-
     bool jPulsePins=true;
+    jtag_cleanup();
     bluetag_jPulsePins_set(jPulsePins);
     splashScreen();
     showMenu();
@@ -138,16 +152,31 @@ static void bluetag_cli(void){
                 break;
 
             case 'j':
-                //jtagScan();
+                struct jtagScan_t jtag;
+                jtag.channelCount = get_channels(4, 8);
+                if(!jtagScan(&jtag)){
+                    bluetag_progressbar_cleanup(jtag.maxPermutations);
+                    printf("\r\n\r\n");
+                    printf("\tNo JTAG devices found. Please try again.\n\n");
+                }
                 break;
 
-            case 's':
-                //swdScan();
+            case 's':  
+                struct swdScan_t swd;
+                swd.channelCount = get_channels(2, 8);              
+                if(!swdScan(&swd)){
+                    bluetag_progressbar_cleanup(swd.maxPermutations);
+                    printf("\r\n\r\n");
+                    printf("\tNo devices found. Please try again.\n\n");
+                }else{
+                    char swd_pin_labels[][5] = { "SCLK", "SDIO" };
+                    system_bio_update_purpose_and_label(true, (swd.xSwdClk-8), BP_PIN_MODE, swd_pin_labels[0]);
+                    system_bio_update_purpose_and_label(true, (swd.xSwdIO-8), BP_PIN_MODE, swd_pin_labels[1]);
+                }                
                 break;
 
             case 'p':
                 jPulsePins=!jPulsePins;
-                bluetag_jPulsePins_set(jPulsePins);
                 if(jPulsePins){
                     printf("\tPin pulsing activated.\r\n\r\n");
                 }else{
@@ -165,6 +194,8 @@ static void bluetag_cli(void){
                     sleep_ms(250);
                 }*/
                // cleanup pins
+                jtag_cleanup();
+                jtag_setup_exc();
                 return;
                 break;
 

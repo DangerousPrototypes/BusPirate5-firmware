@@ -881,7 +881,7 @@ bool swdScan(struct swdScan_t *swd)
 }
 
 //--------------------------------------------Main--------------------------------------------------
-
+#if 0
 static int main()
 {
     char cmd;
@@ -970,6 +970,7 @@ static int main()
     }    
     return 0;
 }
+#endif
 
 ///////////////// HELPER ADDITIONS //////////////////////
 void bluetag_progressbar_cleanup(uint maxPermutations)

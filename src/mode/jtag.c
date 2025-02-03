@@ -47,12 +47,15 @@ uint32_t jtag_setup_exc(void) {
 
 void jtag_cleanup(void) {
     // release pin claims
+    system_bio_update_purpose_and_label(false, BIO0, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO1, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, BIO2, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, BIO3, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_SPI_CLK, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_SPI_CDO, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
+    bio_init();
 }
 
 bool jtag_preflight_sanity_check(void){

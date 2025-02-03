@@ -66,9 +66,9 @@ void bluetag_handler(struct command_result* res) {
     // 2. if the help assignment in commands[] struct is 0x00, it can be handled here (or ignored)
     // res.help_flag is set by the command line parser if the user enters -h
     // we can use the ui_help_show function to display the help text we configured above
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
-        return;
-    }
+    //if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    //    return;
+    //}
 
     // check for verb (jtag, swd, cli)
 

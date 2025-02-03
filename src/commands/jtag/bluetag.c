@@ -46,13 +46,13 @@ static const char* const usage[] = { "bluetag [jtag|swd] [-c <channels>] [-v(ers
 //      values
 //      4. Use the new T_ constant in the help text for the command
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_DUMMY_COMMANDS },    // section heading
-    /*{ 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
-    { 0, "test", T_HELP_DUMMY_TEST },    // test is an example we'll find by position
-    { 1, "", T_HELP_DUMMY_FLAGS },       // section heading for flags
-    { 0, "-b", T_HELP_DUMMY_B_FLAG },    //-a flag, with no optional string or integer
-    { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer
-    { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string*/
+    { 1, "", T_JTAG_BLUETAG_OPTIONS },    // section heading
+    { 0, "jtag", T_JTAG_BLUETAG_JTAG },    // jtag is an example we'll find by position
+    { 0, "swd", T_JTAG_BLUETAG_SWD },      // swd is an example we'll find by position
+    { 1, "", T_JTAG_BLUETAG_FLAGS },       // section heading for flags
+    { 0, "-c", T_JTAG_BLUETAG_CHANNELS },  //-c flag, with optional integer
+    { 0, "-v", T_JTAG_BLUETAG_VERSION },   //-v flag, show version
+    { 0, "-d", T_JTAG_BLUETAG_DISABLE },   //-d flag, disable pin pulsing
 };
 
 static void bluetag_cli(void);
@@ -62,6 +62,12 @@ void bluetag_handler(struct command_result* res) {
     char file[13];  // somewhere to keep a string value (8.3 filename + 0x00 = 13 characters max)
 
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+        return;
+    }
+
+    //print version
+    if(cmdln_args_find_flag('v')){
+        printf("\r\nCurrent version: %s\r\n\r\n", version);
         return;
     }
 
@@ -79,10 +85,6 @@ void bluetag_handler(struct command_result* res) {
             return;
         }
 
-        //print version
-        if(cmdln_args_find_flag('v')){
-            printf("\r\nCurrent version: %s\r\n\r\n", version);
-        }
         //disable pin pulsing
         bool disable_pulse=cmdln_args_find_flag('d');
         if(disable_pulse){
@@ -96,6 +98,8 @@ void bluetag_handler(struct command_result* res) {
         if(!c_flag){
             printf("\r\nSpecify the number of channels with the -c flag, -h for help\r\n");
             return;
+        }else{
+            printf("\r\nNumber of channels set to: %d\r\n\r\n", channels);
         }
 
         // lets do jtag!
@@ -219,6 +223,8 @@ static void bluetag_cli(void){
     {
         rx_fifo_get_blocking(&cmd);
         printf("%c\r\n",cmd);
+        struct jtagScan_t jtag;
+        struct swdScan_t swd;
         switch(cmd)
         {
             // Help menu requested
@@ -232,7 +238,6 @@ static void bluetag_cli(void){
 
             case 'j':
                 jtag_cleanup();
-                struct jtagScan_t jtag;
                 jtag.channelCount = get_channels(4, 8);
                 jtag.jPulsePins = jPulsePins;
                 if(jtag.channelCount == 0){
@@ -257,7 +262,7 @@ static void bluetag_cli(void){
 
             case 's':  
                 jtag_cleanup();
-                struct swdScan_t swd;
+                //struct swdScan_t swd;
                 swd.channelCount = get_channels(2, 8);  
                 if(swd.channelCount == 0){
                     printf("\r\nAbort\r\n\r\n");

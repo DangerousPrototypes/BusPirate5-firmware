@@ -26,13 +26,14 @@
 #include "ui/ui_prompt.h"
 
 // This array of strings is used to display help USAGE examples for the dummy command
-static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
-                                     "Initialize: dummy init",
-                                     "Test: dummy test",
-                                     "Test, require button press: dummy test -b",
-                                     "Integer, value required: dummy -i 123",
-                                     "Create/write/read file: dummy -f dummy.txt",
-                                     "Kitchen sink: dummy test -b -i 123 -f dummy.txt" };
+static const char* const usage[] = { "bluetag [jtag|swd] [-c <channels>] [-v(ersion)] [-d(isable pulsing)]",
+                                     "blueTag interactive interface: bluetag",
+                                     "JTAG scan, 6 channels: bluetag jtag -c 6",
+                                     "SWD scan, 4 channels: bluetag swd -c 4",
+                                     "Show version: bluetag -v",
+                                     "Disable JTAG pin pulsing: bluetag jtag -c 6 -d",
+                                     "",
+                                     "blueTag by @Aodrulez https://github.com/Aodrulez/blueTag" };
 
 // This is a struct of help strings for each option/flag/variable the command accepts
 // Record type 1 is a section header
@@ -46,12 +47,12 @@ static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nte
 //      4. Use the new T_ constant in the help text for the command
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_DUMMY_COMMANDS },    // section heading
-    { 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
+    /*{ 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
     { 0, "test", T_HELP_DUMMY_TEST },    // test is an example we'll find by position
     { 1, "", T_HELP_DUMMY_FLAGS },       // section heading for flags
     { 0, "-b", T_HELP_DUMMY_B_FLAG },    //-a flag, with no optional string or integer
     { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer
-    { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string
+    { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string*/
 };
 
 static void bluetag_cli(void);
@@ -60,20 +61,92 @@ void bluetag_handler(struct command_result* res) {
     uint32_t value; // somewhere to keep an integer value
     char file[13];  // somewhere to keep a string value (8.3 filename + 0x00 = 13 characters max)
 
-    // the help -h flag can be serviced by the command line parser automatically, or from within the command
-    // the action taken is set by the help_text variable of the command struct entry for this command
-    // 1. a single T_ constant help entry assigned in the commands[] struct in commands.c will be shown automatically
-    // 2. if the help assignment in commands[] struct is 0x00, it can be handled here (or ignored)
-    // res.help_flag is set by the command line parser if the user enters -h
-    // we can use the ui_help_show function to display the help text we configured above
-    //if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
-    //    return;
-    //}
+    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+        return;
+    }
 
-    // check for verb (jtag, swd, cli)
+    // check for option verb
+    char action_str[5];              // somewhere to store the parameter string
+    bool jtag=false;
+    bool swd=false;
+    if(cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
+        if (strcmp(action_str, "jtag") == 0) {
+            jtag = true;
+        }else if (strcmp(action_str, "swd") == 0) {
+            swd = true;
+        }else{
+            printf("Invalid option: %s\r\n", action_str);
+            return;
+        }
 
-    // cli
-    bluetag_cli();
+        //print version
+        if(cmdln_args_find_flag('v')){
+            printf("\r\nCurrent version: %s\r\n\r\n", version);
+        }
+        //disable pin pulsing
+        bool disable_pulse=cmdln_args_find_flag('d');
+        if(disable_pulse){
+            printf("\r\nDisabled pin pulsing\r\n\r\n");
+        }
+
+        //number of channels
+        command_var_t arg;
+        uint32_t channels=0;
+        bool c_flag = cmdln_args_find_flag_uint32('c', &arg, &channels);
+        if(!c_flag){
+            printf("\r\nSpecify the number of channels with the -c flag, -h for help\r\n");
+            return;
+        }
+
+        // lets do jtag!
+        if(jtag){
+            if(jtag && (channels < 4 || channels > 8)){
+                printf("Invalid number of JTAG channels (min 4, max 8)\r\n");
+                return;
+            }
+
+            jtag_cleanup();
+            struct jtagScan_t jtag;
+            jtag.channelCount = channels;
+            jtag.jPulsePins = !disable_pulse;
+            if(!jtagScan(&jtag)){
+                bluetag_progressbar_cleanup(jtag.maxPermutations);
+                printf("\r\n\r\n");
+                printf("\tNo JTAG devices found. Please try again.\r\n");
+            }else{
+                //char jtag_pin_labels[][5] = { "TRST", "TCK", "TDI", "TDO", "TMS" }; 
+                /*system_bio_update_purpose_and_label(true, (jtag.xTCK-8), BP_PIN_MODE, jtag_pin_labels[1]);
+                system_bio_update_purpose_and_label(true, (jtag.xTDI-8), BP_PIN_MODE, jtag_pin_labels[2]);
+                system_bio_update_purpose_and_label(true, (jtag.xTDO-8), BP_PIN_MODE, jtag_pin_labels[3]);
+                system_bio_update_purpose_and_label(true, (jtag.xTMS-8), BP_PIN_MODE, jtag_pin_labels[4]);
+                if(jtag.xTRST != 0){
+                    system_bio_update_purpose_and_label(true, (jtag.xTRST-8), BP_PIN_MODE, jtag_pin_labels[0]);
+                }*/
+            }            
+        }
+        
+        if(swd){
+            if(channels < 2 || channels > 8){
+                printf("Invalid number of SWD channels (min 2, max 8)\r\n");
+                return;
+            }
+            jtag_cleanup();
+            struct swdScan_t swd;
+            swd.channelCount = channels;         
+            if(!swdScan(&swd)){
+                bluetag_progressbar_cleanup(swd.maxPermutations);
+                printf("\r\n\r\n");
+                printf("\tNo SWD devices found. Please try again.\r\n");
+            }else{
+                /*char swd_pin_labels[][5] = { "SCLK", "SDIO" };
+                system_bio_update_purpose_and_label(true, (swd.xSwdClk-8), BP_PIN_MODE, swd_pin_labels[0]);
+                system_bio_update_purpose_and_label(true, (swd.xSwdIO-8), BP_PIN_MODE, swd_pin_labels[1]);*/
+            }     
+        }
+
+    } else {
+        bluetag_cli();
+    }
 }
 
 static void splashScreen(void)
@@ -161,6 +234,7 @@ static void bluetag_cli(void){
                 jtag_cleanup();
                 struct jtagScan_t jtag;
                 jtag.channelCount = get_channels(4, 8);
+                jtag.jPulsePins = jPulsePins;
                 if(jtag.channelCount == 0){
                     printf("\r\nAbort\r\n\r\n");
                     break;

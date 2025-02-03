@@ -55,6 +55,7 @@ void jtag_cleanup(void) {
     system_bio_update_purpose_and_label(false, M_SPI_CDO, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
+    bio_init();
 }
 
 bool jtag_preflight_sanity_check(void){

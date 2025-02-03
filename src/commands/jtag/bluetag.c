@@ -23,6 +23,7 @@
 #include "lib/bluetag/src/blueTag.h"
 #include "usb_rx.h"
 #include "mode/jtag.h"
+#include "ui/ui_prompt.h"
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
@@ -113,16 +114,23 @@ static void showMenu(void)
 //TODO: use our prompt function to get channels
 static uint32_t get_channels(uint32_t minChannels, uint32_t maxChannels)
 {
-    int x=minChannels;//debug
-    printf("\tEnter number of channels hooked up (Min %d, Max %d): ", minChannels, maxChannels);
-    //x = getIntFromSerial();
-    while(x < 4 || x > maxChannels)
+    printf("\r\nNumber of connected IO, starting with IO0 (Min %d, Max %d, x to exit): ", minChannels, maxChannels);
+    char c;
+    rx_fifo_get_blocking(&c);
+    while(true)
     {
-        printf("\tEnter a valid value: ");
-        //x = getIntFromSerial();       
+        if(c == 'x')
+        {
+            return 0;
+        }
+        if(c >= '0'+minChannels && c <= '0'+maxChannels)
+        {
+            printf("\r\n\r\n\tNumber of channels set to: %d\r\n\r\n",c-'0');
+            return c-'0';
+        }
+        printf("\r\nEnter a valid value (Min %d, Max %d, x to exit): ", minChannels, maxChannels);
+        rx_fifo_get_blocking(&c);
     }
-    printf("\tNumber of channels set to: %d\n\n",x);
-    return(x);
 }
 
 // to maintain mergability with the upstream project,
@@ -130,16 +138,14 @@ static uint32_t get_channels(uint32_t minChannels, uint32_t maxChannels)
 static void bluetag_cli(void){
     bool jPulsePins=true;
     jtag_cleanup();
-    bluetag_jPulsePins_set(jPulsePins);
     splashScreen();
     showMenu();
     showPrompt();
     char cmd;
     while(1)
     {
-        //cmd=getc(stdin);
         rx_fifo_get_blocking(&cmd);
-        printf("%c\n\n",cmd);
+        printf("%c\r\n",cmd);
         switch(cmd)
         {
             // Help menu requested
@@ -152,22 +158,41 @@ static void bluetag_cli(void){
                 break;
 
             case 'j':
+                jtag_cleanup();
                 struct jtagScan_t jtag;
                 jtag.channelCount = get_channels(4, 8);
+                if(jtag.channelCount == 0){
+                    printf("\r\nAbort\r\n\r\n");
+                    break;
+                }
                 if(!jtagScan(&jtag)){
                     bluetag_progressbar_cleanup(jtag.maxPermutations);
                     printf("\r\n\r\n");
-                    printf("\tNo JTAG devices found. Please try again.\n\n");
+                    printf("\tNo JTAG devices found. Please try again.\r\n");
+                }else{
+                    char jtag_pin_labels[][5] = { "TRST", "TCK", "TDI", "TDO", "TMS" }; 
+                    system_bio_update_purpose_and_label(true, (jtag.xTCK-8), BP_PIN_MODE, jtag_pin_labels[1]);
+                    system_bio_update_purpose_and_label(true, (jtag.xTDI-8), BP_PIN_MODE, jtag_pin_labels[2]);
+                    system_bio_update_purpose_and_label(true, (jtag.xTDO-8), BP_PIN_MODE, jtag_pin_labels[3]);
+                    system_bio_update_purpose_and_label(true, (jtag.xTMS-8), BP_PIN_MODE, jtag_pin_labels[4]);
+                    if(jtag.xTRST != 0){
+                        system_bio_update_purpose_and_label(true, (jtag.xTRST-8), BP_PIN_MODE, jtag_pin_labels[0]);
+                    }
                 }
                 break;
 
             case 's':  
+                jtag_cleanup();
                 struct swdScan_t swd;
-                swd.channelCount = get_channels(2, 8);              
+                swd.channelCount = get_channels(2, 8);  
+                if(swd.channelCount == 0){
+                    printf("\r\nAbort\r\n\r\n");
+                    break;
+                }            
                 if(!swdScan(&swd)){
                     bluetag_progressbar_cleanup(swd.maxPermutations);
                     printf("\r\n\r\n");
-                    printf("\tNo devices found. Please try again.\n\n");
+                    printf("\tNo devices found. Please try again.\r\n");
                 }else{
                     char swd_pin_labels[][5] = { "SCLK", "SDIO" };
                     system_bio_update_purpose_and_label(true, (swd.xSwdClk-8), BP_PIN_MODE, swd_pin_labels[0]);
@@ -200,7 +225,7 @@ static void bluetag_cli(void){
                 break;
 
             default:
-                printf(" Unknown command. \n\n");
+                printf("\tUnknown command.\r\n");
                 break;
         }
         showPrompt();

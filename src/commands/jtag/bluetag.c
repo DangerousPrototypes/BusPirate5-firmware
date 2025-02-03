@@ -223,6 +223,8 @@ static void bluetag_cli(void){
     {
         rx_fifo_get_blocking(&cmd);
         printf("%c\r\n",cmd);
+        struct jtagScan_t jtag;
+        struct swdScan_t swd;
         switch(cmd)
         {
             // Help menu requested
@@ -236,7 +238,6 @@ static void bluetag_cli(void){
 
             case 'j':
                 jtag_cleanup();
-                struct jtagScan_t jtag;
                 jtag.channelCount = get_channels(4, 8);
                 jtag.jPulsePins = jPulsePins;
                 if(jtag.channelCount == 0){
@@ -261,7 +262,7 @@ static void bluetag_cli(void){
 
             case 's':  
                 jtag_cleanup();
-                struct swdScan_t swd;
+                //struct swdScan_t swd;
                 swd.channelCount = get_channels(2, 8);  
                 if(swd.channelCount == 0){
                     printf("\r\nAbort\r\n\r\n");

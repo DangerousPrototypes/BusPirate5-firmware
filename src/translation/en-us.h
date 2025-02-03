@@ -214,6 +214,14 @@ static char const * const en_us[]={
 	[T_HELP_IRTX_FILE_FLAG]="Transmit one or more aIR packets from a file",
 	[T_HELP_IRRX_FILE_FLAG]="Specify filename for saved signals",
 	[T_HELP_IRRX_SENSOR_FLAG]="Specify sensor for received signals (38B/38D/56D)irtx -h",
+	//JTAG
+	[T_JTAG_BLUETAG_OPTIONS]="blueTAG options",
+	[T_JTAG_BLUETAG_JTAG]="Scan for JTAG pins",
+	[T_JTAG_BLUETAG_SWD]="Scan for SWD pins",
+	[T_JTAG_BLUETAG_FLAGS]="Flags",
+	[T_JTAG_BLUETAG_CHANNELS]="Number of channels to scan (starting from IO0)",
+	[T_JTAG_BLUETAG_VERSION]="Show version",
+	[T_JTAG_BLUETAG_DISABLE]="Disable pin pulsing (JTAG mode)",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",

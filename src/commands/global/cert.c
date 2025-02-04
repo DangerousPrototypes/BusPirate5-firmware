@@ -27,7 +27,7 @@
 #include "cert.h"
 #include "mbedtls/md.h"
 
-
+#if 0
     const char *cert_pem = "-----BEGIN CERTIFICATE-----\n\
 MIIF3TCCA8WgAwIBAgIUPNMkwDcT1pkDihebaQfebG/5CxMwDQYJKoZIhvcNAQEL\n\
 BQAwfjELMAkGA1UEBhMCVVMxDTALBgNVBAgMBElPV0ExEjAQBgNVBAcMCU1VU0NB\n\
@@ -77,6 +77,40 @@ VUfT+b1vYCriFlGRO+UPXF5EqvrfRMR3PIzoVmaUrxTXf6oZEYuQeGcSE1AN2+Wk\n\
 ER2bhxRBazcfKEQbbxFyAAjeSDRYVEbsmyongtMyhWtCvr0eswB087/06uEJlKgx\n\
 m3jsnIbZ901lFgAcIQKyq4cCAwEAAQ==\n\
 -----END PUBLIC KEY-----";
+#endif
+
+    const char *cert_pem = "-----BEGIN CERTIFICATE-----\n"
+        "MIIDtTCCAp2gAwIBAgITaKShdq9xXbBofxeT8mpjU4xFQjANBgkqhkiG9w0BAQsF\n"
+        "ADBgMQswCQYDVQQGEwJVUzELMAkGA1UECAwCV0kxIzAhBgNVBAoMGk1hdHR5ZHlu\n"
+        "ZSBIZWF2eSBJbmR1c3RyaWVzMR8wHQYJKoZIhvcNAQkBFhB0ZXN0QGV4YW1wbGUu\n"
+        "Y29tMB4XDTI1MDEyOTE2MTQxMVoXDTM1MDEyNzE2MTQxMVowYDELMAkGA1UEBhMC\n"
+        "VVMxCzAJBgNVBAgMAldJMSMwIQYDVQQKDBpNYXR0eWR5bmUgSGVhdnkgSW5kdXN0\n"
+        "cmllczEfMB0GCSqGSIb3DQEJARYQdGVzdEBleGFtcGxlLmNvbTCCASIwDQYJKoZI\n"
+        "hvcNAQEBBQADggEPADCCAQoCggEBAM46AUpYay/BiKKXDnwdS9wI6yBYz6NClxWV\n"
+        "vXhbs/I2Y/AH+A8ZmHnMYb0B9rSXRXyI5Ar3dTvultmJJ4qr6aibxvl99p7jmp0U\n"
+        "MieX6EasClC+vmpzUTHTWMoGWy2eviyqbK+tnO5sD754DiAp8PgHdVq3E0rdoF6k\n"
+        "bidmZLhdQD3CEmlSnPFllB2nELT//B18PE3jIf7iBU9Klbz6xS9iU5bM/g0R21yx\n"
+        "69udOY1crREaWgBBH+1x0dfYyGNa3yVfgIIGfLk9mT3MTD1IlaI0JXAET7r5pcnt\n"
+        "rW2l54ECaZ08SA9O0heKWWz3zrnGtXMemzNxx8AkKoinSqI0tbUCAwEAAaNoMGYw\n"
+        "HwYIKwYBBAGh9CMEEwwRQlAgc2VyaWFsIDEyMzQ1NjcwJAYIKwYBBAGh9CQEGAwW\n"
+        "clBJIHNlcmlhbCBhMWIyYzNkNDk5OTAdBgNVHQ4EFgQU/nqKhpUnDq82nl4lGYoO\n"
+        "fCRlr3EwDQYJKoZIhvcNAQELBQADggEBAE6FUOZ2Wg/L5AG3UDqnpoX3FM6aLu7i\n"
+        "IGnr8G+Ru9rxEQaIISPGdH2m3jaebM8AoZGLRhJooAev03AoiWuIJXSQB4nEQvSr\n"
+        "DqOxf2KvkTcwaghjisr+duRQ3kkAM5xqxV1WjiL0jdE42t6FwesU0y45/UnMe8iQ\n"
+        "ON+sd9b4xChgRS5g7dPK2XdMxJYeUNAEICKBSQeUWY7BRa3A50dHR23n5Xio5Rcy\n"
+        "hZAiCQ7pLUUjjehcvmUVBG9PR7RPMNSkB6N0fd8GUwSl2fy+VG/BaScO68rUf0qj\n"
+        "U0r95j0j1GsySuTRk16UMC9WBPqfPvUROOHrMXoT3cpTAVvl041WOsE=\n"
+        "-----END CERTIFICATE-----";
+
+    const char* public_key_pem = "-----BEGIN PUBLIC KEY-----\n"
+        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzjoBSlhrL8GIopcOfB1L\n"
+        "3AjrIFjPo0KXFZW9eFuz8jZj8Af4DxmYecxhvQH2tJdFfIjkCvd1O+6W2Ykniqvp\n"
+        "qJvG+X32nuOanRQyJ5foRqwKUL6+anNRMdNYygZbLZ6+LKpsr62c7mwPvngOICnw\n"
+        "+Ad1WrcTSt2gXqRuJ2ZkuF1APcISaVKc8WWUHacQtP/8HXw8TeMh/uIFT0qVvPrF\n"
+        "L2JTlsz+DRHbXLHr2505jVytERpaAEEf7XHR19jIY1rfJV+AggZ8uT2ZPcxMPUiV\n"
+        "ojQlcARPuvmlye2tbaXngQJpnTxID07SF4pZbPfOuca1cx6bM3HHwCQqiKdKojS1\n"
+        "tQIDAQAB\n"
+        "-----END PUBLIC KEY-----";
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { /*"dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
@@ -139,13 +173,13 @@ void print_x509_info(const mbedtls_x509_crt *cert) {
 }
 
 void cert_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
-        return;
-    }
+    //if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    //    return;
+    //}
 
     mbedtls_x509_crt cert;
     mbedtls_pk_context public_key;
-    unsigned char hash[32];
+    unsigned char hash[64];
 
     mbedtls_x509_crt_init(&cert);
     mbedtls_pk_init(&public_key);
@@ -175,6 +209,7 @@ void cert_handler(struct command_result* res) {
         return;
     }
 */
+    print_x509_info(&cert); 
 
     // Compute the SHA-256 hash of the TBS (to-be-signed) part of the certificate
     printf("Verifying the SHA-256 signature");
@@ -190,12 +225,21 @@ void cert_handler(struct command_result* res) {
         return;
     }
 
-    printf("Hash done\r\n");
+    printf("\r\nHash done\r\n");
+
+    printf("CERT SIG LEN: %d\r\n", cert.sig.len);
+    printf("Hash LEN: %d\r\n", mdinfo->size);
+    printf("Hash: ");
+
+    for(int i = 0; i < mdinfo->size; i++) {
+        printf("%02X", hash[i]);
+    }
+    printf("\r\n");
 
     // Verify the certificate signature using the public key
     ret = mbedtls_pk_verify(
         &public_key,
-        mdinfo->type,
+        MBEDTLS_MD_SHA256,
         hash, 0,
         cert.sig.p, cert.sig.len
     );
@@ -206,7 +250,7 @@ void cert_handler(struct command_result* res) {
         return;
     }
 
-    print_x509_info(&cert); 
+
 
     printf("Certificate verified successfully\n");
 

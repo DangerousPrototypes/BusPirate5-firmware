@@ -45,6 +45,35 @@ static const struct prompt_item spi_polarity_menu[] = { { T_HWSPI_CLOCK_POLARITY
 static const struct prompt_item spi_phase_menu[] = { { T_HWSPI_CLOCK_PHASE_MENU_1 }, { T_HWSPI_CLOCK_PHASE_MENU_2 } };
 static const struct prompt_item spi_idle_menu[] = { { T_HWSPI_CS_IDLE_MENU_1 }, { T_HWSPI_CS_IDLE_MENU_2 } };
 
+void planks_auxpins(bool set)
+{
+    const uint8_t hold_pin = 2;
+    const uint8_t wp_pin = 3;
+
+    if (set) 
+    {
+        bio_output(hold_pin);
+        bio_put(hold_pin, true);
+        system_bio_update_purpose_and_label(true, hold_pin, BP_PIN_IO, "HIGH");
+        system_set_active(true, hold_pin, &system_config.aux_active);
+
+        bio_output(wp_pin);
+        bio_put(wp_pin, true);
+        system_bio_update_purpose_and_label(true, wp_pin, BP_PIN_IO, "HIGH");
+        system_set_active(true, wp_pin, &system_config.aux_active);
+    } 
+    else 
+    {
+        bio_input(hold_pin);
+        system_bio_update_purpose_and_label(false, hold_pin, BP_PIN_IO, 0);
+        system_set_active(false, hold_pin, &system_config.aux_active);
+
+        bio_input(wp_pin);
+        system_bio_update_purpose_and_label(false, wp_pin, BP_PIN_IO, 0);
+        system_set_active(false, wp_pin, &system_config.aux_active);
+    }
+}
+
 uint32_t spi_setup(void) {
     uint32_t temp;
 
@@ -208,6 +237,8 @@ uint32_t spi_binmode_setup(uint8_t* config) {
 
     mode_config.binmode = true;
 
+    planks_auxpins(true);
+
     return error;
 }
 
@@ -222,6 +253,7 @@ uint32_t spi_setup_exc(void) {
                ui_term_color_reset(),
                mode_config.baudrate_actual / 1000);
     }
+    planks_auxpins(true);
     hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
     system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
@@ -232,6 +264,7 @@ uint32_t spi_setup_exc(void) {
 }
 
 void spi_cleanup(void) {
+    planks_auxpins(false);
     // disable peripheral
     hwspi_deinit();
     // release pin claims

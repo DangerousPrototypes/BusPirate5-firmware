@@ -43,6 +43,7 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include "ui/ui_term.h"
 #include "pirate/hwspi.h"
 #include "pirate/mem.h"
+#include "pirate/bio.h"
 
 const char legacy4third_mode_name[] = "Legacy Binary Mode for Flashrom and AVRdude (EXPERIMENTAL)";
 
@@ -65,6 +66,37 @@ static uint8_t current_decimal;
 static uint8_t* tmpbuf;
 static uint8_t* cdc_buff;
 static uint32_t remain_bytes;
+static bool set_aux_pins = true;
+static bool hold_value = true;
+static bool wp_value = true;
+
+
+void set_planks_auxpins(bool set)
+{
+    const uint8_t hold_pin = 2;
+    const uint8_t wp_pin = 3;
+
+    if (set)
+    {
+        bio_output(hold_pin);
+        bio_put(hold_pin, hold_value ? true : false);
+        system_bio_update_purpose_and_label(true, hold_pin, BP_PIN_IO, hold_value ? "HIGH" : "LOW");
+        system_set_active(true, hold_pin, &system_config.aux_active);
+
+        bio_output(wp_pin);
+        bio_put(wp_pin, wp_value ? true : false);
+        system_bio_update_purpose_and_label(true, wp_pin, BP_PIN_IO, wp_value ? "HIGH" : "LOW");
+        system_set_active(true, wp_pin, &system_config.aux_active);
+    }
+    else
+    {
+        bio_input(hold_pin);
+        bio_input(wp_pin);
+        system_set_active(true, hold_pin, &system_config.aux_active);
+        system_set_active(true, wp_pin, &system_config.aux_active);
+    }
+}
+
 
 void disable_psu_legacy(void) {
     uint8_t binmode_args = 0x00;
@@ -161,6 +193,7 @@ void reset_legacy(void) {
     uint8_t binmode_args = 0;
 
     hwspi_deinit();
+    set_planks_auxpins(false);
     disable_psu_legacy();
     binmode_pullup_disable(&binmode_args);
     binmode_reset(&binmode_args);
@@ -407,6 +440,9 @@ void legacy_protocol(void) {
                 }
 
                 setup_spi_legacy(spi_speed, 8, 0, 0, cs_init);
+                if (set_aux_pins) {
+                    set_planks_auxpins(true);
+                }
                 hwspi_select();
                 CDC_SEND_STR(1, "\x01");
 
@@ -663,9 +699,22 @@ void legacy4third_mode(void) {
         system_config.binmode_usb_tx_queue_enable = false;
         set_pins_ui();
     } else if (mode_active == 1) {
+        set_aux_pins = true;
         mode_active++;
 
         prompt_result result = { 0 };
+
+        printf("\r\nSet OUTPUT HOLD(IO2) & WP(IO3) pins? (no=INPUT)");
+        ui_prompt_bool(&result, true, true, false, &set_aux_pins);
+        if (set_aux_pins) {
+            printf("\r\nSet HOLD HIGH? (no=LOW)");
+            ui_prompt_bool(&result, true, true, false, &hold_value);
+            printf("\r\nSet WP HIGH? (no=LOW)");
+            ui_prompt_bool(&result, true, true, false, &wp_value);
+        }
+        if (set_aux_pins) {
+            set_planks_auxpins(true);
+        }
 
         printf("\r\n%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());
 
@@ -713,6 +762,7 @@ void legacy4third_mode(void) {
         system_bio_update_purpose_and_label(false, M_SPI_CDO, BP_PIN_MODE, 0);
         system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
         system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
+        set_planks_auxpins(false);
     }
 }
 

@@ -16,6 +16,8 @@
     #error "BP_OTP_PRODUCT_VERSION must be defined in the platform header as the portion of the string to follow `Bus Pirate `.  E.g., `6` for BP6, or `5XL` for the BP5XL"
 #endif
 
+// TODO: update this to wait for actual keypresses over RTT (as in the earlier experimentation firmware)
+//       to allow for review of all the things happening....
 #define WAIT_FOR_KEY()
 
 

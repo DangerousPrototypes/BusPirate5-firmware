@@ -9,7 +9,6 @@
     ,"scsi": {
         "vendor": "Bus Pir8"
         ,"product": "Bus Pirate 6"
-        ,"version": "v1.0"
     }
     ,"volume": {
         "label": "BP6_BOOT"

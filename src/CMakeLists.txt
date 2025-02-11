@@ -407,6 +407,9 @@ set (bp5_rtt
 set (rp2350_common
         commands/global/otpdump.h 
         commands/global/otpdump.c
+        otp/bp_otp.h
+        otp/otp_ecc.c
+        otp/bp_whitelabel.c
 )
 
 

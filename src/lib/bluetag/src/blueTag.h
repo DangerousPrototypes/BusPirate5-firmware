@@ -6,7 +6,6 @@
 #define  MAX_IR_LEN         32                             // Maximum length of instruction register
 #define  MAX_IR_CHAIN_LEN   MAX_DEVICES_LEN * MAX_IR_LEN   // Maximum total length of JTAG chain w/ IR selected
 #define  MAX_DR_LEN         4096                           // Maximum length of data register
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(*array))
 #define CR		    13
 #define LF		    10
 

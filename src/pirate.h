@@ -2,6 +2,15 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
+// GCC is awesome ... this is the ___type-safe___ array element count macro
+#define ARRAY_SIZE(arr) \
+    (sizeof(arr) / sizeof((arr)[0]) \
+     + sizeof(typeof(int[1 - 2 * \
+           !!__builtin_types_compatible_p(typeof(arr), \
+                 typeof(&arr[0]))])) * 0)
+
+
+
 // enable splash screen at startup, increases firmware size and load time
 #define BP_SPLASH_ENABLED
 
@@ -75,7 +84,7 @@
             #error "Unknown platform version in pirate.h"
         #endif
     #elif BP_VER == XL5
-        #include "platform/bpi-rev10.h"
+        #include "platform/bpi5xl-rev0.h"
     #elif BP_VER == 6
         #include "platform/bpi6-rev1.h"
     #else
@@ -154,5 +163,7 @@ void spi_busy_wait_internal(bool enable, const char *file, int line);
 // LED settings
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 // only used on APA102
+
+
 
 #endif

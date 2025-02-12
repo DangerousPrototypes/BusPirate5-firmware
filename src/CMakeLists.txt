@@ -407,6 +407,9 @@ set (bp5_rtt
 set (rp2350_common
         commands/global/otpdump.h 
         commands/global/otpdump.c
+        otp/bp_otp.h
+        otp/otp_ecc.c
+        otp/bp_whitelabel.c
 )
 
 
@@ -434,8 +437,8 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${bp5_nandflash}
                 ${bp5_rtt}
                 ${rp2350_common}
-                platform/bpi-rev10.h
-                platform/bpi-rev10.c 
+                platform/bpi5xl-rev0.h
+                platform/bpi5xl-rev0.c
                 pirate/shift.h
                 pirate/shift.c
                 display/robot5xx16.h

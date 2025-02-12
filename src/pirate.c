@@ -59,6 +59,7 @@
 #include "hardware/regs/addressmap.h"
 #include "hardware/regs/otp.h"
 #endif
+#include "otp/bp_otp.h"
 
 static mutex_t spi_mutex;
 
@@ -84,6 +85,7 @@ static bool should_disable_unique_usb_serial_number(void) {
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: manufacturing mode ... disabling unique USB serial number\n"
         );
+    // TODO: detect if manufacturing is done, and if so, re-enable unique USB serial number
     result = true;
 #endif
     if (system_config.disable_unique_usb_serial_number) {
@@ -130,10 +132,17 @@ static void main_system_initialization(void) {
     tx_fifo_init();
     rx_fifo_init();
 
+#ifdef BP_MANUFACTURING_TEST_MODE
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-        "Init: softlock OTP\n"
+        "Init: OTP whitelabel update\n"
         );
-    softlock_all_otp();
+    bp_otp_apply_whitelabel_data(); // inline no-op on BP5
+#endif // BP_MANUFACTURING_TEST_MODE
+
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: OTP softlock\n"
+        );
+    softlock_all_otp(); // 
 
 
 #if (BP_VER == 5)

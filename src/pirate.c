@@ -58,8 +58,9 @@
 #if BP_VER != 5
 #include "hardware/regs/addressmap.h"
 #include "hardware/regs/otp.h"
-#endif
 #include "otp/bp_otp.h"
+#endif
+
 
 static mutex_t spi_mutex;
 

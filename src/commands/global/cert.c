@@ -169,7 +169,7 @@ void cert_handler(struct command_result* res) {
         goto cert_cleanup;
     }
 
-    printf("Certificate signature length: %d\r\n", cert.sig.len);
+    printf("Certificate signature   length: %d\r\n", cert.sig.len);
     printf("SHA-256 hash length: %d\r\n", mdinfo->size);
     printf("SHA-256 hash: ");
     for(int i = 0; i < mdinfo->size; i++) {

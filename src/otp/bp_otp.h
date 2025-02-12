@@ -53,8 +53,16 @@ static_assert(sizeof(OTP_RAW_READ_RESULT) == sizeof(uint32_t));
 uint32_t bp_otp_calculate_ecc(uint16_t x);
 uint32_t bp_otp_decode_raw(const OTP_RAW_READ_RESULT data);
 
-void bp_otp_apply_whitelabel_data(void);
-bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string);
+#if BP_VER == 5
+    // // ?? mark these as deprecated for compilation warnings if used?
+    // inline void bp_otp_apply_whitelabel_data(void) __attribute__((deprecated)) { }
+    // inline bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) __attribute__((deprecated)) { return false; }
+    inline void bp_otp_apply_whitelabel_data(void) { }
+    inline bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) { return false; }
+#else
+    void bp_otp_apply_whitelabel_data(void);
+    bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string);
+#endif
 
 
 #ifdef __cplusplus

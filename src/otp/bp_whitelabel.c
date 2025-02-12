@@ -433,7 +433,7 @@ static bool write_otp_byte_3x(uint16_t row, uint8_t new_value) {
     return true;
 }
 
-void apply_whitelabel_data(void) {
+void bp_otp_apply_whitelabel_data(void) {
     static const uint16_t base = 0x0c0; // written so this can be changed easily
     static const size_t product_extension_rows = sizeof(_product_string) /2u; // sizeof() includes null; round down to even number
     uint16_t product_char_count = strlen("Bus Pirate") + strlen(_product_string);
@@ -542,7 +542,7 @@ void apply_whitelabel_data(void) {
 }
 
 
-bool apply_manufacturing_string(const char* manufacturing_data_string) {
+bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
     uint16_t base;
     // Follow the breadcrumbs to find the base address
     OTP_USB_BOOT_FLAGS old_usb_boot_flags;

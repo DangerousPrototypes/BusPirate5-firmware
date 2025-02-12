@@ -20,6 +20,27 @@
 //       to allow for review of all the things happening....
 #define WAIT_FOR_KEY()
 
+// decide where to single-step through the whitelabel process ... controlled via RTT (no USB connection required)
+static volatile bool g_WaitForKey = false;
+void MyWaitForAnyKey_with_discards(void) {
+    if (!g_WaitForKey) {
+        return;
+    }
+    // clear any prior keypresses
+    int t;
+    do {
+        t = SEGGER_RTT_GetKey();
+    } while (t >= 0);
+
+    int c = SEGGER_RTT_WaitKey();
+
+    // clear any remaining kepresses (particularly useful for telnet, which does line-by-line input)
+    do {
+        t = SEGGER_RTT_GetKey();
+    } while (t >= 0);
+
+    return;
+}
 
 #define USB_WHITELABEL_MAX_CHARS_BP_VERSION 8
 #define USB_WHITELABEL_MAX_CHARS_BP_MANU    40
@@ -34,14 +55,6 @@ static char byte_to_printable_char(uint8_t byte) {
     }
     return byte;
 }
-
-/* GCC is awesome. */
-#define ARRAY_SIZE(arr) \
-    (sizeof(arr) / sizeof((arr)[0]) \
-     + sizeof(typeof(int[1 - 2 * \
-           !!__builtin_types_compatible_p(typeof(arr), \
-                 typeof(&arr[0]))])) * 0)
-
 
 typedef struct _OTP_USB_BOOT_FLAGS {
     union {
@@ -434,6 +447,10 @@ static bool write_otp_byte_3x(uint16_t row, uint8_t new_value) {
 }
 
 void bp_otp_apply_whitelabel_data(void) {
+
+    // // Uncomment next line to single-step (using RTT for input)
+    // g_WaitForKey = true;
+
     static const uint16_t base = 0x0c0; // written so this can be changed easily
     static const size_t product_extension_rows = sizeof(_product_string) /2u; // sizeof() includes null; round down to even number
     uint16_t product_char_count = strlen("Bus Pirate") + strlen(_product_string);
@@ -543,6 +560,10 @@ void bp_otp_apply_whitelabel_data(void) {
 
 
 bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
+
+    // // Uncomment next line to single-step (using RTT for input)
+    // g_WaitForKey = true;
+
     uint16_t base;
     // Follow the breadcrumbs to find the base address
     OTP_USB_BOOT_FLAGS old_usb_boot_flags;

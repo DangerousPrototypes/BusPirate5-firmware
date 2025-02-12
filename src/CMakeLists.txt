@@ -438,6 +438,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${bp5_rtt}
                 ${rp2350_common}
                 platform/bpi5xl-rev0.h
+                platform/bpi5xl-rev0.c
                 pirate/shift.h
                 pirate/shift.c
                 display/robot5xx16.h

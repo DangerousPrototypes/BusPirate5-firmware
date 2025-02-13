@@ -6,7 +6,7 @@
 #define BP_SPLASH_ENABLED
 
 // uncomment to disable unique com ports for manufacturing testing
-// #define BP_MANUFACTURING_TEST_MODE
+#define BP_MANUFACTURING_TEST_MODE
 
 #define BP_FIRMWARE_VERSION "main branch"
 
@@ -66,18 +66,18 @@
 #else
     #if BP_VER == 5
         #if BP_REV == 8
-            #include "platform/bpi-rev8.h"
+            #include "platform/bpi5-rev8.h"
         #elif BP_REV == 9
-            #include "platform/bpi-rev9.h"
+            #include "platform/bpi5-rev9.h"
         #elif BP_REV == 10
-            #include "platform/bpi-rev10.h"
+            #include "platform/bpi5-rev10.h"
         #else
             #error "Unknown platform version in pirate.h"
         #endif
     #elif BP_VER == XL5
         #include "platform/bpi-rev10.h"
     #elif BP_VER == 6
-        #include "platform/bpi6-rev1.h"
+        #include "platform/bpi6-rev2.h"
     #else
         #error "Unknown platform version in pirate.h"
     #endif

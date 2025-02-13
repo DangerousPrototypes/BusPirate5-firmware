@@ -10,6 +10,8 @@
 #define BP_HARDWARE_FLASH "128Mbit"
 #define BP_HARDWARE_PULLUP_VALUE "10K ohms"
 
+#define BP_OTP_PRODUCT_VERSION_STRING "5XL REV0"
+
 //font and pin colors
 // HEX 24bit RGB format
 //used in terminal

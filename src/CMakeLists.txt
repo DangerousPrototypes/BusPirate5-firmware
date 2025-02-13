@@ -416,8 +416,8 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${bp5_nandflash}
                 ${bp5_rtt}
                 ${rp2350_common}
-                platform/bpi6-rev1.h
-                platform/bpi6-rev1.c
+                platform/bpi6-rev2.h
+                platform/bpi6-rev2.c
                 display/robot6x16.h
                 )
         target_compile_definitions(bus_pirate6 PUBLIC BP_VER=6) 
@@ -448,8 +448,8 @@ else()
                 ${bp5_common}
                 ${bp5_nandflash}
                 ${bp5_rtt}
-                platform/bpi-rev10.h
-                platform/bpi-rev10.c
+                platform/bpi5-rev10.h
+                platform/bpi5-rev10.c
                 pirate/shift.h
                 pirate/shift.c
                 display/robot5x16.h
@@ -466,8 +466,8 @@ else()
         add_executable(bus_pirate5_rev8
                 ${bp5_common}
                 ${bp5_rtt}
-                platform/bpi-rev8.h
-                platform/bpi-rev8.c
+                platform/bpi5-rev8.h
+                platform/bpi5-rev8.c
                 #tf card access control
                 fatfs/tf_card.c
                 fatfs/tf_card.h

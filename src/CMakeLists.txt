@@ -109,7 +109,8 @@ set(bp5_common
         commands/global/dump.h
         commands/global/ovrclk.c 
         commands/global/ovrclk.h        
-        
+        commands/global/cert.c 
+        commands/global/cert.h
         # HiZ
         mode/hiz.h
         mode/hiz.c
@@ -505,6 +506,7 @@ set(stdlibs
         tinyusb_device
         tinyusb_board
         hardware_structs
+        pico_mbedtls
         )        
 
 

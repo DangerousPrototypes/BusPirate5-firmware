@@ -204,17 +204,22 @@ void cert_handler(struct command_result* res) {
     printf("\r\n");
     //uint nr = (cert.serial.len <= 32)
     //? cert.serial.len  : 28;
-
     printf("Certificate Serial Number: ");
-    for (uint i = 0; i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES; i++) {
+    char serial[8];
+    uint8_t serial_len = 0;
+    for (uint i = 0; i < cert.serial.len; i++) {
         if (i == 0 && PICO_UNIQUE_BOARD_ID_SIZE_BYTES > 1 && cert.serial.p[i] == 0x0) {
             continue;
         }
-        printf("%02X%s", cert.serial.p[i], (i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES - 1) ? ":" : "");
+        if(serial_len < PICO_UNIQUE_BOARD_ID_SIZE_BYTES) {
+            serial[serial_len] = cert.serial.p[i];
+            serial_len++;
+        }
+        printf("%02X%s", cert.serial.p[i], (i < cert.serial.len - 1) ? ":" : "");
     }
     printf("\r\n");
     //verify that the serial number in the certificate matches the RP2040 unique serial number
-    if (memcmp(cert.serial.p, id.id, PICO_UNIQUE_BOARD_ID_SIZE_BYTES) == 0) {
+    if (memcmp(serial, id.id, PICO_UNIQUE_BOARD_ID_SIZE_BYTES) == 0) {
         printf("Certificate Serial Number matches RP2xxx Unique Serial Number\r\n");
     } else {
         printf("Certificate Serial Number does not match RP2xxx Unique Serial Number\r\n");

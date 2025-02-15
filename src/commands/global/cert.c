@@ -529,10 +529,11 @@ void cert_handler(struct command_result* res) {
     if (!s_flag && !d_flag) goto cert_cleanup; //done
 cert_dump:
     printf("\r\n");
+    #if 0
     // Buffer to hold the PEM-encoded certificate
     size_t pem_len;
     // Convert DER to PEM
-    /*ret = mbedtls_pem_write_buffer("-----BEGIN CERTIFICATE-----\n",
+    ret = mbedtls_pem_write_buffer("-----BEGIN CERTIFICATE-----\n",
                                    "-----END CERTIFICATE-----\n",
                                    cert_der, cert_der_len,
                                    buf, sizeof(buf), &pem_len);
@@ -542,10 +543,12 @@ cert_dump:
         printf("Failed to write certificate PEM: %s\r\n", error_buf);
         goto cert_cleanup;
     }
+    #endif
 
     if(d_flag){
         printf("Certificate PEM:\r\n");
         // Print the PEM-encoded certificate
+        #if 0
         for(uint i = 0; i < pem_len; i++) {
             if(buf[i] == '\n') {
                 printf("\r\n");
@@ -553,9 +556,11 @@ cert_dump:
             }
             printf("%c", buf[i]);
         }
+        #endif
+        base64_encode(cert_der, cert_der_len, "CERTIFICATE");
         printf("\r\n");  
     }
-
+    #if 0 
     if(s_flag){
 
         // create a file
@@ -589,7 +594,8 @@ cert_dump:
             system_config.error = true; // set the error flag
             goto cert_cleanup;
         }
-    }*/
+    }
+
 
     // Convert DER to PEM and display the public key
     ret = mbedtls_pem_write_buffer("--------BEGIN PUBLIC KEY--------\n",
@@ -602,9 +608,11 @@ cert_dump:
         printf("Failed to write public key PEM: %s\r\n", error_buf);
         goto cert_cleanup;
     }
-  
+    #endif
+
     if(d_flag){
         printf("Public key PEM:\r\n");
+        #if 0
         // Print the PEM-encoded certificate
         for(uint i = 0; i < pem_len; i++) {
             if(buf[i] == '\n') {
@@ -613,14 +621,13 @@ cert_dump:
             }
             printf("%c", buf[i]);
         }
-        printf("\r\n");  
+        #endif
 
         base64_encode(bp_pubkey_der, pubkey_der_len, "PUBLIC KEY");
+        printf("\r\n");  
     }
 
-
-
-
+    #if 0
     if(s_flag){
         // create a file
         printf("Creating file pubkey.pem\r\n");
@@ -654,6 +661,7 @@ cert_dump:
             goto cert_cleanup;
         }
     }
+    #endif
 
 cert_cleanup:
     mbedtls_x509_crt_free(&cert);

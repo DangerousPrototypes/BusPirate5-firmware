@@ -344,22 +344,13 @@ bool base64_encode(const unsigned char *src, size_t len, const char *header)
 {
     unsigned char *out, *pos;
     const unsigned char *end, *in;
-
-    size_t olen;
-
-    olen = 4*((len + 2) / 3); /* 3-byte blocks to 4-byte */
-
-    if (olen < len)
-        return false; /* integer overflow */
-
-    //std::string outStr;
-    //outStr.resize(olen);
-    //out = (unsigned char*)&outStr[0];
     char line[4];
+    uint8_t char_cnt = 0;
+
     end = src + len;
     in = src;
-    uint8_t char_cnt = 0;
-    printf("--------BEGIN %s--------\r\n", header);
+
+    printf("-----BEGIN %s-----\r\n", header);
     //pos = out;
     while (end - in >= 3) {
         line[0] = base64_table[in[0] >> 2];
@@ -401,7 +392,7 @@ bool base64_encode(const unsigned char *src, size_t len, const char *header)
         }        
     }
 
-    printf("\r\n--------END %s--------\r\n", header);
+    printf("\r\n-----END %s-----\r\n", header);
 
     return true;
 }

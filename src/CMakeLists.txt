@@ -111,6 +111,8 @@ set(bp5_common
         commands/global/ovrclk.h        
         commands/global/cert.c 
         commands/global/cert.h
+        pubkey/pubkey.h 
+        pubkey/pubkey.c
         # HiZ
         mode/hiz.h
         mode/hiz.c

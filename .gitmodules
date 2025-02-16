@@ -1,0 +1,3 @@
+[submodule "src/pubkey"]
+	path = src/pubkey
+	url = https://github.com/DangerousPrototypes/BusPirate-public-key.git

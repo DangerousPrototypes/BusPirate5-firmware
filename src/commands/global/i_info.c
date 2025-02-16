@@ -18,6 +18,8 @@
 #include "commands/global/freq.h"
 #include "timestamp.h"
 #include "binmode/binmodes.h"
+#include "pico/unique_id.h"
+#include "pico/bootrom.h"
 /*
 static const char * const usage[]=
 {
@@ -72,8 +74,13 @@ void i_info_handler(struct command_result* res) {
            BP_HARDWARE_FLASH,
            ui_term_color_reset(),
            GET_T(T_INFO_FLASH));
-    printf(
-        "%s: %s%016llX%s\r\n", GET_T(T_INFO_SN), ui_term_color_num_float(), mcu_get_unique_id(), ui_term_color_reset());
+    printf("%s: %s",GET_T(T_INFO_SN), ui_term_color_num_float());
+    pico_unique_board_id_t id;
+    pico_get_unique_board_id(&id);    
+    for (int i = 0; i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES; i++) {
+        printf("%02X%s", id.id[i], (i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES-1) ? ":" : "");
+    }    
+    printf("%s\r\n", ui_term_color_reset());
 
 
     // TF flash card information

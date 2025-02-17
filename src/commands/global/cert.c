@@ -39,7 +39,7 @@
 #define BP_OTP_CERT_ROW 0x100  
 
 // This array of strings is used to display help USAGE examples for the dummy command
-static const char* const usage[] = { "cert [-d display] ",
+static const char* const usage[] = { "cert [-d display] [-b burn <filename>] ",
                                      "Validate Bus Pirate x509 cert: cert",
                                      "Display cert and public key: cert -d",
                                      "Burn cert from DER file: cert -b cert.der" };
@@ -133,79 +133,53 @@ int32_t cert_otp_row_write_verify_raw(uint32_t otp_row, char *row_data){
     if (memcmp(row_data, buf, 3) != 0) return 0x100;
 }
 
+bool cert_extract_oid(const mbedtls_x509_name *name, const char *oid, char *buf, uint buflen) {
+    size_t i, j;
+    unsigned char c;
+    char s[MBEDTLS_X509_MAX_DN_NAME_SIZE], *p;
+
+    memset(s, 0, sizeof(s));
+
+    //name = dn;
+    //p = buf;
+    while (name != NULL) {
+        if (name->oid.p != NULL && name->oid.len == MBEDTLS_OID_SIZE(oid) &&
+            memcmp(name->oid.p, oid, MBEDTLS_OID_SIZE(oid)) == 0) {           
+                for (i = 0, j = 0; i < name->val.len; i++, j++) {
+                    if (j >= buflen - 1) {
+                        return MBEDTLS_ERR_X509_BUFFER_TOO_SMALL;
+                    }
+
+                    c = name->val.p[i];
+                    // Special characters requiring escaping, RFC 1779
+                    if (c && strchr(",=+<>#;\"\\", c)) {
+                        if (j + 1 >= buflen - 1) {
+                            return MBEDTLS_ERR_X509_BUFFER_TOO_SMALL;
+                        }
+                        buf[j++] = '\\';
+                    }
+                    if (c < 32 || c >= 127) {
+                        buf[j] = '?';
+                    } else {
+                        buf[j] = c;
+                    }
+                }
+                buf[j] = '\0';
+                //printf("OID: %s\r\n", s);
+                return true;
+
+            }
+            name = name->next;
+        }
+
+    return false;
+}
+
+
 // write the cert to OTP
-int cert_write_to_otp(char *cert_der, const char* pubkey_der, char *buf, uint buflen, bool debug) {
-    uint16_t ecc_row = BP_OTP_CERT_ROW;
+int otp_write_verify(uint16_t start_row, char *data, bool lock, bool debug) {
     otp_cmd_t cmd;
     int8_t ret;
-    mbedtls_x509_crt cert;
-    mbedtls_pk_context public_key;
-    unsigned char hash[32];
-    
-    uint32_t pubkey_der_len=cert_length(pubkey_der); 
-    if(pubkey_der_len == 0) {
-        if(debug) printf("Invalid pubkey length\r\n");
-        return 0x100;
-    }
-    uint32_t cert_der_len=cert_length(cert_der);
-    if (cert_der_len == 0) {
-        if(debug) printf("Invalid cert length\r\n");
-        return 0x101;
-    }
-
-    mbedtls_x509_crt_init(&cert);
-    mbedtls_pk_init(&public_key);
-
-    // preflight check!
-    // is cert valid?
-    ret = mbedtls_x509_crt_parse(&cert, cert_der, cert_der_len);
-    if (ret != 0){
-        if(debug) printf("Error parsing cert\r\n");
-        return ret;
-    }
-
-    ret = mbedtls_pk_parse_public_key(&public_key, pubkey_der, pubkey_der_len);
-    if (ret != 0) {
-        if(debug) printf("Error parsing public key\r\n");
-        mbedtls_x509_crt_free(&cert);
-        return ret;
-    }
-
-    // Compute the SHA-256 hash of the TBS (to-be-signed) part of the certificate
-    const mbedtls_md_info_t *mdinfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-    ret = mbedtls_md(mdinfo, cert.tbs.p, cert.tbs.len, hash);
-    if (ret != 0) {
-        if(debug) printf("Error computing hash\r\n");
-        mbedtls_x509_crt_free(&cert);
-        mbedtls_pk_free(&public_key);
-        return ret;   
-    }
-
-    // Verify the certificate signature using the public key
-    ret = mbedtls_pk_verify(&public_key, MBEDTLS_MD_SHA256, hash, 0, cert.sig.p, cert.sig.len);
-    if (ret != 0) {
-        if(debug) printf("Error verifying cert\r\n");
-        mbedtls_x509_crt_free(&cert);
-        mbedtls_pk_free(&public_key);
-        return ret;   
-    }
-    
-    if(debug) printf("Certificate verified!\r\n");
-
-    // is cert serial match the one in OTP?
-    pico_unique_board_id_t id;
-    pico_get_unique_board_id(&id);
-    char cert_serial[PICO_UNIQUE_BOARD_ID_SIZE_BYTES];
-    cert_serial_get(&cert, cert_serial, sizeof(cert_serial));
-    //verify that the serial number in the certificate matches the RP2040 unique serial number
-    if (!memcmp(cert_serial, id.id, PICO_UNIQUE_BOARD_ID_SIZE_BYTES) == 0) {
-        if(debug) printf("Serial number mismatch\r\n");
-        mbedtls_x509_crt_free(&cert);
-        mbedtls_pk_free(&public_key);
-        return 0x200;
-    }
-
-    if(debug) printf("Serial number verified!\r\n");
 
     //ensure cert_der_len is multiple of 2
     if(cert_der_len % 2 != 0) cert_der_len++;
@@ -321,7 +295,269 @@ int cert_write_to_otp(char *cert_der, const char* pubkey_der, char *buf, uint bu
             return ret;
         }
     }
+#endif
+    printf("OTP protection rows verified\r\n");
+    printf("Success! Cert burned to OTP\r\n");
+    return 0x00;
+}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// write the cert to OTP
+int cert_write_to_otp(char *cert_der, const char* pubkey_der, char *buf, uint buflen, bool debug) {
+    uint16_t ecc_row = BP_OTP_CERT_ROW;
+    otp_cmd_t cmd;
+    int8_t ret;
+    mbedtls_x509_crt cert;
+    mbedtls_pk_context public_key;
+    unsigned char hash[32];
+    
+    uint32_t pubkey_der_len=cert_length(pubkey_der); 
+    if(pubkey_der_len == 0) {
+        if(debug) printf("Invalid pubkey length\r\n");
+        return 0x100;
+    }
+    uint32_t cert_der_len=cert_length(cert_der);
+    if (cert_der_len == 0) {
+        if(debug) printf("Invalid cert length\r\n");
+        return 0x101;
+    }
+
+    mbedtls_x509_crt_init(&cert);
+    mbedtls_pk_init(&public_key);
+
+    // preflight check!
+    // is cert valid?
+    ret = mbedtls_x509_crt_parse(&cert, cert_der, cert_der_len);
+    if (ret != 0){
+        if(debug) printf("Error parsing cert\r\n");
+        return ret;
+    }
+#if 0
+    ret = mbedtls_pk_parse_public_key(&public_key, pubkey_der, pubkey_der_len);
+    if (ret != 0) {
+        if(debug) printf("Error parsing public key\r\n");
+        mbedtls_x509_crt_free(&cert);
+        return ret;
+    }
+
+    // Compute the SHA-256 hash of the TBS (to-be-signed) part of the certificate
+    const mbedtls_md_info_t *mdinfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+    ret = mbedtls_md(mdinfo, cert.tbs.p, cert.tbs.len, hash);
+    if (ret != 0) {
+        if(debug) printf("Error computing hash\r\n");
+        mbedtls_x509_crt_free(&cert);
+        mbedtls_pk_free(&public_key);
+        return ret;   
+    }
+
+    // Verify the certificate signature using the public key
+    ret = mbedtls_pk_verify(&public_key, MBEDTLS_MD_SHA256, hash, 0, cert.sig.p, cert.sig.len);
+    if (ret != 0) {
+        if(debug) printf("Error verifying cert\r\n");
+        mbedtls_x509_crt_free(&cert);
+        mbedtls_pk_free(&public_key);
+        return ret;   
+    }
+    
+    if(debug) printf("Certificate verified!\r\n");
+
+    // is cert serial match the one in OTP?
+    pico_unique_board_id_t id;
+    pico_get_unique_board_id(&id);
+    char cert_serial[PICO_UNIQUE_BOARD_ID_SIZE_BYTES];
+    cert_serial_get(&cert, cert_serial, sizeof(cert_serial));
+    //verify that the serial number in the certificate matches the RP2040 unique serial number
+    if (!memcmp(cert_serial, id.id, PICO_UNIQUE_BOARD_ID_SIZE_BYTES) == 0) {
+        if(debug) printf("Serial number mismatch\r\n");
+        mbedtls_x509_crt_free(&cert);
+        mbedtls_pk_free(&public_key);
+        return 0x200;
+    }
+#endif
+    if(debug) printf("Serial number verified!\r\n");
+    //struct for loop processing OID info
+    const struct oid_info{
+        const char token;
+        const char *oid;
+        const mbedtls_x509_name *name;
+    } oid_info[] = {
+        {0x01, MBEDTLS_OID_AT_STATE, &cert.subject},
+        {0x02, MBEDTLS_OID_AT_LOCALITY, &cert.subject},
+        {0x03, MBEDTLS_OID_AT_ORGANIZATION, &cert.subject},
+        {0x04, MBEDTLS_OID_AT_COUNTRY, &cert.subject},
+        {0x05, MBEDTLS_OID_AT_ORGANIZATION, &cert.issuer},
+    };
+
+    size_t offset = 0;
+    char oid_buf[20];
+    for(uint32_t i = 0; i < count_of(oid_info); i++){
+        if(cert_extract_oid(oid_info[i].name, oid_info[i].oid, oid_buf, sizeof(oid_buf))){
+            //printf("OID %d: %s\r\n", oid_info[i].token, oid_buf);
+            buf[offset++] = oid_info[i].token;
+            offset += snprintf(buf + offset, buflen - offset, "%s", oid_buf);
+            buf[offset++] = 0x00;
+        }else{
+            printf("OID %d: Not found\r\n", oid_info[i].token);
+            return 0x600;
+        }
+    }
+    const mbedtls_x509_time *valid_from = &cert.valid_from;
+    buf[offset++] = 0x06;
+    offset += snprintf(buf + offset, buflen - offset,
+                       "%04d-%02d-%02d %02d:%02d:%02d",
+                       valid_from->year, valid_from->mon, valid_from->day,
+                       valid_from->hour, valid_from->min, valid_from->sec); 
+    buf[offset++] = 0x00;
+
+    for(uint32_t i = 0; i < offset; i++) {
+        if(buf[i]>=' ' && buf[i] <= '~'){
+            printf("%c", buf[i]);
+        }else{
+            printf(":0x%02X:", buf[i]);
+        }
+    }
+
+    // burn to OTP
+    uint16_t info_row=0x2c0;
+    // verify range empty
+    // verify not write protected
+    cmd.flags = info_row | OTP_CMD_ECC_BITS | OTP_CMD_WRITE_BITS;
+    ret = rom_func_otp_access(buf, offset, cmd);
+    // verify OTP
+    // add & verify directory entry
+
+
+    return 0x00;
+
+#if 0
+    //ensure cert_der_len is multiple of 2
+    if(cert_der_len % 2 != 0) cert_der_len++;
+
+    //TODO: in a loop with smaller buffer size
+    // is the cert in otp empty?
+    // this will change, for now check the length
+    cmd.flags = ecc_row | OTP_CMD_ECC_BITS;
+    ret = rom_func_otp_access(buf, cert_der_len, cmd);
+    if (ret != 0) {
+        if(debug) printf("Failed to read from blank OTP: %04X\r\n", ret);
+        mbedtls_x509_crt_free(&cert);
+        mbedtls_pk_free(&public_key);
+        return ret;
+    }
+
+    for(uint32_t i = 0; i < (cert_der_len); i++) {
+        if(buf[i] != 0) {
+            if(debug) printf("OTP row 0x%03x is not empty\r\n", i+ecc_row);
+            mbedtls_x509_crt_free(&cert);
+            mbedtls_pk_free(&public_key);
+            return 0x300;
+        }
+    }    
+
+    //are the rows write protected?
+    // calculate the number of rows needed
+    // find the protection row index
+    // Calculate the number of pages required
+    int num_pages = (cert_der_len + (OTP_PAGE_SIZE - 1)) / OTP_PAGE_SIZE;
+    // find the protection row index
+    uint16_t protection_row = ((ecc_row/64) + num_pages)-1;
+    if(debug){
+        printf("Number of OTP pages required: %d\r\n", num_pages);    
+        printf("Protection pages: 0x%03x : 0x%03x\r\n", (ecc_row/64), protection_row);
+        printf("First protection row to program: 0x%03x\r\n", 0xf80+((ecc_row/64)*2));
+        printf("Last protection row to program: 0x%03x\r\n", 0xf80+(protection_row*2)+1);
+    }
+    //raw reads 3 bytes, check all are 0x00
+    uint32_t start_row = 0xf80+((ecc_row/64)*2);
+    for(uint32_t i=0; i < (num_pages*2); i++) {
+        cmd.flags = start_row + i;
+        if(debug) printf("Reading row 0x%03x\r\n", cmd.flags);
+        ret = rom_func_otp_access(buf, 4, cmd);
+        if (ret != 0) {
+            mbedtls_x509_crt_free(&cert);
+            mbedtls_pk_free(&public_key);
+            return ret;
+        }
+        if (buf[0] != 0 || buf[1] != 0 || buf[2] != 0) {
+            if(debug) printf("Protection row 0x%03x is not empty\r\n", cmd.flags);
+            mbedtls_x509_crt_free(&cert);
+            mbedtls_pk_free(&public_key);
+            return 0x400;
+        }
+    }
+
+    if(debug) printf("OK. Ready to burn!\r\n");
+    //return 0xfff;
+    // burn the cert
+    if(debug) printf("Writing cert to OTP\r\n");
+    cmd.flags = ecc_row | OTP_CMD_ECC_BITS | OTP_CMD_WRITE_BITS;
+    ret = rom_func_otp_access(cert_der, cert_der_len, cmd);
+    if (ret != 0) {
+        if(debug) printf("Failed to write cert to OTP\r\n");
+        mbedtls_x509_crt_free(&cert);
+        mbedtls_pk_free(&public_key);
+        return ret;
+    }
+
+    // verify burned cert
+    cmd.flags = ecc_row | OTP_CMD_ECC_BITS;
+    ret = rom_func_otp_access(buf, cert_der_len, cmd);
+    if (ret != 0) {
+        if(debug) printf("Failed to read burned cert\r\n");
+        mbedtls_x509_crt_free(&cert);
+        mbedtls_pk_free(&public_key);
+        return ret;
+    }
+    if(memcmp(cert_der, buf, cert_der_len) != 0) {
+        if(debug) printf("Failed to verify burned cert\r\n");
+        mbedtls_x509_crt_free(&cert);
+        mbedtls_pk_free(&public_key);
+        return 0x500;
+    }
+
+    if(debug) printf("OTP cert verified\r\n");
+
+    //burn the directory entry
+
+    //burn the protection rows
+    //must be 4 bytes, last is unused
+    char raw_write_data_lock_0[4] = {0x3F, 0x3F, 0x3F, 0x00};
+    char raw_write_data_lock_1[4] = {0x15, 0x15, 0x15, 0x00};
+    for(uint32_t i=0; i < (num_pages); i++) {
+        // burn lock_0
+        uint32_t lock_0_row = start_row + (i*2);
+        if(debug) printf("Writing protection row 0x%03x\r\n", lock_0_row);
+        ret = cert_otp_row_write_verify_raw(lock_0_row, raw_write_data_lock_0);
+        if (ret != 0) {
+            mbedtls_x509_crt_free(&cert);
+            mbedtls_pk_free(&public_key);
+            return ret;
+        }
+
+        // burn lock_1
+        uint32_t lock_1_row = (start_row + (i*2)+1);
+        ret = cert_otp_row_write_verify_raw(lock_1_row, raw_write_data_lock_1);
+        if(debug) printf("Writing protection row 0x%03x\r\n", lock_1_row);
+        if (ret != 0) {
+            mbedtls_x509_crt_free(&cert);
+            mbedtls_pk_free(&public_key);
+            return ret;
+        }
+    }
+#endif
     printf("OTP protection rows verified\r\n");
     printf("Success! Cert burned to OTP\r\n");
     return 0x00;
@@ -590,20 +826,6 @@ cert_close_file:
 cert_cleanup:
     mbedtls_x509_crt_free(&cert);
     mbedtls_pk_free(&public_key);   
-
-    if(cmdln_args_find_flag('m')){
-        pico_unique_board_id_t id;
-        pico_get_unique_board_id(&id); 
-        //convert the unique ID to ANSI string
-        snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", 
-            id.id[0], id.id[1], id.id[2], id.id[3], id.id[4], id.id[5], id.id[6], id.id[7]);
-        printf("Manufacturing ID string: %s\r\n", buf);
-        if(!bp_otp_apply_manufacturing_string(buf)){
-            printf("Failed to apply manufacturing string\r\n");
-        }else{
-            printf("Manufacturing string applied, OTP locked\r\n");
-        }
-    }      
 
 cert_dump:
 

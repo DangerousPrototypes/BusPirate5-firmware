@@ -175,129 +175,123 @@ bool cert_extract_oid(const mbedtls_x509_name *name, const char *oid, char *buf,
     return false;
 }
 
-
-// write the cert to OTP
-int otp_write_verify(uint16_t start_row, char *data, bool lock, bool debug) {
+int otp_verify_empty(uint32_t start_row, uint32_t length_rows, bool debug) {
     otp_cmd_t cmd;
     int8_t ret;
-
-    //ensure cert_der_len is multiple of 2
-    if(cert_der_len % 2 != 0) cert_der_len++;
-
-    //TODO: in a loop with smaller buffer size
-    // is the cert in otp empty?
-    // this will change, for now check the length
-    cmd.flags = ecc_row | OTP_CMD_ECC_BITS;
-    ret = rom_func_otp_access(buf, cert_der_len, cmd);
-    if (ret != 0) {
-        if(debug) printf("Failed to read from blank OTP: %04X\r\n", ret);
-        mbedtls_x509_crt_free(&cert);
-        mbedtls_pk_free(&public_key);
-        return ret;
-    }
-
-    for(uint32_t i = 0; i < (cert_der_len); i++) {
-        if(buf[i] != 0) {
-            if(debug) printf("OTP row 0x%03x is not empty\r\n", i+ecc_row);
-            mbedtls_x509_crt_free(&cert);
-            mbedtls_pk_free(&public_key);
-            return 0x300;
-        }
-    }    
-
-    //are the rows write protected?
-    // calculate the number of rows needed
-    // find the protection row index
-    // Calculate the number of pages required
-    int num_pages = (cert_der_len + (OTP_PAGE_SIZE - 1)) / OTP_PAGE_SIZE;
-    // find the protection row index
-    uint16_t protection_row = ((ecc_row/64) + num_pages)-1;
-    if(debug){
-        printf("Number of OTP pages required: %d\r\n", num_pages);    
-        printf("Protection pages: 0x%03x : 0x%03x\r\n", (ecc_row/64), protection_row);
-        printf("First protection row to program: 0x%03x\r\n", 0xf80+((ecc_row/64)*2));
-        printf("Last protection row to program: 0x%03x\r\n", 0xf80+(protection_row*2)+1);
-    }
-    //raw reads 3 bytes, check all are 0x00
-    uint32_t start_row = 0xf80+((ecc_row/64)*2);
-    for(uint32_t i=0; i < (num_pages*2); i++) {
+    //loop rows, ensure empty
+    for(uint32_t i = 0; i < length_rows; i++) {
+        char buf[4];
         cmd.flags = start_row + i;
-        if(debug) printf("Reading row 0x%03x\r\n", cmd.flags);
         ret = rom_func_otp_access(buf, 4, cmd);
         if (ret != 0) {
-            mbedtls_x509_crt_free(&cert);
-            mbedtls_pk_free(&public_key);
+            if(debug) printf("Failed to read from blank OTP: %04X\r\n", ret);
             return ret;
         }
         if (buf[0] != 0 || buf[1] != 0 || buf[2] != 0) {
-            if(debug) printf("Protection row 0x%03x is not empty\r\n", cmd.flags);
-            mbedtls_x509_crt_free(&cert);
-            mbedtls_pk_free(&public_key);
-            return 0x400;
+            if(debug) printf("OTP row 0x%03x is not empty\r\n", i+start_row);
+            return 0x300;
+        }
+    }
+}
+
+// write the cert to OTP
+int otp_write_verify_ecc(uint16_t start_row, uint16_t length_bytes, char *data, bool lock, bool debug) {
+    otp_cmd_t cmd;
+    int8_t ret;
+
+    //ensure eec data is multiple of 2
+    if(length_bytes % 2 != 0) length_bytes++;
+
+    // calculate the number of rows needed
+    uint32_t length_rows = length_bytes/2;
+
+    ret = otp_verify_empty(start_row, length_rows, debug);
+    if (ret != 0) {
+        if(debug) printf("OTP rows are not empty\r\n");
+        return ret;
+    }
+
+    // are the rows write protected?
+    // calculate the number of rows needed
+    // find the protection row index
+    // Calculate the number of pages required
+    uint32_t num_pages = (length_bytes + (OTP_PAGE_SIZE - 1)) / OTP_PAGE_SIZE;
+    // find the protection row index
+    uint32_t start_page = start_row/64;
+    uint32_t end_page = (start_page + num_pages)-1;
+    uint32_t lock_start_row = 0xf80+(start_page*2);
+    uint32_t lock_end_row = 0xf80+(end_page*2)+1;
+    if(lock){
+        if(debug){
+            printf("Number of OTP pages required: %d\r\n", num_pages);    
+            printf("Protected pages: 0x%03x : 0x%03x\r\n", start_page, end_page);
+            printf("First protection row to program: 0x%03x\r\n", lock_start_row);
+            printf("Last protection row to program: 0x%03x\r\n", lock_end_row);
+        }
+        ret=otp_verify_empty(lock_start_row, lock_end_row, debug); 
+        if (ret != 0) {
+            if(debug) printf("Protection rows are not empty\r\n");
+            return ret;
         }
     }
 
     if(debug) printf("OK. Ready to burn!\r\n");
-    //return 0xfff;
-    // burn the cert
-    if(debug) printf("Writing cert to OTP\r\n");
-    cmd.flags = ecc_row | OTP_CMD_ECC_BITS | OTP_CMD_WRITE_BITS;
-    ret = rom_func_otp_access(cert_der, cert_der_len, cmd);
+
+    // write to OTP
+    cmd.flags = start_row | OTP_CMD_ECC_BITS | OTP_CMD_WRITE_BITS;
+    ret = rom_func_otp_access(data, length_bytes, cmd);
     if (ret != 0) {
-        if(debug) printf("Failed to write cert to OTP\r\n");
-        mbedtls_x509_crt_free(&cert);
-        mbedtls_pk_free(&public_key);
+        if(debug) printf("Failed to write to OTP\r\n");
         return ret;
     }
 
-    // verify burned cert
-    cmd.flags = ecc_row | OTP_CMD_ECC_BITS;
-    ret = rom_func_otp_access(buf, cert_der_len, cmd);
-    if (ret != 0) {
-        if(debug) printf("Failed to read burned cert\r\n");
-        mbedtls_x509_crt_free(&cert);
-        mbedtls_pk_free(&public_key);
-        return ret;
-    }
-    if(memcmp(cert_der, buf, cert_der_len) != 0) {
-        if(debug) printf("Failed to verify burned cert\r\n");
-        mbedtls_x509_crt_free(&cert);
-        mbedtls_pk_free(&public_key);
-        return 0x500;
+    // verify burned OTP
+    cmd.flags = start_row | OTP_CMD_ECC_BITS;
+    //loop through and verify one row at a time
+    for(uint32_t i = 0; i < length_rows; i++) {
+        char buf[2];
+        cmd.flags = start_row + i;
+        ret = rom_func_otp_access(buf, 2, cmd);
+        if (ret != 0) {
+            if(debug) printf("Failed to read OTP on verify\r\n");
+            return ret;
+        }
+        if(memcmp(data+(i*2), buf, 2) != 0) {
+            if(debug) printf("Failed to verify OTP write\r\n");
+            return 0x500;
+        }
     }
 
-    if(debug) printf("OTP cert verified\r\n");
-
-    //burn the directory entry
+    if(debug) printf("OTP write verified\r\n");
 
     //burn the protection rows
     //must be 4 bytes, last is unused
-    char raw_write_data_lock_0[4] = {0x3F, 0x3F, 0x3F, 0x00};
-    char raw_write_data_lock_1[4] = {0x15, 0x15, 0x15, 0x00};
-    for(uint32_t i=0; i < (num_pages); i++) {
-        // burn lock_0
-        uint32_t lock_0_row = start_row + (i*2);
-        if(debug) printf("Writing protection row 0x%03x\r\n", lock_0_row);
-        ret = cert_otp_row_write_verify_raw(lock_0_row, raw_write_data_lock_0);
-        if (ret != 0) {
-            mbedtls_x509_crt_free(&cert);
-            mbedtls_pk_free(&public_key);
-            return ret;
-        }
+    if(lock){
+        const char raw_write_data_lock_0[4] = {0x3F, 0x3F, 0x3F, 0x00};
+        const char raw_write_data_lock_1[4] = {0x15, 0x15, 0x15, 0x00};
+        for(uint32_t i=0; i < (num_pages); i++) {
+            // burn lock_0
+            uint32_t lock_0_row = start_row + (i*2);
+            if(debug) printf("Writing protection row 0x%03x\r\n", lock_0_row);
+            ret = cert_otp_row_write_verify_raw(lock_0_row, raw_write_data_lock_0);
+            if (ret != 0) {
+                if(debug) printf("Failed to write/verify protection row 0x%03x\r\n", lock_0_row);
+                return ret;
+            }
 
-        // burn lock_1
-        uint32_t lock_1_row = (start_row + (i*2)+1);
-        ret = cert_otp_row_write_verify_raw(lock_1_row, raw_write_data_lock_1);
-        if(debug) printf("Writing protection row 0x%03x\r\n", lock_1_row);
-        if (ret != 0) {
-            mbedtls_x509_crt_free(&cert);
-            mbedtls_pk_free(&public_key);
-            return ret;
+            // burn lock_1
+            uint32_t lock_1_row = (start_row + (i*2)+1);
+            ret = cert_otp_row_write_verify_raw(lock_1_row, raw_write_data_lock_1);
+            if(debug) printf("Writing protection row 0x%03x\r\n", lock_1_row);
+            if (ret != 0) {
+                if(debug) printf("Failed to write/verify protection row 0x%03x\r\n", lock_1_row);
+                return ret;
+            }
         }
+        if(debug) printf("OTP protection rows verified\r\n");
     }
-#endif
-    printf("OTP protection rows verified\r\n");
-    printf("Success! Cert burned to OTP\r\n");
+    
+    if(debug) printf("Success! Data burned to OTP\r\n");
     return 0x00;
 }
 

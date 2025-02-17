@@ -343,7 +343,9 @@ bool selftest_current_limit(void) {
         uint i;
         for (i = 0; i < 5; i++) {
             amux_sweep();
+#if (BP_VER != 7)
             printf("PPSU CODE %d, ADC: %d, ERROR!\r\n", result, hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT]);
+#endif
             busy_wait_ms(200);
         }
         return true;

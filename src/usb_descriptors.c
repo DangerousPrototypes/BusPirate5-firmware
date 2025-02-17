@@ -264,6 +264,8 @@ char const* string_desc_arr[] = {
     "Bus Pirate 5XL",             // 2: Product
 #elif (BP_VER == 6)
     "Bus Pirate 6",               // 2: Product
+#elif (BP_VER == 7)
+    "Bus Pirate 7",               // 2: Product
 #else
     #error "Unknown Bus Pirate version"
 #endif
@@ -272,6 +274,7 @@ char const* string_desc_arr[] = {
     "Bus Pirate MSC",             // 5: MSC Interface
     "Bus Pirate BIN"              // 6: Binary CDC Interface
 };
+
 // automatically update if an additional string is later added to the table
 #define STRING_DESC_ARR_ELEMENT_COUNT (sizeof(string_desc_arr) / sizeof(string_desc_arr[0]))
 

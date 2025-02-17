@@ -5,8 +5,8 @@ else()
     set(USERHOME $ENV{HOME})
 endif()
 if(WIN32)
-set(sdkVersion 2.0.0)
-set(toolchainVersion 13_2_Rel1)
+set(sdkVersion 2.1.0)
+set(toolchainVersion 13_3_Rel1)
 set(picotoolVersion 2.0.0)
 include(${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 endif()
@@ -35,14 +35,18 @@ message(GIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
 message(BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
 if(${BP_PICO_PLATFORM} MATCHES "rp2350")
-    set(PICO_PLATFORM "rp2350") #compile for 5XL and 6 
-    set(PICO_BOARD buspirate6)   
+    set(PICO_PLATFORM "rp2350") #compile for 5XL and 6
+    if("${PICO_BOARD} " STREQUAL " ")
+        set(PICO_BOARD buspirate6)
+    endif()
 else()
     set(PICO_PLATFORM "rp2040") #compile for 5 rev8 and 5 rev10
     set(PICO_BOARD buspirate5)
 endif()
 
-
+message("---------------------------")
+message("PICO_BOARD ${PICO_BOARD}")
+message("---------------------------")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(cmake/pico_sdk_import.cmake)

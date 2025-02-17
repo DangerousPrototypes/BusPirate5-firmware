@@ -98,18 +98,24 @@ void psu_set_i(float current, struct psu_status_t* psu) {
 }
 
 void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
+#if (BP_VER != 7)
     uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
     uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
     uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
     pwm_set_chan_level(slice_num, v_chan_num, v_dac);
     pwm_set_chan_level(slice_num, i_chan_num, i_dac);
     // printf("GPIO: %d, slice: %d, v_chan: %d, i_chan: %d",PSU_PWM_VREG_ADJ,slice_num,v_chan_num,i_chan_num);
+#endif
 }
 
 bool psu_fuse_ok(void) {
+#if (BP_VER == 7)
+	return false;
+#else
     uint32_t fuse = amux_read(HW_ADC_MUX_CURRENT_DETECT);
     // printf("Fuse: %d\r\n",fuse);
     return (fuse > 300);
+#endif
 }
 
 bool psu_vout_ok(struct psu_status_t* psu) {
@@ -137,7 +143,11 @@ void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     *isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000) / 4095));
     *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
     *vout = ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]));
-    *fuse = (hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] > 300);
+#if (BP_VER == 7)
+	*fuse = false;
+#else
+	*fuse = (hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] > 300);
+#endif
 }
 
 void psu_disable(void) {
@@ -191,8 +201,8 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
 
 void psu_init(void) {
     psu_vreg_enable(false);
-
     // pin and PWM setup
+#if (BP_VER != 7)
     gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_SIO);
     gpio_set_dir(PSU_PWM_CURRENT_ADJ, GPIO_OUT);
     gpio_put(PSU_PWM_CURRENT_ADJ, 0);
@@ -222,4 +232,6 @@ void psu_init(void) {
     // too early, spi not setup
     // psu_current_limit_override(false);
     // psu_fuse_reset();
+
+#endif
 }

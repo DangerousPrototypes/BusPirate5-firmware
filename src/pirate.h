@@ -78,6 +78,8 @@
         #include "platform/bpi-rev10.h"
     #elif BP_VER == 6
         #include "platform/bpi6-rev1.h"
+    #elif BP_VER == 7
+        #include "platform/bpi7-rev0.h"
     #else
         #error "Unknown platform version in pirate.h"
     #endif

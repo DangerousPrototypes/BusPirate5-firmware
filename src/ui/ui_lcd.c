@@ -20,6 +20,18 @@
 #include "displays.h"
 #include "pirate/lcd.h"
 
+
+void lcd_write_start(void) {
+    spi_busy_wait(true);
+    gpio_put(DISPLAY_DP, 1);
+    gpio_put(DISPLAY_CS, 0);
+}
+
+void lcd_write_stop(void) {
+    gpio_put(DISPLAY_CS, 1);
+    spi_busy_wait(false);
+}
+
 void lcd_write_string(
     const FONT_INFO* font, const uint8_t* back_color, const uint8_t* text_color, const char* c, uint16_t fill_length);
 void lcd_write_labels(uint16_t left_margin,
@@ -48,24 +60,18 @@ void menu_update(uint8_t current, uint8_t next) {
                          240 - 1,
                          current * 32,
                          (current * 32) + hunter_14ptFontInfo.lookup[b[0] - hunter_14ptFontInfo.start_char].height - 1);
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+	lcd_write_start();
     lcd_write_string(&hunter_14ptFontInfo, colors_pallet[LCD_BLACK], colors_pallet[LCD_RED], b, 0);
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 
     const char c[2] = { '>', 0x00 };
     lcd_set_bounding_box(0,
                          240 - 1,
                          next * 32,
                          (next * 32) + hunter_14ptFontInfo.lookup[c[0] - hunter_14ptFontInfo.start_char].height - 1);
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+	lcd_write_start();
     lcd_write_string(&hunter_14ptFontInfo, colors_pallet[LCD_BLACK], colors_pallet[LCD_RED], c, 0);
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 }
 
 struct display_layout {
@@ -113,17 +119,14 @@ const struct display_layout layout = {
 void lcd_write_background(const unsigned char* image) {
     lcd_set_bounding_box(0, 240, 0, 320);
 
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+    lcd_write_start();
 
     // Update October 2024: new image headers in pre-sorted pixel format for speed
     //  see image.py in the display folder to create new headers
     // TODO: DMA it.
     spi_write_blocking(BP_SPI_PORT, image, (320 * 240 * 2));
 
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 }
 
 // Write a string to the LCD
@@ -334,12 +337,9 @@ void lcd_write_labels(uint16_t left_margin,
                          left_margin + ((240) - 1),
                          top_margin,
                          (top_margin + (*font).lookup[(*c) - (*font).start_char].height) - 1);
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+	lcd_write_start();
     lcd_write_string(font, layout.image->text_background_color, color, c, fill_length);
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 }
 
 void lcd_clear(void) {
@@ -347,16 +347,13 @@ void lcd_clear(void) {
 
     lcd_set_bounding_box(0, 240, 0, 320);
 
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+    lcd_write_start();
     for (x = 0; x < 240; x++) {
         for (y = 0; y < 320; y++) {
             spi_write_blocking(BP_SPI_PORT, colors_pallet[LCD_BLACK], 2);
         }
     }
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 }
 
 void lcd_set_bounding_box(uint16_t xs, uint16_t xe, uint16_t ys, uint16_t ye) {
@@ -388,13 +385,9 @@ void lcd_write_command(uint8_t command) {
 }
 
 void lcd_write_data(uint8_t data) {
-    // D/C high for data
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);                   // gpio_set(BP_LCD_DP_PORT,BP_LCD_DP_PIN);
-    gpio_put(DISPLAY_CS, 0);                   // gpio_clear(BP_LCD_CS_PORT, BP_LCD_CS_PIN);
-    spi_write_blocking(BP_SPI_PORT, &data, 1); // spi_xfer(BP_LCD_SPI, &data);
-    gpio_put(DISPLAY_CS, 1);                   // gpio_set(BP_LCD_CS_PORT, BP_LCD_CS_PIN);
-    spi_busy_wait(false);
+    lcd_write_start();
+    spi_write_blocking(BP_SPI_PORT, &data, 1);
+    lcd_write_stop();
 }
 
 void lcd_disable(void) {

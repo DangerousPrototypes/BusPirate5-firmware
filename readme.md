@@ -1,4 +1,4 @@
-# Bus Pirate 7
+# Bus Pirate 7 with PSRAM
 
 ![](./img/bp5rev10-cover-angle.jpg)
 

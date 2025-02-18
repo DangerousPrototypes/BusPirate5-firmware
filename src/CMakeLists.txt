@@ -408,6 +408,7 @@ set (rp2350_common
         commands/global/otpdump.h 
         commands/global/otpdump.c
         psram.c
+		psram.h
 )
 
 
@@ -425,39 +426,39 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate7 PUBLIC BP_REV=10) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}") 
 
-        add_executable(bus_pirate6
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
-                ${rp2350_common}
-                platform/bpi6-rev1.h
-                platform/bpi6-rev1.c
-                display/robot6x16.h
-                )
-        target_compile_definitions(bus_pirate6 PUBLIC BP_VER=6) 
-        target_compile_definitions(bus_pirate6 PUBLIC BP_REV=10) 
-        target_compile_definitions(bus_pirate6 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}") 
+#        add_executable(bus_pirate6
+#                ${bp5_common}
+#                ${bp5_nandflash}
+#                ${bp5_rtt}
+#                ${rp2350_common}
+#                platform/bpi6-rev1.h
+#                platform/bpi6-rev1.c
+#                display/robot6x16.h
+#                )
+#        target_compile_definitions(bus_pirate6 PUBLIC BP_VER=6) 
+#        target_compile_definitions(bus_pirate6 PUBLIC BP_REV=10) 
+#        target_compile_definitions(bus_pirate6 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}") 
         
         set(revisions
                 bus_pirate7
-                bus_pirate5_xl  
-                bus_pirate6
+#                bus_pirate5_xl  
+#                bus_pirate6
         )        
 
-        add_executable(bus_pirate5_xl
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
-                ${rp2350_common}
-                platform/bpi-rev10.h
-                platform/bpi-rev10.c 
-                pirate/shift.h
-                pirate/shift.c
-                display/robot5xx16.h
-                )
-        target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
-        target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
-        target_compile_definitions(bus_pirate5_xl PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
+#        add_executable(bus_pirate5_xl
+#                ${bp5_common}
+#                ${bp5_nandflash}
+#                ${bp5_rtt}
+#                ${rp2350_common}
+#                platform/bpi-rev10.h
+#                platform/bpi-rev10.c 
+#                pirate/shift.h
+#                pirate/shift.c
+#                display/robot5xx16.h
+#                )
+#        target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
+#        target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
+#        target_compile_definitions(bus_pirate5_xl PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 else()
         add_executable(bus_pirate5_rev10
                 ${bp5_common}
@@ -549,7 +550,7 @@ foreach(revision ${revisions})
         if(${PICO_PLATFORM} MATCHES "rp2350")
             pico_set_program_description(${revision} "Bus Pirate 5XL/6/7 Firmware for RP2350")
         else()
-                pico_set_program_description(${revision} "Bus Pirate 5 Firmware for RP2040")
+            pico_set_program_description(${revision} "Bus Pirate 5 Firmware for RP2040")
         endif()
         pico_enable_stdio_uart(${revision} 0)
         pico_enable_stdio_usb(${revision} 0)
@@ -587,8 +588,8 @@ if(USE_LGPL3)
 if(LEGACY_ANSI_COLOURS_ENABLED)
         if(${PICO_PLATFORM} MATCHES "rp2350")
             target_link_libraries(bus_pirate7           lib_ansi_colours)
-            target_link_libraries(bus_pirate5_xl         lib_ansi_colours)
-            target_link_libraries(bus_pirate6           lib_ansi_colours)
+#            target_link_libraries(bus_pirate5_xl         lib_ansi_colours)
+#            target_link_libraries(bus_pirate6           lib_ansi_colours)
         else()
                 target_link_libraries(bus_pirate5_rev10       lib_ansi_colours)
                 target_link_libraries(bus_pirate5_rev8        lib_ansi_colours)

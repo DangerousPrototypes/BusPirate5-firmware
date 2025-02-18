@@ -2,8 +2,10 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
+#define DISPLAY_ILI9341
+
 // enable splash screen at startup, increases firmware size and load time
-#define BP_SPLASH_ENABLED
+// #define BP_SPLASH_ENABLED
 
 // uncomment to disable unique com ports for manufacturing testing
 // #define BP_MANUFACTURING_TEST_MODE

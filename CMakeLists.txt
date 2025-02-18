@@ -36,17 +36,11 @@ message(BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
 if(${BP_PICO_PLATFORM} MATCHES "rp2350")
     set(PICO_PLATFORM "rp2350") #compile for 5XL and 6
-    if("${PICO_BOARD} " STREQUAL " ")
-        set(PICO_BOARD buspirate6)
-    endif()
+    set(PICO_BOARD buspirate6)
 else()
     set(PICO_PLATFORM "rp2040") #compile for 5 rev8 and 5 rev10
     set(PICO_BOARD buspirate5)
 endif()
-
-message("---------------------------")
-message("PICO_BOARD ${PICO_BOARD}")
-message("---------------------------")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(cmake/pico_sdk_import.cmake)

@@ -30,6 +30,8 @@ size_t __psram_heap_size = 0;
 
 #define PICO_RUNTIME_INIT_PSRAM "11001" // Towards the end, after alarms
 
+#ifdef RP2350_PSRAM_CS
+
 #ifndef RP2350_PSRAM_MAX_SELECT_FS64
 #define RP2350_PSRAM_MAX_SELECT_FS64 (125000000u)
 #endif
@@ -89,6 +91,8 @@ const uint8_t PSRAM_CMD_NOOP = 0xFF;
 
 const uint8_t PSRAM_ID = RP2350_PSRAM_ID;
 
+#endif
+
 /**
  * @brief Communicate directly with the PSRAM IC - validate it is present and return the size
  * 
@@ -100,6 +104,9 @@ const uint8_t PSRAM_ID = RP2350_PSRAM_ID;
 static size_t get_psram_size(void)
 {
 	size_t psram_size = 0;
+
+#ifdef RP2350_PSRAM_CS
+
 	uint32_t intr_stash = save_and_disable_interrupts();
 
 	// Try and read the PSRAM ID via direct_csr.
@@ -166,6 +173,8 @@ static size_t get_psram_size(void)
 			psram_size *= 4;
 	}
 	restore_interrupts(intr_stash);
+
+#endif
 	return psram_size;
 }
 
@@ -176,6 +185,8 @@ static size_t get_psram_size(void)
  */
 static void set_psram_timing(void)
 {
+#ifdef RP2350_PSRAM_CS
+
 	// Get secs / cycle for the system clock - get before disabling interrupts.
 	uint32_t sysHz = (uint32_t)clock_get_hz(clk_sys);
 
@@ -208,6 +219,8 @@ static void set_psram_timing(void)
 						  clockDivider << QMI_M1_TIMING_CLKDIV_LSB;
 
 	restore_interrupts(intr_stash);
+
+#endif
 }
 
 /**
@@ -216,6 +229,9 @@ static void set_psram_timing(void)
 static void __no_inline_not_in_flash_func(runtime_init_setup_psram)(/*uint32_t psram_cs_pin*/)
 // void runtime_init_setup_psram(/*uint32_t psram_cs_pin*/)
 {
+
+#ifdef RP2350_PSRAM_CS
+
 	gpio_set_function(RP2350_PSRAM_CS, GPIO_FUNC_XIP_CS1);
 
 	// start with zero size
@@ -302,6 +318,9 @@ static void __no_inline_not_in_flash_func(runtime_init_setup_psram)(/*uint32_t p
 
 	uint32_t used_psram_size = &__psram_heap_start__ - &__psram_start__;
 	__psram_heap_size = __psram_size - used_psram_size;
+
+#endif
+
 }
 PICO_RUNTIME_INIT_FUNC_RUNTIME(runtime_init_setup_psram, PICO_RUNTIME_INIT_PSRAM);
 
@@ -473,6 +492,7 @@ size_t __psram_total_used()
 	}
 	return total_size;
 }
+
 
 /**
  *

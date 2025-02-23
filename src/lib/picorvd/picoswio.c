@@ -10,6 +10,7 @@ Changed by: Ian Lesnet, 2024 Where Labs LLC for Bus Pirate 5
 #include "ch32vswio.pio.h"
 #include "debug_defines.h"
 #include "hardware/pio.h"
+#include "hardware/clocks.h"
 #include "picoswio.h"
 #include "pio_config.h"
 
@@ -67,10 +68,9 @@ void ch32vswio_reset(int pin, int dirpin) {
   sm_config_set_out_shift   (&c, /*shift_right*/ false, /*autopull*/ false, /*pull_threshold*/ 32);
   sm_config_set_in_shift    (&c, /*shift_right*/ false, /*autopush*/ true,  /*push_threshold*/ 32);
 
-  // 125 mhz / 12 = 96 nanoseconds per tick, close enough to 100 ns.
-  sm_config_set_clkdiv      (&c, 12);
+   sm_config_set_clkdiv(&c, clock_get_hz(clk_sys)/10000000);
 
-  #if BP_VER==5
+#if BP_VER==5
   gpio_pull_down(pin);
   #endif
   pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<pin)); //read pins to input (0, mask)  

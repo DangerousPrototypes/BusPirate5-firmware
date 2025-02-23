@@ -26,7 +26,7 @@
 // Parameters for edge-counter gating
 #define TIMER_PRESCALE      1     // 8-bit value
 #define TIMER_WRAP          31250  // 17-bit value
-#define SAMPLE_FREQ         (125000000 / (TIMER_PRESCALE * TIMER_WRAP))
+#define SAMPLE_FREQ (clock_get_hz(clk_sys) / (TIMER_PRESCALE * TIMER_WRAP))
 
 // Parameters for edge-timer: number of samples, and sample interval
 #define NUM_EDGE_TIMES      11

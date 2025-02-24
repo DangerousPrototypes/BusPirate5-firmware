@@ -1,0 +1,18 @@
+# Require Ian or Henry to review changes to...
+
+# Changes to the public key, or cert commands
+/src/pubkey/                   @DangerousPrototypes @henrygab
+/src/commands/global/cert.*    @DangerousPrototypes @henrygab
+
+# Modifications to CMakeLists.txt can change which files are included in the build
+CMakeLists.txt                 @DangerousPrototypes @henrygab
+
+# Anything in github directory (workflows, codeowners, etc.)
+/.github/                      @DangerousPrototypes @henrygab
+/.devcontainer/                @DangerousPrototypes @henrygab
+/.vscode/                      @DangerousPrototypes @henrygab
+/LICENSE.TXT                   @DangerousPrototypes @henrygab
+/.gitignore                    @DangerousPrototypes @henrygab
+/.gitmodules                   @DangerousPrototypes @henrygab
+/docker-compose.yml            @DangerousPrototypes @henrygab
+

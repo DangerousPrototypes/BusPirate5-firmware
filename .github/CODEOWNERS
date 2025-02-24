@@ -4,6 +4,9 @@
 /src/pubkey/                   @DangerousPrototypes @henrygab
 /src/commands/global/cert.*    @DangerousPrototypes @henrygab
 
+# Changes to legacy mode
+src/binmode/legacy4third.*      @therealdreg @henrygab @DangerousPrototypes
+
 # Modifications to CMakeLists.txt can change which files are included in the build
 CMakeLists.txt                 @DangerousPrototypes @henrygab
 

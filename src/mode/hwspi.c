@@ -17,6 +17,7 @@
 #include "ui/ui_help.h"
 #include "pirate/hwspi.h"
 #include "commands/spi/sniff.h"
+#include "commands/spi/slave.h"
 #include "usb_rx.h"
 
 // command configuration
@@ -31,6 +32,11 @@ const struct _mode_command_struct hwspi_commands[] = {
         .description_text=T_SPI_CMD_SNIFF, 
         .supress_fala_capture=true
     },    
+    {   .command="slave", 
+        .func=&slave_handler, 
+        .description_text=T_SPI_CMD_SNIFF, 
+        .supress_fala_capture=true
+    },      
 };
 const uint32_t hwspi_commands_count = count_of(hwspi_commands);
 

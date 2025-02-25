@@ -190,6 +190,8 @@ set(bp5_common
         lib/sfud/inc/sfud_flash_def.h
         lib/sfud/inc/sfud_port.c
         lib/sfud/inc/sfud_sfdp.c
+        commands/spi/slave.h 
+        commands/spi/slave.c
 
         # 2WIRE
         mode/hw2wire.h

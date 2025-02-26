@@ -46,6 +46,37 @@
 #include "commands/global/ovrclk.h"
 #include "commands/global/cert.h"
 
+/*
+struct ui_help_topics {
+    uint8_t topic_id;
+    const char* description;
+};
+
+enum {
+    HELP_TOPIC_IO = 0,
+    HELP_TOPIC_CONFIGURE,
+    HELP_TOPIC_SYSTEM,
+    HELP_TOPIC_FILES,
+    HELP_TOPIC_SCRIPT,
+    HELP_TOPIC_TOOLS,
+    HELP_TOPIC_MODE,
+    HELP_TOPIC_SYNTAX,
+};
+
+const struct ui_help_topics help_topics[] = {
+    { HELP_TOPIC_IO, T_HELP_SECTION_IO},
+    { HELP_TOPIC_CONFIGURE, T_HELP_SECTION_CONFIGURE},
+    { HELP_TOPIC_SYSTEM, T_HELP_SECTION_SYSTEM},
+    { HELP_TOPIC_FILES, T_HELP_SECTION_FILES},
+    { HELP_TOPIC_SCRIPT, T_HELP_SECTION_SCRIPT},
+    { HELP_TOPIC_TOOLS, T_HELP_SECTION_TOOLS},
+    { HELP_TOPIC_MODE, T_HELP_SECTION_MODE},
+    { HELP_TOPIC_SYNTAX, T_HELP_SECTION_SYNTAX},
+};
+
+const struct 
+*/
+
 // command configuration
 const struct _global_command_struct commands[] = {
     // clang-format off

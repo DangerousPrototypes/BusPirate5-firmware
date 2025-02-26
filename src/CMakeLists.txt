@@ -14,7 +14,7 @@ ADD_CUSTOM_TARGET (
     ADD_DEPENDENCIES ${CMAKE_BINARY_DIR}/timestamp.cmake)
 
 # Add executable. Default name is the project name, version 0.1
-set(bp5_common
+set(buspirate_common
         # main loop and printf
         pirate.c
         pirate.h
@@ -376,7 +376,7 @@ set(bp5_common
         usb_descriptors.c
 )
 
-set(bp5_nandflash
+set(buspirate_nandflash
         #nand flash management and dhara
         dhara/bytes.h
         dhara/error.c
@@ -397,7 +397,7 @@ set(bp5_nandflash
         nand/sys_time.h
 )
 
-set (bp5_rtt
+set (buspirate_rtt
         lib/rtt/Config/SEGGER_RTT_Conf.h
         lib/rtt/RTT/SEGGER_RTT.c
         lib/rtt/RTT/SEGGER_RTT.h
@@ -418,9 +418,9 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         )   
 
         add_executable(bus_pirate7
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_nandflash}
+                ${buspirate_rtt}
                 ${rp2350_common}
                 platform/bpi7-rev0.h
                 platform/bpi7-rev0.c
@@ -431,9 +431,9 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate7 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")             
 
         add_executable(bus_pirate6
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_nandflash}
+                ${buspirate_rtt}
                 ${rp2350_common}
                 platform/bpi6-rev2.h
                 platform/bpi6-rev2.c
@@ -444,9 +444,9 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate6 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}") 
 
         add_executable(bus_pirate5_xl
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_nandflash}
+                ${buspirate_rtt}
                 ${rp2350_common}
                 platform/bpi5xl-rev0.h
                 platform/bpi5xl-rev0.c 
@@ -465,9 +465,9 @@ else()
         )
 
         add_executable(bus_pirate5_rev10
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_nandflash}
+                ${buspirate_rtt}
                 platform/bpi5-rev10.h
                 platform/bpi5-rev10.c
                 pirate/shift.h
@@ -479,8 +479,8 @@ else()
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
         add_executable(bus_pirate5_rev8
-                ${bp5_common}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_rtt}
                 platform/bpi5-rev8.h
                 platform/bpi5-rev8.c
                 #tf card access control

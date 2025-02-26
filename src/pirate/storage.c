@@ -86,32 +86,32 @@ void storage_unmount(void) {
     f_unmount("");
     system_config.storage_available = false;
     system_config.storage_mount_error = 0;
-#if BP_REV == 8 || BP_REV == 9
-    printf("Storage removed\r\n");
-#endif
+    #ifdef BP_HW_STORAGE_TFCARD
+        printf("Storage removed\r\n");
+    #endif
 }
 
 bool storage_detect(void) {
-#if BP_REV == 8 || BP_REV == 9
-    // TF flash card detect is measured through the analog mux for lack of IO pins....
-    // if we have low, storage not previously available, and we didn't error out, try to mount
-    if (hw_adc_raw[HW_ADC_MUX_CARD_DETECT] < 100 && system_config.storage_available == false &&
-        system_config.storage_mount_error == 0) {
-        if (storage_mount() == FR_OK) {
-            printf("Storage mounted: %7.2f GB %s\r\n\r\n",
-                   system_config.storage_size,
-                   storage_fat_type_labels[system_config.storage_fat_type - 1]);
-        } else {
-            printf("Mount error %d\r\n", system_config.storage_mount_error);
+    #ifdef BP_HW_STORAGE_TFCARD
+        // TF flash card detect is measured through the analog mux for lack of IO pins....
+        // if we have low, storage not previously available, and we didn't error out, try to mount
+        if (hw_adc_raw[HW_ADC_MUX_CARD_DETECT] < 100 && system_config.storage_available == false &&
+            system_config.storage_mount_error == 0) {
+            if (storage_mount() == FR_OK) {
+                printf("Storage mounted: %7.2f GB %s\r\n\r\n",
+                    system_config.storage_size,
+                    storage_fat_type_labels[system_config.storage_fat_type - 1]);
+            } else {
+                printf("Mount error %d\r\n", system_config.storage_mount_error);
+            }
         }
-    }
 
-    // card removed, unmount, look for fresh insert next time
-    if (hw_adc_raw[HW_ADC_MUX_CARD_DETECT] >= 100 &&
-        (system_config.storage_available == true || system_config.storage_mount_error != 0)) {
-        storage_unmount();
-    }
-#endif
+        // card removed, unmount, look for fresh insert next time
+        if (hw_adc_raw[HW_ADC_MUX_CARD_DETECT] >= 100 &&
+            (system_config.storage_available == true || system_config.storage_mount_error != 0)) {
+            storage_unmount();
+        }
+    #endif
     return true;
 }
 

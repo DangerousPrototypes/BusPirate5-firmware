@@ -264,6 +264,8 @@ char const* string_desc_arr[] = {
     "Bus Pirate 5XL",             // 2: Product
 #elif (BP_VER == 6)
     "Bus Pirate 6",               // 2: Product
+#elif (BP_VER == 7)
+    "Bus Pirate 7",               // 2: Product
 #else
     #error "Unknown Bus Pirate version"
 #endif

@@ -150,6 +150,8 @@ static void sump_do_meta(void) {
         ptr = sump_add_metas(ptr, SUMP_META_NAME, "Bus Pirate 5XL");
     #elif (BP_VER == 6)
         ptr = sump_add_metas(ptr, SUMP_META_NAME, "Bus Pirate 6");
+    #elif (BP_VER == 7)
+        ptr = sump_add_metas(ptr, SUMP_META_NAME, "Bus Pirate 7");
     #else
         #error "Unknown platform version in sump.c"
     #endif

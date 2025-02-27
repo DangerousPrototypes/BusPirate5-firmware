@@ -216,14 +216,19 @@ void logic_handler(struct command_result* res) {
     }
 
     if (has_info || has_oversample || has_frequency) {
+        fala_config.actual_sample_frequency =
+            logic_analyzer_compute_actual_sample_frequency(fala_config.base_frequency * fala_config.oversample, NULL);
         printf("\r\nLogic Analyzer settings\r\n");
+        float foversample = (float)fala_config.actual_sample_frequency / fala_config.base_frequency;
         printf(" Oversample rate: %d\r\n", fala_config.oversample);
         printf(" Sample frequency: %dHz\r\n", fala_config.base_frequency);
-        if (oversample != 1) {
-            printf("\r\nNote: oversample rate is not 1\r\n");
-            printf("Actual sample frequency: %dHz (%d * %dHz)\r\n",
-                   fala_config.base_frequency * fala_config.oversample,
-                   fala_config.oversample,
+        if (foversample != 1.0) {
+            printf("\r\nNote: actual oversample rate is not 1\r\n");
+        }
+        if (fala_config.actual_sample_frequency != fala_config.base_frequency) {
+            printf("Actual sample frequency: %dHz (%f * %dHz)\r\n",
+                   fala_config.actual_sample_frequency,
+                   foversample,
                    fala_config.base_frequency);
         }
     }

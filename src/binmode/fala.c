@@ -42,7 +42,7 @@ void fala_set_triggers(uint8_t trigger_pin, uint8_t trigger_level) {
 // start the logic analyzer
 void fala_start(void) {
     // configure and arm the logic analyzer
-    logic_analyzer_configure(
+    fala_config.actual_sample_frequency = logic_analyzer_configure(
         fala_config.base_frequency * fala_config.oversample, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0x00, 0x00, false, false);
     logic_analyzer_arm(false);
 }
@@ -173,11 +173,12 @@ void fala_stop_hook(void) {
 void fala_mode_change_hook(void) {
     fala_set_freq(modes[system_config.mode].protocol_get_speed());
     fala_set_oversample(8);
+    fala_config.actual_sample_frequency = logic_analyzer_compute_actual_sample_frequency(fala_config.base_frequency * fala_config.oversample, NULL);
     if (fala_has_hook()) {
         printf("\r\n%sLogic analyzer speed:%s %dHz (%dx oversampling)\r\n",
                ui_term_color_info(),
                ui_term_color_reset(),
-               fala_config.base_frequency * fala_config.oversample,
+               fala_config.actual_sample_frequency,
                fala_config.oversample);
         printf(
             "%sUse the 'logic' command to change capture settings%s\r\n", ui_term_color_info(), ui_term_color_reset());

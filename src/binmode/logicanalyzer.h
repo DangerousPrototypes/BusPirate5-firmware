@@ -6,7 +6,7 @@ int logicanalyzer_status(void);
 void logic_analyzer_dump(uint8_t* txbuf);
 bool logic_analyzer_is_done(void);
 void logic_analyser_done(void);
-bool logic_analyzer_configure(
+uint32_t logic_analyzer_configure(
     float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction, bool edge, bool interrupt);
 void logic_analyzer_arm(bool led_indicator_enable);
 bool logic_analyzer_cleanup(void);
@@ -19,3 +19,4 @@ void logic_analyzer_reset_ptr(void);
 uint8_t logic_analyzer_read_ptr(uint32_t read_pointer);
 void logic_analyzer_set_base_pin(uint8_t base_pin);
 uint32_t logic_analyzer_get_samples_from_zero(void);
+uint32_t logic_analyzer_compute_actual_sample_frequency(float desired_frequency, float* div_out);

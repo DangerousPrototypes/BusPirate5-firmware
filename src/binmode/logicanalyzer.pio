@@ -57,7 +57,7 @@ capture:
     irq 0
 
 % c-sdk {
-static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq, bool edge) {
+static inline uint32_t logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq, bool edge) {
     pio_sm_set_enabled(pio, sm, false);
     pio_sm_clear_fifos(pio, sm);
     pio_sm_restart(pio, sm);    
@@ -78,8 +78,9 @@ static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uin
     sm_config_set_out_shift(&c, false, true, 32);
     sm_config_set_in_shift(&c, false, true, 8);
 
-	float div = clock_get_hz(clk_sys) / (freq * 2); //2 instructions per sample, run twice as fast as requested sampling rate  
-	sm_config_set_clkdiv(&c, div);
+    float div = 0;
+    uint32_t real_frequency = logic_analyzer_compute_actual_sample_frequency(freq, &div);
+    sm_config_set_clkdiv(&c, div);
 
     pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
     pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
@@ -87,10 +88,10 @@ static inline void logicanalyzer_high_trigger_program_init(PIO pio, uint sm, uin
     uint program_offset = offset + (edge ? logicanalyzer_high_trigger_offset_edge_trigger_rising : logicanalyzer_high_trigger_offset_high_trigger);
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, program_offset, &c);
-
+    return real_frequency;
 }
 
-static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq, bool edge) {
+static inline uint32_t logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, uint trigger, float freq, bool edge) {
     pio_sm_set_enabled(pio, sm, false);
     pio_sm_clear_fifos(pio, sm);
     pio_sm_restart(pio, sm);    
@@ -111,8 +112,9 @@ static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint
     sm_config_set_out_shift(&c, false, true, 32);
     sm_config_set_in_shift(&c, false, true, 8);
 
-	float div = clock_get_hz(clk_sys) / (freq * 2); //2 instructions per sample, run twice as fast as requested sampling rate  
-	sm_config_set_clkdiv(&c, div);
+    float div = 0;
+    uint32_t real_frequency = logic_analyzer_compute_actual_sample_frequency(freq, &div);
+    sm_config_set_clkdiv(&c, div);
 
     pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
     pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
@@ -120,10 +122,10 @@ static inline void logicanalyzer_low_trigger_program_init(PIO pio, uint sm, uint
     uint program_offset = offset + (edge ? logicanalyzer_low_trigger_offset_edge_trigger_falling : logicanalyzer_low_trigger_offset_low_trigger);
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, program_offset, &c);
-
+    return real_frequency;
 }
 
-static inline void logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
+static inline uint32_t logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint offset, uint pin, float freq) {
     pio_sm_set_enabled(pio, sm, false);
     pio_sm_clear_fifos(pio, sm);
     pio_sm_restart(pio, sm);    
@@ -144,7 +146,8 @@ static inline void logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint 
     sm_config_set_out_shift(&c, false, true, 32);
     sm_config_set_in_shift(&c, false, true, 8);
 
-    float div = clock_get_hz(clk_sys) / (freq * 2);
+    float div = 0;
+    uint32_t real_frequency = logic_analyzer_compute_actual_sample_frequency(freq, &div);
     sm_config_set_clkdiv(&c, div);
 
     pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
@@ -152,7 +155,7 @@ static inline void logicanalyzer_no_trigger_program_init(PIO pio, uint sm, uint 
 
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, offset, &c);
- 
+    return real_frequency;
 }
 
 %}

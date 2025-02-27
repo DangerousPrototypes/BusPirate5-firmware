@@ -19,54 +19,60 @@
 #define PSU_I_HIGH 500 // mA
 #define PSU_I_RANGE ((PSU_I_HIGH * 10000) - (PSU_I_LOW * 10000))
 
+#define BP_HW_PSU_USE_SHIFT_REGISTERS (BP_VER == 5 || BP_VER == XL5)
+
 struct psu_status_t psu_status;
 
 static void psu_fuse_reset(void) {
-// reset current trigger
-#if (BP_VER == 5 || BP_VER == XL5)
-    shift_clear_set_wait(CURRENT_RESET, 0); // low to activate the pnp
-#else
-    gpio_put(CURRENT_RESET, 0);
-#endif
-    busy_wait_ms(1);
-#if (BP_VER == 5 || BP_VER == XL5)
-    shift_clear_set_wait(0, CURRENT_RESET); // high to disable
-#else
-    gpio_put(CURRENT_RESET, 1);
-#endif
+    // reset current trigger
+    #if (BP_VER == 5 || BP_VER == XL5)
+        shift_clear_set_wait(CURRENT_RESET, 0); // low to activate the pnp
+        busy_wait_ms(1);
+        shift_clear_set_wait(0, CURRENT_RESET); // high to disable    
+    #elif (BP_VER == 6)
+        gpio_put(CURRENT_RESET, 0);
+        busy_wait_ms(1);
+        gpio_put(CURRENT_RESET, 1);
+    #elif (BP_VER == 7 && BP_REV == 0)
+        gpio_put(CURRENT_RESET, 0);
+        busy_wait_ms(1);
+        gpio_put(CURRENT_RESET, 1);
+    #else
+        #error "Platform not speficied in psu.c"
+    #endif
 }
 
 // TODO: rename this function, it actually controls if the current limit circuit is connected to the VREG
 void psu_vreg_enable(bool enable) {
-    if (enable) {
-#if (BP_VER == 5 || BP_VER == XL5)
-        shift_clear_set_wait(CURRENT_EN, 0); // low is on (PNP)
-#else
-        gpio_put(CURRENT_EN, 0);
-#endif
-    } else {
-#if (BP_VER == 5 || BP_VER == XL5)
-        shift_clear_set_wait(0, CURRENT_EN); // high is off
-#else
-        gpio_put(CURRENT_EN, 1);
-#endif
-    }
+    #if (BP_VER == 5 || BP_VER == XL5)
+        if (enable) {
+            shift_clear_set_wait(CURRENT_EN, 0); // low is on (PNP)
+        } else {
+            shift_clear_set_wait(0, CURRENT_EN); // high is off
+        }    
+    #elif (BP_VER == 6)
+        gpio_put(CURRENT_EN, !enable);
+    #elif (BP_VER == 7 && BP_REV == 0)
+        gpio_put(CURRENT_EN, !enable);
+    #else
+        #error "Platform not speficied in psu.c"
+    #endif
 }
 
 void psu_current_limit_override(bool enable) {
-    if (enable) {
-#if (BP_VER == 5 || BP_VER == XL5)
-        shift_clear_set_wait(0, CURRENT_EN_OVERRIDE);
-#else
-        gpio_put(CURRENT_EN_OVERRIDE, 1);
-#endif
-    } else {
-#if (BP_VER == 5 || BP_VER == XL5)
-        shift_clear_set_wait(CURRENT_EN_OVERRIDE, 0);
-#else
-        gpio_put(CURRENT_EN_OVERRIDE, 0);
-#endif
-    }
+    #if (BP_VER == 5 || BP_VER == XL5)
+        if (enable) {
+            shift_clear_set_wait(0, CURRENT_EN_OVERRIDE);
+        } else {
+            shift_clear_set_wait(CURRENT_EN_OVERRIDE, 0);
+        }
+    #elif (BP_VER == 6)
+        gpio_put(CURRENT_EN_OVERRIDE, enable);
+    #elif (BP_VER == 7 && BP_REV == 0)
+        gpio_put(CURRENT_EN_OVERRIDE, enable);
+    #else
+        #error "Platform not speficied in psu.c"
+    #endif
 }
 
 void psu_set_v(float volts, struct psu_status_t* psu) {
@@ -98,11 +104,17 @@ void psu_set_i(float current, struct psu_status_t* psu) {
 }
 
 void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
-    uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
-    uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
-    uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
-    pwm_set_chan_level(slice_num, v_chan_num, v_dac);
-    pwm_set_chan_level(slice_num, i_chan_num, i_dac);
+    #if (BP_VER == 5 || BP_VER == XL5 || BP_VER == 6 || (BP_VER == 7 && BP_REV > 0))
+        uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
+        uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
+        uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
+        pwm_set_chan_level(slice_num, v_chan_num, v_dac);
+        pwm_set_chan_level(slice_num, i_chan_num, i_dac);
+    #elif (BP_VER == 7 && BP_REV == 0)
+        //I2C dac
+    #else
+        #error "Platform not speficied in psu.c"
+    #endif
     // printf("GPIO: %d, slice: %d, v_chan: %d, i_chan: %d",PSU_PWM_VREG_ADJ,slice_num,v_chan_num,i_chan_num);
 }
 
@@ -192,34 +204,40 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
 void psu_init(void) {
     psu_vreg_enable(false);
 
-    // pin and PWM setup
-    gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_SIO);
-    gpio_set_dir(PSU_PWM_CURRENT_ADJ, GPIO_OUT);
-    gpio_put(PSU_PWM_CURRENT_ADJ, 0);
-    gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_SIO);
-    gpio_set_dir(PSU_PWM_VREG_ADJ, GPIO_OUT);
-    gpio_put(PSU_PWM_VREG_ADJ, 1);
+    #if (BP_VER == 5 || BP_VER == XL5 || BP_VER == 6 || (BP_VER == 7 && BP_REV > 0))
+        // pin and PWM setup
+        gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_SIO);
+        gpio_set_dir(PSU_PWM_CURRENT_ADJ, GPIO_OUT);
+        gpio_put(PSU_PWM_CURRENT_ADJ, 0);
+        gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_SIO);
+        gpio_set_dir(PSU_PWM_VREG_ADJ, GPIO_OUT);
+        gpio_put(PSU_PWM_VREG_ADJ, 1);
 
-    uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
-    uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
-    uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
+        uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
+        uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
+        uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
 
-    // 10kHz clock, into our 1K + 0.1uF filter
-    pwm_set_clkdiv_int_frac(slice_num, 16 >> 4, 16 & 0b1111);
-    pwm_set_wrap(slice_num, PWM_TOP);
+        // 10kHz clock, into our 1K + 0.1uF filter
+        pwm_set_clkdiv_int_frac(slice_num, 16 >> 4, 16 & 0b1111);
+        pwm_set_wrap(slice_num, PWM_TOP);
 
-    // start with v adjust high (lowest voltage output)
-    pwm_set_chan_level(slice_num, v_chan_num, PWM_TOP);
+        // start with v adjust high (lowest voltage output)
+        pwm_set_chan_level(slice_num, v_chan_num, PWM_TOP);
 
-    // start with i adjust low (lowest current output)
-    pwm_set_chan_level(slice_num, i_chan_num, 0);
+        // start with i adjust low (lowest current output)
+        pwm_set_chan_level(slice_num, i_chan_num, 0);
 
-    // enable output
-    gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_PWM);
-    gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_PWM);
-    pwm_set_enabled(slice_num, true);
+        // enable output
+        gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_PWM);
+        gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_PWM);
+        pwm_set_enabled(slice_num, true);
 
-    // too early, spi not setup
-    // psu_current_limit_override(false);
-    // psu_fuse_reset();
+        // too early, spi not setup for shift register method of IO control
+        // psu_current_limit_override(false);
+        // psu_fuse_reset();
+    #elif (BP_VER == 7 && BP_REV == 0)
+        //I2C dac
+    #else
+        #error "Platform not speficied in psu.c"
+    #endif
 }

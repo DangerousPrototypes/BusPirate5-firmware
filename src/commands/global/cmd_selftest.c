@@ -388,7 +388,7 @@ bool selftest_button(void) {
 }
 
 // test that the logic analyzer chip is mounted and with no shorts
-#if BP_VER == 6
+#if BP_VER >= 6
 bool selftest_la_bpio(void) {
     uint32_t temp1, fails = 0, iopin = 0;
     printf("LA_BPIO TEST (SHOULD BE 1)\r\n");
@@ -460,12 +460,12 @@ void cmd_selftest(void) {
         return;
     }
 
-// REV10 + check status of NAND flash
-#if BP_REV >= 10
-    if (selftest_format_nand()) {
-        fails++;
-    }
-#endif
+    // REV10 + check status of NAND flash
+    #ifdef BP_HW_STORAGE_NAND
+        if (selftest_format_nand()) {
+            fails++;
+        }
+    #endif
 
     printf("SELF TEST STARTING\r\nDISABLE IRQ: ");
     icm_core0_send_message_synchronous(BP_ICM_DISABLE_LCD_UPDATES);
@@ -510,18 +510,18 @@ void cmd_selftest(void) {
         fails++;
     }
 
-// LA_BPIO test
-#if BP_VER == 6
-    if (selftest_la_bpio()) {
-        fails++;
-    }
-#endif
-#if (BP_VER == 6 || BP_VER == XL5)
-    if(selftest_rp2350_e9_fix()){
-        printf("RP2350 E9 silicon bug detected, try \"bug e9 -a\" to confirm\r\n");
-        fails++;
-    }
-#endif
+    // LA_BPIO test
+    #if BP_VER >= 6
+        if (selftest_la_bpio()) {
+            fails++;
+        }
+    #endif
+    #if (RPI_PLATFORM == RP2350)
+        if(selftest_rp2350_e9_fix()){
+            printf("RP2350 E9 silicon bug detected, try \"bug e9 -a\" to confirm\r\n");
+            fails++;
+        }
+    #endif
 
     // BIO pull-up high test
     if (selftest_pullup_high()) {

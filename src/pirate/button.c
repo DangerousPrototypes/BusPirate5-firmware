@@ -17,11 +17,13 @@ static volatile enum button_codes button_code = BP_BUTT_NO_PRESS;
 
 // poll the value of button button_id
 bool button_get(uint8_t button_id) {
-#if (BP_VER == 5)
-    return gpio_get(EXT1);
-#else
-    return !gpio_get(EXT1);
-#endif
+    #if RPI_PLATFORM == RP2040
+        return gpio_get(EXT1);
+    #elif RPI_PLATFORM == RP2350
+        return !gpio_get(EXT1);
+    #else
+        #error "Platform not speficied in button.c"
+    #endif
 }
 // check button press type
 enum button_codes button_check_press(uint8_t button_id) {
@@ -69,9 +71,11 @@ void button_irq_disable(uint8_t button_id) {
 void button_init(void) {
     gpio_set_function(EXT1, GPIO_FUNC_SIO);
     gpio_set_dir(EXT1, GPIO_IN);
-#if (BP_VER == 5)
-    gpio_pull_down(EXT1);
-#else
-    gpio_pull_up(EXT1);
-#endif
+    #if (RPI_PLATFORM == RP2040)
+        gpio_pull_down(EXT1);
+    #elif (RPI_PLATFORM == RP2350)
+        gpio_pull_up(EXT1);
+    #else
+        #error "Platform not speficied in button.c"
+    #endif
 }

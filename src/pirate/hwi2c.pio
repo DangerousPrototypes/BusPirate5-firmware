@@ -111,7 +111,7 @@ static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda,
     // Try to avoid glitching the bus while connecting the IOs. Get things set
     // up so that pin is driven down when PIO asserts OE low, and pulled up
     // otherwise.
-    #if BP_VER==5
+    #if RPI_PLATFORM != RP2350
     gpio_pull_down(pin_scl); //we pull down so we can output 0 when the buffer is an output without manipulating the actual scl/sda pin directions
     gpio_pull_down(pin_sda);
     #endif
@@ -168,7 +168,7 @@ static inline void i2c_clock_stretch_program_init(PIO pio, uint sm, uint offset,
     // Try to avoid glitching the bus while connecting the IOs. Get things set
     // up so that pin is driven down when PIO asserts OE low, and pulled up
     // otherwise.
-    #if BP_VER==5
+    #if RPI_PLATFORM != RP2350
     gpio_pull_down(pin_scl); //we pull down so we can output 0 when the buffer is an output without manipulating the actual scl/sda pin directions
     gpio_pull_down(pin_sda);
     #endif

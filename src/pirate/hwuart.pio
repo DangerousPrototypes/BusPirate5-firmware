@@ -34,7 +34,7 @@ good_stop:              ; No delay before returning to start; a little slack is
 static inline void uart_rx_program_init(PIO pio, uint sm, uint offset, uint pin, uint bits, uint baud) {
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
     pio_gpio_init(pio, pin);
-    #if BP_VER==5
+    #if RPI_PLATFORM != RP2350
     gpio_pull_down(pin);
     #endif
     pio_sm_config c = uart_rx_program_get_default_config(offset);

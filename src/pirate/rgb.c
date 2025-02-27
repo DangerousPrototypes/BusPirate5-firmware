@@ -23,6 +23,8 @@
 //
 #define COUNT_OF_PIXELS RGB_LEN // 18 for Rev10, 16 for Rev8
 
+#define BP_HW_RGB_HAS_ALL_PIXELS !(BP_VER==5 && BP_REV<=9)
+
 // static PIO pio;
 // static int sm;
 // static uint offset;
@@ -54,7 +56,7 @@ typedef struct _coordin8 {
 static const coordin8_t pixel_coordin8[] = {
 //                        // SIDE      POSITION    FACING
 // clang-format off
-        #if BP_REV >= 10
+        #if BP_HW_RGB_HAS_ALL_PIXELS
         { .x = 127, .y = 255,  }, // bottom    center      out
         #endif
         { .x = 165, .y = 255,  }, // bottom    right       side
@@ -73,7 +75,7 @@ static const coordin8_t pixel_coordin8[] = {
         { .x =   0, .y = 171,  }, // left      bottom      side    (by USB port)
         { .x =   0, .y = 202,  }, // left      bottom      out
         { .x =  52, .y = 255,  }, // bottom    left        out
-        #if BP_REV >= 10
+        #if BP_HW_RGB_HAS_ALL_PIXELS
         { .x =  90, .y = 255,  }, // bottom    left        side
         #endif
     // clang-format on
@@ -87,7 +89,7 @@ static const coordin8_t pixel_coordin8[] = {
 static const uint8_t pixel_angle256[] = {
 //                  // SIDE      POSITION    FACING
 // clang-format off
-        #if BP_REV >= 10
+        #if BP_HW_RGB_HAS_ALL_PIXELS
         192,                // bottom    center      out
         #endif
         204,                // bottom    right       side
@@ -106,7 +108,7 @@ static const uint8_t pixel_angle256[] = {
         141,                // left      bottom      side    (by USB port)
         150,                // left      bottom      out
         170,                // bottom    left        out
-        #if BP_REV >= 10
+        #if BP_HW_RGB_HAS_ALL_PIXELS
         180,                // bottom    left        side
         #endif
     // clang-format on
@@ -120,16 +122,16 @@ static_assert(count_of(pixel_angle256) == COUNT_OF_PIXELS);
 // static const uint32_t PIXEL_MASK_SIDE  = 0b1....0;
 
 // clang-format off
-    #if BP_REV <= 9
-        // Pixels that shine    orthogonal to OLED: idx     1,2,    5,6,  8,  10,11,      14,15,
-        #define PIXEL_MASK_UPPER ( 0b1100110101100110 )
-        // Pixels that shine    orthogonal to OLED: idx   0,    3,4,    7,  9,      12,13,
-        #define PIXEL_MASK_SIDE  ( 0b0011001010011001 )
-    #else
+    #if BP_HW_RGB_HAS_ALL_PIXELS
         // Pixels that shine in direction  of OLED: idx 0,  2,3,    6,7,  9,   11,12,      15,16
         #define PIXEL_MASK_UPPER (0b011001101011001101)
         // Pixels that shine    orthogonal to OLED: idx   1,    4,5,    8,  10,      13,14,     17
         #define PIXEL_MASK_SIDE  (0b100110010100110010)
+    #else
+        // Pixels that shine    orthogonal to OLED: idx     1,2,    5,6,  8,  10,11,      14,15,
+        #define PIXEL_MASK_UPPER ( 0b1100110101100110 )
+        // Pixels that shine    orthogonal to OLED: idx   0,    3,4,    7,  9,      12,13,
+        #define PIXEL_MASK_SIDE  ( 0b0011001010011001 )        
     #endif
 // clang-format on
 
@@ -222,7 +224,7 @@ static CPIXEL_COLOR reduce_brightness(CPIXEL_COLOR c, uint8_t numerator, uint8_t
 //    All the pixels facing upwards as one group, and all the pixels
 //    facing the sides as a second group.
 
-#if BP_REV <= 9
+#if !BP_HW_RGB_HAS_ALL_PIXELS
 static const uint32_t groups_top_left[] = {
     // clang-format off
             ((1u <<  1) | (1u <<  2)             ),
@@ -257,8 +259,8 @@ static const uint32_t groups_center_clockwise[] = {
             ((1u << 10)             ),
             ((1u << 11) | (1u << 12)),
     // clang-format on
-};
-#elif BP_REV >= 10
+};  
+#else
 static const uint32_t groups_top_left[] = {
     // TODO: use grid mappings instead
     //       e.g., for iteration target from 255..0

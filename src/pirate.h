@@ -6,7 +6,7 @@
 #define BP_SPLASH_ENABLED
 
 // uncomment to disable unique com ports for manufacturing testing
-// #define BP_MANUFACTURING_TEST_MODE
+#define BP_MANUFACTURING_TEST_MODE
 
 #define BP_FIRMWARE_VERSION "main branch"
 
@@ -59,6 +59,11 @@
 
 #define BIG_BUFFER_SIZE (128 * 1024)
 
+enum {
+    RP2040 = 0,
+    RP2350,
+};
+
 // clang-format off
 // include platform
 #ifndef BP_REV
@@ -66,18 +71,31 @@
 #else
     #if BP_VER == 5
         #if BP_REV == 8
-            #include "platform/bpi-rev8.h"
+            #include "platform/bpi5-rev8.h"
+            #define BP_HW_STORAGE_TFCARD 1
+            #define BP_HW_PSU_PWM_IO_BUG 1
         #elif BP_REV == 9
-            #include "platform/bpi-rev9.h"
+            #include "platform/bpi5-rev9.h"
+            #define BP_HW_STORAGE_NAND 1
         #elif BP_REV == 10
-            #include "platform/bpi-rev10.h"
+            #include "platform/bpi5-rev10.h"
+            #define BP_HW_STORAGE_NAND 1
         #else
             #error "Unknown platform version in pirate.h"
         #endif
+        #define RPI_PLATFORM RP2040
     #elif BP_VER == XL5
-        #include "platform/bpi-rev10.h"
+        #include "platform/bpi5xl-rev0.h"
+        #define RPI_PLATFORM RP2350
+        #define BP_HW_STORAGE_NAND 1
     #elif BP_VER == 6
-        #include "platform/bpi6-rev1.h"
+        #include "platform/bpi6-rev2.h"  
+        #define RPI_PLATFORM RP2350
+        #define BP_HW_STORAGE_NAND 1
+    #elif BP_VER == 7
+        #include "platform/bpi7-rev0.h"
+        #define RPI_PLATFORM RP2350
+        #define BP_HW_STORAGE_NAND 1
     #else
         #error "Unknown platform version in pirate.h"
     #endif

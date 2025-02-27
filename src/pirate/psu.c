@@ -8,9 +8,13 @@
 #include "pirate/amux.h"
 #if (BP_VER == 7 && BP_REV == 0)
     #include "hardware/i2c.h"
-#endif 
+#endif
 
-#define PWM_TOP 14000 // 0x30D3
+#if (BP_VER == 7 && BP_REV == 0)
+    #define PWM_TOP 0x0fff //12 bit DAC
+#else
+    #define PWM_TOP 14000 // 0x30D3
+#endif
 
 // voltage settings
 #define PSU_V_LOW 800   // millivolts
@@ -22,8 +26,6 @@
 #define PSU_I_HIGH 500 // mA
 #define PSU_I_RANGE ((PSU_I_HIGH * 10000) - (PSU_I_LOW * 10000))
 
-#define BP_HW_PSU_USE_SHIFT_REGISTERS (BP_VER == 5 || BP_VER == XL5)
-
 struct psu_status_t psu_status;
 
 static void psu_fuse_reset(void) {
@@ -32,11 +34,7 @@ static void psu_fuse_reset(void) {
         shift_clear_set_wait(CURRENT_RESET, 0); // low to activate the pnp
         busy_wait_ms(1);
         shift_clear_set_wait(0, CURRENT_RESET); // high to disable    
-    #elif (BP_VER == 6)
-        gpio_put(CURRENT_RESET, 0);
-        busy_wait_ms(1);
-        gpio_put(CURRENT_RESET, 1);
-    #elif (BP_VER == 7 && BP_REV == 0)
+    #elif (BP_VER == 6 || (BP_VER == 7 && BP_REV == 0))
         gpio_put(CURRENT_RESET, 0);
         busy_wait_ms(1);
         gpio_put(CURRENT_RESET, 1);
@@ -53,9 +51,7 @@ void psu_vreg_enable(bool enable) {
         } else {
             shift_clear_set_wait(0, CURRENT_EN); // high is off
         }    
-    #elif (BP_VER == 6)
-        gpio_put(CURRENT_EN, !enable);
-    #elif (BP_VER == 7 && BP_REV == 0)
+    #elif (BP_VER == 6 || (BP_VER == 7 && BP_REV == 0))
         gpio_put(CURRENT_EN, !enable);
     #else
         #error "Platform not speficied in psu.c"
@@ -69,9 +65,7 @@ void psu_current_limit_override(bool enable) {
         } else {
             shift_clear_set_wait(CURRENT_EN_OVERRIDE, 0);
         }
-    #elif (BP_VER == 6)
-        gpio_put(CURRENT_EN_OVERRIDE, enable);
-    #elif (BP_VER == 7 && BP_REV == 0)
+    #elif (BP_VER == 6 || (BP_VER == 7 && BP_REV == 0))
         gpio_put(CURRENT_EN_OVERRIDE, enable);
     #else
         #error "Platform not speficied in psu.c"
@@ -259,7 +253,7 @@ void psu_init(void) {
         gpio_set_function(BP_I2C_SDA, GPIO_FUNC_I2C);
         gpio_set_function(BP_I2C_SCL, GPIO_FUNC_I2C);    
         //init dac
-        psu_dac_set(0x0000, 0xffff);  
+        psu_dac_set(0xffff, 0x0000);  
     #else
         #error "Platform not speficied in psu.c"
     #endif

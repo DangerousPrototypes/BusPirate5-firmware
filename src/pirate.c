@@ -13,7 +13,7 @@
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
 #if (BP_VER == 5 || BP_VER == XL5)
-#include "pirate/shift.h"
+    #include "pirate/shift.h"
 #endif
 #include "pirate/bio.h"
 #include "pirate/button.h"
@@ -53,11 +53,11 @@
 #include "pirate/intercore_helpers.h"
 // #include "display/robot16.h"
 #ifdef BP_SPLASH_ENABLED
-#include BP_SPLASH_FILE
+    #include BP_SPLASH_FILE
 #endif
 #if RPI_PLATFORM == RP2350
-#include "hardware/regs/addressmap.h"
-#include "hardware/regs/otp.h"
+    #include "hardware/regs/addressmap.h"
+    #include "hardware/regs/otp.h"
 #endif
 
 static mutex_t spi_mutex;

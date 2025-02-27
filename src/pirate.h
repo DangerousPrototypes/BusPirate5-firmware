@@ -59,10 +59,10 @@
 
 #define BIG_BUFFER_SIZE (128 * 1024)
 
-enum {
-    RP2040 = 0,
-    RP2350,
-};
+
+#define RP2040 2040
+#define RP2350 2350
+
 
 // clang-format off
 // include platform

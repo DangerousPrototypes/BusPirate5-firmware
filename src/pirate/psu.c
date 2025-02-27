@@ -6,6 +6,9 @@
 #include "pirate/shift.h"
 #include "pirate/psu.h"
 #include "pirate/amux.h"
+#if (BP_VER == 7 && BP_REV == 0)
+    #include "hardware/i2c.h"
+#endif 
 
 #define PWM_TOP 14000 // 0x30D3
 
@@ -112,6 +115,21 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
         pwm_set_chan_level(slice_num, i_chan_num, i_dac);
     #elif (BP_VER == 7 && BP_REV == 0)
         //I2C dac
+        //voltage dac
+        const uint8_t v_dac_address = 0xc2;
+        uint8_t dac[2];
+        dac[0] = (v_dac >> 8) & 0xF;
+        dac[1] = v_dac & 0xFF;
+        if(i2c_write_blocking(BP_I2C_PORT, v_dac_address, dac, 2, false) == PICO_ERROR_GENERIC){
+            printf("I2C write error\n");
+        } 
+        //current dac
+        const uint8_t i_dac_address = 0xc0;
+        dac[0] == (i_dac >> 8) & 0xF;
+        dac[1] == i_dac & 0xFF;
+        if(i2c_write_blocking(BP_I2C_PORT, i_dac_address, dac, 2, false) == PICO_ERROR_GENERIC){
+            printf("I2C write error\n");
+        }
     #else
         #error "Platform not speficied in psu.c"
     #endif
@@ -237,6 +255,11 @@ void psu_init(void) {
         // psu_fuse_reset();
     #elif (BP_VER == 7 && BP_REV == 0)
         //I2C dac
+        i2c_init(BP_I2C_PORT, 400 * 1000);
+        gpio_set_function(BP_I2C_SDA, GPIO_FUNC_I2C);
+        gpio_set_function(BP_I2C_SCL, GPIO_FUNC_I2C);    
+        //init dac
+        psu_dac_set(0x0000, 0xffff);  
     #else
         #error "Platform not speficied in psu.c"
     #endif

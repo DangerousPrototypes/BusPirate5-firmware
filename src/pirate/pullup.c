@@ -41,9 +41,7 @@ void pullup_enable(void) {
     #elif (BP_VER == 6)
         gpio_put(PULLUP_EN, 0);
     #elif (BP_VER == 7)
-        //TBD
-        //0x40, 0x42
-        //10K pullup 
+        //to test: all have 10K pullup 
         pullx_set_all(0xf000, 0xf000);
     #else
         #error "Platform not speficied in pullup.c"
@@ -58,8 +56,6 @@ void pullup_disable(void) {
     #elif (BP_VER == 6)
         gpio_put(PULLUP_EN, 1);
     #elif (BP_VER == 7)
-        //TBD
-        //0x40, 0x42
         // 1M pull-down by default
         pullx_set_all(0x0f00, 0x0000);
     #else

@@ -11,10 +11,12 @@
 #include "pirate.h"
 #include "diskio.h" /* Declarations of disk functions */
 
-#if BP_REV <= 9
+#ifdef BP_HW_STORAGE_TFCARD
     #include "fatfs/tf_card.h"
-#else
+#elif defined(BP_HW_STORAGE_NAND)
     #include "../nand/nand_ftl_diskio.h"
+#else
+    #error "No storage device defined in diskio.c"
 #endif
 
 // Drive number for spi_nand device

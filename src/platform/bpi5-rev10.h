@@ -150,6 +150,9 @@ extern const uint8_t bio2bufdirpin[8];
 #define PSU_PWM_CURRENT_ADJ 22 //3A
 #define PSU_PWM_VREG_ADJ 23 //3B
 
+//First pin (base) of logic analyzer input
+#define LA_BPIO0 8
+
 // A single ADC pin is used to measure the source selected by a 74hct4067
 #define AMUX_OUT 28
 #define AMUX_OUT_ADC (AMUX_OUT - 26)

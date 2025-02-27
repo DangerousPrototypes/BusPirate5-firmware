@@ -23,11 +23,13 @@ static const char* const usage[] = {
     "show logic analyzer: logic show",
     "navigate logic analyzer: logic nav",
     "configure logic analyzer: logic -i -o 8 -f 1000000 -d 0",
-#if BP_VER == 6
-    "undocumented: set base pin (0=bufdir, 8=bufio, 20=follow along) -b: logic -b 20",
-#else
-    "undocumented: set base pin (0=bufdir, 8=bufio) -b: logic -b 8",
-#endif
+    #if (BP_VER == 5 || BP_VER == XL5)
+        "undocumented: set base pin (0=bufdir, 8=bufio) -b: logic -b 8",
+    #elif (BP_VER == 6 || BP_VER == 7)
+        "undocumented: set base pin (0=bufdir, 8=bufio, 20=follow along) -b: logic -b 20",
+    #else
+        #error "Unknown Bus Pirate version in logic.c"
+    #endif
 };
 
 static const struct ui_help_options options[] = {

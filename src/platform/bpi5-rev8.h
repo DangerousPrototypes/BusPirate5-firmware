@@ -2,18 +2,18 @@
 
 #include <stdint.h>
 
-#define BP_SPLASH_FILE "display/robot6x16.h"
+#define BP_SPLASH_FILE "display/robot5x16.h" //splash screen
 
-#define BP_HARDWARE_VERSION "Bus Pirate 6"
-#define BP_HARDWARE_MCU "RP2350B"
-#define BP_HARDWARE_RAM "512KB"
+#define BP_HARDWARE_VERSION "Bus Pirate 5 REV8"
+#define BP_HARDWARE_MCU "RP2040"
+#define BP_HARDWARE_RAM "264KB"
 #define BP_HARDWARE_FLASH "128Mbit"
 #define BP_HARDWARE_PULLUP_VALUE "10K ohms"
 
 //font and pin colors
 // HEX 24bit RGB format
 //used in terminal
-#define BP_COLOR_RED 0xdb3030  
+#define BP_COLOR_RED 0xdb3030 
 #define BP_COLOR_ORANGE 0xdb7530
 #define BP_COLOR_YELLOW 0xdbca30
 #define BP_COLOR_GREEN 0x30db36
@@ -29,16 +29,16 @@
 //these have to be ASCII strings for the terminal
 //TODO: abuse pre-compiler to use 0x000000 format as above...
 #define BP_COLOR_PROMPT_TEXT "150;203;89"
-#define BP_COLOR_256_PROMPT_TEXT "113"
 #define BP_COLOR_INFO_TEXT "191;165;48"
-#define BP_COLOR_256_INFO_TEXT "178"
 #define BP_COLOR_NOTICE_TEXT "191;165;48"
-#define BP_COLOR_256_NOTICE_TEXT "178"
 #define BP_COLOR_WARNING_TEXT "191;165;48"
-#define BP_COLOR_256_WARNING_TEXT "178"
 #define BP_COLOR_ERROR_TEXT "191;48;48"
-#define BP_COLOR_256_ERROR_TEXT "1"
 #define BP_COLOR_NUM_FLOAT_TEXT "83;166;230"
+#define BP_COLOR_256_PROMPT_TEXT "113"
+#define BP_COLOR_256_INFO_TEXT "178"
+#define BP_COLOR_256_NOTICE_TEXT "178"
+#define BP_COLOR_256_WARNING_TEXT "178"
+#define BP_COLOR_256_ERROR_TEXT "1"
 #define BP_COLOR_256_NUM_FLOAT_TEXT "26"
 
 // LCD size
@@ -115,90 +115,109 @@ enum _bp_bio_pins{
 };
 
 // here we map the short names to 
-// the buffer IO pin number
-extern const uint8_t bio2bufiopin[8];
-
+// the buffer IO pin number 
+static const uint8_t bio2bufiopin[]=
+{
+    BUFIO0,
+    BUFIO1,
+    BUFIO2,
+    BUFIO3,
+    BUFIO4,
+    BUFIO5,
+    BUFIO6,
+    BUFIO7
+};
 // here we map the short names to 
 // the buffer direction pin number
-extern const uint8_t bio2bufdirpin[8];
-
+static const uint8_t bio2bufdirpin[]=
+{
+    BUFDIR0,
+    BUFDIR1,
+    BUFDIR2,
+    BUFDIR3,
+    BUFDIR4,
+    BUFDIR5,
+    BUFDIR6,
+    BUFDIR7
+};
 
 // SPI Defines
 // We are going to use SPI 0 for on-board peripherals
 #define BP_SPI_PORT spi0
-#define BP_SPI_CDI 32 //16
-#define BP_SPI_CLK  34 //18
-#define BP_SPI_CDO 35 //19
+#define BP_SPI_CDI 16
+#define BP_SPI_CLK  18
+#define BP_SPI_CDO 19
 
-// NAND flash is on the BP_SPI_PORT, define Chip Select
-#define FLASH_STORAGE_CS 31 //26 
+// TF flash card is on the BP_SPI_PORT, define Chip Select
+#define FLASH_STORAGE_CS 26 
 
 // LCD is on the BP_SPI_PORT, define CS and DP pins
-#define DISPLAY_CS 29 //25
-#define DISPLAY_DP 28 //24
-#define DISPLAY_BACKLIGHT  33
-#define DISPLAY_RESET      30
+#define DISPLAY_CS 23
+#define DISPLAY_DP 22
 
-//pull-up resistor control
-#define PULLUP_EN           42
+// Two 74HC595 shift registers are on BP_SPI_PORT, define latch and enable pins
+#define SHIFT_EN 21
+#define SHIFT_LATCH 20
 
 // Controller data out to SK6812 RGB LEDs
-#define RGB_CDO 36 //17
+#define RGB_CDO 17
 // The number of SK6812 LEDs in the string
-#define RGB_LEN 18 
+#define RGB_LEN 16 
 
 //PWM based PSU control pins
-#define PSU_PWM_CURRENT_ADJ 45 //10B
-#define PSU_PWM_VREG_ADJ 44 //10A
-#define CURRENT_EN          18
-#define CURRENT_RESET       17
-#define CURRENT_EN_OVERRIDE 16
-#define CURRENT_FUSE_DETECT 19 
+#define PSU_PWM_CURRENT_ADJ 24 //4A
+#define PSU_PWM_VREG_ADJ 25 //4B
 
-//Look behind logic analyzer buffer
-#define LA_BPIO0 20
-#define LA_BPIO1 21
-#define LA_BPIO2 22
-#define LA_BPIO3 23
-#define LA_BPIO4 24
-#define LA_BPIO5 25
-#define LA_BPIO6 26
-#define LA_BPIO7 27
+//First pin (base) of logic analyzer input
+#define LA_BPIO0 8
 
 // A single ADC pin is used to measure the source selected by a 74hct4067
-#define AMUX_OUT 46 //28
-#define AMUX_OUT_ADC 6
+#define AMUX_OUT 28
+#define AMUX_OUT_ADC (AMUX_OUT - 26)
 
 // Current sense ADC
-#define CURRENT_SENSE 47 //29
-#define CURRENT_SENSE_ADC 7
+#define CURRENT_SENSE 29
+#define CURRENT_SENSE_ADC (CURRENT_SENSE - 26)
 
 // Two pins for front buttons
-#define EXT1 43 //27
+#define EXT1 27
 
-// on bp6 AMUX is controlled directly by MCU pins
-#define AMUX_S0             38
-#define AMUX_S1             39
-#define AMUX_S2             40
-#define AMUX_S3             41
+// The two 75hc595 shift registers control various hardware on the board
+#define AMUX_EN             (1u<<0)
+#define AMUX_S0             (1u<<1)
+#define AMUX_S1             (1u<<2)
+#define AMUX_S2             (1u<<3)
+#define AMUX_S3             (1u<<4)
+#define DISPLAY_BACKLIGHT   (1u<<5)
+#define DISPLAY_RESET       (1u<<6)
+#define PULLUP_EN           (1u<<7)
+//#define                   (1u<<8) 
+#define CURRENT_EN          (1u<<9)
+//#define                   (1u<<10)
+#define CURRENT_RESET       (1u<<11)
+#define DAC_CS              (1u<<12)
+#define CURRENT_EN_OVERRIDE (1u<<13)
+//#define                   (1u<<14)
+//#define                   (1u<<15)
 
 // A 74HCT4067 selects one of 16 analog sources to measure 
 // (voltage is divided by 2 with a buffered resistor divider)
 // ADC connections as they appear on the analog mux pins
 // will be disambiguated in the hw_pin_voltages_ordered'
 enum adc_mux{
-    HW_ADC_MUX_BPIO7, //0
-    HW_ADC_MUX_BPIO6, //1
-    HW_ADC_MUX_BPIO5, //2
-    HW_ADC_MUX_BPIO4, //3
-    HW_ADC_MUX_BPIO3, //4
-    HW_ADC_MUX_BPIO2, //5
-    HW_ADC_MUX_BPIO1, //6
-    HW_ADC_MUX_BPIO0, //7
-    HW_ADC_MUX_VUSB, //8
-    HW_ADC_MUX_CURRENT_DETECT,    //9
-    HW_ADC_MUX_VREG_OUT, //10
-    HW_ADC_MUX_VREF_VOUT, //11
+    HW_ADC_MUX_BPIO7,
+    HW_ADC_MUX_BPIO6,
+    HW_ADC_MUX_BPIO5,
+    HW_ADC_MUX_BPIO4,
+    HW_ADC_MUX_BPIO3,
+    HW_ADC_MUX_BPIO2,
+    HW_ADC_MUX_BPIO1,
+    HW_ADC_MUX_BPIO0,
+    HW_ADC_MUX_VREF_VOUT,
+    HW_ADC_MUX_CARD_DETECT,
+    HW_ADC_MUX_VUSB,
+    HW_ADC_MUX_VREG_OUT,
+    HW_ADC_MUX_CURRENT_DETECT,
     HW_ADC_MUX_COUNT
 };
 
@@ -222,15 +241,16 @@ extern uint32_t *hw_pin_voltage_ordered[];
 #define hw_adc_to_volts_x1(X) ((3300*hw_adc_raw[X])/4096);
 
 //how many 595 shift registers are connected
-//#define SHIFT_REG_COUNT 2
+#define SHIFT_REG_COUNT 2
 
+//#define BP_DEBUG_ENABLED 1
 #define BP_DEBUG_UART_0 uart0
 #define BP_DEBUG_UART_0_TX BIO4
 #define BP_DEBUG_UART_0_RX BIO5
 #define BP_DEBUG_UART_1 uart1
-#define BP_DEBUG_UART_1_TX BIO0 
-#define BP_DEBUG_UART_1_RX BIO1     
+#define BP_DEBUG_UART_1_TX BIO0
+#define BP_DEBUG_UART_1_RX BIO1 
 
-#define BP_FLASH_DISK_BLOCK_SIZE 2048 //512
+#define BP_FLASH_DISK_BLOCK_SIZE 512
 
 #endif

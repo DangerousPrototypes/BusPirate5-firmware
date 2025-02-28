@@ -216,6 +216,20 @@ void pullups_enable_handler(struct command_result* res) {
     //apply the settings
     pullx_update();
 
+    //display the current configuration
+    for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
+        printf("|  IO%d\t", i);
+    }
+    printf("|\r\n");
+    for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
+        if(system_config.pullx_value[i] == PULL_OFF) {
+            printf("|%s \t", pullx_options[system_config.pullx_value[i]].name);
+        }else{
+            printf("|%s %s\t", pullx_options[system_config.pullx_value[i]].name, system_config.pullx_direction & (1<<i) ? "U" : "D");
+        }
+    }
+    printf("|\r\n");
+
     //temp, reset all pins
     for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
         pullx_set_pin(i, PULL_OFF, false);

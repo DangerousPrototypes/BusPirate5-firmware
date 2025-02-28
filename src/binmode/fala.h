@@ -4,6 +4,7 @@
 typedef struct {
     uint32_t base_frequency;
     uint32_t oversample;
+    uint32_t actual_sample_frequency;
     uint8_t debug_level;
 } FalaConfig;
 

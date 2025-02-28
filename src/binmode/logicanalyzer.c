@@ -212,8 +212,9 @@ void restart_dma() {
     dma_channel_start(la_dma[0]);
 }
 
-bool logic_analyzer_configure(
+uint32_t logic_analyzer_configure(
     float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction, bool edge, bool interrupt) {
+    uint32_t actual_frequency = 0;
     la_sm_done = false;
     memset(la_buf, 0, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT);
 
@@ -250,7 +251,7 @@ bool logic_analyzer_configure(
             // &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true); hard_assert(success);
             pio_config.program = &logicanalyzer_high_trigger_program;
             pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
-            logicanalyzer_high_trigger_program_init(
+            actual_frequency = logicanalyzer_high_trigger_program_init(
                 pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, la_base_pin + trigger_pin, freq, edge);
         } else // low level trigger program
         {
@@ -258,7 +259,7 @@ bool logic_analyzer_configure(
             // &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true); hard_assert(success);
             pio_config.program = &logicanalyzer_low_trigger_program;
             pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
-            logicanalyzer_low_trigger_program_init(
+            actual_frequency = logicanalyzer_low_trigger_program_init(
                 pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, la_base_pin + trigger_pin, freq, edge);
         }
     } else { // else no trigger program
@@ -266,7 +267,8 @@ bool logic_analyzer_configure(
         // &pio_config.pio, &pio_config.sm, &pio_config.offset, LA_BASE_PIN, 8, true); hard_assert(success);
         pio_config.program = &logicanalyzer_no_trigger_program; // move this before to simplify add program
         pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
-        logicanalyzer_no_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, freq);
+        actual_frequency =
+            logicanalyzer_no_trigger_program_init(pio_config.pio, pio_config.sm, pio_config.offset, la_base_pin, freq);
     }
 #ifdef BP_PIO_SHOW_ASSIGNMENT
     printf("pio %d, sm %d, offset %d\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
@@ -284,7 +286,7 @@ bool logic_analyzer_configure(
     }
     // write sample count and enable sampling
     pio_sm_put_blocking(pio_config.pio, pio_config.sm, samples - 1);
-    return true;
+    return actual_frequency;
 }
 
 void logic_analyzer_arm(bool led_indicator_enable) {
@@ -337,4 +339,14 @@ bool logicanalyzer_setup(void) {
 
     // restart_dma();
     return true;
+}
+
+uint32_t logic_analyzer_compute_actual_sample_frequency(float desired_frequency, float* div_out)
+{
+    float div = clock_get_hz(clk_sys) / (desired_frequency * 2); // 2 instructions per sample, run twice as fast as requested sampling rate
+    div = (div >= 1.0) ? ((div < 10.0) ? floorf(div) : div) : 1.0;
+    if (div_out) {
+        *div_out = div;
+    }
+    return clock_get_hz(clk_sys) / (2 * div);
 }

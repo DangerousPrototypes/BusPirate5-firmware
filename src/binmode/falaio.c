@@ -41,7 +41,7 @@ void falaio_notify(void) {
                                0,
                                0,
                                'N',
-                               fala_config.base_frequency * fala_config.oversample,
+                               fala_config.actual_sample_frequency,
                                fala_samples,
                                0);
         if (tud_cdc_n_write_available(CDC_INTF) >= sizeof(buf)) {

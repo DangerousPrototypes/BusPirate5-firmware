@@ -2,6 +2,7 @@
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()  
 
+# TODO - For reproducible builds, allow override of timestamp
 # build time in UTC ISO 8601
 FILE (WRITE ${CMAKE_BINARY_DIR}/timestamp.cmake "STRING(TIMESTAMP TIMEZ UTC)\n")
 FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(WRITE timestamp.h \"#ifndef TIMESTAMP_H\\n\")\n")

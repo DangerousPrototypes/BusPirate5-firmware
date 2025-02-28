@@ -42,10 +42,6 @@ void MyWaitForAnyKey_with_discards(void) {
     return;
 }
 
-#define USB_WHITELABEL_MAX_CHARS_BP_VERSION 8
-#define USB_WHITELABEL_MAX_CHARS_BP_MANU    40
-
-
 static char byte_to_printable_char(uint8_t byte) {
     if (byte < 0x20u) {
         return '.';
@@ -89,7 +85,6 @@ typedef struct _OTP_USB_BOOT_FLAGS {
     };
 } OTP_USB_BOOT_FLAGS;
 
-
 static const uint16_t _static_portion[] = {
     // offset 0x10, chars 0x16: "https://buspirate.com/"
     // offset 0x14, chars 0x0D:       "buspirate.com"
@@ -122,24 +117,42 @@ static const uint16_t _static_portion[] = {
     0x6574, // `te` // Row 0x0e7 -- offset 0x27
 };
 static_assert(ARRAY_SIZE(_static_portion) == 24);
+
+// NOTE: Reserved for product string:
+//                  // Rows 0x0e8 .. 0x0ef (8 rows == space character + 15 additional characters maximum)
+#define OTP_ROW__PRODUCT_VERSION_STRING_OFFSET 0x28u
+#define OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT 8u
+
+// NOTE: Reserved for manufacturing data:
+//                  // Rows 0x0f0 .. 0x0ff (16 rows == 32 characters maximum)
+#define OTP_ROW__MANUFACTURING_DATA_STRING_OFFSET 0x30u
+#define OTP_ROW__MANUFACTURING_DATA_STRING_MAX_ROWCOUNT 16u
+
+// Verify that everything will fit into one page
+static_assert(
+    0x10u + // fixed-size whitelabel struct
+    ARRAY_SIZE(_static_portion) +
+    OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT +
+    OTP_ROW__MANUFACTURING_DATA_STRING_MAX_ROWCOUNT
+    <= 0x40u,
+    "Whitelabel data will not fit into a single OTP page"
+);
+
+
 static const char  _product_string[] = " " BP_OTP_PRODUCT_VERSION_STRING;
 // note: using a string ensures the byte immediately following the last charcter is readable
 //       which is important since writing ECC requires an even number of bytes.
 static_assert(sizeof(char) == sizeof(uint8_t), "char must be 8-bits");
-static_assert(ARRAY_SIZE(_product_string) <= USB_WHITELABEL_MAX_CHARS_BP_VERSION + 1);
-
-// NOTE: Reserved for product string:
-//                  // Rows 0x0e8 .. 0x0eb (space character + 7 additional characters maximum)
-
-// NOTE: Reserved for manufacturing data:
-//                  // Rows 0x0ec .. 0x0ff (40 characters maximum)
+// Since the string includes NULL and whitelabel uses counted strings,
+// can calculate the number of rows needed by simply dividing by 2 (rounds down).
+static_assert(ARRAY_SIZE(_product_string)/2 <= OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT);
 
 // Leaving the manufacturing data portion uncoded...
 // That will be filled in by another process
-
+#define USB_WHITELABEL_MAX_CHARS_BP_VERSION (OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT*2u)
+#define USB_WHITELABEL_MAX_CHARS_BP_MANU    (OTP_ROW__MANUFACTURING_DATA_STRING_MAX_ROWCOUNT*2u)
 
 // Detect if firmware is ready for whitelabeling
-
 // don't want to use that difficult-to-parse API in many places....
 static int write_ecc_wrapper(uint16_t starting_row, const void* buffer, size_t buffer_size) {
     otp_cmd_t cmd;
@@ -578,6 +591,10 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
         PRINT_ERROR("Whitelabel Error: No white label data to update (%06x)\n", old_usb_boot_flags.as_uint32);
         return false;
     }
+    if (old_usb_boot_flags.info_uf2_boardid_valid) {
+        PRINT_DEBUG("Whitelabel Debug: Manufacturing string already set ... exiting\n");
+        return true;
+    }
 
     int r = read_ecc_wrapper(0x5C, &base, sizeof(base));
     if (BOOTROM_OK != r) {
@@ -602,11 +619,13 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
     PRINT_DEBUG("Whitelabel Debug: Static portion of the strings look ok\n");
 
     size_t char_count = strlen(manufacturing_data_string);
-    if (char_count > 40) {
+    if (char_count > USB_WHITELABEL_MAX_CHARS_BP_MANU) {
         PRINT_ERROR("Whitelabel Error: Manufacturing data string is too long (%d chars)\n", char_count);
         return false;
     }
-    uint16_t strdef = 0x2c00u | char_count;
+    uint16_t strdef = OTP_ROW__MANUFACTURING_DATA_STRING_OFFSET;
+    strdef <<= 8;
+    strdef |= char_count;
 
     // check if the STRDEF is already set ... if it is, verify it matches the current provided string's length
     uint16_t oldstrdef;
@@ -622,7 +641,7 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
 
     // first write the actual string's data
     for (size_t i = 0; i < (char_count+1)/2; ++i) {
-        uint16_t row = base + 0x2Cu + i;
+        uint16_t row = base + OTP_ROW__MANUFACTURING_DATA_STRING_OFFSET + i;
         uint16_t data = 0;
         // First  character is stored in LSB
         // Second character is stored in MSB
@@ -658,7 +677,7 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
         return false;
     }
     // Finally, update page protections for page 3 (`0x0c0 .. 0x0ff`).
-    // Row `0xF86`, PAGE3_LOCK0 = `0x3F3F3F` = `0b00'111'111` : NO_KEY_STATE: 0b00, KEY_R: 0b111, KEY_W: 0b111 (no key; read-only without key)
+    // Row `0xF86`, PAGE3_LOCK0 = `0x3F3F3F` = `0b00'111'111`  : NO_KEY_STATE: 0b00, KEY_R: 0b111, KEY_W: 0b111 (no key; read-only without key)
     // Row `0xF87`, PAGE3_LOCK1 = `0x151515` = `0b00'01'01'01` : LOCK_S: 0b01, LOCK_NS: 0b01, LOCK_BL: 0b01 (read-only for all)
 
     PRINT_DEBUG("Whitelabel Debug: Setting PAGE3_LOCK0 (0xF86) to `0x3Fu` (no keys; read-only without key)\n"); WAIT_FOR_KEY();

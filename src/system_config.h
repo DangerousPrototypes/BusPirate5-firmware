@@ -61,7 +61,10 @@ typedef struct _system_config {
     uint8_t bit_order;       // bitorder (0=msb, 1=lsb)
     uint8_t write_with_read; // write with read
     uint8_t open_drain;      // open drain pin mode (1=true)
-
+    #if BP_VER > 5
+    uint8_t pullx_value[BIO_MAX_PINS]; // pullx resistor configuration
+    uint8_t pullx_direction; // pullx direction (1=up, 0=down)
+    #endif
     uint8_t pullup_enabled; // pullup enabled? (0=off, 1=on)
 
     const char* pin_labels[HW_PINS]; // pointer to labels for each pin on the bus pirate header

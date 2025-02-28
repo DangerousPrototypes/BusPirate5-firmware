@@ -29,8 +29,6 @@
 #include "mbedtls/md.h"
 #include "mbedtls/pem.h"
 #include "pico/unique_id.h"
-#include "pico/bootrom.h"
-#include "hardware/structs/otp.h"
 #include "otp/bp_otp.h"
 #include "pubkey/pubkey.h"
 

@@ -21,7 +21,7 @@
 #include "pirate/button.h" // Button press functions
 #include "msc_disk.h"
 #include "pico/bootrom.h"
-#include "hardware/structs/otp.h"
+#include "otp/bp_otp.h"
 #include "ui/ui_term.h"
 
 // This array of strings is used to display help USAGE examples for the dummy command

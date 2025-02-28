@@ -128,7 +128,7 @@ static void main_system_initialization(void) {
     tx_fifo_init();
     rx_fifo_init();
 
-#ifdef BP_MANUFACTURING_TEST_MODE
+#if defined(BP_MANUFACTURING_TEST_MODE) && BP_VER != 5
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: OTP whitelabel update\n"
         );

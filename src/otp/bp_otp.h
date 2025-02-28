@@ -125,8 +125,8 @@ bool bp_otp_read_redundant_rows_2_of_3(uint16_t start_row, uint32_t* out_data);
     // These functions actually access the hardware,
     // so code calling it on RP2040 is probably in error?
     // This is a nicer error message than a linker error....
-    inline void bp_otp_apply_whitelabel_data(void) [[deprecated]] { }
-    inline bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) [[deprecated]] { return false; }
+    __attribute__((deprecated)) inline void bp_otp_apply_whitelabel_data(void) { }
+    __attribute__((deprecated)) inline bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) { return false; }
 #else
     void bp_otp_apply_whitelabel_data(void);
     bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string);

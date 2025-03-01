@@ -54,6 +54,18 @@ static void MyWaitForAnyKey_with_discards(void) {
 
 // Detect if firmware is ready for whitelabeling
 // don't want to use that difficult-to-parse API in many places....
+static int write_raw_wrapper(uint16_t starting_row, const void* buffer, size_t buffer_size) {
+    otp_cmd_t cmd;
+    cmd.flags = starting_row;
+    cmd.flags |= OTP_CMD_WRITE_BITS;
+    return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
+}
+static int read_raw_wrapper(uint16_t starting_row, void* buffer, size_t buffer_size) {
+    // TODO: use own ECC decoding functions ...
+    otp_cmd_t cmd;
+    cmd.flags = starting_row;
+    return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
+}
 static int write_ecc_wrapper(uint16_t starting_row, const void* buffer, size_t buffer_size) {
     otp_cmd_t cmd;
     cmd.flags = starting_row;
@@ -66,18 +78,6 @@ static int read_ecc_wrapper(uint16_t starting_row, void* buffer, size_t buffer_s
     otp_cmd_t cmd;
     cmd.flags = starting_row;
     cmd.flags |= OTP_CMD_ECC_BITS;
-    return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
-}
-static int write_raw_wrapper(uint16_t starting_row, const void* buffer, size_t buffer_size) {
-    otp_cmd_t cmd;
-    cmd.flags = starting_row;
-    cmd.flags |= OTP_CMD_WRITE_BITS;
-    return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
-}
-static int read_raw_wrapper(uint16_t starting_row, void* buffer, size_t buffer_size) {
-    // TODO: use own ECC decoding functions ...
-    otp_cmd_t cmd;
-    cmd.flags = starting_row;
     return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
 }
 static bool write_single_otp_ecc_row(uint16_t row, uint16_t data) {

@@ -117,7 +117,7 @@ bool pullx_update(void){
         }
 
     }
-
+    #if 0
     printf("Configuration:");
     pullx_print_bin(configuration_register[0]);
     printf(" ");
@@ -127,6 +127,7 @@ bool pullx_update(void){
     printf(" ");
     pullx_print_bin(output_port_register[1]);
     printf("\r\n");
+    #endif
 }
 
 void pullx_set_pin(uint8_t pin, uint8_t pull, bool pull_up){
@@ -138,56 +139,88 @@ void pullx_set_pin(uint8_t pin, uint8_t pull, bool pull_up){
     }
 }
 
-void pullups_enable_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, p_usage, count_of(p_usage), &p_options[0], count_of(p_options))) {
-        return;
-    }
-
+// get command line arguments, false = fail, true = success
+bool pullx_parse_args(uint8_t *pullx, uint8_t *pin_args, bool *direction){
     //search for trailing arguments
     char action_str[9]; // somewhere to store the parameter string
-    int8_t pullx = -1; // default pullup value (10K)
-    bool direction = 1; // default direction value (up)
+    bool r_found = false; // default pullup value (10K)
     if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
         strupr(action_str);
         for(uint8_t i=0; i<count_of(pullx_options); i++) {
             if (strcmp(action_str, pullx_options[i].name) == 0) {
-                pullx = pullx_options[i].pull;
+                (*pullx) = pullx_options[i].pull;
+                r_found = true;
                 break;
             }
         }
-        if(pullx == -1) {
+        if(!r_found) {
             printf("Invalid resistor value, valid values are:\r\n");
             for(uint8_t i=0; i<count_of(pullx_options); i++) {
                 printf("%s ", pullx_options[i].name);
             }
-            return;
+            return false;
         }
     }else{
-        pullx = PULL_10K; //default to 10K
+        (*pullx) = PULL_10K; //default to 10K
     }
 
     //pull up is the default
     if(cmdln_args_find_flag('d')) {
-        direction = 0;
+        (*direction) = 0;
+    }else{
+        (*direction) = 1;
     }
 
     command_var_t arg;
-    uint8_t pin_args=0;
+    (*pin_args)=0;
     if(cmdln_args_find_flag_string('p',&arg, sizeof(action_str), action_str)) {
         for(uint8_t i=0; i<sizeof(action_str); i++) {
             if(action_str[i]==0) break;
             if(action_str[i] < '0' || action_str[i] > '7') {
                 printf("Invalid pin number: %c\r\n", action_str[i]);
-                return;
+                return false;
             }
             //set bit in pin_args
-            pin_args |= 1<< (action_str[i] - '0');
+            (*pin_args) |= 1<< (action_str[i] - '0');
         }
     }else{
-        pin_args = 0xff;
+        (*pin_args) = 0xff;
+    }
+    return true;
+}
+
+void pullx_show_settings(void){
+    //display the current configuration
+    for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
+        printf("|  IO%d\t", i);
+    }
+    printf("|\r\n");
+    for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
+        if(system_config.pullx_value[i] == PULL_OFF) {
+            printf("|%s\t", pullx_options[system_config.pullx_value[i]].name);
+        }else{
+            printf("|%s %s\t", pullx_options[system_config.pullx_value[i]].name, system_config.pullx_direction & (1<<i) ? "U" : "D");
+        }
+    }
+    printf("|\r\n");
+}
+
+void pullups_enable_handler(struct command_result* res) {
+    if (ui_help_show(res->help_flag, p_usage, count_of(p_usage), &p_options[0], count_of(p_options))) {
+        pullx_show_settings();
+        return;
     }
 
-    // show the configuration
+    uint8_t pullx;
+    uint8_t pin_args;
+    bool direction;
+
+    if(!pullx_parse_args(&pullx, &pin_args, &direction)) {
+        pullx_show_settings(); 
+        return;
+    }
+
+     // show the configuration
     printf("Pull resistor: %s", pullx_options[pullx].name);
     if(pullx != PULL_OFF) {
         printf(", Direction: %s", direction ? "UP" : "DOWN");
@@ -203,7 +236,6 @@ void pullups_enable_handler(struct command_result* res) {
             }
         }  
     }  
-
     printf("\r\n");
 
     //apply the settings and update the pullx configuration
@@ -216,28 +248,10 @@ void pullups_enable_handler(struct command_result* res) {
     //apply the settings
     pullx_update();
 
-    //display the current configuration
-    for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
-        printf("|  IO%d\t", i);
-    }
-    printf("|\r\n");
-    for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
-        if(system_config.pullx_value[i] == PULL_OFF) {
-            printf("|%s \t", pullx_options[system_config.pullx_value[i]].name);
-        }else{
-            printf("|%s %s\t", pullx_options[system_config.pullx_value[i]].name, system_config.pullx_direction & (1<<i) ? "U" : "D");
-        }
-    }
-    printf("|\r\n");
-
-    //temp, reset all pins
-    for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
-        pullx_set_pin(i, PULL_OFF, false);
-    }
+    //show the settings
+    pullx_show_settings();
 
     return;
-
-
 
     pullups_enable();
 
@@ -262,6 +276,14 @@ void pullups_enable_handler(struct command_result* res) {
 }
 
 void pullups_disable(void) {
+    //temp, reset all pins
+    for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
+        pullx_set_pin(i, PULL_1M, false);
+    }
+    pullx_update();
+    //show settings
+    pullx_show_settings();
+    
     system_config.pullup_enabled = 0;
     system_config.info_bar_changed = true;
     pullup_disable();

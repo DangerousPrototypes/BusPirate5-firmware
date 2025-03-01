@@ -213,7 +213,8 @@ uint32_t bp_otp_calculate_ecc(uint16_t x) {
     return p;
 }
 
-uint32_t bp_otp_decode_raw(const OTP_RAW_READ_RESULT data) {
+uint32_t bp_otp_decode_raw(uint32_t raw_data) {
+    const BP_OTP_RAW_READ_RESULT data = { .as_uint32 = raw_data };
     // This function DISABLES raw data that the bootrom MIGHT accept as
     // being validly encoded ECC data.  This can occur when the count
     // of bitflips is 3, 5 (also 19, 21 for BRBP variants) vs. the correct encoding.
@@ -239,7 +240,7 @@ uint32_t bp_otp_decode_raw(const OTP_RAW_READ_RESULT data) {
             // this is OK
         } else {
             // this is NOT a valid ECC decoding ... but maybe the bootrom will think it is.  :-)
-            return 0xFF990000u; // make this into a symbolic named error (internal error)
+            return BP_OTP_ECC_ERROR_POTENTIALLY_READABLE_BY_BOOTROM;
         }
     }
     return result;

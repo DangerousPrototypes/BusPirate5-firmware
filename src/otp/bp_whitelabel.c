@@ -16,13 +16,26 @@
     #error "BP_OTP_PRODUCT_VERSION must be defined in the platform header as the portion of the string to follow `Bus Pirate `.  E.g., `6` for BP6, or `5XL` for the BP5XL"
 #endif
 
+// ****** IMPORTANT DEVELOPEMENT NOTE ******
+// During development, it's REALLY useful to force the code to single-step through this process.
+// To support this, this file has code that uses waits for the RTT terminal to accept input.
+//
+// To use this is a TWO STEP process:
+// 1. Define WAIT_FOR_KEY() to be MyWaitForAnyKey_with_discards() in this file.
+// 2. At the location in the code you want to start single-stepping, set the static `g_WaitForKey` to true.
+//
+// Because OTP fuses can only transition from 0 -> 1, this capability is critical to
+// minimizing the number of RP2350 chips with invalid data during development.
+
+
 // TODO: update this to wait for actual keypresses over RTT (as in the earlier experimentation firmware)
 //       to allow for review of all the things happening....
 #define WAIT_FOR_KEY()
+// #define WAIT_FOR_KEY() MyWaitForAnyKey_with_discards()
 
 // decide where to single-step through the whitelabel process ... controlled via RTT (no USB connection required)
 static volatile bool g_WaitForKey = false;
-void MyWaitForAnyKey_with_discards(void) {
+static void MyWaitForAnyKey_with_discards(void) {
     if (!g_WaitForKey) {
         return;
     }
@@ -41,6 +54,18 @@ void MyWaitForAnyKey_with_discards(void) {
 
     return;
 }
+
+#define DIE() die(__LINE__)
+
+// define as returning bool to allow:
+//     funcA() || DIE();
+// Otherwise, compiler complains because of using void in a boolean context.
+static bool __attribute__((noreturn)) die(int line) {
+    PRINT_ERROR("Whitelabel Error: Aborting whitelabel process @ line %d\n");
+    hard_assert(false);
+    while (1);
+}
+
 
 static char byte_to_printable_char(uint8_t byte) {
     if (byte < 0x20u) {
@@ -152,313 +177,8 @@ static_assert(ARRAY_SIZE(_product_string)/2 <= OTP_ROW__PRODUCT_VERSION_STRING_M
 #define USB_WHITELABEL_MAX_CHARS_BP_VERSION (OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT*2u)
 #define USB_WHITELABEL_MAX_CHARS_BP_MANU    (OTP_ROW__MANUFACTURING_DATA_STRING_MAX_ROWCOUNT*2u)
 
-// Detect if firmware is ready for whitelabeling
-// don't want to use that difficult-to-parse API in many places....
-static int write_ecc_wrapper(uint16_t starting_row, const void* buffer, size_t buffer_size) {
-    otp_cmd_t cmd;
-    cmd.flags = starting_row;
-    cmd.flags |= OTP_CMD_ECC_BITS;
-    cmd.flags |= OTP_CMD_WRITE_BITS;
-    return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
-}
-static int read_ecc_wrapper(uint16_t starting_row, void* buffer, size_t buffer_size) {
-    // TODO: use own ECC decoding functions ...
-    otp_cmd_t cmd;
-    cmd.flags = starting_row;
-    cmd.flags |= OTP_CMD_ECC_BITS;
-    return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
-}
-static int write_raw_wrapper(uint16_t starting_row, const void* buffer, size_t buffer_size) {
-    otp_cmd_t cmd;
-    cmd.flags = starting_row;
-    cmd.flags |= OTP_CMD_WRITE_BITS;
-    return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
-}
-static int read_raw_wrapper(uint16_t starting_row, void* buffer, size_t buffer_size) {
-    // TODO: use own ECC decoding functions ...
-    otp_cmd_t cmd;
-    cmd.flags = starting_row;
-    return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
-}
-static bool write_single_otp_ecc_row(uint16_t row, uint16_t data) {
-    uint16_t existing_data;
-    int r;
-    r = read_ecc_wrapper(row, &existing_data, sizeof(existing_data));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Error: Failed to read OTP ecc row %03x: %d (0x%x)\n", row, r, r);
-        return false;
-    }
-    if (existing_data == data) {
-        // already written, nothing more to do for this row
-        return true;
-    }
-    r = write_ecc_wrapper(row, &data, sizeof(data));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Error: Failed to write OTP ecc row %03x: %d (0x%x)\n", row, r, r);
-        return false;
-    }
-    // and verify the data is now there
-    r = read_ecc_wrapper(row, &existing_data, sizeof(existing_data));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Error: Failed to read OTP ecc row %03x: %d (0x%x)\n", row, r, r);
-        return false;
-    }
-    if (existing_data != data) {
-        PRINT_ERROR("Whitelabel Error: Failed to verify OTP ecc row %03x: %d (0x%x) has data 0x%04x\n", row, r, r, data);
-        return false;
-    }
-    return true;
-}
-static bool write_single_otp_raw_row(uint16_t row, uint32_t data) {
-    uint32_t existing_data;
-    int r;
-    r = write_raw_wrapper(row, &existing_data, sizeof(existing_data));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Warn: Failed to read OTP raw row %03x: %d (0x%x)\n", row, r, r);
-        return false;
-    }
-    if (existing_data == data) {
-        // already written, nothing more to do for this row
-        return true;
-    }
-    r = write_raw_wrapper(row, &data, sizeof(data));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Warn: Failed to write OTP raw row %03x: %d (0x%x)\n", row, r, r);
-        return false;
-    }
-    // and verify the data is now there
-    r = read_raw_wrapper(row, &existing_data, sizeof(existing_data));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Warn: Failed to read OTP raw row %03x: %d (0x%x)\n", row, r, r);
-        return false;
-    }
-    if (existing_data != data) {
-        PRINT_ERROR("Whitelabel Warn: Failed to verify OTP raw row %03x: %d (0x%x) has data 0x%06x\n", row, r, r, data);
-        return false;
-    }
-    return true;
-}
-static void write_single_otp_ecc_row_or_die(uint16_t row, uint16_t data) {
-    if (!write_single_otp_ecc_row(row, data)) {
-        hard_assert(false);
-    }
-}
-static void write_single_otp_raw_row_or_die(uint16_t row, uint32_t data) {
-    if (!write_single_otp_raw_row(row, data)) {
-        hard_assert(false);
-    }
-}
-static bool read_otp_2_of_3(uint16_t start_row, uint32_t* out_data) {
-    *out_data = 0xFFFFFFFFu;
 
-    // 1. read the base address
-    uint32_t v[3];
-    int r[3];
-    r[0] = read_raw_wrapper(start_row+0, &(v[0]), sizeof(uint32_t)); // DO NOT DIE ON FAILURE OF ANY ONE ROW
-    r[1] = read_raw_wrapper(start_row+1, &(v[1]), sizeof(uint32_t)); // DO NOT DIE ON FAILURE OF ANY ONE ROW
-    r[2] = read_raw_wrapper(start_row+2, &(v[2]), sizeof(uint32_t)); // DO NOT DIE ON FAILURE OF ANY ONE ROW
-    
-    if ((r[0] == BOOTROM_OK) && (r[1] == BOOTROM_OK) && (r[2] == BOOTROM_OK)) {
-        // All three value read successfully ... so use bitwise majority voting
-        PRINT_VERBOSE("Whitelabel Read OTP 2-of-3: rows 0x%03x, 0x%03x, and 0x%03x all read successfully (0x%06x, 0x%06x, 0x%06x)\n",
-            start_row+0, start_row+1, start_row+2,
-            v[0], v[1], v[2]
-        );
-        uint32_t result = 0u;
-        for (uint32_t mask = 0x00800000u; mask; mask >>= 1) {
-            uint_fast8_t count = 0;
-            if (v[0] & mask) { ++count; }
-            if (v[1] & mask) { ++count; }
-            if (v[2] & mask) { ++count; }
-            if (count >= 2) {
-                result |= mask;
-            }
-        }
-        PRINT_VERBOSE("Whitelabel Read OTP 2-of-3: Bit-by-bit voting result: 0x%06x\n", result);
-        *out_data = result;
-        return true;
-    }
-
-    // else at most two reads succeeded.  Can only accept a perfect match of the data.
-    if ((r[0] == BOOTROM_OK) && (r[1] == BOOTROM_OK) && (v[0] == v[1]) && ((v[0] & 0xFF000000u) == 0)) {
-        PRINT_VERBOSE("Whitelabel Read OTP 2-of-3: rows 0x%03x and 0x%03x agree on data 0x%06x\n", start_row+0, start_row+1, v[0]);
-        *out_data = v[0];
-        return true;
-    } else
-    if ((r[0] == BOOTROM_OK) && (r[2] == BOOTROM_OK) && (v[0] == v[2]) && ((v[0] & 0xFF000000u) == 0)) {
-        PRINT_VERBOSE("Whitelabel Read OTP 2-of-3: rows 0x%03x and 0x%03x agree on data 0x%06x\n", start_row+0, start_row+2, v[0]);
-        *out_data = v[0];
-        return true;
-    } else
-    if ((r[1] == BOOTROM_OK) && (r[2] == BOOTROM_OK) && (v[1] == v[2]) && ((v[1] & 0xFF000000u) == 0)) {
-        PRINT_VERBOSE("Whitelabel Read OTP 2-of-3: rows 0x%03x and 0x%03x agree on data 0x%06x\n", start_row+1, start_row+2, v[1]);
-        *out_data = v[1];
-        return true;
-    } else
-    {
-        PRINT_ERROR("Whitelabel Error: Read OTP 2-of-3: rows 0x%03x, 0x%03x, and 0x%03x  (%d,%d,%d) --> (0x%06x, 0x%06x, 0x%06x) --> NO AGREEMENT\n",
-            start_row+0, start_row+1, start_row+2,
-            r[0], r[1], r[2],
-            v[0], v[1], v[2]
-        );
-        return false;
-    }
-}
-static bool write_otp_2_of_3(uint16_t start_row, uint32_t new_value) {
-
-    // 1. read the old data
-    PRINT_DEBUG("Whitelabel Debug: Write OTP 2-of-3: row 0x%03x\n", start_row); WAIT_FOR_KEY();
-
-    uint32_t old_voted_bits;
-    if (!read_otp_2_of_3(start_row, &old_voted_bits)) {
-        PRINT_DEBUG("Whitelabel Debug: Failed to read agreed-upon old bits for OTP 2-of-3: rows 0x%03x, 0x%03x, and 0x%03x\n", start_row+0, start_row+1, start_row+2);
-        return false;
-    }
-
-    // If any bits are already voted upon as set, there's no way to unset them.
-    if (old_voted_bits & (~new_value)) {
-        PRINT_ERROR("Whitelabel Error: Fail: Old voted-upon value 0x%06x has bits set that are not in the new value 0x%06x ---> 0x%06x\n",
-            old_voted_bits, new_value,
-            old_voted_bits & (~new_value)
-        );
-        return false;
-    }
-
-    // 2. Read each row individually, OR in the requested bits to be set, and write back the new value
-    //    Note that each individual row may have bits set that are not in the new value.  That's OK.
-    uint32_t old_data;
-    int r;
-    for (uint16_t i = 0; i < 3; ++i) {
-        r = read_raw_wrapper(start_row+i, &old_data, sizeof(old_data));
-        if (BOOTROM_OK != r) {
-            PRINT_WARNING("Whitelabel Warning: unable to read old bits for OTP 2-of-3: row 0x%03x\n", start_row+i);
-            continue; // to next OTP row, if any
-        }
-        if ((old_data & new_value) == new_value) {
-            // no change needed
-            PRINT_WARNING("Whitelabel Warning: skipping update to row 0x%03x: old value 0x%06x already has bits 0x%06x\n", start_row+i, old_data, new_value);
-            continue; // to next OTP row, if any
-        }
-
-        uint32_t to_write = old_data | new_value;
-        PRINT_DEBUG("Whitelabel Debug: Write USB_BOOT_FLAGS: updating row 0x%03x: 0x%06x --> 0x%06x\n", start_row+i, old_data, to_write); WAIT_FOR_KEY();
-        r = write_raw_wrapper(start_row+i, &to_write, sizeof(to_write));
-        if (BOOTROM_OK != r) {
-            PRINT_ERROR("Whitelabel Error: Failed to write new bits for OTP 2-of-3: row 0x%03x: 0x%06x --> 0x%06x\n", start_row+i, old_data, to_write);
-            continue; // to next OTP row, if any
-        }
-        PRINT_DEBUG("Whitelabel Debug: Wrote new bits for OTP 2-of-3: row 0x%03x: 0x%06x --> 0x%06x\n", start_row+i, old_data, to_write);
-    }
-
-    // 3. Can we read the data as now voted upon?
-    uint32_t new_voted_bits;
-    if (!read_otp_2_of_3(start_row, &new_voted_bits)) {
-        PRINT_ERROR("Whitelabel Error: Failed to read agreed-upon new bits for OTP 2-of-3: rows 0x%03x, 0x%03x, and 0x%03x\n", start_row+0, start_row+1, start_row+2);
-        return false;
-    }
-
-    // 4. Verify the new data matches the requested value
-    if (new_voted_bits != new_value) {
-        PRINT_ERROR("Whitelabel Error: OTP 2-of-3: rows 0x%03x, 0x%03x, and 0x%03x: 0x%06x -> 0x%06x, but got 0x%06x\n",
-            start_row+0, start_row+1, start_row+2,
-            old_voted_bits, new_value, new_voted_bits
-        );
-        return false;
-    }
-    PRINT_DEBUG("Whitelabel Debug: Successfully update the RBIT3 (2-of-3 voting) rows\n");
-
-    return true;
-}
-static bool read_otp_byte_3x(uint16_t row, uint8_t* out_data) {
-    *out_data = 0xFFu;
-
-    // 1. read the data
-    OTP_RAW_READ_RESULT v;
-    int r;
-    r = read_raw_wrapper(row, &v.as_uint32, sizeof(uint32_t)); // DO NOT DIE ON FAILURE OF ANY ONE ROW
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Error: Failed to read OTP byte 3x: row 0x%03x: %d (0x%x)\n", row, r, r);
-        return false;
-    }
-    // use bit-by-bit majority voting
-    PRINT_DEBUG("Whitelabel Debug: Read OTP byte_3x row 0x%03x: (0x%02x, 0x%02x, 0x%02x)\n", row, v.as_bytes[0], v.as_bytes[1], v.as_bytes[2]);
-    uint8_t result = 0u;
-    for (uint8_t mask = 0x80u; mask; mask >>= 1) {
-        uint_fast8_t count = 0;
-        if (v.as_bytes[0] & mask) { ++count; }
-        if (v.as_bytes[1] & mask) { ++count; }
-        if (v.as_bytes[2] & mask) { ++count; }
-        if (count >= 2) {
-            result |= mask;
-        }
-    }
-    PRINT_DEBUG("Whitelabel Debug: Read OTP byte_3x row 0x%03x: Bit-by-bit voting result: 0x%02x\n", row, result);
-    *out_data = result;
-    return true;
-}
-static bool write_otp_byte_3x(uint16_t row, uint8_t new_value) {
-
-    // 1. read the old data
-    PRINT_DEBUG("Whitelabel Debug: Write OTP byte_3x: row 0x%03x\n", row); WAIT_FOR_KEY();
-
-    uint8_t old_voted_bits;
-    if (!read_otp_byte_3x(row, &old_voted_bits)) {
-        PRINT_ERROR("Whitelabel Error: Failed to read agreed-upon old bits for OTP byte_3x: row 0x%03x\n", row);
-        return false;
-    }
-
-    // If any bits are already voted upon as set, there's no way to unset them.
-    if (old_voted_bits & (~new_value)) {
-        PRINT_ERROR("Whitelabel Error: Fail: Old voted-upon byte_3x value 0x%02x has bits set that are not in the new value 0x%02x ---> 0x%02x\n",
-            old_voted_bits, new_value,
-            old_voted_bits & (~new_value)
-        );
-        return false;
-    }
-
-    // 2. Read the row raw, OR in the requested bits to be set, and write back the new value.
-    //    Note that each individual byte may have bits set that are not in the new value.  That's OK.
-    OTP_RAW_READ_RESULT old_raw_data;
-    int r;
-    r = read_raw_wrapper(row, &old_raw_data, sizeof(old_raw_data));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Error: Warning: unable to read old bits for OTP byte_3x: row 0x%03x\n", row);
-        return false;
-    }
-    OTP_RAW_READ_RESULT new_value_3x = { .as_bytes = { new_value, new_value, new_value } };
-    OTP_RAW_READ_RESULT to_write = { .as_uint32 = old_raw_data.as_uint32 | new_value_3x.as_uint32 };
-    if (old_raw_data.as_uint32 == to_write.as_uint32) {
-        // no change needed
-        PRINT_WARNING("Whitelabel Warning: skipping update to row 0x%03x: old value 0x%06x already has bits 0x%06x\n", row, old_raw_data.as_uint32, new_value_3x.as_uint32);
-        return true;
-    }
-
-    PRINT_DEBUG("Whitelabel Debug: Write OTP byte_3x: updating row 0x%03x: 0x%06x --> 0x%06x\n", row, old_raw_data.as_uint32, to_write.as_uint32); WAIT_FOR_KEY();
-
-    r = write_raw_wrapper(row, &to_write, sizeof(to_write));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Error: Failed to write new bits for byte_3x: row 0x%03x: 0x%06x --> 0x%06x\n", row, old_raw_data.as_uint32, to_write.as_uint32);
-        return false;
-    }
-
-    // 3. Can we read the data as now voted upon?
-    uint8_t new_voted_bits;
-    if (!read_otp_byte_3x(row, &new_voted_bits)) {
-        PRINT_ERROR("Whitelabel Error: Failed to read agreed-upon new bits for OTP byte_3x: row 0x%03x\n", row);
-        return false;
-    }
-
-    // 4. Verify the new data matches the requested value
-    if (new_voted_bits != new_value) {
-        PRINT_ERROR("Whitelabel Error: OTP byte_3x: row 0x%03x: 0x%02x -> 0x%02x, but got 0x%02x\n",
-            row, old_voted_bits, new_value, new_voted_bits
-        );
-        return false;
-    }
-
-    return true;
-}
-
+// Restartable whitelabel process ... controlled via RTT (no USB connection required)
 void bp_otp_apply_whitelabel_data(void) {
 
     // // Uncomment next line to single-step (using RTT for input)
@@ -473,7 +193,7 @@ void bp_otp_apply_whitelabel_data(void) {
         uint16_t row = base + 0x10u +  i;
         PRINT_DEBUG("Whitelabel Debug: Write static portion index %d: row 0x%03x, data 0x%04x\n", i, row, _static_portion[i]);
         WAIT_FOR_KEY();
-        write_single_otp_ecc_row_or_die(row, _static_portion[i]);
+        bp_otp_write_single_row_ecc(row, _static_portion[i]) || DIE();
     }
     PRINT_DEBUG("Whitelabel Debug: Version extension: '%s'\n", _product_string);
     // 2. also write the product version extension
@@ -488,7 +208,7 @@ void bp_otp_apply_whitelabel_data(void) {
 
         PRINT_DEBUG("Whitelabel Debug: Write product version extension index %d: row 0x%03x, data 0x%04x\n", i, row, data);
         WAIT_FOR_KEY();
-        write_single_otp_ecc_row_or_die(row, data);
+        bp_otp_write_single_row_ecc(row, data) || DIE();
     }
 
     // NOTE: DOES NOT WRITE THE MANUFACTURING DATA PORTION
@@ -497,27 +217,29 @@ void bp_otp_apply_whitelabel_data(void) {
     uint16_t tmp_p = 0x2300 | product_char_count;
 
     // 4. Write the portions of the first 16 rows that have valid data:
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 0: row 0x%03x\n", base + 0x0u); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0x0u, 0x1209u);   // USB VID == 0x1209
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 1: row 0x%03x\n", base + 0x1u); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0x1u, 0x7332u);   // USB PID == 0x7332
-    //write_single_otp_ecc_row_or_die(base + 0x.u, 0x....u); // USB BCD Device
-    //write_single_otp_ecc_row_or_die(base + 0x.u, 0x....u); // USB LangID for strings
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 4: row 0x%03x\n", base + 0x4u); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0x4u, 0x230Au);   // USB MANU              ten   chars @ offset 0x23
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 5: row 0x%03x\n", base + 0x5u); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0x5u, tmp_p  );   // USB PROD              XXX   chars @ offset 0x23
-    //write_single_otp_ecc_row_or_die(base + 0x.u, 0x....u); // USB Serial Number
-    //write_single_otp_ecc_row_or_die(base + 0x.u, 0x....u); // USB config attributes & max power
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 8: row 0x%03x\n", base + 0x8u); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0x8u, 0x1B08u);   // STOR VOLUME LABEL     eight chars @ offset 0x1b
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 9: row 0x%03x\n", base + 0x9u); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0x9u, 0x1F08u);   // SCSI INQUIRY VENDOR   eight chars @ offset 0x1f
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index A: row 0x%03x\n", base + 0xAu); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0xAu, tmp_p  );   // SCSI INQUIRY PRODUCT  XXX   chars @ offset 0x23
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index C: row 0x%03x\n", base + 0xCu); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0xCu, 0x1016u);   // redirect URL          22    chars @ offset 0x10
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index D: row 0x%03x\n", base + 0xDu); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0xDu, 0x140du);   // redirect name         13    chars @ offset 0x14
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index E: row 0x%03x\n", base + 0xEu); WAIT_FOR_KEY(); write_single_otp_ecc_row_or_die(base + 0xEu, tmp_p  );   // info_uf2.txt product  XXX   chars @ offset 0x23
-    //write_single_otp_ecc_row_or_die(base + 0xFu, 0x2Cxxu); // info_uf2.txt manufacturing string ... to be added later
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 0: row 0x%03x\n", base + 0x0u);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x0u, 0x1209u) || DIE();   // USB VID == 0x1209
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 1: row 0x%03x\n", base + 0x1u);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x1u, 0x7332u) || DIE();   // USB PID == 0x7332
+    //PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 2: row 0x%03x\n", base + 0x2u); WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x2u, 0x....u) || DIE();   // USB BCD Device
+    //PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 3: row 0x%03x\n", base + 0x3u); WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x3u, 0x....u) || DIE();   // USB LangID for strings
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 4: row 0x%03x\n", base + 0x4u);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x4u, 0x230Au) || DIE();   // USB MANU              ten   chars @ offset 0x23
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 5: row 0x%03x\n", base + 0x5u);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x5u, tmp_p  ) || DIE();   // USB PROD              XXX   chars @ offset 0x23
+    //PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 6: row 0x%03x\n", base + 0x6u); WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x6u, 0x....u) || DIE();   // USB Serial Number
+    //PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 7: row 0x%03x\n", base + 0x7u); WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x7u, 0x....u) || DIE();   // USB config attributes & max power
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 8: row 0x%03x\n", base + 0x8u);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x8u, 0x1B08u) || DIE();   // STOR VOLUME LABEL     eight chars @ offset 0x1b
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 9: row 0x%03x\n", base + 0x9u);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x9u, 0x1F08u) || DIE();   // SCSI INQUIRY VENDOR   eight chars @ offset 0x1f
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index A: row 0x%03x\n", base + 0xAu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xAu, tmp_p  ) || DIE();   // SCSI INQUIRY PRODUCT  XXX   chars @ offset 0x23
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index C: row 0x%03x\n", base + 0xCu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xCu, 0x1016u) || DIE();   // redirect URL          22    chars @ offset 0x10
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index D: row 0x%03x\n", base + 0xDu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xDu, 0x140du) || DIE();   // redirect name         13    chars @ offset 0x14
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index E: row 0x%03x\n", base + 0xEu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xEu, tmp_p  ) || DIE();   // info_uf2.txt product  XXX   chars @ offset 0x23
+    //PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index F: row 0x%03x\n", base + 0xFu); WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xFu, 0x....u) || DIE();   // info_uf2.txt manufacturing string ... to be added later
 
     // 5. write the `WHITE_LABEL_ADDR` to point to the base address used here
+    // NOTE: this is a fixed OTP row ... only get one shot to write this, so ensuring the above values are correctly written first is important!
     PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL_BASE_ADDR 0x%03x to row 0x05C\n", base); WAIT_FOR_KEY();
-    write_single_otp_ecc_row_or_die(0x05c, base);
+    bp_otp_write_single_row_ecc(0x05c, base) || DIE();
 
     // 6. NON-ECC write the USB boot flags ... writes go to three (3) consecutive rows
+    // NOTE: Flags can be migrated from 0 --> 1 later.  This is used to allow manufacturing data to be written later, for example.
     OTP_USB_BOOT_FLAGS usb_boot_flags = {
         .usb_vid_valid          = 1,
         .usb_pid_valid          = 1,
@@ -540,8 +262,9 @@ void bp_otp_apply_whitelabel_data(void) {
     hard_assert(usb_boot_flags.as_uint32 == 0x407733u); // manually calculated ... should match the friendly description above.
     
     // 7. Read the existing USB boot flags
+    // NOTE: This is a fixed set of OTP rows, stored redundantly using 2-of-3 voting
     OTP_USB_BOOT_FLAGS old_usb_boot_flags;
-    if (!read_otp_2_of_3(0x059, &old_usb_boot_flags.as_uint32)) {
+    if (!bp_otp_read_redundant_rows_2_of_3(0x059, &old_usb_boot_flags.as_uint32)) {
         PRINT_ERROR("Whitelabel Error: Raw OTP rows 0x59..0x5B (old USB BOOT FLAGS) did not find majority agreement\n");
         return;
     }
@@ -560,7 +283,7 @@ void bp_otp_apply_whitelabel_data(void) {
     OTP_USB_BOOT_FLAGS new_flags = { .as_uint32 = old_usb_boot_flags.as_uint32 | usb_boot_flags.as_uint32 };
 
     PRINT_DEBUG("Whitelabel Debug: Writing USB BOOT FLAGS: 0x%06x -> 0x%06x\n", old_usb_boot_flags.as_uint32, new_flags);  WAIT_FOR_KEY();
-    if (!write_otp_2_of_3(0x059, new_flags.as_uint32)) {
+    if (!bp_otp_write_redundant_rows_2_of_3(0x059, new_flags.as_uint32)) {
         PRINT_ERROR("Whitelabel Error: Failed to write USB BOOT FLAGS\n");
         return;
     }
@@ -580,7 +303,7 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
     uint16_t base;
     // Follow the breadcrumbs to find the base address
     OTP_USB_BOOT_FLAGS old_usb_boot_flags;
-    if (!read_otp_2_of_3(0x059, &old_usb_boot_flags.as_uint32)) {
+    if (!bp_otp_read_redundant_rows_2_of_3(0x059, &old_usb_boot_flags.as_uint32)) {
         PRINT_ERROR("Whitelabel Error: Raw OTP rows 0x59..0x5B (USB BOOT FLAGS) did not find majority agreement\n");
         return false;
     }
@@ -596,9 +319,8 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
         return true;
     }
 
-    int r = read_ecc_wrapper(0x5C, &base, sizeof(base));
-    if (BOOTROM_OK != r) {
-        PRINT_ERROR("Whitelabel Error: OTP row 0x5C could not be read (WHITE_LABEL_ADDR): %d (0x%x)\n", r, r);
+    if (!bp_otp_read_single_row_ecc(0x05C, &base)) {
+        PRINT_ERROR("Whitelabel Error: OTP row 0x5C could not be read (WHITE_LABEL_ADDR)\n");
         return false;
     }
     if (base != 0x0C0) {
@@ -610,9 +332,13 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
 
     // Validate the static portion of the strings matches
     // That static portion starts at offset 0x10 from the base whitelabel structure.
-    uint8_t* white_label_ecc_alias = (uint8_t*)(OTP_DATA_BASE + ((base+0x10) * 2u));
-    if (memcmp(white_label_ecc_alias, _static_portion, sizeof(_static_portion)) != 0) {
-        PRINT_ERROR("Whitelabel Error: Static portion of white label data at row 0x%03x (alias 0x%08x) does not match\n", base, white_label_ecc_alias);
+    uint16_t _written_static_portion[ARRAY_SIZE(_static_portion)];
+    if (!bp_otp_read_ecc_data(base+0x10, _written_static_portion, sizeof(_written_static_portion))) {
+        PRINT_ERROR("Whitelabel Error: Failed to read static portion of white label data at row 0x%03x (0x%03x)\n", base, base+0x10);
+        return false;
+    }
+    if (memcmp(_written_static_portion, _static_portion, sizeof(_static_portion)) != 0) {
+        PRINT_ERROR("Whitelabel Error: Static portion of white label data at row 0x%03x (0x%03x) does not match\n", base, base+0x10);
         return false;
     }
 
@@ -620,16 +346,19 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
 
     size_t char_count = strlen(manufacturing_data_string);
     if (char_count > USB_WHITELABEL_MAX_CHARS_BP_MANU) {
-        PRINT_ERROR("Whitelabel Error: Manufacturing data string is too long (%d chars)\n", char_count);
+        PRINT_ERROR("Whitelabel Error: Manufacturing data string is too long (%d chars > %d chars)\n", char_count, USB_WHITELABEL_MAX_CHARS_BP_MANU);
         return false;
     }
+
+    // create the STRDEF value for the manufacturing data.
+    // It currently goes to a fixed offset from the base address.
     uint16_t strdef = OTP_ROW__MANUFACTURING_DATA_STRING_OFFSET;
     strdef <<= 8;
     strdef |= char_count;
 
     // check if the STRDEF is already set ... if it is, verify it matches the current provided string's length
     uint16_t oldstrdef;
-    if (read_ecc_wrapper(base + 0xFu, &oldstrdef, sizeof(oldstrdef)) != BOOTROM_OK) {
+    if (bp_otp_read_single_row_ecc(base + 0xFu, &oldstrdef)) {
         PRINT_ERROR("Whitelabel Error: Failed to read prior manufacturing STRDEF\n");
         return false;
     } else if ((oldstrdef != 0u) && (oldstrdef != strdef)) {
@@ -650,14 +379,14 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
         data  |= (uint8_t)(manufacturing_data_string[2u * i    ]);
 
         PRINT_DEBUG("Whitelabel Debug: Writing row 0x%03x: 0x%04x (`%c%c`)\n", row, data, byte_to_printable_char(data & 0xFFu), byte_to_printable_char(data >> 8)); WAIT_FOR_KEY();
-        if (!write_single_otp_ecc_row(row, data)) {
+        if (!bp_otp_write_single_row_ecc(row, data)) {
             PRINT_ERROR("Whitelabel Error: Failed with partial manufacturing string data written.\n");
             return false;
         }
     }
 
     PRINT_DEBUG("Whitelabel Debug: Writing row 0x%03x: STRDEF %04x\n", base + 0xFu, strdef); WAIT_FOR_KEY();
-    if (!write_single_otp_ecc_row(base + 0xFu, strdef)) {
+    if (!bp_otp_write_single_row_ecc(base + 0xFu, strdef)) {
         PRINT_ERROR("Whitelabel Error: Failed to write manufacturing string length and offset\n");
     }
 
@@ -667,26 +396,27 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
     new_usb_boot_flags.info_uf2_boardid_valid = 1;
 
     PRINT_DEBUG("Whitelabel Debug: Writing rows 0x059..0x05B: 0x%06x --> 0x%06x\n", old_usb_boot_flags.as_uint32, new_usb_boot_flags.as_uint32); WAIT_FOR_KEY();
-    if (!write_otp_2_of_3(0x059, new_usb_boot_flags.as_uint32)) {
+    if (!bp_otp_write_redundant_rows_2_of_3(0x059, new_usb_boot_flags.as_uint32)) {
         PRINT_ERROR("Whitelabel Error: Failed to update USB BOOT FLAGs\n");
         return false;
     }
 
     if (base != 0x0c0) {
+        // Currently hard-coded the mapping from pages to PAGEn_LOCK0 / PAGEn_LOCK1
         PRINT_ERROR("Whitelabel Error: Not yet supporting locking of OTP page unless base address is 0x0C0\n");
         return false;
     }
+
     // Finally, update page protections for page 3 (`0x0c0 .. 0x0ff`).
     // Row `0xF86`, PAGE3_LOCK0 = `0x3F3F3F` = `0b00'111'111`  : NO_KEY_STATE: 0b00, KEY_R: 0b111, KEY_W: 0b111 (no key; read-only without key)
     // Row `0xF87`, PAGE3_LOCK1 = `0x151515` = `0b00'01'01'01` : LOCK_S: 0b01, LOCK_NS: 0b01, LOCK_BL: 0b01 (read-only for all)
-
     PRINT_DEBUG("Whitelabel Debug: Setting PAGE3_LOCK0 (0xF86) to `0x3Fu` (no keys; read-only without key)\n"); WAIT_FOR_KEY();
-    if (!write_otp_byte_3x(0xF86, 0x3Fu)) {
+    if (!bp_otp_write_single_row_byte3x(0xF86, 0x3Fu)) {
         PRINT_ERROR("Whitelabel Error: Failed to write PAGE3_LOCK0\n");
         return false;
     }
     PRINT_DEBUG("Whitelabel Debug: Setting PAGE3_LOCK1 (0xF87) to `0x151515` (read-only for all three)\n"); WAIT_FOR_KEY();
-    if (!write_otp_byte_3x(0xF87, 0x15u)) {
+    if (!bp_otp_write_single_row_byte3x(0xF87, 0x15u)) {
         PRINT_ERROR("Whitelabel Error: Failed to write PAGE3_LOCK1\n");
         return false;
     }

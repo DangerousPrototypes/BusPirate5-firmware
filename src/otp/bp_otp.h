@@ -27,7 +27,7 @@ typedef enum _BP_OTP_ECC_ERROR {
     BP_OTP_ECC_ERROR_INVALID_INPUT                 = 0xFF010000u,
     BP_OTP_ECC_ERROR_DETECTED_MULTI_BIT_ERROR      = 0xFF020000u,
     BP_OTP_ECC_ERROR_BRBP_NEITHER_DECODING_VALID   = 0xFF030000u, // BRBP = 0b10 or 0b01, but neither decodes precisely
-
+    BP_OTP_ECC_ERROR_NOT_VALID_SINGLE_BIT_FLIP     = 0xFF050000u, // 
     BP_OTP_ECC_ERROR_INVALID_ENCODING              = 0xFF040000u, // Syndrome alone generates data, but too many bit flips...
     BP_OTP_ECC_ERROR_BRBP_DUAL_DECODINGS_POSSIBLE  = 0x80000000u, // TODO: prove code makes this impossible to hit
     BP_OTP_ECC_ERROR_INTERNAL_ERROR_BRBP_BIT       = 0x80010000u, // TODO: prove code makes this impossible to hit

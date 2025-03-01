@@ -55,11 +55,7 @@
 #ifdef BP_SPLASH_ENABLED
 #include BP_SPLASH_FILE
 #endif
-#if BP_VER != 5
-#include "hardware/regs/addressmap.h"
-#include "hardware/regs/otp.h"
-#endif
-#include "otp/bp_otp.h"
+#include "otp/bp_otp.h" // OTP related functions and definitions
 
 static mutex_t spi_mutex;
 
@@ -132,7 +128,7 @@ static void main_system_initialization(void) {
     tx_fifo_init();
     rx_fifo_init();
 
-#ifdef BP_MANUFACTURING_TEST_MODE
+#if defined(BP_MANUFACTURING_TEST_MODE) && BP_VER != 5
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: OTP whitelabel update\n"
         );

@@ -77,12 +77,16 @@ static uint32_t decode_raw_data_with_correction_impl(const OTP_RAW_READ_RESULT d
 
         // Are both of those decodings an exact match (except for the BRBP bits?  If so, that's 
         if (match_wo_brbp && match_w__brbp) {
+            // NOTE: This is expected to be impossible, but only way to know is via exhaustively checking all 16-bit values.
             return BP_OTP_ECC_ERROR_BRBP_DUAL_DECODINGS_POSSIBLE;
         } else if (match_wo_brbp) {
+            // There was a single-bit error in the BRBP bits; True value was 0b00  (no BRBP used to store the ECC encoded data).
             return decoded_wo_brbp;
         } else if (match_w__brbp) {
+            // There was a single-bit error in the BRBP bits; True value was 0b11  (BRBP used to store the ECC encoded data).
             return decoded_w__brbp;
         } else {
+            // Either multiple bits in error, or this data was not encoded with the RP2350 ECC encoding scheme.
             return BP_OTP_ECC_ERROR_BRBP_NEITHER_DECODING_VALID;
         }
     }
@@ -143,6 +147,10 @@ static uint32_t decode_raw_data_with_correction_impl(const OTP_RAW_READ_RESULT d
     }
     // NEW: If syndrome is 0b00001 the single-bit error was in one of the BRBP bits?
     if (tmp.hamming_ecc == 0x01u) {
+        // NOTE: This is expected to be impossible to reach this code,
+        //       because should have found the one-bit error earlier (above).
+        //       After all, a one-bit error in BRBP is either 0b01 or 0b10,
+        //       both of which checked above.  Belt-and-suspenders....
         return BP_OTP_ECC_ERROR_INTERNAL_ERROR_BRBP_BIT;
     }
 
@@ -155,8 +163,11 @@ static uint32_t decode_raw_data_with_correction_impl(const OTP_RAW_READ_RESULT d
     //         the ECC detected an unrecoverable multi-bit error.
     //     ...
     if (tmp.parity_bit == 0u && tmp.hamming_ecc == 0u) {
-        // this is handled above ... checking if the encoded value already matched.
-        // return src.as_uint32 & 0x0000FFFFu; // SUCCESS!
+        // NOTE: This is expected to be impossible to reach this code,
+        //       because should have discovered no error existed earlier,
+        //       when calculated ECC from just the low 16 bits.
+        //       Even so, belt-and-suspenders... Can this occur any other time?
+        //       would need to check all 2^24 input values to be sure.
         return BP_OTP_ECC_ERROR_INTERNAL_ERROR_PERFECT_MATCH;
     }
     if (tmp.parity_bit == 0u && tmp.hamming_ecc != 0u) {
@@ -174,6 +185,15 @@ static uint32_t decode_raw_data_with_correction_impl(const OTP_RAW_READ_RESULT d
     //         to recover from the error.
     //     ...
     uint16_t bitflip = sdk_otp_syndrome_to_bitflip[tmp.hamming_ecc];
+
+    if (bitflip == 0u) {
+        // The table has entries for all **VALID** single-bit flip syndromes.
+        // All other values in the table are 0u, which would not flip a bit,
+        // and thus would not correct an error.
+        // It's unknown if this code path could be reached.
+        return BP_OTP_ECC_ERROR_NOT_VALID_SINGLE_BIT_FLIP;
+    }
+
     return (src.as_uint32 ^ bitflip) & SUCCESS_MASK;
 }
 
@@ -193,7 +213,8 @@ uint32_t bp_otp_calculate_ecc(uint16_t x) {
     return p;
 }
 
-uint32_t bp_otp_decode_raw(const OTP_RAW_READ_RESULT data) {
+uint32_t bp_otp_decode_raw(uint32_t raw_data) {
+    const BP_OTP_RAW_READ_RESULT data = { .as_uint32 = raw_data };
     // This function DISABLES raw data that the bootrom MIGHT accept as
     // being validly encoded ECC data.  This can occur when the count
     // of bitflips is 3, 5 (also 19, 21 for BRBP variants) vs. the correct encoding.
@@ -219,7 +240,7 @@ uint32_t bp_otp_decode_raw(const OTP_RAW_READ_RESULT data) {
             // this is OK
         } else {
             // this is NOT a valid ECC decoding ... but maybe the bootrom will think it is.  :-)
-            return 0xFF990000u; // make this into a symbolic named error (internal error)
+            return BP_OTP_ECC_ERROR_POTENTIALLY_READABLE_BY_BOOTROM;
         }
     }
     return result;

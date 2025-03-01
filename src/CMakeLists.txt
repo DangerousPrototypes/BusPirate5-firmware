@@ -2,6 +2,7 @@
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()  
 
+# TODO - For reproducible builds, allow override of timestamp
 # build time in UTC ISO 8601
 FILE (WRITE ${CMAKE_BINARY_DIR}/timestamp.cmake "STRING(TIMESTAMP TIMEZ UTC)\n")
 FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(WRITE timestamp.h \"#ifndef TIMESTAMP_H\\n\")\n")
@@ -26,6 +27,9 @@ set(bp5_common
         system_config.c
         system_monitor.h
         system_monitor.c
+
+        # The common OTP header can be included even on RP2040
+        otp/bp_otp.h
 
         # pirate lib
         pirate/psu.h
@@ -109,12 +113,8 @@ set(bp5_common
         commands/global/dump.h
         commands/global/ovrclk.c 
         commands/global/ovrclk.h        
-        commands/global/cert.c 
-        commands/global/cert.h
         pubkey/pubkey.h 
         pubkey/pubkey.c
-        commands/global/otp.c
-        commands/global/otp.h
         # HiZ
         mode/hiz.h
         mode/hiz.c
@@ -410,11 +410,16 @@ set (bp5_rtt
 )
 
 set (rp2350_common
+        # otp/bp_otp.h is included in bp5_common
+        otp/otp_ecc.c
+        otp/bp_otp_rw.c
+        otp/bp_whitelabel.c
+        commands/global/cmd_otp.c
+        commands/global/cmd_otp.h
         commands/global/otpdump.h 
         commands/global/otpdump.c
-        otp/bp_otp.h
-        otp/otp_ecc.c
-        otp/bp_whitelabel.c
+        commands/global/cert.c 
+        commands/global/cert.h
 )
 
 

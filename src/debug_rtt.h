@@ -38,7 +38,7 @@
         E_DEBUG_CAT_EARLY_BOOT       =  1u, // (((uint32_t)1u) <<  1u), // early-in-boot (initialization)
         E_DEBUG_CAT_ONBOARD_PIXELS   =  2u, // (((uint32_t)1u) <<  2u), // onboard RGB pixels
         E_DEBUG_CAT_ONBOARD_STORAGE  =  3u, // (((uint32_t)1u) << XXu), // lcdi2c mode specific
-        E_DEBUG_CAT_OTP              =  4u, // (((uint32_t)1u) << XXu), // rp2350 OTP (fuse) settings
+        // E_DEBUG_CAT_USB_HID          = XXu, // (((uint32_t)1u) << XXu), // USB based HID interactions
         // E_DEBUG_CAT_USB_CDC          = XXu, // (((uint32_t)1u) << XXu), // USB based serial port
         // E_DEBUG_CAT_USB_MSC          = XXu, // (((uint32_t)1u) << XXu), // USB based mass storage commands
         // E_DEBUG_CAT_FLASH_MEDIA      = XXu, // (((uint32_t)1u) << XXu), // flash media operations
@@ -96,7 +96,6 @@
 #define BP_DEBUG_CAT_EARLY_BOOT       ((bp_debug_category_t){ E_DEBUG_CAT_EARLY_BOOT       }) // early-in-boot (initialization)
 #define BP_DEBUG_CAT_ONBOARD_PIXELS   ((bp_debug_category_t){ E_DEBUG_CAT_ONBOARD_PIXELS   }) // onboard RGB pixels
 #define BP_DEBUG_CAT_ONBOARD_STORAGE  ((bp_debug_category_t){ E_DEBUG_CAT_ONBOARD_STORAGE  }) // onboard storage (e.g., to root cause FS corruption)
-#define BP_DEBUG_CAT_OTP              ((bp_debug_category_t){ E_DEBUG_CAT_OTP              }) // rp2350 OTP (fuse) settings
 // #define BP_DEBUG_CAT_USB_HID          ((bp_debug_category_t){ E_DEBUG_CAT_USB_HID          }) // USB based HID interactions
 // #define BP_DEBUG_CAT_USB_CDC          ((bp_debug_category_t){ E_DEBUG_CAT_USB_CDC          }) // USB based serial port
 // #define BP_DEBUG_CAT_USB_MSC          ((bp_debug_category_t){ E_DEBUG_CAT_USB_MSC          }) // USB based mass storage commands

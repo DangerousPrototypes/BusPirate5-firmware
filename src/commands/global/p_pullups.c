@@ -10,8 +10,6 @@
 #include "pirate/amux.h"
 #include "pirate/pullup.h"
 
-#define BP_HW_HAS_PULLX 1
-
 #if BP_HW_HAS_PULLX
 const char* const p_usage[] = {
     "P [resistor value] [-d] [-p <pins>]",
@@ -162,28 +160,23 @@ void pullups_enable_handler(struct command_result* res) {
 
         //apply the settings
         pullx_update();
-
         //show the settings
         pullx_show_settings();
-
         amux_sweep();
     #else
-
-    pullups_enable();
-
-    amux_sweep();
-    printf("\r\n\r\n%s%s:%s %s (%s @ %s%d.%d%sV)",
-           ui_term_color_notice(),
-           GET_T(T_MODE_PULLUP_RESISTORS),
-           ui_term_color_reset(),
-           GET_T(T_MODE_ENABLED),
-           BP_HARDWARE_PULLUP_VALUE,
-           ui_term_color_num_float(),
-           hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] / 1000,
-           (hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] % 1000) / 100,
-           ui_term_color_reset());
+        pullups_enable();
+        amux_sweep();
+        printf("\r\n\r\n%s%s:%s %s (%s @ %s%d.%d%sV)",
+            ui_term_color_notice(),
+            GET_T(T_MODE_PULLUP_RESISTORS),
+            ui_term_color_reset(),
+            GET_T(T_MODE_ENABLED),
+            BP_HARDWARE_PULLUP_VALUE,
+            ui_term_color_num_float(),
+            hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] / 1000,
+            (hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] % 1000) / 100,
+            ui_term_color_reset());
     #endif
-    // TODO test outside debug mode
     if (hw_adc_raw[HW_ADC_MUX_VREF_VOUT] < 250){
         printf(
             "\r\nWarning: no/low voltage detected.\r\nEnable power supply (W) or attach external supply to Vout/Vref");

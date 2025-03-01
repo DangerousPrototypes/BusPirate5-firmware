@@ -70,7 +70,7 @@ void ch32vswio_reset(int pin, int dirpin) {
   // 125 mhz / 12 = 96 nanoseconds per tick, close enough to 100 ns.
   sm_config_set_clkdiv      (&c, 12);
 
-  #if BP_VER==5
+  #if RPI_PLATFORM == RP2040
   gpio_pull_down(pin);
   #endif
   pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<pin)); //read pins to input (0, mask)  

@@ -83,19 +83,31 @@ enum {
         #else
             #error "Unknown platform version in pirate.h"
         #endif
+        #define BP_HW_IOEXP_595 1
         #define RPI_PLATFORM RP2040
+        #define BP_HW_PSU_PWM 1
     #elif BP_VER == XL5
         #include "platform/bpi5xl-rev0.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
+        #define BP_HW_IOEXP_595 1
+        #define BP_HW_PSU_PWM 1
     #elif BP_VER == 6
         #include "platform/bpi6-rev2.h"  
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
+        #define BP_HW_HAS_PULLX 1
+        #define BP_HW_IOEXP_NONE 1
+        #define BP_HW_FALA_BUFFER 1
+        #define BP_HW_PSU_PWM 1
     #elif BP_VER == 7
         #include "platform/bpi7-rev0.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
+        #define BP_HW_HAS_PULLX 1
+        #define BP_HW_IOEXP_I2C 1
+        #define BP_HW_FALA_BUFFER 1
+        #define BP_HW_PSU_DAC 1
     #else
         #error "Unknown platform version in pirate.h"
     #endif

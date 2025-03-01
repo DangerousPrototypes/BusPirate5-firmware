@@ -3,7 +3,7 @@
 #include "pirate.h"
 #include "pirate/shift.h"
 #include "pirate/pullup.h"
-#define BP_HW_HAS_PULLX 1
+
 #if BP_HW_HAS_PULLX
     #include "hardware/i2c.h"
 
@@ -138,45 +138,45 @@
 #endif
 
 void pullup_enable(void) {
-    #if (BP_VER ==5 && BP_REV <= 8)
+    #if BP_HW_HAS_PULLX
+        //to test: all have 10K pullup 
+        //pullx_set_all(0xf000, 0xf000);
+        pullx_set_all_update(PULLX_10K, true);
+    #elif (BP_VER ==5 && BP_REV <= 8)
         shift_clear_set_wait(0, PULLUP_EN);
     #elif ((BP_VER == 5 && BP_REV > 8)) || (BP_VER == XL5)
         shift_clear_set_wait(PULLUP_EN, 0);
     #elif (BP_VER == 6)
         gpio_put(PULLUP_EN, 0);
-    #elif (BP_VER == 7)
-        //to test: all have 10K pullup 
-        //pullx_set_all(0xf000, 0xf000);
-        pullx_set_all_update(PULLX_10K, true);
     #else
         #error "Platform not speficied in pullup.c"
     #endif
 }
 
 void pullup_disable(void) {
-    #if (BP_VER ==5 && BP_REV <= 8)
+    #if BP_HW_HAS_PULLX
+        // 1M pull-down by default
+        // pullx_set_all(0x0f00, 0x0000);
+        pullx_set_all_update(PULLX_1M, false);
+    #elif (BP_VER ==5 && BP_REV <= 8)
         shift_clear_set_wait(PULLUP_EN, 0);
     #elif ((BP_VER == 5 && BP_REV > 8)) || (BP_VER == XL5)
         shift_clear_set_wait(0, PULLUP_EN);
     #elif (BP_VER == 6)
         gpio_put(PULLUP_EN, 1);
-    #elif (BP_VER == 7)
-        // 1M pull-down by default
-        // pullx_set_all(0x0f00, 0x0000);
-        pullx_set_all_update(PULLX_1M, false);
     #else
         #error "Platform not speficied in pullup.c"
     #endif
 }
 
 void pullup_init(void) {
-    #if (BP_VER == 5 || BP_VER == XL5)
+    #if BP_HW_HAS_PULLX
+        pullx_set_all_update(PULLX_1M, false);  
+    #elif (BP_VER == 5 || BP_VER == XL5)
         //nothing to do
     #elif (BP_VER == 6)
         gpio_set_function(PULLUP_EN, GPIO_FUNC_SIO);
-        gpio_set_dir(PULLUP_EN, GPIO_OUT);
-    #elif (BP_VER == 7)
-        pullx_set_all_update(PULLX_1M, false);        
+        gpio_set_dir(PULLUP_EN, GPIO_OUT);             
     #else
         #error "Platform not speficied in pullup.c"
     #endif

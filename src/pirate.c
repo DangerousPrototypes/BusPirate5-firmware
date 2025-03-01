@@ -12,7 +12,7 @@
 #include "command_struct.h"
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
-#if (BP_VER == 5 || BP_VER == XL5)
+#if BP_HW_IOEXP_595
 #include "pirate/shift.h"
 #endif
 #include "pirate/bio.h"
@@ -140,12 +140,12 @@ static void main_system_initialization(void) {
     softlock_all_otp();
 
 
-#if (BP_VER == 5)
-    uint8_t bp_rev = mcu_detect_revision();
-    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-        "Init: mcu_detect_revision: %d\n", bp_rev
-        );
-#endif
+    #if (BP_VER == 5)
+        uint8_t bp_rev = mcu_detect_revision();
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: mcu_detect_revision: %d\n", bp_rev
+            );
+    #endif
 
     reserve_for_future_mode_specific_allocations[1] = 99;
     reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
@@ -167,7 +167,7 @@ static void main_system_initialization(void) {
     gpio_set_function(BP_SPI_CDO, GPIO_FUNC_SPI);
 
 // init shift register pins
-#if (BP_VER == 5 || BP_VER == XL5)
+#if BP_HW_IOEXP_595
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: shift register pins\n"
         );
@@ -212,10 +212,10 @@ static void main_system_initialization(void) {
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: Pin states\n"
         );
-#if (BP_VER == 5 || BP_VER == XL5)
+#if (BP_HW_IOEXP_595)
     // configure the defaults for shift register attached hardware
     shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3 | AMUX_S1 | DISPLAY_RESET | CURRENT_EN));
-#elif (BP_VER == 6 || (BP_VER == 7 && BP_REV == 0))
+#elif (BP_HW_IOEXP_NONE)
     // todo: current detect
     gpio_setup(CURRENT_EN_OVERRIDE, GPIO_OUT, 0);
     gpio_setup(AMUX_S0, GPIO_OUT, 0);
@@ -242,7 +242,7 @@ static void main_system_initialization(void) {
     pullups_init(); // uses shift register internally
 
     // Shift register setup (BP5, BP5XL)
-#if (BP_VER == 5 || BP_VER == XL5)
+#if BP_HW_IOEXP_595
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: BP5 / BP5XL - shift output enable\n"
         );

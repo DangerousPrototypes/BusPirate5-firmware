@@ -41,7 +41,7 @@ void falaio_notify(void) {
                                0,
                                0,
                                'N',
-                               fala_config.base_frequency * fala_config.oversample,
+                               fala_config.actual_sample_frequency,
                                fala_samples,
                                0);
         if (tud_cdc_n_write_available(CDC_INTF) >= sizeof(buf)) {
@@ -66,7 +66,7 @@ void falaio_setup(void) {
 }
 
 void falaio_setup_message(void){
-#if BP_VER != 6
+#if BP_VER < 6
     printf("%sWarning: What you see may not be what you get!%s\r\n", ui_term_color_error(), ui_term_color_reset());
     printf("%sThis hardware version captures samples from behind the IO buffer.%s\r\n",
             ui_term_color_info(),

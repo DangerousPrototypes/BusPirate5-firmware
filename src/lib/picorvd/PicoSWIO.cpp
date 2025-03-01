@@ -47,8 +47,7 @@ void PicoSWIO::reset(int pin) {
   sm_config_set_out_shift   (&c, /*shift_right*/ false, /*autopull*/ false, /*pull_threshold*/ 32);
   sm_config_set_in_shift    (&c, /*shift_right*/ false, /*autopush*/ true,  /*push_threshold*/ 32);
 
-  // 125 mhz / 12 = 96 nanoseconds per tick, close enough to 100 ns.
-  sm_config_set_clkdiv      (&c, 12);
+  sm_config_set_clkdiv(&c, clock_get_hz(clk_sys) / 10000000);
 
   pio_sm_init       (pio0, pio_sm, pio_offset, &c);
   pio_sm_set_pins   (pio0, pio_sm, 0);

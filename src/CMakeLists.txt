@@ -15,7 +15,7 @@ ADD_CUSTOM_TARGET (
     ADD_DEPENDENCIES ${CMAKE_BINARY_DIR}/timestamp.cmake)
 
 # Add executable. Default name is the project name, version 0.1
-set(bp5_common
+set(buspirate_common
         # main loop and printf
         pirate.c
         pirate.h
@@ -381,7 +381,7 @@ set(bp5_common
         usb_descriptors.c
 )
 
-set(bp5_nandflash
+set(buspirate_nandflash
         #nand flash management and dhara
         dhara/bytes.h
         dhara/error.c
@@ -402,7 +402,7 @@ set(bp5_nandflash
         nand/sys_time.h
 )
 
-set (bp5_rtt
+set (buspirate_rtt
         lib/rtt/Config/SEGGER_RTT_Conf.h
         lib/rtt/RTT/SEGGER_RTT.c
         lib/rtt/RTT/SEGGER_RTT.h
@@ -424,10 +424,29 @@ set (rp2350_common
 
 
 if(${PICO_PLATFORM} MATCHES "rp2350")
+        set(revisions
+                bus_pirate5_xl  
+                bus_pirate6
+#                bus_pirate7
+        )   
+
+#        add_executable(bus_pirate7
+#                ${buspirate_common}
+#                ${buspirate_nandflash}
+#                ${buspirate_rtt}
+#                ${rp2350_common}
+#                platform/bpi7-rev0.h
+#                platform/bpi7-rev0.c
+#                display/robot6x16.h
+#                ) 
+#        target_compile_definitions(bus_pirate7 PUBLIC BP_VER=7) 
+#        target_compile_definitions(bus_pirate7 PUBLIC BP_REV=0) 
+#        target_compile_definitions(bus_pirate7 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")             
+
         add_executable(bus_pirate6
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_nandflash}
+                ${buspirate_rtt}
                 ${rp2350_common}
                 platform/bpi6-rev2.h
                 platform/bpi6-rev2.c
@@ -436,19 +455,14 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate6 PUBLIC BP_VER=6) 
         target_compile_definitions(bus_pirate6 PUBLIC BP_REV=10) 
         target_compile_definitions(bus_pirate6 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}") 
-        
-        set(revisions
-                bus_pirate5_xl  
-                bus_pirate6
-        )        
 
         add_executable(bus_pirate5_xl
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_nandflash}
+                ${buspirate_rtt}
                 ${rp2350_common}
                 platform/bpi5xl-rev0.h
-                platform/bpi5xl-rev0.c
+                platform/bpi5xl-rev0.c 
                 pirate/shift.h
                 pirate/shift.c
                 display/robot5xx16.h
@@ -457,10 +471,16 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 else()
+
+        set(revisions
+                bus_pirate5_rev8  
+                bus_pirate5_rev10
+        )
+
         add_executable(bus_pirate5_rev10
-                ${bp5_common}
-                ${bp5_nandflash}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_nandflash}
+                ${buspirate_rtt}
                 platform/bpi5-rev10.h
                 platform/bpi5-rev10.c
                 pirate/shift.h
@@ -471,14 +491,9 @@ else()
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_REV=10)
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
-        set(revisions
-                bus_pirate5_rev8  
-                bus_pirate5_rev10
-        )
-
         add_executable(bus_pirate5_rev8
-                ${bp5_common}
-                ${bp5_rtt}
+                ${buspirate_common}
+                ${buspirate_rtt}
                 platform/bpi5-rev8.h
                 platform/bpi5-rev8.c
                 #tf card access control
@@ -546,7 +561,7 @@ foreach(revision ${revisions})
         pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")
         if(${PICO_PLATFORM} MATCHES "rp2350")
-                pico_set_program_description(${revision} "Bus Pirate 5XL/6 Firmware for RP2350")
+                pico_set_program_description(${revision} "Bus Pirate 5XL/6/7 Firmware for RP2350")
         else()
                 pico_set_program_description(${revision} "Bus Pirate 5 Firmware for RP2040")
         endif()
@@ -587,6 +602,7 @@ if(LEGACY_ANSI_COLOURS_ENABLED)
         if(${PICO_PLATFORM} MATCHES "rp2350")
                 target_link_libraries(bus_pirate5_xl         lib_ansi_colours)
                 target_link_libraries(bus_pirate6           lib_ansi_colours)
+#                target_link_libraries(bus_pirate7           lib_ansi_colours)
         else()
                 target_link_libraries(bus_pirate5_rev10       lib_ansi_colours)
                 target_link_libraries(bus_pirate5_rev8        lib_ansi_colours)

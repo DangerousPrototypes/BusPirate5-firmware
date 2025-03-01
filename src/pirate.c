@@ -13,7 +13,7 @@
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
 #if (BP_VER == 5 || BP_VER == XL5)
-#include "pirate/shift.h"
+    #include "pirate/shift.h"
 #endif
 #include "pirate/bio.h"
 #include "pirate/button.h"
@@ -53,9 +53,14 @@
 #include "pirate/intercore_helpers.h"
 // #include "display/robot16.h"
 #ifdef BP_SPLASH_ENABLED
-#include BP_SPLASH_FILE
+    #include BP_SPLASH_FILE
+#endif
+#if RPI_PLATFORM == RP2350
+    #include "hardware/regs/addressmap.h"
+    #include "hardware/regs/otp.h"
 #endif
 #include "otp/bp_otp.h" // OTP related functions and definitions
+
 
 static mutex_t spi_mutex;
 
@@ -112,12 +117,16 @@ static bool should_disable_unique_usb_serial_number(void) {
 }
 static void softlock_all_otp(void) {
     // lock all OTP pages as read-only
-#if BP_VER != 5
-    uint32_t * otp_soft_lock_register = ((uint32_t*)(OTP_BASE+REG_ALIAS_SET_BITS));
-    for (uint32_t offset = 0; offset < 64; ++offset) {
-        otp_soft_lock_register[offset] = 0x5; // read-only
-    }
-#endif // BP_VER != 5
+    #if RPI_PLATFORM == RP2350
+        uint32_t * otp_soft_lock_register = ((uint32_t*)(OTP_BASE+REG_ALIAS_SET_BITS));
+        for (uint32_t offset = 0; offset < 64; ++offset) {
+            otp_soft_lock_register[offset] = 0x5; // read-only
+        }
+    #elif RPI_PLATFORM == RP2040
+        //nothing to do
+    #else
+        #error "Unknown platform in pirate.c"
+    #endif 
 }
 
 static void main_system_initialization(void) {
@@ -216,7 +225,7 @@ static void main_system_initialization(void) {
 #if (BP_VER == 5 || BP_VER == XL5)
     // configure the defaults for shift register attached hardware
     shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3 | AMUX_S1 | DISPLAY_RESET | CURRENT_EN));
-#else
+#elif (BP_VER == 6 || (BP_VER == 7 && BP_REV == 0))
     // todo: current detect
     gpio_setup(CURRENT_EN_OVERRIDE, GPIO_OUT, 0);
     gpio_setup(AMUX_S0, GPIO_OUT, 0);
@@ -233,6 +242,8 @@ static void main_system_initialization(void) {
     gpio_setup(LA_BPIO5, GPIO_IN, 0);
     gpio_setup(LA_BPIO6, GPIO_IN, 0);
     gpio_setup(LA_BPIO7, GPIO_IN, 0);
+#else
+#error "Platform not speficied in pirate.c"
 #endif
 
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
@@ -312,7 +323,25 @@ static void main_system_initialization(void) {
     // //////////////////////////////////////////////////////////////////////
     // Prior to this point, configuration settings from storage have
     // not been available!
-#if (BP_VER != 5 || BP_REV >= 10)
+#ifdef BP_HW_STORAGE_TFCARD
+    // Now continue after init of all the pins and shift registers
+    // Mount the TF flash card file system (and put into SPI mode)
+    // This must be done before any other SPI communications
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: BP5 w/TF Flash: storage mount\n"
+        );
+    spi_set_baudrate(BP_SPI_PORT, BP_SPI_START_SPEED);
+    storage_mount();
+    if (storage_load_config()) {
+        system_config.config_loaded_from_file = true;
+        // update LED
+        rgb_set_effect(system_config.led_effect);
+    } else {
+        // party mode/demo mode if no config file found
+        rgb_set_effect(LED_EFFECT_PARTY_MODE);
+    }
+    spi_set_baudrate(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
+#elif defined(BP_HW_STORAGE_NAND)
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: Mounting SPI Flash\n"
         );
@@ -338,23 +367,7 @@ static void main_system_initialization(void) {
         system_config.led_effect = LED_EFFECT_PARTY_MODE;
     }
 #else
-    // Now continue after init of all the pins and shift registers
-    // Mount the TF flash card file system (and put into SPI mode)
-    // This must be done before any other SPI communications
-    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-        "Init: BP5 w/TF Flash: storage mount\n"
-        );
-    spi_set_baudrate(BP_SPI_PORT, BP_SPI_START_SPEED);
-    storage_mount();
-    if (storage_load_config()) {
-        system_config.config_loaded_from_file = true;
-        // update LED
-        rgb_set_effect(system_config.led_effect);
-    } else {
-        // party mode/demo mode if no config file found
-        rgb_set_effect(LED_EFFECT_PARTY_MODE);
-    }
-    spi_set_baudrate(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
+    #error "Storage device not defined in pirate.c"
 #endif
     // Stored configuration settings (if available) now loaded.
     // //////////////////////////////////////////////////////////////////////
@@ -799,11 +812,11 @@ static void core1_infinite_loop(void) {
                 ui_statusbar_update_from_core1(update_flags);
             }
 
-#if (BP_VER == 5 && BP_REV <= 9)
-           // remains for legacy REV8 support of TF flash
-            if (storage_detect()) {
-            }
-#endif
+            #ifdef BP_HW_STORAGE_TFCARD
+            // remains for legacy REV8 support of TF flash
+                if (storage_detect()) {
+                }
+            #endif
 
             freq_measure_period_irq(); // update frequency periodically
             monitor_reset();

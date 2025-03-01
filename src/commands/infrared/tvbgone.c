@@ -40,6 +40,7 @@ Ported to RP2040 by Ian Lesnet 2024 (see you in another 15 years?)
 #include "mode/infrared.h"
 #include "hardware/pwm.h"
 #include "hardware/gpio.h"
+#include "hardware/clocks.h"
 #include "pirate/bio.h"
 #include "ui/ui_help.h"
 
@@ -73,7 +74,7 @@ static uint8_t pwm_freq_find(
 #define TOP_MAX 65534
 #define DIV_MIN ((0x01 << 4) + 0x0) // 0x01.0
 #define DIV_MAX ((0xFF << 4) + 0xF) // 0xFF.F
-    uint32_t clock = 125000000;
+    uint32_t clock = clock_get_hz(clk_sys);
     // Calculate a div value for frequency desired
     uint32_t div = (clock << 4) / *freq_hz_value / (TOP_MAX + 1);
     if (div < DIV_MIN) {

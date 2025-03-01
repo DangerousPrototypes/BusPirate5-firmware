@@ -17,9 +17,7 @@
 # zero without holes in the numbering.)
 #
 
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7331", ENV{ID_USB_INTERFACE_NUM}=="00",  SYMLINK+="buspirate-%n",     MODE="660", GROUP="dialout"
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7331", ENV{ID_USB_INTERFACE_NUM}=="02",  SYMLINK+="buspirate-bin-%n", MODE="660", GROUP="dialout"
-
-SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7331", SYMLINK+="buspirate-uf2-%n", MODE="660", GROUP="dialout"
-SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7332", SYMLINK+="buspirate-uf2-%n", MODE="660", GROUP="dialout"
-SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000f", SYMLINK+="raspberry-pi-uf2-%n", MODE="660", GROUP="dialout"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7331", ENV{ID_USB_INTERFACE_NUM}=="00",  SYMLINK+="buspirate-%n",        MODE="660", GROUP="dialout"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7331", ENV{ID_USB_INTERFACE_NUM}=="02",  SYMLINK+="buspirate-bin-%n",    MODE="660", GROUP="dialout"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="7332",                                   SYMLINK+="buspirate-uf2-%n",    MODE="660", GROUP="dialout"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000f",                                   SYMLINK+="raspberry-pi-uf2-%n", MODE="660", GROUP="dialout"

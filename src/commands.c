@@ -39,8 +39,10 @@
 #include "commands/global/bug.h"
 #include "commands/global/image.h"
 #include "commands/global/dump.h"
-#if BP_VER >= 6
-#include "commands/global/otpdump.h"
+#if BP_VER !=5
+    #include "commands/global/otpdump.h"
+    #include "commands/global/cmd_otp.h"
+    #include "commands/global/cert.h"
 #endif
 #include "commands/global/ovrclk.h"
 
@@ -96,8 +98,10 @@ const struct _global_command_struct commands[] = {
 { .command="bug",       .allow_hiz=true,  .func=&bug_handler,                        .help_text=0x00 },
 { .command="image",     .allow_hiz=true,  .func=&image_handler,                      .help_text=0x00 },
 { .command="dump",      .allow_hiz=false, .func=&dump_handler,                       .help_text=0x00 },
-#if BP_VER >= 6
+#if BP_VER != 5
 { .command="otpdump",   .allow_hiz=true,  .func=&otpdump_handler,                    .help_text=0x00 },
+{ .command="otp",       .allow_hiz=true,  .func=&otp_handler,                        .help_text=0x00 },
+{ .command="cert",      .allow_hiz=true,  .func=&cert_handler,                       .help_text=0x00 },
 #endif
 { .command="ovrclk",    .allow_hiz=true,  .func=&ovrclk_handler,                     .help_text=0x00 },
     // clang-format on

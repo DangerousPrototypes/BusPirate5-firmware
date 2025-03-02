@@ -181,23 +181,29 @@ static_assert(ARRAY_SIZE(_static_portion) == 0x18u); // 24 rows
 //           01:23:45:67:89:AB:CD:EF
 //           ....-....1....-....2... == 23 characters
 //       With NULL terminator it would still fit within 12 rows...
-#define BP_OTP_ROW__BOARD_ID_STRING_OFFSET ((sizeof(BP_OTP_WHITELABEL)/2u) + ARRAY_SIZE(_static_portion))
-#define BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT 0x0Cu // 12 rows
+// This is placed to be at the very end of the whitelabel data page
+//
+#define BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT  (0x0Cu) // 12 rows
+#define BP_OTP_ROW__BOARD_ID_STRING_OFFSET        (0x40u - BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT)
 #define BP_OTP_ROW__BOARD_ID_STRING_MAX_CHARCOUNT ((BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT * 2u) - 1u)
 
 // NOTE: Reserved for product string, which is only portion
 //       that changes length between boards
-#define BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET (    \
-    BP_OTP_ROW__BOARD_ID_STRING_OFFSET +     \
-    BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT \
+//       Due to string re-use, this must be appended after the static portion
+#define BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET ( \
+    (sizeof(BP_OTP_WHITELABEL)/2u) +  \
+    (sizeof(_static_portion)/2u)      \
 )
-#define BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT (0x40u - BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET)
+#define BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT ( \
+    BP_OTP_ROW__BOARD_ID_STRING_OFFSET -       \
+    BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET  \
+)
 #define BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_CHARCOUNT ((BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT * 2u) - 1u)
 
 // These are the offsets ... put here as static asserts simply to help
 // validate the structure of the OTP data
-static_assert(BP_OTP_ROW__BOARD_ID_STRING_OFFSET               == 0x28u);
-static_assert(BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET        == 0x34u);
+static_assert(BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET        == 0x28u);
+static_assert(BP_OTP_ROW__BOARD_ID_STRING_OFFSET               == 0x34u);
 static_assert(BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT  == 0x0Cu);
 static_assert(BP_OTP_ROW__BOARD_ID_STRING_MAX_CHARCOUNT        == 0x17u);
 static_assert(BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_CHARCOUNT == 0x17u);
@@ -245,6 +251,7 @@ void bp_otp_apply_whitelabel_data(void) {
         bp_otp_write_single_row_ecc(row, _static_portion[i]) || DIE();
     }
     PRINT_DEBUG("Whitelabel Debug: Version extension: '%s'\n", _product_string);
+
     // 2. also write the product version extension
     for (uint16_t i = 0; i < product_extension_rows; ++i) {
         uint16_t row = base + 0x28u + i;

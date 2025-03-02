@@ -77,7 +77,7 @@ static char byte_to_printable_char(uint8_t byte) {
     return byte;
 }
 
-typedef struct _OTP_USB_BOOT_FLAGS {
+typedef struct _BP_OTP_USB_BOOT_FLAGS {
     union {
         uint32_t as_uint32;
         struct {
@@ -108,7 +108,36 @@ typedef struct _OTP_USB_BOOT_FLAGS {
             uint32_t _must_be_zero          : 8; // 24..31 are not used in raw OTP data
         };
     };
-} OTP_USB_BOOT_FLAGS;
+} BP_OTP_USB_BOOT_FLAGS;
+static_assert(sizeof(BP_OTP_USB_BOOT_FLAGS) == sizeof(uint32_t), "BP_OTP_USB_BOOT_FLAGS must be 32-bits");
+
+typedef struct _BP_OTP_WHITELABEL_STRDEF {
+    uint16_t character_count : 7;
+    uint16_t is_unicode      : 1; // Unicode only supported for usb manufacturer, product, and serial
+    uint16_t row_offset      : 8; // USB_WHITE_LABEL_ADDR + row_offset == start row for the string
+} BP_OTP_WHITELABEL_STRDEF;
+static_assert(sizeof(BP_OTP_WHITELABEL_STRDEF) == sizeof(uint16_t), "BP_OTP_WHITELABEL_STRDEF must be 16-bits");
+
+typedef struct _BP_OTP_WHITELABEL {
+    uint16_t usb_vid; // USB vendor ID  ... 0x1209 for buspirate
+    uint16_t usb_pid; // USB product ID ... 0x7332 for buspirate UF2 bootloader
+    uint16_t usb_bcd_device_value; // not used by buspirate ... bootrom defaults to 0x0100
+    uint16_t usb_strings_lang_id;  // not used by buspirate ... bootrom defaults to 0x0409 (US English)
+    BP_OTP_WHITELABEL_STRDEF usb_manufacturer;
+    BP_OTP_WHITELABEL_STRDEF usb_product;
+    BP_OTP_WHITELABEL_STRDEF usb_serial;
+    uint16_t usb_config_attributes_max_power; // not used by buspirate ... bootrom defaults to 
+    BP_OTP_WHITELABEL_STRDEF storage_volume_label;
+    BP_OTP_WHITELABEL_STRDEF scsi_vid; // scsi vendor ID  .. "Bus Pir8" for buspirate
+    BP_OTP_WHITELABEL_STRDEF scsi_pid; // scsi product ID
+    BP_OTP_WHITELABEL_STRDEF scsi_rev; // scsi revision
+    BP_OTP_WHITELABEL_STRDEF index_htm_redirect_url;
+    BP_OTP_WHITELABEL_STRDEF index_htm_redirect_name;
+    BP_OTP_WHITELABEL_STRDEF info_uf2_model;
+    BP_OTP_WHITELABEL_STRDEF info_uf2_boardid;
+} BP_OTP_WHITELABEL;
+static_assert(sizeof(BP_OTP_WHITELABEL) == 0x20u, "BP_OTP_WHITELABEL must be 32 bytes (16 rows)");
+
 
 static const uint16_t _static_portion[] = {
     // offset 0x10, chars 0x16: "https://buspirate.com/"
@@ -141,24 +170,49 @@ static const uint16_t _static_portion[] = {
     0x6172, // `ra` // Row 0x0e6 -- offset 0x26
     0x6574, // `te` // Row 0x0e7 -- offset 0x27
 };
-static_assert(ARRAY_SIZE(_static_portion) == 24);
+static_assert(ARRAY_SIZE(_static_portion) == 0x18u); // 24 rows
 
-// NOTE: Reserved for product string:
-//                  // Rows 0x0e8 .. 0x0ef (8 rows == space character + 15 additional characters maximum)
-#define OTP_ROW__PRODUCT_VERSION_STRING_OFFSET 0x28u
-#define OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT 8u
+// NOTE: Reserved for board id string exposed in INFO_UF2.TXT file
+//       Ian is choosing to use this to make it
+//       easier to get the board serial number
+//       formatted as follows:
+//           "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X"
+//
+//           01:23:45:67:89:AB:CD:EF
+//           ....-....1....-....2... == 23 characters
+//       With NULL terminator it would still fit within 12 rows...
+#define BP_OTP_ROW__BOARD_ID_STRING_OFFSET ((sizeof(BP_OTP_WHITELABEL)/2u) + ARRAY_SIZE(_static_portion))
+#define BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT 0x0Cu // 12 rows
+#define BP_OTP_ROW__BOARD_ID_STRING_MAX_CHARCOUNT ((BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT * 2u) - 1u)
 
-// NOTE: Reserved for manufacturing data:
-//                  // Rows 0x0f0 .. 0x0ff (16 rows == 32 characters maximum)
-#define OTP_ROW__MANUFACTURING_DATA_STRING_OFFSET 0x30u
-#define OTP_ROW__MANUFACTURING_DATA_STRING_MAX_ROWCOUNT 16u
+// NOTE: Reserved for product string, which is only portion
+//       that changes length between boards
+#define BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET (    \
+    BP_OTP_ROW__BOARD_ID_STRING_OFFSET +     \
+    BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT \
+)
+#define BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT (0x40u - BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET)
+#define BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_CHARCOUNT ((BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT * 2u) - 1u)
+
+// These are the offsets ... put here as static asserts simply to help
+// validate the structure of the OTP data
+static_assert(BP_OTP_ROW__BOARD_ID_STRING_OFFSET               == 0x28u);
+static_assert(BP_OTP_ROW__PRODUCT_VERSION_STRING_OFFSET        == 0x34u);
+static_assert(BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT  == 0x0Cu);
+static_assert(BP_OTP_ROW__BOARD_ID_STRING_MAX_CHARCOUNT        == 0x17u);
+static_assert(BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_CHARCOUNT == 0x17u);
+
 
 // Verify that everything will fit into one page
+// NOTE: If make these strings have unique addresses or even NULL termination,
+//       then this WILL NOT fit into a single OTP page.  That'll be OK...
+//       especially where those strings are used in at least one other place
+//       in the firmware.
 static_assert(
-    0x10u + // fixed-size whitelabel struct
-    ARRAY_SIZE(_static_portion) +
-    OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT +
-    OTP_ROW__MANUFACTURING_DATA_STRING_MAX_ROWCOUNT
+    (sizeof(BP_OTP_WHITELABEL)/2u)                      + // fixed-size whitelabel struct
+    ARRAY_SIZE(_static_portion)                         + // static non-variable portion
+    BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT     +
+    BP_OTP_ROW__BOARD_ID_STRING_MAX_ROWCOUNT
     <= 0x40u,
     "Whitelabel data will not fit into a single OTP page"
 );
@@ -170,12 +224,7 @@ static const char  _product_string[] = " " BP_OTP_PRODUCT_VERSION_STRING;
 static_assert(sizeof(char) == sizeof(uint8_t), "char must be 8-bits");
 // Since the string includes NULL and whitelabel uses counted strings,
 // can calculate the number of rows needed by simply dividing by 2 (rounds down).
-static_assert(ARRAY_SIZE(_product_string)/2 <= OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT);
-
-// Leaving the manufacturing data portion uncoded...
-// That will be filled in by another process
-#define USB_WHITELABEL_MAX_CHARS_BP_VERSION (OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT*2u)
-#define USB_WHITELABEL_MAX_CHARS_BP_MANU    (OTP_ROW__MANUFACTURING_DATA_STRING_MAX_ROWCOUNT*2u)
+static_assert(ARRAY_SIZE(_product_string)/2 <= BP_OTP_ROW__PRODUCT_VERSION_STRING_MAX_ROWCOUNT);
 
 
 // Restartable whitelabel process ... controlled via RTT (no USB connection required)
@@ -211,12 +260,13 @@ void bp_otp_apply_whitelabel_data(void) {
         bp_otp_write_single_row_ecc(row, data) || DIE();
     }
 
-    // NOTE: DOES NOT WRITE THE MANUFACTURING DATA PORTION
+    // NOTE: MUST UPDATE TO WRITE THE INFO_UF2.TXT BOARD ID
 
     // 3. encode the product string length and offset
     uint16_t tmp_p = 0x2300 | product_char_count;
 
     // 4. Write the portions of the first 16 rows that have valid data:
+    //                                                                                                                                                                    // XXX <= 0x17 (23) chars ... product / revision specific
     PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 0: row 0x%03x\n", base + 0x0u);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x0u, 0x1209u) || DIE();   // USB VID == 0x1209
     PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 1: row 0x%03x\n", base + 0x1u);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x1u, 0x7332u) || DIE();   // USB PID == 0x7332
     //PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index 2: row 0x%03x\n", base + 0x2u); WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0x2u, 0x....u) || DIE();   // USB BCD Device
@@ -230,8 +280,8 @@ void bp_otp_apply_whitelabel_data(void) {
     PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index A: row 0x%03x\n", base + 0xAu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xAu, tmp_p  ) || DIE();   // SCSI INQUIRY PRODUCT  XXX   chars @ offset 0x23
     PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index C: row 0x%03x\n", base + 0xCu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xCu, 0x1016u) || DIE();   // redirect URL          22    chars @ offset 0x10
     PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index D: row 0x%03x\n", base + 0xDu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xDu, 0x140du) || DIE();   // redirect name         13    chars @ offset 0x14
-    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index E: row 0x%03x\n", base + 0xEu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xEu, tmp_p  ) || DIE();   // info_uf2.txt product  XXX   chars @ offset 0x23
-    //PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index F: row 0x%03x\n", base + 0xFu); WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xFu, 0x....u) || DIE();   // info_uf2.txt manufacturing string ... to be added later
+    PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index E: row 0x%03x\n", base + 0xEu);   WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xEu, tmp_p  ) || DIE();   // info_uf2.txt product  XXX   chars @ offset 0x34
+    //PRINT_DEBUG("Whitelabel Debug: Write WHITELABEL index F: row 0x%03x\n", base + 0xFu); WAIT_FOR_KEY(); bp_otp_write_single_row_ecc(base + 0xFu, 0x....u) || DIE();   // info_uf2.txt board ID 23    chars @ offset 0x28
 
     // 5. write the `WHITE_LABEL_ADDR` to point to the base address used here
     // NOTE: this is a fixed OTP row ... only get one shot to write this, so ensuring the above values are correctly written first is important!
@@ -239,8 +289,8 @@ void bp_otp_apply_whitelabel_data(void) {
     bp_otp_write_single_row_ecc(0x05c, base) || DIE();
 
     // 6. NON-ECC write the USB boot flags ... writes go to three (3) consecutive rows
-    // NOTE: Flags can be migrated from 0 --> 1 later.  This is used to allow manufacturing data to be written later, for example.
-    OTP_USB_BOOT_FLAGS usb_boot_flags = {
+    // NOTE: Flags can be migrated from 0 --> 1 later.  This is used to allow board id to be written later, for example.
+    BP_OTP_USB_BOOT_FLAGS usb_boot_flags = {
         .usb_vid_valid          = 1,
         .usb_pid_valid          = 1,
         .usb_bcd_valid          = 0,
@@ -256,14 +306,14 @@ void bp_otp_apply_whitelabel_data(void) {
         .redirect_url_valid     = 1,
         .redirect_name_valid    = 1,
         .info_uf2_model_valid   = 1,
-        .info_uf2_boardid_valid = 0,
+        .info_uf2_boardid_valid = 0, // TODO -- update this to 1!
         .white_label_addr_valid = 1,
     };
     hard_assert(usb_boot_flags.as_uint32 == 0x407733u); // manually calculated ... should match the friendly description above.
     
     // 7. Read the existing USB boot flags
     // NOTE: This is a fixed set of OTP rows, stored redundantly using 2-of-3 voting
-    OTP_USB_BOOT_FLAGS old_usb_boot_flags;
+    BP_OTP_USB_BOOT_FLAGS old_usb_boot_flags;
     if (!bp_otp_read_redundant_rows_2_of_3(0x059, &old_usb_boot_flags.as_uint32)) {
         PRINT_ERROR("Whitelabel Error: Raw OTP rows 0x59..0x5B (old USB BOOT FLAGS) did not find majority agreement\n");
         return;
@@ -278,9 +328,9 @@ void bp_otp_apply_whitelabel_data(void) {
             old_usb_boot_flags.as_uint32, usb_boot_flags.as_uint32,
             old_usb_boot_flags.as_uint32 & ~usb_boot_flags.as_uint32
         );
-        // continue anyways?  This allow the code to run even after manufacturing string has been applied....
+        // continue anyways? // TODO -- update this to exit as it's an error!
     }
-    OTP_USB_BOOT_FLAGS new_flags = { .as_uint32 = old_usb_boot_flags.as_uint32 | usb_boot_flags.as_uint32 };
+    BP_OTP_USB_BOOT_FLAGS new_flags = { .as_uint32 = old_usb_boot_flags.as_uint32 | usb_boot_flags.as_uint32 };
 
     PRINT_DEBUG("Whitelabel Debug: Writing USB BOOT FLAGS: 0x%06x -> 0x%06x\n", old_usb_boot_flags.as_uint32, new_flags);  WAIT_FOR_KEY();
     if (!bp_otp_write_redundant_rows_2_of_3(0x059, new_flags.as_uint32)) {
@@ -294,15 +344,15 @@ void bp_otp_apply_whitelabel_data(void) {
     // That's it!
 }
 
-
-bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
+// TODO -- Remove below as no longer relevant / required
+bool bp_otp_apply_manufacturing_string(const char* board_id_string) {
 
     // // Uncomment next line to single-step (using RTT for input)
     // g_WaitForKey = true;
 
     uint16_t base;
     // Follow the breadcrumbs to find the base address
-    OTP_USB_BOOT_FLAGS old_usb_boot_flags;
+    BP_OTP_USB_BOOT_FLAGS old_usb_boot_flags;
     if (!bp_otp_read_redundant_rows_2_of_3(0x059, &old_usb_boot_flags.as_uint32)) {
         PRINT_ERROR("Whitelabel Error: Raw OTP rows 0x59..0x5B (USB BOOT FLAGS) did not find majority agreement\n");
         return false;
@@ -315,7 +365,7 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
         return false;
     }
     if (old_usb_boot_flags.info_uf2_boardid_valid) {
-        PRINT_DEBUG("Whitelabel Debug: Manufacturing string already set ... exiting\n");
+        PRINT_DEBUG("Whitelabel Debug: boardid string already set ... exiting\n");
         return true;
     }
 
@@ -344,55 +394,55 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
 
     PRINT_DEBUG("Whitelabel Debug: Static portion of the strings look ok\n");
 
-    size_t char_count = strlen(manufacturing_data_string);
-    if (char_count > USB_WHITELABEL_MAX_CHARS_BP_MANU) {
-        PRINT_ERROR("Whitelabel Error: Manufacturing data string is too long (%d chars > %d chars)\n", char_count, USB_WHITELABEL_MAX_CHARS_BP_MANU);
+    size_t char_count = strlen(board_id_string);
+    if (char_count > BP_OTP_ROW__BOARD_ID_STRING_MAX_CHARCOUNT) {
+        PRINT_ERROR("Whitelabel Error: board id string is too long (%d chars > %d chars)\n", char_count, BP_OTP_ROW__BOARD_ID_STRING_MAX_CHARCOUNT);
         return false;
     }
 
-    // create the STRDEF value for the manufacturing data.
+    // create the STRDEF value for the board id.
     // It currently goes to a fixed offset from the base address.
-    uint16_t strdef = OTP_ROW__MANUFACTURING_DATA_STRING_OFFSET;
+    uint16_t strdef = BP_OTP_ROW__BOARD_ID_STRING_OFFSET;
     strdef <<= 8;
     strdef |= char_count;
 
     // check if the STRDEF is already set ... if it is, verify it matches the current provided string's length
     uint16_t oldstrdef;
     if (bp_otp_read_single_row_ecc(base + 0xFu, &oldstrdef)) {
-        PRINT_ERROR("Whitelabel Error: Failed to read prior manufacturing STRDEF\n");
+        PRINT_ERROR("Whitelabel Error: Failed to read prior board id STRDEF\n");
         return false;
     } else if ((oldstrdef != 0u) && (oldstrdef != strdef)) {
-        PRINT_ERROR("Whitelabel Error: Old manufacturing STRDEF (0x%06x) does not match new (0x%06x)\n", oldstrdef, strdef);
+        PRINT_ERROR("Whitelabel Error: Old board id STRDEF (0x%06x) does not match new (0x%06x)\n", oldstrdef, strdef);
         return false;
     }
 
-    PRINT_DEBUG("Whitelabel Debug: Writing the manufacturing string data\n"); WAIT_FOR_KEY();
+    PRINT_DEBUG("Whitelabel Debug: Writing the board id string data\n"); WAIT_FOR_KEY();
 
     // first write the actual string's data
     for (size_t i = 0; i < (char_count+1)/2; ++i) {
-        uint16_t row = base + OTP_ROW__MANUFACTURING_DATA_STRING_OFFSET + i;
+        uint16_t row = base + BP_OTP_ROW__BOARD_ID_STRING_OFFSET + i;
         uint16_t data = 0;
         // First  character is stored in LSB
         // Second character is stored in MSB
-        data  |= (uint8_t)(manufacturing_data_string[2u * i + 1]);
+        data  |= (uint8_t)(board_id_string[2u * i + 1]);
         data <<= 8;
-        data  |= (uint8_t)(manufacturing_data_string[2u * i    ]);
+        data  |= (uint8_t)(board_id_string[2u * i    ]);
 
         PRINT_DEBUG("Whitelabel Debug: Writing row 0x%03x: 0x%04x (`%c%c`)\n", row, data, byte_to_printable_char(data & 0xFFu), byte_to_printable_char(data >> 8)); WAIT_FOR_KEY();
         if (!bp_otp_write_single_row_ecc(row, data)) {
-            PRINT_ERROR("Whitelabel Error: Failed with partial manufacturing string data written.\n");
+            PRINT_ERROR("Whitelabel Error: Failed with partial board id string data written.\n");
             return false;
         }
     }
 
     PRINT_DEBUG("Whitelabel Debug: Writing row 0x%03x: STRDEF %04x\n", base + 0xFu, strdef); WAIT_FOR_KEY();
     if (!bp_otp_write_single_row_ecc(base + 0xFu, strdef)) {
-        PRINT_ERROR("Whitelabel Error: Failed to write manufacturing string length and offset\n");
+        PRINT_ERROR("Whitelabel Error: Failed to write board id STRDEF\n");
     }
 
-    PRINT_DEBUG("Whitelabel Debug: Updating the USB_BOOT_FLAGS to mark the manufacturing string as valid\n");
+    PRINT_DEBUG("Whitelabel Debug: Updating the USB_BOOT_FLAGS to mark the board id string as valid\n");
 
-    OTP_USB_BOOT_FLAGS new_usb_boot_flags = { .as_uint32 = old_usb_boot_flags.as_uint32 };
+    BP_OTP_USB_BOOT_FLAGS new_usb_boot_flags = { .as_uint32 = old_usb_boot_flags.as_uint32 };
     new_usb_boot_flags.info_uf2_boardid_valid = 1;
 
     PRINT_DEBUG("Whitelabel Debug: Writing rows 0x059..0x05B: 0x%06x --> 0x%06x\n", old_usb_boot_flags.as_uint32, new_usb_boot_flags.as_uint32); WAIT_FOR_KEY();
@@ -421,7 +471,7 @@ bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string) {
         return false;
     }
 
-    PRINT_DEBUG("Whitelabel Debug: Manufacturing string successfully applied and locked down.\n");
+    PRINT_DEBUG("Whitelabel Debug: Board ID string successfully applied and locked down.\n");
     return true;
 }
 

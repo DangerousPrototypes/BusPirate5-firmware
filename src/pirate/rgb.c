@@ -11,17 +11,17 @@
 #include "pirate/rgb.h"
 #include "pio_config.h"
 
-//        REV10                     REV8
+//       All others                BP5 REV8
 //
 //    11 10  9  8  7            10  9  8  7  6
-// 12    +-------+    6     11    +-------+     5
-// 13    |       |    5     12    |       |     4
-// USB   | OLED  |   []     USB   | OLED  |    []
-// 14    |       |    4     13    |       |     3
-// 15    +-------+    3     14    +-------+     2
+// 12    +-------+    6     11     +-------+     5
+// 13    |       |    5     12     |       |     4
+// USB   | OLED  |   []     USB    | OLED  |    []
+// 14    |       |    4     13     |       |     3
+// 15    +-------+    3     14     +-------+     2
 //    16 17  0  1  2            15  x  x  0  1
 //
-#define COUNT_OF_PIXELS RGB_LEN // 18 for Rev10, 16 for Rev8
+#define COUNT_OF_PIXELS RGB_LEN // 16 for 5Rev8;  Otherwise 18 (for 5Rev10+, 5XL, 6, 7...)
 
 #define BP_HW_RGB_HAS_ALL_PIXELS !(BP_VER==5 && BP_REV<=9)
 

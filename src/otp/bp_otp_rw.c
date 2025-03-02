@@ -80,6 +80,19 @@ static int read_ecc_wrapper(uint16_t starting_row, void* buffer, size_t buffer_s
     cmd.flags |= OTP_CMD_ECC_BITS;
     return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
 }
+
+// RP2350 OTP storage is strongly recommended to use some form of
+// error correction.  Most rows will use ECC, but three other forms exist:
+// (1) 2-of-3 voting of a single byte in a single row
+// (2) 2-of-3 voting of 24-bits across three consecutive OTP rows (RBIT-3)
+// (3) 3-of-8 voting of 24-bits across eight consecutive OTP rows (RBIT-8)
+//
+// A note on RBIT-8:
+// RBIT-8 is used _ONLY_ for CRIT0 and CRIT1. It works similarly to RBIT-3,
+// except that each bit is considered set if at least three (3) of the eight
+// rows have that bit set.  Thus, it's not a simple majority vote, instead
+// tending to favor considering bits as set.
+// 
 static bool write_single_otp_ecc_row(uint16_t row, uint16_t data) {
     uint16_t existing_data;
     int r;

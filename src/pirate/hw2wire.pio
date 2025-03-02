@@ -85,7 +85,11 @@ static inline void hw2wire_program_init(PIO pio, uint sm, uint offset, uint pin_
     // Try to avoid glitching the bus while connecting the IOs. Get things set
     // up so that pin is driven down when PIO asserts OE low, and pulled up
     // otherwise.
-    #if RPI_PLATFORM != RP2350
+    #if RPI_PLATFORM == RP2040
+    // TODO: Document what is done on RP2350, and why this works.
+    //       Is there intentional split ownership in RP2040 of a GPIO used by PIO?
+    //       Is there a bug on RP2350 that prevents this?
+    //       Is this a workaround for a bug on RP2040?
     gpio_pull_down(pin_scl); //we pull down so we can output 0 when the buffer is an output without manipulating the actual scl/sda pin directions
     gpio_pull_down(pin_sda);
     #endif

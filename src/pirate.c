@@ -137,18 +137,12 @@ static void main_system_initialization(void) {
     tx_fifo_init();
     rx_fifo_init();
 
-#if defined(BP_MANUFACTURING_TEST_MODE) && BP_VER != 5
+#if defined(BP_MANUFACTURING_TEST_MODE) && RPI_PLATFORM == RP2350
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: OTP whitelabel update\n"
         );
-    bp_otp_apply_whitelabel_data(); // inline no-op on BP5
+    bp_otp_apply_whitelabel_data();
 #endif // BP_MANUFACTURING_TEST_MODE
-
-    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-        "Init: OTP softlock\n"
-        );
-    softlock_all_otp(); // 
-
 
 #if (BP_VER == 5)
     uint8_t bp_rev = mcu_detect_revision();

@@ -4,7 +4,7 @@
 #include "pirate/shift.h"
 #include "pirate/pullup.h"
 
-#if BP_HW_HAS_PULLX
+#if BP_HW_PULLX
     #include "hardware/i2c.h"
 
     #define R2K2_MASK 0x01
@@ -138,7 +138,7 @@
 #endif
 
 void pullup_enable(void) {
-    #if BP_HW_HAS_PULLX
+    #if BP_HW_PULLX
         //to test: all have 10K pullup 
         //pullx_set_all(0xf000, 0xf000);
         pullx_set_all_update(PULLX_10K, true);
@@ -154,7 +154,7 @@ void pullup_enable(void) {
 }
 
 void pullup_disable(void) {
-    #if BP_HW_HAS_PULLX
+    #if BP_HW_PULLX
         // 1M pull-down by default
         // pullx_set_all(0x0f00, 0x0000);
         pullx_set_all_update(PULLX_1M, false);
@@ -170,7 +170,7 @@ void pullup_disable(void) {
 }
 
 void pullup_init(void) {
-    #if BP_HW_HAS_PULLX
+    #if BP_HW_PULLX
         pullx_set_all_update(PULLX_1M, false);  
     #elif (BP_VER == 5 || BP_VER == XL5)
         //nothing to do

@@ -10,7 +10,7 @@
 #include "pirate/amux.h"
 #include "pirate/pullup.h"
 
-#if BP_HW_HAS_PULLX
+#if BP_HW_PULLX
 const char* const p_usage[] = {
     "P [resistor value] [-d] [-p <pins>]",
     "Quick enable 10K pull-up resistors on all pins: P",
@@ -39,7 +39,7 @@ const struct ui_help_options p_options[] = {
 };
 #endif
 
-#if BP_HW_HAS_PULLX
+#if BP_HW_PULLX
     void pullx_show_settings(void){
         //display the current configuration
         for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
@@ -123,7 +123,7 @@ void pullups_enable_handler(struct command_result* res) {
         return;
     }
 
-    #if BP_HW_HAS_PULLX
+    #if BP_HW_PULLX
         uint8_t pullx;
         uint8_t pin_args;
         bool direction;
@@ -186,7 +186,7 @@ void pullups_enable_handler(struct command_result* res) {
 void pullups_disable(void) {   
     system_config.pullup_enabled = 0;
     system_config.info_bar_changed = true;
-    #if BP_HW_HAS_PULLX
+    #if BP_HW_PULLX
         //1M pull-down when disabled
         pullx_set_all_update(PULLX_1M, false);
     #else
@@ -207,7 +207,7 @@ void pullups_disable_handler(struct command_result* res) {
            ui_term_color_reset(),
            GET_T(T_MODE_DISABLED));
   
-    #if BP_HW_HAS_PULLX
+    #if BP_HW_PULLX
         //show settings
         pullx_show_settings();    
     #endif

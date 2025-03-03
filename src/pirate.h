@@ -96,7 +96,7 @@ enum {
         #include "platform/bpi6-rev2.h"  
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
-        #define BP_HW_HAS_PULLX 1
+        #define BP_HW_PULLX 1
         #define BP_HW_IOEXP_NONE 1
         #define BP_HW_FALA_BUFFER 1
         #define BP_HW_PSU_PWM 1
@@ -104,7 +104,7 @@ enum {
         #include "platform/bpi7-rev0.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
-        #define BP_HW_HAS_PULLX 1
+        #define BP_HW_PULLX 1
         #define BP_HW_IOEXP_I2C 1
         #define BP_HW_FALA_BUFFER 1
         #define BP_HW_PSU_DAC 1

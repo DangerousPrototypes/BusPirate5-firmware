@@ -35,7 +35,7 @@
 #define WAIT_FOR_KEY() MyWaitForAnyKey_with_discards()
 
 // decide where to single-step through the whitelabel process ... controlled via RTT (no USB connection required)
-static volatile bool g_WaitForKey = true;
+static volatile bool g_WaitForKey = false;
 static void MyWaitForAnyKey_with_discards(void) {
     if (!g_WaitForKey) {
         return;
@@ -434,7 +434,7 @@ bool internal_get_whitelabel_row_range(BP_OTP_ROW_RANGE *result_out) {
 void bp_otp_apply_whitelabel_data(void) {
 
     // // Uncomment next line to single-step (using RTT for input)
-    g_WaitForKey = true;
+    // g_WaitForKey = true;
 
     static const uint16_t base = 0x0c0; // written so this can be changed easily
     static const size_t product_extension_rows = sizeof(_product_string) / 2u; // sizeof() includes null; rounds down to even number
@@ -570,7 +570,7 @@ bool bp_otp_lock_whitelabel(void) {
     const uint16_t expect_used_row_count = 0x040;
 
     // // Uncomment next line to single-step (using RTT for input)
-    g_WaitForKey = true;
+    // g_WaitForKey = true;
 
     BP_OTP_USB_BOOT_FLAGS old_usb_boot_flags;
     if (!bp_otp_read_redundant_rows_2_of_3(0x059, &old_usb_boot_flags.as_uint32)) {

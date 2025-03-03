@@ -70,7 +70,8 @@ uint32_t bp_otp_decode_raw(uint32_t data); // [[unsequenced]]
     // so code calling it on RP2040 is probably in error?
     // This is a nicer error message than a linker error....
     __attribute__((deprecated)) inline void bp_otp_apply_whitelabel_data(void) { }
-    __attribute__((deprecated)) inline bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string)        { return false; }
+    __attribute__((deprecated)) inline bool bp_otp_lock_whitelabel(void) { return false; }
+
     __attribute__((deprecated)) inline bool bp_otp_write_single_row_raw(uint16_t row, uint32_t new_value)                   { return false; }
     __attribute__((deprecated)) inline bool bp_otp_read_single_row_raw(uint16_t row, uint32_t* out_data)                    { return false; }
     __attribute__((deprecated)) inline bool bp_otp_write_single_row_ecc(uint16_t row, uint16_t new_value)                   { return false; }
@@ -83,7 +84,7 @@ uint32_t bp_otp_decode_raw(uint32_t data); // [[unsequenced]]
 
 #else
     void bp_otp_apply_whitelabel_data(void);
-    bool bp_otp_apply_manufacturing_string(const char* manufacturing_data_string);
+    bool bp_otp_lock_whitelabel(void);
 
     // RP2350 OTP can encode data in multiple ways:
     // * 24 bits of raw data (no error correction / detection)

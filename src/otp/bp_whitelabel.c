@@ -464,7 +464,7 @@ void bp_otp_apply_whitelabel_data(void) {
         bp_otp_write_single_row_ecc(row, data) || DIE();
     }
 
-    // 3. write the INFO_UF2.TXT board id
+    // 3. write the INFO_UF2.TXT board id (serial number)
     if (true) {
         uint8_t board_id_as_string[BP_OTP_ROW__BOARD_ID_STRING_MAX_CHARCOUNT + 1u] = { 0 };
         pico_unique_board_id_t id;

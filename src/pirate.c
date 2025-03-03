@@ -60,6 +60,7 @@
     #include "hardware/regs/otp.h"
 #endif
 #include "otp/bp_otp.h" // OTP related functions and definitions
+#include <pico/unique_id.h>
 
 
 static mutex_t spi_mutex;
@@ -662,13 +663,15 @@ void main(void) {
         BP_FIRMWARE_HASH,
         BP_FIRMWARE_TIMESTAMP
         );
+
+    pico_unique_board_id_t id;
+    pico_get_unique_board_id(&id);
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_WARNING, BP_DEBUG_CAT_EARLY_BOOT,
-        "Init: %s with %s RAM, %s FLASH, S/N %08X%08X\n",
+        "Init: %s with %s RAM, %s FLASH, S/N %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X\n",
            BP_HARDWARE_MCU,
            BP_HARDWARE_RAM,
            BP_HARDWARE_FLASH,
-           (uint32_t)(mcu_get_unique_id() >> 32),
-           (uint32_t)(mcu_get_unique_id() & 0xFFFFFFFFu)
+           id.id[0], id.id[1], id.id[2], id.id[3], id.id[4], id.id[5], id.id[6], id.id[7]
            );
     main_system_initialization();
 

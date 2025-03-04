@@ -17,9 +17,9 @@ static volatile enum button_codes button_code = BP_BUTT_NO_PRESS;
 
 // poll the value of button button_id
 bool button_get(uint8_t button_id) {
-    #if RPI_PLATFORM == RP2040
+    #if RPI_PLATFORM == RP2040    // BUGBUG / TODO - This is not properly switched based on platform, but rather based on if the board's button is active high or active low.
         return gpio_get(EXT1);
-    #elif RPI_PLATFORM == RP2350
+    #elif RPI_PLATFORM == RP2350  // BUGBUG / TODO - This is not properly switched based on platform, but rather based on if the board's button is active high or active low.
         return !gpio_get(EXT1);
     #else
         #error "Platform not speficied in button.c"
@@ -71,9 +71,9 @@ void button_irq_disable(uint8_t button_id) {
 void button_init(void) {
     gpio_set_function(EXT1, GPIO_FUNC_SIO);
     gpio_set_dir(EXT1, GPIO_IN);
-    #if (RPI_PLATFORM == RP2040)
+    #if (RPI_PLATFORM == RP2040)    // BUGBUG / TODO - This is not properly switched based on platform, but rather based on if the board's button is active high or active low.
         gpio_pull_down(EXT1);
-    #elif (RPI_PLATFORM == RP2350)
+    #elif (RPI_PLATFORM == RP2350)  // BUGBUG / TODO - This is not properly switched based on platform, but rather based on if the board's button is active high or active low.
         gpio_pull_up(EXT1);
     #else
         #error "Platform not speficied in button.c"

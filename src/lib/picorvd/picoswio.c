@@ -70,9 +70,13 @@ void ch32vswio_reset(int pin, int dirpin) {
 
    sm_config_set_clkdiv(&c, clock_get_hz(clk_sys)/10000000);
 
-#if BP_VER==5
-  gpio_pull_down(pin);
-  #endif
+#if RPI_PLATFORM == RP2040
+ // TODO: Document what is done on RP2350, and why this works.
+ //       Is there intentional split ownership in RP2040 of a GPIO used by PIO?
+ //       Is there a bug on RP2350 that prevents this?
+ //       Is this a workaround for a bug on RP2040?
+ gpio_pull_down(pin);
+#endif
   pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<pin)); //read pins to input (0, mask)  
   pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, (1u<<dirpin), (1u<<dirpin)); //buf pins to output (pins, mask)    
   pio_sm_set_pins_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<dirpin)); //buf dir to 0, buffer input/HiZ on the bus

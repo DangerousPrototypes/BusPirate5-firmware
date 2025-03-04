@@ -25,6 +25,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result* res) {
 
     printf("Jump to bootloader for firmware upgrades\r\n\r\n%s\r\n", BP_HARDWARE_VERSION);
     printf("Firmware download:\r\nhttps://forum.buspirate.com/t/bus-pirate-5-auto-build-main-branch/20/999999\r\n");
+    // BUGBUG / TODO - make this switch based on #if RPI_PLATFORM == RP2350 or == RP2040, and pull USB disk name from OTP directory
     #if BP_VER == 5
         printf("Hardware revision: %d\r\n", system_config.hardware_revision);
         printf("Firmware file: bus_pirate5_rev%d.uf2\r\n", system_config.hardware_revision);

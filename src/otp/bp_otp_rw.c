@@ -80,6 +80,19 @@ static int read_ecc_wrapper(uint16_t starting_row, void* buffer, size_t buffer_s
     cmd.flags |= OTP_CMD_ECC_BITS;
     return rom_func_otp_access((uint8_t*)buffer, buffer_size, cmd);
 }
+
+// RP2350 OTP storage is strongly recommended to use some form of
+// error correction.  Most rows will use ECC, but three other forms exist:
+// (1) 2-of-3 voting of a single byte in a single row
+// (2) 2-of-3 voting of 24-bits across three consecutive OTP rows (RBIT-3)
+// (3) 3-of-8 voting of 24-bits across eight consecutive OTP rows (RBIT-8)
+//
+// A note on RBIT-8:
+// RBIT-8 is used _ONLY_ for CRIT0 and CRIT1. It works similarly to RBIT-3,
+// except that each bit is considered set if at least three (3) of the eight
+// rows have that bit set.  Thus, it's not a simple majority vote, instead
+// tending to favor considering bits as set.
+// 
 static bool write_single_otp_ecc_row(uint16_t row, uint16_t data) {
     uint16_t existing_data;
     int r;
@@ -353,18 +366,20 @@ static bool write_otp_byte_3x(uint16_t row, uint8_t new_value) {
 /// Only the below are the public API functions.
 
 
+//#define BP_USE_VIRTUALIZED_OTP
 #if defined(BP_USE_VIRTUALIZED_OTP)
 
 // Enable "virtualized" OTP ... useful for testing.
 // 8k of OTP is a lot to virtualize...
-// maybe only track written sections up to a fixed maximum,
-// and pretend all other sections are filled with 0xFFFFFFu?
+// maybe only track written sections up to a fixed maximum?
+// For any other sections, fallback to reading the actual OTP?
 typedef struct _BP_OTP_VIRTUALIZED_PAGE {
     uint16_t start_row;    // If zero, this page hasn't been written to yet.
     uint16_t rfu_padding;
     BP_OTP_RAW_READ_RESULT data[0x40];   // each page stores 0x40 (64) rows of OTP data
 } BP_OTP_VIRTUALIZED_PAGE;
-static BP_OTP_VIRTUALIZED_PAGE virtualized_otp[40] = NULL;
+static BP_OTP_VIRTUALIZED_PAGE virtualized_otp[40] = { };
+static bool virtualized_otp_full = false;
 
 // probably want a helper function to map from row to virtualized page (nullptr if not exists)
 // Set allocate_if_needed only when next action is to write to the page.
@@ -383,10 +398,26 @@ static inline BP_OTP_VIRTUALIZED_PAGE* ROW_TO_VIRTUALIZED_PAGE(uint16_t row, boo
     if ((result == NULL) && allocate_if_needed) {
         for (size_t i = 0; (result == NULL) && (i < ARRAY_SIZE(virtualized_otp)); ++i) {
             if (virtualized_otp[i].start_row == 0u) {
-                result = &virtualized_otp[i];
-                result->start_row = page_start_row;
+                BP_OTP_VIRTUALIZED_PAGE* tmp = &virtualized_otp[i];
+                // read the page from OTP into the virtualized page...
+                if (read_raw_wrapper(pages_start_row, tmp->data, sizeof(tmp->data)) != BOOTROM_OK) {
+                    tmp->start_row = page_start_row;
+                    result = tmp;
+                }
             }
-        }    
+        }
+    }
+    // NOTE: it's possible to return NULL even when not full, when unable to read the page from OTP
+    if ((result == NULL) && allocate_if_needed) {
+        bool full = true;
+        for (size_t i = 0; (result == NULL) && (i < ARRAY_SIZE(virtualized_otp)); ++i) {
+            if (virtualized_otp[i].start_row == 0u) {
+                full = false;
+            }
+        }
+        if (full) {
+            virtualized_otp_full = true;
+        }
     }
     return result;
 }

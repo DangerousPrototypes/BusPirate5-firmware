@@ -144,6 +144,7 @@ static void sump_do_meta(void) {
 
     sysclk = clock_get_hz(clk_sys) / SAMPLING_DIVIDER;
     snprintf(cpu, sizeof(cpu), "RP2040 %uMhz", sysclk / ONE_MHZ);
+    // BUGBUG / TODO - make this switch based on #if RPI_PLATFORM == RP2350 or == RP2040, and pull meta name from OTP directory on RP2350
     #if (BP_VER == 5)
         ptr = sump_add_metas(ptr, SUMP_META_NAME, "Bus Pirate 5");
     #elif (BP_VER == XL5)

@@ -305,9 +305,17 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
         // 16x  uint16_t to encode 64-bit value as hex (16x nibbles)
         static_assert(MAXIMUM_DESCRIPTOR_STRING_ELEMENT_COUNT >= 17);
         uint64_t unique_id = mcu_get_unique_id();
-        for (uint_fast8_t t = 0; t < 16; t++) {
-            uint8_t nibble = (unique_id >> (t * 4u)) & 0xF;
-            _desc_str[16 - t] = nibble < 10 ? '0' + nibble : 'A' + nibble - 10;
+        // This is ... not great, as it appears to reverse the order of the nibbles
+        // Use a technique identical to other serial numbers in the firmware
+        // which concatenate the bytes from least-significant byte to most-significant byte
+        // processing a single byte at a time.
+        for (uint_fast8_t t = 0u; t < 8u; t++) {
+            // t selects the byte; nibble1 is the high nibble, nibble2 is the low nibble
+            uint8_t tmp     = (unique_id >> (t * 8u)) & 0xFFu;
+            uint8_t nibble1 = (tmp       >> 4) & 0xFu;
+            uint8_t nibble2 = (tmp       >> 0) & 0xFu;
+            _desc_str[(2u*t) + 0u] = nibble1 < 10u ? '0' + nibble1 : 'A' + nibble1 - 10u;
+            _desc_str[(2u*t) + 1u] = nibble2 < 10u ? '0' + nibble2 : 'A' + nibble2 - 10u;
         }
         chr_count = 16;
     } else if (index >= STRING_DESC_ARR_ELEMENT_COUNT) { // if not in table, return NULL

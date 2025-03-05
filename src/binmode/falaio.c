@@ -66,7 +66,7 @@ void falaio_setup(void) {
 }
 
 void falaio_setup_message(void){
-#if BP_VER < 6
+#if ! BP_HW_FALA_BUFFER
     printf("%sWarning: What you see may not be what you get!%s\r\n", ui_term_color_error(), ui_term_color_reset());
     printf("%sThis hardware version captures samples from behind the IO buffer.%s\r\n",
             ui_term_color_info(),

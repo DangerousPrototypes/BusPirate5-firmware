@@ -1,7 +1,15 @@
+; pico-i2c-sniffer 
+; https://github.com/jjsch-dev/pico_i2c_sniffer
+; MIT License
+; Modified for the Bus Pirate 5+
+; 5 MARCH 2025 - Ian Lesnet
+
+; ** Modified from the original code so SDA and SCL are consecutive pins.
 .define PUBLIC SDA_PIN     8    ; Input for i2c data.
-.define PUBLIC EV0_PIN     9    ; Input/Output for bit 0 of event code.
-.define PUBLIC EV1_PIN     10    ; Input/Output for bit 1 of event code.
-.define PUBLIC SCL_PIN     11    ; Input for i2c clock.
+.define PUBLIC SCL_PIN     9    ; Input for i2c clock.
+.define PUBLIC EV0_PIN     10    ; Input/Output for bit 0 of event code.
+.define PUBLIC EV1_PIN     11    ; Input/Output for bit 1 of event code.
+
 
 .define PUBLIC IRQ_EVENT   7    
 
@@ -64,10 +72,11 @@ wait_sda_high:
 
 .program i2c_main
 
+; ** Modified from the original code so SDA and SCL are consecutive pins.
 ; Wait for events from the state machines (START/STOP/DATA) 
 ; and fill the communication FIFO of the APP.
 ; NOTE: as MOV and IN use PINS, they must be consecutive and in this 
-; order (B0, B1, B2): SDA, EV1, EV0. And to know if the event is 
+; order (B0, B1, B2, B3): SDA, SCL, EV1, EV0. And to know if the event is 
 ; data or (start/stop), you have to use the JMP instruction that allows 
 ; you to configure the PIN independently of the PINS.
 
@@ -78,9 +87,9 @@ wait_irq_event:
     in pins, 1              ; Update the ISR register with the SDA value. 
     jmp wait_irq_event      ; loads it into the FIFO when it reaches 9 bits.
 
-send_event:
-    mov isr, pins           ; Load the EV1(3), EV0(1), SDA(0). 
-    in NULL, 9              ; The event code starts at bit 11 and ends at 12.
+send_event:                 ; ** Modified from the original code so SDA and SCL are consecutive pins.
+    mov isr, pins           ; Load the EV1(3), EV0(2), SCL(1), SDA(0). 
+    in NULL, 9              ; The event code starts at bit 12 and ends at 13.
 .wrap
 
 % c-sdk {
@@ -212,12 +221,14 @@ void i2c_main_program_init(PIO pio, uint sm, uint offset, float div) {
     sm_config_set_in_pins(&c, SDA_PIN);
 
     // Set the pin SDA, EV0 and EV1 direction to input (in PIO)
-    pio_sm_set_consecutive_pindirs(pio, sm, SDA_PIN, 3, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, SDA_PIN, 4, false);
     
     // Connect EV0_PIN to JMP pin to test the event code.
     sm_config_set_jmp_pin(&c, EV0_PIN);
     
     // I2C is MSB first then: shift to left, auto push, threshold = 8 datos + 1 ack
+    // note: a MOV ISR resets the FIFO, which happens at end of byte
+    // PIO does a IN NULL 9, so the threshold is 9 with autopush, weird
     sm_config_set_in_shift(&c, false, true, 9);
 
     // It doubles the depth of the FIFO, because it also uses the transmitting one.

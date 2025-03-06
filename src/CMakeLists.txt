@@ -166,6 +166,8 @@ set(buspirate_common
         lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c
         lib/tsl2561/driver_tsl2561.h
+        commands/i2c/sniff.c 
+        commands/i2c/sniff.h
 
         # SPI
         mode/hwspi.c
@@ -543,6 +545,7 @@ foreach(revision ${revisions})
         #pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pio_pwm/pwm.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/irio.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/commands/uart/glitch.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico-i2c-sniff/i2c_sniffer.pio)
 
         pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")

@@ -535,6 +535,8 @@ enum T_translations{
     T_SPI_CMD_SNIFF,
     T_HELP_UART_GLITCH,
     T_HELP_UART_GLITCH_CONFIG,
+    T_I2C_SNIFF,
+    T_I2C_SNIFF_QUIET,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

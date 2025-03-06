@@ -29,12 +29,14 @@ const char* const i2c_sniff_help[] = {
     "Start the I2C sniffer: sniff",
     "Supress (quiet) ACK in output: sniff -q",
     "",
-    "pico-i2c-sniff by @jjsch-dev https://github.com/jjsch-dev/pico_i2c_sniffer"
+    "pico-i2c-sniff by @jjsch-dev https://github.com/jjsch-dev/pico_i2c_sniffer",
+    "Max speed: 500kHz",
 };
 
 const struct ui_help_options i2c_sniff_options[] = {
-    { 1, "", T_HELP_FLAG },
-    { 0, "", T_HELP_FLAG },
+    { 1, "", T_I2C_SNIFF },
+    { 0, "q", T_I2C_SNIFF_QUIET },
+    { 0, "h", T_HELP_FLAG },
 };
 
 void i2c_sniff(struct command_result* res){ 
@@ -102,6 +104,12 @@ void i2c_sniff(struct command_result* res){
 
     printf("Press x to exit\r\n");
 
+    //attempt to drain the FIFO of any spurious data
+    busy_wait_ms(10);
+    while(pio_sm_get_rx_fifo_level(pio_main.pio, pio_main.sm ) > 0){
+        pio_sm_get(pio_main.pio, pio_main.sm);
+    }
+
     if(quiet){  // we duplicate the loop to avoid the quiet test inside the time sensitive parts
                 // this is cheating, we really should have a buffer and a separate thread to handle the output
         printf("Quiet mode enabled, ACKs will not be displayed\r\n");
@@ -123,9 +131,9 @@ void i2c_sniff(struct command_result* res){
                     printf("]\r\n");
                 } else if (ev_code == EV_DATA) {
                     if(ack){
-                        printf(" 0x%02X\r\n", data);
+                        printf(" 0x%02X", data);
                     }else{
-                        printf(" 0x%02X-\r\n", data);
+                        printf(" 0x%02X-", data);
                     }
                 } else {
                     printf("U\r\n");

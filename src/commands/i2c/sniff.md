@@ -62,7 +62,6 @@ Type ```sniff -h``` to see the most recent options and usage info.
 
 In sniffer mode pins IO2 and IO3 are used internally to track the I2C bus state. They will be labeled EV0 and EV1, do not make any external connections to these pins.
 
-
 :::warning
 Do not connect to IO2 (EV0) or IO3 (EV1) in I2C sniffer mode.
 :::

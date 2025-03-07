@@ -351,6 +351,11 @@ bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char* str) {
                 return false;
             }
         } else {
+            cmdln_try_peek(command_info.startptr + (rptr), &c);
+            //see if this is a argument or a flag, reject flags
+            if (c=='-') {
+                return false;
+            }
             struct prompt_result result;
             if (cmdln_args_get_string(rptr, max_len, str)) {
                 return true;

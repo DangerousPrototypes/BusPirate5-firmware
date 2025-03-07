@@ -4,5 +4,3 @@ build_*/**
 .env
 
 src/translation/history/new__en-us.json
-
-private/**

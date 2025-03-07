@@ -13,6 +13,7 @@
 #include "pirate/storage.h"
 #include "commands/i2c/scan.h"
 #include "commands/i2c/demos.h"
+#include "commands/i2c/sniff.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 
@@ -30,6 +31,12 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_SCAN, 
         .supress_fala_capture=true
     },
+    {
+        .command="sniff",
+        .func=&i2c_sniff,
+        .description_text=T_I2C_SNIFF,
+        .supress_fala_capture=true
+    },    
     {   .command="si7021", 
         .func=&demo_si7021, 
         .description_text=T_HELP_I2C_SI7021, 

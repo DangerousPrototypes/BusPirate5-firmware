@@ -2,7 +2,6 @@
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()  
 
-# TODO - For reproducible builds, allow override of timestamp
 # build time in UTC ISO 8601
 FILE (WRITE ${CMAKE_BINARY_DIR}/timestamp.cmake "STRING(TIMESTAMP TIMEZ UTC)\n")
 FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(WRITE timestamp.h \"#ifndef TIMESTAMP_H\\n\")\n")
@@ -27,9 +26,6 @@ set(buspirate_common
         system_config.c
         system_monitor.h
         system_monitor.c
-
-        # The common OTP header can be included even on RP2040
-        otp/bp_otp.h
 
         # pirate lib
         pirate/psu.h
@@ -113,8 +109,7 @@ set(buspirate_common
         commands/global/dump.h
         commands/global/ovrclk.c 
         commands/global/ovrclk.h        
-        pubkey/pubkey.h 
-        pubkey/pubkey.c
+        
         # HiZ
         mode/hiz.h
         mode/hiz.c
@@ -171,6 +166,8 @@ set(buspirate_common
         lib/ms5611/ms5611.h
         lib/tsl2561/driver_tsl2561.c
         lib/tsl2561/driver_tsl2561.h
+        commands/i2c/sniff.c 
+        commands/i2c/sniff.h
 
         # SPI
         mode/hwspi.c
@@ -410,16 +407,8 @@ set (buspirate_rtt
 )
 
 set (rp2350_common
-        # otp/bp_otp.h is included in bp5_common
-        otp/otp_ecc.c
-        otp/bp_otp_rw.c
-        otp/bp_whitelabel.c
-        commands/global/cmd_otp.c
-        commands/global/cmd_otp.h
         commands/global/otpdump.h 
         commands/global/otpdump.c
-        commands/global/cert.c 
-        commands/global/cert.h
 )
 
 
@@ -530,7 +519,6 @@ set(stdlibs
         tinyusb_device
         tinyusb_board
         hardware_structs
-        pico_mbedtls
         )        
 
 
@@ -557,6 +545,7 @@ foreach(revision ${revisions})
         #pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pio_pwm/pwm.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/irio.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/commands/uart/glitch.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico-i2c-sniff/i2c_sniffer.pio)
 
         pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")

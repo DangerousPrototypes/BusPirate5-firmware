@@ -388,7 +388,7 @@ bool selftest_button(void) {
 }
 
 // test that the logic analyzer chip is mounted and with no shorts
-#if BP_VER >= 6 // BUGBUG / TODO - Should this be a hardware feature flag, rather than a version check?
+#if BP_HW_FALA_BUFFER
 bool selftest_la_bpio(void) {
     uint32_t temp1, fails = 0, iopin = 0;
     printf("LA_BPIO TEST (SHOULD BE 1)\r\n");
@@ -511,7 +511,7 @@ void cmd_selftest(void) {
     }
 
     // LA_BPIO test
-    #if BP_VER >= 6 // BUGBUG / TODO - Should this be a hardware feature flag, rather than a version check?
+    #if BP_HW_FALA_BUFFER
         if (selftest_la_bpio()) {
             fails++;
         }

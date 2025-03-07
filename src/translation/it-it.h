@@ -519,5 +519,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_SPI_CMD_SNIFF                  ] = NULL,
     [ T_HELP_UART_GLITCH               ] = NULL,
     [ T_HELP_UART_GLITCH_CONFIG        ] = NULL,
+    [ T_I2C_SNIFF                      ] = NULL,
+    [ T_I2C_SNIFF_QUIET                ] = NULL,
 
 };

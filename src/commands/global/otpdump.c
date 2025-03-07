@@ -22,7 +22,8 @@
 //#include "pirate/amux.h"   // Analog voltage measurement functions
 //#include "pirate/button.h" // Button press functions
 //#include "msc_disk.h"
-#include "otp/bp_otp.h"
+#include "pico/bootrom.h"
+#include "hardware/structs/otp.h"
 #include "ui/ui_term.h"
 
 // This array of strings is used to display help USAGE examples for the dummy command
@@ -71,6 +72,20 @@ typedef struct _OTP_DUAL_ROW_READ_RESULT {
     };
 } OTP_DUAL_ROW_READ_RESULT;
 static_assert(sizeof(OTP_DUAL_ROW_READ_RESULT) == sizeof(uint32_t), "");
+
+typedef struct _OTP_RAW_READ_RESULT {
+    // anonymous structs are supported in C11
+    union {
+        uint32_t as_uint32;
+        struct {
+            uint8_t lsb;
+            uint8_t msb;
+            uint8_t correction;
+            uint8_t is_error; // 0: ok, 0xFF: Permission failure, 0x77: ECC error likely
+        };
+    };
+} OTP_RAW_READ_RESULT;
+static_assert(sizeof(OTP_RAW_READ_RESULT) == sizeof(uint32_t), "");
 
 typedef struct _OTP_READ_RESULT {
     OTP_RAW_READ_RESULT as_raw;

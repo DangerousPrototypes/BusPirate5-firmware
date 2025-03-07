@@ -2,15 +2,6 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
-// GCC is awesome ... this is the ___type-safe___ array element count macro
-#define ARRAY_SIZE(arr) \
-    (sizeof(arr) / sizeof((arr)[0]) \
-     + sizeof(typeof(int[1 - 2 * \
-           !!__builtin_types_compatible_p(typeof(arr), \
-                 typeof(&arr[0]))])) * 0)
-
-
-
 // enable splash screen at startup, increases firmware size and load time
 #define BP_SPLASH_ENABLED
 
@@ -92,19 +83,31 @@
         #else
             #error "Unknown platform version in pirate.h"
         #endif
+        #define BP_HW_IOEXP_595 1
         #define RPI_PLATFORM RP2040
+        #define BP_HW_PSU_PWM 1
     #elif BP_VER == XL5
         #include "platform/bpi5xl-rev0.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
+        #define BP_HW_IOEXP_595 1
+        #define BP_HW_PSU_PWM 1
     #elif BP_VER == 6
         #include "platform/bpi6-rev2.h"  
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
+        //#define BP_HW_PULLX 1
+        #define BP_HW_IOEXP_NONE 1
+        #define BP_HW_FALA_BUFFER 1
+        #define BP_HW_PSU_PWM 1
     #elif BP_VER == 7
         #include "platform/bpi7-rev0.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
+        #define BP_HW_PULLX 1
+        #define BP_HW_IOEXP_I2C 1
+        #define BP_HW_FALA_BUFFER 1
+        #define BP_HW_PSU_DAC 1
     #else
         #error "Unknown platform version in pirate.h"
     #endif
@@ -181,7 +184,5 @@ void spi_busy_wait_internal(bool enable, const char *file, int line);
 // LED settings
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 // only used on APA102
-
-
 
 #endif

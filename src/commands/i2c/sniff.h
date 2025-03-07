@@ -1,0 +1,1 @@
+void i2c_sniff(struct command_result* res);

@@ -6,8 +6,15 @@
 #include "pirate/shift.h"
 #include "pirate/psu.h"
 #include "pirate/amux.h"
+#if BP_HW_PSU_DAC
+    #include "hardware/i2c.h"
+#endif
 
-#define PWM_TOP 14000 // 0x30D3
+#if BP_HW_PSU_DAC
+    #define PWM_TOP 0x0fff //12 bit DAC
+#else
+    #define PWM_TOP 14000 // 0x30D3
+#endif
 
 // voltage settings
 #define PSU_V_LOW 800   // millivolts
@@ -19,21 +26,15 @@
 #define PSU_I_HIGH 500 // mA
 #define PSU_I_RANGE ((PSU_I_HIGH * 10000) - (PSU_I_LOW * 10000))
 
-#define BP_HW_PSU_USE_SHIFT_REGISTERS (BP_VER == 5 || BP_VER == XL5)
-
 struct psu_status_t psu_status;
 
 static void psu_fuse_reset(void) {
     // reset current trigger
-    #if (BP_VER == 5 || BP_VER == XL5)
+    #if BP_HW_IOEXP_595
         shift_clear_set_wait(CURRENT_RESET, 0); // low to activate the pnp
         busy_wait_ms(1);
         shift_clear_set_wait(0, CURRENT_RESET); // high to disable    
-    #elif (BP_VER == 6)
-        gpio_put(CURRENT_RESET, 0);
-        busy_wait_ms(1);
-        gpio_put(CURRENT_RESET, 1);
-    #elif (BP_VER == 7 && BP_REV == 0)
+    #elif BP_HW_IOEXP_NONE
         gpio_put(CURRENT_RESET, 0);
         busy_wait_ms(1);
         gpio_put(CURRENT_RESET, 1);
@@ -44,15 +45,13 @@ static void psu_fuse_reset(void) {
 
 // TODO: rename this function, it actually controls if the current limit circuit is connected to the VREG
 void psu_vreg_enable(bool enable) {
-    #if (BP_VER == 5 || BP_VER == XL5)
+    #if BP_HW_IOEXP_595
         if (enable) {
             shift_clear_set_wait(CURRENT_EN, 0); // low is on (PNP)
         } else {
             shift_clear_set_wait(0, CURRENT_EN); // high is off
         }    
-    #elif (BP_VER == 6)
-        gpio_put(CURRENT_EN, !enable);
-    #elif (BP_VER == 7 && BP_REV == 0)
+    #elif BP_HW_IOEXP_NONE
         gpio_put(CURRENT_EN, !enable);
     #else
         #error "Platform not speficied in psu.c"
@@ -60,15 +59,13 @@ void psu_vreg_enable(bool enable) {
 }
 
 void psu_current_limit_override(bool enable) {
-    #if (BP_VER == 5 || BP_VER == XL5)
+    #if BP_HW_IOEXP_595
         if (enable) {
             shift_clear_set_wait(0, CURRENT_EN_OVERRIDE);
         } else {
             shift_clear_set_wait(CURRENT_EN_OVERRIDE, 0);
         }
-    #elif (BP_VER == 6)
-        gpio_put(CURRENT_EN_OVERRIDE, enable);
-    #elif (BP_VER == 7 && BP_REV == 0)
+    #elif BP_HW_IOEXP_NONE
         gpio_put(CURRENT_EN_OVERRIDE, enable);
     #else
         #error "Platform not speficied in psu.c"
@@ -104,14 +101,29 @@ void psu_set_i(float current, struct psu_status_t* psu) {
 }
 
 void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
-    #if (BP_VER == 5 || BP_VER == XL5 || BP_VER == 6 || (BP_VER == 7 && BP_REV > 0))
+    #if BP_HW_PSU_PWM
         uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
         uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
         uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
         pwm_set_chan_level(slice_num, v_chan_num, v_dac);
         pwm_set_chan_level(slice_num, i_chan_num, i_dac);
-    #elif (BP_VER == 7 && BP_REV == 0)
+    #elif BP_HW_PSU_DAC
         //I2C dac
+        //voltage dac
+        const uint8_t v_dac_address = 0xc2;
+        uint8_t dac[2];
+        dac[0] = (v_dac >> 8) & 0xF;
+        dac[1] = v_dac & 0xFF;
+        if(i2c_write_blocking(BP_I2C_PORT, v_dac_address, dac, 2, false) == PICO_ERROR_GENERIC){
+            printf("I2C write error\n");
+        } 
+        //current dac
+        const uint8_t i_dac_address = 0xc0;
+        dac[0] == (i_dac >> 8) & 0xF;
+        dac[1] == i_dac & 0xFF;
+        if(i2c_write_blocking(BP_I2C_PORT, i_dac_address, dac, 2, false) == PICO_ERROR_GENERIC){
+            printf("I2C write error\n");
+        }
     #else
         #error "Platform not speficied in psu.c"
     #endif
@@ -204,7 +216,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
 void psu_init(void) {
     psu_vreg_enable(false);
 
-    #if (BP_VER == 5 || BP_VER == XL5 || BP_VER == 6 || (BP_VER == 7 && BP_REV > 0))
+    #if BP_HW_PSU_PWM
         // pin and PWM setup
         gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_SIO);
         gpio_set_dir(PSU_PWM_CURRENT_ADJ, GPIO_OUT);
@@ -235,8 +247,13 @@ void psu_init(void) {
         // too early, spi not setup for shift register method of IO control
         // psu_current_limit_override(false);
         // psu_fuse_reset();
-    #elif (BP_VER == 7 && BP_REV == 0)
+    #elif BP_HW_PSU_DAC
         //I2C dac
+        i2c_init(BP_I2C_PORT, 400 * 1000);
+        gpio_set_function(BP_I2C_SDA, GPIO_FUNC_I2C);
+        gpio_set_function(BP_I2C_SCL, GPIO_FUNC_I2C);    
+        //init dac
+        psu_dac_set(0xffff, 0x0000);  
     #else
         #error "Platform not speficied in psu.c"
     #endif

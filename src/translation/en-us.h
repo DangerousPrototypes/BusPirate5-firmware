@@ -530,7 +530,9 @@ static char const * const en_us[]={
 	[T_UART_CMD_TEST]="Test Dual RS232 plank",
 	[T_SPI_CMD_SNIFF]="SPI sniffer",
     [T_HELP_UART_GLITCH]="UART glitcher",
-    [T_HELP_UART_GLITCH_CONFIG]="Configure UART glitch parameters"
+    [T_HELP_UART_GLITCH_CONFIG]="Configure UART glitch parameters",
+	[T_I2C_SNIFF]="I2C sniffer",
+	[T_I2C_SNIFF_QUIET]="Quiet mode, don't show ACKs",
 
 };
 

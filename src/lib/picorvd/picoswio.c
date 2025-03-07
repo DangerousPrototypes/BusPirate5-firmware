@@ -70,9 +70,9 @@ void ch32vswio_reset(int pin, int dirpin) {
 
    sm_config_set_clkdiv(&c, clock_get_hz(clk_sys)/10000000);
 
-#if RPI_PLATFORM == RP2040
+#if !BP_HW_RP2350_E9_BUG
 // RP2350 has defective pull-downs (bug E9) that latch up
-// RP2350 baords have extra large external pull-downs to compensate
+// RP2350 boards have extra large external pull-downs to compensate
 // RP2040 has working pull-downs
 // Don't enable pin pull-downs on RP2350
  gpio_pull_down(pin);

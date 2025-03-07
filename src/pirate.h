@@ -100,6 +100,7 @@
         #define BP_HW_IOEXP_NONE 1
         #define BP_HW_FALA_BUFFER 1
         #define BP_HW_PSU_PWM 1
+        #define BP_HW_RP2350_E9_BUG 1
     #elif BP_VER == 7
         #include "platform/bpi7-rev0.h"
         #define RPI_PLATFORM RP2350
@@ -108,6 +109,7 @@
         #define BP_HW_IOEXP_I2C 1
         #define BP_HW_FALA_BUFFER 1
         #define BP_HW_PSU_DAC 1
+        #define BP_HW_RP2350_E9_BUG 1
     #else
         #error "Unknown platform version in pirate.h"
     #endif

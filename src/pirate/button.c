@@ -17,9 +17,11 @@ static volatile enum button_codes button_code = BP_BUTT_NO_PRESS;
 
 // poll the value of button button_id
 bool button_get(uint8_t button_id) {
-    #if RPI_PLATFORM == RP2040
+    // pull-down on RP2040, active high
+    #if RPI_PLATFORM == RP2040    
         return gpio_get(EXT1);
-    #elif RPI_PLATFORM == RP2350
+    //pull-up on RP2350 because of E9 silicon bug, active low
+    #elif RPI_PLATFORM == RP2350  
         return !gpio_get(EXT1);
     #else
         #error "Platform not speficied in button.c"

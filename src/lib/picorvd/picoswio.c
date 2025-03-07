@@ -70,9 +70,13 @@ void ch32vswio_reset(int pin, int dirpin) {
 
    sm_config_set_clkdiv(&c, clock_get_hz(clk_sys)/10000000);
 
-  #if RPI_PLATFORM == RP2040
-  gpio_pull_down(pin);
-  #endif
+#if !BP_HW_RP2350_E9_BUG
+// RP2350 has defective pull-downs (bug E9) that latch up
+// RP2350 boards have extra large external pull-downs to compensate
+// RP2040 has working pull-downs
+// Don't enable pin pull-downs on RP2350
+ gpio_pull_down(pin);
+#endif
   pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<pin)); //read pins to input (0, mask)  
   pio_sm_set_pindirs_with_mask(pio_config.pio, pio_config.sm, (1u<<dirpin), (1u<<dirpin)); //buf pins to output (pins, mask)    
   pio_sm_set_pins_with_mask(pio_config.pio, pio_config.sm, 0, (1u<<dirpin)); //buf dir to 0, buffer input/HiZ on the bus

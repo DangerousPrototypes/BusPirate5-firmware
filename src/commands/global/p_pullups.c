@@ -42,6 +42,7 @@ const struct ui_help_options p_options[] = {
 #if BP_HW_PULLX
     void pullx_show_settings(void){
         //display the current configuration
+        printf("\r\nPull resistor configuration:\r\n");
         for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
             printf("|  IO%d\t", i);
         }
@@ -60,6 +61,14 @@ const struct ui_help_options p_options[] = {
         printf("|\r\n");
     }
 
+    void pullx_show_values(void){
+        printf("\r\nValid resistor values are:\r\n");
+        for(uint8_t i=0; i<count_of(pullx_options); i++) {
+            printf("%s ", pullx_options[i].name);
+        }
+        printf("\r\n");
+    }
+
     // get command line arguments, false = fail, true = success
     bool pullx_parse_args(uint8_t *pullx, uint8_t *pin_args, bool *direction){
         //search for trailing arguments
@@ -75,10 +84,8 @@ const struct ui_help_options p_options[] = {
                 }
             }
             if(!r_found) {
-                printf("Invalid resistor value, valid values are:\r\n");
-                for(uint8_t i=0; i<count_of(pullx_options); i++) {
-                    printf("%s ", pullx_options[i].name);
-                }
+                printf("Error: Invalid resistor value\r\n");
+                pullx_show_values();
                 return false;
             }
         }else{
@@ -120,6 +127,7 @@ void pullups_enable(void) {
 void pullups_enable_handler(struct command_result* res) {
     if (ui_help_show(res->help_flag, p_usage, count_of(p_usage), &p_options[0], count_of(p_options))) {
         #if BP_HW_PULLX
+            pullx_show_values();
             pullx_show_settings();
         #endif
         return;
@@ -161,7 +169,9 @@ void pullups_enable_handler(struct command_result* res) {
         }
 
         //apply the settings
-        pullx_update();
+        if(!pullx_update()) {
+            printf("Error: Pullx I2C write error\r\n");
+        }
         //show the settings
         pullx_show_settings();
         amux_sweep();
@@ -190,7 +200,9 @@ void pullups_disable(void) {
     system_config.info_bar_changed = true;
     #if BP_HW_PULLX
         //1M pull-down when disabled
-        pullx_set_all_update(PULLX_1M, false);
+        if(!pullx_set_all_update(PULLX_1M, false)) {
+            printf("Error: Pullx I2C write error\r\n");
+        }
     #else
         pullup_disable();
     #endif

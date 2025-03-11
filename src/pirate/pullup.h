@@ -25,7 +25,7 @@ void pullup_enable(void);
 void pullup_disable(void);
 
 void pullx_set_all_test(uint16_t resistor_mask, uint16_t direction_mask);
-void pullx_set_all_update(uint8_t pull, bool pull_up);
+bool pullx_set_all_update(uint8_t pull, bool pull_up);
 void pullx_set_pin(uint8_t pin, uint8_t pull, bool pull_up);
 bool pullx_update(void);
 void pullx_get_pin(uint8_t pin, uint8_t *pull, bool *pull_up);

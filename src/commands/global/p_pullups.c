@@ -54,7 +54,7 @@ const struct ui_help_options p_options[] = {
             if(pull == PULLX_OFF) {
                 printf("|%s\t", pullx_options[pull].name);
             }else{
-                printf("|%s %s\t", pullx_options[pull].name, pull ? "U" : "D");
+                printf("|%s %s\t", pullx_options[pull].name, pull_up ? "U" : "D");
             }
         }
         printf("|\r\n");

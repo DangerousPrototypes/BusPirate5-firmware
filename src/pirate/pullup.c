@@ -32,9 +32,9 @@
     uint8_t pullx_direction=0x00; //output direction mask
 
     void pullup_write_i2c(uint8_t addr, uint8_t *data, uint8_t len) {   
-        /*if(i2c_write_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC){
-            printf("I2C write error\n");
-        }*/
+        if(i2c_write_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC){
+            printf("I2C write error\r\n");
+        }
     }
 
     void pullx_set_all_test(uint16_t resistor_mask, uint16_t direction_mask){
@@ -85,7 +85,7 @@
 
         }
 
-        uint8_t i2c_address[2] = {0x42, 0x40};
+        uint8_t i2c_address[2] = {0x21, 0x20};
         for (uint8_t i =0; i<2; i++){
             uint8_t data[3];
             //change the direction

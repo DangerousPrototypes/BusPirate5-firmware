@@ -207,9 +207,9 @@ enum adc_mux{
     HW_ADC_MUX_BPIO1, //6
     HW_ADC_MUX_BPIO0, //7
     HW_ADC_MUX_VUSB, //8
-    HW_ADC_MUX_CURRENT_DETECT,    //9
-    HW_ADC_MUX_VREG_OUT, //10
-    HW_ADC_MUX_VREF_VOUT, //11
+    HW_ADC_MUX_VREF_VOUT, //9 //swapped in 7+
+    HW_ADC_MUX_VREG_OUT, //10 //swapped in 7+
+    HW_ADC_MUX_CURRENT_DETECT,    //removed in 7+
     HW_ADC_MUX_COUNT
 };
 

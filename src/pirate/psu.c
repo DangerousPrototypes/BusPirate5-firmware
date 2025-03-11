@@ -110,19 +110,19 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
     #elif BP_HW_PSU_DAC
         //I2C dac
         //voltage dac
-        const uint8_t v_dac_address = 0xc2;
+        const uint8_t v_dac_7_bit_address = 0x61;
         uint8_t dac[2];
         dac[0] = (v_dac >> 8) & 0xF;
         dac[1] = v_dac & 0xFF;
-        if(i2c_write_blocking(BP_I2C_PORT, v_dac_address, dac, 2, false) == PICO_ERROR_GENERIC){
-            printf("I2C write error\n");
+        if(i2c_write_blocking(BP_I2C_PORT, v_dac_7_bit_address, dac, 2, false) == PICO_ERROR_GENERIC){
+            printf("I2C write error\r\n");
         } 
         //current dac
-        const uint8_t i_dac_address = 0xc0;
+        const uint8_t i_dac_7_bit_address = 0x60;
         dac[0] == (i_dac >> 8) & 0xF;
         dac[1] == i_dac & 0xFF;
-        if(i2c_write_blocking(BP_I2C_PORT, i_dac_address, dac, 2, false) == PICO_ERROR_GENERIC){
-            printf("I2C write error\n");
+        if(i2c_write_blocking(BP_I2C_PORT, i_dac_7_bit_address, dac, 2, false) == PICO_ERROR_GENERIC){
+            printf("I2C write error\r\n");
         }
     #else
         #error "Platform not speficied in psu.c"
@@ -249,11 +249,14 @@ void psu_init(void) {
         // psu_fuse_reset();
     #elif BP_HW_PSU_DAC
         //I2C dac
+        gpio_set_function(BP_I2C_RESET, GPIO_FUNC_SIO);
+        gpio_set_dir(BP_I2C_RESET, GPIO_OUT);
+        gpio_put(BP_I2C_RESET, 1);
         i2c_init(BP_I2C_PORT, 400 * 1000);
         gpio_set_function(BP_I2C_SDA, GPIO_FUNC_I2C);
         gpio_set_function(BP_I2C_SCL, GPIO_FUNC_I2C);    
         //init dac
-        psu_dac_set(0xffff, 0x0000);  
+        //psu_dac_set(0xffff, 0x0000);  
     #else
         #error "Platform not speficied in psu.c"
     #endif

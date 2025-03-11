@@ -157,7 +157,7 @@ void pullup_disable(void) {
     #if BP_HW_PULLX
         // 1M pull-down by default
         // pullx_set_all(0x0f00, 0x0000);
-        pullx_set_all_update(PULLX_1M, false);
+        //pullx_set_all_update(PULLX_1M, false);
     #elif (BP_VER ==5 && BP_REV <= 8)
         shift_clear_set_wait(PULLUP_EN, 0);
     #elif ((BP_VER == 5 && BP_REV > 8)) || (BP_VER == XL5)
@@ -171,7 +171,7 @@ void pullup_disable(void) {
 
 void pullup_init(void) {
     #if BP_HW_PULLX
-        pullx_set_all_update(PULLX_1M, false);  
+        //pullx_set_all_update(PULLX_1M, false);  
     #elif (BP_VER == 5 || BP_VER == XL5)
         //nothing to do
     #elif (BP_VER == 6)

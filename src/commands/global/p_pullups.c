@@ -42,7 +42,7 @@ const struct ui_help_options p_options[] = {
 #if BP_HW_PULLX
     void pullx_show_settings(void){
         //display the current configuration
-        printf("\r\nPull resistor configuration:\r\n");
+        printf("\r\n%sPull resistor configuration:\r\n", ui_term_color_info());
         for(uint8_t i=0; i<BIO_MAX_PINS; i++) {
             printf("|  IO%d\t", i);
         }
@@ -58,7 +58,7 @@ const struct ui_help_options p_options[] = {
                 printf("|%s %s\t", pullx_options[pull].name, pull_up ? "U" : "D");
             }
         }
-        printf("|\r\n");
+        printf("|%s\r\n", ui_term_color_reset());
     }
 
     void pullx_show_values(void){
@@ -144,12 +144,20 @@ void pullups_enable_handler(struct command_result* res) {
         }
 
         // show the configuration
-        printf("Pull resistor: %s", pullx_options[pullx].name);
+        printf("%sPull resistor: %s%s", 
+            ui_term_color_info(),
+            ui_term_color_reset(),
+            pullx_options[pullx].name);
         if(pullx != PULLX_OFF) {
-            printf(", Direction: %s", direction ? "UP" : "DOWN");
+            printf("%s, Direction:%s %s", 
+                ui_term_color_info(),
+                ui_term_color_reset(),
+                direction ? "UP" : "DOWN");
         }
 
-        printf(", Pins: ");
+        printf("%s, Pins:%s ", 
+            ui_term_color_info(),
+            ui_term_color_reset());
         if(pin_args == 0xff) {
             printf("All");
         }else{
@@ -168,13 +176,15 @@ void pullups_enable_handler(struct command_result* res) {
             }
         }
 
+        //show the settings
+        pullx_show_settings();        
+
         //apply the settings
         if(!pullx_update()) {
-            printf("%sError:%s %sVOUT voltage too low to enable pull-ups%s\r\n", ui_term_color_error(), ui_term_color_info(), ui_term_color_num_float(), ui_term_color_reset());
-            //printf("Settings will be applied when VOUT voltage is sufficient\r\n");
+            printf("\r\n%sError: %sVOUT voltage too low to enable pull-x%s\r\n", ui_term_color_error(), ui_term_color_info(), ui_term_color_reset());
+            printf("%sSettings will be applied when VOUT voltage is sufficient%s\r\n", ui_term_color_info(), ui_term_color_reset());
         }
-        //show the settings
-        pullx_show_settings();
+
         amux_sweep();
     #else
         pullups_enable();
@@ -209,17 +219,23 @@ void pullups_disable_handler(struct command_result* res) {
 
     pullups_disable();
 
-    printf("%s%s:%s %s",
-           ui_term_color_notice(),
-           GET_T(T_MODE_PULLUP_RESISTORS),
-           ui_term_color_reset(),
-           GET_T(T_MODE_DISABLED));
-  
     #if BP_HW_PULLX
         //show settings
+        printf("%sPull-x resistors:%s %s",
+            ui_term_color_notice(),
+            ui_term_color_reset(),
+            GET_T(T_MODE_DISABLED));
         printf("\r\n");
         pullx_show_settings();    
+    #else
+        printf("%s%s:%s %s",
+            ui_term_color_notice(),
+            GET_T(T_MODE_PULLUP_RESISTORS),
+            ui_term_color_reset(),
+            GET_T(T_MODE_DISABLED));
     #endif
+  
+
 }
 
 void pullups_init(void) {

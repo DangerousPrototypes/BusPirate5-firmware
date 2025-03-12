@@ -12,6 +12,7 @@
 #include "ui/ui_cmdln.h"
 #include "pirate/psu.h"
 #include "ui/ui_help.h"
+#include "pirate/pullup.h"
 
 const char* const psucmd_usage[] = {
     "w|W\t<v> <i>",
@@ -200,6 +201,12 @@ void psucmd_enable_handler(struct command_result* res) {
            ui_term_color_reset(),
            ui_term_color_notice(),
            ui_term_color_reset());
+
+        //when voltage changes, we need to reconfigure the pull-ups
+        #if BP_HW_PULLX
+            pullx_update();
+        #endif
+            
 }
 
 // cleanup on mode exit, etc

@@ -170,7 +170,8 @@ void pullups_enable_handler(struct command_result* res) {
 
         //apply the settings
         if(!pullx_update()) {
-            printf("Error: Pullx I2C write error\r\n");
+            printf("%sError:%s %sVOUT voltage too low to enable pull-ups%s\r\n", ui_term_color_error(), ui_term_color_info(), ui_term_color_num_float(), ui_term_color_reset());
+            //printf("Settings will be applied when VOUT voltage is sufficient\r\n");
         }
         //show the settings
         pullx_show_settings();
@@ -198,14 +199,7 @@ void pullups_enable_handler(struct command_result* res) {
 void pullups_disable(void) {   
     system_config.pullup_enabled = 0;
     system_config.info_bar_changed = true;
-    #if BP_HW_PULLX
-        //1M pull-down when disabled
-        if(!pullx_set_all_update(PULLX_1M, false)) {
-            printf("Error: Pullx I2C write error\r\n");
-        }
-    #else
-        pullup_disable();
-    #endif
+    pullup_disable();
 }
 
 void pullups_disable_handler(struct command_result* res) {
@@ -223,6 +217,7 @@ void pullups_disable_handler(struct command_result* res) {
   
     #if BP_HW_PULLX
         //show settings
+        printf("\r\n");
         pullx_show_settings();    
     #endif
 }

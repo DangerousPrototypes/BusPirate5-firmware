@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
@@ -12,6 +13,7 @@
 #include "ui/ui_cmdln.h"
 #include "binmode/binmodes.h"
 #include "binmode/fala.h"
+#include "ui/ui_help.h"
 
 bool ui_mode_list(const struct ui_prompt* menu) {
     for (uint i = 0; i < (*menu).menu_items_count; i++) {
@@ -19,21 +21,63 @@ bool ui_mode_list(const struct ui_prompt* menu) {
     }
 }
 
+static const char* const usage[] = {
+    "m [mode name|mode number] [-h]",
+    "Change mode with menu: m",
+    "Change mode to I2C: m i2c",
+    "Change mode to menu option 5: m 5",
+};
+
+static const struct ui_help_options options[] = {
+/*    { 1, "", T_HELP_GCMD_P }, // command help
+    { 0, "p", T_CONFIG_DISABLE },
+    { 0, "P", T_CONFIG_ENABLE },*/
+};
+
 void ui_mode_enable_args(struct command_result* res) {
+    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+        return;
+    }    
     uint32_t mode;
-    bool error;
+    bool error=true;
 
-    bool has_value = cmdln_args_uint32_by_position(1, &mode);
+    //bool has_value = cmdln_args_uint32_by_position(1, &mode);
 
-    if (!has_value || ((mode) > MAXPROTO) || ((mode) == 0)) {
-        if (has_value && (mode) > MAXPROTO) {
-            ui_prompt_invalid_option();
+    char action_str[32];
+    bool has_string = cmdln_args_string_by_position(1, sizeof(action_str), action_str);
+
+    if(has_string){
+        uint32_t action_len = strlen(action_str);
+        if(action_len>2){ //parse text
+            strupr(action_str);
+            for(uint8_t i=0; i<count_of(modes); i++) {
+                if (strcmp(action_str, modes[i].protocol_name) == 0) {
+                    mode = i;
+                    error = false;
+                    goto mode_configure;
+                }
+            }
+            ui_prompt_invalid_option();            
+        }else{ //try to parse number
+            for(uint8_t i=0; i<action_len; i++) {
+                if(action_str[i] < '0' || action_str[i] > '9') {
+                    ui_prompt_invalid_option();
+                    error = true;
+                    goto mode_configure;
+                }
+            }
+            mode = atoi(action_str);
+            if(mode > MAXPROTO || mode == 0){
+                ui_prompt_invalid_option();
+                error = true;
+            }else{
+                mode--;
+                error = false;
+            }
         }
-        error = true;
-    } else {
-        (mode)--; // adjust down one from user choice
-        error = false;
     }
+
+mode_configure:
 
     if (error) { // no integer found
 

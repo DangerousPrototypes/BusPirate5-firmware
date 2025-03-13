@@ -59,6 +59,12 @@
     #include "hardware/regs/addressmap.h"
     #include "hardware/regs/otp.h"
 #endif
+#if BP_HW_PULLX
+    #include "pirate/pullup.h"
+#endif
+#if BP_HW_IOEXP_I2C || BP_HW_PULLX || BP_HW_PSU_DAC
+    static mutex_t i2c_mutex;
+#endif
 
 static mutex_t spi_mutex;
 
@@ -183,6 +189,11 @@ static void main_system_initialization(void) {
     // SPI bus is used from here
     // setup the mutex for spi arbitration
     mutex_init(&spi_mutex);
+
+    #if BP_HW_IOEXP_I2C || BP_HW_PULLX || BP_HW_PSU_DAC
+        // setup the mutex for i2c arbitration
+        mutex_init(&i2c_mutex);
+    #endif
 
     // init psu pins
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
@@ -810,6 +821,11 @@ static void core1_infinite_loop(void) {
 
             freq_measure_period_irq(); // update frequency periodically
             monitor_reset();
+
+            #if BP_HW_PULLX
+                pullx_brown_out_reset(hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]);
+            #endif
+
             lcd_update_request = false;
         }
 
@@ -896,3 +912,20 @@ void spi_busy_wait_internal(bool enable, const char *file, int line) {
         BP_ASSERT(lock_get_caller_owner_id() == spi_mutex.owner);
     }
 }
+
+#if BP_HW_IOEXP_I2C || BP_HW_PULLX || BP_HW_PSU_DAC
+    // gives protected access to I2C (core safe)
+    void i2c_busy_wait_internal(bool enable, const char *file, int line) {
+
+        if (!enable) {
+
+            BP_ASSERT(lock_get_caller_owner_id() == i2c_mutex.owner);
+            mutex_exit(&i2c_mutex);
+
+        } else {
+
+            mutex_enter_blocking(&i2c_mutex);
+            BP_ASSERT(lock_get_caller_owner_id() == i2c_mutex.owner);
+        }
+    }
+#endif

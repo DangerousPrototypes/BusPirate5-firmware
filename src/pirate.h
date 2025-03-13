@@ -129,6 +129,10 @@ void lcd_irq_disable(void);
 #define spi_busy_wait(ENABLE) spi_busy_wait_internal(ENABLE, __FILE__, __LINE__)
 void spi_busy_wait_internal(bool enable, const char *file, int line);
 
+#if BP_HW_IOEXP_I2C || BP_HW_PULLX || BP_HW_PSU_DAC
+    #define i2c_busy_wait(ENABLE) i2c_busy_wait_internal(ENABLE, __FILE__, __LINE__)
+    void i2c_busy_wait_internal(bool enable, const char *file, int line);
+#endif
 //#define BP_PIO_SHOW_ASSIGNMENT
 
 #if BP_VER == 6

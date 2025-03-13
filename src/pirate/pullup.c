@@ -32,20 +32,18 @@
     uint8_t pullx_direction=0x00; //output direction mask
 
     //return true for success, false for failure
-    bool pullup_write_i2c(uint8_t addr, uint8_t *data, uint8_t len) {   
-        if(i2c_write_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC){
-            //printf("I2C write error\r\n");
-            return false;
-        }
-        return true;
+    bool pullup_write_i2c(uint8_t addr, uint8_t *data, uint8_t len) {  
+        i2c_busy_wait(true); 
+        bool result = i2c_write_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC ? false : true;
+        i2c_busy_wait(false);
+        return result;
     }
     // return true for success, false for failure
-    bool pullup_read_i2c(uint8_t addr, uint8_t *data, uint8_t len) {   
-        if(i2c_read_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC){
-            //printf("I2C read error\r\n");
-            return false;
-        }
-        return true;
+    bool pullup_read_i2c(uint8_t addr, uint8_t *data, uint8_t len) {
+        i2c_busy_wait(true);   
+        bool result = i2c_read_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC ? false : true;
+        i2c_busy_wait(false);   
+        return result;
     }    
 
     bool pullx_register_write_verify(uint8_t addr, uint8_t reg, uint16_t value){
@@ -173,6 +171,17 @@
     void pullx_get_pin(uint8_t pin, uint8_t *pull, bool *pull_up){
         *pull = pullx_value[pin];
         *pull_up = pullx_direction & (1<<pin);
+    }
+
+    void pullx_brown_out_reset(uint32_t vout){
+        static bool pullx_brown_out_reset = false;
+
+        // TCA6416ARTWT must be reset if voltage drops below 1.65 volts
+        if( pullx_brown_out_reset == false && vout < 1650 ){
+            pullx_brown_out_reset = true;
+        }else if( pullx_brown_out_reset == true && vout >= 1650 ){
+            pullx_brown_out_reset = !pullx_update();
+        }
     }
 
 #endif

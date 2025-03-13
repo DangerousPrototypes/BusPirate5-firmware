@@ -181,7 +181,7 @@ void pullups_enable_handler(struct command_result* res) {
 
         //apply the settings
         if(!pullx_update()) {
-            printf("\r\n%sError: %sVOUT voltage too low to enable pull-x%s\r\n", ui_term_color_error(), ui_term_color_info(), ui_term_color_reset());
+            printf("\r\n%sError:%s VOUT voltage too low to enable pull-x\r\n", ui_term_color_error(), ui_term_color_reset());
             printf("%sSettings will be applied when VOUT voltage is sufficient%s\r\n", ui_term_color_info(), ui_term_color_reset());
         }
 
@@ -200,10 +200,14 @@ void pullups_enable_handler(struct command_result* res) {
             (hw_adc_voltage[HW_ADC_MUX_VREF_VOUT] % 1000) / 100,
             ui_term_color_reset());
     #endif
-    if (hw_adc_raw[HW_ADC_MUX_VREF_VOUT] < 250){
-        printf(
-            "\r\nWarning: no/low voltage detected.\r\nEnable power supply (W) or attach external supply to Vout/Vref");
-    }
+
+    ui_help_sanity_check(true, 0x00);
+
+    //if (hw_adc_raw[HW_ADC_MUX_VREF_VOUT] < 250){
+        
+        //printf(
+        //    "\r\nWarning: no/low voltage detected.\r\nEnable power supply (W) or attach external supply to Vout/Vref");
+    //}
 }
 
 void pullups_disable(void) {   

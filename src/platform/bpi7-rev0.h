@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define BP_SPLASH_FILE "display/robot6x16.h"
+#define BP_SPLASH_FILE "display/robot7x16.h"
 
 #define BP_HARDWARE_VERSION "Bus Pirate 7"
 #define BP_HARDWARE_MCU "RP2350B"

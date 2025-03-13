@@ -426,7 +426,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${rp2350_common}
                 platform/bpi7-rev0.h
                 platform/bpi7-rev0.c
-                display/robot6x16.h
+                display/robot7x16.h
                 ) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_VER=7) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_REV=0) 

@@ -51,7 +51,11 @@ void ui_mode_enable_args(struct command_result* res) {
         if(action_len>2){ //parse text
             strupr(action_str);
             for(uint8_t i=0; i<count_of(modes); i++) {
-                if (strcmp(action_str, modes[i].protocol_name) == 0) {
+                //create a strupr version of the protocol name
+                char protocol_name_upper[32];
+                strcpy(protocol_name_upper, modes[i].protocol_name);
+                strupr(protocol_name_upper);
+                if (strcmp(action_str, protocol_name_upper) == 0) {
                     mode = i;
                     error = false;
                     goto mode_configure;
@@ -104,6 +108,12 @@ mode_configure:
         mode--;
     }
 
+    printf("\r\n%s%s:%s %s",
+        ui_term_color_info(),
+        GET_T(T_MODE_MODE),
+        ui_term_color_reset(),
+        modes[mode].protocol_name);
+
     // ok, start setup dialog
     if (!modes[mode].protocol_setup()) { // user bailed on setup steps
         //(*response).error=true;
@@ -126,12 +136,6 @@ mode_configure:
     } else {
         // gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
     }
-
-    printf("\r\n%s%s:%s %s",
-           ui_term_color_info(),
-           GET_T(T_MODE_MODE),
-           ui_term_color_reset(),
-           modes[system_config.mode].protocol_name);
 }
 
 /*

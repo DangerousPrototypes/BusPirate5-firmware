@@ -148,7 +148,7 @@ struct _mode modes[] = {
     },
 #ifdef BP_USE_HW1WIRE
     {
-        .protocol_name = "1-WIRE",             // friendly name (promptname)
+        .protocol_name = "1WIRE",             // friendly name (promptname)
         .protocol_start = hw1wire_start,       // start
         .protocol_start_alt = hw1wire_start,   // start with read
         .protocol_stop = nullfunc1_temp,       // stop

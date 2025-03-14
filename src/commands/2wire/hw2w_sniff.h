@@ -1,0 +1,1 @@
+void hw2w_sniff(struct command_result* res);

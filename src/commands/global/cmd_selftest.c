@@ -351,6 +351,99 @@ bool selftest_current_limit(void) {
     return false;
 }
 
+#if BP_HW_PULLX
+//test all 4 pullx settings
+bool selftest_pullupx_high(uint8_t pullx) {
+    uint32_t temp1, temp2, fails = 0;
+    printf("BIO %s PULL-UP HIGH TEST (SHOULD BE 1/>3.00V)\r\n", pullx_options[pullx].name);
+    pullx_set_all_update(pullx, true);
+
+    // start with all pins grounded, then float one by one
+    for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
+        bio_output(i);
+        bio_put(i, 0);
+    }
+    for (uint8_t pin = 0; pin < BIO_MAX_PINS; pin++) {
+        bio_input(pin);  // let float high
+        busy_wait_ms(5); // give it some time
+        // read pin input (should be low)
+        amux_sweep();
+        temp1 = bio_get(pin);
+        printf("BIO%d PU-HIGH: %d/%1.2fV ", pin, temp1, (float)(*hw_pin_voltage_ordered[pin + 1] / (float)1000));
+        if (!temp1 || ((*hw_pin_voltage_ordered[pin + 1]) < 3 * 1000)) {
+            printf("ERROR!\r\n");
+            fails++;
+        } else {
+            printf("OK\r\n");
+        }
+        // check other pins for possible shorts
+        for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
+            if (pin == i) {
+                continue;
+            }
+            if (*hw_pin_voltage_ordered[i + 1] > SELF_TEST_LOW_LIMIT) {
+                printf("BIO%d SHORT->BIO%d (%1.2fV): ERROR!\r\n",
+                       pin,
+                       i,
+                       (float)(*hw_pin_voltage_ordered[i + 1] / (float)1000));
+                fails++;
+            }
+        }
+        bio_output(pin);
+        bio_put(pin, 0);
+    }
+    bio_init();
+    if (fails) {
+        return true;
+    }
+    return false;
+}
+
+bool selftest_pullx_low(uint8_t pullx) {
+    uint32_t temp1, temp2, fails = 0;
+    printf("BIO %s PULL-UP LOW TEST (SHOULD BE <0.%dV)\r\n", pullx_options[pullx].name, SELF_TEST_LOW_LIMIT / 10);
+    pullx_set_all_update(pullx, true);
+
+    // start with all pins floating, then ground one by one
+    for (uint8_t pin = 0; pin < BIO_MAX_PINS; pin++) {
+        bio_output(pin); // let float high
+        bio_put(pin, 0);
+        busy_wait_ms(5); // give it some time
+        // read pin input (should be high)
+        amux_sweep();
+        printf("BIO%d PU-LOW: %1.2fV ", pin, (float)(*hw_pin_voltage_ordered[pin + 1] / (float)1000));
+        if (((*hw_pin_voltage_ordered[pin + 1]) > SELF_TEST_LOW_LIMIT)) {
+            printf("ERROR!\r\n");
+            fails++;
+        } else {
+            printf("OK\r\n");
+        }
+        // check other pins for possible shorts
+        for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
+            if (pin == i) {
+                continue;
+            }
+            temp1 = bio_get(i);
+            if (temp1 == 0 || *hw_pin_voltage_ordered[i + 1] < 3 * 1000) {
+                printf("BIO%d SHORT->BIO%d (%d/%1.2fV): ERROR!\r\n",
+                       pin,
+                       i,
+                       temp1,
+                       (float)(*hw_pin_voltage_ordered[i + 1] / (float)1000));
+                fails++;
+            }
+        }
+        bio_input(pin);
+    }
+    if (fails) {
+        return true;
+    }
+    return false;
+}
+
+#endif
+
+
 bool selftest_button(void) {
     // debounce value selected somewhat arbitrarily
     static const uint32_t DEBOUNCE_DELAY_MS = 100;
@@ -495,12 +588,16 @@ void cmd_selftest(void) {
         fails++;
     }
 
+    // 7R0 bug: no default 1M pull-downs, enable here
+    #if BP_HW_PULLX
+        pullx_set_all_update(PULLX_1M, false);
+    #endif
+
     // BIO float test
     if (selftest_bio_float()) {
         fails++;
     }
 
-    // BIO high test
     if (selftest_bio_high()) {
         fails++;
     }
@@ -523,15 +620,28 @@ void cmd_selftest(void) {
         }
     #endif
 
-    // BIO pull-up high test
-    if (selftest_pullup_high()) {
-        fails++;
-    }
+    #if BP_HW_PULLX
+        //test all 4 pullx settings
+        static const char pullx_test[4]={PULLX_2K2, PULLX_4K7, PULLX_10K, PULLX_1M};
+        for (uint8_t i = 0; i < 4; i++) {
+            if (selftest_pullupx_high(pullx_test[i])) {
+                fails++;
+            }
+            if (selftest_pullx_low(pullx_test[i])) {
+                fails++;
+            }
+        }
+    #else
+        // BIO pull-up high test
+        if (selftest_pullup_high()) {
+            fails++;
+        }
 
-    // BIO pull-up low test
-    if (selftest_pullup_low()) {
-        fails++;
-    }
+        // BIO pull-up low test
+        if (selftest_pullup_low()) {
+            fails++;
+        }
+    #endif
 
     // PSU test with current override
     if (selftest_current_override()) {

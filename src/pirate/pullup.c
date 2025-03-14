@@ -190,7 +190,7 @@ void pullup_enable(void) {
     #if BP_HW_PULLX
         //to test: all have 10K pullup 
         //pullx_set_all(0xf000, 0xf000);
-        //pullx_set_all_update(PULLX_10K, true);
+        pullx_set_all_update(PULLX_10K, true);
     #elif (BP_VER ==5 && BP_REV <= 8)
         shift_clear_set_wait(0, PULLUP_EN);
     #elif ((BP_VER == 5 && BP_REV > 8)) || (BP_VER == XL5)

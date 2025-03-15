@@ -43,6 +43,7 @@
 #include "commands/global/otpdump.h"
 #endif
 #include "commands/global/ovrclk.h"
+#include "commands/global/psram_cmd.h"
 
 // command configuration
 const struct _global_command_struct commands[] = {
@@ -100,6 +101,7 @@ const struct _global_command_struct commands[] = {
 { .command="otpdump",   .allow_hiz=true,  .func=&otpdump_handler,                    .help_text=0x00 },
 #endif
 { .command="ovrclk",    .allow_hiz=true,  .func=&ovrclk_handler,                     .help_text=0x00 },
+{ .command="psram",     .allow_hiz=true,  .func=&psram_handler,                      .help_text=0x00 },
     // clang-format on
 };
 

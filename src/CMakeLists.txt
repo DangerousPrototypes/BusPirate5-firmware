@@ -108,7 +108,9 @@ set(buspirate_common
         commands/global/dump.c
         commands/global/dump.h
         commands/global/ovrclk.c 
-        commands/global/ovrclk.h        
+        commands/global/ovrclk.h    
+        commands/global/psram_cmd.c 
+        commands/global/psram_cmd.h    
         
         # HiZ
         mode/hiz.h
@@ -427,6 +429,8 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 platform/bpi7-rev0.h
                 platform/bpi7-rev0.c
                 display/robot7x16.h
+                psram.c
+		psram.h
                 ) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_VER=7) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_REV=0) 

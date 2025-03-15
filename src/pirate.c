@@ -62,6 +62,9 @@
 #if BP_HW_PULLX
     #include "pirate/pullup.h"
 #endif
+#if BP_HW_PSRAM
+    #include "psram.h"
+#endif
 #if BP_HW_IOEXP_I2C || BP_HW_PULLX || BP_HW_PSU_DAC
     static mutex_t i2c_mutex;
 #endif
@@ -133,15 +136,6 @@ static void softlock_all_otp(void) {
 }
 
 static void main_system_initialization(void) {
-
-    #if BP_HW_PSRAM
-        // init PSRAM
-        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-            "Init: psram_init()\n"
-            );
-        //make output and high
-        gpio_setup(BP_PSRAM_CS, GPIO_OUT, 1);
-    #endif
 
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: tx/rx_fifo_init()\n"

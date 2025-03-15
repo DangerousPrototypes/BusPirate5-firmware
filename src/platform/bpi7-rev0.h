@@ -192,6 +192,7 @@ extern const uint8_t bio2bufdirpin[8];
 //7+ has PSRAM
 #define BP_PSRAM_QPI_SS QSPI_SS_2
 #define BP_PSRAM_CS 47
+#define RP2350_PSRAM_MAX_SCK_HZ (109 * 1000 * 1000)
 
 // A 74HCT4067 selects one of 16 analog sources to measure 
 // (voltage is divided by 2 with a buffered resistor divider)

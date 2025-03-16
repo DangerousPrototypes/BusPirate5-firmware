@@ -18,6 +18,7 @@
 #include "ui/ui_format.h"
 #include "ui/ui_help.h"
 #include "commands/2wire/sle4442.h"
+#include "commands/2wire/hw2w_sniff.h"
 
 static const char pin_labels[][5] = { "SDA", "SCL", "RST" };
 struct _hw2wire_mode_config hw2wire_mode_config;
@@ -30,6 +31,11 @@ const struct _mode_command_struct hw2wire_commands[] = {
         .description_text=T_HELP_SLE4442, 
         .supress_fala_capture=true
     },
+    {   .command="sniff",
+        .func=&hw2w_sniff,
+        .description_text=T_HW2WIRE_SNIFF,
+        .supress_fala_capture=false
+    }
 };
 const uint32_t hw2wire_commands_count = count_of(hw2wire_commands);
 

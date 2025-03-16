@@ -199,6 +199,8 @@ set(buspirate_common
         pirate/hw2wire_pio.c
         commands/2wire/sle4442.c
         commands/2wire/sle4442.h
+        commands/2wire/hw2w_sniff.c 
+        commands/2wire/hw2w_sniff.h
 
         # 3WIRE
         mode/hw3wire.h
@@ -552,6 +554,7 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/irio.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/commands/uart/glitch.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico-i2c-sniff/i2c_sniffer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico-i2c-sniff/hw2w_sniffer.pio)
 
         pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")

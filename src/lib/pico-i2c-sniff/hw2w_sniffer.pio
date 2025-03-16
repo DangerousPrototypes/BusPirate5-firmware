@@ -1,0 +1,244 @@
+; pico-i2c-sniffer 
+; https://github.com/jjsch-dev/pico_i2c_sniffer
+; MIT License
+; Modified for the Bus Pirate 5+
+; 5 MARCH 2025 - Ian Lesnet
+
+; ** Modified from the original code so SDA and SCL are consecutive pins.
+.define PUBLIC SDA_PIN     8    ; Input for i2c data.
+.define PUBLIC SCL_PIN     9    ; Input for i2c clock.
+.define PUBLIC EV0_PIN     10    ; Input/Output for bit 0 of event code.
+.define PUBLIC EV1_PIN     11    ; Input/Output for bit 1 of event code.
+
+
+.define PUBLIC IRQ_EVENT   7    
+
+; two pins are used to communicate the event code. 
+; To use the JMP pin, the lsb event bit is turned off to indicate data.
+.define PUBLIC EV_DATA     0x00
+.define PUBLIC EV_START    0x01
+.define PUBLIC EV_STOP     0x03
+
+.program hw2w_start
+
+; Decodes the star condition of an i2c bus. 
+; A start condition is detected, when the sda pin goes low while the scl pin remains high.
+
+.wrap_target
+wait_sda_low:    
+    wait 0 gpio SDA_PIN     ; Wait for the sda pin to go down.
+    jmp pin detected        ; If the SCL is high, the condition was detected.
+    jmp wait_sda_high       ;
+
+detected:
+    set pins EV_START       ; Set the event code for START
+    irq wait IRQ_EVENT      ; Fire the irq event  
+
+wait_sda_high:
+    wait 1 gpio SDA_PIN     ; 
+.wrap
+
+.program hw2w_stop
+
+; Decodes the stop condition of an i2c bus. 
+; A stop condition is detected, when the sda pin goes high while the scl pin remains high.
+
+.wrap_target
+wait_sda_low:    
+    wait 1 gpio SDA_PIN     ; Wait for the sda pin to go down.
+    jmp pin detected        ; If the SCL is high, the condition was detected. 
+    jmp wait_sda_high       ;
+
+detected:
+    set pins EV_STOP        ; Set the event code for STOP.
+    irq wait IRQ_EVENT      ; Fire the irq event  
+
+wait_sda_high:
+    wait 0 gpio SDA_PIN     ; 
+.wrap
+
+.program hw2w_data
+
+; Decode the clock to read data from an i2c bus. 
+; The original idea was to set the event code to data when the SCL pin was low 
+; and check if it stayed in the data when the SCL rise up.
+
+.wrap_target
+    wait 1 gpio SCL_PIN     ; Wait for the SCL pin to go high.
+    set pins EV_DATA        ; Clear event code.
+    irq wait IRQ_EVENT      ; Fire the irq event 
+    wait 0 gpio SCL_PIN     ; Wait for the SCL pin to go low.
+.wrap
+
+.program hw2w_main
+
+; ** Modified from the original code so SDA and SCL are consecutive pins.
+; Wait for events from the state machines (START/STOP/DATA) 
+; and fill the communication FIFO of the APP.
+; NOTE: as MOV and IN use PINS, they must be consecutive and in this 
+; order (B0, B1, B2, B3): SDA, SCL, EV1, EV0. And to know if the event is 
+; data or (start/stop), you have to use the JMP instruction that allows 
+; you to configure the PIN independently of the PINS.
+
+.wrap_target
+wait_irq_event:    
+    wait 1 irq IRQ_EVENT    ; Wait for the irq event.
+    jmp pin send_event      ; If the lsb of the event code is zero, read the data bit.
+    in pins, 1              ; Update the ISR register with the SDA value. 
+    jmp wait_irq_event      ; loads it into the FIFO when it reaches 9 bits.
+
+send_event:                 ; ** Modified from the original code so SDA and SCL are consecutive pins.
+    mov isr, pins           ; Load the EV1(3), EV0(2), SCL(1), SDA(0). 
+    in NULL, 8              ; The event code starts at bit 12 and ends at 13.
+.wrap
+
+% c-sdk {
+
+// Helper function (for use in C program) to initialize this PIO program
+void hw2w_start_program_init(PIO pio, uint sm, uint offset, float div) {
+
+    // Sets up state machine and wrap target. This function is automatically
+    // generated in hw2w_sniffer.pio.h.
+    pio_sm_config c = hw2w_start_program_get_default_config(offset);
+
+    // Allow PIO to control GPIO pin (as output)
+    pio_gpio_init(pio, EV0_PIN);
+    pio_gpio_init(pio, EV1_PIN);
+
+    // Connect EV0 EV1 to SET pins (control with 'set' instruction)
+    sm_config_set_set_pins(&c, EV0_PIN, 2);
+    
+    // Connect SCL_PIN to JMP pin to test the clock level.
+    sm_config_set_jmp_pin(&c, SCL_PIN);
+    
+    // Set the SCL direction to input (in PIO)
+    // EV0 and EV1 output, and SCL input.
+    pio_sm_set_pins_with_mask(pio, sm, (1<<EV1_PIN) | (1<<EV0_PIN), 
+                                       (1<<EV1_PIN) | (1<<EV0_PIN));
+    pio_sm_set_pindirs_with_mask(pio, sm, (1<<EV1_PIN) | (1<<EV0_PIN),
+                                          (1<<EV1_PIN) | (1<<EV0_PIN) | (1<<SCL_PIN));
+
+    // wait GPIO : System GPIO input selected by Index . 
+    // This is an absolute GPIO index, and is not affected by the state
+    // machine’s input IO mapping.
+    gpio_init(SDA_PIN);
+    gpio_set_dir(SDA_PIN, GPIO_IN);
+    gpio_disable_pulls(SDA_PIN);
+
+    // Set the clock divider for the state machine
+    sm_config_set_clkdiv(&c, div);
+
+    // Load configuration and jump to start of the program
+    pio_sm_init(pio, sm, offset, &c);
+}
+
+%}
+
+% c-sdk {
+
+// Helper function (for use in C program) to initialize this PIO program
+void hw2w_stop_program_init(PIO pio, uint sm, uint offset, float div) {
+
+    // Sets up state machine and wrap target. This function is automatically
+    // generated in hw2w_sniffer.pio.h.
+    pio_sm_config c = hw2w_stop_program_get_default_config(offset);
+
+    // Allow PIO to control GPIO pin (as output)
+    pio_gpio_init(pio, EV0_PIN);
+
+    // Connect EV0 EV1 to SET pins (control with 'set' instruction)
+    sm_config_set_set_pins(&c, EV0_PIN, 2);
+
+    // Set the pin EV0 and EV1 direction to output (in PIO)
+    pio_sm_set_consecutive_pindirs(pio, sm, EV0_PIN, 2, true);
+    
+    // Connect SCL_PIN to JMP pin to test the clock level.
+    sm_config_set_jmp_pin(&c, SCL_PIN);
+    
+    // Set the SCL direction to input (in PIO)
+    pio_sm_set_consecutive_pindirs(pio, sm, SCL_PIN, 1, false);
+
+    // Set the clock divider for the state machine
+    sm_config_set_clkdiv(&c, div);
+
+    // Load configuration and jump to start of the program
+    pio_sm_init(pio, sm, offset, &c);
+}
+
+%}
+
+% c-sdk {
+
+// Helper function (for use in C program) to initialize this PIO program
+void hw2w_data_program_init(PIO pio, uint sm, uint offset, float div) {
+
+    // Sets up state machine and wrap target. This function is automatically
+    // generated in hw2w_sniffer.pio.h.
+    pio_sm_config c = hw2w_data_program_get_default_config(offset);
+
+    // Allow PIO to control GPIO pin (as output)
+    pio_gpio_init(pio, EV0_PIN);
+    pio_gpio_init(pio, EV1_PIN);
+
+    // Connect EV0 EV1 to SET pins (control with 'set' instruction)
+    sm_config_set_set_pins(&c, EV0_PIN, 2);
+
+    // EV0 and EV1 output, and SCL input.
+    pio_sm_set_pins_with_mask(pio, sm, (1<<EV1_PIN) | (1<<EV0_PIN), 
+                                       (1<<EV1_PIN) | (1<<EV0_PIN));
+    pio_sm_set_pindirs_with_mask(pio, sm, (1<<EV1_PIN) | (1<<EV0_PIN),
+                                          (1<<EV1_PIN) | (1<<EV0_PIN) | (1<<SCL_PIN));
+
+    // wait GPIO : System GPIO input selected by Index . 
+    // This is an absolute GPIO index, and is not affected by the state
+    // machine’s input IO mapping.
+    gpio_init(SCL_PIN);
+    gpio_set_dir(SCL_PIN, GPIO_IN);
+    gpio_disable_pulls(SCL_PIN);
+
+    // Set the clock divider for the state machine
+    sm_config_set_clkdiv(&c, div);
+
+    // Load configuration and jump to start of the program
+    pio_sm_init(pio, sm, offset, &c);
+}
+
+%}
+
+% c-sdk {
+
+// Helper function (for use in C program) to initialize this PIO program
+void hw2w_main_program_init(PIO pio, uint sm, uint offset, float div) {
+
+    // Sets up state machine and wrap target. This function is automatically
+    // generated in hw2w_sniffer.pio.h.
+    pio_sm_config c = hw2w_main_program_get_default_config(offset);
+
+    // Allow PIO to control GPIO pin (as output)
+    pio_gpio_init(pio, SDA_PIN);
+
+    // Connect SDA EV0 EV1 to IN pins (control with 'in' instruction)
+    sm_config_set_in_pins(&c, SDA_PIN);
+
+    // Set the pin SDA, EV0 and EV1 direction to input (in PIO)
+    pio_sm_set_consecutive_pindirs(pio, sm, SDA_PIN, 4, false);
+    
+    // Connect EV0_PIN to JMP pin to test the event code.
+    sm_config_set_jmp_pin(&c, EV0_PIN);
+    
+    // I2C is MSB first then: shift to left, auto push, threshold = 8 data NO ack
+    // note: a MOV ISR resets the FIFO, which happens at end of byte
+    // PIO does a IN NULL 8, so the threshold is 8 with autopush, weird
+    sm_config_set_in_shift(&c, false, true, 8);
+
+    // It doubles the depth of the FIFO, because it also uses the transmitting one.
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+
+    // Set the clock divider for the state machine
+    sm_config_set_clkdiv(&c, div);
+
+    // Load configuration and jump to start of the program
+    pio_sm_init(pio, sm, offset, &c);
+}
+
+%}

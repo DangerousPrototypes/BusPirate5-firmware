@@ -19,7 +19,7 @@
 const struct _mode_command_struct jtag_commands[] = {
     {   .command="bluetag", 
         .func=&bluetag_handler, 
-        .description_text=T_HELP_CMD_FLASH, 
+        .description_text=T_JTAG_BLUETAG_DESCRIPTION, 
         .supress_fala_capture=true
     },
  

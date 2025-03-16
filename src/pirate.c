@@ -142,11 +142,10 @@ static void softlock_all_otp(void) {
 static void main_system_initialization(void) {
     // init PSRAM
 	#if BP_HW_PSRAM
-    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-		"Init: psram_init()\n"
-		);  
-
-    system_config.psram_size = sfe_setup_psram(BP_PSRAM_CS);
+        BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+            "Init: psram_init()\n"
+            );  
+        system_config.psram_size = sfe_setup_psram(BP_PSRAM_CS);
     #endif
     
 

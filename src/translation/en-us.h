@@ -177,6 +177,7 @@ static char const * const en_us[]={
 	[T_HW2WIRE_SPEED_MENU]="2WIRE speed",
 	[T_HW2WIRE_RST_LOW]="RST LOW",
 	[T_HW2WIRE_RST_HIGH]="RST HIGH",
+	[T_HW2WIRE_SNIFF]="Sniff 8 bit data with start and stop bits (SLE4442, TM1640)",
 	//3WIRE
 	[T_HW3WIRE_SPEED_MENU_1]="1 to 3900kHz",
     //LEDs
@@ -222,6 +223,7 @@ static char const * const en_us[]={
 	[T_JTAG_BLUETAG_CHANNELS]="Number of channels to scan (starting from IO0)",
 	[T_JTAG_BLUETAG_VERSION]="Show version",
 	[T_JTAG_BLUETAG_DISABLE]="Disable pin pulsing (JTAG mode)",
+	[T_JTAG_BLUETAG_DESCRIPTION]="Find JTAG and SWD pinouts",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",

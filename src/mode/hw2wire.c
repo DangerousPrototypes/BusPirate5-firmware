@@ -33,7 +33,7 @@ const struct _mode_command_struct hw2wire_commands[] = {
     },
     {   .command="sniff",
         .func=&hw2w_sniff,
-        .description_text=T_HELP_SLE4442,
+        .description_text=T_HW2WIRE_SNIFF,
         .supress_fala_capture=false
     }
 };

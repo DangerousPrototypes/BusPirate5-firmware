@@ -109,6 +109,8 @@ typedef struct _system_config {
     uint8_t binmode_select;           // index of currently active binary mode
     bool binmode_lock_terminal;       // disable terminal while in binmode
 
+    size_t psram_size;
+
 } _system_config;
 
 extern struct _system_config system_config;

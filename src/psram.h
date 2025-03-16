@@ -8,7 +8,9 @@
 
 #include <stddef.h>
 
-void runtime_init_setup_psram(void);
+//void runtime_init_setup_psram(void);
+
+size_t sfe_setup_psram(uint32_t psram_cs_pin);
 
 void psram_reinit_timing(void);
 void *__psram_malloc(size_t size);

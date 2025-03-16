@@ -98,7 +98,7 @@ const uint8_t PSRAM_ID = RP2350_PSRAM_ID;
  * @note This function expects the CS pin set
  * 
  */
-static size_t get_psram_size(void)
+static size_t __no_inline_not_in_flash_func(get_psram_size)(void)
 {
 	size_t psram_size = 0;
 
@@ -177,7 +177,7 @@ static size_t get_psram_size(void)
  *
  * @note This function expects interrupts to be enabled on entry
  */
-static void set_psram_timing(void)
+static void __no_inline_not_in_flash_func(set_psram_timing)(void)
 {
 	// Get secs / cycle for the system clock - get before disabling interrupts.
 	uint32_t sysHz = (uint32_t)clock_get_hz(clk_sys);
@@ -217,15 +217,11 @@ static void set_psram_timing(void)
 /**
  *
  */
-static void __no_inline_not_in_flash_func(runtime_init_setup_psram)(/*uint32_t psram_cs_pin*/)
+//static void __no_inline_not_in_flash_func(runtime_init_setup_psram)(/*uint32_t psram_cs_pin*/)
 // void runtime_init_setup_psram(/*uint32_t psram_cs_pin*/)
+static size_t __no_inline_not_in_flash_func(setup_psram)(uint32_t psram_cs_pin)
 {
-	// init PSRAM
-	BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-		"Init: psram_init()\n"
-		);  
-
-	gpio_set_function(BP_PSRAM_CS, GPIO_FUNC_XIP_CS1);
+	gpio_set_function(psram_cs_pin, GPIO_FUNC_XIP_CS1);
 
 	// start with zero size
 	size_t psram_size = get_psram_size();
@@ -233,7 +229,7 @@ static void __no_inline_not_in_flash_func(runtime_init_setup_psram)(/*uint32_t p
 	// No PSRAM - no dice
 	if (psram_size == 0)
 	{
-		return;
+		return 0;
 	}
 
 	uint32_t intr_stash = save_and_disable_interrupts();
@@ -306,14 +302,22 @@ static void __no_inline_not_in_flash_func(runtime_init_setup_psram)(/*uint32_t p
 	xip_ctrl_hw->ctrl |= XIP_CTRL_WRITABLE_M1_BITS;
 
 	restore_interrupts(intr_stash);
-
+#if 0
 	__psram_size = psram_size;
 
 	uint32_t used_psram_size = &__psram_heap_start__ - &__psram_start__;
 	__psram_heap_size = __psram_size - used_psram_size;
+#endif
+	return psram_size;
 
 }
-PICO_RUNTIME_INIT_FUNC_RUNTIME(runtime_init_setup_psram, PICO_RUNTIME_INIT_PSRAM);
+//PICO_RUNTIME_INIT_FUNC_RUNTIME(runtime_init_setup_psram, PICO_RUNTIME_INIT_PSRAM);
+
+// setup call
+size_t sfe_setup_psram(uint32_t psram_cs_pin)
+{
+    return setup_psram(psram_cs_pin);
+}
 
 // update timing -- used if the system clock/timing was changed.
 void psram_reinit_timing()

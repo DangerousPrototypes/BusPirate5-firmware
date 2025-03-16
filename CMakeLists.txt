@@ -1,13 +1,13 @@
-# == DO NEVER EDIT THE NEXT LINES for Raspberry Pi Pico VS Code Extension to work ==
+# == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
 if(WIN32)
     set(USERHOME $ENV{USERPROFILE})
 else()
     set(USERHOME $ENV{HOME})
 endif()
 if(WIN32)
-set(sdkVersion 2.0.0)
-set(toolchainVersion 13_2_Rel1)
-set(picotoolVersion 2.0.0)
+set(sdkVersion 2.1.0)
+set(toolchainVersion 13_3_Rel1)
+set(picotoolVersion 2.1.0)
 include(${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 endif()
 # ====================================================================================
@@ -34,15 +34,17 @@ endif()
 message(GIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
 message(BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
 
+if("${BP_PICO_PLATFORM} " STREQUAL " ")
+    set(BP_PICO_PLATFORM "rp2350")
+endif()
+
 if(${BP_PICO_PLATFORM} MATCHES "rp2350")
-    set(PICO_PLATFORM "rp2350") #compile for 5XL and 6 
-    set(PICO_BOARD buspirate6)   
+    set(PICO_PLATFORM "rp2350") #compile for 5XL and 6
+    set(PICO_BOARD buspirate6)
 else()
     set(PICO_PLATFORM "rp2040") #compile for 5 rev8 and 5 rev10
     set(PICO_BOARD buspirate5)
 endif()
-
-
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(cmake/pico_sdk_import.cmake)

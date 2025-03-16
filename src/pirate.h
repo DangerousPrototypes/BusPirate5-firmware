@@ -2,8 +2,10 @@
 #ifndef BP_CONFIG
 #define BP_CONFIG
 
+#define DISPLAY_ILI9341
+
 // enable splash screen at startup, increases firmware size and load time
-#define BP_SPLASH_ENABLED
+// #define BP_SPLASH_ENABLED
 
 // uncomment to disable unique com ports for manufacturing testing
 // #define BP_MANUFACTURING_TEST_MODE
@@ -78,6 +80,8 @@
         #include "platform/bpi-rev10.h"
     #elif BP_VER == 6
         #include "platform/bpi6-rev1.h"
+    #elif BP_VER == 7
+        #include "platform/bpi7-rev0.h"
     #else
         #error "Unknown platform version in pirate.h"
     #endif

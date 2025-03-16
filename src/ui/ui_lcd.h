@@ -1,3 +1,6 @@
+void lcd_write_start(void);
+void lcd_write_stop(void);
+
 void lcd_configure(void);
 void lcd_clear(void);
 void ui_lcd_update(uint32_t update_flags);

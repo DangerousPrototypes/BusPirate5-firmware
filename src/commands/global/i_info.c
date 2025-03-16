@@ -18,6 +18,9 @@
 #include "commands/global/freq.h"
 #include "timestamp.h"
 #include "binmode/binmodes.h"
+
+#include "psram.h"
+
 /*
 static const char * const usage[]=
 {
@@ -59,7 +62,7 @@ void i_info_handler(struct command_result* res) {
            ui_term_color_num_float(),
            BP_FIRMWARE_TIMESTAMP,
            ui_term_color_reset());
-    printf("%s%s%s %s %s%s%s %s, %s%s%s %s\r\n",
+    printf("%s%s%s %s %s%s%s %s, %s%s%s %s, %s%u%s %s\r\n",
            ui_term_color_num_float(),
            BP_HARDWARE_MCU,
            ui_term_color_reset(),
@@ -71,7 +74,13 @@ void i_info_handler(struct command_result* res) {
            ui_term_color_num_float(),
            BP_HARDWARE_FLASH,
            ui_term_color_reset(),
-           GET_T(T_INFO_FLASH));
+           GET_T(T_INFO_FLASH),
+
+           ui_term_color_num_float(),
+           __psram_get_size() / 1024,
+           ui_term_color_reset(),
+           "PSRAM"
+		);
     printf(
         "%s: %s%016llX%s\r\n", GET_T(T_INFO_SN), ui_term_color_num_float(), mcu_get_unique_id(), ui_term_color_reset());
 

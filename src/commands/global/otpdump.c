@@ -28,11 +28,12 @@
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = {
-    "otpdump -r <start row> -c <maximum row count> -s <show only non-blank rows>",
-    "show all non-blank rows: otpdump -r 0x000 -c 0xfff -s",
-    // start row  == starting row address to show data
-    // row count  == maximum number of rows to search
-    // only blank == do not show OTP that are all-zero
+    "otpdump -r <start row> -c <maximum row count> -a",
+    "   -r <start row>         : First OTP Row Address to dump",
+    "   -c <maximum row count> : Maximum number of OTP rows to dump",
+    "   -a                     : Show even blank (all-zero) rows",
+    "",
+    "By default, this command will show only non-blank rows.",
 };
 
 // This is a struct of help strings for each option/flag/variable the command accepts
@@ -58,7 +59,7 @@ static const struct ui_help_options cmdline_options[] = {
 typedef struct _PARSED_OTP_COMMAND_OPTIONS {
     uint16_t StartRow;
     uint16_t MaximumRows;
-    bool ShowOnlyNonBlank;
+    bool ShowAllRows;
 } PARSED_OTP_COMMAND_OPTIONS;
 
 typedef struct _OTP_DUAL_ROW_READ_RESULT {
@@ -164,8 +165,8 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
     res->error = false;
     memset(options, 0, sizeof(PARSED_OTP_COMMAND_OPTIONS));
     options->StartRow = 0u;
-    options->MaximumRows = 64; // 128 rows is one page of OTP
-    options->ShowOnlyNonBlank = false; // normal dump is all data
+    options->MaximumRows = OTP_ROW_COUNT;
+    options->ShowAllRows = false; // normal dump is only non-zero data
 
     command_var_t arg;
     // NOTE: Optimizer will do its job.  Below formatting allows collapsing
@@ -174,32 +175,32 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
     // Parse the row count first, so if omitted, can auto-adjust row count later
     uint32_t row_count = 0u;
 
-    bool r_flag = cmdln_args_find_flag_uint32('c', &arg, &row_count);
-    if (r_flag && !arg.has_value) {
+    bool row_count_flag = cmdln_args_find_flag_uint32('c', &arg, &row_count);
+    if (row_count_flag && !arg.has_value) {
         printf(
             "ERROR: Row count requires an integer argument\r\n"
             );
         res->error = true;
-    } else if (r_flag && arg.has_value && (row_count > OTP_ROW_COUNT || row_count == 0)) {
+    } else if (row_count_flag && arg.has_value && (row_count > OTP_ROW_COUNT || row_count == 0)) {
         printf(
             "ERROR: Row count (-c) must be in range [1..%" PRId16 "] (0x0..0x%" PRIx16 ")\r\n",
             OTP_ROW_COUNT, OTP_ROW_COUNT
             );
         // ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
         res->error = true;
-    } else if (r_flag && arg.has_value) {
+    } else if (row_count_flag && arg.has_value) {
         options->MaximumRows = row_count; // bounds checked above
     }
 
 
     uint32_t start_row = 0;
-    bool s_flag = cmdln_args_find_flag_uint32('a', &arg, &start_row);
-    if (s_flag && !arg.has_value) {
+    bool start_row_flag = cmdln_args_find_flag_uint32('r', &arg, &start_row);
+    if (start_row_flag && !arg.has_value) {
         printf(
             "ERROR: Start row requires an integer argument\r\n"
             );
         res->error = true;
-    } else if (s_flag && arg.has_value && start_row > LAST_OTP_ROW) {
+    } else if (start_row_flag && arg.has_value && start_row > LAST_OTP_ROW) {
         printf(
             "ERROR: Start row (-r) must be in range [0..%" PRId16 "] (0x0..0x%" PRIx16 ")\r\n",
             LAST_OTP_ROW, LAST_OTP_ROW
@@ -208,7 +209,7 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
     } else if (res->error) {
         // no checks of row count vs. start row ...
         // already had an error earlier and thus not meaningful check
-    } else if (s_flag && arg.has_value && r_flag) {
+    } else if (start_row_flag && arg.has_value && row_count_flag) {
         uint16_t maximum_start_row = OTP_ROW_COUNT - options->MaximumRows;
         // no automatic adjustment if both start and count arguments were provided.
         // instead, validate that the start + count are within bounds.
@@ -221,7 +222,7 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
                 );
             res->error = true;
         }
-    } else if (s_flag && arg.has_value) {
+    } else if (start_row_flag && arg.has_value) {
         options->StartRow = start_row;
         // automatically adjust the row count
         // (only when row count not explicitly provided)
@@ -232,7 +233,7 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
         }
     }
 
-    options->ShowOnlyNonBlank = cmdln_args_find_flag('s');
+    options->ShowAllRows = cmdln_args_find_flag('a');
     return;
 }
 
@@ -292,13 +293,13 @@ static void internal_triple_read_otp(OTP_READ_RESULT* out_data, uint16_t row) {
     return;
 }
 
-void dump_otp(uint16_t start_row, uint16_t row_count, bool show_only_non_blank) {
+void dump_otp(uint16_t start_row, uint16_t row_count, bool show_all_rows) {
     uint16_t remaining_rows = row_count;
     for (uint16_t current_row = start_row; remaining_rows; --remaining_rows, ++current_row) {
         OTP_READ_RESULT result = {0};
         internal_triple_read_otp(&result, current_row);
-        if (show_only_non_blank && result.data_ok && result.read_with_ecc == 0) {
-            continue;
+        if (!show_all_rows && result.data_ok && result.read_with_ecc == 0) {
+            continue; // to next row ... skipping blank rows
         }
         print_otp_read_result(&result, current_row);
     }
@@ -323,6 +324,6 @@ void otpdump_handler(struct command_result* res) {
         return;
     }
 
-    dump_otp(options.StartRow, options.MaximumRows, options.ShowOnlyNonBlank);
+    dump_otp(options.StartRow, options.MaximumRows, options.ShowAllRows);
     return;
 }

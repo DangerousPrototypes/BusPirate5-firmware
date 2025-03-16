@@ -43,12 +43,18 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include "ui/ui_term.h"
 #include "pirate/hwspi.h"
 #include "pirate/mem.h"
+#include "pirate/bio.h"
 
 const char legacy4third_mode_name[] = "Legacy Binary Mode for Flashrom and AVRdude (EXPERIMENTAL)";
 
 #define TMPBUFF_SIZE 0x4000
 #define CDCBUFF_SIZE 0x4000
+// WARNING: decrease DEFAULT_MAX_TRIES value can cause problems
+#if BP_VER == 5
 #define DEFAULT_MAX_TRIES 100000
+#else
+#define DEFAULT_MAX_TRIES 200000
+#endif
 #define CDC_SEND_STR(cdc_n, str)                                                                                       \
     tud_cdc_n_write(cdc_n, (uint8_t*)str, sizeof(str) - 1);                                                            \
     tud_cdc_n_write_flush(1);
@@ -60,10 +66,40 @@ static uint8_t current_decimal;
 static uint8_t* tmpbuf;
 static uint8_t* cdc_buff;
 static uint32_t remain_bytes;
+static bool set_aux_pins = true;
+static bool hold_value = true;
+static bool wp_value = true;
+
+
+void set_planks_auxpins(bool set)
+{
+    const uint8_t hold_pin = 2;
+    const uint8_t wp_pin = 3;
+
+    if (set)
+    {
+        bio_output(hold_pin);
+        bio_put(hold_pin, hold_value ? true : false);
+        system_bio_update_purpose_and_label(true, hold_pin, BP_PIN_IO, hold_value ? "HIGH" : "LOW");
+        system_set_active(true, hold_pin, &system_config.aux_active);
+
+        bio_output(wp_pin);
+        bio_put(wp_pin, wp_value ? true : false);
+        system_bio_update_purpose_and_label(true, wp_pin, BP_PIN_IO, wp_value ? "HIGH" : "LOW");
+        system_set_active(true, wp_pin, &system_config.aux_active);
+    }
+    else
+    {
+        bio_input(hold_pin);
+        bio_input(wp_pin);
+        system_set_active(true, hold_pin, &system_config.aux_active);
+        system_set_active(true, wp_pin, &system_config.aux_active);
+    }
+}
+
 
 void disable_psu_legacy(void) {
     uint8_t binmode_args = 0x00;
-
     uint32_t result = binmode_psu_disable(&binmode_args);
 }
 
@@ -144,14 +180,25 @@ void cdc_full_flush(uint32_t cdc_id) {
     remain_bytes = 0;
 }
 
+void set_pins_ui(void) {
+    static const char pin_labels[][5] = { "CLK", "MOSI", "MISO", "CS" };
+
+    system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
+    system_bio_update_purpose_and_label(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
+    system_bio_update_purpose_and_label(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, M_SPI_CS, BP_PIN_MODE, pin_labels[3]);
+}
+
 void reset_legacy(void) {
     uint8_t binmode_args = 0;
 
     hwspi_deinit();
+    set_planks_auxpins(false);
     disable_psu_legacy();
     binmode_pullup_disable(&binmode_args);
     binmode_reset(&binmode_args);
     mode_change((uint8_t*)"HiZ");
+    set_pins_ui();
 }
 
 void legacy_protocol(void) {
@@ -393,6 +440,9 @@ void legacy_protocol(void) {
                 }
 
                 setup_spi_legacy(spi_speed, 8, 0, 0, cs_init);
+                if (set_aux_pins) {
+                    set_planks_auxpins(true);
+                }
                 hwspi_select();
                 CDC_SEND_STR(1, "\x01");
 
@@ -647,10 +697,24 @@ void legacy4third_mode(void) {
         // enable_debug_legacy();
         system_config.binmode_usb_rx_queue_enable = false;
         system_config.binmode_usb_tx_queue_enable = false;
+        set_pins_ui();
     } else if (mode_active == 1) {
+        set_aux_pins = true;
         mode_active++;
 
         prompt_result result = { 0 };
+
+        printf("\r\nSet OUTPUT HOLD(IO2) & WP(IO3) pins? (no=INPUT)");
+        ui_prompt_bool(&result, true, true, false, &set_aux_pins);
+        if (set_aux_pins) {
+            printf("\r\nSet HOLD HIGH? (no=LOW)");
+            ui_prompt_bool(&result, true, true, false, &hold_value);
+            printf("\r\nSet WP HIGH? (no=LOW)");
+            ui_prompt_bool(&result, true, true, false, &wp_value);
+        }
+        if (set_aux_pins) {
+            set_planks_auxpins(true);
+        }
 
         printf("\r\n%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());
 
@@ -694,5 +758,17 @@ void legacy4third_mode(void) {
             uint8_t binmode_args = 0;
             binmode_reset_buspirate(&binmode_args);
         */
+        system_bio_update_purpose_and_label(false, M_SPI_CLK, BP_PIN_MODE, 0);
+        system_bio_update_purpose_and_label(false, M_SPI_CDO, BP_PIN_MODE, 0);
+        system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
+        system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
+        set_planks_auxpins(false);
     }
 }
+
+/*
+ Hercules testing:
+ HEX1: 01 49 60 8A
+ HEX2: 02
+ HEX3: 05 00 01 00 03 9f 03
+*/

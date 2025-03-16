@@ -29,6 +29,7 @@ MEMORY
     INCLUDE "pico_flash_region.ld"
     */
     FLASH(rx) : ORIGIN = 0x10000000, LENGTH = 16384k
+    PSRAM(rwx) : ORIGIN = 0x11000000, LENGTH = 8192k
     RAM(rwx) : ORIGIN =  0x20000000, LENGTH = 512k
     SCRATCH_X(rwx) : ORIGIN = 0x20080000, LENGTH = 4k
     SCRATCH_Y(rwx) : ORIGIN = 0x20081000, LENGTH = 4k
@@ -276,6 +277,13 @@ SECTIONS
         KEEP(*(.embedded_end_block*))
         PROVIDE(__flash_binary_end = .);
     } > FLASH =0xaa
+
+    .psram (NOLOAD) : {
+        __psram_start__ = .;
+        *(.psram*)
+        . = ALIGN(4096);
+        __psram_heap_start__ = .;
+    } > PSRAM
 
     /* stack limit is poorly named, but historically is maximum heap ptr */
     __StackLimit = ORIGIN(RAM) + LENGTH(RAM);

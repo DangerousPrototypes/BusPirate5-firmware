@@ -39,7 +39,7 @@ size_t __psram_heap_size = 0;
 #endif
 
 #ifndef RP2350_PSRAM_MAX_SCK_HZ
-#define RP2350_PSRAM_MAX_SCK_HZ (109'000'000)
+#define RP2350_PSRAM_MAX_SCK_HZ (109 * 100 * 100)
 #endif
 
 #ifndef RP2350_PSRAM_ID

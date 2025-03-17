@@ -20,6 +20,17 @@
 #include "displays.h"
 #include "pirate/lcd.h"
 
+static inline void lcd_write_start(void) {
+    spi_busy_wait(true);
+    gpio_put(DISPLAY_DP, 1);
+    gpio_put(DISPLAY_CS, 0);
+}
+
+static inline void lcd_write_stop(void) {
+    gpio_put(DISPLAY_CS, 1);
+    spi_busy_wait(false);
+}
+
 void lcd_write_string(
     const FONT_INFO* font, const uint8_t* back_color, const uint8_t* text_color, const char* c, uint16_t fill_length);
 void lcd_write_labels(uint16_t left_margin,
@@ -48,24 +59,18 @@ void menu_update(uint8_t current, uint8_t next) {
                          240 - 1,
                          current * 32,
                          (current * 32) + hunter_14ptFontInfo.lookup[b[0] - hunter_14ptFontInfo.start_char].height - 1);
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+	lcd_write_start();
     lcd_write_string(&hunter_14ptFontInfo, colors_pallet[LCD_BLACK], colors_pallet[LCD_RED], b, 0);
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 
     const char c[2] = { '>', 0x00 };
     lcd_set_bounding_box(0,
                          240 - 1,
                          next * 32,
                          (next * 32) + hunter_14ptFontInfo.lookup[c[0] - hunter_14ptFontInfo.start_char].height - 1);
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+	lcd_write_start();
     lcd_write_string(&hunter_14ptFontInfo, colors_pallet[LCD_BLACK], colors_pallet[LCD_RED], c, 0);
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 }
 
 struct display_layout {
@@ -113,17 +118,14 @@ const struct display_layout layout = {
 void lcd_write_background(const unsigned char* image) {
     lcd_set_bounding_box(0, 240, 0, 320);
 
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+    lcd_write_start();
 
     // Update October 2024: new image headers in pre-sorted pixel format for speed
     //  see image.py in the display folder to create new headers
     // TODO: DMA it.
     spi_write_blocking(BP_SPI_PORT, image, (320 * 240 * 2));
 
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 }
 
 // Write a string to the LCD
@@ -334,12 +336,9 @@ void lcd_write_labels(uint16_t left_margin,
                          left_margin + ((240) - 1),
                          top_margin,
                          (top_margin + (*font).lookup[(*c) - (*font).start_char].height) - 1);
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+	lcd_write_start();
     lcd_write_string(font, layout.image->text_background_color, color, c, fill_length);
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 }
 
 void lcd_clear(void) {
@@ -347,16 +346,13 @@ void lcd_clear(void) {
 
     lcd_set_bounding_box(0, 240, 0, 320);
 
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);
-    gpio_put(DISPLAY_CS, 0);
+    lcd_write_start();
     for (x = 0; x < 240; x++) {
         for (y = 0; y < 320; y++) {
             spi_write_blocking(BP_SPI_PORT, colors_pallet[LCD_BLACK], 2);
         }
     }
-    gpio_put(DISPLAY_CS, 1);
-    spi_busy_wait(false);
+    lcd_write_stop();
 }
 
 void lcd_set_bounding_box(uint16_t xs, uint16_t xe, uint16_t ys, uint16_t ye) {
@@ -388,13 +384,9 @@ void lcd_write_command(uint8_t command) {
 }
 
 void lcd_write_data(uint8_t data) {
-    // D/C high for data
-    spi_busy_wait(true);
-    gpio_put(DISPLAY_DP, 1);                   // gpio_set(BP_LCD_DP_PORT,BP_LCD_DP_PIN);
-    gpio_put(DISPLAY_CS, 0);                   // gpio_clear(BP_LCD_CS_PORT, BP_LCD_CS_PIN);
-    spi_write_blocking(BP_SPI_PORT, &data, 1); // spi_xfer(BP_LCD_SPI, &data);
-    gpio_put(DISPLAY_CS, 1);                   // gpio_set(BP_LCD_CS_PORT, BP_LCD_CS_PIN);
-    spi_busy_wait(false);
+    lcd_write_start();
+    spi_write_blocking(BP_SPI_PORT, &data, 1);
+    lcd_write_stop();
 }
 
 void lcd_disable(void) {
@@ -441,8 +433,93 @@ void lcd_screensaver_alarm_reset(void) {
     }
 }
 
-
 void lcd_configure(void) {
+
+#if BP_HW_DISPLAY_ILI9341
+
+#define ILI9341_SWRESET 0x01 ///< Software reset register
+
+#define ILI9341_PWCTR1 0xC0 ///< Power Control 1
+#define ILI9341_PWCTR2 0xC1 ///< Power Control 2
+
+#define ILI9341_VMCTR1 0xC5 ///< VCOM Control 1
+#define ILI9341_VMCTR2 0xC7 ///< VCOM Control 2
+
+#define ILI9341_VSCRSADD 0x37 ///< Vertical Scrolling Start Address
+#define ILI9341_PIXFMT 0x3A   ///< COLMOD: Pixel Format Set
+
+#define ILI9341_FRMCTR1 0xB1 ///< Frame Rate Control (In Normal Mode/Full Colors)
+#define ILI9341_DFUNCTR 0xB6 ///< Display Function Control
+
+#define ILI9341_GAMMASET 0x26 ///< Gamma Set
+#define ILI9341_GMCTRP1 0xE0 ///< Positive Gamma Correction
+#define ILI9341_GMCTRN1 0xE1 ///< Negative Gamma Correction
+
+#define ILI9341_SLPIN 0x10  ///< Enter Sleep Mode
+#define ILI9341_SLPOUT 0x11 ///< Sleep Out
+
+#define ILI9341_DISPOFF 0x28  ///< Display OFF
+#define ILI9341_DISPON 0x29   ///< Display ON
+
+#define ILI9341_MADCTL 0x36   ///< Memory Access Control
+
+#define MADCTL_MY	0x80 ///< Bottom to top
+#define MADCTL_MX	0x40 ///< Right to left
+#define MADCTL_MV	0x20 ///< Reverse Mode
+#define MADCTL_ML	0x10 ///< LCD refresh Bottom to top
+#define MADCTL_RGB	0x00 ///< Red-Green-Blue pixel order
+#define MADCTL_BGR	0x08 ///< Blue-Green-Red pixel order
+#define MADCTL_MH	0x04 ///< LCD refresh right to left
+
+	static const uint8_t initcmd[] = {
+		0xEF, 3, 0x03, 0x80, 0x02,
+		0xCF, 3, 0x00, 0xC1, 0x30,
+		0xED, 4, 0x64, 0x03, 0x12, 0x81,
+		0xE8, 3, 0x85, 0x00, 0x78,
+		0xCB, 5, 0x39, 0x2C, 0x00, 0x34, 0x02,
+		0xF7, 1, 0x20,
+		0xEA, 2, 0x00, 0x00,
+		ILI9341_PWCTR1  , 1, 0x23,             // Power control VRH[5:0]
+		ILI9341_PWCTR2  , 1, 0x10,             // Power control SAP[2:0];BT[3:0]
+		ILI9341_VMCTR1  , 2, 0x3e, 0x28,       // VCM control
+		ILI9341_VMCTR2  , 1, 0x86,             // VCM control2
+		ILI9341_MADCTL  , 1, (MADCTL_MY | MADCTL_MV | MADCTL_BGR), // Memory Access Control
+		ILI9341_VSCRSADD, 1, 0x00,             // Vertical scroll zero
+		ILI9341_PIXFMT  , 1, 0x55,
+		ILI9341_FRMCTR1 , 2, 0x00, 0x18,
+		ILI9341_DFUNCTR , 3, 0x08, 0x82, 0x27, // Display Function Control
+		0xF2, 1, 0x00,                         // 3Gamma Function Disable
+		ILI9341_GAMMASET , 1, 0x01,             // Gamma curve selected
+		ILI9341_GMCTRP1 , 15, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, // Set Gamma
+		  0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00,
+		ILI9341_GMCTRN1 , 15, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, // Set Gamma
+		  0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F,
+		ILI9341_SLPOUT  , 0x80,                // Exit Sleep
+		ILI9341_DISPON  , 0x80,                // Display on
+		0x00                                   // End of list
+	};
+
+	lcd_write_command(ILI9341_SWRESET); // Engage software reset
+	sleep_ms(150);
+
+	uint8_t cmd, x, numArgs;
+	const uint8_t *addr = initcmd;
+	while ((cmd = *addr++) != 0)
+	{
+		x = *addr++;
+		numArgs = x & 0x7F;
+		lcd_write_command(cmd);
+		while (numArgs-- != 0)
+			lcd_write_data(*addr++);
+
+		if (x & 0x80)
+			sleep_ms(150);
+	}
+
+    sleep_ms(120);
+
+#else
+
     lcd_write_command(0x36);    // MADCTL (36h): Memory Data Access Control
     lcd_write_data(0b00100000); // 0x00 101/011 - left/right hand mode 0b100000
 
@@ -533,4 +610,6 @@ void lcd_configure(void) {
     lcd_write_command(0x11); // Sleep out, DC/DC converter, internal oscillator, panel scanning "enable"
     sleep_ms(120);
     lcd_write_command(0x29); // Display ON ,default= Display OFF
+
+#endif
 }

@@ -13,7 +13,7 @@ ADD_CUSTOM_TARGET (
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/timestamp.cmake
     ADD_DEPENDENCIES ${CMAKE_BINARY_DIR}/timestamp.cmake)
 
-add_subdirectory(sparkfun_pico)
+
 
 # Add executable. Default name is the project name, version 0.1
 set(buspirate_common
@@ -588,8 +588,6 @@ foreach(revision ${revisions})
 endforeach()
 
 string(APPEND CMAKE_EXE_LINKER_FLAGS "-Wl,--cref,--print-memory-usage")
-
-#target_link_libraries(bus_pirate7 sparkfun_pico)
 
 # by default this project uses LGPL3 libraries, if you do not want to comply
 # with LGPL3 license, please set the following variable to FALSE, otherwise

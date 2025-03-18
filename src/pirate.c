@@ -140,6 +140,12 @@ static void softlock_all_otp(void) {
 }
 
 static void main_system_initialization(void) {
+    // setup the system_config defaults and the initial pin label references
+    BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        "Init: system init()\n"
+        );
+    system_init();
+
     // init PSRAM
 	#if BP_HW_PSRAM
         BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
@@ -316,13 +322,13 @@ static void main_system_initialization(void) {
         "Init: button init\n"
         );
     button_init();
-
+#if 0
     // setup the system_config defaults and the initial pin label references
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: system init()\n"
         );
     system_init();
-
+#endif
     // setup the UI command buffers
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: ui_init()\n"

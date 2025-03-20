@@ -157,15 +157,20 @@ void psram_handler(struct command_result* res) {
             return;
         }
 
+        printf("Memory 1 allocated\r\n");
+
         for (int i = 0; i < 1024; i++)
             mem1[i] = 0xCAFEFEED;
         
-        for (int i = 0; i < 1024; i++)
+        for (int i = 0; i < 1024; i++){
             if (mem1[i] != 0xCAFEFEED ){
                 printf("Failed to write to memory 1\r\n");
                 __psram_free(mem1);
                 return;
             }
+        }
+
+        printf("Memory 1 write OK\r\n");
 
         uint32_t *mem2 = __psram_malloc(BLOCK_SIZE * 2);
         if (mem2 == NULL){
@@ -174,17 +179,22 @@ void psram_handler(struct command_result* res) {
             return;
         }
 
+        printf("Memory 2 allocated\r\n");
+
 
         for(int i = 0; i < 2048; i++)
             mem2[i] = 0xDEADBEEF;
 
-        for(int i = 0; i < 1024; i++)
+        for(int i = 0; i < 1024; i++){
             if (mem2[i] != 0xDEADBEEF){
                 printf("Failed to write to memory 2\r\n");
                 __psram_free(mem1);
                 __psram_free(mem2);
                 return;
             }
+        }
+
+        printf("Memory 2 write OK\r\n");
 
         __psram_free(mem1);
         __psram_free(mem2);  

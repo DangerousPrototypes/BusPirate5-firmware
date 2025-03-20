@@ -302,12 +302,12 @@ static size_t __no_inline_not_in_flash_func(setup_psram)(uint32_t psram_cs_pin)
 	xip_ctrl_hw->ctrl |= XIP_CTRL_WRITABLE_M1_BITS;
 
 	restore_interrupts(intr_stash);
-#if 0
+
 	__psram_size = psram_size;
 
 	uint32_t used_psram_size = &__psram_heap_start__ - &__psram_start__;
 	__psram_heap_size = __psram_size - used_psram_size;
-#endif
+
 	return psram_size;
 
 }

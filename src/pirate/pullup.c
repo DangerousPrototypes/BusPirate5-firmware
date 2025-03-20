@@ -47,7 +47,7 @@
     }    
 
     bool pullx_register_write_verify(uint8_t addr, uint8_t reg, uint16_t value){
-        uint8_t data[2];
+        uint8_t data[3];
         data[0] = reg;
         data[1] = value & 0xff;
         data[2] = (value >> 8) & 0xff;

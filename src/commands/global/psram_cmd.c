@@ -92,7 +92,7 @@ void psram_handler(struct command_result* res) {
     #endif
 
     size_t psram_size = system_config.psram_size;
-    printf("PSRAM setup complete. PSRAM size 0x%lX\r\n", psram_size);
+    printf("PSRAM size 0x%lX\r\n", psram_size);
     if (psram_size == 0)
     {
         printf("PSRAM not detected - done\r\n");

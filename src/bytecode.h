@@ -79,7 +79,8 @@ enum SYNTAX {
     SYN_READ_DAT, // here
     SYN_DELAY_US,
     SYN_DELAY_MS,
-    SYN_AUX_OUTPUT,
+    SYN_AUX_OUTPUT_HIGH,
+    SYN_AUX_OUTPUT_LOW,
     SYN_AUX_INPUT,
     SYN_ADC,
     // SYN_FREQ

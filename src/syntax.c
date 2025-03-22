@@ -79,8 +79,8 @@ const struct _syntax_compile_commands_t syntax_compile_commands[] = {
     {'_', SYN_SET_DAT_LOW},
     {'-', SYN_SET_DAT_HIGH},
     {'.', SYN_READ_DAT},
-    {'a', SYN_AUX_OUTPUT},
-    {'A', SYN_AUX_OUTPUT},
+    {'a', SYN_AUX_OUTPUT_LOW},
+    {'A', SYN_AUX_OUTPUT_HIGH},
     {'@', SYN_AUX_INPUT},
     {'v', SYN_ADC}
 };
@@ -195,7 +195,8 @@ compiler_get_attributes:
             syntax_io.out[syntax_io.out_cnt].repeat = 1;
         }
 
-        if (syntax_io.out[syntax_io.out_cnt].command >= SYN_AUX_OUTPUT) {
+        //these syntax commands need to specify a pin
+        if (syntax_io.out[syntax_io.out_cnt].command >= SYN_AUX_OUTPUT_HIGH) {
             if (syntax_io.out[syntax_io.out_cnt].has_bits == false) {
                 printf("Error: missing IO number for command %c at position %d. Try %c.0\r\n", c, current_position, c);
                 return SSTATUS_ERROR;
@@ -318,15 +319,23 @@ void syntax_run_delay_ms(struct _syntax_io* syntax_io, uint32_t current_position
     busy_wait_ms(syntax_io->out[current_position].repeat);
 }
 
-void syntax_run_aux_output(struct _syntax_io* syntax_io, uint32_t current_position) {
-    bio_output(syntax_io->out[current_position].bits);
-    bio_put((uint8_t)syntax_io->out[current_position].bits, (bool)syntax_io->out[current_position].out_data);
+static inline void _syntax_run_aux_output(uint8_t bio, bool direction) {
+    bio_output(bio);
+    bio_put(bio, direction);
     system_bio_update_purpose_and_label(
         true,
-        syntax_io->out[current_position].bits,
+        bio,
         BP_PIN_IO,
-        labels[syntax_io->out[current_position].out_data]); // this should be moved to a cleanup function to reduce overhead
-    system_set_active(true, syntax_io->out[current_position].bits, &system_config.aux_active);
+        labels[direction]); // this should be moved to a cleanup function to reduce overhead
+    system_set_active(true, bio, &system_config.aux_active);
+}
+
+void syntax_run_aux_output_high(struct _syntax_io* syntax_io, uint32_t current_position) {
+    _syntax_run_aux_output(syntax_io->out[current_position].bits, true);
+}
+
+void syntax_run_aux_output_low(struct _syntax_io* syntax_io, uint32_t current_position) {
+    _syntax_run_aux_output(syntax_io->out[current_position].bits, false);
 }
 
 void syntax_run_aux_input(struct _syntax_io* syntax_io, uint32_t current_position) {
@@ -379,7 +388,8 @@ syntax_run_func_ptr_t syntax_run_func[]={
     [SYN_STOP_ALT]=syntax_run_stop_alt,
     [SYN_DELAY_US]=syntax_run_delay_us,
     [SYN_DELAY_MS]=syntax_run_delay_ms,
-    [SYN_AUX_OUTPUT]=syntax_run_aux_output,
+    [SYN_AUX_OUTPUT_HIGH]=syntax_run_aux_output_high,
+    [SYN_AUX_OUTPUT_LOW]=syntax_run_aux_output_low,
     [SYN_AUX_INPUT]=syntax_run_aux_input,
     [SYN_ADC]=syntax_run_adc,
     [SYN_TICK_CLOCK]=syntax_run_tick_clock,
@@ -462,15 +472,23 @@ void syntax_post_start_stop(struct _bytecode* in, struct _output_info* info) {
     }
 }
 
-void syntax_post_aux_output(struct _bytecode* in, struct _output_info* info) {
+static inline void _syntax_post_aux_output(uint8_t bio, bool direction) {
     printf("\r\nIO%s%d%s set to%s OUTPUT: %s%d%s",
-              ui_term_color_num_float(),
-                in->bits,
+                ui_term_color_num_float(),
+                bio,
                 ui_term_color_notice(),
                 ui_term_color_reset(),
                 ui_term_color_num_float(),
-                (in->out_data),
+                direction,
                 ui_term_color_reset());
+}
+
+void syntax_post_aux_output_high(struct _bytecode* in, struct _output_info* info) {
+    _syntax_post_aux_output(in->bits, 1);
+}
+
+void syntax_post_aux_output_low(struct _bytecode* in, struct _output_info* info) {
+    _syntax_post_aux_output(in->bits, 0);
 }
 
 void syntax_post_aux_input(struct _bytecode* in, struct _output_info* info) {
@@ -548,7 +566,8 @@ syntax_post_func_ptr_t syntax_post_func[] = {
     [SYN_STOP_ALT] = syntax_post_start_stop,
     [SYN_DELAY_US] = syntax_post_delay_us_ms,
     [SYN_DELAY_MS] = syntax_post_delay_us_ms,
-    [SYN_AUX_OUTPUT] = syntax_post_aux_output,
+    [SYN_AUX_OUTPUT_HIGH] = syntax_post_aux_output_high,
+    [SYN_AUX_OUTPUT_LOW] = syntax_post_aux_output_low,
     [SYN_AUX_INPUT] = syntax_post_aux_input,
     [SYN_ADC] = syntax_post_adc,
     [SYN_TICK_CLOCK] = syntax_post_tick_clock,

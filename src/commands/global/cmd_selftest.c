@@ -443,6 +443,19 @@ bool selftest_pullx_low(uint8_t pullx) {
 
 #endif
 
+#if BP_HW_PSRAM
+bool selftest_psram(void) {
+    printf("PSRAM TEST: ");
+    if (system_config.psram_size != 0x800000) {
+        printf("ERROR!\r\n");
+        return true;
+    } else {
+        printf("OK\r\n");
+    }
+    return false;
+}
+#endif
+
 
 bool selftest_button(void) {
     // debounce value selected somewhat arbitrarily
@@ -572,6 +585,10 @@ void cmd_selftest(void) {
     if (selftest_adc()) {
         fails++;
     }
+
+    #if BP_HW_PSRAM
+        if(selftest_psram()) fails++;
+    #endif
 
     // TF flash card check: was TF flash card detected?
     if (selftest_flash()) {

@@ -111,8 +111,6 @@ set(buspirate_common
         commands/global/dump.h
         commands/global/ovrclk.c 
         commands/global/ovrclk.h    
-        commands/global/psram_cmd.c 
-        commands/global/psram_cmd.h    
         
         # HiZ
         mode/hiz.h
@@ -430,14 +428,20 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${buspirate_nandflash}
                 ${buspirate_rtt}
                 ${rp2350_common}
-                platform/bpi7-rev0.h
-                platform/bpi7-rev0.c
+                platform/bpi7-rev1.h
+                platform/bpi7-rev1.c
                 display/robot7x16.h
+                pirate/ioexpander.h
+                pirate/ioexpander.c 
+                pirate/xl9555.h
+                pirate/xl9555.c
                 psram.c
 		psram.h
+                commands/global/psram_cmd.c 
+                commands/global/psram_cmd.h    
                 ) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_VER=7) 
-        target_compile_definitions(bus_pirate7 PUBLIC BP_REV=0) 
+        target_compile_definitions(bus_pirate7 PUBLIC BP_REV=1) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")             
 
         add_executable(bus_pirate6
@@ -459,7 +463,9 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${buspirate_rtt}
                 ${rp2350_common}
                 platform/bpi5xl-rev0.h
-                platform/bpi5xl-rev0.c 
+                platform/bpi5xl-rev0.c
+                pirate/ioexpander.h
+                pirate/ioexpander.c 
                 pirate/shift.h
                 pirate/shift.c
                 display/robot5xx16.h
@@ -480,6 +486,8 @@ else()
                 ${buspirate_rtt}
                 platform/bpi5-rev10.h
                 platform/bpi5-rev10.c
+                pirate/ioexpander.h
+                pirate/ioexpander.c 
                 pirate/shift.h
                 pirate/shift.c
                 display/robot5x16.h
@@ -496,6 +504,8 @@ else()
                 #tf card access control
                 fatfs/tf_card.c
                 fatfs/tf_card.h
+                pirate/ioexpander.h
+                pirate/ioexpander.c  
                 pirate/shift.h
                 pirate/shift.c
                 display/robot5x16.h

@@ -40,10 +40,12 @@
 #include "commands/global/image.h"
 #include "commands/global/dump.h"
 #if RPI_PLATFORM == RP2350
-#include "commands/global/otpdump.h"
+    #include "commands/global/otpdump.h"
 #endif
 #include "commands/global/ovrclk.h"
-#include "commands/global/psram_cmd.h"
+#if BP_HW_PSRAM
+    #include "commands/global/psram_cmd.h"
+#endif
 
 // command configuration
 const struct _global_command_struct commands[] = {
@@ -97,11 +99,13 @@ const struct _global_command_struct commands[] = {
 { .command="bug",       .allow_hiz=true,  .func=&bug_handler,                        .help_text=0x00 },
 { .command="image",     .allow_hiz=true,  .func=&image_handler,                      .help_text=0x00 },
 { .command="dump",      .allow_hiz=false, .func=&dump_handler,                       .help_text=0x00 },
-#if RPI_PLATFORM == RP2350
-{ .command="otpdump",   .allow_hiz=true,  .func=&otpdump_handler,                    .help_text=0x00 },
-#endif
 { .command="ovrclk",    .allow_hiz=true,  .func=&ovrclk_handler,                     .help_text=0x00 },
-{ .command="psram",     .allow_hiz=true,  .func=&psram_handler,                      .help_text=0x00 },
+#if RPI_PLATFORM == RP2350
+    { .command="otpdump",   .allow_hiz=true,  .func=&otpdump_handler,                    .help_text=0x00 },
+#endif
+#if BP_HW_PSRAM
+    { .command="psram",     .allow_hiz=true,  .func=&psram_handler,                      .help_text=0x00 },
+#endif
     // clang-format on
 };
 

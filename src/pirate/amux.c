@@ -2,7 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
 #include "pirate.h"
-#include "pirate/shift.h"
+#include "pirate/ioexpander.h"
 #include "command_struct.h"
 #include "display/scope.h"
 #include "hardware/sync.h"
@@ -53,7 +53,7 @@ bool amux_select_input(uint16_t channel) {
     }
     // clear the amux control bits, set the amux channel bits
     #if BP_HW_IOEXP_595
-        shift_clear_set((0b1111 << 1), (channel << 1) & 0b11110, true);
+        ioexp_clear_set((0b1111 << 1), (channel << 1) & 0b11110);
     #elif (BP_VER == 6 || BP_VER == 7)
         // uint64_t value=(uint64_t)(channel<<AMUX_S0);
         // uint64_t mask=(uint64_t)(0b1111<<AMUX_S0);
@@ -62,8 +62,6 @@ bool amux_select_input(uint16_t channel) {
         gpio_put(AMUX_S1, (channel >> 1) & 1);
         gpio_put(AMUX_S2, (channel >> 2) & 1);
         gpio_put(AMUX_S3, (channel >> 3) & 1);
-    #elif (BP_VER == 8)
-       #error "AMUX not implemented for BP8"
     #else
         #error "Platform not speficied in amux.c"
     #endif

@@ -12,8 +12,8 @@
 #include "command_struct.h"
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
-#if BP_HW_IOEXP_595
-#include "pirate/shift.h"
+#if BP_HW_IOEXP_595 || BP_HW_IOEXP_I2C
+    #include "pirate/ioexpander.h"
 #endif
 #include "pirate/bio.h"
 #include "pirate/button.h"
@@ -193,12 +193,12 @@ static void main_system_initialization(void) {
     gpio_set_function(BP_SPI_CLK, GPIO_FUNC_SPI);
     gpio_set_function(BP_SPI_CDO, GPIO_FUNC_SPI);
 
-// init shift register pins
-#if BP_HW_IOEXP_595
+// init IO expander
+#if BP_HW_IOEXP_595 || BP_HW_IOEXP_I2C
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-        "Init: shift register pins\n"
+        "Init: io expander\n"
         );
-    shift_init();
+    ioexp_init();
 #endif
 
 #ifdef BP_REV
@@ -246,16 +246,31 @@ static void main_system_initialization(void) {
         );
 #if (BP_HW_IOEXP_595)
     // configure the defaults for shift register attached hardware
-    shift_clear_set_wait(CURRENT_EN_OVERRIDE, (AMUX_S3 | AMUX_S1 | DISPLAY_RESET | CURRENT_EN));
+    ioexp_clear_set(CURRENT_EN_OVERRIDE, (AMUX_S3 | AMUX_S1 | DISPLAY_RESET | CURRENT_EN));
 #elif (BP_HW_IOEXP_NONE)
-    // todo: current detect
     gpio_setup(CURRENT_EN_OVERRIDE, GPIO_OUT, 0);
+    gpio_setup(CURRENT_EN, GPIO_OUT, 1);
     gpio_setup(AMUX_S0, GPIO_OUT, 0);
     gpio_setup(AMUX_S1, GPIO_OUT, 1);
     gpio_setup(AMUX_S2, GPIO_OUT, 0);
     gpio_setup(AMUX_S3, GPIO_OUT, 1);
-    // gpio_setup(DISPLAY_RESET, GPIO_OUT, 1);
-    gpio_setup(CURRENT_EN, GPIO_OUT, 1);
+#elif (BP_HW_IOEXP_I2C)
+    // configure the defaults for I2C IO expander attached hardware
+    /* Hardware:
+        CURRENT_EN_OVERRIDE
+        CURRENT_RESET
+        CURRENT_EN
+        DISPLAY_BACKLIGHT
+        DISPLAY_RESET
+        CURRENT_FUSE_DETECT
+    */
+    ioexp_clear_set((CURRENT_EN_OVERRIDE| DISPLAY_BACKLIGHT), (DISPLAY_RESET | CURRENT_EN ));
+#else
+    #error "Platform not speficied in pirate.c"
+#endif
+
+#if BP_HW_FALA
+    // FALA pin init
     gpio_setup(LA_BPIO0, GPIO_IN, 0);
     gpio_setup(LA_BPIO1, GPIO_IN, 0);
     gpio_setup(LA_BPIO2, GPIO_IN, 0);
@@ -264,8 +279,6 @@ static void main_system_initialization(void) {
     gpio_setup(LA_BPIO5, GPIO_IN, 0);
     gpio_setup(LA_BPIO6, GPIO_IN, 0);
     gpio_setup(LA_BPIO7, GPIO_IN, 0);
-#else
-#error "Platform not speficied in pirate.c"
 #endif
 
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
@@ -281,7 +294,7 @@ static void main_system_initialization(void) {
     // enable shift register outputs
     // also enabled level translator so..
     // ***don't do RGB LEDs before here***
-    shift_output_enable(true);
+    ioexp_output_enable(true);
 #endif
 
     // RGB init must be post-shift-register setup on BP5, BP5XL

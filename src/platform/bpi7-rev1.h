@@ -137,8 +137,8 @@ extern const uint8_t bio2bufdirpin[8];
 // LCD is on the BP_SPI_PORT, define CS and DP pins
 #define DISPLAY_CS 29 //25
 #define DISPLAY_DP 28 //24
-#define DISPLAY_BACKLIGHT  33
-#define DISPLAY_RESET      36
+//#define DISPLAY_BACKLIGHT  33
+//#define DISPLAY_RESET      36
 
 //pull-up resistor control
 //#define PULLUP_EN           42
@@ -149,12 +149,14 @@ extern const uint8_t bio2bufdirpin[8];
 #define RGB_LEN 18 
 
 //PWM based PSU control pins
-//#define PSU_PWM_CURRENT_ADJ 45 //10B
-//#define PSU_PWM_VREG_ADJ 44 //10A
-#define CURRENT_EN          18
-#define CURRENT_RESET       17
-#define CURRENT_EN_OVERRIDE 16
-#define CURRENT_FUSE_DETECT 19 
+#define PSU_PWM_CURRENT_ADJ 42 //9A
+#define PSU_PWM_VREG_ADJ 43 //9B
+
+// moved to I2C IO expander
+//#define CURRENT_EN          18
+//#define CURRENT_RESET       17
+//#define CURRENT_EN_OVERRIDE 16
+//#define CURRENT_FUSE_DETECT 19 
 
 //Look behind logic analyzer buffer
 #define LA_BPIO0 20
@@ -185,9 +187,10 @@ extern const uint8_t bio2bufdirpin[8];
 
 //7+ has an internal I2C bus
 #define BP_I2C_PORT i2c1
-#define BP_I2C_SDA  42
-#define BP_I2C_SCL  43
+#define BP_I2C_SDA  18
+#define BP_I2C_SCL  19
 #define BP_I2C_RESET 37
+#define BP_I2C_INTERRUPT
 
 //7+ has PSRAM
 #define BP_PSRAM_QPI_SS QSPI_SS_2
@@ -210,11 +213,26 @@ enum adc_mux{
     HW_ADC_MUX_VUSB, //8
     HW_ADC_MUX_VREF_VOUT, //9 //swapped in 7+
     HW_ADC_MUX_VREG_OUT, //10 //swapped in 7+
-    HW_ADC_MUX_CURRENT_DETECT,    //removed in 7+
+    //HW_ADC_MUX_CURRENT_DETECT,    //removed in 7+
     HW_ADC_MUX_COUNT
 };
 
 #define HW_ADC_MUX_GND 15
+
+// moved to I2C IO expander
+// XL9555 IO expander
+#define IOEXP_CURRENT_EN 0
+#define IOEXP_CURRENT_RESET 1
+#define IOEXP_CURRENT_EN_OVERRIDE 2
+#define IOEXP_CURRENT_FUSE_DETECT 3
+#define IOEXP_DISPLAY_BACKLIGHT 4
+#define IOEXP_DISPLAY_RESET 5
+//#define CURRENT_EN          18
+//#define CURRENT_RESET       17
+//#define CURRENT_EN_OVERRIDE 16
+//#define CURRENT_FUSE_DETECT 19 
+//#define DISPLAY_BACKLIGHT  33
+//#define DISPLAY_RESET      36
 
 #define bufio2amux(x) (7 - x)
 

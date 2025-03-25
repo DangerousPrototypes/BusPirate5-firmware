@@ -83,14 +83,14 @@
         #else
             #error "Unknown platform version in pirate.h"
         #endif
-        #define BP_HW_IOEXP_595 1
+        #define BP_HW_IOEXP_SPI 1
         #define RPI_PLATFORM RP2040
         #define BP_HW_PSU_PWM 1
     #elif BP_VER == XL5
         #include "platform/bpi5xl-rev0.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
-        #define BP_HW_IOEXP_595 1
+        #define BP_HW_IOEXP_SPI 1
         #define BP_HW_PSU_PWM 1
     #elif BP_VER == 6
         #include "platform/bpi6-rev2.h"  
@@ -126,6 +126,8 @@
 
 void lcd_irq_enable(int16_t repeat_interval);
 void lcd_irq_disable(void);
+
+void gpio_setup(uint8_t pin, bool direction, bool level);
 
 #define spi_busy_wait(ENABLE) spi_busy_wait_internal(ENABLE, __FILE__, __LINE__)
 void spi_busy_wait_internal(bool enable, const char *file, int line);

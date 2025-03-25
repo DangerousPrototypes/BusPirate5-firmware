@@ -3,7 +3,7 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include "pirate.h"
-#if BP_HW_IOEXP_595 || BP_HW_IOEXP_XL9555
+#if BP_HW_IOEXP_SPI || BP_HW_IOEXP_I2C
     #include "pirate/ioexpander.h"
 #endif
 #include "pirate/psu.h"
@@ -32,10 +32,10 @@ struct psu_status_t psu_status;
 
 static void psu_fuse_reset(void) {
     // reset current trigger
-    #if BP_HW_IOEXP_595
-        ioexp_clear_set(CURRENT_RESET, 0); // low to activate the pnp
+    #ifdef IOEXP_CURRENT_RESET
+        ioexp_clear_set(IOEXP_CURRENT_RESET, 0); // low to activate the pnp
         busy_wait_ms(1);
-        ioexp_clear_set(0, CURRENT_RESET); // high to disable    
+        ioexp_clear_set(0, IOEXP_CURRENT_RESET); // high to disable    
     #elif BP_HW_IOEXP_NONE
         gpio_put(CURRENT_RESET, 0);
         busy_wait_ms(1);
@@ -47,11 +47,11 @@ static void psu_fuse_reset(void) {
 
 // TODO: rename this function, it actually controls if the current limit circuit is connected to the VREG
 void psu_vreg_enable(bool enable) {
-    #if BP_HW_IOEXP_595
+    #ifdef IOEXP_CURRENT_EN
         if (enable) {
-            ioexp_clear_set(CURRENT_EN, 0); // low is on (PNP)
+            ioexp_clear_set(IOEXP_CURRENT_EN, 0); // low is on (PNP)
         } else {
-            ioexp_clear_set(0, CURRENT_EN); // high is off
+            ioexp_clear_set(0, IOEXP_CURRENT_EN); // high is off
         }    
     #elif BP_HW_IOEXP_NONE
         gpio_put(CURRENT_EN, !enable);
@@ -61,11 +61,11 @@ void psu_vreg_enable(bool enable) {
 }
 
 void psu_current_limit_override(bool enable) {
-    #if BP_HW_IOEXP_595
+    #ifdef IOEXP_CURRENT_EN_OVERRIDE
         if (enable) {
-            ioexp_clear_set(0, CURRENT_EN_OVERRIDE);
+            ioexp_clear_set(0, IOEXP_CURRENT_EN_OVERRIDE);
         } else {
-            ioexp_clear_set(CURRENT_EN_OVERRIDE, 0);
+            ioexp_clear_set(IOEXP_CURRENT_EN_OVERRIDE, 0);
         }
     #elif BP_HW_IOEXP_NONE
         gpio_put(CURRENT_EN_OVERRIDE, enable);
@@ -140,9 +140,15 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
 }
 
 bool psu_fuse_ok(void) {
-    uint32_t fuse = amux_read(HW_ADC_MUX_CURRENT_DETECT);
-    // printf("Fuse: %d\r\n",fuse);
-    return (fuse > 300);
+    #ifdef HW_ADC_MUX_CURRENT_DETECT
+        uint32_t fuse = amux_read(HW_ADC_MUX_CURRENT_DETECT);
+        // printf("Fuse: %d\r\n",fuse);
+        return (fuse > 300);
+    #elif IOEXP_CURRENT_FUSE_DETECT
+        return ioexp_read_bit(IOEXP_CURRENT_FUSE_DETECT);
+    #else 
+        #error "Platform not speficied in psu.c"
+    #endif
 }
 
 bool psu_vout_ok(struct psu_status_t* psu) {
@@ -170,7 +176,13 @@ void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     *isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000) / 4095));
     *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
     *vout = ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]));
-    *fuse = (hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] > 300);
+    #ifdef HW_ADC_MUX_CURRENT_DETECT
+        *fuse = (hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] > 300);
+    #elif IOEXP_CURRENT_FUSE_DETECT
+        *fuse = ioexp_read_bit(IOEXP_CURRENT_FUSE_DETECT);
+    #else
+        #error "Platform not speficied in psu.c"
+    #endif
 }
 
 void psu_disable(void) {

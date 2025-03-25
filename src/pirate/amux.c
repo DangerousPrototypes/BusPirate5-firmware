@@ -52,7 +52,7 @@ bool amux_select_input(uint16_t channel) {
         return false; // scope is using the analog subsystem
     }
     // clear the amux control bits, set the amux channel bits
-    #if BP_HW_IOEXP_595
+    #if BP_HW_IOEXP_SPI
         ioexp_clear_set((0b1111 << 1), (channel << 1) & 0b11110);
     #elif (BP_VER == 6 || BP_VER == 7)
         // uint64_t value=(uint64_t)(channel<<AMUX_S0);

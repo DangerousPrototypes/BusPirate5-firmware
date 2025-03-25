@@ -26,18 +26,18 @@ bool xl9555_read_i2c(uint8_t addr, uint8_t *data, uint8_t len) {
 /// @param reg 
 /// @param value 
 /// @return 
-bool xl9555_register_write_verify(uint8_t addr, uint8_t reg, uint16_t value){
+bool xl9555_register_write_verify(uint8_t addr, uint8_t reg, uint8_t *value){
     uint8_t data[3];
     data[0] = reg;
-    data[1] = value & 0xff;
-    data[2] = (value >> 8) & 0xff;
+    data[1] = value[0];
+    data[2] = value[1];
 
     //write the register
     if(!xl9555_write_i2c(addr, data, 3)) return false;
     //read the register
     if(!xl9555_write_i2c(addr, data, 1)) return false;
     if(!xl9555_read_i2c(addr, data, 2)) return false;
-    if( (data[0] != (value&0xff)) || (data[1] != ((value>>8)&0xff)) ){
+    if( (data[0] != value[0]) || (data[1] != value[1]) ){
         return false;
     }
     return true;   
@@ -81,3 +81,22 @@ void xl9555_write_wait(uint8_t *level, uint8_t *direction) {
     i2c_busy_wait(false);
 
 }
+
+void xl9555_interrupt_enable(uint16_t mask) {
+    uint8_t data[2];
+    data[0] = mask & 0xff;
+    data[1] = (mask >> 8) & 0xff;
+    xl9555_register_write_verify(0x22, 0x04, data);
+}
+
+bool xl9555_read_bit(uint8_t pin) {
+    //read the register
+    uint8_t data[3];
+    data[0] = 0x00;
+    xl9555_write_i2c(0x22, data, 1);
+    xl9555_read_i2c(0x22, data, 2);
+
+    uint16_t value = (data[1] << 8) | data[0];
+    return (value & (1 << pin)) ? 1 : 0;
+}
+

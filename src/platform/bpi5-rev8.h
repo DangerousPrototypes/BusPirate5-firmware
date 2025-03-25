@@ -183,20 +183,20 @@ static const uint8_t bio2bufdirpin[]=
 #define EXT1 27
 
 // The two 75hc595 shift registers control various hardware on the board
-#define AMUX_EN             (1u<<0)
-#define AMUX_S0             (1u<<1)
-#define AMUX_S1             (1u<<2)
-#define AMUX_S2             (1u<<3)
-#define AMUX_S3             (1u<<4)
-#define DISPLAY_BACKLIGHT   (1u<<5)
-#define DISPLAY_RESET       (1u<<6)
-#define PULLUP_EN           (1u<<7)
+#define IOEXP_AMUX_EN             (1u<<0)
+#define IOEXP_AMUX_S0             (1u<<1)
+#define IOEXP_AMUX_S1             (1u<<2)
+#define IOEXP_AMUX_S2             (1u<<3)
+#define IOEXP_AMUX_S3             (1u<<4)
+#define IOEXP_DISPLAY_BACKLIGHT   (1u<<5)
+#define IOEXP_DISPLAY_RESET       (1u<<6)
+#define IOEXP_PULLUP_EN           (1u<<7)
 //#define                   (1u<<8) 
-#define CURRENT_EN          (1u<<9)
+#define IOEXP_CURRENT_EN          (1u<<9)
 //#define                   (1u<<10)
-#define CURRENT_RESET       (1u<<11)
-#define DAC_CS              (1u<<12)
-#define CURRENT_EN_OVERRIDE (1u<<13)
+#define IOEXP_CURRENT_RESET       (1u<<11)
+#define IOEXP_DAC_CS              (1u<<12)
+#define IOEXP_CURRENT_EN_OVERRIDE (1u<<13)
 //#define                   (1u<<14)
 //#define                   (1u<<15)
 
@@ -252,5 +252,7 @@ extern uint32_t *hw_pin_voltage_ordered[];
 #define BP_DEBUG_UART_1_RX BIO1 
 
 #define BP_FLASH_DISK_BLOCK_SIZE 512
+
+void hw_pin_defaults(void);
 
 #endif

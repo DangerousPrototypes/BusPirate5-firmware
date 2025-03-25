@@ -12,7 +12,7 @@
 #include "command_struct.h"
 #include "ui/ui_lcd.h"
 #include "pirate/rgb.h"
-#if BP_HW_IOEXP_595 || BP_HW_IOEXP_I2C
+#if BP_HW_IOEXP_SPI || BP_HW_IOEXP_I2C
     #include "pirate/ioexpander.h"
 #endif
 #include "pirate/bio.h"
@@ -194,7 +194,7 @@ static void main_system_initialization(void) {
     gpio_set_function(BP_SPI_CDO, GPIO_FUNC_SPI);
 
 // init IO expander
-#if BP_HW_IOEXP_595 || BP_HW_IOEXP_I2C
+#if BP_HW_IOEXP_SPI || BP_HW_IOEXP_I2C
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: io expander\n"
         );
@@ -244,42 +244,7 @@ static void main_system_initialization(void) {
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: Pin states\n"
         );
-#if (BP_HW_IOEXP_595)
-    // configure the defaults for shift register attached hardware
-    ioexp_clear_set(CURRENT_EN_OVERRIDE, (AMUX_S3 | AMUX_S1 | DISPLAY_RESET | CURRENT_EN));
-#elif (BP_HW_IOEXP_NONE)
-    gpio_setup(CURRENT_EN_OVERRIDE, GPIO_OUT, 0);
-    gpio_setup(CURRENT_EN, GPIO_OUT, 1);
-    gpio_setup(AMUX_S0, GPIO_OUT, 0);
-    gpio_setup(AMUX_S1, GPIO_OUT, 1);
-    gpio_setup(AMUX_S2, GPIO_OUT, 0);
-    gpio_setup(AMUX_S3, GPIO_OUT, 1);
-#elif (BP_HW_IOEXP_I2C)
-    // configure the defaults for I2C IO expander attached hardware
-    /* Hardware:
-        CURRENT_EN_OVERRIDE
-        CURRENT_RESET
-        CURRENT_EN
-        DISPLAY_BACKLIGHT
-        DISPLAY_RESET
-        CURRENT_FUSE_DETECT
-    */
-    ioexp_clear_set((CURRENT_EN_OVERRIDE| DISPLAY_BACKLIGHT), (DISPLAY_RESET | CURRENT_EN ));
-#else
-    #error "Platform not speficied in pirate.c"
-#endif
-
-#if BP_HW_FALA
-    // FALA pin init
-    gpio_setup(LA_BPIO0, GPIO_IN, 0);
-    gpio_setup(LA_BPIO1, GPIO_IN, 0);
-    gpio_setup(LA_BPIO2, GPIO_IN, 0);
-    gpio_setup(LA_BPIO3, GPIO_IN, 0);
-    gpio_setup(LA_BPIO4, GPIO_IN, 0);
-    gpio_setup(LA_BPIO5, GPIO_IN, 0);
-    gpio_setup(LA_BPIO6, GPIO_IN, 0);
-    gpio_setup(LA_BPIO7, GPIO_IN, 0);
-#endif
+    hw_pin_defaults(); //setup function in each platform file
 
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: Pullups\n"
@@ -287,7 +252,7 @@ static void main_system_initialization(void) {
     pullups_init(); // uses shift register internally
 
     // Shift register setup (BP5, BP5XL)
-#if BP_HW_IOEXP_595
+#if BP_HW_IOEXP_SPI
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: BP5 / BP5XL - shift output enable\n"
         );

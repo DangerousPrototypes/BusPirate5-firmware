@@ -342,8 +342,14 @@ bool selftest_current_limit(void) {
     } else {
         uint i;
         for (i = 0; i < 5; i++) {
-            amux_sweep();
-            printf("PPSU CODE %d, ADC: %d, ERROR!\r\n", result, hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT]);
+            #if HW_ADC_MUX_CURRENT_DETECT
+                amux_sweep();
+                printf("PPSU CODE %d, ADC: %d, ERROR!\r\n", result, hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT]);
+            #elif IOEXP_CURRENT_FUSE_DETECT
+                printf("PPSU CODE %d, ERROR!\r\n", result);
+            #else
+                #error "Platform not speficied in selftest_current_limit"
+            #endif
             busy_wait_ms(200);
         }
         return true;

@@ -3,6 +3,7 @@
 #include "pirate.h"
 #include "hardware/adc.h"
 #include "pico/bootrom.h"
+#include "pirate/ioexpander.h"
 
 //TODO: move all this nonsense to the system config
 uint16_t hw_adc_raw[HW_ADC_COUNT];
@@ -67,3 +68,21 @@ const uint32_t hw_pin_label_ordered_color[][2] = {
     {BP_COLOR_FULLBLACK, BP_COLOR_GREY},
     {BP_COLOR_FULLBLACK, BP_COLOR_WHITE},
     {BP_COLOR_FULLWHITE, BP_COLOR_FULLBLACK}};
+
+void hw_pin_defaults(void) {
+    gpio_setup(CURRENT_EN_OVERRIDE, GPIO_OUT, 0); 
+    gpio_setup(CURRENT_EN, GPIO_OUT, 1);
+    gpio_setup(AMUX_S0, GPIO_OUT, 0);
+    gpio_setup(AMUX_S1, GPIO_OUT, 1);
+    gpio_setup(AMUX_S2, GPIO_OUT, 0);
+    gpio_setup(AMUX_S3, GPIO_OUT, 1);
+    // FALA pin init
+    gpio_setup(LA_BPIO0, GPIO_IN, 0);
+    gpio_setup(LA_BPIO1, GPIO_IN, 0);
+    gpio_setup(LA_BPIO2, GPIO_IN, 0);
+    gpio_setup(LA_BPIO3, GPIO_IN, 0);
+    gpio_setup(LA_BPIO4, GPIO_IN, 0);
+    gpio_setup(LA_BPIO5, GPIO_IN, 0);
+    gpio_setup(LA_BPIO6, GPIO_IN, 0);
+    gpio_setup(LA_BPIO7, GPIO_IN, 0);    
+}

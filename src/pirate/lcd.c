@@ -12,7 +12,7 @@ void lcd_init(void) {
     gpio_put(DISPLAY_DP, 1);
     gpio_set_dir(DISPLAY_DP, GPIO_OUT);
 
-    #if BP_HW_IOEXP_595
+    #if BP_HW_IOEXP_SPI || BP_HW_IOEXP_I2C
         //nothing to do
     #elif BP_HW_IOEXP_NONE
         gpio_set_function(DISPLAY_BACKLIGHT, GPIO_FUNC_SIO);
@@ -28,11 +28,11 @@ void lcd_init(void) {
 }
 
 void lcd_backlight_enable(bool enable) {
-    #if BP_HW_IOEXP_595
+    #ifdef IOEXP_DISPLAY_BACKLIGHT
         if (enable) {
-            ioexp_clear_set(0, (DISPLAY_BACKLIGHT));
+            ioexp_clear_set(0, (IOEXP_DISPLAY_BACKLIGHT));
         } else {
-            ioexp_clear_set((DISPLAY_BACKLIGHT), 0);
+            ioexp_clear_set((IOEXP_DISPLAY_BACKLIGHT), 0);
         }
     #elif BP_HW_IOEXP_NONE
         gpio_put(DISPLAY_BACKLIGHT, enable);
@@ -43,10 +43,10 @@ void lcd_backlight_enable(bool enable) {
 
 // perform a hardware reset of the LCD according to datasheet specs
 void lcd_reset(void) {
-    #if BP_HW_IOEXP_595
-        ioexp_clear_set(DISPLAY_RESET, 0);
+    #ifdef IOEXP_DISPLAY_RESET
+        ioexp_clear_set(IOEXP_DISPLAY_RESET, 0);
         busy_wait_us(20);
-        ioexp_clear_set(0, DISPLAY_RESET);
+        ioexp_clear_set(0, IOEXP_DISPLAY_RESET);
         busy_wait_ms(100);
     #elif BP_HW_IOEXP_NONE
         gpio_put(DISPLAY_RESET, 0);

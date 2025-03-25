@@ -235,4 +235,6 @@ extern uint32_t *hw_pin_voltage_ordered[];
 
 #define BP_FLASH_DISK_BLOCK_SIZE 2048 //512
 
+void hw_pin_defaults(void);
+
 #endif

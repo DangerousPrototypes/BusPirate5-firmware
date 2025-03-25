@@ -192,9 +192,9 @@ void pullup_enable(void) {
         //pullx_set_all(0xf000, 0xf000);
         pullx_set_all_update(PULLX_10K, true);
     #elif (BP_VER ==5 && BP_REV <= 8)
-        ioexp_clear_set(0, PULLUP_EN);
+        ioexp_clear_set(0, IOEXP_PULLUP_EN);
     #elif ((BP_VER == 5 && BP_REV > 8)) || (BP_VER == XL5)
-        ioexp_clear_set(PULLUP_EN, 0);
+        ioexp_clear_set(IOEXP_PULLUP_EN, 0);
     #elif (BP_VER == 6)
         gpio_put(PULLUP_EN, 0);
     #else
@@ -207,9 +207,9 @@ void pullup_disable(void) {
         // 1M pull-down by default
         pullx_set_all_update(PULLX_1M, false);
     #elif (BP_VER ==5 && BP_REV <= 8)
-        ioexp_clear_set(PULLUP_EN, 0);
+        ioexp_clear_set(IOEXP_PULLUP_EN, 0);
     #elif ((BP_VER == 5 && BP_REV > 8)) || (BP_VER == XL5)
-        ioexp_clear_set(0, PULLUP_EN);
+        ioexp_clear_set(0, IOEXP_PULLUP_EN);
     #elif (BP_VER == 6)
         gpio_put(PULLUP_EN, 1);
     #else

@@ -43,7 +43,7 @@ void fala_set_triggers(uint8_t trigger_pin, uint8_t trigger_level) {
 void fala_start(void) {
     // configure and arm the logic analyzer
     fala_config.actual_sample_frequency = logic_analyzer_configure(
-        fala_config.base_frequency * fala_config.oversample, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0x00, 0x00, false, false);
+        fala_config.base_frequency * fala_config.oversample, LA_BUFFER_SIZE, 0x00, 0x00, false, false);
     logic_analyzer_arm(false);
 }
 
@@ -59,7 +59,7 @@ void fala_print_result(void) {
     //uint32_t fala_samples = logic_analyzer_get_end_ptr();
     uint32_t fala_samples = logic_analyzer_get_samples_from_zero();
 
-    if(fala_samples > (DMA_BYTES_PER_CHUNK * LA_DMA_COUNT)){
+    if(fala_samples > (LA_BUFFER_SIZE)){
         printf(
         "\r\n%sLogic analyzer:%s invalid sample count\r\n", ui_term_color_info(), ui_term_color_reset());
     }else{

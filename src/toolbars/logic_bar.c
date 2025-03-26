@@ -137,7 +137,7 @@ void logic_bar_redraw(uint32_t start_pos, uint32_t total_samples) {
     }
 
     uint32_t sample_ptr = logic_analyzer_get_start_ptr(total_samples);
-    sample_ptr = (sample_ptr + start_pos) & 0x1ffff;
+    sample_ptr = (sample_ptr + start_pos) % LA_BUFFER_SIZE;
     // printf("la_prt: %d, sample_ptr: %d\r\n", la_ptr, sample_ptr);
     //  freeze terminal updates
     draw_prepare();

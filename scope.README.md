@@ -70,20 +70,20 @@ Here's a quick start tutorial using the internal FB commands - we're going to wo
 
 So:
 
-* program scope.uf2 into your FB
-* go into mode 7 using the 'm' command
-* set the I/O power supply to 3.3v using the 'w' command (w <enter> <enter> n <enter>)
+* use the 'd' command to enter 'Scope' mode
+* go into I2C mode using the 'm' command and choosing the defaults
+* set the I/O power supply to 3.3v using the 'W' command (W <enter> <enter> <enter>)
 * set the trigger to 'both' enter t<enter> to get into trigger mode and then press 'b' press <enter> to exit
 * start the display with (sr 2n <enter>) that starts the display on pin 2 in normal mode
 * next turn on the pullups (P <enter>) you should see trace with a rising edge
 * and turn them off with a (p <enter>) you should see an exponential decay curve
 * turn them on again with P then enter trigger mode with t and then enter + to only
 trigger on rising edges then <enter> to leave trigger mode
-* start a clock on pin 2 with (G 2 <enter> 1ms <enter> 33% <enter>)
+* start a clock on pin 2 with (G <enter> 2 <enter> 1ms <enter> 33% <enter>)
 * enter x mode (x <enter>) you should see a bunch of square waves, try + and - to change the scale, and the left and right arrows to move around. Freeze a trace by typing 'o'.
 * enter y mode and change the voltage scale with + and - (and use the up down arrows to move the display)
 
-## Limitations na dbugs
+## Limitations and bugs
 
 We're very much limited by the hardware:
 
@@ -96,7 +96,5 @@ There are bugs
 
 * at the moment integration with the rest of the BP software is poor - in particular the analog subsystem
 gets locked out when the scope is grabbing samples
-* we're losing samples some times (I think) might be someone else with a hefty ISR
 * the scope does trigger processing from an ISR (might have to always do that)
-* periodically on long slow traces someone else seems to come in and grab the analog hardware
 

@@ -155,8 +155,6 @@ bool logic_analyzer_is_done(void) {
     return (la_status == LA_IDLE);
 }
 
-const uint32_t la_buff_size[1] = {LA_BUFFER_SIZE};
-
 void restart_dma() {
     dma_channel_config la_dma_data_config;
     dma_channel_config la_dma_control_config;
@@ -170,8 +168,8 @@ void restart_dma() {
     channel_config_set_write_increment(&la_dma_control_config, false);
     dma_channel_configure(la_dma_control_channel,
                           &la_dma_control_config,
-                          &dma_hw->ch[la_dma_data_channel].al1_transfer_count_trig, // write address
-                          &la_buff_size[0],                          // read address
+                          &dma_hw->ch[la_dma_data_channel].al2_write_addr_trig, // write address
+                          &la_buf,                          // read address
                           1,                                         // Halt after each control block
                           false                                      // Don't start yet
     );
@@ -186,9 +184,9 @@ void restart_dma() {
                                 la_dma_control_channel); // Trigger ctrl_chan when data_chan completes
     dma_channel_configure(la_dma_data_channel,
                           &la_dma_data_config,
-                          &la_buf[0],                             // write address
+                          0,                                   // write address, filled by the control channel
                           &pio_config.pio->rxf[pio_config.sm], // read address
-                          0,                      // filled by the control channel
+                          LA_BUFFER_SIZE,                      // size of transfer
                           false                                // Don't start yet
     );
 

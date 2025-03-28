@@ -183,7 +183,6 @@ void onewire_test_romsearch(struct command_result* res) {
     //we manually control any FALA capture
     fala_start_hook();
 
-    char* romno;
     ret = OWFirst(&search_owobj);
     devcount = 0;
     while (ret == TRUE) {

@@ -239,10 +239,10 @@ bool psucmd_init(void) {
 
 void psucmd_over_current(void) {
     if (system_config.psu_current_error) {
-        printf("\x1b[?5h\r\n");
+        printf("\033[?5h\r\n");
         ui_help_error(T_PSU_CURRENT_LIMIT_ERROR);
         busy_wait_ms(500);
-        printf("\x1b[?5l");
+        printf("\033[?5l");
         system_config.psu_current_error = 0;
     }
 }

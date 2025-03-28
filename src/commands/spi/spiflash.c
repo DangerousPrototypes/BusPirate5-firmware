@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -275,7 +276,6 @@ bool spiflash_load(uint32_t start_address,
     uint32_t current_address = start_address;
     FIL fil;    /* File object needed for each open file */
     FRESULT fr; /* FatFs return code */
-    UINT bw;
 
     printf("Loading from %s...\r\n", file_name);
 
@@ -343,7 +343,6 @@ bool spiflash_verify(uint32_t start_address,
     uint32_t current_address = start_address;
     FIL fil;    /* File object needed for each open file */
     FRESULT fr; /* FatFs return code */
-    UINT bw;
 
     // open file
     fr = f_open(&fil, file_name, FA_READ);

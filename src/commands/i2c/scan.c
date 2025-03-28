@@ -103,6 +103,11 @@ bool i2c_search_check_addr(uint8_t address) {
             break;
         case HWI2C_TIMEOUT:
             pio_i2c_resume_after_error();
+            ack = false;
+            break;
+        case HWI2C_NACK:
+            // not an error condition, but also not an ack
+            ack = false;
             break;
     }
 

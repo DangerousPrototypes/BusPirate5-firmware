@@ -30,6 +30,7 @@ Ported to PIC (18F2550) by Ian Lesnet 2009
 Ported to RP2040 by Ian Lesnet 2024 (see you in another 15 years?)
 */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -151,13 +152,15 @@ void tvbgone_player(struct command_result *res){
 			float pwm_ns_actual;
 			uint32_t pwm_divider;
 			uint32_t pwm_top;
-			pwm_freq_find(
+			if (pwm_freq_find(
 				&pwm_hz_reqest_temp,
 				&pwm_hz_actual_temp,
 				&pwm_ns_actual,
 				&pwm_divider,
-				&pwm_top 
-			);
+				&pwm_top)) {
+				printf("Error: PWM frequency too high or too low\r\n");
+				continue;
+			}
 			//set PWM
 			pwm_set_clkdiv_int_frac(slice_num, pwm_divider >> 4, pwm_divider & 0b1111);
 			pwm_set_wrap(slice_num, pwm_top);

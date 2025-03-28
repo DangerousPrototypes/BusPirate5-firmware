@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -95,7 +96,7 @@ void sle4442_write(uint32_t command, uint32_t address, uint32_t data) {
 }
 
 // ISO7816-3 Answer To Reset
-bool sle4442_reset(char* atr) {
+bool sle4442_reset(uint8_t* atr) {
     bio_output(2); // IO2/RST low
     busy_wait_ms(1);
     bio_input(2); // IO2 high
@@ -113,17 +114,17 @@ bool sle4442_reset(char* atr) {
     return true;
 }
 
-bool sle4442_atr_decode(char* atr) {
+bool sle4442_atr_decode(uint8_t* atr) {
     sle44xx_atr_t* atr_head;
     atr_head = (sle44xx_atr_t*)atr;
     printf("--SLE44xx decoder--\r\n");
     printf("ATR: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", atr[0], atr[1], atr[2], atr[3]);
     printf("Protocol Type: %s %d\r\n", (atr_head->protocol_type == 0b1010 ? "S" : "unknown"), atr_head->protocol_type);
     printf("Structure Identifier: %s\r\n",
-           (atr_head->structure_identifier & 0b11 == 0b000 ? "ISO Reserved"
-            : (atr_head->structure_identifier == 0b010)    ? "General Purpose (Structure 1)"
-            : (atr_head->structure_identifier == 0b110)    ? "Proprietary"
-                                                           : "Special Application"));
+           ((atr_head->structure_identifier & 0b11) == 0b000) ? "ISO Reserved"
+            : (atr_head->structure_identifier == 0b010)       ? "General Purpose (Structure 1)"
+            : (atr_head->structure_identifier == 0b110)       ? "Proprietary"
+                                                              : "Special Application");
     printf("Read: %s\r\n", (atr_head->read_with_defined_length ? "Defined Length" : "Read to end"));
     printf("Data Units: ");
     if (atr_head->data_units == 0b0000) {
@@ -138,7 +139,7 @@ bool sle4442_atr_decode(char* atr) {
     return false;
 }
 
-bool sle4442_read_secmem(char* secmem) {
+bool sle4442_read_secmem(uint8_t* secmem) {
     // I2C start, 0x31, 0x00, 0x00, I2C stop
     sle4442_write(SLE_CMD_READ_SECMEM, 0, 0);
     for (uint i = 0; i < 4; i++) {
@@ -153,14 +154,14 @@ bool sle4442_read_secmem(char* secmem) {
     return false;
 }
 
-void sle4442_decode_secmem(char* secmem) {
+void sle4442_decode_secmem(uint8_t* secmem) {
     printf("Security memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", secmem[0], secmem[1], secmem[2], secmem[3]);
     printf("Remaining attempts: %d (0x%1X)\r\n",
            (secmem[0] & 0b100 ? 1 : 0) + (secmem[0] & 0b010 ? 1 : 0) + (secmem[0] & 0b001 ? 1 : 0),
            secmem[0]);
 }
 
-bool sle4442_read_prtmem(char* prtmem) {
+bool sle4442_read_prtmem(uint8_t* prtmem) {
     // I2C start, 0x31, 0x00, 0x00, I2C stop
     sle4442_write(SLE_CMD_READ_PRTMEM, 0, 0);
     for (uint i = 0; i < 4; i++) {
@@ -171,7 +172,7 @@ bool sle4442_read_prtmem(char* prtmem) {
 }
 
 bool sle4442_unlock(uint32_t psc) {
-    char data[5];
+    uint8_t data[5];
 
     sle4442_read_secmem(data);
 
@@ -208,7 +209,9 @@ bool sle4442_unlock(uint32_t psc) {
     // reset passcode attempts
     sle4442_write(SLE_CMD_WRITE_SECMEM, 0, 0xff);
     ticks[4] = sle4442_ticks();
-    // printf("DEBUG Ticks: %d %d %d %d %d\r\n", ticks[0], ticks[1], ticks[2], ticks[3], ticks[4]);
+    if (false) {
+        printf("DEBUG Ticks: %d %d %d %d %d\r\n", ticks[0], ticks[1], ticks[2], ticks[3], ticks[4]);
+    }
 
     sle4442_read_secmem(data);
     if (data[0] != 7) {
@@ -221,14 +224,18 @@ bool sle4442_unlock(uint32_t psc) {
     return true;
 }
 
-bool sle4442_update_psc(uint32_t new_psc, char* data) {
+bool sle4442_update_psc(uint32_t new_psc, uint8_t* data) {
     // update security memory //TODO: use ticks to determine success or error...
     sle4442_write(SLE_CMD_WRITE_SECMEM, 1, new_psc >> 16);
-    uint32_t ticks = sle4442_ticks();
+    uint32_t ticks[3];
+    ticks[0] = sle4442_ticks();
     sle4442_write(SLE_CMD_WRITE_SECMEM, 2, new_psc >> 8);
-    ticks = sle4442_ticks();
+    ticks[1] = sle4442_ticks();
     sle4442_write(SLE_CMD_WRITE_SECMEM, 3, new_psc);
-    ticks = sle4442_ticks();
+    ticks[2] = sle4442_ticks();
+    if (false) {
+        printf("DEBUG Ticks: %d %d %d\r\n", ticks[0], ticks[1], ticks[2]);
+    }
     // verify security memory
     sle4442_read_secmem(data);
     if (data[1] == (uint8_t)(new_psc >> 16) && data[2] == (uint8_t)(new_psc >> 8) && data[3] == (uint8_t)new_psc) {
@@ -359,7 +366,7 @@ void sle4442(struct command_result* res) {
                 res->error=true;
                 goto sle4442_cleanup;
             }
-            char buf[256+4+4];
+            uint8_t buf[256+4+4];
             sle4442_write(SLE_CMD_READ_MEM, 0, 0);
             for(uint i =0; i<256; i++){
                 uint8_t temp;

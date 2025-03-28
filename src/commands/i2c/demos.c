@@ -23,7 +23,7 @@ void demo_tsl2561(struct command_result* res) {
     //  select ADC register [0b01110010 0b11101100]
     // 0b11011100
     uint16_t chan0, chan1;
-    char data[4];
+    uint8_t data[4];
     printf("%s\r\n", GET_T(T_HELP_I2C_TSL2561));
 
     //we manually control any FALA capture
@@ -31,25 +31,25 @@ void demo_tsl2561(struct command_result* res) {
 
     // select register [0b01110010 0b11100000]
     data[0] = 0b11100000;
-    if (pio_i2c_write_array_timeout(0b01110010, data, 1, 0xffff)) {
+    if (pio_i2c_write_array_timeout(0b01110010u, data, 1u, 0xffffu)) {
         goto tsl2561_error;
     }
     // start device [0b01110010 3]
     data[0] = 3;
-    if (pio_i2c_write_array_timeout(0b01110010, data, 1, 0xffff)) {
+    if (pio_i2c_write_array_timeout(0b01110010u, data, 1u, 0xffffu)) {
         goto tsl2561_error;
     }
     busy_wait_ms(500);
     // select ID register [0b01110010 0b11101010]
     // read ID register [0b01110011 r] 7:4 0101 = TSL2561T 3:0 0 = revision
     data[0] = 0b11101010;
-    if (pio_i2c_transaction_array_timeout(0b01110010, data, 1, data, 1, 0xffff)) {
+    if (pio_i2c_transaction_array_timeout(0b01110010u, data, 1u, data, 1u, 0xffffu)) {
         goto tsl2561_error;
     }
-    printf("ID: %d REV: %d\r\n", data[0] >> 4, data[0] & 0b1111);
+    printf("ID: %d REV: %d\r\n", data[0] >> 4, data[0] & 0b1111u);
     // select ADC register [0b01110010 0b11101100]
     data[0] = 0b11101100;
-    if (pio_i2c_transaction_array_timeout(0b01110010, data, 1, data, 4, 0xffff)) {
+    if (pio_i2c_transaction_array_timeout(0b01110010u, data, 1u, data, 4u, 0xffffu)) {
         goto tsl2561_error;
     }
     fala_stop_hook();
@@ -57,7 +57,7 @@ void demo_tsl2561(struct command_result* res) {
     chan0 = data[1] << 8 | data[0];
     chan1 = data[3] << 8 | data[2];
 
-    uint32_t lux1 = a_tsl2561_calculate_lux(0, 2, chan0, chan1);
+    uint32_t lux1 = a_tsl2561_calculate_lux(0u, 2u, chan0, chan1);
 
     printf("Chan0: %d Chan1: %d LUX: %d\r\n", chan0, chan1, lux1);
     goto tsl2561_cleanup;

@@ -1,4 +1,5 @@
 // TODO: add timeout to all I2C stuff that can hang!
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -22,13 +23,7 @@
 static struct _pio_config pio_config;
 
 // command configuration
-const struct _mode_command_struct hwled_commands[] = {
-    /*{ .command="", 
-        .func=&function, 
-        .description_text=T_MODE_COMMAND_DESCRIPTION, 
-        .supress_fala_capture=false
-    },*/
-};
+const struct _mode_command_struct hwled_commands[] = { 0 };
 const uint32_t hwled_commands_count = count_of(hwled_commands);
 
 static const char pin_labels[][5] = {
@@ -53,9 +48,9 @@ static uint8_t device_cleanup;
 
 
 static const struct prompt_item leds_type_menu[] = { { T_HWLED_DEVICE_MENU_1 },
-                                                        { T_HWLED_DEVICE_MENU_2 },
-                                                        { T_HWLED_DEVICE_MENU_3 } };
-static const struct prompt_item leds_num_menu[] = { { T_HWLED_NUM_LEDS_MENU_1 } };
+                                                     { T_HWLED_DEVICE_MENU_2 },
+                                                     { T_HWLED_DEVICE_MENU_3 } };
+//static const struct prompt_item leds_num_menu[] = { { T_HWLED_NUM_LEDS_MENU_1 } };
 
 static const struct ui_prompt leds_menu[] = {
     {
@@ -95,8 +90,6 @@ uint32_t hwled_setup(void) {
     };
 
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        uint32_t temp;
-
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
         hwled_settings();
         bool user_value;
@@ -129,7 +122,6 @@ uint32_t hwled_setup(void) {
 }
 
 uint32_t hwled_setup_exc(void) {
-    bool success;
     pio_config.pio = PIO_MODE_PIO;
     pio_config.sm = 0;
     switch (mode_config.device) {

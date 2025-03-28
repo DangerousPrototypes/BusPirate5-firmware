@@ -16,7 +16,7 @@
 #include "pirate/bio.h"
 #include "pio_config.h"
 
-static struct _pio_config pio_config;
+//static struct _pio_config pio_config;
 
 static const char* const usage[] = {
     "sim\t[-h(elp)]",

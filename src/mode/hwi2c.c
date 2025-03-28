@@ -212,7 +212,6 @@ void hwi2c_read(struct _bytecode* result, struct _bytecode* next) {
 }
 
 void hwi2c_macro(uint32_t macro) {
-    uint32_t result = 0;
     switch (macro) {
         case 0:
             printf(" 0. Macro menu\r\n");

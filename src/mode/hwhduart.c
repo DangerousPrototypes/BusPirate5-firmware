@@ -252,7 +252,6 @@ void hwhduart_read(struct _bytecode* result, struct _bytecode* next) {
 }
 
 void hwhduart_macro(uint32_t macro) {
-    struct command_result result;
     switch (macro) {
         case 0:
             printf("1. Transparent UART bridge\r\n");
@@ -294,7 +293,6 @@ void hwhduart_settings(void) {
 }
 
 void hwhduart_printerror(void) {
-    uint32_t error;
 }
 
 void hwhduart_help(void) {

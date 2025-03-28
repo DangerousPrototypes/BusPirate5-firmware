@@ -26,7 +26,7 @@ const char falaio_name[] = "Follow along logic analyzer";
 void falaio_notify(void) {
     // get samples count
     uint32_t fala_samples = logic_analyzer_get_samples_from_zero();
-    if(fala_samples > (DMA_BYTES_PER_CHUNK * LA_DMA_COUNT)) { //invalid sample count
+    if(fala_samples > (LA_BUFFER_SIZE)) { //invalid sample count
         fala_samples = 0;
     }
     // send notification packet

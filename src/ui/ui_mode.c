@@ -19,6 +19,7 @@ bool ui_mode_list(const struct ui_prompt* menu) {
     for (uint i = 0; i < (*menu).menu_items_count; i++) {
         printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), modes[i].protocol_name, ui_term_color_reset());
     }
+    return true;
 }
 
 static const char* const usage[] = {
@@ -28,11 +29,7 @@ static const char* const usage[] = {
     "Change mode to menu option 5: m 5",
 };
 
-static const struct ui_help_options options[] = {
-/*    { 1, "", T_HELP_GCMD_P }, // command help
-    { 0, "p", T_CONFIG_DISABLE },
-    { 0, "P", T_CONFIG_ENABLE },*/
-};
+static const struct ui_help_options options[] = { 0 };
 
 void ui_mode_enable_args(struct command_result* res) {
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {

@@ -23,16 +23,8 @@
 
 static const char labels[][5] = { "AUXL", "AUXH" };
 
-static uint32_t returnval;
-
 // command configuration
-const struct _mode_command_struct dio_commands[] = {
-    /*{ .command="", 
-        .func=&function, 
-        .description_text=T_MODE_COMMAND_DESCRIPTION, 
-        .supress_fala_capture=false
-    },*/
-};
+const struct _mode_command_struct dio_commands[] = { 0 };
 const uint32_t dio_commands_count = count_of(dio_commands);
 
 // Pre-setup step. Show user menus for any configuration options.

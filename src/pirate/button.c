@@ -60,7 +60,7 @@ void button_irq_callback(uint gpio, uint32_t events) {
     gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
 }
 // enable the irq for button button_id
-void button_irq_enable(uint8_t button_id, void* callback) {
+void button_irq_enable(uint8_t button_id, gpio_irq_callback_t callback) {
     button_pressed = false;
     gpio_set_irq_enabled_with_callback(EXT1, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, callback);
 }

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -43,7 +44,6 @@ const uint32_t hw1wire_commands_count = count_of(hw1wire_commands);
 static const char pin_labels[][5] = { "OWD" };
 
 uint32_t hw1wire_setup(void) {
-    uint32_t temp;
     return 1;
 }
 

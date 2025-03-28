@@ -45,7 +45,7 @@ void hw2w_sniff(struct command_result* res){
     }
 
     //check arguments for quiet mode
-    bool quiet = cmdln_args_find_flag('q');
+    // bool quiet = cmdln_args_find_flag('q');
 
     // Full speed for the PIO clock divider
     float div = 1;

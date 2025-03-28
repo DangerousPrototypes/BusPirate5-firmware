@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
@@ -52,7 +53,6 @@ enum flash_actions {
 };
 
 void flash(struct command_result* res) {
-    uint32_t value;
     char file[13];
 
     /* Some notes on automating the command line parsing a bit more
@@ -84,15 +84,21 @@ void flash(struct command_result* res) {
     }
 
     char action_str[9];
-    bool init = false, probe = false, erase = false, verify = false, read = false, write = false, test = false;
+    // bool init = false;
+    // bool probe = false;
+    bool erase = false;
+    bool verify = false;
+    bool read = false;
+    bool write = false;
+    bool test = false;
     // action is the first argument (read/write/probe/erase/etc)
     if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
-        if (strcmp(action_str, "init") == 0) {
-            init = true;
-        }
-        if (strcmp(action_str, "probe") == 0) {
-            probe = true;
-        }
+        // if (strcmp(action_str, "init") == 0) {
+        //     init = true;
+        // }
+        // if (strcmp(action_str, "probe") == 0) {
+        //     probe = true;
+        // }
         if (strcmp(action_str, "erase") == 0) {
             erase = true;
         }

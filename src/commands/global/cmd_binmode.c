@@ -23,14 +23,13 @@ static const char* const usage[] = {
     "Configure the active binary mode: binmode",
 };
 
-static const struct ui_help_options options[] = {
-
-};
+static const struct ui_help_options options[] = { 0};
 
 bool binmode_prompt_menu(const struct ui_prompt* menu) {
     for (uint8_t i = 0; i < count_of(binmodes); i++) {
         printf(" %d. %s\r\n", i + 1, binmodes[i].binmode_name);
     }
+    return true;
 }
 
 bool binmode_check_range(const struct ui_prompt* menu, uint32_t* value) {

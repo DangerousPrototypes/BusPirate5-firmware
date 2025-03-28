@@ -253,6 +253,7 @@ uint8_t pwm_freq_find(
 //  t=1/1000Hz = .001s = 1ms
 void t_to_hz(float* t, uint8_t t_units, float* hz) {
     uint32_t div;
+    assert(t_units == freq_ms || t_units == freq_us || t_units == freq_ns);
     switch (t_units) {
         case freq_ms:
             div = 1000;
@@ -262,6 +263,9 @@ void t_to_hz(float* t, uint8_t t_units, float* hz) {
             break;
         case freq_ns:
             div = 1000000000;
+            break;
+        default:
+            div = 0; // force this to crash ... better than silently using undefined stack value and hitting random bugs later
             break;
     }
 

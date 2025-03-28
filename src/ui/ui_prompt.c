@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -98,6 +99,7 @@ bool ui_prompt_menu_bio_pin(const struct ui_prompt* menu) {
 bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu) {
     // printf("%s(%d) >%s", ui_term_color_prompt(), (*menu).defval, ui_term_color_reset());
     printf("%s >%s ", ui_term_color_prompt(), ui_term_color_reset());
+    return true;
 }
 
 // used internally in ui_prompt
@@ -287,7 +289,7 @@ bool ui_prompt_any_key_continue(prompt_result* result,
     printf("%s", ui_term_cursor_show()); // show cursor
 
     result->success = 1;
-    true;
+    return true;
 }
 
 const struct ui_prompt_config prompt_int_cfg = {

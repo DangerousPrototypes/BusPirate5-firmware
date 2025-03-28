@@ -9,7 +9,6 @@
 static char voltages_value[HW_PINS - 1][4];
 static uint32_t voltages_update_mask[3];
 
-static uint32_t current_sense;
 char current_value[6];
 static uint8_t current_update_mask; // bbb.b which digits changed?
 

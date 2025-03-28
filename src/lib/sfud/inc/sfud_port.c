@@ -64,7 +64,7 @@ static sfud_err spi_write_read(const sfud_spi *spi, const uint8_t *write_buf, si
     //CS low
     //bio_put(M_SPI_CS, 0);
     hwspi_select();
-    for (size_t i = 0, retry_times; i < write_size + read_size; i++) {
+    for (size_t i = 0; i < write_size + read_size; i++) {
         if (i < write_size) {
             send_data = *write_buf++;
         } else {
@@ -82,10 +82,6 @@ static sfud_err spi_write_read(const sfud_spi *spi, const uint8_t *write_buf, si
             *read_buf++ = read_data;
         }
     }
-
-exit:
-    //CS High
-    //bio_put(M_SPI_CS, 1);
     hwspi_deselect();
 
     return result;

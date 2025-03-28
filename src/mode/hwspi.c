@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -251,7 +252,7 @@ void spi_cleanup(void) {
 }
 
 bool spi_preflight_sanity_check(void){
-    ui_help_sanity_check(true, 0x00);
+    return ui_help_sanity_check(true, 0x00);
 }
 
 void spi_set_cs(uint8_t cs) {
@@ -335,7 +336,6 @@ void spi_settings(void) {
 }
 
 void spi_printSPIflags(void) {
-    uint32_t temp;
 }
 
 void spi_help(void) {

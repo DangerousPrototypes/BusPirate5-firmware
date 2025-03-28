@@ -2,6 +2,10 @@
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()  
 
+#  set all the warnings to help reduce bugs
+# set(BP_PENDANTIC 1)
+
+
 # build time in UTC ISO 8601
 FILE (WRITE ${CMAKE_BINARY_DIR}/timestamp.cmake "STRING(TIMESTAMP TIMEZ UTC)\n")
 FILE (APPEND ${CMAKE_BINARY_DIR}/timestamp.cmake "FILE(WRITE timestamp.h \"#ifndef TIMESTAMP_H\\n\")\n")
@@ -433,6 +437,9 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
 #        target_compile_definitions(bus_pirate7 PUBLIC BP_VER=7) 
 #        target_compile_definitions(bus_pirate7 PUBLIC BP_REV=0) 
 #        target_compile_definitions(bus_pirate7 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")             
+#if(DEFINED BP_PENDANTIC)
+#        target_compile_options(    bus_pirate7 PRIVATE -Wpedantic -Wall -Werror -O3 -Wno-unknown-pragmas -Wno-inline -Wno-unused-function)
+#endif()
 
         add_executable(bus_pirate6
                 ${buspirate_common}
@@ -446,6 +453,9 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate6 PUBLIC BP_VER=6) 
         target_compile_definitions(bus_pirate6 PUBLIC BP_REV=10) 
         target_compile_definitions(bus_pirate6 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}") 
+        if(DEFINED BP_PENDANTIC)
+        target_compile_options(    bus_pirate6 PRIVATE -Wpedantic -Wall -Werror -O3 -Wno-unknown-pragmas -Wno-inline -Wno-unused-function)
+        endif()
 
         add_executable(bus_pirate5_xl
                 ${buspirate_common}
@@ -461,6 +471,9 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_VER=XL5)
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_REV=10)
         target_compile_definitions(bus_pirate5_xl PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
+        if(DEFINED BP_PENDANTIC)
+        target_compile_options(    bus_pirate5_xl PRIVATE -Wpedantic -Wall -Werror -O3 -Wno-unknown-pragmas -Wno-inline -Wno-unused-function)
+        endif()
 else()
 
         set(revisions
@@ -481,6 +494,9 @@ else()
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_VER=5)                
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_REV=10)
         target_compile_definitions(bus_pirate5_rev10 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
+        if(DEFINED BP_PENDANTIC)
+        target_compile_options(    bus_pirate5_rev10 PRIVATE -Wpedantic -Wall -Werror -O3 -Wno-unknown-pragmas -Wno-inline -Wno-unused-function)
+        endif()
 
         add_executable(bus_pirate5_rev8
                 ${buspirate_common}
@@ -497,6 +513,9 @@ else()
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_VER=5) 
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_REV=8)
         target_compile_definitions(bus_pirate5_rev8 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")
+        if(DEFINED BP_PENDANTIC)
+        target_compile_options(    bus_pirate5_rev8 PRIVATE -Wpedantic -Wall -Werror -O3 -Wno-unknown-pragmas -Wno-inline -Wno-unused-function)
+        endif()
 endif()
 
 

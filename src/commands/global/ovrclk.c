@@ -38,15 +38,7 @@ static const char* const usage[] = { "ovrclk \t[-m <MHz> | -k <kHz>] [-v <core m
                                      "Overclock: ovrclk -m 135",
                                      "Change core voltage: ovrclk -v 1150 (850-1300mV valid)",};
 
-static const struct ui_help_options options[] = {
-   /* { 1, "", T_HELP_DUMMY_COMMANDS },    // section heading
-    { 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
-    { 0, "test", T_HELP_DUMMY_TEST },    // test is an example we'll find by position
-    { 1, "", T_HELP_DUMMY_FLAGS },       // section heading for flags
-    { 0, "-b", T_HELP_DUMMY_B_FLAG },    //-a flag, with no optional string or integer
-    { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer
-    { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string*/
-};
+static const struct ui_help_options options[] = { 0 };
 
 void ovrclk_handler(struct command_result* res) {
     #ifndef BP_OVERCLOCK_ENABLED

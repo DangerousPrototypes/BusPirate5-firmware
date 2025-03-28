@@ -24,13 +24,7 @@
 static uint32_t returnval;
 
 // command configuration
-const struct _mode_command_struct dummy1_commands[] = {
-    /*{ .command="", 
-        .func=&function, 
-        .description_text=T_MODE_COMMAND_DESCRIPTION, 
-        .supress_fala_capture=false
-    },*/
-};
+const struct _mode_command_struct dummy1_commands[] = { 0 };
 const uint32_t dummy1_commands_count = count_of(dummy1_commands);
 
 // Pin labels shown on the display and in the terminal status bar
@@ -174,7 +168,7 @@ void dummy1_macro(uint32_t macro) {
 
 // The Bus Pirate will make a periodic call to this function (if linked in modes.c)
 // Useful for checking async stuff like bytes in a UART
-uint32_t dummy1_periodic(void) {
+void dummy1_periodic(void) {
     // your periodic service functions
     static uint32_t cnt;
     if (cnt > 0xffffff) {

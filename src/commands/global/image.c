@@ -229,8 +229,6 @@ void image_handler(struct command_result* res) {
         return;
     }
 
-    BITMAPFILEHEADER fileHeader;
-
     // use cmdln_args_string_by_position to get the image file name
     char file[13];
     if (cmdln_args_string_by_position(1, sizeof(file), file)) {

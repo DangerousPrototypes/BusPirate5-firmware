@@ -16,6 +16,7 @@ bool ui_display_list(const struct ui_prompt* menu) {
     for (uint i = 0; i < (*menu).menu_items_count; i++) {
         printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), displays[i].display_name, ui_term_color_reset());
     }
+    return true;
 }
 
 void ui_display_enable_args(struct command_result* res) {

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -62,7 +63,8 @@ void hduart_bridge_handler(struct command_result* res) {
             }
         }
         if (hwuart_pio_read(&raw, &cooked)) {
-            tx_fifo_put(&cooked);
+            char c = (char)cooked;
+            tx_fifo_put(&c);
         }
         // exit when button pressed.
         if (button_get(0)) {

@@ -469,10 +469,10 @@ static bool animation_gentle_glow(void) {
 /// @param color The color to use for the wipe, or RGBCOLOR_BLACK to use angle-based rainbow
 /// @return true when full animation has run its course
 static bool animation_angular_wipe(CPIXEL_COLOR color) {
-    static const uint16_t value_diffusion = 40u;
-    static const uint16_t starting_value = 0u;
-    static const uint16_t ending_value = value_diffusion * 4u + 256u;
-    static const uint16_t default_frame_delay = 1u;
+    constexpr uint16_t value_diffusion     = 40u;
+    constexpr uint16_t starting_value      =  0u;
+    constexpr uint16_t ending_value        = (value_diffusion * 4u) + 256u;
+    constexpr uint16_t default_frame_delay =  1u;
 
     static uint8_t frame_delay_count = 0;
     static uint16_t current_value = starting_value;
@@ -731,7 +731,9 @@ static bool pixel_timer_callback(struct repeating_timer* t) {
             break;
         case LED_EFFECT_PARTY_MODE:
             assert(!"Party mode should never be value of the *local* variable!");
-            //next=true;
+            break;
+        case MAX_LED_EFFECT:
+            assert(!"MAX_LED_EFFECT should never be value of the *local* variable!");
             break;
     }
     // clang-format on
@@ -774,11 +776,11 @@ void rgb_init(void) {
 #if (BP_VER == 6)
     // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm,
     // &pio_config.offset, RGB_CDO, 16, true);
-    _Static_assert(PIO_RGB_LED_PIO == pio2, "RGB: Mismatch between PIO_RGB_LED_PIO and next line for BP6 board");
+    static_assert(PIO_RGB_LED_PIO == pio2, "RGB: Mismatch between PIO_RGB_LED_PIO and next line for BP6 board");     // these *are* constexpr ... or at least as constexpr as it's possible to be
     gpio_set_function(RGB_CDO, GPIO_FUNC_PIO2);
     pio_set_gpio_base(pio_config.pio, 16);
 #else
-    _Static_assert(PIO_RGB_LED_PIO == pio0, "RGB: Mismatch between PIO_RGB_LED_PIO and next line for non-BP6 board");
+    static_assert(PIO_RGB_LED_PIO == pio0, "RGB: Mismatch between PIO_RGB_LED_PIO and next line for non-BP6 board"); // these *are* constexpr ... or at least as constexpr as it's possible to be
     gpio_set_function(RGB_CDO, GPIO_FUNC_PIO0);
     // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio, &pio_config.sm,
     // &pio_config.offset, RGB_CDO, 1, true);
@@ -810,7 +812,7 @@ void rgb_init(void) {
     }
 
 
-};
+}
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b) {
     PRINT_INFO("RGB: rgb_set_all() - Set all pixels to RGB 0x%02x 0x%02x 0x%02x", r, g, b);
@@ -828,4 +830,4 @@ void rgb_put(uint32_t color) {
     assign_pixel_color(PIXEL_MASK_ALL, PIXEL_COLOR_BLACK);
     pixels[DEMO_LED] = rgb;
     update_pixels();
-};
+}

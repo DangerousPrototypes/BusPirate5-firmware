@@ -332,7 +332,7 @@ void logic_bar_navigate(void) {
                 printf("\e[?25h\e[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); // back to bottom
                 return;
                 break;
-            case '\x1B': // escape commands
+            case '\033': // escape commands
                 rx_fifo_get_blocking(&c);
                 switch (c) {
                     case '[': // arrow keys
@@ -466,7 +466,7 @@ void logic_bar(void) {
                     //logic_analyzer_cleanup();
                     return;
                     break;
-                case '\x1B': // escape commands
+                case '\033': // escape commands
                     rx_fifo_get_blocking(&c);
                     switch (c) {
                         case '[': // arrow keys

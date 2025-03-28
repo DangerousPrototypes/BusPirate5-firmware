@@ -10,8 +10,23 @@ uint64_t mcu_get_unique_id(void) {
                   "pico_unique_board_id_t is not 64 bits (but is cast to uint64_t)");
     pico_unique_board_id_t id;
     pico_get_unique_board_id(&id);
-    return *((uint64_t*)(id.id));
-};
+    // NOTE: Treating the serial number as a 64-bit integer,
+    //       because the platform is little-endian,
+    //       has the unfortunate effect of reversing the bytes
+    //       (vs. viewing as a byte array).
+    uint64_t result =
+        ((uint64_t)id.id[0] << (8*0)) |
+        ((uint64_t)id.id[1] << (8*1)) |
+        ((uint64_t)id.id[2] << (8*2)) |
+        ((uint64_t)id.id[3] << (8*3)) |
+        ((uint64_t)id.id[4] << (8*4)) |
+        ((uint64_t)id.id[5] << (8*5)) |
+        ((uint64_t)id.id[6] << (8*6)) |
+        ((uint64_t)id.id[7] << (8*7)) ;
+    uint64_t result2 = *((uint64_t*)(id.id)); // ... breaks strict-aliasing rules ...
+    assert(result == result2);
+    return result;
+}
 
 void mcu_reset(void) {
     watchdog_enable(1, 1);

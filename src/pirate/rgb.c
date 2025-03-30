@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "pico/stdlib.h"
+#include <stdbool.h>
 #include "pirate.h"
 #include "hardware/pio.h"
 #include "hardware/timer.h"
@@ -23,12 +24,6 @@
 //    16 17  0  1  2            15  x  x  0  1
 //
 #define COUNT_OF_PIXELS RGB_LEN // 18 for Rev10, 16 for Rev8
-
-#define BP_HW_RGB_HAS_ALL_PIXELS !(BP_VER==5 && BP_REV<=9)
-
-// static PIO pio;
-// static int sm;
-// static uint offset;
 
 static struct _pio_config pio_config;
 
@@ -178,6 +173,7 @@ CPIXEL_COLOR pixels[COUNT_OF_PIXELS]; // store as RGB ... as it's the common for
 // C23 would allow this to be `constexpr`
 // here, `static const` relies on compiler to optimize this away to a literal `((uint32_t)0u)`
 static const CPIXEL_COLOR PIXEL_COLOR_BLACK = { .r = 0x00, .g = 0x00, .b = 0x00 };
+static const CPIXEL_COLOR PIXEL_COLOR_WHITE = { .r = 0xff, .g = 0xff, .b = 0xff };
 
 static CPIXEL_COLOR color_from_rgb(uint8_t r, uint8_t g, uint8_t b) {
     CPIXEL_COLOR c = { .r = r, .g = g, .b = b };
@@ -316,6 +312,87 @@ static const uint32_t groups_center_clockwise[] = {
 #endif
 #pragma endregion // Legacy pixel animation groups
 
+// array of Overlay functions for each buffer GPIO direction and IO pin
+static void (*pixel_overlay_function[COUNT_OF_PIXELS])(int i, CPIXEL_COLOR *pixel) = {0};
+static const struct _led_overlay *pixel_overlay_gpio[16];
+static uint32_t pixel_overlay_active = 0;
+static CPIXEL_COLOR pixel_overlay_color_on[COUNT_OF_PIXELS];
+static CPIXEL_COLOR pixel_overlay_color_off[COUNT_OF_PIXELS];
+
+void gpio_irq_handler(uint gpio, uint32_t events); 
+
+// timer interrupt handler reenables gpio interrupt
+//TODO: move IRQ reset out of the timer interrupt handler (to avoid zombie interrupt chains)
+int64_t alarm_callback_reset(alarm_id_t id, void *overlay) {
+    struct _led_overlay **overlay_ptr = (struct _led_overlay **)overlay;
+    // reenable gpio interrupt
+    //printf("alarm_callback_reset: %d\r\n", (*overlay_ptr)->gpio);
+    gpio_set_irq_enabled_with_callback((*overlay_ptr)->gpio, (*overlay_ptr)->irq_type, true, &gpio_irq_handler);
+    return 0;
+}
+
+int64_t alarm_callback_off(alarm_id_t id, void *overlay) {
+    struct _led_overlay **overlay_ptr = (struct _led_overlay **)overlay;
+    pixel_overlay_active &= ~(*overlay_ptr)->pixels;
+    //printf("alarm_callback_off: %d\r\n", (*overlay_ptr)->gpio);
+    add_alarm_in_ms( (*overlay_ptr)->off_delay, alarm_callback_reset, overlay, false);
+    return 0;
+}
+
+// gpio interrupt handler starts a timer with interrupt
+void gpio_irq_handler(uint gpio, uint32_t events) {
+    // disable gpio interrupt
+    gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false);
+    //if still active
+    //printf("gpio_irq_handler: %d\r\n", gpio);
+    if(pixel_overlay_gpio[gpio]->gpio == gpio){
+        pixel_overlay_active|= pixel_overlay_gpio[gpio]->pixels;
+        // start timer
+        add_alarm_in_ms(pixel_overlay_gpio[gpio]->on_delay, alarm_callback_off, &pixel_overlay_gpio[gpio], false);         
+    }
+}
+
+// overlay function forces a pixel to red
+void overlay_function(int pixel, CPIXEL_COLOR *pixel_color) {
+    if(pixel_overlay_active & (1u << pixel)){
+        *pixel_color = pixel_overlay_color_on[pixel];
+    }else{
+        *pixel_color = pixel_overlay_color_off[pixel];
+    }
+}
+
+// function to assign an overlay function to a pixel
+void assign_pixel_overlay_function(const struct _led_overlay *overlay) {
+    pixel_overlay_gpio[overlay->gpio] = overlay;
+    // move this to a macro and use it in configuring the overlay struct
+    CPIXEL_COLOR color_on = color_from_rgb(overlay->r_on, overlay->g_on, overlay->b_on);
+    CPIXEL_COLOR color_off = color_from_rgb(overlay->r_off, overlay->g_off, overlay->b_off);
+    //loop over the pixels in the overlay, and assign the overlay function
+    pixel_overlay_active &= ~overlay->pixels;
+    for(int i = 0; i < COUNT_OF_PIXELS; i++){
+        if(overlay->pixels & (1u << i)){
+            pixel_overlay_function[i] = overlay_function;
+            pixel_overlay_color_on[i] = color_on;
+            pixel_overlay_color_off[i] = color_off;
+        }
+    }
+    gpio_set_irq_enabled_with_callback(overlay->gpio, overlay->irq_type, true, &gpio_irq_handler);
+}
+
+void remove_pixel_overlay_function(const struct _led_overlay *overlay) {
+    gpio_set_irq_enabled(overlay->gpio, overlay->irq_type, false);
+    pixel_overlay_gpio[overlay->gpio] = 0;
+    pixel_overlay_active &= ~overlay->pixels; 
+    for(int i = 0; i < COUNT_OF_PIXELS; i++){
+        if(overlay->pixels & (1u << i)){
+            pixel_overlay_function[i] = 0;
+        }
+    }
+    pixel_overlay_active &= ~overlay->pixels;
+    gpio_set_irq_enabled(overlay->gpio, overlay->irq_type, false);
+}
+
+
 struct rgb_dma_t{
     uint32_t buffer[COUNT_OF_PIXELS];
     dma_channel_config config;
@@ -325,7 +402,14 @@ struct rgb_dma_t{
 static struct rgb_dma_t rgb_dma;
 
 static inline void update_pixels(void) {
+
     for (int i = 0; i < COUNT_OF_PIXELS; i++) {
+
+        //check if an overlay function is assigned to this pixel
+        if (pixel_overlay_function[i]){
+            //call the overlay function
+            overlay_function(i, &pixels[i]);
+        }
 
         // little-endian, so 0x00GGRRBB  is stored as 0xBB 0xRR 0xGG 0x00
         // Shifting it left by 8 bits will give bytes 0x00 0xBB 0xRR 0xGG

@@ -14,6 +14,8 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "ui/ui_cmdln.h"
+#include "pirate/rgb.h"
+#include "pirate/bio.h"
 
 static const char* const usage[] = { "bridge\t[-h(elp)] [-t(oolbar)]",
                                      "Transparent UART bridge: bridge",
@@ -40,6 +42,38 @@ void uart_bridge_handler(struct command_result* res) {
     }
 
     printf("%s%s%s\r\n", ui_term_color_notice(), GET_T(T_HELP_UART_BRIDGE_EXIT), ui_term_color_reset());
+
+    // the overlay config struct
+    static const struct _led_overlay tx_overlay =
+        {   .gpio = M_UART_TX+8, 
+            .r_on = 0xff, 
+            .g_on = 0, 
+            .b_on = 0, 
+            .r_off = 0xff, 
+            .g_off = 0xff, 
+            .b_off = 0xff, 
+            .pixels = (1u<<LED_RIGHT_TOP_SIDE)|(1u<<LED_RIGHT_TOP_UP),
+            .on_delay = 150,
+            .off_delay = 100,
+            .irq_type = GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE,
+        };
+    static const struct _led_overlay rx_overlay =
+        {   .gpio = M_UART_RX+8, 
+            .r_on = 0, 
+            .g_on = 0xff, 
+            .b_on = 0, 
+            .r_off = 0xff, 
+            .g_off = 0xff, 
+            .b_off = 0xff, 
+            .pixels = (1u<<LED_RIGHT_BOTTOM_SIDE)|(1u<<LED_RIGHT_BOTTOM_UP),
+            .on_delay = 150,
+            .off_delay = 100,
+            .irq_type = GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE,
+        };
+
+    assign_pixel_overlay_function(&tx_overlay);
+    assign_pixel_overlay_function(&rx_overlay);
+
     bio_put(M_UART_RTS, 0);
     while (true) {
         char c;
@@ -56,6 +90,8 @@ void uart_bridge_handler(struct command_result* res) {
         }
     }
     bio_put(M_UART_RTS, 1);
+    remove_pixel_overlay_function(&tx_overlay);
+    remove_pixel_overlay_function(&rx_overlay);
 
     if (pause_toolbar) {
         system_config.terminal_ansi_statusbar_pause = toolbar_state;

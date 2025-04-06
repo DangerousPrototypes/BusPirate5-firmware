@@ -1,7 +1,7 @@
 void amux_init(void);
 // select AMUX input source, use the channel defines from the platform header
 // only effects the 4067CD analog mux, you cannot get the current measurement from here
-bool amux_select_input(uint8_t channel);
+bool amux_select_input(uint16_t channel);
 // set the AMUX input source using the BIO pin number
 bool amux_select_bio(uint8_t bio);
 // read from AMUX using channel list in platform header file

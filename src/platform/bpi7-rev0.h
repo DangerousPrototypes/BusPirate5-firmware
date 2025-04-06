@@ -225,7 +225,33 @@ enum adc_mux{
 //the adc variable holds all the ADC readings
 extern uint16_t hw_adc_raw[];
 extern uint32_t hw_adc_voltage[];
-extern uint32_t *hw_pin_voltage_ordered[];
+extern uint32_t hw_adc_avgsum_voltage[];
+
+// this array references the pin voltages in the order that
+// they appear in terminal and LCD for easy loop writeout
+static const uint32_t* hw_pin_voltage_ordered[]={
+    &hw_adc_voltage[HW_ADC_MUX_VREF_VOUT],
+    &hw_adc_voltage[HW_ADC_MUX_BPIO0],
+    &hw_adc_voltage[HW_ADC_MUX_BPIO1],
+    &hw_adc_voltage[HW_ADC_MUX_BPIO2],
+    &hw_adc_voltage[HW_ADC_MUX_BPIO3],
+    &hw_adc_voltage[HW_ADC_MUX_BPIO4],
+    &hw_adc_voltage[HW_ADC_MUX_BPIO5],
+    &hw_adc_voltage[HW_ADC_MUX_BPIO6],
+    &hw_adc_voltage[HW_ADC_MUX_BPIO7]
+};
+
+static const uint32_t* hw_pin_avgsum_voltage_ordered[]={
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_VREF_VOUT],
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_BPIO0],
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_BPIO1],
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_BPIO2],
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_BPIO3],
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_BPIO4],
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_BPIO5],
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_BPIO6],
+    &hw_adc_avgsum_voltage[HW_ADC_MUX_BPIO7]
+};
 
 //convert raw ADC to volts, for pin with a /2 resistor divider (MUX inputs)
 #define hw_adc_to_volts_x2(X) ((6600*hw_adc_raw[X])/4096);

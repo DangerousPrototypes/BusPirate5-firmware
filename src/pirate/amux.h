@@ -17,3 +17,16 @@ uint32_t amux_read_current(void);
 // read all the AMUX channels and the current sense
 // place into the global arrays hw_adc_raw and hw_adc_voltage
 void amux_sweep(void);
+
+// reset the averaging of all channels, start with the current value
+// useful if you expect a step-change of the inputs
+extern bool reset_adc_average;
+
+// use power-of-two values for efficient division
+#define ADC_AVG_TIMES 64
+
+inline uint32_t get_adc_average(uint32_t avgsum)
+{
+    // add ADC_AVG_TIMES/2 before division for correct rounding instead of cutting of decimals
+    return ((avgsum+(ADC_AVG_TIMES/2))/ADC_AVG_TIMES);
+}

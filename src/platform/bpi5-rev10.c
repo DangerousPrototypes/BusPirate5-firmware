@@ -7,6 +7,7 @@
 //TODO: move all this nonsense to the system config
 uint16_t hw_adc_raw[HW_ADC_COUNT];
 uint32_t hw_adc_voltage[HW_ADC_COUNT];
+uint32_t hw_adc_avgsum_voltage[HW_ADC_COUNT];
 // this array references the pin voltages in the order that
 // they appear in terminal and LCD for easy loop writeout
 uint32_t* hw_pin_voltage_ordered[]={
@@ -20,6 +21,7 @@ uint32_t* hw_pin_voltage_ordered[]={
     &hw_adc_voltage[HW_ADC_MUX_BPIO6],
     &hw_adc_voltage[HW_ADC_MUX_BPIO7]
 };
+
 const uint8_t bio2bufiopin[] =
     {
         BUFIO0,

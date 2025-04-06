@@ -35,14 +35,34 @@ void adc_measure(struct command_result* res, bool refresh);
 uint32_t adc_print(uint8_t bio_pin, bool refresh) {
     // sweep adc
     amux_sweep();
-    printf("%s%s IO%d:%s %s%d.%d%sV\r%s",
+    printf("%s%s IO%d:%s %s%d.%03d%sV\r%s",
            ui_term_color_info(),
            GET_T(T_MODE_ADC_VOLTAGE),
            bio_pin,
            ui_term_color_reset(),
            ui_term_color_num_float(),
            ((*hw_pin_voltage_ordered[bio_pin + 1]) / 1000),
-           (((*hw_pin_voltage_ordered[bio_pin + 1]) % 1000) / 100),
+           ((*hw_pin_voltage_ordered[bio_pin + 1]) % 1000),
+           ui_term_color_reset(),
+           (refresh ? "" : "\n"));
+    return 1;
+}
+
+uint32_t adc_print_average(uint8_t bio_pin, bool refresh) {
+    // sweep adc
+    amux_sweep();
+    printf("%s%s IO%d:%s %s%d.%03d%sV (Average: %s%d.%03d%sV)\r%s",
+           ui_term_color_info(),
+           GET_T(T_MODE_ADC_VOLTAGE),
+           bio_pin,
+           ui_term_color_reset(),
+           ui_term_color_num_float(),
+           ((*hw_pin_voltage_ordered[bio_pin + 1]) / 1000),
+           ((*hw_pin_voltage_ordered[bio_pin + 1]) % 1000),
+           ui_term_color_reset(),
+           ui_term_color_num_float(),
+           (get_adc_average(*hw_pin_avgsum_voltage_ordered[bio_pin + 1]) / 1000),
+           (get_adc_average(*hw_pin_avgsum_voltage_ordered[bio_pin + 1]) % 1000),
            ui_term_color_reset(),
            (refresh ? "" : "\n"));
     return 1;
@@ -102,9 +122,10 @@ void adc_measure(struct command_result* res, bool refresh) {
         // continuous measurement on this pin
         //  press any key to continue
         prompt_result result;
+        reset_adc_average = true;
         system_config.terminal_hide_cursor = true;
         printf("%s", ui_term_cursor_hide());
-        ui_prompt_any_key_continue(&result, 250, &adc_print, temp, true);
+        ui_prompt_any_key_continue(&result, 250, &adc_print_average, temp, true);
         printf("%s", ui_term_cursor_show());
         system_config.terminal_hide_cursor = false;
     }

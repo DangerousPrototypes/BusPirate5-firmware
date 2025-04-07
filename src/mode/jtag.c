@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -59,7 +60,7 @@ void jtag_cleanup(void) {
 }
 
 bool jtag_preflight_sanity_check(void){
-    ui_help_sanity_check(true, 0x00);
+    return ui_help_sanity_check(true, 0x00);
 }
 
 void jtag_pins(void){

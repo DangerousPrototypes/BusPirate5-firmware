@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pirate.h"
@@ -151,6 +152,7 @@ bool storage_save_binary_blob_rollover(char* data, uint32_t ptr, uint32_t size, 
             return false;
         }
     }
+    return false;
 }
 
 // TODO: this is a hack because of type issues I don't recall

@@ -14,7 +14,7 @@ static const char* const usage[] = {
     "Note: will attempt to detect and initialize VT100 ANSI terminal",
 };
 
-static const struct ui_help_options options[] = {};
+static const struct ui_help_options options[] = { 0 };
 
 void ui_display_clear(struct command_result* res) {
     BP_ASSERT_CORE0();

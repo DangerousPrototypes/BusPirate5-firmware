@@ -53,6 +53,7 @@ bool ui_button_exec(void) {
                 ; // nothing left to shove in the command prompt
             printf("\r\n");
             bool error = ui_process_commands();
+            // BUGBUG -- no error handling?  What if the above fails?  Shouldn't there be SOME output here?
         }
     }
     printf("\r\n");

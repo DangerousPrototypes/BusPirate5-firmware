@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2024
  * Modified by Lior Shalmay Copyright (c) 2024
  */
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
@@ -312,17 +313,11 @@ void disk_ls_handler(struct command_result* res) {
         return;
     }
 
-    FRESULT fr;
-    DIR dir;
-    FILINFO fno;
-    int nfile, ndir;
-
     // is there a trailing path to ls?
     char location[32];
     cmdln_args_string_by_position(1, sizeof(location), location);
 
     if (!storage_ls(location, NULL, LS_ALL)) {
-        storage_file_error(fr);
         res->error = true;
         return;
     }

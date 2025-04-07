@@ -53,7 +53,6 @@ void onewire_set_fifo_thresh(uint thresh) {
     PIO pio = owobj.pio;
     uint sm = owobj.sm;
     uint offset = owobj.offset;
-    uint pin = owobj.pin;
     uint old, new;
     uint8_t waiting_addr;
     uint need_restart;
@@ -112,7 +111,6 @@ int onewire_reset(void) {
     PIO pio = owobj.pio;
     uint sm = owobj.sm;
     uint offset = owobj.offset;
-    uint pin = owobj.pin;
     uint8_t waiting_addr;
     int timeout;
     uint div;
@@ -155,7 +153,6 @@ int onewire_reset(void) {
    useful when you know that all but the last bit
    have been processe (after having checked fifos) */
 void onewire_wait_for_idle(void) {
-    int ret;
     PIO pio = owobj.pio;
     uint sm = owobj.sm;
     uint offset = owobj.offset;
@@ -182,8 +179,6 @@ void onewire_wait_for_idle(void) {
 void onewire_tx_byte(uint byte) {
     PIO pio = owobj.pio;
     uint sm = owobj.sm;
-    uint offset = owobj.offset;
-    uint pin = owobj.pin;
 
     onewire_set_fifo_thresh(8);
     pio->txf[sm] = byte;
@@ -197,8 +192,6 @@ void onewire_tx_byte(uint byte) {
 uint onewire_rx_byte(void) {
     PIO pio = owobj.pio;
     uint sm = owobj.sm;
-    uint offset = owobj.offset;
-    uint pin = owobj.pin;
 
     onewire_set_fifo_thresh(8);
     pio->txf[sm] = 0xff;
@@ -224,8 +217,6 @@ uint onewire_rx_byte(void) {
 void onewire_triplet(int* id_bit, int* cmp_id_bit, unsigned char* search_direction) {
     PIO pio = owobj.pio;
     uint sm = owobj.sm;
-    uint offset = owobj.offset;
-    uint pin = owobj.pin;
     uint fiforx;
 
     onewire_set_fifo_thresh(2);
@@ -331,9 +322,13 @@ unsigned char calc_crc8(unsigned char data) {
 //
 int OWSearch(struct owobj* search_owobj) {
     int id_bit_number;
-    int last_zero, rom_byte_number, search_result;
-    int id_bit, cmp_id_bit;
-    unsigned char rom_byte_mask, search_direction, status;
+    int last_zero;
+    int rom_byte_number;
+    int search_result;
+    int id_bit;
+    int cmp_id_bit;
+    unsigned char rom_byte_mask;
+    unsigned char search_direction;
 
     // initialize for search
     id_bit_number = 1;
@@ -444,6 +439,7 @@ int OWSearchReset(struct owobj* search_owobj) {
     search_owobj->LastDiscrepancy = 0;
     search_owobj->LastDeviceFlag = FALSE;
     search_owobj->LastFamilyDiscrepancy = 0;
+    return 0;
 }
 
 //--------------------------------------------------------------------------

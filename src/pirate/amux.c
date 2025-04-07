@@ -3,6 +3,7 @@
 #include "hardware/adc.h"
 #include "pirate.h"
 #include "pirate/shift.h"
+#include "pirate/amux.h"
 #include "command_struct.h"
 #include "display/scope.h"
 #include "hardware/sync.h"
@@ -11,6 +12,9 @@
 // lock_core_t core;
 spin_lock_t* adc_spin_lock;
 uint adc_spin_lock_num;
+
+// is executed on the next average calculation
+bool reset_adc_average = false;
 
 // gives protected access to adc (core safe)
 void adc_busy_wait(bool enable) {
@@ -43,6 +47,7 @@ void amux_init(void) {
     // setup the spinlock for adc arbitration
     adc_spin_lock_num = spin_lock_claim_unused(true);
     adc_spin_lock = spin_lock_init(adc_spin_lock_num);
+    reset_adc_average = true;
 }
 
 // select AMUX input source, use the channel defines from the platform header
@@ -149,6 +154,17 @@ void amux_sweep(void) {
     // do these outside the ADC spin lock
     for (int i = 0; i < HW_ADC_MUX_COUNT; i++) {
         hw_adc_voltage[i] = hw_adc_to_volts_x2(i); // these are X2 because a resistor divider /2
+        
+        if (reset_adc_average)
+            hw_adc_avgsum_voltage[i] = hw_adc_voltage[i]*ADC_AVG_TIMES;
+        else
+        {
+            // calculate the rolling average
+            hw_adc_avgsum_voltage[i]-=get_adc_average(hw_adc_avgsum_voltage[i]);
+            hw_adc_avgsum_voltage[i]+=hw_adc_voltage[i];
+        }
     }
+    if (reset_adc_average)
+        reset_adc_average = false;
     hw_adc_voltage[HW_ADC_CURRENT_SENSE] = hw_adc_to_volts_x1(HW_ADC_CURRENT_SENSE);
 }

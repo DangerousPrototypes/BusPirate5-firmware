@@ -71,7 +71,7 @@ uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
         cnt += temp;
     }
     // fill in blank space
-    len += snprintf(&buf[len], buffLen - len, "\e[%dX", system_config.terminal_ansi_columns - cnt);
+    len += snprintf(&buf[len], buffLen - len, "\033[%dX", system_config.terminal_ansi_columns - cnt);
     len += snprintf(&buf[len], buffLen - len, "%s", ui_term_color_reset()); // snprintf to buffer
     return len;
 }
@@ -83,7 +83,7 @@ uint32_t ui_statusbar_names(char* buf, size_t buffLen) {
     for (int i = 0; i < HW_PINS; i++) {
         len += ui_term_color_text_background_buf(
             &buf[len], buffLen - len, hw_pin_label_ordered_color[i][0], hw_pin_label_ordered_color[i][1]);
-        len += snprintf(&buf[len], buffLen - len, "\e[8X"); // clear existing
+        len += snprintf(&buf[len], buffLen - len, "\033[8X"); // clear existing
         len += snprintf(&buf[len], buffLen - len, "%d.%s\t", i + 1, hw_pin_label_ordered[i]);
     }
 
@@ -95,7 +95,7 @@ bool label_default(uint32_t* len, size_t buffLen, char* buf, uint32_t i) {
     if (system_config.pin_changed & (0x01 << (uint8_t)i)) {
         *len += snprintf(&buf[*len],
                          buffLen - *len,
-                         "\e[8X%s\t",
+                         "\033[8X%s\t",
                          system_config.pin_labels[i] == 0 ? "-" : (char*)system_config.pin_labels[i]);
         return true;
     }
@@ -107,7 +107,7 @@ bool label_current(uint32_t* len, size_t buffLen, char* buf, uint32_t i) {
     char* c;
     if (monitor_get_current_ptr(&c) || (system_config.pin_changed & (0x01 << (uint8_t)i))) {
         *len += snprintf(
-            &buf[*len], buffLen - *len, "\e[8X%s%s%smA\t", ui_term_color_num_float(), c, ui_term_color_reset());
+            &buf[*len], buffLen - *len, "\033[8X%s%s%smA\t", ui_term_color_num_float(), c, ui_term_color_reset());
         return true;
     }
     return false;
@@ -125,7 +125,7 @@ bool value_voltage(uint32_t* len, size_t buffLen, char* buf, uint32_t i) {
 
 // TODO: freq function (update on change), pwm function (write once, untill update)
 bool value_freq(uint32_t* len, size_t buffLen, char* buf, uint32_t i) {
-    *len += snprintf(&buf[*len], buffLen - *len, "\e[8X"); // clear out tab, return to tab
+    *len += snprintf(&buf[*len], buffLen - *len, "\033[8X"); // clear out tab, return to tab
     float freq_friendly_value;
     uint8_t freq_friendly_units;
     freq_display_hz(&system_config.freq_config[i - 1].period, &freq_friendly_value, &freq_friendly_units);
@@ -178,7 +178,7 @@ uint32_t ui_statusbar_labels(char* buf, size_t buffLen) {
     for (uint i = 0; i < HW_PINS; i++) {
 
         if (system_config.pin_changed & (0x01 << (uint8_t)i)) {
-            len += snprintf(&buf[len], buffLen - len, "\e[8X"); // clear out tab, return to tab
+            len += snprintf(&buf[len], buffLen - len, "\033[8X"); // clear out tab, return to tab
         }
 
         if (!ui_statusbar_pin_functions[system_config.pin_func[i]].label(&len, buffLen, buf, i)) {
@@ -198,7 +198,7 @@ uint32_t ui_statusbar_value(char* buf, size_t buffLen) {
     for (uint i = 0; i < HW_PINS; i++) {
 
         if (system_config.pin_changed & (0x01 << (uint8_t)i)) {
-            len += snprintf(&buf[len], buffLen - len, "\e[8X"); // clear out tab, return to tab
+            len += snprintf(&buf[len], buffLen - len, "\033[8X"); // clear out tab, return to tab
         }
 
         if (ui_statusbar_pin_functions[system_config.pin_func[i]].value(&len, buffLen, buf, i)) {
@@ -227,20 +227,22 @@ void ui_statusbar_update_from_core1(uint32_t update_flags) {
     }
 
     // save cursor, hide cursor
-    len += snprintf(&tx_sb_buf[len], buffLen - len, "\e7\e[?25l");
+    // NOTE: \033 is the escape character, but a following digit is pulled into the hex value.
+    //       How to avoid non-portable escape sequence?
+    len += snprintf(&tx_sb_buf[len], buffLen - len, "\0337\033[?25l");
 
     // print each line of the toolbar
     if (update_flags & UI_UPDATE_INFOBAR) {
         monitor_force_update(); // we want to repaint the whole screen if we're doing the pin names...
         len += snprintf(&tx_sb_buf[len],
                         buffLen - len,
-                        "\e[%d;0H",
+                        "\033[%d;0H",
                         system_config.terminal_ansi_rows - 3); // position at row-3 col=0
         len += ui_statusbar_info(&tx_sb_buf[len], buffLen - len);
     }
 
     if (update_flags & UI_UPDATE_NAMES) {
-        len += snprintf(&tx_sb_buf[len], buffLen - len, "\e[%d;0H", system_config.terminal_ansi_rows - 2);
+        len += snprintf(&tx_sb_buf[len], buffLen - len, "\033[%d;0H", system_config.terminal_ansi_rows - 2);
         len += ui_statusbar_names(&tx_sb_buf[len], buffLen - len);
     }
 
@@ -250,7 +252,7 @@ void ui_statusbar_update_from_core1(uint32_t update_flags) {
         if (monitor_get_current_ptr(&c)) {
             len += snprintf(&tx_sb_buf[len],
                             buffLen - len,
-                            "\e[%d;0H%s%s%smA",
+                            "\033[%d;0H%s%s%smA",
                             system_config.terminal_ansi_rows - 1,
                             ui_term_color_num_float(),
                             c,
@@ -259,20 +261,20 @@ void ui_statusbar_update_from_core1(uint32_t update_flags) {
     }
 
     if (update_flags & UI_UPDATE_LABELS) {
-        len += snprintf(&tx_sb_buf[len], buffLen - len, "\e[%d;0H", system_config.terminal_ansi_rows - 1);
+        len += snprintf(&tx_sb_buf[len], buffLen - len, "\033[%d;0H", system_config.terminal_ansi_rows - 1);
         len += ui_statusbar_labels(&tx_sb_buf[len], buffLen - len);
     }
 
     if (update_flags & UI_UPDATE_VOLTAGES) {
-        len += snprintf(&tx_sb_buf[len], buffLen - len, "\e[%d;0H", system_config.terminal_ansi_rows - 0);
+        len += snprintf(&tx_sb_buf[len], buffLen - len, "\033[%d;0H", system_config.terminal_ansi_rows - 0);
         len += ui_statusbar_value(&tx_sb_buf[len], buffLen - len);
     }
 
     // restore cursor, show cursor
-    len += snprintf(&tx_sb_buf[len], buffLen - len, "\e8");
+    len += snprintf(&tx_sb_buf[len], buffLen - len, "\0338");
 
     if (!system_config.terminal_hide_cursor) {
-        len += snprintf(&tx_sb_buf[len], buffLen - len, "\e[?25h");
+        len += snprintf(&tx_sb_buf[len], buffLen - len, "\033[?25h");
     }
 
     tx_sb_start(len);
@@ -280,7 +282,7 @@ void ui_statusbar_update_from_core1(uint32_t update_flags) {
 
 void ui_statusbar_init(void) {
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
-        printf("\e[%d;%dr", 1, system_config.terminal_ansi_rows - 4);
+        printf("\033[%d;%dr", 1, system_config.terminal_ansi_rows - 4);
     }
 }
 
@@ -289,10 +291,10 @@ void ui_statusbar_deinit(void) {
         system_config.terminal_ansi_statusbar = 0;
         system_config.terminal_ansi_statusbar_update = false;
         busy_wait_ms(100); // wait for the last statusbar update to finish
-        printf("\e7\e[0;%dr", system_config.terminal_ansi_rows); // save cursor, disable region block
+        printf("\0337\033[0;%dr", system_config.terminal_ansi_rows); // save cursor, disable region block
         for (uint8_t i = 0; i < 4; i++) {
-            printf("\e[%d;0H\e[K", system_config.terminal_ansi_rows - i); // clear screen
+            printf("\033[%d;0H\033[K", system_config.terminal_ansi_rows - i); // clear screen
         }
-        printf("\e8"); // restore cursor
+        printf("\0338"); // restore cursor
     }
 }

@@ -1,6 +1,4 @@
-#define DMA_BYTES_PER_CHUNK 32768
-#define LA_DMA_COUNT 4
-
+#define LA_BUFFER_SIZE (32768 * 4)
 bool logicanalyzer_setup(void);
 int logicanalyzer_status(void);
 void logic_analyzer_dump(uint8_t* txbuf);

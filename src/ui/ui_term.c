@@ -60,7 +60,7 @@ bool ui_term_detect_vt100(uint32_t* row, uint32_t* col) {
     uint8_t stage = 0;
 
     // Position cursor at extreme corner and get the actual postion
-    p = ui_term_get_vt100_query("\e7\e[999;999H\e[6n\e8", 'R', cp, 20);
+    p = ui_term_get_vt100_query("\0337\033[999;999H\033[6n\0338", 'R', (char*)cp, 20);
 
     // no reply, no terminal connected or doesn't support VT100
     if (p < 0) {
@@ -126,24 +126,24 @@ bool ui_term_detect(void) {
 
 void ui_term_init(void) {
     if (system_config.terminal_ansi_color) {
-        printf("\x1b[?3l"); // 80 columns
-        printf("\x1b]0;%s\x1b\\", BP_HARDWARE_VERSION);
+        printf("\033[?3l"); // 80 columns
+        printf("\033]0;%s\033\\", BP_HARDWARE_VERSION);
         // reset all styling
-        printf("\e[0m");
+        printf("\033[0m");
         // set cursor type
         // printf("\e[3 q");
         // clear screen
-        printf("\e[2J");
+        printf("\033[2J");
     }
 }
 
 /*
-\x1b  escape
+\033  escape
 [0m   reset/normal
 [38;2;<r>;<g>;<b>m  set rgb text color
 [48;2;<r>;<g>;<b>m  set rgb background color
 [38;2;<r>;<g>;<b>;48;2;<r>;<g>;<b>m set text and background color
-\x1bP$qm\x1b\\  query current settings, can be used to test true color support on SOME terminals... doesn't seem to be
+\033P$qm\033\\  query current settings, can be used to test true color support on SOME terminals... doesn't seem to be
 widly used
 
 */
@@ -151,11 +151,11 @@ widly used
 void ui_term_color_text(uint32_t rgb) {
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
-            printf("\x1b[38;2;%d;%d;%dm", (uint8_t)(rgb >> 16), (uint8_t)(rgb >> 8), (uint8_t)(rgb));
+            printf("\033[38;2;%d;%d;%dm", (uint8_t)(rgb >> 16), (uint8_t)(rgb >> 8), (uint8_t)(rgb));
             break;
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
-            printf("\x1b[38;5;%hhdm", ansi256_from_rgb(rgb));
+            printf("\033[38;5;%hhdm", ansi256_from_rgb(rgb));
             break;
 #endif
         case UI_TERM_NO_COLOR:
@@ -167,11 +167,11 @@ void ui_term_color_text(uint32_t rgb) {
 void ui_term_color_background(uint32_t rgb) {
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
-            printf("\x1b[48;2;%d;%d;%dm", (uint8_t)(rgb >> 16), (uint8_t)(rgb >> 8), (uint8_t)(rgb));
+            printf("\033[48;2;%d;%d;%dm", (uint8_t)(rgb >> 16), (uint8_t)(rgb >> 8), (uint8_t)(rgb));
             break;
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
-            printf("\x1b[48;5;%hhdm", ansi256_from_rgb(rgb));
+            printf("\033[48;5;%hhdm", ansi256_from_rgb(rgb));
             break;
 #endif
         case UI_TERM_NO_COLOR:
@@ -185,7 +185,7 @@ uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_backgroun
 
     switch (system_config.terminal_ansi_color) {
         case UI_TERM_FULL_COLOR:
-            count = printf("\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
+            count = printf("\033[38;2;%d;%d;%d;48;2;%d;%d;%dm",
                            (uint8_t)(rgb_text >> 16),
                            (uint8_t)(rgb_text >> 8),
                            (uint8_t)(rgb_text),
@@ -195,7 +195,7 @@ uint32_t ui_term_color_text_background(uint32_t rgb_text, uint32_t rgb_backgroun
             return count;
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
-            count = printf("\x1b[38;5;%hhd;48;5;%hhdm", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
+            count = printf("\033[38;5;%hhd;48;5;%hhdm", ansi256_from_rgb(rgb_text), ansi256_from_rgb(rgb_background));
             return count;
 #endif
         case UI_TERM_NO_COLOR:
@@ -211,7 +211,7 @@ uint32_t ui_term_color_text_background_buf(char* buf, size_t buffLen, uint32_t r
         case UI_TERM_FULL_COLOR:
             count = snprintf(buf,
                              buffLen,
-                             "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
+                             "\033[38;2;%d;%d;%d;48;2;%d;%d;%dm",
                              (uint8_t)(rgb_text >> 16),
                              (uint8_t)(rgb_text >> 8),
                              (uint8_t)(rgb_text),
@@ -223,7 +223,7 @@ uint32_t ui_term_color_text_background_buf(char* buf, size_t buffLen, uint32_t r
         case UI_TERM_256:
             count = snprintf(buf,
                              buffLen,
-                             "\x1b[38;5;%hhd;48;5;%hhdm",
+                             "\033[38;5;%hhd;48;5;%hhdm",
                              ansi256_from_rgb(rgb_text),
                              ansi256_from_rgb(rgb_background));
             return count;
@@ -236,10 +236,10 @@ uint32_t ui_term_color_text_background_buf(char* buf, size_t buffLen, uint32_t r
     return 0;
 }
 
-#define UI_TERM_FULL_COLOR_CONCAT_TEXT(color) ("\x1b[38;2;" color "m")
-#define UI_TERM_FULL_COLOR_CONCAT_BACKGROUND(color) ("\x1b[48;2;" color "m")
-#define UI_TERM_256_COLOR_CONCAT_TEXT(color) ("\x1b[38;5;" color "m")
-#define UI_TERM_256_COLOR_CONCAT_BACKGROUND(color) ("\x1b[48;5;" color "m")
+#define UI_TERM_FULL_COLOR_CONCAT_TEXT(color) ("\033[38;2;" color "m")
+#define UI_TERM_FULL_COLOR_CONCAT_BACKGROUND(color) ("\033[48;2;" color "m")
+#define UI_TERM_256_COLOR_CONCAT_TEXT(color) ("\033[38;5;" color "m")
+#define UI_TERM_256_COLOR_CONCAT_BACKGROUND(color) ("\033[48;5;" color "m")
 
 char* ui_term_color_reset(void) {
     switch (system_config.terminal_ansi_color) {
@@ -247,7 +247,7 @@ char* ui_term_color_reset(void) {
         case UI_TERM_256:
 #endif
         case UI_TERM_FULL_COLOR:
-            return "\x1b[0m";
+            return "\033[0m";
         case UI_TERM_NO_COLOR:
         default:
             return "";
@@ -353,10 +353,10 @@ char* ui_term_color_pacman(void) {
 }
 
 char* ui_term_cursor_hide(void) {
-    return system_config.terminal_ansi_color ? "\e[?25l" : "";
+    return system_config.terminal_ansi_color ? "\033[?25l" : "";
 }
 char* ui_term_cursor_show(void) {
-    return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color ? "\e[?25h" : "";
+    return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color ? "\033[?25h" : "";
 }
 
 // handles the user input
@@ -381,7 +381,7 @@ uint32_t ui_term_get_user_input(void) {
                 printf("\x07");
             }
             break;
-        case '\x1B': // escape commands
+        case '\033': // escape commands
             rx_fifo_get_blocking(&c);
             switch (c) {
                 case '[': // arrow keys
@@ -448,7 +448,7 @@ bool ui_term_cmdln_char_insert(char* c) {
         }
         cmdln.cursptr = cmdln_pu(cmdln.cursptr + 1);
         cmdln.wptr = cmdln_pu(cmdln.wptr + 1);
-        printf("\x1B[%dD", cmdln_pu(cmdln.wptr - cmdln.cursptr)); // return the cursor to the correct position
+        printf("\033[%dD", cmdln_pu(cmdln.wptr - cmdln.cursptr)); // return the cursor to the correct position
     }
 
     return true;
@@ -465,11 +465,11 @@ bool ui_term_cmdln_char_backspace(void) {
         cmdln.wptr = cmdln_pu(cmdln.wptr - 1); // write pointer back one space
         cmdln.cursptr = cmdln.wptr;            // cursor pointer also goes back one space
         printf("\x08 \x08");                   // back, space, back again
-        // printf("\x1b[1X");
+        // printf("\033[1X");
         cmdln.buf[cmdln.wptr] = 0x00; // is this really needed?
     } else {
         uint32_t temp = cmdln.cursptr;
-        printf("\x1B[D"); // delete character on terminal
+        printf("\033[D"); // delete character on terminal
         while (temp != cmdln.wptr) {
             cmdln.buf[cmdln_pu(temp - 1)] =
                 cmdln.buf[temp]; // write out the characters from cursor position to write pointer
@@ -480,7 +480,7 @@ bool ui_term_cmdln_char_backspace(void) {
         cmdln.buf[cmdln.wptr] = 0x00;
         cmdln.wptr = cmdln_pu(cmdln.wptr - 1); // move write and cursor positions back one space
         cmdln.cursptr = cmdln_pu(cmdln.cursptr - 1);
-        printf("\x1B[%dD", cmdln_pu(cmdln.wptr - cmdln.cursptr + 1));
+        printf("\033[%dD", cmdln_pu(cmdln.wptr - cmdln.cursptr + 1));
     }
 
     return true;
@@ -500,7 +500,7 @@ bool ui_term_cmdln_char_delete(void) {
     }
     cmdln.buf[cmdln.wptr] = 0x00; // TODO: I dont think these are needed, it is done in the calling fucntion on <enter>
     cmdln.wptr = cmdln_pu(cmdln.wptr - 1);
-    printf("\x1B[1P");
+    printf("\033[1P");
 
     return true;
 }
@@ -533,7 +533,7 @@ void ui_term_cmdln_arrow_keys(char* c) {
             if (cmdln.cursptr != cmdln.rptr) // left
             {
                 cmdln.cursptr = cmdln_pu(cmdln.cursptr - 1);
-                printf("\x1B[D");
+                printf("\033[D");
             } else {
                 printf("\x07");
             }
@@ -542,7 +542,7 @@ void ui_term_cmdln_arrow_keys(char* c) {
             if (cmdln.cursptr != cmdln.wptr) // right
             {
                 cmdln.cursptr = cmdln_pu(cmdln.cursptr + 1);
-                printf("\x1B[C");
+                printf("\033[C");
             } else {
                 printf("\x07");
             }
@@ -580,7 +580,7 @@ void ui_term_cmdln_arrow_keys(char* c) {
             // end of cursor
             while (cmdln.cursptr != cmdln.wptr) {
                 cmdln.cursptr = cmdln_pu(cmdln.cursptr + 1);
-                printf("\x1B[C");
+                printf("\033[C");
             }
             break;
             break;
@@ -590,7 +590,7 @@ void ui_term_cmdln_arrow_keys(char* c) {
                 // home
                 while (cmdln.cursptr != cmdln.rptr) {
                     cmdln.cursptr = cmdln_pu(cmdln.cursptr - 1);
-                    printf("\x1B[D");
+                    printf("\033[D");
                 }
                 break;
             }
@@ -626,7 +626,7 @@ int ui_term_cmdln_history(int ptr) {
             }
             while (cmdln.cursptr != cmdln.rptr) // TODO: verify		//move back to start;
             {
-                printf("\x1B[D \x1B[D");
+                printf("\033[D \033[D");
                 cmdln.cursptr = cmdln_pu(cmdln.cursptr - 1);
             }
 
@@ -661,7 +661,7 @@ void ui_term_progress_bar(uint32_t current, uint32_t total) {
             printf("-");
         }
     }
-    printf("%s]\r\e[1C", ui_term_color_prompt());
+    printf("%s]\r\033[1C", ui_term_color_prompt());
 }
 
 void ui_term_progress_bar_draw(ui_term_progress_bar_t* pb) {
@@ -675,7 +675,7 @@ void ui_term_progress_bar_draw(ui_term_progress_bar_t* pb) {
             printf("o");
         }
     }
-    printf("%s]\r\e[1C", ui_term_color_prompt());
+    printf("%s]\r\033[1C", ui_term_color_prompt());
     pb->indicator_state = 1;
     pb->previous_pct = 0;
     pb->progress_cnt = 0;
@@ -695,7 +695,7 @@ void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progr
 
     if ((pb->progress_cnt > 600) || ((previous_pct) > 0)) // gone 5 loops without an advance
     {
-        printf("%s%c\e[1D", ui_term_color_pacman(), (pb->indicator_state) ? 'C' : 'c'); // C and reset the cursor
+        printf("%s%c\033[1D", ui_term_color_pacman(), (pb->indicator_state) ? 'C' : 'c'); // C and reset the cursor
         if (pb->progress_cnt > 600) {
             pb->progress_cnt = 0;
         }

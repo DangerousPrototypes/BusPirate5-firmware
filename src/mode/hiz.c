@@ -40,13 +40,7 @@ uint32_t hiz_setup_exec(void) {
 }
 
 // command configuration
-const struct _mode_command_struct hiz_commands[] = {
-    /*{ .command="", 
-        .func=&function, 
-        .description_text=T_MODE_COMMAND_DESCRIPTION, 
-        .supress_fala_capture=false
-    },*/
-};
+const struct _mode_command_struct hiz_commands[] = { 0 };
 const uint32_t hiz_commands_count = count_of(hiz_commands);
 
 void hiz_help(void) {

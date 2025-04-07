@@ -28,9 +28,7 @@ static const char* const usage[] = {
     "Read X bytes to a file: dump 256 example.bin",
 };
 
-static const struct ui_help_options options[] = {
-
-};
+static const struct ui_help_options options[] = { 0 };
 
 void dump_handler(struct command_result* res) {
     // we can use the ui_help_show function to display the help text we configured above

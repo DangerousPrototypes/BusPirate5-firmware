@@ -188,7 +188,7 @@ static void main_system_initialization(void) {
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: setup SPI0\n"
         );
-    uint baud = spi_init(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
+    spi_init(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
     gpio_set_function(BP_SPI_CDI, GPIO_FUNC_SPI);
     gpio_set_function(BP_SPI_CLK, GPIO_FUNC_SPI);
     gpio_set_function(BP_SPI_CDO, GPIO_FUNC_SPI);
@@ -667,7 +667,7 @@ static void core0_infinite_loop(void) {
     assert(false); // funtion should never exit / this point should be unreachable
 }
 
-void main(void) {
+int main(void) {
     // N.B. -- printf() can ***NOT*** be used until after
     //         both cores are in their infinite loops.
     //         Use RTT for early boot debugging / status messages.
@@ -707,6 +707,7 @@ void main(void) {
     bp_mark_system_initialized();
     core0_infinite_loop(); // this never should exit, but....
     assert(false); // infinite loop above should never exit
+    return 0;
 }
 
 // refresh interrupt flag, serviced in the loop outside interrupt
@@ -907,7 +908,7 @@ bool lcd_timer_callback(struct repeating_timer* t) {
 }
 
 void lcd_irq_disable(void) {
-    bool cancelled = cancel_repeating_timer(&lcd_timer);
+    cancel_repeating_timer(&lcd_timer);
 }
 
 void lcd_irq_enable(int16_t repeat_interval) {

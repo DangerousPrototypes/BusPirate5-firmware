@@ -142,7 +142,7 @@ hwi2c_status_t pio_i2c_stop_timeout(uint32_t timeout) {
         set_scl_sda_program_instructions[I2C_SC1_SD1]  // Release SDA to return to idle state
     };
     return pio_i2c_put_instructions_timeout(stop, count_of(stop), timeout);
-};
+}
 
 hwi2c_status_t pio_i2c_restart_timeout(uint32_t timeout) {
     const uint16_t restart[] = { 3u << PIO_I2C_ICOUNT_LSB,
@@ -229,10 +229,10 @@ hwi2c_status_t pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len
     hwi2c_status_t i2c_result = pio_i2c_write_timeout(addr, timeout); //note, don't force the last bit high, its mysterious
     if(i2c_result != HWI2C_OK) return i2c_result;
 
+    /*
     uint32_t tx_remain = len; // Need to stuff 0xff bytes in to get clocks
     uint32_t temp = timeout;
-
-    /*while ((tx_remain || len)) {
+    while ((tx_remain || len)) {
         if (tx_remain && !pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {
             --tx_remain;
             // NACK the final byte of the read
@@ -245,7 +245,8 @@ hwi2c_status_t pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len
         }
         temp--;
         if (!temp) return HWI2C_TIMEOUT;
-    }*/
+    }
+    */
 
     while(len){
         --len;

@@ -40,8 +40,6 @@ const struct _mode_command_struct hw2wire_commands[] = {
 const uint32_t hw2wire_commands_count = count_of(hw2wire_commands);
 
 uint32_t hw2wire_setup(void) {
-    uint32_t temp;
-
     // menu items options
     static const struct prompt_item i2c_data_bits_menu[] = { { T_HWI2C_DATA_BITS_MENU_1 },
                                                              { T_HWI2C_DATA_BITS_MENU_2 } };
@@ -114,6 +112,7 @@ uint32_t hw2wire_setup_exc(void) {
     system_bio_update_purpose_and_label(true, M_2WIRE_RST, BP_PIN_MODE, pin_labels[2]);
     pio_hw2wire_reset();
     bio_put(M_2WIRE_RST, 0); // preload the RST pin to be 0 when output
+    return 1;
 }
 
 bool hw2wire_preflight_sanity_check(void){
@@ -215,7 +214,6 @@ void hw2wire_settings(void) {
 }
 
 void hw2wire_printI2Cflags(void) {
-    uint32_t temp;
 }
 
 void hw2wire_help(void) {

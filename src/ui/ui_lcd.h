@@ -14,7 +14,7 @@ void lcd_screensaver_alarm_reset(void);
 
 extern const uint8_t colors_pallet[][2];
 // Setup the text and background pixel colors
-static enum lcd_colors {
+enum lcd_colors {
     LCD_RED,
     LCD_ORANGE,
     LCD_YELLOW,
@@ -25,4 +25,4 @@ static enum lcd_colors {
     LCD_GREY,
     LCD_WHITE,
     LCD_BLACK,
-} lcd_colors;
+};

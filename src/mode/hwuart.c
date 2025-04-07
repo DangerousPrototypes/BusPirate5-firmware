@@ -361,7 +361,6 @@ void hwuart_settings(void) {
 }
 
 void hwuart_printerror(void) {
-    uint32_t error;
 }
 
 void hwuart_help(void) {

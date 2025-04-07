@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
@@ -36,19 +37,7 @@ static const char* const usage[] = {
         "Force dump: flash read -o -b <bytes> -f <file>"*/
 };
 
-static const struct ui_help_options options[] = {
-    /*{1,"", T_HELP_FLASH}, //flash command help
-        {0,"init", T_HELP_FLASH_INIT}, //init
-        {0,"probe", T_HELP_FLASH_PROBE}, //probe
-        {0,"erase", T_HELP_FLASH_ERASE}, //erase
-        {0,"write", T_HELP_FLASH_WRITE}, //write
-        {0,"read",T_HELP_FLASH_READ}, //read
-        {0,"verify",T_HELP_FLASH_VERIFY}, //verify
-        {0,"test",T_HELP_FLASH_TEST}, //test
-        {0,"-f",T_HELP_FLASH_FILE_FLAG}, //file to read/write/verify
-        {0,"-e",T_HELP_FLASH_ERASE_FLAG}, //with erase (before write)
-        {0,"-v",T_HELP_FLASH_VERIFY_FLAG},//with verify (after write)*/
-};
+static const struct ui_help_options options[] = { 0 };
 
 bool pio_read(uint32_t* raw) {
     if (pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
@@ -74,8 +63,6 @@ bool pio_read_d1(uint32_t* raw) {
 
 void sniff_handler(struct command_result* res) {
     uint32_t value;
-    char file[13];
-
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
     }
@@ -88,7 +75,7 @@ void sniff_handler(struct command_result* res) {
         pio_config.pio, pio_config.sm, pio_config.offset, bio2bufiopin[BIO3], bio2bufiopin[BIO0], bio2bufiopin[BIO2]);
 
     success = pio_claim_free_sm_and_add_program_for_gpio_range(
-        &spisnif_2_program, &pio_config_d1.pio, &pio_config_d1.sm, &pio_config_d1.offset, bio2bufiopin[BIO0], 3, true);
+        &spisnif_2_program, &pio_config_d1.pio, &pio_config_d1.sm, &pio_config_d1.offset, bio2bufiopin[BIO0], 3u, true);
     hard_assert(success);
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_d1.pio), pio_config_d1.sm, pio_config_d1.offset);
     spisnif_2_program_init(pio_config_d1.pio,

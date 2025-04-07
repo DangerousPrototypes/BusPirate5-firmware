@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -255,7 +256,8 @@ bool cmdln_args_get_int(uint32_t* rptr, struct prompt_result* result, uint32_t* 
 
 bool cmdln_args_find_flag_internal(char flag, command_var_t* arg) {
     uint32_t rptr = 0;
-    char flag_c, dash_c, space_c;
+    char flag_c;
+    char dash_c;
     arg->error = false;
     arg->has_arg = false;
     while (command_info.endptr >= (command_info.startptr + rptr + 1) && cmdln_try_peek(rptr, &dash_c) &&

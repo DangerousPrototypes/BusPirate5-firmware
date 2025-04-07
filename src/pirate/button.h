@@ -1,7 +1,9 @@
+#pragma once
+
 // initialize all buttons
 void button_init(void);
 // example irq callback handler, copy for your own uses
-void button_irq_enable(uint8_t button_id, void* callback);
+void button_irq_enable(uint8_t button_id, gpio_irq_callback_t callback);
 // enable the irq for button button_id
 void button_irq_disable(uint8_t button_id);
 // example irq callback handler, copy for your own uses

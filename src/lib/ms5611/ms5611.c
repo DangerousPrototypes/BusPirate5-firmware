@@ -95,13 +95,13 @@ uint32_t ms5611_read_temperature_and_pressure_simple(float *temperature, float *
 	int32_t dT, TEMP;
 	int64_t OFF, SENS, P, T2, OFF2, SENS2;
 	uint16_t eeprom_coeff[MS5611_COEFFICIENT_NUMBERS];
-	char data[3];
+	uint8_t data[3];
 
 	//reset until device responds
 	for(uint8_t i=0; i<5; i++)
 	{
 		data[0]= MS5611_RESET_COMMAND;
-		if(!pio_i2c_write_array_timeout(0b11101110, data, 1, 0xffff))
+		if(!pio_i2c_write_array_timeout(0b11101110u, data, 1u, 0xffffu))
 		{
 			break;
 		}		
@@ -114,7 +114,7 @@ uint32_t ms5611_read_temperature_and_pressure_simple(float *temperature, float *
 	for( uint8_t i=0 ; i< MS5611_COEFFICIENT_NUMBERS ; i++)
 	{
 		data[0]= MS5611_PROM_ADDRESS_READ_ADDRESS_0 + i*2;
-		if(pio_i2c_transaction_array_timeout( 0b11101110, data, 1, data, 2, 0xffff))
+		if(pio_i2c_transaction_array_timeout( 0b11101110u, data, 1u, data, 2u, 0xffffu))
 		{
 			return 1;
 		} 			

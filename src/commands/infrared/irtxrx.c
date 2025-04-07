@@ -1,4 +1,4 @@
-
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -57,7 +57,7 @@ bool irtx_transmit(char* buffer){
 	//parse the csv formatted values into 16 bit value pairs
 	uint32_t data[128];
 	uint16_t datacnt=0;
-	uint8_t mod_freq;
+	uint8_t mod_freq=0;
 	uint16_t cnt=0;
 
 	while(buffer[cnt]!='$'){
@@ -159,8 +159,8 @@ void irtx_handler(struct command_result *res){
 			return;
 		}
 		//read the file
-		UINT bytes_read;
-		TCHAR* bufptr;
+		//UINT bytes_read;
+		//TCHAR* bufptr;
 		//result = f_read(&file_handle, buffer, sizeof(buffer), &bytes_read);
 		infrared_cleanup_temp(); //tear down current IR PIO programs
 		irio_pio_tx_init(bio2bufiopin[BIO4], 38000); //setup IR PIO programs, actual freq will be set in irtx_packet
@@ -290,7 +290,7 @@ void irrx_handler(struct command_result *res){
 		uint16_t pairs=0;
 		float mod_freq;
 		uint16_t us;
-		uint8_t air_buffer[512];
+		char air_buffer[512];
 		//wait for complete IR packet from irio_pio
 		printf("\r\nListening for IR packets (x to exit)...\r\n");
 		//drain the FIFO so we can sync and not get garbage
@@ -307,7 +307,7 @@ void irrx_handler(struct command_result *res){
 				}
 			}
 		}
-		uint8_t mod_freq_int=(uint8_t)roundf(mod_freq/1000.0f);
+		uint8_t mod_freq_int = (uint8_t)roundf(mod_freq/1000.0f);
 		uint16_t sn_cnt = snprintf(air_buffer, sizeof(air_buffer), "$%u:", mod_freq_int);
 		for(uint16_t i=0; i<pairs-1; i++){
 			sn_cnt+=snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,%u,", (uint16_t)(buffer[i]>>16), (uint16_t)(buffer[i]&0xffff));

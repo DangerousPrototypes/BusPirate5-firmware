@@ -137,7 +137,7 @@ void logic_bar_redraw(uint32_t start_pos, uint32_t total_samples) {
     }
 
     uint32_t sample_ptr = logic_analyzer_get_start_ptr(total_samples);
-    sample_ptr = (sample_ptr + start_pos) & 0x1ffff;
+    sample_ptr = (sample_ptr + start_pos) % LA_BUFFER_SIZE;
     // printf("la_prt: %d, sample_ptr: %d\r\n", la_ptr, sample_ptr);
     //  freeze terminal updates
     draw_prepare();
@@ -332,7 +332,7 @@ void logic_bar_navigate(void) {
                 printf("\e[?25h\e[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); // back to bottom
                 return;
                 break;
-            case '\x1B': // escape commands
+            case '\033': // escape commands
                 rx_fifo_get_blocking(&c);
                 switch (c) {
                     case '[': // arrow keys
@@ -466,7 +466,7 @@ void logic_bar(void) {
                     //logic_analyzer_cleanup();
                     return;
                     break;
-                case '\x1B': // escape commands
+                case '\033': // escape commands
                     rx_fifo_get_blocking(&c);
                     switch (c) {
                         case '[': // arrow keys

@@ -24,13 +24,7 @@ struct _hw3wire_mode_config mode_config;
 static uint8_t checkshort(void);
 
 // command configuration
-const struct _mode_command_struct hw3wire_commands[] = {
-    /*{   .command="sle4442", 
-        .func=&sle4442, 
-        .description_text=T_HELP_SLE4442, 
-        .supress_fala_capture=true
-    },*/
-};
+const struct _mode_command_struct hw3wire_commands[] = { 0 };
 const uint32_t hw3wire_commands_count = count_of(hw3wire_commands);
 
 
@@ -186,6 +180,7 @@ uint32_t hw3wire_setup_exc(void) {
     //pio_hw3wire_reset();
     //bio_put(M_2WIRE_RST, 0); // preload the RST pin to be 0 when output
     hw3wire_set_cs(M_3WIRE_DESELECT);
+    return 1;
 }
 
 void hw3wire_cleanup(void) {

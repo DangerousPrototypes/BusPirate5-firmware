@@ -469,10 +469,11 @@ static bool animation_gentle_glow(void) {
 /// @param color The color to use for the wipe, or RGBCOLOR_BLACK to use angle-based rainbow
 /// @return true when full animation has run its course
 static bool animation_angular_wipe(CPIXEL_COLOR color) {
-    constexpr uint16_t value_diffusion     = 40u;
-    constexpr uint16_t starting_value      =  0u;
-    constexpr uint16_t ending_value        = (value_diffusion * 4u) + 256u;
-    constexpr uint16_t default_frame_delay =  1u;
+
+    const uint16_t value_diffusion     = 40u;
+    const uint16_t starting_value      =  0u;
+    const uint16_t ending_value        = (value_diffusion * 4u) + 256u;
+    const uint16_t default_frame_delay =  1u;
 
     static uint8_t frame_delay_count = 0;
     static uint16_t current_value = starting_value;

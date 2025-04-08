@@ -39,13 +39,13 @@ uint32_t dio_setup(void) {
 
 // Setup execution. This is where we actually configure any hardware.
 uint32_t dio_setup_exc(void) {
-    for (uint8_t i = 0; i < 8; i++) {
+    /*for (uint8_t i = 0; i < 8; i++) {
         // user data is in result->out_data
         bio_output(i);
         system_bio_update_purpose_and_label(true, i, BP_PIN_IO, labels[0]);
         bio_put(i, 0);
         system_set_active(true, i, &system_config.aux_active);
-    }    
+    }*/    
     
     return 1;
 }
@@ -70,12 +70,14 @@ void dio_write(struct _bytecode* result, struct _bytecode* next) {
         //bio_output(i);
         if (result->out_data & (0b1 << i)) {
             system_bio_update_purpose_and_label(true, i, BP_PIN_IO, labels[1]);
-            //bio_put(i, 1);
+            //system_set_active(true, i, &system_config.aux_active);
+            bio_put(i, 1);
         } else {
             system_bio_update_purpose_and_label(true, i, BP_PIN_IO, labels[0]);
-            //bio_put(i, 0);
+            //system_set_active(true, i, &system_config.aux_active);
+            bio_put(i, 0);
         }
-        //system_set_active(true, i, &system_config.aux_active);
+        system_set_active(true, i, &system_config.aux_active);
     }
     gpio_put_masked((0xff<<8), ((uint32_t)result->out_data << 8u));
 }

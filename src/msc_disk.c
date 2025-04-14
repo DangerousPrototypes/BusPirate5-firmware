@@ -134,7 +134,18 @@ const
 void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16], uint8_t product_rev[4]) {
     (void)lun;
 
-    const char vid[] = "BP5";
+    
+    #if (BP_VER == 5)
+        const char vid[] = "BP5";
+    #elif (BP_VER == XL5)
+        const char vid[] = "BP5XL";
+    #elif (BP_VER == 6)
+        const char vid[] = "BP6";
+    #elif (BP_VER == 7)
+        const char vid[] = "BP7";
+    #else
+        #error "Unknown Bus Pirate version"
+    #endif
     const char pid[] = "Storage";
     const char rev[] = "1.0";
 

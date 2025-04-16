@@ -111,7 +111,7 @@ void psucmd_enable_handler(struct command_result* res) {
         }
 
         // prompt current (float)
-        printf("%sMaximum current (0mA-500mA), <enter> for 300mA or 0 for unlimited%s", ui_term_color_info(), ui_term_color_reset());
+        printf("%sMaximum current (1mA-500mA), 0 for unlimited%s", ui_term_color_info(), ui_term_color_reset());
         ui_prompt_float(&result, 0.0f, 500.0f, 300.0f, true, &current, false);
         if (result.exit) {
             res->error = true;

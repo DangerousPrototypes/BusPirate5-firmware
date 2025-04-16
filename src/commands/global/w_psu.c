@@ -18,7 +18,8 @@ const char* const psucmd_usage[] = {
     "Disable: w",
     "Enable, with menu: W",
     "Enable 5v, 50mA limit: W 5 50",
-    "Enable 3.3v, no limit: W 3.3",
+    "Enable 3.3v, 300mA default limit: W 3.3",
+    "Enable 3.3v, no limit: W 3.3 0",
 };
 
 const struct ui_help_options psucmd_options[] = {
@@ -94,7 +95,8 @@ void psucmd_enable_handler(struct command_result* res) {
     bool has_volts = cmdln_args_float_by_position(1, &volts);
     bool has_current = cmdln_args_float_by_position(2, &current);
     if (has_volts && !has_current) {
-        current_limit_override = true;
+        // default current limit when no argument given
+        current = 300.0f;
     }
 
     if (!has_volts || volts < 0.8f || volts > 5.0f || (has_current && (current < 0.0f || current > 500.0f))) {
@@ -109,15 +111,16 @@ void psucmd_enable_handler(struct command_result* res) {
         }
 
         // prompt current (float)
-        printf("%sMaximum current (0mA-500mA), <enter> for none%s", ui_term_color_info(), ui_term_color_reset());
-        ui_prompt_float(&result, 0.0f, 500.0f, 100.0f, true, &current, true);
+        printf("%sMaximum current (0mA-500mA), <enter> for 300mA or 0 for unlimited%s", ui_term_color_info(), ui_term_color_reset());
+        ui_prompt_float(&result, 0.0f, 500.0f, 300.0f, true, &current, false);
         if (result.exit) {
             res->error = true;
             return;
         }
-        if (result.default_value) { // enter for none...
-            current_limit_override = true;
-        }
+    }
+    // explicit 0 for current means to disable the overcurrent limiting
+    if (current == 0.0f) {
+        current_limit_override = true;
     }
 
     uint32_t psu_result = psucmd_enable(volts, current, current_limit_override);

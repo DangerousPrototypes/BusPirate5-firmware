@@ -132,6 +132,7 @@ void flash(struct command_result* res) {
     // start and end rage? bytes to write/dump???
     sfud_flash flash_info = { .name = "SPI_FLASH", .spi.name = "SPI1" };
     uint8_t data[256];
+    uint8_t data2[256];
     uint32_t start_address = 0;
     uint32_t end_address;
 
@@ -181,7 +182,6 @@ void flash(struct command_result* res) {
             goto flash_cleanup;
         }
         if (verify_flag) {
-            uint8_t data2[256];
             if (!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, file)) {
                 goto flash_cleanup;
             }
@@ -195,7 +195,7 @@ void flash(struct command_result* res) {
     }
 
     if (verify) {
-        if (!spiflash_verify(start_address, end_address, sizeof(data), data, data, &flash_info, file)) {
+        if (!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, file)) {
             goto flash_cleanup;
         }
     }

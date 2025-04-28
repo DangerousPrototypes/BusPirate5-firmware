@@ -165,10 +165,11 @@ void pullups_enable_handler(struct command_result* res) {
         //show the settings
         pullx_show_settings();
         amux_sweep();
+        printf("\r\n\r\n");
     #else
         pullups_enable();
         amux_sweep();
-        printf("\r\n\r\n%s%s:%s %s (%s @ %s%d.%d%sV)",
+        printf("%s%s:%s %s (%s @ %s%d.%d%sV)\r\n",
             ui_term_color_notice(),
             GET_T(T_MODE_PULLUP_RESISTORS),
             ui_term_color_reset(),

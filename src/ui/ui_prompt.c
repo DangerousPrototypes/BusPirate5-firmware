@@ -32,7 +32,7 @@ bool ui_prompt_prompt_int(const struct ui_prompt* menu) {
     // prompt
     printf(ui_term_color_prompt());
     printf(GET_T((*menu).prompt_text), ui_term_color_reset(), (*menu).defval, ui_term_color_prompt());
-    printf(" >%s ", ui_term_color_reset());
+    printf(" >%s \x03", ui_term_color_reset());
 
     return true;
 }
@@ -63,7 +63,7 @@ bool ui_prompt_prompt_ordered_list(const struct ui_prompt* menu) {
     if ((*menu).config->allow_defval && (*menu).config->allow_prompt_defval) {
         printf(" (%s%d%s)", ui_term_color_reset(), (*menu).defval, ui_term_color_prompt());
     }
-    printf(" >%s ", ui_term_color_reset());
+    printf(" >%s \x03", ui_term_color_reset());
 
     return true;
 }
@@ -98,7 +98,7 @@ bool ui_prompt_menu_bio_pin(const struct ui_prompt* menu) {
 
 bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu) {
     // printf("%s(%d) >%s", ui_term_color_prompt(), (*menu).defval, ui_term_color_reset());
-    printf("%s >%s ", ui_term_color_prompt(), ui_term_color_reset());
+    printf("%s >%s \x03", ui_term_color_prompt(), ui_term_color_reset());
     return true;
 }
 
@@ -122,7 +122,7 @@ bool ui_prompt_bool(prompt_result* result, bool defval_show, bool defval, bool a
         if (defval_show) {
             printf("(%c)", defval ? 'Y' : 'N');
         }
-        printf(" >%s ", ui_term_color_reset());
+        printf(" >%s \x03", ui_term_color_reset());
 
         if (!ui_prompt_user_input()) {
             result->exit = true; // a little hackish, but we do want to exit right?
@@ -205,7 +205,7 @@ bool ui_prompt_float(
         } else {
             printf("(none)");
         }
-        printf(" >%s ", ui_term_color_reset());
+        printf(" >%s \x03", ui_term_color_reset());
 
         if (!ui_prompt_user_input()) {
             result->exit = true; // a little hackish, but we do want to exit right?
@@ -236,7 +236,7 @@ bool ui_prompt_float(
 // returns float value in user_units
 bool ui_prompt_float_units(prompt_result* result, const char* menu, float* user_value, uint8_t* user_units) {
     while (1) {
-        printf("\r\n%s%s >%s ", ui_term_color_prompt(), menu, ui_term_color_reset());
+        printf("\r\n%s%s >%s \x03", ui_term_color_prompt(), menu, ui_term_color_reset());
 
         if (!ui_prompt_user_input()) {
             result->exit = true; // a little hackish, but we do want to exit right?

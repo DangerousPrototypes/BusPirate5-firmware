@@ -602,13 +602,13 @@ static void core0_infinite_loop(void) {
                 break;
             case BP_SM_COMMAND_PROMPT:
                 if (system_config.subprotocol_name) {
-                    printf("%s%s-(%s)>%s ",
+                    printf("%s%s-(%s)>%s \x03",
                            ui_term_color_prompt(),
                            modes[system_config.mode].protocol_name,
                            system_config.subprotocol_name,
                            ui_term_color_reset());
                 } else {
-                    printf("%s%s>%s ",
+                    printf("%s%s>%s \x03",
                            ui_term_color_prompt(),
                            modes[system_config.mode].protocol_name,
                            ui_term_color_reset());

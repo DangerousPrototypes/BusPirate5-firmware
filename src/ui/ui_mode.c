@@ -29,7 +29,7 @@ static const char* const usage[] = {
     "Change mode to menu option 5: m 5",
 };
 
-static const struct ui_help_options options[] = { 0 };
+static const struct ui_help_options options[] = {  };
 
 void ui_mode_enable_args(struct command_result* res) {
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {

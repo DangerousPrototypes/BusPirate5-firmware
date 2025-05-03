@@ -375,11 +375,11 @@ void disk_format_handler(struct command_result* res) {
     }
 
     cmdln_next_buf_pos();
-    printf("Erase the internal storage?\r\ny/n> ");
+    printf("Erase the internal storage?\r\ny/n> \x03");
     if (disk_format_confirm() == false) {
         return;
     }
-    printf("\r\nAre you sure?\r\ny/n> ");
+    printf("\r\nAre you sure?\r\ny/n> \x03");
     if (disk_format_confirm() == false) {
         return;
     }

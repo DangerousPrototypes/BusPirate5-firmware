@@ -224,10 +224,6 @@ static char const * const en_us[]={
 	[T_JTAG_BLUETAG_VERSION]="Show version",
 	[T_JTAG_BLUETAG_DISABLE]="Disable pin pulsing (JTAG mode)",
 	[T_JTAG_BLUETAG_DESCRIPTION]="Find JTAG and SWD pinouts",
-	//PS2
-	[T_PS2_DESCRIPTION]="sniff PS2 protocol",
-	//USB
-	[T_USB_DESCRIPTION]="sniff USB protocol",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",

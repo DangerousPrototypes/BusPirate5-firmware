@@ -34,12 +34,6 @@ enum {
 #ifdef BP_USE_JTAG
     JTAG,
 #endif
-#ifdef BP_USE_PS2
-    PS2,
-#endif
-#ifdef BP_USE_USB
-    USB,
-#endif
 #ifdef BP_USE_DUMMY1
     DUMMY1,
 #endif

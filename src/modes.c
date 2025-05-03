@@ -53,12 +53,6 @@
 #ifdef BP_USE_JTAG
 #include "mode/jtag.h"
 #endif
-#ifdef BP_USE_PS2
-#include "mode/ps2.h"
-#endif
-#ifdef BP_USE_USB
-#include "mode/usb.h"
-#endif
 
 // nulfuncs
 // these are the dummy functions when something ain't used
@@ -510,70 +504,6 @@ struct _mode modes[] = {
         .mode_commands_count = &jtag_commands_count, // mode specific commands count
         .protocol_get_speed = jtag_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = jtag_preflight_sanity_check,      // sanity check before executing syntax
-    },
-#endif
-#ifdef BP_USE_PS2
-    {
-        .protocol_name = "PS2",                          // friendly name (promptname)
-        .protocol_start = nullfunc1_temp,                // start
-        .protocol_start_alt = nullfunc1_temp,            // start with read
-        .protocol_stop = nullfunc1_temp,                 // stop
-        .protocol_stop_alt = nullfunc1_temp,             // stop with read
-        .protocol_write = nullfunc1_temp,                     // send(/read) max 32 bit
-        .protocol_read = nullfunc1_temp,                       // read max 32 bit
-        .protocol_clkh = nullfunc1_temp,                 // set clk high
-        .protocol_clkl = nullfunc1_temp,                 // set clk low
-        .protocol_dath = nullfunc1_temp,                 // set dat hi
-        .protocol_datl = nullfunc1_temp,                 // set dat lo
-        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
-        .protocol_tick_clock = nullfunc1_temp,           // tick clk
-        .protocol_bitr = nullfunc1_temp,                 // read dat
-        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
-        .protocol_macro = nullfunc4,                     // macro
-        .protocol_setup = ps2_setup,                     // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
-        .protocol_setup_exc = ps2_setup_exc,             // real setup
-        .protocol_cleanup = ps2_cleanup,                 // cleanup for HiZ
-        //.protocol_pins=dio_pins,				// display pin config
-        .protocol_settings = ps2_settings,          // display settings
-        .protocol_help = ps2_help,                  // display small help about the protocol
-        .mode_commands = ps2_commands,              // mode specific commands
-        .mode_commands_count = &ps2_commands_count, // mode specific commands count
-        .protocol_get_speed = ps2_get_speed,        // get the current speed setting of the protocol
-        .protocol_preflight_sanity_check = ps2_preflight_sanity_check,      // sanity check before executing syntax
-    },
-#endif
-#ifdef BP_USE_USB
-    {
-        .protocol_name = "USB",                          // friendly name (promptname)
-        .protocol_start = nullfunc1_temp,                // start
-        .protocol_start_alt = nullfunc1_temp,            // start with read
-        .protocol_stop = nullfunc1_temp,                 // stop
-        .protocol_stop_alt = nullfunc1_temp,             // stop with read
-        .protocol_write = nullfunc1_temp,                     // send(/read) max 32 bit
-        .protocol_read = nullfunc1_temp,                       // read max 32 bit
-        .protocol_clkh = nullfunc1_temp,                 // set clk high
-        .protocol_clkl = nullfunc1_temp,                 // set clk low
-        .protocol_dath = nullfunc1_temp,                 // set dat hi
-        .protocol_datl = nullfunc1_temp,                 // set dat lo
-        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
-        .protocol_tick_clock = nullfunc1_temp,           // tick clk
-        .protocol_bitr = nullfunc1_temp,                 // read dat
-        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
-        .protocol_macro = nullfunc4,                     // macro
-        .protocol_setup = usb_setup,                     // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
-        .protocol_setup_exc = usb_setup_exc,             // real setup
-        .protocol_cleanup = usb_cleanup,                 // cleanup for HiZ
-        //.protocol_pins=dio_pins,				// display pin config
-        .protocol_settings = usb_settings,          // display settings
-        .protocol_help = usb_help,                  // display small help about the protocol
-        .mode_commands = usb_commands,              // mode specific commands
-        .mode_commands_count = &usb_commands_count, // mode specific commands count
-        .protocol_get_speed = usb_get_speed,        // get the current speed setting of the protocol
-        .protocol_preflight_sanity_check = usb_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
 #ifdef BP_USE_DUMMY1

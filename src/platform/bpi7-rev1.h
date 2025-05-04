@@ -190,7 +190,7 @@ extern const uint8_t bio2bufdirpin[8];
 #define BP_I2C_SDA  18
 #define BP_I2C_SCL  19
 #define BP_I2C_RESET 37
-#define BP_I2C_INTERRUPT 36
+#define BP_I2C_INTERRUPT 16
 
 //7+ has PSRAM
 #define BP_PSRAM_QPI_SS QSPI_SS_2
@@ -221,18 +221,12 @@ enum adc_mux{
 
 // moved to I2C IO expander
 // XL9555 IO expander
-#define IOEXP_CURRENT_EN 0
-#define IOEXP_CURRENT_RESET 1
-#define IOEXP_CURRENT_EN_OVERRIDE 2
-#define IOEXP_CURRENT_FUSE_DETECT 3
-#define IOEXP_DISPLAY_BACKLIGHT 4
-#define IOEXP_DISPLAY_RESET 5
-//#define CURRENT_EN          18
-//#define CURRENT_RESET       17
-//#define CURRENT_EN_OVERRIDE 16
-//#define CURRENT_FUSE_DETECT 19 
-//#define DISPLAY_BACKLIGHT  33
-//#define DISPLAY_RESET      36
+#define IOEXP_CURRENT_EN 15-2
+#define IOEXP_CURRENT_RESET 13-2
+#define IOEXP_CURRENT_EN_OVERRIDE 17-2
+#define IOEXP_CURRENT_FUSE_DETECT 14-2
+#define IOEXP_DISPLAY_BACKLIGHT 10-2
+#define IOEXP_DISPLAY_RESET 11-2
 
 #define bufio2amux(x) (7 - x)
 

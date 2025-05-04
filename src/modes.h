@@ -46,6 +46,9 @@ enum {
 #ifdef BP_USE_LCDI2C // future
     LCDI2C,
 #endif
+#ifdef BP_USE_USBPD
+    USBPD,
+#endif
     MAXPROTO
 };
 

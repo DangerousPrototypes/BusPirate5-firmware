@@ -276,3 +276,11 @@ void hwi2c_help(void) {
 uint32_t hwi2c_get_speed(void) {
     return (mode_config.baudrate * 1000);
 }
+
+void hwi2c_set_speed(uint32_t speed_hz) {
+  mode_config.baudrate = speed_hz/ 1000;
+}
+
+void hwi2c_set_databits(uint32_t bits) {
+  mode_config.data_bits = bits;
+}

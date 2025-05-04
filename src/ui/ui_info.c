@@ -20,7 +20,7 @@ void ui_info_print_pin_names(void) {
     // pin list
     for (int i = 0; i < HW_PINS; i++) {
         ui_term_color_text_background(hw_pin_label_ordered_color[i][0], hw_pin_label_ordered_color[i][1]);
-        printf("\e[8X%d.%s\t", i + 1, hw_pin_label_ordered[i]);
+        printf("\033[8X%d.%s\t", i + 1, hw_pin_label_ordered[i]);
     }
     printf("%s\r\n", ui_term_color_reset());
 }

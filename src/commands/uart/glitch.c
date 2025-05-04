@@ -457,7 +457,6 @@ void uart_glitch_handler(struct command_result* res) {
     uint32_t tries = 0;
     char c;
     char trigger_char = (char)uart_glitch_config.glitch_trg;
-    char fail_resp_char = (char)uart_glitch_config.fail_resp;
     char resp_string[RX_CHAR_LIMIT];
     size_t resp_count;
     uint32_t tick_start = 0;

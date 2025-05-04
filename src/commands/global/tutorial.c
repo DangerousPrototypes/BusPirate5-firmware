@@ -37,10 +37,7 @@ static const char* const usage[] = {
     "# Did it pause?",
 };
 
-static const struct ui_help_options options[] = {
-    //{1,"", T_HELP_FLASH}, //flash command help
-    //    {0,"-f",T_HELP_FLASH_FILE_FLAG}, //file to read/write/verify
-};
+static const struct ui_help_options options[] = { 0 };
 
 void tutorial_handler(struct command_result* res) {
     // check help

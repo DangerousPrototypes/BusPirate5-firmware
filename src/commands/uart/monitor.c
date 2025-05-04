@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -27,8 +28,6 @@ static const struct ui_help_options options[] = {
     { 1, "", T_UART_CMD_TEST }, // command help
     { 0, "-h", T_HELP_FLAG }, // help
 };
-
-static struct repeating_timer uart_timer;
 
 bool uart_timer_callback(struct repeating_timer* t) {
     static int cnt = 0;
@@ -109,7 +108,6 @@ void uart_monitor_handler(struct command_result* res) {
     return;
 
     while (true) {
-        char c;
         // exit when button pressed.
         if (button_get(0)) {
             break;

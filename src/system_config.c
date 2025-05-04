@@ -145,7 +145,8 @@ void system_pin_update_purpose_and_label(bool enable, uint8_t pin, enum bp_pin_f
 }
 
 void system_bio_update_purpose_and_label(bool enable, uint8_t bio_pin, enum bp_pin_func func, const char* label) {
-    return system_pin_update_purpose_and_label(enable, bio_pin + 1, func, label);
+    system_pin_update_purpose_and_label(enable, bio_pin + 1, func, label);
+    return;
 }
 
 // BUGBUG -- rename this function to system_track_active_bio_pin() to more accurately

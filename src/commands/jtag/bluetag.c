@@ -5,6 +5,7 @@
     Type "dummy" at the Bus Pirate prompt to see the output of this command
     Temporary info available at https://forum.buspirate.com/t/command-line-parser-for-developers/235
 */
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
@@ -58,9 +59,6 @@ static const struct ui_help_options options[] = {
 static void bluetag_cli(void);
 
 void bluetag_handler(struct command_result* res) {
-    uint32_t value; // somewhere to keep an integer value
-    char file[13];  // somewhere to keep a string value (8.3 filename + 0x00 = 13 characters max)
-
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
     }

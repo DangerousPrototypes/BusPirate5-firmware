@@ -33,9 +33,9 @@ enum logicanalyzer_status {
 };
 
 static void restart_dma();
-
-int la_dma[LA_DMA_COUNT];
-uint8_t* la_buf;
+int la_dma_data_channel;
+int la_dma_control_channel;
+volatile uint8_t* la_buf;
 uint32_t la_ptr = 0;
 uint32_t la_ptr_reset = 0;
 uint8_t la_base_pin = LA_BPIO0;
@@ -71,7 +71,7 @@ uint32_t logic_analyzer_get_samples_from_zero(void) {
 }
 
 uint32_t logic_analyzer_get_start_ptr(uint32_t sample_count) {
-    return ((la_ptr_reset - sample_count) & 0x1ffff);
+    return ((la_ptr_reset - sample_count) % LA_BUFFER_SIZE);
 }
 
 uint32_t logic_analyzer_get_end_ptr(void) {
@@ -115,30 +115,16 @@ void logic_analyser_done(void) {
 
     busy_wait_ms(1);
 
-    int tail_dma = -1;
-    uint32_t tail_offset;
-
-    // find the final sample
-    for (uint8_t i = 0; i < count_of(la_dma); i++) {
-        if (dma_channel_is_busy(la_dma[i])) {
-            tail_dma = i;
-            break;
-        }
-    }
-    // error, return
-    if (tail_dma == -1) {
-        return;
-    }
-    
+ 
     // transfer count is the words remaining in the stalled transfer, dma deincrements on start (-1)
-    int32_t tail = DMA_BYTES_PER_CHUNK - dma_channel_hw_addr(la_dma[tail_dma])->transfer_count - 1;
+    int32_t tail = LA_BUFFER_SIZE - dma_channel_hw_addr(la_dma_data_channel)->transfer_count - 1;
 
     // add the preceding chunks of DMA to find the location in the array
     // ready to dump
-    samples_from_zero = la_ptr_reset = la_ptr = ((DMA_BYTES_PER_CHUNK * tail_dma) + tail);
+    samples_from_zero = la_ptr_reset = la_ptr = tail;
 
-    if(tail_dma==0 && tail==-1){
-        samples_from_zero=DMA_BYTES_PER_CHUNK*LA_DMA_COUNT;
+    if(tail==-1){
+        samples_from_zero = LA_BUFFER_SIZE;
     }
     if(status_leds_enabled){
         rgb_set_all(0x00, 0xff, 0); //,0x00FF00 green for dump
@@ -147,26 +133,11 @@ void logic_analyser_done(void) {
 }
 
 uint32_t logic_analyzer_get_dma_tail(void) {
-    uint8_t tail_dma = 0xff;
-    for (uint8_t i = 0; i < count_of(la_dma); i++) {
-        if (dma_channel_is_busy(la_dma[i])) {
-            tail_dma = i;
-            break;
-        }
-    }
-
-    if (tail_dma > count_of(la_dma)) {
-        // hum
-        return 0;
-    }
-
-    return dma_channel_hw_addr(la_dma[tail_dma])->transfer_count;
+    return dma_channel_hw_addr(la_dma_data_channel)->transfer_count;
 }
 
 bool logic_analyzer_is_done(void) {
     static int32_t tail;
-    uint8_t tail_dma = 0xff;
-
     if (la_status == LA_ARMED_INIT) {
         tail = logic_analyzer_get_dma_tail();
         la_status = LA_ARMED;
@@ -185,38 +156,49 @@ bool logic_analyzer_is_done(void) {
 }
 
 void restart_dma() {
-    dma_channel_config la_dma_config;
-    for (uint8_t i = 0; i < count_of(la_dma); i++) {
-        dma_channel_abort(la_dma[i]);
-        la_dma_config = dma_channel_get_default_config(la_dma[i]);
-        channel_config_set_read_increment(&la_dma_config, false);          // read fixed PIO address
-        channel_config_set_write_increment(&la_dma_config, true);          // write to circular buffer
-        channel_config_set_transfer_data_size(&la_dma_config, DMA_SIZE_8); // we have 8 IO pins
-        channel_config_set_dreq(
-            &la_dma_config,
-            pio_get_dreq(pio_config.pio, pio_config.sm, false)); // &pio0_hw->rxf[sm] paces the rate of transfer
-        channel_config_set_ring(&la_dma_config, true, 15);       // loop at 2 * 8 bytes
+    dma_channel_config la_dma_data_config;
+    dma_channel_config la_dma_control_config;
+    dma_channel_abort(la_dma_control_channel);
+    dma_channel_abort(la_dma_data_channel);
+    la_dma_data_config = dma_channel_get_default_config(la_dma_data_channel);
+    la_dma_control_config = dma_channel_get_default_config(la_dma_control_channel);
 
-        int la_dma_next = (i + 1 < count_of(la_dma)) ? la_dma[i + 1] : la_dma[0];
-        channel_config_set_chain_to(&la_dma_config, la_dma_next); // chain to next DMA
+    channel_config_set_transfer_data_size(&la_dma_control_config, DMA_SIZE_32);
+    channel_config_set_read_increment(&la_dma_control_config, false);
+    channel_config_set_write_increment(&la_dma_control_config, false);
+    dma_channel_configure(la_dma_control_channel,
+                          &la_dma_control_config,
+                          &dma_hw->ch[la_dma_data_channel].al2_write_addr_trig, // write address
+                          &la_buf,                          // read address
+                          1,                                         // Halt after each control block
+                          false                                      // Don't start yet
+    );
+    channel_config_set_transfer_data_size(&la_dma_data_config, DMA_SIZE_8);
+    channel_config_set_read_increment(&la_dma_data_config, false);
+    channel_config_set_write_increment(&la_dma_data_config, true);
+    channel_config_set_dreq(
+        &la_dma_data_config,
+        pio_get_dreq(pio_config.pio, pio_config.sm, false)); // &pio0_hw->rxf[sm] paces the rate of transfer
 
-        dma_channel_configure(la_dma[i],
-                              &la_dma_config,
-                              (volatile uint8_t*)&la_buf[DMA_BYTES_PER_CHUNK * i],
-                              &pio_config.pio->rxf[pio_config.sm],
-                              DMA_BYTES_PER_CHUNK,
-                              false);
-    }
+    channel_config_set_chain_to(&la_dma_data_config,
+                                la_dma_control_channel); // Trigger ctrl_chan when data_chan completes
+    dma_channel_configure(la_dma_data_channel,
+                          &la_dma_data_config,
+                          0,                                   // write address, filled by the control channel
+                          &pio_config.pio->rxf[pio_config.sm], // read address
+                          LA_BUFFER_SIZE,                      // size of transfer
+                          false                                // Don't start yet
+    );
 
-    // start the first channel, will pause for data from PIO
-    dma_channel_start(la_dma[0]);
+    // start the control channel, the data channel will pause for data from PIO
+    dma_channel_start(la_dma_control_channel);
 }
 
 uint32_t logic_analyzer_configure(
     float freq, uint32_t samples, uint32_t trigger_mask, uint32_t trigger_direction, bool edge, bool interrupt) {
     uint32_t actual_frequency = 0;
     la_sm_done = false;
-    memset(la_buf, 0, DMA_BYTES_PER_CHUNK * LA_DMA_COUNT);
+    memset((uint8_t*)la_buf, 0, LA_BUFFER_SIZE);
 
     irq_handler_installed=interrupt;
 
@@ -301,11 +283,10 @@ void logic_analyzer_arm(bool led_indicator_enable) {
 }
 
 bool logic_analyzer_cleanup(void) {
-
-    for (uint8_t i = 0; i < count_of(la_dma); i++) {
-        dma_channel_cleanup(la_dma[i]);
-        dma_channel_unclaim(la_dma[i]);
-    }
+    dma_channel_cleanup(la_dma_control_channel);
+    dma_channel_cleanup(la_dma_data_channel);
+    dma_channel_unclaim(la_dma_data_channel);
+    dma_channel_unclaim(la_dma_control_channel);
 
     // pio_clear_instruction_memory(pio);
     if (pio_config.program) {
@@ -314,26 +295,22 @@ bool logic_analyzer_cleanup(void) {
         pio_config.program = 0;
     }
 
-    mem_free(la_buf);
+    mem_free((uint8_t*)la_buf);
 
     logicanalyzer_reset_led();
     return true;
 }
 
 bool logicanalyzer_setup(void) {
+    //note that there isn't any alignment constraint for this buffer
+    la_buf = mem_alloc(LA_BUFFER_SIZE, 0);
 
-    la_buf = mem_alloc(DMA_BYTES_PER_CHUNK * LA_DMA_COUNT, 0);
-    if (!la_buf || ((uint)la_buf != ((uint)la_buf & ~((1 << 15) - 1)))) {
-        // printf("Failed to allocate buffer. Is the scope running?\r\n");
-        return false;
-    }
 
     // high bus priority to the DMA
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_DMA_W_BITS | BUSCTRL_BUS_PRIORITY_DMA_R_BITS;
 
-    for (uint8_t i = 0; i < count_of(la_dma); i++) {
-        la_dma[i] = dma_claim_unused_channel(true);
-    }
+    la_dma_data_channel = dma_claim_unused_channel(true);
+    la_dma_control_channel = dma_claim_unused_channel(true);
 
     pio_config.program = 0;
 

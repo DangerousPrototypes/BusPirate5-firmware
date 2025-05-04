@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -81,7 +82,6 @@ bool ui_process_macro(void) {
 
 //returns error = true or false
 bool ui_process_commands(void) {
-    char c, d;
     struct _command_info_t cp;
     cp.nextptr = 0;
 

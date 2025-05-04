@@ -11,8 +11,13 @@ set(picotoolVersion 2.0.0)
 include(${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 endif()
 # ====================================================================================
-cmake_minimum_required(VERSION 3.13)
-set(CMAKE_C_STANDARD 11)
+cmake_minimum_required(VERSION 3.21)
+
+# Could use target_compile_features() instead of explicitly `set(C_STANDARD 23)` with `set(C_STANDARD_REQUIRED ON)`
+# but would need to list all the features relied upon, which can be a bit of a pain.
+# This may result in the use of /std:gnu2x or /std:c23 depending on compiler version.
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17) 
 
 # initalize pico_sdk from installed location

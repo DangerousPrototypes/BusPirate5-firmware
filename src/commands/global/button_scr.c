@@ -58,7 +58,7 @@ void button_scr_handler(struct command_result* res) {
 
     // find our action
     char action[6]; // short or long
-    uint8_t button_code;
+    uint8_t button_code = 0;
 
     // first thing following the command (0) is the action (1)
     // determine short or long etc

@@ -332,7 +332,6 @@ bool ui_parse_get_uint32(struct prompt_result* result, uint32_t* value) {
 
 bool ui_parse_get_units(struct prompt_result* result, char* units, uint8_t length, uint8_t* unit_type) {
     char c;
-    bool r;
     uint8_t i = 0;
     *result = empty_result;
 

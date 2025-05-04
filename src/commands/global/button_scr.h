@@ -1,3 +1,5 @@
-enum button_codes;
+#pragma once
+#include "pirate/button.h"
+
 void button_scr_handler(struct command_result* res);
 bool button_exec(enum button_codes button_code);

@@ -83,6 +83,7 @@ void nullfunc4(uint32_t c) {
 const char* nullfunc5(void) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
+    return "";    
 }
 
 uint32_t nullfunc6(uint8_t next_command) {

@@ -12,7 +12,7 @@ void dummy1_stopr(void);
 void dummy1_macro(uint32_t macro);
 
 // a periodic service call for doing things async.
-uint32_t dummy1_periodic(void);
+void dummy1_periodic(void);
 
 // setup functions
 uint32_t dummy1_setup(void);

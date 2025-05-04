@@ -34,8 +34,6 @@
 
 static struct _infrared_mode_config mode_config;
 static uint8_t device_cleanup;
-static uint32_t returnval;
-static int tx_sm;
 
 // an array of all the IR protocol functions
 typedef struct _ir_protocols {
@@ -335,7 +333,7 @@ uint32_t infrared_setup_exc(void) {
 }
 
 bool infrared_preflight_sanity_check(void){
-    ui_help_sanity_check(true, 0);
+    return ui_help_sanity_check(true, 0);
 }
 
 void infrared_setup_resume(void){
@@ -415,7 +413,8 @@ void infrared_macro(uint32_t macro) {
 // Useful for checking async stuff like bytes in a UART
 void infrared_periodic(void){
     uint32_t rx_frame;
-    ir_rx_status_t result = ir_protocol[mode_config.protocol].irrx_read(&rx_frame);
+    ir_protocol[mode_config.protocol].irrx_read(&rx_frame);
+    return;
 }
 
 void infrared_help(void) {

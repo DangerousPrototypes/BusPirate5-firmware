@@ -40,10 +40,7 @@ static const char* const usage[] = {
     " 1:[0xa0 0][0xa1 r:5]",
 };
 
-static const struct ui_help_options options[] = {
-    //{1,"", T_HELP_FLASH}, //flash command help
-    //    {0,"-f",T_HELP_FLASH_FILE_FLAG}, //file to read/write/verify
-};
+static const struct ui_help_options options[] = { 0 };
 
 #define MACRO_FNAME_LEN 13
 #define ID_MAX_LEN 32

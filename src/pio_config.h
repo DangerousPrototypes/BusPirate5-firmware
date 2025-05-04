@@ -1,6 +1,6 @@
 struct _pio_config {
     PIO pio;
-    int sm;
+    uint sm;
     uint offset;
     const struct pio_program* program;
 };

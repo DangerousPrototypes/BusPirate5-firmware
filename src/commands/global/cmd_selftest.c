@@ -126,7 +126,8 @@ bool selftest_psu_opamp(void) {
 }
 
 bool selftest_bio_float(void) {
-    uint32_t temp1, temp2, fails = 0;
+    uint32_t temp1;
+    uint32_t fails = 0;
     printf("BIO FLOAT TEST (SHOULD BE 0/<0.%dV)\r\n", SELF_TEST_LOW_LIMIT / 10);
     for (uint8_t pin = 0; pin < BIO_MAX_PINS; pin++) {
         // read pin input (should be low)
@@ -147,7 +148,8 @@ bool selftest_bio_float(void) {
 }
 
 bool selftest_bio_high(void) {
-    uint32_t temp1, temp2, fails = 0;
+    uint32_t temp1;
+    uint32_t fails = 0;
     printf("BIO HIGH TEST (SHOULD BE >3.00V)\r\n");
     for (uint8_t pin = 0; pin < BIO_MAX_PINS; pin++) {
         bio_output(pin);
@@ -186,7 +188,7 @@ bool selftest_bio_high(void) {
 }
 
 bool selftest_bio_low(void) {
-    uint32_t temp1, temp2, fails = 0;
+    uint32_t fails = 0;
     printf("BIO LOW TEST (SHOULD BE <0.%dV)\r\n", SELF_TEST_LOW_LIMIT / 10);
     // start with all pins high, ground one by one
     for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
@@ -228,7 +230,8 @@ bool selftest_bio_low(void) {
 }
 
 bool selftest_pullup_high(void) {
-    uint32_t temp1, temp2, fails = 0;
+    uint32_t temp1;
+    uint32_t fails = 0;
     printf("BIO PULL-UP HIGH TEST (SHOULD BE 1/>3.00V)\r\n");
     pullup_enable();
     // start with all pins grounded, then float one by one
@@ -273,7 +276,8 @@ bool selftest_pullup_high(void) {
 }
 
 bool selftest_pullup_low(void) {
-    uint32_t temp1, temp2, fails = 0;
+    uint32_t temp1;
+    uint32_t fails = 0;
     printf("BIO PULL-UP LOW TEST (SHOULD BE <0.%dV)\r\n", SELF_TEST_LOW_LIMIT / 10);
     pullup_enable();
     // start with all pins floating, then ground one by one
@@ -558,7 +562,7 @@ bool selftest_la_bpio(void) {
 #endif
 
 void cmd_selftest(void) {
-    uint32_t temp1, temp2, fails = 0;
+    uint32_t fails = 0;
 
     if (scope_running) { // scope is using the analog subsystem
         printf("Can't self test when the scope is using the analog subsystem - use the 'd 1' command to switch to the "

@@ -260,16 +260,19 @@ char const* string_desc_arr[] = {
     "Bus Pirate",                 // 1: Manufacturer
 #if (BP_VER == 5)
     "Bus Pirate 5",               // 2: Product
+    "5buspirate",                 // 3: Serial -- now using chip ID (serial port can be remembered per device)
 #elif (BP_VER == XL5)
     "Bus Pirate 5XL",             // 2: Product
+    "5xbuspirate",                 // 3: Serial -- now using chip ID (serial port can be remembered per device)
 #elif (BP_VER == 6)
     "Bus Pirate 6",               // 2: Product
+    "6buspirate",                 // 3: Serial -- now using chip ID (serial port can be remembered per device)
 #elif (BP_VER == 7)
     "Bus Pirate 7",               // 2: Product
+    "7buspirate",                 // 3: Serial -- now using chip ID (serial port can be remembered per device)
 #else
     #error "Unknown Bus Pirate version"
 #endif
-    "5buspirate",                 // 3: Serial -- now using chip ID (serial port can be remembered per device)
     "Bus Pirate CDC",             // 4: CDC Interface
     "Bus Pirate MSC",             // 5: MSC Interface
     "Bus Pirate BIN"              // 6: Binary CDC Interface

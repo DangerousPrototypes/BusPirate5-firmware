@@ -7,6 +7,7 @@
 #include "usb_tx.h"
 #include "usb_rx.h"
 #include "ui/ui_cmdln.h"
+#include "ui/ui_statusbar.h"
 #ifdef ANSI_COLOR_256
 #include "ansi_colours.h"
 /**
@@ -368,6 +369,15 @@ uint32_t ui_term_get_user_input(void) {
     }
 
     switch (c) {
+        case 0x02: //vt100 screen clear refresh, for autodocs
+            ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
+            ui_term_init();   // Initialize VT100 if ANSI terminal
+            if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
+                ui_statusbar_init();
+                ui_statusbar_update_blocking();
+            }
+            return 0xff;
+            break;
         case 0x09: // tab
             printf("\x07TAB\r\n");
             break;

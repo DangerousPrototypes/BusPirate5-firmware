@@ -140,6 +140,16 @@ static void softlock_all_otp(void) {
 }
 
 static void main_system_initialization(void) {
+
+        // SPI bus is used from here
+    // setup the mutex for spi arbitration
+    mutex_init(&spi_mutex);
+
+    #if BP_HW_IOEXP_I2C || BP_HW_PULLX || BP_HW_PSU_DAC
+        // setup the mutex for i2c arbitration
+        mutex_init(&i2c_mutex);
+    #endif
+
     // setup the system_config defaults and the initial pin label references
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: system init()\n"
@@ -206,15 +216,6 @@ static void main_system_initialization(void) {
 #else
 #error "No platform revision defined. Check pirate.h."
 #endif
-
-    // SPI bus is used from here
-    // setup the mutex for spi arbitration
-    mutex_init(&spi_mutex);
-
-    #if BP_HW_IOEXP_I2C || BP_HW_PULLX || BP_HW_PSU_DAC
-        // setup the mutex for i2c arbitration
-        mutex_init(&i2c_mutex);
-    #endif
 
     // init psu pins
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,

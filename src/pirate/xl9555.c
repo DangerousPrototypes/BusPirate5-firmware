@@ -46,8 +46,6 @@ bool xl9555_register_write_verify(uint8_t addr, uint8_t reg, uint8_t *value){
 void xl9555_init(void) {
     //configure i2c and pins
     //configure interrupt pin
-    i2c_busy_wait(true);
-
     gpio_set_function(BP_I2C_RESET, GPIO_FUNC_SIO);
     gpio_set_dir(BP_I2C_RESET, GPIO_OUT);
     gpio_put(BP_I2C_RESET, 1);
@@ -59,8 +57,6 @@ void xl9555_init(void) {
     i2c_init(BP_I2C_PORT, 400 * 1000);
     gpio_set_function(BP_I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(BP_I2C_SCL, GPIO_FUNC_I2C);  
-
-    i2c_busy_wait(false);  
 }
 
 void xl9555_output_enable(bool enable) {
@@ -68,8 +64,6 @@ void xl9555_output_enable(bool enable) {
 }
 
 void xl9555_write_wait(uint8_t *level, uint8_t *direction) {
-    // I inverted it to clear and then set for easier use with amux
-    i2c_busy_wait(true);
     
     if(xl9555_register_write_verify(0x22, 0x02, level) == false){
         //printf("I2C write error\r\n");
@@ -77,9 +71,6 @@ void xl9555_write_wait(uint8_t *level, uint8_t *direction) {
     if(xl9555_register_write_verify(0x22, 0x06, direction) == false){
         //printf("I2C write error\r\n");
     }
-
-    i2c_busy_wait(false);
-
 }
 
 void xl9555_interrupt_enable(uint16_t mask) {
@@ -95,7 +86,6 @@ bool xl9555_read_bit(uint8_t pin) {
     data[0] = 0x00;
     xl9555_write_i2c(0x22, data, 1);
     xl9555_read_i2c(0x22, data, 2);
-
     uint16_t value = (data[1] << 8) | data[0];
     return (value & (1 << pin)) ? 1 : 0;
 }

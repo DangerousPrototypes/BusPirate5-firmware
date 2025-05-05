@@ -7,6 +7,7 @@
 #include "display/scope.h"
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
+#include "pirate/amux.h"
 
 // lock_core_t core;
 spin_lock_t* adc_spin_lock;

@@ -109,7 +109,6 @@
         #define BP_HW_IOEXP_I2C 1
         //#define BP_HW_IOEXP_NONE 1 //rev 0
         #define BP_HW_FALA_BUFFER 1
-        #define BP_HW_PSU_DAC 1
         #define BP_HW_RP2350_E9_BUG 1
         #define BP_HW_PSRAM 1
     #else

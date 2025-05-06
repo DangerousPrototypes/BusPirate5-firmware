@@ -41,14 +41,28 @@ void ioexp_output_enable(bool enable) {
     ioexp_func.output_enable(enable);
 }
 
-void ioexp_clear_set(uint16_t clear_bits, uint16_t set_bits) {
-    static uint8_t ioexp_dir[2] = { 0xff, 0xff };
-    static uint8_t ioexp_level[2] = { 0, 0 };  
+//#if BP_HW_IOEXP_SPI
+static uint8_t ioexp_dir[2] = { 0xff, 0xff };
+/*#elif BP_HW_IOEXP_I2C
+static uint8_t ioexp_dir[2] = { 0x00, 0xff &~(IOEXP_DISPLAY_BACKLIGHT | IOEXP_DISPLAY_RESET | IOEXP_CURRENT_RESET | IOEXP_CURRENT_EN | IOEXP_CURRENT_EN_OVERRIDE) };
+#else
+  #error "Platform not speficied in ioexpander.c"
+#endif*/  
+static uint8_t ioexp_level[2] = { 0, 0 };  
 
-    ioexp_level[1] &= ~((uint8_t)clear_bits);
-    ioexp_level[0] &= ~((uint8_t)(clear_bits >> 8));
-    ioexp_level[1] |= (uint8_t)set_bits;
-    ioexp_level[0] |= (uint8_t)(set_bits >> 8);
+void ioexp_in_out(uint16_t input, uint16_t output) {
+    ioexp_dir[0] &= ~((uint8_t)output);
+    ioexp_dir[1] &= ~((uint8_t)(output >> 8));
+    ioexp_dir[0] |= (uint8_t)input;
+    ioexp_dir[1] |= (uint8_t)(input >> 8);
+    ioexp_func.clear_set(ioexp_level, ioexp_dir);
+}
+
+void ioexp_clear_set(uint16_t clear_bits, uint16_t set_bits) {
+    ioexp_level[0] &= ~((uint8_t)clear_bits);
+    ioexp_level[1] &= ~((uint8_t)(clear_bits >> 8));
+    ioexp_level[0] |= (uint8_t)set_bits;
+    ioexp_level[1] |= (uint8_t)(set_bits >> 8);
     ioexp_func.clear_set(ioexp_level, ioexp_dir);
 }
 

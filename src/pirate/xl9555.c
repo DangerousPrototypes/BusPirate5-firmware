@@ -5,6 +5,16 @@
 #include "command_struct.h"
 #include "display/scope.h"
 
+#define XL9555_I2C_ADDR 0x22
+#define XL9555_INPORT0 0x00
+#define XL9555_INPORT1 0x01
+#define XL9555_OUTPORT0 0x02
+#define XL9555_OUTPORT1 0x03
+#define XL9555_INVERT0 0x04
+#define XL9555_INVERT1 0x05
+#define XL9555_CONFIG0 0x06
+#define XL9555_CONFIG1 0x07
+
 //return true for success, false for failure
 bool xl9555_write_i2c(uint8_t addr, uint8_t *data, uint8_t len) {  
     i2c_busy_wait(true); 
@@ -59,33 +69,42 @@ void xl9555_init(void) {
     gpio_set_function(BP_I2C_SCL, GPIO_FUNC_I2C);  
 }
 
+// 1 = input, 0 = output
 void xl9555_output_enable(bool enable) {
 
 }
 
+
 void xl9555_write_wait(uint8_t *level, uint8_t *direction) {
     
-    if(xl9555_register_write_verify(0x22, 0x02, level) == false){
+    if(xl9555_register_write_verify(XL9555_I2C_ADDR, XL9555_OUTPORT0, level) == false){
         //printf("I2C write error\r\n");
     }
-    if(xl9555_register_write_verify(0x22, 0x06, direction) == false){
+    if(xl9555_register_write_verify(XL9555_I2C_ADDR, XL9555_CONFIG0, direction) == false){
         //printf("I2C write error\r\n");
     }
 }
 
+void xl9555_write_wait_error(uint8_t *level, uint8_t *direction) {
+    
+    if(xl9555_register_write_verify(XL9555_I2C_ADDR, XL9555_OUTPORT0, level) == false){
+        printf("I2C write error\r\n");
+    }
+    if(xl9555_register_write_verify(XL9555_I2C_ADDR, XL9555_CONFIG0, direction) == false){
+        printf("I2C write error\r\n");
+    }
+}
+
 void xl9555_interrupt_enable(uint16_t mask) {
-    uint8_t data[2];
-    data[0] = mask & 0xff;
-    data[1] = (mask >> 8) & 0xff;
-    xl9555_register_write_verify(0x22, 0x04, data);
+
 }
 
 bool xl9555_read_bit(uint8_t pin) {
     //read the register
     uint8_t data[3];
-    data[0] = 0x00;
-    xl9555_write_i2c(0x22, data, 1);
-    xl9555_read_i2c(0x22, data, 2);
+    data[0] = XL9555_INPORT0;
+    xl9555_write_i2c(XL9555_I2C_ADDR, data, 1);
+    xl9555_read_i2c(XL9555_I2C_ADDR, data, 2);
     uint16_t value = (data[1] << 8) | data[0];
     return (value & (1 << pin)) ? 1 : 0;
 }

@@ -222,12 +222,14 @@ enum adc_mux{
 // moved to I2C IO expander
 // XL9555 IO expander
 #define IOEXP_RES_1M 0xff //first 8 bits are 1M resistors
-#define IOEXP_CURRENT_EN 1u << (15-2)
-#define IOEXP_CURRENT_RESET 1u << (13-2)
-#define IOEXP_CURRENT_EN_OVERRIDE 1u << (17-2)
-#define IOEXP_CURRENT_FUSE_DETECT 1u << (14-2)
-#define IOEXP_DISPLAY_BACKLIGHT 1u << (10-2)
-#define IOEXP_DISPLAY_RESET 1u << (11-2)
+#define IOEXP_DISPLAY_BACKLIGHT 1u << (8+0)
+#define IOEXP_DISPLAY_RESET 1u << (8+1)
+#define IOEXP_UNUSED_12 1u << (8+2)
+#define IOEXP_CURRENT_RESET 1u << (8+3)
+#define IOEXP_CURRENT_FUSE_DETECT 1u << (8+4)
+#define IOEXP_CURRENT_EN 1u << (8+5)
+#define IOEXP_UNUSED_16 1u << (8+6)
+#define IOEXP_CURRENT_EN_OVERRIDE 1u << (8+7)
 
 #define bufio2amux(x) (7 - x)
 

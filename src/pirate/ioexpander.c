@@ -7,7 +7,7 @@ struct ioexp_func_t {
     void (*output_enable)(bool enable);
     void (*clear_set)(uint8_t *level, uint8_t *direction);
     void (*interrupt_enable)(uint16_t mask);
-    bool (*read_bit)(uint8_t pin);
+    bool (*read_bit)(uint16_t bit);
 };
 
 #if BP_HW_IOEXP_SPI
@@ -41,14 +41,18 @@ void ioexp_output_enable(bool enable) {
     ioexp_func.output_enable(enable);
 }
 
-//#if BP_HW_IOEXP_SPI
 static uint8_t ioexp_dir[2] = { 0xff, 0xff };
-/*#elif BP_HW_IOEXP_I2C
-static uint8_t ioexp_dir[2] = { 0x00, 0xff &~(IOEXP_DISPLAY_BACKLIGHT | IOEXP_DISPLAY_RESET | IOEXP_CURRENT_RESET | IOEXP_CURRENT_EN | IOEXP_CURRENT_EN_OVERRIDE) };
-#else
-  #error "Platform not speficied in ioexpander.c"
-#endif*/  
 static uint8_t ioexp_level[2] = { 0, 0 };  
+
+void ioexp_write_register_dir(bool reg, uint8_t value){
+    ioexp_dir[reg] = value;
+    ioexp_func.clear_set(ioexp_level, ioexp_dir);
+}
+
+void ioexp_write_register_level(bool reg, uint8_t value){
+    ioexp_level[reg] = value;
+    ioexp_func.clear_set(ioexp_level, ioexp_dir);
+}
 
 void ioexp_in_out(uint16_t input, uint16_t output) {
     ioexp_dir[0] &= ~((uint8_t)output);
@@ -70,6 +74,6 @@ void ioexp_interrupt_enable(uint16_t mask) {
     ioexp_func.interrupt_enable(mask);
 }
 
-bool ioexp_read_bit(uint8_t pin) {
-    return ioexp_func.read_bit(pin);
+bool ioexp_read_bit(uint16_t read_bit) {
+    return ioexp_func.read_bit(read_bit);
 }

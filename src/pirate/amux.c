@@ -44,6 +44,12 @@ void amux_init(void) {
     adc_init();
     adc_gpio_init(AMUX_OUT);
     adc_gpio_init(CURRENT_SENSE);
+    #if BP_VER == 6 || BP_VER == 7
+        gpio_setup(AMUX_S0, GPIO_OUT, 0);
+        gpio_setup(AMUX_S1, GPIO_OUT, 1);
+        gpio_setup(AMUX_S2, GPIO_OUT, 0);
+        gpio_setup(AMUX_S3, GPIO_OUT, 1);
+    #endif
     // setup the spinlock for adc arbitration
     adc_spin_lock_num = spin_lock_claim_unused(true);
     adc_spin_lock = spin_lock_init(adc_spin_lock_num);

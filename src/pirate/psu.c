@@ -8,15 +8,10 @@
 #endif
 #include "pirate/psu.h"
 #include "pirate/amux.h"
-#if BP_HW_PSU_DAC
-    #include "hardware/i2c.h"
-#endif
 
-#if BP_HW_PSU_DAC
-    #define PWM_TOP 0x0fff //12 bit DAC
-#else
-    #define PWM_TOP 14000 // 0x30D3
-#endif
+
+#define PWM_TOP 14000 // 0x30D3
+
 
 // voltage settings
 #define PSU_V_LOW 800   // millivolts
@@ -103,39 +98,13 @@ void psu_set_i(float current, struct psu_status_t* psu) {
 }
 
 void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
-    #if BP_HW_PSU_PWM
-        uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
-        uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
-        uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
-        pwm_set_chan_level(slice_num, v_chan_num, v_dac);
-        pwm_set_chan_level(slice_num, i_chan_num, i_dac);
-    #elif BP_HW_PSU_DAC
-        //I2C dac
-        //voltage dac
-        const uint8_t v_dac_7_bit_address = 0x61;
-        uint8_t dac[2];
-        dac[0] = (v_dac >> 8) & 0xF;
-        dac[1] = v_dac & 0xFF;
-        
-        i2c_busy_wait(true);
-        if(i2c_write_blocking(BP_I2C_PORT, v_dac_7_bit_address, dac, 2, false) == PICO_ERROR_GENERIC){
-            printf("I2C write error\r\n");
-        } 
-        i2c_busy_wait(false);
 
-        //current dac
-        const uint8_t i_dac_7_bit_address = 0x60;
-        dac[0] == (i_dac >> 8) & 0xF;
-        dac[1] == i_dac & 0xFF;
-
-        i2c_busy_wait(true);
-        if(i2c_write_blocking(BP_I2C_PORT, i_dac_7_bit_address, dac, 2, false) == PICO_ERROR_GENERIC){
-            printf("I2C write error\r\n");
-        }
-        i2c_busy_wait(false);
-    #else
-        #error "Platform not speficied in psu.c"
-    #endif
+    uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
+    uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
+    uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
+    pwm_set_chan_level(slice_num, v_chan_num, v_dac);
+    pwm_set_chan_level(slice_num, i_chan_num, i_dac);
+ 
     // printf("GPIO: %d, slice: %d, v_chan: %d, i_chan: %d",PSU_PWM_VREG_ADJ,slice_num,v_chan_num,i_chan_num);
 }
 
@@ -176,13 +145,7 @@ void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     *isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000) / 4095));
     *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
     *vout = ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]));
-    #ifdef HW_ADC_MUX_CURRENT_DETECT
-        *fuse = (hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] > 300);
-    #elif IOEXP_CURRENT_FUSE_DETECT
-        *fuse = ioexp_read_bit(IOEXP_CURRENT_FUSE_DETECT);
-    #else
-        #error "Platform not speficied in psu.c"
-    #endif
+    *fuse = psu_fuse_ok();
 }
 
 void psu_disable(void) {
@@ -237,50 +200,36 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
 void psu_init(void) {
     psu_vreg_enable(false);
 
-    #if BP_HW_PSU_PWM
-        // pin and PWM setup
-        gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_SIO);
-        gpio_set_dir(PSU_PWM_CURRENT_ADJ, GPIO_OUT);
-        gpio_put(PSU_PWM_CURRENT_ADJ, 0);
-        gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_SIO);
-        gpio_set_dir(PSU_PWM_VREG_ADJ, GPIO_OUT);
-        gpio_put(PSU_PWM_VREG_ADJ, 1);
 
-        uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
-        uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
-        uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
+    // pin and PWM setup
+    gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_SIO);
+    gpio_set_dir(PSU_PWM_CURRENT_ADJ, GPIO_OUT);
+    gpio_put(PSU_PWM_CURRENT_ADJ, 0);
+    gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_SIO);
+    gpio_set_dir(PSU_PWM_VREG_ADJ, GPIO_OUT);
+    gpio_put(PSU_PWM_VREG_ADJ, 1);
 
-        // 10kHz clock, into our 1K + 0.1uF filter
-        pwm_set_clkdiv_int_frac(slice_num, 16 >> 4, 16 & 0b1111);
-        pwm_set_wrap(slice_num, PWM_TOP);
+    uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
+    uint v_chan_num = pwm_gpio_to_channel(PSU_PWM_VREG_ADJ);
+    uint i_chan_num = pwm_gpio_to_channel(PSU_PWM_CURRENT_ADJ);
 
-        // start with v adjust high (lowest voltage output)
-        pwm_set_chan_level(slice_num, v_chan_num, PWM_TOP);
+    // 10kHz clock, into our 1K + 0.1uF filter
+    pwm_set_clkdiv_int_frac(slice_num, 16 >> 4, 16 & 0b1111);
+    pwm_set_wrap(slice_num, PWM_TOP);
 
-        // start with i adjust low (lowest current output)
-        pwm_set_chan_level(slice_num, i_chan_num, 0);
+    // start with v adjust high (lowest voltage output)
+    pwm_set_chan_level(slice_num, v_chan_num, PWM_TOP);
 
-        // enable output
-        gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_PWM);
-        gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_PWM);
-        pwm_set_enabled(slice_num, true);
+    // start with i adjust low (lowest current output)
+    pwm_set_chan_level(slice_num, i_chan_num, 0);
 
-        // too early, spi not setup for shift register method of IO control
-        // psu_current_limit_override(false);
-        // psu_fuse_reset();
-    #elif BP_HW_PSU_DAC
-        //I2C dac
-        i2c_busy_wait(true);
-        gpio_set_function(BP_I2C_RESET, GPIO_FUNC_SIO);
-        gpio_set_dir(BP_I2C_RESET, GPIO_OUT);
-        gpio_put(BP_I2C_RESET, 1);
-        i2c_init(BP_I2C_PORT, 400 * 1000);
-        gpio_set_function(BP_I2C_SDA, GPIO_FUNC_I2C);
-        gpio_set_function(BP_I2C_SCL, GPIO_FUNC_I2C);  
-        i2c_busy_wait(false);  
-        //init dac
-        //psu_dac_set(0xffff, 0x0000);  
-    #else
-        #error "Platform not speficied in psu.c"
-    #endif
+    // enable output
+    gpio_set_function(PSU_PWM_VREG_ADJ, GPIO_FUNC_PWM);
+    gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_PWM);
+    pwm_set_enabled(slice_num, true);
+
+    // too early, spi not setup for shift register method of IO control
+    // psu_current_limit_override(false);
+    // psu_fuse_reset();
+
 }

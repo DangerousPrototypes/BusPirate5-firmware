@@ -617,7 +617,7 @@ void cmd_selftest(void) {
 
     // 7R0 bug: no default 1M pull-downs, enable here
     #if BP_HW_PULLX
-        pullx_set_all_update(PULLX_1M, false);
+        pullx_set_all_update(PULLX_OFF, false);
     #endif
 
     // BIO float test
@@ -649,7 +649,7 @@ void cmd_selftest(void) {
 
     #if BP_HW_PULLX
         //test all 4 pullx settings
-        static const char pullx_test[4]={PULLX_2K2, PULLX_4K7, PULLX_10K, PULLX_1M};
+        static const char pullx_test[4]={PULLX_2K2, PULLX_4K7, PULLX_10K, PULLX_100K};
         for (uint8_t i = 0; i < 4; i++) {
             if (selftest_pullupx_high(pullx_test[i])) {
                 fails++;

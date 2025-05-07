@@ -149,8 +149,8 @@ extern const uint8_t bio2bufdirpin[8];
 #define RGB_LEN 18 
 
 //PWM based PSU control pins
-#define PSU_PWM_CURRENT_ADJ 42 //9A
-#define PSU_PWM_VREG_ADJ 43 //9B
+#define PSU_PWM_CURRENT_ADJ 43 //9A
+#define PSU_PWM_VREG_ADJ 42 //9B
 
 // moved to I2C IO expander
 //#define CURRENT_EN          18

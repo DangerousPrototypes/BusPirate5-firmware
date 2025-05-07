@@ -9,6 +9,7 @@
 #include "ui/ui_help.h"
 #include "pirate/amux.h"
 #include "pirate/pullup.h"
+#include "hardware/i2c.h"
 
 
 #if BP_HW_PULLX
@@ -41,6 +42,41 @@ const struct ui_help_options p_options[] = {
 #endif
 
 #if BP_HW_PULLX
+
+    //return true for success, false for failure
+    bool pullup_read_reg(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len) {  
+        uint8_t data_out[2];
+        data_out[0] = reg;
+        i2c_busy_wait(true); 
+        bool result = i2c_write_blocking(BP_I2C_PORT, addr, data_out, 1, false) == PICO_ERROR_GENERIC ? false : true;
+        if(result) {
+            result = i2c_read_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC ? false : true;
+        }
+        i2c_busy_wait(false);
+        return result;
+    }
+
+    static void pullx_print_bin(uint8_t *value){
+        for(uint8_t j=0; j<2; j++){
+            for(uint8_t i=0; i<8; i++){
+                printf("%d", (value[j] & (1<<i)) ? 1 : 0);
+            }
+            printf(" ");
+        }
+    }
+
+    void pullx_print_reg(uint8_t addr, uint8_t reg){
+        uint8_t data[2];
+        printf("Read: %02x | ", reg);
+        if(!pullup_read_reg(addr, reg, data, 2)) {
+            printf("I2C read error\r\n");
+            return;
+        }
+        printf("%02x %02x | ", data[0], data[1]); 
+        pullx_print_bin(data);
+        printf("\r\n");
+    }
+
     void pullx_show_settings(void){
         //display the current configuration
         printf("\r\n%sPull resistor configuration:\r\n", ui_term_color_info());
@@ -60,6 +96,7 @@ const struct ui_help_options p_options[] = {
             }
         }
         printf("|%s\r\n", ui_term_color_reset());
+
     }
 
     void pullx_show_values(void){
@@ -204,6 +241,14 @@ void pullups_enable_handler(struct command_result* res) {
             printf("\r\n%sError:%s VOUT voltage too low to enable pull-x\r\n", ui_term_color_error(), ui_term_color_reset());
             printf("%sSettings will be applied when VOUT voltage is sufficient%s\r\n", ui_term_color_info(), ui_term_color_reset());
         }
+
+        pullx_print_reg(0x20, 0x06); //configuration register
+        pullx_print_reg(0x20, 0x02); //output register
+        pullx_print_reg(0x21, 0x06); //configuration register
+        pullx_print_reg(0x21, 0x02); //output register
+        pullx_print_reg(0x22, 0x00); //input register
+        pullx_print_reg(0x22, 0x06); //configuration register
+        pullx_print_reg(0x22, 0x02); //output register
 
         amux_sweep();
         printf("\r\n\r\n");

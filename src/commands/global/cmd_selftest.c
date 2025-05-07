@@ -31,6 +31,11 @@ bool selftest_rp2350_e9_fix(void){
             fail = true;
         }
     }
+    
+    if(!fail){
+        printf(" OK\r\n");
+    }
+    
     bio_init();
     return fail;
 }

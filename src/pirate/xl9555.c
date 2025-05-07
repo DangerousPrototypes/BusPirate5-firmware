@@ -99,13 +99,13 @@ void xl9555_interrupt_enable(uint16_t mask) {
 
 }
 
-bool xl9555_read_bit(uint8_t pin) {
+bool xl9555_read_bit(uint16_t bit) {
     //read the register
     uint8_t data[3];
     data[0] = XL9555_INPORT0;
     xl9555_write_i2c(XL9555_I2C_ADDR, data, 1);
     xl9555_read_i2c(XL9555_I2C_ADDR, data, 2);
     uint16_t value = (data[1] << 8) | data[0];
-    return (value & (1 << pin)) ? 1 : 0;
+    return (value & bit) ? 1 : 0;
 }
 

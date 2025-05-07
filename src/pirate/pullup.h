@@ -7,7 +7,8 @@ enum {
     PULLX_3K2,
     PULLX_4K7,
     PULLX_10K,
-    PULLX_1M,
+    PULLX_100K,
+    PULLD_1M
 };
 
 struct pullx_options_t {

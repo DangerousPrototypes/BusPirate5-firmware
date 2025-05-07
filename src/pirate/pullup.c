@@ -10,10 +10,10 @@
     #define R2K2_MASK 0x01
     #define R4K7_MASK 0x02
     #define R10K_MASK 0x08
-    #define R1M_MASK  0x04
+    #define R100K_MASK  0x04
 
-    #define SET_RESISTORS(r2k2, r4k7, r10k, r1m) \
-        ((r2k2 ? R2K2_MASK : 0) | (r4k7 ? R4K7_MASK : 0) | (r10k ? R10K_MASK : 0) | (r1m ? R1M_MASK : 0))
+    #define SET_RESISTORS(r2k2, r4k7, r10k, r100k) \
+        ((r2k2 ? R2K2_MASK : 0) | (r4k7 ? R4K7_MASK : 0) | (r10k ? R10K_MASK : 0) | (r100k ? R100K_MASK : 0))
 
     const struct pullx_options_t pullx_options[9] = {
         { .pull=PULLX_OFF, .name="OFF", .resistors=SET_RESISTORS(false, false, false, false) },
@@ -24,11 +24,11 @@
         { .pull=PULLX_3K2, .name="3.2K", .resistors=SET_RESISTORS(false, true, true, false) },
         { .pull=PULLX_4K7, .name="4.7K", .resistors=SET_RESISTORS(false, true, false, false) },
         { .pull=PULLX_10K, .name="10K", .resistors=SET_RESISTORS(false, false, true, false) },
-        { .pull=PULLX_1M, .name="1M", .resistors=SET_RESISTORS(false, false, false, true) },
+        { .pull=PULLX_100K, .name="100K", .resistors=SET_RESISTORS(false, false, false, true) },
     };
 
     //persistent configuration
-    uint8_t pullx_value[BIO_MAX_PINS]={PULLX_1M,PULLX_1M,PULLX_1M,PULLX_1M,PULLX_1M,PULLX_1M,PULLX_1M,PULLX_1M};
+    uint8_t pullx_value[BIO_MAX_PINS]={PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF};
     uint8_t pullx_direction=0x00; //output direction mask
 
     //return true for success, false for failure
@@ -92,9 +92,17 @@
     bool pullx_update(void){
         uint16_t output_port_register[2]={0,0};
         uint16_t configuration_register[2]={0xffff,0xffff};
+        uint8_t default_pull_down = 0xFF; //load with all pins input
 
         for(uint8_t i=0; i<BIO_MAX_PINS; i++){
             //build the commands to send to the I2C IO expander
+            //if pin is configured as PULLX_OFF, then enable the 1M pull down on the XL9555
+            if(pullx_value[i] == PULLX_OFF){
+                //set the pin to output/low
+                default_pull_down &=~(1<<i); 
+                continue;
+            }
+
             for(uint8_t b=0; b<4; b++){
                 //if bit is set in the resistor mask, set the resistor pin to output
                 //resistor mask is 1 if enabled
@@ -117,6 +125,10 @@
             if(!pullx_register_write_verify(i2c_address[i], 0x02, output_port_register[i])) return false;
             if(!pullx_register_write_verify(i2c_address[i], 0x06, configuration_register[i])) return false;
         }
+
+        //1M default pull down when pullx is off
+        ioexp_write_register_dir(0, default_pull_down); //set the pull down resistors
+
             
 #if 0
         printf("Configuration:");
@@ -179,6 +191,8 @@
         // TCA6416ARTWT must be reset if voltage drops below 1.65 volts
         if( pullx_brown_out_reset == false && vout < 1650 ){
             pullx_brown_out_reset = true;
+            //enable the independent 1M pull down resistors on the IO expander
+            ioexp_write_register_dir(0, 0x00);
         }else if( pullx_brown_out_reset == true && vout >= 1650 ){
             pullx_brown_out_reset = !pullx_update();
         }
@@ -205,7 +219,7 @@ void pullup_enable(void) {
 void pullup_disable(void) {
     #if BP_HW_PULLX
         // 1M pull-down by default
-        pullx_set_all_update(PULLX_1M, false);
+        pullx_set_all_update(PULLX_OFF, false);
     #elif (BP_VER ==5 && BP_REV <= 8)
         ioexp_clear_set(IOEXP_PULLUP_EN, 0);
     #elif ((BP_VER == 5 && BP_REV > 8)) || (BP_VER == XL5)
@@ -219,7 +233,7 @@ void pullup_disable(void) {
 
 void pullup_init(void) {
     #if BP_HW_PULLX
-        //pullx_set_all_update(PULLX_1M, false);  
+        //pullx_set_all_update(PULLX_OFF, false); //defaults to a 1M pull down on the IO expander
     #elif (BP_VER == 5 || BP_VER == XL5)
         //nothing to do
     #elif (BP_VER == 6)

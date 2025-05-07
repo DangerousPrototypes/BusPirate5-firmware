@@ -10,6 +10,7 @@
 #include "pirate/amux.h"
 #include "pirate/pullup.h"
 
+
 #if BP_HW_PULLX
 const char* const p_usage[] = {
     "P [resistor value] [-d] [-p <pins>]",
@@ -53,7 +54,7 @@ const struct ui_help_options p_options[] = {
             pullx_get_pin(i, &pull, &pull_up);  
 
             if(pull == PULLX_OFF) {
-                printf("|%s\t", pullx_options[pull].name);
+                printf("|1M D\t");
             }else{
                 printf("|%s %s\t", pullx_options[pull].name, pull_up ? "U" : "D");
             }
@@ -71,6 +72,7 @@ const struct ui_help_options p_options[] = {
 
     // get command line arguments, false = fail, true = success
     bool pullx_parse_args(uint8_t *pullx, uint8_t *pin_args, bool *direction){
+
         //search for trailing arguments
         char action_str[9]; // somewhere to store the parameter string
         bool r_found = false; // default pullup value (10K)
@@ -132,6 +134,24 @@ void pullups_enable_handler(struct command_result* res) {
         #endif
         return;
     }
+
+    #include "pirate/ioexpander.h"
+    // test for xl9555
+    uint8_t level[2] = {0,0};
+    uint8_t dir[2]= {0, 0b00010000};
+    if(cmdln_args_find_flag('t')){
+        printf("%d\r\n", amux_read(HW_ADC_MUX_VUSB));
+        /*level[1] =0b00000011;
+        //xl9555_write_wait_error(level,dir);
+        ioexp_clear_set(IOEXP_DISPLAY_BACKLIGHT, 0x00);*/
+        return;
+    }
+
+    if(cmdln_args_find_flag('s')){
+        level[1] =0b00000010;
+        ioexp_clear_set(0x00, IOEXP_DISPLAY_BACKLIGHT);
+        return;
+    }    
 
     #if BP_HW_PULLX
         uint8_t pullx;

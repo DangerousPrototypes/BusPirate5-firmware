@@ -9,9 +9,7 @@
 #include "pirate/psu.h"
 #include "pirate/amux.h"
 
-
 #define PWM_TOP 14000 // 0x30D3
-
 
 // voltage settings
 #define PSU_V_LOW 800   // millivolts
@@ -108,6 +106,7 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
     // printf("GPIO: %d, slice: %d, v_chan: %d, i_chan: %d",PSU_PWM_VREG_ADJ,slice_num,v_chan_num,i_chan_num);
 }
 
+// returns true for ok
 bool psu_fuse_ok(void) {
     #ifdef HW_ADC_MUX_CURRENT_DETECT
         uint32_t fuse = amux_read(HW_ADC_MUX_CURRENT_DETECT);

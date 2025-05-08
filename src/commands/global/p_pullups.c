@@ -246,6 +246,7 @@ void pullups_enable_handler(struct command_result* res) {
         pullx_print_reg(0x20, 0x02); //output register
         pullx_print_reg(0x21, 0x06); //configuration register
         pullx_print_reg(0x21, 0x02); //output register
+        printf("psu_fuse_ok: %d\r\n", psu_fuse_ok());
         pullx_print_reg(0x22, 0x00); //input register
         pullx_print_reg(0x22, 0x06); //configuration register
         pullx_print_reg(0x22, 0x02); //output register

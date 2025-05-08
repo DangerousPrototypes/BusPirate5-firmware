@@ -42,6 +42,7 @@ void psucmd_irq_callback(void) {
 
 // zero return code = success
 uint32_t psucmd_enable(float volts, float current, bool current_limit_override) {
+    system_config.psu_irq_en = false;
     system_config.psu = 0;
     system_config.pin_labels[0] = 0;
     system_config.pin_changed = 0xff;

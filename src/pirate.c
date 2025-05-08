@@ -768,13 +768,15 @@ static void core1_infinite_loop(void) {
         // also receive input from RTT, if available
         rx_from_rtt_terminal();
 
+        // check for fuse fault on PSU
+        #if 1
         if (system_config.psu == 1 &&
             system_config.psu_irq_en == true &&
             !psu_fuse_ok()
             ) {
-            system_config.psu_irq_en = false;
             psucmd_irq_callback();
         }
+        #endif
 
         if (lcd_update_request) {
             monitor(system_config.psu); // TODO: fix monitor to return bool up_volts and up_current

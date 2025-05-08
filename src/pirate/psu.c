@@ -23,12 +23,16 @@
 
 struct psu_status_t psu_status;
 
+#if IOEXP_CURRENT_FUSE_DETECT
+    bool fuse_fault = true;
+#endif
+
 static void psu_fuse_reset(void) {
     // reset current trigger
     #ifdef IOEXP_CURRENT_RESET
         ioexp_clear_set(IOEXP_CURRENT_RESET, 0); // low to activate the pnp
         busy_wait_ms(1);
-        ioexp_clear_set(0, IOEXP_CURRENT_RESET); // high to disable    
+        ioexp_clear_set(0, IOEXP_CURRENT_RESET); // high to disable           
     #elif BP_HW_IOEXP_NONE
         gpio_put(CURRENT_RESET, 0);
         busy_wait_ms(1);
@@ -109,11 +113,10 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
 // returns true for ok
 bool psu_fuse_ok(void) {
     #ifdef HW_ADC_MUX_CURRENT_DETECT
-        uint32_t fuse = amux_read(HW_ADC_MUX_CURRENT_DETECT);
-        // printf("Fuse: %d\r\n",fuse);
-        return (fuse > 300);
+        return (amux_read(HW_ADC_MUX_CURRENT_DETECT) > 300);
     #elif IOEXP_CURRENT_FUSE_DETECT
-        return ioexp_read_bit(IOEXP_CURRENT_FUSE_DETECT);
+        //printf("I2C IRQ: %d, fuse_fault: %d\r\n",gpio_get(BP_I2C_INTERRUPT), fuse_fault);
+        return !fuse_fault;
     #else 
         #error "Platform not speficied in psu.c"
     #endif
@@ -155,6 +158,11 @@ void psu_disable(void) {
     psu_fuse_reset(); // reset fuse so it isn't draining current from the opamp
 }
 
+void psu_current_fuse_detect(uint gpio, uint32_t events) {
+    //printf("GPIO IRQ: %d\r\n", gpio);
+    fuse_fault = true; // set the fuse fault flag
+}
+
 uint32_t psu_enable(float volts, float current, bool current_limit_override) {
 
     psu_set_v(volts, &psu_status);
@@ -171,6 +179,12 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
     psu_fuse_reset();
     psu_vreg_enable(true);
     busy_wait_ms(10);
+    
+    #if IOEXP_CURRENT_FUSE_DETECT
+        fuse_fault = false; // reset the fuse fault flag
+        // Enable GPIO interrupt for falling edge
+        gpio_set_irq_enabled_with_callback(BP_I2C_INTERRUPT, GPIO_IRQ_EDGE_FALL, true, &psu_current_fuse_detect); 
+    #endif 
 
     // after some settling time, engage the current limit system
     if (!current_limit_override) {
@@ -198,7 +212,6 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
 
 void psu_init(void) {
     psu_vreg_enable(false);
-
 
     // pin and PWM setup
     gpio_set_function(PSU_PWM_CURRENT_ADJ, GPIO_FUNC_SIO);

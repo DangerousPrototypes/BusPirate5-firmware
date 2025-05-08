@@ -32,19 +32,17 @@
     uint8_t pullx_direction=0x00; //output direction mask
 
     //return true for success, false for failure
+    #if 0
     bool pullup_write_i2c(uint8_t addr, uint8_t *data, uint8_t len) {  
-        i2c_busy_wait(true); 
         bool result = i2c_write_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC ? false : true;
-        i2c_busy_wait(false);
         return result;
     }
     // return true for success, false for failure
     bool pullup_read_i2c(uint8_t addr, uint8_t *data, uint8_t len) {
-        i2c_busy_wait(true);   
         bool result = i2c_read_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC ? false : true;
-        i2c_busy_wait(false);   
         return result;
-    }    
+    }   
+    #endif 
 
     bool pullx_register_write_verify(uint8_t addr, uint8_t reg, uint16_t value){
         uint8_t data[3];
@@ -52,15 +50,26 @@
         data[1] = value & 0xff;
         data[2] = (value >> 8) & 0xff;
 
+        i2c_busy_wait(true);
         //write the register
-        if(!pullup_write_i2c(addr, data, 3)) return false;
+        //if(!pullup_write_i2c(addr, data, 3)) goto pullx_register_write_verify_fail;
+        if(i2c_write_blocking(BP_I2C_PORT, addr, data, 3, false) == PICO_ERROR_GENERIC) goto pullx_register_write_verify_fail;
         //read the register
-        if(!pullup_write_i2c(addr, data, 1)) return false;
-        if(!pullup_read_i2c(addr, data, 2)) return false;
-        if( (data[0] != (value&0xff)) || (data[1] != ((value>>8)&0xff)) ){
+        //if(!pullup_write_i2c(addr, data, 1)) goto pullx_register_write_verify_fail;
+        if(i2c_write_blocking(BP_I2C_PORT, addr, data, 1, false) == PICO_ERROR_GENERIC) goto pullx_register_write_verify_fail;
+        //if(!pullup_read_i2c(addr, data, 2)) goto pullx_register_write_verify_fail;
+        if(i2c_read_blocking(BP_I2C_PORT, addr, data, 2, false) == PICO_ERROR_GENERIC) goto pullx_register_write_verify_fail;
+        i2c_busy_wait(false);
+
+        if( (data[0] == (value&0xff)) && (data[1] == ((value>>8)&0xff)) ){
+            return true;
+        }else{
             return false;
         }
-        return true;   
+
+        pullx_register_write_verify_fail:
+            i2c_busy_wait(false);
+            return false;
     }
 
 #if 0
@@ -122,8 +131,9 @@
         //OFF 1.3K 1.5K 1.8K 2.2K 3.2K 4.7K 10K 1M
         uint8_t i2c_address[2] = {0x21, 0x20};
         for (uint8_t i =0; i<2; i++){
-            if(!pullx_register_write_verify(i2c_address[i], 0x02, output_port_register[i])) return false;
-            if(!pullx_register_write_verify(i2c_address[i], 0x06, configuration_register[i])) return false;
+            //TODO: don't fail silently, enable 1M pull down resistors on the IO expander if the pullx is off
+            pullx_register_write_verify(i2c_address[i], 0x02, output_port_register[i]);
+            pullx_register_write_verify(i2c_address[i], 0x06, configuration_register[i]);
         }
 
         //1M default pull down when pullx is off

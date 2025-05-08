@@ -6,12 +6,18 @@
 #include "command_struct.h"
 #include "msc_disk.h"
 #include "ui/ui_statusbar.h"
+#if BP_HW_IOEXP_SPI || BP_HW_IOEXP_I2C
+    #include "pirate/ioexpander.h"
+#endif
 
 void cmd_mcu_reset(void) {
     mcu_reset();
 }
 
 void cmd_mcu_reset_handler(struct command_result* res) {
+    #if BP_VER == 7
+        ioexp_clear_set(IOEXP_DISPLAY_BACKLIGHT|IOEXP_DISPLAY_RESET, 0x00); // turn off the display backlight
+    #endif 
     ui_statusbar_deinit();
     busy_wait_ms(100);
     cmd_mcu_reset();
@@ -36,6 +42,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result* res) {
         printf("Firmware file: bus_pirate6.uf2\r\n");
         printf("A USB disk named \"RP2350\" will appear\r\n");
     #elif BP_VER == 7
+        ioexp_clear_set(IOEXP_DISPLAY_BACKLIGHT|IOEXP_DISPLAY_RESET, 0x00); // turn off the display backlight
         printf("Firmware file: bus_pirate7.uf2\r\n");
         printf("A USB disk named \"BP_BOOT\" will appear\r\n");
     #else

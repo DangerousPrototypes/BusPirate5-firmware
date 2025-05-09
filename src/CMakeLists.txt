@@ -442,7 +442,9 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 psram.c
 		psram.h
                 commands/global/psram_cmd.c 
-                commands/global/psram_cmd.h    
+                commands/global/psram_cmd.h
+                commands/global/reg.h 
+                commands/global/reg.c      
                 ) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_VER=7) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_REV=1) 

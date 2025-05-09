@@ -46,6 +46,9 @@
 #if BP_HW_PSRAM
     #include "commands/global/psram_cmd.h"
 #endif
+#if BP_HW_PULLX
+    #include "commands/global/reg.h"
+#endif
 
 // command configuration
 const struct _global_command_struct commands[] = {
@@ -105,6 +108,9 @@ const struct _global_command_struct commands[] = {
 #endif
 #if BP_HW_PSRAM
     { .command="psram",     .allow_hiz=true,  .func=&psram_handler,                      .help_text=0x00 },
+#endif
+#if BP_HW_PULLX
+    { .command="reg",       .allow_hiz=true,  .func=&reg_handler,                        .help_text=0x00 },
 #endif
     // clang-format on
 };

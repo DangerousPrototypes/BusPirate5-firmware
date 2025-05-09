@@ -28,8 +28,8 @@ uint32_t hiz_setup(void) {
 uint32_t hiz_setup_exec(void) {
     // turn everything off
     bio_init();        // make all pins safe
-    psucmd_disable();  // turn off power supply
     pullups_disable(); // deactivate
+    psucmd_disable();  // turn off power supply
     system_config.freq_active = 0;
     system_config.pwm_active = 0;
     system_config.aux_active = 0;

@@ -241,18 +241,8 @@ void pullups_enable_handler(struct command_result* res) {
             printf("\r\n%sError:%s VOUT voltage too low to enable pull-x\r\n", ui_term_color_error(), ui_term_color_reset());
             printf("%sSettings will be applied when VOUT voltage is sufficient%s\r\n", ui_term_color_info(), ui_term_color_reset());
         }
-
-        pullx_print_reg(0x20, 0x06); //configuration register
-        pullx_print_reg(0x20, 0x02); //output register
-        pullx_print_reg(0x21, 0x06); //configuration register
-        pullx_print_reg(0x21, 0x02); //output register
-        printf("psu_fuse_ok: %d\r\n", psu_fuse_ok());
-        pullx_print_reg(0x22, 0x00); //input register
-        pullx_print_reg(0x22, 0x06); //configuration register
-        pullx_print_reg(0x22, 0x02); //output register
-
         amux_sweep();
-        printf("\r\n\r\n");
+        printf("\r\n");
     #else
         pullups_enable();
         amux_sweep();

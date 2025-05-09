@@ -24,10 +24,10 @@
 
 bool selftest_rp2350_e9_fix(void){
     bool fail = false;
-    printf("TEST RP2350 E9 BUG FIX\r\n");
+    printf("TEST RP2350 E9 BUG FIX:");
     for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
         if(!bug_e9_seems_fixed(true, i, false)){
-            printf("ERROR: BIO%d shows E9 behavior\r\n", i);
+            printf("\r\nERROR: BIO%d shows E9 behavior\r\n", i);
             fail = true;
         }
     }
@@ -484,7 +484,8 @@ bool selftest_button(void) {
         }   
         //or press key to exit
         char c;
-		if (rx_fifo_try_get(&c)) {
+		if (rx_fifo_try_get(&c) && (c>=' ' && c<='~')) {
+            // if a key is pressed, skip the test
             printf("SKIPPED\r\n");
             return true;
         }
@@ -499,7 +500,7 @@ bool selftest_button(void) {
         }   
         //or press key to exit
         char c;
-		if (rx_fifo_try_get(&c)) {
+        if (rx_fifo_try_get(&c) && (c>=' ' && c<='~')){
             printf("SKIPPED\r\n");
             return true;
         }

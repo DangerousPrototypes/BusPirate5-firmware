@@ -116,7 +116,15 @@ bool psu_fuse_ok(void) {
         return (amux_read(HW_ADC_MUX_CURRENT_DETECT) > 300);
     #elif IOEXP_CURRENT_FUSE_DETECT
         //printf("I2C IRQ: %d, fuse_fault: %d\r\n",gpio_get(BP_I2C_INTERRUPT), fuse_fault);
-        return !fuse_fault;
+        return ioexp_read_bit(IOEXP_CURRENT_FUSE_DETECT);
+        /*if(fuse_fault){
+            if(ioexp_read_bit(IOEXP_CURRENT_FUSE_DETECT)){
+                fuse_fault = false; // set the fuse fault flag
+                return true; // fuse is blown
+            }else{
+                return false;
+            }
+        }*/
     #else 
         #error "Platform not speficied in psu.c"
     #endif
@@ -151,6 +159,12 @@ void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
 }
 
 void psu_disable(void) {
+    #if 0
+    #if IOEXP_CURRENT_FUSE_DETECT
+        gpio_set_irq_enabled(BP_I2C_INTERRUPT, GPIO_IRQ_EDGE_FALL, false); // disable the interrupt    
+    #endif 
+    #endif
+    
     psu_vreg_enable(false);
     psu_dac_set(PWM_TOP, 0);
     psu_current_limit_override(false);
@@ -158,10 +172,13 @@ void psu_disable(void) {
     psu_fuse_reset(); // reset fuse so it isn't draining current from the opamp
 }
 
+#if 0
+// interrupt handler for the current limit fuse detect
 void psu_current_fuse_detect(uint gpio, uint32_t events) {
-    //printf("GPIO IRQ: %d\r\n", gpio);
+    printf("GPIO IRQ: %d\r\n", gpio);
     fuse_fault = true; // set the fuse fault flag
 }
+#endif
 
 uint32_t psu_enable(float volts, float current, bool current_limit_override) {
 
@@ -180,11 +197,13 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
     psu_vreg_enable(true);
     busy_wait_ms(10);
     
+    #if 0
     #if IOEXP_CURRENT_FUSE_DETECT
         fuse_fault = false; // reset the fuse fault flag
         // Enable GPIO interrupt for falling edge
         gpio_set_irq_enabled_with_callback(BP_I2C_INTERRUPT, GPIO_IRQ_EDGE_FALL, true, &psu_current_fuse_detect); 
     #endif 
+    #endif
 
     // after some settling time, engage the current limit system
     if (!current_limit_override) {

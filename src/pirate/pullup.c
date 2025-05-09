@@ -31,19 +31,6 @@
     uint8_t pullx_value[BIO_MAX_PINS]={PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF,PULLX_OFF};
     uint8_t pullx_direction=0x00; //output direction mask
 
-    //return true for success, false for failure
-    #if 0
-    bool pullup_write_i2c(uint8_t addr, uint8_t *data, uint8_t len) {  
-        bool result = i2c_write_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC ? false : true;
-        return result;
-    }
-    // return true for success, false for failure
-    bool pullup_read_i2c(uint8_t addr, uint8_t *data, uint8_t len) {
-        bool result = i2c_read_blocking(BP_I2C_PORT, addr, data, len, false) == PICO_ERROR_GENERIC ? false : true;
-        return result;
-    }   
-    #endif 
-
     bool pullx_register_write_verify(uint8_t addr, uint8_t reg, uint16_t value){
         uint8_t data[3];
         data[0] = reg;
@@ -52,12 +39,9 @@
 
         i2c_busy_wait(true);
         //write the register
-        //if(!pullup_write_i2c(addr, data, 3)) goto pullx_register_write_verify_fail;
         if(i2c_write_blocking(BP_I2C_PORT, addr, data, 3, false) == PICO_ERROR_GENERIC) goto pullx_register_write_verify_fail;
         //read the register
-        //if(!pullup_write_i2c(addr, data, 1)) goto pullx_register_write_verify_fail;
         if(i2c_write_blocking(BP_I2C_PORT, addr, data, 1, false) == PICO_ERROR_GENERIC) goto pullx_register_write_verify_fail;
-        //if(!pullup_read_i2c(addr, data, 2)) goto pullx_register_write_verify_fail;
         if(i2c_read_blocking(BP_I2C_PORT, addr, data, 2, false) == PICO_ERROR_GENERIC) goto pullx_register_write_verify_fail;
         i2c_busy_wait(false);
 
@@ -72,26 +56,6 @@
             return false;
     }
 
-#if 0
-    void pullx_set_all_test(uint16_t resistor_mask, uint16_t direction_mask){
-        uint8_t data[3] = {0x06, 0xFF, 0xFF};
-        //configuration register, all pins as inputs = 1
-        pullup_write_i2c(0x40, data, 3);
-        pullup_write_i2c(0x42, data, 3);
-        //1M pull down by default
-        data[0] = 0x02;
-        data[1] = direction_mask&0xff;
-        data[2] = (direction_mask>>8)&0xff;
-        pullup_write_i2c(0x40, data, 3);
-        pullup_write_i2c(0x42, data, 3);
-        //now make those pins outputs
-        data[0]=0x06;
-        data[1]= ~(resistor_mask&0xff);
-        data[2]= ~((resistor_mask>>8)&0xff);
-        pullup_write_i2c(0x40, data, 3);
-        pullup_write_i2c(0x42, data, 3);
-    }
-#endif
     void pullx_print_bin(uint16_t value){
         for(uint8_t i=0; i<16; i++){
             printf("%d", (value & (1<<i)) ? 1 : 0);
@@ -128,50 +92,24 @@
             }
 
         }
-        //OFF 1.3K 1.5K 1.8K 2.2K 3.2K 4.7K 10K 1M
+        //OFF 1.3K 1.5K 1.8K 2.2K 3.2K 4.7K 10K 100K
+        bool result = true;
         uint8_t i2c_address[2] = {0x21, 0x20};
         for (uint8_t i =0; i<2; i++){
-            //TODO: don't fail silently, enable 1M pull down resistors on the IO expander if the pullx is off
-            pullx_register_write_verify(i2c_address[i], 0x02, output_port_register[i]);
-            pullx_register_write_verify(i2c_address[i], 0x06, configuration_register[i]);
+            //enable 1M pull down resistors on the IO expander if the pullx is off
+            if(!pullx_register_write_verify(i2c_address[i], 0x02, output_port_register[i]) ||
+                !pullx_register_write_verify(i2c_address[i], 0x06, configuration_register[i])
+            ){
+                default_pull_down = 0x00; //1M all pins on fail
+                result = false;
+                break;
+            }
         }
 
         //1M default pull down when pullx is off
         ioexp_write_register_dir(0, default_pull_down); //set the pull down resistors
 
-            
-#if 0
-        printf("Configuration:");
-        pullx_print_bin(configuration_register[0]);
-        printf(" ");
-        pullx_print_bin(configuration_register[1]);
-
-        uint8_t data[3];
-        data[0] = 0x06;
-        pullup_write_i2c(0x21, data, 1);
-        pullup_read_i2c(0x21, data, 2);
-        printf("\r\nRead: %02x %02x | ", data[0], data[1]); 
-        data[0] = 0x06;
-        pullup_write_i2c(0x20, data, 1);
-        pullup_read_i2c(0x20, data, 2);
-        printf("%02x %02x\r\n", data[0], data[1]);
-
-        printf("\r\nOutput:");
-        pullx_print_bin(output_port_register[0]);
-        printf(" ");
-        pullx_print_bin(output_port_register[1]);
-
-        data[0] = 0x02;
-        pullup_write_i2c(0x21, data, 1);
-        pullup_read_i2c(0x21, data, 2);
-        printf("\r\nRead: %02x %02x | ", data[0], data[1]);
-        data[0] = 0x02;
-        pullup_write_i2c(0x20, data, 1);
-        pullup_read_i2c(0x20, data, 2);
-        printf("%02x %02x\r\n", data[0], data[1]);        
-        printf("\r\n");
-#endif
-        return true;
+        return result;
     }
 
     void pullx_set_pin(uint8_t pin, uint8_t pull, bool pull_up){
@@ -195,16 +133,16 @@
         *pull_up = pullx_direction & (1<<pin);
     }
 
-    void pullx_brown_out_reset(uint32_t vout){
-        static bool pullx_brown_out_reset = false;
+    static bool pullx_brown_out_reset_enabled = false;
 
+    void pullx_brown_out_reset(uint32_t vout){    
         // TCA6416ARTWT must be reset if voltage drops below 1.65 volts
-        if( pullx_brown_out_reset == false && vout < 1650 ){
-            pullx_brown_out_reset = true;
+        if( pullx_brown_out_reset_enabled == false && vout < 1650 ){
+            pullx_brown_out_reset_enabled = true;
             //enable the independent 1M pull down resistors on the IO expander
             ioexp_write_register_dir(0, 0x00);
-        }else if( pullx_brown_out_reset == true && vout >= 1650 ){
-            pullx_brown_out_reset = !pullx_update();
+        }else if( pullx_brown_out_reset_enabled == true && vout >= 1650 ){
+            pullx_brown_out_reset_enabled = !pullx_update();
         }
     }
 
@@ -214,6 +152,7 @@ void pullup_enable(void) {
     #if BP_HW_PULLX
         //to test: all have 10K pullup 
         //pullx_set_all(0xf000, 0xf000);
+        pullx_brown_out_reset_enabled = false;
         pullx_set_all_update(PULLX_10K, true);
     #elif (BP_VER ==5 && BP_REV <= 8)
         ioexp_clear_set(0, IOEXP_PULLUP_EN);

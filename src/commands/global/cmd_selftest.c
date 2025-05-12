@@ -476,7 +476,7 @@ bool selftest_button(void) {
     // debounce value selected somewhat arbitrarily
     static const uint32_t DEBOUNCE_DELAY_MS = 100;
     // prompt to push button
-    printf("PUSH BUTTON (ANY KEY SKIPS): ");
+    printf("PUSH BUTTON (SPACE TO SKIP): ");
     // wait for button to be pressed
     while (true){
         if(button_get(0)){
@@ -484,7 +484,7 @@ bool selftest_button(void) {
         }   
         //or press key to exit
         char c;
-		if (rx_fifo_try_get(&c) && (c>=' ' && c<='~')) {
+		if (rx_fifo_try_get(&c) && (c==' ')) {
             // if a key is pressed, skip the test
             printf("SKIPPED\r\n");
             return true;
@@ -492,7 +492,7 @@ bool selftest_button(void) {
     }
 
     busy_wait_ms(DEBOUNCE_DELAY_MS);
-    printf("OK\r\nRELEASE BUTTON (ANY KEY SKIPS): ");
+    printf("OK\r\nRELEASE BUTTON (SPACE TO SKIP): ");
     // then wait for button to be released
     while (true){
         if(!button_get(0)){
@@ -500,7 +500,7 @@ bool selftest_button(void) {
         }   
         //or press key to exit
         char c;
-        if (rx_fifo_try_get(&c) && (c>=' ' && c<='~')){
+        if (rx_fifo_try_get(&c) && (c==' ')){
             printf("SKIPPED\r\n");
             return true;
         }

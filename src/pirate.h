@@ -52,6 +52,8 @@
 #define BP_USE_SCOPE
 // #define     BP_USE_BINLOOPBACK
  #define     BP_USE_JTAG
+ #define     BP_USE_PS2
+ #define     BP_USE_USB
 
 // enable display support
 // #define		DISPLAY_USE_HD44780	// is always enabled

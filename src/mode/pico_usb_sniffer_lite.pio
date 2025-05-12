@@ -1,0 +1,222 @@
+; pico usb sniffer lite is the Dreg's fork from:
+;
+;https://github.com/ataradov/usb-sniffer-lite
+;
+; SPDX-License-Identifier: BSD-3-Clause
+; Copyright (c) 2022, Alex Taradov <alex@taradov.com>. All rights reserved.
+;
+; https://github.com/therealdreg/pico-usb-sniffer-lite
+;
+; Copyright (c) [2025] by David Reguera Garcia aka Dreg
+; https://www.rootkit.es
+; X @therealdreg
+; dreg@rootkit.es
+; ---------------------------------------------------------------------------
+; WARNING: DREG'S BULLSHIT CODE X-)
+; ---------------------------------------------------------------------------
+
+
+; Dreg's note: I have tried to document everything as best as possible and make the code and project
+; as accessible as possible for beginners. There may be errors (I am a lazy bastard using COPILOT)
+; if you find any, please make a PR
+
+; I'm still a novice with the Pico SDK & RP2040, so please bear with me if there are unnecessary things ;-)
+
+; I want to avoid mental uncertainty when solving problems and knowing where things are,
+; so ALL the programs in PIO0/1 are in the same place and order in each execution.
+
+; https://www.usbmadesimple.co.uk/
+; https://www.beyondlogic.org/usbnutshell/usb1.shtml
+; USB Documentation - Christopher D Leary and Devrin Talen (pdf)
+
+; Ported & adapted by Dreg to PICO SDK from:
+; https://github.com/ataradov/usb-sniffer-lite by Alex Taradov
+
+; For LOW SPEED:
+; PIO0 & PIO1 Must run at 15 MHz (each PIO cycle is 64 ns / 0.064 us / 0.000064 ms)
+; USB LOW SPEED 1.5 Mbit/s = 1.5 MHz (each cycle is 666.66 ns / 0.66 us / 0.00066 ms)
+; So, PIO0 & PIO1 is running 10 times faster than USB LOW SPEED
+
+; For FULL SPEED:
+; PIO0 & PIO1 Must run at 120 MHz (each PIO cycle is 8.33 ns / 0.00833 us / 0.00000833 ms)
+; USB FULL SPEED 12 Mbit/s = 12 MHz (each cycle is 83.33 ns / 0.083 us / 0.000083 ms)
+; So, PIO0 & PIO1 is running 10 times faster than USB FULL SPEED
+
+; WARNING: RP clock must be set to 120 MHz to ensure that the PIO (Programmable Input/Output)
+; can accurately capture USB signals.
+; Using the default clock settings (125 MHz) can cause capture errors because the clock divider
+; for the PIO is not an exact multiple for achieving the required 1.5 MHz USB low-speed clock.
+
+
+; ---- TEMPLATE AREA ---------------------------------------------------------------------
+
+; these templates are used to replace the NOP instructions in the tar_pio0 program
+
+.program usb_low_speed_template
+    wait 1 PIN 1             ; 01 Wait until the bus goes idle
+    wait 0 PIN 1             ; 02 Wait for the SOP
+
+.program usb_full_speed_template
+    wait 1 PIN 0             ; 01 Wait until the bus goes idle
+    wait 0 PIN 0             ; 02 Wait for the SOP
+
+
+; ---- PIO0 AREA ---------------------------------------------------------------------
+
+.program tar_pio0
+; This PIO program does not handle bit stuffing, which is a technique used in USB communication to ensure signal integrity.
+; Bit stuffing involves inserting extra bits into the data stream to prevent long sequences of identical bits.
+; The host is responsible for removing these extra bits from the captured data.
+
+; This PIO program captures data from the D+ line without handling NRZI (Non-Return-to-Zero Inverted) encoding.
+; NRZI is a binary encoding technique where a logical '0' is represented by a transition in the signal level,
+; and a logical '1' is represented by no change. By not managing NRZI encoding, this program relies on the host
+; system to decode the NRZI signals and accurately detect bit transitions.
+
+; This PIO program captures USB data from the D+ and D- lines of the USB bus. It detects the start of a packet
+; (SOP, EOP) by monitoring both lines, but for the actual data capture, only the D+ line is sampled.
+; This approach simplifies the data capture process. The program relies on the host system to decode the
+; captured data and handle any necessary bit stuffing or NRZI decoding.
+
+; Must be started by the PIO1 program, which sends a START SIGNAL to synchronize the data capture process.
+; It waits for a START SIGNAL from the PIO1 program to synchronize the data capture process.
+; The program captures the data and sends it to the host using the FIFO.
+; The program also detects the end of packet (EOP) condition and sends the bit count to the host.
+; The program uses the OSR to sample the D+ and D- lines, and it uses the X register to count the bits.
+
+; This PIO program outputs data to the host in sequences of TWO 32-bit packets for each captured sample:
+; 1. (32-bit packet) data, limited to 31 bits. Highest bit can be used to distinguish size (end of packet) from the data bits
+; 2. (32-bit packet) size in bits of the captured data (0xffffffff minus the sample count)
+; Do not confuse the data packet being 32 bits with the sampled data bits always being 32 bits. Ex: There can be
+; packets with fewer sampled bits, and for that, the size packet is used to indicate how many bits have been sampled.
+; Sometimes 0xffffffff appears as the size value when the actual sample size is 0,
+; such as during a line reset. This indicates a valid start-of-packet marker that lacks a synchronization
+; field. Importantly, 0xffffffff is only pushed as the size part, never as additional data.
+
+; Using 0xffffffff as a counter is necessary due to the limitations of the PIO instructions.
+; We are using the counter in reverse, decrementing from 0xffffffff to 0, to count the bits.
+
+; This PIO program does not track/count time by itself. So, time should be calculated by the host
+; after the last element is read from the PIO.
+; The host knows the speed at which the PIO runs and how many cycles everything takes, so it is easy to
+; calculate the time between samples etc.
+
+; The instructions "mov OSR, ::PINS" followed by "out Y, 2" capture the state of the D+ and D- lines,
+; while ignoring the START SIGNAL pin. This ensures that only the USB data lines (D+ and D-) are sampled.
+; The bit reverse operation "::PINS" is performed to exclude the START SIGNAL pin when outputting to Y,
+; because the original PIN order is D+, D-, START SIGNAL. Therefore, the bit reverse operation is necessary.
+
+; The entry point for this program is the last instruction (31), which is executed using:
+; pio_sm_exec(pio0, pio0_sm, pio_encode_jmp(31));
+
+; WARNING: This PIO program must be exactly 32 instructions long.
+; When the program counter (PC) reaches 31, it resets to 0, causing the PIO program to
+; start again from the beginning.
+; This PIO program uses the WRAP feature in one part to restart the program, and also
+; leverages the automatic PC reset to 0 in another part.
+; Essentially, it functions as if it has two wraps!
+
+; FIFO_JOIN_RX: RX FIFO length: 8, TX FIFO is disabled
+; IN PIN 0: D+
+; IN PIN 1: D-
+; IN PIN 2: START SIGNAL
+; JMP PIN: D+ (LOW SPEED) / D- (FULL SPEED)
+; shift ISR to left, autopush: true, threshold: 31 bits
+; shift OSR to left, autopull: false, threshold: 32 bits
+.wrap_target
+idle:
+    mov X, !NULL             ; 00 Initialize the bit counter to its maximum value (0xffffffff)
+ ; these two nop instruction must be replaced by one template before using the program:
+    nop                      ; 01 Wait until the bus goes idle
+    nop                      ; 02 Wait for the SOP
+start0:
+    nop [1]                  ; 03 Skip to the middle of the bit
+read0:
+    jmp X-- pio0_label_4     ; 04 Decrement the bit counter
+pio0_label_4:
+    in PINS, 1               ; 05 Sample D+
+    mov OSR, ::PINS          ; 06 Sample D+ and D- (bit reverse)
+    out Y, 2                 ; 07
+    jmp !Y eop               ; 08 If both are 0, then it is an EOP
+    nop [3]                  ; 09 Skip to the middle of the bit
+    jmp PIN read0            ; 10 If D- is high, then D+ is low, read 0
+read1:
+    jmp X-- pio0_label_6     ; 11 Decrement the bit counter
+pio0_label_6:
+    in PINS, 1               ; 12 Sample D+
+    mov OSR, ::PINS          ; 13 Sample D+ and D- (bit reverse)
+    out Y, 2                 ; 14
+    jmp !Y eop               ; 15 If both are 0, then it is an EOP
+    jmp PIN start0           ; 16 Look for a low to high transition on
+    jmp PIN start0           ; 17 D- to adjust the sample point location
+    jmp PIN start0           ; 18
+    jmp PIN start0           ; 19
+    jmp read1                ; 20
+eop:
+    push noblock             ; 21 Transfer the last data
+    mov ISR, X               ; 22 Transfer the bit count
+    push noblock             ; 23
+poll_reset:
+    set X, 31                ; 24
+poll_loop:
+    mov OSR, ::PINS          ; 25 Sample D+ and D- (bit reverse)
+    out Y, 2                 ; 26
+    jmp Y-- idle             ; 27 If either is not zero, back to idle
+    jmp X-- poll_loop        ; 28
+    mov ISR, !NULL           ; 29 ISR is filled with 0xffffffff
+    push noblock             ; 30
+.wrap
+    wait 1 PIN 2             ; 31 Entry point, wait for a START signal from the PIO1
+; At this point PC goes to first instruction of the PIO program (see rp2040-datasheet.pdf)
+; After executing an instruction from the program memory, state machines use the
+; following logic to update PC:
+;     1. If the current instruction is a JMP, and the Condition is true, set PC to the Target
+;     2. Otherwise, if PC matches EXECCTRL_WRAP_TOP, set PC to EXECCTRL_WRAP_BOTTOM
+;     3. Otherwise, increment PC, or set to 0 if the current value is 31. <-- This is the case
+
+
+
+; ---- PIO1 AREA ---------------------------------------------------------------------
+
+.program tar_pio1
+; This PIO program waits for a Single-Ended Zero (SE0) condition on the USB bus.
+; SE0 is a state where both the D+ and D- lines are pulled low.
+; Once SE0 is detected, the program sends a START SIGNAL (using a specified PIN) to PIO0.
+; This is used to synchronize the PIO0 programs and start the data capture process.
+
+; This PIO program moves the value of D+ and D- (bit reverse)
+; to Y and performs a JMP Y-- wait_se0. In this way, if D+ and D- are different from 0,
+; it stays in the wait_se0 loop, but if both D+ and D- are 0, it sends the START SIGNAL.
+; Before sending the START SIGNAL, it CHECKS that both D+ and D- are 0 for several cycles
+; to ensure it is a valid SE0.
+
+; SET PIN 0: START SIGNAL
+; IN PIN 0: D+
+; IN PIN 1: D-
+; IN PIN 2: START SIGNAL
+    set pindirs, 1           ; Set the START output
+    set pins, 0              ; Set the START output LOW
+.wrap_target
+    nop [31]                 ; 00 Wait for the PIO0 to start
+    nop [31]                 ; 01
+    nop [31]                 ; 02
+    nop [31]                 ; 03
+wait_se0:
+    mov OSR, ::PINS          ; 04 (bit reverse)
+    out Y, 2                 ; 05
+    jmp Y-- wait_se0         ; 06
+    mov OSR, ::PINS          ; 07 (bit reverse)
+    out Y, 2                 ; 08
+    jmp Y-- wait_se0         ; 09
+    mov OSR, ::PINS          ; 10 (bit reverse)
+    out Y, 2                 ; 11
+    jmp Y-- wait_se0         ; 12
+    mov OSR, ::PINS          ; 13 (bit reverse)
+    out Y, 2                 ; 14
+    jmp Y-- wait_se0         ; 15
+    set PINS, 1              ; 16 Set the START output HIGH
+    ; BP HACK
+    ; irq nowait 0         ; 16 Set the START output HIGH
+infinite_loop:
+    jmp infinite_loop        ; 17
+.wrap

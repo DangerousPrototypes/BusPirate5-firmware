@@ -244,6 +244,14 @@ set(buspirate_common
         lib/bluetag/src/blueTag.h
         lib/bluetag/src/jep106.inc
 
+        # PS2
+        mode/ps2.h
+        mode/ps2.c
+
+        # USB
+        mode/usb.h
+        mode/usb.c
+
         # DUMMY MODE
         mode/dummy1.c
         mode/dummy1.h 
@@ -547,6 +555,8 @@ set(stdlibs
 # Compile the various PIO programs to generate the header files
 foreach(revision ${revisions})
         ADD_DEPENDENCIES (${revision} timestamp)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/pico_ps2_sniffer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/pico_usb_sniffer_lite.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw2wire.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw3wire.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwi2c.pio)

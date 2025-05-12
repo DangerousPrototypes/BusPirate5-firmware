@@ -43,8 +43,8 @@ void i_info_handler(struct command_result* res) {
 
     // Hardware information
     printf("\r\n%sThis device complies with part 15 of the FCC Rules. Operation is subject to the following two "
-           "conditions: (1) this device may not cause harmful interference, and (2) this device must accept any "
-           "interference received, including interference that may cause undesired operation.%s\r\n\r\n",
+           "conditions:\r\n(1) this device may not cause harmful interference, and \r\n(2) this device must accept any "
+           "interference received, including interference that may cause undesired operation.%s\r\n",
            ui_term_color_info(),
            ui_term_color_reset());
 

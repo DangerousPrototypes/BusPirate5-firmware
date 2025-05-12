@@ -98,7 +98,7 @@ uint32_t hwi2c_setup(void) {
     const mode_config_t config_t[] = {
         // clang-format off
         { "$.baudrate", &mode_config.baudrate, MODE_CONFIG_FORMAT_DECIMAL },
-        { "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },
+        /*{ "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },*/
         { "$.clock_stretch", (uint32_t*)&mode_config.clock_stretch, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };

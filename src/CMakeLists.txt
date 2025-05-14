@@ -382,6 +382,10 @@ set(buspirate_common
         msc_disk.c
         msc_disk.h
         usb_descriptors.c
+
+	# USBPD 
+        mode/usbpd.c
+        mode/usbpd.h
 )
 
 set(buspirate_nandflash

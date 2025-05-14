@@ -53,6 +53,9 @@
 #ifdef BP_USE_JTAG
 #include "mode/jtag.h"
 #endif
+#ifdef BP_USE_USBPD
+#include "mode/usbpd.h"
+#endif
 
 // nulfuncs
 // these are the dummy functions when something ain't used
@@ -628,6 +631,37 @@ struct _mode modes[] = {
         .mode_commands = NULL,                    // mode specific commands
         .mode_commands_count = 0,                 // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error, // get the current speed setting of the protocol
+    },
+#endif
+#ifdef BP_USE_USBPD
+    {
+        .protocol_name = "USBPD",                        // friendly name (promptname)
+        .protocol_start = nullfunc1_temp,                // start
+        .protocol_start_alt = nullfunc1_temp,            // start with read
+        .protocol_stop = nullfunc1_temp,                 // stop
+        .protocol_stop_alt = nullfunc1_temp,             // stop with read
+        .protocol_write = nullfunc1_temp,                // send(/read) max 32 bit
+        .protocol_read = nullfunc1_temp,                 // read max 32 bit
+        .protocol_clkh = nullfunc1_temp,                 // set clk high
+        .protocol_clkl = nullfunc1_temp,                 // set clk low
+        .protocol_dath = nullfunc1_temp,                 // set dat hi
+        .protocol_datl = nullfunc1_temp,                 // set dat lo
+        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
+        .protocol_tick_clock = nullfunc1_temp,           // tick clk
+        .protocol_bitr = nullfunc1_temp,                 // read dat
+        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
+        .protocol_macro = nullfunc4,                     // macro
+        .protocol_setup = usbpd_setup,                   // setup UI
+        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
+        .binmode_setup = nullfunc8_error,                // setup for binmode
+        .protocol_setup_exc = usbpd_setup_exc,           // real setup
+        .protocol_cleanup = usbpd_cleanup,               // cleanup for HiZ
+        .protocol_settings = usbpd_settings,          // display settings
+        .protocol_help = usbpd_help,                  // display small help about the protocol
+        .mode_commands = usbpd_commands,              // mode specific commands
+        .mode_commands_count = &usbpd_commands_count, // mode specific commands count
+        .protocol_get_speed = nullfunc7_no_error,     // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = NULL,      // sanity check before executing syntax
     },
 #endif
 

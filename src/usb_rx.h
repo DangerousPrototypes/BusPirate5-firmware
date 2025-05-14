@@ -1,3 +1,6 @@
+#include "queue.h"
+extern queue_t rx_fifo;
+extern queue_t bin_rx_fifo;
 void rx_fifo_init(void);
 void rx_uart_init_irq(void);
 void rx_usb_init(void);

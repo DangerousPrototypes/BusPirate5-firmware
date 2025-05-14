@@ -118,7 +118,7 @@ uint32_t hwhduart_setup(void) {
 
     prompt_result result;
 
-    const char config_file[] = "bphwuart.bp";
+    const char config_file[] = "bphduart.bp";
 
     const mode_config_t config_t[] = {
         // clang-format off

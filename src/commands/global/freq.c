@@ -92,7 +92,7 @@ uint32_t freq_print(uint8_t pin, bool refresh) {
 
     freq_display_ns(&freq_ns_value, &ns_friendly_value, &ns_friendly_units);
 
-    printf("%s%s%s IO%s%d%s: %s%.2f%s%s %s%.2f%s%s (%s%.0f%sHz), %s%s:%s %s%.1f%s%%\r%s",
+    printf("\e[0K%s%s%s IO%s%d%s: %s%.2f%s%s %s%.2f%s%s (%s%.0f%sHz), %s%s:%s %s%.1f%s%%\r%s",
            ui_term_color_info(),
            GET_T(T_MODE_FREQ_FREQUENCY),
            ui_term_color_reset(),

@@ -327,7 +327,7 @@ float freq_measure_period(uint gpio) {
     // Only the PWM B pins can be used as inputs.
     assert(pwm_gpio_to_channel(gpio) == PWM_CHAN_B);
     uint slice_num = pwm_gpio_to_slice_num(gpio);
-
+    pwm_set_enabled(slice_num, false);
     pwm_config cfg = pwm_get_default_config();
     pwm_config_set_clkdiv_mode(&cfg, PWM_DIV_B_RISING);
     pwm_config_set_clkdiv(&cfg, 1);
@@ -359,7 +359,7 @@ float freq_measure_duty_cycle(uint gpio) {
     // Only the PWM B pins can be used as inputs.
     assert(pwm_gpio_to_channel(gpio) == PWM_CHAN_B);
     uint slice_num = pwm_gpio_to_slice_num(gpio);
-
+    pwm_set_enabled(slice_num, false);
     // Count once for every div cycles the PWM B input is high
     pwm_config cfg = pwm_get_default_config();
     pwm_config_set_clkdiv_mode(&cfg, PWM_DIV_B_HIGH);

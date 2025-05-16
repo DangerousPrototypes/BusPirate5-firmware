@@ -180,7 +180,7 @@ uint32_t hwled_setup_exc(void) {
     }
     device_cleanup = mode_config.device;
     system_config.subprotocol_name = led_device_type[mode_config.device];
-    system_config.num_bits=32;
+    system_config.num_bits=24;
     return 1;
 }
 

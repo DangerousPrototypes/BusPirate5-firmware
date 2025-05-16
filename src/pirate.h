@@ -86,6 +86,7 @@
         #define BP_HW_IOEXP_SPI 1
         #define RPI_PLATFORM RP2040
         #define BP_HW_PSU_PWM 1
+        #define HW_ADC_MUX_CURRENT_DETECT
     #elif BP_VER == XL5
         #include "platform/bpi5xl-rev0.h"
         #define RPI_PLATFORM RP2350

@@ -268,12 +268,13 @@ uint32_t freq_measure(int32_t pin, int refresh) {
 
 // we pre-calculate the disable bitmask for the enable function
 // to avoid blowing out active PWM when we're done with a FREQ measure
-static uint32_t freq_irq_disable_bitmask;
+static volatile uint32_t freq_irq_disable_bitmask;
 // frequency measurement
 int64_t freq_timer_callback(alarm_id_t id, void* user_data) {
     // disable all at once (but leave any other PWM slices running)
     // turn off only the ones we turned on and don't turn on any other that weren't running already
     pwm_set_mask_enabled(freq_irq_disable_bitmask & pwm_hw->en);
+    freq_irq_disable_bitmask = 0;
     for (uint8_t i = 0; i < count_of(bio2bufiopin); i++) {
         if (system_config.freq_active & (0x01 << i)) {
             uint slice_num = pwm_gpio_to_slice_num(bio2bufiopin[i]);
@@ -294,6 +295,9 @@ void freq_measure_period_irq(void) {
     if (system_config.freq_active == 0) {
         return;
     }
+    //dont do anything if the counters are running
+    if (freq_irq_disable_bitmask)
+        return;
 
     for (uint8_t i = 0; i < count_of(bio2bufiopin); i++) {
         if (system_config.freq_active & (0x01 << i)) {
@@ -309,15 +313,6 @@ void freq_measure_period_irq(void) {
             // build mask, slices 0-7...
             mask |= (0x01 << slice_num);
         }
-
-        // we pre-calculate the disable bitmask for the enable function
-        // to avoid blowing out active PWM when we're done with a FREQ measure
-        if (system_config.pwm_active & (0x01 << i)) {
-            uint slice_num = pwm_gpio_to_slice_num(bio2bufiopin[i]);
-            // build mask, slices 0-7...
-            mask |= (0x01 << slice_num);
-            //freq_irq_disable_bitmask = (0x01 << slice_num);
-        }
     }
 
     freq_irq_disable_bitmask = ~mask;
@@ -332,7 +327,7 @@ float freq_measure_period(uint gpio) {
     // Only the PWM B pins can be used as inputs.
     assert(pwm_gpio_to_channel(gpio) == PWM_CHAN_B);
     uint slice_num = pwm_gpio_to_slice_num(gpio);
-
+    pwm_set_enabled(slice_num, false);
     pwm_config cfg = pwm_get_default_config();
     pwm_config_set_clkdiv_mode(&cfg, PWM_DIV_B_RISING);
     pwm_config_set_clkdiv(&cfg, 1);
@@ -364,7 +359,7 @@ float freq_measure_duty_cycle(uint gpio) {
     // Only the PWM B pins can be used as inputs.
     assert(pwm_gpio_to_channel(gpio) == PWM_CHAN_B);
     uint slice_num = pwm_gpio_to_slice_num(gpio);
-
+    pwm_set_enabled(slice_num, false);
     // Count once for every div cycles the PWM B input is high
     pwm_config cfg = pwm_get_default_config();
     pwm_config_set_clkdiv_mode(&cfg, PWM_DIV_B_HIGH);

@@ -63,7 +63,9 @@ bool ui_help_show(bool help_flag,
                   uint32_t count_of_options) {
     if (help_flag) {
         ui_help_usage(usage, count_of_usage);
-        ui_help_options(&options[0], count_of_options);
+        if(options[0].description!=0) {
+            ui_help_options(&options[0], count_of_options);
+        }
         return true;
     }
     return false;

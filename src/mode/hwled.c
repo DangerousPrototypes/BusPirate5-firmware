@@ -141,7 +141,8 @@ uint32_t hwled_setup_exc(void) {
                                 pio_config.offset,
                                 bio2bufiopin[M_LED_SDO],
                                 (float)mode_config.baudrate,
-                                false);            
+                                false);  
+            system_config.num_bits=24;          
             break;
         case M_LED_APA102:
             system_bio_update_purpose_and_label(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
@@ -162,7 +163,7 @@ uint32_t hwled_setup_exc(void) {
                                      mode_config.baudrate,
                                      bio2bufiopin[M_LED_SCL],
                                      bio2bufiopin[M_LED_SDO]);
-            
+            system_config.num_bits=32;            
             break;
         case M_LED_WS2812_ONBOARD: // internal LEDs, stop any in-progress stuff
             rgb_irq_enable(false);
@@ -170,6 +171,7 @@ uint32_t hwled_setup_exc(void) {
             pio_config.pio = PIO_RGB_LED_PIO;
             pio_config.sm = PIO_RGB_LED_SM;
             mode_config.baudrate = 800000;
+            system_config.num_bits=24;
             #if BP_VER == 5
                 logic_analyzer_set_base_pin(RGB_CDO);
             #endif
@@ -180,7 +182,7 @@ uint32_t hwled_setup_exc(void) {
     }
     device_cleanup = mode_config.device;
     system_config.subprotocol_name = led_device_type[mode_config.device];
-    system_config.num_bits=24;
+
     return 1;
 }
 
@@ -249,10 +251,10 @@ void hwled_write(struct _bytecode* result, struct _bytecode* next) {
             //       only set to full brightness if the top bits from caller are zero
             //       otherwise, allow the caller to set the global brightness bits for
             //       more advanced brightness setting.
-            if ((result->out_data & 0xE0000000) == 0) {
+            /*if ((result->out_data & 0xE0000000) == 0) {
                 result->out_data|=(0xff<<24);
                 //pio_sm_put_blocking(pio_config.pio, pio_config.sm, ((0xff<<24)|result->out_data));
-            }//else{
+            }//else{*/
                 pio_sm_put_blocking(pio_config.pio, pio_config.sm, result->out_data);
             //}
             break;

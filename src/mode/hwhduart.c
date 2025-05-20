@@ -190,7 +190,7 @@ bool hwhduart_preflight_sanity_check(void){
 void hwhduart_periodic(void) {
     uint32_t raw;
     uint8_t cooked;
-    if (hwuart_pio_read(&raw, &cooked)) {
+    if (mode_config.async_print && hwuart_pio_read(&raw, &cooked)) {
         // printf("PIO: 0x%04X ", raw);
         printf("0x%02x ", cooked);
         // ui_format_print_number_2(&periodic_attributes,  &cooked);

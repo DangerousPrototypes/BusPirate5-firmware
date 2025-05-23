@@ -56,6 +56,9 @@
 #ifdef BP_USE_USBPD
 #include "mode/usbpd.h"
 #endif
+#ifdef BP_USE_I2S
+#include "mode/i2s.h"
+#endif
 
 // nulfuncs
 // these are the dummy functions when something ain't used
@@ -507,6 +510,37 @@ struct _mode modes[] = {
         .mode_commands_count = &jtag_commands_count, // mode specific commands count
         .protocol_get_speed = jtag_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = jtag_preflight_sanity_check,      // sanity check before executing syntax
+    },
+#endif
+#ifdef BP_USE_I2S
+    {
+        .protocol_name = "I2S",                       // friendly name (promptname)
+        .protocol_start = i2s_start,                  // start
+        .protocol_start_alt = i2s_start,              // start with read
+        .protocol_stop = i2s_stop,                    // stop
+        .protocol_stop_alt = i2s_stop,                // stop with read
+        .protocol_write = i2s_write,                  // send(/read) max 32 bit
+        .protocol_read = i2s_read,                    // read max 32 bit
+        .protocol_clkh = i2s_clkh,                    // set clk high
+        .protocol_clkl = i2s_clkl,                    // set clk low
+        .protocol_dath = i2s_dath,                    // set dat hi
+        .protocol_datl = i2s_datl,                    // set dat lo
+        .protocol_dats = i2s_dats,                    // toggle dat (?)
+        .protocol_tick_clock = i2s_clk,               // toggle clk (?)
+        .protocol_bitr = i2s_bitr,                    // read 1 bit (?)
+        .protocol_periodic = i2s_periodic,            // service to regular poll whether a byte ahs arrived
+        .protocol_macro = nullfunc4,                  // macro
+        .protocol_setup = i2s_setup,                  // setup UI
+        .binmode_get_config_length = nullfunc7_no_error, // binmode get length of config data
+        .binmode_setup = nullfunc8_error,                // binmode setup
+        .protocol_setup_exc = i2s_setup_exc,          // real setup
+        .protocol_cleanup = i2s_cleanup,              // cleanup for HiZ
+        //.protocol_pins=i2s_pins,				// display pin config
+        .protocol_settings = i2s_settings,          // display settings
+        .protocol_help = i2s_help,                  // display small help about the protocol
+        .mode_commands = i2s_commands,              // mode specific commands
+        .mode_commands_count = &i2s_commands_count, // mode specific commands count
+        .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
     },
 #endif
 #ifdef BP_USE_DUMMY1

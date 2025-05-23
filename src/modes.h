@@ -49,6 +49,9 @@ enum {
 #ifdef BP_USE_USBPD
     USBPD,
 #endif
+#ifdef BP_USE_I2S
+    I2S,
+#endif
     MAXPROTO
 };
 

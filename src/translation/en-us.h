@@ -234,7 +234,7 @@ static char const * const en_us[]={
 	[T_CMDLN_CAT]="cat <file> - print the contents of <file>.",
 	[T_CMDLN_MODE]="m - change protocol mode. m <mode number> to skip the menu.",
 	[T_CMDLN_PSU_EN]="W - enable onboard power supply, show configuration menu.",
-	[T_CMDLN_RESET]="# - reset and restart the Bus Pirate.",
+	[T_CMDLN_RESET]="reset - reset and restart the Bus Pirate.",
 	[T_CMDLN_BOOTLOAD]="$ - reset and enter bootloader mode for updates.",
 	[T_CMDLN_INT_FORMAT]="= <value> - convert <value> to BIN/DEC/HEX/ASCII.",
 	[T_CMDLN_INT_INVERSE]="| <value> - inverse the bits in <value>.",

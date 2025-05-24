@@ -544,7 +544,7 @@
         "DataTypes": []
     },
     "T_CMDLN_RESET": {
-        "Localized": "# - poništite postavke i ponovno pokrenite Bus Pirate.",
+        "Localized": "reset - poništite postavke i ponovno pokrenite Bus Pirate.",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []

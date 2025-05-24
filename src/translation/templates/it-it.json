@@ -682,8 +682,8 @@
         "DataTypes": []
     },
     "T_CMDLN_RESET": {
-        "Localized": "# - resetta e riavvia Bus Pirate.",
-        "EN_US": "# - reset and restart the Bus Pirate.",
+        "Localized": "reset - resetta e riavvia Bus Pirate.",
+        "EN_US": "reset - reset and restart the Bus Pirate.",
         "Comments": null,
         "DataTypes": []
     },

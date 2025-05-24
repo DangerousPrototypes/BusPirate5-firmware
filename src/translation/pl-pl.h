@@ -228,7 +228,7 @@ static char const * const pl_pl[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_CMDLN_CAT                      ] = "cat {plik} - wyświetla zawartość {pliku}.",
     [ T_CMDLN_MODE                     ] = "m - zmienia tryb protokołu, pokazuje menu wyboru.",
     [ T_CMDLN_PSU_EN                   ] = "W - włącza zasilanie na płytce, pokazuje menu konfiguracji.",
-    [ T_CMDLN_RESET                    ] = "# - resetuje i restartuje Bus Pirate'a.",
+    [ T_CMDLN_RESET                    ] = "reset - resetuje i restartuje Bus Pirate'a.",
     [ T_CMDLN_BOOTLOAD                 ] = "$ - resetuje i wchodzi w tryb bootloadera do aktualizacji.",
     [ T_CMDLN_INT_FORMAT               ] = "= {wartość} - konwertuje {wartość} do BIN/DEC/HEX/ASCII.",
     [ T_CMDLN_INT_INVERSE              ] = "| {wartość} - inwertuje bity {wartośći}.",

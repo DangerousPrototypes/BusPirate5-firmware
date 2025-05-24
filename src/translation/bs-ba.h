@@ -228,7 +228,7 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_CMDLN_CAT                      ] = "cat {datoteka} - prikažite sadržaj {datoteka}.",
     [ T_CMDLN_MODE                     ] = "m - promjenite protokol mod, prikažite izbornik.",
     [ T_CMDLN_PSU_EN                   ] = "W - omogućite napojnu jedinicu na ploči, prikažite konfiguracijski izbornik.",
-    [ T_CMDLN_RESET                    ] = "# - poništite postavke i ponovno pokrenite Bus Pirate.",
+    [ T_CMDLN_RESET                    ] = "reset - poništite postavke i ponovno pokrenite Bus Pirate.",
     [ T_CMDLN_BOOTLOAD                 ] = "$ - poništite postavke i otvorite bootloader mod za ažuriranje.",
     [ T_CMDLN_INT_FORMAT               ] = "= {vrijednost} - konvertujte {vrijednost} u BIN/DEC/HEX/ASCII.",
     [ T_CMDLN_INT_INVERSE              ] = "| {vrijednost} - invertirajte bite u {vrijednost}.",

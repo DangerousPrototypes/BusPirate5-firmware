@@ -596,7 +596,7 @@
         "DataTypes": []
     },
     "T_CMDLN_RESET": {
-        "Localized": "# - resetuje i restartuje Bus Pirate'a.",
+        "Localized": "reset - resetuje i restartuje Bus Pirate'a.",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []

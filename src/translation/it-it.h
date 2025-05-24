@@ -228,7 +228,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_CMDLN_CAT                      ] = "cat <file> - stampa il contenuto di <file>.",
     [ T_CMDLN_MODE                     ] = "m - cambia modalità protocollo. m <numero modalità> per saltare il menu.",
     [ T_CMDLN_PSU_EN                   ] = "W - abilita l'alimentazione integrata, mostra il menu di configurazione.",
-    [ T_CMDLN_RESET                    ] = "# - resetta e riavvia Bus Pirate.",
+    [ T_CMDLN_RESET                    ] = "reset - resetta e riavvia Bus Pirate.",
     [ T_CMDLN_BOOTLOAD                 ] = "$ - resetta ed entra in modalità bootloader per gli aggiornamenti.",
     [ T_CMDLN_INT_FORMAT               ] = "= <valore> - converte <valore> in BIN/DEC/HEX/ASCII.",
     [ T_CMDLN_INT_INVERSE              ] = "| <valore> - inverte i bit in <valore>.",

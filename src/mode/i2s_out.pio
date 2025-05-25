@@ -25,7 +25,7 @@
 
 ; Send 16 bit words to the PIO for mono, 32 bit words for stereo
 
-.program audio_i2s
+.program i2s_out
 .side_set 2
 
                     ;        /--- LRCLK
@@ -63,8 +63,8 @@ public entry_point:
 
 % c-sdk {
 
-static inline void audio_i2s_program_init(PIO pio, uint sm, uint offset, uint data_pin, uint clock_pin_base) {
-    pio_sm_config sm_config = audio_i2s_program_get_default_config(offset);
+static inline void i2s_out_program_init(PIO pio, uint sm, uint offset, uint data_pin, uint clock_pin_base) {
+    pio_sm_config sm_config = i2s_out_program_get_default_config(offset);
     
     sm_config_set_out_pins(&sm_config, data_pin, 1);
     sm_config_set_sideset_pins(&sm_config, clock_pin_base);

@@ -34,3 +34,9 @@ void i2s_help(void);
 
 extern const struct _mode_command_struct i2s_commands[];
 extern const uint32_t i2s_commands_count;
+typedef struct _i2s_mode_config {
+    uint32_t freq;
+    uint32_t bits;
+} _i2s_mode_config;
+extern struct _i2s_mode_config i2s_mode_config;
+extern struct _pio_config i2s_pio_config_out,  i2s_pio_config_in;

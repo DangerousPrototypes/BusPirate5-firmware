@@ -224,6 +224,13 @@ static char const * const en_us[]={
 	[T_JTAG_BLUETAG_VERSION]="Show version",
 	[T_JTAG_BLUETAG_DISABLE]="Disable pin pulsing (JTAG mode)",
 	[T_JTAG_BLUETAG_DESCRIPTION]="Find JTAG and SWD pinouts",
+	//I2S
+	[T_I2S_SPEED_MENU]="Sample frequency",
+	[T_I2S_SPEED_MENU_1]="4000, 8000, 16000, 44100, 48000, 96000 etc",
+	[T_I2S_SPEED_PROMPT]="Hz (%s%d*%s)",
+	[T_I2S_DATA_BITS_MENU]="Data bits",
+	[T_I2S_DATA_BITS_MENU_1]="16 bits",
+	[T_I2S_DATA_BITS_PROMPT]="Bits (%s%d*%s)",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",

@@ -1,0 +1,51 @@
+; MIT license
+; Source: https://github.com/mryndzionek/rp2040_pico_sdk_playground
+
+.program i2s_in
+
+.side_set 2
+
+bitloop1:           
+    in pins, 1        side 0b01
+    jmp x-- bitloop1  side 0b00
+    in pins, 1        side 0b11
+    set x, 30         side 0b10
+
+bitloop0:
+    nop               side 0b11
+    jmp x-- bitloop0  side 0b10
+    nop               side 0b01
+public entry_point:
+    set x, 30         side 0b00
+
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void i2s_in_program_init(PIO pio, uint sm, uint offset, uint samplerate, uint data_pin, uint clock_pin_base) {
+    pio_sm_config sm_config = i2s_in_program_get_default_config(offset);
+    
+    sm_config_set_in_pins(&sm_config, data_pin);
+    sm_config_set_sideset_pins(&sm_config, clock_pin_base);
+    sm_config_set_in_shift(&sm_config, false, true, 32);
+    sm_config_set_fifo_join(&sm_config, PIO_FIFO_JOIN_RX);
+
+    sm_config_set_clkdiv(&sm_config, clock_get_hz(clk_sys) / (samplerate * 32 * 2 * 2.0f));
+
+    pio_sm_init(pio, sm, offset, &sm_config);
+
+    uint pin_mask = (1u << data_pin) | (0b11 << clock_pin_base);
+    pio_sm_set_pindirs_with_mask(pio, sm, (0u << data_pin) | (0b11 << clock_pin_base), pin_mask);
+    pio_sm_set_pins(pio, sm, 0); // clear pins
+
+    pio_gpio_init(pio, data_pin);
+    pio_gpio_init(pio, clock_pin_base);
+    pio_gpio_init(pio, clock_pin_base + 1);
+
+    //gpio_pull_down(data_pin);
+
+    pio_sm_exec(pio, sm, pio_encode_jmp(offset + inmp441_offset_entry_point));
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+%}

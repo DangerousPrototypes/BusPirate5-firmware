@@ -20,21 +20,72 @@
 #include "pirate/bio.h" // Buffered pin IO functions
 #include "ui/ui_help.h"
 #include "i2s.h"
-#include "audio_i2s.pio.h"
+#include "i2s_out.pio.h"
+#include "i2s_in.pio.h"
 #include "pio_config.h"
 #include "hardware/clocks.h"
 #include "hardware/pio.h"
+#include "ui/ui_prompt.h"
+#include "pirate/storage.h"
+#include "ui/ui_term.h"
+#include "commands/i2s/sine.h" // sine wave generation functions
 
 static uint32_t returnval;
-static struct _pio_config pio_config;
+struct _pio_config i2s_pio_config_out,  i2s_pio_config_in;
+struct _i2s_mode_config i2s_mode_config;
 
 // command configuration
-const struct _mode_command_struct i2s_commands[] = { 0 };
+const struct _mode_command_struct i2s_commands[] = { 
+    {   .command="sine", 
+        .func=&sine_handler, 
+        .description_text=T_HELP_UART_NMEA, 
+        .supress_fala_capture=false
+    },
+ };
 const uint32_t i2s_commands_count = count_of(i2s_commands);
 
 // Pin labels shown on the display and in the terminal status bar
 // No more than 4 characters long
-static const char pin_labels[][5] = { "DATA", "CLK", "WS" };
+static const char pin_labels[][5] = { "DATO", "CLKO", "WSO", "DATI", "CLKI", "WSI" };
+
+
+static const struct prompt_item i2s_speed_menu[] = { { T_I2S_SPEED_MENU_1 } };
+static const struct prompt_item i2s_data_bits_menu[] = { { T_I2S_DATA_BITS_MENU_1 } };
+
+static const struct ui_prompt i2s_menu[] = { 
+    [0] = { .description = T_I2S_SPEED_MENU,
+    .menu_items = i2s_speed_menu,
+    .menu_items_count = count_of(i2s_speed_menu),
+    .prompt_text = T_I2S_SPEED_PROMPT,
+    .minval = 4000,
+    .maxval = 96000,
+    .defval = 44100,
+    .menu_action = 0,
+    .config = &prompt_int_cfg },
+    [1] = { .description = T_I2S_DATA_BITS_MENU,
+    .menu_items = i2s_data_bits_menu,
+    .menu_items_count = count_of(i2s_data_bits_menu),
+    .prompt_text = T_I2S_DATA_BITS_PROMPT,
+    .minval = 16,
+    .maxval = 16,
+    .defval = 16,
+    .menu_action = 0,
+    .config = &prompt_int_cfg }
+};
+
+void i2s_settings(void) {
+    ui_prompt_mode_settings_int(GET_T(T_I2S_SPEED_MENU), i2s_mode_config.freq, GET_T(T_HZ));
+    ui_prompt_mode_settings_int(GET_T(T_I2S_DATA_BITS_MENU), i2s_mode_config.bits, GET_T(T_UART_STOP_BITS_PROMPT));
+}
+
+static bool update_pio_frequency(uint32_t sample_freq, bool enable) {
+    uint32_t system_clock_frequency = clock_get_hz(clk_sys);
+    if(!(system_clock_frequency < 0x40000000)) return false; // sanity check;
+    uint32_t divider = system_clock_frequency * 4 / sample_freq; // avoid arithmetic overflow
+    if(!(divider < 0x1000000)) return false; // sanity check, divider must be less than 2^24
+    if(enable) pio_sm_set_clkdiv_int_frac(i2s_pio_config_out.pio,  i2s_pio_config_out.sm, divider >> 8u, divider & 0xffu);
+    return true; // return true if the frequency was set successfully
+}
 
 // Pre-setup step. Show user menus for any configuration options.
 // The Bus Pirate hardware is not "clean" and reset at this point.
@@ -42,21 +93,54 @@ static const char pin_labels[][5] = { "DATA", "CLK", "WS" };
 // the user may cancel out of the menu and return to the previous mode.
 // Don't touch hardware yet, save the settings in variables for later.
 uint32_t i2s_setup(void) {
-    printf("\r\n-i2s- setup()\r\n");
+    prompt_result result;
+
+    const char config_file[] = "bpi2s.bp";
+    const mode_config_t config_t[] = {
+        // clang-format off
+        { "$.freq", &i2s_mode_config.freq, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.bits", &i2s_mode_config.bits, MODE_CONFIG_FORMAT_DECIMAL },
+        // clang-format off
+    };    
+
+    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+        i2s_settings();
+        bool user_value;
+        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
+            return 0;
+        }
+        if (user_value) {
+            return 1; // user said yes, use the saved settings
+        }
+    }
+
+    uint32_t new_freq;
+    do {
+        // Show the user the menu and get the frequency
+        ui_prompt_uint32(&result, &i2s_menu[0], &new_freq);
+        if (result.exit) {
+            return 0; // user exited the menu
+        }
+    } while(!update_pio_frequency(new_freq, false)); 
+
+    uint32_t new_bits;
+    ui_prompt_uint32(&result, &i2s_menu[1], &new_bits);
+    if (result.exit) {
+        return 0;
+    }
+    i2s_mode_config.freq = new_freq; // save the frequency
+    i2s_mode_config.bits = (uint8_t)new_bits;
+
+    storage_save_mode(config_file, config_t, count_of(config_t));
+
     return 1;
 }
 
-static void update_pio_frequency(uint32_t sample_freq) {
-    uint32_t system_clock_frequency = clock_get_hz(clk_sys);
-    assert(system_clock_frequency < 0x40000000);
-    uint32_t divider = system_clock_frequency * 4 / sample_freq; // avoid arithmetic overflow
-    assert(divider < 0x1000000);
-    pio_sm_set_clkdiv_int_frac(pio_config.pio,  pio_config.sm, divider >> 8u, divider & 0xffu);
-}
 
 // Setup execution. This is where we actually configure any hardware.
 uint32_t i2s_setup_exc(void) {
-    // I2S has DATA, CLOCK, WORD_SELECT (L/R)
+    // I2S OUTPUT has DATA, CLOCK, WORD_SELECT (L/R)
     bio_output(BIO0);
     bio_output(BIO1);
     bio_output(BIO2);
@@ -65,15 +149,32 @@ uint32_t i2s_setup_exc(void) {
     gpio_set_function(bio2bufiopin[BIO1], GPIO_FUNC_PIO1);
     gpio_set_function(bio2bufiopin[BIO2], GPIO_FUNC_PIO1);
     
-    pio_config.pio = PIO_MODE_PIO;
-    pio_config.sm = 0;
-    pio_config.program = &audio_i2s_program;
-    pio_config.offset = pio_add_program(pio_config.pio, pio_config.program);
+    i2s_pio_config_out.pio = PIO_MODE_PIO;
+    i2s_pio_config_out.sm = 0;
+    i2s_pio_config_out.program = &i2s_out_program;
+    i2s_pio_config_out.offset = pio_add_program(i2s_pio_config_out.pio, i2s_pio_config_out.program);
 #ifdef BP_PIO_SHOW_ASSIGNMENT
-    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(i2s_pio_config_out.pio), i2s_pio_config_out.sm, i2s_pio_config_out.offset);
 #endif
+    i2s_out_program_init(i2s_pio_config_out.pio,  i2s_pio_config_out.sm, i2s_pio_config_out.offset, bio2bufiopin[BIO0], bio2bufiopin[BIO1]);
 
-    audio_i2s_program_init(pio_config.pio,  pio_config.sm, pio_config.offset, bio2bufiopin[BIO0], bio2bufiopin[BIO1]);
+    // I2S INPUT has DATA, CLOCK, WORD_SELECT (L/R)
+    bio_input(BIO5);
+    bio_output(BIO6);
+    bio_output(BIO7);
+    gpio_set_function(bio2bufiopin[BIO5], GPIO_FUNC_PIO1);
+    gpio_set_function(bio2bufiopin[BIO6], GPIO_FUNC_PIO1);
+    gpio_set_function(bio2bufiopin[BIO7], GPIO_FUNC_PIO1);
+    // Initialize the I2S microphone PIO program
+    i2s_pio_config_in.pio = PIO_MODE_PIO;
+    i2s_pio_config_in.sm = 1; // Use a different state machine for the microphone
+    i2s_pio_config_in.program = &i2s_in_program;
+    i2s_pio_config_in.offset = pio_add_program(i2s_pio_config_in.pio, i2s_pio_config_in.program);
+#ifdef BP_PIO_SHOW_ASSIGNMENT
+    printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(i2s_pio_config_in.pio), i2s_pio_config_in.sm, i2s_pio_config_in.offset);        
+#endif
+    // Initialize the I2S microphone PIO program
+    i2s_in_program_init(i2s_pio_config_in.pio, i2s_pio_config_in.sm, i2s_pio_config_in.offset, i2s_mode_config.freq, bio2bufiopin[BIO5], bio2bufiopin[BIO6]);
 
     // 2. Claim IO pins that are used by your hardware/protocol
     // The Bus Pirate won't let the user manipulate these pins
@@ -81,19 +182,23 @@ uint32_t i2s_setup_exc(void) {
     system_bio_update_purpose_and_label(true, BIO0, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, BIO1, BP_PIN_MODE, pin_labels[1]);
     system_bio_update_purpose_and_label(true, BIO2, BP_PIN_MODE, pin_labels[2]);
+    system_bio_update_purpose_and_label(true, BIO5, BP_PIN_MODE, pin_labels[3]);
+    system_bio_update_purpose_and_label(true, BIO6, BP_PIN_MODE, pin_labels[4]);
+    system_bio_update_purpose_and_label(true, BIO7, BP_PIN_MODE, pin_labels[5]);
 
-    update_pio_frequency(44100); // default sample rate
+    update_pio_frequency(i2s_mode_config.freq, true); // default sample rate
 
-    pio_sm_set_enabled(pio_config.pio,  pio_config.sm, true);
+    pio_sm_set_enabled(i2s_pio_config_out.pio,  i2s_pio_config_out.sm, true);
+    pio_sm_set_enabled(i2s_pio_config_in.pio,  i2s_pio_config_in.sm, true);
 
-    printf("-i2s- setup_exc()\r\n");
+    //printf("-i2s- setup_exc()\r\n");
     return 1;
 }
 
 // Cleanup any configuration on exit.
 void i2s_cleanup(void) {
-    pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
-
+    pio_remove_program(i2s_pio_config_out.pio, i2s_pio_config_out.program, i2s_pio_config_out.offset);
+    pio_remove_program(i2s_pio_config_in.pio, i2s_pio_config_in.program, i2s_pio_config_in.offset);
     // 1. Disable any hardware you used
     bio_init();
 
@@ -101,7 +206,7 @@ void i2s_cleanup(void) {
     system_bio_update_purpose_and_label(false, BIO0, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, BIO1, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, BIO2, BP_PIN_MODE, 0);
-    printf("-i2s- cleanup()\r\n");
+    //printf("-i2s- cleanup()\r\n");
 }
 
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
@@ -141,14 +246,91 @@ void i2s_read(struct _bytecode* result, struct _bytecode* next) {
 // Handler for mode START when user enters the '[' key
 void i2s_start(struct _bytecode* result, struct _bytecode* next) {
     static const char message[] = "-i2s- start()"; // The message to show the user
+    #if 0
+    #define SAMPLE_RATE 44100
+    #define FREQUENCY   1000
+    #define DURATION    1.0 // seconds
+    #define AMPLITUDE   32767 // max for int16_t
+    
+    #ifndef M_PI
+    #define M_PI 3.14159265358979323846
+    #endif
 
-    for(uint32_t i = 0; i < 100; i++) {
-        pio_sm_put_blocking(pio_config.pio, pio_config.sm, 0xFFFFFFFF);
-        pio_sm_put_blocking(pio_config.pio, pio_config.sm, 0x00000000);
+    int total_samples = (int)(SAMPLE_RATE * DURATION);
+
+    printf("Sine wave: %d Hz, %d samples\r\n", FREQUENCY, total_samples);
+
+    for (int i = 0; i < total_samples; i++) {
+        double t = (double)i / SAMPLE_RATE;
+        double s = sin(2 * M_PI * FREQUENCY * t);
+        int16_t sample = (int16_t)(s * AMPLITUDE);
+        pio_sm_put_blocking(i2s_pio_config_out.pio, i2s_pio_config_out.sm, sample << 16 | (sample & 0xFFFF)); // Send the sample to the PIO
+    }  
+        #endif
+    #if 0
+    // 10 cycles of 1kHz at 44.1kHz = 10 * 44.1 = 441 samples
+    #define MAX_TABLE_SIZE 500
+    #define AMPLITUDE 32767.0  // Max amplitude for 16-bit signed
+    #define CYCLES 10
+    int16_t sine_table[MAX_TABLE_SIZE];
+    uint32_t sample_frequency_hz = i2s_mode_config.freq; // Get the frequency from the mode config
+    uint32_t sine_frequency_hz = 1000; // 1kHz sine wave
+    uint32_t cycle_multiplier = 1; // Default multiplier for cycles
+    uint32_t table_size;
+
+    printf("Sine Wave: %dHz @ %dHz sample rate\r\n", sine_frequency_hz, sample_frequency_hz);
+    //determine if the sample/sine has a remainder
+    // if sample/sine has a remainder, attempt the 10 cycle loop, if it will fit in MAX_TABLE_SIZE    
+    if( (sample_frequency_hz % sine_frequency_hz) != 0) {
+        printf("(sample/sine) has a remainder, trying a 10 cycle table\r\n");
+        if(((sample_frequency_hz*CYCLES) % sine_frequency_hz) !=0){
+            printf("Error: Cannot create 10 cycle sine table\r\n");
+            return;
+        }
+
+        cycle_multiplier = CYCLES;        
     }
-    while(!pio_sm_is_tx_fifo_empty(pio_config.pio, pio_config.sm)) {
+
+    // Calculate the table size based on the sample frequency and sine frequency
+    table_size = (sample_frequency_hz * cycle_multiplier) / sine_frequency_hz;
+
+    if(table_size > MAX_TABLE_SIZE) {
+        printf("Error: Cannot fit %d cycles of %dHz sine wave (%d samples) at %dHz sampling frequency in sine table.\r\n", cycle_multiplier, sine_frequency_hz, table_size, sample_frequency_hz);
+        return;
+    } 
+
+    printf("Sine table: %d samples, %d cycles\r\nReady!\r\n", table_size, cycle_multiplier);
+
+    for (uint32_t i = 0; i < table_size; i++) {
+        // Each index represents: i / SAMPLE_RATE seconds
+        // For 10 cycles: phase = 2*pi*FREQ*(i/SAMPLE_RATE)
+        // But for exactly 10 cycles in 441 samples: phase = 2*pi*CYCLES*i/TABLE_SIZE
+        double phase = 2.0 * M_PI * cycle_multiplier * i / table_size;
+        sine_table[i] = (int16_t)(AMPLITUDE * sin(phase));
+    }
+
+    for(int i=0; i<(1000 / cycle_multiplier); i++) {
+        // Send the sine wave samples to the PIO
+        // The PIO will handle the timing and output
+        for(int j=0; j<table_size; j++) {
+            // Send each sample, shift left to fit in 32 bits
+            pio_sm_put_blocking(i2s_pio_config_out.pio, i2s_pio_config_out.sm, sine_table[j] << 16 | (sine_table[j] & 0xFFFF));
+        }
+    }
+
+    while(!pio_sm_is_tx_fifo_empty(i2s_pio_config_out.pio, i2s_pio_config_out.sm)) {
         // wait for the TX FIFO to be empty
     }
+        #endif
+    
+    uint32_t cnt=0;
+    do{
+        if(!pio_sm_is_rx_fifo_empty(i2s_pio_config_in.pio, i2s_pio_config_in.sm)) {
+            pio_sm_put_blocking(i2s_pio_config_out.pio, i2s_pio_config_out.sm, ((pio_sm_get(i2s_pio_config_in.pio, i2s_pio_config_in.sm)>>(7+8)) & 0xFFFF));
+            cnt++;
+        }
+    }while(cnt<(44100 * 10)); // wait for 10 seconds of data 
+
 
     result->data_message = message; // return a reference to the message to show the user
 }
@@ -164,12 +346,7 @@ void i2s_stop(struct _bytecode* result, struct _bytecode* next) {
 // Useful for checking async stuff like bytes in a UART
 void i2s_periodic(void) {
     // your periodic service functions
-    static uint32_t cnt;
-    if (cnt > 0xffffff) {
-        printf("\r\n-i2s- periodic\r\n");
-        cnt = 0;
-    }
-    cnt++;
+
 }
 
 // Handler for mode START when user enters the '{' key
@@ -206,14 +383,6 @@ void i2s_clk(struct _bytecode* result, struct _bytecode* next) {
 }
 void i2s_bitr(struct _bytecode* result, struct _bytecode* next) {
     printf("-i2s- bitr()=%08X", returnval);
-}
-
-/*const char *i2s_pins(void)
-{
-    return "pin1\tpin2\tpin3\tpin4";
-}*/
-void i2s_settings(void) {
-    printf("DUMMY (arg1 arg2)=(%d, %d)", 1, 2);
 }
 
 void i2s_help(void) {

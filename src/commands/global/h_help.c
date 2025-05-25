@@ -73,7 +73,7 @@ const struct ui_help_options global_commands[] = {
     // restart, firmware updates and diagnostic
     { 1, "", T_HELP_SECTION_SYSTEM },
     { 0, "i", T_HELP_1_14 },
-    { 0, "reset", T_HELP_1_4 },
+    { 0, "reboot", T_HELP_SYSTEM_REBOOT },
     { 0, "$", T_HELP_1_5 },
     { 0, "~", T_HELP_1_3 },
 

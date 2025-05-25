@@ -543,12 +543,6 @@
         "Comments": null,
         "DataTypes": []
     },
-    "T_CMDLN_RESET": {
-        "Localized": "reset - poništite postavke i ponovno pokrenite Bus Pirate.",
-        "EN_US": null,
-        "Comments": null,
-        "DataTypes": []
-    },
     "T_CMDLN_BOOTLOAD": {
         "Localized": "$ - poništite postavke i otvorite bootloader mod za ažuriranje.",
         "EN_US": null,
@@ -749,12 +743,6 @@
     },
     "T_HELP_1_3": {
         "Localized": "Selftest\\t\\t",
-        "EN_US": null,
-        "Comments": null,
-        "DataTypes": []
-    },
-    "T_HELP_1_4": {
-        "Localized": "Poništi postavke na Bus Pirate\\t",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []

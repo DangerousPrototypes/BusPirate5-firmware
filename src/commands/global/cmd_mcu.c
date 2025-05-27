@@ -11,7 +11,7 @@ void cmd_mcu_reset(void) {
     mcu_reset();
 }
 
-void cmd_mcu_reset_handler(struct command_result* res) {
+void cmd_mcu_reboot_handler(struct command_result* res) {
     ui_statusbar_deinit();
     busy_wait_ms(100);
     cmd_mcu_reset();

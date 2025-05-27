@@ -234,7 +234,8 @@ static char const * const en_us[]={
 	[T_CMDLN_CAT]="cat <file> - print the contents of <file>.",
 	[T_CMDLN_MODE]="m - change protocol mode. m <mode number> to skip the menu.",
 	[T_CMDLN_PSU_EN]="W - enable onboard power supply, show configuration menu.",
-	[T_CMDLN_RESET]="# - reset and restart the Bus Pirate.",
+	[T_CMDLN_REBOOT]="reboot - reboot and restart the Bus Pirate.",
+	
 	[T_CMDLN_BOOTLOAD]="$ - reset and enter bootloader mode for updates.",
 	[T_CMDLN_INT_FORMAT]="= <value> - convert <value> to BIN/DEC/HEX/ASCII.",
 	[T_CMDLN_INT_INVERSE]="| <value> - inverse the bits in <value>.",
@@ -264,6 +265,8 @@ static char const * const en_us[]={
 	[T_CMDLN_DISPLAY]="d - change display mode, show selection menu.",
 	[T_CMDLN_LOGIC]="logic <frequency in kHz> <samples> <trigger pin> <trigger level> - logic analyzer. <frequency> 1kHz-62500kHz, <trigger pin> 0:7, <trigger level> 0:1.",
 	[T_CMDLN_HEX]="hex <file> - print contents of <file> in HEX",
+
+	// Help screens
 	[T_HELP_SECTION_IO]="work with pins, input, output measurement",
 	[T_HELP_SECTION_CAPTURE]="measure analog and digital signals",
 	[T_HELP_SECTION_CONFIGURE]="configure the terminal, LEDs, display and mode",
@@ -291,7 +294,7 @@ static char const * const en_us[]={
 	[T_HELP_CMD_DUMP]="Repeat read command, save ouput to storage",
 	[T_HELP_1_2]="Converts x/reverse x",
 	[T_HELP_1_3]="Self test",
-	[T_HELP_1_4]="Reset the Bus Pirate",
+	[T_HELP_SYSTEM_REBOOT]="Reboot the Bus Pirate",
 	[T_HELP_1_5]="Jump to bootloader",
 	[T_HELP_1_6]="Delay 1 us/MS (d:4 to repeat)",
 	[T_HELP_1_7]="Set IO.x state (low/HI/READ)",

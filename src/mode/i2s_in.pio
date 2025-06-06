@@ -5,19 +5,20 @@
 
 .side_set 2
 
+.wrap_target
+public entry_point:
+    set x, 30         side 0b00  
 bitloop1:           
     in pins, 1        side 0b01
     jmp x-- bitloop1  side 0b00
-    in pins, 1        side 0b11
-    set x, 30         side 0b10
+    in pins, 1        side 0b01 
+    set x, 30         side 0b10 ; LR transition happens on 32nd bit clock falling edge
 
 bitloop0:
     nop               side 0b11
     jmp x-- bitloop0  side 0b10
-    nop               side 0b01
-public entry_point:
-    set x, 30         side 0b00
-
+    nop               side 0b11
+.wrap
 
 % c-sdk {
 #include "hardware/clocks.h"
@@ -44,7 +45,7 @@ static inline void i2s_in_program_init(PIO pio, uint sm, uint offset, uint sampl
 
     //gpio_pull_down(data_pin);
 
-    pio_sm_exec(pio, sm, pio_encode_jmp(offset + inmp441_offset_entry_point));
+    pio_sm_exec(pio, sm, pio_encode_jmp(offset + i2s_in_offset_entry_point));
     pio_sm_set_enabled(pio, sm, true);
 }
 

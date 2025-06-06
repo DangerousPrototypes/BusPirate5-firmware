@@ -29,6 +29,8 @@
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "commands/i2s/sine.h" // sine wave generation functions
+#include "pirate/storage.h"
+#include "fatfs/ff.h"       // File system related
 
 static uint32_t returnval;
 struct _pio_config i2s_pio_config_out,  i2s_pio_config_in;
@@ -189,7 +191,7 @@ uint32_t i2s_setup_exc(void) {
     update_pio_frequency(i2s_mode_config.freq, true); // default sample rate
 
     pio_sm_set_enabled(i2s_pio_config_out.pio,  i2s_pio_config_out.sm, true);
-    pio_sm_set_enabled(i2s_pio_config_in.pio,  i2s_pio_config_in.sm, true);
+
 
     //printf("-i2s- setup_exc()\r\n");
     return 1;
@@ -246,98 +248,30 @@ void i2s_read(struct _bytecode* result, struct _bytecode* next) {
 // Handler for mode START when user enters the '[' key
 void i2s_start(struct _bytecode* result, struct _bytecode* next) {
     static const char message[] = "-i2s- start()"; // The message to show the user
-    #if 0
-    #define SAMPLE_RATE 44100
-    #define FREQUENCY   1000
-    #define DURATION    1.0 // seconds
-    #define AMPLITUDE   32767 // max for int16_t
-    
-    #ifndef M_PI
-    #define M_PI 3.14159265358979323846
-    #endif
-
-    int total_samples = (int)(SAMPLE_RATE * DURATION);
-
-    printf("Sine wave: %d Hz, %d samples\r\n", FREQUENCY, total_samples);
-
-    for (int i = 0; i < total_samples; i++) {
-        double t = (double)i / SAMPLE_RATE;
-        double s = sin(2 * M_PI * FREQUENCY * t);
-        int16_t sample = (int16_t)(s * AMPLITUDE);
-        pio_sm_put_blocking(i2s_pio_config_out.pio, i2s_pio_config_out.sm, sample << 16 | (sample & 0xFFFF)); // Send the sample to the PIO
-    }  
-        #endif
-    #if 0
-    // 10 cycles of 1kHz at 44.1kHz = 10 * 44.1 = 441 samples
-    #define MAX_TABLE_SIZE 500
-    #define AMPLITUDE 32767.0  // Max amplitude for 16-bit signed
-    #define CYCLES 10
-    int16_t sine_table[MAX_TABLE_SIZE];
-    uint32_t sample_frequency_hz = i2s_mode_config.freq; // Get the frequency from the mode config
-    uint32_t sine_frequency_hz = 1000; // 1kHz sine wave
-    uint32_t cycle_multiplier = 1; // Default multiplier for cycles
-    uint32_t table_size;
-
-    printf("Sine Wave: %dHz @ %dHz sample rate\r\n", sine_frequency_hz, sample_frequency_hz);
-    //determine if the sample/sine has a remainder
-    // if sample/sine has a remainder, attempt the 10 cycle loop, if it will fit in MAX_TABLE_SIZE    
-    if( (sample_frequency_hz % sine_frequency_hz) != 0) {
-        printf("(sample/sine) has a remainder, trying a 10 cycle table\r\n");
-        if(((sample_frequency_hz*CYCLES) % sine_frequency_hz) !=0){
-            printf("Error: Cannot create 10 cycle sine table\r\n");
-            return;
-        }
-
-        cycle_multiplier = CYCLES;        
-    }
-
-    // Calculate the table size based on the sample frequency and sine frequency
-    table_size = (sample_frequency_hz * cycle_multiplier) / sine_frequency_hz;
-
-    if(table_size > MAX_TABLE_SIZE) {
-        printf("Error: Cannot fit %d cycles of %dHz sine wave (%d samples) at %dHz sampling frequency in sine table.\r\n", cycle_multiplier, sine_frequency_hz, table_size, sample_frequency_hz);
-        return;
-    } 
-
-    printf("Sine table: %d samples, %d cycles\r\nReady!\r\n", table_size, cycle_multiplier);
-
-    for (uint32_t i = 0; i < table_size; i++) {
-        // Each index represents: i / SAMPLE_RATE seconds
-        // For 10 cycles: phase = 2*pi*FREQ*(i/SAMPLE_RATE)
-        // But for exactly 10 cycles in 441 samples: phase = 2*pi*CYCLES*i/TABLE_SIZE
-        double phase = 2.0 * M_PI * cycle_multiplier * i / table_size;
-        sine_table[i] = (int16_t)(AMPLITUDE * sin(phase));
-    }
-
-    for(int i=0; i<(1000 / cycle_multiplier); i++) {
-        // Send the sine wave samples to the PIO
-        // The PIO will handle the timing and output
-        for(int j=0; j<table_size; j++) {
-            // Send each sample, shift left to fit in 32 bits
-            pio_sm_put_blocking(i2s_pio_config_out.pio, i2s_pio_config_out.sm, sine_table[j] << 16 | (sine_table[j] & 0xFFFF));
-        }
-    }
-
-    while(!pio_sm_is_tx_fifo_empty(i2s_pio_config_out.pio, i2s_pio_config_out.sm)) {
-        // wait for the TX FIFO to be empty
-    }
-        #endif
     
     uint32_t cnt=0;
+    while(!pio_sm_is_rx_fifo_empty(i2s_pio_config_in.pio, i2s_pio_config_in.sm)) {
+        // Clear the RX FIFO before starting to read data
+        pio_sm_get_blocking(i2s_pio_config_in.pio, i2s_pio_config_in.sm);
+    }
+    pio_sm_set_enabled(i2s_pio_config_in.pio,  i2s_pio_config_in.sm, true);
     do{
         if(!pio_sm_is_rx_fifo_empty(i2s_pio_config_in.pio, i2s_pio_config_in.sm)) {
             pio_sm_put_blocking(i2s_pio_config_out.pio, i2s_pio_config_out.sm, ((pio_sm_get(i2s_pio_config_in.pio, i2s_pio_config_in.sm)>>(7+8)) & 0xFFFF));
             cnt++;
         }
     }while(cnt<(44100 * 10)); // wait for 10 seconds of data 
+    pio_sm_set_enabled(i2s_pio_config_in.pio,  i2s_pio_config_in.sm, false);
 
 
     result->data_message = message; // return a reference to the message to show the user
 }
 
+
 // Handler for mode STOP when user enters the ']' key
 void i2s_stop(struct _bytecode* result, struct _bytecode* next) {
     static const char message[] = "-i2s- stop()"; // The message to show the user
+
 
     result->data_message = message; // return a reference to the message to show the user
 }

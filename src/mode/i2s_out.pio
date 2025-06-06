@@ -82,7 +82,7 @@ static inline void i2s_out_program_init(PIO pio, uint sm, uint offset, uint data
 #endif
     pio_sm_set_pins(pio, sm, 0); // clear pins
 
-    pio_sm_exec(pio, sm, pio_encode_jmp(offset + audio_i2s_offset_entry_point));
+    pio_sm_exec(pio, sm, pio_encode_jmp(offset + i2s_out_offset_entry_point));
 }
 
 %}

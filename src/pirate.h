@@ -52,7 +52,7 @@
 #define BP_USE_SCOPE
 // #define     BP_USE_BINLOOPBACK
 #define     BP_USE_JTAG
-#define BP_USE_I2S
+//#define BP_USE_I2S
 // #define     BP_USE_USBPD
 
 // enable display support

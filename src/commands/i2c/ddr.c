@@ -1,0 +1,546 @@
+#include <stdio.h>
+#include "pico/stdlib.h"
+#include <stdint.h>
+#include "pirate.h"
+#include "pirate/hwi2c_pio.h"
+#include "ui/ui_term.h"
+#include "system_config.h"
+#include "command_struct.h"
+#include "bytecode.h"
+#include "mode/hwi2c.h"
+#include "ui/ui_help.h"
+#include "ui/ui_cmdln.h"
+#include "lib/ms5611/ms5611.h"
+#include "lib/tsl2561/driver_tsl2561.h"
+#include "binmode/fala.h"
+
+// DDR5 SPD Volatile Memory structure
+typedef struct __attribute__((packed)) {
+    // Register MR0 and MR1: Device Type
+    uint8_t device_type_msb; // MR0: Device Type MSB (Default: 0x51)
+    uint8_t device_type_lsb; // MR1: Device Type LSB (Default: 0x18)
+
+    // Register MR2: Device Revision
+    uint8_t device_revision_0_rv:1; // MR2: Reserved (Default: 0x00)
+    uint8_t device_revision_minor:3;
+    uint8_t device_revision_major:2;
+    uint8_t device_revision_76_rv:2; // MR2: Device Revision (Default: 0x20)
+
+    // Register MR3 and MR4: Vendor ID
+    uint8_t vendor_id_byte0; // MR3: Vendor ID Byte 0 (Default: 0x80)
+    uint8_t vendor_id_byte1; // MR4: Vendor ID Byte 1 (Default: 0xCD)
+
+    // Register MR5: Device Capability
+    //uint8_t device_capability; // MR5: Device Capability (Default: 0x03)
+    bool device_capability_hub_support:1; 
+    bool device_capability_ts_suport:1; 
+    uint8_t device_capability_rv:6;
+
+    // Register MR6: Device Write Recovery Time Capability
+    //uint8_t write_recovery_time_capability; // MR6: Write Recovery Time Capability (Default: 0x52)
+    uint8_t write_recovery_time_capability_time:2; 
+    uint8_t write_recovery_time_capability_rv:2; // Reserved bit
+    uint8_t write_recovery_time_capability_unit:4; 
+
+    // Register MR7 to MR10: Reserved
+    uint8_t reserved_7_10[4]; // MR7 to MR10: Reserved (Default: 0x00)
+
+    // Register MR11: I2C Legacy Mode Device Configuration
+    //uint8_t i2c_legacy_mode_config; // MR11: I2C Legacy Mode Device Configuration (Default: 0x00)
+    uint8_t i2c_legacy_mode_config_addr_pointer:3; // Address Pointer Mode (Default: 0x00)
+    uint8_t i2c_legacy_mode_config_addr_mode:1; // I2C Legacy Mode (Default: 0x00)
+    uint8_t i2c_legacy_mode_config_rv:4; // Reserved bits
+
+
+    // Register MR12 and MR13: Write Protection for NVM Blocks
+    uint8_t write_protection_nvm_blocks_low;  // MR12: Write Protection for NVM Blocks [7:0] (Default: 0x00)
+    uint8_t write_protection_nvm_blocks_high; // MR13: Write Protection for NVM Blocks [15:8] (Default: 0x00)
+
+    // Register MR14: Device Configuration - Host & Local Interface IO
+    uint8_t device_configuration_io; // MR14: Device Configuration - Host & Local Interface IO (Default: 0x00)
+
+    // Register MR15 to MR17: Reserved
+    uint8_t reserved_15_17[3]; // MR15 to MR17: Reserved (Default: 0x00)
+
+    // Register MR18: Device Configuration
+    uint8_t device_configuration; // MR18: Device Configuration (Default: 0x00)
+
+    // Register MR19 and MR20: Clear Registers
+    uint8_t clear_register_temperature_status; // MR19: Clear Register MR51 Temperature Status Command (Default: 0x00)
+    uint8_t clear_register_error_status;       // MR20: Clear Register MR52 Error Status Command (Default: 0x00)
+
+    // Register MR21 to MR25: Reserved
+    uint8_t reserved_21_25[5]; // MR21 to MR25: Reserved (Default: 0x00)
+
+    // Register MR26: TS Configuration
+    uint8_t ts_configuration; // MR26: TS Configuration (Default: 0x00)
+
+    // Register MR27: Interrupt Configurations
+    uint8_t interrupt_configurations; // MR27: Interrupt Configurations (Default: 0x00)
+
+    // Register MR28 to MR35: TS Temperature Limits
+    uint8_t ts_temp_high_limit_low;       // MR28 & MR29: TS Temperature High Limit Configuration (Default: 0x7003)
+    uint8_t ts_temp_high_limit_high;      // MR30 & MR31: TS Temperature High Limit Configuration (Default: 0x0000)
+    
+    uint8_t ts_temp_low_limit_low;        // MR30 & MR31: TS Temperature Low Limit Configuration (Default: 0x0000)
+    uint8_t ts_temp_low_limit_high;       // MR32 & MR33: TS Temperature Low Limit Configuration (Default: 0x0000)
+    
+    uint8_t ts_critical_temp_high_limit_low; // MR32 & MR33: TS Critical Temperature High Limit Configuration (Default: 0x5005)
+    uint8_t ts_critical_temp_high_limit_high; // MR34 & MR35: TS Critical Temperature High Limit Configuration (Default: 0x0000)
+    
+    uint8_t ts_critical_temp_low_limit_low;  // MR34 & MR35: TS Critical Temperature Low Limit Configuration (Default: 0x0000)
+    uint8_t ts_critical_temp_low_limit_high; // MR36 & MR37: TS Critical Temperature Low Limit Configuration (Default: 0x0000)
+
+    // Register MR36: TS Resolution
+    uint8_t ts_resolution; // MR36: TS Resolution register (Default: 0x01)
+
+    // Register MR37: TS Hysteresis Width
+    uint8_t ts_hysteresis_width; // MR37: TS Hysteresis width register (Default: 0x01)
+
+    uint8_t reserved_38_47[10]; // MR38 to MR47: Reserved (Default: 0x00)
+
+    // Register MR48: Device Status
+    uint8_t device_status; // MR48: Device Status (Default: 0x00)
+
+    // Register MR49 and MR50: TS Current Sensed Temperature
+    uint8_t ts_current_sensed_temperature_low; // MR49 & MR50: TS Current Sensed Temperature (Default: 0x0000)
+    uint8_t ts_current_sensed_temperature_high; // MR49 & MR50: TS Current Sensed Temperature (Default: 0x0000)
+
+    // Register MR51: TS Temperature Status
+    uint8_t ts_temperature_status; // MR51: TS Temperature Status (Default: 0x00)
+
+    // Register MR52: Hub, Thermal, and NVM Error Status
+    uint8_t error_status; // MR52: Hub, Thermal, and NVM Error Status (Default: 0x00)
+
+    // Register MR53: Program Abort Register
+    uint8_t program_abort_register; // MR53: Program abort register (Default: 0x00)
+
+    // Reserved Registers
+    uint8_t reserved_54_127[74]; // MR54 to MR127: Reserved (Default: 0x00)
+} ddr5_spd_volatile_t;
+
+float ddr5_get_temperature(uint8_t t_high, uint8_t t_low, uint8_t t_resolution) {
+   // Extract the sign bit from the high byte
+   int8_t sign = (t_high & 0x10) ? -1 : 1;
+
+   // Combine the high and low bytes into a 16-bit value
+   uint16_t raw_value = ((t_high & 0x0F) << 8) | t_low;
+
+   raw_value = raw_value >> (3-t_resolution); // Adjust for resolution
+   // Determine the resolution multiplier
+   float multiplier;
+   switch (t_resolution) {
+       case 0x00: // 9-bit resolution (0.5°C)
+           multiplier = 0.5f;
+           break;
+       case 0x01: // 10-bit resolution (0.25°C)
+           multiplier = 0.25f;
+           break;
+       case 0x02: // 11-bit resolution (0.125°C)
+           multiplier = 0.125f;
+           break;
+       case 0x03: // 12-bit resolution (0.0625°C)
+           multiplier = 0.0625f;
+           break;
+       default:
+           multiplier = 0.0f; // Invalid resolution
+           break;
+   }
+
+    //printf("Raw Value: 0x%04X, Sign: %d, Multiplier: %f\r\n", raw_value, sign, multiplier);
+   // Calculate the temperature
+   float temperature = sign * raw_value * multiplier;
+   return temperature;
+}
+
+// 0 if ok, 1 if error
+bool ddr5_sdram_info(uint8_t b1, uint8_t b2, uint8_t b3){
+
+    
+    static const uint8_t spd_sdram_density[]={0,4,8,12,16,24,32,48,64};
+    if((b1 & 0b11111)==0){
+        printf("  Not present\r\n");
+        return false;
+    }else if( (b1 & 0b11111) <= 0b1000) {
+        printf("  Density: %d Gb\r\n", spd_sdram_density[b1 & 0b11111]);
+    } else {
+        printf("  Density: Unknown (0x%02X), aborting...\r\n", b1 & 0b11111);
+    }
+
+    static const uint8_t spd_sram_dies[]={1,2,2,4,8,16};
+    if((b1>>5) <= 0b101) {
+        printf("  Number of SRAM Dies: %d\r\n", spd_sram_dies[b1>>5]);
+    } else {
+        printf("  Number of SRAM Dies: Unknown (0x%02X), aborting...\r\n", b1>>5);
+    }
+
+    static const uint8_t spd_sdram_width[]={4,8,16,32};
+    if(b2>>5 <=0b11) {
+        printf("  Width: x%d\r\n", spd_sdram_width[b2>>5]);
+    } else {
+        printf("  Width: Unknown (0x%02X), aborting...\r\n",b2>>5);
+    }
+
+    static const uint8_t spd_sdram_groups[]={1,2,4,8};
+    if(((b3 >> 5) & 0b111) <= 0b11) {
+        printf("  Number of SDRAM Groups: %d\r\n", spd_sdram_groups[(b3 >> 5) & 0b111]);
+    } else {
+        printf("  Number of SDRAM Groups: Unknown (0x%02X), aborting...\r\n", (b3 >> 5) & 0b111);
+    }
+
+    static const uint8_t spd_sdram_banks[]={1,2,4};
+    if((b3 & 0b111) <= 0b010) {
+        printf("  Number of SDRAM Banks: %d\r\n", spd_sdram_banks[b3 & 0b111]);
+    } else {
+        printf("  Number of SDRAM Banks: Unknown (0x%02X), aborting...\r\n", b3 & 0b111);
+    }
+
+    return false;
+}
+
+uint16_t ddr5_crc16(const uint8_t *spd, uint32_t cnt) {
+    if (spd == NULL) {
+        printf("Error: SPD pointer is NULL.\n");
+        return 0xFFFF; // Return an error code
+    }
+
+    uint16_t crc = 0;
+    for (uint32_t index = 0; index < cnt; ++index) {
+        crc ^= (uint16_t)(spd[index] << 8); // Process each byte
+        for (uint8_t bit = 0; bit < 8; ++bit) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ 0x1021;
+            } else {
+                crc = crc << 1;
+            }
+        }
+    }
+    return crc & 0xFFFF;
+}
+
+//search in EEPROM bits of data, with up to X=10 trailing 0s
+void ddr5_search_upa(uint8_t *data, uint32_t start, uint32_t end) {
+    uint8_t data_found = 0;
+    for(uint32_t i=start; i<end; i++){
+        if(data[i] == 0x00 && !data_found){
+            //data_found = 0;
+            continue; //skip empty bytes
+        }
+        if(!data_found) {
+            printf("\r\n\r\n@ 0x%03X:", i+512);
+        }
+        if(data[i]==0x00){
+            data_found--;
+        } else {
+            data_found = 10; //reset counter
+        }        
+        printf(" 0x%02X", data[i]);
+
+    }
+}
+
+bool ddr5_set_legacy_page(uint8_t page){
+    //set the page for the legacy mode
+    uint8_t data[2];
+    data[0] = 0x0B; //MR11: I2C Legacy Mode Device Configuration
+    data[1] = page & 0b111; //page 0-7
+    if(pio_i2c_write_array_timeout(0xa0, data, 2u, 0xffffu)) {
+        printf("Device not detected (no ACK)\r\n");
+        return true;
+    }
+    //read to verify
+    data[0] = 0x0B; //read EEPROM
+    if(pio_i2c_transaction_array_repeat_start(0xa0, data, 1u, data, 1, 0xffffu)){
+        printf("Device not detected (no ACK)\r\n");
+        return true;
+    }
+    if(data[0] != page) {
+        printf("Error: Page %d not set, read back %d\r\n", page, data[0]);
+        return true;
+    }
+    return false;
+}
+
+bool ddr5_read_pages_128bytes(bool eeprom, uint8_t start_page, uint8_t num_pages, uint8_t* data) {
+    if(!eeprom){
+        data[0]=0x00;//read volatile memory, start at 0x00
+    }else{
+        data[0]=0x80;//read EEPROM page start at 0x00 
+        if(ddr5_set_legacy_page(start_page)) return true; //set the page for the legacy mode
+    }
+    if (pio_i2c_transaction_array_repeat_start(0xa0, data, 1u, data, num_pages*128, 0xffffu)) {
+        printf("Device not detected (no ACK)\r\n");
+        return true;
+    }
+    return false;
+}
+
+bool ddr5_detect_spd(ddr5_spd_volatile_t* spd){
+    printf("Device Type: 0x%02X%02X\r\n", spd->device_type_msb, spd->device_type_lsb);
+    if((spd->device_type_msb != 0x51) || (spd->device_type_lsb != 0x18)){
+        printf("Error: Device Type does not match expected values (0x51 0x18)\r\n");
+        return true;
+    }
+    return false;
+}
+
+bool ddr5_decode_volatile_memory(ddr5_spd_volatile_t* spd) {
+    printf("Device Revision: %d.%d\r\n", (spd->device_revision_major+1), spd->device_revision_minor);
+    printf("Vendor ID: 0x%02X%02X\r\n", spd->vendor_id_byte0, spd->vendor_id_byte1);
+    printf("Device Capability - Temperature Sensor Support: %d\r\n", spd->device_capability_ts_suport);
+    printf("Device Capability - Hub Support: %d\r\n", spd->device_capability_hub_support);
+
+    uint16_t write_recovery_time;
+    if(spd->write_recovery_time_capability_unit<=10){
+        write_recovery_time = spd->write_recovery_time_capability_unit;
+    } else if (spd->write_recovery_time_capability_unit==11){
+        write_recovery_time = 50;
+    } else if (spd->write_recovery_time_capability_unit==12){
+        write_recovery_time = 100;
+    } else if (spd->write_recovery_time_capability_unit==13){
+        write_recovery_time = 200;
+    } else if (spd->write_recovery_time_capability_unit==14){
+        write_recovery_time = 500;
+    } else {
+        write_recovery_time = 0xffff;
+    }
+
+    printf("Write Recovery Time Capability: %d%s\r\n", write_recovery_time, spd->write_recovery_time_capability_time==0?"ns": spd->write_recovery_time_capability_time==1 ? "us" : spd->write_recovery_time_capability_time==2?"ms": "error");
+    printf("I2C Legacy Mode Address Pointer Mode: %d byte address\r\n", (spd->i2c_legacy_mode_config_addr_mode+1));
+    printf("I2C Legacy Mode Address Pointer: page %d\r\n", spd->i2c_legacy_mode_config_addr_pointer);
+    printf("Write Protection for NVM Blocks: 0x%02X%02X\r\n", spd->write_protection_nvm_blocks_high, spd->write_protection_nvm_blocks_low);
+    for(uint8_t i=0; i<8; i++){
+        printf("  Block %d: %s\r\n", i, (spd->write_protection_nvm_blocks_low & (1u << i)) ? "Protected" : "Unprotected");
+    }
+    for(uint8_t i=0; i<8; i++){
+        printf("  Block %d: %s\r\n", i+8, (spd->write_protection_nvm_blocks_high & (1u << i)) ? "Protected" : "Unprotected");
+    }    
+    printf("Device Configuration - Host & Local Interface IO: 0x%02X\r\n", spd->device_configuration_io);
+    printf("Device Configuration: 0x%02X\r\n", spd->device_configuration);
+    printf("Interrupt Configurations: 0x%02X\r\n", spd->interrupt_configurations);
+
+    printf("Device Status: 0x%02X\r\n", spd->device_status);
+    printf("Device Status - Write Protect Override: %s\r\n", (spd->device_status & 0x04) ? "Enabled" : "Disabled");
+
+    printf("Temp Sensor: %s\r\n", spd->ts_configuration?"Disabled":"Enabled");
+    printf("TS Resolution: %d bits\r\n", spd->ts_resolution+9);
+    printf("TS Hysteresis Width: 0x%02X\r\n", spd->ts_hysteresis_width);
+    printf("TS Current Sensed Temperature: 0x%02X%02X (%2.1fc)\r\n", 
+        spd->ts_current_sensed_temperature_high, 
+        spd->ts_current_sensed_temperature_low, 
+        ddr5_get_temperature(spd->ts_current_sensed_temperature_high, spd->ts_current_sensed_temperature_low, spd->ts_resolution));
+    printf("TS Temperature High Limit: 0x%02X%02X (%2.1fc)\r\n", 
+        spd->ts_temp_high_limit_high, 
+        spd->ts_temp_high_limit_low, 
+        ddr5_get_temperature(spd->ts_temp_high_limit_high, spd->ts_temp_high_limit_low, spd->ts_resolution));
+    printf("TS Temperature Low Limit: 0x%02X%02X (%2.1fc)\r\n", 
+        spd->ts_temp_low_limit_high, 
+        spd->ts_temp_low_limit_low, 
+        ddr5_get_temperature(spd->ts_temp_low_limit_high, spd->ts_temp_low_limit_low, spd->ts_resolution));
+    printf("TS Critical Temperature High Limit: 0x%02X%02X (%2.1fc)\r\n", spd->ts_critical_temp_high_limit_high, spd->ts_critical_temp_high_limit_low, 
+        ddr5_get_temperature(spd->ts_critical_temp_high_limit_high, spd->ts_critical_temp_high_limit_low, spd->ts_resolution)); 
+    printf("TS Critical Temperature Low Limit: 0x%02X%02X (%2.1fc)\r\n", 
+        spd->ts_critical_temp_low_limit_high, 
+        spd->ts_critical_temp_low_limit_low,
+        ddr5_get_temperature(spd->ts_critical_temp_low_limit_high, spd->ts_critical_temp_low_limit_low, spd->ts_resolution));
+    printf("TS Temperature Status: 0x%02X\r\n", spd->ts_temperature_status);
+    
+    printf("Error Status: 0x%02X\r\n", spd->error_status);
+    printf("Program Abort Register: %s\r\n", spd->program_abort_register?"Error":"Normal");  
+    return false;
+}
+
+bool ddr5_nvm_jedec_crc(uint8_t *data){
+    printf("\r\nCRC verify\r\nStored CRC: 0x%02X%02X\r\n", data[511], data[510]);
+    uint16_t crc= ddr5_crc16(data, 510);
+    printf("Calculated CRC: 0x%04X\r\n", crc);
+    if(crc != (data[511] << 8 | data[510])){
+        printf("Error: CRC does not match!!!\r\n");
+        return true;
+    } else {
+        printf("CRC okay :)\r\n");
+        return false;
+    }
+}
+
+bool ddr5_nvm_jedec_decode_data(uint8_t *data) {
+    //print the first few SPD bytes as hex first, then decode
+    printf("\r\nSPD bytes 0-3: 0x%02X, 0x%02X, 0x%02X, 0x%02X\r\n", data[0], data[1], data[2], data[3]);
+    //printf("\r\nSPD NVM byte 2: 0x%02X\r\n", data[2]);
+    if(data[2] == 0x12){
+        printf("  Host Bus Type: DDR5 SDRAM\r\n");
+    }else{
+        printf("  Host Bus Type: Unknown (0x%02X), aborting...\r\n", data[2]);
+        return true;
+    }
+
+    //printf("SPD NVM byte 1: 0x%02X\r\n", data[1]);
+    printf("  SPD Revision: %d.%d\r\n", (data[1] >> 4), data[1] & 0b1111);
+
+    //printf("SPD NVM byte 0: 0x%02X\r\n", data[0]);   
+    uint8_t cnt = (data[0]>>4)&0b111;
+    const uint16_t spd_eeprom_size[] = { 0, 256, 512, 1024, 2048};
+    if(cnt <= 0b100) {
+        printf("  EEPROM size: %d bytes\r\n", spd_eeprom_size[cnt]);
+    } else {
+        printf("  EEPROM size: Unknown (0x%02X)\r\n", cnt);
+    }
+    cnt = data[0]>>7 | (data[0] & 0b1111);
+    printf("  Beta Level: %d\r\n", cnt);
+
+    //printf("SPD NVM byte 3: 0x%02X\r\n", data[3]);
+    if(data[3] & 0b10000000) {
+        printf("  Module Type: Hybrid, aborting...\r\n");
+        return true;
+    }
+
+    printf("  Module Type: ");
+    switch(data[3]&0xf){
+        case 0b0001:printf("RDIMM\r\n");break;
+        case 0b0010:printf("UDIMM\r\n");break;
+        case 0b0011:printf("SODIMM\r\n");break;
+        case 0b0100:printf("LRDIMM\r\n");break;
+        case 0b0101:printf("CUDIMM\r\n");break;
+        case 0b0110:printf("CSODIMM\r\n");break;
+        case 0b0111:printf("MRDIMM\r\n");break;
+        case 0b1000:printf("CAMM2\r\n");break;
+        case 0b1010:printf("DDIMM\r\n");break;
+        case 0b1011:printf("Solder down\r\n");break;
+        default:
+            printf("Unknown (0x%02X), aborting...\r\n", data[3]);
+            return true;
+    }
+    
+    printf("First SDRAM: (0x%02X, 0x%02X, 0x%02X, 0x%02X)\r\n", data[4], data[5], data[6], data[7]);
+    ddr5_sdram_info(data[4], data[6], data[7]);
+    printf("Second SDRAM: (0x%02X, 0x%02X, 0x%02X, 0x%02X)\r\n", data[8], data[9], data[10], data[11]);
+    ddr5_sdram_info(data[8], data[10], data[11]);
+    return false;
+}
+
+bool ddr5_nvm_jedec_decode_manuf(uint8_t *data){
+    printf("Module Manuf. Code: 0x%02X%02X\r\n", data[0], data[1]);
+    printf("Module Manuf. Location: 0x%02X\r\n", data[2]);
+    printf("Module Manuf. Date: %02XY/%02XW\r\n", data[3], data[4]);
+    printf("Module Serial Number: 0x%02X%02X%02X%02X\r\n", data[5], data[6], data[7], data[8]);
+    printf("Module Part Number: ");
+    for(uint8_t i=0; i<30; i++){
+        printf("%c", data[9+i]);
+    }
+    printf("\r\n");
+    printf("\r\nModule Revision Code: 0x%02X\r\n", data[39]);
+    printf("DRAM Manuf. Code: 0x%02X%02X\r\n", data[40], data[41]);
+    printf("DRAM Stepping: 0x%02X\r\n", data[42]);
+    return false;
+}
+
+bool ddr5_nvm_search(uint8_t *data) {
+    printf("\r\nSearching Manuf. Specific Data area block 9:");
+    ddr5_search_upa(data, 555-512, 0x27F-512); //search in 0x240-0x27F (576-639)
+    printf("\r\n\r\nSearching End User Programmable Area blocks 10-15:");
+    ddr5_search_upa(data, 0x280-512, 0x3FF-512); //search in 0x280-0x3FF (640-1023)
+    printf("\r\n\r\n");
+    return false;
+}
+
+bool ddr5_probe(void) {
+    // read 128 bytes from the DDR5 SPD Volatile Memory
+    // cast it to the ddr5_spd_volatile_t structure
+    uint8_t data[512];
+
+    if(ddr5_read_pages_128bytes(false, 0, 1, data)) return true; //read volatile memory, start at 0x00
+    ddr5_spd_volatile_t* spd = (ddr5_spd_volatile_t*)data;
+    
+    if(ddr5_detect_spd(spd)) return true; //check if the device is DDR5 SPD
+    
+    ddr5_decode_volatile_memory(spd); //decode the volatile memory
+
+    printf("\r\nSPD EEPROM JEDEC Data blocks 0-7:\r\n");
+    if(ddr5_read_pages_128bytes(true, 0, 4, data)) return true; //read EEPROM page 0-4, start at 0x00
+    if(ddr5_nvm_jedec_crc(data)) return true; //check CRC of the first 512 bytes
+    if(ddr5_nvm_jedec_decode_data(data)) return true; //decode the first 512 bytes of the EEPROM
+
+    printf("\r\nSPD EEPROM JEDEC Manufacturing Information blocks 8-9:\r\n");
+    if(ddr5_read_pages_128bytes(true, 0b100, 4, data)) return true; //read EEPROM page 5-8, start at 0x00
+    if(ddr5_nvm_jedec_decode_manuf(data)) return true; //decode the manufacturing information
+    if(ddr5_nvm_search(data)) return true; //search for the end user programmable area
+    return false;
+}
+
+
+
+bool ddr5_dump(void) {
+    uint8_t data[128];
+
+    if(ddr5_read_pages_128bytes(false, 0, 1, data)) return true; //read the first page of the volatile memory
+    ddr5_spd_volatile_t* spd = (ddr5_spd_volatile_t*)data;
+    if(ddr5_detect_spd(spd)) return true;
+
+    if(ddr5_set_legacy_page(0)){
+        printf("Error: I2C Legacy Mode Address Pointer Mode is not 1 byte, aborting...\r\n");
+        return true;
+    }
+
+    //loop and read out eeprom_bytes_count of bytes from the EEPROM
+    for(uint32_t i=0; i<1024/128; i++){
+        if(ddr5_read_pages_128bytes(true, i, 1, data)) return true; //read the EEPROM page
+
+        printf("\r\nEEPROM Page %d:\r\n", i);
+        for(uint32_t j=0; j<128; j++){
+            printf(" 0x%02X", data[j]);
+        }
+        //save to file...
+    } 
+}
+
+void ddr5_handler(struct command_result* res) {
+
+    ddr5_probe();
+    ddr5_dump();
+
+}
+
+
+//maybe useful to evaluate before writing?
+#if 0
+    printf("Device Status - Write Protect Override: %s\r\n", (spd->device_status & 0x04) ? "Enabled" : "Disabled");
+    if(!(spd->device_status & 0x04)) {
+        printf("Error: Write Protect Override is disabled, ensure HSA pin is connected to ground, aborting...\r\n");
+        return true;
+    }
+    printf("Error Status: 0x%02X\r\n", spd->error_status);
+    printf("Program Abort Register: %s\r\n", spd->program_abort_register?"Error":"Normal");  
+
+
+    printf("\r\nEEPROM SPD Data blocks 0-7:\r\n");
+    
+    if(ddr5_set_legacy_page(0)) return true; //set the page for the legacy mode
+    
+    data[0] = 0x80;
+    if (pio_i2c_transaction_array_repeat_start(0xa0, data, 1u, data, 512, 0xffffu)) {
+        printf("Device not detected (no ACK)\r\n");
+        return true;
+    }
+
+    //print the first few SPD bytes as hex first, then decode
+    printf("\r\nSPD bytes 0-3: 0x%02X, 0x%02X, 0x%02X, 0x%02X\r\n", data[0], data[1], data[2], data[3]);
+    //printf("\r\nSPD NVM byte 2: 0x%02X\r\n", data[2]);
+    if(data[2] == 0x12){
+        printf("  Host Bus Type: DDR5 SDRAM\r\n");
+    }else{
+        printf("  Host Bus Type: Unknown (0x%02X), aborting...\r\n", data[2]);
+        return true;
+    }
+
+    //printf("SPD NVM byte 0: 0x%02X\r\n", data[0]);   
+    uint8_t eeprom_bytes_cnt = (data[0]>>4)&0b111;
+    const uint16_t spd_eeprom_size[] = { 0, 256, 512, 1024, 2048};
+    if(eeprom_bytes_cnt <= 0b100) {
+        printf("  EEPROM size: %d bytes\r\n", spd_eeprom_size[eeprom_bytes_cnt]);
+        if(eeprom_bytes_cnt !=3) {
+            printf("  Warning: EEPROM size is not 1024 bytes!\r\n");
+        }
+    } else {
+        printf("  EEPROM size: Unknown (0x%02X)\r\n", eeprom_bytes_cnt);
+    }
+#endif

@@ -172,6 +172,8 @@ set(buspirate_common
         lib/tsl2561/driver_tsl2561.h
         commands/i2c/sniff.c 
         commands/i2c/sniff.h
+        commands/i2c/ddr.c
+        commands/i2c/ddr.h
 
         # SPI
         mode/hwspi.c

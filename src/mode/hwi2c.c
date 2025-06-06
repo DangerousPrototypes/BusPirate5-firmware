@@ -16,6 +16,7 @@
 #include "commands/i2c/sniff.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
+#include "commands/i2c/ddr.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -52,6 +53,11 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_TSL2561, 
         .supress_fala_capture=true
     },
+    {   .command="ddr5", 
+        .func=&ddr5_handler, 
+        .description_text=T_HELP_I2C_TSL2561, 
+        .supress_fala_capture=true
+    },    
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 

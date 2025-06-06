@@ -351,9 +351,9 @@ bool ddr5_decode_volatile_memory(ddr5_spd_volatile_t* spd) {
 }
 
 bool ddr5_nvm_jedec_crc(uint8_t *data){
-    printf("\r\nCRC verify\r\nStored CRC: 0x%02X%02X\r\n", data[511], data[510]);
+    printf("\r\nCRC verify\r\nStored CRC (bytes 510:511): 0x%02X 0x%02X\r\n", data[510], data[511]);
     uint16_t crc= ddr5_crc16(data, 510);
-    printf("Calculated CRC: 0x%04X\r\n", crc);
+    printf("Calculated CRC: 0x%02X 0x%02X\r\n", crc, crc >> 8);
     if(crc != (data[511] << 8 | data[510])){
         printf("Error: CRC does not match!!!\r\n");
         return true;
@@ -493,13 +493,151 @@ bool ddr5_dump(void) {
     } 
 }
 
-void ddr5_handler(struct command_result* res) {
 
-    ddr5_probe();
-    ddr5_dump();
+static const char* const usage[] = {
+    "ddr5 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-b <block number>] [-h(elp)]",
+    "Probe DDR5 SPD: ddr5 probe",
+    "Show DDR5 SPD NVM contents: ddr5 dump",
+    "Write SPD NVM from file, verify: ddr5 write -f example.bin",
+    "Read SPD NVM to file, verify: ddr5 read -f example.bin",
+    "Verify against file: ddr5 verify -f example.bin",
+    "Lock a NVM block 0-15: ddr5 lock -b 0",
+    "Unlock a NVM block 0-15: ddr5 unlock -b 0",
+    "Check/generate CRC for JEDEC blocks 0-7: ddr5 crc -f example.bin",
+    "DDR5 write file **MUST** be exactly 1024 bytes long"
+};
+
+static const struct ui_help_options options[] = {
+    { 1, "", T_HELP_FLASH },               // flash command help
+    { 0, "probe", T_HELP_FLASH_PROBE },    // probe
+    { 0, "dump", T_HELP_FLASH_PROBE },      // dump
+    { 0, "write", T_HELP_FLASH_WRITE },    // write
+    { 0, "read", T_HELP_FLASH_READ },      // read
+    { 0, "verify", T_HELP_FLASH_VERIFY },  // verify
+    { 0, "lock", T_HELP_FLASH_TEST },      // test
+    { 0, "unlock", T_HELP_FLASH_TEST },    // test
+    { 0, "-f", T_HELP_FLASH_FILE_FLAG },   // file to read/write/verify
+    { 0, "-b", T_HELP_FLASH_ERASE_FLAG },  // with erase (before write)
+    { 0, "-h", T_HELP_HELP },   // help flag
+};
+
+enum ddr5_actions {
+    DDR5_PROBE=0,
+    DDR5_DUMP,
+    DDR5_READ,
+    DDR5_WRITE,
+    DDR5_VERIFY,
+    DDR5_LOCK,
+    DDR5_UNLOCK,
+    DDR5_CRC
+};
+
+struct ddr5_actions_t {
+    enum ddr5_actions action;
+    const char verb[7];
+};
+
+static const struct ddr5_actions_t ddr5_actions[] = {
+    { DDR5_PROBE, "probe" },
+    { DDR5_DUMP, "dump" },
+    { DDR5_READ, "read" },
+    { DDR5_WRITE, "write" },
+    { DDR5_VERIFY, "verify" },
+    { DDR5_LOCK, "lock" },
+    { DDR5_UNLOCK, "unlock" },
+    { DDR5_CRC, "crc" }
+};
+
+void ddr5_handler(struct command_result* res) {
+    char file[13];
+
+    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+        return;
+    }
+    if (!ui_help_check_vout_vref()) {
+        return;
+    }
+
+    int8_t action=-1;
+    char action_str[7];
+    // action is the first argument (read/write/probe/erase/etc)
+    if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
+        for(uint8_t i = 0; i < count_of(ddr5_actions); i++) {
+            if (strcmp(action_str, ddr5_actions[i].verb) == 0) {
+                action = ddr5_actions[i].action;
+                break;
+            }
+        }
+    }
+
+    if( action == -1) {
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+        return;
+    }
+
+    command_var_t arg;
+    bool file_flag = cmdln_args_find_flag_string('f' | 0x20, &arg, sizeof(file), file);
+    if ((action == DDR5_WRITE || action == DDR5_READ || action== DDR5_VERIFY || action == DDR5_CRC) && !file_flag) {
+        printf("Missing file name: -f <filename>\r\n");
+        return;
+    }
+
+    uint32_t block_flag;
+    if(action == DDR5_LOCK || action == DDR5_UNLOCK) {
+        if(!cmdln_args_find_flag_uint32('b', &arg, &block_flag)){ // block to lock/unlock
+            printf("Missing block number: -b <block number>\r\n");
+            return;
+        }
+        if(block_flag > 15) {
+            printf("Block number must be between 0 and 15\r\n");
+            return;
+        }
+    }
+
+    fala_start_hook();  
+    switch(action) {
+        case DDR5_PROBE:
+            ddr5_probe();
+            return;
+        case DDR5_DUMP:
+            ddr5_dump();
+            return;
+        case DDR5_READ:
+            printf("Reading SPD NVM to file: %s\r\n", file);
+            break;
+        case DDR5_WRITE:
+            printf("Writing SPD NVM from file: %s\r\n", file);
+            break;
+        case DDR5_VERIFY:
+            printf("Verifying SPD NVM against file: %s\r\n", file);
+            //send 512 bytes of file data
+            //ddr5_nvm_jedec_crc(uint8_t *data);
+            break;
+        case DDR5_LOCK:
+            // show status before and after lock?
+            printf("Locking NVM block %d\r\n", block_flag);
+            break;
+        case DDR5_UNLOCK:
+            printf("Unlocking NVM block %d\r\n", block_flag);
+            break;
+        case DDR5_CRC:
+            printf("Checking CRC for JEDEC blocks 0-7, file: %s\r\n", file);
+            // crc in the file
+            // calculated crc
+            break;
+        default:
+            printf("Unknown action\r\n");
+            return;
+    }
+
+#if 0
+flash_cleanup:
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
+#endif
 
 }
-
 
 //maybe useful to evaluate before writing?
 #if 0

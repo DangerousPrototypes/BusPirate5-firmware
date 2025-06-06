@@ -209,12 +209,6 @@
         "Comments": null,
         "DataTypes": []
     },
-    "T_HELP_1_4": {
-        "Localized": "重启Bus Pirate",
-        "EN_US": null,
-        "Comments": null,
-        "DataTypes": []
-    },
     "T_HELP_1_5": {
         "Localized": "切换到系统启动加载器",
         "EN_US": null,

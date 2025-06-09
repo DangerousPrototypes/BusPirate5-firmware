@@ -56,6 +56,10 @@ set(buspirate_common
         pirate/rgb.c
         pirate/intercore_helpers.c
 
+        # libraries
+        lib/jep106/jep106.c
+        lib/jep106/jep106.h
+
         # commands
         commands.h
         commands.c

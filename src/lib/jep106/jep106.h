@@ -1,0 +1,1 @@
+const char *jep106_table_manufacturer(uint8_t bank, uint8_t id);

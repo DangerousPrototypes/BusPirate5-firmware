@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "blueTag.h"
+#include "../../../lib/jep106/jep106.h"
 
 const char *banner=R"banner(
              _______ ___     __   __ _______ _______ _______ _______ 
@@ -36,9 +37,11 @@ const uint startChannel = BTAG_START_CHANNEL;              // First GPIO pin to 
 const uint maxChannels = BTAG_MAX_CHANNELS;               // Max number of channels supported by Pico  
 
 // include file from openocd/src/helper
+#if 0
 static const char * const jep106[][126] = {
 #include "jep106.inc"
 };
+#endif 
 
 long int strtol(const char *str, char **endptr, int base);
 
@@ -297,7 +300,8 @@ void displayPinout(struct jtagScan_t *jtag)
         printf(" TRST=N/A %s%s", BTAG_EOL, BTAG_EOL);
     }
 }
-
+#if 0
+// Now a core Bus Pirate library
 const char *jep106_table_manufacturer(unsigned int bank, unsigned int id)
 {
 	if (id < 1 || id > 126) {
@@ -309,6 +313,7 @@ const char *jep106_table_manufacturer(unsigned int bank, unsigned int id)
 		return "Unknown";
 	return jep106[bank][id];
 }
+#endif
 
 bool isValidDeviceID(uint32_t idc)
 {        

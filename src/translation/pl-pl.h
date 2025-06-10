@@ -529,5 +529,16 @@ static char const * const pl_pl[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_UART_GLITCH_CONFIG        ] = NULL,
     [ T_I2C_SNIFF                      ] = NULL,
     [ T_I2C_SNIFF_QUIET                ] = NULL,
+    [ T_HELP_DDR5                      ] = NULL,
+    [ T_HELP_DDR5_PROBE                ] = NULL,
+    [ T_HELP_DDR5_DUMP                 ] = NULL,
+    [ T_HELP_DDR5_WRITE                ] = NULL,
+    [ T_HELP_DDR5_READ                 ] = NULL,
+    [ T_HELP_DDR5_VERIFY               ] = NULL,
+    [ T_HELP_DDR5_LOCK                 ] = NULL,
+    [ T_HELP_DDR5_UNLOCK               ] = NULL,
+    [ T_HELP_DDR5_CRC                  ] = NULL,
+    [ T_HELP_DDR5_FILE_FLAG            ] = NULL,
+    [ T_HELP_DDR5_BLOCK_FLAG           ] = NULL,
 
 };

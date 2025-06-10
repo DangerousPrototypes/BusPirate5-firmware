@@ -545,7 +545,18 @@ static char const * const en_us[]={
     [T_HELP_UART_GLITCH_CONFIG]="Configure UART glitch parameters",
 	[T_I2C_SNIFF]="I2C sniffer",
 	[T_I2C_SNIFF_QUIET]="Quiet mode, don't show ACKs",
-
+	//DDR5 command in I2C
+	[T_HELP_DDR5]="read, write and probe DDR5 SPD chips",
+	[T_HELP_DDR5_PROBE]="Show DDR5 SPD chip and NVM/EEPROM status",
+	[T_HELP_DDR5_DUMP]="Display DDR5 SPD NVM contents",
+	[T_HELP_DDR5_WRITE]="Write file to DDR5 SPD NVM",
+	[T_HELP_DDR5_READ]="Read DDR5 SPD NVM to a file",
+	[T_HELP_DDR5_VERIFY]="Verify DDR5 SPD NVM against file",
+	[T_HELP_DDR5_LOCK]="Lock DDR5 SPD NVM block (64 bytes per block)",
+	[T_HELP_DDR5_UNLOCK]="Unlock DDR5 SPD NVM block",
+	[T_HELP_DDR5_CRC]="Calculate/verify CRC of JEDEC blocks 0-7 in a file",
+	[T_HELP_DDR5_FILE_FLAG]="File flag. Speficy a file to write, read, verify or check CRC",
+	[T_HELP_DDR5_BLOCK_FLAG]="Block flag. Speficy a DDR5 SPD NVM block to lock or unlock (0 - 15)",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

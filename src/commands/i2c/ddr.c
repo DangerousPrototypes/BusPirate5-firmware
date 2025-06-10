@@ -163,8 +163,6 @@ typedef struct __attribute__((packed)) {
     uint8_t manufacturer_specific[128-42]; // Manufacturer Specific Data (remaining bytes)
 } ddr5_nvm_jedec_manuf_info_t;
 
-
-
 #define DDR5_SPD_SIGNITURE 0x12
 #define DDR5_SPD_I2C_WRITE_ADDR 0xA0
 #define DDR5_SPD_MR11 0x0B // MR11: I2C Legacy Mode Device Configuration
@@ -239,8 +237,15 @@ bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8
 }
 
 bool i2c_write(uint8_t addr, uint8_t *data, uint8_t len) {
-    if (pio_i2c_write_array_timeout(addr, data, len, 0xffffu)) {
-        printf("Device not detected (no ACK)\r\n");
+    hwi2c_status_t i2c_result = pio_i2c_write_array_timeout(addr, data, len, 0xfffffu);
+    if(i2c_result != HWI2C_OK) {
+        if(i2c_result == HWI2C_TIMEOUT) {
+            printf("I2C Timeout\r\n");
+        } else if(i2c_result == HWI2C_NACK) {
+            printf("Device not detected (no ACK)\r\n");
+        } else {
+            printf("I2C Error: %d\r\n", i2c_result);
+        }
         return true;
     }
     return false;
@@ -248,23 +253,18 @@ bool i2c_write(uint8_t addr, uint8_t *data, uint8_t len) {
 
 bool ddr5_set_legacy_page(uint8_t page){
     //set the page for the legacy mode
-    uint8_t data[2];
-    data[0] = DDR5_SPD_MR11; //MR11: I2C Legacy Mode Device Configuration
-    data[1] = page & 0b111; //page 0-7
-    if(pio_i2c_write_array_timeout(DDR5_SPD_I2C_WRITE_ADDR, data, 2u, 0xffffu)) {
-        printf("Device not detected (no ACK)\r\n");
-        return true;
-    }
+    uint8_t data[2]={DDR5_SPD_MR11, page & 0b111}; //MR11: I2C Legacy Mode Device Configuration
+    //data[0] = DDR5_SPD_MR11; //MR11: I2C Legacy Mode Device Configuration
+    //data[1] = page & 0b111; //page 0-7
+    if(i2c_write(DDR5_SPD_I2C_WRITE_ADDR, data, 2u)) return true; //write the page to the device
     //read to verify
-    //data[0] = DDR5_SPD_MR11; //read register MR11
-    if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR11}, 1u, data, 1, 0xffffu)){
-        printf("Device not detected (no ACK)\r\n");
-        return true;
-    }
+    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR11}, 1u, data, 1)) return true;
+    
     if(data[0] != page) {
         printf("Error: Page %d not set, read back %d\r\n", page, data[0]);
         return true;
     }
+
     return false;
 }
 
@@ -306,6 +306,41 @@ static const char *ddr5_decode_jep106_jedec_id(uint8_t b0, uint8_t b1){
     int bank=(b0 & 0xf);
     int id=(b1 & 0x7f); //SPD JEDEC ID is lower 7 bits, no parity bit. Bit 7 = 1 = bank > 0
     return jep106_table_manufacturer(bank, id); //returns a string
+}
+
+uint16_t ddr5_crc16(const uint8_t *spd, uint32_t cnt) {
+    if (spd == NULL) {
+        printf("Error: SPD pointer is NULL.\n");
+        return 0xFFFF; // Return an error code
+    }
+
+    uint16_t crc = 0;
+    for (uint32_t index = 0; index < cnt; ++index) {
+        crc ^= (uint16_t)(spd[index] << 8); // Process each byte
+        for (uint8_t bit = 0; bit < 8; ++bit) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ 0x1021;
+            } else {
+                crc = crc << 1;
+            }
+        }
+    }
+    return crc & 0xFFFF;
+}
+
+bool ddr5_wait_idle(void){
+    uint32_t timeout = 0xfffu; 
+    // wait for the write to complete
+    uint8_t status;
+    do {
+        // read the status register 0x30
+        if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, &status, 1)) {
+            printf("Error reading SPD Device Status Register\r\n");
+            return true;
+        }
+        timeout --;
+    } while((status & DDR5_SPD_MR48_OP_STATUS) || (timeout==0)); // wait until the write operation is complete
+    return false;
 }
 
 /*
@@ -425,7 +460,7 @@ void ddr5_print_unknown(uint8_t value){
 }
 
 bool ddr5_nvm_jedec_crc(uint8_t *data){
-    printf("\r\nCRC verify\r\nStored CRC (bytes 510:511): 0x%02X 0x%02X\r\n", data[510], data[511]);
+    printf("CRC verify\r\nStored CRC (bytes 510:511): 0x%02X 0x%02X\r\n", data[510], data[511]);
     uint16_t crc= ddr5_crc16(data, 510);
     printf("Calculated CRC: 0x%02X 0x%02X\r\n", crc&0xff, crc >> 8);
     if(crc != (data[511] << 8 | data[510])){
@@ -655,6 +690,8 @@ bool ddr5_lock_bits_write_verify(uint8_t lb0, uint8_t lb1) {
         return true;
     }
 
+    if(ddr5_wait_idle()) return true;
+
     //verify lock bits
     if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, lock_bits, 2)) {
         return true;
@@ -666,95 +703,6 @@ bool ddr5_lock_bits_write_verify(uint8_t lb0, uint8_t lb1) {
         return true; // if not, we cannot write to the NVM
     }
     return false; // if the lock bits were written successfully
-}
-
-//true for error, false for success
-bool ddr5_write_from_file(FIL *file_handle, uint8_t *buffer) {
-    uint32_t bytes_read;
-
-    //detect if spd present
-    if(ddr5_detect_spd_quick()) goto ddr5_write_error; //check if the device is DDR5 SPD
-
-    //check if write enabled (HSA pin grounded)
-    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, buffer, 1)) goto ddr5_write_error; // read the Device Status Register (MR48)
-    // is write enabled? check 0x30 bit 2
-    if(buffer[0] & DDR5_SPD_MR48_OVERRIDE_STATUP) {
-        printf("Write Protect Override is enabled, proceeding with write\r\n");
-    } else {
-        printf("Write Protect Override is not enabled, cannot write to SPD NVM. Is HSA pin grounded?\r\n");
-        goto ddr5_write_error; // if not, we cannot write to the NVM
-    }
-
-    // is file size 1024 bytes?
-    if(file_size_check(file_handle, 1024)) return true; // if not, we cannot write to the NVM
-
-    //check file CRC
-    if(file_read(file_handle, buffer, 512)) return true;
-    if(f_rewind(file_handle)) { // rewind the file to the beginning
-        printf("Error rewinding file\r\n");
-        goto ddr5_write_error; 
-    }
-
-    if(ddr5_nvm_jedec_crc(buffer)) return true; // check CRC of the first 512 bytes
-
-    //read current lock bits
-    uint8_t original_lock_bits[2];
-    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, original_lock_bits, 2)) {
-        goto ddr5_write_error; // read the NVM block lock bits
-    }
-
-    // unlock the block lock bits
-    if(ddr5_lock_bits_write_verify(0x00, 0x00)) {
-        goto ddr5_write_error; // if the lock bits were not written successfully
-    }
-    printf("NVM block lock bits cleared, proceeding with write\r\n");
-
-    //write 16 byte pages to the DDR5 SPD NVM
-    // poll 0x30 bit 3 for 0
-    //8 pages of 128 bytes
-    //page needs to be updated every 128 bytes in MR11
-    for(uint8_t i=0; i<8; i++){
-        if(file_read(file_handle, buffer, 128)) return true; // read 128 bytes from the file
-
-        if(ddr5_set_legacy_page(i)) goto ddr5_write_error; // set the legacy page to write to
-
-        for(uint8_t j=0; j<128/16; j++){
-            // need to send the address to write to, then the data
-            if(pio_i2c_start_timeout(0xfffff)) goto ddr5_write_error; // start the I2C transaction
-            if(pio_i2c_write_timeout(DDR5_SPD_I2C_WRITE_ADDR, 0xffff)) goto ddr5_write_error; // write the device address
-            if(pio_i2c_write_timeout(0x80 + (j*16), 0xffff))goto ddr5_write_error; // write the address to write to
-            for(uint8_t k=0; k<16; k++) {
-                if(pio_i2c_write_timeout(buffer[j*16+k], 0xffff))goto ddr5_write_error; // write the data byte
-            }
-            if(pio_i2c_stop_timeout(0xffff))goto ddr5_write_error; // stop the I2C transaction
-            
-            // wait for the write to complete
-            uint8_t status;
-            do {
-                // read the status register 0x30
-                if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, &status, 1)) {
-                    printf("Error reading SPD Device Status Register\r\n");
-                    goto ddr5_write_error; // read the Device Status Register (MR48)q
-                }
-            } while(status & DDR5_SPD_MR48_OP_STATUS); // wait until the write operation is complete
-        }
-    }
-
-    //restore NVM lock bits
-    if(ddr5_lock_bits_write_verify(original_lock_bits[0], original_lock_bits[1])) {
-        goto ddr5_write_error; // if the lock bits were not written successfully
-    }
-    printf("NVM block lock bits restored to 0x%02X 0x%02X\r\n", original_lock_bits[0], original_lock_bits[1]);
-
-    printf("Write to DDR5 SPD NVM completed successfully :)\r\n");
-    file_close(file_handle); // close the file
-    return false;
-
-ddr5_write_error:
-    printf("Error writing to DDR5 SPD NVM\r\n");
-    file_close(file_handle); // close the file
-    system_config.error = true; // set the error flag
-    return true;
 }
 
 bool ddr5_verify(FIL *file_handle, uint8_t *buffer) {
@@ -786,6 +734,100 @@ bool ddr5_verify(FIL *file_handle, uint8_t *buffer) {
     return verror; // return true if there was a verification error, false otherwise
 }
 
+//true for error, false for success
+bool ddr5_write_from_file(FIL *file_handle, uint8_t *buffer) {
+    uint32_t bytes_read;
+    
+    // is file size 1024 bytes?
+    if(file_size_check(file_handle, 1024)) return true; // if not, we cannot write to the NVM
+
+    //check file CRC
+    if(file_read(file_handle, buffer, 512)) return true;
+    if(f_rewind(file_handle)) { // rewind the file to the beginning
+        printf("Error rewinding file\r\n");
+        goto ddr5_write_error; 
+    }
+    if(ddr5_nvm_jedec_crc(buffer)) return true; // check CRC of the first 512 bytes
+
+    //detect if spd present
+    if(ddr5_detect_spd_quick()) goto ddr5_write_error; //check if the device is DDR5 SPD
+
+    //check if write enabled (HSA pin grounded)
+    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, buffer, 1)) goto ddr5_write_error; // read the Device Status Register (MR48)
+    // is write enabled? check 0x30 bit 2
+    if(buffer[0] & DDR5_SPD_MR48_OVERRIDE_STATUP) {
+        printf("Write Protect Override is enabled: OK\r\n");
+    } else {
+        printf("Write Protect Override is not enabled, cannot write to SPD NVM. Is HSA pin grounded?\r\n");
+        goto ddr5_write_error; // if not, we cannot write to the NVM
+    }
+
+    //read current lock bits
+    uint8_t original_lock_bits[2];
+    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, original_lock_bits, 2)) {
+        goto ddr5_write_error; // read the NVM block lock bits
+    }
+    printf("Saving NVM block lock bits: 0x%02X%02X\r\n", original_lock_bits[0], original_lock_bits[1]);
+
+    // unlock the block lock bits
+    if(ddr5_lock_bits_write_verify(0x00, 0x00)) {
+        goto ddr5_write_error; // if the lock bits were not written successfully
+    }
+    printf("NVM block lock bits cleared: OK\r\n");
+
+    //write 16 byte pages to the DDR5 SPD NVM
+    // poll 0x30 bit 3 for 0
+    //8 pages of 128 bytes
+    //page needs to be updated every 128 bytes in MR11
+    for(uint8_t i=0; i<8; i++){
+        printf("Writing page %d\r\n", i);
+        if(file_read(file_handle, buffer, 128)) return true; // read 128 bytes from the file
+
+        if(ddr5_set_legacy_page(i)) goto ddr5_write_error; // set the page for the legacy mode  
+
+        for(uint8_t j=0; j<128/16; j++){
+            //get the bytes into an array so we don't have to use granular function
+            uint8_t page_data[17];
+            page_data[0] = DDR5_SPD_ACCESS_NVM | (j*16); // address to write to
+            for(uint8_t k=0; k<16; k++) {
+                page_data[k+1] = buffer[(j*16)+k]; // data to write
+            }
+
+            if(i2c_write(DDR5_SPD_I2C_WRITE_ADDR, page_data, 17u)){
+                printf("Error writing page %d, chunk %d\r\n", i, j);   
+                goto ddr5_write_error; // write the access register and address to write to
+            }
+ 
+            // wait for the write to complete
+            if(ddr5_wait_idle()) return true; // wait until the write operation is complete
+        }
+    }
+
+    //restore NVM lock bits
+    if(ddr5_lock_bits_write_verify(original_lock_bits[0], original_lock_bits[1])) {
+        goto ddr5_write_error; // if the lock bits were not written successfully
+    }
+    printf("NVM block lock bits restored: 0x%02X%02X\r\n", original_lock_bits[0], original_lock_bits[1]);
+
+    printf("Verify write\r\n");
+    f_rewind(file_handle); // rewind the file to the beginning
+    if(ddr5_verify(file_handle, buffer)){
+        printf("Verify: Failed!\r\n");
+        return true; // on fail file is closed in ddr5_verify
+    }else{
+        printf("Verify: OK\r\n"); //on success file is closed in ddr5_verify
+    }
+
+    //file_close(file_handle); // close the file
+    return false;
+
+ddr5_write_error:
+    printf("Error writing to DDR5 SPD NVM\r\n");
+    file_close(file_handle); // close the file
+    system_config.error = true; // set the error flag
+    return true;
+}
+
 bool ddr5_crc_file(FIL *file_handle, char *buffer){
     //get file size
     if(file_size_check(file_handle, 1024)) return true; // check if the file size is 1024 bytes
@@ -802,7 +844,6 @@ bool ddr5_crc_file(FIL *file_handle, char *buffer){
 /// @return true on error, false on success
 bool ddr5_lock(uint8_t block, bool lock, bool update) {
     uint8_t old_data[2];
-    uint8_t new_data[3];
 
     //detect if spd present
     if(ddr5_detect_spd_quick()) return true; //check if the device is DDR5 SPD
@@ -813,10 +854,9 @@ bool ddr5_lock(uint8_t block, bool lock, bool update) {
         return true;
     }
 
+    uint8_t new_data[3]={DDR5_SPD_MR12, old_data[0], old_data[1]}; // prepare new data for writing
     if(update){
         // Update lock bits
-        new_data[1] = old_data[0];
-        new_data[2] = old_data[1];
         if (block < 8) {
             new_data[1] = lock ? (old_data[0] | (1u << block)) : (old_data[0] & ~(1u << block));
         } else {
@@ -829,17 +869,25 @@ bool ddr5_lock(uint8_t block, bool lock, bool update) {
         }
     }
 
-    //read back to verify
-    if(ddr5_lock_bits_write_verify(new_data[1], new_data[2])) {
-        return true; // if the lock bits were not written successfully
+    uint8_t verify_data[2];
+    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, verify_data, 2)) {
+        return true; // read the NVM block lock bits
     }
-    printf("Lock bits set successfully: 0x%02X 0x%02X\r\n", new_data[1], new_data[2]);
+
+    if(update){
+        if(new_data[1] != verify_data[0] || new_data[2] != verify_data[1]) {
+            printf("Error: Lock bits not written successfully, expected 0x%02X 0x%02X, got 0x%02X 0x%02X\r\n", verify_data[0], verify_data[1], new_data[1], new_data[2]);
+            printf("Is HSA pin grounded to enable Write Protect Override?\r\n");
+            return true; // if not, we cannot write to the NVM
+        }
+        printf("Lock bits set successfully: 0x%02X 0x%02X\r\n", new_data[1], new_data[2]);
+    }
 
     printf(" Block| Old State | New State\r\n");
     printf("------|-----------|-----------\r\n");
     for(uint8_t j=0; j<2; j++){
         for(uint8_t i=0; i<8; i++){
-            printf("  %d   | %s | %s\r\n", (j*8)+i, (old_data[j] & (1u << i)) ? "Locked" : "Unlock", (new_data[j+1] & (1u << i)) ? "Locked" : "Unlock");
+            printf("  %d   | %s | %s\r\n", (j*8)+i, (old_data[j] & (1u << i)) ? "Locked" : "Unlock", (verify_data[j] & (1u << i)) ? "Locked" : "Unlock");
         }
     }
     return false;
@@ -860,18 +908,18 @@ static const char* const usage[] = {
 };
 
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_FLASH },               // flash command help
-    { 0, "probe", T_HELP_FLASH_PROBE },    // probe
-    { 0, "dump", T_HELP_FLASH_PROBE },      // dump
-    { 0, "write", T_HELP_FLASH_WRITE },    // write
-    { 0, "read", T_HELP_FLASH_READ },      // read
-    { 0, "verify", T_HELP_FLASH_VERIFY },  // verify
-    { 0, "lock", T_HELP_FLASH_TEST },      // test
-    { 0, "unlock", T_HELP_FLASH_TEST },    // test
-    { 0, "crc", T_HELP_FLASH_TEST },    // test    
-    { 0, "-f", T_HELP_FLASH_FILE_FLAG },   // file to read/write/verify
-    { 0, "-b", T_HELP_FLASH_ERASE_FLAG },  // with erase (before write)
-    { 0, "-h", T_HELP_HELP },   // help flag
+    { 1, "", T_HELP_DDR5 },               // flash command help
+    { 0, "probe", T_HELP_DDR5_PROBE },    // probe
+    { 0, "dump", T_HELP_DDR5_DUMP },      // dump
+    { 0, "write", T_HELP_DDR5_WRITE },    // write
+    { 0, "read", T_HELP_DDR5_READ },      // read
+    { 0, "verify", T_HELP_DDR5_VERIFY },  // verify
+    { 0, "lock", T_HELP_DDR5_LOCK },      // lock
+    { 0, "unlock", T_HELP_DDR5_UNLOCK },  // unlock
+    { 0, "crc", T_HELP_DDR5_CRC },        // crc
+    { 0, "-f", T_HELP_DDR5_FILE_FLAG },   // file to read/write/verify
+    { 0, "-b", T_HELP_DDR5_BLOCK_FLAG },  // with erase (before write)
+    { 0, "-h", T_HELP_HELP }               // help flag
 };
 
 enum ddr5_actions {
@@ -965,24 +1013,22 @@ void ddr5_handler(struct command_result* res) {
     }
 
     //BSS138 on breakout board
-    //fala_start_hook();  
+    fala_start_hook();  
     uint8_t buffer[1024]; // buffer to store the file data
     switch(action) {
         case DDR5_PROBE:
             ddr5_probe(buffer);
-            return;
+            break;
         case DDR5_DUMP:
             ddr5_dump(buffer);
-            return;
+            break;
         case DDR5_READ:
             printf("Read SPD NVM to file: %s\r\n", file);
             if(ddr5_read_to_file(&file_handle, buffer)) {
-                printf("Error reading");
-                return;
+                printf("Error!");
             }else{
-                printf("Successfully read");
+                printf("Success :)");
             }
-            printf(" SPD NVM to file: %s\r\n", file);
             break;
         case DDR5_WRITE:
             //TODO: CRC check!
@@ -990,17 +1036,17 @@ void ddr5_handler(struct command_result* res) {
             //TODO: restore lock bits after write
             printf("Write SPD NVM from file: %s\r\n", file);
             if(ddr5_write_from_file(&file_handle, buffer)) {
-                printf("Error writing SPD NVM from file: %s\r\n", file);
-                return;
+                printf("Error!\r\n");
             } else {
-                printf("Successfully wrote SPD NVM from file: %s\r\n", file);
+                printf("Success :)");
             }
+            break;
         case DDR5_VERIFY:
             printf("Verifying SPD NVM against file: %s\r\n", file);
             if(ddr5_verify(&file_handle, buffer)) {
-                printf("Error: verification failed, SPD NVM does not match file!\r\n");
+                printf("Error!\r\n");
             } else {
-                printf("Verification successful, SPD NVM matches file :)\r\n");
+                printf("Success :)\r\n");
             }
             break;
         case DDR5_LOCK:
@@ -1018,14 +1064,9 @@ void ddr5_handler(struct command_result* res) {
             break;
         default:
             printf("Unknown action\r\n");
-            return;
+            break;
     }
-
-#if 0
-flash_cleanup:
     //we manually control any FALA capture
     fala_stop_hook();
     fala_notify_hook();
-#endif
-
 }

@@ -545,6 +545,17 @@ enum T_translations{
     T_HELP_UART_GLITCH_CONFIG,
     T_I2C_SNIFF,
     T_I2C_SNIFF_QUIET,
+    T_HELP_DDR5,
+    T_HELP_DDR5_PROBE,
+    T_HELP_DDR5_DUMP,
+    T_HELP_DDR5_WRITE,
+    T_HELP_DDR5_READ,
+    T_HELP_DDR5_VERIFY,
+    T_HELP_DDR5_LOCK,
+    T_HELP_DDR5_UNLOCK,
+    T_HELP_DDR5_CRC,
+    T_HELP_DDR5_FILE_FLAG,
+    T_HELP_DDR5_BLOCK_FLAG,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

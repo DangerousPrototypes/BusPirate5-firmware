@@ -177,21 +177,70 @@ typedef struct __attribute__((packed)) {
 #define DDR5_SPD_ACCESS_REG 0x00 // Access register space
 #define DDR5_SPD_ACCESS_NVM 0x80 // Access NVM space
 
-bool ddr5_detect_spd_quick(void){
-    uint8_t data[2];
-    //data[0] = DDR5_SPD_ACCESS_REG; //read volatile memory, start at 0x00
-    if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_ACCESS_REG}, 1u, data, 2, 0xffffu)) {
+
+bool file_close(FIL *file_handle) {
+    FRESULT result = f_close(file_handle); // close the file
+    if (result != FR_OK) {
+        printf("Error closing file\r\n");
+        return true; // return true if there was an error
+    }
+    return false; // return false if the file was closed successfully
+}
+
+// true for error, false for success
+bool file_open(FIL *file_handle, const char *file, uint8_t file_status) {
+    FRESULT result;
+    result = f_open(file_handle, file, file_status); 
+    if (result != FR_OK){
+        printf("Error opening file %s\r\n", file);
+        file_close(file_handle); // close the file if there was an error
+        return true;
+    }
+    return false; // return false if the file was opened successfully
+}
+
+bool file_size_check(FIL *file_handle, uint32_t expected_size) {
+    if(f_size(file_handle) != expected_size) { // get the file size
+        printf("Error: File must be exactly %d bytes long\r\n", expected_size);
+        file_close(file_handle); // close the file
+        return true; // return true if the file size is not as expected
+    }
+    return false; // return false if the file size is as expected
+}
+
+bool file_read(FIL *file_handle, uint8_t *buffer, uint32_t size) {
+    UINT bytes_read;
+    FRESULT result = f_read(file_handle, buffer, size, &bytes_read); // read the file
+    if (result != FR_OK || bytes_read != size) { // check if the read was successful
+        printf("Error reading file\r\n");
+        file_close(file_handle); // close the file if there was an error
+        return true; // return true if there was an error
+    }
+    return false; // return false if the read was successful
+}
+
+bool file_write(FIL *file_handle, uint8_t *buffer, uint32_t size) {
+    UINT bytes_written;
+    FRESULT result = f_write(file_handle, buffer, size, &bytes_written); // write the file
+    if (result != FR_OK || bytes_written != size) { // check if the write was successful
+        printf("Error writing to file\r\n");
+        file_close(file_handle); // close the file if there was an error
+        return true; // return true if there was an error
+    }
+    return false; // return false if the write was successful
+}
+
+bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8_t *read_data, uint8_t read_len) {
+    if (pio_i2c_transaction_array_repeat_start(addr, write_data, write_len, read_data, read_len, 0xffffu)) {
         printf("Device not detected (no ACK)\r\n");
         return true;
     }
-    ddr5_spd_volatile_t* spd = (ddr5_spd_volatile_t*)data;
-    printf("Device Type: 0x%02X%02X\r\n", spd->device_type_msb, spd->device_type_lsb);
-    if((spd->device_type_msb != 0x51) || (spd->device_type_lsb != 0x18)){
-        printf("Error: Device Type does not match expected values (0x51 0x18)\r\n");
-        return true;
-    }
-    if(ddr5_set_legacy_page(0)) {
-        printf("Error: I2C Legacy Mode Address Pointer Mode is not 1 byte\r\n");
+    return false;
+}
+
+bool i2c_write(uint8_t addr, uint8_t *data, uint8_t len) {
+    if (pio_i2c_write_array_timeout(addr, data, len, 0xffffu)) {
+        printf("Device not detected (no ACK)\r\n");
         return true;
     }
     return false;
@@ -214,6 +263,26 @@ bool ddr5_set_legacy_page(uint8_t page){
     }
     if(data[0] != page) {
         printf("Error: Page %d not set, read back %d\r\n", page, data[0]);
+        return true;
+    }
+    return false;
+}
+
+bool ddr5_detect_spd_quick(void){
+    uint8_t data[2];
+    //data[0] = DDR5_SPD_ACCESS_REG; //read volatile memory, start at 0x00
+    if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_ACCESS_REG}, 1u, data, 2, 0xffffu)) {
+        printf("Device not detected (no ACK)\r\n");
+        return true;
+    }
+    ddr5_spd_volatile_t* spd = (ddr5_spd_volatile_t*)data;
+    printf("Device Type: 0x%02X%02X\r\n", spd->device_type_msb, spd->device_type_lsb);
+    if((spd->device_type_msb != 0x51) || (spd->device_type_lsb != 0x18)){
+        printf("Error: Device Type does not match expected values (0x51 0x18)\r\n");
+        return true;
+    }
+    if(ddr5_set_legacy_page(0)) {
+        printf("Error: I2C Legacy Mode Address Pointer Mode is not 1 byte\r\n");
         return true;
     }
     return false;
@@ -276,7 +345,10 @@ float ddr5_get_temperature(uint8_t t_high, uint8_t t_low, uint8_t t_resolution) 
    return temperature;
 }
 
-bool ddr5_decode_volatile_memory(ddr5_spd_volatile_t* spd) {
+bool ddr5_decode_volatile_memory(uint8_t* data) {
+    
+    ddr5_spd_volatile_t* spd = (ddr5_spd_volatile_t*)data;
+
     printf("Device Revision: %d.%d\r\n", (spd->device_revision_major+1), spd->device_revision_minor);
     printf("Vendor ID: 0x%02X%02X (%s)\r\n", spd->vendor_id_byte0, spd->vendor_id_byte1, ddr5_decode_jep106_jedec_id(spd->vendor_id_byte0, spd->vendor_id_byte1));
     printf("Device Capability - Temperature Sensor Support: %d\r\n", spd->device_capability_ts_suport);
@@ -519,275 +591,209 @@ bool ddr5_nvm_search(uint8_t *data) {
 *
 */
 
-bool ddr5_probe(void) {
+bool ddr5_probe(uint8_t *buffer) {
     // read 128 bytes from the DDR5 SPD Volatile Memory
     // cast it to the ddr5_spd_volatile_t structure
-    uint8_t data[512];
-
     //detect if spd present
     if(ddr5_detect_spd_quick()) return true; //check if the device is DDR5 SPD
 
-    if(ddr5_read_pages_128bytes(false, 0, 1, data)) return true; //read volatile memory, start at 0x00
-    ddr5_spd_volatile_t* spd = (ddr5_spd_volatile_t*)data;
+    if(ddr5_read_pages_128bytes(false, 0, 1, buffer)) return true; //read volatile memory, start at 0x00
     
-    ddr5_decode_volatile_memory(spd); //decode the volatile memory
+    ddr5_decode_volatile_memory(buffer); //decode the volatile memory
 
     printf("\r\nSPD EEPROM JEDEC Data blocks 0-7:\r\n");
-    if(ddr5_read_pages_128bytes(true, 0, 4, data)) return true; //read EEPROM page 0-4, start at 0x00
-    if(ddr5_nvm_jedec_crc(data)) return true; //check CRC of the first 512 bytes
-    if(ddr5_nvm_jedec_decode_data(data)) return true; //decode the first 512 bytes of the EEPROM
+    if(ddr5_read_pages_128bytes(true, 0, 4, buffer)) return true; //read EEPROM page 0-4, start at 0x00
+    if(ddr5_nvm_jedec_crc(buffer)) return true; //check CRC of the first 512 bytes
+    if(ddr5_nvm_jedec_decode_data(buffer)) return true; //decode the first 512 bytes of the EEPROM
 
     printf("\r\nSPD EEPROM JEDEC Manufacturing Information blocks 8-9:\r\n");
-    if(ddr5_read_pages_128bytes(true, 0b100, 4, data)) return true; //read EEPROM page 5-8, start at 0x00
-    if(ddr5_nvm_jedec_decode_manuf(data)) return true; //decode the manufacturing information
-    if(ddr5_nvm_search(data)) return true; //search for the end user programmable area
+    if(ddr5_read_pages_128bytes(true, 0b100, 4, buffer)) return true; //read EEPROM page 5-8, start at 0x00
+    if(ddr5_nvm_jedec_decode_manuf(buffer)) return true; //decode the manufacturing information
+    if(ddr5_nvm_search(buffer)) return true; //search for the end user programmable area
     return false;
 }
 
-bool ddr5_dump(void) {
-    uint8_t data[128];
-
+bool ddr5_dump(uint8_t *buffer) {
     //detect if spd present
     if(ddr5_detect_spd_quick()) return true; //check if the device is DDR5 SPD
 
-    //loop and read out eeprom_bytes_count of bytes from the EEPROM
-    for(uint32_t i=0; i<1024/128; i++){
-        if(ddr5_read_pages_128bytes(true, i, 1, data)) return true; //read the EEPROM page
+    //read 1024 bytes from the DDR5 SPD NVM
+    if(ddr5_read_pages_128bytes(true, 0, 8, buffer)) return true; //read EEPROM page 0-7, start at 0x00
 
-        // for convenience, we read 128 byte "pages" that each have two JEDEC blocks of 64 bytes each
-        for(uint8_t block=0; block<2; block++){
-            printf("\r\nEEPROM Block %d:\r\n", (i*2)+block);
-            for(uint32_t j=0; j<64; j++){
-                printf(" 0x%02X", data[(block*64)+j]);
-            }
-        }    
+    //loop and read out eeprom_bytes_count of bytes from the EEPROM
+    for(uint32_t i=0; i<16; i++){
+        printf("\r\nEEPROM Block %d:\r\n", i);
+        for(uint32_t j=0; j<64; j++){
+            printf(" 0x%02X", buffer[(i*64)+j]);
+        }         
     } 
 }
 
-bool ddr5_read_to_file(FILE *file) {
-    uint8_t data[128];
-
+bool ddr5_read_to_file(FIL *file_handle, uint8_t *buffer) {
     //detect if spd present
     if(ddr5_detect_spd_quick()){
-        result = f_close(&file_handle); // close the file
-        res->error = true; // set the error flag
-        return; //check if the device is DDR5 SPD
+        file_close(file_handle); // close the file if there was an error
+        return true; // check if the device is DDR5 SPD
     }
-
     //read 1024 bytes from the DDR5 SPD NVM
-    for(uint32_t i=0; i<1024/128; i++){
-        if(ddr5_read_pages_128bytes(true, i, 1, rbuffer)){
-            result = f_close(&file_handle); // close the file
-            return;
-        }
-        result = f_write(&file_handle, rbuffer, 128, &bytes_written); // write the data to the file
-        if (result != FR_OK) {                                              // if the write was successful
-            printf("Error writing to file %s\r\n", file);
-            result = f_close(&file_handle); // close the file
-            system_config.error = true; // set the error flag
-            return;
-        }
-        printf("Wrote %d bytes to file %s\r\n", bytes_written, file);
+    if(ddr5_read_pages_128bytes(true, 0, 8, buffer)) {
+        file_close(file_handle); // close the file if there was an error
+        return true; // if the read was unsuccessful
+    }
+    if(file_write(file_handle, buffer, 1024)) { 
+        return true; // if the write was unsuccessful (file closed in lower layer)
     }
     // close the file
-    result = f_close(&file_handle); // close the file
-    printf("Successfully read SPD NVM to file: %s\r\n", file);
+    f_close(file_handle); // close the file
+    return false;
 }
 
-ddr5_write_from_file(FILE *file) {
-    uint8_t data[128];
+bool ddr5_lock_bits_write_verify(uint8_t lb0, uint8_t lb1) {
+    // unlock the block lock bits
+    uint8_t lock_bits[3] = {DDR5_SPD_MR12, lb0, lb1}; // 0x0c is the lock bits register
+    if(i2c_write(DDR5_SPD_I2C_WRITE_ADDR, lock_bits, 3u)) {
+        return true;
+    }
+
+    //verify lock bits
+    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, lock_bits, 2)) {
+        return true;
+    }
+
+    if(lock_bits[0] != lb0 || lock_bits[1] != lb1) {
+        printf("Error: Lock bits not written successfully, expected 0x%02X 0x%02X, got 0x%02X 0x%02X\r\n", lb0, lb1, lock_bits[0], lock_bits[1]);
+        printf("Is HSA pin grounded to enable Write Protect Override?\r\n");
+        return true; // if not, we cannot write to the NVM
+    }
+    return false; // if the lock bits were written successfully
+}
+
+//true for error, false for success
+bool ddr5_write_from_file(FIL *file_handle, uint8_t *buffer) {
     uint32_t bytes_read;
 
     //detect if spd present
-    if(ddr5_detect_spd_quick()){
-        result = f_close(&file_handle); // close the file
-        res->error = true; // set the error flag
-        return; //check if the device is DDR5 SPD
-    }
+    if(ddr5_detect_spd_quick()) goto ddr5_write_error; //check if the device is DDR5 SPD
 
-
-    if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, rbuffer, 1, 0xffffu)) {
-        printf("Device not detected (no ACK)\r\n");
-        result = f_close(&file_handle); // close the file
-        system_config.error = true; // set the error flag
-        return;
-    }
+    //check if write enabled (HSA pin grounded)
+    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, buffer, 1)) goto ddr5_write_error; // read the Device Status Register (MR48)
     // is write enabled? check 0x30 bit 2
-    if(rbuffer[0] & DDR5_SPD_MR48_OVERRIDE_STATUP) {
+    if(buffer[0] & DDR5_SPD_MR48_OVERRIDE_STATUP) {
         printf("Write Protect Override is enabled, proceeding with write\r\n");
     } else {
         printf("Write Protect Override is not enabled, cannot write to SPD NVM. Is HSA pin grounded?\r\n");
-        result = f_close(&file_handle); // close the file
-        system_config.error = true; // set the error flag
-        return;
+        goto ddr5_write_error; // if not, we cannot write to the NVM
     }
+
     // is file size 1024 bytes?
-    if(f_size(&file_handle)!=1024){ // get the file size
-        printf("Error: File %s must be exactly 1024 bytes long\r\n", file);
-        system_config.error = true; // set the error flag
-        result = f_close(&file_handle); // close the file
-        return;
+    if(file_size_check(file_handle, 1024)) return true; // if not, we cannot write to the NVM
+
+    //check file CRC
+    if(file_read(file_handle, buffer, 512)) return true;
+    if(f_rewind(file_handle)) { // rewind the file to the beginning
+        printf("Error rewinding file\r\n");
+        goto ddr5_write_error; 
     }
-    // unlock and verify the block lock bits
-    if(pio_i2c_write_array_timeout(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){0x0c, 0x00, 0x00}, 3u, 0xffffu)) {
-        printf("Error: Could not unlock NVM blocks\r\n");
-        result = f_close(&file_handle); // close the file
-        system_config.error = true; // set the error flag
-        return;
+
+    if(ddr5_nvm_jedec_crc(buffer)) return true; // check CRC of the first 512 bytes
+
+    //read current lock bits
+    uint8_t original_lock_bits[2];
+    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, original_lock_bits, 2)) {
+        goto ddr5_write_error; // read the NVM block lock bits
     }
-    //verify lock bits
-    uint8_t lock_bits[2];
-    if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){0x0c}, 1u, lock_bits, 2, 0xffffu)) {
-        printf("Error: Could not read NVM block lock bits\r\n");
-        result = f_close(&file_handle); // close the file
-        system_config.error = true; // set the error flag
-        return;
+
+    // unlock the block lock bits
+    if(ddr5_lock_bits_write_verify(0x00, 0x00)) {
+        goto ddr5_write_error; // if the lock bits were not written successfully
     }
-    if(lock_bits[0] != 0x00 || lock_bits[1] != 0x00) {
-        printf("Error: NVM block lock bits are not cleared, cannot write to SPD NVM\r\n");
-        printf("Current lock bits: 0x%02X 0x%02X\r\n", lock_bits[0], lock_bits[1]);
-        result = f_close(&file_handle); // close the file
-        system_config.error = true; // set the error flag
-        return;
-    } else {
-        printf("NVM block lock bits cleared, proceeding with write\r\n");
-    }
+    printf("NVM block lock bits cleared, proceeding with write\r\n");
+
     //write 16 byte pages to the DDR5 SPD NVM
     // poll 0x30 bit 3 for 0
     //8 pages of 128 bytes
     //page needs to be updated every 128 bytes in MR11
     for(uint8_t i=0; i<8; i++){
-        result = f_read(&file_handle, rbuffer, 128, &bytes_read); // read the data from the file
-        if (result != FR_OK) {                                              // if the read was successful
-            printf("Error reading file %s\r\n", file);
-            system_config.error = true; // set the error flag
-            result = f_close(&file_handle); // close the file
-            return;
-        }
-        if(bytes_read != 128) { // check if we read exactly 128 bytes
-            printf("Error reading 128 bytes from file %d\r\n", i);
-            system_config.error = true; // set the error flag
-            result = f_close(&file_handle); // close the file
-            return;
-        }
+        if(file_read(file_handle, buffer, 128)) return true; // read 128 bytes from the file
+
         if(ddr5_set_legacy_page(i)) goto ddr5_write_error; // set the legacy page to write to
+
         for(uint8_t j=0; j<128/16; j++){
             // need to send the address to write to, then the data
             if(pio_i2c_start_timeout(0xfffff)) goto ddr5_write_error; // start the I2C transaction
             if(pio_i2c_write_timeout(DDR5_SPD_I2C_WRITE_ADDR, 0xffff)) goto ddr5_write_error; // write the device address
             if(pio_i2c_write_timeout(0x80 + (j*16), 0xffff))goto ddr5_write_error; // write the address to write to
             for(uint8_t k=0; k<16; k++) {
-                if(pio_i2c_write_timeout(rbuffer[j*16+k], 0xffff))goto ddr5_write_error; // write the data byte
+                if(pio_i2c_write_timeout(buffer[j*16+k], 0xffff))goto ddr5_write_error; // write the data byte
             }
             if(pio_i2c_stop_timeout(0xffff))goto ddr5_write_error; // stop the I2C transaction
+            
             // wait for the write to complete
             uint8_t status;
             do {
                 // read the status register 0x30
-                if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, &status, 1, 0xffffu)) {
+                if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, &status, 1)) {
                     printf("Error reading SPD Device Status Register\r\n");
-                    system_config.error = true; // set the error flag
-                    result = f_close(&file_handle); // close the file
-                    return;
+                    goto ddr5_write_error; // read the Device Status Register (MR48)q
                 }
             } while(status & DDR5_SPD_MR48_OP_STATUS); // wait until the write operation is complete
         }
     }
-    result = f_close(&file_handle); // close the file
-    break;
-    ddr5_write_error:
-                printf("Error writing to DDR5 SPD NVM\r\n");
-                result = f_close(&file_handle); // close the file
-                system_config.error = true; // set the error flag
-                break;    
+
+    //restore NVM lock bits
+    if(ddr5_lock_bits_write_verify(original_lock_bits[0], original_lock_bits[1])) {
+        goto ddr5_write_error; // if the lock bits were not written successfully
+    }
+    printf("NVM block lock bits restored to 0x%02X 0x%02X\r\n", original_lock_bits[0], original_lock_bits[1]);
+
+    printf("Write to DDR5 SPD NVM completed successfully :)\r\n");
+    file_close(file_handle); // close the file
+    return false;
+
+ddr5_write_error:
+    printf("Error writing to DDR5 SPD NVM\r\n");
+    file_close(file_handle); // close the file
+    system_config.error = true; // set the error flag
+    return true;
 }
 
-bool ddr5_verify(FILE *file) {
+bool ddr5_verify(FIL *file_handle, uint8_t *buffer) {
     if(ddr5_detect_spd_quick()){
-        result = f_close(&file_handle); // close the file
-        res->error = true; // set the error flag
-        return; //check if the device is DDR5 SPD
-    }            
-    //open file for reading, then varify against the SPD NVM page by page
-    //get file size
-    if(f_size(&file_handle)!=1024){ // get the file size
-        printf("Error: File %s must be exactly 1024 bytes long\r\n", file);
-        system_config.error = true; // set the error flag
-        result = f_close(&file_handle); // close the file
-        return;
-    }
+        file_close(file_handle); // close the file
+        return true;
+    }    
+    // check if the file size is 1024 bytes        
+    if(file_size_check(file_handle, 1024)) return true; 
+
+    uint8_t verify_buffer[128];
     bool verror = false; // flag to indicate if there was a verification error
     for(uint32_t i=0; i<1024/128; i++){
-        result = f_read(&file_handle, rbuffer, 128, &bytes_read); // read the data from the file
-        if (result != FR_OK) {                                              // if the read was successful
-            printf("Error reading file %s\r\n", file);
-            system_config.error = true; // set the error flag
-            result = f_close(&file_handle); // close the file
-            return;
-        }
-        if(bytes_read != 128) { // check if we read exactly 128 bytes
-            printf("Error reading 128 bytes from file %d\r\n", i);
-            system_config.error = true; // set the error flag
-            result = f_close(&file_handle); // close the file
-            return;
-        }
-        if(ddr5_read_pages_128bytes(true, i, 1, buffer)){
-            result = f_close(&file_handle); // close the file
-            return;
+        if(file_read(file_handle, buffer, 128)) return true; 
+        if(ddr5_read_pages_128bytes(true, i, 1, verify_buffer)){
+            file_close(file_handle); // close the file
+            return true;
         }
         for(uint8_t j=0; j<128; j++){
-            if(rbuffer[j] != buffer[j]) {
-                printf("Error: SPD NVM byte %d does not match file! (0x%02X != 0x%02X)\r\n", j+(i*128), rbuffer[j], buffer[j]);
+            if(verify_buffer[j] != buffer[j]) {
+                printf("Error: SPD NVM byte %d does not match file! (0x%02X != 0x%02X)\r\n", j+(i*128), verify_buffer[j], buffer[j]);
                 verror = true; // set the verification error flag
             }
         }
     }
 
     // close the file
-    result = f_close(&file_handle); // close the file
-    if (verror) {
-        printf("Verification failed, SPD NVM does not match file %s\r\n", file);
-    } else {
-        printf("Verification successful, SPD NVM matches file %s\r\n", file);
-    }
+    file_close(file_handle); // close the file
+    return verror; // return true if there was a verification error, false otherwise
 }
 
-bool ddr5_crc(){
-                // crc in the file
-            // read the file
-            //get file size
-            if(f_size(&file_handle)!=1024){ // get the file size
-                printf("Error: File %s must be exactly 1024 bytes long\r\n", file);
-                system_config.error = true; // set the error flag
-                result = f_close(&file_handle); // close the file
-                return;
-            }
-            result = f_read(&file_handle, buffer, 512, &bytes_read); // read the data from the file
-            if (result != FR_OK) {                                              // if the read was successful
-                printf("Error reading file %s\r\n", file);
-                system_config.error = true; // set the error flag
-                result = f_close(&file_handle); // close the file
-                return;
-            }
-            
-            // close the file
-            result = f_close(&file_handle); // close the file
-            if (result != FR_OK) {
-                printf("Error closing file %s\r\n", file);
-                system_config.error = true; // set the error flag
-                return;
-            }    
-
-            if(bytes_read != 512) { // check if we read exactly 512 bytes
-                printf("Error reading 512 byte JEDEC header\r\n", file);
-                system_config.error = true; // set the error flag
-                return;
-            }
-
-            ddr5_nvm_jedec_crc(buffer); // check the CRC of the first 512 bytes
-
+bool ddr5_crc_file(FIL *file_handle, char *buffer){
+    //get file size
+    if(file_size_check(file_handle, 1024)) return true; // check if the file size is 1024 bytes
+    if(file_read(file_handle, buffer, 512)) return true; // read the first 512 bytes from the file
+    if(file_close(file_handle)) return true; // close the file
+    // check the CRC of the first 512 bytes
+    return ddr5_nvm_jedec_crc(buffer); 
 }
-
 
 /// @brief lock and unlock a NVM block
 /// @param block NWM block number (0-15)
@@ -803,8 +809,7 @@ bool ddr5_lock(uint8_t block, bool lock, bool update) {
     
     //read current lock bits (0xc, 0xd)
     //old_data[0]=DDR5_SPD_MR12;
-    if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, old_data, 2, 0xffffu)) {
-        printf("Device not detected (no ACK)\r\n");
+    if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, old_data, 2)) {
         return true;
     }
 
@@ -819,34 +824,22 @@ bool ddr5_lock(uint8_t block, bool lock, bool update) {
         }
         //write the new lock bits
         new_data[0] = DDR5_SPD_MR12; //register to write
-        if(pio_i2c_write_array_timeout(DDR5_SPD_I2C_WRITE_ADDR, new_data, 3u, 0xffffu)) {
-            printf("Device not detected (no ACK)\r\n");
+        if(i2c_write(DDR5_SPD_I2C_WRITE_ADDR, new_data, 3u)) {
             return true;
         }
     }
 
     //read back to verify
-    uint8_t verify_data[2];//register to read
-    //verify_data[0] = DDR5_SPD_MR12; //register to read
-    if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, verify_data, 2, 0xffffu)) {
-        printf("Device not detected (no ACK)\r\n");
-        return true;
+    if(ddr5_lock_bits_write_verify(new_data[1], new_data[2])) {
+        return true; // if the lock bits were not written successfully
     }
-
-    if(update){
-        if(verify_data[0] != new_data[1] || verify_data[1] != new_data[2]) {
-            printf("Error: Lock bits not set correctly, read back 0x%02X 0x%02X\r\n", verify_data[0], verify_data[1]);
-            return true;
-        } else {
-            printf("Lock bits set successfully: 0x%02X 0x%02X\r\n", verify_data[0], verify_data[1]);
-        }
-    }
+    printf("Lock bits set successfully: 0x%02X 0x%02X\r\n", new_data[1], new_data[2]);
 
     printf(" Block| Old State | New State\r\n");
     printf("------|-----------|-----------\r\n");
     for(uint8_t j=0; j<2; j++){
         for(uint8_t i=0; i<8; i++){
-            printf("  %d   | %s | %s\r\n", (j*8)+i, (old_data[j] & (1u << i)) ? "Locked" : "Unlock", (verify_data[j] & (1u << i)) ? "Locked" : "Unlock");
+            printf("  %d   | %s | %s\r\n", (j*8)+i, (old_data[j] & (1u << i)) ? "Locked" : "Unlock", (new_data[j+1] & (1u << i)) ? "Locked" : "Unlock");
         }
     }
     return false;
@@ -943,18 +936,13 @@ void ddr5_handler(struct command_result* res) {
             printf("Missing file name: -f <filename>\r\n");
             return;
         }else{
-            BYTE file_status;
+            uint8_t file_status;
             if(action==DDR5_READ){
                 file_status = FA_CREATE_ALWAYS | FA_WRITE;
             }else{
                 file_status = FA_READ; // open the file for reading
             }
-            result = f_open(&file_handle, file, file_status); // create the file, overwrite if it exists
-            if (result != FR_OK) {                                            // error
-                printf("Read write error file %s\r\n", file);
-                system_config.error = true; // set the error flag
-                return;
-            }
+            if(file_open(&file_handle, file, file_status)) return; // create the file, overwrite if it 
         }
     }
 
@@ -975,214 +963,45 @@ void ddr5_handler(struct command_result* res) {
             lock_update = true; //we will update the lock bits
         }
     }
+
     //BSS138 on breakout board
     //fala_start_hook();  
-    //TODO: reusable file function
-    //TODO: check if write is enabled for block lock and write operations
-    UINT bytes_written; // somewhere to store the number of bytes written
-    UINT bytes_read; // somewhere to store the number of bytes read
-    uint8_t rbuffer[128];
     uint8_t buffer[1024]; // buffer to store the file data
     switch(action) {
         case DDR5_PROBE:
-            ddr5_probe();
+            ddr5_probe(buffer);
             return;
         case DDR5_DUMP:
-            ddr5_dump();
+            ddr5_dump(buffer);
             return;
         case DDR5_READ:
             printf("Read SPD NVM to file: %s\r\n", file);
-#if 0
-            //detect if spd present
-            if(ddr5_detect_spd_quick()){
-                result = f_close(&file_handle); // close the file
-                res->error = true; // set the error flag
-                return; //check if the device is DDR5 SPD
+            if(ddr5_read_to_file(&file_handle, buffer)) {
+                printf("Error reading");
+                return;
+            }else{
+                printf("Successfully read");
             }
-
-            //read 1024 bytes from the DDR5 SPD NVM
-            for(uint32_t i=0; i<1024/128; i++){
-                if(ddr5_read_pages_128bytes(true, i, 1, rbuffer)){
-                    result = f_close(&file_handle); // close the file
-                    return;
-                }
-                result = f_write(&file_handle, rbuffer, 128, &bytes_written); // write the data to the file
-                if (result != FR_OK) {                                              // if the write was successful
-                    printf("Error writing to file %s\r\n", file);
-                    result = f_close(&file_handle); // close the file
-                    system_config.error = true; // set the error flag
-                    return;
-                }
-                printf("Wrote %d bytes to file %s\r\n", bytes_written, file);
-            }
-            // close the file
-            result = f_close(&file_handle); // close the file
-        #endif
-            printf("Successfully read SPD NVM to file: %s\r\n", file);
+            printf(" SPD NVM to file: %s\r\n", file);
             break;
         case DDR5_WRITE:
             //TODO: CRC check!
             //TODO: single "write ready?" function to check write enabled, lock bits, etc
             //TODO: restore lock bits after write
             printf("Write SPD NVM from file: %s\r\n", file);
-
-            #if 0
-            //detect if spd present
-            if(ddr5_detect_spd_quick()){
-                result = f_close(&file_handle); // close the file
-                res->error = true; // set the error flag
-                return; //check if the device is DDR5 SPD
-            }
-
-
-            if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, rbuffer, 1, 0xffffu)) {
-                printf("Device not detected (no ACK)\r\n");
-                result = f_close(&file_handle); // close the file
-                system_config.error = true; // set the error flag
-                return;
-            }
-            // is write enabled? check 0x30 bit 2
-            if(rbuffer[0] & DDR5_SPD_MR48_OVERRIDE_STATUP) {
-                printf("Write Protect Override is enabled, proceeding with write\r\n");
-            } else {
-                printf("Write Protect Override is not enabled, cannot write to SPD NVM. Is HSA pin grounded?\r\n");
-                result = f_close(&file_handle); // close the file
-                system_config.error = true; // set the error flag
-                return;
-            }
-            // is file size 1024 bytes?
-            if(f_size(&file_handle)!=1024){ // get the file size
-                printf("Error: File %s must be exactly 1024 bytes long\r\n", file);
-                system_config.error = true; // set the error flag
-                result = f_close(&file_handle); // close the file
-                return;
-            }
-            // unlock and verify the block lock bits
-            if(pio_i2c_write_array_timeout(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){0x0c, 0x00, 0x00}, 3u, 0xffffu)) {
-                printf("Error: Could not unlock NVM blocks\r\n");
-                result = f_close(&file_handle); // close the file
-                system_config.error = true; // set the error flag
-                return;
-            }
-            //verify lock bits
-            uint8_t lock_bits[2];
-            if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){0x0c}, 1u, lock_bits, 2, 0xffffu)) {
-                printf("Error: Could not read NVM block lock bits\r\n");
-                result = f_close(&file_handle); // close the file
-                system_config.error = true; // set the error flag
-                return;
-            }
-            if(lock_bits[0] != 0x00 || lock_bits[1] != 0x00) {
-                printf("Error: NVM block lock bits are not cleared, cannot write to SPD NVM\r\n");
-                printf("Current lock bits: 0x%02X 0x%02X\r\n", lock_bits[0], lock_bits[1]);
-                result = f_close(&file_handle); // close the file
-                system_config.error = true; // set the error flag
+            if(ddr5_write_from_file(&file_handle, buffer)) {
+                printf("Error writing SPD NVM from file: %s\r\n", file);
                 return;
             } else {
-                printf("NVM block lock bits cleared, proceeding with write\r\n");
+                printf("Successfully wrote SPD NVM from file: %s\r\n", file);
             }
-            //write 16 byte pages to the DDR5 SPD NVM
-            // poll 0x30 bit 3 for 0
-            //8 pages of 128 bytes
-            //page needs to be updated every 128 bytes in MR11
-            for(uint8_t i=0; i<8; i++){
-                result = f_read(&file_handle, rbuffer, 128, &bytes_read); // read the data from the file
-                if (result != FR_OK) {                                              // if the read was successful
-                    printf("Error reading file %s\r\n", file);
-                    system_config.error = true; // set the error flag
-                    result = f_close(&file_handle); // close the file
-                    return;
-                }
-                if(bytes_read != 128) { // check if we read exactly 128 bytes
-                    printf("Error reading 128 bytes from file %d\r\n", i);
-                    system_config.error = true; // set the error flag
-                    result = f_close(&file_handle); // close the file
-                    return;
-                }
-                if(ddr5_set_legacy_page(i)) goto ddr5_write_error; // set the legacy page to write to
-                for(uint8_t j=0; j<128/16; j++){
-                    // need to send the address to write to, then the data
-                    if(pio_i2c_start_timeout(0xfffff)) goto ddr5_write_error; // start the I2C transaction
-                    if(pio_i2c_write_timeout(DDR5_SPD_I2C_WRITE_ADDR, 0xffff)) goto ddr5_write_error; // write the device address
-                    if(pio_i2c_write_timeout(0x80 + (j*16), 0xffff))goto ddr5_write_error; // write the address to write to
-                    for(uint8_t k=0; k<16; k++) {
-                        if(pio_i2c_write_timeout(rbuffer[j*16+k], 0xffff))goto ddr5_write_error; // write the data byte
-                    }
-                    if(pio_i2c_stop_timeout(0xffff))goto ddr5_write_error; // stop the I2C transaction
-                    // wait for the write to complete
-                    uint8_t status;
-                    do {
-                        // read the status register 0x30
-                        if(pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR48}, 1u, &status, 1, 0xffffu)) {
-                            printf("Error reading SPD Device Status Register\r\n");
-                            system_config.error = true; // set the error flag
-                            result = f_close(&file_handle); // close the file
-                            return;
-                        }
-                    } while(status & DDR5_SPD_MR48_OP_STATUS); // wait until the write operation is complete
-                }
-            }
-            result = f_close(&file_handle); // close the file
-
-            break;
-ddr5_write_error:
-            printf("Error writing to DDR5 SPD NVM\r\n");
-            result = f_close(&file_handle); // close the file
-            system_config.error = true; // set the error flag
-            break;
-            #endif            
         case DDR5_VERIFY:
             printf("Verifying SPD NVM against file: %s\r\n", file);
-#if 0
-            //detect if spd present
-            if(ddr5_detect_spd_quick()){
-                result = f_close(&file_handle); // close the file
-                res->error = true; // set the error flag
-                return; //check if the device is DDR5 SPD
-            }            
-            //open file for reading, then varify against the SPD NVM page by page
-            //get file size
-            if(f_size(&file_handle)!=1024){ // get the file size
-                printf("Error: File %s must be exactly 1024 bytes long\r\n", file);
-                system_config.error = true; // set the error flag
-                result = f_close(&file_handle); // close the file
-                return;
-            }
-            bool verror = false; // flag to indicate if there was a verification error
-            for(uint32_t i=0; i<1024/128; i++){
-                result = f_read(&file_handle, rbuffer, 128, &bytes_read); // read the data from the file
-                if (result != FR_OK) {                                              // if the read was successful
-                    printf("Error reading file %s\r\n", file);
-                    system_config.error = true; // set the error flag
-                    result = f_close(&file_handle); // close the file
-                    return;
-                }
-                if(bytes_read != 128) { // check if we read exactly 128 bytes
-                    printf("Error reading 128 bytes from file %d\r\n", i);
-                    system_config.error = true; // set the error flag
-                    result = f_close(&file_handle); // close the file
-                    return;
-                }
-                if(ddr5_read_pages_128bytes(true, i, 1, buffer)){
-                    result = f_close(&file_handle); // close the file
-                    return;
-                }
-                for(uint8_t j=0; j<128; j++){
-                    if(rbuffer[j] != buffer[j]) {
-                        printf("Error: SPD NVM byte %d does not match file! (0x%02X != 0x%02X)\r\n", j+(i*128), rbuffer[j], buffer[j]);
-                        verror = true; // set the verification error flag
-                    }
-                }
-            }
-
-            // close the file
-            result = f_close(&file_handle); // close the file
-            if (verror) {
-                printf("Verification failed, SPD NVM does not match file %s\r\n", file);
+            if(ddr5_verify(&file_handle, buffer)) {
+                printf("Error: verification failed, SPD NVM does not match file!\r\n");
             } else {
-                printf("Verification successful, SPD NVM matches file %s\r\n", file);
+                printf("Verification successful, SPD NVM matches file :)\r\n");
             }
-#endif
             break;
         case DDR5_LOCK:
             // show status before and after lock?
@@ -1195,40 +1014,7 @@ ddr5_write_error:
             break;
         case DDR5_CRC:
             printf("Checking CRC for JEDEC blocks 0-7, file: %s\r\n", file);
-#if 0
-            // crc in the file
-            // read the file
-            //get file size
-            if(f_size(&file_handle)!=1024){ // get the file size
-                printf("Error: File %s must be exactly 1024 bytes long\r\n", file);
-                system_config.error = true; // set the error flag
-                result = f_close(&file_handle); // close the file
-                return;
-            }
-            result = f_read(&file_handle, buffer, 512, &bytes_read); // read the data from the file
-            if (result != FR_OK) {                                              // if the read was successful
-                printf("Error reading file %s\r\n", file);
-                system_config.error = true; // set the error flag
-                result = f_close(&file_handle); // close the file
-                return;
-            }
-            
-            // close the file
-            result = f_close(&file_handle); // close the file
-            if (result != FR_OK) {
-                printf("Error closing file %s\r\n", file);
-                system_config.error = true; // set the error flag
-                return;
-            }    
-
-            if(bytes_read != 512) { // check if we read exactly 512 bytes
-                printf("Error reading 512 byte JEDEC header\r\n", file);
-                system_config.error = true; // set the error flag
-                return;
-            }
-
-            ddr5_nvm_jedec_crc(buffer); // check the CRC of the first 512 bytes
-#endif
+            ddr5_crc_file(&file_handle, buffer);
             break;
         default:
             printf("Unknown action\r\n");
@@ -1243,47 +1029,3 @@ flash_cleanup:
 #endif
 
 }
-
-//maybe useful to evaluate before writing?
-#if 0
-    printf("Device Status - Write Protect Override: %s\r\n", (spd->device_status & 0x04) ? "Enabled" : "Disabled");
-    if(!(spd->device_status & 0x04)) {
-        printf("Error: Write Protect Override is disabled, ensure HSA pin is connected to ground, aborting...\r\n");
-        return true;
-    }
-    printf("Error Status: 0x%02X\r\n", spd->error_status);
-    printf("Program Abort Register: %s\r\n", spd->program_abort_register?"Error":"Normal");  
-
-
-    printf("\r\nEEPROM SPD Data blocks 0-7:\r\n");
-    
-    if(ddr5_set_legacy_page(0)) return true; //set the page for the legacy mode
-    
-    data[0] = 0x80;
-    if (pio_i2c_transaction_array_repeat_start(DDR5_SPD_I2C_WRITE_ADDR, data, 1u, data, 512, 0xffffu)) {
-        printf("Device not detected (no ACK)\r\n");
-        return true;
-    }
-
-    //print the first few SPD bytes as hex first, then decode
-    printf("\r\nSPD bytes 0-3: 0x%02X, 0x%02X, 0x%02X, 0x%02X\r\n", data[0], data[1], data[2], data[3]);
-    //printf("\r\nSPD NVM byte 2: 0x%02X\r\n", data[2]);
-    if(data[2] == 0x12){
-        printf("  Host Bus Type: DDR5 SDRAM\r\n");
-    }else{
-        printf("  Host Bus Type: Unknown (0x%02X), aborting...\r\n", data[2]);
-        return true;
-    }
-
-    //printf("SPD NVM byte 0: 0x%02X\r\n", data[0]);   
-    uint8_t eeprom_bytes_cnt = (data[0]>>4)&0b111;
-    const uint16_t spd_eeprom_size[] = { 0, 256, 512, 1024, 2048};
-    if(eeprom_bytes_cnt <= 0b100) {
-        printf("  EEPROM size: %d bytes\r\n", spd_eeprom_size[eeprom_bytes_cnt]);
-        if(eeprom_bytes_cnt !=3) {
-            printf("  Warning: EEPROM size is not 1024 bytes!\r\n");
-        }
-    } else {
-        printf("  EEPROM size: Unknown (0x%02X)\r\n", eeprom_bytes_cnt);
-    }
-#endif

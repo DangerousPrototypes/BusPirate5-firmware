@@ -253,7 +253,7 @@ bool i2c_write(uint8_t addr, uint8_t *data, uint8_t len) {
 
 bool ddr5_set_legacy_page(uint8_t page){
     //set the page for the legacy mode
-    uint8_t data[2]={DDR5_SPD_MR11, page & 0b111}; //MR11: I2C Legacy Mode Device Configuration
+    uint8_t data[2]={DDR5_SPD_MR11, 0x00 | (page & 0b111)}; //MR11: I2C Legacy Mode Device Configuration
     //data[0] = DDR5_SPD_MR11; //MR11: I2C Legacy Mode Device Configuration
     //data[1] = page & 0b111; //page 0-7
     if(i2c_write(DDR5_SPD_I2C_WRITE_ADDR, data, 2u)) return true; //write the page to the device
@@ -407,7 +407,7 @@ bool ddr5_decode_volatile_memory(uint8_t* data) {
     printf("Write Recovery Time Capability: %d%s\r\n", write_recovery_time, spd->write_recovery_time_capability_time==0?"ns": spd->write_recovery_time_capability_time==1 ? "us" : spd->write_recovery_time_capability_time==2?"ms": "error");
     printf("I2C Legacy Mode Address Pointer Mode: %d byte address\r\n", (spd->i2c_legacy_mode_config_addr_mode+1));
     printf("I2C Legacy Mode Address Pointer: page %d\r\n", spd->i2c_legacy_mode_config_addr_pointer);
-    printf("Write Protection for NVM Blocks: 0x%02X%02X\r\n", spd->write_protection_nvm_blocks_high, spd->write_protection_nvm_blocks_low);
+    printf("Write Protection for NVM Blocks: 0x%02X 0x%02X\r\n", spd->write_protection_nvm_blocks_low, spd->write_protection_nvm_blocks_high);
     for(uint8_t i=0; i<8; i++){
         printf("  Block %d: %s\r\n", i, (spd->write_protection_nvm_blocks_low & (1u << i)) ? "Protected" : "Unprotected");
     }
@@ -767,7 +767,7 @@ bool ddr5_write_from_file(FIL *file_handle, uint8_t *buffer) {
     if(i2c_transaction(DDR5_SPD_I2C_WRITE_ADDR, (uint8_t[]){DDR5_SPD_MR12}, 1u, original_lock_bits, 2)) {
         goto ddr5_write_error; // read the NVM block lock bits
     }
-    printf("Saving NVM block lock bits: 0x%02X%02X\r\n", original_lock_bits[0], original_lock_bits[1]);
+    printf("Saving NVM block lock bits: 0x%02X 0x%02X\r\n", original_lock_bits[0], original_lock_bits[1]);
 
     // unlock the block lock bits
     if(ddr5_lock_bits_write_verify(0x00, 0x00)) {
@@ -807,7 +807,7 @@ bool ddr5_write_from_file(FIL *file_handle, uint8_t *buffer) {
     if(ddr5_lock_bits_write_verify(original_lock_bits[0], original_lock_bits[1])) {
         goto ddr5_write_error; // if the lock bits were not written successfully
     }
-    printf("NVM block lock bits restored: 0x%02X%02X\r\n", original_lock_bits[0], original_lock_bits[1]);
+    printf("NVM block lock bits restored: 0x%02X 0x%02X\r\n", original_lock_bits[0], original_lock_bits[1]);
 
     printf("Verify write\r\n");
     f_rewind(file_handle); // rewind the file to the beginning
@@ -908,7 +908,7 @@ static const char* const usage[] = {
 };
 
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_DDR5 },               // flash command help
+    { 1, "", T_HELP_DDR5 },               // flash command help  
     { 0, "probe", T_HELP_DDR5_PROBE },    // probe
     { 0, "dump", T_HELP_DDR5_DUMP },      // dump
     { 0, "write", T_HELP_DDR5_WRITE },    // write

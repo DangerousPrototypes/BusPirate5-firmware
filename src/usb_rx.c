@@ -94,32 +94,7 @@ void rx_from_rtt_terminal(void) {
     }
 }
 
-// USB (tinyUSB) interrupt handler
-// Invoked when CDC interface received data from host
-void tud_cdc_rx_cb(uint8_t itf) {
 
-    BP_ASSERT_CORE1(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
-
-    char buf[64];
-
-    if (itf == 0 && tud_cdc_n_available(0)) {
-        uint32_t count = tud_cdc_n_read(0, buf, 64);
-
-        // while bytes available shove them in the buffer
-        for (uint32_t i = 0; i < count; i++) {
-            queue2_add_blocking(&rx_fifo, &buf[i]); // BUGBUG -- blocking call from ISR!
-        }
-    }
-
-    if (system_config.binmode_usb_rx_queue_enable && itf == 1 && tud_cdc_n_available(1)) {
-        uint32_t count = tud_cdc_n_read(1, buf, 64);
-
-        // while bytes available shove them in the buffer
-        for (uint32_t i = 0; i < count; i++) {
-            queue2_add_blocking(&bin_rx_fifo, &buf[i]); // BUGBUG -- blocking call from ISR!
-        }
-    }
-}
 
 // Invoked when cdc when line state changed e.g connected/disconnected
 void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts) {

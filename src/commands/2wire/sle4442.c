@@ -38,7 +38,7 @@ typedef struct __attribute__((packed)) sle44xx_atr_struct {
 } sle44xx_atr_t;
 
 static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]\r\n\t[-a <address>] [-v <value>] [-p "
-                                     "<current psc>] [-n <new psc>] [-h(elp)]",
+                                     "<current psc>] [-n <new psc>] [-f <dump file>] [-h(elp)]",
                                      "Initialize and probe: sle4442 init",
                                      "Dump contents: sle4442 dump",
                                      "Unlock card: sle4442 unlock -p 0xffffff",

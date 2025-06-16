@@ -272,5 +272,32 @@ hwi2c_status_t pio_i2c_transaction_array_timeout(uint8_t addr, uint8_t* txbuf, u
     return HWI2C_OK;
 }
 
+// same as above but with a repeat start
+// required for reading DDR5 SPD data, as the pointer resets after a stop condition
+hwi2c_status_t pio_i2c_transaction_array_repeat_start(uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout) {
+    if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
+    hwi2c_status_t i2c_result = pio_i2c_write_timeout(addr, timeout);
+    if(i2c_result != HWI2C_OK) return i2c_result;
+    
+    while (txlen) {
+        --txlen;
+        i2c_result = pio_i2c_write_timeout(*txbuf++, timeout);
+        if(i2c_result != HWI2C_OK) return i2c_result;
+    }
+
+    if(pio_i2c_restart_timeout(timeout)) return HWI2C_TIMEOUT;
+
+    i2c_result = pio_i2c_write_timeout(addr|1u, timeout); //note, don't force the last bit high, its mysterious
+    if(i2c_result != HWI2C_OK) return i2c_result;
+
+    while(rxlen){
+        --rxlen;
+        pio_i2c_read_timeout(rxbuf++, rxlen!=0, timeout);
+    }
+
+    if (pio_i2c_stop_timeout(timeout)) return HWI2C_TIMEOUT;
+    if (pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
+    return HWI2C_OK;
+}
 
 

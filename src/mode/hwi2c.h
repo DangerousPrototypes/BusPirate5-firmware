@@ -13,6 +13,8 @@ void hwi2c_printI2Cflags(void);
 void hwi2c_help(void);
 uint8_t hwi2c_checkshort(void);
 uint32_t hwi2c_get_speed(void);
+void hwi2c_set_speed(uint32_t speed_hz);
+void hwi2c_set_databits(uint32_t bits);
 bool hwi2c_preflight_sanity_check(void);
 
 typedef struct _i2c_mode_config {

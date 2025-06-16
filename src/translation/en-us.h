@@ -228,6 +228,13 @@ static char const * const en_us[]={
 	[T_PS2_DESCRIPTION]="sniff PS2 protocol",
 	//USB
 	[T_USB_DESCRIPTION]="sniff USB protocol",
+	//I2S
+	[T_I2S_SPEED_MENU]="Sample frequency",
+	[T_I2S_SPEED_MENU_1]="4000, 8000, 16000, 44100, 48000, 96000 etc",
+	[T_I2S_SPEED_PROMPT]="Hz (%s%d*%s)",
+	[T_I2S_DATA_BITS_MENU]="Data bits",
+	[T_I2S_DATA_BITS_MENU_1]="16 bits",
+	[T_I2S_DATA_BITS_PROMPT]="Bits (%s%d*%s)",
 	//COMMAND LINE
 	[T_CMDLN_INVALID_COMMAND]="Invalid command: %s. Type ? for help.",
 	[T_CMDLN_NO_HELP]="Help not currently available for this command.",
@@ -238,7 +245,8 @@ static char const * const en_us[]={
 	[T_CMDLN_CAT]="cat <file> - print the contents of <file>.",
 	[T_CMDLN_MODE]="m - change protocol mode. m <mode number> to skip the menu.",
 	[T_CMDLN_PSU_EN]="W - enable onboard power supply, show configuration menu.",
-	[T_CMDLN_RESET]="# - reset and restart the Bus Pirate.",
+	[T_CMDLN_REBOOT]="reboot - reboot and restart the Bus Pirate.",
+	
 	[T_CMDLN_BOOTLOAD]="$ - reset and enter bootloader mode for updates.",
 	[T_CMDLN_INT_FORMAT]="= <value> - convert <value> to BIN/DEC/HEX/ASCII.",
 	[T_CMDLN_INT_INVERSE]="| <value> - inverse the bits in <value>.",
@@ -268,6 +276,8 @@ static char const * const en_us[]={
 	[T_CMDLN_DISPLAY]="d - change display mode, show selection menu.",
 	[T_CMDLN_LOGIC]="logic <frequency in kHz> <samples> <trigger pin> <trigger level> - logic analyzer. <frequency> 1kHz-62500kHz, <trigger pin> 0:7, <trigger level> 0:1.",
 	[T_CMDLN_HEX]="hex <file> - print contents of <file> in HEX",
+
+	// Help screens
 	[T_HELP_SECTION_IO]="work with pins, input, output measurement",
 	[T_HELP_SECTION_CAPTURE]="measure analog and digital signals",
 	[T_HELP_SECTION_CONFIGURE]="configure the terminal, LEDs, display and mode",
@@ -295,7 +305,7 @@ static char const * const en_us[]={
 	[T_HELP_CMD_DUMP]="Repeat read command, save ouput to storage",
 	[T_HELP_1_2]="Converts x/reverse x",
 	[T_HELP_1_3]="Self test",
-	[T_HELP_1_4]="Reset the Bus Pirate",
+	[T_HELP_SYSTEM_REBOOT]="Reboot the Bus Pirate",
 	[T_HELP_1_5]="Jump to bootloader",
 	[T_HELP_1_6]="Delay 1 us/MS (d:4 to repeat)",
 	[T_HELP_1_7]="Set IO.x state (low/HI/READ)",
@@ -539,7 +549,18 @@ static char const * const en_us[]={
     [T_HELP_UART_GLITCH_CONFIG]="Configure UART glitch parameters",
 	[T_I2C_SNIFF]="I2C sniffer",
 	[T_I2C_SNIFF_QUIET]="Quiet mode, don't show ACKs",
-
+	//DDR5 command in I2C
+	[T_HELP_DDR5]="read, write and probe DDR5 SPD chips",
+	[T_HELP_DDR5_PROBE]="Show DDR5 SPD chip and NVM/EEPROM status",
+	[T_HELP_DDR5_DUMP]="Display DDR5 SPD NVM contents",
+	[T_HELP_DDR5_WRITE]="Write file to DDR5 SPD NVM",
+	[T_HELP_DDR5_READ]="Read DDR5 SPD NVM to a file",
+	[T_HELP_DDR5_VERIFY]="Verify DDR5 SPD NVM against file",
+	[T_HELP_DDR5_LOCK]="Lock DDR5 SPD NVM block (64 bytes per block)",
+	[T_HELP_DDR5_UNLOCK]="Unlock DDR5 SPD NVM block",
+	[T_HELP_DDR5_CRC]="Calculate/verify CRC of JEDEC blocks 0-7 in a file",
+	[T_HELP_DDR5_FILE_FLAG]="File flag. Speficy a file to write, read, verify or check CRC",
+	[T_HELP_DDR5_BLOCK_FLAG]="Block flag. Speficy a DDR5 SPD NVM block to lock or unlock (0 - 15)",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

@@ -56,6 +56,10 @@ set(buspirate_common
         pirate/rgb.c
         pirate/intercore_helpers.c
 
+        # libraries
+        lib/jep106/jep106.c
+        lib/jep106/jep106.h
+
         # commands
         commands.h
         commands.c
@@ -172,6 +176,8 @@ set(buspirate_common
         lib/tsl2561/driver_tsl2561.h
         commands/i2c/sniff.c 
         commands/i2c/sniff.h
+        commands/i2c/ddr.c
+        commands/i2c/ddr.h
 
         # SPI
         mode/hwspi.c
@@ -390,6 +396,16 @@ set(buspirate_common
         msc_disk.c
         msc_disk.h
         usb_descriptors.c
+
+	# USBPD 
+        mode/usbpd.c            
+        mode/usbpd.h
+
+        # I2S
+        mode/i2s.c
+        mode/i2s.h
+        commands/i2s/sine.h 
+        commands/i2s/sine.c
 )
 
 set(buspirate_nandflash
@@ -578,6 +594,8 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/commands/uart/glitch.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico-i2c-sniff/i2c_sniffer.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico-i2c-sniff/hw2w_sniffer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/i2s_out.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/i2s_in.pio)
 
         pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")

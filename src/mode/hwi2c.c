@@ -16,6 +16,7 @@
 #include "commands/i2c/sniff.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
+#include "commands/i2c/ddr.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -52,6 +53,11 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_TSL2561, 
         .supress_fala_capture=true
     },
+    {   .command="ddr5", 
+        .func=&ddr5_handler, 
+        .description_text=T_HELP_I2C_TSL2561, 
+        .supress_fala_capture=true
+    },    
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 
@@ -98,7 +104,7 @@ uint32_t hwi2c_setup(void) {
     const mode_config_t config_t[] = {
         // clang-format off
         { "$.baudrate", &mode_config.baudrate, MODE_CONFIG_FORMAT_DECIMAL },
-        { "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },
+        /*{ "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },*/
         { "$.clock_stretch", (uint32_t*)&mode_config.clock_stretch, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };
@@ -275,4 +281,12 @@ void hwi2c_help(void) {
 
 uint32_t hwi2c_get_speed(void) {
     return (mode_config.baudrate * 1000);
+}
+
+void hwi2c_set_speed(uint32_t speed_hz) {
+  mode_config.baudrate = speed_hz/ 1000;
+}
+
+void hwi2c_set_databits(uint32_t bits) {
+  mode_config.data_bits = bits;
 }

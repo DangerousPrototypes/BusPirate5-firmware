@@ -1012,7 +1012,6 @@ void ddr5_handler(struct command_result* res) {
         }
     }
 
-    //BSS138 on breakout board
     fala_start_hook();  
     uint8_t buffer[1024]; // buffer to store the file data
     switch(action) {

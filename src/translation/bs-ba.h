@@ -174,6 +174,7 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HWI2C_NO_VOUT_DETECTED         ] = NULL,
     [ T_HWI2C_TIMEOUT                  ] = NULL,
     [ T_HWI2C_I2C_ERROR                ] = "I2C bus greška",
+    [ T_HELP_I2C_TCS34725              ] = NULL,
     [ T_HW2WIRE_SPEED_MENU             ] = NULL,
     [ T_HW2WIRE_RST_LOW                ] = NULL,
     [ T_HW2WIRE_RST_HIGH               ] = NULL,

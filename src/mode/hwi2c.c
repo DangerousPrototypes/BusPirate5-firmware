@@ -55,9 +55,15 @@ const struct _mode_command_struct hwi2c_commands[] = {
     },
     {   .command="ddr5", 
         .func=&ddr5_handler, 
-        .description_text=T_HELP_I2C_TSL2561, 
+        .description_text=T_HELP_DDR5, 
         .supress_fala_capture=true
-    },    
+    },
+    {
+        .command="tcs3472",
+        .func=&demo_tcs34725,
+        .description_text=T_HELP_I2C_TCS34725,
+        .supress_fala_capture=true
+    }, 
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 

@@ -13,6 +13,101 @@
 #include "lib/ms5611/ms5611.h"
 #include "lib/tsl2561/driver_tsl2561.h"
 #include "binmode/fala.h"
+#include "usb_rx.h"
+
+static bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8_t *read_data, uint8_t read_len) {
+    if (pio_i2c_transaction_array_repeat_start(addr, write_data, write_len, read_data, read_len, 0xffffu)) {
+        printf("Device not detected (no ACK)\r\n");
+        return true;
+    }
+    return false;
+}
+
+static bool i2c_write(uint8_t addr, uint8_t *data, uint8_t len) {
+    hwi2c_status_t i2c_result = pio_i2c_write_array_timeout(addr, data, len, 0xfffffu);
+    if(i2c_result != HWI2C_OK) {
+        if(i2c_result == HWI2C_TIMEOUT) {
+            printf("I2C Timeout\r\n");
+        } else if(i2c_result == HWI2C_NACK) {
+            printf("Device not detected (no ACK)\r\n");
+        } else {
+            printf("I2C Error: %d\r\n", i2c_result);
+        }
+        return true;
+    }
+    return false;
+}
+
+// based on https://github.com/ControlEverythingCommunity/TCS34725/blob/master/C/TCS34725.c
+void demo_tcs34725(struct command_result* res) {
+    #define TCS34725_ADDRESS 0x29<<1u // I2C address of TCS34725
+    uint16_t red, green, blue;
+    uint8_t data[4];
+
+    printf("TCS3472x Ambient Light Sensor Demo\r\n");
+    printf("Press SPACE to exit\r\n");
+    
+    fala_start_hook();
+    // Select enable register(0x80)
+	// Power ON, RGBC enable, wait time disable(0x03)
+	char config[2] = {0};
+    if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x80, 0x03}, 2u)){
+        goto tcs34725_cleanup;
+    }
+
+	// Select ALS time register(0x81)
+	// Atime = 700 ms(0x00)
+    if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x81, 0x00}, 2u)){
+        goto tcs34725_cleanup;
+    }
+
+	// Select Wait Time register(0x83)
+	// WTIME : 2.4ms(0xFF)
+    if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x83, 0xff}, 2u)){
+        goto tcs34725_cleanup;
+    }
+
+	// Select control register(0x8F)
+	// AGAIN = 1x(0x00)
+    if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x8f, 0x00}, 2u)){
+        goto tcs34725_cleanup;
+    }
+
+	// Read 8 bytes of data from register(0x94)
+	// cData lsb, cData msb, red lsb, red msb, green lsb, green msb, blue lsb, blue msb
+    while(true){
+        char data[8] = {0};
+        if(i2c_transaction(TCS34725_ADDRESS, (uint8_t[]){0x94}, 1u, data, 8u)) {
+            goto tcs34725_cleanup;
+        }
+
+        // Convert the data
+        int cData = (data[1] * 256 + data[0]);
+        int red = (data[3] * 256 + data[2]);
+        int green = (data[5] * 256 + data[4]);
+        int blue = (data[7] * 256 + data[6]);
+
+        // Calculate luminance
+        float luminance = (-0.32466) * (red) + (1.57837) * (green) + (-0.73191) * (blue);
+        if(luminance < 0){
+            luminance = 0;
+        }
+
+        printf("\rR: 0x%04X G: 0x%04X B: 0x%04X IR: 0x%04X Luminance: %.2f", red, green, blue, cData, luminance);
+        //press key to exit
+        char c;
+        if (rx_fifo_try_get(&c) && (c==' ')) {
+            goto tcs34725_cleanup;
+        }
+    }
+
+tcs34725_cleanup:
+    pio_i2c_stop_timeout(0xffff); //force both lines back high
+    fala_stop_hook();
+    //we manually control any FALA capture
+    fala_notify_hook();
+
+}
 
 void demo_tsl2561(struct command_result* res) {
     // select register [0b01110010 0b11100000]

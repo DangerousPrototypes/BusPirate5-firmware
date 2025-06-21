@@ -1068,4 +1068,4 @@ void ddr5_handler(struct command_result* res) {
     //we manually control any FALA capture
     fala_stop_hook();
     fala_notify_hook();
-}
+}    

@@ -148,7 +148,7 @@ void demo_tcs34725(struct command_result* res) {
         // upper byte of each
         //rgb_put(data[3] << 16 | data[5] << 8 | data[7]); // RGB format
         rgb_set_all(data[3], data[5], data[7]); // RGB format
-        printf("\rR: 0x%04X G: 0x%04X B: 0x%04X C: 0x%04X Luminance: %.2f", red, green, blue, cData, luminance);
+        printf("\rR: 0x%04X G: 0x%04X B: 0x%04X C: 0x%04X #RGB: #%02X%02X%02X Lum: %.2f", red, green, blue, cData, data[3], data[5], data[7], luminance);
         //press key to exit
         uint32_t i = 1;
         char c;

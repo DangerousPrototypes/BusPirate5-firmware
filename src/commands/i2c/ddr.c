@@ -598,7 +598,7 @@ bool ddr5_nvm_jedec_decode_manuf(uint8_t *data){
     ddr5_nvm_jedec_manuf_info_t* manuf_info = (ddr5_nvm_jedec_manuf_info_t*)data;
 
     printf("  Module Manuf. Code: 0x%02X%02X (%s)\r\n", manuf_info->manuf_code[0], manuf_info->manuf_code[1], ddr5_decode_jep106_jedec_id(manuf_info->manuf_code[0], manuf_info->manuf_code[1]));
-        printf("  Module Manuf. Location: 0x%02X\r\n", manuf_info->manuf_location);
+    printf("  Module Manuf. Location: 0x%02X\r\n", manuf_info->manuf_location);
     printf("  Module Manuf. Date: %02XY/%02XW\r\n", manuf_info->manuf_date[0], manuf_info->manuf_date[1]);
     printf("  Module Serial Number: 0x%02X%02X%02X%02X\r\n", manuf_info->serial_number[0], manuf_info->serial_number[1], manuf_info->serial_number[2], manuf_info->serial_number[3]);
     printf("  Module Part Number: "); 
@@ -953,7 +953,7 @@ void ddr5_handler(struct command_result* res) {
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
     }
-    if (!ui_help_check_vout_vref()) {
+    if (!ui_help_sanity_check(true,0x00)) {
         return;
     }
 

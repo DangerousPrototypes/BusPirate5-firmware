@@ -14,6 +14,7 @@
 #include "lib/tsl2561/driver_tsl2561.h"
 #include "binmode/fala.h"
 #include "usb_rx.h"
+#include "pio_config.h"
 
 static bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8_t *read_data, uint8_t read_len) {
     if (pio_i2c_transaction_array_repeat_start(addr, write_data, write_len, read_data, read_len, 0xffffu)) {
@@ -38,15 +39,62 @@ static bool i2c_write(uint8_t addr, uint8_t *data, uint8_t len) {
     return false;
 }
 
+static const char* const tcs34725_usage[] = {
+    "tcs3472 [-g <gain:1,4,16*,60x>] [-i <integration cycles:1-256*>] [-h(elp)]",
+    "- read tcs3472x color sensor, show colors in terminal and on Bus Pirate LEDs",
+    "- 3.3volt device, pull-up resistors required",
+    "Read with default* 16x gain, 256 integration cycles: tcs3472",
+    "Read with 60x gain, 10 integration cycles: tcs3472 -g 60 -i 10",
+};
+
+static const struct ui_help_options tcs34725_options[] = {0};
+
 // based on https://github.com/ControlEverythingCommunity/TCS34725/blob/master/C/TCS34725.c
 void demo_tcs34725(struct command_result* res) {
+    if (ui_help_show(res->help_flag, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options))) {
+        return;
+    }
+    if (!ui_help_sanity_check(true,0x00)) {
+        ui_help_show(true, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options));
+        return;
+    }
+    
+    
     #define TCS34725_ADDRESS 0x29<<1u // I2C address of TCS34725
     uint16_t red, green, blue;
     uint8_t data[4];
 
     printf("TCS3472x Ambient Light Sensor Demo\r\n");
     printf("Press SPACE to exit\r\n");
-    
+
+    //get gain and integration time
+    command_var_t arg;
+    uint8_t gain; // default gain 16x
+    uint32_t user_gain=16;
+    cmdln_args_find_flag_uint32('g', &arg, &user_gain);
+    switch(user_gain) {
+        case 1: gain = 0b00; break; // 1x
+        case 4: gain = 0b01; break; // 4x
+        case 16: gain = 0b10; break; // 16x
+        case 60: gain = 0b11; break; // 60x
+        default:
+            printf("Invalid gain value: %d\r\n\r\n", user_gain);
+            ui_help_show(true, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options));
+            return;
+    }
+
+    uint32_t integration_cycles = 256; // default integration time 700ms
+    if(cmdln_args_find_flag_uint32('i', &arg, &integration_cycles)){
+        if(integration_cycles < 1 || integration_cycles > 256){
+            printf("Invalid integration cycles: %d\r\n\r\n", integration_cycles);
+            //show help
+            ui_help_show(true, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options));
+            return;
+        }
+    }
+
+    printf("Gain: %d, Integration Cycles: %d\r\n", user_gain, integration_cycles);
+
     fala_start_hook();
     // Select enable register(0x80)
 	// Power ON, RGBC enable, wait time disable(0x03)
@@ -55,9 +103,9 @@ void demo_tcs34725(struct command_result* res) {
         goto tcs34725_cleanup;
     }
 
-	// Select ALS time register(0x81)
-	// Atime = 700 ms(0x00)
-    if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x81, 0x00}, 2u)){
+    // Select control register(0x8F)
+	// AGAIN = 16x(0b10)
+    if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x8f,gain}, 2u)){
         goto tcs34725_cleanup;
     }
 
@@ -66,15 +114,20 @@ void demo_tcs34725(struct command_result* res) {
     if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x83, 0xff}, 2u)){
         goto tcs34725_cleanup;
     }
-
-	// Select control register(0x8F)
-	// AGAIN = 1x(0x00)
-    if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x8f, 0x00}, 2u)){
+	
+    // Select ALS time register(0x81)
+	// Atime = 700 ms(0x00)
+    if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x81, (uint8_t)(256-integration_cycles)}, 2u)){
         goto tcs34725_cleanup;
     }
 
 	// Read 8 bytes of data from register(0x94)
 	// cData lsb, cData msb, red lsb, red msb, green lsb, green msb, blue lsb, blue msb
+    static struct _pio_config pio_config;
+    rgb_irq_enable(false);
+    rgb_set_all(0, 0, 0);
+    pio_config.pio = PIO_RGB_LED_PIO;
+    pio_config.sm = PIO_RGB_LED_SM;
     while(true){
         char data[8] = {0};
         if(i2c_transaction(TCS34725_ADDRESS, (uint8_t[]){0x94}, 1u, data, 8u)) {
@@ -92,16 +145,24 @@ void demo_tcs34725(struct command_result* res) {
         if(luminance < 0){
             luminance = 0;
         }
-
-        printf("\rR: 0x%04X G: 0x%04X B: 0x%04X IR: 0x%04X Luminance: %.2f", red, green, blue, cData, luminance);
+        // upper byte of each
+        //rgb_put(data[3] << 16 | data[5] << 8 | data[7]); // RGB format
+        rgb_set_all(data[3], data[5], data[7]); // RGB format
+        printf("\rR: 0x%04X G: 0x%04X B: 0x%04X C: 0x%04X Luminance: %.2f", red, green, blue, cData, luminance);
         //press key to exit
+        uint32_t i = 1;
         char c;
-        if (rx_fifo_try_get(&c) && (c==' ')) {
-            goto tcs34725_cleanup;
+        while(i){
+            if (rx_fifo_try_get(&c) && (c==' ')) {
+                goto tcs34725_cleanup;
+            }
+            i--; 
+            busy_wait_ms(1);
         }
     }
 
 tcs34725_cleanup:
+    rgb_irq_enable(true);
     pio_i2c_stop_timeout(0xffff); //force both lines back high
     fala_stop_hook();
     //we manually control any FALA capture
@@ -109,7 +170,27 @@ tcs34725_cleanup:
 
 }
 
+static const char* const tsl2561_usage[] = {
+    "tsl2561 [-h(elp)]",
+    "- 3.3volt device, pull-up resistors required",
+    "Show LUX: tsl2561",
+};
+
+static const struct ui_help_options tsl2561_options[] = {
+    { 1, "", T_HELP_I2C_TSL2561 },               // flash command help  
+    { 0, "-h", T_HELP_HELP }               // help flag   
+};
+
 void demo_tsl2561(struct command_result* res) {
+    if (ui_help_show(res->help_flag, tsl2561_usage, count_of(tsl2561_usage), &tsl2561_options[0], count_of(tsl2561_options))) {
+        return;
+    }
+    if (!ui_help_sanity_check(true,0x00)) {
+        ui_help_show(true, tsl2561_usage, count_of(tsl2561_usage), &tsl2561_options[0], count_of(tsl2561_options));
+        return;
+    }
+
+
     // select register [0b01110010 0b11100000]
     //  start device [0b01110010 3]
     // confirm start [0b01110011 r]
@@ -167,7 +248,25 @@ tsl2561_cleanup:
     fala_notify_hook();
 }
 
+static const char* const ms5611_usage[] = {
+    "ms5611 [-h(elp)]",
+    "- 3.3volt device, pull-up resistors required",
+    "Show temperature and pressure: ms5611",
+};
+
+static const struct ui_help_options ms5611_options[] = {
+    { 1, "", T_HELP_I2C_MS5611},               // flash command help  
+    { 0, "-h", T_HELP_HELP }               // help flag   
+};
+
 void demo_ms5611(struct command_result* res) {
+    if (ui_help_show(res->help_flag, ms5611_usage, count_of(ms5611_usage), &ms5611_options[0], count_of(ms5611_options))) {
+        return;
+    }
+    if (!ui_help_sanity_check(true,0x00)) {
+        ui_help_show(true, ms5611_usage, count_of(ms5611_usage), &ms5611_options[0], count_of(ms5611_options));
+        return;
+    }    
     // PS high, CSB low
     // reset [0b11101110 0b00011110]
     // PROM read [0b11101110 0b10100110] [0b11101111 r:2]
@@ -198,7 +297,26 @@ ms5611_cleanup:
     fala_notify_hook();
 }
 
+static const char* const si7021_usage[] = {
+    "si7021 [-h(elp)]",
+    "- 3.3volt device, pull-up resistors required",
+    "Show temperature and humidity: si7021",
+};
+
+static const struct ui_help_options si7021_options[] = {
+    { 1, "", T_HELP_I2C_SI7021},               // flash command help  
+    { 0, "-h", T_HELP_HELP }               // help flag   
+};
+
 void demo_si7021(struct command_result* res) {
+    if (ui_help_show(res->help_flag, si7021_usage, count_of(si7021_usage), &si7021_options[0], count_of(si7021_options))) {
+        return;
+    }
+    if (!ui_help_sanity_check(true,0x00)) {
+        ui_help_show(true, si7021_usage, count_of(si7021_usage), &si7021_options[0], count_of(si7021_options));
+        return;
+    }    
+
     uint8_t data[8];
     printf("%s\r\n", GET_T(T_HELP_I2C_SI7021));
 
@@ -232,7 +350,7 @@ void demo_si7021(struct command_result* res) {
 
     f = (float)((float)(175.72 * (data[0] << 8 | data[1])) / 65536) - 46.85;
     printf("Temperature: %.2fC (%#04x %#04x)\r\n", f, data[0], data[1]);
-
+/*
     // SN
     data[0] = 0xfa;
     data[1] = 0xf0;
@@ -265,7 +383,7 @@ void demo_si7021(struct command_result* res) {
            sn[2],
            sn[1],
            sn[0]);
-    
+*/
     goto si7021_cleanup;
 
 si7021_error:    

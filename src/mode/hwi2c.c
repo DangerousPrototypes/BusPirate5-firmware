@@ -37,6 +37,17 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .func=&i2c_sniff,
         .description_text=T_I2C_SNIFF,
         .supress_fala_capture=true
+    },
+    {
+        .command="sht3x", 
+        .func=&demo_sht3x, 
+        .description_text=T_HELP_I2C_SHT3X, 
+        .supress_fala_capture=true
+    },    
+    {   .command="sht4x", 
+        .func=&demo_sht4x, 
+        .description_text=T_HELP_I2C_SHT4X, 
+        .supress_fala_capture=true
     },    
     {   .command="si7021", 
         .func=&demo_si7021, 

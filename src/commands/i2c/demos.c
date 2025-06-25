@@ -39,6 +39,116 @@ static bool i2c_write(uint8_t addr, uint8_t *data, uint8_t len) {
     return false;
 }
 
+static bool i2c_read(uint8_t addr, uint8_t *data, uint8_t len) {
+    hwi2c_status_t i2c_result = pio_i2c_read_array_timeout(addr | 1u, data, len, 0xfffffu);
+    if(i2c_result != HWI2C_OK) {
+        if(i2c_result == HWI2C_TIMEOUT) {
+            printf("I2C Timeout\r\n");
+        } else if(i2c_result == HWI2C_NACK) {
+            printf("Device not detected (no ACK)\r\n");
+        } else {
+            printf("I2C Error: %d\r\n", i2c_result);
+        }
+        return true;
+    }
+    return false;
+}
+
+static const char* const sht4x_usage[] = {
+    "sht4x [-h(elp)]",
+    "- read SHT4x series temperature and humidity sensors",
+    "- 1.08-3.3 volt device, pull-up resistors required",
+    "Read SHT4x: sht4x",
+};
+
+static const struct ui_help_options sht4x_options[] = {0};
+
+void demo_sht4x(struct command_result* res){
+    printf("SHT40/41/43/45 Temperature and Humidity Sensor Demo\r\n");
+    if (ui_help_show(res->help_flag||!ui_help_sanity_check(true,0x00), sht4x_usage, count_of(sht4x_usage), &sht4x_options[0], count_of(sht4x_options))) {
+        return;
+    }
+
+    fala_start_hook();
+
+    #define SHT4X_ADDRESS 0x44 << 1u // SHT4x default I2C address
+    static uint8_t HIGH_REPEATABILITY_MEASURE[] = { 0xFD };
+    if(i2c_write(SHT4X_ADDRESS, HIGH_REPEATABILITY_MEASURE, sizeof(HIGH_REPEATABILITY_MEASURE))) {
+        goto sht4x_cleanup; // Error writing to the sensor
+    }
+    busy_wait_ms(9); // Wait for measurement to complete
+    uint8_t data[6];
+    if(i2c_read(SHT4X_ADDRESS, data, 6)) {
+       goto sht4x_cleanup; // Error reading from the sensor
+    }
+
+    // Process the data
+    uint16_t temp_raw = (data[0] << 8) | data[1];
+    uint16_t hum_raw = (data[3] << 8) | data[4];
+
+    float temperature = -45 + (175 * (temp_raw / 65535.0f));
+    float humidity = -6 + 125 * (hum_raw / 65535.0f);
+
+    printf("Temperature: %.2f °C (0x%02X 0x%02X)\r\n", temperature, data[0], data[1]);
+    printf("Humidity: %.2f %% (0x%02X 0x%02X)\r\n", humidity, data[3], data[4]);
+
+sht4x_cleanup:
+    pio_i2c_stop_timeout(0xffff); //force both lines back high
+    fala_stop_hook();
+    //we manually control any FALA capture
+    fala_notify_hook();       
+
+}
+
+static const char* const sht3x_usage[] = {
+    "sht3x [-h(elp)]",
+    "- read SHT3x series temperature and humidity sensors",
+    "- 2.15-5 volt device, pull-up resistors required",
+    "Read SHT3x: sht3x",
+};
+
+static const struct ui_help_options sht3x_options[] = {0};
+
+void demo_sht3x(struct command_result* res) {
+    printf("SHT30/31/35 Temperature and Humidity Sensor Demo\r\n");
+
+    if(ui_help_show(res->help_flag||!ui_help_sanity_check(true,0x00), sht3x_usage, count_of(sht3x_usage), &sht3x_options[0], count_of(sht3x_options))) {
+        return;
+    }
+    /*if (!ui_help_sanity_check(true,0x00)) {
+        ui_help_show(true, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options));
+        return;
+    }*/
+    fala_start_hook();
+
+    #define SHT3X_ADDRESS 0x44 << 1u // SHT3x default I2C address
+    static uint8_t CMD_SINGLE_SHOT_MEASURE[] = { 0x24, 0x00 };
+    if(i2c_write(SHT3X_ADDRESS, CMD_SINGLE_SHOT_MEASURE, sizeof(CMD_SINGLE_SHOT_MEASURE))) {
+        goto sht3x_cleanup; // Error writing to the sensor
+    }
+    busy_wait_ms(15); // Wait for measurement to complete
+    uint8_t data[6];
+    if(i2c_read(SHT3X_ADDRESS, data, 6)) {
+        goto sht3x_cleanup; // Error reading from the sensor
+    }
+
+    // Process the data
+    uint16_t temp_raw = (data[0] << 8) | data[1];
+    uint16_t hum_raw = (data[3] << 8) | data[4];
+
+    float temperature = -45 + (175 * (temp_raw / 65535.0f));
+    float humidity = 100 * (hum_raw / 65535.0f);
+
+    printf("Temperature: %.2f °C (0x%02X 0x%02X)\r\n", temperature, data[0], data[1]);
+    printf("Humidity: %.2f %% (0x%02X 0x%02X)\r\n", humidity, data[3], data[4]);
+
+sht3x_cleanup:
+    pio_i2c_stop_timeout(0xffff); //force both lines back high
+    fala_stop_hook();
+    //we manually control any FALA capture
+    fala_notify_hook();    
+}
+
 static const char* const tcs34725_usage[] = {
     "tcs3472 [-g <gain:1,4,16*,60x>] [-i <integration cycles:1-256*>] [-h(elp)]",
     "- read tcs3472x color sensor, show colors in terminal and on Bus Pirate LEDs",
@@ -98,7 +208,6 @@ void demo_tcs34725(struct command_result* res) {
     fala_start_hook();
     // Select enable register(0x80)
 	// Power ON, RGBC enable, wait time disable(0x03)
-	char config[2] = {0};
     if(i2c_write(TCS34725_ADDRESS, (uint8_t[]){0x80, 0x03}, 2u)){
         goto tcs34725_cleanup;
     }
@@ -123,11 +232,8 @@ void demo_tcs34725(struct command_result* res) {
 
 	// Read 8 bytes of data from register(0x94)
 	// cData lsb, cData msb, red lsb, red msb, green lsb, green msb, blue lsb, blue msb
-    static struct _pio_config pio_config;
     rgb_irq_enable(false);
     rgb_set_all(0, 0, 0);
-    pio_config.pio = PIO_RGB_LED_PIO;
-    pio_config.sm = PIO_RGB_LED_SM;
     while(true){
         char data[8] = {0};
         if(i2c_transaction(TCS34725_ADDRESS, (uint8_t[]){0x94}, 1u, data, 8u)) {

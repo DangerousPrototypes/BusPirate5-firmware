@@ -70,6 +70,13 @@ static inline hwi2c_status_t pio_i2c_wait_idle_timeout(uint32_t timeout) {
     return HWI2C_OK;
 }
 
+hwi2c_status_t pio_i2c_wait_idle_extern(uint32_t timeout) {
+    if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, timeout)) {
+        return HWI2C_TIMEOUT;
+    }
+    return HWI2C_OK;
+}
+
 static inline hwi2c_status_t pio_i2c_put_timeout(uint16_t data, uint32_t timeout) {
     //this is a precaution, we should never leave with stuff in the fifo
     while (pio_sm_is_tx_fifo_full(pio_config.pio, pio_config.sm)) {

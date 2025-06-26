@@ -44,6 +44,7 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include "pirate/hwspi.h"
 #include "pirate/mem.h"
 #include "pirate/bio.h"
+#include "pirate/button.h"
 
 const char legacy4third_mode_name[] = "Legacy Binary Mode for Flashrom and AVRdude (EXPERIMENTAL)";
 
@@ -151,6 +152,9 @@ uint32_t read_buff(uint8_t* buf, uint32_t len, uint32_t max_tries) {
     }
 
     while (total_bytes_readed < len && max_tries--) {
+        if (button_get(0)) {
+            return 0; 
+        }
         pending_data = tud_cdc_n_available(1);
         if (pending_data > 0) {
             bytes_readed = tud_cdc_n_read(1, cdc_buff + remain_bytes, pending_data);
@@ -211,11 +215,17 @@ void legacy_protocol(void) {
     cdc_full_flush(1);
 
     while (1) {
+        if (button_get(0)) {
+            return;
+        }
         op_byte = 0;
         extended_info = 0;
         tud_task();
-        while (!read_buff(&op_byte, 1, DEFAULT_MAX_TRIES))
-            ;
+        while (!read_buff(&op_byte, 1, DEFAULT_MAX_TRIES)) {
+            if (button_get(0)) {
+                return;
+            }
+        }
         if (binmode_debug) {
             printf("\r\n-\r\nop_byte=0x%02X", op_byte);
             printf(", extended_info=0x%02X", extended_info);
@@ -493,11 +503,18 @@ void legacy_protocol(void) {
                 }
                 CDC_SEND_STR(1, "\x01");
                 while (!read_buff(tmpbuf, bytes2read, DEFAULT_MAX_TRIES))
-                    ;
+                {
+                    if (button_get(0)) {
+                        return;
+                    }
+                }
                 if (binmode_debug) {
                     printf("\r\n>> ");
                 }
                 for (int i = 0; i < bytes2read; i++) {
+                    if (button_get(0)) {
+                        return;
+                    }
                     if (binmode_debug) {
                         printf("\r\n0x%02X | ", tmpbuf[i]);
                     }
@@ -522,7 +539,11 @@ void legacy_protocol(void) {
                 memset(tmpbuf, 0, TMPBUFF_SIZE);
 
                 while (!read_buff(tmpbuf, 4, DEFAULT_MAX_TRIES))
-                    ;
+                {
+                    if (button_get(0)) {
+                        return;
+                    }
+                }
                 if (binmode_debug) {
                     printf("\r\nbytes_to_write H: 0x%02X", tmpbuf[0]);
                     printf("\r\nbytes_to_write L: 0x%02x", tmpbuf[1]);
@@ -544,7 +565,11 @@ void legacy_protocol(void) {
 
                 if (bytes_to_write) {
                     while (!read_buff(tmpbuf, bytes_to_write, DEFAULT_MAX_TRIES))
-                        ;
+                    {
+                        if (button_get(0)) {
+                            return;
+                        }
+                    }
                 }
 
                 if (0x04 == op_byte) {
@@ -556,6 +581,9 @@ void legacy_protocol(void) {
                 int j = 0;
                 uint32_t total_bytes_spi = bytes_to_write + bytes_to_read;
                 while (j < total_bytes_spi) {
+                    if (button_get(0)) {
+                        return;
+                    }
                     if (binmode_debug) {
                         printf("\r\n[%d] 0x%02X -> | ", j, tmpbuf[j]);
                     }
@@ -583,9 +611,15 @@ void legacy_protocol(void) {
                 tud_cdc_n_read_flush(1);
                 remain_bytes = 0;
                 while (bytes_sent < total_bytes) {
+                    if (button_get(0)) {
+                        return;
+                    }
                     int bytes_left = total_bytes - bytes_sent;
                     int current_chunk_size = (bytes_left < chunk_size) ? bytes_left : chunk_size;
                     while (tud_cdc_n_write_available(1) < current_chunk_size) {
+                        if (button_get(0)) {
+                            return;
+                        }
                         tud_task();
                         tud_cdc_n_write_flush(1);
                     }
@@ -603,7 +637,11 @@ void legacy_protocol(void) {
             {
                 CDC_SEND_STR(1, "\x01");
                 while (!read_buff(&op_byte, 1, DEFAULT_MAX_TRIES))
-                    ;
+                {
+                    if (button_get(0)) {
+                        return;
+                    }
+                }
                 if (binmode_debug) {
                     printf("\r\n-\r\nAVR op_byte=0x%02X", op_byte);
                 }
@@ -630,7 +668,11 @@ void legacy_protocol(void) {
                         memset(tmpbuf, 0, TMPBUFF_SIZE);
 
                         while (!read_buff(tmpbuf, 8, DEFAULT_MAX_TRIES))
-                            ;
+                        {
+                            if (button_get(0)) {
+                                return;
+                            }
+                        }
 
                         uint32_t addr = (tmpbuf[0] << 24) | (tmpbuf[1] << 16) | (tmpbuf[2] << 8) | tmpbuf[3];
                         uint32_t len = (tmpbuf[4] << 24) | (tmpbuf[5] << 16) | (tmpbuf[6] << 8) | tmpbuf[7];
@@ -650,6 +692,9 @@ void legacy_protocol(void) {
                             printf("\r\n>> ");
                         }
                         while (len > 0) {
+                            if (button_get(0)) {
+                                return;
+                            }
                             hwspi_write_read(0x20); // AVR_FETCH_LOW_BYTE_COMMAND
                             hwspi_write_read((addr >> 8) & 0xFF);
                             hwspi_write_read(addr & 0xFF);
@@ -743,13 +788,22 @@ void legacy4third_mode(void) {
         if (binmode_debug) {
             printf("\r\ncdc_buff: %p\r\n", cdc_buff);
         }
-        printf("\r\nDone! Just execute flashrom or avrdude using the binary com port\r\n");
+        if (cdc_buff == NULL) {
+            printf("\r\nError: Not enough memory for cdc_buff!\r\n");
+            return;
+        }
+        printf("\r\nDone! Just execute flashrom or avrdude using the binary com port\r\n"
+               "Keep Pressing button to exit legacy binary mode.\r\n");
+               
         tmpbuf = cdc_buff + CDCBUFF_SIZE;
         memset(cdc_buff, 0, CDCBUFF_SIZE);
         memset(tmpbuf, 0, TMPBUFF_SIZE);
         remain_bytes = 0;
         cdc_full_flush(1);
         legacy_protocol();
+        printf("\r\nExiting Legacy Binary Mode...\r\n");
+        printf("Resetting Bus Pirate...\r\n");
+        sleep_ms(1000); 
         system_config.binmode_usb_rx_queue_enable = true;
         system_config.binmode_usb_tx_queue_enable = true;
         mem_free(cdc_buff);
@@ -763,6 +817,8 @@ void legacy4third_mode(void) {
         system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
         system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
         set_planks_auxpins(false);
+        uint8_t binmode_args = 0;
+        binmode_reset_buspirate(&binmode_args);
     }
 }
 

@@ -54,6 +54,596 @@ static bool i2c_read(uint8_t addr, uint8_t *data, uint8_t len) {
     return false;
 }
 
+/**************************************************** */
+
+struct eeprom_device_t {
+    char name[9];
+    uint32_t size_bytes;
+    uint8_t address_bytes; 
+    uint8_t block_select_bits;
+    uint8_t block_select_offset;
+    uint16_t page_bytes; 
+};
+
+const struct eeprom_device_t eeprom_devices[] = {
+    { "24xM02", 262144, 2, 2, 0, 256 },
+    { "24xM01", 131072, 2, 1, 0, 256 },    
+    { "24x1026", 131072, 2, 1, 0, 128 },
+    { "24x1025", 131072, 2, 1, 3, 128 },
+    { "24x512",  65536,  2, 0, 0, 128 },
+    { "24x256",  32768,  2, 0, 0, 64  },
+    { "24x128",  16384,  2, 0, 0, 64  },
+    { "24x64",   8192,   2, 0, 0, 32  },
+    { "24x32",   4096,   2, 0, 0, 32  },
+    { "24x16",   2048,   1, 3, 0, 16  },
+    { "24x08",   1024,   1, 2, 0, 16  },
+    { "24x04",   512,    1, 1, 0, 16  },
+    { "24x02",   256,    1, 0, 0, 8   },
+    { "24x01",   128,    1, 0, 0, 8   }
+};
+
+// a struct to hold the current EEPROM info and address, etc
+struct eeprom_info {
+    const struct eeprom_device_t* device;
+    uint8_t device_address; // 7-bit address for the device
+    uint8_t rw_ptr[2]; // 1 or 2 bytes depending on the device
+    uint8_t block_select; // 0-15 for 24LC1025, 0-7 for others
+    uint8_t page; // page address for writing
+};
+
+
+static void printProgress(size_t count, size_t max) {
+    const int bar_width = 50;
+
+    float progress = (float) count / max;
+    int bar_length = progress * bar_width;
+
+    printf("\rProgress: [");
+    for (int i = 0; i < bar_length; ++i) {
+        printf("#");
+    }
+    for (int i = bar_length; i < bar_width; ++i) {
+        printf(" ");
+    }
+    printf("] %.2f%%", progress * 100);
+
+    fflush(stdout);
+}
+
+// read the EEPROM and write to file
+void eeprom_read_handler(struct command_result* res) {
+    #define EEPROM_READ_SIZE 256
+    
+    //get eeprom type from command line
+    command_var_t arg;
+    char device_name[9];
+    if(!cmdln_args_find_flag_string('d', &arg, sizeof(device_name), device_name)){
+        printf("Missing EEPROM device name: -d <device name>\r\n");
+        for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+            printf("  %s\r\n", eeprom_devices[i].name);
+        }
+        return;
+    }
+
+    // we have a device name, find it in the list
+    uint8_t eeprom_type = 0xFF; // invalid by default
+    strupr(device_name);
+    for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+        if(strcmp(device_name, eeprom_devices[i].name) == 0) {
+            eeprom_type = i; // found the device
+            break;
+        }
+    }
+
+    if(eeprom_type == 0xFF) {
+        printf("Invalid EEPROM device name: %s\r\n", device_name);
+        for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+            printf("  %s\r\n", eeprom_devices[i].name);
+        }
+        return; // error
+    }
+ 
+    static struct eeprom_info eeprom;
+    eeprom.device = &eeprom_devices[eeprom_type];
+    eeprom.device_address = 0x50; // default I2C address for EEPROMs
+
+    //read in 256 bytes pages for convinience
+    uint32_t addr_range_256b= eeprom.device->size_bytes / EEPROM_READ_SIZE;
+
+    if(addr_range_256b ==0) addr_range_256b = 1;
+
+    printf("Reading EEPROM %s (%d bytes) %d * 256 bytes\r\n", eeprom.device->name, eeprom.device->size_bytes, addr_range_256b);
+
+    eeprom.rw_ptr[0] = eeprom.rw_ptr[1] = 0x00;
+
+    // TODO: just pull high byte of address, lower byte is always 0x00;
+    for(uint32_t i = 0; i < addr_range_256b; i++) {
+       
+        uint32_t read_size = EEPROM_READ_SIZE; // read 256 bytes at a time
+        if(eeprom.device->size_bytes < EEPROM_READ_SIZE){
+            read_size = eeprom.device->size_bytes; // use the page size for reading        
+        }
+
+        // calculate the address for the page
+        uint32_t page_address = i * EEPROM_READ_SIZE;       
+        //if(eeprom.device->address_bytes == 1) { //<256 bytes is a single read, not needed
+            //eeprom.rw_ptr[0] = page_address & 0xFF; // low byte only
+        //}else{
+            eeprom.rw_ptr[0] = (page_address >> 8) & 0xFF; // high byte
+            //eeprom.rw_ptr[1] = page_address & 0xFF; // low byte
+        //}
+
+        // if the device has block select bits, we need to adjust the address
+        // if the device doen't have block select bits, then page_address is always 0 in the upper bits and this has no effect
+        uint8_t block_select_bits = (page_address>>(8*eeprom.device->address_bytes));
+        // adjust to correct location in address (ie 1025)
+        uint8_t i2caddr_7bit = eeprom.device_address | (block_select_bits << eeprom.device->block_select_offset);        
+
+        //printf("Reading EEPROM page %d at address 0x%04X (I2C address 0x%02X)\r\n", i, page_address, i2caddr_7bit);
+        printProgress(i, addr_range_256b);
+        #if 0
+        // read the page from the EEPROM
+        if (i2c_transaction(eeprom.device_address<<1, eeprom.rw_ptr, eeprom.device->address_bytes, buffer, EEPROM_READ_SIZE)) {
+            printf("Error reading EEPROM at %d\r\n", i*256);
+            return true; // error
+        }
+        #endif
+    }
+
+    printProgress(addr_range_256b, addr_range_256b);
+    printf("\r\nRead complete\r\n");
+
+}
+
+
+// write the EEPROM from a file
+// 8, 16, 32, 64, 128 byte pages are possible
+void eeprom_handler(struct command_result* res) {
+    #define EEPROM_READ_SIZE 256
+    
+    //get eeprom type from command line
+    command_var_t arg;
+    char device_name[9];
+    if(!cmdln_args_find_flag_string('d', &arg, sizeof(device_name), device_name)){
+        printf("Missing EEPROM device name: -d <device name>\r\n");
+        for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+            printf("  %s\r\n", eeprom_devices[i].name);
+        }
+        return;
+    }
+
+    // we have a device name, find it in the list
+    //TODO: case insensitive
+    uint8_t eeprom_type = 0xFF; // invalid by default
+    strupr(device_name);
+    for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+        if(strcmp(device_name, eeprom_devices[i].name) == 0) {
+            eeprom_type = i; // found the device
+            break;
+        }
+    }
+
+    if(eeprom_type == 0xFF) {
+        printf("Invalid EEPROM device name: %s\r\n", device_name);
+        for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+            printf("  %s\r\n", eeprom_devices[i].name);
+        }
+        return; // error
+    }
+ 
+    static struct eeprom_info eeprom;
+    eeprom.device = &eeprom_devices[eeprom_type];
+    eeprom.device_address = 0x50; // default I2C address for EEPROMs
+
+    //read in 256 bytes pages for convinience
+    uint32_t addr_range_256b= eeprom.device->size_bytes / EEPROM_READ_SIZE;
+
+    if(addr_range_256b ==0) addr_range_256b = 1;
+
+    //nice fill description of chip and capabilities
+    printf("%s: %d bytes,  %d block select bits, %d byte address, %d byte pages\r\n", eeprom.device->name, eeprom.device->size_bytes, eeprom.device->block_select_bits, eeprom.device->address_bytes, eeprom.device->page_bytes);
+
+    eeprom.rw_ptr[0] = eeprom.rw_ptr[1] = 0x00;
+
+    // TODO: just pull high byte of address, lower byte is always 0x00;
+    for(uint32_t i = 0; i < addr_range_256b; i++) {
+       
+        uint32_t read_size = EEPROM_READ_SIZE; // read 256 bytes at a time
+        if(eeprom.device->size_bytes < EEPROM_READ_SIZE){
+            read_size = eeprom.device->size_bytes; // use the page size for reading        
+        }
+
+        // calculate the address for the page
+        uint32_t page_address = i * EEPROM_READ_SIZE;       
+        //if(eeprom.device->address_bytes == 1) { //<256 bytes is a single read, not needed
+            //eeprom.rw_ptr[0] = page_address & 0xFF; // low byte only
+        //}else{
+            eeprom.rw_ptr[0] = (page_address >> 8) & 0xFF; // high byte
+            //eeprom.rw_ptr[1] = page_address & 0xFF; // low byte
+        //}
+
+        // if the device has block select bits, we need to adjust the address
+        // if the device doen't have block select bits, then page_address is always 0 in the upper bits and this has no effect
+        uint8_t block_select_bits = (page_address>>(8*eeprom.device->address_bytes));
+        // adjust to correct location in address (ie 1025)
+        uint8_t i2caddr_7bit = eeprom.device_address | (block_select_bits << eeprom.device->block_select_offset);        
+
+        //printf("Reading EEPROM page %d at address 0x%04X (I2C address 0x%02X)\r\n", i, page_address, i2caddr_7bit);
+        printProgress(i, addr_range_256b);
+
+        // loop over the page size
+        uint32_t write_pages = read_size / eeprom.device->page_bytes;
+        uint8_t buffer[128];
+        memset(buffer, 0x88, sizeof(buffer)); // clear the buffer
+
+        //printf("Writing EEPROM page %d at address 0x%04X, %d write pages (I2C address 0x%02X):", i, page_address, write_pages, i2caddr_7bit);
+
+        for(uint32_t j = 0; j < write_pages; j++) {
+            // read the page from the EEPROM
+            /*if (i2c_transaction(i2caddr_7bit, eeprom.rw_ptr, eeprom.device->address_bytes, buffer, eeprom.device->page_bytes)) {
+                printf("Error reading EEPROM at %d\r\n", i*256 + j);
+                return; // error
+            }*/
+            //printf(" %d", j);
+        }
+        //printf("\r\n");
+        #if 0
+        // read the page from the EEPROM
+        if (i2c_transaction(eeprom.device_address<<1, eeprom.rw_ptr, eeprom.device->address_bytes, buffer, EEPROM_READ_SIZE)) {
+            printf("Error reading EEPROM at %d\r\n", i*256);
+            return true; // error
+        }
+        #endif
+    }
+
+    printProgress(addr_range_256b, addr_range_256b);
+    printf("\r\nWrite complete\r\n");
+
+}
+
+
+enum eeprom_actions_enum {
+    FLASH_DUMP=0,
+    FLASH_ERASE,
+    FLASH_WRITE,
+    FLASH_READ,
+    FLASH_VERIFY,
+    FLASH_TEST
+};
+
+struct eeprom_action_t {
+    enum eeprom_actions action;
+    const char name[7];
+};
+
+const struct eeprom_action_t eeprom_actions[] = {
+    { FLASH_DUMP, "dump" },
+    { FLASH_ERASE, "erase" },
+    { FLASH_WRITE, "write" },
+    { FLASH_READ, "read" },
+    { FLASH_VERIFY, "verify" },
+    { FLASH_TEST, "test" }
+};
+
+struct eeprom_args{
+    int action;
+    struct eeprom_info device;
+    uint8_t device_address; // 7-bit address for the device
+    char file[13]; // file to read/write/verify
+    bool verify_flag; // verify flag
+    uint32_t start_address; // start address for read/write
+    uint32_t end_address; // end address for read/write
+}
+
+bool eeprom_get_args(struct eeprom_args *args) {
+    command_var_t arg;
+    char arg_str[9];
+    
+    args->action = -1; // invalid by default
+    // action is the first argument (read/write/probe/erase/etc)
+    if (cmdln_args_string_by_position(1, sizeof(arg_str), arg_str)) {
+        // get action from struct
+        for (uint8_t i = 0; i < count_of(eeprom_actions); i++) {
+            if (strcmp(arg_str, eeprom_actions[i].name) == 0) {
+                args->action = eeprom_actions[i].action;
+                break;
+            }
+        }
+    }
+    if (args->action == -1) {
+        printf("Invalid action: %s\r\n\r\n", arg_str);
+        return true; // invalid action
+    }
+    
+    if(!cmdln_args_find_flag_string('d', &arg, sizeof(arg_str), arg_str)){
+        printf("Missing EEPROM device name: -d <device name>\r\n");
+        for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+            printf("  %s\r\n", eeprom_devices[i].name);
+        }
+        return true;
+    }
+
+    // we have a device name, find it in the list
+    uint8_t eeprom_type = 0xFF; // invalid by default
+    strupr(arg_str);
+    for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+        if(strcmp(arg_str, eeprom_devices[i].name) == 0) {
+            eeprom_type = i; // found the device
+            break;
+        }
+    }
+
+    if(eeprom_type == 0xFF) {
+        printf("Invalid EEPROM device name: %s\r\n", arg_str);
+        for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+            printf("  %s\r\n", eeprom_devices[i].name);
+        }
+        return true; // error
+    }
+ 
+    //static struct eeprom_info eeprom;
+    //eeprom.device = &eeprom_devices[eeprom_type];
+    args->device.device = &eeprom_devices[eeprom_type];
+    args->device_address = 0x50; // default I2C address for EEPROMs
+
+    // verify_flag
+    args->verify_flag = cmdln_args_find_flag('v' | 0x20);
+
+    // file to read/write/verify
+    bool file_flag = cmdln_args_find_flag_string('f' | 0x20, &arg, sizeof(args->file), args->file);
+    if ((args->action == FLASH_READ || args->action == FLASH_WRITE || args->action==FLASH_VERIFY) && !file_flag) {
+        printf("Missing file name: -f <file name>\r\n");
+        return true;
+    }
+    //bool override_flag = cmdln_args_find_flag('o' | 0x20);
+    return false;
+}
+
+bool eeprom_write(struct eeprom_args *args){
+    struct eeprom_info *eeprom;
+    eeprom = &args->device;
+    
+    //Each EEPROM 8 bit address covers 256 bytes
+    uint32_t addr_range_256b= eeprom->device->size_bytes / EEPROM_READ_SIZE;
+    if(addr_range_256b ==0) addr_range_256b = 1; //for devices smaller than 256 bytes
+
+    //nice full description of chip and capabilities
+    printf("%s: %d bytes,  %d block select bits, %d byte address, %d byte pages\r\n", eeprom->device->name, eeprom->device->size_bytes, eeprom->device->block_select_bits, eeprom->device->address_bytes, eeprom->device->page_bytes);
+
+    eeprom->rw_ptr[0] = eeprom->rw_ptr[1] = 0x00;
+
+    for(uint32_t i = 0; i < addr_range_256b; i++) {
+       
+        uint32_t read_size = EEPROM_READ_SIZE; // read 256 bytes at a time
+        if(eeprom->device->size_bytes < EEPROM_READ_SIZE){
+            read_size = eeprom->device->size_bytes; // use the page size for reading        
+        }
+
+        // calculate the address for the 256 byte address range
+        uint32_t page_address = i * EEPROM_READ_SIZE;       
+        eeprom->rw_ptr[0] = (page_address >> 8) & 0xFF; // high byte
+
+        // if the device has block select bits, we need to adjust the address
+        // if the device doen't have block select bits, then page_address is always 0 in the upper bits and this has no effect
+        uint8_t block_select_bits = (page_address>>(8*eeprom->device->address_bytes));
+        // adjust to correct location in address (ie 1025)
+        uint8_t i2caddr_7bit = eeprom->device_address | (block_select_bits << eeprom->device->block_select_offset);        
+
+        //printf("Reading EEPROM page %d at address 0x%04X (I2C address 0x%02X)\r\n", i, page_address, i2caddr_7bit);
+        printProgress(i, addr_range_256b);
+
+        // loop over the page size
+        uint32_t write_pages = read_size / eeprom->device->page_bytes;
+        uint8_t buffer[256];
+        memset(buffer, 0x88, sizeof(buffer)); // clear the buffer
+
+        //printf("Writing EEPROM page %d at address 0x%04X, %d write pages (I2C address 0x%02X):", i, page_address, write_pages, i2caddr_7bit);
+
+        for(uint32_t j = 0; j < write_pages; j++) {
+            // write page to the EEPROM
+            /*if (i2c_transaction(i2caddr_7bit, eeprom->rw_ptr, eeprom->device->address_bytes, buffer, eeprom->device->page_bytes)) {
+                printf("Error reading EEPROM at %d\r\n", i*256 + j);
+                return; // error
+            }*/
+            //printf(" %d", j);
+        }
+        //printf("\r\n");
+        #if 0
+        // read the page from the EEPROM
+        if (i2c_transaction(eeprom->device_address<<1, eeprom->rw_ptr, eeprom->device->address_bytes, buffer, EEPROM_READ_SIZE)) {
+            printf("Error reading EEPROM at %d\r\n", i*256);
+            return true; // error
+        }
+        #endif
+    }
+
+    printProgress(addr_range_256b, addr_range_256b);
+    printf("\r\nWrite complete\r\n");
+}
+
+
+void eeprom_handler_high_level(struct command_result* res) {
+    //help
+
+    struct eeprom_args args;
+    if(eeprom_get_args(&args)) {
+        //ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+        return;
+    }
+
+    //we manually control any FALA capture
+    fala_start_hook();    
+    if (args.action == FLASH_ERASE || args.action == FLASH_TEST) {
+        if (!spiflash_erase(&flash_info)) {
+            goto flash_cleanup;
+        }
+        if (args.verify_flag || args.action == FLASH_TEST) {
+            if (!spiflash_erase_verify(start_address, end_address, sizeof(data), data, &flash_info)) {
+                goto flash_cleanup;
+            }
+        }
+    }
+
+    if (args.action == FLASH_TEST) {
+        if (!spiflash_write_test(start_address, end_address, sizeof(data), data, &flash_info)) {
+            goto flash_cleanup;
+        }
+        if (!spiflash_write_verify(start_address, end_address, sizeof(data), data, &flash_info)) {
+            goto flash_cleanup;
+        }
+    }
+
+    if (args.action==FLASH_WRITE) {
+        if (!spiflash_load(start_address, end_address, sizeof(data), data, &flash_info, file)) {
+            goto flash_cleanup;
+        }
+        if (args.verify_flag) {
+            if (!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, file)) {
+                goto flash_cleanup;
+            }
+        }
+    }
+
+    if (args.action==FLASH_READ) {
+        if (!spiflash_dump(start_address, end_address, sizeof(data), data, &flash_info, file)) {
+            goto flash_cleanup;
+        }
+    }
+
+    if (args.action==FLASH_VERIFY) {
+        if (!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, file)) {
+            goto flash_cleanup;
+        }
+    }
+
+flash_cleanup:
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
+
+}
+
+
+// write the EEPROM from a file
+// 8, 16, 32, 64, 128 byte pages are possible
+void eeprom_handler_high_level(struct command_result* res) {
+    #define EEPROM_READ_SIZE 256
+    
+    //get eeprom type from command line
+    command_var_t arg;
+    char device_name[9];
+    if(!cmdln_args_find_flag_string('d', &arg, sizeof(device_name), device_name)){
+        printf("Missing EEPROM device name: -d <device name>\r\n");
+        for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+            printf("  %s\r\n", eeprom_devices[i].name);
+        }
+        return;
+    }
+
+    // we have a device name, find it in the list
+    //TODO: case insensitive
+    uint8_t eeprom_type = 0xFF; // invalid by default
+    strupr(device_name);
+    for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+        if(strcmp(device_name, eeprom_devices[i].name) == 0) {
+            eeprom_type = i; // found the device
+            break;
+        }
+    }
+
+    if(eeprom_type == 0xFF) {
+        printf("Invalid EEPROM device name: %s\r\n", device_name);
+        for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+            printf("  %s\r\n", eeprom_devices[i].name);
+        }
+        return; // error
+    }
+ 
+    static struct eeprom_info eeprom;
+    eeprom.device = &eeprom_devices[eeprom_type];
+    eeprom.device_address = 0x50; // default I2C address for EEPROMs
+
+    //read in 256 bytes pages for convinience
+    uint32_t addr_range_256b= eeprom.device->size_bytes / EEPROM_READ_SIZE;
+
+    if(addr_range_256b ==0) addr_range_256b = 1;
+
+    //nice fill description of chip and capabilities
+    printf("%s: %d bytes,  %d block select bits, %d byte address, %d byte pages\r\n", eeprom.device->name, eeprom.device->size_bytes, eeprom.device->block_select_bits, eeprom.device->address_bytes, eeprom.device->page_bytes);
+
+    eeprom.rw_ptr[0] = eeprom.rw_ptr[1] = 0x00;
+
+    // TODO: just pull high byte of address, lower byte is always 0x00;
+    for(uint32_t i = 0; i < addr_range_256b; i++) {
+       
+        uint32_t read_size = EEPROM_READ_SIZE; // read 256 bytes at a time
+        if(eeprom.device->size_bytes < EEPROM_READ_SIZE){
+            read_size = eeprom.device->size_bytes; // use the page size for reading        
+        }
+
+        // calculate the address for the page
+        uint32_t page_address = i * EEPROM_READ_SIZE;       
+        //if(eeprom.device->address_bytes == 1) { //<256 bytes is a single read, not needed
+            //eeprom.rw_ptr[0] = page_address & 0xFF; // low byte only
+        //}else{
+            eeprom.rw_ptr[0] = (page_address >> 8) & 0xFF; // high byte
+            //eeprom.rw_ptr[1] = page_address & 0xFF; // low byte
+        //}
+
+        // if the device has block select bits, we need to adjust the address
+        // if the device doen't have block select bits, then page_address is always 0 in the upper bits and this has no effect
+        uint8_t block_select_bits = (page_address>>(8*eeprom.device->address_bytes));
+        // adjust to correct location in address (ie 1025)
+        uint8_t i2caddr_7bit = eeprom.device_address | (block_select_bits << eeprom.device->block_select_offset);        
+
+        //printf("Reading EEPROM page %d at address 0x%04X (I2C address 0x%02X)\r\n", i, page_address, i2caddr_7bit);
+        printProgress(i, addr_range_256b);
+
+        // loop over the page size
+        uint32_t write_pages = read_size / eeprom.device->page_bytes;
+        uint8_t buffer[128];
+        memset(buffer, 0x88, sizeof(buffer)); // clear the buffer
+
+        //printf("Writing EEPROM page %d at address 0x%04X, %d write pages (I2C address 0x%02X):", i, page_address, write_pages, i2caddr_7bit);
+
+        for(uint32_t j = 0; j < write_pages; j++) {
+            // read the page from the EEPROM
+            /*if (i2c_transaction(i2caddr_7bit, eeprom.rw_ptr, eeprom.device->address_bytes, buffer, eeprom.device->page_bytes)) {
+                printf("Error reading EEPROM at %d\r\n", i*256 + j);
+                return; // error
+            }*/
+            //printf(" %d", j);
+        }
+        //printf("\r\n");
+        #if 0
+        // read the page from the EEPROM
+        if (i2c_transaction(eeprom.device_address<<1, eeprom.rw_ptr, eeprom.device->address_bytes, buffer, EEPROM_READ_SIZE)) {
+            printf("Error reading EEPROM at %d\r\n", i*256);
+            return true; // error
+        }
+        #endif
+    }
+
+    printProgress(addr_range_256b, addr_range_256b);
+    printf("\r\nWrite complete\r\n");
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**************************************************** */
+
 static const char* const sht4x_usage[] = {
     "sht4x [-h(elp)]",
     "- read SHT4x series temperature and humidity sensors",

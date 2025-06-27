@@ -227,7 +227,7 @@ bool file_write(FIL *file_handle, uint8_t *buffer, uint32_t size) {
     }
     return false; // return false if the write was successful
 }
-
+#if 0
 bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8_t *read_data, uint8_t read_len) {
     if (pio_i2c_transaction_array_repeat_start(addr, write_data, write_len, read_data, read_len, 0xffffu)) {
         printf("Device not detected (no ACK)\r\n");
@@ -250,6 +250,7 @@ bool i2c_write(uint8_t addr, uint8_t *data, uint8_t len) {
     }
     return false;
 }
+#endif
 
 bool ddr5_set_legacy_page(uint8_t page){
     //set the page for the legacy mode

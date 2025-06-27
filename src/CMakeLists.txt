@@ -178,6 +178,8 @@ set(buspirate_common
         commands/i2c/sniff.h
         commands/i2c/ddr.c
         commands/i2c/ddr.h
+        commands/i2c/eeprom.c 
+        commands/i2c/eeprom.h
 
         # SPI
         mode/hwspi.c
@@ -286,6 +288,11 @@ set(buspirate_common
         ui/ui_term.h
         ui/ui_statusbar.c
         ui/ui_statusbar.h
+        ui/ui_hex.c
+        ui/ui_hex.h
+        ui/ui_progress_indicator.h
+        ui/ui_progress_indicator.c
+
 
         # Debug
         debug_uart.c

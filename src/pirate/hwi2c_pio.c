@@ -310,3 +310,44 @@ hwi2c_status_t pio_i2c_transaction_array_repeat_start(uint8_t addr, uint8_t* txb
     return HWI2C_OK;
 }
 
+/***********************************************/
+/*High level functions with user error messages*/
+/***********************************************/
+
+bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8_t *read_data, uint16_t read_len) {
+    if (pio_i2c_transaction_array_repeat_start(addr, write_data, write_len, read_data, read_len, 0xffffu)) {
+        printf("\r\nDevice not detected (no ACK)\r\n");
+        return true;
+    }
+    return false;
+}
+
+bool i2c_write(uint8_t addr, uint8_t *data, uint16_t len) {
+    hwi2c_status_t i2c_result = pio_i2c_write_array_timeout(addr, data, len, 0xfffffu);
+    if(i2c_result != HWI2C_OK) {
+        if(i2c_result == HWI2C_TIMEOUT) {
+            printf("\r\nI2C Timeout\r\n");
+        } else if(i2c_result == HWI2C_NACK) {
+            printf("\r\nDevice not detected (no ACK)\r\n");
+        } else {
+            printf("\r\nI2C Error: %d\r\n", i2c_result);
+        }
+        return true;
+    }
+    return false;
+}
+
+bool i2c_read(uint8_t addr, uint8_t *data, uint8_t len) {
+    hwi2c_status_t i2c_result = pio_i2c_read_array_timeout(addr | 1u, data, len, 0xfffffu);
+    if(i2c_result != HWI2C_OK) {
+        if(i2c_result == HWI2C_TIMEOUT) {
+            printf("\r\nI2C Timeout\r\n");
+        } else if(i2c_result == HWI2C_NACK) {
+            printf("\r\nDevice not detected (no ACK)\r\n");
+        } else {
+            printf("\r\nI2C Error: %d\r\n", i2c_result);
+        }
+        return true;
+    }
+    return false;
+}

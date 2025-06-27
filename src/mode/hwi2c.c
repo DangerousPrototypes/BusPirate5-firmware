@@ -17,6 +17,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "commands/i2c/ddr.h"
+#include "commands/i2c/eeprom.h"
 
 static const char pin_labels[][5] = {
     "SDA",

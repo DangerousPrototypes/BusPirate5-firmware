@@ -25,7 +25,7 @@
 #include "ui/ui_cmdln.h"
 #include "pirate/storage.h"
 
-#define DEF_ROW_SIZE 8
+#define DEF_ROW_SIZE 16
 #define PRINTABLE(_c) (_c > 0x1f && _c < 0x7f ? _c : '.')
 
 static const char* const hex_usage[] = { "hex <file> [-d(address)] [-a(ascii)] [-s <size>]",
@@ -86,7 +86,7 @@ static uint32_t hex_dump(
         for (UINT i = 0; i < bytes_read; i++) {
             if (print_addr) {
                 print_addr = false;
-                printf("%04x  ", shown_off);
+                printf("%08X  ", shown_off);
             }
             printf("%02x ", buf[i]);
             buf_off++;
@@ -124,7 +124,7 @@ void disk_hex_handler(struct command_result* res) {
     char location[32];
     uint32_t off = 0;
     uint32_t row_size = DEF_ROW_SIZE;
-    uint8_t flags = HEX_NONE;
+    uint8_t flags = HEX_ADDR | HEX_ASCII; // default to both address and ascii
     uint32_t bytes_read = 0;
     uint16_t page_lines = 0;
     uint32_t seek_off = 0;
@@ -139,13 +139,14 @@ void disk_hex_handler(struct command_result* res) {
         res->error = true;
         return;
     }
-
+/*
     if (cmdln_args_find_flag('d' | 0x20)) {
         flags |= HEX_ADDR;
     }
     if (cmdln_args_find_flag('a' | 0x20)) {
         flags |= HEX_ASCII;
     }
+*/
     if (!cmdln_args_find_flag_uint32('s' | 0x20, &arg, &row_size)) {
         row_size = DEF_ROW_SIZE;
     }
@@ -160,6 +161,13 @@ void disk_hex_handler(struct command_result* res) {
     f_lseek(&fil, seek_off);
     off = seek_off;
     printf("\r\n");
+    
+    //show header if row size is 16
+    if(row_size == 16){
+        printf("          00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n");
+        printf("---------------------------------------------------------\r\n");
+    }
+
     while ((bytes_read = hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
         off += bytes_read;
 

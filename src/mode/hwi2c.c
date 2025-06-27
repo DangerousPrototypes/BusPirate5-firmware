@@ -75,6 +75,12 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_TCS34725,
         .supress_fala_capture=true
     }, 
+    {
+        .command="eeprom",
+        .func=&eeprom_handler,
+        .description_text=T_HELP_I2C_TCS34725,
+        .supress_fala_capture=true
+    }
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 

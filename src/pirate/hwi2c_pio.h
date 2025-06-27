@@ -29,7 +29,7 @@ hwi2c_status_t pio_i2c_write_array_timeout(uint8_t addr, uint8_t* txbuf, uint le
 hwi2c_status_t pio_i2c_transaction_array_timeout(
     uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout);
 hwi2c_status_t pio_i2c_transaction_array_repeat_start(uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout);
-
+hwi2c_status_t pio_i2c_wait_idle_extern(uint32_t timeout) ;
 // ----------------------------------------------------------------------------
 // Low-level functions
 

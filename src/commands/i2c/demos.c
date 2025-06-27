@@ -208,7 +208,7 @@ struct eeprom_info{
     char file_name[13]; // file to read/write/verify
     bool verify_flag; // verify flag
     uint32_t start_address; // start address for read/write
-    uint32_t end_address; // end address for read/write
+    uint32_t user_bytes; // user specified number of bytes to read/write
     FIL file_handle;     // file handle
 };
 
@@ -276,6 +276,26 @@ bool eeprom_get_args(struct eeprom_info *args) {
         return true;
     }
     //bool override_flag = cmdln_args_find_flag('o' | 0x20);
+
+    // start address
+    if (cmdln_args_find_flag_uint32('s' | 0x20, &arg, &args->start_address)) {
+        if (args->start_address >= args->device->size_bytes) {
+            printf("Start address out of range: %d\r\n", args->start_address);
+            return true; // error
+        }
+    } else {
+        args->start_address = 0; // default to 0
+    }
+
+    // end address: user provides number of bytes to read/write, we calculate the end address
+    if (cmdln_args_find_flag_uint32('b' | 0x20, &arg, &args->user_bytes)) {
+        if(args->user_bytes == 0) {
+            args->user_bytes = 1;
+        }
+    }else{
+        args->user_bytes = args->device->size_bytes;
+    }
+
     return false;
 }
 
@@ -309,7 +329,94 @@ uint8_t eeprom_get_address_block_i2c_address(struct eeprom_info *eeprom, uint32_
     return i2caddr_7bit;
 } 
 
-bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool erase) {
+//function to return the block select, address given a byte address
+bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uint8_t *i2caddr_7bit, uint8_t *address_bytes) {
+    // check if the address is valid
+    if (address >= eeprom->device->size_bytes) {
+        printf("Error: Address out of range\r\n");
+        return true; // invalid address
+    }
+    if(eeprom->device->address_bytes == 1) {
+        address_bytes[0] = (uint8_t)(address & 0xFF); // 8-bit address
+    }else if(eeprom->device->address_bytes == 2) {
+        address_bytes[0] = (uint8_t)((address >> 8) & 0xFF); // high byte
+        address_bytes[1] = (uint8_t)(address & 0xFF); // low byte
+    } else {
+        printf("Error: Invalid address bytes\r\n");
+        return true; // invalid address bytes
+    }
+    // if the device has block select bits, we need to adjust the address
+    // if the device doen't have block select bits, then address_block is always 0 in the upper bits and this has no effect
+    uint8_t block_select_bits = ((address)>>(8*eeprom->device->address_bytes));
+    // adjust to correct location in address (ie 1025)
+    (*i2caddr_7bit) = eeprom->device_address | (block_select_bits << eeprom->device->block_select_offset); 
+    return false; 
+}
+
+//function to display hex editor like dump of the EEPROM contents
+bool eeprom_dump(struct eeprom_info *eeprom, char *buf, uint32_t buf_size){
+    // user specified start address: align to 16 bytes, then adjust the number of bytes to read
+    uint32_t start_address = eeprom->start_address & 0xFFFFFFF0; // align to 16 bytes
+    uint32_t start_padding_bytes = eeprom->start_address - start_address; // calculate padding bytes
+    // align user_bytes to 16 bytes, and adjust for padding
+    uint32_t end_address = (eeprom->start_address + (eeprom->user_bytes-1)); // align to 16 bytes, remember -1 to account for the start byte (0)
+    uint32_t total_read_bytes = (((end_address)&0xFFFFFFF0)+0x10)-eeprom->start_address;
+    total_read_bytes = total_read_bytes + start_padding_bytes; // add the padding bytes to the total read bytes
+
+    if(total_read_bytes > eeprom->device->size_bytes - start_address) {
+        total_read_bytes = eeprom->device->size_bytes - start_address; // limit to device size
+    }
+
+    uint32_t end_address_aligned = start_address + total_read_bytes; // calculate the end address
+
+    printf("Start address: %08X, end address: %08X\r\n\r\n", start_address, (start_address + total_read_bytes)-1);
+
+    printf("          00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n");
+    printf("---------------------------------------------------------\r\n");
+
+    for(uint32_t i =start_address; i<end_address_aligned; i+=16) {
+        // find the address for current byte and read 16 bytes at a time
+        uint8_t i2caddr_7bit;
+        uint8_t address_bytes[2];
+        if(eeprom_get_address(eeprom, i, &i2caddr_7bit,address_bytes)) return true; // if there was an error getting the address
+        if(i2c_transaction(i2caddr_7bit<<1, address_bytes, eeprom->device->address_bytes, buf, 16)) {
+            return true; // error
+        }
+   
+        // print the address
+        printf("%08X: ", i);
+        
+        // print the data in hex
+        for(uint32_t j = 0; j < 16; j++) {
+            if(i+j < eeprom->device->size_bytes) {
+                printf("%02X ", (uint8_t)buf[j]);
+            } else {
+                printf("   "); // print spaces for empty bytes
+            }
+        }
+        printf(" ");
+        
+        // print the data as ASCII
+        printf("|");
+         // print the ASCII representation of the data
+        for(uint32_t j = 0; j < 16; j++) {
+            if(i+j < eeprom->device->size_bytes) {
+                char c = (char)buf[j];
+                if(c >= 32 && c <= 126) { // printable ASCII range
+                    printf("%c", c);
+                } else {
+                    printf("."); // non-printable characters as dot
+                }
+            } else {
+                printf(" "); // print space for empty bytes
+            }
+        }
+        printf("|\r\n");
+    }
+
+}
+
+bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool write_from_buf) {
    
     //Each EEPROM 8 bit address covers 256 bytes
     uint32_t address_blocks_total=eeprom_get_address_blocks_total(eeprom);
@@ -317,10 +424,8 @@ bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool
     //reset pointers
     uint8_t block_ptr[2] = {0x00, 0x00}; // reset the block pointer
 
-    if(!erase){
+    if(!write_from_buf){
         if(file_open(&eeprom->file_handle, eeprom->file_name, FA_READ)) return true; // create the file, overwrite if it exists, close if fails
-    }else{
-        memset(buf, 0xFF, buf_size); // fill the buffer with 0xFF for erase
     }
 
     for(uint32_t i = 0; i < address_blocks_total; i++) {
@@ -331,7 +436,7 @@ bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool
         // set any block select bits in the I2C address
         uint8_t i2caddr_7bit = eeprom_get_address_block_i2c_address(eeprom, i);
 
-        if(!erase){
+        if(!write_from_buf){
             //read the next file chunk into the buffer
             if(file_read(&eeprom->file_handle, buf, write_size))return true;
         }
@@ -353,7 +458,7 @@ bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool
                 block_ptr[0] = (j * eeprom->device->page_bytes);
                 if (eeprom_i2c_write(i2caddr_7bit<<1, block_ptr, eeprom->device->address_bytes, &buf[j*eeprom->device->page_bytes], eeprom->device->page_bytes)) {
                     printf("Error writing EEPROM at %d\r\n", i*256 + j);
-                    if(!erase) file_close(&eeprom->file_handle); // close the file if there was an error
+                    if(!write_from_buf) file_close(&eeprom->file_handle); // close the file if there was an error
                     return true; // error
                 }
                 //poll for write complete
@@ -366,7 +471,7 @@ bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool
                     timeout--; // decrement the timeout
                     if(!timeout) {
                         printf("\r\nError: EEPROM write timeout at %d\r\n", i*256 + j);
-                        if(!erase) file_close(&eeprom->file_handle); // close the file if there was an error
+                        if(!write_from_buf) file_close(&eeprom->file_handle); // close the file if there was an error
                         return true; // error
                     }
                 }
@@ -383,15 +488,9 @@ bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool
     #if !EEPROM_DEBUG
         printProgress(address_blocks_total, address_blocks_total);
     #endif
-    if(!erase){
-        // close the file after writing
+    if(!write_from_buf){
         if(file_close(&eeprom->file_handle)) return true;
-        printf("\r\nWrite complete\r\n");
-    }else{
-        // if we are erasing, we don't need to close the file
-        printf("\r\nErase complete\r\n");
-    }
-    
+    }   
     return false; // success
 }
 
@@ -444,10 +543,13 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
                     if(file_read(&eeprom->file_handle, verify_buf, read_size)) return true; 
                 }
                 // compare the read data with the file data (or 0xff if verifying erase)
-                if(memcmp(buf, verify_buf, read_size) != 0) {
-                    printf("\r\nError verifying EEPROM at %d, expected 0x%02X, read 0x%02X\r\n", i*256, verify_buf[i], buf[i]);
-                    if(!verify_against_verify_buf) if(!file_close(&eeprom->file_handle)) return true; // close the file if there was an error
-                    return true; // error
+                for(uint32_t j = 0; j < read_size; j++) {
+                    // verify against file data
+                    if(buf[j] != verify_buf[j]) {
+                        printf("\r\nError at 0x%08X: expected 0x%02X, read 0x%02X\r\n", i*256 + j, verify_buf[j], buf[j]);
+                        if(!verify_against_verify_buf) if(!file_close(&eeprom->file_handle)) return true; // close the file if there was an error
+                        return true; // error
+                    }
                 }
             }
         #endif
@@ -457,11 +559,6 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
         printProgress(address_blocks_total, address_blocks_total);
     #endif
     if(!verify_against_verify_buf) if(file_close(&eeprom->file_handle)) return true; // close the file after writing
-    if(verify || verify_against_verify_buf) {
-        printf("\r\nVerify complete\r\n");
-    } else {
-        printf("\r\nRead complete\r\n");
-    }
     return false; // success
 }
 
@@ -475,63 +572,110 @@ void eeprom_handler(struct command_result* res) {
     }
 
     //nice full description of chip and capabilities
-    printf("%s: %d bytes,  %d block select bits, %d byte address, %d byte pages\r\n", eeprom.device->name, eeprom.device->size_bytes, eeprom.device->block_select_bits, eeprom.device->address_bytes, eeprom.device->page_bytes);
+    printf("%s: %d bytes,  %d block select bits, %d byte address, %d byte pages\r\n\r\n", eeprom.device->name, eeprom.device->size_bytes, eeprom.device->block_select_bits, eeprom.device->address_bytes, eeprom.device->page_bytes);
 
     char buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading/writing
     uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading data from EEPROM
 
     //we manually control any FALA capture
     fala_start_hook(); 
+
+    if(eeprom.action == EEPROM_DUMP) {
+        //dump the EEPROM contents
+        eeprom_dump(&eeprom, buf, sizeof(buf));
+        goto eeprom_cleanup; // no need to continue
+    }
  
     if (eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_TEST) {
+        printf("Erase: Writing 0xFF to all bytes...\r\n");
+        memset(buf, 0xFF, sizeof(buf)); // fill the buffer with 0xFF for erase
         if (eeprom_write(&eeprom, buf, sizeof(buf), true)) {
             goto eeprom_cleanup;
         }
+        printf("\r\nErase complete\r\n");
         if (eeprom.verify_flag || eeprom.action == EEPROM_TEST) {
-            if(eeprom.verify_flag){
-                memset(verify_buf, 0xFF, sizeof(verify_buf)); // fill the verify buffer with 0xFF for erase
-            }
+            printf("Erase verify...\r\n");
+            memset(verify_buf, 0xFF, sizeof(verify_buf)); // fill the verify buffer with 0xFF for erase
             if (eeprom_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), true, true)) {
                 goto eeprom_cleanup;
             }
+            printf("\r\nErase verify complete\r\n");
         }
     }
-    #if 0  
+
     if (eeprom.action == EEPROM_TEST) {
-        if (!spiflash_write_test(start_address, end_address, sizeof(data), data, &flash_info)) {
+        printf("\r\nTest: Writing alternating patterns\r\n");
+        printf("Writing 0xAA 0x55...\r\n");
+        //fill the buffer with 0xaa 0x55 for testing
+        for(uint32_t i = 0; i < sizeof(verify_buf); i++) {
+            if (i % 2 == 0) {
+                verify_buf[i] = 0xAA; // even bytes
+            } else {
+                verify_buf[i] = 0x55; // odd bytes
+            }
+        }
+        if (eeprom_write(&eeprom, verify_buf, sizeof(verify_buf), true)) {
             goto eeprom_cleanup;
         }
-        if (!spiflash_write_verify(start_address, end_address, sizeof(data), data, &flash_info)) {
+        printf("\r\nWrite complete\r\nWrite verify...\r\n");
+        if (eeprom_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), true, true)) {
             goto eeprom_cleanup;
         }
+        printf("\r\nWrite verify complete\r\nWriting 0x55 0xAA...\r\n");
+        //fill the buffer with 0x55aa for testing
+        for(uint32_t i = 0; i < sizeof(verify_buf); i++) {
+            if (i % 2 == 0) {
+                verify_buf[i] = 0x55; // even bytes
+            } else {
+                verify_buf[i] = 0xAA; // odd bytes
+            }
+        }
+        if (eeprom_write(&eeprom, verify_buf, sizeof(verify_buf), true)) {
+            goto eeprom_cleanup;
+        }
+        printf("\r\nWrite complete\r\nWrite verify...\r\n");
+        if (eeprom_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), true, true)) {
+            goto eeprom_cleanup;
+        }        
+        printf("\r\nWrite verify complete\r\n");
     }
-    #endif
+
     if (eeprom.action==EEPROM_WRITE) {
+        printf("Write: Writing EEPROM from file %s...\r\n", eeprom.file_name);
         if (eeprom_write(&eeprom, buf, sizeof(buf), false)) {
             goto eeprom_cleanup;
         }
+        printf("\r\nWrite complete\r\n");
         if (eeprom.verify_flag) {   
+            printf("Write verify...\r\n");
             if(eeprom_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), true, false)){
                 goto eeprom_cleanup;
             }
+            printf("\r\nWrite verify complete\r\n");
         }
     }
 
     if (eeprom.action==EEPROM_READ) {
+        printf("Read: Reading EEPROM to file %s...\r\n", eeprom.file_name);
         if(eeprom_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), false, false)){
             goto eeprom_cleanup;
         }
+        printf("\r\nRead complete\r\n");
         if (eeprom.verify_flag) {
+            printf("Read verify...\r\n");
             if(eeprom_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), true, false)){
                 goto eeprom_cleanup;
             }
+            printf("\r\nRead verify complete\r\n");
         }        
     }
 
     if (eeprom.action==EEPROM_VERIFY) {
+        printf("Verify: Verifying EEPROM contents against file %s...\r\n", eeprom.file_name);
         if(eeprom_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), true, false)){
             goto eeprom_cleanup;
         }
+        printf("\r\nVerify complete\r\n");
     }
 
 

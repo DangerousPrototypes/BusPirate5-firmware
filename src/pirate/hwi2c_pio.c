@@ -217,7 +217,10 @@ hwi2c_status_t pio_i2c_read_timeout(uint8_t* in_data, bool ack, uint32_t timeout
 hwi2c_status_t pio_i2c_write_array_timeout(uint8_t addr, uint8_t* txbuf, uint len, uint32_t timeout) {
     if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
     hwi2c_status_t i2c_result = pio_i2c_write_timeout(addr, timeout);
-    if(i2c_result != HWI2C_OK) return i2c_result;
+    if(i2c_result != HWI2C_OK){
+        pio_i2c_stop_timeout(timeout);
+        return i2c_result;
+    }
     
     while (len) {
         --len;
@@ -306,5 +309,4 @@ hwi2c_status_t pio_i2c_transaction_array_repeat_start(uint8_t addr, uint8_t* txb
     if (pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
     return HWI2C_OK;
 }
-
 

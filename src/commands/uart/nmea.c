@@ -14,7 +14,7 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 
-static const char* const usage[] = { "gps\t[-h(elp)]", "Decode GPS NMEA packets: gps", "Exit: press any key" };
+static const char* const usage[] = { "gps\t[-h(elp)]", "Decode GPS NMEA packets:%s gps", "Exit:%s press any key" };
 
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_UART_NMEA }, // command help

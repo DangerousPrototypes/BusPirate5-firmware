@@ -14,7 +14,7 @@
 #include "hardware/pio.h"
 #include "pwm.pio.h"
 
-static const char* const usage[] = { "replicate hardware bugs", "Test errata E9: bug e9" };
+static const char* const usage[] = { "replicate hardware bugs", "Test errata E9:%s bug e9" };
 
 static const struct ui_help_options options[] = {
     { 0, "-h", T_HELP_FLAG },

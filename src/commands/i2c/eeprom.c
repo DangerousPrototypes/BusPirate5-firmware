@@ -140,34 +140,6 @@ static const char* const usage[] = {
     "Use alternate I2C address (0x50 default):%s eeprom dump -d 24x02 -a 0x53",
 };
 
-static const char* const usage_desc[] = {
-    "eeprom [dump|erase|write|read|verify|test|list]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-h(elp)]",
-    "List available EEPROM devices",
-    "Display contents",
-    "Display 16 bytes starting at address 0x60",
-    "Erase, verify",
-    "Write from file, verify",
-    "Read to file, verify",
-    "Verify against file",
-    "Test chip (full erase/write/verify)",
-    "Use alternate I2C address (0x50 default)"
-};
-
-static const char* const usage_cmd[] = {
-    "",
-    "eeprom list",
-    "eeprom dump -d 24x02",
-    "eeprom dump -d 24x02 -s 0x60 -b 16",
-    "eeprom erase -d 24x02 -v",
-    "eeprom write -d 24x02 -f example.bin -v",
-    "eeprom read -d 24x02 -f example.bin -v",
-    "eeprom verify -d 24x02 -f example.bin",
-    "eeprom test -d 24x02",
-    "eeprom dump -d 24x02 -a 0x53"
-};
-
-static_assert(count_of(usage_cmd) == count_of(usage_desc));
-
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_EEPROM },               // command help
     { 0, "dump", T_HELP_EEPROM_DUMP },  
@@ -253,7 +225,8 @@ bool eeprom_get_args(struct eeprom_info *args) {
         }
     }
     if (args->action == -1) {
-        ui_help_show_v2(true, usage_desc, usage_cmd, count_of(usage), &options[0], count_of(options)); // show help if requested
+        //ui_help_show_v2(true, usage_desc, usage_cmd, count_of(usage), &options[0], count_of(options)); // show help if requested
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
         if(strlen(arg_str) > 0) printf("\r\nInvalid action: %s\r\n\r\n", arg_str);
         return true; // invalid action
     }else if(args->action == EEPROM_LIST) {
@@ -553,7 +526,8 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
 void eeprom_handler(struct command_result* res) {
     if(res->help_flag) {
         eeprom_display_devices(); // display the available EEPROM devices
-         ui_help_show_v2(true, usage_desc, usage_cmd, count_of(usage), &options[0], count_of(options));
+        //ui_help_show_v2(true, usage_desc, usage_cmd, count_of(usage), &options[0], count_of(options));
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
         return; // if help was shown, exit
     }
     struct eeprom_info eeprom;

@@ -35,8 +35,8 @@
 /*****************************************/
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "ovrclk \t[-m <MHz> | -k <kHz>] [-v <core mV>]",
-                                     "Overclock: ovrclk -m 135",
-                                     "Change core voltage: ovrclk -v 1150 (850-1300mV valid)",};
+                                     "Overclock:%s ovrclk -m 135",
+                                     "Change core voltage:%s ovrclk -v 1150 (850-1300mV valid)",};
 
 static const struct ui_help_options options[] = { 0 };
 

@@ -10,10 +10,10 @@
 #include "pirate/button.h"
 
 static const char* const usage[] = {
-    "pause and wait for any key: pause",
-    "pause and wait for button press: pause -b",
-    "pause and wait for button or any key: pause -b -k",
-    "'x' key to exit (e.g. script mode): pause -x",
+    "pause and wait for any key:%s pause",
+    "pause and wait for button press:%s pause -b",
+    "pause and wait for button or any key:%s pause -b -k",
+    "'x' key to exit (e.g. script mode):%s pause -x",
 };
 
 static const struct ui_help_options options[] = {

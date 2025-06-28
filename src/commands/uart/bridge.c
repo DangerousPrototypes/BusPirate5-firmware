@@ -16,8 +16,8 @@
 #include "ui/ui_cmdln.h"
 
 static const char* const usage[] = { "bridge\t[-h(elp)] [-t(oolbar)]",
-                                     "Transparent UART bridge: bridge",
-                                     "Exit: press Bus Pirate button" };
+                                     "Transparent UART bridge:%s bridge",
+                                     "Exit:%s press Bus Pirate button" };
 
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_UART_BRIDGE }, // command help

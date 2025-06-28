@@ -27,9 +27,9 @@
 #include "mode/i2s.h"
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "sine [Hz]",
-                                     "Generate a sine wave at the default frequency (1000Hz): sine",                                 
-                                     "Generate 2000Hz sine wave: sine 2000",
-                                     "Generate 1000Hz sine wave for 5 seconds: sine 1000 -s 5" };
+                                     "Generate a sine wave at the default frequency (1000Hz):%s sine",                                 
+                                     "Generate 2000Hz sine wave:%s sine 2000",
+                                     "Generate 1000Hz sine wave for 5 seconds:%s sine 1000 -s 5" };
 
 // This is a struct of help strings for each option/flag/variable the command accepts
 // Record type 1 is a section header

@@ -896,15 +896,15 @@ bool ddr5_lock(uint8_t block, bool lock, bool update) {
 
 static const char* const usage[] = {
     "ddr5 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-b <block number>] [-h(elp)]",
-    "Probe DDR5 SPD: ddr5 probe",
-    "Show DDR5 SPD NVM contents: ddr5 dump",
-    "Write SPD NVM from file, verify: ddr5 write -f example.bin",
-    "Read SPD NVM to file, verify: ddr5 read -f example.bin",
-    "Verify against file: ddr5 verify -f example.bin",
-    "Show NVM block lock status: ddr5 lock -or- ddr5 unlock",
-    "Lock a NVM block 0-15: ddr5 lock -b 0",
-    "Unlock a NVM block 0-15: ddr5 unlock -b 0",
-    "Check/generate CRC for JEDEC blocks 0-7: ddr5 crc -f example.bin",
+    "Probe DDR5 SPD:%s ddr5 probe",
+    "Show DDR5 SPD NVM contents:%s ddr5 dump",
+    "Write SPD NVM from file, verify:%s ddr5 write -f example.bin",
+    "Read SPD NVM to file, verify:%s ddr5 read -f example.bin",
+    "Verify against file:%s ddr5 verify -f example.bin",
+    "Show NVM block lock status:%s ddr5 lock -or- ddr5 unlock",
+    "Lock a NVM block 0-15:%s ddr5 lock -b 0",
+    "Unlock a NVM block 0-15:%s ddr5 unlock -b 0",
+    "Check/generate CRC for JEDEC blocks 0-7:%s ddr5 crc -f example.bin",
     "DDR5 write file **MUST** be exactly 1024 bytes long"
 };
 

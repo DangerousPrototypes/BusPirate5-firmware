@@ -572,9 +572,9 @@ void cmd_selftest(void) {
 
 static const char* const usage[] = {
     "~\t[-h(elp)]",
-    "Run self-test: ~",
-    "Warning: Disconnect any devices before running self-test",
-    "Warning: Self-test is only available in HiZ mode",
+    "Run self-test:%s ~",
+    "Warning:%s Disconnect any devices before running self-test",
+    "Warning:%s Self-test is only available in HiZ mode",
 };
 
 static const struct ui_help_options options[] = {

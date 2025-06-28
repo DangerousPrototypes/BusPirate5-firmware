@@ -39,14 +39,14 @@ typedef struct __attribute__((packed)) sle44xx_atr_struct {
 
 static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]\r\n\t[-a <address>] [-v <value>] [-p "
                                      "<current psc>] [-n <new psc>] [-f <dump file>] [-h(elp)]",
-                                     "Initialize and probe: sle4442 init",
-                                     "Dump contents: sle4442 dump",
-                                     "Unlock card: sle4442 unlock -p 0xffffff",
-                                     "Write a value: sle4442 write -a 0xff -v 0x55",
-                                     "Erase memory: sle4442 erase",
-                                     "Update PSC: sle4442 psc -p 0xffffff -n 0x000000",
-                                    "Dump contents to file: sle4442 dump -f dump.bin", 
-                                    "Dump format: DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"
+                                     "Initialize and probe:%s sle4442 init",
+                                     "Dump contents:%s sle4442 dump",
+                                     "Unlock card:%s sle4442 unlock -p 0xffffff",
+                                     "Write a value:%s sle4442 write -a 0xff -v 0x55",
+                                     "Erase memory:%s sle4442 erase",
+                                     "Update PSC:%s sle4442 psc -p 0xffffff -n 0x000000",
+                                    "Dump contents to file:%s sle4442 dump -f dump.bin", 
+                                    "Dump format:%s DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"
                                     }; 
 
 static const struct ui_help_options options[] = {

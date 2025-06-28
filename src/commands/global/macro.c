@@ -22,12 +22,12 @@ void disk_get_line_id(const char* location, const char* id, char* line, int max_
 
 static const char* const usage[] = {
     "macro <#>\r\n\t[-f <file>] [-a] [-l] [-h(elp)]",
-    "Load macros: macro -f <file>",
-    "List macros: macro -l",
-    "Run macro 1: macro 1",
-    "Macro 1 help: macro 1 -h",
-    "Macro system help: macro -h",
-    "List macro files: macro -a",
+    "Load macros:%s macro -f <file>",
+    "List macros:%s macro -l",
+    "Run macro 1:%s macro 1",
+    "Macro 1 help:%s macro 1 -h",
+    "Macro system help:%s macro -h",
+    "List macro files:%s macro -a",
     "",
     "Macro files:",
     " Macros are stored in text files with the .mcr extension",

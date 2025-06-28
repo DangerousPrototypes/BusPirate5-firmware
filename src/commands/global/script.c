@@ -23,7 +23,7 @@
 
 static const char* const usage[] = {
     "script <file> [-p(ause for <enter>)] [-d (hiDe comments)] [-e(xit on error)] [-h(elp)]",
-    "Run script: script example.scr",
+    "Run script:%s script example.scr",
     "",
     "Script files:",
     "Script files are stored in text files with the .scr extension",

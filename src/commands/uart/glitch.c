@@ -72,7 +72,7 @@
 
 static const char* const usage[] = { "glitch\t[-h(elp)] [-c(onfig)]",
                                      "UART glitch generator.  Note that times are in terms of nanoseconds * 10; therefore, a setting of 3 = 30ns",
-                                     "Exit: press Bus Pirate button" };
+                                     "Exit:%s press Bus Pirate button" };
 // config struct
 typedef struct _uart_glitch_config {
     uint32_t glitch_trg;        // character sent from BP UART to trigger the glitch

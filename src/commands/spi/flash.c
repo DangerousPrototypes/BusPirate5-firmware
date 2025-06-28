@@ -20,12 +20,12 @@
 
 static const char* const usage[] = {
     "flash [init|probe|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
-    "Initialize and probe: flash probe",
-    "Erase and program, with verify: flash write -f example.bin -e -v",
-    "Read to file: flash read -f example.bin",
-    "Verify with file: flash verify -f example.bin",
-    "Test chip (full erase/write/verify): flash test",
-    "Force dump: flash read -o -b <bytes> -f <file>"
+    "Initialize and probe:%s flash probe",
+    "Erase and program, with verify:%s flash write -f example.bin -e -v",
+    "Read to file:%s flash read -f example.bin",
+    "Verify with file:%s flash verify -f example.bin",
+    "Test chip (full erase/write/verify):%s flash test",
+    "Force dump:%s flash read -o -b <bytes> -f <file>"
 };
 
 static const struct ui_help_options options[] = {

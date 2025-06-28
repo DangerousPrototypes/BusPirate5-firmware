@@ -213,9 +213,9 @@ void process_bitmap(FIL* file_handle, bool draw) {
 
 static const char* const usage[] = {
     "Read BMP info and display image file on LCD",
-    "Usage: image <file> [-d] [-h]",
-    "Read info: image example.bmp",
-    "Draw on display: image example.bmp -d",
+    "Usage:%s image <file> [-d] [-h]",
+    "Read info:%s image example.bmp",
+    "Draw on display:%s image example.bmp -d",
     "Read formats: BITMAPINFOHEADER V1 (40Bytes), V2 (52B), V3 (54B)",
     "Draw formats: 16-bit (565) and 24-bit bitmaps, 240x320 pixels",
 };

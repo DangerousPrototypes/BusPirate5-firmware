@@ -71,6 +71,29 @@ bool ui_help_show(bool help_flag,
     return false;
 }
 
+void ui_help_usage_v2(const char* const usage_desc[], const char* const usage_cmd[], uint32_t count) {
+    printf("usage:\r\n");
+    for (uint32_t i = 0; i < count; i++) {
+        printf("%s%s:%s %s\r\n", ui_term_color_info(), usage_desc[i], ui_term_color_reset(), usage_cmd[i]);
+    }
+}
+
+bool ui_help_show_v2(bool help_flag,
+                  const char* const usage_desc[],
+                  const char* const usage_cmd[],
+                  uint32_t count_of_usage,
+                  const struct ui_help_options* options,
+                  uint32_t count_of_options) {
+    if (help_flag) {
+        ui_help_usage_v2(usage_desc, usage_cmd, count_of_usage);
+        if(options[0].description!=0) {
+            ui_help_options(&options[0], count_of_options);
+        }
+        return true;
+    }
+    return false;
+}
+
 void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uint32_t count, const char* mode) {
     // printf("\r\nAvailable mode commands:\r\n");
     printf(

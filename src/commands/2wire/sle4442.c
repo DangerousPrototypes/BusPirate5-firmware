@@ -39,9 +39,10 @@ typedef struct __attribute__((packed)) sle44xx_atr_struct {
 } sle44xx_atr_t;
 
 static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]\r\n\t[-a <address>] [-v <value>] [-p "
-                                     "<current psc>] [-n <new psc>] [-f <dump file>] [-h(elp)]",
+                                     "<current psc>] [-n <new psc>] [-f <dump file>] [-s <start address>] [-b <bytes>] [-h(elp)]",
                                      "Initialize and probe:%s sle4442 init",
                                      "Dump contents:%s sle4442 dump",
+                                     "Dump 32 bytes starting at address 0x50:%s sle4442 dump -s 0x50 -b 32",
                                      "Dump contents to file:%s sle4442 dump -f dump.bin", 
                                      "Dump format:%s DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"                                     
                                      "Unlock card:%s sle4442 unlock -p 0xffffff",
@@ -64,6 +65,9 @@ static const struct ui_help_options options[] = {
     { 0, "-p", T_HELP_SLE4442_CURRENT_PSC_FLAG },
     { 0, "-n", T_HELP_SLE4442_NEW_PSC_FLAG },
     { 0, "-f", T_HELP_SLE4442_FILE_FLAG },
+    { 0, "-s", T_HELP_EEPROM_START_FLAG }, // start address for dump/read/write
+    { 0, "-b", T_HELP_EEPROM_BYTES_FLAG }, // bytes to dump/read/write
+    { 0, "-h", T_HELP_FLAG }                // help flag
 };
 
 uint32_t sle4442_ticks(void) {
@@ -379,9 +383,15 @@ void sle4442(struct command_result* res) {
         printf("Protection memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", buf[260], buf[261], buf[262], buf[263]);
         //printf("Security memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", buf[256], buf[257], buf[258], buf[259]);
         printf("Memory:\r\n");
-        ui_hex_header(0x00, 255, 256);
+
+        uint32_t dump_start, dump_bytes;
+        ui_hex_get_args(256, &dump_start, &dump_bytes);
+        uint32_t aligned_start, aligned_end, total_bytes_read;
+        ui_hex_align(dump_start, dump_bytes, 256, &aligned_start, &aligned_end, &total_bytes_read); //align the start and bytes to the DDR5 SPD size
+        ui_hex_header(aligned_start, aligned_end, total_bytes_read); //print the header
+        
         struct hex_config_t config;
-        for (uint32_t i = 0; i < 256; i += 16) {
+        for (uint32_t i = aligned_start; i < (aligned_end+1); i += 16) {
             ui_hex_row(i, &buf[i], 16, &config); //print the hex row
         }
         printf("\r\n");

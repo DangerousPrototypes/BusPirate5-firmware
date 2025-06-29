@@ -5,22 +5,15 @@
 #include "pirate.h"
 #include "pirate/hwi2c_pio.h"
 #include "ui/ui_term.h"
-//#include "system_config.h"
 #include "command_struct.h"
-//#include "bytecode.h"
-//#include "mode/hwi2c.h"
 #include "ui/ui_help.h"
 #include "ui/ui_cmdln.h"
-//#include "lib/ms5611/ms5611.h"
-//#include "lib/tsl2561/driver_tsl2561.h"
 #include "binmode/fala.h"
-//#include "usb_rx.h"
-//#include "pio_config.h"
 #include "fatfs/ff.h"       // File system related
-#include "pirate/storage.h" // File system related
 #include "ui/ui_hex.h" // Hex display related
 #include "ui/ui_progress_indicator.h" // Progress indicator related
 #include "commands/i2c/eeprom.h"
+#include "pirate/file.h" // File handling related
 
 struct eeprom_device_t {
     char name[9];
@@ -48,59 +41,6 @@ const struct eeprom_device_t eeprom_devices[] = {
     { "24X01",   128,    1, 0, 0, 8   }
 };
 
-
-static bool file_close(FIL *file_handle) {
-    FRESULT result = f_close(file_handle); // close the file
-    if (result != FR_OK) {
-        printf("\r\nError closing file\r\n");
-        return true; // return true if there was an error
-    }
-    return false; // return false if the file was closed successfully
-}
-
-// true for error, false for success
-static bool file_open(FIL *file_handle, const char *file, uint8_t file_status) {
-    FRESULT result;
-    result = f_open(file_handle, file, file_status); 
-    if (result != FR_OK){
-        printf("\r\nError opening file %s\r\n", file);
-        file_close(file_handle); // close the file if there was an error
-        return true;
-    }
-    return false; // return false if the file was opened successfully
-}
-
-static bool file_size_check(FIL *file_handle, uint32_t expected_size) {
-    if(f_size(file_handle) != expected_size) { // get the file size
-        printf("\r\nError: File must be exactly %d bytes long\r\n", expected_size);
-        file_close(file_handle); // close the file
-        return true; // return true if the file size is not as expected
-    }
-    return false; // return false if the file size is as expected
-}
-
-static bool file_read(FIL *file_handle, uint8_t *buffer, uint32_t size) {
-    UINT bytes_read;
-    FRESULT result = f_read(file_handle, buffer, size, &bytes_read); // read the file
-    if (result != FR_OK || bytes_read != size) { // check if the read was successful
-        printf("\r\nError reading file\r\n");
-        file_close(file_handle); // close the file if there was an error
-        return true; // return true if there was an error
-    }
-    return false; // return false if the read was successful
-}
-
-static bool file_write(FIL *file_handle, uint8_t *buffer, uint32_t size) {
-    UINT bytes_written;
-    FRESULT result = f_write(file_handle, buffer, size, &bytes_written); // write the file
-    if (result != FR_OK || bytes_written != size) { // check if the write was successful
-        printf("\r\nError writing to file\r\n");
-        file_close(file_handle); // close the file if there was an error
-        return true; // return true if there was an error
-    }
-    return false; // return false if the write was successful
-}
-/**************************************************** */
 enum eeprom_actions_enum {
     EEPROM_DUMP=0,
     EEPROM_ERASE,
@@ -111,12 +51,7 @@ enum eeprom_actions_enum {
     EEPROM_LIST
 };
 
-struct eeprom_action_t {
-    enum eeprom_actions_enum action;
-    const char name[7];
-};
-
-const struct eeprom_action_t eeprom_actions[] = {
+const struct cmdln_action_t eeprom_actions[] = {
     { EEPROM_DUMP, "dump" },
     { EEPROM_ERASE, "erase" },
     { EEPROM_WRITE, "write" },
@@ -125,7 +60,6 @@ const struct eeprom_action_t eeprom_actions[] = {
     { EEPROM_TEST, "test" },
     { EEPROM_LIST, "list"  }
 };
-
 
 static const char* const usage[] = {
     "eeprom [dump|erase|write|read|verify|test|list]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-h(elp)]",
@@ -160,7 +94,7 @@ static const struct ui_help_options options[] = {
 struct eeprom_info{
     const struct eeprom_device_t* device;
     uint8_t device_address; // 7-bit address for the device
-    int action;
+    uint32_t action;
     char file_name[13]; // file to read/write/verify
     bool verify_flag; // verify flag
     uint32_t start_address; // start address for read/write
@@ -207,97 +141,6 @@ void eeprom_display_devices(void) {
     }
     printf("\r\nCompatible with most common 24X I2C EEPROMs: AT24C, 24C/LC/AA/FC, etc.\r\n");
     printf("3.3volts is suitable for most devices.\r\n\r\n");
-}
-
-bool eeprom_get_args(struct eeprom_info *args) {
-    command_var_t arg;
-    char arg_str[9];
-    
-    args->action = -1; // invalid by default
-    // action is the first argument (read/write/probe/erase/etc)
-    if (cmdln_args_string_by_position(1, sizeof(arg_str), arg_str)) {
-        // get action from struct
-        for (uint8_t i = 0; i < count_of(eeprom_actions); i++) {
-            if (strcmp(arg_str, eeprom_actions[i].name) == 0) {
-                args->action = eeprom_actions[i].action;
-                break;
-            }
-        }
-    }
-    if (args->action == -1) {
-        //ui_help_show_v2(true, usage_desc, usage_cmd, count_of(usage), &options[0], count_of(options)); // show help if requested
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
-        if(strlen(arg_str) > 0) printf("\r\nInvalid action: %s\r\n\r\n", arg_str);
-        return true; // invalid action
-    }else if(args->action == EEPROM_LIST) {
-        eeprom_display_devices(); // display devices if list action
-        return true; // no error, just listing devices
-    }
-    
-    if(!cmdln_args_find_flag_string('d', &arg, sizeof(arg_str), arg_str)){
-        printf("Missing EEPROM device name: -d <device name>\r\n");
-        eeprom_display_devices();
-        return true;
-    }
-
-    // we have a device name, find it in the list
-    uint8_t eeprom_type = 0xFF; // invalid by default
-    strupr(arg_str);
-    for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
-        if(strcmp(arg_str, eeprom_devices[i].name) == 0) {
-            eeprom_type = i; // found the device
-            break;
-        }
-    }
-
-    if(eeprom_type == 0xFF) {
-        printf("Invalid EEPROM device name: %s\r\n", arg_str);
-        eeprom_display_devices();
-        return true; // error
-    }
- 
-    args->device = &eeprom_devices[eeprom_type];
-    uint32_t i2c_address = 0x50; // default I2C address for EEPROMs
-    if(cmdln_args_find_flag_uint32('a' | 0x20, &arg, &i2c_address)) {
-        if (i2c_address > 0x7F) {
-            printf("Invalid I2C address: %d\r\n", args->device_address);
-            return true; // error
-        }
-    }
-    args->device_address = i2c_address; // set the device address
-
-
-    // verify_flag
-    args->verify_flag = cmdln_args_find_flag('v' | 0x20);
-
-    // file to read/write/verify
-    bool file_flag = cmdln_args_find_flag_string('f' | 0x20, &arg, sizeof(args->file_name), args->file_name);
-    if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action==EEPROM_VERIFY) && !file_flag) {
-        printf("Missing file name: -f <file name>\r\n");
-        return true;
-    }
-    //bool override_flag = cmdln_args_find_flag('o' | 0x20);
-
-    // start address
-    if (cmdln_args_find_flag_uint32('s' | 0x20, &arg, &args->start_address)) {
-        if (args->start_address >= args->device->size_bytes) {
-            printf("Start address out of range: %d\r\n", args->start_address);
-            return true; // error
-        }
-    } else {
-        args->start_address = 0; // default to 0
-    }
-
-    // end address: user provides number of bytes to read/write, we calculate the end address
-    if (cmdln_args_find_flag_uint32('b' | 0x20, &arg, &args->user_bytes)) {
-        if(args->user_bytes == 0) {
-            args->user_bytes = 1;
-        }
-    }else{
-        args->user_bytes = args->device->size_bytes;
-    }
-
-    return false;
 }
 
 uint32_t eeprom_get_address_blocks_total(struct eeprom_info *eeprom) {
@@ -362,6 +205,7 @@ bool eeprom_dump(struct eeprom_info *eeprom, char *buf, uint32_t buf_size){
 
     // print the header
     ui_hex_header(start_address, end_address, total_read_bytes);
+    struct hex_config_t config;
 
     for(uint32_t i =start_address; i<(end_address+1); i+=16) {
         // find the address for current byte and read 16 bytes at a time
@@ -373,7 +217,7 @@ bool eeprom_dump(struct eeprom_info *eeprom, char *buf, uint32_t buf_size){
         }
 
         // print the row
-        ui_hex_row(i, buf, 16);
+        ui_hex_row(i, buf, 16, &config);
     }
 }
 
@@ -523,10 +367,72 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
     return false; // success
 }
 
+
+bool eeprom_get_args(struct eeprom_info *args) {
+    command_var_t arg;
+    char arg_str[9];
+    
+    // common function to parse the command line verb or action
+    if(cmdln_args_get_action(eeprom_actions, count_of(eeprom_actions), &args->action)){
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+        return true;
+    }
+
+    if(args->action == EEPROM_LIST) {
+        eeprom_display_devices(); // display devices if list action
+        return true; // no error, just listing devices
+    }
+    
+    if(!cmdln_args_find_flag_string('d', &arg, sizeof(arg_str), arg_str)){
+        printf("Missing EEPROM device name: -d <device name>\r\n");
+        eeprom_display_devices();
+        return true;
+    }
+
+    // we have a device name, find it in the list
+    uint8_t eeprom_type = 0xFF; // invalid by default
+    strupr(arg_str);
+    for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+        if(strcmp(arg_str, eeprom_devices[i].name) == 0) {
+            eeprom_type = i; // found the device
+            break;
+        }
+    }
+
+    if(eeprom_type == 0xFF) {
+        printf("Invalid EEPROM device name: %s\r\n", arg_str);
+        eeprom_display_devices();
+        return true; // error
+    }
+ 
+    args->device = &eeprom_devices[eeprom_type];
+    uint32_t i2c_address = 0x50; // default I2C address for EEPROMs
+    if(cmdln_args_find_flag_uint32('a' | 0x20, &arg, &i2c_address)) {
+        if (i2c_address > 0x7F) {
+            printf("Invalid I2C address: %d\r\n", args->device_address);
+            return true; // error
+        }
+    }
+    args->device_address = i2c_address; // set the device address
+
+
+    // verify_flag
+    args->verify_flag = cmdln_args_find_flag('v' | 0x20);
+
+    // file to read/write/verify
+    if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action==EEPROM_VERIFY)) {
+        if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
+    }
+
+    // let hex editor parse its own arguments
+    if(ui_hex_get_args(args->device->size_bytes, &args->start_address, &args->user_bytes)) return true;
+
+    return false;
+}
+
 void eeprom_handler(struct command_result* res) {
     if(res->help_flag) {
         eeprom_display_devices(); // display the available EEPROM devices
-        //ui_help_show_v2(true, usage_desc, usage_cmd, count_of(usage), &options[0], count_of(options));
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
         return; // if help was shown, exit
     }

@@ -144,9 +144,9 @@ const struct ui_help_options global_commands_more_help[] = {
 
 static const char* const help_usage[] = {
     "?|help [mode|display] [-h(elp)]",
-    "Show global commands: ?",
-    "Show help and commands for current mode: ? mode",
-    "Show help and commands for current display mode: ? display",
+    "Show help and all commands:%s help",
+    "Show help and commands for current mode:%s help mode",
+    "Show help and commands for current display mode:%s help display",
 };
 
 static const struct ui_help_options help_options[] = {

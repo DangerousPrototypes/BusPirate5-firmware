@@ -55,6 +55,8 @@ set(buspirate_common
         pirate/rgb.h
         pirate/rgb.c
         pirate/intercore_helpers.c
+        pirate/file.h 
+        pirate/file.c
 
         # libraries
         lib/jep106/jep106.c
@@ -116,7 +118,9 @@ set(buspirate_common
         commands/global/dump.c
         commands/global/dump.h
         commands/global/ovrclk.c 
-        commands/global/ovrclk.h        
+        commands/global/ovrclk.h   
+        commands/global/hex.c     
+        commands/global/hex.h
         
         # HiZ
         mode/hiz.h

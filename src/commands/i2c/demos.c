@@ -25,7 +25,7 @@ static const char* const sht4x_usage[] = {
     "sht4x [-h(elp)]",
     "- read SHT4x series temperature and humidity sensors",
     "- 1.08-3.3 volt device, pull-up resistors required",
-    "Read SHT4x: sht4x",
+    "Read SHT4x:%s sht4x",
 };
 
 static const struct ui_help_options sht4x_options[] = {0};
@@ -71,7 +71,7 @@ static const char* const sht3x_usage[] = {
     "sht3x [-h(elp)]",
     "- read SHT3x series temperature and humidity sensors",
     "- 2.15-5 volt device, pull-up resistors required",
-    "Read SHT3x: sht3x",
+    "Read SHT3x:%s sht3x",
 };
 
 static const struct ui_help_options sht3x_options[] = {0};
@@ -120,8 +120,8 @@ static const char* const tcs34725_usage[] = {
     "tcs3472 [-g <gain:1,4,16*,60x>] [-i <integration cycles:1-256*>] [-h(elp)]",
     "- read tcs3472x color sensor, show colors in terminal and on Bus Pirate LEDs",
     "- 3.3volt device, pull-up resistors required",
-    "Read with default* 16x gain, 256 integration cycles: tcs3472",
-    "Read with 60x gain, 10 integration cycles: tcs3472 -g 60 -i 10",
+    "Read with default* 16x gain, 256 integration cycles:%s tcs3472",
+    "Read with 60x gain, 10 integration cycles:%s tcs3472 -g 60 -i 10",
 };
 
 static const struct ui_help_options tcs34725_options[] = {0};
@@ -246,7 +246,7 @@ tcs34725_cleanup:
 static const char* const tsl2561_usage[] = {
     "tsl2561 [-h(elp)]",
     "- 3.3volt device, pull-up resistors required",
-    "Show LUX: tsl2561",
+    "Show LUX:%s tsl2561",
 };
 
 static const struct ui_help_options tsl2561_options[] = {
@@ -324,7 +324,7 @@ tsl2561_cleanup:
 static const char* const ms5611_usage[] = {
     "ms5611 [-h(elp)]",
     "- 3.3volt device, pull-up resistors required",
-    "Show temperature and pressure: ms5611",
+    "Show temperature and pressure:%s ms5611",
 };
 
 static const struct ui_help_options ms5611_options[] = {
@@ -373,7 +373,7 @@ ms5611_cleanup:
 static const char* const si7021_usage[] = {
     "si7021 [-h(elp)]",
     "- 3.3volt device, pull-up resistors required",
-    "Show temperature and humidity: si7021",
+    "Show temperature and humidity:%s si7021",
 };
 
 static const struct ui_help_options si7021_options[] = {

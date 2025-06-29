@@ -39,6 +39,7 @@
 #include "commands/global/bug.h"
 #include "commands/global/image.h"
 #include "commands/global/dump.h"
+#include "commands/global/hex.h"
 #if RPI_PLATFORM == RP2350
 #include "commands/global/otpdump.h"
 #endif
@@ -82,7 +83,7 @@ const struct _global_command_struct commands[] = {
 { .command="label",     .allow_hiz=true,  .func=&disk_label_handler,                 .help_text=0x00 },
 { .command="d",         .allow_hiz=true,  .func=&ui_display_enable_args,             .help_text=T_CMDLN_DISPLAY }, // "d"
 { .command="logic",     .allow_hiz=true,  .func=&logic_handler,                      .help_text=0x00 }, // "logic"
-{ .command="hex",       .allow_hiz=true,  .func=&disk_hex_handler,                   .help_text=0x00 }, // "hex"  T_CMDLN_HEX
+{ .command="hex",       .allow_hiz=true,  .func=&hex_handler,                        .help_text=0x00 }, // "hex"  T_CMDLN_HEX
 { .command="pause",     .allow_hiz=true,  .func=&pause_handler,                      .help_text=0x00 }, // "pause"
 { .command="dummy",     .allow_hiz=true,  .func=&dummy_handler,                      .help_text=0x00 }, // "dummy"
 { .command="help",      .allow_hiz=true,  .func=&help_handler,                       .help_text=0x00 },

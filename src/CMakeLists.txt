@@ -203,6 +203,8 @@ set(buspirate_common
         lib/sfud/inc/sfud_flash_def.h
         lib/sfud/inc/sfud_port.c
         lib/sfud/inc/sfud_sfdp.c
+        commands/spi/eeprom.h
+        commands/spi/eeprom.c
 
         # 2WIRE
         mode/hw2wire.h

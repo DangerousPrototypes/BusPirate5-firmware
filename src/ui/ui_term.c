@@ -339,6 +339,20 @@ char* ui_term_color_num_float(void) {
     }
 }
 
+char * ui_term_color_grey(void) {
+    switch (system_config.terminal_ansi_color) {
+#ifdef ANSI_COLOR_256
+        case UI_TERM_256:
+            return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_GREY_TEXT);
+#endif
+        case UI_TERM_FULL_COLOR:
+            return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_GREY_TEXT);
+        case UI_TERM_NO_COLOR:
+        default:
+            return "";
+    }
+}
+
 char* ui_term_color_pacman(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256

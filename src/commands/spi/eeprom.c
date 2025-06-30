@@ -14,50 +14,44 @@
 #include "ui/ui_progress_indicator.h" // Progress indicator related
 #include "commands/i2c/eeprom.h"
 #include "pirate/file.h" // File handling related
+#include "pirate/hwspi.h" // SPI related functions
 
-struct i2c_eeprom_device_t {
+#define SPI_EEPROM_READ_CMD 0x03 // Read command for EEPROM
+#define SPI_EEPROM_WRITE_CMD 0x02 // Write command for EEPROM   
+#define SPI_EEPROM_WRDI_CMD 0x04 // Write Disable command for EEPROM
+#define SPI_EEPROM_WREN_CMD 0x06 // Write Enable command for EEPROM
+#define SPI_EEPROM_RDSR_CMD 0x05 // Read Status Register command for EEPROM
+#define SPI_EEPROM_WRSR_CMD 0x01 // Write Status Register command
+
+struct spi_eeprom_device_t {
     char name[9];
     uint32_t size_bytes;
     uint8_t address_bytes; 
     uint8_t block_select_bits;
     uint8_t block_select_offset;
     uint16_t page_bytes; 
+    uint32_t max_speed_khz; //if max speed is <10MHz, then specify the speed in kHz
 };
 
-#if 0
-const struct eeprom_device_t eeprom_devices[] = {
-    { "24XM02", 262144, 2, 2, 0, 256 },
-    { "24XM01", 131072, 2, 1, 0, 256 },    
-    { "24X1026", 131072, 2, 1, 0, 128 },
-    { "24X1025", 131072, 2, 1, 3, 128 },
-    { "24X512",  65536,  2, 0, 0, 128 },
-    { "24X256",  32768,  2, 0, 0, 64  },
-    { "24X128",  16384,  2, 0, 0, 64  },
-    { "24X64",   8192,   2, 0, 0, 32  },
-    { "24X32",   4096,   2, 0, 0, 32  },
-    { "24X16",   2048,   1, 3, 0, 16  },
-    { "24X08",   1024,   1, 2, 0, 16  },
-    { "24X04",   512,    1, 1, 0, 16  },
-    { "24X02",   256,    1, 0, 0, 8   },
-    { "24X01",   128,    1, 0, 0, 8   }
-};
-#endif
-
-static const struct i2c_eeprom_device_t eeprom_devices[] = {
-    { "24X01",   128,    1, 0, 0, 8   },
-    { "24X02",   256,    1, 0, 0, 8   },
-    { "24X04",   512,    1, 1, 0, 16  },
-    { "24X08",   1024,   1, 2, 0, 16  },
-    { "24X16",   2048,   1, 3, 0, 16  },
-    { "24X32",   4096,   2, 0, 0, 32  },
-    { "24X64",   8192,   2, 0, 0, 32  },
-    { "24X128",  16384,  2, 0, 0, 64  },
-    { "24X256",  32768,  2, 0, 0, 64  },
-    { "24X512",  65536,  2, 0, 0, 128 },
-    { "24X1025", 131072, 2, 1, 3, 128 },
-    { "24X1026", 131072, 2, 1, 0, 128 },
-    { "24XM01",  131072, 2, 1, 0, 256 },    
-    { "24XM02",  262144, 2, 2, 0, 256 }
+static const struct spi_eeprom_device_t eeprom_devices[] = {
+    { "25X010",    128,     1, 0, 0,   8, 10000 }, //8 and 16 byte page variants
+    //{ "25X010",    128,     1, 0, 0,  16 },//use the lowest common page size
+    { "25X020",    256,     1, 0, 0,   8, 10000 },
+    //{ "25X020",    256,     1, 0, 0,  16 },
+    { "25X040",    512,     1, 1, 3,   8, 10000 },
+    //{ "25X040",    512,     1, 1, 3,  16 },
+    { "25X080",   1024,     2, 0, 0,  16, 10000 },
+    //{ "25X080",   1024,     2, 0, 0,  32 },
+    { "25X160",   2048,     2, 0, 0,  16, 10000 },
+    //{ "25X160",   2048,     2, 0, 0,  32 },
+    { "25X320",    4096,     2, 0, 0,  32, 10000 },
+    { "25X640",    8192,     2, 0, 0,  32, 10000 },
+    { "25X128",  16384,     2, 0, 0,  64, 10000 },
+    { "25X256",  32768,     2, 0, 0,  64, 10000 },
+    { "25X512",   65536,     2, 0, 0, 128, 10000 },
+    { "25XM01",  131072,     3, 0, 0, 256, 10000 },
+    { "25XM02",  262144,     3, 0, 0, 256, 5000 }, //5MHz
+    { "25XM04",  524288,     3, 0, 0, 256, 8000 } 
 };
 
 enum eeprom_actions_enum {
@@ -70,7 +64,7 @@ enum eeprom_actions_enum {
     EEPROM_LIST
 };
 
-static const struct cmdln_action_t eeprom_actions[] = {
+const struct cmdln_action_t eeprom_actions[] = {
     { EEPROM_DUMP, "dump" },
     { EEPROM_ERASE, "erase" },
     { EEPROM_WRITE, "write" },
@@ -108,10 +102,20 @@ static const struct ui_help_options options[] = {
     { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },  // bytes to dump/read/write
     { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // address for read/write
     { 0, "-h", T_HELP_FLAG },   // help
-};    
+};  
+
+
+struct eeprom_hal_t {
+    bool (*read_16)(uint8_t block_select_bits, uint8_t address_bytes, uint8_t *address, char *buf);
+    bool (*read_256)(uint8_t block_select_bits, uint8_t address_bytes, uint8_t *address, char *buf);
+    bool (*write_page)(uint8_t block_select_bits, uint8_t address_bytes, uint8_t *address, uint32_t page_size, char *buf);
+    bool (*write_protection_blocks)(uint8_t block_select_bits, uint8_t address_bytes, uint8_t *address, uint8_t reg);
+    bool (*poll_busy)(uint8_t block_select_bits);
+};
 
 struct eeprom_info{
-    const struct i2c_eeprom_device_t* device;
+    const struct spi_eeprom_device_t* device;
+    const struct eeprom_hal_t *hal; // HAL for EEPROM operations
     uint8_t device_address; // 7-bit address for the device
     uint32_t action;
     char file_name[13]; // file to read/write/verify
@@ -144,6 +148,7 @@ static hwi2c_status_t eeprom_i2c_write(uint8_t i2c_addr, uint8_t *eeprom_addr, u
     if (pio_i2c_wait_idle_extern(timeout)) return HWI2C_TIMEOUT;
     return HWI2C_OK;
 }
+
 
 static void eeprom_display_devices(void) {
     printf("\r\nAvailable EEPROM devices:\r\n");
@@ -216,27 +221,74 @@ static bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uin
     return false; 
 }
 
+
+//poll for busy status, return false if write is complete, true if timeout
+static bool spi_eeprom_poll_busy(uint8_t block_select_bits){
+    uint8_t reg;
+    for(uint32_t i=0; i<0xfffff; i++) {
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_RDSR_CMD}, 1, &reg, 1); // send the read status command
+        if((reg & 0x01) == 0) { // check if WIP bit is clear
+            return false; // write is complete
+        }
+    }
+    //printf("Error: EEPROM write timeout\r\n");
+    return true;
+}
+
+//TODO: HAL function to determine the write size, i2c address, block select bits, etc
+static bool spi_eeprom_read_16(uint8_t block_select_bits, uint8_t address_bytes, uint8_t *address, char *buf) {
+    //TODO: get the block select bits from the device
+    //ensure row alignment!
+    address[address_bytes-1] &= 0xF0; // align to 16 bytes
+    hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_READ_CMD|block_select_bits, address[0], address[1], address[2]}, 1+address_bytes, buf, 16); // read 16 bytes from the EEPROM
+    return false;
+}
+
+static bool spi_eeprom_read_256(uint8_t block_select_bits, uint8_t address_bytes, uint8_t *address, char *buf){
+    //TODO: get block select bits from the device
+    //ensure row alignment!
+    address[address_bytes-1] &= 0x00; // align to 256
+    hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_READ_CMD|block_select_bits, address[0], address[1], address[2]}, 1+address_bytes, buf, 256); // read
+    return false;
+}
+
+static bool spi_eeprom_write_page(uint8_t block_select_bits, uint8_t address_bytes, uint8_t *address, uint32_t page_size, char *buf){
+    //TODO: get block select bits from the device
+    // ensure row alignment!
+    address[address_bytes-1] &= page_size; // align to page
+    hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WREN_CMD}, 1, NULL, 0); // enable write
+    //TODO: this will need to be copied into a buffer with command, address, page...
+    hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WRITE_CMD|block_select_bits, address[0], address[1], address[2]}, 1 + address_bytes + page_size, NULL, 0); // write 0x00 to the status register
+}
+
+static struct eeprom_hal_t spi_eeprom_hal = {
+    .read_16 = spi_eeprom_read_16,
+    .read_256 = spi_eeprom_read_256,
+    .write_page = spi_eeprom_write_page,
+    .write_protection_blocks = NULL, // not implemented
+    .poll_busy = spi_eeprom_poll_busy
+};
+
 //function to display hex editor like dump of the EEPROM contents
 static bool eeprom_dump(struct eeprom_info *eeprom, char *buf, uint32_t buf_size){
     // align the start address to 16 bytes, and calculate the end address
-    uint32_t start_address, end_address, total_read_bytes;
-    ui_hex_align(eeprom->start_address, eeprom->user_bytes, eeprom->device->size_bytes, &start_address, &end_address, &total_read_bytes);
+    struct hex_config_t hex_config;
+    hex_config.max_size_bytes= eeprom->device->size_bytes; // maximum size of the device in bytes
+    ui_hex_get_args_config(&hex_config);
+    ui_hex_align_config(&hex_config);
+    ui_hex_header_config(&hex_config);
 
-    // print the header
-    ui_hex_header(start_address, end_address, total_read_bytes);
-    struct hex_config_t config;
-
-    for(uint32_t i =start_address; i<(end_address+1); i+=16) {
+    for(uint32_t i=hex_config._aligned_start; i<(hex_config._aligned_end+1); i+=16) {
         // find the address for current byte and read 16 bytes at a time
-        uint8_t i2caddr_7bit;
-        uint8_t address_bytes[2];
-        if(eeprom_get_address(eeprom, i, &i2caddr_7bit,address_bytes)) return true; // if there was an error getting the address
-        if(i2c_transaction(i2caddr_7bit<<1, address_bytes, eeprom->device->address_bytes, buf, 16)) {
-            return true; // error
-        }
-
-        // print the row
-        ui_hex_row(i, buf, 16, &config);
+        //uint8_t i2caddr_7bit;
+        //uint8_t address_bytes[2];
+       // if(eeprom_get_address(eeprom, i, &i2caddr_7bit,address_bytes)) return true; // if there was an error getting the address
+        //if(i2c_transaction(i2caddr_7bit<<1, address_bytes, eeprom->device->address_bytes, buf, 16)) {
+        //    return true; // error
+        //}
+        //hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_READ_CMD, (uint8_t)i}, 2, buf, 16); // read 16 bytes from the EEPROM
+        eeprom->hal->read_16(0x00, eeprom->device->address_bytes, (uint8_t*)&i, buf); // read 16 bytes from the EEPROM
+        ui_hex_row_config(&hex_config, i, buf, 16);
     }
 }
 
@@ -449,7 +501,29 @@ static bool eeprom_get_args(struct eeprom_info *args) {
     return false;
 }
 
-void i2c_eeprom_handler(struct command_result* res) {
+void spi_eerpom_status_reg_print(uint8_t reg) {
+    // print the status register in a human readable format
+    printf("Status Register: 0x%02X\r\n", reg);
+    printf("Write Enable Latch (WEL): %s\r\n", (reg & 0x02) ? "Enabled" : "Disabled");
+    printf("Write In Progress (WIP): %s\r\n", (reg & 0x01) ? "In Progress" : "Idle");
+    printf("Block Protect Bits (BP1, BP0): %d, %d\r\n", (reg >> 2) & 0x01, (reg >> 3) & 0x01);
+    printf("Write Protect Enable (WPEN): %s\r\n", (reg & 0x80) ? "Enabled" : "Disabled");
+}
+
+bool spi_eeprom_poll_write_complete(void) {
+    // Poll for write complete
+    uint8_t reg;
+    for(uint32_t i=0; i<0xfffff; i++) {
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_RDSR_CMD}, 1, &reg, 1); // send the read status command
+        if((reg & 0x01) == 0) { // check if WIP bit is clear
+            return false; // write is complete
+        }
+    }
+    printf("Error: EEPROM write timeout\r\n");
+    return true;
+}
+
+void spi_eeprom_handler(struct command_result* res) {
     if(res->help_flag) {
         eeprom_display_devices(); // display the available EEPROM devices
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
@@ -471,6 +545,40 @@ void i2c_eeprom_handler(struct command_result* res) {
 
     if(eeprom.action == EEPROM_DUMP) {
         //dump the EEPROM contents
+        //eeprom_dump(&eeprom, buf, sizeof(buf));
+        //test for write protect bits....
+        //|7|6|5|4|3|2|1|0|
+        //|-|-|-|-|-|-|-|-|
+        //|WPEN|X|X|X|BP1|BP0|WEL|WIP|
+        uint8_t reg, reg_old;
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_RDSR_CMD}, 1, &reg_old, 1); // read the status register
+        spi_eerpom_status_reg_print(reg_old); // print the status register
+        //now write 0x00 to the status register to disable write protect
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WREN_CMD}, 1, NULL, 0); // enable write
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WRSR_CMD, 0x00}, 2, NULL, 0); // write 0x00 to the status register
+        if(spi_eeprom_poll_write_complete()) goto eeprom_cleanup; // poll for write complete
+        //confirm status = 0
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_RDSR_CMD}, 1, &reg, 1); // read the status register again
+        if(reg != 0x00) {
+            printf("Error: Failed to disable write protect\r\n");
+        }else {
+            printf("Write protect disabled\r\nTesting for WPEN, BP1, BP0...\r\n");
+        }
+        //write WPEN, BP1, BP0, then read back to see the status
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WREN_CMD}, 1, NULL, 0); // enable write
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WRSR_CMD,0b10001100}, 2, NULL, 0); // write 0x00 to the status register
+        if(spi_eeprom_poll_write_complete()) goto eeprom_cleanup; // poll for write complete
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_RDSR_CMD}, 1, &reg, 1); // read the status register again
+        printf("WPEN: %s\r\n", (reg & 0x80) ? "Present" : "Not detected");
+        printf("BP1: %s\r\n", (reg & 0b1000) ? "Present" : "Not detected");
+        printf("BP0: %s\r\n", (reg & 0b100) ? "Present" : "Not detected");
+        //printf("WEL: %s\r\n", (reg & 0b10) ? "Enabled" : "Disabled");
+        //restore old settings
+        printf("Restoring old status register value: 0x%02X\r\n", reg_old);
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WREN_CMD}, 1, NULL, 0); // enable write
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WRSR_CMD, reg_old}, 2, NULL, 0); // write old status register value
+        if(spi_eeprom_poll_write_complete()) goto eeprom_cleanup; // poll for write complete
+        printf("Done :)\r\n");
         eeprom_dump(&eeprom, buf, sizeof(buf));
         goto eeprom_cleanup; // no need to continue
     }

@@ -78,7 +78,7 @@ const struct _mode_command_struct hwi2c_commands[] = {
     }, 
     {
         .command="eeprom",
-        .func=&eeprom_handler,
+        .func=&i2c_eeprom_handler,
         .description_text=T_HELP_I2C_TCS34725,
         .supress_fala_capture=true
     }

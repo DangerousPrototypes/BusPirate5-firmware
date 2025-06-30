@@ -19,6 +19,7 @@
 #include "pirate/hwspi.h"
 #include "commands/spi/sniff.h"
 #include "usb_rx.h"
+#include "commands/spi/eeprom.h"
 
 // command configuration
 const struct _mode_command_struct hwspi_commands[] = {
@@ -26,6 +27,12 @@ const struct _mode_command_struct hwspi_commands[] = {
         .func=&flash, 
         .description_text=T_HELP_CMD_FLASH, 
         .supress_fala_capture=true
+    },
+    {   .command="eeprom", 
+        .func=&spi_eeprom_handler, 
+        .description_text=T_HELP_CMD_FLASH, 
+        .supress_fala_capture=true
+
     },
     {   .command="sniff", 
         .func=&sniff_handler, 

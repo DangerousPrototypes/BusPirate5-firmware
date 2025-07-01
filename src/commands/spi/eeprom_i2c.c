@@ -3,16 +3,14 @@
 #include <stdint.h>
 #include <string.h>
 #include "pirate.h"
-#include "pirate/hwi2c_pio.h"
 #include "ui/ui_term.h"
 #include "command_struct.h"
 #include "ui/ui_help.h"
 #include "ui/ui_cmdln.h"
 #include "binmode/fala.h"
 #include "fatfs/ff.h"       // File system related
-#include "ui/ui_hex.h" // Hex display related
-#include "ui/ui_progress_indicator.h" // Progress indicator related
-#include "commands/i2c/eeprom.h"
+//#include "ui/ui_hex.h" // Hex display related
+//#include "ui/ui_progress_indicator.h" // Progress indicator related
 #include "pirate/file.h" // File handling related
 #include "pirate/hwspi.h" // SPI related functions
 
@@ -22,7 +20,7 @@
 #define SPI_EEPROM_WREN_CMD 0x06 // Write Enable command for EEPROM
 #define SPI_EEPROM_RDSR_CMD 0x05 // Read Status Register command for EEPROM
 #define SPI_EEPROM_WRSR_CMD 0x01 // Write Status Register command
-
+#if 0
 struct eeprom_device_t {
     char name[9];
     uint32_t size_bytes;
@@ -32,7 +30,7 @@ struct eeprom_device_t {
     uint16_t page_bytes; 
     uint32_t max_speed_khz; //if max speed is <10MHz, then specify the speed in kHz
 };
-
+#endif
 static const struct eeprom_device_t i2c_eeprom_devices[] = {
     { "24X01",   128,    1, 0, 0, 8, 400   },
     { "24X02",   256,    1, 0, 0, 8, 400   },
@@ -48,28 +46,6 @@ static const struct eeprom_device_t i2c_eeprom_devices[] = {
     { "24X1026", 131072, 2, 1, 0, 128, 400 },
     { "24XM01",  131072, 2, 1, 0, 256, 400 },    
     { "24XM02",  262144, 2, 2, 0, 256, 400 }
-};
-
-static const struct eeprom_device_t spi_eeprom_devices[] = {
-    { "25X010",    128,     1, 0, 0,   8, 10000 }, //8 and 16 byte page variants
-    //{ "25X010",    128,     1, 0, 0,  16 },//use the lowest common page size
-    { "25X020",    256,     1, 0, 0,   8, 10000 },
-    //{ "25X020",    256,     1, 0, 0,  16 },
-    { "25X040",    512,     1, 1, 3,   8, 10000 },
-    //{ "25X040",    512,     1, 1, 3,  16 },
-    { "25X080",   1024,     2, 0, 0,  16, 10000 },
-    //{ "25X080",   1024,     2, 0, 0,  32 },
-    { "25X160",   2048,     2, 0, 0,  16, 10000 },
-    //{ "25X160",   2048,     2, 0, 0,  32 },
-    { "25X320",    4096,     2, 0, 0,  32, 10000 },
-    { "25X640",    8192,     2, 0, 0,  32, 10000 },
-    { "25X128",  16384,     2, 0, 0,  64, 10000 },
-    { "25X256",  32768,     2, 0, 0,  64, 10000 },
-    { "25X512",   65536,     2, 0, 0, 128, 10000 },
-    { "25X1024",  131072,     3, 0, 0, 256, 10000 },
-    { "25XM01",  131072,     3, 0, 0, 256, 10000 },
-    { "25XM02",  262144,     3, 0, 0, 256, 5000 }, //5MHz
-    { "25XM04",  524288,     3, 0, 0, 256, 8000 } 
 };
 
 enum eeprom_actions_enum {
@@ -121,7 +97,7 @@ static const struct ui_help_options options[] = {
     { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // address for read/write
     { 0, "-h", T_HELP_FLAG },   // help
 };  
-
+#if 0
 struct eeprom_hal_t;
 
 struct eeprom_info{
@@ -206,7 +182,7 @@ static bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uin
     //printf("Address: 0x%06X, Block Select Bits: 0x%02X\r\n", address, (*block_select_bits));
     return false; 
 }
-
+#endif
 //----------------------------------------------------------------------------------
 // I2C EEPROM hardware abstraction layer functions
 //----------------------------------------------------------------------------------
@@ -279,7 +255,7 @@ static struct eeprom_hal_t i2c_eeprom_hal = {
     .write_page = i2c_eeprom_write_page,
     .write_protection_blocks = NULL, // not implemented
 };
-
+#if 0
 //----------------------------------------------------------------------------------
 // SPI EEPROM hardware abstraction layer functions
 //----------------------------------------------------------------------------------
@@ -343,9 +319,9 @@ static struct eeprom_hal_t spi_eeprom_hal = {
     .write_page = spi_eeprom_write_page,
     .write_protection_blocks = NULL, // not implemented
 };
-
+#endif
 //--------------------------Universal Functions--------------------------------------------//
-
+#if
 //function to display hex editor like dump of the EEPROM contents
 static bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size){
     // align the start address to 16 bytes, and calculate the end address
@@ -489,7 +465,7 @@ static bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size
     if(action != EEPROM_VERIFY_BUFFER) if(file_close(&eeprom->file_handle)) return true; // close the file after writing
     return false; // success
 }
-
+#endif
 static bool eeprom_get_args(struct eeprom_info *args, const struct eeprom_device_t *eeprom_devices, uint32_t count_of_eeprom_devices) {
     command_var_t arg;
     char arg_str[9];

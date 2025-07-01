@@ -121,6 +121,8 @@ set(buspirate_common
         commands/global/ovrclk.h   
         commands/global/hex.c     
         commands/global/hex.h
+        commands/eeprom/eeprom_base.h
+        commands/eeprom/eeprom_base.c
         
         # HiZ
         mode/hiz.h
@@ -203,8 +205,8 @@ set(buspirate_common
         lib/sfud/inc/sfud_flash_def.h
         lib/sfud/inc/sfud_port.c
         lib/sfud/inc/sfud_sfdp.c
-        commands/spi/eeprom.h
-        commands/spi/eeprom.c
+        commands/eeprom/eeprom_spi.h
+        commands/eeprom/eeprom_spi.c
 
         # 2WIRE
         mode/hw2wire.h

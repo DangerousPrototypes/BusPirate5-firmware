@@ -4,9 +4,9 @@
 #include <string.h>
 #include "pirate.h"
 //#include "ui/ui_term.h"
-//#include "command_struct.h"
-//#include "ui/ui_help.h"
-//#include "ui/ui_cmdln.h"
+#include "command_struct.h"
+#include "ui/ui_help.h"
+#include "ui/ui_cmdln.h" //for cmdln_action_t
 //#include "binmode/fala.h"
 #include "fatfs/ff.h"       // File system related
 #include "ui/ui_hex.h" // Hex display related
@@ -15,7 +15,6 @@
 #include "pirate/file.h" // File handling related
 //#include "pirate/hwspi.h" // SPI related functions
 #include "eeprom_base.h"
-
 
 void eeprom_display_devices(const struct eeprom_device_t *eeprom_devices, uint8_t count) {
     printf("\r\nAvailable EEPROM devices:\r\n");
@@ -82,7 +81,7 @@ bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uint8_t *b
 }
 
 
-//--------------------------Universal Functions--------------------------------------------//
+//-----------------Universal Functions-------------------------//
 
 //function to display hex editor like dump of the EEPROM contents
 bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size){
@@ -221,3 +220,99 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
     if(action != EEPROM_VERIFY_BUFFER) if(file_close(&eeprom->file_handle)) return true; // close the file after writing
     return false; // success
 }
+
+bool eeprom_action_erase(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size, bool verify) {
+    printf("Erase: Writing 0xFF to all bytes...\r\n");
+    memset(buf, 0xFF, buf_size); // fill the buffer with 0xFF for erase
+    if (eeprom_write(eeprom, buf, buf_size, true)) {
+        return true;
+    }
+    printf("\r\nErase complete\r\n");
+    if (verify) {
+        printf("Erase verify...\r\n");
+        memset(verify_buf, 0xFF, verify_buf_size); // fill the verify buffer with 0xFF for erase
+        if (eeprom_read(eeprom, buf, buf_size, verify_buf, verify_buf_size, EEPROM_VERIFY_BUFFER)) {
+            return true;
+        }
+        printf("\r\nErase verify complete\r\n");
+    }
+    return false; // success
+}
+
+bool eeprom_action_test(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size) {
+    printf("\r\nTest: Writing alternating patterns\r\n");
+    printf("Writing 0xAA 0x55...\r\n");
+    //fill the buffer with 0xaa 0x55 for testing
+    for(uint32_t i = 0; i < verify_buf_size; i++) {
+        if (i % 2 == 0) {
+            verify_buf[i] = 0xAA; // even bytes
+        } else {
+            verify_buf[i] = 0x55; // odd bytes
+        }
+    }
+    if (eeprom_write(eeprom, verify_buf, verify_buf_size, true)) {
+        return true; // error during write
+    }
+    printf("\r\nWrite complete\r\nWrite verify...\r\n");
+    if (eeprom_read(eeprom, buf, buf_size, verify_buf, verify_buf_size, EEPROM_VERIFY_BUFFER)) {
+        return true; // error during read
+    }
+    printf("\r\nWrite verify complete\r\nWriting 0x55 0xAA...\r\n");
+    //fill the buffer with 0x55aa for testing
+    for(uint32_t i = 0; i < verify_buf_size; i++) {
+        if (i % 2 == 0) {
+            verify_buf[i] = 0x55; // even bytes
+        } else {
+            verify_buf[i] = 0xAA; // odd bytes
+        }
+    }
+    if (eeprom_write(eeprom, verify_buf, verify_buf_size, true)) {
+        return true; // error during write
+    }
+    printf("\r\nWrite complete\r\nWrite verify...\r\n");
+    if (eeprom_read(eeprom, buf, buf_size, verify_buf, verify_buf_size, EEPROM_VERIFY_BUFFER)) {
+        return true; // error during read
+    }        
+    printf("\r\nWrite verify complete\r\n");
+    return false; // success
+}
+
+bool eeprom_action_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size, bool verify) {
+    printf("Write: Writing EEPROM from file %s...\r\n", eeprom->file_name);
+    if (eeprom_write(eeprom, buf, buf_size, false)) {
+        return true; // error during write
+    }
+    printf("\r\nWrite complete\r\n");
+    if (verify) {   
+        printf("Write verify...\r\n");
+        if(eeprom_read(eeprom, buf, buf_size, verify_buf, verify_buf_size, EEPROM_VERIFY_FILE)){
+            return true; // error during read
+        }
+        printf("\r\nWrite verify complete\r\n");
+    }
+    return false; // success
+}
+
+bool eeprom_action_read(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size, bool verify) {
+    printf("Read: Reading EEPROM to file %s...\r\n", eeprom->file_name);
+    if(eeprom_read(eeprom, buf, buf_size, verify_buf, verify_buf_size, EEPROM_READ_TO_FILE)){
+        return true; // error during read
+    }
+    printf("\r\nRead complete\r\n");
+    if (verify) {
+        printf("Read verify...\r\n");
+        if(eeprom_read(eeprom, buf, buf_size, verify_buf, verify_buf_size, EEPROM_VERIFY_FILE)){
+            return true; // error during read
+        }
+        printf("\r\nRead verify complete\r\n");
+    }        
+    return false; // success
+}
+
+bool eeprom_action_verify(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size) {
+    printf("Verify: Verifying EEPROM contents against file %s...\r\n", eeprom->file_name);
+    if(eeprom_read(eeprom, buf, buf_size, verify_buf, verify_buf_size, EEPROM_VERIFY_FILE)){
+        return true; // error during read
+    }
+    printf("\r\nVerify complete\r\n");
+} 

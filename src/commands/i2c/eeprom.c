@@ -24,6 +24,10 @@ struct i2c_eeprom_device_t {
     uint16_t page_bytes; 
 };
 
+
+#define EEPROM_DEBUG 0
+#define EEPROM_ADDRESS_PAGE_SIZE 256 // size of the EEPROM address page in bytes
+
 #if 0
 const struct eeprom_device_t eeprom_devices[] = {
     { "24XM02", 262144, 2, 2, 0, 256 },

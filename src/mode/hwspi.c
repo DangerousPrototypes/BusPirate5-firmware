@@ -19,7 +19,7 @@
 #include "pirate/hwspi.h"
 #include "commands/spi/sniff.h"
 #include "usb_rx.h"
-#include "commands/spi/eeprom.h"
+#include "commands/eeprom/eeprom_spi.h"
 
 // command configuration
 const struct _mode_command_struct hwspi_commands[] = {

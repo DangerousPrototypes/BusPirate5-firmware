@@ -1,0 +1,391 @@
+#include <stdio.h>
+#include "pico/stdlib.h"
+#include <stdint.h>
+#include <string.h>
+#include "pirate.h"
+#include "ui/ui_term.h"
+#include "command_struct.h"
+#include "ui/ui_help.h"
+#include "ui/ui_cmdln.h"
+#include "binmode/fala.h"
+#include "fatfs/ff.h"       // File system related
+#include "ui/ui_hex.h" // Hex display related
+//#include "ui/ui_progress_indicator.h" // Progress indicator related
+//#include "commands/i2c/eeprom.h"
+#include "pirate/file.h" // File handling related
+#include "pirate/hwspi.h" // SPI related functions
+#include "eeprom_base.h"
+
+#define SPI_EEPROM_READ_CMD 0x03 // Read command for EEPROM
+#define SPI_EEPROM_WRITE_CMD 0x02 // Write command for EEPROM   
+#define SPI_EEPROM_WRDI_CMD 0x04 // Write Disable command for EEPROM
+#define SPI_EEPROM_WREN_CMD 0x06 // Write Enable command for EEPROM
+#define SPI_EEPROM_RDSR_CMD 0x05 // Read Status Register command for EEPROM
+#define SPI_EEPROM_WRSR_CMD 0x01 // Write Status Register command
+
+enum eeprom_actions_enum {
+    EEPROM_DUMP=0,
+    EEPROM_ERASE,
+    EEPROM_WRITE,
+    EEPROM_READ,
+    EEPROM_VERIFY,
+    EEPROM_TEST,
+    EEPROM_LIST,
+    EEPROM_PROTECT
+};
+
+static const struct cmdln_action_t eeprom_actions[] = {
+    { EEPROM_DUMP, "dump" },
+    { EEPROM_ERASE, "erase" },
+    { EEPROM_WRITE, "write" },
+    { EEPROM_READ, "read" },
+    { EEPROM_VERIFY, "verify" },
+    { EEPROM_TEST, "test" },
+    { EEPROM_LIST, "list"  },
+    { EEPROM_PROTECT, "protect"}
+};
+
+static const struct eeprom_device_t eeprom_devices[] = {
+    { "25X010",    128,     1, 0, 0,   8, 10000 }, //8 and 16 byte page variants
+    //{ "25X010",    128,     1, 0, 0,  16 },//use the lowest common page size
+    { "25X020",    256,     1, 0, 0,   8, 10000 },
+    //{ "25X020",    256,     1, 0, 0,  16 },
+    { "25X040",    512,     1, 1, 3,   8, 10000 },
+    //{ "25X040",    512,     1, 1, 3,  16 },
+    { "25X080",   1024,     2, 0, 0,  16, 10000 },
+    //{ "25X080",   1024,     2, 0, 0,  32 },
+    { "25X160",   2048,     2, 0, 0,  16, 10000 },
+    //{ "25X160",   2048,     2, 0, 0,  32 },
+    { "25X320",    4096,     2, 0, 0,  32, 10000 },
+    { "25X640",    8192,     2, 0, 0,  32, 10000 },
+    { "25X128",  16384,     2, 0, 0,  64, 10000 },
+    { "25X256",  32768,     2, 0, 0,  64, 10000 },
+    { "25X512",   65536,     2, 0, 0, 128, 10000 },
+    { "25X1024",  131072,     3, 0, 0, 256, 10000 },
+    { "25XM01",  131072,     3, 0, 0, 256, 10000 },
+    { "25XM02",  262144,     3, 0, 0, 256, 5000 }, //5MHz
+    { "25XM04",  524288,     3, 0, 0, 256, 8000 } 
+};
+
+static const char* const usage[] = {
+    "eeprom [dump|erase|write|read|verify|test|list]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-h(elp)]",
+    "List available EEPROM devices:%s eeprom list",
+    "Display contents:%s eeprom dump -d 24x02",
+    "Display 16 bytes starting at address 0x60:%s eeprom dump -d 24x02 -s 0x60 -b 16",
+    "Erase, verify:%s eeprom erase -d 24x02 -v",
+    "Write from file, verify:%s eeprom write -d 24x02 -f example.bin -v",
+    "Read to file, verify:%s eeprom read -d 24x02 -f example.bin -v",
+    "Verify against file:%s eeprom verify -d 24x02 -f example.bin",
+    "Test chip (full erase/write/verify):%s eeprom test -d 24x02",
+    "Use alternate I2C address (0x50 default):%s eeprom dump -d 24x02 -a 0x53",
+};
+
+static const struct ui_help_options options[] = {
+    { 1, "", T_HELP_EEPROM },               // command help
+    { 0, "dump", T_HELP_EEPROM_DUMP },  
+    { 0, "erase", T_HELP_EEPROM_ERASE },    // erase
+    { 0, "write", T_HELP_EEPROM_WRITE },    // write
+    { 0, "read", T_HELP_EEPROM_READ },      // read
+    { 0, "verify", T_HELP_EEPROM_VERIFY },  // verify
+    { 0, "test", T_HELP_EEPROM_TEST },      // test
+    { 0, "list", T_HELP_EEPROM_LIST},      // list devices
+    { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
+    { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG }, // with verify (after write)
+    { 0, "-s", T_HELP_EEPROM_START_FLAG },  // start address for dump/read/write
+    { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },  // bytes to dump/read/write
+    { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // address for read/write
+    { 0, "-h", T_HELP_FLAG },   // help
+};  //protect, -p, -t, -w?
+
+//-----------------------------------------------------------------------
+// SPI EEPROM hardware abstraction layer functions
+//-----------------------------------------------------------------------
+
+//poll for busy status, return false if write is complete, true if timeout
+static bool spi_eeprom_poll_busy(struct eeprom_info *eeprom){
+    uint8_t reg;
+    for(uint32_t i=0; i<0xfffff; i++) {
+        hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_RDSR_CMD}, 1, &reg, 1); // send the read status command
+        if((reg & 0x01) == 0) { // check if WIP bit is clear
+            return false; // write is complete
+        }
+    }
+    //printf("Error: EEPROM write timeout\r\n");
+    return true;
+}
+
+static bool spi_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32_t read_bytes, uint8_t *buf) {
+    //ensure row alignment!
+    if(read_bytes !=16 && read_bytes != 256) {
+        printf("Internal error: Invalid read size, must be 16 or 256 bytes\r\n");
+        return true; // invalid read size
+    }
+
+    // get the address for the current byte
+    uint8_t block_select_bits = 0;
+    uint8_t address_array[3];
+    if(eeprom->hal->get_address(eeprom, address, &block_select_bits, address_array)){ 
+        return true; // error getting address
+    }
+
+    // read the data from the EEPROM
+    hwspi_select(); // select the EEPROM chip
+    hwspi_write((SPI_EEPROM_READ_CMD|block_select_bits)); // send the read command with block select bits
+    hwspi_write_n(address_array, eeprom->device->address_bytes); // send the address bytes
+    hwspi_read_n(buf, read_bytes); // read 16 bytes from the EEPROM
+    hwspi_deselect(); // deselect the EEPROM chip
+    return false;
+}
+
+static bool spi_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf){
+    //get address
+    uint8_t block_select_bits = 0;
+    uint8_t address_array[3];
+    if(eeprom->hal->get_address(eeprom, address, &block_select_bits, address_array))return true; // get the address   
+
+    hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WREN_CMD}, 1, NULL, 0); // enable write
+    hwspi_select(); // select the EEPROM chip
+    hwspi_write((SPI_EEPROM_WRITE_CMD|block_select_bits)); // send the read command with block select bits
+    hwspi_write_n(address_array, eeprom->device->address_bytes); // send the address bytes
+    hwspi_write_n(buf, eeprom->device->page_bytes); // write the page data
+    hwspi_deselect(); // deselect the EEPROM chip
+    
+    if(spi_eeprom_poll_busy(eeprom))return true; // poll for write complete, return true if timeout
+    return false; // write is complete
+}
+
+static struct eeprom_hal_t spi_eeprom_hal = {
+    .get_address = eeprom_get_address,
+    .read = spi_eeprom_read,
+    .write_page = spi_eeprom_write_page,
+    .write_protection_blocks = NULL, // not implemented
+};
+//---------------------------------------------------------------------------
+
+static void spi_eerpom_status_reg_print(uint8_t reg) {
+    // print the status register in a human readable format
+    printf("Status Register: 0x%02X\r\n", reg);
+    printf("Write Enable Latch (WEL): %s\r\n", (reg & 0x02) ? "Enabled" : "Disabled");
+    printf("Write In Progress (WIP): %s\r\n", (reg & 0x01) ? "In Progress" : "Idle");
+    printf("Block Protect Bits (BP1, BP0): %d, %d\r\n", (reg >> 2) & 0x01, (reg >> 3) & 0x01);
+    printf("Write Pin ENable (WPEN): %s\r\n", (reg & 0x80) ? "Enabled" : "Disabled");
+
+    //TODO: 00=none, 01 == upper 1/4, 10= 1/2, 11 = all
+}
+
+static uint8_t spi_eeprom_read_status_register(struct eeprom_info *eeprom) {
+    // read the status register
+    uint8_t status_reg;
+    hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_RDSR_CMD}, 1, &status_reg, 1); // send the read status command
+    return status_reg; // return the status register value
+}
+
+static bool spi_eeprom_write_status_register(struct eeprom_info *eeprom, uint8_t value) {
+    // write the status register
+    hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WREN_CMD}, 1, NULL, 0); // enable write
+    hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WRSR_CMD, value}, 2, NULL, 0); // send the write status command with value
+    if(spi_eeprom_poll_busy(eeprom)) return true; // poll for write complete, return true if timeout
+    return false; // write is complete
+}
+
+static bool spi_eeprom_probe_block_protect(struct eeprom_info *eeprom) {   
+    //test for write protect bits....
+    //|7|6|5|4|3|2|1|0|
+    //|-|-|-|-|-|-|-|-|
+    //|WPEN|X|X|X|BP1|BP0|WEL|WIP|
+
+    uint8_t reg, reg_old;
+    reg_old = spi_eeprom_read_status_register(eeprom); // read the status register
+    spi_eerpom_status_reg_print(reg_old); // print the status register
+
+    if(eeprom->protect_test_flag){      
+        printf("\r\nTesting support for Write Protect blocks (WP0, WP1) and Write Pin ENable (WPEN)\r\n");
+        //now write 0x00 to the status register to disable write protect
+        printf("\r\nDisabling write protect: ");
+        if(spi_eeprom_write_status_register(eeprom, 0x00)) return true; // write 0x00 to the status register
+        reg= spi_eeprom_read_status_register(eeprom); // read the status register again
+        if(reg != 0x00) {
+            printf("0x%02X, FAILED!\r\n", reg);
+        }else {
+            printf("0x%02X, OK\r\n", reg);
+            
+            //write WPEN, BP1, BP0, then read back to see the status
+            printf("\r\nTesting for BP0, BP1, WPEN...");
+            if(spi_eeprom_write_status_register(eeprom, 0b10001100)) return true;
+            reg = spi_eeprom_read_status_register(eeprom);
+            printf("wrote: 0x%02X, read: 0x%02X\r\n", 0b10001100, reg);
+            printf("BP0: %s\r\n", (reg & 0b100) ? "Present" : "Not detected");
+            printf("BP1: %s\r\n", (reg & 0b1000) ? "Present" : "Not detected");
+            printf("WPEN: %s\r\n", (reg & 0x80) ? "Present" : "Not detected");
+        }
+
+        //restore old settings
+        printf("\r\nRestoring original status register: 0x%02X...", reg_old);
+        if(spi_eeprom_write_status_register(eeprom, reg_old)) return true;
+        reg = spi_eeprom_read_status_register(eeprom);
+        if(reg!=reg_old){
+            printf("\r\nError: Failed to restore status register, wrote: 0x%02X, read: 0x%02X\r\n", reg_old, reg);
+        }else{
+            printf("Done :)\r\n");
+        }
+        spi_eerpom_status_reg_print(reg);
+    }
+    
+    if(eeprom->protect_flag){
+        printf("\r\nWriting status register block protect bits, WP0: %d WP1: %d...", (eeprom->protect_bits&&0b1)!=0, (eeprom->protect_bits&&0b10)!=0);
+        reg_old = spi_eeprom_read_status_register(eeprom); // read the status register
+        reg=reg_old&=~0b1100; //clear existing
+        reg=reg|eeprom->protect_bits<<2;
+        if(spi_eeprom_write_status_register(eeprom, reg)) return true;
+        uint8_t reg_updated = spi_eeprom_read_status_register(eeprom);
+        if(reg!=reg_updated){
+            printf("\r\nError, wrote: 0x%02X, read: 0x%02X\r\nDoes this chip support block protect? Try -t option to test.\r\n", reg, reg_updated);
+            //spi_eerpom_status_reg_print(reg);
+            //return true;
+        }else{
+            printf("Done :)\r\n");
+        }        
+        spi_eerpom_status_reg_print(reg);
+    }
+    return false;
+}
+
+static bool eeprom_get_args(struct eeprom_info *args) {
+    command_var_t arg;
+    char arg_str[9];
+    
+    // common function to parse the command line verb or action
+    if(cmdln_args_get_action(eeprom_actions, count_of(eeprom_actions), &args->action)){
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+        return true;
+    }
+
+    if(args->action == EEPROM_LIST) {
+        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display devices if list action
+        return true; // no error, just listing devices
+    }
+    
+    if(!cmdln_args_find_flag_string('d', &arg, sizeof(arg_str), arg_str)){
+        printf("Missing EEPROM device name: -d <device name>\r\n");
+        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices));
+        return true;
+    }
+
+    // we have a device name, find it in the list
+    uint8_t eeprom_type = 0xFF; // invalid by default
+    strupr(arg_str);
+    for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+        if(strcmp(arg_str, eeprom_devices[i].name) == 0) {
+            eeprom_type = i; // found the device
+            break;
+        }
+    }
+
+    if(eeprom_type == 0xFF) {
+        printf("Invalid EEPROM device name: %s\r\n", arg_str);
+        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices));
+        return true; // error
+    }
+ 
+    args->device = &eeprom_devices[eeprom_type];
+
+    // verify_flag
+    args->verify_flag = cmdln_args_find_flag('v' | 0x20);
+
+    // test block protect bits
+    args->protect_test_flag = cmdln_args_find_flag('t' | 0x20);
+    // program block protect bits
+    
+    args->protect_flag=cmdln_args_find_flag_uint32('p' | 0x20, &arg, &args->protect_bits);
+    if(arg.error){
+        printf("Specify block protect bits (0-3, 0b00-0b11)\r\n");
+        return true;
+    }
+    if(args->protect_flag){
+        if (args->protect_bits>=4) {
+            printf("Block write protect bits out of range (0-3, 0b00-0b11 valid): %d\r\n", args->protect_bits);
+            return true; // error
+        }
+    }
+
+    // file to read/write/verify
+    if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action==EEPROM_VERIFY)) {
+        if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
+    }
+
+    // let hex editor parse its own arguments
+    if(ui_hex_get_args(args->device->size_bytes, &args->start_address, &args->user_bytes)) return true;
+
+    return false;
+}
+
+void spi_eeprom_handler(struct command_result* res) {
+    if(res->help_flag) {
+        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+        return; // if help was shown, exit
+    }
+    struct eeprom_info eeprom;
+    eeprom.hal = &spi_eeprom_hal; // set the HAL for EEPROM operations
+    // bus specific arguments (action, protect blocks, etc)
+    if(eeprom_get_args(&eeprom)) { 
+        return;
+    }
+
+    //nice full description of chip and capabilities
+    printf("%s: %d bytes,  %d block select bits, %d byte address, %d byte pages\r\n\r\n", eeprom.device->name, eeprom.device->size_bytes, eeprom.device->block_select_bits, eeprom.device->address_bytes, eeprom.device->page_bytes);
+
+    char buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading/writing
+    uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading data from EEPROM
+
+    //we manually control any FALA capture
+    fala_start_hook(); 
+
+    if(eeprom.action == EEPROM_PROTECT){
+        spi_eeprom_probe_block_protect(&eeprom);
+        goto eeprom_cleanup;
+    }
+
+    if(eeprom.action == EEPROM_DUMP) {
+        //dump the EEPROM contents
+        eeprom_dump(&eeprom, buf, sizeof(buf));
+        goto eeprom_cleanup; // no need to continue
+    }
+ 
+    if (eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_TEST) {
+        if(eeprom_action_erase(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag || eeprom.action == EEPROM_TEST)) {
+            goto eeprom_cleanup; // error during erase
+        }
+    }
+
+    if (eeprom.action == EEPROM_TEST) {
+        if(eeprom_action_test(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf))) {
+            goto eeprom_cleanup; // error during test
+        }
+    }
+
+    if (eeprom.action==EEPROM_WRITE) {
+        if(eeprom_action_write(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag)) {
+            goto eeprom_cleanup; // error during write
+        }
+    }
+
+    if (eeprom.action==EEPROM_READ) {
+        if(eeprom_action_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag)) {
+            goto eeprom_cleanup; // error during read
+        }
+    }
+
+    if (eeprom.action==EEPROM_VERIFY) {
+        if(eeprom_action_verify(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf))){
+            goto eeprom_cleanup; // error during verify
+        }
+    }
+    printf("Success :)\r\n");
+
+eeprom_cleanup:
+    //we manually control any FALA capture
+    fala_stop_hook();
+    fala_notify_hook();
+
+}

@@ -750,12 +750,15 @@ void legacy4third_mode(void) {
         prompt_result result = { 0 };
 
         printf("\r\nSet OUTPUT HOLD(IO2) & WP(IO3) pins? (no=INPUT)");
-        ui_prompt_bool(&result, true, true, false, &set_aux_pins);
+        if (!ui_prompt_bool(&result, true, true, true, &set_aux_pins))
+            goto finish_legacy;
         if (set_aux_pins) {
             printf("\r\nSet HOLD HIGH? (no=LOW)");
-            ui_prompt_bool(&result, true, true, false, &hold_value);
+            if (!ui_prompt_bool(&result, true, true, true, &hold_value))
+                goto finish_legacy;
             printf("\r\nSet WP HIGH? (no=LOW)");
-            ui_prompt_bool(&result, true, true, false, &wp_value);
+            if (!ui_prompt_bool(&result, true, true, true, &wp_value))
+                goto finish_legacy;
         }
         if (set_aux_pins) {
             set_planks_auxpins(true);
@@ -764,7 +767,8 @@ void legacy4third_mode(void) {
         printf("\r\n%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());
 
         float volts = 0.0f;
-        ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &volts, false);
+        if (!ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &volts, false)) 
+            goto finish_legacy;
 
         volts_integer = (uint8_t)floorf(volts);
         volts_decimal = (uint8_t)((volts - floorf(volts)) * 100);
@@ -774,8 +778,9 @@ void legacy4third_mode(void) {
         }
 
         float current = 0.0f;
-        printf("\r\n%sMaximum current (0mA-500mA), <enter> for none%s", ui_term_color_info(), ui_term_color_reset());
-        ui_prompt_float(&result, 0.0f, 500.0f, 100.0f, true, &current, true);
+        printf("\r\n%sMaximum current (0mA-500mA)%s", ui_term_color_info(), ui_term_color_reset());
+        if (!ui_prompt_float(&result, 0.0f, 500.0f, 200.0f, true, &current, false))
+            goto finish_legacy;
 
         current_integer = (uint16_t)floorf(current);
         current_decimal = (uint8_t)((current - floorf(current)) * 100);
@@ -784,13 +789,16 @@ void legacy4third_mode(void) {
             printf("\r\nCurrent: int = %u, dec = %u\n", current_integer, current_decimal);
         }
 
+        printf("\r\n%sPower supply set to %u.%02uV, %u.%02umA%s\r\n",
+               ui_term_color_info(), volts_integer, volts_decimal, current_integer, current_decimal, ui_term_color_reset());
+
         cdc_buff = (uint8_t*)mem_alloc(CDCBUFF_SIZE + TMPBUFF_SIZE, 0);
         if (binmode_debug) {
             printf("\r\ncdc_buff: %p\r\n", cdc_buff);
         }
         if (cdc_buff == NULL) {
             printf("\r\nError: Not enough memory for cdc_buff!\r\n");
-            return;
+            goto finish_legacy;
         }
         printf("\r\nDone! Just execute flashrom or avrdude using the binary com port\r\n"
                "Keep Pressing button to exit legacy binary mode.\r\n");
@@ -801,17 +809,19 @@ void legacy4third_mode(void) {
         remain_bytes = 0;
         cdc_full_flush(1);
         legacy_protocol();
+        finish_legacy:
         printf("\r\nExiting Legacy Binary Mode...\r\n");
         printf("Resetting Bus Pirate...\r\n");
+        printf("After reconnect press enter to use Bus Pirate in other modes.\r\n");
         sleep_ms(1000); 
         system_config.binmode_usb_rx_queue_enable = true;
         system_config.binmode_usb_tx_queue_enable = true;
-        mem_free(cdc_buff);
+        if (NULL != cdc_buff)
+        {
+            mem_free(cdc_buff);
+        }
+        cdc_buff = NULL;
         reset_legacy();
-        /*
-            uint8_t binmode_args = 0;
-            binmode_reset_buspirate(&binmode_args);
-        */
         system_bio_update_purpose_and_label(false, M_SPI_CLK, BP_PIN_MODE, 0);
         system_bio_update_purpose_and_label(false, M_SPI_CDO, BP_PIN_MODE, 0);
         system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);

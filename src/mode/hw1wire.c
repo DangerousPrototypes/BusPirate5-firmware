@@ -34,21 +34,16 @@ const struct _mode_command_struct hw1wire_commands[] = {
         .description_text=T_HELP_1WIRE_SCAN, 
         .supress_fala_capture=true
     },
-    {   .command="ds18b20", 
-        .func=&onewire_test_ds18b20_conversion, 
-        .description_text=T_HELP_1WIRE_DS18B20,
-        .supress_fala_capture=true
-    },
-    {   .command="ds18b20", 
-        .func=&onewire_test_ds18b20_conversion, 
-        .description_text=T_HELP_1WIRE_DS18B20,
-        .supress_fala_capture=true
-    },
     {   .command="eeprom", 
         .func=&onewire_eeprom_handler, 
+        .description_text=T_HELP_1WIRE_EEPROM,
+        .supress_fala_capture=true
+    },
+    {   .command="ds18b20", 
+        .func=&onewire_test_ds18b20_conversion, 
         .description_text=T_HELP_1WIRE_DS18B20,
         .supress_fala_capture=true
-    },    
+    },  
 };
 const uint32_t hw1wire_commands_count = count_of(hw1wire_commands);
 

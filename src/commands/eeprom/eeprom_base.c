@@ -31,6 +31,7 @@ void eeprom_display_devices(const struct eeprom_device_t *eeprom_devices, uint8_
                 eeprom_devices[i].max_speed_khz
             );
     }
+    printf("\r\n");
 }
 
 uint32_t eeprom_get_address_blocks_total(struct eeprom_info *eeprom) {

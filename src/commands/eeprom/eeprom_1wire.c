@@ -107,7 +107,7 @@ static const char* const usage[] = {
 };
 
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_EEPROM },               // command help
+    { 1, "", T_HELP_1WIRE_EEPROM },               // command help
     { 0, "dump", T_HELP_EEPROM_DUMP },  
     { 0, "erase", T_HELP_EEPROM_ERASE },    // erase
     { 0, "write", T_HELP_EEPROM_WRITE },    // write
@@ -320,7 +320,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
     if(args->action == EEPROM_LIST) {
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display devices if list action
-        printf("\r\nCompatible with common 1-Wire EEPROMs: DS/GX2431. 2433 untested!\r\n");
+        printf("Compatible with common 1-Wire EEPROMs: DS/GX2431. 2433 untested!\r\n");
         printf("3.3volts is suitable for most devices.\r\n");
         return true; // no error, just listing devices
     }
@@ -383,7 +383,6 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 void onewire_eeprom_handler(struct command_result* res) {
     if(res->help_flag) {
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
-        printf("\r\n");
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
         return; // if help was shown, exit
     }

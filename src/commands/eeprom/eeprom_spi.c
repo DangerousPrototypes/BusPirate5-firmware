@@ -68,20 +68,22 @@ static const struct eeprom_device_t eeprom_devices[] = {
 };
 
 static const char* const usage[] = {
-    "eeprom [dump|erase|write|read|verify|test|list]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-h(elp)]",
+    "eeprom [dump|erase|write|read|verify|test|list|protect]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-t(test)] [-p <protection blocks>] [-h(elp)]",
     "List available EEPROM devices:%s eeprom list",
-    "Display contents:%s eeprom dump -d 24x02",
-    "Display 16 bytes starting at address 0x60:%s eeprom dump -d 24x02 -s 0x60 -b 16",
-    "Erase, verify:%s eeprom erase -d 24x02 -v",
-    "Write from file, verify:%s eeprom write -d 24x02 -f example.bin -v",
-    "Read to file, verify:%s eeprom read -d 24x02 -f example.bin -v",
-    "Verify against file:%s eeprom verify -d 24x02 -f example.bin",
-    "Test chip (full erase/write/verify):%s eeprom test -d 24x02",
-    "Use alternate I2C address (0x50 default):%s eeprom dump -d 24x02 -a 0x53",
+    "Display contents:%s eeprom dump -d 25x020",
+    "Display 16 bytes starting at address 0x60:%s eeprom dump -d 25x020 -s 0x60 -b 16",
+    "Erase, verify:%s eeprom erase -d 25x020 -v",
+    "Write from file, verify:%s eeprom write -d 25x020 -f example.bin -v",
+    "Read to file, verify:%s eeprom read -d 25x020 -f example.bin -v",
+    "Verify against file:%s eeprom verify -d 25x020 -f example.bin",
+    "Test chip (full erase/write/verify):%s eeprom test -d 25x020",
+    "Probe Status Register block protection:%s eeprom protect -d 25x020",
+    "Test for chip block protection features:%s eeprom protect -d 25x020 -t",
+    "Disable all block protection bits:%s eeprom protect -d 25x020 -p 0b00",
 };
 
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_EEPROM },               // command help
+    { 1, "", T_HELP_SPI_EEPROM },               // command help
     { 0, "dump", T_HELP_EEPROM_DUMP },  
     { 0, "erase", T_HELP_EEPROM_ERASE },    // erase
     { 0, "write", T_HELP_EEPROM_WRITE },    // write
@@ -115,14 +117,6 @@ static bool spi_eeprom_poll_busy(struct eeprom_info *eeprom){
 }
 
 static bool spi_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32_t read_bytes, uint8_t *buf) {
-    //ensure row alignment! NO: 128 byte devices exist!
-    #if 0
-    if(read_bytes !=16 && read_bytes != 256) {
-        printf("Internal error: Invalid read size, must be 16 or 256 bytes\r\n");
-        return true; // invalid read size
-    }
-    #endif
-
     // get the address for the current byte
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
@@ -167,12 +161,23 @@ static struct eeprom_hal_t spi_eeprom_hal = {
 static void spi_eerpom_status_reg_print(uint8_t reg) {
     // print the status register in a human readable format
     printf("Status Register: 0x%02X\r\n", reg);
-    printf("Write Enable Latch (WEL): %s\r\n", (reg & 0x02) ? "Enabled" : "Disabled");
-    printf("Write In Progress (WIP): %s\r\n", (reg & 0x01) ? "In Progress" : "Idle");
-    printf("Block Protect Bits (BP1, BP0): %d, %d\r\n", (reg >> 2) & 0x01, (reg >> 3) & 0x01);
+    //printf("Write Enable Latch (WEL): %s\r\n", (reg & 0x02) ? "Enabled" : "Disabled");
+    //printf("Write In Progress (WIP): %s\r\n", (reg & 0x01) ? "In Progress" : "Idle");
     printf("Write Pin ENable (WPEN): %s\r\n", (reg & 0x80) ? "Enabled" : "Disabled");
-
-    //TODO: 00=none, 01 == upper 1/4, 10= 1/2, 11 = all
+    printf("Block Protect Bits (BP1, BP0): %d, %d\r\n", (reg >> 3) & 0x01, (reg >> 2) & 0x01);
+    printf("Protection range: ");
+    if((reg & 0b1100) == 0b00) {
+        printf("None\r\n");
+    } else if((reg & 0b1100) == 0b0100) {
+        printf("Upper 1/4\r\n");
+    } else if((reg & 0b1100) == 0b1000) {
+        printf("Upper 1/2\r\n");
+    } else if((reg & 0b1100) == 0b1100) {
+        printf("All\r\n");
+    } else {
+        printf("Unknown\r\n");
+    }
+    
 }
 
 static uint8_t spi_eeprom_read_status_register(struct eeprom_info *eeprom) {
@@ -190,7 +195,19 @@ static bool spi_eeprom_write_status_register(struct eeprom_info *eeprom, uint8_t
     return false; // write is complete
 }
 
-static bool spi_eeprom_probe_block_protect(struct eeprom_info *eeprom) {   
+static bool spi_eeprom_is_write_protect(struct eeprom_info *eeprom) {
+    // check if the write protect bits are set
+    uint8_t status_reg = spi_eeprom_read_status_register(eeprom); // read the status register
+    if(status_reg & 0b1100) { // check if WEL bit is set
+        printf("Error: block write protection enabled, write will fail!\r\n\r\n");
+        spi_eerpom_status_reg_print(status_reg); // print the status register
+        printf("\r\nDisable block write protection first: eeprom protect -d %s -p 0b00\r\n", eeprom->device->name);
+        return true; // write protect bits are set
+    }
+    return false; // write protect bits are not set
+}
+#define BIT_EQUAL(a, b, bitpos) ((((a) >> (bitpos)) & 1) == (((b) >> (bitpos)) & 1))
+static bool eeprom_probe_block_protect(struct eeprom_info *eeprom) {   
     //test for write protect bits....
     //|7|6|5|4|3|2|1|0|
     //|-|-|-|-|-|-|-|-|
@@ -233,21 +250,47 @@ static bool spi_eeprom_probe_block_protect(struct eeprom_info *eeprom) {
         spi_eerpom_status_reg_print(reg);
     }
     
-    if(eeprom->protect_flag){
-        printf("\r\nWriting status register block protect bits, WP0: %d WP1: %d...", (eeprom->protect_bits&0b1)?1:0, (eeprom->protect_bits&0b10)?1:0);
-        reg_old = spi_eeprom_read_status_register(eeprom); // read the status register
-        reg=reg_old&=~0b1100; //clear existing
-        reg=reg|eeprom->protect_bits<<2;
-        if(spi_eeprom_write_status_register(eeprom, reg)) return true;
+    if(eeprom->protect_blocks_flag || eeprom->protect_wpen_flag) {
+        printf("\r\n");
+        reg = reg_old = spi_eeprom_read_status_register(eeprom); // read the status register
+        uint8_t protection_bits_aligned;
+        if(eeprom->protect_blocks_flag){
+            protection_bits_aligned = (eeprom->protect_bits & 0b11)<<2;
+            reg=reg&~0b1100; //clear existing
+            reg=reg|protection_bits_aligned;
+            printf("New Block protect bits WP0: %d WP1: %d\r\n", reg, (protection_bits_aligned&0b100)?1:0, (protection_bits_aligned&0b1000)?1:0);
+        }
+        if(eeprom->protect_wpen_flag){
+            reg=reg&~0x80; //clear existing
+            reg=reg|((eeprom->protect_wpen_bit&0x01)<<7); //set the WPEN bit
+            printf("New Write Pin ENable bit WPEN: %d\r\n", (eeprom->protect_wpen_bit&0x01)?1:0);
+        }
+
+        printf("Updating status register (0x%02X): ", reg);
+        if(spi_eeprom_write_status_register(eeprom, reg)){
+            printf("Error: Failed to write status register\r\n");
+            return true;
+        }
         uint8_t reg_updated = spi_eeprom_read_status_register(eeprom);
-        if(reg!=reg_updated){
-            printf("\r\nError, wrote: 0x%02X, read: 0x%02X\r\nDoes this chip support block protect? Try -t option to test.\r\n", reg, reg_updated);
+        //test just the updated bits
+        bool wp0=1, wp1=1, wpen=1;
+        if(eeprom->protect_blocks_flag){
+            wp0 = BIT_EQUAL(reg_updated, protection_bits_aligned, 2);
+            wp1 = BIT_EQUAL(reg_updated, protection_bits_aligned, 3);
+        }
+        if(eeprom->protect_wpen_flag){
+            wpen = BIT_EQUAL(reg_updated, ((eeprom->protect_wpen_bit&0x01)<<7), 7);
+        }
+        if(!wp0||!wp1||!wpen){
+            printf("\r\nError updating (0x%02X):%s%s%s\r\n",reg_updated, !wp0?" WP0":"", !wp1?" WP1":"", !wpen?" WPEN":"");
+            printf("Does this chip support all the protection bits?\r\n");
+            printf("To test protection bit support try: eeprom protect -d %s -t\r\n\r\n", eeprom->device->name);
             //spi_eerpom_status_reg_print(reg);
             //return true;
         }else{
-            printf("Done :)\r\n");
+            printf("Done :)\r\n\r\n");
         }        
-        spi_eerpom_status_reg_print(reg);
+        spi_eerpom_status_reg_print(reg_updated);
     }
     return false;
 }
@@ -264,6 +307,8 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
     if(args->action == EEPROM_LIST) {
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display devices if list action
+        printf("\r\nCompatible with most common 25X SPI EEPROMs: AT25, 25C/LC/AA/CS, 25XX-A/B/C/D etc.\r\n");
+        printf("3.3volts is suitable for most devices.\r\n");
         return true; // no error, just listing devices
     }
     
@@ -298,17 +343,27 @@ static bool eeprom_get_args(struct eeprom_info *args) {
     args->protect_test_flag = cmdln_args_find_flag('t' | 0x20);
     // program block protect bits
     
-    args->protect_flag=cmdln_args_find_flag_uint32('p' | 0x20, &arg, &args->protect_bits);
-    if(arg.error){
+    args->protect_blocks_flag=cmdln_args_find_flag_uint32('p' | 0x20, &arg, &args->protect_bits);
+    if(arg.has_arg && !arg.has_value){
         printf("Specify block protect bits (0-3, 0b00-0b11)\r\n");
         return true;
     }
-    if(args->protect_flag){
+    if(args->protect_blocks_flag){
         if (args->protect_bits>=4) {
-            printf("Block write protect bits out of range (0-3, 0b00-0b11 valid): %d\r\n", args->protect_bits);
+            printf("Block write protect bits out of range: -p 0-3 or 0b00-0b11: %d\r\n", args->protect_bits);
             return true; // error
         }
     }
+    uint32_t temp;
+    args->protect_wpen_flag=cmdln_args_find_flag_uint32('w' | 0x20, &arg, &temp);
+    if(arg.has_arg && !arg.has_value){
+        printf("Specify Write Pin ENable: -w 0 or 1\r\n");
+        return true;
+    }
+    if(args->protect_wpen_flag){
+        args->protect_wpen_bit = (temp)?1:0;
+    }
+    
 
     // file to read/write/verify
     if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action==EEPROM_VERIFY)) {
@@ -344,48 +399,57 @@ void spi_eeprom_handler(struct command_result* res) {
     fala_start_hook(); 
 
     if(eeprom.action == EEPROM_PROTECT){
-        spi_eeprom_probe_block_protect(&eeprom);
-        goto eeprom_cleanup;
+        eeprom_probe_block_protect(&eeprom);
+        goto spi_eeprom_cleanup;
     }
 
     if(eeprom.action == EEPROM_DUMP) {
         //dump the EEPROM contents
         eeprom_dump(&eeprom, buf, sizeof(buf));
-        goto eeprom_cleanup; // no need to continue
+        goto spi_eeprom_cleanup; // no need to continue
     }
  
     if (eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_TEST) {
+        if(spi_eeprom_is_write_protect(&eeprom)) {
+            goto spi_eeprom_cleanup; // error if write protect is enabled
+        }
         if(eeprom_action_erase(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag || eeprom.action == EEPROM_TEST)) {
-            goto eeprom_cleanup; // error during erase
+            goto spi_eeprom_cleanup; // error during erase
         }
     }
 
     if (eeprom.action == EEPROM_TEST) {
+        if(spi_eeprom_is_write_protect(&eeprom)) {
+            goto spi_eeprom_cleanup; // error if write protect is enabled
+        }
         if(eeprom_action_test(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf))) {
-            goto eeprom_cleanup; // error during test
+            goto spi_eeprom_cleanup; // error during test
         }
     }
 
     if (eeprom.action==EEPROM_WRITE) {
+        if(spi_eeprom_is_write_protect(&eeprom)) {
+            goto spi_eeprom_cleanup; // error if write protect is enabled
+        }        
         if(eeprom_action_write(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag)) {
-            goto eeprom_cleanup; // error during write
+            goto spi_eeprom_cleanup; // error during write
         }
     }
 
     if (eeprom.action==EEPROM_READ) {
         if(eeprom_action_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag)) {
-            goto eeprom_cleanup; // error during read
+            goto spi_eeprom_cleanup; // error during read
         }
     }
 
     if (eeprom.action==EEPROM_VERIFY) {
         if(eeprom_action_verify(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf))){
-            goto eeprom_cleanup; // error during verify
+            goto spi_eeprom_cleanup; // error during verify
         }
     }
     printf("Success :)\r\n");
 
-eeprom_cleanup:
+spi_eeprom_cleanup:
     //we manually control any FALA capture
     fala_stop_hook();
     fala_notify_hook();

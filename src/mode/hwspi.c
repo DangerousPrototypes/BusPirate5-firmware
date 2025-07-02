@@ -30,7 +30,7 @@ const struct _mode_command_struct hwspi_commands[] = {
     },
     {   .command="eeprom", 
         .func=&spi_eeprom_handler, 
-        .description_text=T_HELP_CMD_FLASH, 
+        .description_text=T_HELP_SPI_EEPROM, 
         .supress_fala_capture=true
 
     },

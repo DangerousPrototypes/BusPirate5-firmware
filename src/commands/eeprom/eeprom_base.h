@@ -21,11 +21,13 @@ struct eeprom_info{
     uint32_t start_address; // start address for read/write
     uint32_t user_bytes; // user specified number of bytes to read/write
     uint32_t protect_bits;
+    uint32_t protect_wpen_bit;
     FIL file_handle;     // file handle
     char file_name[13]; // file to read/write/verify
     bool verify_flag; // verify flag
-    bool protect_flag;
+    bool protect_blocks_flag;
     bool protect_test_flag;
+    bool protect_wpen_flag;
 };
 
 struct eeprom_hal_t {

@@ -186,8 +186,8 @@ set(buspirate_common
         commands/i2c/sniff.h
         commands/i2c/ddr.c
         commands/i2c/ddr.h
-        commands/i2c/eeprom.c 
-        commands/i2c/eeprom.h
+        commands/eeprom/eeprom_i2c.c 
+        commands/eeprom/eeprom_i2c.h
 
         # SPI
         mode/hwspi.c

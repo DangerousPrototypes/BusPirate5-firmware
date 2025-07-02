@@ -18,8 +18,8 @@ struct eeprom_info{
     const struct eeprom_hal_t *hal; // HAL for EEPROM operations
     uint8_t device_address; // 7-bit address for the device
     uint32_t action;
-    uint32_t start_address; // start address for read/write
-    uint32_t user_bytes; // user specified number of bytes to read/write
+    //uint32_t start_address; // start address for read/write
+    //uint32_t user_bytes; // user specified number of bytes to read/write
     uint32_t protect_bits;
     uint32_t protect_wpen_bit;
     FIL file_handle;     // file handle

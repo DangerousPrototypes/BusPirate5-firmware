@@ -121,6 +121,8 @@ set(buspirate_common
         commands/global/ovrclk.h   
         commands/global/hex.c     
         commands/global/hex.h
+        commands/eeprom/eeprom_base.h
+        commands/eeprom/eeprom_base.c
         
         # HiZ
         mode/hiz.h
@@ -137,6 +139,8 @@ set(buspirate_common
         commands/1wire/demos.c
         pirate/onewire_library.h
         pirate/onewire_library.c
+        commands/eeprom/eeprom_1wire.h
+        commands/eeprom/eeprom_1wire.c
 
         # UART
         mode/hwuart.h
@@ -182,8 +186,8 @@ set(buspirate_common
         commands/i2c/sniff.h
         commands/i2c/ddr.c
         commands/i2c/ddr.h
-        commands/i2c/eeprom.c 
-        commands/i2c/eeprom.h
+        commands/eeprom/eeprom_i2c.c 
+        commands/eeprom/eeprom_i2c.h
 
         # SPI
         mode/hwspi.c
@@ -203,6 +207,8 @@ set(buspirate_common
         lib/sfud/inc/sfud_flash_def.h
         lib/sfud/inc/sfud_port.c
         lib/sfud/inc/sfud_sfdp.c
+        commands/eeprom/eeprom_spi.h
+        commands/eeprom/eeprom_spi.c
 
         # 2WIRE
         mode/hw2wire.h

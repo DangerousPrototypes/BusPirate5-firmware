@@ -15,7 +15,7 @@
 #include "commands/i2c/eeprom.h"
 #include "pirate/file.h" // File handling related
 
-struct eeprom_device_t {
+struct i2c_eeprom_device_t {
     char name[9];
     uint32_t size_bytes;
     uint8_t address_bytes; 
@@ -24,6 +24,11 @@ struct eeprom_device_t {
     uint16_t page_bytes; 
 };
 
+
+#define EEPROM_DEBUG 0
+#define EEPROM_ADDRESS_PAGE_SIZE 256 // size of the EEPROM address page in bytes
+
+#if 0
 const struct eeprom_device_t eeprom_devices[] = {
     { "24XM02", 262144, 2, 2, 0, 256 },
     { "24XM01", 131072, 2, 1, 0, 256 },    
@@ -40,6 +45,24 @@ const struct eeprom_device_t eeprom_devices[] = {
     { "24X02",   256,    1, 0, 0, 8   },
     { "24X01",   128,    1, 0, 0, 8   }
 };
+#endif
+
+static const struct i2c_eeprom_device_t eeprom_devices[] = {
+    { "24X01",   128,    1, 0, 0, 8   },
+    { "24X02",   256,    1, 0, 0, 8   },
+    { "24X04",   512,    1, 1, 0, 16  },
+    { "24X08",   1024,   1, 2, 0, 16  },
+    { "24X16",   2048,   1, 3, 0, 16  },
+    { "24X32",   4096,   2, 0, 0, 32  },
+    { "24X64",   8192,   2, 0, 0, 32  },
+    { "24X128",  16384,  2, 0, 0, 64  },
+    { "24X256",  32768,  2, 0, 0, 64  },
+    { "24X512",  65536,  2, 0, 0, 128 },
+    { "24X1025", 131072, 2, 1, 3, 128 },
+    { "24X1026", 131072, 2, 1, 0, 128 },
+    { "24XM01",  131072, 2, 1, 0, 256 },    
+    { "24XM02",  262144, 2, 2, 0, 256 }
+};
 
 enum eeprom_actions_enum {
     EEPROM_DUMP=0,
@@ -51,7 +74,7 @@ enum eeprom_actions_enum {
     EEPROM_LIST
 };
 
-const struct cmdln_action_t eeprom_actions[] = {
+static const struct cmdln_action_t eeprom_actions[] = {
     { EEPROM_DUMP, "dump" },
     { EEPROM_ERASE, "erase" },
     { EEPROM_WRITE, "write" },
@@ -92,7 +115,7 @@ static const struct ui_help_options options[] = {
 };    
 
 struct eeprom_info{
-    const struct eeprom_device_t* device;
+    const struct i2c_eeprom_device_t* device;
     uint8_t device_address; // 7-bit address for the device
     uint32_t action;
     char file_name[13]; // file to read/write/verify
@@ -103,7 +126,7 @@ struct eeprom_info{
 };
 
 // custom I2C write function for EEPROM to get best speed
-hwi2c_status_t eeprom_i2c_write(uint8_t i2c_addr, uint8_t *eeprom_addr, uint8_t eeprom_addr_len, uint8_t* txbuf, uint txbuf_len) {
+static hwi2c_status_t eeprom_i2c_write(uint8_t i2c_addr, uint8_t *eeprom_addr, uint8_t eeprom_addr_len, uint8_t* txbuf, uint txbuf_len) {
     uint32_t timeout = 0xfffffu; // default timeout for I2C operations
     if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
     hwi2c_status_t i2c_result = pio_i2c_write_timeout(i2c_addr, timeout);
@@ -126,7 +149,7 @@ hwi2c_status_t eeprom_i2c_write(uint8_t i2c_addr, uint8_t *eeprom_addr, uint8_t 
     return HWI2C_OK;
 }
 
-void eeprom_display_devices(void) {
+static void eeprom_display_devices(void) {
     printf("\r\nAvailable EEPROM devices:\r\n");
     printf("Device\t|Bytes\t|Page Size\t|Addr Bytes\t|Block Select Bits\r\n");
     for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
@@ -143,14 +166,14 @@ void eeprom_display_devices(void) {
     printf("3.3volts is suitable for most devices.\r\n\r\n");
 }
 
-uint32_t eeprom_get_address_blocks_total(struct eeprom_info *eeprom) {
+static uint32_t eeprom_get_address_blocks_total(struct eeprom_info *eeprom) {
     //Each EEPROM 8 bit address covers 256 bytes
     uint32_t addr_range_256b= eeprom->device->size_bytes / EEPROM_ADDRESS_PAGE_SIZE;
     if(addr_range_256b ==0) addr_range_256b = 1; //for devices smaller than 256 bytes
     return addr_range_256b;
 }
 
-uint32_t eeprom_get_address_block_size(struct eeprom_info *eeprom) {
+static uint32_t eeprom_get_address_block_size(struct eeprom_info *eeprom) {
     uint32_t read_size = EEPROM_ADDRESS_PAGE_SIZE; // read 256 bytes at a time
     if(eeprom->device->size_bytes < EEPROM_ADDRESS_PAGE_SIZE){
         read_size = eeprom->device->size_bytes; // use the page size for reading        
@@ -158,13 +181,13 @@ uint32_t eeprom_get_address_block_size(struct eeprom_info *eeprom) {
     return read_size;
 }
 
-uint32_t eeprom_get_address_block_start(struct eeprom_info *eeprom, uint32_t address_block) {
+static uint32_t eeprom_get_address_block_start(struct eeprom_info *eeprom, uint32_t address_block) {
     // calculate the address for the 256 byte address range
     return ((address_block * EEPROM_ADDRESS_PAGE_SIZE) >> 8) & 0xFF; // high byte
 }
 
 //get the address with optional block select bits 
-uint8_t eeprom_get_address_block_i2c_address(struct eeprom_info *eeprom, uint32_t address_block) {
+static uint8_t eeprom_get_address_block_i2c_address(struct eeprom_info *eeprom, uint32_t address_block) {
     // if the device has block select bits, we need to adjust the address
     // if the device doen't have block select bits, then address_block is always 0 in the upper bits and this has no effect
     uint8_t block_select_bits = ((address_block*EEPROM_ADDRESS_PAGE_SIZE)>>(8*eeprom->device->address_bytes));
@@ -174,7 +197,7 @@ uint8_t eeprom_get_address_block_i2c_address(struct eeprom_info *eeprom, uint32_
 } 
 
 //function to return the block select, address given a byte address
-bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uint8_t *i2caddr_7bit, uint8_t *address_bytes) {
+static bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uint8_t *i2caddr_7bit, uint8_t *address_bytes) {
     // check if the address is valid
     if (address >= eeprom->device->size_bytes) {
         printf("Error: Address out of range\r\n");
@@ -198,7 +221,7 @@ bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uint8_t *i
 }
 
 //function to display hex editor like dump of the EEPROM contents
-bool eeprom_dump(struct eeprom_info *eeprom, char *buf, uint32_t buf_size){
+static bool eeprom_dump(struct eeprom_info *eeprom, char *buf, uint32_t buf_size){
     // align the start address to 16 bytes, and calculate the end address
     uint32_t start_address, end_address, total_read_bytes;
     ui_hex_align(eeprom->start_address, eeprom->user_bytes, eeprom->device->size_bytes, &start_address, &end_address, &total_read_bytes);
@@ -221,7 +244,7 @@ bool eeprom_dump(struct eeprom_info *eeprom, char *buf, uint32_t buf_size){
     }
 }
 
-bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool write_from_buf) {
+static bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool write_from_buf) {
    
     //Each EEPROM 8 bit address covers 256 bytes
     uint32_t address_blocks_total=eeprom_get_address_blocks_total(eeprom);
@@ -299,7 +322,7 @@ bool eeprom_write(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, bool
     return false; // success
 }
 
-bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char *verify_buf, uint32_t verify_buf_size, bool verify, bool verify_against_verify_buf){   
+static bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char *verify_buf, uint32_t verify_buf_size, bool verify, bool verify_against_verify_buf){   
       
     //Each EEPROM 8 bit address covers 256 bytes
     uint32_t address_blocks_total=eeprom_get_address_blocks_total(eeprom);
@@ -368,7 +391,7 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
 }
 
 
-bool eeprom_get_args(struct eeprom_info *args) {
+static bool eeprom_get_args(struct eeprom_info *args) {
     command_var_t arg;
     char arg_str[9];
     
@@ -430,7 +453,7 @@ bool eeprom_get_args(struct eeprom_info *args) {
     return false;
 }
 
-void eeprom_handler(struct command_result* res) {
+void i2c_eeprom_handler(struct command_result* res) {
     if(res->help_flag) {
         eeprom_display_devices(); // display the available EEPROM devices
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested

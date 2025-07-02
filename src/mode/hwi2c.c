@@ -17,7 +17,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "commands/i2c/ddr.h"
-#include "commands/i2c/eeprom.h"
+#include "commands/eeprom/eeprom_i2c.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -39,6 +39,17 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_I2C_SNIFF,
         .supress_fala_capture=true
     },
+    {
+        .command="eeprom",
+        .func=&i2c_eeprom_handler,
+        .description_text=T_HELP_I2C_EEPROM,
+        .supress_fala_capture=true
+    }, 
+    {   .command="ddr5", 
+        .func=&ddr5_handler, 
+        .description_text=T_HELP_DDR5, 
+        .supress_fala_capture=true
+    },       
     {
         .command="sht3x", 
         .func=&demo_sht3x, 
@@ -65,23 +76,12 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_TSL2561, 
         .supress_fala_capture=true
     },
-    {   .command="ddr5", 
-        .func=&ddr5_handler, 
-        .description_text=T_HELP_DDR5, 
-        .supress_fala_capture=true
-    },
     {
         .command="tcs3472",
         .func=&demo_tcs34725,
         .description_text=T_HELP_I2C_TCS34725,
         .supress_fala_capture=true
     }, 
-    {
-        .command="eeprom",
-        .func=&eeprom_handler,
-        .description_text=T_HELP_I2C_TCS34725,
-        .supress_fala_capture=true
-    }
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 

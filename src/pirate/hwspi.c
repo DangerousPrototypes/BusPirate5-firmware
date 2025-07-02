@@ -109,3 +109,22 @@ void hwspi_read_n(uint8_t* data, uint32_t count) {
         data[i] = hwspi_write_read(0xff);
     }
 }
+
+void hwspi_write_read_cs(uint8_t *write_data, uint32_t write_count, uint8_t *read_data, uint32_t read_count) {
+    hwspi_select();
+    for (uint32_t i = 0; i < write_count; i++) {
+        while (!spi_is_writable(M_SPI_PORT));
+        spi_get_hw(M_SPI_PORT)->dr = (uint32_t)write_data[i];
+        while (!spi_is_readable(M_SPI_PORT));
+        while (spi_is_busy(M_SPI_PORT)); // wait for idle
+        spi_get_hw(M_SPI_PORT)->dr;
+    }
+    for (uint32_t i = 0; i < read_count; i++) {
+        while (!spi_is_writable(M_SPI_PORT));
+        spi_get_hw(M_SPI_PORT)->dr = (uint32_t)0xff;
+        while (!spi_is_readable(M_SPI_PORT));
+        while (spi_is_busy(M_SPI_PORT)); // wait for idle
+        read_data[i] = spi_get_hw(M_SPI_PORT)->dr;
+    }
+    hwspi_deselect();
+}

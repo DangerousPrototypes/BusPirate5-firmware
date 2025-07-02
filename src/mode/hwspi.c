@@ -19,6 +19,7 @@
 #include "pirate/hwspi.h"
 #include "commands/spi/sniff.h"
 #include "usb_rx.h"
+#include "commands/eeprom/eeprom_spi.h"
 
 // command configuration
 const struct _mode_command_struct hwspi_commands[] = {
@@ -27,11 +28,18 @@ const struct _mode_command_struct hwspi_commands[] = {
         .description_text=T_HELP_CMD_FLASH, 
         .supress_fala_capture=true
     },
-    {   .command="sniff", 
+    {   .command="eeprom", 
+        .func=&spi_eeprom_handler, 
+        .description_text=T_HELP_SPI_EEPROM, 
+        .supress_fala_capture=true
+
+    },
+/*    {   .command="sniff", 
         .func=&sniff_handler, 
         .description_text=T_SPI_CMD_SNIFF, 
         .supress_fala_capture=true
     },    
+    */
 };
 const uint32_t hwspi_commands_count = count_of(hwspi_commands);
 

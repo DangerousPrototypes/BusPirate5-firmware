@@ -34,11 +34,12 @@ const struct _mode_command_struct hwspi_commands[] = {
         .supress_fala_capture=true
 
     },
-    {   .command="sniff", 
+/*    {   .command="sniff", 
         .func=&sniff_handler, 
         .description_text=T_SPI_CMD_SNIFF, 
         .supress_fala_capture=true
     },    
+    */
 };
 const uint32_t hwspi_commands_count = count_of(hwspi_commands);
 

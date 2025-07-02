@@ -339,7 +339,7 @@ char* ui_term_color_num_float(void) {
     }
 }
 
-char * ui_term_color_grey(void) {
+char* ui_term_color_grey(void) {
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:

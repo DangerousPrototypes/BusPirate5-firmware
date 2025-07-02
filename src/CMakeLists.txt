@@ -139,6 +139,8 @@ set(buspirate_common
         commands/1wire/demos.c
         pirate/onewire_library.h
         pirate/onewire_library.c
+        commands/eeprom/eeprom_1wire.h
+        commands/eeprom/eeprom_1wire.c
 
         # UART
         mode/hwuart.h

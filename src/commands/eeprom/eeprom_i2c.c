@@ -167,6 +167,8 @@ static bool eeprom_get_args(struct eeprom_info *args, const struct eeprom_device
 
     if(args->action == EEPROM_LIST) {
         eeprom_display_devices(eeprom_devices, count_of_eeprom_devices); // display devices if list action
+            printf("\r\nCompatible with most common 24X I2C EEPROMs: AT24C, 24C/LC/AA/FC, etc.\r\n");
+    printf("3.3volts is suitable for most devices.\r\n");
         return true; // no error, just listing devices
     }
     

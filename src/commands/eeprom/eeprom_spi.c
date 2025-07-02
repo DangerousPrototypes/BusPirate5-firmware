@@ -115,11 +115,13 @@ static bool spi_eeprom_poll_busy(struct eeprom_info *eeprom){
 }
 
 static bool spi_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32_t read_bytes, uint8_t *buf) {
-    //ensure row alignment!
+    //ensure row alignment! NO: 128 byte devices exist!
+    #if 0
     if(read_bytes !=16 && read_bytes != 256) {
         printf("Internal error: Invalid read size, must be 16 or 256 bytes\r\n");
         return true; // invalid read size
     }
+    #endif
 
     // get the address for the current byte
     uint8_t block_select_bits = 0;
@@ -232,7 +234,7 @@ static bool spi_eeprom_probe_block_protect(struct eeprom_info *eeprom) {
     }
     
     if(eeprom->protect_flag){
-        printf("\r\nWriting status register block protect bits, WP0: %d WP1: %d...", (eeprom->protect_bits&&0b1)!=0, (eeprom->protect_bits&&0b10)!=0);
+        printf("\r\nWriting status register block protect bits, WP0: %d WP1: %d...", (eeprom->protect_bits&0b1)?1:0, (eeprom->protect_bits&0b10)?1:0);
         reg_old = spi_eeprom_read_status_register(eeprom); // read the status register
         reg=reg_old&=~0b1100; //clear existing
         reg=reg|eeprom->protect_bits<<2;

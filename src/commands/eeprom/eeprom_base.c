@@ -31,8 +31,6 @@ void eeprom_display_devices(const struct eeprom_device_t *eeprom_devices, uint8_
                 eeprom_devices[i].max_speed_khz
             );
     }
-    printf("\r\nCompatible with most common 24X I2C EEPROMs: AT24C, 24C/LC/AA/FC, etc.\r\n");
-    printf("3.3volts is suitable for most devices.\r\n");
 }
 
 uint32_t eeprom_get_address_blocks_total(struct eeprom_info *eeprom) {

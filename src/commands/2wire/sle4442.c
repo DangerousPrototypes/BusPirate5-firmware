@@ -383,7 +383,7 @@ void sle4442(struct command_result* res) {
         printf("Protection memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", buf[260], buf[261], buf[262], buf[263]);
         //printf("Security memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", buf[256], buf[257], buf[258], buf[259]);
         printf("Memory:\r\n");
-
+#if 0
         uint32_t dump_start, dump_bytes;
         ui_hex_get_args(256, &dump_start, &dump_bytes);
         uint32_t aligned_start, aligned_end, total_bytes_read;
@@ -393,6 +393,16 @@ void sle4442(struct command_result* res) {
         struct hex_config_t config;
         for (uint32_t i = aligned_start; i < (aligned_end+1); i += 16) {
             ui_hex_row(i, &buf[i], 16, &config); //print the hex row
+        }
+#endif        
+        struct hex_config_t hex_config;
+        hex_config.max_size_bytes= 256; // maximum size of the device in bytes
+        ui_hex_get_args_config(&hex_config);
+        ui_hex_align_config(&hex_config);
+        ui_hex_header_config(&hex_config);
+
+        for(uint32_t i=hex_config._aligned_start; i<(hex_config._aligned_end+1); i+=16) {
+            ui_hex_row_config(&hex_config, i, &buf[i], 16);
         }
         printf("\r\n");
 

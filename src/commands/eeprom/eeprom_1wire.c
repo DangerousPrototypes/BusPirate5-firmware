@@ -374,8 +374,8 @@ static bool eeprom_get_args(struct eeprom_info *args) {
         if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
     }
 
-    // let hex editor parse its own arguments
-    if(ui_hex_get_args(args->device->size_bytes, &args->start_address, &args->user_bytes)) return true;
+    // let hex editor parse its own arguments (done in the dump function)
+    //if(ui_hex_get_args(args->device->size_bytes, &args->start_address, &args->user_bytes)) return true;
 
     return false;
 }

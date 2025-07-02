@@ -75,20 +75,28 @@ void hex_handler(struct command_result* res) {
         pager_off = 1;
     }
 
+    #if 0
     struct hex_config_t config;
     uint32_t dump_start, dump_bytes;
     ui_hex_get_args(file_size(&fil), &dump_start, &dump_bytes);
     uint32_t aligned_start, aligned_end, total_bytes_read;
     ui_hex_align(dump_start, dump_bytes, file_size(&fil), &aligned_start, &aligned_end, &total_bytes_read); //align the start and bytes to the DDR5 SPD size
+    #endif
+    struct hex_config_t hex_config;
+    hex_config.max_size_bytes= file_size(&fil); // maximum size of the device in bytes
+    ui_hex_get_args_config(&hex_config);
+    ui_hex_align_config(&hex_config);
 
     page_lines = system_config.terminal_ansi_rows;
     
     //advance to the start address
-    f_lseek(&fil, aligned_start);
+    //f_lseek(&fil, aligned_start);
+    f_lseek(&fil, hex_config._aligned_start);
     printf("\r\n");
 
-    ui_hex_header(aligned_start, aligned_end, total_bytes_read); //print the header
-    uint32_t current_address = aligned_start; //current address in the file
+    //ui_hex_header(aligned_start, aligned_end, total_bytes_read); //print the header
+    ui_hex_header_config(&hex_config);
+    uint32_t current_address = hex_config._aligned_start; //current address in the file
     UINT bytes_read = 0;
     uint8_t buf[16]; // buffer to read the file
     while (true) {
@@ -96,12 +104,14 @@ void hex_handler(struct command_result* res) {
         if(!bytes_read || fr != FR_OK) {
             goto hex_cleanup; // no more data to read
         }
-        ui_hex_row(current_address, buf, bytes_read, &config); //print the hex row
+        //ui_hex_row(current_address, buf, bytes_read, &config); //print the hex row
+        ui_hex_row_config(&hex_config, current_address, buf, bytes_read);
         current_address += 16; // advance the current address by 16 bytes
-        if(current_address >= aligned_end) {
+        if(current_address >= (hex_config._aligned_end+1)) {
             goto hex_cleanup; // we reached the end of the range
         }
     }
+
 #if 0
     while ((bytes_read = hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
         off += bytes_read;

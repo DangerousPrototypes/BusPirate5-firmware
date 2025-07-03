@@ -26,6 +26,8 @@ bool ui_hex_get_args_config(struct hex_config_t *config){
     }else{
        config->requested_bytes=config->max_size_bytes;
     }
+    // disable address column and ascii dump
+    config->quiet = cmdln_args_find_flag('q' | 0x20);
 
     return false; // no error
 }
@@ -44,8 +46,15 @@ void ui_hex_align_config(struct hex_config_t *config){
 }
 void ui_hex_header_config(struct hex_config_t *config){
     printf("Start address: 0x%08X, end address: 0x%08X, total bytes: %d\r\n\r\n", config->_aligned_start, config->_aligned_end, config->_total_read_bytes);
-    printf("          00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n");
-    printf("---------------------------------------------------------\r\n");
+    if(!config->quiet) {
+        printf("          ");
+                
+    }
+    printf("00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n");
+    if(!config->quiet) {
+        printf("----------");
+    }
+    printf("----------------------------------------------\r\n");
 }
 
 void ui_hex_row_color(bool *is_grey, bool *is_nonzero, uint32_t address, uint8_t byte, struct hex_config_t *config, char *color_func) {
@@ -97,7 +106,9 @@ void ui_hex_row_config(struct hex_config_t *config, uint32_t address, uint8_t *b
         return; // error
     }
     // print the address
-    printf("%08X: ", address);
+    if(!config->quiet){
+        printf("%08X: ", address);
+    }
     
     bool is_nonzero = false; // flag to highlight the address
     bool is_grey = false; // flag to print grey color for addresses before start address
@@ -112,6 +123,10 @@ void ui_hex_row_config(struct hex_config_t *config, uint32_t address, uint8_t *b
         }
     }
     
+    if(config->quiet){
+        printf("%s\r\n", ui_term_color_reset()); // reset color after hex data
+        return; // skip ASCII representation if disabled
+    }
     // print the ASCII representation of the data
     printf("%s|", ui_term_color_reset());
     is_nonzero = false; // reset highlight flag for ASCII representation 

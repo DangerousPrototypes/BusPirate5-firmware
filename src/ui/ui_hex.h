@@ -5,10 +5,7 @@ struct hex_config_t {
     uint32_t _aligned_start; // aligned start address for the hex dump
     uint32_t _aligned_end;   // aligned end address for the hex dump
     uint32_t _total_read_bytes; // total number of bytes read
-    bool highlight; // flag to highlight the address
-    uint32_t highlight_start; // start address to highlight
-    uint32_t highlight_end;   // end address to highlight
-    uint32_t highlight_color; // color to highlight the address
+    bool quiet; // disable address and ASCII dump
 };
 
 
@@ -25,3 +22,4 @@ void ui_hex_row_config(struct hex_config_t *config, uint32_t address, uint8_t *b
 
 #define UI_HEX_HELP_START T_HELP_EEPROM_START_FLAG
 #define UI_HEX_HELP_BYTES T_HELP_EEPROM_BYTES_FLAG
+#define UI_HEX_HELP_QUIET T_HELP_DISK_HEX_QUIET

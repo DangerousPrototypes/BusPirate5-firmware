@@ -32,15 +32,17 @@
 //#define DEF_ROW_SIZE 16
 //#define PRINTABLE(_c) (_c > 0x1f && _c < 0x7f ? _c : '.')
 
-static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <bytes>] [-p (disable pager)]",
+static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <bytes>] [-p (disable pager)] [-a (disable address column)]",
                                          "Print file contents in HEX:%s hex example.bin",
                                          "Print 32 bytes starting at address 0x50:%s hex example.bin -s 0x50 -b 32",
+                                         "Disable address and ASCII columns:%s hex example.bin -q",
                                          "press 'x' to quit pager" };
 static const struct ui_help_options hex_options[] = { { 1, "", T_HELP_DISK_HEX }, // section heading
                                                       { 0, "<file>", T_HELP_DISK_HEX_FILE },
                                                       { 0, "-s", T_HELP_EEPROM_START_FLAG },
                                                       { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },
-                                                      { 0, "-p", T_HELP_DISK_HEX_PAGER_OFF }};
+                                                      { 0, "-q", UI_HEX_HELP_QUIET }, // disable address column
+                                                        { 0, "-p", T_HELP_DISK_HEX_PAGER_OFF }};
 
 void hex_handler(struct command_result* res) {
     // check help

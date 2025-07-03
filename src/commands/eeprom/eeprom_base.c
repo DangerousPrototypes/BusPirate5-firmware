@@ -99,17 +99,11 @@ bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size){
 
 bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, bool write_from_buf) {
 
-    uint32_t file_size_bytes; 
     if(!write_from_buf){
         // open the file to write, close with message if error
         if(file_open(&eeprom->file_handle, eeprom->file_name, FA_READ)) return true; 
-        file_size_bytes = file_size(&eeprom->file_handle);
-        if(file_size_bytes < eeprom->device->size_bytes) {
-            printf("Warning: File smaller than EEPROM: writing the first %d bytes\r\n");
-        }else if(file_size_bytes > eeprom->device->size_bytes) {
-            printf("Warning: EEPROM is smaller than file: writing the first %d bytes\r\n", eeprom->device->size_bytes);
-        }
     }
+
     //Each EEPROM 8 bit address covers 256 bytes
     uint32_t address_blocks_total=eeprom_get_address_blocks_total(eeprom);
     // 256 bytes at a time, less for smaller devices (128 bytes)
@@ -156,7 +150,7 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
 }
 
 bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char *verify_buf, uint32_t verify_buf_size, enum eeprom_read_action action) {   
-    uint32_t file_size_bytes; 
+
     // figure out what we are doing
     switch(action){
         case EEPROM_READ_TO_FILE: // read contents TO file
@@ -164,12 +158,6 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
             break;
         case EEPROM_VERIFY_FILE: // verify contents AGAINST file
             if(file_open(&eeprom->file_handle, eeprom->file_name, FA_READ)) return true; // open the file for reading
-            file_size_bytes = file_size(&eeprom->file_handle);
-            if(file_size_bytes < eeprom->device->size_bytes) {
-                printf("Warning: File smaller than EEPROM: verifying the first %d bytes\r\n");
-            }else if(file_size_bytes > eeprom->device->size_bytes) {
-                printf("Warning: EEPROM is smaller than file: verifying the first %d bytes\r\n", eeprom->device->size_bytes);
-            }
             break;
         case EEPROM_VERIFY_BUFFER: // verify contents AGAINST buffer
             if(buf_size < EEPROM_ADDRESS_PAGE_SIZE) {

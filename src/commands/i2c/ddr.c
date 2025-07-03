@@ -556,10 +556,6 @@ void ddr5_search_upa(uint8_t *data, uint32_t start, uint32_t end) {
     uint8_t data_found = 0;
     uint32_t start_address, total_bytes=0;
 
-    struct hex_config_t config;
-    config.highlight=true; //enable highlighting
-    config.highlight_color=0xffd465;
-
     for(uint32_t i=start; i<end; i++){
         if(data[i] == 0x00 && !data_found) continue;
         if(!data_found){
@@ -572,16 +568,6 @@ void ddr5_search_upa(uint8_t *data, uint32_t start, uint32_t end) {
             if(!data_found){
                 //show the found data
                 printf("\r\nFound data at 0x%03X: %d bytes\r\n", start_address, total_bytes);
-#if 0
-                uint32_t aligned_start, aligned_end, total_bytes_read;
-                ui_hex_align(start_address, total_bytes, DDR5_SPD_SIZE, &aligned_start, &aligned_end, &total_bytes_read); //align the start and bytes to the DDR5 SPD size
-                //loop and read out eeprom_bytes_count of bytes from the EEPROM
-                ui_hex_header(aligned_start, aligned_end, total_bytes_read); //print the header
-                for(uint32_t i=aligned_start; i<(aligned_end+1); i=i+16){
-                    //memcpy(&row_buf, &buffer[i], 16); //copy 16 bytes to the row buffer
-                    ui_hex_row(i, &data[i], 16, &config); //print the hex row
-                }
-#endif
                 // align the start address to 16 bytes, and calculate the end address
                 struct hex_config_t hex_config;
                 hex_config.max_size_bytes= DDR5_SPD_SIZE; // maximum size of the device in bytes
@@ -649,21 +635,6 @@ bool ddr5_probe(uint8_t *buffer) {
 bool ddr5_dump(uint8_t *buffer) {
     //detect if spd present
     if(ddr5_detect_spd_quick()) return true; //check if the device is DDR5 SPD
-
-#if 0
-    struct hex_config_t config;
-    uint32_t dump_start, dump_bytes;
-    ui_hex_get_args(DDR5_SPD_SIZE, &dump_start, &dump_bytes);
-    uint32_t aligned_start, aligned_end, total_bytes_read;
-    ui_hex_align(dump_start, dump_bytes, DDR5_SPD_SIZE, &aligned_start, &aligned_end, &total_bytes_read); //align the start and bytes to the DDR5 SPD size
-
-    //loop and read out eeprom_bytes_count of bytes from the EEPROM
-    ui_hex_header(aligned_start, aligned_end, total_bytes_read); //print the header
-    for(uint32_t i=aligned_start; i<(aligned_end+1); i=i+16){
-        //memcpy(&row_buf, &buffer[i], 16); //copy 16 bytes to the row buffer
-        ui_hex_row(i, &buffer[i], 16, &config); //print the hex row
-    }
-#endif
 
     // align the start address to 16 bytes, and calculate the end address
     struct hex_config_t hex_config;

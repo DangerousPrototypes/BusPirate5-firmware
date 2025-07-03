@@ -55,18 +55,18 @@ void ui_hex_row_color(bool *is_grey, bool *is_nonzero, uint32_t address, uint8_t
             printf("%s", ui_term_color_grey()); // print grey color
         }
     }else{
-        (*is_grey)=false;
         if((byte == 0x00 || byte == 0xFF)) {
-            if((*is_nonzero)) {
+            if((*is_grey) || (*is_nonzero)) {
                 (*is_nonzero) = false; // stop highlighting the address if we have a zero byte
                 printf("%s", ui_term_color_reset()); // reset color
             }                              
         }else{
-            if(!(*is_nonzero)) {
+            if((*is_grey) || !(*is_nonzero)) {
                 (*is_nonzero) = true; // highlight the address if we have a non-zero byte
                 printf("%s", color_func); // start highlighting
             }
         }
+        (*is_grey)=false;
     }
 }
 
@@ -77,18 +77,18 @@ void ui_hex_ascii_color(bool *is_grey, bool *is_nonzero, uint32_t address, uint8
             printf("%s", ui_term_color_grey()); // print grey color
         }
     }else{
-        (*is_grey)=false;
         if(byte >= 32 && byte <= 126) { // printable ASCII range
-            if(!(*is_nonzero)) {
+            if((*is_grey) || !(*is_nonzero)) {
                 (*is_nonzero) = true; // highlight the character if it is printable
                 printf("%s", color_func); // start highlighting
             }
         } else {
-            if((*is_nonzero)) {
+            if((*is_grey) || (*is_nonzero)) {
                 (*is_nonzero) = false; // stop highlighting the address if we have a non-printable character
                 printf("%s", ui_term_color_reset()); // reset color
             }
         }
+        (*is_grey)=false;
     }
 }
 void ui_hex_row_config(struct hex_config_t *config, uint32_t address, uint8_t *buf, uint32_t buf_size){

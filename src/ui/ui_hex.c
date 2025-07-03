@@ -6,7 +6,7 @@
 #include "ui/ui_cmdln.h"
 #include "ui/ui_hex.h"
 
-
+#if 0
 bool ui_hex_get_args(uint32_t max_size_bytes, uint32_t *start_address, uint32_t *read_bytes) {
     command_var_t arg;
     // start address
@@ -115,6 +115,7 @@ void ui_hex_row(uint32_t address, uint8_t *buf, uint32_t buf_size, struct hex_co
     printf("%s|\r\n", ui_term_color_reset()); // reset color after ASCII representation
 }
 
+#endif
 
 bool ui_hex_get_args_config(struct hex_config_t *config){
     command_var_t arg;

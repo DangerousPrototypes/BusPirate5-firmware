@@ -374,6 +374,10 @@ static char const * const en_us[]={
 	[T_HELP_EEPROM_START_FLAG]="Dump start address",
 	[T_HELP_EEPROM_BYTES_FLAG]="Bytes to dump",
 	[T_HELP_EEPROM_ADDRESS_FLAG]="I2C address (0x50 default)",
+	[T_HELP_EEPROM_PROTECT]="Show chip write protect status",
+	[T_HELP_EEPROM_PROTECT_FLAG]="Set Block Protection bits (0b00-0b11, 0-3)",	
+	[T_HELP_EEPROM_SPI_WPEN_FLAG]="Set Write Protect ENable pin off/on (0/1)",
+	[T_HELP_EEPROM_SPI_TEST_FLAG]="Test for write protection features",
 	//INFO
 	[T_INFO_FIRMWARE]="Firmware",
 	[T_INFO_BOOTLOADER]="Bootloader",

@@ -103,7 +103,7 @@ static const char* const usage[] = {
     "Read to file, verify:%s eeprom read -d ds2431 -f example.bin -v",
     "Verify against file:%s eeprom verify -d ds2431 -f example.bin",
     "Test chip (full erase/write/verify):%s eeprom test -d ds2431",
-    "Probe protection control block:%s eeprom protect -d ds2431",
+    "Show write protect control block:%s eeprom protect -d ds2431",
 };
 
 static const struct ui_help_options options[] = {
@@ -115,7 +115,7 @@ static const struct ui_help_options options[] = {
     { 0, "verify", T_HELP_EEPROM_VERIFY },  // verify
     { 0, "test", T_HELP_EEPROM_TEST },      // test
     { 0, "list", T_HELP_EEPROM_LIST},      // list devices
-    //{ 0, "protect", T_HELP_EEPROM_PROTECT }, // protect
+    { 0, "protect", T_HELP_EEPROM_PROTECT }, // protect
     { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
     { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG }, // with verify (after write)
     { 0, "-s", T_HELP_EEPROM_START_FLAG },  // start address for dump/read/write
@@ -382,7 +382,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
 void onewire_eeprom_handler(struct command_result* res) {
     if(res->help_flag) {
-        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
+        //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
         return; // if help was shown, exit
     }

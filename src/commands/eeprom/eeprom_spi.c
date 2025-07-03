@@ -68,7 +68,7 @@ static const struct eeprom_device_t eeprom_devices[] = {
 };
 
 static const char* const usage[] = {
-    "eeprom [dump|erase|write|read|verify|test|list|protect]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-t(test)] [-p <protection blocks>] [-h(elp)]",
+    "eeprom [dump|erase|write|read|verify|test|list|protect]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-t(test)] [-p <protection blocks>] [-w <WPEN>] [-h(elp)]",
     "List available EEPROM devices:%s eeprom list",
     "Display contents:%s eeprom dump -d 25x020",
     "Display 16 bytes starting at address 0x60:%s eeprom dump -d 25x020 -s 0x60 -b 16",
@@ -79,7 +79,8 @@ static const char* const usage[] = {
     "Test chip (full erase/write/verify):%s eeprom test -d 25x020",
     "Probe Status Register block protection:%s eeprom protect -d 25x020",
     "Test for chip block protection features:%s eeprom protect -d 25x020 -t",
-    "Disable all block protection bits:%s eeprom protect -d 25x020 -p 0b00",
+    "Disable all block protection bits (BP1, BP0):%s eeprom protect -d 25x020 -p 0b00",
+    "Disable Write Pin ENable (WPEN):%s eeprom protect -d 25x020 -w 0",
 };
 
 static const struct ui_help_options options[] = {
@@ -91,13 +92,17 @@ static const struct ui_help_options options[] = {
     { 0, "verify", T_HELP_EEPROM_VERIFY },  // verify
     { 0, "test", T_HELP_EEPROM_TEST },      // test
     { 0, "list", T_HELP_EEPROM_LIST},      // list devices
+    { 0, "protect", T_HELP_EEPROM_PROTECT }, // protect
+    { 0, "-d", T_HELP_EEPROM_DEVICE_FLAG }, // device to use
     { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
     { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG }, // with verify (after write)
     { 0, "-s", T_HELP_EEPROM_START_FLAG },  // start address for dump/read/write
     { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },  // bytes to dump/read/write
-    { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // address for read/write
+    { 0, "-t", T_HELP_EEPROM_SPI_TEST_FLAG },   // test chip for block protection features
+    { 0, "-p", T_HELP_EEPROM_PROTECT_FLAG }, // set block protection bits (BP1, BP0)
+    { 0, "-w", T_HELP_EEPROM_SPI_WPEN_FLAG },   // set Write Pin ENable (WPEN)
     { 0, "-h", T_HELP_FLAG },   // help
-};  //protect, -p, -t, -w?
+};
 
 //-----------------------------------------------------------------------
 // SPI EEPROM hardware abstraction layer functions
@@ -218,7 +223,7 @@ static bool eeprom_probe_block_protect(struct eeprom_info *eeprom) {
     spi_eerpom_status_reg_print(reg_old); // print the status register
 
     if(eeprom->protect_test_flag){      
-        printf("\r\nTesting support for Write Protect blocks (WP0, WP1) and Write Pin ENable (WPEN)\r\n");
+        printf("\r\nTesting support for Write Protect blocks (BP0, BP1) and Write Pin ENable (WPEN)\r\n");
         //now write 0x00 to the status register to disable write protect
         printf("\r\nDisabling write protect: ");
         if(spi_eeprom_write_status_register(eeprom, 0x00)) return true; // write 0x00 to the status register
@@ -258,12 +263,12 @@ static bool eeprom_probe_block_protect(struct eeprom_info *eeprom) {
             protection_bits_aligned = (eeprom->protect_bits & 0b11)<<2;
             reg=reg&~0b1100; //clear existing
             reg=reg|protection_bits_aligned;
-            printf("New Block protect bits WP0: %d WP1: %d\r\n", reg, (protection_bits_aligned&0b100)?1:0, (protection_bits_aligned&0b1000)?1:0);
+            printf("New Block protect bits (BP1, BP0): %d, %d\r\n", (reg&0b1000)?1:0, (reg&0b100)?1:0);
         }
         if(eeprom->protect_wpen_flag){
             reg=reg&~0x80; //clear existing
             reg=reg|((eeprom->protect_wpen_bit&0x01)<<7); //set the WPEN bit
-            printf("New Write Pin ENable bit WPEN: %d\r\n", (eeprom->protect_wpen_bit&0x01)?1:0);
+            printf("New Write Pin ENable bit (WPEN): %d\r\n", (reg&0x80)?1:0);
         }
 
         printf("Updating status register (0x%02X): ", reg);
@@ -273,16 +278,16 @@ static bool eeprom_probe_block_protect(struct eeprom_info *eeprom) {
         }
         uint8_t reg_updated = spi_eeprom_read_status_register(eeprom);
         //test just the updated bits
-        bool wp0=1, wp1=1, wpen=1;
+        bool bp0=1, bp1=1, wpen=1;
         if(eeprom->protect_blocks_flag){
-            wp0 = BIT_EQUAL(reg_updated, protection_bits_aligned, 2);
-            wp1 = BIT_EQUAL(reg_updated, protection_bits_aligned, 3);
+            bp0 = BIT_EQUAL(reg_updated, protection_bits_aligned, 2);
+            bp1 = BIT_EQUAL(reg_updated, protection_bits_aligned, 3);
         }
         if(eeprom->protect_wpen_flag){
             wpen = BIT_EQUAL(reg_updated, ((eeprom->protect_wpen_bit&0x01)<<7), 7);
         }
-        if(!wp0||!wp1||!wpen){
-            printf("\r\nError updating (0x%02X):%s%s%s\r\n",reg_updated, !wp0?" WP0":"", !wp1?" WP1":"", !wpen?" WPEN":"");
+        if(!bp0||!bp1||!wpen){
+            printf("\r\nError updating (0x%02X):%s%s%s\r\n",reg_updated, !bp1?" BP1":"", !bp0?" BP0":"", !wpen?" WPEN":"");
             printf("Does this chip support all the protection bits?\r\n");
             printf("To test protection bit support try: eeprom protect -d %s -t\r\n\r\n", eeprom->device->name);
             //spi_eerpom_status_reg_print(reg);
@@ -378,7 +383,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
 void spi_eeprom_handler(struct command_result* res) {
     if(res->help_flag) {
-        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
+        //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
         return; // if help was shown, exit
     }

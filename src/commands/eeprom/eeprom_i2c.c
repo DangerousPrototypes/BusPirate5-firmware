@@ -215,7 +215,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
         if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
     }
 
-    // let hex editor parse its own arguments (handled in the dump function)
+    // let hex editor parse its own arguments
     //if(ui_hex_get_args(args->device->size_bytes, &args->start_address, &args->user_bytes)) return true;
 
     return false;
@@ -224,7 +224,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
 void i2c_eeprom_handler(struct command_result* res) {
     if(res->help_flag) {
-        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
+        //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
         return; // if help was shown, exit
     }

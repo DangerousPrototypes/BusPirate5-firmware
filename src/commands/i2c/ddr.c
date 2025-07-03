@@ -901,8 +901,9 @@ static const struct ui_help_options options[] = {
     { 0, "unlock", T_HELP_DDR5_UNLOCK },  // unlock
     { 0, "crc", T_HELP_DDR5_CRC },        // crc
     { 0, "-f", T_HELP_DDR5_FILE_FLAG },   // file to read/write/verify
-    { 0, "-s", T_HELP_EEPROM_START_FLAG}, //start address for dump
-    { 0, "-b", T_HELP_EEPROM_BYTES_FLAG},
+    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
+    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
+    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
     { 0, "-b", T_HELP_DDR5_BLOCK_FLAG },  
     { 0, "-h", T_HELP_HELP }               // help flag
 };

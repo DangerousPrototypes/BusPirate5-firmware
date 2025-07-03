@@ -39,9 +39,9 @@ static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <b
                                          "press 'x' to quit pager" };
 static const struct ui_help_options hex_options[] = { { 1, "", T_HELP_DISK_HEX }, // section heading
                                                       { 0, "<file>", T_HELP_DISK_HEX_FILE },
-                                                      { 0, "-s", T_HELP_EEPROM_START_FLAG },
-                                                      { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },
-                                                      { 0, "-q", UI_HEX_HELP_QUIET }, // disable address column
+                                                        { 0, "-s", UI_HEX_HELP_START }, // start address for dump
+                                                        { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
+                                                        { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
                                                         { 0, "-p", T_HELP_DISK_HEX_PAGER_OFF }};
 
 void hex_handler(struct command_result* res) {

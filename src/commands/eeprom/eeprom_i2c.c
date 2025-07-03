@@ -78,9 +78,10 @@ static const struct ui_help_options options[] = {
     { 0, "list", T_HELP_EEPROM_LIST},      // list devices
     { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
     { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG }, // with verify (after write)
-    { 0, "-s", T_HELP_EEPROM_START_FLAG },  // start address for dump/read/write
-    { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },  // bytes to dump/read/write
-    { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // address for read/write
+    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
+    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
+    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
+    { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // alternate I2C address (default is 0x50)
     { 0, "-h", T_HELP_FLAG },   // help
 };  
 

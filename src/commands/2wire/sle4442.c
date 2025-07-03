@@ -65,9 +65,10 @@ static const struct ui_help_options options[] = {
     { 0, "-p", T_HELP_SLE4442_CURRENT_PSC_FLAG },
     { 0, "-n", T_HELP_SLE4442_NEW_PSC_FLAG },
     { 0, "-f", T_HELP_SLE4442_FILE_FLAG },
-    { 0, "-s", T_HELP_EEPROM_START_FLAG }, // start address for dump/read/write
-    { 0, "-b", T_HELP_EEPROM_BYTES_FLAG }, // bytes to dump/read/write
-    { 0, "-h", T_HELP_FLAG }                // help flag
+    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
+    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
+    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
+    { 0, "-h", T_HELP_HELP } // help flag
 };
 
 uint32_t sle4442_ticks(void) {

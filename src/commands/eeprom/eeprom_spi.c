@@ -96,8 +96,9 @@ static const struct ui_help_options options[] = {
     { 0, "-d", T_HELP_EEPROM_DEVICE_FLAG }, // device to use
     { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
     { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG }, // with verify (after write)
-    { 0, "-s", T_HELP_EEPROM_START_FLAG },  // start address for dump/read/write
-    { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },  // bytes to dump/read/write
+    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
+    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
+    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
     { 0, "-t", T_HELP_EEPROM_SPI_TEST_FLAG },   // test chip for block protection features
     { 0, "-p", T_HELP_EEPROM_PROTECT_FLAG }, // set block protection bits (BP1, BP0)
     { 0, "-w", T_HELP_EEPROM_SPI_WPEN_FLAG },   // set Write Pin ENable (WPEN)

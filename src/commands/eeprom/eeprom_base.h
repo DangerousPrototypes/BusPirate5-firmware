@@ -33,7 +33,7 @@ struct eeprom_info{
 struct eeprom_hal_t {
     bool (*get_address)(struct eeprom_info *eeprom, uint32_t address, uint8_t *block_select_bits, uint8_t *address_array);
     bool (*read)(struct eeprom_info *eeprom, uint32_t address, uint32_t read_bytes, uint8_t *buf);
-    bool (*write_page)(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf);
+    bool (*write_page)(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf, uint32_t page_write_size);
     bool (*write_protection_blocks)(struct eeprom_info *eeprom, uint8_t block_select_bits, uint8_t *_array, uint8_t reg);
 };
 

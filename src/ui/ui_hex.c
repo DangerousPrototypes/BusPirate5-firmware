@@ -54,7 +54,7 @@ void ui_hex_header_config(struct hex_config_t *config){
     if(!config->quiet) {
         printf("----------");
     }
-    printf("----------------------------------------------\r\n");
+    printf("-----------------------------------------------\r\n");
 }
 
 void ui_hex_row_color(bool *is_grey, bool *is_nonzero, uint32_t address, uint8_t byte, struct hex_config_t *config, char *color_func) {

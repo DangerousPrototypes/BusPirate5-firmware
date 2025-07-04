@@ -139,17 +139,32 @@ static bool spi_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32
     return false;
 }
 
-static bool spi_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf){
+static bool spi_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf, uint32_t page_write_size){
     //get address
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
     if(eeprom->hal->get_address(eeprom, address, &block_select_bits, address_array))return true; // get the address   
+
+    //need to do a partial page write
+    //first read the existing page from the eeprom
+    //then update with the new data
+    //finally write the updated page back to the eeprom
+    if(page_write_size < eeprom->device->page_bytes) {
+        // if the page write size is less than the device page size, we need to read the existing page first
+        uint8_t existing_page[EEPROM_ADDRESS_PAGE_SIZE];
+        if(spi_eeprom_read(eeprom, address, eeprom->device->page_bytes, existing_page)) {
+            return true; // error reading existing page
+        }
+        // update the existing page with the new data
+        memcpy(&buf[page_write_size], &existing_page[page_write_size], eeprom->device->page_bytes - page_write_size);
+    }
 
     hwspi_write_read_cs((uint8_t[]){SPI_EEPROM_WREN_CMD}, 1, NULL, 0); // enable write
     hwspi_select(); // select the EEPROM chip
     hwspi_write((SPI_EEPROM_WRITE_CMD|block_select_bits)); // send the read command with block select bits
     hwspi_write_n(address_array, eeprom->device->address_bytes); // send the address bytes
     hwspi_write_n(buf, eeprom->device->page_bytes); // write the page data
+    //hwspi_write_n(buf, eeprom->device->page_bytes); // write the page data, use the specified page write size
     hwspi_deselect(); // deselect the EEPROM chip
     
     if(spi_eeprom_poll_busy(eeprom))return true; // poll for write complete, return true if timeout

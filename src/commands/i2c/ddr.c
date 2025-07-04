@@ -702,7 +702,7 @@ bool ddr5_verify(FIL *file_handle, uint8_t *buffer) {
     uint8_t verify_buffer[128];
     bool verror = false; // flag to indicate if there was a verification error
     for(uint32_t i=0; i<DDR5_SPD_SIZE/128; i++){
-        if(file_read(file_handle, buffer, 128)) return true; 
+        if(file_read(file_handle, buffer, 128, NULL)) return true; 
         if(ddr5_read_pages_128bytes(true, i, 1, verify_buffer)){
             file_close(file_handle); // close the file
             return true;
@@ -728,7 +728,7 @@ bool ddr5_write_from_file(FIL *file_handle, uint8_t *buffer) {
     if(file_size_check(file_handle, DDR5_SPD_SIZE)) return true; // if not, we cannot write to the NVM
 
     //check file CRC
-    if(file_read(file_handle, buffer, 512)) return true;
+    if(file_read(file_handle, buffer, 512, NULL)) return true;
     if(f_rewind(file_handle)) { // rewind the file to the beginning
         printf("Error rewinding file\r\n");
         goto ddr5_write_error; 
@@ -768,7 +768,7 @@ bool ddr5_write_from_file(FIL *file_handle, uint8_t *buffer) {
     printf("Writing page:");
     for(uint8_t i=0; i<8; i++){
         printf(" %d,", i);
-        if(file_read(file_handle, buffer, 128)) return true; // read 128 bytes from the file
+        if(file_read(file_handle, buffer, 128, NULL)) return true; // read 128 bytes from the file
 
         if(ddr5_set_legacy_page(i)) goto ddr5_write_error; // set the page for the legacy mode  
 
@@ -819,7 +819,7 @@ ddr5_write_error:
 bool ddr5_crc_file(FIL *file_handle, char *buffer){
     //get file size
     if(file_size_check(file_handle, DDR5_SPD_SIZE)) return true; // check if the file size is 1024 bytes
-    if(file_read(file_handle, buffer, 512)) return true; // read the first 512 bytes from the file
+    if(file_read(file_handle, buffer, 512, NULL)) return true; // read the first 512 bytes from the file
     if(file_close(file_handle)) return true; // close the file
     // check the CRC of the first 512 bytes
     return ddr5_nvm_jedec_crc(buffer); 

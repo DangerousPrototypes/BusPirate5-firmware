@@ -286,8 +286,15 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
                 if(file_write(&eeprom->file_handle, buf, read_size)) return true; // write the read data to the file
             } else {
                 // read more data to verify against
-                if(action==EEPROM_VERIFY_FILE) { 
-                    if(file_read(&eeprom->file_handle, verify_buf, read_size)) return true; 
+                if(action==EEPROM_VERIFY_FILE) {
+                    uint32_t bytes_read = 0; 
+                    if(file_read2(&eeprom->file_handle, verify_buf, read_size, &bytes_read)) return true; 
+                    if(bytes_read == 0){
+                        goto eeprom_base_read_cleanup; // if we are at the end of the file, break out of the loop
+                    }
+                    if(bytes_read < read_size) {
+                        read_size = bytes_read; // if we are at the end of the file, read only the remaining bytes
+                    }
                 }
                 // compare the read data with the file data (or buf if verifying by buffer)
                 for(uint32_t j = 0; j < read_size; j++) {
@@ -298,10 +305,16 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
                         return true; // error
                     }
                 }
+
+                if(read_size < eeprom->device->page_bytes) {
+                    // if we are at the end of the file, break out of the loop
+                    goto eeprom_base_read_cleanup; 
+                }
             }
         #endif
 
     }
+eeprom_base_read_cleanup:
     #if !EEPROM_DEBUG
         print_progress(address_blocks_total, address_blocks_total);
     #endif

@@ -102,12 +102,6 @@ static bool i2c_eeprom_poll_busy(struct eeprom_info *eeprom){
 }
 
 static bool i2c_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32_t read_bytes, uint8_t *buf) {
-    //ensure row alignment!
-    if(read_bytes !=16 && read_bytes != 256) {
-        printf("Internal error: Invalid read size, must be 16 or 256 bytes\r\n");
-        return true; // invalid read size
-    }
-
     // get the address for the current byte
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
@@ -127,6 +121,20 @@ static bool i2c_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, 
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
     if(eeprom->hal->get_address(eeprom, address, &block_select_bits, address_array))return true; // get the address   
+
+    //need to do a partial page write
+    //first read the existing page from the eeprom
+    //then update with the new data
+    //finally write the updated page back to the eeprom
+    if(page_write_size < eeprom->device->page_bytes) {
+        // if the page write size is less than the device page size, we need to read the existing page first
+        uint8_t existing_page[EEPROM_ADDRESS_PAGE_SIZE];
+        if(i2c_eeprom_read(eeprom, address, eeprom->device->page_bytes, existing_page)) {
+            return true; // error reading existing page
+        }
+        // update the existing page with the new data
+        memcpy(&buf[page_write_size], &existing_page[page_write_size], eeprom->device->page_bytes - page_write_size);
+    }
 
     uint32_t timeout = 0xfffffu; // default timeout for I2C operations
     if(pio_i2c_start_timeout(timeout)) return true;

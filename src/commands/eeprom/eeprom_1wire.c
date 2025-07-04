@@ -177,6 +177,20 @@ static bool ow_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, u
     uint8_t buffer[DS243X_BUFFER_SIZE];
     uint8_t crc16[DS243X_CRC_SIZE];
 
+    //need to do a partial page write
+    //first read the existing page from the eeprom
+    //then update with the new data
+    //finally write the updated page back to the eeprom
+    if(page_write_size < eeprom->device->page_bytes) {
+        // if the page write size is less than the device page size, we need to read the existing page first
+        uint8_t existing_page[DS243X_BUFFER_SIZE];
+        if(ow_eeprom_read(eeprom, address, eeprom->device->page_bytes, existing_page)) {
+            return true; // error reading existing page
+        }
+        // update the existing page with the new data
+        memcpy(&buf[page_write_size], &existing_page[page_write_size], eeprom->device->page_bytes - page_write_size);
+    }
+
     // write scratchpad with page of data
     buffer[0] = DS243X_WRITE_SCRATCHPAD; // Command to write scratchpad
     buffer[1] = address_array[1]; // Low byte of address

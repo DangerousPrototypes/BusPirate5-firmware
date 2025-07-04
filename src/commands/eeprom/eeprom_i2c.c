@@ -122,7 +122,7 @@ static bool i2c_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32
     return false;
 }
 
-static bool i2c_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf){
+static bool i2c_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf, uint32_t page_write_size){
     //get address
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];

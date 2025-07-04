@@ -56,11 +56,11 @@ bool file_size_check(FIL *file_handle, uint32_t expected_size) {
     return false; // return false if the file size is as expected
 }
 
-#if 0
+
 //BUGBUGBUG: return number of bytes read so we can manage file lengths!!!!!
-bool file_read(FIL *file_handle, uint8_t *buffer, uint32_t size, uint32_t *bytes_read) {
+bool file_read2(FIL *file_handle, uint8_t *buffer, uint32_t size, uint32_t *bytes_read) {
     //UINT bytes_read;
-    FRESULT result = f_read(file_handle, buffer, size, bytes_read); // read the file
+    FRESULT result = f_read(file_handle, buffer, size, (UINT*)bytes_read); // read the file
     if (result != FR_OK) { // check if the read was successful
         //storage_file_error(fr);
         printf("\r\nError reading file\r\n");
@@ -69,7 +69,7 @@ bool file_read(FIL *file_handle, uint8_t *buffer, uint32_t size, uint32_t *bytes
     }
     return false; // return false if the read was successful
 }
-#endif
+
 //BUGBUGBUG: return number of bytes read so we can manage file lengths!!!!!
 bool file_read(FIL *file_handle, uint8_t *buffer, uint32_t size) {
     UINT bytes_read;

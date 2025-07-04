@@ -167,7 +167,7 @@ static bool ow_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32_
     return false;
 }
 
-static bool ow_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf){
+static bool ow_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf, uint32_t page_write_size){
 
     //get address
     uint8_t block_select_bits = 0;

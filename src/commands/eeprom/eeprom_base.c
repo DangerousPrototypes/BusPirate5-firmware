@@ -97,7 +97,7 @@ bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size){
     }
 }
 
-#if 0
+
 
 bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, bool write_from_buf) {
 
@@ -106,8 +106,8 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
         // open the file to write, close with message if error
         if(file_open(&eeprom->file_handle, eeprom->file_name, FA_READ)) return true; 
         file_size_bytes = file_size(&eeprom->file_handle);
-        if(file_size < eeprom->device->size_bytes) {
-            printf("Warning: File smaller than EEPROM: writing the first %d bytes\r\n");
+        if(file_size_bytes < eeprom->device->size_bytes) {
+            printf("Warning: File smaller than EEPROM: writing the first %d bytes\r\n", file_size_bytes);
         }else if(file_size_bytes > eeprom->device->size_bytes) {
             printf("Warning: EEPROM is smaller than file: writing the first %d bytes\r\n", eeprom->device->size_bytes);
         }
@@ -125,10 +125,11 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
         
         if(!write_from_buf){
             //read the next file chunk into the buffer, close with message if error
-            if(file_read(&eeprom->file_handle, buf, write_size, &bytes_read))return true;
+            if(file_read2(&eeprom->file_handle, buf, write_size, &bytes_read))return true;
             if(bytes_read == 0){ //end of file
-                file_close(&eeprom->file_handle);
-                return false;
+                //file_close(&eeprom->file_handle);
+                //return false;
+                goto eeprom_base_write_cleanup; // if we are at the end of the file, break out of the loop
             }
         }
 
@@ -143,7 +144,6 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
             #if !EEPROM_DEBUG
                 //TODO: add a write bytes amount, write fewer if at end of read
                 if(!write_from_buf){
-                    bytes_read -= eeprom->device->page_bytes; // reduce the bytes read by the page size
                     if(bytes_read < eeprom->device->page_bytes) {
                         page_write_size = bytes_read; // if we are at the end of the file, write only the remaining bytes
                     }
@@ -158,9 +158,10 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
                 printf("%d ", j);
             #endif
             if(!write_from_buf){
-                if(bytes_read < eeprom->device->page_bytes) {
-                    file_close(&eeprom->file_handle);
-                    return false;
+                bytes_read -= page_write_size; // reduce the bytes read by the page size
+                if(bytes_read == 0) {
+                    //ile_close(&eeprom->file_handle);
+                    goto eeprom_base_write_cleanup; // if we are at the end of the file, break out of the loop
                 }
             }
         }
@@ -168,7 +169,7 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
             printf("\r\n");
         #endif   
     }
-
+eeprom_base_write_cleanup:
     #if !EEPROM_DEBUG
         print_progress(address_blocks_total, address_blocks_total);
     #endif
@@ -177,7 +178,7 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
     }   
     return false; // success
 }
-#endif  
+#if 0
 
 bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, bool write_from_buf) {
 
@@ -230,9 +231,9 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
     }   
     return false; // success
 }
-
+#endif
 bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char *verify_buf, uint32_t verify_buf_size, enum eeprom_read_action action) {   
-
+    uint32_t file_size_bytes;
     // figure out what we are doing
     switch(action){
         case EEPROM_READ_TO_FILE: // read contents TO file
@@ -240,6 +241,12 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
             break;
         case EEPROM_VERIFY_FILE: // verify contents AGAINST file
             if(file_open(&eeprom->file_handle, eeprom->file_name, FA_READ)) return true; // open the file for reading
+            file_size_bytes = file_size(&eeprom->file_handle);
+            if(file_size_bytes < eeprom->device->size_bytes) {
+                printf("Warning: File smaller than EEPROM: verifying the first %d bytes\r\n", file_size_bytes);
+            }else if(file_size_bytes > eeprom->device->size_bytes) {
+                printf("Warning: EEPROM is smaller than file: verifying the first %d bytes\r\n", eeprom->device->size_bytes);
+            }            
             break;
         case EEPROM_VERIFY_BUFFER: // verify contents AGAINST buffer
             if(buf_size < EEPROM_ADDRESS_PAGE_SIZE) {

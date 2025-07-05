@@ -6,6 +6,19 @@
 #include "ui/ui_cmdln.h"
 #include "ui/ui_hex.h"
 
+//a function to initialize the hex config structure
+// this is primarily useful for initializing config 
+// if you DO NOT use command line arguments ui_hex_get_args_config();
+void ui_hex_init_config(struct hex_config_t *config) {
+    config->start_address = 0; // default start address
+    config->requested_bytes = 0; // default to 0, will be set by user
+    config->max_size_bytes = 0; // default to 0, will be set by user
+    config->_aligned_start = 0; // aligned start address
+    config->_aligned_end = 0; // aligned end address
+    config->_total_read_bytes = 0; // total number of bytes read
+    config->quiet = false; // quiet mode disabled by default
+}
+
 bool ui_hex_get_args_config(struct hex_config_t *config){
     command_var_t arg;
     // start address

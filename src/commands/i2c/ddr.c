@@ -570,6 +570,8 @@ void ddr5_search_upa(uint8_t *data, uint32_t start, uint32_t end) {
                 printf("\r\nFound data at 0x%03X: %d bytes\r\n", start_address, total_bytes);
                 // align the start address to 16 bytes, and calculate the end address
                 struct hex_config_t hex_config;
+                //ui_hex_init_config(&hex_config);
+                ui_hex_get_args_config(&hex_config); //get the quiet flag, everything else is overridden
                 hex_config.max_size_bytes= DDR5_SPD_SIZE; // maximum size of the device in bytes
                 //ui_hex_get_args_config(&hex_config);
                 hex_config.start_address=start_address; //set the start address

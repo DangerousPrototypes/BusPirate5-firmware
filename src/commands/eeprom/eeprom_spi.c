@@ -328,7 +328,8 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
     if(args->action == EEPROM_LIST) {
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display devices if list action
-        printf("\r\nCompatible with most common 25X SPI EEPROMs: AT25, 25C/LC/AA/CS, 25XX-A/B/C/D etc.\r\n");
+        printf("\r\nCompatible with most 25X/95X SPI EEPROMs: AT25, M95x, 25C/LC/AA/CS, etc.\r\n");
+        printf("For STM M95x chips use the equivalent 25X chip name: M95128 = 25X128, etc\r\n");
         printf("3.3volts is suitable for most devices.\r\n");
         return true; // no error, just listing devices
     }

@@ -19,6 +19,14 @@
 #include "commands/i2c/ddr.h"
 #include "commands/eeprom/eeprom_i2c.h"
 
+bool using_plank = false;
+static bool pio_init = false;
+
+static const char plank_pin_labels[][5] = {
+    "SCL",
+    "SDA",
+};
+
 static const char pin_labels[][5] = {
     "SDA",
     "SCL",
@@ -26,8 +34,62 @@ static const char pin_labels[][5] = {
 
 static struct _i2c_mode_config mode_config;
 
+static void clean_labels(void) {
+    system_bio_update_purpose_and_label(false, M_I2C_SDA, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_I2C_SCL, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, PLANK_M_I2C_SCL, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, PLANK_M_I2C_SDA, BP_PIN_MODE, 0);
+}
+
+static void refresh_pins(void) {
+    bio_init();
+
+    clean_labels();
+
+    if (pio_init) {
+        pio_i2c_cleanup();
+    } else {
+        pio_init = true;
+    }
+
+    if (using_plank) {
+        pio_i2c_init(bio2bufiopin[PLANK_M_I2C_SDA],
+            bio2bufiopin[PLANK_M_I2C_SCL],
+            bio2bufdirpin[PLANK_M_I2C_SDA],
+            bio2bufdirpin[PLANK_M_I2C_SCL],
+            mode_config.baudrate,
+            mode_config.clock_stretch);
+        system_bio_update_purpose_and_label(true, PLANK_M_I2C_SDA, BP_PIN_MODE, plank_pin_labels[0]);
+        system_bio_update_purpose_and_label(true, PLANK_M_I2C_SCL, BP_PIN_MODE, plank_pin_labels[1]);
+    } else {
+        pio_i2c_init(bio2bufiopin[M_I2C_SDA],
+            bio2bufiopin[M_I2C_SCL],
+            bio2bufdirpin[M_I2C_SDA],
+            bio2bufdirpin[M_I2C_SCL],
+            mode_config.baudrate,
+            mode_config.clock_stretch);  
+        system_bio_update_purpose_and_label(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
+        system_bio_update_purpose_and_label(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
+    }
+}
+
+static void toggle_plank(struct command_result* res) {
+    using_plank = !using_plank;
+    if (using_plank) {
+        printf("Using Plank I2C pins\r\n");
+    } else {
+        printf("Using Bus Pirate I2C pins\r\n");
+    }
+    refresh_pins();
+}
+
 // command configuration
 const struct _mode_command_struct hwi2c_commands[] = {
+    {   .command="plank", 
+        .func=&toggle_plank, 
+        .description_text=T_HELP_I2C_PLANK, 
+        .supress_fala_capture=true
+    },
     {   .command="scan", 
         .func=&i2c_search_addr, 
         .description_text=T_HELP_I2C_SCAN, 
@@ -81,7 +143,7 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .func=&demo_tcs34725,
         .description_text=T_HELP_I2C_TCS34725,
         .supress_fala_capture=true
-    }, 
+    },
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 
@@ -163,14 +225,9 @@ uint32_t hwi2c_setup(void) {
 }
 
 uint32_t hwi2c_setup_exc(void) {
-    pio_i2c_init(bio2bufiopin[M_I2C_SDA],
-                bio2bufiopin[M_I2C_SCL],
-                bio2bufdirpin[M_I2C_SDA],
-                bio2bufdirpin[M_I2C_SCL],
-                mode_config.baudrate,
-                mode_config.clock_stretch);           
-    system_bio_update_purpose_and_label(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
-    system_bio_update_purpose_and_label(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
+    using_plank = false;
+    pio_init = false;
+    refresh_pins();
     mode_config.start_sent = false;
     return 1;
 }
@@ -197,7 +254,11 @@ void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
 
     hwi2c_status_t i2c_status;
     if(!mode_config.start_sent) {
-        ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL);
+        if (using_plank) {
+            ui_help_sanity_check(true, 1<<PLANK_M_I2C_SDA|1<<PLANK_M_I2C_SCL);
+        } else {
+            ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL);
+        }
         result->data_message = GET_T(T_HWI2C_START);
         i2c_status = pio_i2c_start_timeout(0xfffff);
     }else{
@@ -255,8 +316,9 @@ void hwi2c_macro(uint32_t macro) {
 void hwi2c_cleanup(void) {
     pio_i2c_cleanup();
     bio_init();
-    system_bio_update_purpose_and_label(false, M_I2C_SDA, BP_PIN_MODE, 0);
-    system_bio_update_purpose_and_label(false, M_I2C_SCL, BP_PIN_MODE, 0);
+    clean_labels();
+    using_plank = false;
+    pio_init = false;
 }
 
 void hwi2c_settings(void) {

@@ -17,23 +17,6 @@
 
 #define I2C_EEPROM_DEFAULT_ADDRESS 0x50 // Default I2C address for EEPROMs
 
-static const struct eeprom_device_t eeprom_devices[] = {
-    { "24X01",   128,    1, 0, 0, 8, 400   },
-    { "24X02",   256,    1, 0, 0, 8, 400   },
-    { "24X04",   512,    1, 1, 0, 16, 400  },
-    { "24X08",   1024,   1, 2, 0, 16, 400  },
-    { "24X16",   2048,   1, 3, 0, 16, 400  },
-    { "24X32",   4096,   2, 0, 0, 32, 400  },
-    { "24X64",   8192,   2, 0, 0, 32, 400  },
-    { "24X128",  16384,  2, 0, 0, 64, 400  },
-    { "24X256",  32768,  2, 0, 0, 64, 400  },
-    { "24X512",  65536,  2, 0, 0, 128, 400 },
-    { "24X1025", 131072, 2, 1, 3, 128, 400 },
-    { "24X1026", 131072, 2, 1, 0, 128, 400 },
-    { "24XM01",  131072, 2, 1, 0, 256, 400 },    
-    { "24XM02",  262144, 2, 2, 0, 256, 400 }
-};
-
 enum eeprom_actions_enum {
     EEPROM_DUMP=0,
     EEPROM_ERASE,
@@ -105,7 +88,7 @@ static bool i2c_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32
     // get the address for the current byte
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
-    if(eeprom->hal->get_address(eeprom, address, &block_select_bits, address_array)){ 
+    if(eeprom->device->hal->get_address(eeprom, address, &block_select_bits, address_array)){ 
         return true; // error getting address
     }
 
@@ -120,7 +103,7 @@ static bool i2c_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, 
     //get address
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
-    if(eeprom->hal->get_address(eeprom, address, &block_select_bits, address_array))return true; // get the address   
+    if(eeprom->device->hal->get_address(eeprom, address, &block_select_bits, address_array))return true; // get the address   
 
     //need to do a partial page write
     //first read the existing page from the eeprom
@@ -163,7 +146,25 @@ static struct eeprom_hal_t i2c_eeprom_hal = {
     .get_address = eeprom_get_address,
     .read = i2c_eeprom_read,
     .write_page = i2c_eeprom_write_page,
-    .write_protection_blocks = NULL, // not implemented
+    .is_write_protected = NULL, // I2C EEPROMs do not have write protection
+    .probe_protect = NULL // I2C EEPROMs do not have write protection
+};
+
+static const struct eeprom_device_t eeprom_devices[] = {
+    { "24X01",   128,    1, 0, 0, 8, 400, &i2c_eeprom_hal},
+    { "24X02",   256,    1, 0, 0, 8, 400, &i2c_eeprom_hal   },
+    { "24X04",   512,    1, 1, 0, 16, 400, &i2c_eeprom_hal  },
+    { "24X08",   1024,   1, 2, 0, 16, 400, &i2c_eeprom_hal  },
+    { "24X16",   2048,   1, 3, 0, 16, 400, &i2c_eeprom_hal  },
+    { "24X32",   4096,   2, 0, 0, 32, 400, &i2c_eeprom_hal  },
+    { "24X64",   8192,   2, 0, 0, 32, 400, &i2c_eeprom_hal  },
+    { "24X128",  16384,  2, 0, 0, 64, 400, &i2c_eeprom_hal  },
+    { "24X256",  32768,  2, 0, 0, 64, 400, &i2c_eeprom_hal  },
+    { "24X512",  65536,  2, 0, 0, 128, 400, &i2c_eeprom_hal },
+    { "24X1025", 131072, 2, 1, 3, 128, 400, &i2c_eeprom_hal },
+    { "24X1026", 131072, 2, 1, 0, 128, 400, &i2c_eeprom_hal },
+    { "24XM01",  131072, 2, 1, 0, 256, 400, &i2c_eeprom_hal },    
+    { "24XM02",  262144, 2, 2, 0, 256, 400, &i2c_eeprom_hal }
 };
 
 static bool eeprom_get_args(struct eeprom_info *args) {
@@ -206,6 +207,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
     }
  
     args->device = &eeprom_devices[eeprom_type];
+
     uint32_t i2c_address = I2C_EEPROM_DEFAULT_ADDRESS; // default I2C address for EEPROMs
     if(cmdln_args_find_flag_uint32('a' | 0x20, &arg, &i2c_address)) {
         if (i2c_address > 0x7F) {
@@ -237,8 +239,8 @@ void i2c_eeprom_handler(struct command_result* res) {
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
         return; // if help was shown, exit
     }
+    
     struct eeprom_info eeprom;
-    eeprom.hal = &i2c_eeprom_hal; // set the HAL for EEPROM operations
     if(eeprom_get_args(&eeprom)) {       
         return;
     }

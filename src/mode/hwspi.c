@@ -34,6 +34,7 @@ const struct _mode_command_struct hwspi_commands[] = {
         .supress_fala_capture=true
 
     },
+    
 /*    {   .command="sniff", 
         .func=&sniff_handler, 
         .description_text=T_SPI_CMD_SNIFF, 

@@ -88,11 +88,6 @@ static const struct cmdln_action_t eeprom_actions[] = {
     { EEPROM_PROTECT, "protect"}
 };
 
-static const struct eeprom_device_t eeprom_devices[] = {
-    { "DS2431",    128,     2, 0, 0,   8, 16 }, 
-    { "DS2433",    512,     2, 0, 0,   32, 16 },
-};
-
 static const char* const usage[] = {
     "eeprom [dump|erase|write|read|verify|test|list|protect]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-h(elp)]",
     "List available EEPROM devices:%s eeprom list",
@@ -147,7 +142,7 @@ static bool ow_eeprom_read(struct eeprom_info *eeprom, uint32_t address, uint32_
     // get the address for the current byte
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
-    if(eeprom->hal->get_address(eeprom, address, &block_select_bits, address_array)){ 
+    if(eeprom->device->hal->get_address(eeprom, address, &block_select_bits, address_array)){ 
         return true; // error getting address
     }
 
@@ -172,7 +167,7 @@ static bool ow_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, u
     //get address
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
-    if(eeprom->hal->get_address(eeprom, address, &block_select_bits, address_array))return true; // get the address  
+    if(eeprom->device->hal->get_address(eeprom, address, &block_select_bits, address_array))return true; // get the address  
 
     uint8_t buffer[DS243X_BUFFER_SIZE];
     uint8_t crc16[DS243X_CRC_SIZE];
@@ -255,14 +250,6 @@ static bool ow_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, u
     return false; // write is complete
 }
 
-static struct eeprom_hal_t ow_eeprom_hal = {
-    .get_address = eeprom_get_address,
-    .read = ow_eeprom_read,
-    .write_page = ow_eeprom_write_page,
-    .write_protection_blocks = NULL, // not implemented
-};
-//---------------------------------------------------------------------------
-
 static void ow_eerpom_user_bytes_print(uint8_t *ub, uint32_t base_page) {
     // print the status register in a human readable format
     // ctrl[0] = 0x80, ctrl[1] = 0x81, ..., ctrl[7] = 0x87
@@ -322,6 +309,20 @@ static bool eeprom_probe_block_protect(struct eeprom_info *eeprom) {
     ow_eerpom_user_bytes_print(user_buf, eeprom->device->size_bytes); // print the user bytes
     return false;
 }
+
+static struct eeprom_hal_t ow_eeprom_hal = {
+    .get_address = eeprom_get_address,
+    .read = ow_eeprom_read,
+    .write_page = ow_eeprom_write_page,
+    .is_write_protected = NULL, // 1-Wire EEPROMs do not have write protection
+    .probe_protect = eeprom_probe_block_protect, // probe the write protection status
+};
+
+static const struct eeprom_device_t eeprom_devices[] = {
+    { "DS2431",    128,     2, 0, 0,   8, 16, &ow_eeprom_hal }, 
+    { "DS2433",    512,     2, 0, 0,   32, 16, &ow_eeprom_hal },
+};
+//---------------------------------------------------------------------------
 
 static bool eeprom_get_args(struct eeprom_info *args) {
     command_var_t arg;
@@ -402,7 +403,6 @@ void onewire_eeprom_handler(struct command_result* res) {
         return; // if help was shown, exit
     }
     struct eeprom_info eeprom;
-    eeprom.hal = &ow_eeprom_hal; // set the HAL for EEPROM operations
     // bus specific arguments (action, protect blocks, etc)
     if(eeprom_get_args(&eeprom)) { 
         return;
@@ -418,7 +418,7 @@ void onewire_eeprom_handler(struct command_result* res) {
     fala_start_hook(); 
 
     if(eeprom.action == EEPROM_PROTECT){
-        eeprom_probe_block_protect(&eeprom);
+        eeprom.device->hal->probe_protect(&eeprom);
         goto ow_eeprom_cleanup;
     }
 

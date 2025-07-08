@@ -47,7 +47,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result* res) {
     if (res->help_flag) {
         return;
     }
-    printf("Later Alligator!");
+    printf("See you on the other side!");
     ui_statusbar_deinit();
     eject_usbmsdrive();
     busy_wait_ms(200);

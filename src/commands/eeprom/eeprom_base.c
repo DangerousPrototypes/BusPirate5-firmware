@@ -18,12 +18,12 @@
 
 void eeprom_display_devices(const struct eeprom_device_t *eeprom_devices, uint8_t count) {
     printf("\r\nAvailable EEPROM devices:\r\n");
-    printf("Device\t|Bytes\t|Page Size\t|Addr Bytes\t|Blk Sel Bits\t|kHz max\r\n");
+    printf("Device\t|Bytes\t|Page\t|Addr\t|Blk Sel|kHz max\r\n");
     for(uint8_t i = 0; i < count; i++) {
         // Print device information
-        printf("%s%s|%d\t|%d\t\t|%d\t\t|%d\t\t|%d\r\n",
+        printf("%s%s|%d\t|%dB\t|%dB\t|%db\t|%d\r\n",
                 eeprom_devices[i].name,
-                strlen(eeprom_devices[i].name)>7?"\t\t":"\t",
+                strlen(eeprom_devices[i].name)>7?"":"\t",
                 eeprom_devices[i].size_bytes,
                 eeprom_devices[i].page_bytes,
                 eeprom_devices[i].address_bytes,
@@ -92,7 +92,7 @@ bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size){
     ui_hex_header_config(&hex_config);
 
     for(uint32_t i=hex_config._aligned_start; i<(hex_config._aligned_end+1); i+=16) {
-        eeprom->hal->read(eeprom, i, 16, buf); // read 16 bytes from the EEPROM
+        eeprom->device->hal->read(eeprom, i, 16, buf); // read 16 bytes from the EEPROM
         ui_hex_row_config(&hex_config, i, buf, 16);
     }
 }
@@ -142,14 +142,14 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
         for(uint32_t j = 0; j < write_pages; j++) {
             // write page to the EEPROM
             #if !EEPROM_DEBUG
-                //TODO: add a write bytes amount, write fewer if at end of read
+                
                 if(!write_from_buf){
                     if(bytes_read < eeprom->device->page_bytes) {
                         page_write_size = bytes_read; // if we are at the end of the file, write only the remaining bytes
                     }
                 }
-                //TODO: pass page size to the write function
-                if(eeprom->hal->write_page(eeprom, (i*256)+(j*eeprom->device->page_bytes), &buf[j*eeprom->device->page_bytes], page_write_size)) {
+                
+                if(eeprom->device->hal->write_page(eeprom, (i*256)+(j*eeprom->device->page_bytes), &buf[j*eeprom->device->page_bytes], page_write_size)) {
                     printf("Error writing EEPROM at %d\r\n", (i*256) + j);
                     if(!write_from_buf) file_close(&eeprom->file_handle); // close the file if there was an error
                     return true; // error
@@ -160,7 +160,6 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
             if(!write_from_buf){
                 bytes_read -= page_write_size; // reduce the bytes read by the page size
                 if(bytes_read == 0) {
-                    //ile_close(&eeprom->file_handle);
                     goto eeprom_base_write_cleanup; // if we are at the end of the file, break out of the loop
                 }
             }
@@ -220,7 +219,7 @@ bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char 
     
         #if !EEPROM_DEBUG
             // read the page from the EEPROM
-            if(eeprom->hal->read(eeprom, i*256, read_size, buf)) {
+            if(eeprom->device->hal->read(eeprom, i*256, read_size, buf)) {
                 printf("Error reading EEPROM at %d\r\n", i*256);
                 if(action != EEPROM_VERIFY_BUFFER) {
                     file_close(&eeprom->file_handle); // close the file if there was an error

@@ -681,7 +681,7 @@ void legacy_protocol(void) {
                             printf("\r\naddr: 0x%08X, len: 0x%08X", addr, len);
                         }
 
-                        if ((addr > 0xFFFF) || (len > 0xFFFF) || ((addr + len) > 0xFFFF)) {
+                        if ((addr > 0x2FFFF) || (len > 0x2FFFF) || ((addr + len) > 0x2FFFF)) {
                             // error
                             CDC_SEND_STR(1, "\x00");
                             break;
@@ -695,6 +695,11 @@ void legacy_protocol(void) {
                             if (button_get(0)) {
                                 return;
                             }
+                            hwspi_write_read(0x4d); // AVR_LOAD_ADDRESS_EXTENDED_HIGH_BYTE_COMMAND
+                            hwspi_write_read(0x00);
+                            hwspi_write_read((addr >> 16) & 0x03);  // just the two lowest bits
+                            hwspi_write_read(0x00);
+
                             hwspi_write_read(0x20); // AVR_FETCH_LOW_BYTE_COMMAND
                             hwspi_write_read((addr >> 8) & 0xFF);
                             hwspi_write_read(addr & 0xFF);

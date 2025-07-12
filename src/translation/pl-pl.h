@@ -498,6 +498,7 @@ static char const * const pl_pl[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_VADC_SINGLE               ] = NULL,
     [ T_HELP_VADC_CONTINUOUS           ] = NULL,
     [ T_HELP_VADC_IO                   ] = NULL,
+    [ T_HELP_I2C_PLANK                 ] = NULL,
     [ T_HELP_I2C_SCAN                  ] = NULL,
     [ T_HELP_I2C_SCAN_VERBOSE          ] = NULL,
     [ T_HELP_FLAG                      ] = NULL,

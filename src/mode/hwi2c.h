@@ -29,3 +29,7 @@ typedef struct _i2c_mode_config {
 
 extern const struct _mode_command_struct hwi2c_commands[];
 extern const uint32_t hwi2c_commands_count;
+extern bool using_plank;
+
+#define PLANK_M_I2C_SCL BIO6
+#define PLANK_M_I2C_SDA BIO7

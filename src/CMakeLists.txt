@@ -394,6 +394,7 @@ set(buspirate_common
         mode/i2s.h
         commands/i2s/sine.h 
         commands/i2s/sine.c
+        lib/picomp3lib/interface/music_file.c 
 )
 
 set(buspirate_nandflash
@@ -530,6 +531,7 @@ else()
         endif()
 endif()
 
+add_subdirectory(lib/picomp3lib/src)
 
 set(stdlibs
         pico_stdlib
@@ -552,9 +554,8 @@ set(stdlibs
         tinyusb_device
         tinyusb_board
         hardware_structs
-        )        
-
-
+        picomp3lib
+        )   
 
 # Compile the various PIO programs to generate the header files
 foreach(revision ${revisions})

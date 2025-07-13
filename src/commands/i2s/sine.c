@@ -25,6 +25,8 @@
 #include "bytecode.h"   // Bytecode structure for data IO
 #include "pio_config.h"
 #include "mode/i2s.h"
+#include "lib/picomp3lib/interface/music_file.h"
+
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "sine [Hz]",
                                      "Generate a sine wave at the default frequency (1000Hz): sine",                                 
@@ -93,6 +95,31 @@ void sine_handler(struct command_result* res) {
         printf("Example: sine -f test.wav\r\n");
         return;
     }
+    
+    int16_t audio_data[4*2200];
+    char config_buf[2200];
+    static music_file mf;
+    if (!musicFileCreate(&mf, file, config_buf, 2200))
+    {
+        printf("Cannot open file: %s\n", file);
+    }   
+    else
+    {
+        printf("Opened: %s\r\n", file);
+        printf("Type: %d", mf.type);
+        printf("Sample Rate: %d\r\n", musicFileGetSampleRate(&mf));
+        printf("Channels: %d\r\n", musicFileGetChannels(&mf));
+        uint32_t written;
+        while(true){
+            musicFileRead(&mf, audio_data,4*2200, &written);
+            printf("Written: %d", written);
+            if(!written) break;
+            for(uint32_t i=0; i<written; i+2){ //play one sample
+                pio_sm_put_blocking(i2s_pio_config_out.pio, i2s_pio_config_out.sm, (audio_data[i]));
+            }
+        }
+        return;
+    }
 
     // open the file
     fresult = f_open(&file_handle, file, FA_READ); // open the file for reading
@@ -128,7 +155,7 @@ void sine_handler(struct command_result* res) {
     printf("Subchunk2 ID: %.4s\r\n", header.subchunk2_id);
     printf("Subchunk2 Size: %u\r\n", header.subchunk2_size);
 
-    int16_t audio_data[1000];
+
     // read the audio data
     fresult = f_read(&file_handle, audio_data, sizeof(audio_data), &bytes_read); // read the audio data from the file
     if (fresult == FR_OK) {                                              // if the read was successful

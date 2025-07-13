@@ -62,7 +62,7 @@
 
 static mutex_t spi_mutex;
 
-uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = { 0 };
+//uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = { 0 };
 
 void core1_entry(void);
 /*
@@ -147,9 +147,9 @@ static void main_system_initialization(void) {
             );
     #endif
 
-    reserve_for_future_mode_specific_allocations[1] = 99;
-    reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
-    reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
+   // reserve_for_future_mode_specific_allocations[1] = 99;
+   // reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
+   // reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
 
     // init buffered IO pins
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,

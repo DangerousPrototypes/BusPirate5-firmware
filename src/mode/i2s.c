@@ -31,6 +31,7 @@
 #include "commands/i2s/sine.h" // sine wave generation functions
 #include "pirate/storage.h"
 #include "fatfs/ff.h"       // File system related
+#include "lib/picomp3lib/interface/music_file.h"
 
 static uint32_t returnval;
 struct _pio_config i2s_pio_config_out,  i2s_pio_config_in;

@@ -52,14 +52,14 @@
 #define BP_USE_SCOPE
 // #define     BP_USE_BINLOOPBACK
 #define     BP_USE_JTAG
-//#define BP_USE_I2S
+#define BP_USE_I2S
 // #define     BP_USE_USBPD
 
 // enable display support
 // #define		DISPLAY_USE_HD44780	// is always enabled
 // #define		DISPLAY_USE_ST7735
 
-#define BIG_BUFFER_SIZE (128 * 1024)
+#define BIG_BUFFER_SIZE (12 * 1024)
 
 
 #define RP2040 2040

@@ -42,7 +42,7 @@ static const struct ui_help_options hex_options[] = { { 1, "", T_HELP_DISK_HEX }
                                                         { 0, "-s", UI_HEX_HELP_START }, // start address for dump
                                                         { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
                                                         { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-                                                        { 0, "-p", T_HELP_DISK_HEX_PAGER_OFF }};
+                                                        { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF }};
 
 void hex_handler(struct command_result* res) {
     // check help
@@ -53,10 +53,6 @@ void hex_handler(struct command_result* res) {
     FIL fil;    /* File object needed for each open file */
     FRESULT fr; /* FatFs return code */
     char location[32];
-    uint16_t page_lines = 0;
-    uint32_t pager_off = 0;
-    command_var_t arg;
-    char recv_char;
 
     //file name
     if(!cmdln_args_string_by_position(1, sizeof(location), location)){
@@ -71,32 +67,14 @@ void hex_handler(struct command_result* res) {
         res->error = true;
         return;
     }
-
-    //pager
-    if (cmdln_args_find_flag('c' | 0x20)) {
-        pager_off = 1;
-    }
-
-    #if 0
-    struct hex_config_t config;
-    uint32_t dump_start, dump_bytes;
-    ui_hex_get_args(file_size(&fil), &dump_start, &dump_bytes);
-    uint32_t aligned_start, aligned_end, total_bytes_read;
-    ui_hex_align(dump_start, dump_bytes, file_size(&fil), &aligned_start, &aligned_end, &total_bytes_read); //align the start and bytes to the DDR5 SPD size
-    #endif
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= file_size(&fil); // maximum size of the device in bytes
-    ui_hex_get_args_config(&hex_config);
+    if(ui_hex_get_args_config(&hex_config)) goto hex_cleanup; // parse the command line arguments
     ui_hex_align_config(&hex_config);
-
-    page_lines = system_config.terminal_ansi_rows;
     
     //advance to the start address
-    //f_lseek(&fil, aligned_start);
     f_lseek(&fil, hex_config._aligned_start);
-    printf("\r\n");
 
-    //ui_hex_header(aligned_start, aligned_end, total_bytes_read); //print the header
     ui_hex_header_config(&hex_config);
     uint32_t current_address = hex_config._aligned_start; //current address in the file
     UINT bytes_read = 0;
@@ -106,34 +84,18 @@ void hex_handler(struct command_result* res) {
         if(!bytes_read || fr != FR_OK) {
             goto hex_cleanup; // no more data to read
         }
-        //ui_hex_row(current_address, buf, bytes_read, &config); //print the hex row
-        ui_hex_row_config(&hex_config, current_address, buf, bytes_read);
+
+        if(ui_hex_row_config(&hex_config, current_address, buf, bytes_read)){
+            //pager exit or other error
+            goto hex_cleanup; // exit the hex dump
+        }
+
         current_address += 16; // advance the current address by 16 bytes
         if(current_address >= (hex_config._aligned_end+1)) {
             goto hex_cleanup; // we reached the end of the range
         }
     }
 
-#if 0
-    while ((bytes_read = hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
-        off += bytes_read;
-
-        if (pager_off) {
-            continue;
-        }
-
-        recv_char = ui_term_cmdln_wait_char('\0');
-        switch (recv_char) {
-            // give the user the ability to bail out
-            case 'x':
-                goto exit_hex_dump_early;
-                break;
-            // anything else just keep going
-            default:
-                break;
-        }
-    }
-#endif
 hex_cleanup:
     f_close(&fil);
     printf("\r\n");

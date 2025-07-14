@@ -93,11 +93,13 @@ bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size){
 
     for(uint32_t i=hex_config._aligned_start; i<(hex_config._aligned_end+1); i+=16) {
         eeprom->device->hal->read(eeprom, i, 16, buf); // read 16 bytes from the EEPROM
-        ui_hex_row_config(&hex_config, i, buf, 16);
+        if(ui_hex_row_config(&hex_config, i, buf, 16)){
+            // user exists pager
+            return true; // exit the hex dump   
+        }
     }
+    return false;
 }
-
-
 
 bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, bool write_from_buf) {
 

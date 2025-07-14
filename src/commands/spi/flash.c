@@ -17,10 +17,13 @@
 #include "system_config.h"
 #include "pirate/amux.h"
 #include "binmode/fala.h"
+#include "ui/ui_hex.h"
 
 static const char* const usage[] = {
-    "flash [init|probe|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
+    "flash [probe|dump|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
     "Initialize and probe:%s flash probe",
+    "Show flash contents (x to exit):%s flash dump",
+    "Show 16 bytes starting at address 0x60:%s flash dump -s 0x60 -b 16",
     "Erase and program, with verify:%s flash write -f example.bin -e -v",
     "Read to file:%s flash read -f example.bin",
     "Verify with file:%s flash verify -f example.bin",
@@ -30,8 +33,9 @@ static const char* const usage[] = {
 
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_FLASH },               // flash command help
-    { 0, "init", T_HELP_FLASH_INIT },      // init
+    //{ 0, "init", T_HELP_FLASH_INIT },      // init
     { 0, "probe", T_HELP_FLASH_PROBE },    // probe
+    { 0, "dump", T_HELP_EEPROM_DUMP }, // dump
     { 0, "erase", T_HELP_FLASH_ERASE },    // erase
     { 0, "write", T_HELP_FLASH_WRITE },    // write
     { 0, "read", T_HELP_FLASH_READ },      // read
@@ -40,11 +44,15 @@ static const struct ui_help_options options[] = {
     { 0, "-f", T_HELP_FLASH_FILE_FLAG },   // file to read/write/verify
     { 0, "-e", T_HELP_FLASH_ERASE_FLAG },  // with erase (before write)
     { 0, "-v", T_HELP_FLASH_VERIFY_FLAG }, // with verify (after write)
+    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
+    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
+    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
+    { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
 };
 
 enum flash_actions {
-    FLASH_INIT = 0,
-    FLASH_PROBE,
+    FLASH_PROBE = 0,
+    FLASH_DUMP,
     FLASH_ERASE,
     FLASH_WRITE,
     FLASH_READ,
@@ -52,30 +60,19 @@ enum flash_actions {
     FLASH_TEST
 };
 
+const struct cmdln_action_t flash_actions[] = {
+    { FLASH_PROBE, "probe" },
+    { FLASH_DUMP, "dump" },
+    { FLASH_ERASE, "erase" },
+    { FLASH_WRITE, "write" },
+    { FLASH_READ, "read" },
+    { FLASH_VERIFY, "verify" },
+    { FLASH_TEST, "test" }
+};
+
 void flash(struct command_result* res) {
     char file[13];
 
-    /* Some notes on automating the command line parsing a bit more
-        enum arg_types {
-            ARG_NONE=0,
-            ARG_STRING,
-            ARG_UINT32T
-        };
-
-        typedef struct arg_item_struct
-        {
-            char flag;
-            uint8_t type;
-            bool arg_required;
-            bool val_required; //if the arg is present, is the value mandatory? TODO: think through
-            uint32_t def_val;
-        }arg_item_t;
-
-        const arg_item_t options[]={
-            {'e', ARG_NONE, false, false, 0}, //erase
-            {'v', ARG_NONE, false, false, 0}, //verify
-        };
-    */
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
     }
@@ -83,37 +80,11 @@ void flash(struct command_result* res) {
         return;
     }
 
-    char action_str[9];
-    // bool init = false;
-    // bool probe = false;
-    bool erase = false;
-    bool verify = false;
-    bool read = false;
-    bool write = false;
-    bool test = false;
-    // action is the first argument (read/write/probe/erase/etc)
-    if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
-        // if (strcmp(action_str, "init") == 0) {
-        //     init = true;
-        // }
-        // if (strcmp(action_str, "probe") == 0) {
-        //     probe = true;
-        // }
-        if (strcmp(action_str, "erase") == 0) {
-            erase = true;
-        }
-        if (strcmp(action_str, "verify") == 0) {
-            verify = true;
-        }
-        if (strcmp(action_str, "read") == 0) {
-            read = true;
-        }
-        if (strcmp(action_str, "write") == 0) {
-            write = true;
-        }
-        if (strcmp(action_str, "test") == 0) {
-            test = true;
-        }
+    uint32_t flash_action = 0;
+    // common function to parse the command line verb or action
+    if(cmdln_args_get_action(flash_actions, count_of(flash_actions), &flash_action)){
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+        return;
     }
 
     // erase_flag
@@ -123,7 +94,7 @@ void flash(struct command_result* res) {
     // file to read/write/verify
     command_var_t arg;
     bool file_flag = cmdln_args_find_flag_string('f' | 0x20, &arg, sizeof(file), file);
-    if ((read || write || verify) && !file_flag) {
+    if((flash_action == FLASH_WRITE || flash_action == FLASH_READ || flash_action == FLASH_VERIFY) && !file_flag) {
         printf("Missing file name (-f)\r\n");
         return;
     }
@@ -139,11 +110,10 @@ void flash(struct command_result* res) {
     //we manually control any FALA capture
     fala_start_hook();    
 
-    spiflash_probe(); // always do by default
     printf("\r\nInitializing SPI flash...\r\n");
     if (spiflash_init(&flash_info) && !override_flag) {
         end_address = flash_info.chip.capacity;
-    } else if (read && override_flag) {
+    } else if (flash_action == FLASH_READ && override_flag) {
         command_var_t arg;
         if (!cmdln_args_find_flag_uint32('b', &arg, &end_address)) {
             printf("Specify read length with the -b flag (-b 0x00ffff)\r\n");
@@ -157,18 +127,28 @@ void flash(struct command_result* res) {
         goto flash_cleanup;
     }
 
-    if (erase || erase_flag || test) {
+    if(flash_action == FLASH_PROBE){
+        spiflash_probe(); // always do by default
+        goto flash_cleanup; // no need to continue
+    }
+
+    if(flash_action == FLASH_DUMP){
+        spiflash_show_hex(sizeof(data), data, &flash_info);
+        goto flash_cleanup; // no need to continue
+    }
+
+    if (flash_action == FLASH_ERASE || erase_flag || flash_action == FLASH_TEST) {
         if (!spiflash_erase(&flash_info)) {
             goto flash_cleanup;
         }
-        if (verify_flag || test) {
+        if (verify_flag || flash_action == FLASH_TEST) {
             if (!spiflash_erase_verify(start_address, end_address, sizeof(data), data, &flash_info)) {
                 goto flash_cleanup;
             }
         }
     }
 
-    if (test) {
+    if (flash_action == FLASH_TEST) {
         if (!spiflash_write_test(start_address, end_address, sizeof(data), data, &flash_info)) {
             goto flash_cleanup;
         }
@@ -177,7 +157,7 @@ void flash(struct command_result* res) {
         }
     }
 
-    if (write) {
+    if (flash_action == FLASH_WRITE) {
         if (!spiflash_load(start_address, end_address, sizeof(data), data, &flash_info, file)) {
             goto flash_cleanup;
         }
@@ -188,13 +168,13 @@ void flash(struct command_result* res) {
         }
     }
 
-    if (read) {
+    if (flash_action == FLASH_READ) {
         if (!spiflash_dump(start_address, end_address, sizeof(data), data, &flash_info, file)) {
             goto flash_cleanup;
         }
     }
 
-    if (verify) {
+    if (flash_action == FLASH_VERIFY) {
         if (!spiflash_verify(start_address, end_address, sizeof(data), data, data2, &flash_info, file)) {
             goto flash_cleanup;
         }

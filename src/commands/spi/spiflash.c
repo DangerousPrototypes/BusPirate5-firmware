@@ -19,6 +19,7 @@
 #include "pirate/mem.h"
 #include "pirate/hwspi.h"
 #include "fatfs/ff.h"
+#include "ui/ui_hex.h"
 
 void flash_not_found() {
     printf("not found\r\n");
@@ -217,6 +218,35 @@ bool spiflash_force_dump(uint32_t start_address,
     return true;
 }
 
+bool spiflash_show_hex(uint32_t buf_size,
+                      uint8_t* buf,
+                      sfud_flash* flash_info) {
+    
+    // align the start address to 16 bytes, and calculate the end address
+    struct hex_config_t hex_config;
+    if(flash_info->init_ok = true){
+        hex_config.max_size_bytes= flash_info->chip.capacity; // maximum size of the device in bytes
+    } else {
+        // default to 128mbit if flash is not initialized
+        hex_config.max_size_bytes = 16 * 1024 * 1024; // 16 MB
+    }
+    ui_hex_get_args_config(&hex_config);
+    ui_hex_align_config(&hex_config);
+    ui_hex_header_config(&hex_config);
+
+    for(uint32_t i=hex_config._aligned_start; i<(hex_config._aligned_end+1); i+=16) {
+        if(sfud_read(flash_info, i, 16, buf) != SFUD_SUCCESS){
+            printf("Error: read failed at 0x%06x\r\n", i);
+            return false;
+        }
+        if(ui_hex_row_config(&hex_config, i, buf, 16)){
+            // user exists pager
+            return false; // exit the hex dump   
+        }
+    }
+    return true;
+}
+
 bool spiflash_dump(uint32_t start_address,
                    uint32_t end_address,
                    uint32_t buf_size,
@@ -305,6 +335,10 @@ bool spiflash_load(uint32_t start_address,
         size_t file_read_count;
         fr = f_read(&fil, buf, write_count, &file_read_count); /* Read a chunk of data from the source file */
         if (file_read_count == 0) {
+            if(file_size < (end_address - start_address)){
+                ui_term_progress_bar_update(bytes_total-1, bytes_total, &progress_bar);
+                break; //file smaller than chip, ok!
+            }            
             ui_term_progress_bar_cleanup(&progress_bar);
             printf("Warning: end of file, aborting");
             break; /* error or eof */
@@ -374,6 +408,10 @@ bool spiflash_verify(uint32_t start_address,
         size_t file_read_count;
         fr = f_read(&fil, buf, read_count, &file_read_count); /* Read a chunk of data from the source file */
         if (file_read_count == 0) {
+            if(file_size < (end_address - start_address)){
+                ui_term_progress_bar_update(bytes_total-1, bytes_total, &progress_bar);
+                break; //file smaller than chip, ok!
+            }            
             ui_term_progress_bar_cleanup(&progress_bar);
             printf("Warning: end of file, aborting");
             break; /* error or eof */

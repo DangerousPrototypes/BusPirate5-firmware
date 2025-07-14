@@ -176,7 +176,7 @@ void help_global(void) {
 
     // loop through modes and display available commands
     for (uint32_t i = 0; i < count_of(modes); i++) {
-        if ((*modes[i].mode_commands_count) > 0) {
+        if ((*modes[i].mode_commands_count) > 0 && modes[i].mode_commands->func != NULL) {
             // ui_help_mode_commands(modes[i].mode_commands, *modes[i].mode_commands_count);
             // printf("%d\r\n", *modes[i].mode_commands_count);
             ui_help_mode_commands_exec(modes[i].mode_commands, *modes[i].mode_commands_count, modes[i].protocol_name);

@@ -185,7 +185,8 @@ bool ui_hex_row_config(struct hex_config_t *config, uint32_t address, uint8_t *b
 
     if(!config->pager_off){
         config->rows_printed++; // increment the row counter
-        if(config->rows_printed >= config->rows_terminal-3) {
+        if(config->rows_printed >= (config->rows_terminal-3)-(system_config.terminal_ansi_statusbar ? 4 : 0)) {
+            printf("x to exit, any other key to continue...");
             // if we reached the end of the page, wait for user input
             // pager is on, wait for user input
             char recv_char = ui_term_cmdln_wait_char('\0');
@@ -196,6 +197,7 @@ bool ui_hex_row_config(struct hex_config_t *config, uint32_t address, uint8_t *b
                     break;
                 // anything else just keep going
                 default:
+                    //printf("\r\n");
                     ui_hex_header_config(config);
                     break;
             }

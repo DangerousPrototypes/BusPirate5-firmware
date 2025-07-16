@@ -68,7 +68,47 @@ static const struct ui_help_options options[] = {
     { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // alternate I2C address (default is 0x50)
     { 0, "-h", T_HELP_FLAG },   // help
 };  
+#if 0
+uint32_t i2c_eeprom_determineSize(const bool debug)
+{
+  // try to read a byte to see if connected
+  if (! isConnected()) return 0;
 
+  uint8_t patAA = 0xAA;
+  uint8_t pat55 = 0x55;
+
+  for (uint32_t size = 128; size <= 65536; size *= 2)
+  {
+    bool folded = false;
+
+    //  store old values
+    bool addressSize = _isAddressSizeTwoWords;
+    _isAddressSizeTwoWords = size > I2C_DEVICESIZE_24LC16;  // 2048
+    uint8_t buf = readByte(size);
+
+    //  test folding
+    uint8_t count = 0;
+    writeByte(size, pat55);
+    if (readByte(0) == pat55) count++;
+    writeByte(size, patAA);
+    if (readByte(0) == patAA) count++;
+    folded = (count == 2);
+    if (debug)
+    {
+      SPRNH(size, HEX);
+      SPRN('\t');
+      SPRNLH(readByte(size), HEX);
+    }
+
+    //  restore old values
+    writeByte(size, buf);
+    _isAddressSizeTwoWords = addressSize;
+
+    if (folded) return size;
+  }
+  return 0;
+}
+#endif
 //----------------------------------------------------------------------------------
 // I2C EEPROM hardware abstraction layer functions
 //----------------------------------------------------------------------------------

@@ -26,54 +26,96 @@
 // A helper to simplify creating vectors from C-arrays.
 #define c_vec_len(V) (sizeof(V)/sizeof((V)[0]))
 
+// This allows us to verify result in optimized builds.
+#define test_assert(x) do { if (!(x)) { assert(0); return -1; }} while(0)
+
 void flat_handler(struct command_result* res) {
 
     flatcc_builder_t builder, *B;
     B = &builder;
     // Initialize the builder object.
     flatcc_builder_init(B);
-    flatbuffers_string_ref_t weapon_one_name = flatbuffers_string_create_str(B, "Sword");
-    flatbuffers_string_ref_t weapon_two_name = flatbuffers_string_create_str(B, "Axe");
-    uint16_t weapon_one_damage = 3;
-    uint16_t weapon_two_damage = 5;
+ 
 
-    ns(Weapon_ref_t) sword 
-        = ns(Weapon_create(B, weapon_one_name, weapon_one_damage));
-    ns(Weapon_ref_t) axe 
-        = ns(Weapon_create(B, weapon_two_name, weapon_two_damage));
-    ns(Weapon_vec_start(B));
-    ns(Weapon_vec_push(B, sword));
-    ns(Weapon_vec_push(B, axe));
-    ns(Weapon_vec_ref_t) weapons = ns(Weapon_vec_end(B));  
-    
+
+// Bottom-up approach where we create child objects and store these
+// in temporary references before a parent object is created with
+// these references.
+    flatbuffers_string_ref_t weapon_one_name = flatbuffers_string_create_str(B, "Sword");
+    int16_t weapon_one_damage = 3;
+
+    flatbuffers_string_ref_t weapon_two_name = flatbuffers_string_create_str(B, "Axe");
+    int16_t weapon_two_damage = 5;
+
+    // Use the `MyGame_Sample_Weapon_create` shortcut to create Weapons
+    // with all the fields set.
+    //
+    // In the C-API, verbs (here create) always follow the type name
+    // (here Weapon), prefixed by the namespace (here MyGame_Sample_):
+    // MyGame_Sample_Weapon_create(...), or ns(Weapone_create(...)).
+    ns(Weapon_ref_t) sword = ns(Weapon_create(B, weapon_one_name, weapon_one_damage));
+    ns(Weapon_ref_t) axe = ns(Weapon_create(B, weapon_two_name, weapon_two_damage));
+
+    // Serialize a name for our monster, called "Orc".
+    // The _str suffix indicates the source is an ascii-z string.
+    flatbuffers_string_ref_t name = flatbuffers_string_create_str(B, "Orc");
+
     // Create a `vector` representing the inventory of the Orc. Each number
     // could correspond to an item that can be claimed after he is slain.
     uint8_t treasure[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     flatbuffers_uint8_vec_ref_t inventory;
     // `c_vec_len` is the convenience macro we defined earlier.
     inventory = flatbuffers_uint8_vec_create(B, treasure, c_vec_len(treasure));
-    
-    // Construct an array of two `Vec3` structs.
-    //ns(Vec3_t) points[] = { {1.0f, 2.0f, 3.0f}, {4.0f, 5.0f, 6.0f} };
 
-    // Serialize it as a vector of structs.
-    flatbuffers_uint8_vec_ref_t path;
-    //path = flatbuffers_uint8_vec_create(B, (const uint8_t*)points, sizeof(points));   
-    
-    // Serialize a name for our monster, called "Orc".
-    // The _str suffix indicates the source is an ascii-z string.
-    flatbuffers_string_ref_t name = flatbuffers_string_create_str(B, "Orc");
+    // Here we use a top-down approach locally to build a Weapons vector
+    // in-place instead of creating a temporary external vector to use
+    // as argument like we did with the `inventory` earlier on, but the
+    // overall approach is still bottom-up.
+    ns(Weapon_vec_start(B));
+    ns(Weapon_vec_push(B, sword));
+    ns(Weapon_vec_push(B, axe));
+    ns(Weapon_vec_ref_t) weapons = ns(Weapon_vec_end(B));
+
+
+    // Create a `Vec3`, representing the Orc's position in 3-D space.
+    ns(Vec3_t) pos = { 1.0f, 2.0f, 3.0f };
+
 
     // Set his hit points to 300 and his mana to 150.
-    uint16_t hp = 300;
-    uint16_t mana = 150;
+    int16_t hp = 300;
+    // The default value is 150, so we will never store this field.
+    int16_t mana = 150;
 
-    // Define an equipment union. `create` calls in C has a single
-    // argument for unions where C++ has both a type and a data argument.
+    // Create the equipment union. In the C++ language API this is given
+    // as two arguments to the create call, or as two separate add
+    // operations for the type and the table reference. Here we create
+    // a single union value that carries both the type and reference.
     ns(Equipment_union_ref_t) equipped = ns(Equipment_as_Weapon(axe));
-    ns(Vec3_t) pos = { 1.0f, 2.0f, 3.0f };
-    //FLATBUFFERS_WRAP_NAMESPACE(MyGame_Sample, x)     
-    ns(Monster_create_as_root(B, &pos, mana, hp, name, inventory, ns(Color_Red), weapons, equipped, path));
+
+    // Finally, create the monster using the `Monster_create` helper function
+    // to set all fields.
+    //
+    // Note that the Equipment union only take up one argument in C, where
+    // C++ takes a type and an object argument.
+    ns(Monster_create_as_root(B, &pos, mana, hp, name, inventory, ns(Color_Red),
+                            weapons, equipped));
+
+    // Unlike C++ we do not use a Finish call. Instead we use the
+    // `create_as_root` action which has better type safety and
+    // simplicity.
+    //
+    // However, we can also express this as:
+    //
+    // ns(Monster_ref_t) orc = ns(Monster_create(B, ...));
+    // flatcc_builder_buffer_create(orc);
+    //
+    // In this approach the function should return the orc and
+    // let a calling function handle the flatcc_buffer_create call
+    // for a more composable setup that is also able to create child
+    // monsters. In general, `flatcc_builder` calls are best isolated
+    // in a containing driver function.
+
+
     uint8_t *buf;
     size_t size;
 
@@ -82,6 +124,8 @@ void flat_handler(struct command_result* res) {
     // NOTE: Finalizing the buffer does NOT change the builder, it
     // just creates a snapshot of the builder content.
     buf = flatcc_builder_finalize_buffer(B, &size);
+    
+    printf("Flatbuffers buffer size: %zu bytes\n", size);
     // use buf
     free(buf);
 

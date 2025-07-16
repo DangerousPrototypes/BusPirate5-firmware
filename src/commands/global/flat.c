@@ -29,6 +29,97 @@
 // This allows us to verify result in optimized builds.
 #define test_assert(x) do { if (!(x)) { assert(0); return -1; }} while(0)
 
+int read_flat(const void *buffer){
+        // Note that we use the `table_t` suffix when reading a table object
+    // as opposed to the `ref_t` suffix used during the construction of
+    // the buffer.
+    ns(Monster_table_t) monster = ns(Monster_as_root(buffer));
+
+    // Note: root object pointers are NOT the same as the `buffer` pointer.
+
+    // Make sure the buffer is accessible.
+    test_assert(monster != 0);
+
+    int16_t hp = ns(Monster_hp(monster));
+    int16_t mana = ns(Monster_mana(monster));
+    // This is just a const char *, but it also supports a fast length operation.
+    flatbuffers_string_t name = ns(Monster_name(monster));
+    size_t name_len = flatbuffers_string_len(name);
+
+    printf("Monster: hp=%d, mana=%d, name='%s', name_len=%zu\r\n", hp, mana, name, name_len);
+
+    test_assert(hp == 300);
+    // Since 150 is the default, we are reading a value that wasn't stored.
+    test_assert(mana == 150);
+    test_assert(0 == strcmp(name, "Orc"));
+    test_assert(name_len == strlen("Orc"));
+
+    int hp_present = ns(Monster_hp_is_present(monster)); // 1
+    int mana_present = ns(Monster_mana_is_present(monster)); // 0
+    test_assert(hp_present);
+    test_assert(!mana_present);
+
+    ns(Vec3_struct_t) pos = ns(Monster_pos(monster));
+    // Make sure pos has been set.
+    test_assert(pos != 0);
+    float x = ns(Vec3_x(pos));
+    float y = ns(Vec3_y(pos));
+    float z = ns(Vec3_z(pos));
+
+    // The literal `f` suffix is important because double literals does
+    // not always map cleanly to 32-bit represention even with only a few digits:
+    // `1.0 == 1.0f`, but `3.2 != 3.2f`.
+    test_assert(x == 1.0f);
+    test_assert(y == 2.0f);
+    test_assert(z == 3.0f);
+
+    // We can also read the position into a C-struct. We have to copy
+    // because we generally do not know if the native endian format
+    // matches the one stored in the buffer (pe: protocol endian).
+    ns(Vec3_t) pos_vec;
+    // `pe` indicates endian conversion from protocol to native.
+    ns(Vec3_copy_from_pe(&pos_vec, pos));
+    test_assert(pos_vec.x == 1.0f);
+    test_assert(pos_vec.y == 2.0f);
+    test_assert(pos_vec.z == 3.0f);
+
+    // This is a const uint8_t *, but it shouldn't be accessed directly
+    // to ensure proper endian conversion. However, uint8 (ubyte) are
+    // not sensitive endianness, so we *could* have accessed it directly.
+    // The compiler likely optimizes this so that it doesn't matter.
+    flatbuffers_uint8_vec_t inv = ns(Monster_inventory(monster));
+    size_t inv_len = flatbuffers_uint8_vec_len(inv);
+    // Make sure the inventory has been set.
+    test_assert(inv != 0);
+    // If `inv` were absent, the length would 0, so the above test is redundant.
+    test_assert(inv_len == 10);
+    // Index 0 is the first, index 2 is the third.
+    // NOTE: C++ uses the `Get` terminology for vector elemetns, C use `at`.
+    uint8_t third_item = flatbuffers_uint8_vec_at(inv, 2);
+    test_assert(third_item == 2);
+
+    ns(Weapon_vec_t) weapons = ns(Monster_weapons(monster));
+    size_t weapons_len = ns(Weapon_vec_len(weapons));
+    test_assert(weapons_len == 2);
+    // We can use `const char *` instead of `flatbuffers_string_t`.
+    const char *second_weapon_name = ns(Weapon_name(ns(Weapon_vec_at(weapons, 1))));
+    int16_t second_weapon_damage =  ns(Weapon_damage(ns(Weapon_vec_at(weapons, 1))));
+    test_assert(second_weapon_name != 0 && strcmp(second_weapon_name, "Axe") == 0);
+    test_assert(second_weapon_damage == 5);
+
+    // Access union type field.
+    if (ns(Monster_equipped_type(monster)) == ns(Equipment_Weapon)) {
+        // Cast to appropriate type:
+        // C does not require the cast to Weapon_table_t, but C++ does.
+        ns(Weapon_table_t) weapon = (ns(Weapon_table_t)) ns(Monster_equipped(monster));
+        const char *weapon_name = ns(Weapon_name(weapon));
+        int16_t weapon_damage = ns(Weapon_damage(weapon));
+
+        test_assert(0 == strcmp(weapon_name, "Axe"));
+        test_assert(weapon_damage == 5);
+    }
+}
+
 void flat_handler(struct command_result* res) {
 
     flatcc_builder_t builder, *B;
@@ -125,8 +216,20 @@ void flat_handler(struct command_result* res) {
     // just creates a snapshot of the builder content.
     buf = flatcc_builder_finalize_buffer(B, &size);
     
-    printf("Flatbuffers buffer size: %zu bytes\n", size);
+    printf("Flatbuffers buffer size: %zu bytes\r\n", size);
     // use buf
+
+    if(read_flat(buf)==-1) {
+        printf("Error reading flatbuffer.\r\n");
+    } else {
+        printf("Flatbuffer read successfully.\r\n");
+    }
+
+
+
+
+
+    
     free(buf);
 
     // Optionally reset builder to reuse builder without deallocating

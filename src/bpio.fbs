@@ -1,0 +1,15 @@
+namespace I2C.Example;
+
+table I2CRWRequest {
+  start:bool; // Start condition.
+  addr:ubyte; // Device address (Bus Pirate automatically will set read/write bit)
+  data:[ubyte]; // Data to write
+  readbytes:uint32; // Number of bytes to read.
+  stop:bool; // Stop condition.
+}
+
+table I2CRWResponse {
+  ack:bool; // Device acknowledged
+  data:[ubyte]; // Data read from device
+  error_message:string; // Error message if any.
+}

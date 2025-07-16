@@ -15,11 +15,11 @@ static int I2C_Example_I2CRWResponse_verify_table(flatcc_table_verifier_descript
 static int I2C_Example_I2CRWRequest_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* start */)) return ret;
-    if ((ret = flatcc_verify_field(td, 1, 1, 1) /* addr */)) return ret;
-    if ((ret = flatcc_verify_vector_field(td, 2, 0, 1, 1, INT64_C(4294967295)) /* data */)) return ret;
-    if ((ret = flatcc_verify_field(td, 3, 4, 4) /* readbytes */)) return ret;
-    if ((ret = flatcc_verify_field(td, 4, 1, 1) /* stop */)) return ret;
+    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* i2cstart */)) return ret;
+    if ((ret = flatcc_verify_field(td, 1, 1, 1) /* i2caddr */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 2, 0, 1, 1, INT64_C(4294967295)) /* i2cdata */)) return ret;
+    if ((ret = flatcc_verify_field(td, 3, 4, 4) /* i2creadbytes */)) return ret;
+    if ((ret = flatcc_verify_field(td, 4, 1, 1) /* i2cstop */)) return ret;
     return flatcc_verify_ok;
 }
 
@@ -66,9 +66,9 @@ static inline int I2C_Example_I2CRWRequest_verify_as_root_with_type_hash_and_siz
 static int I2C_Example_I2CRWResponse_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* ack */)) return ret;
-    if ((ret = flatcc_verify_vector_field(td, 1, 0, 1, 1, INT64_C(4294967295)) /* data */)) return ret;
-    if ((ret = flatcc_verify_string_field(td, 2, 0) /* error_message */)) return ret;
+    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* i2cack */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 1, 0, 1, 1, INT64_C(4294967295)) /* i2cdata */)) return ret;
+    if ((ret = flatcc_verify_string_field(td, 2, 0) /* i2cerror_message */)) return ret;
     return flatcc_verify_ok;
 }
 

@@ -34,6 +34,9 @@ set(buspirate_common
         #flatcc test
         commands/global/flat.h 
         commands/global/flat.c 
+        bpio_builder.h
+        bpio_reader.h
+        bpio_verifier.h
         monster_verifier.h 
         flatbuffers_common_builder.h 
         flatbuffers_common_reader.h

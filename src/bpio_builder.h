@@ -39,20 +39,20 @@ __flatbuffers_build_table_prolog(flatbuffers_, I2C_Example_I2CRWRequest, I2C_Exa
 static inline I2C_Example_I2CRWResponse_ref_t I2C_Example_I2CRWResponse_create(flatbuffers_builder_t *B __I2C_Example_I2CRWResponse_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, I2C_Example_I2CRWResponse, I2C_Example_I2CRWResponse_file_identifier, I2C_Example_I2CRWResponse_type_identifier)
 
-__flatbuffers_build_scalar_field(0, flatbuffers_, I2C_Example_I2CRWRequest_start, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), I2C_Example_I2CRWRequest)
-__flatbuffers_build_scalar_field(1, flatbuffers_, I2C_Example_I2CRWRequest_addr, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), I2C_Example_I2CRWRequest)
-__flatbuffers_build_vector_field(2, flatbuffers_, I2C_Example_I2CRWRequest_data, flatbuffers_uint8, uint8_t, I2C_Example_I2CRWRequest)
-__flatbuffers_build_scalar_field(3, flatbuffers_, I2C_Example_I2CRWRequest_readbytes, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), I2C_Example_I2CRWRequest)
-__flatbuffers_build_scalar_field(4, flatbuffers_, I2C_Example_I2CRWRequest_stop, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), I2C_Example_I2CRWRequest)
+__flatbuffers_build_scalar_field(0, flatbuffers_, I2C_Example_I2CRWRequest_i2cstart, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(1), I2C_Example_I2CRWRequest)
+__flatbuffers_build_scalar_field(1, flatbuffers_, I2C_Example_I2CRWRequest_i2caddr, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), I2C_Example_I2CRWRequest)
+__flatbuffers_build_vector_field(2, flatbuffers_, I2C_Example_I2CRWRequest_i2cdata, flatbuffers_uint8, uint8_t, I2C_Example_I2CRWRequest)
+__flatbuffers_build_scalar_field(3, flatbuffers_, I2C_Example_I2CRWRequest_i2creadbytes, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), I2C_Example_I2CRWRequest)
+__flatbuffers_build_scalar_field(4, flatbuffers_, I2C_Example_I2CRWRequest_i2cstop, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(1), I2C_Example_I2CRWRequest)
 
 static inline I2C_Example_I2CRWRequest_ref_t I2C_Example_I2CRWRequest_create(flatbuffers_builder_t *B __I2C_Example_I2CRWRequest_formal_args)
 {
     if (I2C_Example_I2CRWRequest_start(B)
-        || I2C_Example_I2CRWRequest_data_add(B, v2)
-        || I2C_Example_I2CRWRequest_readbytes_add(B, v3)
-        || I2C_Example_I2CRWRequest_start_add(B, v0)
-        || I2C_Example_I2CRWRequest_addr_add(B, v1)
-        || I2C_Example_I2CRWRequest_stop_add(B, v4)) {
+        || I2C_Example_I2CRWRequest_i2cdata_add(B, v2)
+        || I2C_Example_I2CRWRequest_i2creadbytes_add(B, v3)
+        || I2C_Example_I2CRWRequest_i2cstart_add(B, v0)
+        || I2C_Example_I2CRWRequest_i2caddr_add(B, v1)
+        || I2C_Example_I2CRWRequest_i2cstop_add(B, v4)) {
         return 0;
     }
     return I2C_Example_I2CRWRequest_end(B);
@@ -62,26 +62,26 @@ static I2C_Example_I2CRWRequest_ref_t I2C_Example_I2CRWRequest_clone(flatbuffers
 {
     __flatbuffers_memoize_begin(B, t);
     if (I2C_Example_I2CRWRequest_start(B)
-        || I2C_Example_I2CRWRequest_data_pick(B, t)
-        || I2C_Example_I2CRWRequest_readbytes_pick(B, t)
-        || I2C_Example_I2CRWRequest_start_pick(B, t)
-        || I2C_Example_I2CRWRequest_addr_pick(B, t)
-        || I2C_Example_I2CRWRequest_stop_pick(B, t)) {
+        || I2C_Example_I2CRWRequest_i2cdata_pick(B, t)
+        || I2C_Example_I2CRWRequest_i2creadbytes_pick(B, t)
+        || I2C_Example_I2CRWRequest_i2cstart_pick(B, t)
+        || I2C_Example_I2CRWRequest_i2caddr_pick(B, t)
+        || I2C_Example_I2CRWRequest_i2cstop_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, I2C_Example_I2CRWRequest_end(B));
 }
 
-__flatbuffers_build_scalar_field(0, flatbuffers_, I2C_Example_I2CRWResponse_ack, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), I2C_Example_I2CRWResponse)
-__flatbuffers_build_vector_field(1, flatbuffers_, I2C_Example_I2CRWResponse_data, flatbuffers_uint8, uint8_t, I2C_Example_I2CRWResponse)
-__flatbuffers_build_string_field(2, flatbuffers_, I2C_Example_I2CRWResponse_error_message, I2C_Example_I2CRWResponse)
+__flatbuffers_build_scalar_field(0, flatbuffers_, I2C_Example_I2CRWResponse_i2cack, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), I2C_Example_I2CRWResponse)
+__flatbuffers_build_vector_field(1, flatbuffers_, I2C_Example_I2CRWResponse_i2cdata, flatbuffers_uint8, uint8_t, I2C_Example_I2CRWResponse)
+__flatbuffers_build_string_field(2, flatbuffers_, I2C_Example_I2CRWResponse_i2cerror_message, I2C_Example_I2CRWResponse)
 
 static inline I2C_Example_I2CRWResponse_ref_t I2C_Example_I2CRWResponse_create(flatbuffers_builder_t *B __I2C_Example_I2CRWResponse_formal_args)
 {
     if (I2C_Example_I2CRWResponse_start(B)
-        || I2C_Example_I2CRWResponse_data_add(B, v1)
-        || I2C_Example_I2CRWResponse_error_message_add(B, v2)
-        || I2C_Example_I2CRWResponse_ack_add(B, v0)) {
+        || I2C_Example_I2CRWResponse_i2cdata_add(B, v1)
+        || I2C_Example_I2CRWResponse_i2cerror_message_add(B, v2)
+        || I2C_Example_I2CRWResponse_i2cack_add(B, v0)) {
         return 0;
     }
     return I2C_Example_I2CRWResponse_end(B);
@@ -91,9 +91,9 @@ static I2C_Example_I2CRWResponse_ref_t I2C_Example_I2CRWResponse_clone(flatbuffe
 {
     __flatbuffers_memoize_begin(B, t);
     if (I2C_Example_I2CRWResponse_start(B)
-        || I2C_Example_I2CRWResponse_data_pick(B, t)
-        || I2C_Example_I2CRWResponse_error_message_pick(B, t)
-        || I2C_Example_I2CRWResponse_ack_pick(B, t)) {
+        || I2C_Example_I2CRWResponse_i2cdata_pick(B, t)
+        || I2C_Example_I2CRWResponse_i2cerror_message_pick(B, t)
+        || I2C_Example_I2CRWResponse_i2cack_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, I2C_Example_I2CRWResponse_end(B));

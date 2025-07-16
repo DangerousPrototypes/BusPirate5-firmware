@@ -62,11 +62,11 @@ static inline I2C_Example_I2CRWRequest_table_t I2C_Example_I2CRWRequest_vec_at(I
 __flatbuffers_offset_vec_at(I2C_Example_I2CRWRequest_table_t, vec, i, 0)
 __flatbuffers_table_as_root(I2C_Example_I2CRWRequest)
 
-__flatbuffers_define_scalar_field(0, I2C_Example_I2CRWRequest, start, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_scalar_field(1, I2C_Example_I2CRWRequest, addr, flatbuffers_uint8, uint8_t, UINT8_C(0))
-__flatbuffers_define_vector_field(2, I2C_Example_I2CRWRequest, data, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_scalar_field(3, I2C_Example_I2CRWRequest, readbytes, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_scalar_field(4, I2C_Example_I2CRWRequest, stop, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(0, I2C_Example_I2CRWRequest, i2cstart, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(1))
+__flatbuffers_define_scalar_field(1, I2C_Example_I2CRWRequest, i2caddr, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_vector_field(2, I2C_Example_I2CRWRequest, i2cdata, flatbuffers_uint8_vec_t, 0)
+__flatbuffers_define_scalar_field(3, I2C_Example_I2CRWRequest, i2creadbytes, flatbuffers_uint32, uint32_t, UINT32_C(0))
+__flatbuffers_define_scalar_field(4, I2C_Example_I2CRWRequest, i2cstop, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(1))
 
 struct I2C_Example_I2CRWResponse_table { uint8_t unused__; };
 
@@ -76,9 +76,9 @@ static inline I2C_Example_I2CRWResponse_table_t I2C_Example_I2CRWResponse_vec_at
 __flatbuffers_offset_vec_at(I2C_Example_I2CRWResponse_table_t, vec, i, 0)
 __flatbuffers_table_as_root(I2C_Example_I2CRWResponse)
 
-__flatbuffers_define_scalar_field(0, I2C_Example_I2CRWResponse, ack, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_vector_field(1, I2C_Example_I2CRWResponse, data, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_string_field(2, I2C_Example_I2CRWResponse, error_message, 0)
+__flatbuffers_define_scalar_field(0, I2C_Example_I2CRWResponse, i2cack, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_vector_field(1, I2C_Example_I2CRWResponse, i2cdata, flatbuffers_uint8_vec_t, 0)
+__flatbuffers_define_string_field(2, I2C_Example_I2CRWResponse, i2cerror_message, 0)
 
 
 #include "flatcc/flatcc_epilogue.h"

@@ -165,6 +165,8 @@ const char dirtyproto_mode_name[] = "Binmode test framework";
 enum PacketType{
   I2CRWRequest = 0, // I2C Read/Write Request
   I2CResponse = 1, // I2C Response
+  StatusRequest, 
+  StatusResponse
 };
 
 int read_packet(const void *buffer){
@@ -172,9 +174,10 @@ int read_packet(const void *buffer){
     ns_bpio(Packet_table_t) packet = ns_bpio(Packet_as_root(buffer));
     // Make sure the packet is accessible.
     test_assert(packet != 0);
-    uint8_t packet_type = ns_bpio(Packet_type(packet));
+    uint8_t packet_type = ns_bpio(Packet_contents_type(packet));
+    //uint8_t packet_type = ns_bpio(Packet_type(packet));
     printf("Packet Type: %d\r\n", packet_type);
-    if(packet_type==BPIO2_PacketType_I2CResponse){
+    if(packet_type==I2CRWRequest){
         ns_bpio(I2CRWRequest_table_t) i2c_rw_request = (ns_bpio(I2CRWRequest_table_t)) ns_bpio(Packet_contents(packet));
         bool start = ns_bpio(I2CRWRequest_i2cstart(i2c_rw_request));
         uint8_t addr = ns_bpio(I2CRWRequest_i2caddr(i2c_rw_request));
@@ -184,6 +187,39 @@ int read_packet(const void *buffer){
         bool stop = ns_bpio(I2CRWRequest_i2cstop(i2c_rw_request));
         printf("Start: %s, Address: 0x%02X, Read Bytes: %d, Stop: %s\r\n",
                start ? "true" : "false", addr, readbytes, stop ? "true" : "false");
+    }else if(packet_type==StatusRequest){
+        //if id or name are set, then we switch modes,
+        //else we send a list of modes back in the status response table
+        ns_bpio(StatusRequest_table_t) status_request = (ns_bpio(StatusRequest_table_t)) ns_bpio(Packet_contents(packet));
+        uint8_t id = ns_bpio(StatusRequest_id(status_request));
+        const char* name = ns_bpio(StatusRequest_name(status_request));
+        printf("Status Request: id=%d, name=%s\r\n", id, name ? name : "NULL");
+        if(id!=0 || name!=NULL){
+            printf("Switching to mode\r\n");
+        }else{
+            printf("Sending list of modes\r\n");
+            flatcc_builder_t builder, *B;
+            B = &builder;
+            flatcc_builder_init(B);
+            // send a list of modes back
+            ns_bpio(StatusResponse_start(B));
+            ns_bpio(StatusResponse_modes_start(B));
+            for (uint8_t i = 0; i < count_of(modes); i++) {
+                flatbuffers_string_ref_t name = flatbuffers_string_create_str(B, modes[i].protocol_name);
+                ns_bpio(StatusResponse_modes_push_create(B, i, name));
+            }            
+            ns_bpio(StatusResponse_modes_end(B));
+            BPIO2_StatusResponse_ref_t status_response = ns_bpio(StatusResponse_end(B));
+             // add to packet wrapper
+            ns_bpio(Packet_start_as_root(B));
+            BPIO2_Packet_contents_StatusResponse_add(B, status_response);
+            ns_bpio(Packet_end_as_root(B));            
+            // send the packet
+            uint8_t* buf;
+            size_t len = flatcc_builder_get_buffer_size(B);
+            buf = flatcc_builder_finalize_buffer(B, &len);
+            printf("Sending StatusResponse packet with length %d\r\n", len);
+        }
     }
 }
 

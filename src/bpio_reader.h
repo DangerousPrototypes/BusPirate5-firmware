@@ -19,6 +19,18 @@
 #endif
 
 
+typedef const struct BPIO2_StatusResponse_table *BPIO2_StatusResponse_table_t;
+typedef struct BPIO2_StatusResponse_table *BPIO2_StatusResponse_mutable_table_t;
+typedef const flatbuffers_uoffset_t *BPIO2_StatusResponse_vec_t;
+typedef flatbuffers_uoffset_t *BPIO2_StatusResponse_mutable_vec_t;
+typedef const struct BPIO2_Mode_table *BPIO2_Mode_table_t;
+typedef struct BPIO2_Mode_table *BPIO2_Mode_mutable_table_t;
+typedef const flatbuffers_uoffset_t *BPIO2_Mode_vec_t;
+typedef flatbuffers_uoffset_t *BPIO2_Mode_mutable_vec_t;
+typedef const struct BPIO2_StatusRequest_table *BPIO2_StatusRequest_table_t;
+typedef struct BPIO2_StatusRequest_table *BPIO2_StatusRequest_mutable_table_t;
+typedef const flatbuffers_uoffset_t *BPIO2_StatusRequest_vec_t;
+typedef flatbuffers_uoffset_t *BPIO2_StatusRequest_mutable_vec_t;
 typedef const struct BPIO2_I2CRWRequest_table *BPIO2_I2CRWRequest_table_t;
 typedef struct BPIO2_I2CRWRequest_table *BPIO2_I2CRWRequest_mutable_table_t;
 typedef const flatbuffers_uoffset_t *BPIO2_I2CRWRequest_vec_t;
@@ -31,6 +43,42 @@ typedef const struct BPIO2_Packet_table *BPIO2_Packet_table_t;
 typedef struct BPIO2_Packet_table *BPIO2_Packet_mutable_table_t;
 typedef const flatbuffers_uoffset_t *BPIO2_Packet_vec_t;
 typedef flatbuffers_uoffset_t *BPIO2_Packet_mutable_vec_t;
+#ifndef BPIO2_StatusResponse_file_identifier
+#define BPIO2_StatusResponse_file_identifier 0
+#endif
+/* deprecated, use BPIO2_StatusResponse_file_identifier */
+#ifndef BPIO2_StatusResponse_identifier
+#define BPIO2_StatusResponse_identifier 0
+#endif
+#define BPIO2_StatusResponse_type_hash ((flatbuffers_thash_t)0x6c9d223e)
+#define BPIO2_StatusResponse_type_identifier "\x3e\x22\x9d\x6c"
+#ifndef BPIO2_StatusResponse_file_extension
+#define BPIO2_StatusResponse_file_extension "bin"
+#endif
+#ifndef BPIO2_Mode_file_identifier
+#define BPIO2_Mode_file_identifier 0
+#endif
+/* deprecated, use BPIO2_Mode_file_identifier */
+#ifndef BPIO2_Mode_identifier
+#define BPIO2_Mode_identifier 0
+#endif
+#define BPIO2_Mode_type_hash ((flatbuffers_thash_t)0x38edef3c)
+#define BPIO2_Mode_type_identifier "\x3c\xef\xed\x38"
+#ifndef BPIO2_Mode_file_extension
+#define BPIO2_Mode_file_extension "bin"
+#endif
+#ifndef BPIO2_StatusRequest_file_identifier
+#define BPIO2_StatusRequest_file_identifier 0
+#endif
+/* deprecated, use BPIO2_StatusRequest_file_identifier */
+#ifndef BPIO2_StatusRequest_identifier
+#define BPIO2_StatusRequest_identifier 0
+#endif
+#define BPIO2_StatusRequest_type_hash ((flatbuffers_thash_t)0x8261f592)
+#define BPIO2_StatusRequest_type_identifier "\x92\xf5\x61\x82"
+#ifndef BPIO2_StatusRequest_file_extension
+#define BPIO2_StatusRequest_file_extension "bin"
+#endif
 #ifndef BPIO2_I2CRWRequest_file_identifier
 #define BPIO2_I2CRWRequest_file_identifier 0
 #endif
@@ -68,30 +116,39 @@ typedef flatbuffers_uoffset_t *BPIO2_Packet_mutable_vec_t;
 #define BPIO2_Packet_file_extension "bin"
 #endif
 
-typedef uint8_t BPIO2_PacketType_enum_t;
-__flatbuffers_define_integer_type(BPIO2_PacketType, BPIO2_PacketType_enum_t, 8)
-#define BPIO2_PacketType_I2CRWRequest ((BPIO2_PacketType_enum_t)UINT8_C(0))
-#define BPIO2_PacketType_I2CResponse ((BPIO2_PacketType_enum_t)UINT8_C(1))
-
-static inline const char *BPIO2_PacketType_name(BPIO2_PacketType_enum_t value)
-{
-    switch (value) {
-    case BPIO2_PacketType_I2CRWRequest: return "I2CRWRequest";
-    case BPIO2_PacketType_I2CResponse: return "I2CResponse";
-    default: return "";
-    }
-}
-
-static inline int BPIO2_PacketType_is_known_value(BPIO2_PacketType_enum_t value)
-{
-    switch (value) {
-    case BPIO2_PacketType_I2CRWRequest: return 1;
-    case BPIO2_PacketType_I2CResponse: return 1;
-    default: return 0;
-    }
-}
 
 
+struct BPIO2_StatusResponse_table { uint8_t unused__; };
+
+static inline size_t BPIO2_StatusResponse_vec_len(BPIO2_StatusResponse_vec_t vec)
+__flatbuffers_vec_len(vec)
+static inline BPIO2_StatusResponse_table_t BPIO2_StatusResponse_vec_at(BPIO2_StatusResponse_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(BPIO2_StatusResponse_table_t, vec, i, 0)
+__flatbuffers_table_as_root(BPIO2_StatusResponse)
+
+__flatbuffers_define_vector_field(0, BPIO2_StatusResponse, modes, BPIO2_Mode_vec_t, 0)
+
+struct BPIO2_Mode_table { uint8_t unused__; };
+
+static inline size_t BPIO2_Mode_vec_len(BPIO2_Mode_vec_t vec)
+__flatbuffers_vec_len(vec)
+static inline BPIO2_Mode_table_t BPIO2_Mode_vec_at(BPIO2_Mode_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(BPIO2_Mode_table_t, vec, i, 0)
+__flatbuffers_table_as_root(BPIO2_Mode)
+
+__flatbuffers_define_scalar_field(0, BPIO2_Mode, id, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_string_field(1, BPIO2_Mode, name, 0)
+
+struct BPIO2_StatusRequest_table { uint8_t unused__; };
+
+static inline size_t BPIO2_StatusRequest_vec_len(BPIO2_StatusRequest_vec_t vec)
+__flatbuffers_vec_len(vec)
+static inline BPIO2_StatusRequest_table_t BPIO2_StatusRequest_vec_at(BPIO2_StatusRequest_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(BPIO2_StatusRequest_table_t, vec, i, 0)
+__flatbuffers_table_as_root(BPIO2_StatusRequest)
+
+__flatbuffers_define_scalar_field(0, BPIO2_StatusRequest, id, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_string_field(1, BPIO2_StatusRequest, name, 0)
 
 struct BPIO2_I2CRWRequest_table { uint8_t unused__; };
 
@@ -115,15 +172,16 @@ static inline BPIO2_I2CResponse_table_t BPIO2_I2CResponse_vec_at(BPIO2_I2CRespon
 __flatbuffers_offset_vec_at(BPIO2_I2CResponse_table_t, vec, i, 0)
 __flatbuffers_table_as_root(BPIO2_I2CResponse)
 
-__flatbuffers_define_scalar_field(0, BPIO2_I2CResponse, ack, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_vector_field(1, BPIO2_I2CResponse, data, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_string_field(2, BPIO2_I2CResponse, error_message, 0)
+__flatbuffers_define_vector_field(0, BPIO2_I2CResponse, data, flatbuffers_uint8_vec_t, 0)
+__flatbuffers_define_string_field(1, BPIO2_I2CResponse, error_message, 0)
 typedef uint8_t BPIO2_PacketContents_union_type_t;
 __flatbuffers_define_integer_type(BPIO2_PacketContents, BPIO2_PacketContents_union_type_t, 8)
 __flatbuffers_define_union(flatbuffers_, BPIO2_PacketContents)
 #define BPIO2_PacketContents_NONE ((BPIO2_PacketContents_union_type_t)UINT8_C(0))
 #define BPIO2_PacketContents_I2CRWRequest ((BPIO2_PacketContents_union_type_t)UINT8_C(1))
 #define BPIO2_PacketContents_I2CResponse ((BPIO2_PacketContents_union_type_t)UINT8_C(2))
+#define BPIO2_PacketContents_StatusRequest ((BPIO2_PacketContents_union_type_t)UINT8_C(3))
+#define BPIO2_PacketContents_StatusResponse ((BPIO2_PacketContents_union_type_t)UINT8_C(4))
 
 static inline const char *BPIO2_PacketContents_type_name(BPIO2_PacketContents_union_type_t type)
 {
@@ -131,6 +189,8 @@ static inline const char *BPIO2_PacketContents_type_name(BPIO2_PacketContents_un
     case BPIO2_PacketContents_NONE: return "NONE";
     case BPIO2_PacketContents_I2CRWRequest: return "I2CRWRequest";
     case BPIO2_PacketContents_I2CResponse: return "I2CResponse";
+    case BPIO2_PacketContents_StatusRequest: return "StatusRequest";
+    case BPIO2_PacketContents_StatusResponse: return "StatusResponse";
     default: return "";
     }
 }
@@ -141,6 +201,8 @@ static inline int BPIO2_PacketContents_is_known_type(BPIO2_PacketContents_union_
     case BPIO2_PacketContents_NONE: return 1;
     case BPIO2_PacketContents_I2CRWRequest: return 1;
     case BPIO2_PacketContents_I2CResponse: return 1;
+    case BPIO2_PacketContents_StatusRequest: return 1;
+    case BPIO2_PacketContents_StatusResponse: return 1;
     default: return 0;
     }
 }
@@ -156,8 +218,7 @@ __flatbuffers_table_as_root(BPIO2_Packet)
 
 __flatbuffers_define_scalar_field(0, BPIO2_Packet, version_major, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(1, BPIO2_Packet, version_minor, flatbuffers_uint8, uint8_t, UINT8_C(1))
-__flatbuffers_define_scalar_field(2, BPIO2_Packet, type, BPIO2_PacketType, BPIO2_PacketType_enum_t, UINT8_C(0))
-__flatbuffers_define_union_field(flatbuffers_, 4, BPIO2_Packet, contents, BPIO2_PacketContents, 0)
+__flatbuffers_define_union_field(flatbuffers_, 3, BPIO2_Packet, contents, BPIO2_PacketContents, 0)
 
 
 #include "flatcc/flatcc_epilogue.h"

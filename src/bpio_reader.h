@@ -68,6 +68,29 @@ typedef flatbuffers_uoffset_t *BPIO2_Packet_mutable_vec_t;
 #define BPIO2_Packet_file_extension "bin"
 #endif
 
+typedef uint8_t BPIO2_PacketType_enum_t;
+__flatbuffers_define_integer_type(BPIO2_PacketType, BPIO2_PacketType_enum_t, 8)
+#define BPIO2_PacketType_I2CRWRequest ((BPIO2_PacketType_enum_t)UINT8_C(0))
+#define BPIO2_PacketType_I2CResponse ((BPIO2_PacketType_enum_t)UINT8_C(1))
+
+static inline const char *BPIO2_PacketType_name(BPIO2_PacketType_enum_t value)
+{
+    switch (value) {
+    case BPIO2_PacketType_I2CRWRequest: return "I2CRWRequest";
+    case BPIO2_PacketType_I2CResponse: return "I2CResponse";
+    default: return "";
+    }
+}
+
+static inline int BPIO2_PacketType_is_known_value(BPIO2_PacketType_enum_t value)
+{
+    switch (value) {
+    case BPIO2_PacketType_I2CRWRequest: return 1;
+    case BPIO2_PacketType_I2CResponse: return 1;
+    default: return 0;
+    }
+}
+
 
 
 struct BPIO2_I2CRWRequest_table { uint8_t unused__; };
@@ -133,7 +156,8 @@ __flatbuffers_table_as_root(BPIO2_Packet)
 
 __flatbuffers_define_scalar_field(0, BPIO2_Packet, version_major, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(1, BPIO2_Packet, version_minor, flatbuffers_uint8, uint8_t, UINT8_C(1))
-__flatbuffers_define_union_field(flatbuffers_, 3, BPIO2_Packet, contents, BPIO2_PacketContents, 0)
+__flatbuffers_define_scalar_field(2, BPIO2_Packet, type, BPIO2_PacketType, BPIO2_PacketType_enum_t, UINT8_C(0))
+__flatbuffers_define_union_field(flatbuffers_, 4, BPIO2_Packet, contents, BPIO2_PacketContents, 0)
 
 
 #include "flatcc/flatcc_epilogue.h"

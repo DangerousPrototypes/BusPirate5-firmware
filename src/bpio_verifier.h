@@ -127,7 +127,8 @@ static int BPIO2_Packet_verify_table(flatcc_table_verifier_descriptor_t *td)
     int ret;
     if ((ret = flatcc_verify_field(td, 0, 1, 1) /* version_major */)) return ret;
     if ((ret = flatcc_verify_field(td, 1, 1, 1) /* version_minor */)) return ret;
-    if ((ret = flatcc_verify_union_field(td, 3, 0, &BPIO2_PacketContents_union_verifier) /* contents */)) return ret;
+    if ((ret = flatcc_verify_field(td, 2, 1, 1) /* type */)) return ret;
+    if ((ret = flatcc_verify_union_field(td, 4, 0, &BPIO2_PacketContents_union_verifier) /* contents */)) return ret;
     return flatcc_verify_ok;
 }
 

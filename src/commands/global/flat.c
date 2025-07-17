@@ -31,193 +31,77 @@
 // This allows us to verify result in optimized builds.
 #define test_assert(x) do { if (!(x)) { assert(0); return -1; }} while(0)
 
+enum PacketType{
+  I2CRWRequest = 0, // I2C Read/Write Request
+  I2CResponse = 1, // I2C Response
+};
+
 int read_flat(const void *buffer){
     // get data out of flatbuffer, print it
-    ns_bpio(I2CRWRequest_table_t) bpio = ns_bpio(I2CRWRequest_as_root(buffer));
-    // Make sure the buffer is accessible.
-    test_assert(bpio != 0);
-    // Get the start condition.
-    bool start = ns_bpio(I2CRWRequest_i2cstart(bpio));
-    // Get the I2C address.
-    uint8_t addr = ns_bpio(I2CRWRequest_i2caddr(bpio));
-    // Get the data vector.
-    //ns_bpio(uint8_t_vec_t) data = ns_bpio(Bpio_i2cdata(bpio));
-    // Get the number of bytes to read.
-    uint32_t readbytes = ns_bpio(I2CRWRequest_i2creadbytes(bpio));
-    // Get the stop condition.
-    bool stop = ns_bpio(I2CRWRequest_i2cstop(bpio));
-    // Make sure the data vector is accessible.
-    //test_assert(data != 0);
-    // Get the length of the data vector.
-    size_t data_len = 0; //flatbuffers_uint8_vec_len(data);
-    // Print the data.
-    printf("BPIO: start=%d, addr=0x%02X, readbytes=%d, stop=%d, data_len=%zu\r\n",
-           start, addr, readbytes, stop, data_len);
-
-#if 0
-    // Note that we use the `table_t` suffix when reading a table object
-    // as opposed to the `ref_t` suffix used during the construction of
-    // the buffer.
-    ns(Monster_table_t) monster = ns(Monster_as_root(buffer));
-
-    // Note: root object pointers are NOT the same as the `buffer` pointer.
-
-    // Make sure the buffer is accessible.
-    test_assert(monster != 0);
-
-    int16_t hp = ns(Monster_hp(monster));
-    int16_t mana = ns(Monster_mana(monster));
-    // This is just a const char *, but it also supports a fast length operation.
-    flatbuffers_string_t name = ns(Monster_name(monster));
-    size_t name_len = flatbuffers_string_len(name);
-
-    printf("Monster: hp=%d, mana=%d, name='%s', name_len=%zu\r\n", hp, mana, name, name_len);
-
-    test_assert(hp == 300);
-    // Since 150 is the default, we are reading a value that wasn't stored.
-    test_assert(mana == 150);
-    test_assert(0 == strcmp(name, "Orc"));
-    test_assert(name_len == strlen("Orc"));
-
-    int hp_present = ns(Monster_hp_is_present(monster)); // 1
-    int mana_present = ns(Monster_mana_is_present(monster)); // 0
-    test_assert(hp_present);
-    test_assert(!mana_present);
-
-    ns(Vec3_struct_t) pos = ns(Monster_pos(monster));
-    // Make sure pos has been set.
-    test_assert(pos != 0);
-    float x = ns(Vec3_x(pos));
-    float y = ns(Vec3_y(pos));
-    float z = ns(Vec3_z(pos));
-
-    // The literal `f` suffix is important because double literals does
-    // not always map cleanly to 32-bit represention even with only a few digits:
-    // `1.0 == 1.0f`, but `3.2 != 3.2f`.
-    test_assert(x == 1.0f);
-    test_assert(y == 2.0f);
-    test_assert(z == 3.0f);
-
-    // We can also read the position into a C-struct. We have to copy
-    // because we generally do not know if the native endian format
-    // matches the one stored in the buffer (pe: protocol endian).
-    ns(Vec3_t) pos_vec;
-    // `pe` indicates endian conversion from protocol to native.
-    ns(Vec3_copy_from_pe(&pos_vec, pos));
-    test_assert(pos_vec.x == 1.0f);
-    test_assert(pos_vec.y == 2.0f);
-    test_assert(pos_vec.z == 3.0f);
-
-    // This is a const uint8_t *, but it shouldn't be accessed directly
-    // to ensure proper endian conversion. However, uint8 (ubyte) are
-    // not sensitive endianness, so we *could* have accessed it directly.
-    // The compiler likely optimizes this so that it doesn't matter.
-    flatbuffers_uint8_vec_t inv = ns(Monster_inventory(monster));
-    size_t inv_len = flatbuffers_uint8_vec_len(inv);
-    // Make sure the inventory has been set.
-    test_assert(inv != 0);
-    // If `inv` were absent, the length would 0, so the above test is redundant.
-    test_assert(inv_len == 10);
-    // Index 0 is the first, index 2 is the third.
-    // NOTE: C++ uses the `Get` terminology for vector elemetns, C use `at`.
-    uint8_t third_item = flatbuffers_uint8_vec_at(inv, 2);
-    test_assert(third_item == 2);
-
-    ns(Weapon_vec_t) weapons = ns(Monster_weapons(monster));
-    size_t weapons_len = ns(Weapon_vec_len(weapons));
-    test_assert(weapons_len == 2);
-    // We can use `const char *` instead of `flatbuffers_string_t`.
-    const char *second_weapon_name = ns(Weapon_name(ns(Weapon_vec_at(weapons, 1))));
-    int16_t second_weapon_damage =  ns(Weapon_damage(ns(Weapon_vec_at(weapons, 1))));
-    test_assert(second_weapon_name != 0 && strcmp(second_weapon_name, "Axe") == 0);
-    test_assert(second_weapon_damage == 5);
-
-    // Access union type field.
-    if (ns(Monster_equipped_type(monster)) == ns(Equipment_Weapon)) {
-        // Cast to appropriate type:
-        // C does not require the cast to Weapon_table_t, but C++ does.
-        ns(Weapon_table_t) weapon = (ns(Weapon_table_t)) ns(Monster_equipped(monster));
-        const char *weapon_name = ns(Weapon_name(weapon));
-        int16_t weapon_damage = ns(Weapon_damage(weapon));
-
-        test_assert(0 == strcmp(weapon_name, "Axe"));
-        test_assert(weapon_damage == 5);
+    ns_bpio(Packet_table_t) packet = ns_bpio(Packet_as_root(buffer));
+    // Make sure the packet is accessible.
+    test_assert(packet != 0);
+    uint8_t packet_type = ns_bpio(Packet_type(packet));
+    printf("Packet Type: %d\r\n", packet_type);
+    if(packet_type==I2CRWRequest){
+        ns_bpio(I2CRWRequest_table_t) i2c_rw_request = (ns_bpio(I2CRWRequest_table_t)) ns_bpio(Packet_contents(packet));
+        bool start = ns_bpio(I2CRWRequest_i2cstart(i2c_rw_request));
+        uint8_t addr = ns_bpio(I2CRWRequest_i2caddr(i2c_rw_request));
+        // Get the data vector.
+        //ns_bpio(uint8_t_vec_t) data = ns_bpio(Bpio_i2cdata(bpio));
+        uint32_t readbytes = ns_bpio(I2CRWRequest_i2creadbytes(i2c_rw_request));
+        bool stop = ns_bpio(I2CRWRequest_i2cstop(i2c_rw_request));
+        printf("Start: %s, Address: 0x%02X, Read Bytes: %d, Stop: %s\r\n",
+               start ? "true" : "false", addr, readbytes, stop ? "true" : "false");
     }
-        #endif
 }
 
 void flat_handler(struct command_result* res) {
-
+    uint8_t data[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    size_t data_size = c_vec_len(data);
     flatcc_builder_t builder, *B;
     B = &builder;
-    // Initialize the builder object.
     flatcc_builder_init(B);
- 
-    // create start (bool)
-    flatbuffers_bool_t start = true; // Start condition.
-    // create addr (uint8_t)
-    // Create a `uint8_t` field, which is just a single byte.
-    uint8_t addr = 0x50; // Device address (Bus Pirate automatically will set read/write bit).
-    // create data (uint8_t vector)
-    // Create a `vector` representing the inventory of the Orc. Each number
-    // could correspond to an item that can be claimed after he is slain.
-    uint8_t data[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    flatbuffers_uint8_vec_ref_t payload;
-    // `c_vec_len` is the convenience macro we defined earlier.
-    payload = flatbuffers_uint8_vec_create(B, data, c_vec_len(data));
-    // create readbytes (uint32_t)
-    uint32_t readbytes = 10; // Number of bytes to read.
-    // create stop (bool)
-    // Create a `bool` field, which is just a single byte.
-    flatbuffers_bool_t stop = true; // Stop condition.
-    // Create the I2CRWRequest object using the `I2CRWRequest_create` helper function
-    // to set all fields.
-    // Note that the `I2CRWRequest` table only take up one argument in C, where
-    // C++ takes a type and an object argument.
-    // The `create` function is a shortcut for the `start`, `addr`, `data`, `readbytes`, and `stop` fields.
-    //ns_bpio(I2CRWRequest_create_as_root(B, start, addr, payload, readbytes, stop)); 
-    //ns(Weapon_ref_t) sword = ns(Weapon_create(B, weapon_one_name, weapon_one_damage));
-    ns_bpio(I2CRWRequest_ref_t) i2c_rw_request = ns_bpio(I2CRWRequest_create(B, start, addr, payload, readbytes, stop));
 #if 0
+    ns_bpio(Packet_start_as_root(B));
+    ns_bpio(Packet_contents_start(B));
+    ns_bpio(Packet_contents_type_add(B, ns_bpio(PacketContents_I2CRWRequest))); // Set the packet contents type to I2CRWRequest.
+    // alternate approach
     ns_bpio(I2CRWRequest_start(B));
-    ns_bpio(I2CRWRequest_i2caddr_add(B, addr));
-    ns_bpio(I2CRWRequest_i2cdata_add(B, payload));
-    ns_bpio(I2CRWRequest_i2creadbytes_add(B, readbytes));
-    ns_bpio(I2CRWRequest_i2cstart_add(B, start));
-    ns_bpio(I2CRWRequest_i2cstop_add(B, stop));
-    ns_bpio(I2CRWRequest_vec_ref_t) i2c_rw_request = ns_bpio(I2CRWRequest_end(B));
-#endif
+    ns_bpio(I2CRWRequest_i2caddr_add(B, 0x50)); // Set the I2C address.
+    ns_bpio(I2CRWRequest_i2cstart_add(B, true)); // Set the start condition.
+    ns_bpio(I2CRWRequest_i2cstop_add(B, true)); //   Set the stop condition.
+    ns_bpio(I2CRWRequest_i2cdata_create(B, data, c_vec_len(data))); // Set the payload data.
+    ns_bpio(I2CRWRequest_i2creadbytes_add(B, 10)); // Set the number of bytes to read.
+    ns_bpio(I2CRWRequest_end(B));
+    // Create a packet with the I2C request.
+    ns_bpio(Packet_start(B));
+    ns_bpio(Packet_contents_I2CRWRequest_add(B, ns_bpio(I2CRWRequest_clone(B, ns_bpio(I2CRWRequest_as_root(B)))))); // Add the I2C request to the packet.
+    ns_bpio(Packet_end(B));
+#else
 
+    flatbuffers_bool_t start = true; // Start condition.
+    uint8_t addr = 0x50; // Device address (Bus Pirate automatically will set read/write bit).
+
+    flatbuffers_uint8_vec_ref_t payload = flatbuffers_uint8_vec_create(B, data, c_vec_len(data));
+    uint32_t readbytes = 10; // Number of bytes to read.
+    flatbuffers_bool_t stop = true; // Stop condition.
+    ns_bpio(I2CRWRequest_ref_t) i2c_rw_request = ns_bpio(I2CRWRequest_create(B, start, addr, payload, readbytes, stop));
 
     ns_bpio(Packet_start_as_root(B));
-    // Add the I2CRWRequest object to the packet contents.
     ns_bpio(Packet_contents_I2CRWRequest_add(B, i2c_rw_request));
     ns_bpio(Packet_end_as_root(B));
-    
-
+ #endif   
     uint8_t *buf;
     size_t size;
-
-    // Allocate and extract a readable buffer from internal builder heap.
-    // The returned buffer must be deallocated using `free`.
-    // NOTE: Finalizing the buffer does NOT change the builder, it
-    // just creates a snapshot of the builder content.
     buf = flatcc_builder_finalize_buffer(B, &size);
     
     printf("Flatbuffers buffer size: %zu bytes\r\n", size);
-    // use buf
-
     if(read_flat(buf)==-1) {
         printf("Error reading flatbuffer.\r\n");
     } else {
         printf("Flatbuffer read successfully.\r\n");
     }
-
-
-
-
-
-    
     free(buf);
 
     // Optionally reset builder to reuse builder without deallocating
@@ -225,8 +109,6 @@ void flat_handler(struct command_result* res) {
     flatcc_builder_reset(B);
     // build next buffer.
     // ...
-
     // Cleanup.
-    flatcc_builder_clear(B);        
- 
+    flatcc_builder_clear(B);         
 }

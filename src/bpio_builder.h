@@ -17,6 +17,10 @@
 #define flatbuffers_extension "bin"
 #endif
 
+#define __BPIO2_PacketType_formal_args , BPIO2_PacketType_enum_t v0
+#define __BPIO2_PacketType_call_args , v0
+__flatbuffers_build_scalar(flatbuffers_, BPIO2_PacketType, BPIO2_PacketType_enum_t)
+
 typedef flatbuffers_union_ref_t BPIO2_PacketContents_union_ref_t;
 typedef flatbuffers_union_vec_ref_t BPIO2_PacketContents_union_vec_ref_t;
 static BPIO2_PacketContents_union_ref_t BPIO2_PacketContents_clone(flatbuffers_builder_t *B, BPIO2_PacketContents_union_t t);
@@ -34,7 +38,7 @@ __flatbuffers_build_table(flatbuffers_, BPIO2_I2CResponse, 3)
 static const flatbuffers_voffset_t __BPIO2_Packet_required[] = { 0 };
 typedef flatbuffers_ref_t BPIO2_Packet_ref_t;
 static BPIO2_Packet_ref_t BPIO2_Packet_clone(flatbuffers_builder_t *B, BPIO2_Packet_table_t t);
-__flatbuffers_build_table(flatbuffers_, BPIO2_Packet, 4)
+__flatbuffers_build_table(flatbuffers_, BPIO2_Packet, 5)
 
 #define __BPIO2_I2CRWRequest_formal_args ,\
   flatbuffers_bool_t v0, uint8_t v1, flatbuffers_uint8_vec_ref_t v2, uint32_t v3, flatbuffers_bool_t v4
@@ -48,8 +52,8 @@ __flatbuffers_build_table_prolog(flatbuffers_, BPIO2_I2CRWRequest, BPIO2_I2CRWRe
 static inline BPIO2_I2CResponse_ref_t BPIO2_I2CResponse_create(flatbuffers_builder_t *B __BPIO2_I2CResponse_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, BPIO2_I2CResponse, BPIO2_I2CResponse_file_identifier, BPIO2_I2CResponse_type_identifier)
 
-#define __BPIO2_Packet_formal_args , uint8_t v0, uint8_t v1, BPIO2_PacketContents_union_ref_t v3
-#define __BPIO2_Packet_call_args , v0, v1, v3
+#define __BPIO2_Packet_formal_args , uint8_t v0, uint8_t v1, BPIO2_PacketType_enum_t v2, BPIO2_PacketContents_union_ref_t v4
+#define __BPIO2_Packet_call_args , v0, v1, v2, v4
 static inline BPIO2_Packet_ref_t BPIO2_Packet_create(flatbuffers_builder_t *B __BPIO2_Packet_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, BPIO2_Packet, BPIO2_Packet_file_identifier, BPIO2_Packet_type_identifier)
 
@@ -132,17 +136,19 @@ static BPIO2_I2CResponse_ref_t BPIO2_I2CResponse_clone(flatbuffers_builder_t *B,
 
 __flatbuffers_build_scalar_field(0, flatbuffers_, BPIO2_Packet_version_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), BPIO2_Packet)
 __flatbuffers_build_scalar_field(1, flatbuffers_, BPIO2_Packet_version_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(1), BPIO2_Packet)
-__flatbuffers_build_union_field(3, flatbuffers_, BPIO2_Packet_contents, BPIO2_PacketContents, BPIO2_Packet)
+__flatbuffers_build_scalar_field(2, flatbuffers_, BPIO2_Packet_type, BPIO2_PacketType, BPIO2_PacketType_enum_t, 1, 1, UINT8_C(0), BPIO2_Packet)
+__flatbuffers_build_union_field(4, flatbuffers_, BPIO2_Packet_contents, BPIO2_PacketContents, BPIO2_Packet)
 __flatbuffers_build_union_table_value_field(flatbuffers_, BPIO2_Packet_contents, BPIO2_PacketContents, I2CRWRequest, BPIO2_I2CRWRequest)
 __flatbuffers_build_union_table_value_field(flatbuffers_, BPIO2_Packet_contents, BPIO2_PacketContents, I2CResponse, BPIO2_I2CResponse)
 
 static inline BPIO2_Packet_ref_t BPIO2_Packet_create(flatbuffers_builder_t *B __BPIO2_Packet_formal_args)
 {
     if (BPIO2_Packet_start(B)
-        || BPIO2_Packet_contents_add_value(B, v3)
+        || BPIO2_Packet_contents_add_value(B, v4)
         || BPIO2_Packet_version_major_add(B, v0)
         || BPIO2_Packet_version_minor_add(B, v1)
-        || BPIO2_Packet_contents_add_type(B, v3.type)) {
+        || BPIO2_Packet_type_add(B, v2)
+        || BPIO2_Packet_contents_add_type(B, v4.type)) {
         return 0;
     }
     return BPIO2_Packet_end(B);
@@ -154,7 +160,8 @@ static BPIO2_Packet_ref_t BPIO2_Packet_clone(flatbuffers_builder_t *B, BPIO2_Pac
     if (BPIO2_Packet_start(B)
         || BPIO2_Packet_contents_pick(B, t)
         || BPIO2_Packet_version_major_pick(B, t)
-        || BPIO2_Packet_version_minor_pick(B, t)) {
+        || BPIO2_Packet_version_minor_pick(B, t)
+        || BPIO2_Packet_type_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, BPIO2_Packet_end(B));

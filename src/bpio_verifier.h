@@ -9,10 +9,20 @@
 #include "flatcc/flatcc_verifier.h"
 #include "flatcc/flatcc_prologue.h"
 
-static int I2C_Example_I2CRWRequest_verify_table(flatcc_table_verifier_descriptor_t *td);
-static int I2C_Example_I2CRWResponse_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int BPIO2_I2CRWRequest_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int BPIO2_I2CResponse_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int BPIO2_Packet_verify_table(flatcc_table_verifier_descriptor_t *td);
 
-static int I2C_Example_I2CRWRequest_verify_table(flatcc_table_verifier_descriptor_t *td)
+static int BPIO2_PacketContents_union_verifier(flatcc_union_verifier_descriptor_t *ud)
+{
+    switch (ud->type) {
+    case 1: return flatcc_verify_union_table(ud, BPIO2_I2CRWRequest_verify_table); /* I2CRWRequest */
+    case 2: return flatcc_verify_union_table(ud, BPIO2_I2CResponse_verify_table); /* I2CResponse */
+    default: return flatcc_verify_ok;
+    }
+}
+
+static int BPIO2_I2CRWRequest_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
     if ((ret = flatcc_verify_field(td, 0, 1, 1) /* i2cstart */)) return ret;
@@ -23,93 +33,142 @@ static int I2C_Example_I2CRWRequest_verify_table(flatcc_table_verifier_descripto
     return flatcc_verify_ok;
 }
 
-static inline int I2C_Example_I2CRWRequest_verify_as_root(const void *buf, size_t bufsiz)
+static inline int BPIO2_I2CRWRequest_verify_as_root(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, I2C_Example_I2CRWRequest_identifier, &I2C_Example_I2CRWRequest_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, BPIO2_I2CRWRequest_identifier, &BPIO2_I2CRWRequest_verify_table);
 }
 
-static inline int I2C_Example_I2CRWRequest_verify_as_root_with_size(const void *buf, size_t bufsiz)
+static inline int BPIO2_I2CRWRequest_verify_as_root_with_size(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, I2C_Example_I2CRWRequest_identifier, &I2C_Example_I2CRWRequest_verify_table);
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, BPIO2_I2CRWRequest_identifier, &BPIO2_I2CRWRequest_verify_table);
 }
 
-static inline int I2C_Example_I2CRWRequest_verify_as_typed_root(const void *buf, size_t bufsiz)
+static inline int BPIO2_I2CRWRequest_verify_as_typed_root(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, I2C_Example_I2CRWRequest_type_identifier, &I2C_Example_I2CRWRequest_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, BPIO2_I2CRWRequest_type_identifier, &BPIO2_I2CRWRequest_verify_table);
 }
 
-static inline int I2C_Example_I2CRWRequest_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
+static inline int BPIO2_I2CRWRequest_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, I2C_Example_I2CRWRequest_type_identifier, &I2C_Example_I2CRWRequest_verify_table);
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, BPIO2_I2CRWRequest_type_identifier, &BPIO2_I2CRWRequest_verify_table);
 }
 
-static inline int I2C_Example_I2CRWRequest_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+static inline int BPIO2_I2CRWRequest_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &I2C_Example_I2CRWRequest_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &BPIO2_I2CRWRequest_verify_table);
 }
 
-static inline int I2C_Example_I2CRWRequest_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
+static inline int BPIO2_I2CRWRequest_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
 {
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &I2C_Example_I2CRWRequest_verify_table);
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &BPIO2_I2CRWRequest_verify_table);
 }
 
-static inline int I2C_Example_I2CRWRequest_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+static inline int BPIO2_I2CRWRequest_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
 {
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &I2C_Example_I2CRWRequest_verify_table);
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &BPIO2_I2CRWRequest_verify_table);
 }
 
-static inline int I2C_Example_I2CRWRequest_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+static inline int BPIO2_I2CRWRequest_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
 {
-    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &I2C_Example_I2CRWRequest_verify_table);
+    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &BPIO2_I2CRWRequest_verify_table);
 }
 
-static int I2C_Example_I2CRWResponse_verify_table(flatcc_table_verifier_descriptor_t *td)
+static int BPIO2_I2CResponse_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* i2cack */)) return ret;
-    if ((ret = flatcc_verify_vector_field(td, 1, 0, 1, 1, INT64_C(4294967295)) /* i2cdata */)) return ret;
-    if ((ret = flatcc_verify_string_field(td, 2, 0) /* i2cerror_message */)) return ret;
+    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* ack */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 1, 0, 1, 1, INT64_C(4294967295)) /* data */)) return ret;
+    if ((ret = flatcc_verify_string_field(td, 2, 0) /* error_message */)) return ret;
     return flatcc_verify_ok;
 }
 
-static inline int I2C_Example_I2CRWResponse_verify_as_root(const void *buf, size_t bufsiz)
+static inline int BPIO2_I2CResponse_verify_as_root(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, I2C_Example_I2CRWResponse_identifier, &I2C_Example_I2CRWResponse_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, BPIO2_I2CResponse_identifier, &BPIO2_I2CResponse_verify_table);
 }
 
-static inline int I2C_Example_I2CRWResponse_verify_as_root_with_size(const void *buf, size_t bufsiz)
+static inline int BPIO2_I2CResponse_verify_as_root_with_size(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, I2C_Example_I2CRWResponse_identifier, &I2C_Example_I2CRWResponse_verify_table);
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, BPIO2_I2CResponse_identifier, &BPIO2_I2CResponse_verify_table);
 }
 
-static inline int I2C_Example_I2CRWResponse_verify_as_typed_root(const void *buf, size_t bufsiz)
+static inline int BPIO2_I2CResponse_verify_as_typed_root(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, I2C_Example_I2CRWResponse_type_identifier, &I2C_Example_I2CRWResponse_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, BPIO2_I2CResponse_type_identifier, &BPIO2_I2CResponse_verify_table);
 }
 
-static inline int I2C_Example_I2CRWResponse_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
+static inline int BPIO2_I2CResponse_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
 {
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, I2C_Example_I2CRWResponse_type_identifier, &I2C_Example_I2CRWResponse_verify_table);
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, BPIO2_I2CResponse_type_identifier, &BPIO2_I2CResponse_verify_table);
 }
 
-static inline int I2C_Example_I2CRWResponse_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+static inline int BPIO2_I2CResponse_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
 {
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &I2C_Example_I2CRWResponse_verify_table);
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &BPIO2_I2CResponse_verify_table);
 }
 
-static inline int I2C_Example_I2CRWResponse_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
+static inline int BPIO2_I2CResponse_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
 {
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &I2C_Example_I2CRWResponse_verify_table);
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &BPIO2_I2CResponse_verify_table);
 }
 
-static inline int I2C_Example_I2CRWResponse_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+static inline int BPIO2_I2CResponse_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
 {
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &I2C_Example_I2CRWResponse_verify_table);
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &BPIO2_I2CResponse_verify_table);
 }
 
-static inline int I2C_Example_I2CRWResponse_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+static inline int BPIO2_I2CResponse_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
 {
-    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &I2C_Example_I2CRWResponse_verify_table);
+    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &BPIO2_I2CResponse_verify_table);
+}
+
+static int BPIO2_Packet_verify_table(flatcc_table_verifier_descriptor_t *td)
+{
+    int ret;
+    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* version_major */)) return ret;
+    if ((ret = flatcc_verify_field(td, 1, 1, 1) /* version_minor */)) return ret;
+    if ((ret = flatcc_verify_union_field(td, 3, 0, &BPIO2_PacketContents_union_verifier) /* contents */)) return ret;
+    return flatcc_verify_ok;
+}
+
+static inline int BPIO2_Packet_verify_as_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, BPIO2_Packet_identifier, &BPIO2_Packet_verify_table);
+}
+
+static inline int BPIO2_Packet_verify_as_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, BPIO2_Packet_identifier, &BPIO2_Packet_verify_table);
+}
+
+static inline int BPIO2_Packet_verify_as_typed_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, BPIO2_Packet_type_identifier, &BPIO2_Packet_verify_table);
+}
+
+static inline int BPIO2_Packet_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, BPIO2_Packet_type_identifier, &BPIO2_Packet_verify_table);
+}
+
+static inline int BPIO2_Packet_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &BPIO2_Packet_verify_table);
+}
+
+static inline int BPIO2_Packet_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &BPIO2_Packet_verify_table);
+}
+
+static inline int BPIO2_Packet_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &BPIO2_Packet_verify_table);
+}
+
+static inline int BPIO2_Packet_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &BPIO2_Packet_verify_table);
 }
 
 #include "flatcc/flatcc_epilogue.h"

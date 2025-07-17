@@ -1,15 +1,24 @@
-namespace I2C.Example;
+namespace BPIO2;
 
 table I2CRWRequest {
-  start:bool; // Start condition.
-  addr:ubyte; // Device address (Bus Pirate automatically will set read/write bit)
-  data:[ubyte]; // Data to write
-  readbytes:uint32; // Number of bytes to read.
-  stop:bool; // Stop condition.
+  i2cstart:bool=true; // Start condition.
+  i2caddr:ubyte; // Device address (Bus Pirate automatically will set read/write bit)
+  i2cdata:[ubyte]; // Data to write
+  i2creadbytes:uint32; // Number of bytes to read.
+  i2cstop:bool=true; // Stop condition.
 }
-
-table I2CRWResponse {
+table I2CResponse {
   ack:bool; // Device acknowledged
   data:[ubyte]; // Data read from device
   error_message:string; // Error message if any.
 }
+
+union PacketContents { I2CRWRequest, I2CResponse }
+
+table Packet {
+  version_major:uint8=0;
+  version_minor:uint8=1;
+  contents:PacketContents;
+}
+
+root_type Packet;

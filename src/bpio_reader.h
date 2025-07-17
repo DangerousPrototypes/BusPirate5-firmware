@@ -19,66 +19,121 @@
 #endif
 
 
-typedef const struct I2C_Example_I2CRWRequest_table *I2C_Example_I2CRWRequest_table_t;
-typedef struct I2C_Example_I2CRWRequest_table *I2C_Example_I2CRWRequest_mutable_table_t;
-typedef const flatbuffers_uoffset_t *I2C_Example_I2CRWRequest_vec_t;
-typedef flatbuffers_uoffset_t *I2C_Example_I2CRWRequest_mutable_vec_t;
-typedef const struct I2C_Example_I2CRWResponse_table *I2C_Example_I2CRWResponse_table_t;
-typedef struct I2C_Example_I2CRWResponse_table *I2C_Example_I2CRWResponse_mutable_table_t;
-typedef const flatbuffers_uoffset_t *I2C_Example_I2CRWResponse_vec_t;
-typedef flatbuffers_uoffset_t *I2C_Example_I2CRWResponse_mutable_vec_t;
-#ifndef I2C_Example_I2CRWRequest_file_identifier
-#define I2C_Example_I2CRWRequest_file_identifier 0
+typedef const struct BPIO2_I2CRWRequest_table *BPIO2_I2CRWRequest_table_t;
+typedef struct BPIO2_I2CRWRequest_table *BPIO2_I2CRWRequest_mutable_table_t;
+typedef const flatbuffers_uoffset_t *BPIO2_I2CRWRequest_vec_t;
+typedef flatbuffers_uoffset_t *BPIO2_I2CRWRequest_mutable_vec_t;
+typedef const struct BPIO2_I2CResponse_table *BPIO2_I2CResponse_table_t;
+typedef struct BPIO2_I2CResponse_table *BPIO2_I2CResponse_mutable_table_t;
+typedef const flatbuffers_uoffset_t *BPIO2_I2CResponse_vec_t;
+typedef flatbuffers_uoffset_t *BPIO2_I2CResponse_mutable_vec_t;
+typedef const struct BPIO2_Packet_table *BPIO2_Packet_table_t;
+typedef struct BPIO2_Packet_table *BPIO2_Packet_mutable_table_t;
+typedef const flatbuffers_uoffset_t *BPIO2_Packet_vec_t;
+typedef flatbuffers_uoffset_t *BPIO2_Packet_mutable_vec_t;
+#ifndef BPIO2_I2CRWRequest_file_identifier
+#define BPIO2_I2CRWRequest_file_identifier 0
 #endif
-/* deprecated, use I2C_Example_I2CRWRequest_file_identifier */
-#ifndef I2C_Example_I2CRWRequest_identifier
-#define I2C_Example_I2CRWRequest_identifier 0
+/* deprecated, use BPIO2_I2CRWRequest_file_identifier */
+#ifndef BPIO2_I2CRWRequest_identifier
+#define BPIO2_I2CRWRequest_identifier 0
 #endif
-#define I2C_Example_I2CRWRequest_type_hash ((flatbuffers_thash_t)0xcdca63db)
-#define I2C_Example_I2CRWRequest_type_identifier "\xdb\x63\xca\xcd"
-#ifndef I2C_Example_I2CRWRequest_file_extension
-#define I2C_Example_I2CRWRequest_file_extension "bin"
+#define BPIO2_I2CRWRequest_type_hash ((flatbuffers_thash_t)0xe6c5bb3b)
+#define BPIO2_I2CRWRequest_type_identifier "\x3b\xbb\xc5\xe6"
+#ifndef BPIO2_I2CRWRequest_file_extension
+#define BPIO2_I2CRWRequest_file_extension "bin"
 #endif
-#ifndef I2C_Example_I2CRWResponse_file_identifier
-#define I2C_Example_I2CRWResponse_file_identifier 0
+#ifndef BPIO2_I2CResponse_file_identifier
+#define BPIO2_I2CResponse_file_identifier 0
 #endif
-/* deprecated, use I2C_Example_I2CRWResponse_file_identifier */
-#ifndef I2C_Example_I2CRWResponse_identifier
-#define I2C_Example_I2CRWResponse_identifier 0
+/* deprecated, use BPIO2_I2CResponse_file_identifier */
+#ifndef BPIO2_I2CResponse_identifier
+#define BPIO2_I2CResponse_identifier 0
 #endif
-#define I2C_Example_I2CRWResponse_type_hash ((flatbuffers_thash_t)0xdf4d36d9)
-#define I2C_Example_I2CRWResponse_type_identifier "\xd9\x36\x4d\xdf"
-#ifndef I2C_Example_I2CRWResponse_file_extension
-#define I2C_Example_I2CRWResponse_file_extension "bin"
+#define BPIO2_I2CResponse_type_hash ((flatbuffers_thash_t)0xdc40096e)
+#define BPIO2_I2CResponse_type_identifier "\x6e\x09\x40\xdc"
+#ifndef BPIO2_I2CResponse_file_extension
+#define BPIO2_I2CResponse_file_extension "bin"
+#endif
+#ifndef BPIO2_Packet_file_identifier
+#define BPIO2_Packet_file_identifier 0
+#endif
+/* deprecated, use BPIO2_Packet_file_identifier */
+#ifndef BPIO2_Packet_identifier
+#define BPIO2_Packet_identifier 0
+#endif
+#define BPIO2_Packet_type_hash ((flatbuffers_thash_t)0x700be3bf)
+#define BPIO2_Packet_type_identifier "\xbf\xe3\x0b\x70"
+#ifndef BPIO2_Packet_file_extension
+#define BPIO2_Packet_file_extension "bin"
 #endif
 
 
 
-struct I2C_Example_I2CRWRequest_table { uint8_t unused__; };
+struct BPIO2_I2CRWRequest_table { uint8_t unused__; };
 
-static inline size_t I2C_Example_I2CRWRequest_vec_len(I2C_Example_I2CRWRequest_vec_t vec)
+static inline size_t BPIO2_I2CRWRequest_vec_len(BPIO2_I2CRWRequest_vec_t vec)
 __flatbuffers_vec_len(vec)
-static inline I2C_Example_I2CRWRequest_table_t I2C_Example_I2CRWRequest_vec_at(I2C_Example_I2CRWRequest_vec_t vec, size_t i)
-__flatbuffers_offset_vec_at(I2C_Example_I2CRWRequest_table_t, vec, i, 0)
-__flatbuffers_table_as_root(I2C_Example_I2CRWRequest)
+static inline BPIO2_I2CRWRequest_table_t BPIO2_I2CRWRequest_vec_at(BPIO2_I2CRWRequest_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(BPIO2_I2CRWRequest_table_t, vec, i, 0)
+__flatbuffers_table_as_root(BPIO2_I2CRWRequest)
 
-__flatbuffers_define_scalar_field(0, I2C_Example_I2CRWRequest, i2cstart, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(1))
-__flatbuffers_define_scalar_field(1, I2C_Example_I2CRWRequest, i2caddr, flatbuffers_uint8, uint8_t, UINT8_C(0))
-__flatbuffers_define_vector_field(2, I2C_Example_I2CRWRequest, i2cdata, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_scalar_field(3, I2C_Example_I2CRWRequest, i2creadbytes, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_scalar_field(4, I2C_Example_I2CRWRequest, i2cstop, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(1))
+__flatbuffers_define_scalar_field(0, BPIO2_I2CRWRequest, i2cstart, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(1))
+__flatbuffers_define_scalar_field(1, BPIO2_I2CRWRequest, i2caddr, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_vector_field(2, BPIO2_I2CRWRequest, i2cdata, flatbuffers_uint8_vec_t, 0)
+__flatbuffers_define_scalar_field(3, BPIO2_I2CRWRequest, i2creadbytes, flatbuffers_uint32, uint32_t, UINT32_C(0))
+__flatbuffers_define_scalar_field(4, BPIO2_I2CRWRequest, i2cstop, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(1))
 
-struct I2C_Example_I2CRWResponse_table { uint8_t unused__; };
+struct BPIO2_I2CResponse_table { uint8_t unused__; };
 
-static inline size_t I2C_Example_I2CRWResponse_vec_len(I2C_Example_I2CRWResponse_vec_t vec)
+static inline size_t BPIO2_I2CResponse_vec_len(BPIO2_I2CResponse_vec_t vec)
 __flatbuffers_vec_len(vec)
-static inline I2C_Example_I2CRWResponse_table_t I2C_Example_I2CRWResponse_vec_at(I2C_Example_I2CRWResponse_vec_t vec, size_t i)
-__flatbuffers_offset_vec_at(I2C_Example_I2CRWResponse_table_t, vec, i, 0)
-__flatbuffers_table_as_root(I2C_Example_I2CRWResponse)
+static inline BPIO2_I2CResponse_table_t BPIO2_I2CResponse_vec_at(BPIO2_I2CResponse_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(BPIO2_I2CResponse_table_t, vec, i, 0)
+__flatbuffers_table_as_root(BPIO2_I2CResponse)
 
-__flatbuffers_define_scalar_field(0, I2C_Example_I2CRWResponse, i2cack, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_vector_field(1, I2C_Example_I2CRWResponse, i2cdata, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_string_field(2, I2C_Example_I2CRWResponse, i2cerror_message, 0)
+__flatbuffers_define_scalar_field(0, BPIO2_I2CResponse, ack, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_vector_field(1, BPIO2_I2CResponse, data, flatbuffers_uint8_vec_t, 0)
+__flatbuffers_define_string_field(2, BPIO2_I2CResponse, error_message, 0)
+typedef uint8_t BPIO2_PacketContents_union_type_t;
+__flatbuffers_define_integer_type(BPIO2_PacketContents, BPIO2_PacketContents_union_type_t, 8)
+__flatbuffers_define_union(flatbuffers_, BPIO2_PacketContents)
+#define BPIO2_PacketContents_NONE ((BPIO2_PacketContents_union_type_t)UINT8_C(0))
+#define BPIO2_PacketContents_I2CRWRequest ((BPIO2_PacketContents_union_type_t)UINT8_C(1))
+#define BPIO2_PacketContents_I2CResponse ((BPIO2_PacketContents_union_type_t)UINT8_C(2))
+
+static inline const char *BPIO2_PacketContents_type_name(BPIO2_PacketContents_union_type_t type)
+{
+    switch (type) {
+    case BPIO2_PacketContents_NONE: return "NONE";
+    case BPIO2_PacketContents_I2CRWRequest: return "I2CRWRequest";
+    case BPIO2_PacketContents_I2CResponse: return "I2CResponse";
+    default: return "";
+    }
+}
+
+static inline int BPIO2_PacketContents_is_known_type(BPIO2_PacketContents_union_type_t type)
+{
+    switch (type) {
+    case BPIO2_PacketContents_NONE: return 1;
+    case BPIO2_PacketContents_I2CRWRequest: return 1;
+    case BPIO2_PacketContents_I2CResponse: return 1;
+    default: return 0;
+    }
+}
+
+
+struct BPIO2_Packet_table { uint8_t unused__; };
+
+static inline size_t BPIO2_Packet_vec_len(BPIO2_Packet_vec_t vec)
+__flatbuffers_vec_len(vec)
+static inline BPIO2_Packet_table_t BPIO2_Packet_vec_at(BPIO2_Packet_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(BPIO2_Packet_table_t, vec, i, 0)
+__flatbuffers_table_as_root(BPIO2_Packet)
+
+__flatbuffers_define_scalar_field(0, BPIO2_Packet, version_major, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(1, BPIO2_Packet, version_minor, flatbuffers_uint8, uint8_t, UINT8_C(1))
+__flatbuffers_define_union_field(flatbuffers_, 3, BPIO2_Packet, contents, BPIO2_PacketContents, 0)
 
 
 #include "flatcc/flatcc_epilogue.h"

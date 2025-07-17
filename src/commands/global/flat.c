@@ -23,7 +23,7 @@
 #undef ns
 // Specified in the schema.
 //#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(MyGame_Sample, x) 
-#define ns_bpio(x) FLATBUFFERS_WRAP_NAMESPACE(I2C_Example, x)
+#define ns_bpio(x) FLATBUFFERS_WRAP_NAMESPACE(BPIO2, x)
 
 // A helper to simplify creating vectors from C-arrays.
 #define c_vec_len(V) (sizeof(V)/sizeof((V)[0]))
@@ -176,15 +176,24 @@ void flat_handler(struct command_result* res) {
     // C++ takes a type and an object argument.
     // The `create` function is a shortcut for the `start`, `addr`, `data`, `readbytes`, and `stop` fields.
     //ns_bpio(I2CRWRequest_create_as_root(B, start, addr, payload, readbytes, stop)); 
-    ns_bpio(I2CRWRequest_start_as_root(B));
+    //ns(Weapon_ref_t) sword = ns(Weapon_create(B, weapon_one_name, weapon_one_damage));
+    ns_bpio(I2CRWRequest_ref_t) i2c_rw_request = ns_bpio(I2CRWRequest_create(B, start, addr, payload, readbytes, stop));
+#if 0
+    ns_bpio(I2CRWRequest_start(B));
     ns_bpio(I2CRWRequest_i2caddr_add(B, addr));
     ns_bpio(I2CRWRequest_i2cdata_add(B, payload));
     ns_bpio(I2CRWRequest_i2creadbytes_add(B, readbytes));
     ns_bpio(I2CRWRequest_i2cstart_add(B, start));
     ns_bpio(I2CRWRequest_i2cstop_add(B, stop));
-    // Complete the I2CRWRequest object and make it the buffer root object.
-    ns_bpio(I2CRWRequest_end_as_root(B));
-  
+    ns_bpio(I2CRWRequest_vec_ref_t) i2c_rw_request = ns_bpio(I2CRWRequest_end(B));
+#endif
+
+
+    ns_bpio(Packet_start_as_root(B));
+    // Add the I2CRWRequest object to the packet contents.
+    ns_bpio(Packet_contents_I2CRWRequest_add(B, i2c_rw_request));
+    ns_bpio(Packet_end_as_root(B));
+    
 
     uint8_t *buf;
     size_t size;

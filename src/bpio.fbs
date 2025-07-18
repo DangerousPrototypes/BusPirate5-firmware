@@ -1,45 +1,95 @@
 namespace bpio;
 
-//new tables to query device status, select and configure a mode, enable power, etc.
+enum StatusRequestTypes:byte{All, Version, Mode, Pullup, PSU, ADC, IO, Disk};
+
+table StatusRequest{
+  query:[StatusRequestTypes]; // List of status queries to perform.
+}
+
+// returns the status queries requested in StatusRequest
+// if query is empty, then all queries are performed
 table StatusResponse {
+  error:string; // Error message if any.
   hardware_version_major:uint8; //HW version
   hardware_version_minor:uint8; //HW revision
   firmware_version_major:uint8;//FW version
   firmware_version_minor:uint8; //FW revision
-  modes:[Mode]; // List of modes available on the device.
-}
+  firmware_git_hash:string; //Git hash of the firmware.
+  firmware_date:string; //Date of the firmware build.
+  modes_available:[string]; // List of modes available on the device.
+  mode_current:string; // Current mode name.
+  pullup_enabled:bool; // Pull-up resistors enabled.
+  psu_enabled:bool; // Power supply enabled.
+  psu_set_voltage_mv:uint32; // Power supply voltage in millivolts.
+  psu_set_current_ma:uint32; // Power supply current in milliamps.
+  psu_measured_mv:uint32; // Measured power supply voltage in millivolts.
+  psu_measured_ma:uint32; // Maximum power supply current in milliamps.
+  adc_mv:[uint32]; // ADC values in millivolts.
+  io_direction:[bool]; // IO pin directions (true for output, false for input).
+  io_value:[bool]; // IO pin values (true for high, false for low).
+  disk_size_mb:uint32; // Size of the disk in megabytes.
+  disk_free_mb:uint32; // Free space on the disk in megabytes.
 
-table Mode{
-  id:uint8; // Unique ID for the mode.
-  name:string; // Name of the mode.
 }
 
 table I2CConfig {
   speed_khz:uint32; // Speed in kHz.
 }
-
 union ModeConfiguration { I2CConfig,}
-
-//use one or the other
-table StatusRequest{
-  id:uint8; // ID of the mode to query.
-  name:string; // Mode enter, none for mode query.
+table ModeConfig {
+  name:string; // Name of the mode.
   configuration:ModeConfiguration; 
+}
+table PullupConfig {
+  enabled:bool; // Enable or disable pull-up resistors.
+}
+table PSUConfig {
+  enabled:bool; // Enable or disable power supply.
+  set_voltage_mv:uint32; // Set voltage in millivolts.
+  set_current_ma:uint32; // Set current in milliamps.
+}
+table IOConfig {
+  direction:[bool]; // IO pin directions (true for output, false for input).
+  value:[bool]; // IO pin values (true for high, false for low).
+}
+table LEDconfig {
+  color:[uint32]; // LED colors in RGB format (0xRRGGBB).
+}
+union ConfigurationRequestContents {ModeConfig, PullupConfig, PSUConfig, IOConfig, LEDconfig}
+
+table ConfigurationRequest {
+  config:[ConfigurationRequestContents]; // List of configuration requests.
+}
+
+table AlternateConfigurationRequest {
+  mode:string; // Name of the mode to configure.
+  mode_configuration:ModeConfiguration; // Configuration for the mode.
+  pullup_enabled:bool; // Enable or disable pull-up resistors.
+  psu_enabled:bool; // Enable or disable power supply.
+  psu_set_voltage_mv:uint32; // Set voltage in millivolts.
+  psu_set_current_ma:uint32; // Set current in milliamps.
+  io_direction:[bool]; // IO pin directions (true for output, false for input).
+  io_value:[bool]; // IO pin values (true for high, false for low).
+  led_color:[uint32]; // LED colors in RGB format (0xRRGGBB).
+}
+
+table ConfigurationResponse{
+  error:string; // Error message if any.
 }
 
 table DataRequest {
-  dstart:bool=true; // Start condition.
-  dstart_alt:bool=false; // Alternate start condition.
-  daddr:ubyte; // Device address (Bus Pirate automatically will set read/write bit)
-  ddata:[ubyte]; // Data to write
-  dreadbytes:uint32; // Number of bytes to read.
-  dstop:bool=true; // Stop condition.
-  dstop_alt:bool=false; // Alternate stop condition.
+  start_main:bool; // Start condition.
+  start_alt:bool; // Alternate start condition.
+  i2c_addr:ubyte; // Device address (Bus Pirate automatically will set read/write bit)
+  data_write:[ubyte]; // Data to write
+  bytes_read:uint16; // Number of bytes to read.
+  stop_main:bool; // Stop condition.
+  stop_alt:bool; // Alternate stop condition.
 }
 
 table DataResponse {
-  ddata:[ubyte]; // Data read from device
-  derror_message:string; // Error message if any.
+  error:string; // Error message if any.
+  data_read:[ubyte]; // Data read from device
 }
 
 union RequestPacketContents { StatusRequest, DataRequest}
@@ -59,3 +109,14 @@ table ResponsePacket{
 }
 
 root_type ResponsePacket;
+
+union RequestPacketContents { StatusRequest, ConfigurationRequest, DataRequest}
+union ResponsePacketContents { StatusResponse, ConfigurationResponse, DataResponse}
+table Packet{
+  version_major:uint8=0;
+  version_minor:uint8=1;
+  request:RequestPacketContents;
+  response:ResponsePacketContents;
+}
+
+root_type Packet;

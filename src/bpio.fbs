@@ -1,9 +1,11 @@
-namespace BPIO2;
+namespace bpio;
 
 //new tables to query device status, select and configure a mode, enable power, etc.
 table StatusResponse {
-  //HW version
-  //FW version
+  hardware_version_major:uint8; //HW version
+  hardware_version_minor:uint8; //HW revision
+  firmware_version_major:uint8;//FW version
+  firmware_version_minor:uint8; //FW revision
   modes:[Mode]; // List of modes available on the device.
 }
 
@@ -12,38 +14,48 @@ table Mode{
   name:string; // Name of the mode.
 }
 
+table I2CConfig {
+  speed_khz:uint32; // Speed in kHz.
+}
+
+union ModeConfiguration { I2CConfig,}
+
 //use one or the other
 table StatusRequest{
   id:uint8; // ID of the mode to query.
   name:string; // Mode enter, none for mode query.
-  //mode spefific configuation union
+  configuration:ModeConfiguration; 
 }
 
-table I2CRWRequest {
-  i2cstart:bool=true; // Start condition.
-  i2caddr:ubyte; // Device address (Bus Pirate automatically will set read/write bit)
-  i2cdata:[ubyte]; // Data to write
-  i2creadbytes:uint32; // Number of bytes to read.
-  i2cstop:bool=true; // Stop condition.
+table DataRequest {
+  dstart:bool=true; // Start condition.
+  dstart_alt:bool=false; // Alternate start condition.
+  daddr:ubyte; // Device address (Bus Pirate automatically will set read/write bit)
+  ddata:[ubyte]; // Data to write
+  dreadbytes:uint32; // Number of bytes to read.
+  dstop:bool=true; // Stop condition.
+  dstop_alt:bool=false; // Alternate stop condition.
 }
 
-table I2CResponse {
-  data:[ubyte]; // Data read from device
-  error_message:string; // Error message if any.
+table DataResponse {
+  ddata:[ubyte]; // Data read from device
+  derror_message:string; // Error message if any.
 }
-/*
-enum PacketType:uint8 {
-  I2CRWRequest = 0, // I2C Read/Write Request
-  I2CResponse = 1, // I2C Response
-}
-*/
-union PacketContents { I2CRWRequest, I2CResponse, StatusRequest, StatusResponse }
 
-table Packet {
+union RequestPacketContents { StatusRequest, DataRequest}
+
+table RequestPacket {
   version_major:uint8=0;
   version_minor:uint8=1;
-  //type:PacketType; // Type of packet
-  contents:PacketContents;
+  contents:RequestPacketContents;
 }
 
-root_type Packet;
+union ResponsePacketContents { StatusResponse, DataResponse}
+
+table ResponsePacket{
+  version_major:uint8=0;
+  version_minor:uint8=1;
+  contents:ResponsePacketContents;
+}
+
+root_type ResponsePacket;

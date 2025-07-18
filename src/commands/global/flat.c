@@ -21,25 +21,13 @@
 #include "bytecode.h"
 #include "modes.h"
 
-// Convenient namespace macro to manage long namespace prefix.
-#undef ns
-// Specified in the schema.
-//#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(MyGame_Sample, x) 
-#define ns_bpio(x) FLATBUFFERS_WRAP_NAMESPACE(BPIO2, x)
-
 // A helper to simplify creating vectors from C-arrays.
 #define c_vec_len(V) (sizeof(V)/sizeof((V)[0]))
 
 // This allows us to verify result in optimized builds.
 #define test_assert(x) do { if (!(x)) { assert(0); return -1; }} while(0)
 
-enum PacketType{
-  I2CRWRequest = 0, // I2C Read/Write Request
-  I2CResponse = 1, // I2C Response
-  StatusRequest, 
-  StatusResponse
-};
-
+#if 0
 int read_flat(const void *buffer){
     // get data out of flatbuffer, print it
     ns_bpio(Packet_table_t) packet = ns_bpio(Packet_as_root(buffer));
@@ -86,8 +74,9 @@ int read_modes(const void *buffer) {
     }
     return 0;
 }
-
+#endif
 void flat_handler(struct command_result* res) {
+    #if 0
     uint8_t data[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     size_t data_size = c_vec_len(data);
     flatcc_builder_t builder, *B;
@@ -117,7 +106,7 @@ buf = flatcc_builder_finalize_buffer(B, &len);
             printf("Sending StatusResponse packet with length %d\r\n", len);
 
             read_modes(buf);
-
+#endif
         return;
 
 #if 0
@@ -166,9 +155,5 @@ buf = flatcc_builder_finalize_buffer(B, &len);
     // Optionally reset builder to reuse builder without deallocating
     // internal stack and heap.
     #endif
-    flatcc_builder_reset(B);
-    // build next buffer.
-    // ...
-    // Cleanup.
-    flatcc_builder_clear(B);         
+     
 }

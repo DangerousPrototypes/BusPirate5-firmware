@@ -40,8 +40,8 @@ const binmode_t binmodes[] = {
         .binmode_cleanup = sump_logic_analyzer_cleanup,
     },
     {
-        .lock_terminal = true,
-        .can_save_config = false,
+        .lock_terminal = false,
+        .can_save_config = true,
         .reset_to_hiz = false,
         .pullup_enabled = false,
         .psu_en_voltage = 0,

@@ -9,28 +9,22 @@
 #include "flatcc/flatcc_verifier.h"
 #include "flatcc/flatcc_prologue.h"
 
-static int bpio_StatusResponse_verify_table(flatcc_table_verifier_descriptor_t *td);
-static int bpio_Mode_verify_table(flatcc_table_verifier_descriptor_t *td);
-static int bpio_I2CConfig_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int bpio_StatusRequest_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int bpio_StatusResponse_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int bpio_ModeConfiguration_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int bpio_ConfigurationRequest_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int bpio_ConfigurationResponse_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int bpio_DataRequest_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int bpio_DataResponse_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int bpio_RequestPacket_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int bpio_ResponsePacket_verify_table(flatcc_table_verifier_descriptor_t *td);
 
-static int bpio_ModeConfiguration_union_verifier(flatcc_union_verifier_descriptor_t *ud)
-{
-    switch (ud->type) {
-    case 1: return flatcc_verify_union_table(ud, bpio_I2CConfig_verify_table); /* I2CConfig */
-    default: return flatcc_verify_ok;
-    }
-}
-
 static int bpio_RequestPacketContents_union_verifier(flatcc_union_verifier_descriptor_t *ud)
 {
     switch (ud->type) {
     case 1: return flatcc_verify_union_table(ud, bpio_StatusRequest_verify_table); /* StatusRequest */
-    case 2: return flatcc_verify_union_table(ud, bpio_DataRequest_verify_table); /* DataRequest */
+    case 2: return flatcc_verify_union_table(ud, bpio_ConfigurationRequest_verify_table); /* ConfigurationRequest */
+    case 3: return flatcc_verify_union_table(ud, bpio_DataRequest_verify_table); /* DataRequest */
     default: return flatcc_verify_ok;
     }
 }
@@ -39,163 +33,16 @@ static int bpio_ResponsePacketContents_union_verifier(flatcc_union_verifier_desc
 {
     switch (ud->type) {
     case 1: return flatcc_verify_union_table(ud, bpio_StatusResponse_verify_table); /* StatusResponse */
-    case 2: return flatcc_verify_union_table(ud, bpio_DataResponse_verify_table); /* DataResponse */
+    case 2: return flatcc_verify_union_table(ud, bpio_ConfigurationResponse_verify_table); /* ConfigurationResponse */
+    case 3: return flatcc_verify_union_table(ud, bpio_DataResponse_verify_table); /* DataResponse */
     default: return flatcc_verify_ok;
     }
-}
-
-static int bpio_StatusResponse_verify_table(flatcc_table_verifier_descriptor_t *td)
-{
-    int ret;
-    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* hardware_version_major */)) return ret;
-    if ((ret = flatcc_verify_field(td, 1, 1, 1) /* hardware_version_minor */)) return ret;
-    if ((ret = flatcc_verify_field(td, 2, 1, 1) /* firmware_version_major */)) return ret;
-    if ((ret = flatcc_verify_field(td, 3, 1, 1) /* firmware_version_minor */)) return ret;
-    if ((ret = flatcc_verify_table_vector_field(td, 4, 0, &bpio_Mode_verify_table) /* modes */)) return ret;
-    return flatcc_verify_ok;
-}
-
-static inline int bpio_StatusResponse_verify_as_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, bpio_StatusResponse_identifier, &bpio_StatusResponse_verify_table);
-}
-
-static inline int bpio_StatusResponse_verify_as_root_with_size(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_StatusResponse_identifier, &bpio_StatusResponse_verify_table);
-}
-
-static inline int bpio_StatusResponse_verify_as_typed_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, bpio_StatusResponse_type_identifier, &bpio_StatusResponse_verify_table);
-}
-
-static inline int bpio_StatusResponse_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_StatusResponse_type_identifier, &bpio_StatusResponse_verify_table);
-}
-
-static inline int bpio_StatusResponse_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &bpio_StatusResponse_verify_table);
-}
-
-static inline int bpio_StatusResponse_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &bpio_StatusResponse_verify_table);
-}
-
-static inline int bpio_StatusResponse_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &bpio_StatusResponse_verify_table);
-}
-
-static inline int bpio_StatusResponse_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_StatusResponse_verify_table);
-}
-
-static int bpio_Mode_verify_table(flatcc_table_verifier_descriptor_t *td)
-{
-    int ret;
-    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* id */)) return ret;
-    if ((ret = flatcc_verify_string_field(td, 1, 0) /* name */)) return ret;
-    return flatcc_verify_ok;
-}
-
-static inline int bpio_Mode_verify_as_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, bpio_Mode_identifier, &bpio_Mode_verify_table);
-}
-
-static inline int bpio_Mode_verify_as_root_with_size(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_Mode_identifier, &bpio_Mode_verify_table);
-}
-
-static inline int bpio_Mode_verify_as_typed_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, bpio_Mode_type_identifier, &bpio_Mode_verify_table);
-}
-
-static inline int bpio_Mode_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_Mode_type_identifier, &bpio_Mode_verify_table);
-}
-
-static inline int bpio_Mode_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &bpio_Mode_verify_table);
-}
-
-static inline int bpio_Mode_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &bpio_Mode_verify_table);
-}
-
-static inline int bpio_Mode_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &bpio_Mode_verify_table);
-}
-
-static inline int bpio_Mode_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_Mode_verify_table);
-}
-
-static int bpio_I2CConfig_verify_table(flatcc_table_verifier_descriptor_t *td)
-{
-    int ret;
-    if ((ret = flatcc_verify_field(td, 0, 4, 4) /* speed */)) return ret;
-    return flatcc_verify_ok;
-}
-
-static inline int bpio_I2CConfig_verify_as_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, bpio_I2CConfig_identifier, &bpio_I2CConfig_verify_table);
-}
-
-static inline int bpio_I2CConfig_verify_as_root_with_size(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_I2CConfig_identifier, &bpio_I2CConfig_verify_table);
-}
-
-static inline int bpio_I2CConfig_verify_as_typed_root(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, bpio_I2CConfig_type_identifier, &bpio_I2CConfig_verify_table);
-}
-
-static inline int bpio_I2CConfig_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_I2CConfig_type_identifier, &bpio_I2CConfig_verify_table);
-}
-
-static inline int bpio_I2CConfig_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root(buf, bufsiz, fid, &bpio_I2CConfig_verify_table);
-}
-
-static inline int bpio_I2CConfig_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
-{
-    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &bpio_I2CConfig_verify_table);
-}
-
-static inline int bpio_I2CConfig_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &bpio_I2CConfig_verify_table);
-}
-
-static inline int bpio_I2CConfig_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
-{
-    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_I2CConfig_verify_table);
 }
 
 static int bpio_StatusRequest_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* id */)) return ret;
-    if ((ret = flatcc_verify_string_field(td, 1, 0) /* name */)) return ret;
-    if ((ret = flatcc_verify_union_field(td, 3, 0, &bpio_ModeConfiguration_union_verifier) /* configuration */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 0, 0, 1, 1, INT64_C(4294967295)) /* query */)) return ret;
     return flatcc_verify_ok;
 }
 
@@ -239,16 +86,231 @@ static inline int bpio_StatusRequest_verify_as_root_with_type_hash_and_size(cons
     return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_StatusRequest_verify_table);
 }
 
+static int bpio_StatusResponse_verify_table(flatcc_table_verifier_descriptor_t *td)
+{
+    int ret;
+    if ((ret = flatcc_verify_string_field(td, 0, 0) /* error */)) return ret;
+    if ((ret = flatcc_verify_field(td, 1, 1, 1) /* hardware_version_major */)) return ret;
+    if ((ret = flatcc_verify_field(td, 2, 1, 1) /* hardware_version_minor */)) return ret;
+    if ((ret = flatcc_verify_field(td, 3, 1, 1) /* firmware_version_major */)) return ret;
+    if ((ret = flatcc_verify_field(td, 4, 1, 1) /* firmware_version_minor */)) return ret;
+    if ((ret = flatcc_verify_string_field(td, 5, 0) /* firmware_git_hash */)) return ret;
+    if ((ret = flatcc_verify_string_field(td, 6, 0) /* firmware_date */)) return ret;
+    if ((ret = flatcc_verify_string_vector_field(td, 7, 0) /* modes_available */)) return ret;
+    if ((ret = flatcc_verify_string_field(td, 8, 0) /* mode_current */)) return ret;
+    if ((ret = flatcc_verify_field(td, 9, 1, 1) /* pullup_enabled */)) return ret;
+    if ((ret = flatcc_verify_field(td, 10, 1, 1) /* psu_enabled */)) return ret;
+    if ((ret = flatcc_verify_field(td, 11, 4, 4) /* psu_set_voltage_mv */)) return ret;
+    if ((ret = flatcc_verify_field(td, 12, 4, 4) /* psu_set_current_ma */)) return ret;
+    if ((ret = flatcc_verify_field(td, 13, 4, 4) /* psu_measured_mv */)) return ret;
+    if ((ret = flatcc_verify_field(td, 14, 4, 4) /* psu_measured_ma */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 15, 0, 4, 4, INT64_C(1073741823)) /* adc_mv */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 16, 0, 1, 1, INT64_C(4294967295)) /* io_direction */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 17, 0, 1, 1, INT64_C(4294967295)) /* io_value */)) return ret;
+    if ((ret = flatcc_verify_field(td, 18, 4, 4) /* disk_size_mb */)) return ret;
+    if ((ret = flatcc_verify_field(td, 19, 4, 4) /* disk_free_mb */)) return ret;
+    return flatcc_verify_ok;
+}
+
+static inline int bpio_StatusResponse_verify_as_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_StatusResponse_identifier, &bpio_StatusResponse_verify_table);
+}
+
+static inline int bpio_StatusResponse_verify_as_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_StatusResponse_identifier, &bpio_StatusResponse_verify_table);
+}
+
+static inline int bpio_StatusResponse_verify_as_typed_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_StatusResponse_type_identifier, &bpio_StatusResponse_verify_table);
+}
+
+static inline int bpio_StatusResponse_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_StatusResponse_type_identifier, &bpio_StatusResponse_verify_table);
+}
+
+static inline int bpio_StatusResponse_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &bpio_StatusResponse_verify_table);
+}
+
+static inline int bpio_StatusResponse_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &bpio_StatusResponse_verify_table);
+}
+
+static inline int bpio_StatusResponse_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &bpio_StatusResponse_verify_table);
+}
+
+static inline int bpio_StatusResponse_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_StatusResponse_verify_table);
+}
+
+static int bpio_ModeConfiguration_verify_table(flatcc_table_verifier_descriptor_t *td)
+{
+    int ret;
+    if ((ret = flatcc_verify_field(td, 0, 4, 4) /* speed_khz */)) return ret;
+    return flatcc_verify_ok;
+}
+
+static inline int bpio_ModeConfiguration_verify_as_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_ModeConfiguration_identifier, &bpio_ModeConfiguration_verify_table);
+}
+
+static inline int bpio_ModeConfiguration_verify_as_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_ModeConfiguration_identifier, &bpio_ModeConfiguration_verify_table);
+}
+
+static inline int bpio_ModeConfiguration_verify_as_typed_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_ModeConfiguration_type_identifier, &bpio_ModeConfiguration_verify_table);
+}
+
+static inline int bpio_ModeConfiguration_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_ModeConfiguration_type_identifier, &bpio_ModeConfiguration_verify_table);
+}
+
+static inline int bpio_ModeConfiguration_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &bpio_ModeConfiguration_verify_table);
+}
+
+static inline int bpio_ModeConfiguration_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &bpio_ModeConfiguration_verify_table);
+}
+
+static inline int bpio_ModeConfiguration_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &bpio_ModeConfiguration_verify_table);
+}
+
+static inline int bpio_ModeConfiguration_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_ModeConfiguration_verify_table);
+}
+
+static int bpio_ConfigurationRequest_verify_table(flatcc_table_verifier_descriptor_t *td)
+{
+    int ret;
+    if ((ret = flatcc_verify_string_field(td, 0, 0) /* mode */)) return ret;
+    if ((ret = flatcc_verify_table_field(td, 1, 0, &bpio_ModeConfiguration_verify_table) /* mode_configuration */)) return ret;
+    if ((ret = flatcc_verify_field(td, 2, 1, 1) /* pullup_enabled */)) return ret;
+    if ((ret = flatcc_verify_field(td, 3, 1, 1) /* psu_enabled */)) return ret;
+    if ((ret = flatcc_verify_field(td, 4, 4, 4) /* psu_set_voltage_mv */)) return ret;
+    if ((ret = flatcc_verify_field(td, 5, 4, 4) /* psu_set_current_ma */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 6, 0, 1, 1, INT64_C(4294967295)) /* io_direction */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 7, 0, 1, 1, INT64_C(4294967295)) /* io_value */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 8, 0, 4, 4, INT64_C(1073741823)) /* led_color */)) return ret;
+    return flatcc_verify_ok;
+}
+
+static inline int bpio_ConfigurationRequest_verify_as_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_ConfigurationRequest_identifier, &bpio_ConfigurationRequest_verify_table);
+}
+
+static inline int bpio_ConfigurationRequest_verify_as_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_ConfigurationRequest_identifier, &bpio_ConfigurationRequest_verify_table);
+}
+
+static inline int bpio_ConfigurationRequest_verify_as_typed_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_ConfigurationRequest_type_identifier, &bpio_ConfigurationRequest_verify_table);
+}
+
+static inline int bpio_ConfigurationRequest_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_ConfigurationRequest_type_identifier, &bpio_ConfigurationRequest_verify_table);
+}
+
+static inline int bpio_ConfigurationRequest_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &bpio_ConfigurationRequest_verify_table);
+}
+
+static inline int bpio_ConfigurationRequest_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &bpio_ConfigurationRequest_verify_table);
+}
+
+static inline int bpio_ConfigurationRequest_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &bpio_ConfigurationRequest_verify_table);
+}
+
+static inline int bpio_ConfigurationRequest_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_ConfigurationRequest_verify_table);
+}
+
+static int bpio_ConfigurationResponse_verify_table(flatcc_table_verifier_descriptor_t *td)
+{
+    int ret;
+    if ((ret = flatcc_verify_string_field(td, 0, 0) /* error */)) return ret;
+    return flatcc_verify_ok;
+}
+
+static inline int bpio_ConfigurationResponse_verify_as_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_ConfigurationResponse_identifier, &bpio_ConfigurationResponse_verify_table);
+}
+
+static inline int bpio_ConfigurationResponse_verify_as_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_ConfigurationResponse_identifier, &bpio_ConfigurationResponse_verify_table);
+}
+
+static inline int bpio_ConfigurationResponse_verify_as_typed_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_ConfigurationResponse_type_identifier, &bpio_ConfigurationResponse_verify_table);
+}
+
+static inline int bpio_ConfigurationResponse_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_ConfigurationResponse_type_identifier, &bpio_ConfigurationResponse_verify_table);
+}
+
+static inline int bpio_ConfigurationResponse_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &bpio_ConfigurationResponse_verify_table);
+}
+
+static inline int bpio_ConfigurationResponse_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &bpio_ConfigurationResponse_verify_table);
+}
+
+static inline int bpio_ConfigurationResponse_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &bpio_ConfigurationResponse_verify_table);
+}
+
+static inline int bpio_ConfigurationResponse_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_ConfigurationResponse_verify_table);
+}
+
 static int bpio_DataRequest_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* dstart */)) return ret;
-    if ((ret = flatcc_verify_field(td, 1, 1, 1) /* dstart_alt */)) return ret;
-    if ((ret = flatcc_verify_field(td, 2, 1, 1) /* daddr */)) return ret;
-    if ((ret = flatcc_verify_vector_field(td, 3, 0, 1, 1, INT64_C(4294967295)) /* ddata */)) return ret;
-    if ((ret = flatcc_verify_field(td, 4, 4, 4) /* dreadbytes */)) return ret;
-    if ((ret = flatcc_verify_field(td, 5, 1, 1) /* dstop */)) return ret;
-    if ((ret = flatcc_verify_field(td, 6, 1, 1) /* dstop_alt */)) return ret;
+    if ((ret = flatcc_verify_field(td, 0, 1, 1) /* start_main */)) return ret;
+    if ((ret = flatcc_verify_field(td, 1, 1, 1) /* start_alt */)) return ret;
+    if ((ret = flatcc_verify_field(td, 2, 1, 1) /* i2c_addr */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 3, 0, 1, 1, INT64_C(4294967295)) /* data_write */)) return ret;
+    if ((ret = flatcc_verify_field(td, 4, 2, 2) /* bytes_read */)) return ret;
+    if ((ret = flatcc_verify_field(td, 5, 1, 1) /* stop_main */)) return ret;
+    if ((ret = flatcc_verify_field(td, 6, 1, 1) /* stop_alt */)) return ret;
     return flatcc_verify_ok;
 }
 
@@ -295,8 +357,8 @@ static inline int bpio_DataRequest_verify_as_root_with_type_hash_and_size(const 
 static int bpio_DataResponse_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_vector_field(td, 0, 0, 1, 1, INT64_C(4294967295)) /* ddata */)) return ret;
-    if ((ret = flatcc_verify_string_field(td, 1, 0) /* derror_message */)) return ret;
+    if ((ret = flatcc_verify_string_field(td, 0, 0) /* error */)) return ret;
+    if ((ret = flatcc_verify_vector_field(td, 1, 0, 1, 1, INT64_C(4294967295)) /* data_read */)) return ret;
     return flatcc_verify_ok;
 }
 

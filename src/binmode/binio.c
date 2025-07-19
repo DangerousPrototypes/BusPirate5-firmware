@@ -260,6 +260,7 @@ uint32_t binmode_psu_disable(uint8_t* binmode_args) {
 
 uint32_t binmode_pullup_enable(uint8_t* binmode_args) {
     struct command_result res;
+    res.help_flag = 0; // no help flag
     if (binmode_debug) {
         pullups_enable_handler(&res);
         printf("\r\n");

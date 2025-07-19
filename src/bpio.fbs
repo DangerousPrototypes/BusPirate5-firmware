@@ -1,11 +1,14 @@
 namespace bpio;
 
-enum StatusRequestTypes:byte{All, Version, Mode, Pullup, PSU, ADC, IO, Disk};
+enum StatusRequestTypes:byte{All, Version, Mode, Pullup, PSU, ADC, IO, Disk}
 
 table StatusRequest{
   query:[StatusRequestTypes]; // List of status queries to perform.
 }
 
+// just uint8 for io direction and value? add mask?
+// return array of pin name text
+// included configuration for new pull-x
 // returns the status queries requested in StatusRequest
 // if query is empty, then all queries are performed
 table StatusResponse {
@@ -32,36 +35,14 @@ table StatusResponse {
 
 }
 
-table I2CConfig {
-  speed_khz:uint32; // Speed in kHz.
+// move mode string name here too?
+table ModeConfiguration {
+  speed_khz:uint32; // Speed in kHz for the mode.
 }
-union ModeConfiguration { I2CConfig,}
-table ModeConfig {
-  name:string; // Name of the mode.
-  configuration:ModeConfiguration; 
-}
-table PullupConfig {
-  enabled:bool; // Enable or disable pull-up resistors.
-}
-table PSUConfig {
-  enabled:bool; // Enable or disable power supply.
-  set_voltage_mv:uint32; // Set voltage in millivolts.
-  set_current_ma:uint32; // Set current in milliamps.
-}
-table IOConfig {
-  direction:[bool]; // IO pin directions (true for output, false for input).
-  value:[bool]; // IO pin values (true for high, false for low).
-}
-table LEDconfig {
-  color:[uint32]; // LED colors in RGB format (0xRRGGBB).
-}
-union ConfigurationRequestContents {ModeConfig, PullupConfig, PSUConfig, IOConfig, LEDconfig}
 
+// just uint8 for io direction and value? add mask?
+//included configuration for new pull-x
 table ConfigurationRequest {
-  config:[ConfigurationRequestContents]; // List of configuration requests.
-}
-
-table AlternateConfigurationRequest {
   mode:string; // Name of the mode to configure.
   mode_configuration:ModeConfiguration; // Configuration for the mode.
   pullup_enabled:bool; // Enable or disable pull-up resistors.
@@ -92,7 +73,7 @@ table DataResponse {
   data_read:[ubyte]; // Data read from device
 }
 
-union RequestPacketContents { StatusRequest, DataRequest}
+union RequestPacketContents { StatusRequest, ConfigurationRequest, DataRequest}
 
 table RequestPacket {
   version_major:uint8=0;
@@ -100,7 +81,7 @@ table RequestPacket {
   contents:RequestPacketContents;
 }
 
-union ResponsePacketContents { StatusResponse, DataResponse}
+union ResponsePacketContents { StatusResponse, ConfigurationResponse, DataResponse}
 
 table ResponsePacket{
   version_major:uint8=0;
@@ -110,6 +91,7 @@ table ResponsePacket{
 
 root_type ResponsePacket;
 
+/*
 union RequestPacketContents { StatusRequest, ConfigurationRequest, DataRequest}
 union ResponsePacketContents { StatusResponse, ConfigurationResponse, DataResponse}
 table Packet{
@@ -120,3 +102,4 @@ table Packet{
 }
 
 root_type Packet;
+*/

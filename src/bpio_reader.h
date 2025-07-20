@@ -51,6 +51,10 @@ typedef const struct bpio_RequestPacket_table *bpio_RequestPacket_table_t;
 typedef struct bpio_RequestPacket_table *bpio_RequestPacket_mutable_table_t;
 typedef const flatbuffers_uoffset_t *bpio_RequestPacket_vec_t;
 typedef flatbuffers_uoffset_t *bpio_RequestPacket_mutable_vec_t;
+typedef const struct bpio_ErrorResponse_table *bpio_ErrorResponse_table_t;
+typedef struct bpio_ErrorResponse_table *bpio_ErrorResponse_mutable_table_t;
+typedef const flatbuffers_uoffset_t *bpio_ErrorResponse_vec_t;
+typedef flatbuffers_uoffset_t *bpio_ErrorResponse_mutable_vec_t;
 typedef const struct bpio_ResponsePacket_table *bpio_ResponsePacket_table_t;
 typedef struct bpio_ResponsePacket_table *bpio_ResponsePacket_mutable_table_t;
 typedef const flatbuffers_uoffset_t *bpio_ResponsePacket_vec_t;
@@ -150,6 +154,18 @@ typedef flatbuffers_uoffset_t *bpio_ResponsePacket_mutable_vec_t;
 #define bpio_RequestPacket_type_identifier "\xec\x14\xfb\x8e"
 #ifndef bpio_RequestPacket_file_extension
 #define bpio_RequestPacket_file_extension "bin"
+#endif
+#ifndef bpio_ErrorResponse_file_identifier
+#define bpio_ErrorResponse_file_identifier 0
+#endif
+/* deprecated, use bpio_ErrorResponse_file_identifier */
+#ifndef bpio_ErrorResponse_identifier
+#define bpio_ErrorResponse_identifier 0
+#endif
+#define bpio_ErrorResponse_type_hash ((flatbuffers_thash_t)0x52cd8820)
+#define bpio_ErrorResponse_type_identifier "\x20\x88\xcd\x52"
+#ifndef bpio_ErrorResponse_file_extension
+#define bpio_ErrorResponse_file_extension "bin"
 #endif
 #ifndef bpio_ResponsePacket_file_identifier
 #define bpio_ResponsePacket_file_identifier 0
@@ -272,16 +288,16 @@ __flatbuffers_table_as_root(bpio_ConfigurationRequest)
 
 __flatbuffers_define_string_field(0, bpio_ConfigurationRequest, mode, 0)
 __flatbuffers_define_table_field(1, bpio_ConfigurationRequest, mode_configuration, bpio_ModeConfiguration_table_t, 0)
-__flatbuffers_define_scalar_field(2, bpio_ConfigurationRequest, psu_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(2, bpio_ConfigurationRequest, psu_enabled, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(3, bpio_ConfigurationRequest, psu_set_mv, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_scalar_field(4, bpio_ConfigurationRequest, psu_set_ma, flatbuffers_uint32, uint32_t, UINT32_C(0))
+__flatbuffers_define_scalar_field(4, bpio_ConfigurationRequest, psu_set_ma, flatbuffers_uint16, uint16_t, UINT16_C(300))
 __flatbuffers_define_scalar_field(5, bpio_ConfigurationRequest, io_direction_mask, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(6, bpio_ConfigurationRequest, io_direction, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(7, bpio_ConfigurationRequest, io_value_mask, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(8, bpio_ConfigurationRequest, io_value, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(9, bpio_ConfigurationRequest, led_resume, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 __flatbuffers_define_vector_field(10, bpio_ConfigurationRequest, led_color, flatbuffers_uint32_vec_t, 0)
-__flatbuffers_define_scalar_field(11, bpio_ConfigurationRequest, pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(11, bpio_ConfigurationRequest, pullup_enabled, flatbuffers_uint8, uint8_t, UINT8_C(0))
 
 struct bpio_ConfigurationResponse_table { uint8_t unused__; };
 
@@ -361,18 +377,30 @@ __flatbuffers_table_as_root(bpio_RequestPacket)
 __flatbuffers_define_scalar_field(0, bpio_RequestPacket, version_major, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(1, bpio_RequestPacket, version_minor, flatbuffers_uint8, uint8_t, UINT8_C(1))
 __flatbuffers_define_union_field(flatbuffers_, 3, bpio_RequestPacket, contents, bpio_RequestPacketContents, 0)
+
+struct bpio_ErrorResponse_table { uint8_t unused__; };
+
+static inline size_t bpio_ErrorResponse_vec_len(bpio_ErrorResponse_vec_t vec)
+__flatbuffers_vec_len(vec)
+static inline bpio_ErrorResponse_table_t bpio_ErrorResponse_vec_at(bpio_ErrorResponse_vec_t vec, size_t i)
+__flatbuffers_offset_vec_at(bpio_ErrorResponse_table_t, vec, i, 0)
+__flatbuffers_table_as_root(bpio_ErrorResponse)
+
+__flatbuffers_define_string_field(0, bpio_ErrorResponse, error, 0)
 typedef uint8_t bpio_ResponsePacketContents_union_type_t;
 __flatbuffers_define_integer_type(bpio_ResponsePacketContents, bpio_ResponsePacketContents_union_type_t, 8)
 __flatbuffers_define_union(flatbuffers_, bpio_ResponsePacketContents)
 #define bpio_ResponsePacketContents_NONE ((bpio_ResponsePacketContents_union_type_t)UINT8_C(0))
-#define bpio_ResponsePacketContents_StatusResponse ((bpio_ResponsePacketContents_union_type_t)UINT8_C(1))
-#define bpio_ResponsePacketContents_ConfigurationResponse ((bpio_ResponsePacketContents_union_type_t)UINT8_C(2))
-#define bpio_ResponsePacketContents_DataResponse ((bpio_ResponsePacketContents_union_type_t)UINT8_C(3))
+#define bpio_ResponsePacketContents_ErrorResponse ((bpio_ResponsePacketContents_union_type_t)UINT8_C(1))
+#define bpio_ResponsePacketContents_StatusResponse ((bpio_ResponsePacketContents_union_type_t)UINT8_C(2))
+#define bpio_ResponsePacketContents_ConfigurationResponse ((bpio_ResponsePacketContents_union_type_t)UINT8_C(3))
+#define bpio_ResponsePacketContents_DataResponse ((bpio_ResponsePacketContents_union_type_t)UINT8_C(4))
 
 static inline const char *bpio_ResponsePacketContents_type_name(bpio_ResponsePacketContents_union_type_t type)
 {
     switch (type) {
     case bpio_ResponsePacketContents_NONE: return "NONE";
+    case bpio_ResponsePacketContents_ErrorResponse: return "ErrorResponse";
     case bpio_ResponsePacketContents_StatusResponse: return "StatusResponse";
     case bpio_ResponsePacketContents_ConfigurationResponse: return "ConfigurationResponse";
     case bpio_ResponsePacketContents_DataResponse: return "DataResponse";
@@ -384,6 +412,7 @@ static inline int bpio_ResponsePacketContents_is_known_type(bpio_ResponsePacketC
 {
     switch (type) {
     case bpio_ResponsePacketContents_NONE: return 1;
+    case bpio_ResponsePacketContents_ErrorResponse: return 1;
     case bpio_ResponsePacketContents_StatusResponse: return 1;
     case bpio_ResponsePacketContents_ConfigurationResponse: return 1;
     case bpio_ResponsePacketContents_DataResponse: return 1;

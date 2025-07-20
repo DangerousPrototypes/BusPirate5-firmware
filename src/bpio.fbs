@@ -43,16 +43,16 @@ table ModeConfiguration {
 table ConfigurationRequest {
   mode:string; // Name of the mode to configure.
   mode_configuration:ModeConfiguration; // Configuration for the mode.
-  psu_enabled:bool; // Enable or disable power supply.
+  psu_enabled:uint8; // Enable or disable power supply.
   psu_set_mv:uint32; // Set voltage in millivolts.
-  psu_set_ma:uint32; // Set current in milliamps.
+  psu_set_ma:uint16=300; // Set current in milliamps.
   io_direction_mask:uint8; // Bitmask for IO pin directions (true for output, false for input).
   io_direction:uint8; // IO pin directions (true for output, false for input).
   io_value_mask:uint8; // Bitmask for IO pin values (true for high, false for low).
   io_value:uint8; // IO pin values (true for high, false for low).
   led_resume:bool; // Resume LED effect after configuration.
   led_color:[uint32]; // LED colors in RGB format (0xRRGGBB).
-  pullup_enabled:bool; // Enable or disable pull-up resistors.
+  pullup_enabled:uint8; // Enable or disable pull-up resistors.
 }
 
 table ConfigurationResponse{
@@ -82,7 +82,11 @@ table RequestPacket {
   contents:RequestPacketContents;
 }
 
-union ResponsePacketContents { StatusResponse, ConfigurationResponse, DataResponse}
+table ErrorResponse {
+  error:string; // Error message if any.
+}
+
+union ResponsePacketContents { ErrorResponse, StatusResponse, ConfigurationResponse, DataResponse}
 
 table ResponsePacket{
   version_major:uint8=0;

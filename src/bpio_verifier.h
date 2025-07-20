@@ -17,6 +17,7 @@ static int bpio_ConfigurationResponse_verify_table(flatcc_table_verifier_descrip
 static int bpio_DataRequest_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int bpio_DataResponse_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int bpio_RequestPacket_verify_table(flatcc_table_verifier_descriptor_t *td);
+static int bpio_ErrorResponse_verify_table(flatcc_table_verifier_descriptor_t *td);
 static int bpio_ResponsePacket_verify_table(flatcc_table_verifier_descriptor_t *td);
 
 static int bpio_RequestPacketContents_union_verifier(flatcc_union_verifier_descriptor_t *ud)
@@ -32,9 +33,10 @@ static int bpio_RequestPacketContents_union_verifier(flatcc_union_verifier_descr
 static int bpio_ResponsePacketContents_union_verifier(flatcc_union_verifier_descriptor_t *ud)
 {
     switch (ud->type) {
-    case 1: return flatcc_verify_union_table(ud, bpio_StatusResponse_verify_table); /* StatusResponse */
-    case 2: return flatcc_verify_union_table(ud, bpio_ConfigurationResponse_verify_table); /* ConfigurationResponse */
-    case 3: return flatcc_verify_union_table(ud, bpio_DataResponse_verify_table); /* DataResponse */
+    case 1: return flatcc_verify_union_table(ud, bpio_ErrorResponse_verify_table); /* ErrorResponse */
+    case 2: return flatcc_verify_union_table(ud, bpio_StatusResponse_verify_table); /* StatusResponse */
+    case 3: return flatcc_verify_union_table(ud, bpio_ConfigurationResponse_verify_table); /* ConfigurationResponse */
+    case 4: return flatcc_verify_union_table(ud, bpio_DataResponse_verify_table); /* DataResponse */
     default: return flatcc_verify_ok;
     }
 }
@@ -209,7 +211,7 @@ static int bpio_ConfigurationRequest_verify_table(flatcc_table_verifier_descript
     if ((ret = flatcc_verify_table_field(td, 1, 0, &bpio_ModeConfiguration_verify_table) /* mode_configuration */)) return ret;
     if ((ret = flatcc_verify_field(td, 2, 1, 1) /* psu_enabled */)) return ret;
     if ((ret = flatcc_verify_field(td, 3, 4, 4) /* psu_set_mv */)) return ret;
-    if ((ret = flatcc_verify_field(td, 4, 4, 4) /* psu_set_ma */)) return ret;
+    if ((ret = flatcc_verify_field(td, 4, 2, 2) /* psu_set_ma */)) return ret;
     if ((ret = flatcc_verify_field(td, 5, 1, 1) /* io_direction_mask */)) return ret;
     if ((ret = flatcc_verify_field(td, 6, 1, 1) /* io_direction */)) return ret;
     if ((ret = flatcc_verify_field(td, 7, 1, 1) /* io_value_mask */)) return ret;
@@ -455,6 +457,53 @@ static inline int bpio_RequestPacket_verify_as_root_with_type_hash(const void *b
 static inline int bpio_RequestPacket_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
 {
     return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_RequestPacket_verify_table);
+}
+
+static int bpio_ErrorResponse_verify_table(flatcc_table_verifier_descriptor_t *td)
+{
+    int ret;
+    if ((ret = flatcc_verify_string_field(td, 0, 0) /* error */)) return ret;
+    return flatcc_verify_ok;
+}
+
+static inline int bpio_ErrorResponse_verify_as_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_ErrorResponse_identifier, &bpio_ErrorResponse_verify_table);
+}
+
+static inline int bpio_ErrorResponse_verify_as_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_ErrorResponse_identifier, &bpio_ErrorResponse_verify_table);
+}
+
+static inline int bpio_ErrorResponse_verify_as_typed_root(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, bpio_ErrorResponse_type_identifier, &bpio_ErrorResponse_verify_table);
+}
+
+static inline int bpio_ErrorResponse_verify_as_typed_root_with_size(const void *buf, size_t bufsiz)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, bpio_ErrorResponse_type_identifier, &bpio_ErrorResponse_verify_table);
+}
+
+static inline int bpio_ErrorResponse_verify_as_root_with_identifier(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root(buf, bufsiz, fid, &bpio_ErrorResponse_verify_table);
+}
+
+static inline int bpio_ErrorResponse_verify_as_root_with_identifier_and_size(const void *buf, size_t bufsiz, const char *fid)
+{
+    return flatcc_verify_table_as_root_with_size(buf, bufsiz, fid, &bpio_ErrorResponse_verify_table);
+}
+
+static inline int bpio_ErrorResponse_verify_as_root_with_type_hash(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root(buf, bufsiz, thash, &bpio_ErrorResponse_verify_table);
+}
+
+static inline int bpio_ErrorResponse_verify_as_root_with_type_hash_and_size(const void *buf, size_t bufsiz, flatbuffers_thash_t thash)
+{
+    return flatcc_verify_table_as_typed_root_with_size(buf, bufsiz, thash, &bpio_ErrorResponse_verify_table);
 }
 
 static int bpio_ResponsePacket_verify_table(flatcc_table_verifier_descriptor_t *td)

@@ -1,14 +1,11 @@
 namespace bpio;
 
-enum StatusRequestTypes:byte{All, Version, Mode, Pullup, PSU, ADC, IO, Disk}
+enum StatusRequestTypes:byte{All, Version, Mode, Pullup, PSU, ADC, IO, Disk, LED}
 
 table StatusRequest{
   query:[StatusRequestTypes]; // List of status queries to perform.
 }
 
-// just uint8 for io direction and value? add mask?
-// return array of pin name text
-// included configuration for new pull-x
 // returns the status queries requested in StatusRequest
 // if query is empty, then all queries are performed
 table StatusResponse {
@@ -21,18 +18,20 @@ table StatusResponse {
   firmware_date:string; //Date of the firmware build.
   modes_available:[string]; // List of modes available on the device.
   mode_current:string; // Current mode name.
-  pullup_enabled:bool; // Pull-up resistors enabled.
+  mode_pin_labels:[string]; // Labels for the pins in the current mode.
   psu_enabled:bool; // Power supply enabled.
-  psu_set_voltage_mv:uint32; // Power supply voltage in millivolts.
-  psu_set_current_ma:uint32; // Power supply current in milliamps.
+  psu_set_mv:uint32; // Power supply voltage in millivolts.
+  psu_set_ma:uint32; // Power supply current in milliamps.
   psu_measured_mv:uint32; // Measured power supply voltage in millivolts.
   psu_measured_ma:uint32; // Maximum power supply current in milliamps.
+  psu_current_error:bool; // Power supply fuse error.
   adc_mv:[uint32]; // ADC values in millivolts.
-  io_direction:[bool]; // IO pin directions (true for output, false for input).
-  io_value:[bool]; // IO pin values (true for high, false for low).
-  disk_size_mb:uint32; // Size of the disk in megabytes.
-  disk_free_mb:uint32; // Free space on the disk in megabytes.
-
+  io_direction:uint8; // IO pin directions (true for output, false for input).
+  io_value:uint8; // IO pin values (true for high, false for low).
+  disk_size_mb:float; // Size of the disk in megabytes.
+  disk_used_mb:float; // used space on the disk in megabytes.
+  led_count:uint8; // Number of LEDs.
+  pullup_enabled:bool; // Pull-up resistors enabled.
 }
 
 // move mode string name here too?
@@ -40,18 +39,20 @@ table ModeConfiguration {
   speed_khz:uint32; // Speed in kHz for the mode.
 }
 
-// just uint8 for io direction and value? add mask?
-//included configuration for new pull-x
+//pullup is last so we can add the pull-x fields to the end of the table
 table ConfigurationRequest {
   mode:string; // Name of the mode to configure.
   mode_configuration:ModeConfiguration; // Configuration for the mode.
-  pullup_enabled:bool; // Enable or disable pull-up resistors.
   psu_enabled:bool; // Enable or disable power supply.
-  psu_set_voltage_mv:uint32; // Set voltage in millivolts.
-  psu_set_current_ma:uint32; // Set current in milliamps.
-  io_direction:[bool]; // IO pin directions (true for output, false for input).
-  io_value:[bool]; // IO pin values (true for high, false for low).
+  psu_set_mv:uint32; // Set voltage in millivolts.
+  psu_set_ma:uint32; // Set current in milliamps.
+  io_direction_mask:uint8; // Bitmask for IO pin directions (true for output, false for input).
+  io_direction:uint8; // IO pin directions (true for output, false for input).
+  io_value_mask:uint8; // Bitmask for IO pin values (true for high, false for low).
+  io_value:uint8; // IO pin values (true for high, false for low).
+  led_resume:bool; // Resume LED effect after configuration.
   led_color:[uint32]; // LED colors in RGB format (0xRRGGBB).
+  pullup_enabled:bool; // Enable or disable pull-up resistors.
 }
 
 table ConfigurationResponse{

@@ -174,6 +174,7 @@ __flatbuffers_define_integer_type(bpio_StatusRequestTypes, bpio_StatusRequestTyp
 #define bpio_StatusRequestTypes_ADC ((bpio_StatusRequestTypes_enum_t)INT8_C(5))
 #define bpio_StatusRequestTypes_IO ((bpio_StatusRequestTypes_enum_t)INT8_C(6))
 #define bpio_StatusRequestTypes_Disk ((bpio_StatusRequestTypes_enum_t)INT8_C(7))
+#define bpio_StatusRequestTypes_LED ((bpio_StatusRequestTypes_enum_t)INT8_C(8))
 
 static inline const char *bpio_StatusRequestTypes_name(bpio_StatusRequestTypes_enum_t value)
 {
@@ -186,6 +187,7 @@ static inline const char *bpio_StatusRequestTypes_name(bpio_StatusRequestTypes_e
     case bpio_StatusRequestTypes_ADC: return "ADC";
     case bpio_StatusRequestTypes_IO: return "IO";
     case bpio_StatusRequestTypes_Disk: return "Disk";
+    case bpio_StatusRequestTypes_LED: return "LED";
     default: return "";
     }
 }
@@ -201,6 +203,7 @@ static inline int bpio_StatusRequestTypes_is_known_value(bpio_StatusRequestTypes
     case bpio_StatusRequestTypes_ADC: return 1;
     case bpio_StatusRequestTypes_IO: return 1;
     case bpio_StatusRequestTypes_Disk: return 1;
+    case bpio_StatusRequestTypes_LED: return 1;
     default: return 0;
     }
 }
@@ -234,17 +237,20 @@ __flatbuffers_define_string_field(5, bpio_StatusResponse, firmware_git_hash, 0)
 __flatbuffers_define_string_field(6, bpio_StatusResponse, firmware_date, 0)
 __flatbuffers_define_vector_field(7, bpio_StatusResponse, modes_available, flatbuffers_string_vec_t, 0)
 __flatbuffers_define_string_field(8, bpio_StatusResponse, mode_current, 0)
-__flatbuffers_define_scalar_field(9, bpio_StatusResponse, pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_vector_field(9, bpio_StatusResponse, mode_pin_labels, flatbuffers_string_vec_t, 0)
 __flatbuffers_define_scalar_field(10, bpio_StatusResponse, psu_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_scalar_field(11, bpio_StatusResponse, psu_set_voltage_mv, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_scalar_field(12, bpio_StatusResponse, psu_set_current_ma, flatbuffers_uint32, uint32_t, UINT32_C(0))
+__flatbuffers_define_scalar_field(11, bpio_StatusResponse, psu_set_mv, flatbuffers_uint32, uint32_t, UINT32_C(0))
+__flatbuffers_define_scalar_field(12, bpio_StatusResponse, psu_set_ma, flatbuffers_uint32, uint32_t, UINT32_C(0))
 __flatbuffers_define_scalar_field(13, bpio_StatusResponse, psu_measured_mv, flatbuffers_uint32, uint32_t, UINT32_C(0))
 __flatbuffers_define_scalar_field(14, bpio_StatusResponse, psu_measured_ma, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_vector_field(15, bpio_StatusResponse, adc_mv, flatbuffers_uint32_vec_t, 0)
-__flatbuffers_define_vector_field(16, bpio_StatusResponse, io_direction, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_vector_field(17, bpio_StatusResponse, io_value, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_scalar_field(18, bpio_StatusResponse, disk_size_mb, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_scalar_field(19, bpio_StatusResponse, disk_free_mb, flatbuffers_uint32, uint32_t, UINT32_C(0))
+__flatbuffers_define_scalar_field(15, bpio_StatusResponse, psu_current_error, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_vector_field(16, bpio_StatusResponse, adc_mv, flatbuffers_uint32_vec_t, 0)
+__flatbuffers_define_scalar_field(17, bpio_StatusResponse, io_direction, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(18, bpio_StatusResponse, io_value, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(19, bpio_StatusResponse, disk_size_mb, flatbuffers_float, float, 0.00000000f)
+__flatbuffers_define_scalar_field(20, bpio_StatusResponse, disk_used_mb, flatbuffers_float, float, 0.00000000f)
+__flatbuffers_define_scalar_field(21, bpio_StatusResponse, led_count, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(22, bpio_StatusResponse, pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 
 struct bpio_ModeConfiguration_table { uint8_t unused__; };
 
@@ -266,13 +272,16 @@ __flatbuffers_table_as_root(bpio_ConfigurationRequest)
 
 __flatbuffers_define_string_field(0, bpio_ConfigurationRequest, mode, 0)
 __flatbuffers_define_table_field(1, bpio_ConfigurationRequest, mode_configuration, bpio_ModeConfiguration_table_t, 0)
-__flatbuffers_define_scalar_field(2, bpio_ConfigurationRequest, pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_scalar_field(3, bpio_ConfigurationRequest, psu_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_scalar_field(4, bpio_ConfigurationRequest, psu_set_voltage_mv, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_scalar_field(5, bpio_ConfigurationRequest, psu_set_current_ma, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_vector_field(6, bpio_ConfigurationRequest, io_direction, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_vector_field(7, bpio_ConfigurationRequest, io_value, flatbuffers_uint8_vec_t, 0)
-__flatbuffers_define_vector_field(8, bpio_ConfigurationRequest, led_color, flatbuffers_uint32_vec_t, 0)
+__flatbuffers_define_scalar_field(2, bpio_ConfigurationRequest, psu_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(3, bpio_ConfigurationRequest, psu_set_mv, flatbuffers_uint32, uint32_t, UINT32_C(0))
+__flatbuffers_define_scalar_field(4, bpio_ConfigurationRequest, psu_set_ma, flatbuffers_uint32, uint32_t, UINT32_C(0))
+__flatbuffers_define_scalar_field(5, bpio_ConfigurationRequest, io_direction_mask, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(6, bpio_ConfigurationRequest, io_direction, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(7, bpio_ConfigurationRequest, io_value_mask, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(8, bpio_ConfigurationRequest, io_value, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(9, bpio_ConfigurationRequest, led_resume, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
+__flatbuffers_define_vector_field(10, bpio_ConfigurationRequest, led_color, flatbuffers_uint32_vec_t, 0)
+__flatbuffers_define_scalar_field(11, bpio_ConfigurationRequest, pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 
 struct bpio_ConfigurationResponse_table { uint8_t unused__; };
 

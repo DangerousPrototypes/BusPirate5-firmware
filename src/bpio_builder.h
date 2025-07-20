@@ -36,7 +36,7 @@ __flatbuffers_build_table(flatbuffers_, bpio_StatusRequest, 1)
 static const flatbuffers_voffset_t __bpio_StatusResponse_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_StatusResponse_ref_t;
 static bpio_StatusResponse_ref_t bpio_StatusResponse_clone(flatbuffers_builder_t *B, bpio_StatusResponse_table_t t);
-__flatbuffers_build_table(flatbuffers_, bpio_StatusResponse, 20)
+__flatbuffers_build_table(flatbuffers_, bpio_StatusResponse, 23)
 
 static const flatbuffers_voffset_t __bpio_ModeConfiguration_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_ModeConfiguration_ref_t;
@@ -46,7 +46,7 @@ __flatbuffers_build_table(flatbuffers_, bpio_ModeConfiguration, 1)
 static const flatbuffers_voffset_t __bpio_ConfigurationRequest_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_ConfigurationRequest_ref_t;
 static bpio_ConfigurationRequest_ref_t bpio_ConfigurationRequest_clone(flatbuffers_builder_t *B, bpio_ConfigurationRequest_table_t t);
-__flatbuffers_build_table(flatbuffers_, bpio_ConfigurationRequest, 9)
+__flatbuffers_build_table(flatbuffers_, bpio_ConfigurationRequest, 12)
 
 static const flatbuffers_voffset_t __bpio_ConfigurationResponse_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_ConfigurationResponse_ref_t;
@@ -81,15 +81,17 @@ __flatbuffers_build_table_prolog(flatbuffers_, bpio_StatusRequest, bpio_StatusRe
 #define __bpio_StatusResponse_formal_args ,\
   flatbuffers_string_ref_t v0, uint8_t v1, uint8_t v2, uint8_t v3,\
   uint8_t v4, flatbuffers_string_ref_t v5, flatbuffers_string_ref_t v6, flatbuffers_string_vec_ref_t v7,\
-  flatbuffers_string_ref_t v8, flatbuffers_bool_t v9, flatbuffers_bool_t v10, uint32_t v11,\
-  uint32_t v12, uint32_t v13, uint32_t v14, flatbuffers_uint32_vec_ref_t v15,\
-  flatbuffers_bool_vec_ref_t v16, flatbuffers_bool_vec_ref_t v17, uint32_t v18, uint32_t v19
+  flatbuffers_string_ref_t v8, flatbuffers_string_vec_ref_t v9, flatbuffers_bool_t v10, uint32_t v11,\
+  uint32_t v12, uint32_t v13, uint32_t v14, flatbuffers_bool_t v15,\
+  flatbuffers_uint32_vec_ref_t v16, uint8_t v17, uint8_t v18, float v19,\
+  float v20, uint8_t v21, flatbuffers_bool_t v22
 #define __bpio_StatusResponse_call_args ,\
   v0, v1, v2, v3,\
   v4, v5, v6, v7,\
   v8, v9, v10, v11,\
   v12, v13, v14, v15,\
-  v16, v17, v18, v19
+  v16, v17, v18, v19,\
+  v20, v21, v22
 static inline bpio_StatusResponse_ref_t bpio_StatusResponse_create(flatbuffers_builder_t *B __bpio_StatusResponse_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_StatusResponse, bpio_StatusResponse_file_identifier, bpio_StatusResponse_type_identifier)
 
@@ -99,11 +101,13 @@ static inline bpio_ModeConfiguration_ref_t bpio_ModeConfiguration_create(flatbuf
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_ModeConfiguration, bpio_ModeConfiguration_file_identifier, bpio_ModeConfiguration_type_identifier)
 
 #define __bpio_ConfigurationRequest_formal_args ,\
-  flatbuffers_string_ref_t v0, bpio_ModeConfiguration_ref_t v1, flatbuffers_bool_t v2, flatbuffers_bool_t v3,\
-  uint32_t v4, uint32_t v5, flatbuffers_bool_vec_ref_t v6, flatbuffers_bool_vec_ref_t v7, flatbuffers_uint32_vec_ref_t v8
+  flatbuffers_string_ref_t v0, bpio_ModeConfiguration_ref_t v1, flatbuffers_bool_t v2, uint32_t v3,\
+  uint32_t v4, uint8_t v5, uint8_t v6, uint8_t v7,\
+  uint8_t v8, flatbuffers_bool_t v9, flatbuffers_uint32_vec_ref_t v10, flatbuffers_bool_t v11
 #define __bpio_ConfigurationRequest_call_args ,\
   v0, v1, v2, v3,\
-  v4, v5, v6, v7, v8
+  v4, v5, v6, v7,\
+  v8, v9, v10, v11
 static inline bpio_ConfigurationRequest_ref_t bpio_ConfigurationRequest_create(flatbuffers_builder_t *B __bpio_ConfigurationRequest_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_ConfigurationRequest, bpio_ConfigurationRequest_file_identifier, bpio_ConfigurationRequest_type_identifier)
 
@@ -206,17 +210,20 @@ __flatbuffers_build_string_field(5, flatbuffers_, bpio_StatusResponse_firmware_g
 __flatbuffers_build_string_field(6, flatbuffers_, bpio_StatusResponse_firmware_date, bpio_StatusResponse)
 __flatbuffers_build_string_vector_field(7, flatbuffers_, bpio_StatusResponse_modes_available, bpio_StatusResponse)
 __flatbuffers_build_string_field(8, flatbuffers_, bpio_StatusResponse_mode_current, bpio_StatusResponse)
-__flatbuffers_build_scalar_field(9, flatbuffers_, bpio_StatusResponse_pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_string_vector_field(9, flatbuffers_, bpio_StatusResponse_mode_pin_labels, bpio_StatusResponse)
 __flatbuffers_build_scalar_field(10, flatbuffers_, bpio_StatusResponse_psu_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(11, flatbuffers_, bpio_StatusResponse_psu_set_voltage_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(12, flatbuffers_, bpio_StatusResponse_psu_set_current_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(11, flatbuffers_, bpio_StatusResponse_psu_set_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(12, flatbuffers_, bpio_StatusResponse_psu_set_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
 __flatbuffers_build_scalar_field(13, flatbuffers_, bpio_StatusResponse_psu_measured_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
 __flatbuffers_build_scalar_field(14, flatbuffers_, bpio_StatusResponse_psu_measured_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_vector_field(15, flatbuffers_, bpio_StatusResponse_adc_mv, flatbuffers_uint32, uint32_t, bpio_StatusResponse)
-__flatbuffers_build_vector_field(16, flatbuffers_, bpio_StatusResponse_io_direction, flatbuffers_bool, flatbuffers_bool_t, bpio_StatusResponse)
-__flatbuffers_build_vector_field(17, flatbuffers_, bpio_StatusResponse_io_value, flatbuffers_bool, flatbuffers_bool_t, bpio_StatusResponse)
-__flatbuffers_build_scalar_field(18, flatbuffers_, bpio_StatusResponse_disk_size_mb, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(19, flatbuffers_, bpio_StatusResponse_disk_free_mb, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(15, flatbuffers_, bpio_StatusResponse_psu_current_error, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_vector_field(16, flatbuffers_, bpio_StatusResponse_adc_mv, flatbuffers_uint32, uint32_t, bpio_StatusResponse)
+__flatbuffers_build_scalar_field(17, flatbuffers_, bpio_StatusResponse_io_direction, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(18, flatbuffers_, bpio_StatusResponse_io_value, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(19, flatbuffers_, bpio_StatusResponse_disk_size_mb, flatbuffers_float, float, 4, 4, 0.00000000f, bpio_StatusResponse)
+__flatbuffers_build_scalar_field(20, flatbuffers_, bpio_StatusResponse_disk_used_mb, flatbuffers_float, float, 4, 4, 0.00000000f, bpio_StatusResponse)
+__flatbuffers_build_scalar_field(21, flatbuffers_, bpio_StatusResponse_led_count, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(22, flatbuffers_, bpio_StatusResponse_pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
 
 static inline bpio_StatusResponse_ref_t bpio_StatusResponse_create(flatbuffers_builder_t *B __bpio_StatusResponse_formal_args)
 {
@@ -226,21 +233,24 @@ static inline bpio_StatusResponse_ref_t bpio_StatusResponse_create(flatbuffers_b
         || bpio_StatusResponse_firmware_date_add(B, v6)
         || bpio_StatusResponse_modes_available_add(B, v7)
         || bpio_StatusResponse_mode_current_add(B, v8)
-        || bpio_StatusResponse_psu_set_voltage_mv_add(B, v11)
-        || bpio_StatusResponse_psu_set_current_ma_add(B, v12)
+        || bpio_StatusResponse_mode_pin_labels_add(B, v9)
+        || bpio_StatusResponse_psu_set_mv_add(B, v11)
+        || bpio_StatusResponse_psu_set_ma_add(B, v12)
         || bpio_StatusResponse_psu_measured_mv_add(B, v13)
         || bpio_StatusResponse_psu_measured_ma_add(B, v14)
-        || bpio_StatusResponse_adc_mv_add(B, v15)
-        || bpio_StatusResponse_io_direction_add(B, v16)
-        || bpio_StatusResponse_io_value_add(B, v17)
-        || bpio_StatusResponse_disk_size_mb_add(B, v18)
-        || bpio_StatusResponse_disk_free_mb_add(B, v19)
+        || bpio_StatusResponse_adc_mv_add(B, v16)
+        || bpio_StatusResponse_disk_size_mb_add(B, v19)
+        || bpio_StatusResponse_disk_used_mb_add(B, v20)
         || bpio_StatusResponse_hardware_version_major_add(B, v1)
         || bpio_StatusResponse_hardware_version_minor_add(B, v2)
         || bpio_StatusResponse_firmware_version_major_add(B, v3)
         || bpio_StatusResponse_firmware_version_minor_add(B, v4)
-        || bpio_StatusResponse_pullup_enabled_add(B, v9)
-        || bpio_StatusResponse_psu_enabled_add(B, v10)) {
+        || bpio_StatusResponse_psu_enabled_add(B, v10)
+        || bpio_StatusResponse_psu_current_error_add(B, v15)
+        || bpio_StatusResponse_io_direction_add(B, v17)
+        || bpio_StatusResponse_io_value_add(B, v18)
+        || bpio_StatusResponse_led_count_add(B, v21)
+        || bpio_StatusResponse_pullup_enabled_add(B, v22)) {
         return 0;
     }
     return bpio_StatusResponse_end(B);
@@ -255,21 +265,24 @@ static bpio_StatusResponse_ref_t bpio_StatusResponse_clone(flatbuffers_builder_t
         || bpio_StatusResponse_firmware_date_pick(B, t)
         || bpio_StatusResponse_modes_available_pick(B, t)
         || bpio_StatusResponse_mode_current_pick(B, t)
-        || bpio_StatusResponse_psu_set_voltage_mv_pick(B, t)
-        || bpio_StatusResponse_psu_set_current_ma_pick(B, t)
+        || bpio_StatusResponse_mode_pin_labels_pick(B, t)
+        || bpio_StatusResponse_psu_set_mv_pick(B, t)
+        || bpio_StatusResponse_psu_set_ma_pick(B, t)
         || bpio_StatusResponse_psu_measured_mv_pick(B, t)
         || bpio_StatusResponse_psu_measured_ma_pick(B, t)
         || bpio_StatusResponse_adc_mv_pick(B, t)
-        || bpio_StatusResponse_io_direction_pick(B, t)
-        || bpio_StatusResponse_io_value_pick(B, t)
         || bpio_StatusResponse_disk_size_mb_pick(B, t)
-        || bpio_StatusResponse_disk_free_mb_pick(B, t)
+        || bpio_StatusResponse_disk_used_mb_pick(B, t)
         || bpio_StatusResponse_hardware_version_major_pick(B, t)
         || bpio_StatusResponse_hardware_version_minor_pick(B, t)
         || bpio_StatusResponse_firmware_version_major_pick(B, t)
         || bpio_StatusResponse_firmware_version_minor_pick(B, t)
-        || bpio_StatusResponse_pullup_enabled_pick(B, t)
-        || bpio_StatusResponse_psu_enabled_pick(B, t)) {
+        || bpio_StatusResponse_psu_enabled_pick(B, t)
+        || bpio_StatusResponse_psu_current_error_pick(B, t)
+        || bpio_StatusResponse_io_direction_pick(B, t)
+        || bpio_StatusResponse_io_value_pick(B, t)
+        || bpio_StatusResponse_led_count_pick(B, t)
+        || bpio_StatusResponse_pullup_enabled_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, bpio_StatusResponse_end(B));
@@ -298,26 +311,32 @@ static bpio_ModeConfiguration_ref_t bpio_ModeConfiguration_clone(flatbuffers_bui
 
 __flatbuffers_build_string_field(0, flatbuffers_, bpio_ConfigurationRequest_mode, bpio_ConfigurationRequest)
 __flatbuffers_build_table_field(1, flatbuffers_, bpio_ConfigurationRequest_mode_configuration, bpio_ModeConfiguration, bpio_ConfigurationRequest)
-__flatbuffers_build_scalar_field(2, flatbuffers_, bpio_ConfigurationRequest_pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
-__flatbuffers_build_scalar_field(3, flatbuffers_, bpio_ConfigurationRequest_psu_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
-__flatbuffers_build_scalar_field(4, flatbuffers_, bpio_ConfigurationRequest_psu_set_voltage_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_ConfigurationRequest)
-__flatbuffers_build_scalar_field(5, flatbuffers_, bpio_ConfigurationRequest_psu_set_current_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_ConfigurationRequest)
-__flatbuffers_build_vector_field(6, flatbuffers_, bpio_ConfigurationRequest_io_direction, flatbuffers_bool, flatbuffers_bool_t, bpio_ConfigurationRequest)
-__flatbuffers_build_vector_field(7, flatbuffers_, bpio_ConfigurationRequest_io_value, flatbuffers_bool, flatbuffers_bool_t, bpio_ConfigurationRequest)
-__flatbuffers_build_vector_field(8, flatbuffers_, bpio_ConfigurationRequest_led_color, flatbuffers_uint32, uint32_t, bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(2, flatbuffers_, bpio_ConfigurationRequest_psu_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(3, flatbuffers_, bpio_ConfigurationRequest_psu_set_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(4, flatbuffers_, bpio_ConfigurationRequest_psu_set_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(5, flatbuffers_, bpio_ConfigurationRequest_io_direction_mask, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(6, flatbuffers_, bpio_ConfigurationRequest_io_direction, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(7, flatbuffers_, bpio_ConfigurationRequest_io_value_mask, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(8, flatbuffers_, bpio_ConfigurationRequest_io_value, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(9, flatbuffers_, bpio_ConfigurationRequest_led_resume, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
+__flatbuffers_build_vector_field(10, flatbuffers_, bpio_ConfigurationRequest_led_color, flatbuffers_uint32, uint32_t, bpio_ConfigurationRequest)
+__flatbuffers_build_scalar_field(11, flatbuffers_, bpio_ConfigurationRequest_pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ConfigurationRequest)
 
 static inline bpio_ConfigurationRequest_ref_t bpio_ConfigurationRequest_create(flatbuffers_builder_t *B __bpio_ConfigurationRequest_formal_args)
 {
     if (bpio_ConfigurationRequest_start(B)
         || bpio_ConfigurationRequest_mode_add(B, v0)
         || bpio_ConfigurationRequest_mode_configuration_add(B, v1)
-        || bpio_ConfigurationRequest_psu_set_voltage_mv_add(B, v4)
-        || bpio_ConfigurationRequest_psu_set_current_ma_add(B, v5)
+        || bpio_ConfigurationRequest_psu_set_mv_add(B, v3)
+        || bpio_ConfigurationRequest_psu_set_ma_add(B, v4)
+        || bpio_ConfigurationRequest_led_color_add(B, v10)
+        || bpio_ConfigurationRequest_psu_enabled_add(B, v2)
+        || bpio_ConfigurationRequest_io_direction_mask_add(B, v5)
         || bpio_ConfigurationRequest_io_direction_add(B, v6)
-        || bpio_ConfigurationRequest_io_value_add(B, v7)
-        || bpio_ConfigurationRequest_led_color_add(B, v8)
-        || bpio_ConfigurationRequest_pullup_enabled_add(B, v2)
-        || bpio_ConfigurationRequest_psu_enabled_add(B, v3)) {
+        || bpio_ConfigurationRequest_io_value_mask_add(B, v7)
+        || bpio_ConfigurationRequest_io_value_add(B, v8)
+        || bpio_ConfigurationRequest_led_resume_add(B, v9)
+        || bpio_ConfigurationRequest_pullup_enabled_add(B, v11)) {
         return 0;
     }
     return bpio_ConfigurationRequest_end(B);
@@ -329,13 +348,16 @@ static bpio_ConfigurationRequest_ref_t bpio_ConfigurationRequest_clone(flatbuffe
     if (bpio_ConfigurationRequest_start(B)
         || bpio_ConfigurationRequest_mode_pick(B, t)
         || bpio_ConfigurationRequest_mode_configuration_pick(B, t)
-        || bpio_ConfigurationRequest_psu_set_voltage_mv_pick(B, t)
-        || bpio_ConfigurationRequest_psu_set_current_ma_pick(B, t)
-        || bpio_ConfigurationRequest_io_direction_pick(B, t)
-        || bpio_ConfigurationRequest_io_value_pick(B, t)
+        || bpio_ConfigurationRequest_psu_set_mv_pick(B, t)
+        || bpio_ConfigurationRequest_psu_set_ma_pick(B, t)
         || bpio_ConfigurationRequest_led_color_pick(B, t)
-        || bpio_ConfigurationRequest_pullup_enabled_pick(B, t)
-        || bpio_ConfigurationRequest_psu_enabled_pick(B, t)) {
+        || bpio_ConfigurationRequest_psu_enabled_pick(B, t)
+        || bpio_ConfigurationRequest_io_direction_mask_pick(B, t)
+        || bpio_ConfigurationRequest_io_direction_pick(B, t)
+        || bpio_ConfigurationRequest_io_value_mask_pick(B, t)
+        || bpio_ConfigurationRequest_io_value_pick(B, t)
+        || bpio_ConfigurationRequest_led_resume_pick(B, t)
+        || bpio_ConfigurationRequest_pullup_enabled_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, bpio_ConfigurationRequest_end(B));

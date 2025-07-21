@@ -442,7 +442,7 @@ struct data_request_t {
     bool stop_alt;  // Stop alternate condition
 };
 
-bool i2c_bpio(struct data_request_t *request) {
+uint32_t i2c_bpio(struct data_request_t *request) {
     printf("[I2C] Performing transaction\r\n");
     hwi2c_status_t i2c_result = HWI2C_OK;
     const uint32_t timeout = 0xfffff; // Default timeout, can be adjusted
@@ -459,14 +459,18 @@ bool i2c_bpio(struct data_request_t *request) {
 
     // if txlen is >1 (just the address), we need to write data
     if(request->bytes_write > 1) {
-        // send txbuf[0] (i2c address) with the last bit low
-        i2c_result = pio_i2c_write_timeout(request->data_buf[0]&~0b1, timeout);
-        if(i2c_result != HWI2C_OK) return i2c_result;
-
-        //write out remaining data
-        for(uint32_t i = 1; i < request->bytes_write; i++) {
-            i2c_result = pio_i2c_write_timeout(request->data_buf[i], timeout);
-            if(i2c_result != HWI2C_OK) return i2c_result;
+        //write data
+        for(uint32_t i = 0; i < request->bytes_write; i++) {
+            // send txbuf[0] (i2c address) with the last bit low
+            if(i ==0 && (request->start_main||request->start_alt)) {
+                // if we have a start condition, we need to write the address with the last bit low
+                i2c_result = pio_i2c_write_timeout(request->data_buf[0]&~0b1, timeout);
+                if(i2c_result != HWI2C_OK) return i2c_result;
+            }else{
+                // if we have no start condition, we write the data as is
+                i2c_result = pio_i2c_write_timeout(request->data_buf[i], timeout);
+                if(i2c_result != HWI2C_OK) return i2c_result;
+            }
         }
 
         // if we have no read data, we can stop here
@@ -478,7 +482,7 @@ bool i2c_bpio(struct data_request_t *request) {
     }
     
     //send the read address with the last bit high
-    i2c_result = pio_i2c_write_timeout(request->data_buf[0]|0b1, timeout); //note, don't force the last bit high, its mysterious
+    i2c_result = pio_i2c_write_timeout(request->data_buf[0]|0b1, timeout);
     if(i2c_result != HWI2C_OK) return i2c_result;
 
     // read data
@@ -488,15 +492,73 @@ bool i2c_bpio(struct data_request_t *request) {
     }
 
     // stop and wait for PIO to be idle
-
-    if(request->stop_main || request->stop_alt) {
 i2c_bpio_cleanup:
+    if(request->stop_main || request->stop_alt) {
         if (pio_i2c_stop_timeout(timeout)) return HWI2C_TIMEOUT;
     }
     // Wait for PIO to be idle
     if (pio_i2c_wait_idle_extern(timeout)) return HWI2C_TIMEOUT;
     return HWI2C_OK;
 }
+
+struct bpio_protocol_handler_t {
+    uint32_t (*handler)(struct data_request_t *request);
+};
+
+static const struct bpio_protocol_handler_t protocols[] = {
+    [HIZ] = { .handler = NULL }, // No handler for HIZ
+#ifdef BP_USE_HW1WIRE
+    [HW1WIRE] = { .handler = NULL }, // No handler for HW1WIRE
+#endif
+#ifdef BP_USE_HWUART
+    [HWUART] = { .handler = NULL }, // No handler for HWUART
+#endif
+#ifdef BP_USE_HWHDUART
+    [HWHDUART] = { .handler = NULL }, // No handler for HWHDUART
+#endif
+#ifdef BP_USE_HWI2C
+    [HWI2C] = { .handler = i2c_bpio }, // Handler for HWI2C
+#endif
+#ifdef BP_USE_HW2WIRE
+    [HW2WIRE] = { .handler = NULL }, // No handler for HW2WIRE
+#endif
+#ifdef BP_USE_HWSPI
+    [HWSPI] = { .handler = NULL }, // No handler for HWSPI
+#endif
+#ifdef BP_USE_HW3WIRE
+    [HW3WIRE] = { .handler = NULL }, // No handler for HW3WIRE
+#endif
+#ifdef BP_USE_DIO
+    [DIO] = { .handler = NULL }, // No handler for DIO
+#endif
+#ifdef BP_USE_HWLED
+    [HWLED] = { .handler = NULL }, // No handler for HWLED
+#endif
+#ifdef BP_USE_INFRARED
+    [INFRARED] = { .handler = NULL }, // No handler for INFRARED
+#endif
+#ifdef BP_USE_JTAG
+    [JTAG] = { .handler = NULL }, // No handler for JTAG
+#endif
+#ifdef BP_USE_DUMMY1
+    [DUMMY1] = { .handler = NULL }, // No handler for DUMMY1
+#endif
+#ifdef BP_USE_BINLOOPBACK
+    [BINLOOPBACK] = { .handler = NULL }, // No handler for BINLOOPBACK
+#endif
+#ifdef BP_USE_LCDSPI
+    [LCDSPI] = { .handler = NULL }, // No handler for LCDSPI
+#endif
+#ifdef BP_USE_LCDI2C // future
+    [LCDI2C] = { .handler = NULL }, // No handler for LCDI2C
+#endif
+#ifdef BP_USE_USBPD
+    [USBPD] = { .handler = NULL }, // No handler for USBPD
+#endif
+#ifdef BP_USE_I2S
+    [I2S] = { .handler = NULL }, // No handler for I2S
+#endif
+};
 
 uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     bpio_DataRequest_table_t data_request = (bpio_DataRequest_table_t) bpio_RequestPacket_contents(packet);
@@ -558,9 +620,9 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         .stop_alt = bpio_DataRequest_stop_alt(data_request)
     };
 
-    printf("[Data Request] I2C request\r\n");
-    if(i2c_bpio(&request)){
-        static const char* request_error_msg = "I2C request failed";
+    printf("[Data Request] Protocol request\r\n");
+    if(protocols->handler(&request)){
+        static const char* request_error_msg = "Protocol request failed";
         printf("[Data Request] %s\r\n", request_error_msg);
         error = request_error_msg;
         goto data_response_error;

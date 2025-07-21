@@ -41,7 +41,6 @@ table ModeConfiguration {
   speed_khz:uint32; // Speed in kHz for the mode.
 }
 
-//pullup is last so we can add the pull-x fields to the end of the table
 table ConfigurationRequest {
   mode:string; // Name of the mode to configure.
   mode_configuration:ModeConfiguration; // Configuration for the mode.
@@ -54,10 +53,10 @@ table ConfigurationRequest {
   pullup_disable:bool; // Disable pull-up resistors.
   pullup_enable:bool; // Enable pull-up resistors.
   pullx_config:uint32; //configuration for pull-x on BP7+
-  io_direction_mask:uint8; // Bitmask for IO pin directions (true for output, false for input).
-  io_direction:uint8; // IO pin directions (true for output, false for input).
-  io_value_mask:uint8; // Bitmask for IO pin values (true for high, false for low).
-  io_value:uint8; // IO pin values (true for high, false for low).
+  io_direction_mask:uint8; // Bitmask for IO pin directions (1=modify this pin).
+  io_direction:uint8; // IO pin directions in 8 bit byte (1 output, 0 input).
+  io_value_mask:uint8; // Bitmask for IO pin values (1=modify this pin).
+  io_value:uint8; // IO pin values in 8 bit byte (1 high, 0 low).
   led_resume:bool; // Resume LED effect after configuration.
   led_color:[uint32]; // LED colors in RGB format (0xRRGGBB).
   print_string:string; // string to print on terminal 

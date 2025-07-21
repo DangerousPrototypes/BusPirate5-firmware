@@ -38,6 +38,7 @@
 #include "commands/global/p_pullups.h"
 #include "pirate/psu.h"
 #include "commands/global/cmd_mcu.h"
+#include "pirate/hwi2c_pio.h"
 
 enum binmode_statemachine {
     BINMODE_IDLE = 0,
@@ -431,11 +432,79 @@ config_response_error:
     send_packet(B);
 }
 
+struct data_request_t {
+    bool start_main; // Start main condition
+    bool start_alt;  // Start alternate condition
+    uint16_t bytes_write; // Bytes to write
+    uint16_t bytes_read; // Bytes to read
+    const char *data_buf; // Data buffer 
+    bool stop_main; // Stop main condition  
+    bool stop_alt;  // Stop alternate condition
+};
+
+bool i2c_bpio(struct data_request_t *request) {
+    printf("[I2C] Performing transaction\r\n");
+    hwi2c_status_t i2c_result = HWI2C_OK;
+    const uint32_t timeout = 0xfffff; // Default timeout, can be adjusted
+
+    if(request->bytes_write == 0) {
+        printf("[I2C] Missing I2C read/address in write byte 0\r\n");
+        return true; // Nothing to do
+    }
+
+    // always send a start
+    if(request->start_main||request->start_alt) {
+        if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
+    }
+
+    // if txlen is >1 (just the address), we need to write data
+    if(request->bytes_write > 1) {
+        // send txbuf[0] (i2c address) with the last bit low
+        i2c_result = pio_i2c_write_timeout(request->data_buf[0]&~0b1, timeout);
+        if(i2c_result != HWI2C_OK) return i2c_result;
+
+        //write out remaining data
+        for(uint32_t i = 1; i < request->bytes_write; i++) {
+            i2c_result = pio_i2c_write_timeout(request->data_buf[i], timeout);
+            if(i2c_result != HWI2C_OK) return i2c_result;
+        }
+
+        // if we have no read data, we can stop here
+        if(request->bytes_read == 0) {
+            goto i2c_bpio_cleanup;
+        }
+        // if we have read data, we need to restart
+        if(pio_i2c_restart_timeout(timeout)) return HWI2C_TIMEOUT;
+    }
+    
+    //send the read address with the last bit high
+    i2c_result = pio_i2c_write_timeout(request->data_buf[0]|0b1, timeout); //note, don't force the last bit high, its mysterious
+    if(i2c_result != HWI2C_OK) return i2c_result;
+
+    // read data
+    for(uint32_t i = 0; i<request->bytes_read; i++) {
+        i2c_result = pio_i2c_read_timeout((uint8_t*)&request->data_buf[i], i<(request->bytes_read-1), timeout);
+        if(i2c_result != HWI2C_OK) return i2c_result;
+    }
+
+    // stop and wait for PIO to be idle
+
+    if(request->stop_main || request->stop_alt) {
+i2c_bpio_cleanup:
+        if (pio_i2c_stop_timeout(timeout)) return HWI2C_TIMEOUT;
+    }
+    // Wait for PIO to be idle
+    if (pio_i2c_wait_idle_extern(timeout)) return HWI2C_TIMEOUT;
+    return HWI2C_OK;
+}
+
 uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     bpio_DataRequest_table_t data_request = (bpio_DataRequest_table_t) bpio_RequestPacket_contents(packet);
     test_assert(data_request != 0);
 
     const char *error = NULL;
+
+    char data_buf[512]; // Buffer for data, adjust size as needed
 
     //check if each field is present, get value
     bool start_main = bpio_DataRequest_start_main(data_request);
@@ -447,7 +516,7 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
    
     // Check if data_write is present and get its value.
     flatbuffers_uint8_vec_t data_write;
-    uint32_t data_write_len = 0;
+    uint16_t data_write_len = 0;
     if(bpio_DataRequest_data_write_is_present(data_request)) {
         data_write = bpio_DataRequest_data_write(data_request);
         data_write_len = flatbuffers_uint8_vec_len(data_write);
@@ -461,6 +530,7 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         printf("[Data Request] Data write: ");
         for (size_t i = 0; i < data_write_len; i++) {
             printf("0x%02X ", flatbuffers_uint8_vec_at(data_write, i));
+            data_buf[i] = flatbuffers_uint8_vec_at(data_write, i); // Copy to data_buf
         }
         printf("\r\n");
     }
@@ -478,8 +548,23 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     printf("[Data Request] Stop alternate condition: %s\r\n", stop_alt ? "true" : "false");
 
     // Now we can process the request.
-    // For example, we can send the data to the device.
-    // Here we would typically send the data to the device using the Bus Pirate's I2C interface.
+    struct data_request_t request = {
+        .start_main = bpio_DataRequest_start_main(data_request),
+        .start_alt = bpio_DataRequest_start_alt(data_request),
+        .bytes_write = data_write_len, // Use the length of the data write vector
+        .bytes_read = bpio_DataRequest_bytes_read(data_request),
+        .data_buf = data_buf, // Initialize with the buffer
+        .stop_main = bpio_DataRequest_stop_main(data_request),
+        .stop_alt = bpio_DataRequest_stop_alt(data_request)
+    };
+
+    printf("[Data Request] I2C request\r\n");
+    if(i2c_bpio(&request)){
+        static const char* request_error_msg = "I2C request failed";
+        printf("[Data Request] %s\r\n", request_error_msg);
+        error = request_error_msg;
+        goto data_response_error;
+    }
 
     //prepare DataResponse, put mock up data in data_read if readbytes > 0
     bpio_DataResponse_start(B);
@@ -487,13 +572,13 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         printf("[Data Request] Returning read %d bytes\r\n", readbytes);
         // Create a vector for the data read.
         bpio_DataResponse_data_read_start(B);
-        uint8_t temp = 0xff;
         for (uint16_t i = 0; i < readbytes; i++) {
-            bpio_DataResponse_data_read_push(B, &temp); // Mock data, replace with actual read data.
+            bpio_DataResponse_data_read_push(B, &request.data_buf[i]); // Mock data, replace with actual read data.
         }
         bpio_DataResponse_data_read_end(B);
     }
 
+data_response_error:
     if (error) {
         // Set the error message in the response.
         flatbuffers_string_ref_t error_str = flatbuffers_string_create_str(B, error);

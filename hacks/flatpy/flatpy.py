@@ -289,10 +289,10 @@ def bpio_data_request(start_main, start_alt, data_write, bytes_read, stop_main, 
     # print the data read, if any
     if data_resp.DataReadLength() > 0:
         data_bytes = data_resp.DataReadAsNumpy()
-        print(f"Data read: {data_bytes}")
+        print(f"Data read: {' '.join(f'{b:02x}' for b in data_bytes)}")
 
 
 
 #bpio_status_request()
 bpio_configuration_request("I2C", 400)
-bpio_data_request(True, False, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0b], 12, True, False)
+bpio_data_request(True, False, [0xA0, 0x00], 16, True, False)

@@ -49,6 +49,114 @@
 
 uint8_t binmode_debug = 0;
 
+#if 0
+
+struct _binmode_struct {
+    uint32_t (*func)(uint8_t* data);
+    int arg_count;
+};
+
+enum {
+    BM_RESET = 0,
+    BM_DEBUG_LEVEL,        // 1
+    BM_POWER_EN,           // 2
+    BM_POWER_DIS,          // 3
+    BM_PULLUP_EN,          // 4
+    BM_PULLUP_DIS,         // 5
+    BM_LIST_MODES,         // 6
+    BM_CHANGE_MODE,        // 7
+    BM_INFO,               // 8
+    BM_VERSION_HW,         // 9
+    BM_VERSION_FW,         // 10
+    BM_BITORDER_MSB,       // 11
+    BM_BITORDER_LSB,       // 12
+    BM_AUX_DIRECTION_MASK, // 13
+    BM_AUX_READ,           // 14
+    BM_AUX_WRITE_MASK,     // 15
+    BM_ADC_SELECT,         // 16
+    BM_ADC_READ,           // 17
+    BM_ADC_RAW,            // 18
+    BM_PWM_EN,             // 19
+    BM_PWM_DIS,            // 20
+    BM_PWM_RAW,            // 21
+    // BM_PWM_ACTUAL_FREQ, //22
+    BM_FREQ,            // 23
+    BM_FREQ_RAW,        // 24
+    BM_DELAY_US,        // 25
+    BM_DELAY_MS,        // 26
+    BM_BOOTLOADER,      // 27
+    BM_RESET_BUSPIRATE, // 28
+    BM_PRINT_STRING,    // 29
+    BM_CHANGE_BINMODE,
+    // BM_BINMODE_VERSION, //30
+    // self test
+    // disable all interrupt
+    // enable all interrupt
+    // LEDs?
+
+    BM_CONFIG,
+    BM_WRITE,
+    BM_START,
+    BM_START_ALT,
+    BM_STOP,
+    BM_STOP_ALT,
+    BM_READ,
+    BM_CLKH,
+    BM_CLKL,
+    BM_TICK,
+    BM_DATH,
+    BM_DATL,
+    BM_BITR,
+};
+
+static const struct _binmode_struct binmode_commands[] = {
+    [BM_RESET] = { &binmode_reset, 0 },
+    [BM_DEBUG_LEVEL] = { &binmode_debug_level, 1 },
+    [BM_POWER_EN] = { &binmode_psu_enable, 4 },
+    [BM_POWER_DIS] = { &binmode_psu_disable, 0 },
+    [BM_PULLUP_EN] = { &binmode_pullup_enable, 0 },
+    [BM_PULLUP_DIS] = { &binmode_pullup_disable, 0 },
+    [BM_LIST_MODES] = { &mode_list, 0 },
+    [BM_CHANGE_MODE] = { &mode_change, -1 },
+    [BM_INFO] = { &binmode_info, 0 },
+    [BM_VERSION_HW] = { &binmode_hwversion, 0 },
+    [BM_VERSION_FW] = { &binmode_fwversion, 0 },
+    [BM_BITORDER_MSB] = { &binmode_bitorder_msb, 0 },
+    [BM_BITORDER_LSB] = { &binmode_bitorder_lsb, 0 },
+    [BM_AUX_DIRECTION_MASK] = { &binmode_aux_direction_mask, 2 },
+    [BM_AUX_READ] = { &binmode_aux_read, 0 },
+    [BM_AUX_WRITE_MASK] = { &binmode_aux_write_mask, 2 },
+    [BM_ADC_SELECT] = { &binmode_adc_select, 1 },
+    [BM_ADC_READ] = { &binmode_adc_read, 0 },
+    [BM_ADC_RAW] = { &binmode_adc_raw, 0 },
+    [BM_PWM_EN] = { &binmode_pwm_enable, 6 },
+    [BM_PWM_DIS] = { &binmode_pwm_disable, 1 },
+    [BM_PWM_RAW] = { &binmode_pwm_raw, 7 },
+    [BM_FREQ] = { &binmode_freq, 2 },
+    [BM_FREQ_RAW] = { &binmode_freq_raw, 2 },
+    [BM_DELAY_US] = { &binmode_delay_us, 1 },
+    [BM_DELAY_MS] = { &binmode_delay_ms, 1 },
+    [BM_BOOTLOADER] = { &binmode_bootloader, 0 },
+    [BM_RESET_BUSPIRATE] = { &binmode_reset_buspirate, 0 },
+    [BM_PRINT_STRING] = { 0, 0 },
+    [BM_CHANGE_BINMODE] = { &binmode_change_binmode, 1 },
+    // mode commands
+    [BM_CONFIG] = { &binmode_config, 0 },
+    [BM_WRITE] = { &binmode_write, 1 },
+    [BM_START] = { &binmode_start, 0 },
+    [BM_START_ALT] = { &binmode_start_alt, 0 },
+    [BM_STOP] = { &binmode_stop, 0 },
+    [BM_STOP_ALT] = { &binmode_stop_alt, 0 },
+    [BM_READ] = { &binmode_read, 0 },
+    [BM_CLKH] = { &binmode_clkh, 0 },
+    [BM_CLKL] = { &binmode_clkl, 0 },
+    [BM_TICK] = { &binmode_tick, 0 },
+    [BM_DATH] = { &binmode_dath, 0 },
+    [BM_DATL] = { &binmode_datl, 0 },
+    [BM_BITR] = { &binmode_bitr, 0 },
+};
+#endif
+
 void script_print(const char* str) {
     for (size_t i = 0; i < strlen(str); i++) {
         bin_tx_fifo_put(str[i]);

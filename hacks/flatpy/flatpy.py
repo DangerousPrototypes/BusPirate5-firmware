@@ -247,20 +247,27 @@ def bpio_configuration_request(mode, speed_khz):
         print(f"Configuration error: {config_resp.Error().decode('utf-8')}")
 
 
-def bpio_data_request(i2c_addr, i2c_start, i2c_stop, i2c_read_bytes, i2c_data):
+def bpio_data_request(start_main, start_alt, data_write, bytes_read, stop_main, stop_alt):
     """Create a BPIO DataRequest packet"""
     builder = flatbuffers.Builder(1024)
-    data_vector = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    data_bytes= bytes(data_vector)
-    data_write_vector = builder.CreateByteVector(data_bytes)
+
+    data_write_vector = builder.CreateByteVector(bytes(data_write))
 
     # Create a DataRequest
     DataRequest.Start(builder)
-    DataRequest.AddStartMain(builder, i2c_start)
-    DataRequest.AddStopMain(builder, i2c_stop)
-    DataRequest.AddBytesRead(builder, i2c_read_bytes)
-    DataRequest.AddI2cAddr(builder, i2c_addr)
-    DataRequest.AddDataWrite(builder, data_write_vector)
+    if start_main:
+        DataRequest.AddStartMain(builder, True)
+    if start_alt:
+        DataRequest.AddStartAlt(builder, True)
+    if len(data_write) > 0:
+        DataRequest.AddDataWrite(builder, data_write_vector)
+    if bytes_read > 0:
+        DataRequest.AddBytesRead(builder, bytes_read)
+    if stop_main:
+        DataRequest.AddStopMain(builder, True)
+    if stop_alt:
+        DataRequest.AddStopAlt(builder, True)
+
     data_request = DataRequest.End(builder)
     data = bpio_wrap_request(builder, RequestPacketContents.RequestPacketContents.DataRequest, data_request)
     resp_packet = send_and_receive(data)
@@ -274,15 +281,18 @@ def bpio_data_request(i2c_addr, i2c_start, i2c_stop, i2c_read_bytes, i2c_data):
     #get the DataResponse
     data_resp = DataResponse.DataResponse()
     data_resp.Init(resp_packet.Contents().Bytes, resp_packet.Contents().Pos)
+    
+    # Check if error field is present
+    if data_resp.Error():
+        print(f"Data request error: {data_resp.Error().decode('utf-8')}")
+
     # print the data read, if any
     if data_resp.DataReadLength() > 0:
         data_bytes = data_resp.DataReadAsNumpy()
         print(f"Data read: {data_bytes}")
 
-    # Check if error field is present
-    if data_resp.Error():
-        print(f"Data request error: {data_resp.Error().decode('utf-8')}")
 
-bpio_status_request()
+
+#bpio_status_request()
 bpio_configuration_request("I2C", 400)
-#bpio_data_request(0x50, True, True, 10, None)
+bpio_data_request(True, False, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0b], 12, True, False)

@@ -37,6 +37,7 @@
 #include "pirate/bio.h"
 #include "commands/global/p_pullups.h"
 #include "pirate/psu.h"
+#include "commands/global/cmd_mcu.h"
 
 struct _binmode_struct {
     uint32_t (*func)(uint8_t* data);
@@ -247,6 +248,8 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
             bpio_StatusResponse_mode_pin_labels_push(B, label);
         }
         bpio_StatusResponse_mode_pin_labels_end(B);
+
+        bpio_StatusResponse_mode_bitorder_msb_add(B, system_config.bit_order == 0);
     }
 
     // led_count
@@ -259,6 +262,9 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
     if(query_flags & (1u << bpio_StatusRequestTypes_Pullup) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
         printf("[Status Request] Pullup status requested\r\n");
         bpio_StatusResponse_pullup_enabled_add(B, system_config.pullup_enabled);
+        #ifdef BP_HW_PULLX
+        bpio_StatusResponse_pullx_config_add(B, 0x00000000u); //todo: implement pull-x config
+        #endif
     }
 
     // PSU status
@@ -336,72 +342,90 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
         printf("[Config Request] Mode changed to '%s'\r\n", mode_str);
     }
 
-    //psu_enabled
-    if(bpio_ConfigurationRequest_psu_enabled_is_present(config_request)) {
-        bool psu_enabled = bpio_ConfigurationRequest_psu_enabled_get(config_request);
-        if(psu_enabled>0){
-            psu_enabled--;
-            if(!psu_enabled) {
-                psucmd_disable();
-            }else{
-                uint32_t voltage_mv = 3300;
-                if(bpio_ConfigurationRequest_psu_set_mv_is_present(config_request)) {
-                    voltage_mv = bpio_ConfigurationRequest_psu_set_mv_get(config_request);
-                    //check out of range
-                    if(voltage_mv < 800 || voltage_mv > 5000) {
-                        static const char *voltage_error_msg = "PSU Voltage out of range (800-5000 mV)";
-                        printf("[Config Request] Error: %s (%d mV)\r\n", voltage_error_msg, voltage_mv);
-                        error = voltage_error_msg;
-                        goto config_response_error;
-                    }
-                }
-                
-                uint32_t current_ma = 300; // default
-                bool current_limit_override = false;
-                if(bpio_ConfigurationRequest_psu_set_ma_is_present(config_request)) {
-                    uint32_t current_ma = bpio_ConfigurationRequest_psu_set_ma_get(config_request);
-                    if(current_ma==0) {
-                        current_limit_override = true; // 0 means no limit
-                        printf("[Config Request] PSU current limit override enabled\r\n");
-                    }else{
-                        //check out of range
-                        if(current_ma < 1 || current_ma > 500) {
-                            static const char *current_error_msg = "PSU Current out of range (1-500 mA)";
-                            printf("[Config Request] Error: %s (%d mA)\r\n", current_error_msg, current_ma);
-                            error = current_error_msg;
-                            goto config_response_error;
-                        }
-                    }
-                }
+    //bit orders
+    bool bit_order_msb = bpio_ConfigurationRequest_mode_bitorder_msb_get(config_request);
+    if(bit_order_msb) {
+        system_config.bit_order = 0; // MSB first
+        printf("[Config Request] Bit order set to MSB first\r\n");
+    }
 
-                printf("[Config Request] PSU Voltage: %f, Current: %f, Override: %s\r\n", (float)voltage_mv/1000.0f, (float)current_ma, current_limit_override?"true":"false");
-                
-                uint8_t psu_error = psucmd_enable((float)voltage_mv/1000.0f, (float)current_ma, current_limit_override);
-                if (psu_error) {
-                    static const char *psu_error_msg = "Power supply initialization failed";
-                    printf("[Config Request] Error: %s (%d)\r\n", psu_error_msg, psu_error);
-                    error = psu_error_msg;
+    bool bit_order_lsb = bpio_ConfigurationRequest_mode_bitorder_lsb_get(config_request);
+    if(bit_order_lsb) {
+        system_config.bit_order = 1; // LSB first
+        printf("[Config Request] Bit order set to LSB first\r\n");
+    }
+
+    bool psu_disable = bpio_ConfigurationRequest_psu_disable_get(config_request);
+    if(psu_disable){
+        psucmd_disable();
+        printf("[Config Request] Power supply disabled\r\n");
+    }
+
+    //psu_enabled
+    bool psu_enable = bpio_ConfigurationRequest_psu_enable_get(config_request);
+    if(psu_enable){
+        uint32_t voltage_mv = 3300;
+        if(bpio_ConfigurationRequest_psu_set_mv_is_present(config_request)) {
+            voltage_mv = bpio_ConfigurationRequest_psu_set_mv_get(config_request);
+            //check out of range
+            if(voltage_mv < 800 || voltage_mv > 5000) {
+                static const char *voltage_error_msg = "PSU Voltage out of range (800-5000 mV)";
+                printf("[Config Request] Error: %s (%d mV)\r\n", voltage_error_msg, voltage_mv);
+                error = voltage_error_msg;
+                goto config_response_error;
+            }
+        }
+            
+        uint32_t current_ma = 300; // default
+        bool current_limit_override = false;
+        if(bpio_ConfigurationRequest_psu_set_ma_is_present(config_request)) {
+            current_ma = bpio_ConfigurationRequest_psu_set_ma_get(config_request);
+            if(current_ma==0) {
+                current_limit_override = true; // 0 means no limit
+                printf("[Config Request] PSU current limit override enabled\r\n");
+            }else{
+                //check out of range
+                if(current_ma < 1 || current_ma > 500) {
+                    static const char *current_error_msg = "PSU Current out of range (1-500 mA)";
+                    printf("[Config Request] Error: %s (%d mA)\r\n", current_error_msg, current_ma);
+                    error = current_error_msg;
                     goto config_response_error;
                 }
             }
-            printf("[Config Request] Power supply %s\r\n", psu_enabled ? "enabled" : "disabled");
         }
+
+        printf("[Config Request] PSU Voltage: %f, Current: %f, Override: %s\r\n", (float)voltage_mv/1000.0f, (float)current_ma, current_limit_override?"true":"false");
+        
+        uint8_t psu_error = psucmd_enable((float)voltage_mv/1000.0f, (float)current_ma, current_limit_override);
+        if (psu_error) {
+            static const char *psu_error_msg = "Power supply initialization failed";
+            printf("[Config Request] Error: %s (%d)\r\n", psu_error_msg, psu_error);
+            error = psu_error_msg;
+            goto config_response_error;
+        }
+
+        printf("[Config Request] Power supply enabled\r\n");
+    }
+
+    uint8_t pullup_disable = bpio_ConfigurationRequest_pullup_disable_get(config_request);
+    if(pullup_disable){
+        pullups_disable();
+        printf("[Config Request] Pull-up resistors disabled\r\n");
     }
 
     //pullup_enabled
-    if(bpio_ConfigurationRequest_pullup_enabled_is_present(config_request)) {
-        uint8_t pullup_enabled = bpio_ConfigurationRequest_pullup_enabled_get(config_request);
-        if(pullup_enabled>0){
-            pullup_enabled--;
-            if(pullup_enabled) {
-                pullups_enable();
-            } else {
-                pullups_disable();
-            }
-            printf("[Config Request] Pull-up resistors %s\r\n", pullup_enabled ? "enabled" : "disabled");
+    //if(bpio_ConfigurationRequest_pullup_enabled_is_present(config_request)) {
+        uint8_t pullup_enable = bpio_ConfigurationRequest_pullup_enable_get(config_request);
+        if(pullup_enable){
+            pullups_enable();
+            printf("[Config Request] Pull-up resistors enabled\r\n");
         }
-    }    
-   
+    //}    
+    
+    #ifdef BP_HW_PULLX
+    //pullx_config
+    #endif
+
     //io_direction
     //TODO: this needs to respect any in-use pins (check system_config?)
     if(bpio_ConfigurationRequest_io_direction_mask_is_present(config_request)){
@@ -473,6 +497,26 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
         }
     }
 
+    //printf
+    if(bpio_ConfigurationRequest_print_string_is_present(config_request)) {
+        const char *print_str = bpio_ConfigurationRequest_print_string_get(config_request);
+        printf("%s", print_str);
+    }
+
+    //hardware_bootloader
+    bool hardware_bootloader = bpio_ConfigurationRequest_hardware_bootloader_get(config_request);
+    if(hardware_bootloader) {
+        printf("[Config Request] Entering bootloader mode\r\n");
+        cmd_mcu_jump_to_bootloader();
+    }
+
+    //hardware_reset
+    bool hardware_reset = bpio_ConfigurationRequest_hardware_reset_get(config_request);
+    if(hardware_reset) {
+        printf("[Config Request] Hardware reset requested\r\n");
+        cmd_mcu_reset();
+    }
+
 config_response_error:
     bpio_ConfigurationResponse_start(B);
     // If there was an error, we can set it here.
@@ -496,15 +540,6 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     bpio_DataRequest_table_t data_request = (bpio_DataRequest_table_t) bpio_RequestPacket_contents(packet);
     test_assert(data_request != 0);
 
-    /*table DataRequest {
-  start_main:bool; // Start condition.
-  start_alt:bool; // Alternate start condition.
-  i2c_addr:ubyte; // Device address (Bus Pirate automatically will set read/write bit)
-  data_write:[ubyte]; // Data to write
-  bytes_read:uint16; // Number of bytes to read.
-  stop_main:bool; // Stop condition.
-  stop_alt:bool; // Alternate stop condition.
-}*/
     const char *error = NULL;
 
     //check if each field is present, get value
@@ -520,20 +555,7 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         start_alt = bpio_DataRequest_start_alt(data_request);
     }
     printf("Start alternate condition: %s\r\n", start_alt ? "true" : "false");
-
-    // Check if i2c_addr is present and get its value.
-    uint8_t i2c_addr = 0;
-    bool i2c_addr_present = false;
-    if(bpio_DataRequest_i2c_addr_is_present(data_request)) {
-        i2c_addr = bpio_DataRequest_i2c_addr(data_request);
-        i2c_addr_present = true;
-    }  
-    if (i2c_addr_present) {
-        printf("I2C Address: 0x%02X\r\n", i2c_addr);
-    } else {
-        printf("I2C Address is not present\r\n");
-    }
-    
+   
     // Check if data_write is present and get its value.
     flatbuffers_uint8_vec_t data_write = 0;
     uint32_t data_write_len = 0;
@@ -576,8 +598,8 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     printf("Stop alternate condition: %s\r\n", stop_alt ? "true" : "false");
 
     //print summary of the request
-    printf("start_main: %s, start_alt: %s, i2c_addr: 0x%02X, data_write_len: %d, readbytes: %d, stop_main: %s, stop_alt: %s\r\n",
-            start_main ? "true" : "false", start_alt ? "true" : "false", i2c_addr, data_write_len, readbytes,
+    printf("start_main: %s, start_alt: %s, data_write_len: %d, readbytes: %d, stop_main: %s, stop_alt: %s\r\n",
+            start_main ? "true" : "false", start_alt ? "true" : "false", data_write_len, readbytes,
             stop_main ? "true" : "false", stop_alt ? "true" : "false");
 
 

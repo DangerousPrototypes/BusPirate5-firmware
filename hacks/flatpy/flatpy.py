@@ -181,7 +181,7 @@ def bpio_status_request():
     print(f"  Disk space used: {status_resp.DiskUsedMb()} MB")
 
 
-def bpio_configuration_request(mode, speed_khz):
+def bpio_configuration_request(mode, speed):
     """Create a BPIO ConfigurationRequest packet"""
     builder = flatbuffers.Builder(1024)
     mode = builder.CreateString(mode)
@@ -198,7 +198,8 @@ def bpio_configuration_request(mode, speed_khz):
 
     # Create a ModeConfiguration
     ModeConfiguration.Start(builder)
-    ModeConfiguration.AddSpeedKhz(builder, speed_khz)
+    ModeConfiguration.AddSpeed(builder, speed)  # Speed in Hz
+    ModeConfiguration.AddClockStretch(builder, False)  # Example: clock stretching disabled
     mode_config = ModeConfiguration.End(builder)
 
     # Create a ConfigurationRequest
@@ -294,5 +295,8 @@ def bpio_data_request(start_main, start_alt, data_write, bytes_read, stop_main, 
 
 
 #bpio_status_request()
-bpio_configuration_request("I2C", 400)
-bpio_data_request(True, False, [0xA0, 0x00], 16, True, False)
+for i in range(100):
+    print(f"***********************Test {i+1}:")
+    bpio_configuration_request("I2C", 400000)
+    bpio_data_request(True, False, [0xA0, 0x00], 16, True, False)
+

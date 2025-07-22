@@ -162,7 +162,19 @@ static inline int bpio_StatusResponse_verify_as_root_with_type_hash_and_size(con
 static int bpio_ModeConfiguration_verify_table(flatcc_table_verifier_descriptor_t *td)
 {
     int ret;
-    if ((ret = flatcc_verify_field(td, 0, 4, 4) /* speed_khz */)) return ret;
+    if ((ret = flatcc_verify_field(td, 0, 4, 4) /* speed */)) return ret;
+    if ((ret = flatcc_verify_field(td, 1, 1, 1) /* data_bits */)) return ret;
+    if ((ret = flatcc_verify_field(td, 2, 1, 1) /* parity */)) return ret;
+    if ((ret = flatcc_verify_field(td, 3, 1, 1) /* stop_bits */)) return ret;
+    if ((ret = flatcc_verify_field(td, 4, 1, 1) /* flow_control */)) return ret;
+    if ((ret = flatcc_verify_field(td, 5, 1, 1) /* signal_inversion */)) return ret;
+    if ((ret = flatcc_verify_field(td, 6, 1, 1) /* clock_stretch */)) return ret;
+    if ((ret = flatcc_verify_field(td, 7, 1, 1) /* clock_polarity */)) return ret;
+    if ((ret = flatcc_verify_field(td, 8, 1, 1) /* clock_phase */)) return ret;
+    if ((ret = flatcc_verify_field(td, 9, 1, 1) /* chip_select_active_low */)) return ret;
+    if ((ret = flatcc_verify_field(td, 10, 1, 1) /* submode */)) return ret;
+    if ((ret = flatcc_verify_field(td, 11, 1, 1) /* tx_modulation */)) return ret;
+    if ((ret = flatcc_verify_field(td, 12, 1, 1) /* rx_sensor */)) return ret;
     return flatcc_verify_ok;
 }
 

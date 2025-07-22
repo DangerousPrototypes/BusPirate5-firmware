@@ -41,7 +41,7 @@ __flatbuffers_build_table(flatbuffers_, bpio_StatusResponse, 25)
 static const flatbuffers_voffset_t __bpio_ModeConfiguration_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_ModeConfiguration_ref_t;
 static bpio_ModeConfiguration_ref_t bpio_ModeConfiguration_clone(flatbuffers_builder_t *B, bpio_ModeConfiguration_table_t t);
-__flatbuffers_build_table(flatbuffers_, bpio_ModeConfiguration, 1)
+__flatbuffers_build_table(flatbuffers_, bpio_ModeConfiguration, 13)
 
 static const flatbuffers_voffset_t __bpio_ConfigurationRequest_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_ConfigurationRequest_ref_t;
@@ -100,8 +100,14 @@ __flatbuffers_build_table_prolog(flatbuffers_, bpio_StatusRequest, bpio_StatusRe
 static inline bpio_StatusResponse_ref_t bpio_StatusResponse_create(flatbuffers_builder_t *B __bpio_StatusResponse_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_StatusResponse, bpio_StatusResponse_file_identifier, bpio_StatusResponse_type_identifier)
 
-#define __bpio_ModeConfiguration_formal_args , uint32_t v0
-#define __bpio_ModeConfiguration_call_args , v0
+#define __bpio_ModeConfiguration_formal_args ,\
+  uint32_t v0, uint8_t v1, flatbuffers_bool_t v2, uint8_t v3,\
+  flatbuffers_bool_t v4, flatbuffers_bool_t v5, flatbuffers_bool_t v6, flatbuffers_bool_t v7,\
+  flatbuffers_bool_t v8, uint8_t v9, uint8_t v10, uint8_t v11, uint8_t v12
+#define __bpio_ModeConfiguration_call_args ,\
+  v0, v1, v2, v3,\
+  v4, v5, v6, v7,\
+  v8, v9, v10, v11, v12
 static inline bpio_ModeConfiguration_ref_t bpio_ModeConfiguration_create(flatbuffers_builder_t *B __bpio_ModeConfiguration_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_ModeConfiguration, bpio_ModeConfiguration_file_identifier, bpio_ModeConfiguration_type_identifier)
 
@@ -309,12 +315,36 @@ static bpio_StatusResponse_ref_t bpio_StatusResponse_clone(flatbuffers_builder_t
     __flatbuffers_memoize_end(B, t, bpio_StatusResponse_end(B));
 }
 
-__flatbuffers_build_scalar_field(0, flatbuffers_, bpio_ModeConfiguration_speed_khz, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(0, flatbuffers_, bpio_ModeConfiguration_speed, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(1, flatbuffers_, bpio_ModeConfiguration_data_bits, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(2, flatbuffers_, bpio_ModeConfiguration_parity, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(3, flatbuffers_, bpio_ModeConfiguration_stop_bits, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(4, flatbuffers_, bpio_ModeConfiguration_flow_control, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(5, flatbuffers_, bpio_ModeConfiguration_signal_inversion, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(6, flatbuffers_, bpio_ModeConfiguration_clock_stretch, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(7, flatbuffers_, bpio_ModeConfiguration_clock_polarity, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(8, flatbuffers_, bpio_ModeConfiguration_clock_phase, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(9, flatbuffers_, bpio_ModeConfiguration_chip_select_active_low, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(10, flatbuffers_, bpio_ModeConfiguration_submode, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(11, flatbuffers_, bpio_ModeConfiguration_tx_modulation, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
+__flatbuffers_build_scalar_field(12, flatbuffers_, bpio_ModeConfiguration_rx_sensor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ModeConfiguration)
 
 static inline bpio_ModeConfiguration_ref_t bpio_ModeConfiguration_create(flatbuffers_builder_t *B __bpio_ModeConfiguration_formal_args)
 {
     if (bpio_ModeConfiguration_start(B)
-        || bpio_ModeConfiguration_speed_khz_add(B, v0)) {
+        || bpio_ModeConfiguration_speed_add(B, v0)
+        || bpio_ModeConfiguration_data_bits_add(B, v1)
+        || bpio_ModeConfiguration_parity_add(B, v2)
+        || bpio_ModeConfiguration_stop_bits_add(B, v3)
+        || bpio_ModeConfiguration_flow_control_add(B, v4)
+        || bpio_ModeConfiguration_signal_inversion_add(B, v5)
+        || bpio_ModeConfiguration_clock_stretch_add(B, v6)
+        || bpio_ModeConfiguration_clock_polarity_add(B, v7)
+        || bpio_ModeConfiguration_clock_phase_add(B, v8)
+        || bpio_ModeConfiguration_chip_select_active_low_add(B, v9)
+        || bpio_ModeConfiguration_submode_add(B, v10)
+        || bpio_ModeConfiguration_tx_modulation_add(B, v11)
+        || bpio_ModeConfiguration_rx_sensor_add(B, v12)) {
         return 0;
     }
     return bpio_ModeConfiguration_end(B);
@@ -324,7 +354,19 @@ static bpio_ModeConfiguration_ref_t bpio_ModeConfiguration_clone(flatbuffers_bui
 {
     __flatbuffers_memoize_begin(B, t);
     if (bpio_ModeConfiguration_start(B)
-        || bpio_ModeConfiguration_speed_khz_pick(B, t)) {
+        || bpio_ModeConfiguration_speed_pick(B, t)
+        || bpio_ModeConfiguration_data_bits_pick(B, t)
+        || bpio_ModeConfiguration_parity_pick(B, t)
+        || bpio_ModeConfiguration_stop_bits_pick(B, t)
+        || bpio_ModeConfiguration_flow_control_pick(B, t)
+        || bpio_ModeConfiguration_signal_inversion_pick(B, t)
+        || bpio_ModeConfiguration_clock_stretch_pick(B, t)
+        || bpio_ModeConfiguration_clock_polarity_pick(B, t)
+        || bpio_ModeConfiguration_clock_phase_pick(B, t)
+        || bpio_ModeConfiguration_chip_select_active_low_pick(B, t)
+        || bpio_ModeConfiguration_submode_pick(B, t)
+        || bpio_ModeConfiguration_tx_modulation_pick(B, t)
+        || bpio_ModeConfiguration_rx_sensor_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, bpio_ModeConfiguration_end(B));

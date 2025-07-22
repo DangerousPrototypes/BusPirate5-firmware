@@ -113,6 +113,7 @@ void system_init(void) {
 
     system_config.rts = 0;
 
+    system_config.bpio_debug_enable = false; // default to no debug output for BPIO
     system_config.binmode_select = 0;
     system_config.binmode_lock_terminal = false;
     system_config.binmode_usb_rx_queue_enable =

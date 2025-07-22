@@ -168,59 +168,6 @@ uint32_t spi_setup(void) {
     return 1;
 }
 
-uint32_t spi_binmode_get_config_length(void) {
-    return 8;
-}
-
-uint32_t spi_binmode_setup(uint8_t* config) {
-    // spi config sequence:
-    // 0x3b9aca0 4-8 CPOL=0 CPHA=0 CS=1
-    uint32_t temp = 0;
-    char c;
-    bool error = false;
-    for (uint8_t i = 0; i < 4; i++) {
-        temp = temp << 8;
-        temp |= config[i];
-    }
-    if (temp > 62500000) {
-        error = true;
-    } else {
-        mode_config.baudrate = temp;
-    }
-
-    c = config[4];
-    if (c < 4 || c > 8) {
-        error = true;
-    } else {
-        mode_config.data_bits = c;
-    }
-
-    c = config[5];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.clock_polarity = c;
-    }
-
-    c = config[6];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.clock_phase = c;
-    }
-
-    c = config[7];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.cs_idle = c;
-    }
-
-    mode_config.binmode = true;
-
-    return error;
-}
-
 uint32_t spi_setup_exc(void) {
     // setup spi
     mode_config.read_with_write = false;

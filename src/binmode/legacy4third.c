@@ -101,7 +101,7 @@ void set_planks_auxpins(bool set)
 
 void disable_psu_legacy(void) {
     uint8_t binmode_args = 0x00;
-    uint32_t result = binmode_psu_disable(&binmode_args);
+    //DREG: uint32_t result = binmode_psu_disable(&binmode_args);
 }
 
 void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8_t cpah, uint8_t cs) {
@@ -122,8 +122,9 @@ void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8
                                    cpah,
                                    cs };
 
-    mode_change((uint8_t*)"SPI");
-    binmode_config(spi_binmode_args);
+    //DREG: mode_change((uint8_t*)"SPI");
+    //DREG: new config
+    //binmode_config(spi_binmode_args);
     system_config.binmode_usb_rx_queue_enable = false;
     system_config.binmode_usb_tx_queue_enable = false;
 }
@@ -199,9 +200,10 @@ void reset_legacy(void) {
     hwspi_deinit();
     set_planks_auxpins(false);
     disable_psu_legacy();
-    binmode_pullup_disable(&binmode_args);
-    binmode_reset(&binmode_args);
-    mode_change((uint8_t*)"HiZ");
+    //DREG: new bpio
+    //DREG: binmode_pullup_disable(&binmode_args);
+    //DREG: binmode_reset(&binmode_args);
+    //DREG: mode_change((uint8_t*)"HiZ");
     set_pins_ui();
 }
 
@@ -298,7 +300,9 @@ void legacy_protocol(void) {
                     uint8_t args[] = {
                         volts_integer, volts_decimal, (uint8_t)(current_integer >> 8), (uint8_t)(current_integer & 0xFF)
                     };
-                    uint32_t result = binmode_psu_enable(args);
+                    //DREG: new psu
+                    //DREG: uint32_t result = binmode_psu_enable(args);
+                    uint32_t result =0;
 
                     if (result) {
                         if (binmode_debug) {
@@ -317,13 +321,13 @@ void legacy_protocol(void) {
                         printf("\r\npullup_disable");
                     }
                     uint8_t binmode_args = 0;
-                    binmode_pullup_disable(&binmode_args);
+                    //DREG: binmode_pullup_disable(&binmode_args);
                 } else {
                     if (binmode_debug) {
                         printf("\r\npullup_enable");
                     }
                     uint8_t binmode_args = 0;
-                    binmode_pullup_enable(&binmode_args);
+                    //DREG: binmode_pullup_enable(&binmode_args);
                 }
 
                 // AUX
@@ -828,7 +832,7 @@ void legacy4third_mode(void) {
         system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
         set_planks_auxpins(false);
         uint8_t binmode_args = 0;
-        binmode_reset_buspirate(&binmode_args);
+        //DREG: binmode_reset_buspirate(&binmode_args);
     }
 }
 

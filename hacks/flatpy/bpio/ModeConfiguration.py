@@ -25,23 +25,179 @@ class ModeConfiguration(object):
         self._tab = flatbuffers.table.Table(buf, pos)
 
     # ModeConfiguration
-    def SpeedKhz(self):
+    def Speed(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
+    # ModeConfiguration
+    def DataBits(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
+        return 0
+
+    # ModeConfiguration
+    def Parity(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+        return False
+
+    # ModeConfiguration
+    def StopBits(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
+        return 0
+
+    # ModeConfiguration
+    def FlowControl(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
+        if o != 0:
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+        return False
+
+    # ModeConfiguration
+    def SignalInversion(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        if o != 0:
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+        return False
+
+    # ModeConfiguration
+    def ClockStretch(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        if o != 0:
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+        return False
+
+    # ModeConfiguration
+    def ClockPolarity(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        if o != 0:
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+        return False
+
+    # ModeConfiguration
+    def ClockPhase(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(20))
+        if o != 0:
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+        return False
+
+    # ModeConfiguration
+    def ChipSelectActiveLow(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
+        return 0
+
+    # ModeConfiguration
+    def Submode(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(24))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
+        return 0
+
+    # ModeConfiguration
+    def TxModulation(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(26))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
+        return 0
+
+    # ModeConfiguration
+    def RxSensor(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(28))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
+        return 0
+
 def ModeConfigurationStart(builder):
-    builder.StartObject(1)
+    builder.StartObject(13)
 
 def Start(builder):
     ModeConfigurationStart(builder)
 
-def ModeConfigurationAddSpeedKhz(builder, speedKhz):
-    builder.PrependUint32Slot(0, speedKhz, 0)
+def ModeConfigurationAddSpeed(builder, speed):
+    builder.PrependUint32Slot(0, speed, 0)
 
-def AddSpeedKhz(builder, speedKhz):
-    ModeConfigurationAddSpeedKhz(builder, speedKhz)
+def AddSpeed(builder, speed):
+    ModeConfigurationAddSpeed(builder, speed)
+
+def ModeConfigurationAddDataBits(builder, dataBits):
+    builder.PrependUint8Slot(1, dataBits, 0)
+
+def AddDataBits(builder, dataBits):
+    ModeConfigurationAddDataBits(builder, dataBits)
+
+def ModeConfigurationAddParity(builder, parity):
+    builder.PrependBoolSlot(2, parity, 0)
+
+def AddParity(builder, parity):
+    ModeConfigurationAddParity(builder, parity)
+
+def ModeConfigurationAddStopBits(builder, stopBits):
+    builder.PrependUint8Slot(3, stopBits, 0)
+
+def AddStopBits(builder, stopBits):
+    ModeConfigurationAddStopBits(builder, stopBits)
+
+def ModeConfigurationAddFlowControl(builder, flowControl):
+    builder.PrependBoolSlot(4, flowControl, 0)
+
+def AddFlowControl(builder, flowControl):
+    ModeConfigurationAddFlowControl(builder, flowControl)
+
+def ModeConfigurationAddSignalInversion(builder, signalInversion):
+    builder.PrependBoolSlot(5, signalInversion, 0)
+
+def AddSignalInversion(builder, signalInversion):
+    ModeConfigurationAddSignalInversion(builder, signalInversion)
+
+def ModeConfigurationAddClockStretch(builder, clockStretch):
+    builder.PrependBoolSlot(6, clockStretch, 0)
+
+def AddClockStretch(builder, clockStretch):
+    ModeConfigurationAddClockStretch(builder, clockStretch)
+
+def ModeConfigurationAddClockPolarity(builder, clockPolarity):
+    builder.PrependBoolSlot(7, clockPolarity, 0)
+
+def AddClockPolarity(builder, clockPolarity):
+    ModeConfigurationAddClockPolarity(builder, clockPolarity)
+
+def ModeConfigurationAddClockPhase(builder, clockPhase):
+    builder.PrependBoolSlot(8, clockPhase, 0)
+
+def AddClockPhase(builder, clockPhase):
+    ModeConfigurationAddClockPhase(builder, clockPhase)
+
+def ModeConfigurationAddChipSelectActiveLow(builder, chipSelectActiveLow):
+    builder.PrependUint8Slot(9, chipSelectActiveLow, 0)
+
+def AddChipSelectActiveLow(builder, chipSelectActiveLow):
+    ModeConfigurationAddChipSelectActiveLow(builder, chipSelectActiveLow)
+
+def ModeConfigurationAddSubmode(builder, submode):
+    builder.PrependUint8Slot(10, submode, 0)
+
+def AddSubmode(builder, submode):
+    ModeConfigurationAddSubmode(builder, submode)
+
+def ModeConfigurationAddTxModulation(builder, txModulation):
+    builder.PrependUint8Slot(11, txModulation, 0)
+
+def AddTxModulation(builder, txModulation):
+    ModeConfigurationAddTxModulation(builder, txModulation)
+
+def ModeConfigurationAddRxSensor(builder, rxSensor):
+    builder.PrependUint8Slot(12, rxSensor, 0)
+
+def AddRxSensor(builder, rxSensor):
+    ModeConfigurationAddRxSensor(builder, rxSensor)
 
 def ModeConfigurationEnd(builder):
     return builder.EndObject()

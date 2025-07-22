@@ -39,6 +39,7 @@
 #include "pirate/psu.h"
 #include "commands/global/cmd_mcu.h"
 #include "pirate/hwi2c_pio.h"
+#include "mode/hwi2c.h"
 
 enum binmode_statemachine {
     BINMODE_IDLE = 0,
@@ -57,13 +58,23 @@ const char dirtyproto_mode_name[] = "BPIO2 flatbuffer interface";
 // This allows us to verify result in optimized builds.
 #define test_assert(x) do { if (!(x)) { assert(0); return -1; }} while(0)
 
+bool bpio_debug = false;
 
-static bool mode_change_new(const char *mode_name) {
+static bool mode_change_new(const char *mode_name, bpio_mode_configuration_t *mode_config) {
     // compare mode name to modes.protocol_name
     for (uint8_t i = 0; i < count_of(modes); i++) {
         if (strcasecmp(mode_name, modes[i].protocol_name) == 0) {
+            if(modes[i].bpio_handler==NULL) {
+                if(bpio_debug) printf("[Mode Change] Protocol %s does not support BPIO handler\r\n", mode_name);
+                return true;
+            }
             modes[system_config.mode].protocol_cleanup();
             system_config.mode = i;
+            if(modes[system_config.mode].bpio_configure==NULL) {
+                if(bpio_debug) printf("[Mode Change] Protocol %s does not support BPIO configuration\r\n", mode_name);
+            }else{
+                modes[system_config.mode].bpio_configure(mode_config);
+            }
             modes[system_config.mode].protocol_setup_exc();
             return false;
         }
@@ -74,8 +85,9 @@ static bool mode_change_new(const char *mode_name) {
 static inline void send_packet(flatcc_builder_t *B) {
     uint8_t* buf;
     size_t len = flatcc_builder_get_buffer_size(B);
+    if(bpio_debug) printf("[Send Packet] Length %d\r\n", len);
     buf = flatcc_builder_finalize_buffer(B, &len);
-    printf("[Send Packet] Length %d\r\n", len);
+    if(bpio_debug) printf("[Send Packet] Finalized buffer\r\n");
     //send two byte length header
     uint8_t header[2];
     header[0] = len & 0xFF; // LSB
@@ -85,6 +97,8 @@ static inline void send_packet(flatcc_builder_t *B) {
     for(size_t i = 0; i < len; i++) {
         bin_tx_fifo_put(buf[i]);
     }
+    free(buf); // Free the buffer allocated by flatcc_builder_finalize_buffer
+    flatcc_builder_reset(B);
 }
 
 uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
@@ -99,20 +113,22 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
         query_flags|= 1u<<bpio_StatusRequestTypes_All;
     }else{
         // Iterate through the vector
-        printf("[Status Request] Query types: ");
+        if(bpio_debug) printf("[Status Request] Query types: ");
         for (size_t i = 0; i < bpio_StatusRequestTypes_vec_len(query); i++) {
             bpio_StatusRequestTypes_enum_t query_type = bpio_StatusRequestTypes_vec_at(query, i);
-            printf("%zu ", query_type);
+            if(bpio_debug) printf("%zu ", query_type);
             // Set the corresponding bit in query_flags
             query_flags |= (1u << query_type);
         }
-        printf("\r\n");
+        if(bpio_debug) printf("\r\n");
     }
+
+    flatcc_builder_reset(B);
 
     bpio_StatusResponse_start(B);
     if(query_flags & (1u << bpio_StatusRequestTypes_Version)||query_flags & (1u << bpio_StatusRequestTypes_All)) {
         // Send version information
-        printf("[Status Request] Version requested\r\n");
+        if(bpio_debug) printf("[Status Request] Version requested\r\n");
         bpio_StatusResponse_hardware_version_major_add(B, BP_FIRMWARE_VERSION_MAJOR);
         bpio_StatusResponse_hardware_version_minor_add(B, BP_FIRMWARE_VERSION_REVISION);
         bpio_StatusResponse_firmware_version_major_add(B, 0);
@@ -126,7 +142,7 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
 
     //modes_available and current mode
     if(query_flags & (1u << bpio_StatusRequestTypes_Mode) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
-        printf("[Status Request] Modes available requested\r\n");
+        if(bpio_debug) printf("[Status Request] Modes available requested\r\n");
         
         flatbuffers_string_ref_t current_mode_name = flatbuffers_string_create_str(B, modes[system_config.mode].protocol_name);
         bpio_StatusResponse_mode_current_add(B, current_mode_name);
@@ -150,13 +166,13 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
 
     // led_count
     if(query_flags & (1u << bpio_StatusRequestTypes_LED) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
-        printf("[Status Request] LED count requested\r\n");
+        if(bpio_debug) printf("[Status Request] LED count requested\r\n");
         bpio_StatusResponse_led_count_add(B, RGB_LEN);
     }
 
     // Pullup status
     if(query_flags & (1u << bpio_StatusRequestTypes_Pullup) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
-        printf("[Status Request] Pullup status requested\r\n");
+        if(bpio_debug) printf("[Status Request] Pullup status requested\r\n");
         bpio_StatusResponse_pullup_enabled_add(B, system_config.pullup_enabled);
         #ifdef BP_HW_PULLX
         bpio_StatusResponse_pullx_config_add(B, 0x00000000u); //todo: implement pull-x config
@@ -165,7 +181,7 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
 
     // PSU status
     if(query_flags & (1u << bpio_StatusRequestTypes_PSU) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
-        printf("[Status Request] PSU status requested\r\n");
+        if(bpio_debug) printf("[Status Request] PSU status requested\r\n");
         bpio_StatusResponse_psu_enabled_add(B, system_config.psu);
         bpio_StatusResponse_psu_set_mv_add(B, system_config.psu_voltage/10);
         bpio_StatusResponse_psu_set_ma_add(B, system_config.psu_current_limit/10000);
@@ -180,7 +196,7 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
 
     //ADC status, return the voltage on IO0...IO7
     if(query_flags & (1u << bpio_StatusRequestTypes_ADC) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
-        printf("[Status Request] ADC status requested\r\n");
+        if(bpio_debug) printf("[Status Request] ADC status requested\r\n");
         amux_sweep();
         bpio_StatusResponse_adc_mv_start(B);
         for (uint8_t i = 1; i < 9; i++) {
@@ -191,7 +207,7 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
 
     // IO status
     if(query_flags & (1u << bpio_StatusRequestTypes_IO) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
-        printf("[Status Request] IO status requested\r\n");
+        if(bpio_debug) printf("[Status Request] IO status requested\r\n");
         // direction is 0-7
         // value is 8-15
         uint32_t pins = gpio_get_all();
@@ -201,7 +217,7 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
 
     // Disk status
     if(query_flags & (1u << bpio_StatusRequestTypes_Disk) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
-        printf("[Status Request] Disk status requested\r\n");
+        if(bpio_debug) printf("[Status Request] Disk status requested\r\n");
         bpio_StatusResponse_disk_size_mb_add(B, system_config.storage_size * 1000);
         bpio_StatusResponse_disk_used_mb_add(B, 0.0f); //todo: implement disk free space    
     }
@@ -228,33 +244,57 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
     if(bpio_ConfigurationRequest_mode_is_present(config_request)) {
         // change mode
         const char* mode_str = bpio_ConfigurationRequest_mode_get(config_request);
-        if (mode_change_new(mode_str)) {
+        //get the mode configuration
+        bpio_ModeConfiguration_table_t mode_config = bpio_ConfigurationRequest_mode_configuration(config_request);
+        if(mode_config == 0){
+            static const char *mode_config_error_msg = "Mode configuration not present";
+            if(bpio_debug) printf("[Config Request] Error: %s\r\n", mode_config_error_msg);
+            error = mode_config_error_msg;
+            goto config_response_error;
+        }
+        bpio_mode_configuration_t mode_config_data;
+        mode_config_data.speed = bpio_ModeConfiguration_speed_get(mode_config);
+        mode_config_data.data_bits = bpio_ModeConfiguration_data_bits_get(mode_config);
+        mode_config_data.parity = bpio_ModeConfiguration_parity_get(mode_config);
+        mode_config_data.stop_bits = bpio_ModeConfiguration_stop_bits_get(mode_config);
+        mode_config_data.flow_control = bpio_ModeConfiguration_flow_control_get(mode_config);
+        mode_config_data.signal_inversion = bpio_ModeConfiguration_signal_inversion_get(mode_config);
+        mode_config_data.clock_stretch = bpio_ModeConfiguration_clock_stretch_get(mode_config);
+        mode_config_data.clock_polarity = bpio_ModeConfiguration_clock_polarity_get(mode_config);
+        mode_config_data.clock_phase = bpio_ModeConfiguration_clock_phase_get(mode_config);
+        mode_config_data.chip_select_active_low = bpio_ModeConfiguration_chip_select_active_low_get(mode_config);
+        mode_config_data.submode = bpio_ModeConfiguration_submode_get(mode_config);
+        mode_config_data.tx_modulation = bpio_ModeConfiguration_tx_modulation_get(mode_config);
+        mode_config_data.rx_sensor = bpio_ModeConfiguration_rx_sensor_get(mode_config);
+        mode_config_data.debug = bpio_debug;
+        
+        if (mode_change_new(mode_str, &mode_config_data)) {
             static const char *mode_error_msg = "Invalid mode name";
-            printf("[Config Request] Error: %s '%s'\r\n", mode_error_msg, mode_str);
+            if(bpio_debug) printf("[Config Request] Error: %s '%s'\r\n", mode_error_msg, mode_str);
             error = mode_error_msg;
             goto config_response_error;
         }
         //todo: configure mode
-        printf("[Config Request] Mode changed to '%s'\r\n", mode_str);
+        if(bpio_debug) printf("[Config Request] Mode changed to '%s'\r\n", mode_str);
     }
 
     //bit orders
     bool bit_order_msb = bpio_ConfigurationRequest_mode_bitorder_msb_get(config_request);
     if(bit_order_msb) {
         system_config.bit_order = 0; // MSB first
-        printf("[Config Request] Bit order set to MSB first\r\n");
+        if(bpio_debug) printf("[Config Request] Bit order set to MSB first\r\n");
     }
 
     bool bit_order_lsb = bpio_ConfigurationRequest_mode_bitorder_lsb_get(config_request);
     if(bit_order_lsb) {
         system_config.bit_order = 1; // LSB first
-        printf("[Config Request] Bit order set to LSB first\r\n");
+        if(bpio_debug) printf("[Config Request] Bit order set to LSB first\r\n");
     }
 
     bool psu_disable = bpio_ConfigurationRequest_psu_disable_get(config_request);
     if(psu_disable){
         psucmd_disable();
-        printf("[Config Request] Power supply disabled\r\n");
+        if(bpio_debug) printf("[Config Request] Power supply disabled\r\n");
     }
 
     //psu_enabled
@@ -266,7 +306,7 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
             //check out of range
             if(voltage_mv < 800 || voltage_mv > 5000) {
                 static const char *voltage_error_msg = "PSU Voltage out of range (800-5000 mV)";
-                printf("[Config Request] Error: %s (%d mV)\r\n", voltage_error_msg, voltage_mv);
+                if(bpio_debug) printf("[Config Request] Error: %s (%d mV)\r\n", voltage_error_msg, voltage_mv);
                 error = voltage_error_msg;
                 goto config_response_error;
             }
@@ -278,35 +318,35 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
             current_ma = bpio_ConfigurationRequest_psu_set_ma_get(config_request);
             if(current_ma==0) {
                 current_limit_override = true; // 0 means no limit
-                printf("[Config Request] PSU current limit override enabled\r\n");
+                if(bpio_debug) printf("[Config Request] PSU current limit override enabled\r\n");
             }else{
                 //check out of range
                 if(current_ma < 1 || current_ma > 500) {
                     static const char *current_error_msg = "PSU Current out of range (1-500 mA)";
-                    printf("[Config Request] Error: %s (%d mA)\r\n", current_error_msg, current_ma);
+                    if(bpio_debug) printf("[Config Request] Error: %s (%d mA)\r\n", current_error_msg, current_ma);
                     error = current_error_msg;
                     goto config_response_error;
                 }
             }
         }
 
-        printf("[Config Request] PSU Voltage: %f, Current: %f, Override: %s\r\n", (float)voltage_mv/1000.0f, (float)current_ma, current_limit_override?"true":"false");
+        if(bpio_debug) printf("[Config Request] PSU Voltage: %f, Current: %f, Override: %s\r\n", (float)voltage_mv/1000.0f, (float)current_ma, current_limit_override?"true":"false");
         
         uint8_t psu_error = psucmd_enable((float)voltage_mv/1000.0f, (float)current_ma, current_limit_override);
         if (psu_error) {
             static const char *psu_error_msg = "Power supply initialization failed";
-            printf("[Config Request] Error: %s (%d)\r\n", psu_error_msg, psu_error);
+            if(bpio_debug) printf("[Config Request] Error: %s (%d)\r\n", psu_error_msg, psu_error);
             error = psu_error_msg;
             goto config_response_error;
         }
 
-        printf("[Config Request] Power supply enabled\r\n");
+        if(bpio_debug) printf("[Config Request] Power supply enabled\r\n");
     }
 
     uint8_t pullup_disable = bpio_ConfigurationRequest_pullup_disable_get(config_request);
     if(pullup_disable){
         pullups_disable();
-        printf("[Config Request] Pull-up resistors disabled\r\n");
+        if(bpio_debug) printf("[Config Request] Pull-up resistors disabled\r\n");
     }
 
     //pullup_enabled
@@ -314,7 +354,7 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
         uint8_t pullup_enable = bpio_ConfigurationRequest_pullup_enable_get(config_request);
         if(pullup_enable){
             pullups_enable();
-            printf("[Config Request] Pull-up resistors enabled\r\n");
+            if(bpio_debug) printf("[Config Request] Pull-up resistors enabled\r\n");
         }
     //}    
     
@@ -335,13 +375,13 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
                     gpio_put(i, BUFDIR_OUTPUT);
                     // now set pin to output
                     gpio_set_dir(i+8, GPIO_OUT);
-                    printf("[Config Request] IO%d set to output\r\n", i);
+                    if(bpio_debug) printf("[Config Request] IO%d set to output\r\n", i);
                 }else{
                     // first set the pin to input
                     gpio_set_dir(i+8, GPIO_IN);
                     // now set buffer to input
                     gpio_put(i, BUFDIR_INPUT);
-                    printf("[Config Request] IO%d set to input\r\n", i);
+                    if(bpio_debug) printf("[Config Request] IO%d set to input\r\n", i);
                 }
             }
         }
@@ -355,7 +395,7 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
             if(io_value_mask & (1u << i)) {
                 //set the value
                 gpio_put(i+8, (io_value & (1u << i)));
-                printf("[Config Request] IO%d set to %s\r\n", i, (io_value & (1u << i)) ? "high" : "low");
+                if(bpio_debug) printf("[Config Request] IO%d set to %s\r\n", i, (io_value & (1u << i)) ? "high" : "low");
             }
         }    
     }
@@ -364,10 +404,10 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
     if(bpio_ConfigurationRequest_led_resume_is_present(config_request)) {
         bool led_resume = bpio_ConfigurationRequest_led_resume_get(config_request);
         if (led_resume) {
-            printf("[Config Request] LED effect resumed\r\n");
+            if(bpio_debug) printf("[Config Request] LED effect resumed\r\n");
             rgb_irq_enable(true); // Enable the RGB IRQ
         }/* else {
-            printf("[Config Request] LED effect paused\r\n");
+            if(bpio_debug) printf("[Config Request] LED effect paused\r\n");
             rgb_irq_enable(false); // Disable the RGB IRQ
         }*/
     }
@@ -377,17 +417,17 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
         flatbuffers_uint32_vec_t led_color = bpio_ConfigurationRequest_led_color_get(config_request);
         if(flatbuffers_uint32_vec_len(led_color) < RGB_LEN) {
             static const char *led_error_msg = "LED color vector (array) too short";
-            printf("[Config Request] Error: %s: %d, this device has %d LEDs\r\n", led_error_msg, flatbuffers_uint32_vec_len(led_color), RGB_LEN);
+            if(bpio_debug) printf("[Config Request] Error: %s: %d, this device has %d LEDs\r\n", led_error_msg, flatbuffers_uint32_vec_len(led_color), RGB_LEN);
             error = led_error_msg;
             goto config_response_error;
         }else{
             uint32_t colors[RGB_LEN];
-            printf("[Config Request] LED colors: ");
+            if(bpio_debug) printf("[Config Request] LED colors: ");
             for (size_t i = 0; i < RGB_LEN; i++) {
                 colors[i] = flatbuffers_uint32_vec_at(led_color, i);
-                printf("0x%06X ", colors[i]);
+                if(bpio_debug) printf("0x%06X ", colors[i]);
             }
-            printf("\r\n");
+            if(bpio_debug) printf("\r\n");
             rgb_irq_enable(false);
             rgb_set_array(colors);            
         }
@@ -396,22 +436,24 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
     //printf
     if(bpio_ConfigurationRequest_print_string_is_present(config_request)) {
         const char *print_str = bpio_ConfigurationRequest_print_string_get(config_request);
-        printf("%s", print_str);
+        if(bpio_debug) printf("%s", print_str);
     }
 
     //hardware_bootloader
     bool hardware_bootloader = bpio_ConfigurationRequest_hardware_bootloader_get(config_request);
     if(hardware_bootloader) {
-        printf("[Config Request] Entering bootloader mode\r\n");
+        if(bpio_debug) printf("[Config Request] Entering bootloader mode\r\n");
         cmd_mcu_jump_to_bootloader();
     }
 
     //hardware_reset
     bool hardware_reset = bpio_ConfigurationRequest_hardware_reset_get(config_request);
     if(hardware_reset) {
-        printf("[Config Request] Hardware reset requested\r\n");
+        if(bpio_debug) printf("[Config Request] Hardware reset requested\r\n");
         cmd_mcu_reset();
     }
+
+    flatcc_builder_reset(B);
 
 config_response_error:
     bpio_ConfigurationResponse_start(B);
@@ -420,7 +462,7 @@ config_response_error:
         // Set the error message in the response.
         flatbuffers_string_ref_t error_str = flatbuffers_string_create_str(B, error);
         bpio_ConfigurationResponse_error_add(B, error_str);
-        printf("%s\r\n", error);
+        if(bpio_debug) printf("%s\r\n", error);
     }
     bpio_ConfigurationResponse_ref_t config_response = bpio_ConfigurationResponse_end(B);
     
@@ -432,133 +474,6 @@ config_response_error:
     send_packet(B);
 }
 
-struct data_request_t {
-    bool start_main; // Start main condition
-    bool start_alt;  // Start alternate condition
-    uint16_t bytes_write; // Bytes to write
-    uint16_t bytes_read; // Bytes to read
-    const char *data_buf; // Data buffer 
-    bool stop_main; // Stop main condition  
-    bool stop_alt;  // Stop alternate condition
-};
-
-uint32_t i2c_bpio(struct data_request_t *request) {
-    printf("[I2C] Performing transaction\r\n");
-    hwi2c_status_t i2c_result = HWI2C_OK;
-    const uint32_t timeout = 0xfffff; // Default timeout, can be adjusted
-
-    if(request->bytes_write == 0) {
-        printf("[I2C] Missing I2C read/address in write byte 0\r\n");
-        return true; // Nothing to do
-    }
-
-    // always send a start
-    if(request->start_main||request->start_alt) {
-        if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
-    }
-
-    // if txlen is >1 (just the address), we need to write data
-    if(request->bytes_write > 1) {
-        //write data
-        for(uint32_t i = 0; i < request->bytes_write; i++) {
-            // send txbuf[0] (i2c address) with the last bit low
-            if(i ==0 && (request->start_main||request->start_alt)) {
-                // if we have a start condition, we need to write the address with the last bit low
-                i2c_result = pio_i2c_write_timeout(request->data_buf[0]&~0b1, timeout);
-                if(i2c_result != HWI2C_OK) return i2c_result;
-            }else{
-                // if we have no start condition, we write the data as is
-                i2c_result = pio_i2c_write_timeout(request->data_buf[i], timeout);
-                if(i2c_result != HWI2C_OK) return i2c_result;
-            }
-        }
-
-        // if we have no read data, we can stop here
-        if(request->bytes_read == 0) {
-            goto i2c_bpio_cleanup;
-        }
-        // if we have read data, we need to restart
-        if(pio_i2c_restart_timeout(timeout)) return HWI2C_TIMEOUT;
-    }
-    
-    //send the read address with the last bit high
-    i2c_result = pio_i2c_write_timeout(request->data_buf[0]|0b1, timeout);
-    if(i2c_result != HWI2C_OK) return i2c_result;
-
-    // read data
-    for(uint32_t i = 0; i<request->bytes_read; i++) {
-        i2c_result = pio_i2c_read_timeout((uint8_t*)&request->data_buf[i], i<(request->bytes_read-1), timeout);
-        if(i2c_result != HWI2C_OK) return i2c_result;
-    }
-
-    // stop and wait for PIO to be idle
-i2c_bpio_cleanup:
-    if(request->stop_main || request->stop_alt) {
-        if (pio_i2c_stop_timeout(timeout)) return HWI2C_TIMEOUT;
-    }
-    // Wait for PIO to be idle
-    if (pio_i2c_wait_idle_extern(timeout)) return HWI2C_TIMEOUT;
-    return HWI2C_OK;
-}
-
-struct bpio_protocol_handler_t {
-    uint32_t (*handler)(struct data_request_t *request);
-};
-
-static const struct bpio_protocol_handler_t protocols[] = {
-    [HIZ] = { .handler = NULL }, // No handler for HIZ
-#ifdef BP_USE_HW1WIRE
-    [HW1WIRE] = { .handler = NULL }, // No handler for HW1WIRE
-#endif
-#ifdef BP_USE_HWUART
-    [HWUART] = { .handler = NULL }, // No handler for HWUART
-#endif
-#ifdef BP_USE_HWHDUART
-    [HWHDUART] = { .handler = NULL }, // No handler for HWHDUART
-#endif
-#ifdef BP_USE_HWI2C
-    [HWI2C] = { .handler = i2c_bpio }, // Handler for HWI2C
-#endif
-#ifdef BP_USE_HW2WIRE
-    [HW2WIRE] = { .handler = NULL }, // No handler for HW2WIRE
-#endif
-#ifdef BP_USE_HWSPI
-    [HWSPI] = { .handler = NULL }, // No handler for HWSPI
-#endif
-#ifdef BP_USE_HW3WIRE
-    [HW3WIRE] = { .handler = NULL }, // No handler for HW3WIRE
-#endif
-#ifdef BP_USE_DIO
-    [DIO] = { .handler = NULL }, // No handler for DIO
-#endif
-#ifdef BP_USE_HWLED
-    [HWLED] = { .handler = NULL }, // No handler for HWLED
-#endif
-#ifdef BP_USE_INFRARED
-    [INFRARED] = { .handler = NULL }, // No handler for INFRARED
-#endif
-#ifdef BP_USE_JTAG
-    [JTAG] = { .handler = NULL }, // No handler for JTAG
-#endif
-#ifdef BP_USE_DUMMY1
-    [DUMMY1] = { .handler = NULL }, // No handler for DUMMY1
-#endif
-#ifdef BP_USE_BINLOOPBACK
-    [BINLOOPBACK] = { .handler = NULL }, // No handler for BINLOOPBACK
-#endif
-#ifdef BP_USE_LCDSPI
-    [LCDSPI] = { .handler = NULL }, // No handler for LCDSPI
-#endif
-#ifdef BP_USE_LCDI2C // future
-    [LCDI2C] = { .handler = NULL }, // No handler for LCDI2C
-#endif
-#ifdef BP_USE_USBPD
-    [USBPD] = { .handler = NULL }, // No handler for USBPD
-#endif
-#ifdef BP_USE_I2S
-    [I2S] = { .handler = NULL }, // No handler for I2S
-#endif
-};
 
 uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     bpio_DataRequest_table_t data_request = (bpio_DataRequest_table_t) bpio_RequestPacket_contents(packet);
@@ -570,11 +485,11 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
 
     //check if each field is present, get value
     bool start_main = bpio_DataRequest_start_main(data_request);
-    printf("[Data Request] Start main condition: %s\r\n", start_main ? "true" : "false");
+    if(bpio_debug) printf("[Data Request] Start main condition: %s\r\n", start_main ? "true" : "false");
 
     // Check if start_alt is present and get its value.
     bool start_alt = bpio_DataRequest_start_alt(data_request);
-    printf("[Data Request] Start alternate condition: %s\r\n", start_alt ? "true" : "false");
+    if(bpio_debug) printf("[Data Request] Start alternate condition: %s\r\n", start_alt ? "true" : "false");
    
     // Check if data_write is present and get its value.
     flatbuffers_uint8_vec_t data_write;
@@ -582,35 +497,36 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     if(bpio_DataRequest_data_write_is_present(data_request)) {
         data_write = bpio_DataRequest_data_write(data_request);
         data_write_len = flatbuffers_uint8_vec_len(data_write);
-        printf("[Data Request] Data write vector is present\r\n");
+        if(bpio_debug) printf("[Data Request] Data write vector is present\r\n");
     }else{
-        printf("[Data Request] Data write vector is missing\r\n");
+        if(bpio_debug) printf("[Data Request] Data write vector is missing\r\n");
     }
     if (data_write_len > 0) {
-        printf("[Data Request] Data write vector length: %d\r\n", data_write_len);
+        if(bpio_debug) printf("[Data Request] Data write vector length: %d\r\n", data_write_len);
         // Print the data write vector contents.
-        printf("[Data Request] Data write: ");
+        if(bpio_debug) printf("[Data Request] Data write: ");
         for (size_t i = 0; i < data_write_len; i++) {
-            printf("0x%02X ", flatbuffers_uint8_vec_at(data_write, i));
+            if(bpio_debug) printf("0x%02X ", flatbuffers_uint8_vec_at(data_write, i));
             data_buf[i] = flatbuffers_uint8_vec_at(data_write, i); // Copy to data_buf
         }
-        printf("\r\n");
+        if(bpio_debug) printf("\r\n");
     }
 
     // Check if bytes_read is present and get its value.
     uint16_t readbytes = bpio_DataRequest_bytes_read(data_request);
-    printf("[Data Request] Bytes to read: %d\r\n", readbytes);
+    if(bpio_debug) printf("[Data Request] Bytes to read: %d\r\n", readbytes);
 
     // Check if stop_main is present and get its value.
     bool stop_main = bpio_DataRequest_stop_main(data_request);
-    printf("[Data Request] Stop main condition: %s\r\n", stop_main ? "true" : "false");
+    if(bpio_debug) printf("[Data Request] Stop main condition: %s\r\n", stop_main ? "true" : "false");
 
     // Check if stop_alt is present and get its value.
     bool stop_alt = bpio_DataRequest_stop_alt(data_request);
-    printf("[Data Request] Stop alternate condition: %s\r\n", stop_alt ? "true" : "false");
+    if(bpio_debug) printf("[Data Request] Stop alternate condition: %s\r\n", stop_alt ? "true" : "false");
 
     // Now we can process the request.
-    struct data_request_t request = {
+    struct bpio_data_request_t request = {
+        .debug = bpio_debug,
         .start_main = bpio_DataRequest_start_main(data_request),
         .start_alt = bpio_DataRequest_start_alt(data_request),
         .bytes_write = data_write_len, // Use the length of the data write vector
@@ -620,18 +536,19 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         .stop_alt = bpio_DataRequest_stop_alt(data_request)
     };
 
-    printf("[Data Request] Protocol request\r\n");
-    if(protocols->handler(&request)){
+    if(bpio_debug) printf("[Data Request] Protocol request\r\n");
+    if(modes[system_config.mode].bpio_handler(&request)){
         static const char* request_error_msg = "Protocol request failed";
-        printf("[Data Request] %s\r\n", request_error_msg);
+        if(bpio_debug) printf("[Data Request] %s\r\n", request_error_msg);
         error = request_error_msg;
-        goto data_response_error;
     }
+
+    flatcc_builder_reset(B);
 
     //prepare DataResponse, put mock up data in data_read if readbytes > 0
     bpio_DataResponse_start(B);
-    if (readbytes > 0) {
-        printf("[Data Request] Returning read %d bytes\r\n", readbytes);
+    if (readbytes > 0 && !error) {
+        if(bpio_debug) printf("[Data Request] Returning read %d bytes\r\n", readbytes);
         // Create a vector for the data read.
         bpio_DataResponse_data_read_start(B);
         for (uint16_t i = 0; i < readbytes; i++) {
@@ -640,22 +557,29 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         bpio_DataResponse_data_read_end(B);
     }
 
+    if(bpio_debug) printf("[Data Request] Data read added ");
+
 data_response_error:
     if (error) {
         // Set the error message in the response.
         flatbuffers_string_ref_t error_str = flatbuffers_string_create_str(B, error);
         bpio_DataResponse_error_add(B, error_str);
-        printf("[Data Request] Error: %s\r\n", error);
+        if(bpio_debug) printf("[Data Request] Error: %s\r\n", error);
     }
 
+    if(bpio_debug) printf("[Data Request] Packing response\r\n");
     bpio_DataResponse_ref_t data_response = bpio_DataResponse_end(B);
     // add to packet wrapper
     bpio_ResponsePacket_start_as_root(B);
     bpio_ResponsePacket_contents_DataResponse_add(B, data_response);
     bpio_ResponsePacket_end_as_root(B);
+
+    if(bpio_debug) printf("[Data Request] Response packet created\r\n");
        
     // send the packet
     send_packet(B);
+
+    if(bpio_debug) printf("[Data Request] Packet sent\r\n");
 }
 
 struct _bpio_function_t {
@@ -710,14 +634,15 @@ void dirtyproto_mode(void) {
             break;
         case BINMODE_HEADER1:
             len |= c << 8;
+            bpio_debug = (system_config.bpio_debug_enable && tud_cdc_n_connected(0));
             if(len==0 || len>sizeof(buf)){ //TODO: on all fails return error response
-                printf("[BPIO] Flatbuffer size error: %d\r\n", len);
+                if(bpio_debug) printf("[BPIO] Flatbuffer size error: %d\r\n", len);
                 // Send an error response.
                 error_response("Flatbuffer size error: Invalid length");
                 binmode_state = BINMODE_IDLE;
                 break;
             }
-            printf("[BPIO] Flatbuffer length: %d\r\n", len);         
+            if(bpio_debug) printf("[BPIO] Flatbuffer length: %d\r\n", len);         
             binmode_state = BINMODE_PACKET;
             //break;
         case BINMODE_PACKET:
@@ -726,17 +651,17 @@ void dirtyproto_mode(void) {
                 bin_rx_fifo_get_blocking(&c);
                 buf[i] = c; // Store in reverse order
             }
-            printf("[BPIO] Flatbuffer received, length: %d\r\n", len);
+            if(bpio_debug) printf("[BPIO] Flatbuffer received, length: %d\r\n", len);
             bpio_RequestPacket_table_t packet = bpio_RequestPacket_as_root(buf);
             if(packet == 0) {
-                printf("[BPIO] Error: Invalid table received\r\n");
+                if(bpio_debug) printf("[BPIO] Error: Invalid table received\r\n");
                 // Send an error response.
                 error_response("Invalid table received");
                 binmode_state = BINMODE_IDLE; // Reset state on error
                 return;
             }
             uint8_t packet_type = bpio_RequestPacket_contents_type_get(packet);
-            printf("[BPIO] Packet Type: %d\r\n", packet_type);
+            if(bpio_debug) printf("[BPIO] Packet Type: %d\r\n", packet_type);
             if (packet_type < count_of(bpio_handlers) && bpio_handlers[packet_type].func) {
                 // build response    
                 flatcc_builder_t builder, *B;
@@ -750,14 +675,14 @@ void dirtyproto_mode(void) {
                 // Cleanup.
                 flatcc_builder_clear(B);    
             } else {
-                printf("[BPIO] Unknown packet type: %d\r\n", packet_type);
+                if(bpio_debug) printf("[BPIO] Unknown packet type: %d\r\n", packet_type);
                 // Send an error response.
                 error_response("Unknown packet type received");
             }
             binmode_state = BINMODE_IDLE; // Reset state after processing the packet
             break;
         default:
-            printf("[BPIO] Unknown binmode state: %d\r\n", binmode_state);
+            if(bpio_debug) printf("[BPIO] Unknown binmode state: %d\r\n", binmode_state);
             binmode_state = BINMODE_IDLE;
             break;
     }

@@ -175,6 +175,7 @@ void binmode_terminal_lock(bool lock) {
     }
 }
 
+#if 0
 uint32_t binmode_config(uint8_t* binmode_args) {
     struct _bytecode result;
     struct _bytecode next;
@@ -187,7 +188,7 @@ uint32_t binmode_config(uint8_t* binmode_args) {
     modes[system_config.mode].protocol_setup_exc();
     return 0;
 }
-
+#endif
 /* move to protocol layer
 uint32_t binmode_write(uint8_t *binmode_args){
     struct _bytecode result;
@@ -208,7 +209,7 @@ uint32_t binmode_write(uint8_t *binmode_args){
     return 0;
 }
 */
-
+#if 0
 uint32_t binmode_write(uint8_t* binmode_args) {
     struct _bytecode result;
     struct _bytecode next;
@@ -388,7 +389,7 @@ uint32_t binmode_pullup_disable(uint8_t* binmode_args) {
     }
     return 0;
 }
-
+#if 0
 uint32_t mode_list(uint8_t* binmode_args) {
     for (uint8_t i = 0; i < count_of(modes); i++) {
         if (modes[i].binmode_setup) {
@@ -401,6 +402,7 @@ uint32_t mode_list(uint8_t* binmode_args) {
     // bin_tx_fifo_put(';');
     return 0;
 }
+
 
 uint32_t mode_change(uint8_t* binmode_args) {
     // compare mode name to modes.protocol_name
@@ -424,6 +426,7 @@ uint32_t mode_change(uint8_t* binmode_args) {
     }
     return 1;
 }
+    #endif
 
 uint32_t binmode_info(uint8_t* binmode_args) {
     script_print("BBIO2.000");
@@ -768,3 +771,4 @@ uint32_t binmode_change_binmode(uint8_t* binmode_args) {
     system_config.binmode_select = binmode_args[0];
     return 0;
 }
+    #endif

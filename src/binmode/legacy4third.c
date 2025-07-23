@@ -75,8 +75,22 @@ static uint32_t remain_bytes;
 static bool set_aux_pins = true;
 static bool hold_value = true;
 static bool wp_value = true;
-static bool req_EHB_write = false;
-static uint8_t big_flash_parts[] = {0x97, 0x98, 0xa7, 0xa8, 0xc0};
+
+// For Atmel parts which have a flash size > 64Kbytes, an additional
+// command is needed - the "Extended High Byte" address write.  This
+// bool will be set when avrdude first queries the part, and will be
+// used later if required.
+static bool req_EHB_write = false; // This part has > 64K flash
+
+// Each Atmel part has a 3-byte signature.  The first byte is 0x1e,
+// the second byte is used to encode the flash size of the part.
+// This array contains the second signature byte for every part
+// that avrdude supports that has flash > 64Kbytes.
+// When avrdude initially connects to the part, it will query for
+// the part's signature before we do any other operations.  We
+// can use this array to compare and set req_EHB_write to 'true' if needed.
+static uint8_t big_flash_parts[] = {0x97, 0x98, 0xa7, 0xa8, 0xc0}; // array of signature bytes for parts with > 64K flash
+
 static uint8_t binmode_debug = 1; // Debug mode flag
 
 void set_planks_auxpins(bool set)
@@ -535,8 +549,8 @@ void legacy_protocol(void) {
                 if (binmode_debug) {
                     printf("\r\n>> ");
                 }
-                bool is_read_sig_cmd = false;
-                uint8_t read_sig_byte_inx = 0;
+                bool is_read_sig_cmd = false;  // true when reading any one of the signature bytes
+                uint8_t read_sig_byte_inx = 0; // which signature byte to read
                 for (int i = 0; i < bytes2read; i++) {
                     if (button_get(0)) {
                         return;
@@ -548,10 +562,18 @@ void legacy_protocol(void) {
                     // 64K bytes of flash.  Signature byte 2 indicates flash
                     // size - we'll use this byte to set a global flag if
                     // this part requires writing the Extended High Byte address
+                    // First - check if we are receiving a command 0x30 (query signature);
+                    // this command is 4 bytes of SPI:
+                    // 0 -> avrdude/BP sends 0x30
+                    // 1 -> avrdude/BP clocks out 0, and part returns 0x30 to confirm command
+                    // 2 -> avrdude/BP sends which of the 3 signature bytes to read
+                    // 3 -> avrdude/BP clocks out 0, part returns requested value.
                     if (i == 0 && tmpbuf[i] == 0x30) {
+                        // this is the start of a read signature command - set state active
                         is_read_sig_cmd = true;
                     }
                     if (is_read_sig_cmd && i == 2) {
+                        // this is byte 4 of sequence from BP to part - which signature byte to read
                         read_sig_byte_inx = tmpbuf[i];
                     }
                     tmpbuf[i] = hwspi_write_read(tmpbuf[i]);
@@ -565,12 +587,17 @@ void legacy_protocol(void) {
                             }
                         }
                     }
+                    // if we are in the process of reading signature command, and
+                    // this is the the 4th byte (byte 3), then use the returned value
+                    // from the part to compare to the array of known signatures of
+                    // parts with > 64K bytes
                     if (is_read_sig_cmd && read_sig_byte_inx == 1 && i == 3) {
                         if (binmode_debug) {
                             printf("  - signature part ID 0x%02x", tmpbuf[i]);
                         }
                         for (uint8_t ii = 0; ii < sizeof(big_flash_parts); ++ii) {
                             if (big_flash_parts[ii] == tmpbuf[3]) {
+                                // we have a match!  This part has more than 64K bytes of flash
                                 req_EHB_write = true;
                                 break;
                             }
@@ -745,11 +772,6 @@ void legacy_protocol(void) {
                             }
                         }
 
-                        if ((addr > 0x2FFFF) || (len > 0x2FFFF) || ((addr + len) > 0x2FFFF)) {
-                            // error
-                            CDC_SEND_STR(1, "\x00");
-                            break;
-                        }
                         CDC_SEND_STR(1, "\x01");
 
                         if (binmode_debug) {

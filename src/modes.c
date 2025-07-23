@@ -187,8 +187,8 @@ struct _mode modes[] = {
         .mode_commands_count = &hw1wire_commands_count,  // mode specific commands count ignored if 0x00
         .protocol_get_speed = hw1wire_get_speed,         // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw1wire_preflight_sanity_check, // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access
+        .bpio_configure = bpio_1wire_configure, // configure for flatbuffer/binary access
+        .bpio_handler = bpio_1wire_transaction,   // handler for flatbuffer/binary access
     },
 #endif
 #ifdef BP_USE_HWUART
@@ -317,8 +317,8 @@ struct _mode modes[] = {
         .mode_commands_count = &hwspi_commands_count, // mode specific commands count
         .protocol_get_speed = spi_get_speed,          // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = spi_preflight_sanity_check,      // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access
+        .bpio_configure = bpio_hwspi_configure, // configure for flatbuffer/binary access
+        .bpio_handler = bpio_hwspi_transaction,   // handler for flatbuffer/binary access
     },
 #endif
 #ifdef BP_USE_HW2WIRE

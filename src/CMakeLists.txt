@@ -425,8 +425,6 @@ set(buspirate_common
         # binary mode
         binmode/binmodes.c
         binmode/binmodes.h
-        binmode/binio.c
-        binmode/binio.h
         binmode/binio_helpers.c
         binmode/binio_helpers.h
         mode/binloopback.c
@@ -435,8 +433,8 @@ set(buspirate_common
         binmode/logicanalyzer.c
         binmode/sump.c
         binmode/sump.h
-        binmode/dirtyproto.c
-        binmode/dirtyproto.h
+        binmode/bpio.c
+        binmode/bpio.h
         binmode/legacy4third.c
         binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c

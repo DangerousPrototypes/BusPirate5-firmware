@@ -211,7 +211,7 @@ typedef struct {
     bool clock_stretch;          // Clock stretching for I2C mode (true for enabled, false for disabled)
     bool clock_polarity;         // Clock polarity for SPI mode (true for high, false for low)
     bool clock_phase;            // Clock phase for SPI mode (true for leading edge, false for trailing edge)
-    uint8_t chip_select_active_low;         // Chip select active (0=Active High, 1=Active Low) for SPI and 3-wire modes
+    bool chip_select_idle;         // Chip select active (0=Active High, 1=Active Low) for SPI and 3-wire modes
     uint8_t submode;             // Submode for LED and INFRARED modes (e.g., "RGB", "IR TX", "IR RX")
     uint8_t tx_modulation;       // TX modulation for INFRARED mode (true for enabled, false for disabled)
     uint8_t rx_sensor;           // RX sensor for INFRARED mode (true for enabled, false for disabled)

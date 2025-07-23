@@ -209,17 +209,17 @@ def bpio_configuration_request(mode, speed):
     
     # populate all ConfigurationRequest fields
     ConfigurationRequest.AddModeBitorderMsb(builder, True)  # Example: MSB first
-    ConfigurationRequest.AddModeBitorderLsb(builder, True)  # Example: LSB last
+    #ConfigurationRequest.AddModeBitorderLsb(builder, True)  # Example: LSB last
     ConfigurationRequest.AddPullupDisable(builder, True)  # Example: pull-up resistors disabled
     ConfigurationRequest.AddPullupEnable(builder, True)  # Example: pull-up resistors enabled
     ConfigurationRequest.AddPsuDisable(builder, True)  # Example: PSU disabled
     ConfigurationRequest.AddPsuEnable(builder, True)  # Example: PSU enabled
     ConfigurationRequest.AddPsuSetMv(builder, 3300)  # Example: 3.3V
     ConfigurationRequest.AddPsuSetMa(builder, 0)  # Example: 500mA
-    ConfigurationRequest.AddIoDirectionMask(builder, 255)  # Example: all pins as outputs
-    ConfigurationRequest.AddIoDirection(builder, 0)
-    ConfigurationRequest.AddIoValueMask(builder, 255)  # Example: all pins set to HIGH
-    ConfigurationRequest.AddIoValue(builder, 0)
+    #ConfigurationRequest.AddIoDirectionMask(builder, 255)  # Example: all pins as outputs
+    #ConfigurationRequest.AddIoDirection(builder, 0)
+    #ConfigurationRequest.AddIoValueMask(builder, 255)  # Example: all pins set to HIGH
+    #ConfigurationRequest.AddIoValue(builder, 0)
     
     ConfigurationRequest.AddLedColor(builder, led_color_vector)
     #ConfigurationRequest.AddLedResume(builder, True)  # Example: resume LED blinking
@@ -295,8 +295,12 @@ def bpio_data_request(start_main, start_alt, data_write, bytes_read, stop_main, 
 
 
 #bpio_status_request()
-for i in range(100):
-    print(f"***********************Test {i+1}:")
-    bpio_configuration_request("I2C", 400000)
-    bpio_data_request(True, False, [0xA0, 0x00], 16, True, False)
-
+#for i in range(100):
+#    print(f"***********************Test {i+1}:")
+bpio_configuration_request("1WIRE", 100000)
+bpio_data_request(True, False, [0xcc, 0x4e, 0x00, 0x00, 0x7f], 0, False, False)
+bpio_data_request(True, False, [0xcc, 0x44], 0, False, False)
+# delay 800ms to allow the device to process the command
+import time
+time.sleep(0.8)
+bpio_data_request(True, False, [0xcc, 0xbe], 9, False, False)  # Read 9 bytes

@@ -4,8 +4,8 @@ binmode/binio.c
 binmode/binio.h
 binmode/binmodes.c
 binmode/binmodes.h
-binmode/dirtyproto.c
-binmode/dirtyproto.h
+binmode/bpio.c
+binmode/bpio.h
 binmode/fala.c
 binmode/fala.h
 binmode/falaio.c

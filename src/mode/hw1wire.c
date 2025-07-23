@@ -134,3 +134,48 @@ void hw1wire_help(void) {
 uint32_t hw1wire_get_speed(void) {
     return 220000;
 }
+
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_1wire_configure(bpio_mode_configuration_t *bpio_mode_config){
+    return true;  
+}
+
+uint32_t bpio_1wire_transaction(struct bpio_data_request_t *request) {
+    if(request->debug) printf("[1WIRE] Performing transaction\r\n");
+
+    if(request->start_main||request->start_alt) {
+        if(request->debug) printf("[1WIRE] RESET\r\n");
+        uint8_t device_detect = onewire_reset();
+        if(!device_detect) {
+            if(request->debug) printf("[1WIRE] No device detected\r\n");
+            return true; // no device detected, but we can continue
+        } else {
+            if(request->debug) printf("[1WIRE] Device detected\r\n");
+        }
+    }
+
+    if(request->bytes_write > 0) {
+        if(request->debug) printf("[1WIRE] Writing %d bytes\r\n", request->bytes_write);
+        for(uint32_t i = 0; i < request->bytes_write; i++) {
+            onewire_tx_byte((uint8_t)request->data_buf[i]);
+        }
+        onewire_wait_for_idle(); // wait for the bus to be idle after writing
+    }
+
+    if(request->bytes_read > 0) {
+        if(request->debug) printf("[1WIRE] Reading %d bytes\r\n", request->bytes_read);
+        // read data
+        uint8_t *data_buf = (uint8_t *)request->data_buf;
+        for(uint32_t i = 0; i < request->bytes_read; i++) {
+            data_buf[i] = onewire_rx_byte();
+            onewire_wait_for_idle(); //temp test
+        } 
+    }
+
+    return false;
+}

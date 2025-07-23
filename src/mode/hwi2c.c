@@ -331,18 +331,18 @@ uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request) {
     if(request->debug) printf("[I2C] Performing transaction\r\n");
     hwi2c_status_t i2c_result = HWI2C_OK;
     const uint32_t timeout = 0xfffff; // Default timeout, can be adjusted
-
+    #if 0
     if(request->bytes_write == 0) {
         if(request->debug) printf("[I2C] Missing I2C read/address in write byte 0\r\n");
         return true; // Nothing to do
     }
+    #endif
     if(request->debug) printf("[I2C] START\r\n");
-    // always send a start
+
     if(request->start_main||request->start_alt) {
         if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
     }
 
-    // if txlen is >1 (just the address), we need to write data
     if(request->bytes_write > 0) {
         if(request->debug) printf("[I2C] Writing %d bytes\r\n", request->bytes_write);
         //write data

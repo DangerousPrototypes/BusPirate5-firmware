@@ -35,7 +35,7 @@ table StatusResponse {
   disk_used_mb:float; // used space on the disk in megabytes.
   led_count:uint8; // Number of LEDs.
 }
-
+//TODO: set some sane defaults???
 table ModeConfiguration {
   //1wire : no config
   //uart: speed, data bits, parity, stop bits, flow control, signal inversion
@@ -48,19 +48,19 @@ table ModeConfiguration {
   //LED: submode, 
   //INFRARED: submode, TX modulation, RX sensor
   //jtag: none
-  speed:uint32; // Speed in Hz or baud for the mode.
-  data_bits:uint8; // Data bits for the mode (e.g., 8 for UART).
-  parity:bool; // Parity for the mode (true for even parity, false for no parity).
-  stop_bits:uint8; // Stop bits for the mode (1 or 2).
-  flow_control:bool; // Flow control for the mode (true for enabled, false for disabled).
-  signal_inversion:bool; // Signal inversion for the mode (true for inverted, false for normal).
-  clock_stretch:bool; // Clock stretching for I2C mode (true for enabled, false for disabled).
-  clock_polarity:bool; // Clock polarity for SPI mode (true for high, false for low).
-  clock_phase:bool; // Clock phase for SPI mode (true for leading edge, false for trailing edge).
-  chip_select_active_low:uint8; // Chip select active (0=Active High, 1=Active Low) for SPI and 3-wire modes.
+  speed:uint32=20000; // Speed in Hz or baud for the mode.
+  data_bits:uint8=8; // Data bits for the mode (e.g., 8 for UART).
+  parity:bool=false; // Parity for the mode (true for even parity, false for no parity).
+  stop_bits:uint8=1; // Stop bits for the mode (1 or 2).
+  flow_control:bool=false; // Flow control for the mode (true for enabled, false for disabled).
+  signal_inversion:bool=false; // Signal inversion for the mode (true for inverted, false for normal).
+  clock_stretch:bool=false; // Clock stretching for I2C mode (true for enabled,  false for disabled).
+  clock_polarity:bool=false; // Clock idle polarity for SPI mode (true for high, false for low).
+  clock_phase:bool=false; // Clock phase for SPI mode (false for leading edge, true for trailing edge).
+  chip_select_idle:bool=true; // Chip select idle (0=idle low, 1=idle high) for SPI and 3-wire modes.
   submode:uint8; // Submode for LED and INFRARED modes (e.g., "RGB", "IR TX", "IR RX").
-  tx_modulation:uint8; // TX modulation for INFRARED mode (true for enabled, false for disabled).
-  rx_sensor:uint8; // RX sensor for INFRARED mode (true for enabled, false for disabled).
+  tx_modulation:uint32; // TX modulation for INFRARED mode 
+  rx_sensor:uint8; // RX sensor for INFRARED mode 
 }
 
 table ConfigurationRequest {

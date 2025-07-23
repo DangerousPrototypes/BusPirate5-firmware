@@ -171,9 +171,9 @@ static int bpio_ModeConfiguration_verify_table(flatcc_table_verifier_descriptor_
     if ((ret = flatcc_verify_field(td, 6, 1, 1) /* clock_stretch */)) return ret;
     if ((ret = flatcc_verify_field(td, 7, 1, 1) /* clock_polarity */)) return ret;
     if ((ret = flatcc_verify_field(td, 8, 1, 1) /* clock_phase */)) return ret;
-    if ((ret = flatcc_verify_field(td, 9, 1, 1) /* chip_select_active_low */)) return ret;
+    if ((ret = flatcc_verify_field(td, 9, 1, 1) /* chip_select_idle */)) return ret;
     if ((ret = flatcc_verify_field(td, 10, 1, 1) /* submode */)) return ret;
-    if ((ret = flatcc_verify_field(td, 11, 1, 1) /* tx_modulation */)) return ret;
+    if ((ret = flatcc_verify_field(td, 11, 4, 4) /* tx_modulation */)) return ret;
     if ((ret = flatcc_verify_field(td, 12, 1, 1) /* rx_sensor */)) return ret;
     return flatcc_verify_ok;
 }

@@ -278,18 +278,18 @@ static inline bpio_ModeConfiguration_table_t bpio_ModeConfiguration_vec_at(bpio_
 __flatbuffers_offset_vec_at(bpio_ModeConfiguration_table_t, vec, i, 0)
 __flatbuffers_table_as_root(bpio_ModeConfiguration)
 
-__flatbuffers_define_scalar_field(0, bpio_ModeConfiguration, speed, flatbuffers_uint32, uint32_t, UINT32_C(0))
-__flatbuffers_define_scalar_field(1, bpio_ModeConfiguration, data_bits, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(0, bpio_ModeConfiguration, speed, flatbuffers_uint32, uint32_t, UINT32_C(20000))
+__flatbuffers_define_scalar_field(1, bpio_ModeConfiguration, data_bits, flatbuffers_uint8, uint8_t, UINT8_C(8))
 __flatbuffers_define_scalar_field(2, bpio_ModeConfiguration, parity, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_scalar_field(3, bpio_ModeConfiguration, stop_bits, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(3, bpio_ModeConfiguration, stop_bits, flatbuffers_uint8, uint8_t, UINT8_C(1))
 __flatbuffers_define_scalar_field(4, bpio_ModeConfiguration, flow_control, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(5, bpio_ModeConfiguration, signal_inversion, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(6, bpio_ModeConfiguration, clock_stretch, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(7, bpio_ModeConfiguration, clock_polarity, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(8, bpio_ModeConfiguration, clock_phase, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_scalar_field(9, bpio_ModeConfiguration, chip_select_active_low, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(9, bpio_ModeConfiguration, chip_select_idle, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(1))
 __flatbuffers_define_scalar_field(10, bpio_ModeConfiguration, submode, flatbuffers_uint8, uint8_t, UINT8_C(0))
-__flatbuffers_define_scalar_field(11, bpio_ModeConfiguration, tx_modulation, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(11, bpio_ModeConfiguration, tx_modulation, flatbuffers_uint32, uint32_t, UINT32_C(0))
 __flatbuffers_define_scalar_field(12, bpio_ModeConfiguration, rx_sensor, flatbuffers_uint8, uint8_t, UINT8_C(0))
 
 struct bpio_ConfigurationRequest_table { uint8_t unused__; };

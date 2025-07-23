@@ -29,14 +29,14 @@ class ModeConfiguration(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
-        return 0
+        return 20000
 
     # ModeConfiguration
     def DataBits(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
-        return 0
+        return 8
 
     # ModeConfiguration
     def Parity(self):
@@ -50,7 +50,7 @@ class ModeConfiguration(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
-        return 0
+        return 1
 
     # ModeConfiguration
     def FlowControl(self):
@@ -88,11 +88,11 @@ class ModeConfiguration(object):
         return False
 
     # ModeConfiguration
-    def ChipSelectActiveLow(self):
+    def ChipSelectIdle(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
-        return 0
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+        return True
 
     # ModeConfiguration
     def Submode(self):
@@ -105,7 +105,7 @@ class ModeConfiguration(object):
     def TxModulation(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(26))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
     # ModeConfiguration
@@ -122,13 +122,13 @@ def Start(builder):
     ModeConfigurationStart(builder)
 
 def ModeConfigurationAddSpeed(builder, speed):
-    builder.PrependUint32Slot(0, speed, 0)
+    builder.PrependUint32Slot(0, speed, 20000)
 
 def AddSpeed(builder, speed):
     ModeConfigurationAddSpeed(builder, speed)
 
 def ModeConfigurationAddDataBits(builder, dataBits):
-    builder.PrependUint8Slot(1, dataBits, 0)
+    builder.PrependUint8Slot(1, dataBits, 8)
 
 def AddDataBits(builder, dataBits):
     ModeConfigurationAddDataBits(builder, dataBits)
@@ -140,7 +140,7 @@ def AddParity(builder, parity):
     ModeConfigurationAddParity(builder, parity)
 
 def ModeConfigurationAddStopBits(builder, stopBits):
-    builder.PrependUint8Slot(3, stopBits, 0)
+    builder.PrependUint8Slot(3, stopBits, 1)
 
 def AddStopBits(builder, stopBits):
     ModeConfigurationAddStopBits(builder, stopBits)
@@ -175,11 +175,11 @@ def ModeConfigurationAddClockPhase(builder, clockPhase):
 def AddClockPhase(builder, clockPhase):
     ModeConfigurationAddClockPhase(builder, clockPhase)
 
-def ModeConfigurationAddChipSelectActiveLow(builder, chipSelectActiveLow):
-    builder.PrependUint8Slot(9, chipSelectActiveLow, 0)
+def ModeConfigurationAddChipSelectIdle(builder, chipSelectIdle):
+    builder.PrependBoolSlot(9, chipSelectIdle, 1)
 
-def AddChipSelectActiveLow(builder, chipSelectActiveLow):
-    ModeConfigurationAddChipSelectActiveLow(builder, chipSelectActiveLow)
+def AddChipSelectIdle(builder, chipSelectIdle):
+    ModeConfigurationAddChipSelectIdle(builder, chipSelectIdle)
 
 def ModeConfigurationAddSubmode(builder, submode):
     builder.PrependUint8Slot(10, submode, 0)
@@ -188,7 +188,7 @@ def AddSubmode(builder, submode):
     ModeConfigurationAddSubmode(builder, submode)
 
 def ModeConfigurationAddTxModulation(builder, txModulation):
-    builder.PrependUint8Slot(11, txModulation, 0)
+    builder.PrependUint32Slot(11, txModulation, 0)
 
 def AddTxModulation(builder, txModulation):
     ModeConfigurationAddTxModulation(builder, txModulation)

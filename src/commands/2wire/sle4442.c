@@ -403,7 +403,9 @@ void sle4442(struct command_result* res) {
         ui_hex_header_config(&hex_config);
 
         for(uint32_t i=hex_config._aligned_start; i<(hex_config._aligned_end+1); i+=16) {
-            ui_hex_row_config(&hex_config, i, &buf[i], 16);
+            if(ui_hex_row_config(&hex_config, i, &buf[i], 16)){
+                goto sle4442_cleanup; // user exists pager
+            }
         }
         printf("\r\n");
 

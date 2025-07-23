@@ -5,6 +5,8 @@
 #define BP_SPLASH_FILE "display/robot6x16.h"
 
 #define BP_HARDWARE_VERSION "Bus Pirate 7"
+#define BP_FIRMWARE_VERSION_MAJOR 7
+#define BP_FIRMWARE_VERSION_REVISION 1
 #define BP_HARDWARE_MCU "RP2350B"
 #define BP_HARDWARE_RAM "512KB"
 #define BP_HARDWARE_FLASH "128Mbit"

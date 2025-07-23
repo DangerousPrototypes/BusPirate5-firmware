@@ -165,73 +165,20 @@ uint32_t spi_setup(void) {
     storage_save_mode(config_file, config_t, count_of(config_t));
     //}
 
+    mode_config.baudrate_actual = spi_init(M_SPI_PORT, mode_config.baudrate);
+    printf("\r\n%s%s:%s %ukHz",
+            ui_term_color_notice(),
+            GET_T(T_HWSPI_ACTUAL_SPEED_KHZ),
+            ui_term_color_reset(),
+            mode_config.baudrate_actual / 1000);
+
     return 1;
-}
-
-uint32_t spi_binmode_get_config_length(void) {
-    return 8;
-}
-
-uint32_t spi_binmode_setup(uint8_t* config) {
-    // spi config sequence:
-    // 0x3b9aca0 4-8 CPOL=0 CPHA=0 CS=1
-    uint32_t temp = 0;
-    char c;
-    bool error = false;
-    for (uint8_t i = 0; i < 4; i++) {
-        temp = temp << 8;
-        temp |= config[i];
-    }
-    if (temp > 62500000) {
-        error = true;
-    } else {
-        mode_config.baudrate = temp;
-    }
-
-    c = config[4];
-    if (c < 4 || c > 8) {
-        error = true;
-    } else {
-        mode_config.data_bits = c;
-    }
-
-    c = config[5];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.clock_polarity = c;
-    }
-
-    c = config[6];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.clock_phase = c;
-    }
-
-    c = config[7];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.cs_idle = c;
-    }
-
-    mode_config.binmode = true;
-
-    return error;
 }
 
 uint32_t spi_setup_exc(void) {
     // setup spi
     mode_config.read_with_write = false;
     mode_config.baudrate_actual = spi_init(M_SPI_PORT, mode_config.baudrate);
-    if (!mode_config.binmode) {
-        printf("\r\n%s%s:%s %ukHz",
-               ui_term_color_notice(),
-               GET_T(T_HWSPI_ACTUAL_SPEED_KHZ),
-               ui_term_color_reset(),
-               mode_config.baudrate_actual / 1000);
-    }
     hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
     system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
@@ -395,4 +342,58 @@ void spi_help(void) {
 
 uint32_t spi_get_speed(void) {
     return mode_config.baudrate_actual;
+}
+
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_hwspi_configure(bpio_mode_configuration_t *bpio_mode_config){
+    if(bpio_mode_config->debug) printf("[SPI] Speed %d Hz\r\n", bpio_mode_config->speed);
+    mode_config.baudrate=bpio_mode_config->speed; // convert to kHz
+    mode_config.data_bits = bpio_mode_config->data_bits;
+    mode_config.clock_polarity = bpio_mode_config->clock_polarity;
+    mode_config.clock_phase = bpio_mode_config->clock_phase;
+    mode_config.cs_idle = bpio_mode_config->chip_select_idle;
+    return true;  
+}
+
+uint32_t bpio_hwspi_transaction(struct bpio_data_request_t *request) {
+    if(request->debug) printf("[SPI] Performing transaction\r\n");
+
+    if(request->start_main||request->start_alt) {
+        // CS active
+        if(request->debug) printf("[SPI] CS active\r\n");
+        mode_config.read_with_write=request->start_alt;
+        spi_set_cs(M_SPI_SELECT);
+    }
+
+    if(request->bytes_write > 0) {
+        if(request->debug) printf("[SPI] Writing %d bytes\r\n", request->bytes_write);
+        //write data (how to handle write with read?)
+        //maybe return all the wwr bytes, then the read bytes?
+        for(uint32_t i = 0; i < request->bytes_write; i++) {
+            uint8_t read_byte = hwspi_write_read((uint8_t)request->data_buf[i]); // send data and read response
+            //request->data_buf[i] = read_byte; // store the read byte back in the buffer
+        }
+    }
+
+    if(request->bytes_read > 0) {
+        if(request->debug) printf("[SPI] Reading %d bytes\r\n", request->bytes_read);
+        // read data
+        uint8_t *data_buf = (uint8_t *)request->data_buf;
+        for(uint32_t i = 0; i < request->bytes_read; i++) {
+            data_buf[i] = (uint8_t)hwspi_write_read(0xFF); // send dummy byte
+        } 
+    }
+
+    if(request->stop_main || request->stop_alt) {
+        // CS inactive
+        if(request->debug) printf("[SPI] CS inactive\r\n");
+        spi_set_cs(M_SPI_DESELECT);
+    }
+
+    return false;
 }

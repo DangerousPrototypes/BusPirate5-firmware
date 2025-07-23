@@ -91,7 +91,7 @@ static const struct cmdln_action_t eeprom_actions[] = {
 static const char* const usage[] = {
     "eeprom [dump|erase|write|read|verify|test|list|protect]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-h(elp)]",
     "List available EEPROM devices:%s eeprom list",
-    "Display contents:%s eeprom dump -d ds2431",
+    "Display contents (x to exit):%s eeprom dump -d ds2431",
     "Display 16 bytes starting at address 0x10:%s eeprom dump -d ds2431 -s 0x10 -b 16",
     "Erase, verify:%s eeprom erase -d ds2431 -v",
     "Write from file, verify:%s eeprom write -d ds2431 -f example.bin -v",
@@ -116,6 +116,7 @@ static const struct ui_help_options options[] = {
     { 0, "-s", UI_HEX_HELP_START }, // start address for dump
     { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
     { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
+    { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
     { 0, "-h", T_HELP_FLAG },   // help
 };  //protect, -p, -t, -w?
 

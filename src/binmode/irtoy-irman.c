@@ -10,7 +10,6 @@
 // bytecode stuff to a single helper file #include "command_struct.h" //needed for same reason as bytecode and needs same fix
 // #include "modes.h"
 #include "binmode/binmodes.h"
-#include "binmode/binio.h"
 #include "tusb.h"
 #include "ui/ui_term.h"
 #include "mode/infrared-struct.h"

@@ -108,6 +108,7 @@ typedef struct _system_config {
                                       // functions
     uint8_t binmode_select;           // index of currently active binary mode
     bool binmode_lock_terminal;       // disable terminal while in binmode
+    uint32_t bpio_debug_enable;           // enable debug output for BPIO
 
 } _system_config;
 

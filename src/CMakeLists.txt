@@ -31,6 +31,90 @@ set(buspirate_common
         system_monitor.h
         system_monitor.c
 
+        #flatcc test
+        commands/global/flat.h 
+        commands/global/flat.c 
+        bpio_builder.h
+        bpio_reader.h
+        bpio_verifier.h
+        monster_verifier.h 
+        flatbuffers_common_builder.h 
+        flatbuffers_common_reader.h
+        monster_builder.h
+        monster_reader.h
+        builder.c
+        emitter.c 
+        json_parser.c 
+        json_printer.c 
+        refmap.c 
+        verifier.c 
+        flatcc/flatcc_portable.h
+        flatcc/flatcc_rtconfig.h
+        flatcc/flatcc_unaligned.h
+        flatcc/flatcc_flatbuffers.h
+        flatcc/flatcc_verifier.h
+        flatcc/flatcc_prologue.h
+        flatcc/flatcc.h
+        flatcc/flatcc_json_printer.h
+        flatcc/flatcc_assert.h
+        flatcc/flatcc_json_parser.h
+        flatcc/flatcc_version.h
+        flatcc/flatcc_endian.h
+        flatcc/flatcc_emitter.h
+        flatcc/flatcc_accessors.h
+        flatcc/flatcc_refmap.h
+        flatcc/flatcc_types.h
+        flatcc/flatcc_builder.h
+        flatcc/flatcc_alloc.h
+        flatcc/flatcc_identifier.h
+        flatcc/flatcc_epilogue.h
+        flatcc/flatcc_iov.h
+        flatcc/support/elapsed.h
+        flatcc/support/cdump.h
+        flatcc/support/hexdump.h
+        flatcc/support/readfile.h
+        flatcc/reflection/reflection_verifier.h
+        flatcc/reflection/reflection_reader.h
+        flatcc/reflection/reflection_builder.h
+        flatcc/reflection/flatbuffers_common_builder.h
+        flatcc/reflection/flatbuffers_common_reader.h
+        flatcc/portable/portable.h
+        flatcc/portable/pinttypes.h
+        flatcc/portable/pdiagnostic_push.h
+        flatcc/portable/pinline.h
+        flatcc/portable/pendian_detect.h
+        flatcc/portable/pversion.h
+        flatcc/portable/pdiagnostic_pop.h
+        flatcc/portable/pstdalign.h
+        flatcc/portable/pstatic_assert_scope.h
+        flatcc/portable/punaligned.h
+        flatcc/portable/grisu3_math.h
+        flatcc/portable/paligned_alloc.h
+        flatcc/portable/pprintfp.h
+        flatcc/portable/pattributes.h
+        flatcc/portable/pmemaccess.h
+        flatcc/portable/pstdint.h
+        flatcc/portable/pstdbool.h
+        flatcc/portable/pwarnings.h
+        flatcc/portable/portable_basic.h
+        flatcc/portable/pprintint.h
+        flatcc/portable/pparseint.h
+        flatcc/portable/grisu3_parse.h
+        flatcc/portable/grisu3_print.h
+        flatcc/portable/prestrict.h
+        flatcc/portable/pbase64.h
+        flatcc/portable/pparsefp.h
+        flatcc/portable/pdiagnostic.h
+        flatcc/portable/pendian.h
+        flatcc/portable/pcrt.h
+        flatcc/portable/pstatic_assert.h
+        flatcc/portable/include/linux/endian.h
+        flatcc/portable/include/std/inttypes.h
+        flatcc/portable/include/std/stdbool.h
+        flatcc/portable/include/std/stdint.h
+        flatcc/portable/include/std/stdalign.h
+
+
         # pirate lib
         pirate/psu.h
         pirate/psu.c
@@ -341,8 +425,6 @@ set(buspirate_common
         # binary mode
         binmode/binmodes.c
         binmode/binmodes.h
-        binmode/binio.c
-        binmode/binio.h
         binmode/binio_helpers.c
         binmode/binio_helpers.h
         mode/binloopback.c
@@ -351,8 +433,8 @@ set(buspirate_common
         binmode/logicanalyzer.c
         binmode/sump.c
         binmode/sump.h
-        binmode/dirtyproto.c
-        binmode/dirtyproto.h
+        binmode/bpio.c
+        binmode/bpio.h
         binmode/legacy4third.c
         binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c
@@ -416,7 +498,6 @@ set(buspirate_common
         commands/i2s/sine.h 
         commands/i2s/sine.c
 )
-
 set(buspirate_nandflash
         #nand flash management and dhara
         dhara/bytes.h

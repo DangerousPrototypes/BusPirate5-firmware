@@ -72,8 +72,6 @@ typedef struct _mode {
     void (*protocol_periodic)(void);                                               // service to poll for async data
     void (*protocol_macro)(uint32_t);                                              // macro
     uint32_t (*protocol_setup)(void);                                              // setup UI
-    uint32_t (*binmode_get_config_length)(void);                                   // get binmode config length
-    uint32_t (*binmode_setup)(uint8_t* config);                                    // setup for binmode
     uint32_t (*protocol_setup_exc)(void);                                          // real setup
     void (*protocol_cleanup)(void);                                                // cleanup for HiZ
     // const char*(*protocol_pins)(void);			// display pin config
@@ -87,6 +85,8 @@ typedef struct _mode {
     uint32_t (*protocol_command)(struct command_result* result); // per mode command parser - ignored if 0
     //void (*protocol_lcd_update)(uint32_t flags);                 // replacement for ui_lcd_update if non-0
     bool (*protocol_preflight_sanity_check)(void); // sanity check before executing syntax
+    bool (*bpio_configure)(bpio_mode_configuration_t *bpio_mode_config);
+    uint32_t (*bpio_handler)(struct bpio_data_request_t *request);
 } _mode;
 
 extern struct _mode modes[MAXPROTO];

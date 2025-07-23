@@ -576,6 +576,7 @@ void ddr5_search_upa(uint8_t *data, uint32_t start, uint32_t end) {
                 //ui_hex_get_args_config(&hex_config);
                 hex_config.start_address=start_address; //set the start address
                 hex_config.requested_bytes=total_bytes; //set the requested bytes
+                hex_config.pager_off= true; //disable the pager
                 ui_hex_align_config(&hex_config);
                 ui_hex_header_config(&hex_config);
                 //read 1024 bytes from the DDR5 SPD NVM
@@ -647,9 +648,11 @@ bool ddr5_dump(uint8_t *buffer) {
     //read 1024 bytes from the DDR5 SPD NVM
     if(ddr5_read_pages_128bytes(true, 0, 8, buffer)) return true; //read EEPROM page 0-7, start at 0x00
     for(uint32_t i=hex_config._aligned_start; i<(hex_config._aligned_end+1); i+=16) {
-        ui_hex_row_config(&hex_config, i, &buffer[i], 16);
+        if(ui_hex_row_config(&hex_config, i, &buffer[i], 16)){
+            return true; // exit pager
+        }
     }
-
+    return false; // no error
 }
 
 bool ddr5_read_to_file(FIL *file_handle, uint8_t *buffer) {

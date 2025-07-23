@@ -377,7 +377,7 @@ uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request) {
     if(request->debug) printf("[I2C] Reading %d bytes\r\n", request->bytes_read);
     // read data
     for(uint32_t i = 0; i<request->bytes_read; i++) {
-        i2c_result = pio_i2c_read_timeout((uint8_t*)&request->data_buf[i], i<(request->bytes_read-1), timeout);
+        i2c_result = pio_i2c_read_timeout((uint8_t*)&request->data_buf[i], (request->stop_main || request->stop_alt) && (i<(request->bytes_read-1)), timeout);
         if(i2c_result != HWI2C_OK) return i2c_result;
     }
 

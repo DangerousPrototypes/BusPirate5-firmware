@@ -18,8 +18,9 @@ import bpio.StatusResponse as StatusResponse
 import bpio.ErrorResponse as ErrorResponse
 
 # Send to serial port and receive response
-def send_and_receive(data, port='COM35', baudrate=115200):
+def send_and_receive(data):
     """Send data to serial port with 2-byte length header and receive response"""
+    baudrate = 115200  # Default baudrate for BPIO
     try:
         length_header = struct.pack('<H', len(data))
         with serial.Serial(port, baudrate, timeout=2) as ser:
@@ -292,15 +293,24 @@ def bpio_data_request(start_main, start_alt, data_write, bytes_read, stop_main, 
         data_bytes = data_resp.DataReadAsNumpy()
         print(f"Data read: {' '.join(f'{b:02x}' for b in data_bytes)}")
 
-
-
-#bpio_status_request()
 #for i in range(100):
 #    print(f"***********************Test {i+1}:")
-bpio_configuration_request("1WIRE", 100000)
-bpio_data_request(True, False, [0xcc, 0x4e, 0x00, 0x00, 0x7f], 0, False, False)
-bpio_data_request(True, False, [0xcc, 0x44], 0, False, False)
-# delay 800ms to allow the device to process the command
-import time
-time.sleep(0.8)
-bpio_data_request(True, False, [0xcc, 0xbe], 9, False, False)  # Read 9 bytes
+port='COM35'
+bpio_status_request()
+# 1WIRE example
+if True:
+    bpio_configuration_request("1WIRE", 100000)
+    bpio_data_request(True, False, [0xcc, 0x4e, 0x00, 0x00, 0x7f], 0, False, False)
+    bpio_data_request(True, False, [0xcc, 0x44], 0, False, False)
+    # delay 800ms to allow the device to process the command
+    import time
+    time.sleep(0.8)
+    bpio_data_request(True, False, [0xcc, 0xbe], 9, False, False)  # Read 9 bytes
+# I2C example
+if False:
+    bpio_configuration_request("I2C", 400000)
+    bpio_data_request(True, False, [0xA0, 0x00], 16, True, False)
+# SPI example
+if False:
+    bpio_configuration_request("SPI", 100000)
+    bpio_data_request(True, False, [0x9f], 3, True, False)

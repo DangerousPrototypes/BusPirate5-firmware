@@ -368,12 +368,16 @@ uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request) {
         // if we have read data, we need to restart
         if(pio_i2c_restart_timeout(timeout)) return HWI2C_TIMEOUT;
 
+    }
+
+    if(request->start_main || request->start_alt){
         if(request->debug) printf("[I2C] Read address 0x%02X\r\n", request->data_buf[0]|0b1);
         //send the read address with the last bit high
         i2c_result = pio_i2c_write_timeout(request->data_buf[0]|0b1, timeout);
         if(i2c_result != HWI2C_OK) return i2c_result;
     }
     
+
     if(request->debug) printf("[I2C] Reading %d bytes\r\n", request->bytes_read);
     // read data
     // only nack the last byte if we have a stop condition

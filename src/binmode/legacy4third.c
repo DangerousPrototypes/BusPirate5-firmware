@@ -70,6 +70,8 @@ static uint32_t remain_bytes;
 static bool set_aux_pins = true;
 static bool hold_value = true;
 static bool wp_value = true;
+static bool req_EHB_write = false;
+static uint8_t big_flash_parts[] = {0x97, 0x98, 0xa7, 0xa8, 0xc0};
 
 
 void set_planks_auxpins(bool set)
@@ -511,6 +513,8 @@ void legacy_protocol(void) {
                 if (binmode_debug) {
                     printf("\r\n>> ");
                 }
+                bool is_read_sig_cmd = false;
+                uint8_t read_sig_byte_inx = 0;
                 for (int i = 0; i < bytes2read; i++) {
                     if (button_get(0)) {
                         return;
@@ -518,9 +522,45 @@ void legacy_protocol(void) {
                     if (binmode_debug) {
                         printf("\r\n0x%02X | ", tmpbuf[i]);
                     }
+                    // This hack required to handle parts with more than
+                    // 64K bytes of flash.  Signature byte 2 indicates flash
+                    // size - we'll use this byte to set a global flag if
+                    // this part requires writing the Extended High Byte address
+                    if (i == 0 && tmpbuf[i] == 0x30) {
+                        is_read_sig_cmd = true;
+                        req_EHB_write = false;
+                    }
+                    if (is_read_sig_cmd && i == 2) {
+                        read_sig_byte_inx = tmpbuf[i];
+                    }
                     tmpbuf[i] = hwspi_write_read(tmpbuf[i]);
                     if (binmode_debug) {
                         printf("0x%02X", tmpbuf[i]);
+                        if (is_read_sig_cmd) {
+                            if (i == 0) {
+                                printf("  - read signature command");
+                            } else if (i == 2) {
+                                printf("  - read signature byte %d", read_sig_byte_inx);
+                            }
+                        }
+                    }
+                    if (is_read_sig_cmd && read_sig_byte_inx == 1 && i == 3) {
+                        if (binmode_debug) {
+                            printf("  - signature part ID 0x%02x", tmpbuf[i]);
+                        }
+                        for (uint8_t ii = 0; ii < sizeof(big_flash_parts); ++ii) {
+                            if (big_flash_parts[ii] == tmpbuf[3]) {
+                                req_EHB_write = true;
+                                break;
+                            }
+                        }
+                        if (binmode_debug) {
+                            if (req_EHB_write) {
+                                printf(", requires EHB write");
+                            } else {
+                                printf(", does not require EHB write");
+                            }
+                        }
                     }
                 }
                 if (binmode_debug) {
@@ -695,11 +735,12 @@ void legacy_protocol(void) {
                             if (button_get(0)) {
                                 return;
                             }
-                            hwspi_write_read(0x4d); // AVR_LOAD_ADDRESS_EXTENDED_HIGH_BYTE_COMMAND
-                            hwspi_write_read(0x00);
-                            hwspi_write_read((addr >> 16) & 0x03);  // just the two lowest bits
-                            hwspi_write_read(0x00);
-
+                            if (req_EHB_write) {
+                                hwspi_write_read(0x4d); // AVR_LOAD_ADDRESS_EXTENDED_HIGH_BYTE_COMMAND
+                                hwspi_write_read(0x00);
+                                hwspi_write_read((addr >> 16) & 0x03);  // just the two lowest bits
+                                hwspi_write_read(0x00);
+                            }
                             hwspi_write_read(0x20); // AVR_FETCH_LOW_BYTE_COMMAND
                             hwspi_write_read((addr >> 8) & 0xFF);
                             hwspi_write_read(addr & 0xFF);

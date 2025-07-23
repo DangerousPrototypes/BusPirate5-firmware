@@ -719,6 +719,9 @@ void legacy_protocol(void) {
 
                         if (binmode_debug) {
                             printf("\r\naddr: 0x%08X, len: 0x%08X", addr, len);
+                            if (req_EHB_write) {
+                                printf(" -- EHB is 0x%02x", (addr >> 16) & 0x03);
+                            }
                         }
 
                         if ((addr > 0x2FFFF) || (len > 0x2FFFF) || ((addr + len) > 0x2FFFF)) {
@@ -766,7 +769,7 @@ void legacy_protocol(void) {
                             addr++;
                         }
                         if (binmode_debug) {
-                            printf("\r\n");
+                            printf(" - end addr 0x%08x\r\n", addr);
                         }
                         break;
 

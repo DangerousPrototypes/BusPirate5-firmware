@@ -528,7 +528,6 @@ void legacy_protocol(void) {
                     // this part requires writing the Extended High Byte address
                     if (i == 0 && tmpbuf[i] == 0x30) {
                         is_read_sig_cmd = true;
-                        req_EHB_write = false;
                     }
                     if (is_read_sig_cmd && i == 2) {
                         read_sig_byte_inx = tmpbuf[i];

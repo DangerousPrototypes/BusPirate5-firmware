@@ -47,7 +47,7 @@
 #include "binmode/binmodes.h"
 #include "ui/ui_term.h"
 
-uint8_t binmode_debug = 1;
+uint8_t binmode_debug = 0;
 
 void script_print(const char* str) {
     for (size_t i = 0; i < strlen(str); i++) {

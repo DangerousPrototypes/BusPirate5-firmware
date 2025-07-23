@@ -77,7 +77,7 @@ static bool hold_value = true;
 static bool wp_value = true;
 static bool req_EHB_write = false;
 static uint8_t big_flash_parts[] = {0x97, 0x98, 0xa7, 0xa8, 0xc0};
-static uint8_t binmode_debug = 0; // Debug mode flag
+static uint8_t binmode_debug = 1; // Debug mode flag
 
 void set_planks_auxpins(bool set)
 {

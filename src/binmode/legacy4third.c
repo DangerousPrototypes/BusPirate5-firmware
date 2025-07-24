@@ -91,7 +91,7 @@ static bool req_EHB_write = false; // This part has > 64K flash
 // can use this array to compare and set req_EHB_write to 'true' if needed.
 static uint8_t big_flash_parts[] = {0x97, 0x98, 0xa7, 0xa8, 0xc0}; // array of signature bytes for parts with > 64K flash
 
-static uint8_t binmode_debug = 1; // Debug mode flag
+static uint8_t binmode_debug = 0; // Debug mode flag
 
 void set_planks_auxpins(bool set)
 {
@@ -595,6 +595,7 @@ void legacy_protocol(void) {
                         if (binmode_debug) {
                             printf("  - signature part ID 0x%02x", tmpbuf[i]);
                         }
+                        req_EHB_write = false; // assume this part's flash is <= 64Kb flash
                         for (uint8_t ii = 0; ii < sizeof(big_flash_parts); ++ii) {
                             if (big_flash_parts[ii] == tmpbuf[3]) {
                                 // we have a match!  This part has more than 64K bytes of flash

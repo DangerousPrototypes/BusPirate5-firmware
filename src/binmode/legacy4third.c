@@ -573,7 +573,7 @@ void legacy_protocol(void) {
                         is_read_sig_cmd = true;
                     }
                     if (is_read_sig_cmd && i == 2) {
-                        // this is 3rd byte (byte 2) of sequence from BP to part - which signature byte to read
+                        // this is 3rd byte of the SPI sequence from BP to part - which signature byte to read
                         read_sig_byte_inx = tmpbuf[i];
                     }
                     tmpbuf[i] = hwspi_write_read(tmpbuf[i]);
@@ -587,10 +587,13 @@ void legacy_protocol(void) {
                             }
                         }
                     }
-                    // if we are in the process of reading signature command, and
-                    // this is the the 4th byte (byte 3) of the request to read
-                    // signature byte 2, then compare to the known array of
-                    // signature byte 2 for parts with > 64K flash.
+                    // IF
+                    // we're in the process of requesting part signature bytes AND
+                    // this is a request to read signature byte 1 AND
+                    // this is the part's response to the 4th byte in the SPI sequence
+                    // THEN
+                    // tmpbuf[i] holds the signature byte 2 - this is what we need to
+                    // determine flash size.
                     if (is_read_sig_cmd && read_sig_byte_inx == 1 && i == 3) {
                         if (binmode_debug) {
                             printf("  - signature part ID 0x%02x", tmpbuf[i]);

@@ -504,23 +504,9 @@ config_response_error:
 uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     bpio_DataRequest_table_t data_request = (bpio_DataRequest_table_t) bpio_RequestPacket_contents(packet);
     test_assert(data_request != 0);
-
     const char *error = NULL;
-
     char data_buf[512]; // Buffer for data, adjust size as needed
-
                 
-    //**********TIME START        
-    #if 0
-    //check if each field is present, get value
-    bool start_main = bpio_DataRequest_start_main(data_request);
-    if(bpio_debug) printf("[Data Request] Start main condition: %s\r\n", start_main ? "true" : "false");
-
-    // Check if start_alt is present and get its value.
-    bool start_alt = bpio_DataRequest_start_alt(data_request);
-    if(bpio_debug) printf("[Data Request] Start alternate condition: %s\r\n", start_alt ? "true" : "false");
-    #endif
-
     // Check if data_write is present and get its value.
     flatbuffers_uint8_vec_t data_write;
     uint16_t data_write_len = 0;
@@ -532,29 +518,12 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         if(bpio_debug) printf("[Data Request] Data write vector is missing\r\n");
     }
     if (data_write_len > 0) {
-        if(bpio_debug) printf("[Data Request] Data write vector length: %d\r\n", data_write_len);
-        // Print the data write vector contents.
-        if(bpio_debug) printf("[Data Request] Data write: ");
         for (size_t i = 0; i < data_write_len; i++) {
-            if(bpio_debug) printf("0x%02X ", flatbuffers_uint8_vec_at(data_write, i));
             data_buf[i] = flatbuffers_uint8_vec_at(data_write, i); // Copy to data_buf
         }
-        if(bpio_debug) printf("\r\n");
     }
 
-    #if 0
-    // Check if bytes_read is present and get its value.
-    uint16_t readbytes = bpio_DataRequest_bytes_read(data_request);
-    if(bpio_debug) printf("[Data Request] Bytes to read: %d\r\n", readbytes);
-
-    // Check if stop_main is present and get its value.
-    bool stop_main = bpio_DataRequest_stop_main(data_request);
-    if(bpio_debug) printf("[Data Request] Stop main condition: %s\r\n", stop_main ? "true" : "false");
-
-    // Check if stop_alt is present and get its value.
-    bool stop_alt = bpio_DataRequest_stop_alt(data_request);
-    if(bpio_debug) printf("[Data Request] Stop alternate condition: %s\r\n", stop_alt ? "true" : "false");
-    #endif 
+        //**********TIME START        
 
     // Now we can process the request.
     struct bpio_data_request_t request = {
@@ -567,6 +536,22 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         .stop_main = bpio_DataRequest_stop_main(data_request),
         .stop_alt = bpio_DataRequest_stop_alt(data_request)
     };
+
+    if(bpio_debug){
+        printf("[Data Request] Start main condition: %s\r\n", request.start_main ? "true" : "false");
+        printf("[Data Request] Start alternate condition: %s\r\n", request.start_alt ? "true" : "false");
+        printf("[Data Request] Data write vector length: %d\r\n", data_write_len);
+        // Print the data write vector contents.
+        printf("[Data Request] Data write: ");
+        for (size_t i = 0; i < data_write_len; i++) {
+            printf("0x%02X ", data_buf[i]);
+        }
+        printf("\r\n");
+        printf("[Data Request] Bytes to write: %d\r\n", request.bytes_write);
+        printf("[Data Request] Bytes to read: %d\r\n", request.bytes_read);
+        printf("[Data Request] Stop main condition: %s\r\n", request.stop_main ? "true" : "false");
+        printf("[Data Request] Stop alternate condition: %s\r\n", request.stop_alt ? "true" : "false");
+    }
 
     //**************TIME END: 40uS
     

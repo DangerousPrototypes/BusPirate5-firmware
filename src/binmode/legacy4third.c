@@ -63,10 +63,6 @@ const char legacy4third_mode_name[] = "Legacy Binary Mode for Flashrom and AVRdu
     tud_cdc_n_write(cdc_n, (uint8_t*)str, sizeof(str) - 1);                                                            \
     tud_cdc_n_write_flush(1);
 
-//static uint8_t volts_integer;
-//static uint8_t volts_decimal;
-//static uint16_t current_integer;
-//static uint8_t current_decimal;
 static float psu_voltage = 0.0f; // PSU voltage in volts
 static float psu_current_limit = 0.0f; // PSU current limit in amps
 static uint8_t* tmpbuf;
@@ -121,29 +117,10 @@ void set_planks_auxpins(bool set)
 
 
 void disable_psu_legacy(void) {
-    //DREG
     psucmd_disable();
 }
 
 void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8_t cpah, uint8_t cs) {
-    /*
-        Example:
-            data_bits = 0x08;
-            uint8_t cpol = 0x00;
-            uint8_t cpah = 0x00;
-            uint8_t cs = 0x01;
-            uint32_t spi_speed = 10000000; // ~10Mhz
-    */
-   #if 0
-    uint8_t spi_binmode_args[] = { (spi_speed >> 24) & 0xFF,
-                                   (spi_speed >> 16) & 0xFF,
-                                   (spi_speed >> 8) & 0xFF,
-                                   spi_speed & 0xFF,
-                                   data_bits,
-                                   cpol,
-                                   cpah,
-                                   cs };
-    #endif
     bpio_mode_configuration_t mode_config={
         .speed = spi_speed,
         .data_bits = data_bits,
@@ -152,14 +129,12 @@ void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8
         .chip_select_idle = cs,
     };
 
-    //DREG
     mode_change_new((uint8_t*)"SPI", &mode_config);
     system_config.binmode_usb_rx_queue_enable = false;
     system_config.binmode_usb_tx_queue_enable = false;
 }
 
 void enable_debug_legacy(void) {
-    //DREG
     binmode_debug = 1;
 }
 
@@ -223,15 +198,9 @@ void set_pins_ui(void) {
 }
 
 void reset_legacy(void) {
-    uint8_t binmode_args = 0;
-
     hwspi_deinit();
     set_planks_auxpins(false);
     disable_psu_legacy();
-    //DREG
-    //DREG: binmode_pullup_disable(&binmode_args);
-    //DREG: binmode_reset(&binmode_args); //this is the same as mode_change...
-    //DREG: mode_change((uint8_t*)"HiZ");
     pullups_disable();
     bpio_mode_configuration_t mode_config;
     mode_change_new((uint8_t*)"HIZ", &mode_config);
@@ -327,14 +296,6 @@ void legacy_protocol(void) {
                 if ((extended_info & 0b00001000) == 0) {
                     disable_psu_legacy();
                 } else {
-                    #if 0
-                    // uint8_t args[] = { 0x03, 0x21, 0x00, 0x80 }; // 3.3v
-                    uint8_t args[] = {
-                        volts_integer, volts_decimal, (uint8_t)(current_integer >> 8), (uint8_t)(current_integer & 0xFF)
-                    };
-                    //DREG: new psu
-                    //DREG: uint32_t result = binmode_psu_enable(args);
-                    #endif 
                     uint32_t result = psucmd_enable(psu_voltage, psu_current_limit, false);
                     if (result) {
                         if (binmode_debug) {
@@ -352,15 +313,11 @@ void legacy_protocol(void) {
                     if (binmode_debug) {
                         printf("\r\npullup_disable");
                     }
-                    //uint8_t binmode_args = 0;
-                    //DREG: binmode_pullup_disable(&binmode_args);
                     pullups_disable();
                 } else {
                     if (binmode_debug) {
                         printf("\r\npullup_enable");
                     }
-                    //uint8_t binmode_args = 0;
-                    //DREG: binmode_pullup_enable(&binmode_args);
                     pullups_enable();
                 }
 
@@ -493,25 +450,6 @@ void legacy_protocol(void) {
                 }
                 hwspi_select();
                 CDC_SEND_STR(1, "\x01");
-
-                /*
-                uint8_t data_bits = 8;
-                uint8_t cpol = 0;
-                uint8_t cpha = 0;
-                static const char mpin_labels[][5]={
-                    "CLK",
-                    "MOSI",
-                    "MISO",
-                    "CS"
-                };
-
-                spi_init(SPI1_BASE, 100000); // ~0.1MHz
-                hwspi_init(data_bits, cpol, cpha);
-                system_bio_update_purpose_and_label(true, 6, 1, mpin_labels[0]);
-                system_bio_update_purpose_and_label(true, 7, 1, mpin_labels[1]);
-                system_bio_update_purpose_and_label(true, 4, 1, mpin_labels[2]);
-                system_bio_update_purpose_and_label(true, 5, 1, mpin_labels[3]);
-                */
             } break;
 
             case 0x03: {
@@ -862,13 +800,8 @@ void legacy4third_mode(void) {
 
         printf("\r\n%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());
 
-        //DREG
-        //float volts = 0.0f;
         if (!ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &psu_voltage, false)) 
             goto finish_legacy;
-
-        //volts_integer = (uint8_t)floorf(volts);
-        //volts_decimal = (uint8_t)((volts - floorf(volts)) * 100);
 
         if (binmode_debug) {
             printf("\r\nVolts: %2.2f\n", psu_voltage);
@@ -878,9 +811,6 @@ void legacy4third_mode(void) {
         printf("\r\n%sMaximum current (0mA-500mA)%s", ui_term_color_info(), ui_term_color_reset());
         if (!ui_prompt_float(&result, 0.0f, 500.0f, 200.0f, true, &psu_current_limit, false))
             goto finish_legacy;
-
-        //current_integer = (uint16_t)floorf(current);
-        //current_decimal = (uint8_t)((current - floorf(current)) * 100);
 
         if (binmode_debug) {
             printf("\r\nCurrent: %2.2f\n",psu_current_limit);
@@ -924,8 +854,6 @@ void legacy4third_mode(void) {
         system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
         system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
         set_planks_auxpins(false);
-        //uint8_t binmode_args = 0;
-        //DREG: binmode_reset_buspirate(&binmode_args);
         cmd_mcu_reset();
     }
 }

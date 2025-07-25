@@ -34,11 +34,19 @@ void i2c_search_addr(struct command_result* res) {
         return;
     }
 
-    if(!ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL)){
-        printf("\r\nAborting I2C scan\r\n");
-        return;
+    if (using_plank) {
+        if (!ui_help_sanity_check(true, 1<<PLANK_M_I2C_SDA|1<<PLANK_M_I2C_SCL)) {
+            printf("\r\nAborting I2C scan\r\n");
+            return;
+        }
+    } else {
+        // check pins
+        if (!ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL)) {
+            printf("\r\nAborting I2C scan\r\n");
+            return;
+        }
     }
-
+    
     bool verbose = cmdln_args_find_flag('v');
     bool color = false;
     uint16_t device_count = 0;

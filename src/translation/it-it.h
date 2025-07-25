@@ -498,6 +498,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_VADC_SINGLE               ] = "Misurazione singola",
     [ T_HELP_VADC_CONTINUOUS           ] = "Misurazione continua",
     [ T_HELP_VADC_IO                   ] = "Numero pin IO, 0-7",
+    [ T_HELP_I2C_PLANK                 ] = NULL,
     [ T_HELP_I2C_SCAN                  ] = "scansione degli indirizzi I2C, con opzionale numero di parte",
     [ T_HELP_I2C_SCAN_VERBOSE          ] = "Modalità dettagliata, stampa potenziali numeri di parte",
     [ T_HELP_FLAG                      ] = "Ottieni aiuto aggiuntivo",

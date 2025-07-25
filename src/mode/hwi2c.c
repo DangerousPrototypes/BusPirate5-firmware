@@ -343,7 +343,7 @@ uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request) {
         if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
     }
 
-    if(request->bytes_write > 0) {
+    if(request->bytes_write > 1) {
         if(request->debug) printf("[I2C] Writing %d bytes\r\n", request->bytes_write);
         //write data
         for(uint32_t i = 0; i < request->bytes_write; i++) {

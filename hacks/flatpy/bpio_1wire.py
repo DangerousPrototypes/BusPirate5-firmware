@@ -1,23 +1,16 @@
 from bpio_client import BPIOClient
-import time
+from bpio_base import BPIOBase
 
-class BPIO1Wire:
+class BPIO1Wire(BPIOBase):
     def __init__(self, client):
-        self.client = client
-        self.configured = False
+        super().__init__(client)
    
     def configure(self, **kwargs):
         """Configure 1-Wire mode"""
-        success = self.client.configure_mode("1WIRE", **kwargs)
+        kwargs['mode'] = '1-Wire'
+        success = self.client.configuration_request(**kwargs)  
         self.configured = success
         return success
-
-    def config_check(self):
-        """Check if 1-Wire is configured"""
-        if not self.configured:
-            print("1-Wire not configured. Call configure() first.")
-            return False
-        return True
 
     def reset(self):
         """Reset the 1-Wire bus"""

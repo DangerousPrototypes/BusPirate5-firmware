@@ -64,7 +64,7 @@ class BPIOClient:
             return None
             
         try:
-            length_header = struct.pack('<H', len(data))
+            length_header = struct.pack('<H', (len(data)))
             
             # Clear any pending data
             self.serial_port.reset_input_buffer()
@@ -95,192 +95,164 @@ class BPIOClient:
                 return None
             if self.debug:
                 print(f"Received {len(resp_data)} bytes")
-            
-            # Decode response packet
-            resp_packet = ResponsePacket.ResponsePacket.GetRootAsResponsePacket(resp_data, 0)
-            contents_type = resp_packet.ContentsType()
-            if self.debug:
-                print(f"ContentsType: {contents_type}")
-            
-            if contents_type == ResponsePacketContents.ResponsePacketContents.ErrorResponse:
-                error_resp = ErrorResponse.ErrorResponse()
-                error_resp.Init(resp_packet.Contents().Bytes, resp_packet.Contents().Pos)       
-                print(f"  Error: {error_resp.Error().decode('utf-8')}")
-                return None
 
-            return resp_packet
+            return resp_data
 
         except serial.SerialException as e:
             print(f"Serial communication error: {e}")
         except Exception as e:
             print(f"Error: {e}")
         return None
+    
+    def _expected_response(self, request_type):
+        """Get the expected response type for a given request type"""
+        if request_type == RequestPacketContents.RequestPacketContents.ConfigurationRequest:
+            return ResponsePacketContents.ResponsePacketContents.ConfigurationResponse
+        elif request_type == RequestPacketContents.RequestPacketContents.DataRequest:
+            return ResponsePacketContents.ResponsePacketContents.DataResponse
+        elif request_type == RequestPacketContents.RequestPacketContents.StatusRequest:
+            return ResponsePacketContents.ResponsePacketContents.StatusResponse
+        else:
+            return None
 
-    def _wrap_request(self, builder, contents_type, contents):
+    def send_request(self, builder, request_contents_type, request_contents):
+        """Send a request packet and return the response"""
         """Wrap contents in a RequestPacket"""
         RequestPacket.Start(builder)
-        RequestPacket.AddContentsType(builder, contents_type)
-        RequestPacket.AddContents(builder, contents)
+        RequestPacket.AddContentsType(builder, request_contents_type)
+        RequestPacket.AddContents(builder, request_contents)
         final_packet = RequestPacket.End(builder)
         builder.Finish(final_packet)
-        return builder.Output()
+        data = builder.Output()
+    
+        resp_data = self.send_and_receive(data)
 
-    def status_request(self):
-        """Create a BPIO StatusRequest packet"""
+        if not resp_data:
+            return False
+
+        # Decode response packet
+        resp_packet = ResponsePacket.ResponsePacket.GetRootAsResponsePacket(resp_data, 0)
+        response_contents_type = resp_packet.ContentsType()
+        if self.debug:
+            print(f"ContentsType: {response_contents_type}")        
+
+        if response_contents_type == ResponsePacketContents.ResponsePacketContents.ErrorResponse:
+            error_resp = ErrorResponse.ErrorResponse()
+            error_resp.Init(resp_packet.Contents().Bytes, resp_packet.Contents().Pos)
+            print(f"Error: {error_resp.Error().decode('utf-8')}")
+            return False
+        
+        expected_type = self._expected_response(request_contents_type)        
+        if response_contents_type != expected_type:
+            print(f"Unexpected response type: {response_contents_type}")
+            return False
+
+        return resp_packet
+    
+    def configuration_request(self, **kwargs):
+        """Create a BPIO ConfigurationRequest packet"""
         builder = flatbuffers.Builder(1024)
 
-        # Create the query vector BEFORE starting the StatusRequest table
-        StatusRequest.StartQueryVector(builder, 2)
-        builder.PrependUint8(StatusRequestTypes.StatusRequestTypes.All)
-        builder.PrependUint8(StatusRequestTypes.StatusRequestTypes.Version)
-        query_vector = builder.EndVector()
+        # TODO: mode configuration!
 
-        # Create a StatusRequest
-        StatusRequest.Start(builder)
-        StatusRequest.AddQuery(builder, query_vector)
-        status_request = StatusRequest.End(builder)
-        data = self._wrap_request(builder, RequestPacketContents.RequestPacketContents.StatusRequest, status_request)
-        resp_packet = self.send_and_receive(data)
-        
-        if not resp_packet:
-            return None
-            
-        contents_type = resp_packet.ContentsType()
-        if contents_type != ResponsePacketContents.ResponsePacketContents.StatusResponse:
-            print(f"Expected StatusResponse, got {contents_type}")
-            return None
-            
-        status_resp = StatusResponse.StatusResponse()
-        status_resp.Init(resp_packet.Contents().Bytes, resp_packet.Contents().Pos)
-        return self._parse_status_response(status_resp)
+        mode_string = None
+        if 'mode' in kwargs:
+            mode_string = builder.CreateString(kwargs['mode'])
 
-    def _parse_status_response(self, status_resp):
-        """Parse and display status response"""
-        print("StatusResponse:")
-        print(f"  Hardware version: {status_resp.HardwareVersionMajor()} REV{status_resp.HardwareVersionMinor()}")
-        print(f"  Firmware version: {status_resp.FirmwareVersionMajor()}.{status_resp.FirmwareVersionMinor()}")
-        print(f"  Firmware git hash: {status_resp.FirmwareGitHash().decode('utf-8')}")
-        print(f"  Firmware date: {status_resp.FirmwareDate().decode('utf-8')}")
+        mode_config = None
+        if 'mode_configuration' in kwargs:
+            config_args = kwargs['mode_configuration']
+            # Create a ModeConfiguration
+            ModeConfiguration.Start(builder)
+            if 'speed' in config_args:
+                ModeConfiguration.AddSpeed(builder, config_args['speed'])
+            else:
+                ModeConfiguration.AddSpeed(builder, 20000)  # Default speed
+            if 'data_bits' in config_args:
+                ModeConfiguration.AddDataBits(builder, config_args['data_bits'])
+            if 'parity' in config_args:
+                ModeConfiguration.AddParity(builder, config_args['parity'])
+            if 'stop_bits' in config_args:
+                ModeConfiguration.AddStopBits(builder, config_args['stop_bits'])
+            if 'flow_control' in config_args:
+                ModeConfiguration.AddFlowControl(builder, config_args['flow_control'])
+            if 'signal_inversion' in config_args:
+                ModeConfiguration.AddSignalInversion(builder, config_args['signal_inversion'])
+            if 'clock_stretch' in config_args:
+                ModeConfiguration.AddClockStretch(builder, config_args['clock_stretch'])
+            if 'clock_polarity' in config_args:
+                ModeConfiguration.AddClockPolarity(builder, config_args['clock_polarity'])
+            if 'clock_phase' in config_args:
+                ModeConfiguration.AddClockPhase(builder, config_args['clock_phase'])
+            if 'chip_select_idle' in config_args:
+                ModeConfiguration.AddChipSelectIdle(builder, config_args['chip_select_idle'])
+            if 'submode' in config_args:
+                ModeConfiguration.AddSubmode(builder, config_args['submode'])
+            if 'tx_modulation' in config_args:
+                ModeConfiguration.AddTxModulation(builder, config_args['tx_modulation'])
+            if 'rx_sensor' in config_args:
+                ModeConfiguration.AddRxSensor(builder, config_args['rx_sensor'])
+            mode_config = ModeConfiguration.End(builder)
 
-        if status_resp.ModesAvailableLength():
-            modes = [status_resp.ModesAvailable(i).decode('utf-8') for i in range(status_resp.ModesAvailableLength())]
-            print(f"  Available modes: {', '.join(modes)}")
+        print_string = None
+        if 'print_string' in kwargs:
+            print_string = builder.CreateString(kwargs['print_string'])
 
-        if status_resp.ModeCurrent():
-            print(f"  Current mode: {status_resp.ModeCurrent().decode('utf-8')}")
-
-        print(f"  Mode bit order: {"MSB" if status_resp.ModeBitorderMsb() else "LSB"}")
-
-        if status_resp.ModePinLabelsLength():
-            pin_labels = [status_resp.ModePinLabels(i).decode('utf-8') for i in range(status_resp.ModePinLabelsLength())]
-            print(f"  Pin labels: {', '.join(pin_labels)}")
-
-        if status_resp.LedCount():
-            print(f"  Number of LEDs: {status_resp.LedCount()}")
-
-        print(f"  Pull-up resistors enabled: {status_resp.PullupEnabled()}")
-        print(f"  Power supply enabled: {status_resp.PsuEnabled()}")
-        print(f"  PSU set voltage: {status_resp.PsuSetMv()} mV")
-        print(f"  PSU set current: {status_resp.PsuSetMa()} mA")
-        print(f"  PSU measured voltage: {status_resp.PsuMeasuredMv()} mV")
-        print(f"  PSU measured current: {status_resp.PsuMeasuredMa()} mA")        
-        print(f"  PSU over current error: {"Yes" if status_resp.PsuCurrentError() else "No"}")
-
-        if status_resp.AdcMvLength():
-            adc_values = [str(status_resp.AdcMv(i)) for i in range(status_resp.AdcMvLength())]
-            print(f"  IO ADC values (mV): {', '.join(adc_values)}")
-
-        # Print IO pin directions and values
-        io_direction_byte = status_resp.IoDirection()
-        directions = []
-        for i in range(8):
-            bit_value = (io_direction_byte >> i) & 1
-            direction = 'OUT' if bit_value else 'IN'
-            directions.append(f"IO{i}:{direction}")
-        print(f"  IO directions: {', '.join(directions)}")
-
-        io_value_byte = status_resp.IoValue()
-        values = []
-        for i in range(8):
-            bit_value = (io_value_byte >> i) & 1
-            value = 'HIGH' if bit_value else 'LOW'
-            values.append(f"IO{i}:{value}")
-        print(f"  IO values: {', '.join(values)}")
-
-        print(f"  Disk size: {status_resp.DiskSizeMb()} MB")
-        print(f"  Disk space used: {status_resp.DiskUsedMb()} MB")
-        
-        return status_resp
-
-    def configure_mode(self, mode, speed=100000, **kwargs):
-        """Configure a mode with given parameters"""
-        builder = flatbuffers.Builder(1024)
-        mode_str = builder.CreateString(mode)
-        
-        print_string = kwargs.get('print_string', "Mode configured\r\n")
-        print_string = builder.CreateString(print_string)
-
-        # Create LED colors if provided
         led_color_vector = None
-        if 'led_colors' in kwargs:
-            led_colors = kwargs['led_colors']
+        if 'led_color' in kwargs:
+            led_colors = kwargs['led_color']
             ConfigurationRequest.StartLedColorVector(builder, len(led_colors))
             for color in reversed(led_colors):
                 builder.PrependUint32(color)
-            led_color_vector = builder.EndVector()
-
-        # Create a ModeConfiguration
-        ModeConfiguration.Start(builder)
-        ModeConfiguration.AddSpeed(builder, speed)
+            led_color_vector = builder.EndVector()    
         
-        # Add mode-specific configuration
-        if 'clock_stretch' in kwargs:
-            ModeConfiguration.AddClockStretch(builder, kwargs['clock_stretch'])
-        if 'clock_polarity' in kwargs:
-            ModeConfiguration.AddClockPolarity(builder, kwargs['clock_polarity'])
-        if 'clock_phase' in kwargs:
-            ModeConfiguration.AddClockPhase(builder, kwargs['clock_phase'])
-        if 'chip_select_idle' in kwargs:
-            ModeConfiguration.AddChipSelectIdle(builder, kwargs['chip_select_idle'])
-            
-        mode_config = ModeConfiguration.End(builder)
-
-        # Create a ConfigurationRequest
         ConfigurationRequest.Start(builder)
-        ConfigurationRequest.AddMode(builder, mode_str)
-        ConfigurationRequest.AddModeConfiguration(builder, mode_config)
-        
-        # Add optional configuration parameters
-        if 'bit_order_msb' in kwargs:
-            ConfigurationRequest.AddModeBitorderMsb(builder, kwargs['bit_order_msb'])
-        if 'pullup_enable' in kwargs:
-            ConfigurationRequest.AddPullupEnable(builder, kwargs['pullup_enable'])
-        if 'pullup_disable' in kwargs:
-            ConfigurationRequest.AddPullupDisable(builder, kwargs['pullup_disable'])
-        if 'psu_enable' in kwargs:
-            ConfigurationRequest.AddPsuEnable(builder, kwargs['psu_enable'])
+        # Check if each key exists in kwargs and add it to the request
+        if 'mode' in kwargs:
+            ConfigurationRequest.AddMode(builder, mode_string)
+        if 'mode_configuration' in kwargs:
+            ConfigurationRequest.AddModeConfiguration(builder, mode_config)
+        if 'mode_bitorder_msb' in kwargs:
+            ConfigurationRequest.AddModeBitorderMsb(builder, kwargs['mode_bitorder_msb'])
+        if 'mode_bitorder_lsb' in kwargs:
+            ConfigurationRequest.AddModeBitorderLsb(builder, kwargs['mode_bitorder_lsb'])
         if 'psu_disable' in kwargs:
             ConfigurationRequest.AddPsuDisable(builder, kwargs['psu_disable'])
-        if 'psu_voltage_mv' in kwargs:
-            ConfigurationRequest.AddPsuSetMv(builder, kwargs['psu_voltage_mv'])
-        if 'psu_current_ma' in kwargs:
-            ConfigurationRequest.AddPsuSetMa(builder, kwargs['psu_current_ma'])
-            
-        if led_color_vector:
-            ConfigurationRequest.AddLedColor(builder, led_color_vector)
-            
-        ConfigurationRequest.AddPrintString(builder, print_string)
+        if 'psu_enable' in kwargs:
+            ConfigurationRequest.AddPsuEnable(builder, kwargs['psu_enable'])
+        if 'psu_set_mv' in kwargs:
+            ConfigurationRequest.AddPsuSetMv(builder, kwargs['psu_set_mv'])
+        if 'psu_set_ma' in kwargs:
+            ConfigurationRequest.AddPsuSetMa(builder, kwargs['psu_set_ma'])
+        if 'pullup_disable' in kwargs:
+            ConfigurationRequest.AddPullupDisable(builder, kwargs['pullup_disable'])
+        if 'pullup_enable' in kwargs:
+            ConfigurationRequest.AddPullupEnable(builder, kwargs['pullup_enable'])
+        if 'pullx_config' in kwargs:
+            ConfigurationRequest.AddPullxConfig(builder, kwargs['pullx_config'])
+        if 'io_direction_mask' in kwargs:
+            ConfigurationRequest.AddIoDirectionMask(builder, kwargs['io_direction_mask'])
+        if 'io_direction' in kwargs:
+            ConfigurationRequest.AddIoDirection(builder, kwargs['io_direction'])
+        if 'io_value_mask' in kwargs:
+            ConfigurationRequest.AddIoValueMask(builder, kwargs['io_value_mask'])
+        if 'io_value' in kwargs:
+            ConfigurationRequest.AddIoValue(builder, kwargs['io_value'])
+        if 'led_resume' in kwargs:  
+            ConfigurationRequest.AddLedResume(builder, kwargs['led_resume'])    
+        if 'led_color' in kwargs:       
+            ConfigurationRequest.AddLedColor(builder, led_color_vector) 
+        if 'print_string' in kwargs:
+            ConfigurationRequest.AddPrintString(builder, print_string)
+        if 'hardware_bootloader' in kwargs:
+            ConfigurationRequest.AddHardwareBootloader(builder, kwargs['hardware_bootloader'])
+        if 'hardware_reset' in kwargs:
+            ConfigurationRequest.AddHardwareReset(builder, kwargs['hardware_reset'])
 
         config_request = ConfigurationRequest.End(builder)
-        data = self._wrap_request(builder, RequestPacketContents.RequestPacketContents.ConfigurationRequest, config_request)
-        resp_packet = self.send_and_receive(data)
-
+        resp_packet = self.send_request(builder, RequestPacketContents.RequestPacketContents.ConfigurationRequest, config_request)
+        
         if not resp_packet:
-            return False
-            
-        contents_type = resp_packet.ContentsType()
-        if contents_type != ResponsePacketContents.ResponsePacketContents.ConfigurationResponse:
-            print(f"Expected ConfigurationResponse, got {contents_type}")
             return False
 
         config_resp = ConfigurationResponse.ConfigurationResponse()
@@ -289,8 +261,128 @@ class BPIOClient:
         if config_resp.Error():
             print(f"Configuration error: {config_resp.Error().decode('utf-8')}")
             return False
-            
+        
         return True
+
+    def status_request(self, **kwargs):
+        """Create a BPIO StatusRequest packet"""
+        builder = flatbuffers.Builder(1024)
+
+        # Create the query vector BEFORE starting the StatusRequest table
+        StatusRequest.StartQueryVector(builder, 1)
+        builder.PrependUint8(StatusRequestTypes.StatusRequestTypes.All)
+        #builder.PrependUint8(StatusRequestTypes.StatusRequestTypes.Version)
+        query_vector = builder.EndVector()
+
+        # Create a StatusRequest
+        StatusRequest.Start(builder)
+        StatusRequest.AddQuery(builder, query_vector)
+        status_request = StatusRequest.End(builder)
+        resp_packet = self.send_request(builder, RequestPacketContents.RequestPacketContents.StatusRequest, status_request)
+        
+        if not resp_packet:
+            return None
+            
+        status_resp = StatusResponse.StatusResponse()
+        status_resp.Init(resp_packet.Contents().Bytes, resp_packet.Contents().Pos)
+
+        # copy the status response into a dictionary
+        status_dict = {
+            'error': status_resp.Error().decode('utf-8') if status_resp.Error() else None,
+            'hardware_version_major': status_resp.HardwareVersionMajor(),
+            'hardware_version_minor': status_resp.HardwareVersionMinor(),
+            'firmware_version_major': status_resp.FirmwareVersionMajor(),
+            'firmware_version_minor': status_resp.FirmwareVersionMinor(),
+            'firmware_git_hash': status_resp.FirmwareGitHash().decode('utf-8'),
+            'firmware_date': status_resp.FirmwareDate().decode('utf-8'),
+            'modes_available': [status_resp.ModesAvailable(i).decode('utf-8') for i in range(status_resp.ModesAvailableLength())],
+            'mode_current': status_resp.ModeCurrent().decode('utf-8') if status_resp.ModeCurrent() else None,
+            'mode_pin_labels': [status_resp.ModePinLabels(i).decode('utf-8') for i in range(status_resp.ModePinLabelsLength())],
+            'mode_bitorder_msb': status_resp.ModeBitorderMsb(),
+            'psu_enabled': status_resp.PsuEnabled(),
+            'psu_set_mv': status_resp.PsuSetMv(),
+            'psu_set_ma': status_resp.PsuSetMa(),
+            'psu_measured_mv': status_resp.PsuMeasuredMv(),
+            'psu_measured_ma': status_resp.PsuMeasuredMa(),
+            'psu_current_error': status_resp.PsuCurrentError(),
+            'pullup_enabled': status_resp.PullupEnabled(),
+            'pullx_config': status_resp.PullxConfig(),
+            'adc_mv': [status_resp.AdcMv(i) for i in range(status_resp.AdcMvLength())],
+            'io_direction': status_resp.IoDirection(),
+            'io_value': status_resp.IoValue(),
+            'disk_size_mb': status_resp.DiskSizeMb(),
+            'disk_used_mb': status_resp.DiskUsedMb(),
+            'led_count': status_resp.LedCount()
+        }
+
+        return status_dict
+    
+    def print_status_response(self, status_dict):
+        """Parse and display status response from dictionary"""
+        print("StatusResponse:")
+        
+        if status_dict.get('error'):
+            print(f"  Error: {status_dict['error']}")
+            return
+        
+        print(f"  Hardware version: {status_dict['hardware_version_major']} REV{status_dict['hardware_version_minor']}")
+        print(f"  Firmware version: {status_dict['firmware_version_major']}.{status_dict['firmware_version_minor']}")
+        print(f"  Firmware git hash: {status_dict['firmware_git_hash']}")
+        print(f"  Firmware date: {status_dict['firmware_date']}")
+
+        if status_dict['modes_available']:
+            print(f"  Available modes: {', '.join(status_dict['modes_available'])}")
+
+        if status_dict['mode_current']:
+            print(f"  Current mode: {status_dict['mode_current']}")
+
+        print(f"  Mode bit order: {'MSB' if status_dict['mode_bitorder_msb'] else 'LSB'}")
+
+        if status_dict['mode_pin_labels']:
+            print(f"  Pin labels: {', '.join(status_dict['mode_pin_labels'])}")
+
+        if status_dict['led_count']:
+            print(f"  Number of LEDs: {status_dict['led_count']}")
+
+        print(f"  Pull-up resistors enabled: {status_dict['pullup_enabled']}")
+        print(f"  Power supply enabled: {status_dict['psu_enabled']}")
+        print(f"  PSU set voltage: {status_dict['psu_set_mv']} mV")
+        print(f"  PSU set current: {status_dict['psu_set_ma']} mA")
+        print(f"  PSU measured voltage: {status_dict['psu_measured_mv']} mV")
+        print(f"  PSU measured current: {status_dict['psu_measured_ma']} mA")        
+        print(f"  PSU over current error: {'Yes' if status_dict['psu_current_error'] else 'No'}")
+
+        if status_dict['adc_mv']:
+            adc_values = [str(mv) for mv in status_dict['adc_mv']]
+            print(f"  IO ADC values (mV): {', '.join(adc_values)}")
+
+        # Print IO pin directions and values
+        io_direction_byte = status_dict['io_direction']
+        directions = []
+        for i in range(8):
+            bit_value = (io_direction_byte >> i) & 1
+            direction = 'OUT' if bit_value else 'IN'
+            directions.append(f"IO{i}:{direction}")
+        print(f"  IO directions: {', '.join(directions)}")
+
+        io_value_byte = status_dict['io_value']
+        values = []
+        for i in range(8):
+            bit_value = (io_value_byte >> i) & 1
+            value = 'HIGH' if bit_value else 'LOW'
+            values.append(f"IO{i}:{value}")
+        print(f"  IO values: {', '.join(values)}")
+
+        print(f"  Disk size: {status_dict['disk_size_mb']} MB")
+        print(f"  Disk space used: {status_dict['disk_used_mb']} MB")
+    
+    def show_status(self):
+        """Get and print status information"""
+        status_dict = self.status_request()
+        if status_dict:
+            self.print_status_response(status_dict)
+        else:
+            print("Failed to get status information.")
 
     def data_request(self, start_main=False, start_alt=False, data_write=None, bytes_read=0, stop_main=False, stop_alt=False):
         """Create a BPIO DataRequest packet"""
@@ -316,17 +408,11 @@ class BPIOClient:
             DataRequest.AddStopAlt(builder, True)
 
         data_request = DataRequest.End(builder)
-        data = self._wrap_request(builder, RequestPacketContents.RequestPacketContents.DataRequest, data_request)
-        resp_packet = self.send_and_receive(data)
+        resp_packet = self.send_request(builder, RequestPacketContents.RequestPacketContents.DataRequest, data_request)
         
         if not resp_packet:
             return None
-            
-        contents_type = resp_packet.ContentsType()
-        if contents_type != ResponsePacketContents.ResponsePacketContents.DataResponse:
-            print(f"Expected DataResponse, got {contents_type}")
-            return None
-        
+                    
         data_resp = DataResponse.DataResponse()
         data_resp.Init(resp_packet.Contents().Bytes, resp_packet.Contents().Pos)
         

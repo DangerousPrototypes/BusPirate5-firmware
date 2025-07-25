@@ -1,22 +1,24 @@
 from bpio_client import BPIOClient
+from bpio_base import BPIOBase
 
-class BPIOI2C:
+class BPIOI2C(BPIOBase):
     def __init__(self, client):
-        self.client = client
-        self.configured = False
+        super().__init__(client)
     
-    def configure(self, speed=400000, clock_stretch=False, **kwargs):
+    def configure(self, speed = 400000, clock_stretch = False, **kwargs):
         """Configure I2C mode"""
-        success = self.client.configure_mode("I2C", speed=speed, clock_stretch=clock_stretch, **kwargs)
+        kwargs['mode'] = 'I2C'
+        #get the existing mode_configuration from kwargs or create a new one
+        mode_configuration = kwargs.get('mode_configuration', {})
+        # Set the speed and clock stretch
+        mode_configuration['speed'] = speed
+        mode_configuration['clock_stretch'] = clock_stretch
+        # Replace the mode_configuration in kwargs
+        kwargs['mode_configuration'] = mode_configuration
+
+        success = self.client.configuration_request(**kwargs)         
         self.configured = success
         return success
-    
-    def config_check(self):
-        """Check if I2C is configured"""
-        if not self.configured:
-            print("I2C not configured. Call configure() first.")
-            return False
-        return True
     
     def start(self):
         """I2C Start condition"""

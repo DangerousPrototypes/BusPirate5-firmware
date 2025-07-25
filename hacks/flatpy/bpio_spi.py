@@ -1,30 +1,27 @@
 from bpio_client import BPIOClient
+from bpio_base import BPIOBase
 
-class BPIOSPI:
+class BPIOSPI(BPIOBase):
     def __init__(self, client):
-        self.client = client
-        self.configured = False
+        super().__init__(client)
     
     def configure(self, speed=1000000, clock_polarity=False, clock_phase=False, chip_select_idle=True, **kwargs):
         """Configure SPI mode"""
-        success = self.client.configure_mode(
-            "SPI", 
-            speed=speed,
-            clock_polarity=clock_polarity,
-            clock_phase=clock_phase,
-            chip_select_idle=chip_select_idle,
-            **kwargs
-        )
+        kwargs['mode'] = 'SPI'
+        # Get the existing mode_configuration from kwargs or create a new one
+        mode_configuration = kwargs.get('mode_configuration', {})
+        # Set the SPI configuration parameters
+        mode_configuration['speed'] = speed
+        mode_configuration['clock_polarity'] = clock_polarity
+        mode_configuration['clock_phase'] = clock_phase
+        mode_configuration['chip_select_idle'] = chip_select_idle
+        # Replace the mode_configuration in kwargs
+        kwargs['mode_configuration'] = mode_configuration
+
+        success = self.client.configuration_request(**kwargs)         
         self.configured = success
         return success
-    
-    def config_check(self):
-        """Check if SPI is configured"""
-        if not self.configured:
-            print("SPI not configured. Call configure() first.")
-            return False
-        return True
-    
+       
     def select(self):
         """Select SPI device (set chip select low)"""
         if not self.config_check():

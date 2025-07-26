@@ -153,8 +153,6 @@ class BPIOClient:
         """Create a BPIO ConfigurationRequest packet"""
         builder = flatbuffers.Builder(1024)
 
-        # TODO: mode configuration!
-
         mode_string = None
         if 'mode' in kwargs:
             mode_string = builder.CreateString(kwargs['mode'])

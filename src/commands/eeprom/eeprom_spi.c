@@ -125,7 +125,7 @@ static bool eeprom_25x_write_page(struct eeprom_info *eeprom, uint32_t address, 
     uint8_t block_select_bits = 0;
     uint8_t address_array[3];
     if(eeprom->device->hal->get_address(eeprom, address, &block_select_bits, address_array))return true; // get the address   
-
+    //printf("BS: 0x%02X, Address: 0x%02X 0x%02X 0x%02X, Page Write Size: %d\r\n", block_select_bits, address_array[2], address_array[1], address_array[0], page_write_size);
     //need to do a partial page write
     //first read the existing page from the eeprom
     //then update with the new data

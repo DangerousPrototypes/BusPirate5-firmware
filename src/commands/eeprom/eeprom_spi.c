@@ -144,7 +144,9 @@ static bool eeprom_25x_write_page(struct eeprom_info *eeprom, uint32_t address, 
     hwspi_select(); // select the EEPROM chip
     hwspi_write((SPI_EEPROM_WRITE_CMD|block_select_bits)); // send the read command with block select bits
     hwspi_write_n(address_array, eeprom->device->address_bytes); // send the address bytes
-    hwspi_write_n(buf, eeprom->device->page_bytes); // write the page data
+    for(uint32_t i = 0; i < eeprom->device->page_bytes; i++) {
+        hwspi_write(buf[i]);
+    }
     //hwspi_write_n(buf, eeprom->device->page_bytes); // write the page data, use the specified page write size
     hwspi_deselect(); // deselect the EEPROM chip
     

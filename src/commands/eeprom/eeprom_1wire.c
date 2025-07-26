@@ -224,8 +224,8 @@ static bool ow_eeprom_write_page(struct eeprom_info *eeprom, uint32_t address, u
     TA1 = onewire_rx_byte(); // Read TA1
     TA2 = onewire_rx_byte(); // Read TA2
     ES = onewire_rx_byte(); // Read E/S
-    if(ES != DS243X_PF_MASK){
-        printf("Error: E/S not matching, expected 0x%02X, got 0x%02X\r\n", DS243X_PF_MASK, ES);
+    if(ES != (eeprom->device->page_bytes-1)){
+        printf("Error: E/S not matching, expected 0x%02X, got 0x%02X\r\n", (eeprom->device->page_bytes-1), ES);
         return true; // E/S not matching
     }
 
@@ -337,7 +337,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
     if(args->action == EEPROM_LIST) {
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display devices if list action
-        printf("Compatible with common 1-Wire EEPROMs: DS/GX2431. 2433 untested!\r\n");
+        printf("Compatible with common 1-Wire EEPROMs: DS/GX2431, DS24x33.\r\n");
         printf("3.3volts is suitable for most devices.\r\n");
         return true; // no error, just listing devices
     }

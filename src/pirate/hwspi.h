@@ -16,3 +16,4 @@ typedef enum {
     SPI_FRF_MICROWIRE = 2
 } spi_frf_t;
 void hwspi_set_frame_format(spi_frf_t frf);
+void hwspi_set_cphase(bool cpha);

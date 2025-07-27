@@ -358,9 +358,12 @@ static bool eeprom_93x_read(struct eeprom_info *eeprom, uint32_t address, uint32
     //return false;
     // read the data from the EEPROM
     hwspi_deselect(); // deselect the EEPROM chip NOTE: 93X are CS active HIGH
+    hwspi_set_cphase(0);
     hwspi_write_n(address_array, 2); // send the address bytes
+    hwspi_set_cphase(1);
     hwspi_read_n(buf, read_bytes); // read bytes from the EEPROM
     hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
+    hwspi_set_cphase(0);
     //hwspi_set_frame_format(SPI_FRF_MOTOROLA); // restore the frame format to Motorola for other SPI operations
     return false;
 }

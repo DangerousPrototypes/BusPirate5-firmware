@@ -314,14 +314,16 @@ static bool eeprom_93x_poll_busy(struct eeprom_info *eeprom){
 
     //wait 250ns, then raise CS
     busy_wait_us(1);
-    hwspi_select(); // select the EEPROM chip
+    hwspi_deselect(); // select the EEPROM chip NOTE: 93X are CS active HIGH
     busy_wait_us(1);
     //wait for DO to go low->high
     for(uint32_t i=0; i<0xfffff; i++) {
         if(bio_get(M_SPI_CDI)) {
+            hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
             return false; // write is complete
         }
     }
+    hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
     //printf("Error: EEPROM write timeout\r\n");
     return true;
 }
@@ -354,13 +356,12 @@ static bool eeprom_93x_read(struct eeprom_info *eeprom, uint32_t address, uint32
     }
     //printf("0x%02X 0x%02X\r\n", address_array[0], address_array[1]);
     //return false;
-
     // read the data from the EEPROM
-    hwspi_select(); // select the EEPROM chip
+    hwspi_deselect(); // deselect the EEPROM chip NOTE: 93X are CS active HIGH
     hwspi_write_n(address_array, 2); // send the address bytes
     hwspi_read_n(buf, read_bytes); // read bytes from the EEPROM
-    hwspi_deselect(); // deselect the EEPROM chip
-
+    hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
+    //hwspi_set_frame_format(SPI_FRF_MOTOROLA); // restore the frame format to Motorola for other SPI operations
     return false;
 }
 
@@ -380,14 +381,21 @@ static bool eeprom_93x_write_page(struct eeprom_info *eeprom, uint32_t address, 
     uint16_t cmd = (E93_EWEN_CMD << (address_bits-2)); // construct the command with block select bits
     ewen_cmd[0] = (uint8_t)(cmd >> 8); // high byte
     ewen_cmd[1] = (uint8_t)(cmd & 0xFF); // low byte
-    hwspi_write_read_cs(ewen_cmd, 2, NULL, 0); // enable write
 
-    hwspi_select(); // select the EEPROM chip
+
+    hwspi_deselect(); // deselect the EEPROM chip NOTE: 93X are CS active HIGH
+    hwspi_write_n(ewen_cmd, 2); // enable write
+    hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
+    
+    hwspi_deselect(); // deselect the EEPROM chip NOTE: 93X are CS active HIGH
     hwspi_write_n(address_array, 2); // send the address bytes
     hwspi_write_n(buf, page_write_size); // write the page data
-    hwspi_deselect(); // deselect the EEPROM chip
+    hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
     
     if(eeprom_93x_poll_busy(eeprom))return true; // poll for write complete, return true if timeout
+    
+    //hwspi_set_frame_format(SPI_FRF_MOTOROLA); // restore the frame format to Motorola for other SPI operations
+
     return false; // write is complete
 }
 

@@ -357,13 +357,14 @@ static bool eeprom_93x_read(struct eeprom_info *eeprom, uint32_t address, uint32
     //printf("0x%02X 0x%02X\r\n", address_array[0], address_array[1]);
     //return false;
     // read the data from the EEPROM
+    bool cphase_current= hwspi_get_cphase();
     hwspi_deselect(); // deselect the EEPROM chip NOTE: 93X are CS active HIGH
     hwspi_set_cphase(0);
     hwspi_write_n(address_array, 2); // send the address bytes
     hwspi_set_cphase(1);
     hwspi_read_n(buf, read_bytes); // read bytes from the EEPROM
     hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
-    hwspi_set_cphase(0);
+    hwspi_set_cphase(cphase_current);
     //hwspi_set_frame_format(SPI_FRF_MOTOROLA); // restore the frame format to Motorola for other SPI operations
     return false;
 }
@@ -371,11 +372,21 @@ static bool eeprom_93x_read(struct eeprom_info *eeprom, uint32_t address, uint32
 static bool eeprom_93x_write_page(struct eeprom_info *eeprom, uint32_t address, uint8_t *buf, uint32_t page_write_size){
     //get address
     uint8_t address_array[2];
-    //TODO: acomdate 16 bit addressing
+
     address = address >> (eeprom->device->page_bytes-1);
     if(eeprom_93x_get_address(eeprom, address, E93_WRITE_CMD, address_array))return true; // get the address   
     //printf("0x%02X 0x%02X\r\n", address_array[0], address_array[1]);
     //return false;
+
+    if(page_write_size < eeprom->device->page_bytes) {
+        // if the page write size is less than the device page size, we need to read the existing page first
+        uint8_t existing_page[2];
+        if(eeprom_93x_read(eeprom, address, eeprom->device->page_bytes, existing_page)) {
+            return true; // error reading existing page
+        }
+        // update the existing page with the new data
+        memcpy(&buf[page_write_size], &existing_page[page_write_size], eeprom->device->page_bytes - page_write_size);
+    }    
 
     uint8_t ewen_cmd[2];
     bool org_16=false;
@@ -385,15 +396,17 @@ static bool eeprom_93x_write_page(struct eeprom_info *eeprom, uint32_t address, 
     ewen_cmd[0] = (uint8_t)(cmd >> 8); // high byte
     ewen_cmd[1] = (uint8_t)(cmd & 0xFF); // low byte
 
-
+    bool cphase_current= hwspi_get_cphase();
+    hwspi_set_cphase(0); // set clock phase to 0 for 93X
     hwspi_deselect(); // deselect the EEPROM chip NOTE: 93X are CS active HIGH
     hwspi_write_n(ewen_cmd, 2); // enable write
     hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
     
     hwspi_deselect(); // deselect the EEPROM chip NOTE: 93X are CS active HIGH
     hwspi_write_n(address_array, 2); // send the address bytes
-    hwspi_write_n(buf, page_write_size); // write the page data
+    hwspi_write_n(buf, eeprom->device->page_bytes); // write the page data
     hwspi_select(); // select the EEPROM chip NOTE: 93X are CS active HIGH
+    hwspi_set_cphase(cphase_current); // restore the clock phase
     
     if(eeprom_93x_poll_busy(eeprom))return true; // poll for write complete, return true if timeout
     
@@ -462,9 +475,9 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
     if(args->action == EEPROM_LIST) {
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display devices if list action
-        printf("\r\nCompatible with most 25X/95X SPI EEPROMs: AT25, M95x, 25C/LC/AA/CS, etc.\r\n");
-        printf("For STM M95x chips use the equivalent 25X chip name: M95128 = 25X128, etc.\r\n");
-        printf("93X are supported in 8 and 16 bit address modes.\r\n93X chips have no write protect bits.\r\n");
+        printf("\r\nCompatible with most 25X/95X/93X SPI EEPROMs: AT25, M95x, 25C/LC/AA/CS, etc.\r\n");
+        printf("For ST M95x chips use the equivalent 25X chip name: M95128 = 25X128\r\n");
+        printf("93X are supported in 8 and 16 bit address modes.\r\n93XnnC ORG pin: low = 8bit, HIGH = 16bit \r\n93X chips have no write protect bits.\r\n");
         printf("3.3volts is suitable for most devices.\r\n");
         return true; // no error, just listing devices
     }

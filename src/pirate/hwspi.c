@@ -142,9 +142,14 @@ void hwspi_set_frame_format(spi_frf_t frf) {
     hw_set_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
 }
 
+bool hwspi_get_cphase(void){
+    // Read the cpha bit from CR0 register
+    return (spi_get_hw(M_SPI_PORT)->cr0 & SPI_SSPCR0_SPH_BITS);
+}
+
 void hwspi_set_cphase(bool cpha){
     // Disable SPI before changing cpha
-    hw_clear_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
+    //hw_clear_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
     
     // Set cpha in CR0 register
     if (cpha) {
@@ -154,5 +159,5 @@ void hwspi_set_cphase(bool cpha){
     }
     
     // Re-enable SPI
-    hw_set_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
+    //hw_set_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
 }

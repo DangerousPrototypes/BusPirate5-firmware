@@ -113,6 +113,8 @@ set(buspirate_common
         flatcc/portable/include/std/stdbool.h
         flatcc/portable/include/std/stdint.h
         flatcc/portable/include/std/stdalign.h
+        lib/nanocobs/cobs.c
+        lib/nanocobs/cobs.h
 
 
         # pirate lib

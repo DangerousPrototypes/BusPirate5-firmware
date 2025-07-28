@@ -1,4 +1,5 @@
 import flatbuffers
+from cobs import cobs
 import serial
 import struct
 
@@ -58,45 +59,55 @@ class BPIOClient:
         self.close()
         
     def send_and_receive(self, data):
-        """Send data to serial port with 2-byte length header and receive response"""
+        """Send COBS-encoded data to serial port and receive COBS-encoded response"""
         if not self.serial_port or not self.serial_port.is_open:
             print("Serial port is not open")
             return None
             
         try:
-            length_header = struct.pack('<H', (len(data)))
+            # COBS encode the data
+            encoded_data = cobs.encode(data)
             
             # Clear any pending data
             self.serial_port.reset_input_buffer()
             self.serial_port.reset_output_buffer()
             
-            # Send data
-            self.serial_port.write(length_header)
-            self.serial_port.write(data)
+            # Send COBS-encoded data followed by delimiter (0x00)
+            self.serial_port.write(encoded_data)
+            self.serial_port.write(b'\x00')  # COBS delimiter
             
             if self.debug:
-                print(f"Sent {len(length_header)} bytes (length header): {length_header.hex()}")
-                print(f"Sent {len(data)} bytes (flatbuffer data)")            
-                print(f"Total bytes sent: {len(length_header) + len(data)}")
+                print(f"Sent {len(data)} bytes (original data)")
+                print(f"Sent {len(encoded_data)} bytes (COBS encoded)")
+                print(f"Total bytes sent: {len(encoded_data) + 1} (including delimiter)")
 
-            # Read response length header (2 bytes)
-            resp_len_bytes = self.serial_port.read(2)
-            if len(resp_len_bytes) < 2:
-                print("No response or incomplete length header received.")
+            # Read response until we get the delimiter (0x00)
+            resp_encoded = b''
+            while True:
+                byte = self.serial_port.read(1)
+                if len(byte) == 0:
+                    print("Timeout waiting for response")
+                    return None
+                if byte == b'\x00':  # Found delimiter
+                    break
+                resp_encoded += byte
+            
+            if len(resp_encoded) == 0:
+                print("No response data received")
                 return None
-            resp_len = struct.unpack('<H', resp_len_bytes)[0]
+                
             if self.debug:
-                print(f"Response length header: {resp_len_bytes.hex()} (value: {resp_len})")
-
-            # Read response data
-            resp_data = self.serial_port.read(resp_len)
-            if len(resp_data) < resp_len:
-                print("Incomplete response data received.")
+                print(f"Received {len(resp_encoded)} bytes (COBS encoded)")
+            
+            # COBS decode the response
+            try:
+                resp_data = cobs.decode(resp_encoded)
+                if self.debug:
+                    print(f"Decoded {len(resp_data)} bytes")
+                return resp_data
+            except cobs.DecodeError as e:
+                print(f"COBS decode error: {e}")
                 return None
-            if self.debug:
-                print(f"Received {len(resp_data)} bytes")
-
-            return resp_data
 
         except serial.SerialException as e:
             print(f"Serial communication error: {e}")

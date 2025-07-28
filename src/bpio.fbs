@@ -8,6 +8,7 @@ table StatusRequest{
 
 // returns the status queries requested in StatusRequest
 // if query is empty, then all queries are performed
+//TODO: add max read/write, packet size? switch to big buff?
 table StatusResponse {
   error:string; // Error message if any.
   hardware_version_major:uint8; //HW version
@@ -21,21 +22,21 @@ table StatusResponse {
   mode_pin_labels:[string]; // Labels for the pins in the current mode.
   mode_bitorder_msb:bool; // Bit order for the current mode (true for MSB first, false for LSB first).
   psu_enabled:bool; // Power supply enabled.
-  psu_set_mv:uint32; // Power supply voltage in millivolts.
-  psu_set_ma:uint32; // Power supply current in milliamps.
+  psu_set_mv:uint32; // Power supply set voltage in millivolts.
+  psu_set_ma:uint32; // Power supply set current in milliamps.
   psu_measured_mv:uint32; // Measured power supply voltage in millivolts.
-  psu_measured_ma:uint32; // Maximum power supply current in milliamps.
+  psu_measured_ma:uint32; // measured power supply current in milliamps.
   psu_current_error:bool; // Power supply fuse error.
   pullup_enabled:bool; // Pull-up resistors enabled.
   pullx_config:uint32; //configuration for pull-x on BP7+
-  adc_mv:[uint32]; // ADC values in millivolts.
+  adc_mv:[uint32]; // IO pin ADC values in millivolts.
   io_direction:uint8; // IO pin directions (true for output, false for input).
   io_value:uint8; // IO pin values (true for high, false for low).
   disk_size_mb:float; // Size of the disk in megabytes.
-  disk_used_mb:float; // used space on the disk in megabytes.
+  disk_used_mb:float; // Used space on the disk in megabytes.
   led_count:uint8; // Number of LEDs.
 }
-//TODO: set some sane defaults???
+
 table ModeConfiguration {
   //1wire : no config
   //uart: speed, data bits, parity, stop bits, flow control, signal inversion
@@ -66,12 +67,12 @@ table ModeConfiguration {
 table ConfigurationRequest {
   mode:string; // Name of the mode to configure.
   mode_configuration:ModeConfiguration; // Configuration for the mode.
-  mode_bitorder_msb:bool; // Bit order for the mode (true for MSB first, false for LSB first).
-  mode_bitorder_lsb:bool; // Bit order for the mode (true for LSB first, false for MSB first).
+  mode_bitorder_msb:bool; // Bit order MSB.
+  mode_bitorder_lsb:bool; // Bit order LSB.
   psu_disable:bool; // Disable power supply.
-  psu_enable:bool; // Enable or disable power supply.
-  psu_set_mv:uint32; // Set voltage in millivolts.
-  psu_set_ma:uint16=300; // Set current in milliamps.
+  psu_enable:bool; // Enable power supply.
+  psu_set_mv:uint32; // Set voltage in millivolts (psu_enable must = true).
+  psu_set_ma:uint16=300; // Set current in milliamps, 0 for unlimited (psu_enable must = true).
   pullup_disable:bool; // Disable pull-up resistors.
   pullup_enable:bool; // Enable pull-up resistors.
   pullx_config:uint32; //configuration for pull-x on BP7+
@@ -125,16 +126,3 @@ table ResponsePacket{
 }
 
 root_type ResponsePacket;
-
-/*
-union RequestPacketContents { StatusRequest, ConfigurationRequest, DataRequest}
-union ResponsePacketContents { StatusResponse, ConfigurationResponse, DataResponse}
-table Packet{
-  version_major:uint8=0;
-  version_minor:uint8=1;
-  request:RequestPacketContents;
-  response:ResponsePacketContents;
-}
-
-root_type Packet;
-*/

@@ -700,8 +700,17 @@ foreach(revision ${revisions})
         #XOSC fix?
         target_compile_definitions(${revision} PUBLIC PICO_XOSC_STARTUP_DELAY_MULTIPLIER=172)
         # useful for debug builds
-        target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=$<CONFIG:DEBUG>)
+        #target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=$<CONFIG:DEBUG>)
+        target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=1)
         target_compile_definitions(${revision} PUBLIC PICO_STACK_SIZE=4096)        
+        target_compile_definitions(${revision} PRIVATE PICO_MALLOC_PANIC=0)
+
+        # Add to your foreach(revision ${revisions}) loop after target_link_libraries
+        target_link_options(${revision} PRIVATE 
+        "LINKER:-Map=${CMAKE_BINARY_DIR}/${revision}.map"
+        "LINKER:--print-memory-usage"
+        "LINKER:--cref"
+        )
 
         # Add the standard library to the build
         target_link_libraries(${revision} ${stdlibs} )

@@ -148,6 +148,186 @@ def read_spi_flash_to_file(client, filename='spi_flash_dump.bin'):
             total_time_str = f"{int(total_time//60):02d}:{int(total_time%60):02d}"
             print(f"\nCompleted! Saved {chunk_count * chunk_size} bytes to '{filename}' in {total_time_str}")
 
+def write_spi_flash_from_file(client, filename='spi_flash_dump.bin', verify=True):
+    """Write a file to SPI flash and optionally verify."""
+    import os
+    
+    spi = BPIOSPI(client)
+    if spi.configure(speed=12*1000*1000, clock_polarity=False, clock_phase=False, chip_select_idle=True, psu_enable=True, psu_voltage_mv=3300, psu_current_ma=0, pullup_enable=True):
+        
+        # Check if file exists
+        if not os.path.exists(filename):
+            print(f"Error: File '{filename}' not found")
+            return False
+            
+        file_size = os.path.getsize(filename)
+        max_flash_size = 16 * 1024 * 1024  # 16MB
+        
+        if file_size > max_flash_size:
+            print(f"Error: File size ({file_size} bytes) exceeds flash capacity ({max_flash_size} bytes)")
+            return False
+            
+        print(f"Writing {file_size // (1024*1024):.1f}MB from '{filename}' to SPI flash...")
+        
+        # First, erase the flash (chip erase for full erase)
+        print("Erasing flash chip...")
+        # Write enable
+        spi.transfer(write_data=[0x06])
+        # Chip erase command
+        spi.transfer(write_data=[0xC7])
+        
+        # Wait for erase to complete (poll status register)
+        print("Waiting for erase to complete...")
+        while True:
+            status_data = spi.transfer(write_data=[0x05], read_bytes=1)
+            if status_data and len(status_data) == 1:
+                if (status_data[0] & 0x01) == 0:  # WIP bit cleared
+                    break
+            time.sleep(0.1)
+        print("Erase complete!")
+        
+        # Write the file data
+        page_size = 256  # Standard page size for SPI flash
+        chunk_size = page_size
+        total_chunks = (file_size + chunk_size - 1) // chunk_size  # Round up
+        
+        with open(filename, 'rb') as f:
+            address = 0
+            chunk_count = 0
+            start_time = time.time()
+            
+            while address < file_size:
+                # Read chunk from file
+                chunk_data = f.read(chunk_size)
+                if not chunk_data:
+                    break
+                    
+                # Write enable before each page program
+                spi.transfer(write_data=[0x06])
+                
+                # Page program command (0x02) + 24-bit address + data
+                write_cmd = [0x02, (address >> 16) & 0xFF, (address >> 8) & 0xFF, address & 0xFF]
+                write_cmd.extend(chunk_data)
+                spi.transfer(write_data=write_cmd)
+                
+                # Wait for write to complete
+                while True:
+                    status_data = spi.transfer(write_data=[0x05], read_bytes=1)
+                    if status_data and len(status_data) == 1:
+                        if (status_data[0] & 0x01) == 0:  # WIP bit cleared
+                            break
+                    time.sleep(0.001)
+                
+                address += len(chunk_data)
+                chunk_count += 1
+                
+                # Update progress bar every 64 chunks (16KB)
+                if chunk_count == 1 or chunk_count % 64 == 0 or chunk_count == total_chunks:
+                    progress = chunk_count / total_chunks
+                    bar_length = 50
+                    filled_length = int(bar_length * progress)
+                    bar = '█' * filled_length + '░' * (bar_length - filled_length)
+                    percent = progress * 100
+                    mb_written = address / (1024 * 1024)
+                    
+                    # Calculate elapsed time and estimated time remaining
+                    elapsed_time = time.time() - start_time
+                    if progress > 0:
+                        estimated_total_time = elapsed_time / progress
+                        eta = estimated_total_time - elapsed_time
+                    else:
+                        eta = 0
+                    
+                    # Format time as mm:ss
+                    elapsed_str = f"{int(elapsed_time//60):02d}:{int(elapsed_time%60):02d}"
+                    eta_str = f"{int(eta//60):02d}:{int(eta%60):02d}"
+                    
+                    # Speed calculation
+                    speed_kbps = (mb_written * 1024) / elapsed_time if elapsed_time > 0 else 0
+                    
+                    # Print progress
+                    print(f'\r[{bar}] {percent:.1f}%', end='')
+                    print(f'\n({mb_written:.1f}MB/{file_size/(1024*1024):.1f}MB) {elapsed_str} elapsed, ETA {eta_str} ({speed_kbps:.1f}KB/s)', end='')
+                    print('\033[A', end='', flush=True)
+            
+            total_time = time.time() - start_time
+            total_time_str = f"{int(total_time//60):02d}:{int(total_time%60):02d}"
+            print(f"\nWrite completed! Wrote {address} bytes to flash in {total_time_str}")
+            
+            # Verify if requested
+            if verify:
+                print("Verifying written data...")
+                verify_start = time.time()
+                
+                # Reset file pointer
+                f.seek(0)
+                address = 0
+                verify_chunk_size = 512  # Larger chunks for faster verification
+                
+                while address < file_size:
+                    # Read expected data from file
+                    expected_data = f.read(verify_chunk_size)
+                    if not expected_data:
+                        break
+                    
+                    # Read actual data from flash
+                    read_cmd = [0x03, (address >> 16) & 0xFF, (address >> 8) & 0xFF, address & 0xFF]
+                    actual_data = spi.transfer(write_data=read_cmd, read_bytes=len(expected_data))
+                    
+                    if actual_data != expected_data:
+                        print(f"\nVerification failed at address 0x{address:06X}")
+                        return False
+                    
+                    address += len(expected_data)
+                    
+                    # Show verification progress
+                    progress = address / file_size
+                    if address % (64 * 1024) == 0 or address >= file_size:  # Update every 64KB
+                        print(f'\rVerifying... {progress*100:.1f}%', end='', flush=True)
+                
+                verify_time = time.time() - verify_start
+                print(f"\nVerification completed successfully in {verify_time:.1f}s!")
+                
+        return True
+    
+    else:
+        print("Failed to configure SPI interface")
+        return False
+
+def erase_spi_flash(client):
+    """Erase the entire SPI flash chip."""
+    spi = BPIOSPI(client)
+    if spi.configure(speed=12*1000*1000, clock_polarity=False, clock_phase=False, chip_select_idle=True, psu_enable=True, psu_voltage_mv=3300, psu_current_ma=0, pullup_enable=True):
+        
+        print("Erasing SPI flash chip...")
+        start_time = time.time()
+        
+        # Write enable
+        spi.transfer(write_data=[0x06])
+        
+        # Chip erase command
+        spi.transfer(write_data=[0xC7])
+        
+        # Wait for erase to complete (poll status register)
+        print("Waiting for erase to complete (this may take several minutes)...")
+        while True:
+            status_data = spi.transfer(write_data=[0x05], read_bytes=1)
+            if status_data and len(status_data) == 1:
+                if (status_data[0] & 0x01) == 0:  # WIP bit cleared
+                    break
+            time.sleep(0.5)  # Check every 500ms
+            
+            # Show elapsed time
+            elapsed = time.time() - start_time
+            print(f'\rErasing... {elapsed:.1f}s elapsed', end='', flush=True)
+        
+        total_time = time.time() - start_time
+        print(f"\nErase completed in {total_time:.1f}s!")
+        return True
+    else:
+        print("Failed to configure SPI interface")
+        return False            
+
 # Create client, configure the serial port
 client = BPIOClient('COM35')
 
@@ -167,7 +347,19 @@ start_time = time.time()
 #one_wire_example(client)
 
 # Read SPI flash to file
-read_spi_flash_to_file(client, 'spi_flash_dump.bin')
+#read_spi_flash_to_file(client, 'spi_flash_dump.bin')
+
+# Erase flash chip
+#erase_spi_flash(client)
+
+# Write a file to flash with verification
+write_spi_flash_from_file(client, 'spi_flash_dump.bin', verify=True)
+
+# Write without verification (faster)
+# write_spi_flash_from_file(client, 'data.bin', verify=False)
+
+# Read flash to verify
+# read_spi_flash_to_file(client, 'verify_dump.bin')
 
 # Print the time taken foe the operation
 end_time = time.time()

@@ -17,6 +17,7 @@ import bpio.StatusRequest as StatusRequest
 import bpio.StatusRequestTypes as StatusRequestTypes
 import bpio.StatusResponse as StatusResponse
 import bpio.ErrorResponse as ErrorResponse
+import time 
 
 class BPIOClient:
     def __init__(self, port, baudrate=115200, timeout=2, debug=False):
@@ -73,24 +74,40 @@ class BPIOClient:
             self.serial_port.reset_output_buffer()
             
             # Send COBS-encoded data followed by delimiter (0x00)
-            self.serial_port.write(encoded_data)
-            self.serial_port.write(b'\x00')  # COBS delimiter
+            packet = cobs.encode(data) + b'\x00'
+            self.serial_port.write(packet)
             
             if self.debug:
                 print(f"Sent {len(data)} bytes (original data)")
                 print(f"Sent {len(encoded_data)} bytes (COBS encoded)")
                 print(f"Total bytes sent: {len(encoded_data) + 1} (including delimiter)")
 
-            # Read response until we get the delimiter (0x00)
-            resp_encoded = b''
+            # Read response until we get the delimiter (0x00) - most efficient
+            resp_encoded = bytearray()
+            timeout_start = time.time()
+
             while True:
-                byte = self.serial_port.read(1)
-                if len(byte) == 0:
-                    print("Timeout waiting for response")
-                    return None
-                if byte == b'\x00':  # Found delimiter
-                    break
-                resp_encoded += byte
+                # Read all available data at once
+                available = self.serial_port.in_waiting
+                if available > 0:
+                    chunk = self.serial_port.read(available)
+                    resp_encoded.extend(chunk)
+                    
+                    # Check if we have the complete message (contains delimiter)
+                    delimiter_pos = resp_encoded.find(b'\x00')
+                    if delimiter_pos != -1:
+                        # Found delimiter, truncate at delimiter position
+                        resp_encoded = resp_encoded[:delimiter_pos]
+                        break
+                else:
+                    # No data available, check timeout
+                    if time.time() - timeout_start > self.timeout:
+                        print("Timeout waiting for response")
+                        return None
+                    time.sleep(0.001)  # Small delay to prevent busy waiting
+
+            # Convert back to bytes
+            resp_encoded = bytes(resp_encoded)
             
             if len(resp_encoded) == 0:
                 print("No response data received")
@@ -409,7 +426,7 @@ class BPIOClient:
             DataRequest.AddStartAlt(builder, True)
         if data_write_vector:
             DataRequest.AddDataWrite(builder, data_write_vector)
-        if bytes_read > 0:
+        if bytes_read is not None:
             DataRequest.AddBytesRead(builder, bytes_read)
         if stop_main:
             DataRequest.AddStopMain(builder, True)

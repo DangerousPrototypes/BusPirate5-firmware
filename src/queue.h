@@ -23,8 +23,8 @@
 typedef struct {
     lock_core_t core;
     uint8_t* data;
-    uint16_t wptr;
-    uint16_t rptr;
+    volatile uint16_t wptr;
+    volatile uint16_t rptr;
     uint16_t element_count;
 } queue_t;
 

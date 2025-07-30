@@ -219,7 +219,7 @@ static inline void send_packet(flatcc_builder_t *B) {
     // Encode the buffer using COBS
     size_t cobs_len;
     uint32_t temp_time_start = time_us_32();
-    cobs_ret_t cobs_result = t_cobs_encode(buf, len, cobs_buf, sizeof(cobs_buf), &cobs_len);
+    cobs_ret_t cobs_result = cobs_encode(buf, len, cobs_buf, sizeof(cobs_buf), &cobs_len);
     if(bpio_debug) printf("[COBS] Encoded in %dus\r\n", time_us_32() - temp_time_start);
     free(buf); // Free the buffer allocated by flatcc_builder_finalize_buffer
     
@@ -232,14 +232,15 @@ static inline void send_packet(flatcc_builder_t *B) {
     if(bpio_debug) printf("[Send Packet] COBS encoded buffer length: %zu\r\n", cobs_len);
 
     uint8_t *buf_ptr = cobs_buf;
+    uint32_t len32 = cobs_len;
     temp_time_start = time_us_32();
-    while (cobs_len) { //80uS
+    while (len32) { //80uS
         if (tud_cdc_n_write_available(CDC_INTF) >= 64) {
-            uint32_t chunk_size = (cobs_len > 64) ? 64 : cobs_len;
+            uint32_t chunk_size = (len32 > 64) ? 64 : len32;
             tud_cdc_n_write(CDC_INTF, buf_ptr, chunk_size);
             tud_cdc_n_write_flush(CDC_INTF);
             buf_ptr += chunk_size;
-            cobs_len -= chunk_size;
+            len32 -= chunk_size;
         }
     }
     if(bpio_debug) printf("[Send Packet] Sent %d bytes in %dus\r\n", len, time_us_32() - temp_time_start);

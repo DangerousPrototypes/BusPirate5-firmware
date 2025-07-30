@@ -94,7 +94,7 @@ def read_spi_flash_to_file(client, filename='spi_flash_dump.bin'):
     spi = BPIOSPI(client)
     if spi.configure(speed=12*1000*1000, clock_polarity=False, clock_phase=False, chip_select_idle=True, psu_enable=True, psu_voltage_mv=3300, psu_current_ma=0, pullup_enable=True):
         total_size = 16 * 1024 * 1024  # 16MB
-        chunk_size = 256
+        chunk_size = 512
         total_chunks = total_size // chunk_size
         
         print(f"Reading {total_size // (1024*1024)}MB SPI flash to '{filename}'...")

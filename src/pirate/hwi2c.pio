@@ -26,13 +26,15 @@
 ; the data is immediately available in the OSR.
 ;
 ; Pin mapping:
-; - Input pin 0 is SDA, 1 is SCL (if clock stretching used)
+; - Input pin 0 is SDA
 ; - Jump pin is SDA
 ; - Side-set pin 0 is SCL
 ; - Set pin 0 is SDA
 ; - OUT pin 0 is SDA
-; - SCL must be SDA + 1 (for wait mapping)
 ;
+; wait gpio is used to allow clock stretching with SCL not following SDA
+; this instruction must be replaced when using clock stretching (runtime)
+; 
 ; The OE outputs should be inverted in the system IO controls!
 ; (It's possible for the inversion to be done in this program,
 ; but costs 2 instructions: 1 for inversion, and one to cope
@@ -45,7 +47,6 @@ do_byte:
 bitloop:
     out pins, 1         [7] ; Serialise write data (all-ones if reading)
     nop             side 0b1 [6] ; SCL rising edge
-    ;wait 1 pin, 1          [4] ; Allow clock to be stretched, in pins: 0=sda, 1=scl
     in pins, 1             [7] ; Sample read data in middle of SCL pulse
     jmp x-- bitloop side 0b0 [7] ; SCL falling edge
     mov isr, null              ; Reset the input bit counter
@@ -67,6 +68,7 @@ do_byte:
 bitloop:
     out pins, 1         [7] ; Serialise write data (all-ones if reading)
     nop             side 0b1 [2] ; SCL rising edge
+public wait_pin_offset:
     wait 1 pin, 1          [4] ; Allow clock to be stretched, in pins: 0=sda, 1=scl
     in pins, 1             [7] ; Sample read data in middle of SCL pulse
     jmp x-- bitloop side 0b0 [7] ; SCL falling edge
@@ -82,6 +84,23 @@ do_exec:
     jmp x-- do_exec            ; Repeat n + 1 times
 .wrap
 
+
+.program waitgpio_i2c_strech
+.side_set 1 opt 
+; Assemble a table of instructions which software can select to replace wait pin instruction
+; for clock stretching.
+; This isn't intended to be run as a complete program.
+
+wait 1 gpio, 8           [4]
+wait 1 gpio, 9           [4]
+wait 1 gpio, 10          [4]
+wait 1 gpio, 11          [4]
+wait 1 gpio, 12          [4]
+wait 1 gpio, 13          [4]
+wait 1 gpio, 14          [4]
+wait 1 gpio, 15          [4]
+
+
 % c-sdk {
 
 #include "hardware/clocks.h"
@@ -89,8 +108,6 @@ do_exec:
 #include "pirate.h"
 
 static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda, uint pin_scl, uint buf_sda, uint buf_scl, uint32_t freq) {
-    assert(pin_scl == pin_sda + 1); //wait uses pin ordered inputs, need to be consecutive
-    //assert(buf_scl == buf_sda + 1); //doesn't use wait, don't think they need to be consecutive
     pio_sm_config c = i2c_program_get_default_config(offset);
 
     // IO mapping
@@ -150,10 +167,11 @@ static inline void i2c_program_init(PIO pio, uint sm, uint offset, uint pin_sda,
 
 
 static inline void i2c_clock_stretch_program_init(PIO pio, uint sm, uint offset, uint pin_sda, uint pin_scl, uint buf_sda, uint buf_scl, uint32_t freq) {
-    assert(pin_scl == pin_sda + 1); //wait uses pin ordered inputs, need to be consecutive
-    //assert(buf_scl == buf_sda + 1); //doesn't use wait, don't think they need to be consecutive
     pio_sm_config c = i2c_clock_stretch_program_get_default_config(offset);
 
+    // replace wait pin by the wait gpio instruction
+    pio->instr_mem[offset + i2c_clock_stretch_offset_wait_pin_offset] = waitgpio_i2c_strech_program_instructions[pin_scl - 8];
+    
     // IO mapping
     sm_config_set_out_pins(&c, buf_sda, 1);
     sm_config_set_set_pins(&c, buf_sda, 1);
@@ -199,6 +217,7 @@ static inline void i2c_clock_stretch_program_init(PIO pio, uint sm, uint offset,
     //pio_set_irq0_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
     //pio_set_irq1_source_enabled(pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
     //pio_interrupt_clear(pio, sm);
+
 
     // Configure and start SM
     pio_sm_init(pio, sm, offset + i2c_offset_entry_point, &c);

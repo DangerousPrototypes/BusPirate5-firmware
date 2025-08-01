@@ -86,7 +86,42 @@ def one_wire_example(client):
         else:
             print("Failed to read temperature data.")
           
-
+def show_progress(current, total, start_time, operation_name="Operation", unit="MB"):
+    """Reusable progress indicator function."""
+    progress = current / total
+    bar_length = 50
+    filled_length = int(bar_length * progress)
+    bar = '█' * filled_length + '░' * (bar_length - filled_length)
+    percent = progress * 100
+    
+    # Calculate elapsed time and estimated time remaining
+    elapsed_time = time.time() - start_time
+    if progress > 0:
+        estimated_total_time = elapsed_time / progress
+        eta = estimated_total_time - elapsed_time
+    else:
+        eta = 0
+    
+    # Format time as mm:ss
+    elapsed_str = f"{int(elapsed_time//60):02d}:{int(elapsed_time%60):02d}"
+    eta_str = f"{int(eta//60):02d}:{int(eta%60):02d}"
+    
+    # Speed calculation
+    if unit == "MB":
+        current_mb = current / (1024 * 1024)
+        total_mb = total / (1024 * 1024)
+        speed_kbps = (current_mb * 1024) / elapsed_time if elapsed_time > 0 else 0
+        size_info = f"({current_mb:.1f}{unit}/{total_mb:.1f}{unit})"
+        speed_info = f"({speed_kbps:.1f}KB/s)"
+    else:
+        speed_kbps = current / elapsed_time if elapsed_time > 0 else 0
+        size_info = f"({current}{unit}/{total}{unit})"
+        speed_info = f"({speed_kbps:.1f}/s)"
+    
+    # Print progress on two lines
+    print(f'\r[{bar}] {percent:.1f}%', end='')
+    print(f'\n{size_info} {elapsed_str} elapsed, ETA {eta_str} {speed_info}', end='')
+    print('\033[A', end='', flush=True)  # Move cursor up one line for next update
 
 # example to read 128mbit SPI flash and save to file
 def read_spi_flash_to_file(client, filename='spi_flash_dump.bin'):
@@ -99,47 +134,22 @@ def read_spi_flash_to_file(client, filename='spi_flash_dump.bin'):
         
         print(f"Reading {total_size // (1024*1024)}MB SPI flash to '{filename}'...")
         
-        # Read the entire flash memory in 256 byte chunks
         with open(filename, 'wb') as f:
             address = 0
             chunk_count = 0
-            start_time = time.time()  # Start timing
+            start_time = time.time()
             
             while address < total_size:
-                # Read 256 bytes from the SPI flash
+                # Read chunk from the SPI flash
                 data = spi.transfer(write_data=[0x03, (address >> 16) & 0xFF, (address >> 8) & 0xFF, address & 0xFF], read_bytes=chunk_size)
                 if data and len(data) == chunk_size:
                     f.write(data)
                     address += chunk_size
                     chunk_count += 1
-                    # Update progress bar every 256 chunks (64KB)
+                    
+                    # Update progress bar every 256 chunks (128KB)
                     if chunk_count == 1 or chunk_count % 256 == 0 or chunk_count == total_chunks:
-                        progress = chunk_count / total_chunks
-                        bar_length = 50
-                        filled_length = int(bar_length * progress)
-                        bar = '█' * filled_length + '░' * (bar_length - filled_length)
-                        percent = progress * 100
-                        mb_read = (chunk_count * chunk_size) / (1024 * 1024)
-                        
-                        # Calculate elapsed time and estimated time remaining
-                        elapsed_time = time.time() - start_time
-                        if progress > 0:
-                            estimated_total_time = elapsed_time / progress
-                            eta = estimated_total_time - elapsed_time
-                        else:
-                            eta = 0
-                        
-                        # Format time as mm:ss
-                        elapsed_str = f"{int(elapsed_time//60):02d}:{int(elapsed_time%60):02d}"
-                        eta_str = f"{int(eta//60):02d}:{int(eta%60):02d}"
-                        
-                        # For more detailed timing with speed calculation
-                        speed_kbps = (mb_read * 1024) / elapsed_time if elapsed_time > 0 else 0
-                        
-                        # Print the progress bar and status on two lines
-                        print(f'\r[{bar}] {percent:.1f}%', end='')
-                        print(f'\n({mb_read:.1f}MB/{total_size//(1024*1024)}MB) {elapsed_str} elapsed, ETA {eta_str} ({speed_kbps:.1f}KB/s)', end='')
-                        print('\033[A', end='', flush=True)  # Move cursor up one line for next update                   
+                        show_progress(address, total_size, start_time, "Reading")
                 else:
                     print(f"\nFailed to read SPI flash data at address 0x{address:06X}")
                     break
@@ -171,10 +181,9 @@ def write_spi_flash_from_file(client, filename='spi_flash_dump.bin', verify=True
         
         # First, erase the flash (chip erase for full erase)
         print("Erasing flash chip...")
-        # Write enable
-        spi.transfer(write_data=[0x06])
-        # Chip erase command
-        spi.transfer(write_data=[0xC7])
+        start_time = time.time()
+        #spi.transfer(write_data=[0x06])  # Write enable
+        #spi.transfer(write_data=[0xC7])  # Chip erase command
         
         # Wait for erase to complete (poll status register)
         print("Waiting for erase to complete...")
@@ -184,7 +193,13 @@ def write_spi_flash_from_file(client, filename='spi_flash_dump.bin', verify=True
                 if (status_data[0] & 0x01) == 0:  # WIP bit cleared
                     break
             time.sleep(0.1)
-        print("Erase complete!")
+
+            # Show elapsed time
+            elapsed = time.time() - start_time
+            print(f'\rErasing... {elapsed:.1f}s elapsed', end='', flush=True)
+        
+        total_time = time.time() - start_time
+        print(f"\nErase completed in {total_time:.1f}s!")
         
         # Write the file data
         page_size = 256  # Standard page size for SPI flash
@@ -212,6 +227,7 @@ def write_spi_flash_from_file(client, filename='spi_flash_dump.bin', verify=True
                 
                 # Wait for write to complete
                 while True:
+                    #time.sleep(0.002)
                     status_data = spi.transfer(write_data=[0x05], read_bytes=1)
                     if status_data and len(status_data) == 1:
                         if (status_data[0] & 0x01) == 0:  # WIP bit cleared
@@ -223,32 +239,7 @@ def write_spi_flash_from_file(client, filename='spi_flash_dump.bin', verify=True
                 
                 # Update progress bar every 64 chunks (16KB)
                 if chunk_count == 1 or chunk_count % 64 == 0 or chunk_count == total_chunks:
-                    progress = chunk_count / total_chunks
-                    bar_length = 50
-                    filled_length = int(bar_length * progress)
-                    bar = '█' * filled_length + '░' * (bar_length - filled_length)
-                    percent = progress * 100
-                    mb_written = address / (1024 * 1024)
-                    
-                    # Calculate elapsed time and estimated time remaining
-                    elapsed_time = time.time() - start_time
-                    if progress > 0:
-                        estimated_total_time = elapsed_time / progress
-                        eta = estimated_total_time - elapsed_time
-                    else:
-                        eta = 0
-                    
-                    # Format time as mm:ss
-                    elapsed_str = f"{int(elapsed_time//60):02d}:{int(elapsed_time%60):02d}"
-                    eta_str = f"{int(eta//60):02d}:{int(eta%60):02d}"
-                    
-                    # Speed calculation
-                    speed_kbps = (mb_written * 1024) / elapsed_time if elapsed_time > 0 else 0
-                    
-                    # Print progress
-                    print(f'\r[{bar}] {percent:.1f}%', end='')
-                    print(f'\n({mb_written:.1f}MB/{file_size/(1024*1024):.1f}MB) {elapsed_str} elapsed, ETA {eta_str} ({speed_kbps:.1f}KB/s)', end='')
-                    print('\033[A', end='', flush=True)
+                    show_progress(address, file_size, start_time, "Writing")
             
             total_time = time.time() - start_time
             total_time_str = f"{int(total_time//60):02d}:{int(total_time%60):02d}"
@@ -280,10 +271,9 @@ def write_spi_flash_from_file(client, filename='spi_flash_dump.bin', verify=True
                     
                     address += len(expected_data)
                     
-                    # Show verification progress
-                    progress = address / file_size
-                    if address % (64 * 1024) == 0 or address >= file_size:  # Update every 64KB
-                        print(f'\rVerifying... {progress*100:.1f}%', end='', flush=True)
+                    # Show verification progress every 64KB
+                    if address % (64 * 1024) == 0 or address >= file_size:
+                        show_progress(address, file_size, verify_start, "Verifying")
                 
                 verify_time = time.time() - verify_start
                 print(f"\nVerification completed successfully in {verify_time:.1f}s!")
@@ -326,7 +316,7 @@ def erase_spi_flash(client):
         return True
     else:
         print("Failed to configure SPI interface")
-        return False            
+        return False     
 
 # Create client, configure the serial port
 client = BPIOClient('COM35')
@@ -340,11 +330,13 @@ start_time = time.time()
 # Run the I2C example
 #i2c_example(client)
 
+#i2c_example_read_24x02_eeprom(client)
+
 # Run the SPI example
 #spi_example(client)
 
 # Run the 1-Wire example
-#one_wire_example(client)
+one_wire_example(client)
 
 # Read SPI flash to file
 #read_spi_flash_to_file(client, 'spi_flash_dump.bin')
@@ -353,7 +345,7 @@ start_time = time.time()
 #erase_spi_flash(client)
 
 # Write a file to flash with verification
-write_spi_flash_from_file(client, 'spi_flash_dump.bin', verify=True)
+# write_spi_flash_from_file(client, 'spi_flash_dump.bin', verify=True)
 
 # Write without verification (faster)
 # write_spi_flash_from_file(client, 'data.bin', verify=False)

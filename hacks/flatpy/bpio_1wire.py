@@ -7,7 +7,11 @@ class BPIO1Wire(BPIOBase):
    
     def configure(self, **kwargs):
         """Configure 1-Wire mode"""
-        kwargs['mode'] = '1-Wire'
+        kwargs['mode'] = '1Wire'
+        #get the existing mode_configuration from kwargs or create a new one
+        mode_configuration = kwargs.get('mode_configuration', {})
+        # Replace the mode_configuration in kwargs
+        kwargs['mode_configuration'] = mode_configuration        
         success = self.client.configuration_request(**kwargs)  
         self.configured = success
         return success

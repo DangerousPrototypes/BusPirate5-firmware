@@ -20,7 +20,7 @@ import bpio.ErrorResponse as ErrorResponse
 import time 
 
 class BPIOClient:
-    def __init__(self, port, baudrate=115200, timeout=2, debug=False):
+    def __init__(self, port, baudrate=3000000, timeout=2, debug=False):
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout

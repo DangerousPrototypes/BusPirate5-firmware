@@ -437,6 +437,8 @@ set(buspirate_common
         binmode/sump.h
         binmode/bpio.c
         binmode/bpio.h
+        binmode/bpio_transactions.h
+        binmode/bpio_transactions.c
         binmode/legacy4third.c
         binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c

@@ -18,7 +18,6 @@ void hwi2c_set_speed(uint32_t speed_hz);
 void hwi2c_set_databits(uint32_t bits);
 bool hwi2c_preflight_sanity_check(void);
 bool bpio_hwi2c_configure(bpio_mode_configuration_t *bpio_mode_config);
-uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request);
 
 typedef struct _i2c_mode_config {
     uint32_t baudrate;

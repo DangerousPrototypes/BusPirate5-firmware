@@ -161,3 +161,4 @@ void hwspi_set_cphase(bool cpha){
     // Re-enable SPI
     //hw_set_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
 }
+

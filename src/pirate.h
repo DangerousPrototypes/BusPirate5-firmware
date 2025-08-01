@@ -189,17 +189,6 @@ void spi_busy_wait_internal(bool enable, const char *file, int line);
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 // only used on APA102
 
-struct bpio_data_request_t {
-    bool debug; // Debug flag
-    bool start_main; // Start main condition
-    bool start_alt;  // Start alternate condition
-    uint16_t bytes_write; // Bytes to write
-    uint16_t bytes_read; // Bytes to read
-    const char *data_buf; // Data buffer 
-    bool stop_main; // Stop main condition  
-    bool stop_alt;  // Stop alternate condition
-};
-
 typedef struct {
     bool debug;                 // Debug flag for BPIO
     uint32_t speed;              // Speed in Hz or baud for the mode

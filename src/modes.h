@@ -13,11 +13,11 @@ enum {
 #ifdef BP_USE_HWI2C
     HWI2C,
 #endif
-#ifdef BP_USE_HW2WIRE
-    HW2WIRE,
-#endif
 #ifdef BP_USE_HWSPI
     HWSPI,
+#endif
+#ifdef BP_USE_HW2WIRE
+    HW2WIRE,
 #endif
 #ifdef BP_USE_HW3WIRE
     HW3WIRE,
@@ -34,23 +34,20 @@ enum {
 #ifdef BP_USE_JTAG
     JTAG,
 #endif
-#ifdef BP_USE_DUMMY1
-    DUMMY1,
-#endif
-#ifdef BP_USE_BINLOOPBACK
-    BINLOOPBACK,
-#endif
-#ifdef BP_USE_LCDSPI
-    LCDSPI,
+#ifdef BP_USE_I2S
+    I2S,
 #endif
 #ifdef BP_USE_LCDI2C // future
     LCDI2C,
 #endif
+#ifdef BP_USE_LCDSPI
+    LCDSPI,
+#endif
 #ifdef BP_USE_USBPD
     USBPD,
 #endif
-#ifdef BP_USE_I2S
-    I2S,
+#ifdef BP_USE_DUMMY1
+    DUMMY1,
 #endif
     MAXPROTO
 };
@@ -85,8 +82,6 @@ typedef struct _mode {
     uint32_t (*protocol_command)(struct command_result* result); // per mode command parser - ignored if 0
     //void (*protocol_lcd_update)(uint32_t flags);                 // replacement for ui_lcd_update if non-0
     bool (*protocol_preflight_sanity_check)(void); // sanity check before executing syntax
-    bool (*bpio_configure)(bpio_mode_configuration_t *bpio_mode_config);
-    uint32_t (*bpio_handler)(struct bpio_data_request_t *request);
 } _mode;
 
 extern struct _mode modes[MAXPROTO];

@@ -130,7 +130,7 @@ bool nullfunc_bpio_configure(bpio_mode_configuration_t *bpio_mode_config) {
 // all modes and their interaction is handled here
 // pirate.h has the conditional defines for modes
 struct _mode modes[] = {
-    {
+   [HIZ]= {
         .protocol_name = "HiZ",                // friendly name (promptname)
         .protocol_start = nullfunc1_temp,      // start
         .protocol_start_alt = nullfunc1_temp,  // start with read
@@ -157,11 +157,9 @@ struct _mode modes[] = {
         .protocol_get_speed = nullfunc7_no_error,        // get the current speed setting of the protocol
         .protocol_command = NULL,                        // per mode command parser - ignored if 0
         .protocol_preflight_sanity_check = NULL,         // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access
     },
 #ifdef BP_USE_HW1WIRE
-    {
+    [HW1WIRE] = {
         .protocol_name = "1WIRE",             // friendly name (promptname)
         .protocol_start = hw1wire_start,       // start
         .protocol_start_alt = hw1wire_start,   // start with read
@@ -187,12 +185,10 @@ struct _mode modes[] = {
         .mode_commands_count = &hw1wire_commands_count,  // mode specific commands count ignored if 0x00
         .protocol_get_speed = hw1wire_get_speed,         // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw1wire_preflight_sanity_check, // sanity check before executing syntax
-        .bpio_configure = bpio_1wire_configure, // configure for flatbuffer/binary access
-        .bpio_handler = bpio_1wire_transaction,   // handler for flatbuffer/binary access
     },
 #endif
 #ifdef BP_USE_HWUART
-    {
+    [HWUART] = {
         .protocol_name = "UART",                         // friendly name (promptname)
         .protocol_start = hwuart_open,                   // start
         .protocol_start_alt = hwuart_open_read,          // start with read
@@ -220,12 +216,10 @@ struct _mode modes[] = {
         .protocol_get_speed = hwuart_get_speed,        // get the current speed setting of the protocol
         .protocol_wait_done = hwuart_wait_done,        // wait for the protocol to finish
         .protocol_preflight_sanity_check=hwuart_preflight_sanity_check, // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
     },
 #endif
 #ifdef BP_USE_HWHDUART
-    {
+    [HWHDUART] = {
         .protocol_name = "HDUART",                       // friendly name (promptname)
         .protocol_start = hwhduart_open,                 // start
         .protocol_start_alt = hwhduart_start_alt,        // start with read
@@ -252,13 +246,10 @@ struct _mode modes[] = {
         .mode_commands_count = &hwhduart_commands_count, // mode specific commands count
         .protocol_get_speed = hwhduart_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwhduart_preflight_sanity_check, // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
-
     },
 #endif
 #ifdef BP_USE_HWI2C
-    {
+    [HWI2C] = {
         .protocol_name = "I2C",                          // friendly name (promptname)
         .protocol_start = hwi2c_start,                   // start
         .protocol_start_alt = hwi2c_start,               // start with read
@@ -285,12 +276,10 @@ struct _mode modes[] = {
         .mode_commands_count = &hwi2c_commands_count, // mode specific commands count
         .protocol_get_speed = hwi2c_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwi2c_preflight_sanity_check, // sanity check before executing syntax
-        .bpio_configure = bpio_hwi2c_configure, // configure for flatbuffer/binary access
-        .bpio_handler = bpio_hwi2c_transaction, // handler for flatbuffer/binary access
     },
 #endif
 #ifdef BP_USE_HWSPI
-    {
+    [HWSPI] = {
         .protocol_name = "SPI",                // friendly name (promptname)
         .protocol_start = spi_start,           // start
         .protocol_start_alt = spi_startr,      // start with read
@@ -317,12 +306,10 @@ struct _mode modes[] = {
         .mode_commands_count = &hwspi_commands_count, // mode specific commands count
         .protocol_get_speed = spi_get_speed,          // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = spi_preflight_sanity_check,      // sanity check before executing syntax
-        .bpio_configure = bpio_hwspi_configure, // configure for flatbuffer/binary access
-        .bpio_handler = bpio_hwspi_transaction,   // handler for flatbuffer/binary access
     },
 #endif
 #ifdef BP_USE_HW2WIRE
-    {
+    [HW2WIRE] = {
         .protocol_name = "2WIRE",                        // friendly name (promptname)
         .protocol_start = hw2wire_start,                 // start
         .protocol_start_alt = hw2wire_start_alt,         // start with read
@@ -349,12 +336,10 @@ struct _mode modes[] = {
         .mode_commands_count = &hw2wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw2wire_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw2wire_preflight_sanity_check,      // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access
     },
 #endif
 #ifdef BP_USE_HW3WIRE
-    {
+    [HW3WIRE] = {
         .protocol_name = "3WIRE",                        // friendly name (promptname)
         .protocol_start = hw3wire_start,                 // start
         .protocol_start_alt = hw3wire_start_alt,         // start with read
@@ -380,13 +365,11 @@ struct _mode modes[] = {
         .mode_commands = hw3wire_commands,              // mode specific commands
         .mode_commands_count = &hw3wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw3wire_get_speed,        // get the current speed setting of the protocol
-        .protocol_preflight_sanity_check = hw3wire_preflight_sanity_check,      // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
+        .protocol_preflight_sanity_check = hw3wire_preflight_sanity_check,      // sanity check before executing syntax 
     },
 #endif
 #ifdef BP_USE_DIO
-    {
+    [DIO] = {
         .protocol_name = "DIO",                          // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read
@@ -413,12 +396,10 @@ struct _mode modes[] = {
         .mode_commands_count = &dio_commands_count, // mode specific commands count
         .protocol_get_speed = dio_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = dio_preflight_sanity_check,      // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
     },
 #endif
 #ifdef BP_USE_HWLED
-    {
+    [HWLED] = {
         .protocol_name = "LED",                // friendly name (promptname)
         .protocol_start = hwled_start,         // start
         .protocol_start_alt = hwled_start,     // start with read
@@ -447,13 +428,11 @@ struct _mode modes[] = {
         .protocol_get_speed = hwled_get_speed,        // get the current speed setting of the protocol
         .protocol_command = NULL,                     // per mode command parser - ignored if 0
         .protocol_wait_done = hwled_wait_idle,        // wait for the protocol to finish
-        .protocol_preflight_sanity_check = hwled_preflight_sanity_check,      // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
+        .protocol_preflight_sanity_check = hwled_preflight_sanity_check,      // sanity check before executing syntax      
     },
 #endif
 #ifdef BP_USE_INFRARED
-    {
+    [INFRARED] = {
         .protocol_name = "INFRARED",                     // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read
@@ -481,12 +460,10 @@ struct _mode modes[] = {
         .protocol_wait_done = infrared_wait_idle,        // wait for the protocol to finish
         .protocol_get_speed = infrared_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = infrared_preflight_sanity_check,      // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access    
     },
 #endif
 #ifdef BP_USE_JTAG
-    {
+    [JTAG] = {
         .protocol_name = "JTAG",                          // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read
@@ -513,12 +490,10 @@ struct _mode modes[] = {
         .mode_commands_count = &jtag_commands_count, // mode specific commands count
         .protocol_get_speed = jtag_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = jtag_preflight_sanity_check,      // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
     },
 #endif
 #ifdef BP_USE_I2S
-    {
+    [I2S] = {
         .protocol_name = "I2S",                       // friendly name (promptname)
         .protocol_start = i2s_start,                  // start
         .protocol_start_alt = i2s_start,              // start with read
@@ -544,105 +519,10 @@ struct _mode modes[] = {
         .mode_commands = i2s_commands,              // mode specific commands
         .mode_commands_count = &i2s_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
-    },
-#endif
-#ifdef BP_USE_DUMMY1
-    {
-        .protocol_name = "DUMMY1",                       // friendly name (promptname)
-        .protocol_start = dummy1_start,                  // start
-        .protocol_start_alt = dummy1_start,              // start with read
-        .protocol_stop = dummy1_stop,                    // stop
-        .protocol_stop_alt = dummy1_stop,                // stop with read
-        .protocol_write = dummy1_write,                  // send(/read) max 32 bit
-        .protocol_read = dummy1_read,                    // read max 32 bit
-        .protocol_clkh = dummy1_clkh,                    // set clk high
-        .protocol_clkl = dummy1_clkl,                    // set clk low
-        .protocol_dath = dummy1_dath,                    // set dat hi
-        .protocol_datl = dummy1_datl,                    // set dat lo
-        .protocol_dats = dummy1_dats,                    // toggle dat (?)
-        .protocol_tick_clock = dummy1_clk,               // toggle clk (?)
-        .protocol_bitr = dummy1_bitr,                    // read 1 bit (?)
-        .protocol_periodic = dummy1_periodic,            // service to regular poll whether a byte ahs arrived
-        .protocol_macro = dummy1_macro,                  // macro
-        .protocol_setup = dummy1_setup,                  // setup UI
-        .protocol_setup_exc = dummy1_setup_exc,          // real setup
-        .protocol_cleanup = dummy1_cleanup,              // cleanup for HiZ
-        //.protocol_pins=dummy1_pins,				// display pin config
-        .protocol_settings = dummy1_settings,          // display settings
-        .protocol_help = dummy1_help,                  // display small help about the protocol
-        .mode_commands = dummy1_commands,              // mode specific commands
-        .mode_commands_count = &dummy1_commands_count, // mode specific commands count
-        .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
-    },
-#endif
-#ifdef BP_USE_BINLOOPBACK
-    {
-        .protocol_name = "BIN"                                   // friendly name (promptname)
-        .protocol_start = binloopback_open, // start
-        .protocol_start_alt = binloopback_open_read,             // start with read
-        .protocol_stop = binloopback_close,                      // stop
-        .protocol_stop_alt = binloopback_close,                  // stop with read
-        .protocol_write = binloopback_write,                     // send(/read) max 32 bit
-        .protocol_read = nullfunc1_temp,                         // read max 32 bit
-        .protocol_clkh = nullfunc1_temp,                         // set clk high
-        .protocol_clkl = nullfunc1_temp,                         // set clk low
-        .protocol_dath = nullfunc1_temp,                         // set dat hi
-        .protocol_datl = nullfunc1_temp,                         // set dat lo
-        .protocol_dats = nullfunc1_temp,                         // toggle dat (remove?)
-        .protocol_tick_clock = nullfunc1_temp,                   // tick clk
-        .protocol_bitr = nullfunc1_temp,                         // read dat
-        .protocol_periodic = binloopback_periodic,               // service to regular poll whether a byte ahs arrived
-        .protocol_macro = hwled_macro,                           // macro
-        .protocol_setup = binloopback_setup,                     // setup UI
-        .protocol_setup_exc = binloopback_setup_exc,             // real setup
-        .protocol_cleanup = binloopback_cleanup,                 // cleanup for HiZ
-        //.protocol_pins=HWLED_pins,				// display pin config
-        .protocol_settings = hwled_settings,                // display settings
-        .protocol_help = hwled_help,                        // display small help about the protocol
-        .mode_commands = binloopback_commands,              // mode specific commands
-        .mode_commands_count = &binloopback_commands_count, // mode specific commands count
-        .protocol_get_speed = nullfunc7_no_error,           // get the current speed setting of the protocol
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access
-    },
-#endif
-#ifdef BP_USE_LCDSPI
-    {
-        .protocol_name = "LCDSPI",                       // friendly name (promptname)
-        .protocol_start = nullfunc1,                     // start
-        .protocol_start_alt = nullfunc1,                 // start with read
-        .protocol_stop = nullfunc1,                      // stop
-        .protocol_stop_alt = nullfunc1,                  // stop with read
-        .protocol_write = LCDSPI_send,                   // send(/read) max 32 bit
-        .protocol_read = LCDSPI_read,                    // read max 32 bit
-        .protocol_clkh = nullfunc1_temp,                 // set clk high
-        .protocol_clkl = nullfunc1_temp,                 // set clk low
-        .protocol_dath = nullfunc1_temp,                 // set dat hi
-        .protocol_datl = nullfunc1_temp,                 // set dat lo
-        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
-        .protocol_tick_clock = nullfunc1_temp,           // tick clk
-        .protocol_bitr = nullfunc1_temp,                 // read dat
-        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
-        .protocol_macro = LCDSPI_macro,                  // macro
-        .protocol_setup = LCDSPI_setup,                  // setup UI
-        .protocol_setup_exc = LCDSPI_setup_exc,          // real setup
-        .protocol_cleanup = LCDSPI_cleanup,              // cleanup for HiZ
-        //.protocol_pins=LCDSPI_pins,				// display pin config
-        .protocol_settings = LCDSPI_settings,     // display settings
-        .protocol_help = nohelp,                  // display small help about the protocol
-        .mode_commands = NULL,                    // mode specific commands
-        .mode_commands_count = NULL,              // mode specific commands count
-        .protocol_get_speed = nullfunc7_no_error, // get the current speed setting of the protocol
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
     },
 #endif
 #ifdef BP_USE_LCDI2C
-    {
+    [LCDI2C] = {
         .protocol_name = "LCDI2C",                       // friendly name (promptname)
         .protocol_start = nullfunc1,                     // start
         .protocol_start_alt = nullfunc1,                 // start with read
@@ -668,12 +548,39 @@ struct _mode modes[] = {
         .mode_commands = NULL,                    // mode specific commands
         .mode_commands_count = 0,                 // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error, // get the current speed setting of the protocol
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
+    },
+#endif
+#ifdef BP_USE_LCDSPI
+    [LCDSPI] = {
+        .protocol_name = "LCDSPI",                       // friendly name (promptname)
+        .protocol_start = nullfunc1,                     // start
+        .protocol_start_alt = nullfunc1,                 // start with read
+        .protocol_stop = nullfunc1,                      // stop
+        .protocol_stop_alt = nullfunc1,                  // stop with read
+        .protocol_write = LCDSPI_send,                   // send(/read) max 32 bit
+        .protocol_read = LCDSPI_read,                    // read max 32 bit
+        .protocol_clkh = nullfunc1_temp,                 // set clk high
+        .protocol_clkl = nullfunc1_temp,                 // set clk low
+        .protocol_dath = nullfunc1_temp,                 // set dat hi
+        .protocol_datl = nullfunc1_temp,                 // set dat lo
+        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
+        .protocol_tick_clock = nullfunc1_temp,           // tick clk
+        .protocol_bitr = nullfunc1_temp,                 // read dat
+        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
+        .protocol_macro = LCDSPI_macro,                  // macro
+        .protocol_setup = LCDSPI_setup,                  // setup UI
+        .protocol_setup_exc = LCDSPI_setup_exc,          // real setup
+        .protocol_cleanup = LCDSPI_cleanup,              // cleanup for HiZ
+        //.protocol_pins=LCDSPI_pins,				// display pin config
+        .protocol_settings = LCDSPI_settings,     // display settings
+        .protocol_help = nohelp,                  // display small help about the protocol
+        .mode_commands = NULL,                    // mode specific commands
+        .mode_commands_count = NULL,              // mode specific commands count
+        .protocol_get_speed = nullfunc7_no_error, // get the current speed setting of the protocol
     },
 #endif
 #ifdef BP_USE_USBPD
-    {
+    [USBPD] = {
         .protocol_name = "USBPD",                        // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read
@@ -699,11 +606,37 @@ struct _mode modes[] = {
         .mode_commands_count = &usbpd_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,     // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = NULL,      // sanity check before executing syntax
-        .bpio_configure = nullfunc_bpio_configure, // configure for flatbuffer/binary access
-        .bpio_handler = nullfunc_bpio_handler,   // handler for flatbuffer/binary access        
     },
 #endif
-
+#ifdef BP_USE_DUMMY1
+    [DUMMY1] = {
+        .protocol_name = "DUMMY1",                       // friendly name (promptname)
+        .protocol_start = dummy1_start,                  // start
+        .protocol_start_alt = dummy1_start,              // start with read
+        .protocol_stop = dummy1_stop,                    // stop
+        .protocol_stop_alt = dummy1_stop,                // stop with read
+        .protocol_write = dummy1_write,                  // send(/read) max 32 bit
+        .protocol_read = dummy1_read,                    // read max 32 bit
+        .protocol_clkh = dummy1_clkh,                    // set clk high
+        .protocol_clkl = dummy1_clkl,                    // set clk low
+        .protocol_dath = dummy1_dath,                    // set dat hi
+        .protocol_datl = dummy1_datl,                    // set dat lo
+        .protocol_dats = dummy1_dats,                    // toggle dat (?)
+        .protocol_tick_clock = dummy1_clk,               // toggle clk (?)
+        .protocol_bitr = dummy1_bitr,                    // read 1 bit (?)
+        .protocol_periodic = dummy1_periodic,            // service to regular poll whether a byte ahs arrived
+        .protocol_macro = dummy1_macro,                  // macro
+        .protocol_setup = dummy1_setup,                  // setup UI
+        .protocol_setup_exc = dummy1_setup_exc,          // real setup
+        .protocol_cleanup = dummy1_cleanup,              // cleanup for HiZ
+        //.protocol_pins=dummy1_pins,				// display pin config
+        .protocol_settings = dummy1_settings,          // display settings
+        .protocol_help = dummy1_help,                  // display small help about the protocol
+        .mode_commands = dummy1_commands,              // mode specific commands
+        .mode_commands_count = &dummy1_commands_count, // mode specific commands count
+        .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+    },
+#endif
 };
 /* For Emacs:
  * Local Variables:

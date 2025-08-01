@@ -47,7 +47,7 @@ else()
     set(PICO_BOARD buspirate5)
 endif()
 
-
+#set(PICO_SDK_PATH "~/pico-sdk")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(cmake/pico_sdk_import.cmake)

@@ -119,7 +119,9 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
     uint32_t address_blocks_total=eeprom_get_address_blocks_total(eeprom);
     // 256 bytes at a time, less for smaller devices (128 bytes)
     uint32_t write_size = eeprom_get_address_block_size(eeprom); 
-    uint32_t write_pages = write_size / eeprom->device->page_bytes; 
+    uint32_t write_pages = write_size / eeprom->device->page_bytes;
+    
+    printf("Writing %d blocks of %d bytes each, %d pages per block\r\n", address_blocks_total, write_size, write_pages);
 
     for(uint32_t i = 0; i < address_blocks_total; i++) {
         uint32_t bytes_read=write_size;
@@ -138,16 +140,22 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
         #if !EEPROM_DEBUG
             print_progress(i, address_blocks_total);
         #else
-            printf("Block %d, I2C address 0x%02X, address 0x%02X00, %d write pages, %d bytes\r\n", i, i2caddr_7bit, block_ptr[0], write_pages, eeprom->device->page_bytes); //debug
+            printf("Block %d, SB: 0x%02X, address 0x%02X00, %d write pages, %d bytes\r\n", i, i2caddr_7bit, block_ptr[0], write_pages, eeprom->device->page_bytes); //debug
         #endif
-        
+
         for(uint32_t j = 0; j < write_pages; j++) {
+            bool end_of_file = false;
             // write page to the EEPROM
             #if !EEPROM_DEBUG
                 
                 if(!write_from_buf){
+                    if(bytes_read == 0) {
+                        //printf("\r\nEnd of file reached, stopping write 1\r\n");
+                        goto eeprom_base_write_cleanup; // if we are at the end of the file, break out of the loop
+                    }
                     if(bytes_read < eeprom->device->page_bytes) {
                         page_write_size = bytes_read; // if we are at the end of the file, write only the remaining bytes
+                        end_of_file = true; // we are at the end of the file
                     }
                 }
                 
@@ -160,10 +168,12 @@ bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, b
                 printf("%d ", j);
             #endif
             if(!write_from_buf){
-                bytes_read -= page_write_size; // reduce the bytes read by the page size
-                if(bytes_read == 0) {
-                    goto eeprom_base_write_cleanup; // if we are at the end of the file, break out of the loop
+                if(end_of_file) {
+                    // if we are at the end of the file, break out of the loop
+                    //printf("\r\nEnd of file reached, stopping write 2\r\n");
+                    goto eeprom_base_write_cleanup; 
                 }
+                bytes_read -= page_write_size; // reduce the bytes read by the page write size
             }
         }
         #if EEPROM_DEBUG

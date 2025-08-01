@@ -134,3 +134,13 @@ void hw1wire_help(void) {
 uint32_t hw1wire_get_speed(void) {
     return 220000;
 }
+
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_1wire_configure(bpio_mode_configuration_t *bpio_mode_config){
+    return true;  
+}

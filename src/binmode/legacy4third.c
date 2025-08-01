@@ -37,7 +37,6 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include "modes.h"
 #include "binio_helpers.h"
 #include "tusb.h"
-#include "binmode/binio.h"
 #include "system_config.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
@@ -45,6 +44,10 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include "pirate/mem.h"
 #include "pirate/bio.h"
 #include "pirate/button.h"
+#include "commands/global/w_psu.h"
+#include "commands/global/p_pullups.h"
+#include "binmode/bpio.h"
+#include "commands/global/cmd_mcu.h"
 
 const char legacy4third_mode_name[] = "Legacy Binary Mode for Flashrom and AVRdude (EXPERIMENTAL)";
 
@@ -60,10 +63,8 @@ const char legacy4third_mode_name[] = "Legacy Binary Mode for Flashrom and AVRdu
     tud_cdc_n_write(cdc_n, (uint8_t*)str, sizeof(str) - 1);                                                            \
     tud_cdc_n_write_flush(1);
 
-static uint8_t volts_integer;
-static uint8_t volts_decimal;
-static uint16_t current_integer;
-static uint8_t current_decimal;
+static float psu_voltage = 0.0f; // PSU voltage in volts
+static float psu_current_limit = 0.0f; // PSU current limit in amps
 static uint8_t* tmpbuf;
 static uint8_t* cdc_buff;
 static uint32_t remain_bytes;
@@ -71,6 +72,22 @@ static bool set_aux_pins = true;
 static bool hold_value = true;
 static bool wp_value = true;
 
+// For Atmel parts which have a flash size > 64Kbytes, an additional
+// command is needed - the "Extended High Byte" address write.  This
+// bool will be set when avrdude first queries the part, and will be
+// used later if required.
+static bool req_EHB_write = false; // This part has > 64K flash
+
+// Each Atmel part has a 3-byte signature.  The first byte is 0x1e,
+// the second byte is used to encode the flash size of the part.
+// This array contains the second signature byte for every part
+// that avrdude supports that has flash > 64Kbytes.
+// When avrdude initially connects to the part, it will query for
+// the part's signature before we do any other operations.  We
+// can use this array to compare and set req_EHB_write to 'true' if needed.
+static uint8_t big_flash_parts[] = {0x97, 0x98, 0xa7, 0xa8, 0xc0}; // array of signature bytes for parts with > 64K flash
+
+static uint8_t binmode_debug = 0; // Debug mode flag
 
 void set_planks_auxpins(bool set)
 {
@@ -100,38 +117,25 @@ void set_planks_auxpins(bool set)
 
 
 void disable_psu_legacy(void) {
-    uint8_t binmode_args = 0x00;
-    uint32_t result = binmode_psu_disable(&binmode_args);
+    psucmd_disable();
 }
 
 void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8_t cpah, uint8_t cs) {
-    /*
-        Example:
-            data_bits = 0x08;
-            uint8_t cpol = 0x00;
-            uint8_t cpah = 0x00;
-            uint8_t cs = 0x01;
-            uint32_t spi_speed = 10000000; // ~10Mhz
-    */
-    uint8_t spi_binmode_args[] = { (spi_speed >> 24) & 0xFF,
-                                   (spi_speed >> 16) & 0xFF,
-                                   (spi_speed >> 8) & 0xFF,
-                                   spi_speed & 0xFF,
-                                   data_bits,
-                                   cpol,
-                                   cpah,
-                                   cs };
+    bpio_mode_configuration_t mode_config={
+        .speed = spi_speed,
+        .data_bits = data_bits,
+        .clock_polarity = cpol,
+        .clock_phase = cpah,
+        .chip_select_idle = cs,
+    };
 
-    mode_change((uint8_t*)"SPI");
-    binmode_config(spi_binmode_args);
+    mode_change_new((uint8_t*)"SPI", &mode_config);
     system_config.binmode_usb_rx_queue_enable = false;
     system_config.binmode_usb_tx_queue_enable = false;
 }
 
 void enable_debug_legacy(void) {
-    uint8_t binmode_args = 1;
-
-    binmode_debug_level(&binmode_args);
+    binmode_debug = 1;
 }
 
 uint32_t read_buff(uint8_t* buf, uint32_t len, uint32_t max_tries) {
@@ -194,14 +198,12 @@ void set_pins_ui(void) {
 }
 
 void reset_legacy(void) {
-    uint8_t binmode_args = 0;
-
     hwspi_deinit();
     set_planks_auxpins(false);
     disable_psu_legacy();
-    binmode_pullup_disable(&binmode_args);
-    binmode_reset(&binmode_args);
-    mode_change((uint8_t*)"HiZ");
+    pullups_disable();
+    bpio_mode_configuration_t mode_config;
+    mode_change_new((uint8_t*)"HIZ", &mode_config);
     set_pins_ui();
 }
 
@@ -294,12 +296,7 @@ void legacy_protocol(void) {
                 if ((extended_info & 0b00001000) == 0) {
                     disable_psu_legacy();
                 } else {
-                    // uint8_t args[] = { 0x03, 0x21, 0x00, 0x80 }; // 3.3v
-                    uint8_t args[] = {
-                        volts_integer, volts_decimal, (uint8_t)(current_integer >> 8), (uint8_t)(current_integer & 0xFF)
-                    };
-                    uint32_t result = binmode_psu_enable(args);
-
+                    uint32_t result = psucmd_enable(psu_voltage, psu_current_limit, false);
                     if (result) {
                         if (binmode_debug) {
                             printf("\r\nPSU ERROR CODE %d", result);
@@ -316,14 +313,12 @@ void legacy_protocol(void) {
                     if (binmode_debug) {
                         printf("\r\npullup_disable");
                     }
-                    uint8_t binmode_args = 0;
-                    binmode_pullup_disable(&binmode_args);
+                    pullups_disable();
                 } else {
                     if (binmode_debug) {
                         printf("\r\npullup_enable");
                     }
-                    uint8_t binmode_args = 0;
-                    binmode_pullup_enable(&binmode_args);
+                    pullups_enable();
                 }
 
                 // AUX
@@ -455,25 +450,6 @@ void legacy_protocol(void) {
                 }
                 hwspi_select();
                 CDC_SEND_STR(1, "\x01");
-
-                /*
-                uint8_t data_bits = 8;
-                uint8_t cpol = 0;
-                uint8_t cpha = 0;
-                static const char mpin_labels[][5]={
-                    "CLK",
-                    "MOSI",
-                    "MISO",
-                    "CS"
-                };
-
-                spi_init(SPI1_BASE, 100000); // ~0.1MHz
-                hwspi_init(data_bits, cpol, cpha);
-                system_bio_update_purpose_and_label(true, 6, 1, mpin_labels[0]);
-                system_bio_update_purpose_and_label(true, 7, 1, mpin_labels[1]);
-                system_bio_update_purpose_and_label(true, 4, 1, mpin_labels[2]);
-                system_bio_update_purpose_and_label(true, 5, 1, mpin_labels[3]);
-                */
             } break;
 
             case 0x03: {
@@ -511,6 +487,8 @@ void legacy_protocol(void) {
                 if (binmode_debug) {
                     printf("\r\n>> ");
                 }
+                bool is_read_sig_cmd = false;  // true when reading any one of the signature bytes
+                uint8_t read_sig_byte_inx = 0; // which signature byte to read
                 for (int i = 0; i < bytes2read; i++) {
                     if (button_get(0)) {
                         return;
@@ -518,9 +496,61 @@ void legacy_protocol(void) {
                     if (binmode_debug) {
                         printf("\r\n0x%02X | ", tmpbuf[i]);
                     }
+                    // This hack required to handle parts with more than
+                    // 64K bytes of flash.  Signature byte 2 indicates flash
+                    // size - we'll use this byte to set a global flag if
+                    // this part requires writing the Extended High Byte address
+                    // First - check if we are receiving a command 0x30 (query signature);
+                    // this command is 4 bytes of SPI:
+                    // 0 -> avrdude/BP sends 0x30
+                    // 1 -> avrdude/BP clocks out 0, and part returns 0x30 to confirm command
+                    // 2 -> avrdude/BP sends which of the 3 signature bytes to read
+                    // 3 -> avrdude/BP clocks out 0, part returns requested value.
+                    if (i == 0 && tmpbuf[i] == 0x30) {
+                        // this is the start of a read signature command - set state active
+                        is_read_sig_cmd = true;
+                    }
+                    if (is_read_sig_cmd && i == 2) {
+                        // this is 3rd byte of the SPI sequence from BP to part - which signature byte to read
+                        read_sig_byte_inx = tmpbuf[i];
+                    }
                     tmpbuf[i] = hwspi_write_read(tmpbuf[i]);
                     if (binmode_debug) {
                         printf("0x%02X", tmpbuf[i]);
+                        if (is_read_sig_cmd) {
+                            if (i == 0) {
+                                printf("  - read signature command");
+                            } else if (i == 2) {
+                                printf("  - read signature byte %d", read_sig_byte_inx);
+                            }
+                        }
+                    }
+                    // IF
+                    // we're in the process of requesting part signature bytes AND
+                    // this is a request to read signature byte 1 AND
+                    // this is the part's response to the 4th byte in the SPI sequence
+                    // THEN
+                    // tmpbuf[i] holds the signature byte 2 - this is what we need to
+                    // determine flash size.
+                    if (is_read_sig_cmd && read_sig_byte_inx == 1 && i == 3) {
+                        if (binmode_debug) {
+                            printf("  - signature part ID 0x%02x", tmpbuf[i]);
+                        }
+                        req_EHB_write = false; // assume this part's flash is <= 64Kb flash
+                        for (uint8_t ii = 0; ii < sizeof(big_flash_parts); ++ii) {
+                            if (big_flash_parts[ii] == tmpbuf[3]) {
+                                // we have a match!  This part has more than 64K bytes of flash
+                                req_EHB_write = true;
+                                break;
+                            }
+                        }
+                        if (binmode_debug) {
+                            if (req_EHB_write) {
+                                printf(", requires EHB write");
+                            } else {
+                                printf(", does not require EHB write");
+                            }
+                        }
                     }
                 }
                 if (binmode_debug) {
@@ -679,13 +709,11 @@ void legacy_protocol(void) {
 
                         if (binmode_debug) {
                             printf("\r\naddr: 0x%08X, len: 0x%08X", addr, len);
+                            if (req_EHB_write) {
+                                printf(" -- EHB is 0x%02x", (addr >> 16) & 0x03);
+                            }
                         }
 
-                        if ((addr > 0xFFFF) || (len > 0xFFFF) || ((addr + len) > 0xFFFF)) {
-                            // error
-                            CDC_SEND_STR(1, "\x00");
-                            break;
-                        }
                         CDC_SEND_STR(1, "\x01");
 
                         if (binmode_debug) {
@@ -694,6 +722,12 @@ void legacy_protocol(void) {
                         while (len > 0) {
                             if (button_get(0)) {
                                 return;
+                            }
+                            if (req_EHB_write) {
+                                hwspi_write_read(0x4d); // AVR_LOAD_ADDRESS_EXTENDED_HIGH_BYTE_COMMAND
+                                hwspi_write_read(0x00);
+                                hwspi_write_read((addr >> 16) & 0x03);  // just the two lowest bits
+                                hwspi_write_read(0x00);
                             }
                             hwspi_write_read(0x20); // AVR_FETCH_LOW_BYTE_COMMAND
                             hwspi_write_read((addr >> 8) & 0xFF);
@@ -720,7 +754,7 @@ void legacy_protocol(void) {
                             addr++;
                         }
                         if (binmode_debug) {
-                            printf("\r\n");
+                            printf(" - end addr 0x%08x\r\n", addr);
                         }
                         break;
 
@@ -766,31 +800,24 @@ void legacy4third_mode(void) {
 
         printf("\r\n%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());
 
-        float volts = 0.0f;
-        if (!ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &volts, false)) 
+        if (!ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &psu_voltage, false)) 
             goto finish_legacy;
 
-        volts_integer = (uint8_t)floorf(volts);
-        volts_decimal = (uint8_t)((volts - floorf(volts)) * 100);
-
         if (binmode_debug) {
-            printf("\r\nVolts: int = %u, dec = %u\n", volts_integer, volts_decimal);
+            printf("\r\nVolts: %2.2f\n", psu_voltage);
         }
 
         float current = 0.0f;
         printf("\r\n%sMaximum current (0mA-500mA)%s", ui_term_color_info(), ui_term_color_reset());
-        if (!ui_prompt_float(&result, 0.0f, 500.0f, 200.0f, true, &current, false))
+        if (!ui_prompt_float(&result, 0.0f, 500.0f, 200.0f, true, &psu_current_limit, false))
             goto finish_legacy;
 
-        current_integer = (uint16_t)floorf(current);
-        current_decimal = (uint8_t)((current - floorf(current)) * 100);
-
         if (binmode_debug) {
-            printf("\r\nCurrent: int = %u, dec = %u\n", current_integer, current_decimal);
+            printf("\r\nCurrent: %2.2f\n",psu_current_limit);
         }
 
-        printf("\r\n%sPower supply set to %u.%02uV, %u.%02umA%s\r\n",
-               ui_term_color_info(), volts_integer, volts_decimal, current_integer, current_decimal, ui_term_color_reset());
+        printf("\r\n%sPower supply set to %2.2fV, %3.0fmA%s\r\n",
+               ui_term_color_info(), psu_voltage, psu_current_limit, ui_term_color_reset());
 
         cdc_buff = (uint8_t*)mem_alloc(CDCBUFF_SIZE + TMPBUFF_SIZE, 0);
         if (binmode_debug) {
@@ -827,8 +854,7 @@ void legacy4third_mode(void) {
         system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
         system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
         set_planks_auxpins(false);
-        uint8_t binmode_args = 0;
-        binmode_reset_buspirate(&binmode_args);
+        cmd_mcu_reset();
     }
 }
 

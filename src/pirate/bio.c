@@ -2,9 +2,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-
-#define BUFDIR_INPUT 0
-#define BUFDIR_OUTPUT 1
+#include "pirate/bio.h"
 
 void bio_init(void) {
     // setup the buffer IO and DIRection pins

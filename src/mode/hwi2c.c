@@ -322,3 +322,15 @@ void hwi2c_set_speed(uint32_t speed_hz) {
 void hwi2c_set_databits(uint32_t bits) {
   mode_config.data_bits = bits;
 }
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_hwi2c_configure(bpio_mode_configuration_t *bpio_mode_config){
+    if(bpio_mode_config->debug) printf("[I2C] Speed %d Hz\r\n", bpio_mode_config->speed);
+    mode_config.baudrate=bpio_mode_config->speed/1000; // convert to kHz
+    mode_config.clock_stretch=false;  
+    return true;  
+}

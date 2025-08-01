@@ -122,7 +122,7 @@ void nullfunc1_temp(struct _bytecode* result, struct _bytecode* next) {
 // all modes and their interaction is handled here
 // pirate.h has the conditional defines for modes
 struct _mode modes[] = {
-    {
+   [HIZ]= {
         .protocol_name = "HiZ",                // friendly name (promptname)
         .protocol_start = nullfunc1_temp,      // start
         .protocol_start_alt = nullfunc1_temp,  // start with read
@@ -137,12 +137,9 @@ struct _mode modes[] = {
         .protocol_dats = nullfunc1_temp,       // toggle dat (maybe remove?)
         .protocol_tick_clock = nullfunc1_temp, // tick clk
         .protocol_bitr = nullfunc1_temp,       // read dat pin
-        .protocol_periodic =
-            noperiodic, // service to regular poll whether a byte has arrived or something interesting has happened
+        .protocol_periodic = noperiodic, // service to regular poll whether a byte has arrived or something interesting has happened
         .protocol_macro = nullfunc4,                     // macro
         .protocol_setup = hiz_setup,                     // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = hiz_setup_exec,            // real setup
         .protocol_cleanup = hiz_cleanup,                 // cleanup for HiZ
         //.protocol_settings = hiz_settings,               // display settings
@@ -154,7 +151,7 @@ struct _mode modes[] = {
         .protocol_preflight_sanity_check = NULL,         // sanity check before executing syntax
     },
 #ifdef BP_USE_HW1WIRE
-    {
+    [HW1WIRE] = {
         .protocol_name = "1WIRE",             // friendly name (promptname)
         .protocol_start = hw1wire_start,       // start
         .protocol_start_alt = hw1wire_start,   // start with read
@@ -169,12 +166,9 @@ struct _mode modes[] = {
         .protocol_dats = nullfunc1_temp,       // toggle dat (maybe remove?)
         .protocol_tick_clock = nullfunc1_temp, // tick clk
         .protocol_bitr = nullfunc1_temp,       // read dat pin
-        .protocol_periodic =
-            noperiodic, // service to regular poll whether a byte has arrived or something interesting has happened
+        .protocol_periodic = noperiodic, // service to regular poll whether a byte has arrived or something interesting has happened
         .protocol_macro = hw1wire_macro,                 // macro
         .protocol_setup = hw1wire_setup,                 // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = hw1wire_setup_exc,         // real setup
         .protocol_cleanup = hw1wire_cleanup,             // cleanup for HiZ
         //.protocol_settings = hiz_settings,               // display settings
@@ -186,7 +180,7 @@ struct _mode modes[] = {
     },
 #endif
 #ifdef BP_USE_HWUART
-    {
+    [HWUART] = {
         .protocol_name = "UART",                         // friendly name (promptname)
         .protocol_start = hwuart_open,                   // start
         .protocol_start_alt = hwuart_open_read,          // start with read
@@ -204,8 +198,6 @@ struct _mode modes[] = {
         .protocol_periodic = hwuart_periodic,            // service to regular poll whether a byte ahs arrived
         .protocol_macro = hwuart_macro,                  // macro
         .protocol_setup = hwuart_setup,                  // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = hwuart_setup_exc,          // real setup
         .protocol_cleanup = hwuart_cleanup,              // cleanup for HiZ
         //.protocol_pins=hwuart_pins,				// display pin config
@@ -219,7 +211,7 @@ struct _mode modes[] = {
     },
 #endif
 #ifdef BP_USE_HWHDUART
-    {
+    [HWHDUART] = {
         .protocol_name = "HDUART",                       // friendly name (promptname)
         .protocol_start = hwhduart_open,                 // start
         .protocol_start_alt = hwhduart_start_alt,        // start with read
@@ -237,8 +229,6 @@ struct _mode modes[] = {
         .protocol_periodic = hwhduart_periodic,          // service to regular poll whether a byte ahs arrived
         .protocol_macro = hwhduart_macro,                // macro
         .protocol_setup = hwhduart_setup,                // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = hwhduart_setup_exc,        // real setup
         .protocol_cleanup = hwhduart_cleanup,            // cleanup for HiZ
         //.protocol_pins=hwuart_pins,				// display pin config
@@ -248,11 +238,10 @@ struct _mode modes[] = {
         .mode_commands_count = &hwhduart_commands_count, // mode specific commands count
         .protocol_get_speed = hwhduart_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwhduart_preflight_sanity_check, // sanity check before executing syntax
-
     },
 #endif
 #ifdef BP_USE_HWI2C
-    {
+    [HWI2C] = {
         .protocol_name = "I2C",                          // friendly name (promptname)
         .protocol_start = hwi2c_start,                   // start
         .protocol_start_alt = hwi2c_start,               // start with read
@@ -270,8 +259,6 @@ struct _mode modes[] = {
         .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
         .protocol_macro = hwi2c_macro,                   // macro
         .protocol_setup = hwi2c_setup,                   // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = hwi2c_setup_exc,           // real setup
         .protocol_cleanup = hwi2c_cleanup,               // cleanup for HiZ
         //.protocol_pins=HWI2C_pins,				// display pin config
@@ -281,11 +268,10 @@ struct _mode modes[] = {
         .mode_commands_count = &hwi2c_commands_count, // mode specific commands count
         .protocol_get_speed = hwi2c_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwi2c_preflight_sanity_check, // sanity check before executing syntax
-
     },
 #endif
 #ifdef BP_USE_HWSPI
-    {
+    [HWSPI] = {
         .protocol_name = "SPI",                // friendly name (promptname)
         .protocol_start = spi_start,           // start
         .protocol_start_alt = spi_startr,      // start with read
@@ -303,8 +289,6 @@ struct _mode modes[] = {
         .protocol_periodic = noperiodic,       // service to regular poll whether a byte ahs arrived
         .protocol_macro = spi_macro,           // macro
         .protocol_setup = spi_setup,           // setup UI
-        .binmode_get_config_length = spi_binmode_get_config_length, // get binmode config length
-        .binmode_setup = spi_binmode_setup,                         // setup for binmode
         .protocol_setup_exc = spi_setup_exc,                        // real setup
         .protocol_cleanup = spi_cleanup,                            // cleanup for HiZ
         //.protocol_pins=spi_pins,				// display pin config
@@ -317,7 +301,7 @@ struct _mode modes[] = {
     },
 #endif
 #ifdef BP_USE_HW2WIRE
-    {
+    [HW2WIRE] = {
         .protocol_name = "2WIRE",                        // friendly name (promptname)
         .protocol_start = hw2wire_start,                 // start
         .protocol_start_alt = hw2wire_start_alt,         // start with read
@@ -335,8 +319,6 @@ struct _mode modes[] = {
         .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
         .protocol_macro = hw2wire_macro,                 // macro
         .protocol_setup = hw2wire_setup,                 // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = hw2wire_setup_exc,         // real setup
         .protocol_cleanup = hw2wire_cleanup,             // cleanup for HiZ
         //.protocol_pins=HWI2C_pins,				// display pin config
@@ -349,7 +331,7 @@ struct _mode modes[] = {
     },
 #endif
 #ifdef BP_USE_HW3WIRE
-    {
+    [HW3WIRE] = {
         .protocol_name = "3WIRE",                        // friendly name (promptname)
         .protocol_start = hw3wire_start,                 // start
         .protocol_start_alt = hw3wire_start_alt,         // start with read
@@ -367,8 +349,6 @@ struct _mode modes[] = {
         .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
         .protocol_macro = hw3wire_macro,                 // macro
         .protocol_setup = hw3wire_setup,                 // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = hw3wire_setup_exc,         // real setup
         .protocol_cleanup = hw3wire_cleanup,             // cleanup for HiZ
         //.protocol_pins=HWI2C_pins,				// display pin config
@@ -377,11 +357,11 @@ struct _mode modes[] = {
         .mode_commands = hw3wire_commands,              // mode specific commands
         .mode_commands_count = &hw3wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw3wire_get_speed,        // get the current speed setting of the protocol
-        .protocol_preflight_sanity_check = hw3wire_preflight_sanity_check,      // sanity check before executing syntax
+        .protocol_preflight_sanity_check = hw3wire_preflight_sanity_check,      // sanity check before executing syntax 
     },
 #endif
 #ifdef BP_USE_DIO
-    {
+    [DIO] = {
         .protocol_name = "DIO",                          // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read
@@ -399,8 +379,6 @@ struct _mode modes[] = {
         .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
         .protocol_macro = dio_macro,                     // macro
         .protocol_setup = dio_setup,                     // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = dio_setup_exc,             // real setup
         .protocol_cleanup = dio_cleanup,                 // cleanup for HiZ
         //.protocol_pins=dio_pins,				// display pin config
@@ -413,7 +391,7 @@ struct _mode modes[] = {
     },
 #endif
 #ifdef BP_USE_HWLED
-    {
+    [HWLED] = {
         .protocol_name = "LED",                // friendly name (promptname)
         .protocol_start = hwled_start,         // start
         .protocol_start_alt = hwled_start,     // start with read
@@ -432,8 +410,6 @@ struct _mode modes[] = {
             noperiodic, // service to regular poll whether a byte has arrived or something interesting has happened
         .protocol_macro = hwled_macro,                   // macro
         .protocol_setup = hwled_setup,                   // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // binmode get length of config data
-        .binmode_setup = nullfunc8_error,                // binmode setup
         .protocol_setup_exc = hwled_setup_exc,           // real setup
         .protocol_cleanup = hwled_cleanup,               // cleanup for HiZ
         //.protocol_pins=HWLED_pins,				// display pin config
@@ -444,11 +420,11 @@ struct _mode modes[] = {
         .protocol_get_speed = hwled_get_speed,        // get the current speed setting of the protocol
         .protocol_command = NULL,                     // per mode command parser - ignored if 0
         .protocol_wait_done = hwled_wait_idle,        // wait for the protocol to finish
-        .protocol_preflight_sanity_check = hwled_preflight_sanity_check,      // sanity check before executing syntax
+        .protocol_preflight_sanity_check = hwled_preflight_sanity_check,      // sanity check before executing syntax      
     },
 #endif
 #ifdef BP_USE_INFRARED
-    {
+    [INFRARED] = {
         .protocol_name = "INFRARED",                     // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read
@@ -466,8 +442,6 @@ struct _mode modes[] = {
         .protocol_periodic = infrared_periodic,                 // service to regular poll whether a byte ahs arrived
         .protocol_macro = infrared_macro,                // macro
         .protocol_setup = infrared_setup,                // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // binmode get length of config data
-        .binmode_setup = nullfunc8_error,                // binmode setup
         .protocol_setup_exc = infrared_setup_exc,        // real setup
         .protocol_cleanup = infrared_cleanup,            // cleanup for HiZ
         //.protocol_pins=infrared_pins,				// display pin config
@@ -481,7 +455,7 @@ struct _mode modes[] = {
     },
 #endif
 #ifdef BP_USE_JTAG
-    {
+    [JTAG] = {
         .protocol_name = "JTAG",                          // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read
@@ -499,8 +473,6 @@ struct _mode modes[] = {
         .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
         .protocol_macro = nullfunc4,                     // macro
         .protocol_setup = jtag_setup,                     // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = jtag_setup_exc,             // real setup
         .protocol_cleanup = jtag_cleanup,                 // cleanup for HiZ
         //.protocol_pins=dio_pins,				// display pin config
@@ -513,7 +485,7 @@ struct _mode modes[] = {
     },
 #endif
 #ifdef BP_USE_I2S
-    {
+    [I2S] = {
         .protocol_name = "I2S",                       // friendly name (promptname)
         .protocol_start = i2s_start,                  // start
         .protocol_start_alt = i2s_start,              // start with read
@@ -531,8 +503,6 @@ struct _mode modes[] = {
         .protocol_periodic = i2s_periodic,            // service to regular poll whether a byte ahs arrived
         .protocol_macro = nullfunc4,                  // macro
         .protocol_setup = i2s_setup,                  // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // binmode get length of config data
-        .binmode_setup = nullfunc8_error,                // binmode setup
         .protocol_setup_exc = i2s_setup_exc,          // real setup
         .protocol_cleanup = i2s_cleanup,              // cleanup for HiZ
         //.protocol_pins=i2s_pins,				// display pin config
@@ -543,101 +513,8 @@ struct _mode modes[] = {
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
     },
 #endif
-#ifdef BP_USE_DUMMY1
-    {
-        .protocol_name = "DUMMY1",                       // friendly name (promptname)
-        .protocol_start = dummy1_start,                  // start
-        .protocol_start_alt = dummy1_start,              // start with read
-        .protocol_stop = dummy1_stop,                    // stop
-        .protocol_stop_alt = dummy1_stop,                // stop with read
-        .protocol_write = dummy1_write,                  // send(/read) max 32 bit
-        .protocol_read = dummy1_read,                    // read max 32 bit
-        .protocol_clkh = dummy1_clkh,                    // set clk high
-        .protocol_clkl = dummy1_clkl,                    // set clk low
-        .protocol_dath = dummy1_dath,                    // set dat hi
-        .protocol_datl = dummy1_datl,                    // set dat lo
-        .protocol_dats = dummy1_dats,                    // toggle dat (?)
-        .protocol_tick_clock = dummy1_clk,               // toggle clk (?)
-        .protocol_bitr = dummy1_bitr,                    // read 1 bit (?)
-        .protocol_periodic = dummy1_periodic,            // service to regular poll whether a byte ahs arrived
-        .protocol_macro = dummy1_macro,                  // macro
-        .protocol_setup = dummy1_setup,                  // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // binmode get length of config data
-        .binmode_setup = nullfunc8_error,                // binmode setup
-        .protocol_setup_exc = dummy1_setup_exc,          // real setup
-        .protocol_cleanup = dummy1_cleanup,              // cleanup for HiZ
-        //.protocol_pins=dummy1_pins,				// display pin config
-        .protocol_settings = dummy1_settings,          // display settings
-        .protocol_help = dummy1_help,                  // display small help about the protocol
-        .mode_commands = dummy1_commands,              // mode specific commands
-        .mode_commands_count = &dummy1_commands_count, // mode specific commands count
-        .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
-    },
-#endif
-#ifdef BP_USE_BINLOOPBACK
-    {
-        .protocol_name = "BIN"                                   // friendly name (promptname)
-        .protocol_start = binloopback_open, // start
-        .protocol_start_alt = binloopback_open_read,             // start with read
-        .protocol_stop = binloopback_close,                      // stop
-        .protocol_stop_alt = binloopback_close,                  // stop with read
-        .protocol_write = binloopback_write,                     // send(/read) max 32 bit
-        .protocol_read = nullfunc1_temp,                         // read max 32 bit
-        .protocol_clkh = nullfunc1_temp,                         // set clk high
-        .protocol_clkl = nullfunc1_temp,                         // set clk low
-        .protocol_dath = nullfunc1_temp,                         // set dat hi
-        .protocol_datl = nullfunc1_temp,                         // set dat lo
-        .protocol_dats = nullfunc1_temp,                         // toggle dat (remove?)
-        .protocol_tick_clock = nullfunc1_temp,                   // tick clk
-        .protocol_bitr = nullfunc1_temp,                         // read dat
-        .protocol_periodic = binloopback_periodic,               // service to regular poll whether a byte ahs arrived
-        .protocol_macro = hwled_macro,                           // macro
-        .protocol_setup = binloopback_setup,                     // setup UI
-        .binmode_get_config_length = nullfunc7_no_error,         // binmode get length of config data
-        .binmode_setup = nullfunc8_error,                        // binmode setup
-        .protocol_setup_exc = binloopback_setup_exc,             // real setup
-        .protocol_cleanup = binloopback_cleanup,                 // cleanup for HiZ
-        //.protocol_pins=HWLED_pins,				// display pin config
-        .protocol_settings = hwled_settings,                // display settings
-        .protocol_help = hwled_help,                        // display small help about the protocol
-        .mode_commands = binloopback_commands,              // mode specific commands
-        .mode_commands_count = &binloopback_commands_count, // mode specific commands count
-        .protocol_get_speed = nullfunc7_no_error,           // get the current speed setting of the protocol
-    },
-#endif
-#ifdef BP_USE_LCDSPI
-    {
-        .protocol_name = "LCDSPI",                       // friendly name (promptname)
-        .protocol_start = nullfunc1,                     // start
-        .protocol_start_alt = nullfunc1,                 // start with read
-        .protocol_stop = nullfunc1,                      // stop
-        .protocol_stop_alt = nullfunc1,                  // stop with read
-        .protocol_write = LCDSPI_send,                   // send(/read) max 32 bit
-        .protocol_read = LCDSPI_read,                    // read max 32 bit
-        .protocol_clkh = nullfunc1_temp,                 // set clk high
-        .protocol_clkl = nullfunc1_temp,                 // set clk low
-        .protocol_dath = nullfunc1_temp,                 // set dat hi
-        .protocol_datl = nullfunc1_temp,                 // set dat lo
-        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
-        .protocol_tick_clock = nullfunc1_temp,           // tick clk
-        .protocol_bitr = nullfunc1_temp,                 // read dat
-        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
-        .protocol_macro = LCDSPI_macro,                  // macro
-        .protocol_setup = LCDSPI_setup,                  // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
-        .protocol_setup_exc = LCDSPI_setup_exc,          // real setup
-        .protocol_cleanup = LCDSPI_cleanup,              // cleanup for HiZ
-        //.protocol_pins=LCDSPI_pins,				// display pin config
-        .protocol_settings = LCDSPI_settings,     // display settings
-        .protocol_help = nohelp,                  // display small help about the protocol
-        .mode_commands = NULL,                    // mode specific commands
-        .mode_commands_count = NULL,              // mode specific commands count
-        .protocol_get_speed = nullfunc7_no_error, // get the current speed setting of the protocol
-    },
-#endif
 #ifdef BP_USE_LCDI2C
-    {
+    [LCDI2C] = {
         .protocol_name = "LCDI2C",                       // friendly name (promptname)
         .protocol_start = nullfunc1,                     // start
         .protocol_start_alt = nullfunc1,                 // start with read
@@ -655,8 +532,6 @@ struct _mode modes[] = {
         .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
         .protocol_macro = LCDI2C_macro,                  // macro
         .protocol_setup = LCDI2C_setup,                  // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = LCDI2C_setup_exc,          // real setup
         .protocol_cleanup = LCDI2C_cleanup,              // cleanup for HiZ
         //.protocol_pins=LCDI2C_pins,				// display pin config
@@ -667,8 +542,37 @@ struct _mode modes[] = {
         .protocol_get_speed = nullfunc7_no_error, // get the current speed setting of the protocol
     },
 #endif
+#ifdef BP_USE_LCDSPI
+    [LCDSPI] = {
+        .protocol_name = "LCDSPI",                       // friendly name (promptname)
+        .protocol_start = nullfunc1,                     // start
+        .protocol_start_alt = nullfunc1,                 // start with read
+        .protocol_stop = nullfunc1,                      // stop
+        .protocol_stop_alt = nullfunc1,                  // stop with read
+        .protocol_write = LCDSPI_send,                   // send(/read) max 32 bit
+        .protocol_read = LCDSPI_read,                    // read max 32 bit
+        .protocol_clkh = nullfunc1_temp,                 // set clk high
+        .protocol_clkl = nullfunc1_temp,                 // set clk low
+        .protocol_dath = nullfunc1_temp,                 // set dat hi
+        .protocol_datl = nullfunc1_temp,                 // set dat lo
+        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
+        .protocol_tick_clock = nullfunc1_temp,           // tick clk
+        .protocol_bitr = nullfunc1_temp,                 // read dat
+        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
+        .protocol_macro = LCDSPI_macro,                  // macro
+        .protocol_setup = LCDSPI_setup,                  // setup UI
+        .protocol_setup_exc = LCDSPI_setup_exc,          // real setup
+        .protocol_cleanup = LCDSPI_cleanup,              // cleanup for HiZ
+        //.protocol_pins=LCDSPI_pins,				// display pin config
+        .protocol_settings = LCDSPI_settings,     // display settings
+        .protocol_help = nohelp,                  // display small help about the protocol
+        .mode_commands = NULL,                    // mode specific commands
+        .mode_commands_count = NULL,              // mode specific commands count
+        .protocol_get_speed = nullfunc7_no_error, // get the current speed setting of the protocol
+    },
+#endif
 #ifdef BP_USE_USBPD
-    {
+    [USBPD] = {
         .protocol_name = "USBPD",                        // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read
@@ -686,8 +590,6 @@ struct _mode modes[] = {
         .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
         .protocol_macro = nullfunc4,                     // macro
         .protocol_setup = usbpd_setup,                   // setup UI
-        .binmode_get_config_length = nullfunc7_no_error, // get binmode config length
-        .binmode_setup = nullfunc8_error,                // setup for binmode
         .protocol_setup_exc = usbpd_setup_exc,           // real setup
         .protocol_cleanup = usbpd_cleanup,               // cleanup for HiZ
         .protocol_settings = usbpd_settings,          // display settings
@@ -698,7 +600,35 @@ struct _mode modes[] = {
         .protocol_preflight_sanity_check = NULL,      // sanity check before executing syntax
     },
 #endif
-
+#ifdef BP_USE_DUMMY1
+    [DUMMY1] = {
+        .protocol_name = "DUMMY1",                       // friendly name (promptname)
+        .protocol_start = dummy1_start,                  // start
+        .protocol_start_alt = dummy1_start,              // start with read
+        .protocol_stop = dummy1_stop,                    // stop
+        .protocol_stop_alt = dummy1_stop,                // stop with read
+        .protocol_write = dummy1_write,                  // send(/read) max 32 bit
+        .protocol_read = dummy1_read,                    // read max 32 bit
+        .protocol_clkh = dummy1_clkh,                    // set clk high
+        .protocol_clkl = dummy1_clkl,                    // set clk low
+        .protocol_dath = dummy1_dath,                    // set dat hi
+        .protocol_datl = dummy1_datl,                    // set dat lo
+        .protocol_dats = dummy1_dats,                    // toggle dat (?)
+        .protocol_tick_clock = dummy1_clk,               // toggle clk (?)
+        .protocol_bitr = dummy1_bitr,                    // read 1 bit (?)
+        .protocol_periodic = dummy1_periodic,            // service to regular poll whether a byte ahs arrived
+        .protocol_macro = dummy1_macro,                  // macro
+        .protocol_setup = dummy1_setup,                  // setup UI
+        .protocol_setup_exc = dummy1_setup_exc,          // real setup
+        .protocol_cleanup = dummy1_cleanup,              // cleanup for HiZ
+        //.protocol_pins=dummy1_pins,				// display pin config
+        .protocol_settings = dummy1_settings,          // display settings
+        .protocol_help = dummy1_help,                  // display small help about the protocol
+        .mode_commands = dummy1_commands,              // mode specific commands
+        .mode_commands_count = &dummy1_commands_count, // mode specific commands count
+        .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+    },
+#endif
 };
 /* For Emacs:
  * Local Variables:

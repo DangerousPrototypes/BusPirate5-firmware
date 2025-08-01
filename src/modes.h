@@ -13,11 +13,11 @@ enum {
 #ifdef BP_USE_HWI2C
     HWI2C,
 #endif
-#ifdef BP_USE_HW2WIRE
-    HW2WIRE,
-#endif
 #ifdef BP_USE_HWSPI
     HWSPI,
+#endif
+#ifdef BP_USE_HW2WIRE
+    HW2WIRE,
 #endif
 #ifdef BP_USE_HW3WIRE
     HW3WIRE,
@@ -34,23 +34,20 @@ enum {
 #ifdef BP_USE_JTAG
     JTAG,
 #endif
-#ifdef BP_USE_DUMMY1
-    DUMMY1,
-#endif
-#ifdef BP_USE_BINLOOPBACK
-    BINLOOPBACK,
-#endif
-#ifdef BP_USE_LCDSPI
-    LCDSPI,
+#ifdef BP_USE_I2S
+    I2S,
 #endif
 #ifdef BP_USE_LCDI2C // future
     LCDI2C,
 #endif
+#ifdef BP_USE_LCDSPI
+    LCDSPI,
+#endif
 #ifdef BP_USE_USBPD
     USBPD,
 #endif
-#ifdef BP_USE_I2S
-    I2S,
+#ifdef BP_USE_DUMMY1
+    DUMMY1,
 #endif
     MAXPROTO
 };
@@ -72,8 +69,6 @@ typedef struct _mode {
     void (*protocol_periodic)(void);                                               // service to poll for async data
     void (*protocol_macro)(uint32_t);                                              // macro
     uint32_t (*protocol_setup)(void);                                              // setup UI
-    uint32_t (*binmode_get_config_length)(void);                                   // get binmode config length
-    uint32_t (*binmode_setup)(uint8_t* config);                                    // setup for binmode
     uint32_t (*protocol_setup_exc)(void);                                          // real setup
     void (*protocol_cleanup)(void);                                                // cleanup for HiZ
     // const char*(*protocol_pins)(void);			// display pin config

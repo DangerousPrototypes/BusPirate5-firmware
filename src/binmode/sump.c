@@ -46,12 +46,8 @@
 #include "bytecode.h" //needed because modes.h has some functions that use it TODO: move all the opt args and bytecode stuff to a single helper file
 #include "command_struct.h" //needed for same reason as bytecode and needs same fix
 #include "modes.h"
-// #include "mode/binio.h"
 #include "pirate/psu.h"
-// #include "binio_helpers.h"
 #include "binmode/logicanalyzer.h"
-#include "binmode/binio.h"
-
 #include "tusb.h"
 
 #define CDC_INTF 1

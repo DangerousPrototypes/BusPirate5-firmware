@@ -26,3 +26,4 @@ void rgb_put(uint32_t color);
 void rgb_irq_enable(bool enable);
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b);
 void rgb_set_effect(led_effect_t new_effect);
+void rgb_set_array(uint32_t* colors);

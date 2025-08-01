@@ -119,14 +119,6 @@ void nullfunc1_temp(struct _bytecode* result, struct _bytecode* next) {
     system_config.error = 1;
 }
 
-uint32_t nullfunc_bpio_handler(struct bpio_data_request_t *request) {
-    return 0xff; // always return true, as this is a dummy function
-}
-
-bool nullfunc_bpio_configure(bpio_mode_configuration_t *bpio_mode_config) {
-    return true; // always return true, as this is a dummy function
-}
-
 // all modes and their interaction is handled here
 // pirate.h has the conditional defines for modes
 struct _mode modes[] = {

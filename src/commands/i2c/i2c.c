@@ -15,54 +15,34 @@
 #include "pirate/hwi2c_pio.h"
 
 enum i2c_dump_actions_enum {
-    EEPROM_DUMP=0,
-    EEPROM_ERASE,
-    EEPROM_WRITE,
-    EEPROM_READ,
-    EEPROM_VERIFY,
-    EEPROM_TEST,
-    EEPROM_LIST
+    I2CDUMP_DUMP=0,
+    I2CDUMP_READ,
 };
 
 const struct cmdln_action_t i2c_dump_actions[] = {
-    { EEPROM_DUMP, "dump" },
-    { EEPROM_ERASE, "erase" },
-    { EEPROM_WRITE, "write" },
-    { EEPROM_READ, "read" },
-    { EEPROM_VERIFY, "verify" },
-    { EEPROM_TEST, "test" },
-    { EEPROM_LIST, "list"  }
+    { I2CDUMP_DUMP, "dump" },
+    { I2CDUMP_READ, "read" },
 };
 
 static const char* const usage[] = {
-    "eeprom [dump|erase|write|read|verify|test|list]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-h(elp)]",
-    "List available EEPROM devices:%s eeprom list",
-    "Display contents (x to exit):%s eeprom dump -d 24x02",
-    "Display 16 bytes starting at address 0x60:%s eeprom dump -d 24x02 -s 0x60 -b 16",
-    "Erase, verify:%s eeprom erase -d 24x02 -v",
-    "Write from file, verify:%s eeprom write -d 24x02 -f example.bin -v",
-    "Read to file, verify:%s eeprom read -d 24x02 -f example.bin -v",
-    "Verify against file:%s eeprom verify -d 24x02 -f example.bin",
-    "Test chip (full erase/write/verify):%s eeprom test -d 24x02",
-    "Use alternate I2C address (0x50 default):%s eeprom dump -d 24x02 -a 0x53",
+    "i2c [dump|read]\r\n\t[-a <7 bit i2c address>] [-w <register width>] [-r <register address>] [-b <bytes>] [-f <file>] [-h(elp)]",
+    "Dump 16 bytes from device:%s i2c dump -a 0x50 -w 1 -r 0x00 -b 16",
+    "Read 256 bytes to file:%s i2c read -a 0x50 -w 1 -r 0x00 -b 16 -f example.bin",
+    "Dump device with 2 byte wide register:%s i2c dump -a 0x50 -w 2 -r 0x0000 -b 64",
+    "Dump device with 3 bytes wide register:%s i2c dump -a 0x50 -w 3 -r 0x000000 -b 64",
 };
 
 static const struct ui_help_options options[] = {
     { 1, "", T_HELP_I2C_EEPROM },               // command help
     { 0, "dump", T_HELP_EEPROM_DUMP },  
-    { 0, "erase", T_HELP_EEPROM_ERASE },    // erase
-    { 0, "write", T_HELP_EEPROM_WRITE },    // write
     { 0, "read", T_HELP_EEPROM_READ },      // read
-    { 0, "verify", T_HELP_EEPROM_VERIFY },  // verify
-    { 0, "test", T_HELP_EEPROM_TEST },      // test
-    { 0, "list", T_HELP_EEPROM_LIST},      // list devices
+    { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // alternate I2C address (default is 0x50)
+    { 0, "-w", T_HELP_EEPROM_ADDRESS_FLAG },   // register address width in bytes
+    { 0, "-r", T_HELP_EEPROM_ADDRESS_FLAG }, // register address to start dumping from
+    { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },   // number of bytes to dump
     { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
-    { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG }, // with verify (after write)
-    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
     { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
     { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
-    { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // alternate I2C address (default is 0x50)
     { 0, "-h", T_HELP_FLAG },   // help
 };  
 
@@ -72,6 +52,7 @@ struct i2c_dump_t {
     uint32_t register_address_width; // width of the register address in bytes
     uint32_t register_address; // register address to start dumping from
     uint32_t data_size_bytes;
+    uint8_t file_name[13]; // file name to read/write/verify
 };
 
 static bool i2c_get_args(struct i2c_dump_t *args) {
@@ -85,37 +66,40 @@ static bool i2c_get_args(struct i2c_dump_t *args) {
     }
     
     uint32_t i2c_address;
-    if(!cmdln_args_find_flag_uint32('i', &arg, &i2c_address)) {
-        printf("Missing I2C 7 bit address: -i <I2C_address>\r\n");
-        return true;
+    if(!cmdln_args_find_flag_uint32('a', &arg, &i2c_address)) {
+        //printf("Missing I2C 7 bit address: -a <address>\r\n");
+        printf("Using default I2C address: 0x50\r\n");
+        i2c_address = 0x50; // default I2C address
     }
+
     if (i2c_address > 0x7F) {
-        printf("Invalid I2C address: %d\r\n", args->i2c_address_7bit);
+        printf("Invalid I2C address: %d\r\nSpecify a 7 bit I2C address\r\n", i2c_address);
         return true; // error
     }
     args->i2c_address_7bit= i2c_address; // set the device address
 
     if(!cmdln_args_find_flag_uint32('w', &arg, &args->register_address_width)) {
-        printf("Missing register address: -w <register address width>\r\n");
-        return true;
+        //printf("Missing register width: -w <reg. width>\r\n");
+        printf("Using default register width: 1 byte\r\n");
+        args->register_address_width = 1; // default register width
     }
 
     if(!cmdln_args_find_flag_uint32('r', &arg, &args->register_address)) {
-        printf("Missing register address: -r <register address>\r\n");
-        return true;
+        //printf("Missing register address: -r <reg. address>\r\n");
+        printf("Using default register address: 0x00\r\n");
+        args->register_address = 0; // default register address
     }
+
     if(!cmdln_args_find_flag_uint32('b', &arg, &args->data_size_bytes)) {
-        printf("Missing byte length: -b <bytes>\r\n");
-        return true;
+        //printf("Missing byte length: -b <bytes>\r\n");
+        printf("Using default bytes: 16 bytes\r\n");
+        args->data_size_bytes = 16; // default data size
     }
-    #if 0
+
     // file to read/write/verify
-    if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action==EEPROM_VERIFY)) {
+    if ((args->action == I2CDUMP_READ)) {
         if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
     }
-    #endif
-    // let hex editor parse its own arguments
-    //if(ui_hex_get_args(args->device->size_bytes, &args->start_address, &args->user_bytes)) return true;
 
     return false;
 }
@@ -173,43 +157,43 @@ void i2c_dump_handler(struct command_result* res) {
     fala_start_hook(); 
     
     #if 0
-    if(eeprom.action == EEPROM_PROTECT){
+    if(eeprom.action == I2CDUMP_PROTECT){
         eeprom_probe_block_protect(&eeprom);
         goto i2c_dump_cleanup;
     }
     #endif
 
-    if(eeprom.action == EEPROM_DUMP) {
+    if(eeprom.action == I2CDUMP_DUMP) {
         //dump the EEPROM contents
         i2c_dump(&eeprom);
         goto i2c_dump_cleanup; // no need to continue
     }
  #if 0
-    if (eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_TEST) {
-        if(eeprom_action_erase(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag || eeprom.action == EEPROM_TEST)) {
+    if (eeprom.action == I2CDUMP_ERASE || eeprom.action == I2CDUMP_TEST) {
+        if(eeprom_action_erase(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag || eeprom.action == I2CDUMP_TEST)) {
             goto i2c_dump_cleanup; // error during erase
         }
     }
 
-    if (eeprom.action == EEPROM_TEST) {
+    if (eeprom.action == I2CDUMP_TEST) {
         if(eeprom_action_test(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf))) {
             goto i2c_dump_cleanup; // error during test
         }
     }
 
-    if (eeprom.action==EEPROM_WRITE) {
+    if (eeprom.action==I2CDUMP_WRITE) {
         if(eeprom_action_write(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag)) {
             goto i2c_dump_cleanup; // error during write
         }
     }
 
-    if (eeprom.action==EEPROM_READ) {
+    if (eeprom.action==I2CDUMP_READ) {
         if(eeprom_action_read(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag)) {
             goto i2c_dump_cleanup; // error during read
         }
     }
 
-    if (eeprom.action==EEPROM_VERIFY) {
+    if (eeprom.action==I2CDUMP_VERIFY) {
         if(eeprom_action_verify(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf))){
             goto i2c_dump_cleanup; // error during verify
         }

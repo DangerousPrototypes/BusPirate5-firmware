@@ -29,5 +29,6 @@ typedef struct _i2c_mode_config {
     bool start_sent;
 } _i2c_mode_config;
 
+extern struct _i2c_mode_config i2c_mode_config;
 extern const struct _mode_command_struct hwi2c_commands[];
 extern const uint32_t hwi2c_commands_count;

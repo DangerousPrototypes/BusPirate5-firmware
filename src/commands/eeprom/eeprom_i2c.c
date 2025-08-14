@@ -14,6 +14,8 @@
 #include "pirate/file.h" // File handling related
 #include "pirate/hwi2c_pio.h"
 #include "eeprom_base.h"
+#include "bytecode.h"
+#include "mode/hwi2c.h"
 
 #define I2C_EEPROM_DEFAULT_ADDRESS 0x50 // Default I2C address for EEPROMs
 
@@ -283,6 +285,11 @@ void i2c_eeprom_handler(struct command_result* res) {
     
     struct eeprom_info eeprom;
     if(eeprom_get_args(&eeprom)) {       
+        return;
+    }
+
+    if(i2c_mode_config.clock_stretch) {
+        printf("Error: I2C Clock stretching is enabled.\r\nEnter I2C mode again and select clock stretching DISABLED.\r\n");
         return;
     }
 

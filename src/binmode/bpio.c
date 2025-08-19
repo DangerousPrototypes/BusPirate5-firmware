@@ -51,6 +51,11 @@ uint32_t time_start, time_end;
 
 #define CDC_INTF 1
 
+#define BPIO_MAX_PACKET_SIZE 640
+#define BPIO_MAX_WRITE_SIZE 512
+#define BPIO_MAX_READ_SIZE  512
+#define BPIO_MAX_COBS_SIZE BPIO_MAX_PACKET_SIZE+((BPIO_MAX_PACKET_SIZE + 254) / 254) 
+
 // A helper to simplify creating vectors from C-arrays.
 #define c_vec_len(V) (sizeof(V)/sizeof((V)[0]))
 
@@ -79,7 +84,7 @@ static const struct bpio_mode_handlers_t bpio_mode_handlers[] = {
     }    
 };
 
-void error_response(const char *error_msg, flatcc_builder_t *B);
+void error_response(const char *error_msg, flatcc_builder_t *B, uint8_t *buf);
 
 bool mode_change_new(const char *mode_name, bpio_mode_configuration_t *mode_config) {
     // compare mode name to modes.protocol_name
@@ -103,17 +108,17 @@ bool mode_change_new(const char *mode_name, bpio_mode_configuration_t *mode_conf
     return true;
 }
 
-static inline void send_packet(flatcc_builder_t *B) {
+static inline void send_packet(flatcc_builder_t *B, uint8_t *cobs_buf) {
     uint8_t* buf;
     size_t len = flatcc_builder_get_buffer_size(B);
     if(bpio_debug) printf("[Send Packet] Length %d\r\n", len);
          
     buf = flatcc_builder_finalize_buffer(B, &len); //23uS
 
-    uint8_t cobs_buf[700];
+    //uint8_t cobs_buf[BPIO_MAX_PACKET_SIZE + BPIO_MAX_PACKET_SIZE/256]; // COBS encoded buffer, + COBS overhead
     // Encode the buffer using COBS
     size_t cobs_len;
-    cobs_ret_t cobs_result = cobs_encode(buf, len, cobs_buf, sizeof(cobs_buf), &cobs_len);
+    cobs_ret_t cobs_result = cobs_encode(buf, len, cobs_buf, BPIO_MAX_COBS_SIZE, &cobs_len);
     free(buf); // Free the buffer allocated by flatcc_builder_finalize_buffer
     
     if (cobs_result != COBS_RET_SUCCESS) {
@@ -136,7 +141,7 @@ static inline void send_packet(flatcc_builder_t *B) {
     }
 }
 
-uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
+uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, uint8_t *buf) {
     const char *error = NULL;
     uint32_t query_flags=0;
 
@@ -166,14 +171,14 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
     if(query_flags & (1u << bpio_StatusRequestTypes_Version)||query_flags & (1u << bpio_StatusRequestTypes_All)) {
         // Send version information
         if(bpio_debug) printf("[Status Request] Version requested\r\n");
-        bpio_StatusResponse_hardware_version_major_add(B, BP_FIRMWARE_VERSION_MAJOR);
-        bpio_StatusResponse_hardware_version_minor_add(B, BP_FIRMWARE_VERSION_REVISION);
-        bpio_StatusResponse_firmware_version_major_add(B, 0);
-        bpio_StatusResponse_firmware_version_minor_add(B, 0);
+        bpio_StatusResponse_version_hardware_major_add(B, BP_FIRMWARE_VERSION_MAJOR);
+        bpio_StatusResponse_version_hardware_minor_add(B, BP_FIRMWARE_VERSION_REVISION);
+        bpio_StatusResponse_version_firmware_major_add(B, 0);
+        bpio_StatusResponse_version_firmware_minor_add(B, 0);
         flatbuffers_string_ref_t git_hash = flatbuffers_string_create_str(B, BP_FIRMWARE_HASH);
-        bpio_StatusResponse_firmware_git_hash_add(B, git_hash);
+        bpio_StatusResponse_version_firmware_git_hash_add(B, git_hash);
         flatbuffers_string_ref_t firmware_date = flatbuffers_string_create_str(B, BP_FIRMWARE_TIMESTAMP);
-        bpio_StatusResponse_firmware_date_add(B, firmware_date);
+        bpio_StatusResponse_version_firmware_date_add(B, firmware_date);
 
     }
 
@@ -199,6 +204,10 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
         bpio_StatusResponse_mode_pin_labels_end(B);
 
         bpio_StatusResponse_mode_bitorder_msb_add(B, system_config.bit_order == 0);
+
+        bpio_StatusResponse_mode_max_packet_size_add(B, BPIO_MAX_PACKET_SIZE);
+        bpio_StatusResponse_mode_max_write_add(B, BPIO_MAX_WRITE_SIZE);
+        bpio_StatusResponse_mode_max_read_add(B, BPIO_MAX_READ_SIZE);
     }
 
     // led_count
@@ -212,7 +221,7 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
         if(bpio_debug) printf("[Status Request] Pullup status requested\r\n");
         bpio_StatusResponse_pullup_enabled_add(B, system_config.pullup_enabled);
         #ifdef BP_HW_PULLX
-        bpio_StatusResponse_pullx_config_add(B, 0x00000000u); //todo: implement pull-x config
+        //bpio_StatusResponse_pullx_config_add(B, 0x00000000u); //todo: implement pull-x config
         #endif
     }
 
@@ -270,11 +279,11 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) 
     bpio_ResponsePacket_start_as_root(B);
     bpio_ResponsePacket_contents_StatusResponse_add(B, status_response);
     bpio_ResponsePacket_end_as_root(B);            
-    send_packet(B);
+    send_packet(B, buf);
 }
 
 
-uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
+uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, uint8_t *buf) {
     const char *error = NULL;
 
     bpio_ConfigurationRequest_table_t config_request = (bpio_ConfigurationRequest_table_t) bpio_RequestPacket_contents(packet);
@@ -484,6 +493,20 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
         cmd_mcu_reset();
     }
 
+    bool hardware_selftest = bpio_ConfigurationRequest_hardware_selftest_get(config_request);
+    if(hardware_selftest) {
+        if(bpio_debug) printf("[Config Request] Hardware self-test requested\r\n");
+        uint8_t selftest_result = false; //cmd_mcu_selftest();
+        if(selftest_result) {
+            static const char *selftest_error_msg = "Hardware self-test failed";
+            if(bpio_debug) printf("[Config Request] Error: %s (%d)\r\n", selftest_error_msg, selftest_result);
+            error = selftest_error_msg;
+            goto config_response_error;
+        }
+        if(bpio_debug) printf("[Config Request] Hardware self-test passed\r\n");
+    }
+
+
 config_response_error:
     bpio_ConfigurationResponse_start(B);
     // If there was an error, we can set it here.
@@ -499,10 +522,10 @@ config_response_error:
     bpio_ResponsePacket_start_as_root(B);
     bpio_ResponsePacket_contents_ConfigurationResponse_add(B, config_response);
     bpio_ResponsePacket_end_as_root(B);            
-    send_packet(B);
+    send_packet(B, buf);
 }
 
-uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
+uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, uint8_t *buf) {
     bpio_DataRequest_table_t data_request = (bpio_DataRequest_table_t) bpio_RequestPacket_contents(packet);
     test_assert(data_request != 0);
     const char *error = NULL;
@@ -513,6 +536,12 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
     if(bpio_DataRequest_data_write_is_present(data_request)) {
         data_write = bpio_DataRequest_data_write(data_request);
         data_write_len = flatbuffers_uint8_vec_len(data_write);
+        /*if(data_write_len > BPIO_MAX_WRITE_SIZE) {
+            static const char *data_write_error_msg = "Data write vector too long";
+            if(bpio_debug) printf("[Data Request] Error: %s (%d bytes)\r\n", data_write_error_msg, data_write_len);
+            error = data_write_error_msg;
+            goto data_response_error;
+        }*/
     }
 
     struct bpio_data_request_t request = {
@@ -521,10 +550,16 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B) {
         .start_alt = bpio_DataRequest_start_alt(data_request),
         .bytes_write = data_write_len, // Use the length of the data write vector
         .bytes_read = bpio_DataRequest_bytes_read(data_request),
-        //.data_buf = data_buf, // Initialize with the buffer
         .stop_main = bpio_DataRequest_stop_main(data_request),
         .stop_alt = bpio_DataRequest_stop_alt(data_request)
     };
+
+    if(request.bytes_read > BPIO_MAX_READ_SIZE) {
+        static const char *data_read_error_msg = "Data read size too large";
+        if(bpio_debug) printf("[Data Request] Error: %s (%d bytes)\r\n", data_read_error_msg, request.bytes_read);
+        error = data_read_error_msg;
+        goto data_response_error;
+    }
 
     if(bpio_debug){
         printf("[Data Request] Start main condition: %s\r\n", request.start_main ? "true" : "false");
@@ -567,11 +602,11 @@ data_response_error:
     bpio_ResponsePacket_start_as_root(B);
     bpio_ResponsePacket_contents_DataResponse_add(B, data_response);
     bpio_ResponsePacket_end_as_root(B);
-    send_packet(B);
+    send_packet(B, buf);
 }
 
 struct _bpio_function_t {
-    uint32_t (*func)(bpio_RequestPacket_table_t packet, flatcc_builder_t *B);
+    uint32_t (*func)(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, uint8_t *buf);
 };
 
 const static struct _bpio_function_t bpio_handlers[]={
@@ -581,7 +616,7 @@ const static struct _bpio_function_t bpio_handlers[]={
     [bpio_RequestPacketContents_DataRequest] = { .func = data_request },
 };
 
-void error_response(const char *error_msg, flatcc_builder_t *B) {
+void error_response(const char *error_msg, flatcc_builder_t *B, uint8_t *buf) {
     if(bpio_debug) printf("[Error Response] %s\r\n", error_msg);
     flatcc_builder_reset(B);//25uS
 
@@ -593,7 +628,7 @@ void error_response(const char *error_msg, flatcc_builder_t *B) {
     bpio_ResponsePacket_start_as_root(B);
     bpio_ResponsePacket_contents_ErrorResponse_add(B, error_response);
     bpio_ResponsePacket_end_as_root(B);
-    send_packet(B);
+    send_packet(B, buf);
 }
 
 flatcc_builder_t builder, *B;
@@ -612,8 +647,7 @@ void dirtyproto_mode_setup(void) {
 
 // handler needs to be cooperative multitasking until mode is enabled
 void dirtyproto_mode(void) {
-    uint8_t buf[500];
-
+    uint8_t buf[BPIO_MAX_COBS_SIZE]; // used to store the flatbuffer data, and for COBS encoded output
     if (!tud_cdc_n_available(CDC_INTF)) return; // No data available, exit early 
 
     bpio_debug = (system_config.bpio_debug_enable && tud_cdc_n_connected(0));
@@ -639,7 +673,7 @@ void dirtyproto_mode(void) {
             //error if buffer is full
             if (len >= sizeof(buf)) {
                 if(bpio_debug) printf("[BPIO] Error: Flatbuffer buffer overflow, buffer size %zu\r\n", sizeof(buf));
-                error_response("Flatbuffer buffer overflow", B);
+                error_response("Flatbuffer buffer overflow", B, buf);
                 return;
             }
 
@@ -649,7 +683,7 @@ void dirtyproto_mode(void) {
         
         if (time_us_32() - timeout > 500000) { // Timeout after 500ms
             if(bpio_debug) printf("[BPIO] Timeout waiting for flatbuffer data\r\n");
-            error_response("Timeout waiting for flatbuffer data", B);
+            error_response("Timeout waiting for flatbuffer data", B, buf);
             return;
         }
     } 
@@ -662,41 +696,45 @@ bpio_mode_read_end:
     cobs_ret_t const cobs_result = cobs_decode(buf, len, buf, sizeof(buf), &decoded_len);
     if(cobs_result != COBS_RET_SUCCESS) {
         if(bpio_debug) printf("[BPIO] Error: COBS decode failed\r\n");
-        error_response("COBS decode failed", B);
+        error_response("COBS decode failed", B, buf);
         return;
     }
     
     // Verify the flatbuffer packet (this will throw an error if invalid)
-    int ret = bpio_RequestPacket_verify_as_root(buf, 500); 
+    int ret = bpio_RequestPacket_verify_as_root(buf, sizeof(buf)); 
     if(ret){
         if(bpio_debug){
             printf("[BPIO] Error: Invalid flatbuffer, verify returned %s\r\n", flatcc_verify_error_string(ret));
         }
-        error_response("Invalid flatbuffer", B);
+        error_response("Invalid flatbuffer", B, buf);
         return;
     }
     
     bpio_RequestPacket_table_t packet = bpio_RequestPacket_as_root(buf); //7uS
     if(packet == 0) {
-        error_response("Invalid table received", B);
+        error_response("Invalid table received", B, buf);
+        return;
+    }
+
+    uint8_t version_major = bpio_RequestPacket_version_major_get(packet);
+    //uint8_t version_minor = bpio_RequestPacket_version_minor_get(packet);
+    if(version_major != 2) {
+        if(bpio_debug) printf("[BPIO] Error: Unsupported BPIO version %d, expected 2\r\n", version_major);
+        error_response("Unsupported BPIO version, expected 2.x", B, buf);
         return;
     }
 
     uint8_t packet_type = bpio_RequestPacket_contents_type_get(packet);
     if(bpio_debug) printf("[BPIO] Packet Type: %d\r\n", packet_type);
     if(packet_type >= count_of(bpio_handlers) && bpio_handlers[packet_type].func) {
-        error_response("Unknown packet type received", B);
+        error_response("Unknown packet type received", B, buf);
+        return;
     }
 
-    // build response    
-    //flatcc_builder_t builder, *B;
-    //B = &builder;
-    //flatcc_builder_init(B);
     // Call the handler function for this packet type.
     flatcc_builder_reset(B);//25uS
-    bpio_handlers[packet_type].func(packet, B); //450uS
+    bpio_handlers[packet_type].func(packet, B, buf); //450uS
     //flatcc_builder_reset(B);
     // build next buffer.
     //flatcc_builder_clear(B);    
-
 }

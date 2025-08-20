@@ -277,6 +277,8 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, 
     
     // add to packet wrapper
     bpio_ResponsePacket_start_as_root(B);
+    bpio_ResponsePacket_version_major_add(B, 2);
+    bpio_ResponsePacket_version_minor_add(B, 0);
     bpio_ResponsePacket_contents_StatusResponse_add(B, status_response);
     bpio_ResponsePacket_end_as_root(B);            
     send_packet(B, buf);
@@ -520,6 +522,8 @@ config_response_error:
     
     // add to packet wrapper
     bpio_ResponsePacket_start_as_root(B);
+    bpio_ResponsePacket_version_major_add(B, 2);
+    bpio_ResponsePacket_version_minor_add(B, 0);
     bpio_ResponsePacket_contents_ConfigurationResponse_add(B, config_response);
     bpio_ResponsePacket_end_as_root(B);            
     send_packet(B, buf);
@@ -600,6 +604,8 @@ data_response_error:
     bpio_DataResponse_ref_t data_response = bpio_DataResponse_end(B);
     // add to packet wrapper
     bpio_ResponsePacket_start_as_root(B);
+    bpio_ResponsePacket_version_major_add(B, 2);
+    bpio_ResponsePacket_version_minor_add(B, 0);
     bpio_ResponsePacket_contents_DataResponse_add(B, data_response);
     bpio_ResponsePacket_end_as_root(B);
     send_packet(B, buf);
@@ -626,6 +632,8 @@ void error_response(const char *error_msg, flatcc_builder_t *B, uint8_t *buf) {
     bpio_ErrorResponse_ref_t error_response = bpio_ErrorResponse_end(B);
     
     bpio_ResponsePacket_start_as_root(B);
+    bpio_ResponsePacket_version_major_add(B, 2);
+    bpio_ResponsePacket_version_minor_add(B, 0);
     bpio_ResponsePacket_contents_ErrorResponse_add(B, error_response);
     bpio_ResponsePacket_end_as_root(B);
     send_packet(B, buf);

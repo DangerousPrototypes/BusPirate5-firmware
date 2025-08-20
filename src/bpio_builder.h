@@ -560,7 +560,7 @@ static bpio_ErrorResponse_ref_t bpio_ErrorResponse_clone(flatbuffers_builder_t *
     __flatbuffers_memoize_end(B, t, bpio_ErrorResponse_end(B));
 }
 
-__flatbuffers_build_scalar_field(0, flatbuffers_, bpio_RequestPacket_version_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(2), bpio_RequestPacket)
+__flatbuffers_build_scalar_field(0, flatbuffers_, bpio_RequestPacket_version_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_RequestPacket)
 __flatbuffers_build_scalar_field(1, flatbuffers_, bpio_RequestPacket_version_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_RequestPacket)
 __flatbuffers_build_union_field(3, flatbuffers_, bpio_RequestPacket_contents, bpio_RequestPacketContents, bpio_RequestPacket)
 __flatbuffers_build_union_table_value_field(flatbuffers_, bpio_RequestPacket_contents, bpio_RequestPacketContents, StatusRequest, bpio_StatusRequest)
@@ -591,7 +591,7 @@ static bpio_RequestPacket_ref_t bpio_RequestPacket_clone(flatbuffers_builder_t *
     __flatbuffers_memoize_end(B, t, bpio_RequestPacket_end(B));
 }
 
-__flatbuffers_build_scalar_field(0, flatbuffers_, bpio_ResponsePacket_version_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(2), bpio_ResponsePacket)
+__flatbuffers_build_scalar_field(0, flatbuffers_, bpio_ResponsePacket_version_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ResponsePacket)
 __flatbuffers_build_scalar_field(1, flatbuffers_, bpio_ResponsePacket_version_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ResponsePacket)
 __flatbuffers_build_union_field(3, flatbuffers_, bpio_ResponsePacket_contents, bpio_ResponsePacketContents, bpio_ResponsePacket)
 __flatbuffers_build_union_table_value_field(flatbuffers_, bpio_ResponsePacket_contents, bpio_ResponsePacketContents, ErrorResponse, bpio_ErrorResponse)

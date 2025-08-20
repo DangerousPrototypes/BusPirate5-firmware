@@ -1,1 +1,1 @@
-BPIO2 flat buffer tooling and libraries [are now in their own repo](https://github.com/DangerousPrototypes/BusPirate-BBIO2-flatbuffer-interface).
+BPIO2 flat buffer tooling and libraries [are now in their own repo](https://github.com/DangerousPrototypes/BusPirate-BPIO2-flatbuffer-interface).

@@ -407,7 +407,7 @@ static inline bpio_RequestPacket_table_t bpio_RequestPacket_vec_at(bpio_RequestP
 __flatbuffers_offset_vec_at(bpio_RequestPacket_table_t, vec, i, 0)
 __flatbuffers_table_as_root(bpio_RequestPacket)
 
-__flatbuffers_define_scalar_field(0, bpio_RequestPacket, version_major, flatbuffers_uint8, uint8_t, UINT8_C(2))
+__flatbuffers_define_scalar_field(0, bpio_RequestPacket, version_major, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(1, bpio_RequestPacket, version_minor, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_union_field(flatbuffers_, 3, bpio_RequestPacket, contents, bpio_RequestPacketContents, 0)
 typedef uint8_t bpio_ResponsePacketContents_union_type_t;
@@ -452,7 +452,7 @@ static inline bpio_ResponsePacket_table_t bpio_ResponsePacket_vec_at(bpio_Respon
 __flatbuffers_offset_vec_at(bpio_ResponsePacket_table_t, vec, i, 0)
 __flatbuffers_table_as_root(bpio_ResponsePacket)
 
-__flatbuffers_define_scalar_field(0, bpio_ResponsePacket, version_major, flatbuffers_uint8, uint8_t, UINT8_C(2))
+__flatbuffers_define_scalar_field(0, bpio_ResponsePacket, version_major, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(1, bpio_ResponsePacket, version_minor, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_union_field(flatbuffers_, 3, bpio_ResponsePacket, contents, bpio_ResponsePacketContents, 0)
 

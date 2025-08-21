@@ -103,7 +103,7 @@
         #define BP_HW_PSU_PWM 1
         #define BP_HW_RP2350_E9_BUG 1
     #elif BP_VER == 7
-        #include "platform/bpi7-rev1.h"
+        #include "platform/bpi7-rev2.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
         #define BP_HW_PULLX 1

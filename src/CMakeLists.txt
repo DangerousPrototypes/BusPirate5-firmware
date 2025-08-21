@@ -432,8 +432,8 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 ${buspirate_nandflash}
                 ${buspirate_rtt}
                 ${rp2350_common}
-                platform/bpi7-rev1.h
-                platform/bpi7-rev1.c
+                platform/bpi7-rev2.h
+                platform/bpi7-rev2.c
                 display/robot7x16.h
                 pirate/ioexpander.h
                 pirate/ioexpander.c 
@@ -447,7 +447,7 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
                 commands/global/reg.c      
                 ) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_VER=7) 
-        target_compile_definitions(bus_pirate7 PUBLIC BP_REV=1) 
+        target_compile_definitions(bus_pirate7 PUBLIC BP_REV=2) 
         target_compile_definitions(bus_pirate7 PUBLIC BP_FIRMWARE_HASH="${BP_FIRMWARE_HASH}")             
 if(DEFINED BP_PENDANTIC)
         target_compile_options(    bus_pirate7 PRIVATE -Wpedantic -Wall -Werror -O3 -Wno-unknown-pragmas -Wno-inline -Wno-unused-function)

@@ -156,7 +156,9 @@ extern const uint8_t bio2bufdirpin[8];
 //#define CURRENT_EN          18
 //#define CURRENT_RESET       17
 //#define CURRENT_EN_OVERRIDE 16
-//#define CURRENT_FUSE_DETECT 19 
+#define CURRENT_FUSE_DETECT 16
+#define BP_I2C_INTERRUPT CURRENT_FUSE_DETECT //REMOVE ME!!!
+#define VOUT_ACTIVATE_VOUT 36
 
 //Look behind logic analyzer buffer
 #define LA_BPIO0 20
@@ -190,7 +192,7 @@ extern const uint8_t bio2bufdirpin[8];
 #define BP_I2C_SDA  18
 #define BP_I2C_SCL  19
 #define BP_I2C_RESET 37
-#define BP_I2C_INTERRUPT 16
+//#define BP_I2C_INTERRUPT 16
 
 //7+ has PSRAM
 #define BP_PSRAM_QPI_SS QSPI_SS_2

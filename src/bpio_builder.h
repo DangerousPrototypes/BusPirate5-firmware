@@ -36,7 +36,7 @@ __flatbuffers_build_table(flatbuffers_, bpio_StatusRequest, 1)
 static const flatbuffers_voffset_t __bpio_StatusResponse_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_StatusResponse_ref_t;
 static bpio_StatusResponse_ref_t bpio_StatusResponse_clone(flatbuffers_builder_t *B, bpio_StatusResponse_table_t t);
-__flatbuffers_build_table(flatbuffers_, bpio_StatusResponse, 27)
+__flatbuffers_build_table(flatbuffers_, bpio_StatusResponse, 29)
 
 static const flatbuffers_voffset_t __bpio_ModeConfiguration_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_ModeConfiguration_ref_t;
@@ -63,11 +63,6 @@ typedef flatbuffers_ref_t bpio_DataResponse_ref_t;
 static bpio_DataResponse_ref_t bpio_DataResponse_clone(flatbuffers_builder_t *B, bpio_DataResponse_table_t t);
 __flatbuffers_build_table(flatbuffers_, bpio_DataResponse, 2)
 
-static const flatbuffers_voffset_t __bpio_ErrorResponse_required[] = { 0 };
-typedef flatbuffers_ref_t bpio_ErrorResponse_ref_t;
-static bpio_ErrorResponse_ref_t bpio_ErrorResponse_clone(flatbuffers_builder_t *B, bpio_ErrorResponse_table_t t);
-__flatbuffers_build_table(flatbuffers_, bpio_ErrorResponse, 1)
-
 static const flatbuffers_voffset_t __bpio_RequestPacket_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_RequestPacket_ref_t;
 static bpio_RequestPacket_ref_t bpio_RequestPacket_clone(flatbuffers_builder_t *B, bpio_RequestPacket_table_t t);
@@ -76,7 +71,7 @@ __flatbuffers_build_table(flatbuffers_, bpio_RequestPacket, 4)
 static const flatbuffers_voffset_t __bpio_ResponsePacket_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_ResponsePacket_ref_t;
 static bpio_ResponsePacket_ref_t bpio_ResponsePacket_clone(flatbuffers_builder_t *B, bpio_ResponsePacket_table_t t);
-__flatbuffers_build_table(flatbuffers_, bpio_ResponsePacket, 4)
+__flatbuffers_build_table(flatbuffers_, bpio_ResponsePacket, 3)
 
 #define __bpio_StatusRequest_formal_args , bpio_StatusRequestTypes_vec_ref_t v0
 #define __bpio_StatusRequest_call_args , v0
@@ -84,13 +79,13 @@ static inline bpio_StatusRequest_ref_t bpio_StatusRequest_create(flatbuffers_bui
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_StatusRequest, bpio_StatusRequest_file_identifier, bpio_StatusRequest_type_identifier)
 
 #define __bpio_StatusResponse_formal_args ,\
-  flatbuffers_string_ref_t v0, uint8_t v1, uint8_t v2, uint8_t v3,\
-  uint8_t v4, flatbuffers_string_ref_t v5, flatbuffers_string_ref_t v6, flatbuffers_string_vec_ref_t v7,\
-  flatbuffers_string_ref_t v8, flatbuffers_string_vec_ref_t v9, flatbuffers_bool_t v10, uint32_t v11,\
-  uint32_t v12, uint32_t v13, flatbuffers_bool_t v14, uint32_t v15,\
-  uint32_t v16, uint32_t v17, uint32_t v18, flatbuffers_bool_t v19,\
-  flatbuffers_bool_t v20, flatbuffers_uint32_vec_ref_t v21, uint8_t v22, uint8_t v23,\
-  float v24, float v25, uint8_t v26
+  flatbuffers_string_ref_t v0, uint8_t v1, uint16_t v2, uint8_t v3,\
+  uint8_t v4, uint8_t v5, uint8_t v6, flatbuffers_string_ref_t v7,\
+  flatbuffers_string_ref_t v8, flatbuffers_string_vec_ref_t v9, flatbuffers_string_ref_t v10, flatbuffers_string_vec_ref_t v11,\
+  flatbuffers_bool_t v12, uint32_t v13, uint32_t v14, uint32_t v15,\
+  flatbuffers_bool_t v16, uint32_t v17, uint32_t v18, uint32_t v19,\
+  uint32_t v20, flatbuffers_bool_t v21, flatbuffers_bool_t v22, flatbuffers_uint32_vec_ref_t v23,\
+  uint8_t v24, uint8_t v25, float v26, float v27, uint8_t v28
 #define __bpio_StatusResponse_call_args ,\
   v0, v1, v2, v3,\
   v4, v5, v6, v7,\
@@ -98,7 +93,7 @@ __flatbuffers_build_table_prolog(flatbuffers_, bpio_StatusRequest, bpio_StatusRe
   v12, v13, v14, v15,\
   v16, v17, v18, v19,\
   v20, v21, v22, v23,\
-  v24, v25, v26
+  v24, v25, v26, v27, v28
 static inline bpio_StatusResponse_ref_t bpio_StatusResponse_create(flatbuffers_builder_t *B __bpio_StatusResponse_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_StatusResponse, bpio_StatusResponse_file_identifier, bpio_StatusResponse_type_identifier)
 
@@ -145,18 +140,13 @@ __flatbuffers_build_table_prolog(flatbuffers_, bpio_DataRequest, bpio_DataReques
 static inline bpio_DataResponse_ref_t bpio_DataResponse_create(flatbuffers_builder_t *B __bpio_DataResponse_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_DataResponse, bpio_DataResponse_file_identifier, bpio_DataResponse_type_identifier)
 
-#define __bpio_ErrorResponse_formal_args , flatbuffers_string_ref_t v0
-#define __bpio_ErrorResponse_call_args , v0
-static inline bpio_ErrorResponse_ref_t bpio_ErrorResponse_create(flatbuffers_builder_t *B __bpio_ErrorResponse_formal_args);
-__flatbuffers_build_table_prolog(flatbuffers_, bpio_ErrorResponse, bpio_ErrorResponse_file_identifier, bpio_ErrorResponse_type_identifier)
-
-#define __bpio_RequestPacket_formal_args , uint8_t v0, uint8_t v1, bpio_RequestPacketContents_union_ref_t v3
+#define __bpio_RequestPacket_formal_args , uint8_t v0, uint16_t v1, bpio_RequestPacketContents_union_ref_t v3
 #define __bpio_RequestPacket_call_args , v0, v1, v3
 static inline bpio_RequestPacket_ref_t bpio_RequestPacket_create(flatbuffers_builder_t *B __bpio_RequestPacket_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_RequestPacket, bpio_RequestPacket_file_identifier, bpio_RequestPacket_type_identifier)
 
-#define __bpio_ResponsePacket_formal_args , uint8_t v0, uint8_t v1, bpio_ResponsePacketContents_union_ref_t v3
-#define __bpio_ResponsePacket_call_args , v0, v1, v3
+#define __bpio_ResponsePacket_formal_args , flatbuffers_string_ref_t v0, bpio_ResponsePacketContents_union_ref_t v2
+#define __bpio_ResponsePacket_call_args , v0, v2
 static inline bpio_ResponsePacket_ref_t bpio_ResponsePacket_create(flatbuffers_builder_t *B __bpio_ResponsePacket_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_ResponsePacket, bpio_ResponsePacket_file_identifier, bpio_ResponsePacket_type_identifier)
 
@@ -182,8 +172,6 @@ static bpio_RequestPacketContents_union_ref_t bpio_RequestPacketContents_clone(f
 
 static inline bpio_ResponsePacketContents_union_ref_t bpio_ResponsePacketContents_as_NONE(void)
 { bpio_ResponsePacketContents_union_ref_t uref; uref.type = bpio_ResponsePacketContents_NONE; uref.value = 0; return uref; }
-static inline bpio_ResponsePacketContents_union_ref_t bpio_ResponsePacketContents_as_ErrorResponse(bpio_ErrorResponse_ref_t ref)
-{ bpio_ResponsePacketContents_union_ref_t uref; uref.type = bpio_ResponsePacketContents_ErrorResponse; uref.value = ref; return uref; }
 static inline bpio_ResponsePacketContents_union_ref_t bpio_ResponsePacketContents_as_StatusResponse(bpio_StatusResponse_ref_t ref)
 { bpio_ResponsePacketContents_union_ref_t uref; uref.type = bpio_ResponsePacketContents_StatusResponse; uref.value = ref; return uref; }
 static inline bpio_ResponsePacketContents_union_ref_t bpio_ResponsePacketContents_as_ConfigurationResponse(bpio_ConfigurationResponse_ref_t ref)
@@ -195,10 +183,9 @@ __flatbuffers_build_union_vector(flatbuffers_, bpio_ResponsePacketContents)
 static bpio_ResponsePacketContents_union_ref_t bpio_ResponsePacketContents_clone(flatbuffers_builder_t *B, bpio_ResponsePacketContents_union_t u)
 {
     switch (u.type) {
-    case 1: return bpio_ResponsePacketContents_as_ErrorResponse(bpio_ErrorResponse_clone(B, (bpio_ErrorResponse_table_t)u.value));
-    case 2: return bpio_ResponsePacketContents_as_StatusResponse(bpio_StatusResponse_clone(B, (bpio_StatusResponse_table_t)u.value));
-    case 3: return bpio_ResponsePacketContents_as_ConfigurationResponse(bpio_ConfigurationResponse_clone(B, (bpio_ConfigurationResponse_table_t)u.value));
-    case 4: return bpio_ResponsePacketContents_as_DataResponse(bpio_DataResponse_clone(B, (bpio_DataResponse_table_t)u.value));
+    case 1: return bpio_ResponsePacketContents_as_StatusResponse(bpio_StatusResponse_clone(B, (bpio_StatusResponse_table_t)u.value));
+    case 2: return bpio_ResponsePacketContents_as_ConfigurationResponse(bpio_ConfigurationResponse_clone(B, (bpio_ConfigurationResponse_table_t)u.value));
+    case 3: return bpio_ResponsePacketContents_as_DataResponse(bpio_DataResponse_clone(B, (bpio_DataResponse_table_t)u.value));
     default: return bpio_ResponsePacketContents_as_NONE();
     }
 }
@@ -225,63 +212,67 @@ static bpio_StatusRequest_ref_t bpio_StatusRequest_clone(flatbuffers_builder_t *
 }
 
 __flatbuffers_build_string_field(0, flatbuffers_, bpio_StatusResponse_error, bpio_StatusResponse)
-__flatbuffers_build_scalar_field(1, flatbuffers_, bpio_StatusResponse_version_hardware_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(2, flatbuffers_, bpio_StatusResponse_version_hardware_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(3, flatbuffers_, bpio_StatusResponse_version_firmware_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(4, flatbuffers_, bpio_StatusResponse_version_firmware_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_string_field(5, flatbuffers_, bpio_StatusResponse_version_firmware_git_hash, bpio_StatusResponse)
-__flatbuffers_build_string_field(6, flatbuffers_, bpio_StatusResponse_version_firmware_date, bpio_StatusResponse)
-__flatbuffers_build_string_vector_field(7, flatbuffers_, bpio_StatusResponse_modes_available, bpio_StatusResponse)
-__flatbuffers_build_string_field(8, flatbuffers_, bpio_StatusResponse_mode_current, bpio_StatusResponse)
-__flatbuffers_build_string_vector_field(9, flatbuffers_, bpio_StatusResponse_mode_pin_labels, bpio_StatusResponse)
-__flatbuffers_build_scalar_field(10, flatbuffers_, bpio_StatusResponse_mode_bitorder_msb, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(11, flatbuffers_, bpio_StatusResponse_mode_max_packet_size, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(12, flatbuffers_, bpio_StatusResponse_mode_max_write, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(13, flatbuffers_, bpio_StatusResponse_mode_max_read, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(14, flatbuffers_, bpio_StatusResponse_psu_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(15, flatbuffers_, bpio_StatusResponse_psu_set_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(16, flatbuffers_, bpio_StatusResponse_psu_set_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(17, flatbuffers_, bpio_StatusResponse_psu_measured_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(18, flatbuffers_, bpio_StatusResponse_psu_measured_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(19, flatbuffers_, bpio_StatusResponse_psu_current_error, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(20, flatbuffers_, bpio_StatusResponse_pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_vector_field(21, flatbuffers_, bpio_StatusResponse_adc_mv, flatbuffers_uint32, uint32_t, bpio_StatusResponse)
-__flatbuffers_build_scalar_field(22, flatbuffers_, bpio_StatusResponse_io_direction, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(23, flatbuffers_, bpio_StatusResponse_io_value, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
-__flatbuffers_build_scalar_field(24, flatbuffers_, bpio_StatusResponse_disk_size_mb, flatbuffers_float, float, 4, 4, 0.00000000f, bpio_StatusResponse)
-__flatbuffers_build_scalar_field(25, flatbuffers_, bpio_StatusResponse_disk_used_mb, flatbuffers_float, float, 4, 4, 0.00000000f, bpio_StatusResponse)
-__flatbuffers_build_scalar_field(26, flatbuffers_, bpio_StatusResponse_led_count, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(1, flatbuffers_, bpio_StatusResponse_version_flatbuffers_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(2, flatbuffers_, bpio_StatusResponse_version_flatbuffers_minor, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(3, flatbuffers_, bpio_StatusResponse_version_hardware_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(4, flatbuffers_, bpio_StatusResponse_version_hardware_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(5, flatbuffers_, bpio_StatusResponse_version_firmware_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(6, flatbuffers_, bpio_StatusResponse_version_firmware_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_string_field(7, flatbuffers_, bpio_StatusResponse_version_firmware_git_hash, bpio_StatusResponse)
+__flatbuffers_build_string_field(8, flatbuffers_, bpio_StatusResponse_version_firmware_date, bpio_StatusResponse)
+__flatbuffers_build_string_vector_field(9, flatbuffers_, bpio_StatusResponse_modes_available, bpio_StatusResponse)
+__flatbuffers_build_string_field(10, flatbuffers_, bpio_StatusResponse_mode_current, bpio_StatusResponse)
+__flatbuffers_build_string_vector_field(11, flatbuffers_, bpio_StatusResponse_mode_pin_labels, bpio_StatusResponse)
+__flatbuffers_build_scalar_field(12, flatbuffers_, bpio_StatusResponse_mode_bitorder_msb, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(13, flatbuffers_, bpio_StatusResponse_mode_max_packet_size, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(14, flatbuffers_, bpio_StatusResponse_mode_max_write, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(15, flatbuffers_, bpio_StatusResponse_mode_max_read, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(16, flatbuffers_, bpio_StatusResponse_psu_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(17, flatbuffers_, bpio_StatusResponse_psu_set_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(18, flatbuffers_, bpio_StatusResponse_psu_set_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(19, flatbuffers_, bpio_StatusResponse_psu_measured_mv, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(20, flatbuffers_, bpio_StatusResponse_psu_measured_ma, flatbuffers_uint32, uint32_t, 4, 4, UINT32_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(21, flatbuffers_, bpio_StatusResponse_psu_current_error, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(22, flatbuffers_, bpio_StatusResponse_pullup_enabled, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_vector_field(23, flatbuffers_, bpio_StatusResponse_adc_mv, flatbuffers_uint32, uint32_t, bpio_StatusResponse)
+__flatbuffers_build_scalar_field(24, flatbuffers_, bpio_StatusResponse_io_direction, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(25, flatbuffers_, bpio_StatusResponse_io_value, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
+__flatbuffers_build_scalar_field(26, flatbuffers_, bpio_StatusResponse_disk_size_mb, flatbuffers_float, float, 4, 4, 0.00000000f, bpio_StatusResponse)
+__flatbuffers_build_scalar_field(27, flatbuffers_, bpio_StatusResponse_disk_used_mb, flatbuffers_float, float, 4, 4, 0.00000000f, bpio_StatusResponse)
+__flatbuffers_build_scalar_field(28, flatbuffers_, bpio_StatusResponse_led_count, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_StatusResponse)
 
 static inline bpio_StatusResponse_ref_t bpio_StatusResponse_create(flatbuffers_builder_t *B __bpio_StatusResponse_formal_args)
 {
     if (bpio_StatusResponse_start(B)
         || bpio_StatusResponse_error_add(B, v0)
-        || bpio_StatusResponse_version_firmware_git_hash_add(B, v5)
-        || bpio_StatusResponse_version_firmware_date_add(B, v6)
-        || bpio_StatusResponse_modes_available_add(B, v7)
-        || bpio_StatusResponse_mode_current_add(B, v8)
-        || bpio_StatusResponse_mode_pin_labels_add(B, v9)
-        || bpio_StatusResponse_mode_max_packet_size_add(B, v11)
-        || bpio_StatusResponse_mode_max_write_add(B, v12)
-        || bpio_StatusResponse_mode_max_read_add(B, v13)
-        || bpio_StatusResponse_psu_set_mv_add(B, v15)
-        || bpio_StatusResponse_psu_set_ma_add(B, v16)
-        || bpio_StatusResponse_psu_measured_mv_add(B, v17)
-        || bpio_StatusResponse_psu_measured_ma_add(B, v18)
-        || bpio_StatusResponse_adc_mv_add(B, v21)
-        || bpio_StatusResponse_disk_size_mb_add(B, v24)
-        || bpio_StatusResponse_disk_used_mb_add(B, v25)
-        || bpio_StatusResponse_version_hardware_major_add(B, v1)
-        || bpio_StatusResponse_version_hardware_minor_add(B, v2)
-        || bpio_StatusResponse_version_firmware_major_add(B, v3)
-        || bpio_StatusResponse_version_firmware_minor_add(B, v4)
-        || bpio_StatusResponse_mode_bitorder_msb_add(B, v10)
-        || bpio_StatusResponse_psu_enabled_add(B, v14)
-        || bpio_StatusResponse_psu_current_error_add(B, v19)
-        || bpio_StatusResponse_pullup_enabled_add(B, v20)
-        || bpio_StatusResponse_io_direction_add(B, v22)
-        || bpio_StatusResponse_io_value_add(B, v23)
-        || bpio_StatusResponse_led_count_add(B, v26)) {
+        || bpio_StatusResponse_version_firmware_git_hash_add(B, v7)
+        || bpio_StatusResponse_version_firmware_date_add(B, v8)
+        || bpio_StatusResponse_modes_available_add(B, v9)
+        || bpio_StatusResponse_mode_current_add(B, v10)
+        || bpio_StatusResponse_mode_pin_labels_add(B, v11)
+        || bpio_StatusResponse_mode_max_packet_size_add(B, v13)
+        || bpio_StatusResponse_mode_max_write_add(B, v14)
+        || bpio_StatusResponse_mode_max_read_add(B, v15)
+        || bpio_StatusResponse_psu_set_mv_add(B, v17)
+        || bpio_StatusResponse_psu_set_ma_add(B, v18)
+        || bpio_StatusResponse_psu_measured_mv_add(B, v19)
+        || bpio_StatusResponse_psu_measured_ma_add(B, v20)
+        || bpio_StatusResponse_adc_mv_add(B, v23)
+        || bpio_StatusResponse_disk_size_mb_add(B, v26)
+        || bpio_StatusResponse_disk_used_mb_add(B, v27)
+        || bpio_StatusResponse_version_flatbuffers_minor_add(B, v2)
+        || bpio_StatusResponse_version_flatbuffers_major_add(B, v1)
+        || bpio_StatusResponse_version_hardware_major_add(B, v3)
+        || bpio_StatusResponse_version_hardware_minor_add(B, v4)
+        || bpio_StatusResponse_version_firmware_major_add(B, v5)
+        || bpio_StatusResponse_version_firmware_minor_add(B, v6)
+        || bpio_StatusResponse_mode_bitorder_msb_add(B, v12)
+        || bpio_StatusResponse_psu_enabled_add(B, v16)
+        || bpio_StatusResponse_psu_current_error_add(B, v21)
+        || bpio_StatusResponse_pullup_enabled_add(B, v22)
+        || bpio_StatusResponse_io_direction_add(B, v24)
+        || bpio_StatusResponse_io_value_add(B, v25)
+        || bpio_StatusResponse_led_count_add(B, v28)) {
         return 0;
     }
     return bpio_StatusResponse_end(B);
@@ -307,6 +298,8 @@ static bpio_StatusResponse_ref_t bpio_StatusResponse_clone(flatbuffers_builder_t
         || bpio_StatusResponse_adc_mv_pick(B, t)
         || bpio_StatusResponse_disk_size_mb_pick(B, t)
         || bpio_StatusResponse_disk_used_mb_pick(B, t)
+        || bpio_StatusResponse_version_flatbuffers_minor_pick(B, t)
+        || bpio_StatusResponse_version_flatbuffers_major_pick(B, t)
         || bpio_StatusResponse_version_hardware_major_pick(B, t)
         || bpio_StatusResponse_version_hardware_minor_pick(B, t)
         || bpio_StatusResponse_version_firmware_major_pick(B, t)
@@ -539,29 +532,8 @@ static bpio_DataResponse_ref_t bpio_DataResponse_clone(flatbuffers_builder_t *B,
     __flatbuffers_memoize_end(B, t, bpio_DataResponse_end(B));
 }
 
-__flatbuffers_build_string_field(0, flatbuffers_, bpio_ErrorResponse_error, bpio_ErrorResponse)
-
-static inline bpio_ErrorResponse_ref_t bpio_ErrorResponse_create(flatbuffers_builder_t *B __bpio_ErrorResponse_formal_args)
-{
-    if (bpio_ErrorResponse_start(B)
-        || bpio_ErrorResponse_error_add(B, v0)) {
-        return 0;
-    }
-    return bpio_ErrorResponse_end(B);
-}
-
-static bpio_ErrorResponse_ref_t bpio_ErrorResponse_clone(flatbuffers_builder_t *B, bpio_ErrorResponse_table_t t)
-{
-    __flatbuffers_memoize_begin(B, t);
-    if (bpio_ErrorResponse_start(B)
-        || bpio_ErrorResponse_error_pick(B, t)) {
-        return 0;
-    }
-    __flatbuffers_memoize_end(B, t, bpio_ErrorResponse_end(B));
-}
-
 __flatbuffers_build_scalar_field(0, flatbuffers_, bpio_RequestPacket_version_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_RequestPacket)
-__flatbuffers_build_scalar_field(1, flatbuffers_, bpio_RequestPacket_version_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_RequestPacket)
+__flatbuffers_build_scalar_field(1, flatbuffers_, bpio_RequestPacket_minimum_version_minor, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), bpio_RequestPacket)
 __flatbuffers_build_union_field(3, flatbuffers_, bpio_RequestPacket_contents, bpio_RequestPacketContents, bpio_RequestPacket)
 __flatbuffers_build_union_table_value_field(flatbuffers_, bpio_RequestPacket_contents, bpio_RequestPacketContents, StatusRequest, bpio_StatusRequest)
 __flatbuffers_build_union_table_value_field(flatbuffers_, bpio_RequestPacket_contents, bpio_RequestPacketContents, ConfigurationRequest, bpio_ConfigurationRequest)
@@ -571,8 +543,8 @@ static inline bpio_RequestPacket_ref_t bpio_RequestPacket_create(flatbuffers_bui
 {
     if (bpio_RequestPacket_start(B)
         || bpio_RequestPacket_contents_add_value(B, v3)
+        || bpio_RequestPacket_minimum_version_minor_add(B, v1)
         || bpio_RequestPacket_version_major_add(B, v0)
-        || bpio_RequestPacket_version_minor_add(B, v1)
         || bpio_RequestPacket_contents_add_type(B, v3.type)) {
         return 0;
     }
@@ -584,17 +556,15 @@ static bpio_RequestPacket_ref_t bpio_RequestPacket_clone(flatbuffers_builder_t *
     __flatbuffers_memoize_begin(B, t);
     if (bpio_RequestPacket_start(B)
         || bpio_RequestPacket_contents_pick(B, t)
-        || bpio_RequestPacket_version_major_pick(B, t)
-        || bpio_RequestPacket_version_minor_pick(B, t)) {
+        || bpio_RequestPacket_minimum_version_minor_pick(B, t)
+        || bpio_RequestPacket_version_major_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, bpio_RequestPacket_end(B));
 }
 
-__flatbuffers_build_scalar_field(0, flatbuffers_, bpio_ResponsePacket_version_major, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ResponsePacket)
-__flatbuffers_build_scalar_field(1, flatbuffers_, bpio_ResponsePacket_version_minor, flatbuffers_uint8, uint8_t, 1, 1, UINT8_C(0), bpio_ResponsePacket)
-__flatbuffers_build_union_field(3, flatbuffers_, bpio_ResponsePacket_contents, bpio_ResponsePacketContents, bpio_ResponsePacket)
-__flatbuffers_build_union_table_value_field(flatbuffers_, bpio_ResponsePacket_contents, bpio_ResponsePacketContents, ErrorResponse, bpio_ErrorResponse)
+__flatbuffers_build_string_field(0, flatbuffers_, bpio_ResponsePacket_error, bpio_ResponsePacket)
+__flatbuffers_build_union_field(2, flatbuffers_, bpio_ResponsePacket_contents, bpio_ResponsePacketContents, bpio_ResponsePacket)
 __flatbuffers_build_union_table_value_field(flatbuffers_, bpio_ResponsePacket_contents, bpio_ResponsePacketContents, StatusResponse, bpio_StatusResponse)
 __flatbuffers_build_union_table_value_field(flatbuffers_, bpio_ResponsePacket_contents, bpio_ResponsePacketContents, ConfigurationResponse, bpio_ConfigurationResponse)
 __flatbuffers_build_union_table_value_field(flatbuffers_, bpio_ResponsePacket_contents, bpio_ResponsePacketContents, DataResponse, bpio_DataResponse)
@@ -602,10 +572,9 @@ __flatbuffers_build_union_table_value_field(flatbuffers_, bpio_ResponsePacket_co
 static inline bpio_ResponsePacket_ref_t bpio_ResponsePacket_create(flatbuffers_builder_t *B __bpio_ResponsePacket_formal_args)
 {
     if (bpio_ResponsePacket_start(B)
-        || bpio_ResponsePacket_contents_add_value(B, v3)
-        || bpio_ResponsePacket_version_major_add(B, v0)
-        || bpio_ResponsePacket_version_minor_add(B, v1)
-        || bpio_ResponsePacket_contents_add_type(B, v3.type)) {
+        || bpio_ResponsePacket_error_add(B, v0)
+        || bpio_ResponsePacket_contents_add_value(B, v2)
+        || bpio_ResponsePacket_contents_add_type(B, v2.type)) {
         return 0;
     }
     return bpio_ResponsePacket_end(B);
@@ -615,9 +584,8 @@ static bpio_ResponsePacket_ref_t bpio_ResponsePacket_clone(flatbuffers_builder_t
 {
     __flatbuffers_memoize_begin(B, t);
     if (bpio_ResponsePacket_start(B)
-        || bpio_ResponsePacket_contents_pick(B, t)
-        || bpio_ResponsePacket_version_major_pick(B, t)
-        || bpio_ResponsePacket_version_minor_pick(B, t)) {
+        || bpio_ResponsePacket_error_pick(B, t)
+        || bpio_ResponsePacket_contents_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, bpio_ResponsePacket_end(B));

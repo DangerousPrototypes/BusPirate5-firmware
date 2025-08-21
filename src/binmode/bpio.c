@@ -169,10 +169,14 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, 
 
     bpio_StatusResponse_start(B);
     if(query_flags & (1u << bpio_StatusRequestTypes_Version)||query_flags & (1u << bpio_StatusRequestTypes_All)) {
+        #define FLATBUFFERS_VERSION_MAJOR 2
+        #define FLATBUFFERS_VERSION_MINOR 0
         // Send version information
         if(bpio_debug) printf("[Status Request] Version requested\r\n");
-        bpio_StatusResponse_version_hardware_major_add(B, BP_FIRMWARE_VERSION_MAJOR);
-        bpio_StatusResponse_version_hardware_minor_add(B, BP_FIRMWARE_VERSION_REVISION);
+        bpio_StatusResponse_version_flatbuffers_major_add(B, FLATBUFFERS_VERSION_MAJOR);
+        bpio_StatusResponse_version_flatbuffers_minor_add(B, FLATBUFFERS_VERSION_MINOR);
+        bpio_StatusResponse_version_hardware_major_add(B, BP_HARDWARE_VERSION_MAJOR);
+        bpio_StatusResponse_version_hardware_minor_add(B, BP_HARDWARE_VERSION_REVISION);
         bpio_StatusResponse_version_firmware_major_add(B, 0);
         bpio_StatusResponse_version_firmware_minor_add(B, 0);
         flatbuffers_string_ref_t git_hash = flatbuffers_string_create_str(B, BP_FIRMWARE_HASH);
@@ -277,8 +281,8 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, 
     
     // add to packet wrapper
     bpio_ResponsePacket_start_as_root(B);
-    bpio_ResponsePacket_version_major_add(B, 2);
-    bpio_ResponsePacket_version_minor_add(B, 0);
+    //bpio_ResponsePacket_version_major_add(B, 2);
+    //bpio_ResponsePacket_version_minor_add(B, 0);
     bpio_ResponsePacket_contents_StatusResponse_add(B, status_response);
     bpio_ResponsePacket_end_as_root(B);            
     send_packet(B, buf);
@@ -522,8 +526,8 @@ config_response_error:
     
     // add to packet wrapper
     bpio_ResponsePacket_start_as_root(B);
-    bpio_ResponsePacket_version_major_add(B, 2);
-    bpio_ResponsePacket_version_minor_add(B, 0);
+    //bpio_ResponsePacket_version_major_add(B, 2);
+    //bpio_ResponsePacket_version_minor_add(B, 0);
     bpio_ResponsePacket_contents_ConfigurationResponse_add(B, config_response);
     bpio_ResponsePacket_end_as_root(B);            
     send_packet(B, buf);
@@ -604,8 +608,8 @@ data_response_error:
     bpio_DataResponse_ref_t data_response = bpio_DataResponse_end(B);
     // add to packet wrapper
     bpio_ResponsePacket_start_as_root(B);
-    bpio_ResponsePacket_version_major_add(B, 2);
-    bpio_ResponsePacket_version_minor_add(B, 0);
+    //bpio_ResponsePacket_version_major_add(B, 2);
+    //bpio_ResponsePacket_version_minor_add(B, 0);
     bpio_ResponsePacket_contents_DataResponse_add(B, data_response);
     bpio_ResponsePacket_end_as_root(B);
     send_packet(B, buf);
@@ -627,14 +631,14 @@ void error_response(const char *error_msg, flatcc_builder_t *B, uint8_t *buf) {
     flatcc_builder_reset(B);//25uS
 
     flatbuffers_string_ref_t error_str = flatbuffers_string_create_str(B, error_msg);
-    bpio_ErrorResponse_start(B);
-    bpio_ErrorResponse_error_add(B, error_str);
-    bpio_ErrorResponse_ref_t error_response = bpio_ErrorResponse_end(B);
+    //bpio_ErrorResponse_start(B);
+    //bpio_ErrorResponse_error_add(B, error_str);
+    //bpio_ErrorResponse_ref_t error_response = bpio_ErrorResponse_end(B);
     
     bpio_ResponsePacket_start_as_root(B);
-    bpio_ResponsePacket_version_major_add(B, 2);
-    bpio_ResponsePacket_version_minor_add(B, 0);
-    bpio_ResponsePacket_contents_ErrorResponse_add(B, error_response);
+    //bpio_ResponsePacket_version_major_add(B, 2);
+    //bpio_ResponsePacket_version_minor_add(B, 0);
+    bpio_ResponsePacket_error_add(B, error_str);
     bpio_ResponsePacket_end_as_root(B);
     send_packet(B, buf);
 }
@@ -729,6 +733,13 @@ bpio_mode_read_end:
     if(version_major != 2) {
         if(bpio_debug) printf("[BPIO] Error: Unsupported BPIO version %d, expected 2\r\n", version_major);
         error_response("Unsupported BPIO version, expected 2.x", B, buf);
+        return;
+    }
+
+    uint16_t minimum_version_minor = bpio_RequestPacket_minimum_version_minor_get(packet);
+    if(minimum_version_minor > 0) {
+        if(bpio_debug) printf("[BPIO] Warning: Minimum version minor %d, this may not be compatible\r\n", minimum_version_minor);
+        error_response("Flatbuffers minimum version minor not met, update the Bus Pirate firmware", B, buf);
         return;
     }
 

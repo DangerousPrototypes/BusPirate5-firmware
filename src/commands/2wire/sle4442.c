@@ -16,8 +16,9 @@
 #include "pirate/psu.h"
 #include "usb_rx.h"
 #include "fatfs/ff.h"
-#include "pirate/storage.h"
+#include "pirate/file.h"
 #include "binmode/fala.h"
+#include "ui/ui_hex.h"
 
 #define SLE_CMD_READ_MEM 0x30
 #define SLE_CMD_WRITE_MEM 0x38
@@ -38,15 +39,17 @@ typedef struct __attribute__((packed)) sle44xx_atr_struct {
 } sle44xx_atr_t;
 
 static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]\r\n\t[-a <address>] [-v <value>] [-p "
-                                     "<current psc>] [-n <new psc>] [-h(elp)]",
-                                     "Initialize and probe: sle4442 init",
-                                     "Dump contents: sle4442 dump",
-                                     "Unlock card: sle4442 unlock -p 0xffffff",
-                                     "Write a value: sle4442 write -a 0xff -v 0x55",
-                                     "Erase memory: sle4442 erase",
-                                     "Update PSC: sle4442 psc -p 0xffffff -n 0x000000",
-                                    "Dump contents to file: sle4442 dump -f dump.bin", 
-                                    "Dump format: DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"
+                                     "<current psc>] [-n <new psc>] [-f <dump file>] [-s <start address>] [-b <bytes>] [-h(elp)]",
+                                     "Initialize and probe:%s sle4442 init",
+                                     "Dump contents:%s sle4442 dump",
+                                     "Dump 32 bytes starting at address 0x50:%s sle4442 dump -s 0x50 -b 32",
+                                     "Dump contents to file:%s sle4442 dump -f dump.bin", 
+                                     "Dump format:%s DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"                                     
+                                     "Unlock card:%s sle4442 unlock -p 0xffffff",
+                                     "Write a value:%s sle4442 write -a 0xff -v 0x55",
+                                     "Erase memory:%s sle4442 erase",
+                                     "Update PSC:%s sle4442 psc -p 0xffffff -n 0x000000",
+                                     "Write protection mem:%s sle4442 protect -v 0x000000",
                                     }; 
 
 static const struct ui_help_options options[] = {
@@ -62,6 +65,10 @@ static const struct ui_help_options options[] = {
     { 0, "-p", T_HELP_SLE4442_CURRENT_PSC_FLAG },
     { 0, "-n", T_HELP_SLE4442_NEW_PSC_FLAG },
     { 0, "-f", T_HELP_SLE4442_FILE_FLAG },
+    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
+    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
+    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
+    { 0, "-h", T_HELP_HELP } // help flag
 };
 
 uint32_t sle4442_ticks(void) {
@@ -245,6 +252,28 @@ bool sle4442_update_psc(uint32_t new_psc, uint8_t* data) {
     }
 }
 
+enum sle4442_action_enum {
+    SLE4442_INIT = 0,
+    SLE4442_DUMP,
+    SLE4442_UNLOCK,
+    SLE4442_WRITE,
+    SLE4442_ERASE,
+    SLE4442_PSC,
+    SLE4442_GLITCH,
+    SLE4442_PROTECT
+};
+
+const struct cmdln_action_t sle4442_actions[] = {
+    { SLE4442_INIT, "init" },
+    { SLE4442_DUMP, "dump" },
+    { SLE4442_UNLOCK, "unlock" },
+    { SLE4442_WRITE, "write" },
+    { SLE4442_ERASE, "erase" },
+    { SLE4442_PSC, "psc" },
+    { SLE4442_GLITCH, "glitch" },
+    { SLE4442_PROTECT, "protect" }
+};
+
 void sle4442(struct command_result* res) {
     // check help
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
@@ -252,6 +281,7 @@ void sle4442(struct command_result* res) {
     }
 
     // parse command line
+    #if 0
     char action[9];
     cmdln_args_string_by_position(1, sizeof(action), action);
 
@@ -263,6 +293,10 @@ void sle4442(struct command_result* res) {
     bool update_psc = (strcmp(action, "psc") == 0);
 
     bool glitch = (strcmp(action, "glitch") == 0);
+    #endif
+
+    uint32_t action = SLE4442_INIT; // default action
+    if(cmdln_args_get_action(sle4442_actions, count_of(sle4442_actions), &action));
 
     if (hw2wire_mode_config.baudrate > (51)) {
         printf("Whoa there! %dkHz is probably too fast. Try 50kHz\r\n", hw2wire_mode_config.baudrate);
@@ -289,12 +323,12 @@ void sle4442(struct command_result* res) {
     }
     sle4442_decode_secmem(data);
 
-    if (glitch) {
+    if (action == SLE4442_GLITCH) {
         // unlock card, reset password attempts
         uint32_t psc;
         command_var_t arg;
         if (!cmdln_args_find_flag_uint32('p', &arg, &psc)) {
-            printf("Specify a 24 bit PSC with the -p flag (-p 0xffffff)\r\n");
+            printf("Specify a 24 bit (3 byte) PSC with the -p flag (-p 0xffffff)\r\n");
             goto sle4442_cleanup;
         }
 
@@ -334,47 +368,68 @@ void sle4442(struct command_result* res) {
         }
     }
 
-    if (dump) {
-        sle4442_read_prtmem(data);
-        printf("Protection memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", data[0], data[1], data[2], data[3]);
-
-        printf("Memory:\r\n");
+    if (action == SLE4442_DUMP) {
+        uint8_t buf[256+4+4];
         sle4442_write(SLE_CMD_READ_MEM, 0, 0);
-        for (uint i = 0; i < 256; i++) {
+        for(uint i =0; i<256; i++){
             uint8_t temp;
             pio_hw2wire_get16(&temp);
-            printf("0x%02x ", (uint8_t)ui_format_lsb(temp, 8));
+            buf[i]=(uint8_t)ui_format_lsb(temp, 8);
+        }
+        sle4442_read_secmem(&buf[256]);
+        sle4442_read_prtmem(&buf[256+4]);
+
+        //sle4442_read_prtmem(data);
+        //printf("Protection memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", data[0], data[1], data[2], data[3]);
+        printf("Protection memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", buf[260], buf[261], buf[262], buf[263]);
+        //printf("Security memory: 0x%02x 0x%02x 0x%02x 0x%02x\r\n", buf[256], buf[257], buf[258], buf[259]);
+        printf("Memory:\r\n");
+#if 0
+        uint32_t dump_start, dump_bytes;
+        ui_hex_get_args(256, &dump_start, &dump_bytes);
+        uint32_t aligned_start, aligned_end, total_bytes_read;
+        ui_hex_align(dump_start, dump_bytes, 256, &aligned_start, &aligned_end, &total_bytes_read); //align the start and bytes to the DDR5 SPD size
+        ui_hex_header(aligned_start, aligned_end, total_bytes_read); //print the header
+        
+        struct hex_config_t config;
+        for (uint32_t i = aligned_start; i < (aligned_end+1); i += 16) {
+            ui_hex_row(i, &buf[i], 16, &config); //print the hex row
+        }
+#endif        
+        struct hex_config_t hex_config;
+        hex_config.max_size_bytes= 256; // maximum size of the device in bytes
+        ui_hex_get_args_config(&hex_config);
+        ui_hex_align_config(&hex_config);
+        ui_hex_header_config(&hex_config);
+
+        for(uint32_t i=hex_config._aligned_start; i<(hex_config._aligned_end+1); i+=16) {
+            if(ui_hex_row_config(&hex_config, i, &buf[i], 16)){
+                goto sle4442_cleanup; // user exists pager
+            }
         }
         printf("\r\n");
 
-        //file to read/write/verify
         char file[13];
         command_var_t arg;
         bool file_flag = cmdln_args_find_flag_string('f'|0x20, &arg, sizeof(file), file);
-
         if(file_flag){
-            //new file
             FIL fil;		/* File object needed for each open file */
-            FRESULT fr;     /* FatFs return code */
-            UINT bw;
-
             printf("Dumping to %s...\r\n", file);
             //open file
+            if(file_open(&fil, file, FA_CREATE_ALWAYS | FA_WRITE)
+                || file_write(&fil, buf, sizeof(buf))
+                || file_close(&fil)){
+                res->error=true;
+                goto sle4442_cleanup;  
+            }
+            /*
             fr = f_open(&fil, file, FA_WRITE | FA_CREATE_ALWAYS);	
             if (fr != FR_OK) {
                 storage_file_error(fr);
                 res->error=true;
                 goto sle4442_cleanup;
             }
-            uint8_t buf[256+4+4];
-            sle4442_write(SLE_CMD_READ_MEM, 0, 0);
-            for(uint i =0; i<256; i++){
-                uint8_t temp;
-                pio_hw2wire_get16(&temp);
-                buf[i]=(uint8_t)ui_format_lsb(temp, 8);
-            }
-            sle4442_read_secmem(&buf[256]);
-            sle4442_read_prtmem(&buf[256+4]);
+            
             //write to file
             fr = f_write(&fil, buf, sizeof(buf), &bw);
             if (fr != FR_OK|| bw != sizeof(buf)) {
@@ -389,11 +444,12 @@ void sle4442(struct command_result* res) {
                 res->error=true;
                 goto sle4442_cleanup;
             }
+            */
             printf("Dump complete\r\n");
         }
     }
 
-    if (unlock || update_psc) {
+    if (action == SLE4442_UNLOCK || action == SLE4442_PSC) {
         // get cmdln flag -p uint32
         uint32_t psc;
         command_var_t arg;
@@ -447,7 +503,7 @@ void sle4442(struct command_result* res) {
         }
     }
 
-    if (update_psc) {
+    if (action == SLE4442_PSC) {
         uint32_t new_psc;
         command_var_t arg;
         if (!cmdln_args_find_flag_uint32('n', &arg, &new_psc)) {
@@ -467,7 +523,7 @@ void sle4442(struct command_result* res) {
         sle4442_decode_secmem(data);
     }
 
-    if (erase) {
+    if (action == SLE4442_ERASE) {
         printf("Erasing memory\r\n");
         for (uint i = 32; i < (0xff + 1); i++) {
             sle4442_write(SLE_CMD_WRITE_MEM, i, 0xff);
@@ -476,11 +532,11 @@ void sle4442(struct command_result* res) {
         printf("Memory erased\r\n");
     }
 
-    if (write) {
+    if (action == SLE4442_WRITE) {
         command_var_t arg;
         uint32_t val = 0, addr = 0;
         if (!cmdln_args_find_flag_uint32('v', &arg, &val)) {
-            printf("Specify 8bit write value -v flag (-v 0xffffffff)\r\n");
+            printf("Specify 8bit write value -v flag (-v 0xff)\r\n");
             goto sle4442_cleanup;
         }
         if (!cmdln_args_find_flag_uint32('a', &arg, &addr)) {
@@ -492,11 +548,11 @@ void sle4442(struct command_result* res) {
         sle4442_ticks();
     }
 
-    if (protect) {
+    if (action == SLE4442_PROTECT) {
         command_var_t arg;
         uint32_t prtmem = 0;
         if (!cmdln_args_find_flag_uint32('v', &arg, &prtmem)) {
-            printf("Specify 32bit protection value -v flag (-v 0xffffffff)\r\n");
+            printf("Specify 32 bit protection mem value -v flag (-v 0xffffffff)\r\n");
             goto sle4442_cleanup;
         }
         printf("Writing Protection Memory\r\n");

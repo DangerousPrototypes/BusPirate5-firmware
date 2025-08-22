@@ -822,6 +822,15 @@ void rgb_set_all(uint8_t r, uint8_t g, uint8_t b) {
     update_pixels();
 }
 
+void rgb_set_array(uint32_t* colors) {
+    for(uint8_t i=0; i < COUNT_OF_PIXELS; i++) {
+        CPIXEL_COLOR rgb = color_from_uint32(colors[i]);
+        PRINT_INFO("RGB: rgb_set_array() - Set pixel %d to RGB 0x%02x 0x%02x 0x%02x (0x%08x)", i, rgb.r, rgb.g, rgb.b, colors[i]);
+        pixels[i] = rgb;
+    }
+    update_pixels();
+}
+
 // function to control LED from led mode onboard demo
 #define DEMO_LED 1
 void rgb_put(uint32_t color) {

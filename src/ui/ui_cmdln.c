@@ -558,3 +558,30 @@ bool cmdln_info_uint32(void) {
         }
     }
 }
+
+//get first argument following command, search in a list of actions, error if not found
+// returns false if action is found, true if no action is found or error
+bool cmdln_args_get_action(const struct cmdln_action_t* action_list, size_t count_of_action_list, uint32_t *action) {
+    command_var_t arg;
+    char arg_str[9];
+    bool action_found = false; // invalid by default
+
+    // action is the first argument (read/write/probe/erase/etc)
+    if(!cmdln_args_string_by_position(1, sizeof(arg_str), arg_str)) return true; // no action found, return true to indicate no error
+
+    // get action from struct
+    for (uint8_t i = 0; i < count_of_action_list; i++) {
+        if (strcmp(arg_str, action_list[i].verb) == 0) {
+            (*action) = action_list[i].action;
+            action_found = true; // found the action
+            break;
+        }
+    }
+
+    if (!action_found) {
+        if(strlen(arg_str) > 0) printf("\r\nInvalid action: %s\r\n\r\n", arg_str);
+        return true; // invalid action
+    }
+
+    return false;
+}

@@ -5,6 +5,8 @@
 #define BP_SPLASH_FILE "display/robot5x16.h" //splash screen
 
 #define BP_HARDWARE_VERSION "Bus Pirate 5 REV8"
+#define BP_HARDWARE_VERSION_MAJOR 5
+#define BP_HARDWARE_VERSION_REVISION 8
 #define BP_HARDWARE_MCU "RP2040"
 #define BP_HARDWARE_RAM "264KB"
 #define BP_HARDWARE_FLASH "128Mbit"
@@ -40,6 +42,8 @@
 #define BP_COLOR_256_WARNING_TEXT "178"
 #define BP_COLOR_256_ERROR_TEXT "1"
 #define BP_COLOR_256_NUM_FLOAT_TEXT "26"
+#define BP_COLOR_GREY_TEXT "94;94;94"
+#define BP_COLOR_256_GREY_TEXT "59"
 
 // LCD size
 #define BP_LCD_WIDTH 240

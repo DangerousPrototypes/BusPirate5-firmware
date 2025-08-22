@@ -17,6 +17,14 @@ typedef enum {
 void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate, bool clock_stretch);
 void pio_i2c_cleanup(void);
 
+//---------------------------------------------------------------
+// High level functions with user error messages
+bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8_t *read_data, uint16_t read_len);
+bool i2c_write(uint8_t addr, uint8_t *data, uint16_t len);
+bool i2c_read(uint8_t addr, uint8_t *data, uint8_t len);
+
+
+
 // ---------------------------------------------------------------
 // Functions with timeout
 hwi2c_status_t pio_i2c_start_timeout(uint32_t timeout);
@@ -28,7 +36,9 @@ hwi2c_status_t pio_i2c_read_array_timeout(uint8_t addr, uint8_t* rxbuf, uint len
 hwi2c_status_t pio_i2c_write_array_timeout(uint8_t addr, uint8_t* txbuf, uint len, uint32_t timeout);
 hwi2c_status_t pio_i2c_transaction_array_timeout(
     uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout);
-
+hwi2c_status_t pio_i2c_transaction_array_repeat_start(uint8_t addr, uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout);
+hwi2c_status_t pio_i2c_wait_idle_extern(uint32_t timeout) ;
+//hwi2c_status_t pio_i2c_transaction_bpio(uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout);
 // ----------------------------------------------------------------------------
 // Low-level functions
 

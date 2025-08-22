@@ -39,6 +39,7 @@
 #include "commands/global/bug.h"
 #include "commands/global/image.h"
 #include "commands/global/dump.h"
+#include "commands/global/hex.h"
 #if RPI_PLATFORM == RP2350
     #include "commands/global/otpdump.h"
 #endif
@@ -59,8 +60,8 @@ const struct _global_command_struct commands[] = {
 { .command="rm",        .allow_hiz=true,  .func=&disk_rm_handler,                    .help_text=0x00 }, // rm T_CMDLN_RM
 { .command="cat",       .allow_hiz=true,  .func=&disk_cat_handler,                   .help_text=0x00 }, // cat T_CMDLN_CAT
 { .command="m",         .allow_hiz=true,  .func=&ui_mode_enable_args,                .help_text=0x00 }, // "m"  T_CMDLN_MODE //needs trailing int32
-{ .command="W",         .allow_hiz=false, .func=&psucmd_enable_handler,              .help_text=0x00 }, // "W"   T_CMDLN_PSU_EN  //TOD0: more flexability on help handling and also a general deescription
-{ .command="#",         .allow_hiz=true,  .func=&cmd_mcu_reset_handler,              .help_text=T_CMDLN_RESET }, // "#"
+{ .command="W",         .allow_hiz=false, .func=&psucmd_enable_handler,              .help_text=0x00 }, // "W"   T_CMDLN_PSU_EN  //TODO: more flexibility on help handling and also a general deescription
+{ .command="reboot",    .allow_hiz=true,  .func=&cmd_mcu_reboot_handler,             .help_text=T_CMDLN_REBOOT }, // "reboot"
 { .command="$",         .allow_hiz=true,  .func=&cmd_mcu_jump_to_bootloader_handler, .help_text=0x00 }, // "$" T_CMDLN_BOOTLOAD
 { .command="=",         .allow_hiz=true,  .func=&cmd_convert_base_handler,           .help_text=T_CMDLN_INT_FORMAT }, // "="
 { .command="|",         .allow_hiz=true,  .func=&cmd_convert_inverse_handler,        .help_text=T_CMDLN_INT_INVERSE }, // "|"
@@ -88,7 +89,7 @@ const struct _global_command_struct commands[] = {
 { .command="label",     .allow_hiz=true,  .func=&disk_label_handler,                 .help_text=0x00 },
 { .command="d",         .allow_hiz=true,  .func=&ui_display_enable_args,             .help_text=T_CMDLN_DISPLAY }, // "d"
 { .command="logic",     .allow_hiz=true,  .func=&logic_handler,                      .help_text=0x00 }, // "logic"
-{ .command="hex",       .allow_hiz=true,  .func=&disk_hex_handler,                   .help_text=0x00 }, // "hex"  T_CMDLN_HEX
+{ .command="hex",       .allow_hiz=true,  .func=&hex_handler,                        .help_text=0x00 }, // "hex"  T_CMDLN_HEX
 { .command="pause",     .allow_hiz=true,  .func=&pause_handler,                      .help_text=0x00 }, // "pause"
 { .command="dummy",     .allow_hiz=true,  .func=&dummy_handler,                      .help_text=0x00 }, // "dummy"
 { .command="help",      .allow_hiz=true,  .func=&help_handler,                       .help_text=0x00 },

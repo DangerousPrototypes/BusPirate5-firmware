@@ -328,6 +328,7 @@ const mode_config_t system_config_json[] = {
     {"$.debug_uart_enable",           &system_config.debug_uart_enable,                MODE_CONFIG_FORMAT_DECIMAL,   },
     {"$.debug_uart_number",           &system_config.debug_uart_number,                MODE_CONFIG_FORMAT_DECIMAL,   },
     {"$.disable_usb_serial_number",   &system_config.disable_unique_usb_serial_number, MODE_CONFIG_FORMAT_DECIMAL,   },
+    {"$.bpio_debug_enable",           &system_config.bpio_debug_enable,               MODE_CONFIG_FORMAT_DECIMAL,   },
     //....-....1....-....2....-....3
     // clang-format on
 };

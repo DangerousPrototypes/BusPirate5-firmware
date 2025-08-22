@@ -12,7 +12,6 @@
 // #include "modes.h"
 #include "binmode/binmodes.h"
 #include "binmode/logicanalyzer.h"
-#include "binmode/binio.h"
 #include "binmode/fala.h"
 #include "tusb.h"
 #include "ui/ui_term.h"

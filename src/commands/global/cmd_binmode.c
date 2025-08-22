@@ -20,7 +20,7 @@
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = {
     "binmode",
-    "Configure the active binary mode: binmode",
+    "Configure the active binary mode:%s binmode",
 };
 
 static const struct ui_help_options options[] = { 0};

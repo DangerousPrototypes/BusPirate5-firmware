@@ -21,6 +21,7 @@
 //#include "pirate/button.h" // Button press functions
 //#include "msc_disk.h"
 #include "hardware/clocks.h"
+#include "hardware/vreg.h"
 
 /*****************************************/
 // OVERCLOCKING CAN DESTROY YOUR HARDWARE
@@ -35,8 +36,8 @@
 /*****************************************/
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "ovrclk \t[-m <MHz> | -k <kHz>] [-v <core mV>]",
-                                     "Overclock: ovrclk -m 135",
-                                     "Change core voltage: ovrclk -v 1150 (850-1300mV valid)",};
+                                     "Overclock:%s ovrclk -m 135",
+                                     "Change core voltage:%s ovrclk -v 1150 (850-1300mV valid)",};
 
 static const struct ui_help_options options[] = { 0 };
 
@@ -83,6 +84,13 @@ void ovrclk_handler(struct command_result* res) {
         VREG_VOLTAGE_MAX = VREG_VOLTAGE_1_30,      ///< Always the maximum possible voltage
     };*/
 
+    
+    // now set clock frequency
+    if(m_flag && k_flag){
+        printf("Invalid options, -m and -k both set\r\n");
+        return;
+    }
+
     if(v_flag){
         //0.85 = 0b0110 = 6
         //1.30 = 0b1111 = 15
@@ -98,12 +106,6 @@ void ovrclk_handler(struct command_result* res) {
         #ifdef BP_OVERCLOCK_ENABLED
         vreg_set_voltage(vreg_value);
         #endif
-    }
-
-    // now set clock frequency
-    if(m_flag && k_flag){
-        printf("Invalid options, -m and -k both set\r\n");
-        return;
     }
     
     if (m_flag) {

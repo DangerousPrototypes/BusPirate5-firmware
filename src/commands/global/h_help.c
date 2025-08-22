@@ -41,6 +41,12 @@ const struct ui_help_topics help_topics[] = {
 };
 */
 const struct ui_help_options global_commands[] = {
+    // BUGBUG -- Why isn't this automatically generated from _global_command_struct?
+    //           Likely because this list is categorized.
+    //           Unfortunately, that also means it's easy to get these out of sync.
+    //           That problem will disappear when we restructure the commands to
+    //           be heirarchical / well structures (needed if ever to enable protobuf).
+
     { 1, "", T_HELP_SECTION_IO }, // work with pins, input, output measurement
     { 0, "w/W", T_HELP_1_21 },    // note that pin functions need power on the buffer
     { 0, "a/A/@ x", T_HELP_COMMAND_AUX },
@@ -67,7 +73,7 @@ const struct ui_help_options global_commands[] = {
     // restart, firmware updates and diagnostic
     { 1, "", T_HELP_SECTION_SYSTEM },
     { 0, "i", T_HELP_1_14 },
-    { 0, "#", T_HELP_1_4 },
+    { 0, "reboot", T_HELP_SYSTEM_REBOOT },
     { 0, "$", T_HELP_1_5 },
     { 0, "~", T_HELP_1_3 },
 
@@ -138,9 +144,9 @@ const struct ui_help_options global_commands_more_help[] = {
 
 static const char* const help_usage[] = {
     "?|help [mode|display] [-h(elp)]",
-    "Show global commands: ?",
-    "Show help and commands for current mode: ? mode",
-    "Show help and commands for current display mode: ? display",
+    "Show help and all commands:%s help",
+    "Show help and commands for current mode:%s help mode",
+    "Show help and commands for current display mode:%s help display",
 };
 
 static const struct ui_help_options help_options[] = {
@@ -170,7 +176,7 @@ void help_global(void) {
 
     // loop through modes and display available commands
     for (uint32_t i = 0; i < count_of(modes); i++) {
-        if ((*modes[i].mode_commands_count) > 0) {
+        if ((*modes[i].mode_commands_count) > 0 && modes[i].mode_commands->func != NULL) {
             // ui_help_mode_commands(modes[i].mode_commands, *modes[i].mode_commands_count);
             // printf("%d\r\n", *modes[i].mode_commands_count);
             ui_help_mode_commands_exec(modes[i].mode_commands, *modes[i].mode_commands_count, modes[i].protocol_name);

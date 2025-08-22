@@ -10,7 +10,7 @@
 
 static const char* const usage[] = {
     "cls",
-    "Clear and refresh the terminal screen: cls",
+    "Clear and refresh the terminal screen:%s cls",
     "Note: will attempt to detect and initialize VT100 ANSI terminal",
 };
 

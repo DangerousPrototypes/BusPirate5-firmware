@@ -51,7 +51,9 @@
 // #define 	BP_USE_DUMMY2
 #define BP_USE_SCOPE
 // #define     BP_USE_BINLOOPBACK
- #define     BP_USE_JTAG
+#define     BP_USE_JTAG
+//#define BP_USE_I2S
+// #define     BP_USE_USBPD
 
 // enable display support
 // #define		DISPLAY_USE_HD44780	// is always enabled
@@ -195,5 +197,22 @@ void spi_busy_wait_internal(bool enable, const char *file, int line);
 // LED settings
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 // only used on APA102
+
+typedef struct {
+    bool debug;                 // Debug flag for BPIO
+    uint32_t speed;              // Speed in Hz or baud for the mode
+    uint8_t data_bits;           // Data bits for the mode (e.g., 8 for UART)
+    bool parity;                 // Parity for the mode (true for even parity, false for no parity)
+    uint8_t stop_bits;           // Stop bits for the mode (1 or 2)
+    bool flow_control;           // Flow control for the mode (true for enabled, false for disabled)
+    bool signal_inversion;       // Signal inversion for the mode (true for inverted, false for normal)
+    bool clock_stretch;          // Clock stretching for I2C mode (true for enabled, false for disabled)
+    bool clock_polarity;         // Clock polarity for SPI mode (true for high, false for low)
+    bool clock_phase;            // Clock phase for SPI mode (true for leading edge, false for trailing edge)
+    bool chip_select_idle;         // Chip select active (0=Active High, 1=Active Low) for SPI and 3-wire modes
+    uint8_t submode;             // Submode for LED and INFRARED modes (e.g., "RGB", "IR TX", "IR RX")
+    uint8_t tx_modulation;       // TX modulation for INFRARED mode (true for enabled, false for disabled)
+    uint8_t rx_sensor;           // RX sensor for INFRARED mode (true for enabled, false for disabled)
+} bpio_mode_configuration_t;
 
 #endif

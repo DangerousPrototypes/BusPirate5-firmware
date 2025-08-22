@@ -32,3 +32,6 @@ bool spiflash_force_dump(uint32_t start_address,
                          uint8_t* buf,
                          sfud_flash* flash_info,
                          const char* file_name);
+bool spiflash_show_hex(uint32_t buf_size,
+                      uint8_t* buf,
+                      sfud_flash* flash_info); 

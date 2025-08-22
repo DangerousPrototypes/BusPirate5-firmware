@@ -28,11 +28,11 @@
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "bluetag [jtag|swd] [-c <channels>] [-v(ersion)] [-d(isable pulsing)]",
-                                     "blueTag interactive interface: bluetag",
-                                     "JTAG scan, 6 channels: bluetag jtag -c 6",
-                                     "SWD scan, 4 channels: bluetag swd -c 4",
-                                     "Show version: bluetag -v",
-                                     "Disable JTAG pin pulsing: bluetag jtag -c 6 -d",
+                                     "blueTag interactive interface:%s bluetag",
+                                     "JTAG scan, 6 channels:%s bluetag jtag -c 6",
+                                     "SWD scan, 4 channels:%s bluetag swd -c 4",
+                                     "Show version:%s bluetag -v",
+                                     "Disable JTAG pin pulsing:%s bluetag jtag -c 6 -d",
                                      "",
                                      "blueTag by @Aodrulez https://github.com/Aodrulez/blueTag" };
 

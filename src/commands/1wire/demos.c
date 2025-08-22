@@ -23,7 +23,7 @@
 
 static const char* const ds18b20_usage[] = {
     "ds18b20\t[-h(elp)]",
-    "measure temperature (single sensor bus only): ds18b20",
+    "measure temperature (single sensor bus only):%s ds18b20",
 };
 
 static const struct ui_help_options ds18b20_options[] = {

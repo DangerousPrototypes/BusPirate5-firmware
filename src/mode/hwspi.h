@@ -29,6 +29,7 @@ uint8_t spi_xfer(const uint8_t out);
 
 uint32_t spi_read_simple(void);
 void spi_write_simple(uint32_t data);
+bool bpio_hwspi_configure(bpio_mode_configuration_t *bpio_mode_config);
 
 typedef struct _spi_mode_config {
     uint32_t baudrate;

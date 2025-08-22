@@ -33,6 +33,92 @@ set(buspirate_common
         system_monitor.h
         system_monitor.c
 
+        #flatcc test
+        commands/global/flat.h 
+        commands/global/flat.c 
+        bpio_builder.h
+        bpio_reader.h
+        bpio_verifier.h
+        monster_verifier.h 
+        flatbuffers_common_builder.h 
+        flatbuffers_common_reader.h
+        monster_builder.h
+        monster_reader.h
+        builder.c
+        emitter.c 
+        json_parser.c 
+        json_printer.c 
+        refmap.c 
+        verifier.c 
+        flatcc/flatcc_portable.h
+        flatcc/flatcc_rtconfig.h
+        flatcc/flatcc_unaligned.h
+        flatcc/flatcc_flatbuffers.h
+        flatcc/flatcc_verifier.h
+        flatcc/flatcc_prologue.h
+        flatcc/flatcc.h
+        flatcc/flatcc_json_printer.h
+        flatcc/flatcc_assert.h
+        flatcc/flatcc_json_parser.h
+        flatcc/flatcc_version.h
+        flatcc/flatcc_endian.h
+        flatcc/flatcc_emitter.h
+        flatcc/flatcc_accessors.h
+        flatcc/flatcc_refmap.h
+        flatcc/flatcc_types.h
+        flatcc/flatcc_builder.h
+        flatcc/flatcc_alloc.h
+        flatcc/flatcc_identifier.h
+        flatcc/flatcc_epilogue.h
+        flatcc/flatcc_iov.h
+        flatcc/support/elapsed.h
+        flatcc/support/cdump.h
+        flatcc/support/hexdump.h
+        flatcc/support/readfile.h
+        flatcc/reflection/reflection_verifier.h
+        flatcc/reflection/reflection_reader.h
+        flatcc/reflection/reflection_builder.h
+        flatcc/reflection/flatbuffers_common_builder.h
+        flatcc/reflection/flatbuffers_common_reader.h
+        flatcc/portable/portable.h
+        flatcc/portable/pinttypes.h
+        flatcc/portable/pdiagnostic_push.h
+        flatcc/portable/pinline.h
+        flatcc/portable/pendian_detect.h
+        flatcc/portable/pversion.h
+        flatcc/portable/pdiagnostic_pop.h
+        flatcc/portable/pstdalign.h
+        flatcc/portable/pstatic_assert_scope.h
+        flatcc/portable/punaligned.h
+        flatcc/portable/grisu3_math.h
+        flatcc/portable/paligned_alloc.h
+        flatcc/portable/pprintfp.h
+        flatcc/portable/pattributes.h
+        flatcc/portable/pmemaccess.h
+        flatcc/portable/pstdint.h
+        flatcc/portable/pstdbool.h
+        flatcc/portable/pwarnings.h
+        flatcc/portable/portable_basic.h
+        flatcc/portable/pprintint.h
+        flatcc/portable/pparseint.h
+        flatcc/portable/grisu3_parse.h
+        flatcc/portable/grisu3_print.h
+        flatcc/portable/prestrict.h
+        flatcc/portable/pbase64.h
+        flatcc/portable/pparsefp.h
+        flatcc/portable/pdiagnostic.h
+        flatcc/portable/pendian.h
+        flatcc/portable/pcrt.h
+        flatcc/portable/pstatic_assert.h
+        flatcc/portable/include/linux/endian.h
+        flatcc/portable/include/std/inttypes.h
+        flatcc/portable/include/std/stdbool.h
+        flatcc/portable/include/std/stdint.h
+        flatcc/portable/include/std/stdalign.h
+        lib/nanocobs/cobs.c
+        lib/nanocobs/cobs.h
+
+
         # pirate lib
         pirate/psu.h
         pirate/psu.c
@@ -57,6 +143,12 @@ set(buspirate_common
         pirate/rgb.h
         pirate/rgb.c
         pirate/intercore_helpers.c
+        pirate/file.h 
+        pirate/file.c
+
+        # libraries
+        lib/jep106/jep106.c
+        lib/jep106/jep106.h
 
         # commands
         commands.h
@@ -114,7 +206,11 @@ set(buspirate_common
         commands/global/dump.c
         commands/global/dump.h
         commands/global/ovrclk.c 
-        commands/global/ovrclk.h    
+        commands/global/ovrclk.h   
+        commands/global/hex.c     
+        commands/global/hex.h
+        commands/eeprom/eeprom_base.h
+        commands/eeprom/eeprom_base.c
         
         # HiZ
         mode/hiz.h
@@ -131,6 +227,8 @@ set(buspirate_common
         commands/1wire/demos.c
         pirate/onewire_library.h
         pirate/onewire_library.c
+        commands/eeprom/eeprom_1wire.h
+        commands/eeprom/eeprom_1wire.c
 
         # UART
         mode/hwuart.h
@@ -174,6 +272,10 @@ set(buspirate_common
         lib/tsl2561/driver_tsl2561.h
         commands/i2c/sniff.c 
         commands/i2c/sniff.h
+        commands/i2c/ddr.c
+        commands/i2c/ddr.h
+        commands/eeprom/eeprom_i2c.c 
+        commands/eeprom/eeprom_i2c.h
 
         # SPI
         mode/hwspi.c
@@ -193,6 +295,8 @@ set(buspirate_common
         lib/sfud/inc/sfud_flash_def.h
         lib/sfud/inc/sfud_port.c
         lib/sfud/inc/sfud_sfdp.c
+        commands/eeprom/eeprom_spi.h
+        commands/eeprom/eeprom_spi.c
 
         # 2WIRE
         mode/hw2wire.h
@@ -282,6 +386,11 @@ set(buspirate_common
         ui/ui_term.h
         ui/ui_statusbar.c
         ui/ui_statusbar.h
+        ui/ui_hex.c
+        ui/ui_hex.h
+        ui/ui_progress_indicator.h
+        ui/ui_progress_indicator.c
+
 
         # Debug
         debug_uart.c
@@ -320,8 +429,6 @@ set(buspirate_common
         # binary mode
         binmode/binmodes.c
         binmode/binmodes.h
-        binmode/binio.c
-        binmode/binio.h
         binmode/binio_helpers.c
         binmode/binio_helpers.h
         mode/binloopback.c
@@ -330,8 +437,10 @@ set(buspirate_common
         binmode/logicanalyzer.c
         binmode/sump.c
         binmode/sump.h
-        binmode/dirtyproto.c
-        binmode/dirtyproto.h
+        binmode/bpio.c
+        binmode/bpio.h
+        binmode/bpio_transactions.h
+        binmode/bpio_transactions.c
         binmode/legacy4third.c
         binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c
@@ -384,8 +493,17 @@ set(buspirate_common
         msc_disk.c
         msc_disk.h
         usb_descriptors.c
-)
 
+	# USBPD 
+        mode/usbpd.c            
+        mode/usbpd.h
+
+        # I2S
+        mode/i2s.c
+        mode/i2s.h
+        commands/i2s/sine.h 
+        commands/i2s/sine.c
+)
 set(buspirate_nandflash
         #nand flash management and dhara
         dhara/bytes.h
@@ -585,6 +703,8 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/commands/uart/glitch.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico-i2c-sniff/i2c_sniffer.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico-i2c-sniff/hw2w_sniffer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/i2s_out.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/i2s_in.pio)
 
         pico_set_program_name(${revision} ${revision}) 
         pico_set_program_version(${revision} "0.1.0")
@@ -599,8 +719,17 @@ foreach(revision ${revisions})
         #XOSC fix?
         target_compile_definitions(${revision} PUBLIC PICO_XOSC_STARTUP_DELAY_MULTIPLIER=172)
         # useful for debug builds
-        target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=$<CONFIG:DEBUG>)
+        #target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=$<CONFIG:DEBUG>)
+        target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=1)
         target_compile_definitions(${revision} PUBLIC PICO_STACK_SIZE=4096)        
+        target_compile_definitions(${revision} PRIVATE PICO_MALLOC_PANIC=0)
+
+        # Add to your foreach(revision ${revisions}) loop after target_link_libraries
+        target_link_options(${revision} PRIVATE 
+        "LINKER:-Map=${CMAKE_BINARY_DIR}/${revision}.map"
+        "LINKER:--print-memory-usage"
+        "LINKER:--cref"
+        )
 
         # Add the standard library to the build
         target_link_libraries(${revision} ${stdlibs} )

@@ -24,7 +24,7 @@
 // NOTE: tutorial is basically a simplified alias to script
 static const char* const usage[] = {
     "tutorial <file> [-h(elp)]",
-    "Run tutorial: tutorial example.tut",
+    "Run tutorial:%s tutorial example.tut",
     "",
     "Tutorial files:",
     "Tutorial files are stored in text files with the .tut extension",

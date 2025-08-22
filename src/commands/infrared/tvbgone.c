@@ -114,7 +114,7 @@ static uint8_t pwm_freq_find(
 
 static const char* const usage[] = {
     "tvbgone",
-	"Turn off TVs: tvbgone",
+	"Turn off TVs:%s tvbgone",
 	"Based on TV B Gone by Mitch Altman and a 2009 kit version by Limor Fried",
 };
 

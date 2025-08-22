@@ -24,9 +24,9 @@ bool ui_mode_list(const struct ui_prompt* menu) {
 
 static const char* const usage[] = {
     "m [mode name|mode number] [-h]",
-    "Change mode with menu: m",
-    "Change mode to I2C: m i2c",
-    "Change mode to menu option 5: m 5",
+    "Change mode with menu:%s m",
+    "Change mode to I2C:%s m i2c",
+    "Change mode to menu option 5:%s m 5",
 };
 
 static const struct ui_help_options options[] = {  };

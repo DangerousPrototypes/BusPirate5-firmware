@@ -7,10 +7,9 @@
 #include "modes.h"
 //#include "pirate/psu.h"
 #include "pirate/pullup.h"
-#include "binmode/binio.h"
 #include "system_config.h"
 #include "binmode/sump.h"
-#include "binmode/dirtyproto.h"
+#include "binmode/bpio.h"
 #include "binmode/legacy4third.h"
 #include "binmode/falaio.h"
 #include "binmode/irtoy-irman.h"
@@ -20,6 +19,20 @@
 #include "usb_rx.h"
 #include "ui/ui_const.h"
 #include "commands/global/w_psu.h"
+#include "ui/ui_term.h"
+#include "tusb.h"
+
+void binmode_terminal_lock(bool lock) {
+    system_config.binmode_lock_terminal = lock;
+    if (!tud_cdc_n_connected(0)) {
+        return;
+    }
+    if (lock) {
+        printf("\r\n%sBinmode active. Terminal locked%s\r\n", ui_term_color_info(), ui_term_color_reset());
+    } else {
+        printf("\r\n%sTerminal unlocked%s\r\n", ui_term_color_info(), ui_term_color_reset());
+    }
+}
 
 void binmode_null_func_void(void) {
     return;
@@ -40,15 +53,15 @@ const binmode_t binmodes[] = {
         .binmode_cleanup = sump_logic_analyzer_cleanup,
     },
     {
-        .lock_terminal = true,
-        .can_save_config = false,
+        .lock_terminal = false,
+        .can_save_config = true,
         .reset_to_hiz = false,
         .pullup_enabled = false,
         .psu_en_voltage = 0,
         .psu_en_current = 0,  
         .button_to_exit = false,      
         .binmode_name = dirtyproto_mode_name,
-        .binmode_setup = binmode_null_func_void,
+        .binmode_setup = dirtyproto_mode_setup,
         .binmode_service = dirtyproto_mode,
         .binmode_cleanup = binmode_null_func_void,
     },

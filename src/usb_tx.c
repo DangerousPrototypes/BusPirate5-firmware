@@ -154,6 +154,11 @@ void tx_fifo_put(char* c) {
     queue2_add_blocking(&tx_fifo, c);
 }
 
+void tx_fifo_try_put(char* c) {
+    BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
+    queue2_try_add(&tx_fifo, c);
+}
+
 void bin_tx_fifo_put(const char c) {
     BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
     queue2_add_blocking(&bin_tx_fifo, &c);

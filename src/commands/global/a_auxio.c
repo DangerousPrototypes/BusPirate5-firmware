@@ -12,9 +12,9 @@ static const char labels[][5] = { "AUXL", "AUXH" };
 
 static const char* const usage[] = {
     "a/A/@ <io> [-h(elp)]",
-    "Pin 0 ouput, low: a 0",
-    "Pin 2 output, high: A 2",
-    "Pin 5 input, read value: @ 5",
+    "Pin 0 ouput, low:%s a 0",
+    "Pin 2 output, high:%s A 2",
+    "Pin 5 input, read value:%s @ 5",
 };
 
 static const struct ui_help_options options[] = {

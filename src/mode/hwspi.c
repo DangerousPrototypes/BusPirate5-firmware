@@ -19,6 +19,7 @@
 #include "pirate/hwspi.h"
 #include "commands/spi/sniff.h"
 #include "usb_rx.h"
+#include "commands/eeprom/eeprom_spi.h"
 
 // command configuration
 const struct _mode_command_struct hwspi_commands[] = {
@@ -27,11 +28,19 @@ const struct _mode_command_struct hwspi_commands[] = {
         .description_text=T_HELP_CMD_FLASH, 
         .supress_fala_capture=true
     },
-    {   .command="sniff", 
+    {   .command="eeprom", 
+        .func=&spi_eeprom_handler, 
+        .description_text=T_HELP_SPI_EEPROM, 
+        .supress_fala_capture=true
+
+    },
+    
+/*    {   .command="sniff", 
         .func=&sniff_handler, 
         .description_text=T_SPI_CMD_SNIFF, 
         .supress_fala_capture=true
     },    
+    */
 };
 const uint32_t hwspi_commands_count = count_of(hwspi_commands);
 
@@ -156,73 +165,20 @@ uint32_t spi_setup(void) {
     storage_save_mode(config_file, config_t, count_of(config_t));
     //}
 
+    mode_config.baudrate_actual = spi_init(M_SPI_PORT, mode_config.baudrate);
+    printf("\r\n%s%s:%s %ukHz",
+            ui_term_color_notice(),
+            GET_T(T_HWSPI_ACTUAL_SPEED_KHZ),
+            ui_term_color_reset(),
+            mode_config.baudrate_actual / 1000);
+
     return 1;
-}
-
-uint32_t spi_binmode_get_config_length(void) {
-    return 8;
-}
-
-uint32_t spi_binmode_setup(uint8_t* config) {
-    // spi config sequence:
-    // 0x3b9aca0 4-8 CPOL=0 CPHA=0 CS=1
-    uint32_t temp = 0;
-    char c;
-    bool error = false;
-    for (uint8_t i = 0; i < 4; i++) {
-        temp = temp << 8;
-        temp |= config[i];
-    }
-    if (temp > 62500000) {
-        error = true;
-    } else {
-        mode_config.baudrate = temp;
-    }
-
-    c = config[4];
-    if (c < 4 || c > 8) {
-        error = true;
-    } else {
-        mode_config.data_bits = c;
-    }
-
-    c = config[5];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.clock_polarity = c;
-    }
-
-    c = config[6];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.clock_phase = c;
-    }
-
-    c = config[7];
-    if (c > 1) {
-        error = true;
-    } else {
-        mode_config.cs_idle = c;
-    }
-
-    mode_config.binmode = true;
-
-    return error;
 }
 
 uint32_t spi_setup_exc(void) {
     // setup spi
     mode_config.read_with_write = false;
     mode_config.baudrate_actual = spi_init(M_SPI_PORT, mode_config.baudrate);
-    if (!mode_config.binmode) {
-        printf("\r\n%s%s:%s %ukHz",
-               ui_term_color_notice(),
-               GET_T(T_HWSPI_ACTUAL_SPEED_KHZ),
-               ui_term_color_reset(),
-               mode_config.baudrate_actual / 1000);
-    }
     hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
     system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
@@ -386,4 +342,20 @@ void spi_help(void) {
 
 uint32_t spi_get_speed(void) {
     return mode_config.baudrate_actual;
+}
+
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_hwspi_configure(bpio_mode_configuration_t *bpio_mode_config){
+    if(bpio_mode_config->debug) printf("[SPI] Speed %d Hz\r\n", bpio_mode_config->speed);
+    mode_config.baudrate=bpio_mode_config->speed; // convert to kHz
+    mode_config.data_bits = bpio_mode_config->data_bits;
+    mode_config.clock_polarity = bpio_mode_config->clock_polarity;
+    mode_config.clock_phase = bpio_mode_config->clock_phase;
+    mode_config.cs_idle = bpio_mode_config->chip_select_idle;
+    return true;  
 }

@@ -27,6 +27,7 @@ void hw1wire_macro(uint32_t macro);
 void hw1wire_help(void);
 uint32_t hw1wire_get_speed(void);
 bool hw1wire_preflight_sanity_check(void);
+bool bpio_1wire_configure(bpio_mode_configuration_t *bpio_mode_config);
 
 extern const struct _mode_command_struct hw1wire_commands[];
 extern const uint32_t hw1wire_commands_count;

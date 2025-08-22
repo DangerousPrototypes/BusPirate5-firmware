@@ -29,6 +29,16 @@ typedef struct command_var_struct {
     uint8_t number_format;
 } command_var_t;
 
+//this doesn't really belong here
+//it is for parsing the first verb after a command and searching for it in a list
+//used frequently in commands
+//  returns false if action is found, true if no action is found or error
+struct cmdln_action_t {
+    uint32_t action;
+    const char verb[9];
+};
+bool cmdln_args_get_action(const struct cmdln_action_t* action_list, size_t count_of_action_list, uint32_t *action);
+
 bool cmdln_args_find_flag(char flag);
 bool cmdln_args_find_flag_uint32(char flag, command_var_t* arg, uint32_t* value);
 bool cmdln_args_find_flag_string(char flag, command_var_t* arg, uint32_t max_len, char* str);

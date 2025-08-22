@@ -16,13 +16,15 @@
 #include "commands/i2c/sniff.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
+#include "commands/i2c/ddr.h"
+#include "commands/eeprom/eeprom_i2c.h"
 
 static const char pin_labels[][5] = {
     "SDA",
     "SCL",
 };
 
-static struct _i2c_mode_config mode_config;
+struct _i2c_mode_config i2c_mode_config;
 
 // command configuration
 const struct _mode_command_struct hwi2c_commands[] = {
@@ -35,6 +37,28 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .command="sniff",
         .func=&i2c_sniff,
         .description_text=T_I2C_SNIFF,
+        .supress_fala_capture=true
+    },
+    {
+        .command="eeprom",
+        .func=&i2c_eeprom_handler,
+        .description_text=T_HELP_I2C_EEPROM,
+        .supress_fala_capture=true
+    }, 
+    {   .command="ddr5", 
+        .func=&ddr5_handler, 
+        .description_text=T_HELP_DDR5, 
+        .supress_fala_capture=true
+    },       
+    {
+        .command="sht3x", 
+        .func=&demo_sht3x, 
+        .description_text=T_HELP_I2C_SHT3X, 
+        .supress_fala_capture=true
+    },    
+    {   .command="sht4x", 
+        .func=&demo_sht4x, 
+        .description_text=T_HELP_I2C_SHT4X, 
         .supress_fala_capture=true
     },    
     {   .command="si7021", 
@@ -52,6 +76,12 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_TSL2561, 
         .supress_fala_capture=true
     },
+    {
+        .command="tcs3472",
+        .func=&demo_tcs34725,
+        .description_text=T_HELP_I2C_TCS34725,
+        .supress_fala_capture=true
+    }, 
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 
@@ -97,9 +127,9 @@ uint32_t hwi2c_setup(void) {
 
     const mode_config_t config_t[] = {
         // clang-format off
-        { "$.baudrate", &mode_config.baudrate, MODE_CONFIG_FORMAT_DECIMAL },
-        /*{ "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },*/
-        { "$.clock_stretch", (uint32_t*)&mode_config.clock_stretch, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.baudrate", &i2c_mode_config.baudrate, MODE_CONFIG_FORMAT_DECIMAL },
+        /*{ "$.data_bits", &i2c_mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },*/
+        { "$.clock_stretch", (uint32_t*)&i2c_mode_config.clock_stretch, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };
     prompt_result result;
@@ -115,7 +145,7 @@ uint32_t hwi2c_setup(void) {
             return 1; // user said yes, use the saved settings
         }
     }
-    ui_prompt_uint32(&result, &i2c_menu[0], &mode_config.baudrate);
+    ui_prompt_uint32(&result, &i2c_menu[0], &i2c_mode_config.baudrate);
     if (result.exit) {
         return 0;
     }
@@ -123,11 +153,11 @@ uint32_t hwi2c_setup(void) {
     if (result.exit) {
         return 0;
     }    
-    mode_config.clock_stretch = (bool)(temp-1);
-    // printf("Result: %d\r\n", mode_config.baudrate);
+    i2c_mode_config.clock_stretch = (bool)(temp-1);
+    // printf("Result: %d\r\n", i2c_mode_config.baudrate);
     // ui_prompt_uint32(&result, &i2c_menu[1], &temp);
     // if(result.exit) return 0;
-    // mode_config.data_bits=(uint8_t)temp-1;
+    // i2c_mode_config.data_bits=(uint8_t)temp-1;
     storage_save_mode(config_file, config_t, count_of(config_t));
     return 1;
 }
@@ -137,11 +167,11 @@ uint32_t hwi2c_setup_exc(void) {
                 bio2bufiopin[M_I2C_SCL],
                 bio2bufdirpin[M_I2C_SDA],
                 bio2bufdirpin[M_I2C_SCL],
-                mode_config.baudrate,
-                mode_config.clock_stretch);           
+                i2c_mode_config.baudrate,
+                i2c_mode_config.clock_stretch);           
     system_bio_update_purpose_and_label(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
-    mode_config.start_sent = false;
+    i2c_mode_config.start_sent = false;
     return 1;
 }
 
@@ -166,7 +196,7 @@ bool hwi2c_error(hwi2c_status_t error, struct _bytecode* result) {
 void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
 
     hwi2c_status_t i2c_status;
-    if(!mode_config.start_sent) {
+    if(!i2c_mode_config.start_sent) {
         ui_help_sanity_check(true, 1<<M_I2C_SDA|1<<M_I2C_SCL);
         result->data_message = GET_T(T_HWI2C_START);
         i2c_status = pio_i2c_start_timeout(0xfffff);
@@ -176,7 +206,7 @@ void hwi2c_start(struct _bytecode* result, struct _bytecode* next) {
     }
 
     if (!hwi2c_error(i2c_status, result)) {
-        mode_config.start_sent = true;
+        i2c_mode_config.start_sent = true;
     }
 }
 
@@ -184,7 +214,7 @@ void hwi2c_stop(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_HWI2C_STOP);
     hwi2c_status_t i2c_status = pio_i2c_stop_timeout(0xffff);
     hwi2c_error(i2c_status, result);
-    mode_config.start_sent = false;
+    i2c_mode_config.start_sent = false;
 }
 
 void hwi2c_write(struct _bytecode* result, struct _bytecode* next) {
@@ -230,13 +260,13 @@ void hwi2c_cleanup(void) {
 }
 
 void hwi2c_settings(void) {
-    //printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate);
-    ui_prompt_mode_settings_int(GET_T(T_HWI2C_SPEED_MENU), mode_config.baudrate, GET_T(T_KHZ));
-    // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[mode_config.data_bits].description));
+    //printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), i2c_mode_config.baudrate);
+    ui_prompt_mode_settings_int(GET_T(T_HWI2C_SPEED_MENU), i2c_mode_config.baudrate, GET_T(T_KHZ));
+    // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[i2c_mode_config.data_bits].description));
     //printf(" %s: %s\r\n", GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
-    //        (mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
+    //        (i2c_mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
     ui_prompt_mode_settings_string(GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
-            (mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)), 0x00);
+            (i2c_mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)), 0x00);
 }
 
 void hwi2c_help(void) {
@@ -274,5 +304,25 @@ void hwi2c_help(void) {
 }
 
 uint32_t hwi2c_get_speed(void) {
-    return (mode_config.baudrate * 1000);
+    return (i2c_mode_config.baudrate * 1000);
+}
+
+void hwi2c_set_speed(uint32_t speed_hz) {
+  i2c_mode_config.baudrate = speed_hz/ 1000;
+}
+
+void hwi2c_set_databits(uint32_t bits) {
+  i2c_mode_config.data_bits = bits;
+}
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_hwi2c_configure(bpio_mode_configuration_t *bpio_mode_config){
+    if(bpio_mode_config->debug) printf("[I2C] Speed %d Hz\r\n", bpio_mode_config->speed);
+    i2c_mode_config.baudrate=bpio_mode_config->speed/1000; // convert to kHz
+    i2c_mode_config.clock_stretch=false;  
+    return true;  
 }

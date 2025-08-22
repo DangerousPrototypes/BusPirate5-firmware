@@ -25,11 +25,12 @@
 #include "ui/ui_cmdln.h"
 #include "pirate/storage.h"
 
-#define DEF_ROW_SIZE 8
+#if 0
+#define DEF_ROW_SIZE 16
 #define PRINTABLE(_c) (_c > 0x1f && _c < 0x7f ? _c : '.')
 
 static const char* const hex_usage[] = { "hex <file> [-d(address)] [-a(ascii)] [-s <size>]",
-                                         "Print file contents in HEX: hex example.bin -d -a -s 8",
+                                         "Print file contents in HEX:%s hex example.bin -d -a -s 8",
                                          "press 'x' to quit pager" };
 static const struct ui_help_options hex_options[] = { { 1, "", T_HELP_DISK_HEX }, // section heading
                                                       { 0, "<file>", T_HELP_DISK_HEX_FILE },
@@ -86,7 +87,7 @@ static uint32_t hex_dump(
         for (UINT i = 0; i < bytes_read; i++) {
             if (print_addr) {
                 print_addr = false;
-                printf("%04x  ", shown_off);
+                printf("%08X  ", shown_off);
             }
             printf("%02x ", buf[i]);
             buf_off++;
@@ -124,7 +125,7 @@ void disk_hex_handler(struct command_result* res) {
     char location[32];
     uint32_t off = 0;
     uint32_t row_size = DEF_ROW_SIZE;
-    uint8_t flags = HEX_NONE;
+    uint8_t flags = HEX_ADDR | HEX_ASCII; // default to both address and ascii
     uint32_t bytes_read = 0;
     uint16_t page_lines = 0;
     uint32_t seek_off = 0;
@@ -139,13 +140,14 @@ void disk_hex_handler(struct command_result* res) {
         res->error = true;
         return;
     }
-
+/*
     if (cmdln_args_find_flag('d' | 0x20)) {
         flags |= HEX_ADDR;
     }
     if (cmdln_args_find_flag('a' | 0x20)) {
         flags |= HEX_ASCII;
     }
+*/
     if (!cmdln_args_find_flag_uint32('s' | 0x20, &arg, &row_size)) {
         row_size = DEF_ROW_SIZE;
     }
@@ -160,6 +162,13 @@ void disk_hex_handler(struct command_result* res) {
     f_lseek(&fil, seek_off);
     off = seek_off;
     printf("\r\n");
+    
+    //show header if row size is 16
+    if(row_size == 16){
+        printf("          00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n");
+        printf("---------------------------------------------------------\r\n");
+    }
+
     while ((bytes_read = hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
         off += bytes_read;
 
@@ -183,10 +192,10 @@ exit_hex_dump_early:
     f_close(&fil);
     printf("\r\n");
 }
-
+#endif 
 static const char* const cat_usage[] = {
     "cat <file>",
-    "Print file contents: cat example.txt",
+    "Print file contents:%s cat example.txt",
 };
 static const struct ui_help_options cat_options[] = {
     { 1, "", T_HELP_DISK_CAT }, // section heading
@@ -221,7 +230,7 @@ void disk_cat_handler(struct command_result* res) {
 
 static const char* const mkdir_usage[] = {
     "mkdir <dir>",
-    "Create directory: mkdir dir",
+    "Create directory:%s mkdir dir",
 };
 static const struct ui_help_options mkdir_options[] = {
     { 1, "", T_HELP_DISK_MKDIR }, // section heading
@@ -245,7 +254,7 @@ void disk_mkdir_handler(struct command_result* res) {
 
 static const char* const cd_usage[] = {
     "cd <dir>",
-    "Change directory: cd dir",
+    "Change directory:%s cd dir",
 };
 static const struct ui_help_options cd_options[] = {
     { 1, "", T_HELP_DISK_CD }, // section heading
@@ -274,8 +283,8 @@ void disk_cd_handler(struct command_result* res) {
 
 static const char* const rm_usage[] = {
     "rm [<file>|<dir>]",
-    "Delete file: rm example.txt",
-    "Delete directory: rm dir",
+    "Delete file:%s rm example.txt",
+    "Delete directory:%s rm dir",
 };
 static const struct ui_help_options rm_options[] = {
     { 1, "", T_HELP_DISK_RM }, // section heading
@@ -300,8 +309,8 @@ void disk_rm_handler(struct command_result* res) {
 
 static const char* const ls_usage[] = {
     "ls <dir>",
-    "Show current directory contents: ls",
-    "Show directory contents: ls /dir",
+    "Show current directory contents:%s ls",
+    "Show directory contents:%s ls /dir",
 };
 static const struct ui_help_options ls_options[] = {
     { 1, "", T_HELP_DISK_LS }, // section heading
@@ -360,7 +369,7 @@ bool disk_format_confirm(void) {
 
 static const char* const format_usage[] = {
     "format",
-    "Format storage: format",
+    "Format storage:%s format",
 };
 static const struct ui_help_options format_options[] = {
     { 1, "", T_HELP_DISK_FORMAT }, // section heading
@@ -392,8 +401,8 @@ void disk_format_handler(struct command_result* res) {
 }
 
 static const char* const label_usage[] = { "label <get|set> [label name]",
-                                           "Get flash storage label name: label get",
-                                           "Set flash storage label name: label set <name>" };
+                                           "Get flash storage label name:%s label get",
+                                           "Set flash storage label name:%s label set <name>" };
 
 static const struct ui_help_options label_options[] = {
     { 1, "", T_HELP_DISK_LABEL },

@@ -116,7 +116,7 @@ uint32_t hw2wire_setup_exc(void) {
 }
 
 bool hw2wire_preflight_sanity_check(void){
-    return ui_help_sanity_check(true, 1<<M_2WIRE_SDA|1<<M_2WIRE_SCL);
+    return ui_help_sanity_check(true, 0);
 }
 
 void hw2wire_start(struct _bytecode* result, struct _bytecode* next) {

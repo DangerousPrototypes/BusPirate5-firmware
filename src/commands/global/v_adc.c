@@ -17,10 +17,10 @@
 
 static const char* const usage[] = {
     "v/V <io> [-h(elp)]",
-    "Measure pin 0 voltage: v 0",
-    "Continuous measurement pin 0: V 0",
-    "Measure voltage on all pins: v",
-    "Continuous measurement on all pins: V",
+    "Measure pin 0 voltage:%s v 0",
+    "Continuous measurement pin 0:%s V 0",
+    "Measure voltage on all pins:%s v",
+    "Continuous measurement on all pins:%s V",
 };
 
 static const struct ui_help_options options[] = {

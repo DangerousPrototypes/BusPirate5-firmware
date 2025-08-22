@@ -23,9 +23,9 @@
 
 static const char* const usage_tx[] = {
     "irtx [aIR packet] [-f <file>]",
-	"aIR format: $<modulation freq (kHz)>:<MARK1>,<SPACE1>,...<MARKn>,<SPACEn>,;",
-	"Transmit: irtx $38:900,1800,900,65535,;",
-	"Transmit from file: irtx -f example.air",
+	"aIR format:%s $<modulation freq (kHz)>:<MARK1>,<SPACE1>,...<MARKn>,<SPACEn>,;",
+	"Transmit:%s irtx $38:900,1800,900,65535,;",
+	"Transmit from file:%s irtx -f example.air",
 };
 
 static const struct ui_help_options options_tx[] = {
@@ -36,11 +36,11 @@ static const struct ui_help_options options_tx[] = {
 
 static const char* const usage_rx[] = {
     "irrx [-f <file>] [-s <sensor>]",
-	"aIR format: $<modulation freq (kHz)>:<MARK1>,<SPACE1>,...<MARKn>,<SPACEn>,;",
-	"Receive (interactive): irrx",
-	"Receive, save to file (interactive): irrx -f example.air",
-	"Receive, specify sensor (interactive): irrx -s 56D",
-	"Sensors: 38kHz barrier (38B), 36-40kHz/56kHz demodulator (38D*/56D)",
+	"aIR format:%s $<modulation freq (kHz)>:<MARK1>,<SPACE1>,...<MARKn>,<SPACEn>,;",
+	"Receive (interactive):%s irrx",
+	"Receive, save to file (interactive):%s irrx -f example.air",
+	"Receive, specify sensor (interactive):%s irrx -s 56D",
+	"Sensors:%s 38kHz barrier (38B), 36-40kHz/56kHz demodulator (38D*/56D)",
 	"*default",
 };
 

@@ -16,8 +16,8 @@
 
 static const char* const usage[] = {
     "scan\t[-v(erbose)] [-h(elp)]",
-    "Scan I2C address space: scan",
-    "Scan, list possible part numbers: scan -v",
+    "Scan I2C address space:%s scan",
+    "Scan, list possible part numbers:%s scan -v",
 };
 
 static const struct ui_help_options options[] = {

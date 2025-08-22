@@ -749,14 +749,48 @@ static void core1_initialization(void) {
         );
     icm_core1_notify_completion(raw_init_message);
 }
+
+static void assert_error()
+{
+    BP_ASSERT(false);
+}
+
+static queue_t* queues[2] = { &rx_fifo, &bin_rx_fifo };
+
+static void tud_cdc_rx_task() {
+
+    BP_ASSERT_CORE1(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
+
+    char buf[64];
+    bool enabled[2] = { system_config.terminal_usb_enable, system_config.binmode_usb_rx_queue_enable };
+    uint32_t available = 0;
+    for (uint8_t itf = 0; itf < 2; itf++) {
+        if (enabled[itf] && (available = tud_cdc_n_available(itf))) {
+            uint16_t used_space = 0;
+            queue_available_bytes_unsafe(queues[itf], &used_space);
+            uint32_t free_space = rx_fifo.element_count - used_space - 1;
+            if (free_space) {
+                uint32_t count = tud_cdc_n_read(itf, buf, MIN(available, free_space));
+                // while bytes available shove them in the buffer
+                for (uint32_t i = 0; i < count; i++) {
+                    bool success = queue2_try_add(queues[itf], &buf[i]);
+                    if (!success)
+                        assert_error();
+                }
+            }
+        }
+    }
+
+}
 static void core1_infinite_loop(void) {
 
     //uint32_t core0_requested_update_flags = 0;
     while (1) {
 
         // service (thread safe) tinyusb tasks
-        if (system_config.terminal_usb_enable) {
+        if (system_config.terminal_usb_enable || system_config.binmode_usb_rx_queue_enable) {
             tud_task(); // tinyusb device task
+            tud_cdc_rx_task();
         }
 
         // service the terminal TX queue

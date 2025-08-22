@@ -22,7 +22,7 @@ static const char pin_labels[][5] = { "TX->", "RX<-", "CTS", "RTS"
 };
 
 static const char* const usage[] = { "test\t[-h(elp)] [-t(oolbar)]",
-                                     "Test Dual RS232 plank: test"};
+                                     "Test Dual RS232 plank:%s test"};
 
 static const struct ui_help_options options[] = {
     { 1, "", T_UART_CMD_TEST }, // command help

@@ -23,12 +23,12 @@
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
-                                     "Initialize: dummy init",
-                                     "Test: dummy test",
-                                     "Test, require button press: dummy test -b",
-                                     "Integer, value required: dummy -i 123",
-                                     "Create/write/read file: dummy -f dummy.txt",
-                                     "Kitchen sink: dummy test -b -i 123 -f dummy.txt" };
+                                     "Initialize:%s dummy init",
+                                     "Test:%s dummy test",
+                                     "Test, require button press:%s dummy test -b",
+                                     "Integer, value required:%s dummy -i 123",
+                                     "Create/write/read file:%s dummy -f dummy.txt",
+                                     "Kitchen sink:%s dummy test -b -i 123 -f dummy.txt" };
 
 // This is a struct of help strings for each option/flag/variable the command accepts
 // Record type 1 is a section header

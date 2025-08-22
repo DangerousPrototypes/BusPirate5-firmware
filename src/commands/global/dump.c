@@ -22,10 +22,10 @@
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = {
-    "dump",
+    "dump <bytes> <file>",
     "First, manually setup a read from the device",
     "Then, run this command to read X bytes to a file",
-    "Read X bytes to a file: dump 256 example.bin",
+    "Read X bytes to a file:%s dump 256 example.bin",
 };
 
 static const struct ui_help_options options[] = { 0 };

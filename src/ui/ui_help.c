@@ -52,7 +52,10 @@ void ui_help_options(const struct ui_help_options(*help), uint32_t count) {
 void ui_help_usage(const char* const flash_usage[], uint32_t count) {
     printf("usage:\r\n");
     for (uint32_t i = 0; i < count; i++) {
-        printf("%s%s%s\r\n", ui_term_color_info(), flash_usage[i], ui_term_color_reset());
+        printf("%s", ui_term_color_info());
+        printf(flash_usage[i], ui_term_color_reset());
+        printf("\r\n");
+        //printf("%s%s%s\r\n", ui_term_color_info(), flash_usage[i], ui_term_color_reset());
     }
 }
 
@@ -62,8 +65,13 @@ bool ui_help_show(bool help_flag,
                   const struct ui_help_options* options,
                   uint32_t count_of_options) {
     if (help_flag) {
+
         ui_help_usage(usage, count_of_usage);
-        ui_help_options(&options[0], count_of_options);
+        printf("%s", ui_term_color_reset());
+
+        if(options[0].description!=0) {
+            ui_help_options(&options[0], count_of_options);
+        }
         return true;
     }
     return false;

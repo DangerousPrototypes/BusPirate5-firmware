@@ -109,3 +109,56 @@ void hwspi_read_n(uint8_t* data, uint32_t count) {
         data[i] = hwspi_write_read(0xff);
     }
 }
+
+void hwspi_write_read_cs(uint8_t *write_data, uint32_t write_count, uint8_t *read_data, uint32_t read_count) {
+    hwspi_select();
+    for (uint32_t i = 0; i < write_count; i++) {
+        while (!spi_is_writable(M_SPI_PORT));
+        spi_get_hw(M_SPI_PORT)->dr = (uint32_t)write_data[i];
+        while (!spi_is_readable(M_SPI_PORT));
+        while (spi_is_busy(M_SPI_PORT)); // wait for idle
+        spi_get_hw(M_SPI_PORT)->dr;
+    }
+    for (uint32_t i = 0; i < read_count; i++) {
+        while (!spi_is_writable(M_SPI_PORT));
+        spi_get_hw(M_SPI_PORT)->dr = (uint32_t)0xff;
+        while (!spi_is_readable(M_SPI_PORT));
+        while (spi_is_busy(M_SPI_PORT)); // wait for idle
+        read_data[i] = spi_get_hw(M_SPI_PORT)->dr;
+    }
+    hwspi_deselect();
+}
+
+void hwspi_set_frame_format(spi_frf_t frf) {
+    // Disable SPI before changing format
+    hw_clear_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
+    
+    // Set frame format in CR0 register
+    hw_write_masked(&spi_get_hw(M_SPI_PORT)->cr0,
+                    ((uint)frf) << SPI_SSPCR0_FRF_LSB| 8<<SPI_SSPCR0_DSS_LSB,
+                    SPI_SSPCR0_FRF_BITS| SPI_SSPCR0_DSS_BITS);
+    
+    // Re-enable SPI
+    hw_set_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
+}
+
+bool hwspi_get_cphase(void){
+    // Read the cpha bit from CR0 register
+    return (spi_get_hw(M_SPI_PORT)->cr0 & SPI_SSPCR0_SPH_BITS);
+}
+
+void hwspi_set_cphase(bool cpha){
+    // Disable SPI before changing cpha
+    //hw_clear_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
+    
+    // Set cpha in CR0 register
+    if (cpha) {
+        hw_set_bits(&spi_get_hw(M_SPI_PORT)->cr0, SPI_SSPCR0_SPH_BITS);
+    } else {
+        hw_clear_bits(&spi_get_hw(M_SPI_PORT)->cr0, SPI_SSPCR0_SPH_BITS);
+    }
+    
+    // Re-enable SPI
+    //hw_set_bits(&spi_get_hw(M_SPI_PORT)->cr1, SPI_SSPCR1_SSE_BITS);
+}
+

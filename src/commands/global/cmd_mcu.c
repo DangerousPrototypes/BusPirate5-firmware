@@ -14,7 +14,7 @@ void cmd_mcu_reset(void) {
     mcu_reset();
 }
 
-void cmd_mcu_reset_handler(struct command_result* res) {
+void cmd_mcu_reboot_handler(struct command_result* res) {
     #if BP_VER == 7
         ioexp_clear_set(IOEXP_DISPLAY_BACKLIGHT|IOEXP_DISPLAY_RESET, 0x00); // turn off the display backlight
     #endif 
@@ -54,7 +54,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result* res) {
     if (res->help_flag) {
         return;
     }
-    printf("Later Alligator!");
+    printf("See you on the other side!");
     ui_statusbar_deinit();
     eject_usbmsdrive();
     busy_wait_ms(200);

@@ -23,7 +23,7 @@
 
 static const char* const usage[] = {
     "scan\t[-h(elp)]",
-    "Scan 1-Wire address space: scan",
+    "Scan 1-Wire address space:%s scan",
 };
 
 static const struct ui_help_options options[] = {

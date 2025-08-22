@@ -38,9 +38,9 @@ static const uint8_t num_button_press_types = count_of(button_press_types);
 
 static const char* const usage[] = {
     "button [short|long] [-f <file>] [-d (hiDe comments)] [-e(xit on error)] [-h(elp)]",
-    "Assign script file to short button press: button short -f example.scr",
-    "Assign script file to long button press: button long -f example.scr",
-    "Exit script on error option: button short example.scr -e",
+    "Assign script file to short button press:%s button short -f example.scr",
+    "Assign script file to long button press:%s button long -f example.scr",
+    "Exit script on error option:%s button short example.scr -e",
     "Default script files are 'button.scr' and 'buttlong.scr' in the root directory",
 };
 

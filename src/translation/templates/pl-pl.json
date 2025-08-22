@@ -595,12 +595,6 @@
         "Comments": null,
         "DataTypes": []
     },
-    "T_CMDLN_RESET": {
-        "Localized": "# - resetuje i restartuje Bus Pirate'a.",
-        "EN_US": null,
-        "Comments": null,
-        "DataTypes": []
-    },
     "T_CMDLN_BOOTLOAD": {
         "Localized": "$ - resetuje i wchodzi w tryb bootloadera do aktualizacji.",
         "EN_US": null,
@@ -801,12 +795,6 @@
     },
     "T_HELP_1_3": {
         "Localized": "Wewnętrzny test (self-test)\\t\\t",
-        "EN_US": null,
-        "Comments": null,
-        "DataTypes": []
-    },
-    "T_HELP_1_4": {
-        "Localized": "Resetuj Bus Pirate'a\\t",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []

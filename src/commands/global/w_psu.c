@@ -187,29 +187,45 @@ void psucmd_enable_handler(struct command_result* res) {
     uint32_t vout, isense, vreg;
     bool fuse;
     psu_measure(&vout, &isense, &vreg, &fuse);
-    printf("%sVreg output: %s%d.%d%sV%s, Vref/Vout pin: %s%d.%d%sV%s, Current: %s%d.%d%smA%s\r\n%s",
-           ui_term_color_notice(),
-           ui_term_color_num_float(),
-           ((vreg) / 1000),
-           (((vreg) % 1000) / 100),
-           ui_term_color_reset(),
-           ui_term_color_notice(),
-           ui_term_color_num_float(),
-           ((vout) / 1000),
-           (((vout) % 1000) / 100),
-           ui_term_color_reset(),
-           ui_term_color_notice(),
-           ui_term_color_num_float(),
-           (isense / 1000),
-           ((isense % 1000) / 100),
-           ui_term_color_reset(),
-           ui_term_color_notice(),
-           ui_term_color_reset());
+    #ifdef BP_HW_VOUT_PROTECTION
+        printf("%sVref/Vout: %s%d.%d%sV%s, Current: %s%d.%d%smA%s\r\n%s",
+            ui_term_color_notice(),
+            ui_term_color_num_float(),
+            ((vout) / 1000),
+            (((vout) % 1000) / 100),
+            ui_term_color_reset(),
+            ui_term_color_notice(),
+            ui_term_color_num_float(),
+            (isense / 1000),
+            ((isense % 1000) / 100),
+            ui_term_color_reset(),
+            ui_term_color_notice(),
+            ui_term_color_reset());
+    #else       
+        printf("%sVreg output: %s%d.%d%sV%s, Vref/Vout pin: %s%d.%d%sV%s, Current: %s%d.%d%smA%s\r\n%s",
+            ui_term_color_notice(),
+            ui_term_color_num_float(),
+            ((vreg) / 1000),
+            (((vreg) % 1000) / 100),
+            ui_term_color_reset(),
+            ui_term_color_notice(),
+            ui_term_color_num_float(),
+            ((vout) / 1000),
+            (((vout) % 1000) / 100),
+            ui_term_color_reset(),
+            ui_term_color_notice(),
+            ui_term_color_num_float(),
+            (isense / 1000),
+            ((isense % 1000) / 100),
+            ui_term_color_reset(),
+            ui_term_color_notice(),
+            ui_term_color_reset());
+    #endif
 
-        //when voltage changes, we need to reconfigure the pull-ups
-        #if BP_HW_PULLX
-            pullx_update();
-        #endif
+    //when voltage changes, we need to reconfigure the pull-ups
+    #if BP_HW_PULLX
+        pullx_update();
+    #endif
             
 }
 

@@ -75,7 +75,6 @@ void reg_i2c_dump(void) {
     reg_i2c_reg(0x21);
     printf("IO EXP (0x22):\r\n");
     reg_i2c_reg(0x22);
-    printf("\r\nINT pin: %d\r\n", gpio_get(BP_I2C_INTERRUPT));
 }
 
 struct reg_options_t {

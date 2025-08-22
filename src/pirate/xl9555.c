@@ -72,10 +72,6 @@ void xl9555_init(void) {
     gpio_set_dir(BP_I2C_RESET, GPIO_OUT);
     gpio_put(BP_I2C_RESET, 1);
 
-    gpio_set_function(BP_I2C_INTERRUPT, GPIO_FUNC_SIO);
-    gpio_set_dir(BP_I2C_INTERRUPT, GPIO_IN);
-    gpio_pull_up(BP_I2C_INTERRUPT); 
-
     i2c_init(BP_I2C_PORT, 400 * 1000);
     gpio_set_function(BP_I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(BP_I2C_SCL, GPIO_FUNC_I2C);  

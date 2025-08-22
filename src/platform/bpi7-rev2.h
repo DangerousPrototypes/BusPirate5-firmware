@@ -161,7 +161,6 @@ extern const uint8_t bio2bufdirpin[8];
 //#define CURRENT_RESET       17
 //#define CURRENT_EN_OVERRIDE 16
 #define CURRENT_FUSE_DETECT 16
-#define BP_I2C_INTERRUPT CURRENT_FUSE_DETECT //REMOVE ME!!!
 #define VOUT_ACTIVATE_VOUT 36
 
 //Look behind logic analyzer buffer
@@ -218,7 +217,7 @@ enum adc_mux{
     HW_ADC_MUX_BPIO0, //7
     HW_ADC_MUX_VUSB, //8
     HW_ADC_MUX_VREF_VOUT, //9 //swapped in 7+
-    HW_ADC_MUX_VREG_OUT, //10 //swapped in 7+
+    //HW_ADC_MUX_VREG_OUT, //10 //swapped in 7+
     //HW_ADC_MUX_CURRENT_DETECT,    //removed in 7+
     HW_ADC_MUX_COUNT
 };
@@ -232,7 +231,7 @@ enum adc_mux{
 #define IOEXP_DISPLAY_RESET 1u << (8+1)
 #define IOEXP_UNUSED_12 1u << (8+2)
 #define IOEXP_CURRENT_RESET 1u << (8+3)
-#define IOEXP_CURRENT_FUSE_DETECT 1u << (8+4)
+#define IOEXP_CURRENT_UNUSED_14 1u << (8+4)
 #define IOEXP_CURRENT_EN 1u << (8+5)
 #define IOEXP_UNUSED_16 1u << (8+6)
 #define IOEXP_CURRENT_EN_OVERRIDE 1u << (8+7)

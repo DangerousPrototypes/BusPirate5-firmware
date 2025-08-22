@@ -114,19 +114,10 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
 bool psu_fuse_ok(void) {
     #ifdef HW_ADC_MUX_CURRENT_DETECT
         return (amux_read(HW_ADC_MUX_CURRENT_DETECT) > 300);
-    #elif IOEXP_CURRENT_FUSE_DETECT
-        //printf("I2C IRQ: %d, fuse_fault: %d\r\n",gpio_get(BP_I2C_INTERRUPT), fuse_fault);
-        return ioexp_read_bit(IOEXP_CURRENT_FUSE_DETECT);
-        /*if(fuse_fault){
-            if(ioexp_read_bit(IOEXP_CURRENT_FUSE_DETECT)){
-                fuse_fault = false; // set the fuse fault flag
-                return true; // fuse is blown
-            }else{
-                return false;
-            }
-        }*/
+    #elif BP_HW_CURRENT_FUSE_DETECT_GPIO
+        return gpio_get(CURRENT_FUSE_DETECT);
     #else 
-        #error "Platform not speficied in psu.c"
+        #error "Platform not specified in psu.c"
     #endif
 }
 
@@ -135,15 +126,15 @@ bool psu_vout_ok(struct psu_status_t* psu) {
 }
 
 bool psu_backflow_ok(struct psu_status_t* psu) {
-    return (amux_read(HW_ADC_MUX_VREF_VOUT) < (amux_read(HW_ADC_MUX_VREG_OUT) + 100)); //+100? TODO: fine tuning
+    #ifdef BP_HW_VOUT_PROTECTION
+        return true; // skip the backflow test if we have a protection diode
+    #else
+        return (amux_read(HW_ADC_MUX_VREF_VOUT) < (amux_read(HW_ADC_MUX_VREG_OUT) + 100)); //+100? TODO: fine tuning
+    #endif
 }
 
 uint32_t psu_measure_current(void) {
     return (amux_read_current() * ((500 * 1000) / 4095));
-}
-
-uint32_t psu_measure_vreg(void) {
-    return hw_adc_to_volts_x2(amux_read(HW_ADC_MUX_VREG_OUT));
 }
 
 uint32_t psu_measure_vout(void) {
@@ -153,7 +144,11 @@ uint32_t psu_measure_vout(void) {
 void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     amux_sweep();
     *isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000) / 4095));
-    *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
+    #ifdef BP_HW_VOUT_PROTECTION
+        *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT])); // no vreg on 7+
+    #else
+        *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
+    #endif
     *vout = ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]));
     *fuse = psu_fuse_ok();
 }

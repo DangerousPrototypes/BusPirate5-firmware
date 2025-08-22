@@ -107,6 +107,7 @@ bool selftest_psu(float volts, float current, bool current_limit_override) {
     return false;
 }
 
+#ifdef BP_HW_BACKFLOW_PROTECTION
 bool selftest_psu_opamp(void) {
     // detect REV10 failure of op-amp
     printf("VREG==VOUT: ");
@@ -129,6 +130,7 @@ bool selftest_psu_opamp(void) {
     }
     return false;
 }
+#endif
 
 bool selftest_bio_float(void) {
     uint32_t temp1;
@@ -354,7 +356,7 @@ bool selftest_current_limit(void) {
             #if HW_ADC_MUX_CURRENT_DETECT
                 amux_sweep();
                 printf("PPSU CODE %d, ADC: %d, ERROR!\r\n", result, hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT]);
-            #elif IOEXP_CURRENT_FUSE_DETECT
+            #elif BP_HW_CURRENT_FUSE_DETECT_GPIO
                 printf("PPSU CODE %d, ERROR!\r\n", result);
             #else
                 #error "Platform not speficied in selftest_current_limit"
@@ -616,10 +618,12 @@ void cmd_selftest(void) {
         fails++;
     }
 
+    #ifdef BP_HW_BACKFLOW_PROTECTION
     // detect REV10 failure of op-amp
     if (selftest_psu_opamp()) {
         fails++;
     }
+    #endif
 
     // 7R0 bug: no default 1M pull-downs, enable here
     #if BP_HW_PULLX

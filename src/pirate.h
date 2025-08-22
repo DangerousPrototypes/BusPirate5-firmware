@@ -89,12 +89,14 @@
         #define RPI_PLATFORM RP2040
         #define BP_HW_PSU_PWM 1
         #define HW_ADC_MUX_CURRENT_DETECT
+        #define BP_HW_BACKFLOW_PROTECTION 1
     #elif BP_VER == XL5
         #include "platform/bpi5xl-rev0.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
         #define BP_HW_IOEXP_SPI 1
         #define BP_HW_PSU_PWM 1
+        #define BP_HW_BACKFLOW_PROTECTION 1
     #elif BP_VER == 6
         #include "platform/bpi6-rev2.h"  
         #define RPI_PLATFORM RP2350
@@ -104,17 +106,19 @@
         #define BP_HW_FALA_BUFFER 1
         #define BP_HW_PSU_PWM 1
         #define BP_HW_RP2350_E9_BUG 1
+        #define BP_HW_BACKFLOW_PROTECTION 1
     #elif BP_VER == 7
         #include "platform/bpi7-rev2.h"
         #define RPI_PLATFORM RP2350
         #define BP_HW_STORAGE_NAND 1
         #define BP_HW_PULLX 1
         #define BP_HW_IOEXP_I2C 1
-        //#define BP_HW_IOEXP_NONE 1 //rev 0
         #define BP_HW_FALA_BUFFER 1
         #define BP_HW_RP2350_E9_BUG 1
         #define BP_HW_PSRAM 1
         #define BP_HW_PSU_PWM 1
+        #define BP_HW_VOUT_PROTECTION 1
+        #define BP_HW_CURRENT_FUSE_DETECT_GPIO 1
     #else
         #error "Unknown platform version in pirate.h"
     #endif

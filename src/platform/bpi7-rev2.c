@@ -66,11 +66,10 @@ void hw_pin_defaults(void) {
         CURRENT_EN
         DISPLAY_BACKLIGHT
         DISPLAY_RESET
-        CURRENT_FUSE_DETECT
     */
     // setup inputs and outputs?
     ioexp_clear_set((IOEXP_RES_1M | IOEXP_CURRENT_EN_OVERRIDE| IOEXP_DISPLAY_BACKLIGHT), (IOEXP_DISPLAY_RESET | IOEXP_CURRENT_EN ));
-    ioexp_in_out(IOEXP_CURRENT_FUSE_DETECT, IOEXP_RES_1M |IOEXP_DISPLAY_BACKLIGHT | IOEXP_DISPLAY_RESET | IOEXP_CURRENT_RESET | IOEXP_CURRENT_EN | IOEXP_CURRENT_EN_OVERRIDE | IOEXP_UNUSED_12 | IOEXP_UNUSED_16);
+    ioexp_in_out(0, IOEXP_RES_1M |IOEXP_DISPLAY_BACKLIGHT | IOEXP_DISPLAY_RESET | IOEXP_CURRENT_RESET | IOEXP_CURRENT_EN | IOEXP_CURRENT_EN_OVERRIDE | IOEXP_UNUSED_12 | IOEXP_UNUSED_16);
     // FALA pin init
     gpio_setup(LA_BPIO0, GPIO_IN, 0);
     gpio_setup(LA_BPIO1, GPIO_IN, 0);
@@ -80,4 +79,6 @@ void hw_pin_defaults(void) {
     gpio_setup(LA_BPIO5, GPIO_IN, 0);
     gpio_setup(LA_BPIO6, GPIO_IN, 0);
     gpio_setup(LA_BPIO7, GPIO_IN, 0);
+    gpio_setup(CURRENT_FUSE_DETECT, GPIO_IN, 0);
+    gpio_setup(VOUT_ACTIVATE_VOUT, GPIO_OUT, 0); //high to enable
 }

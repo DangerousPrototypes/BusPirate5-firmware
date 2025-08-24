@@ -63,23 +63,27 @@ void dio_cleanup(void) {
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
 // This function generally writes data out to the IO pins or a peripheral
 void dio_write(struct _bytecode* result, struct _bytecode* next) {
-    
-    // your code
+    uint8_t mask = 0;
     for (uint8_t i = 0; i < 8; i++) {
-        // user data is in result->out_data
-        //bio_output(i);
+        // respect any existing pin functions
+        if(system_config.pin_func[i+1] != BP_PIN_IO){
+            continue;
+        }
+
+        //update this pin in the mask
+        mask |= (0x01 << i);
+
+        //update pin labels and purposes
         if (result->out_data & (0b1 << i)) {
             system_bio_update_purpose_and_label(true, i, BP_PIN_IO, labels[1]);
-            //system_set_active(true, i, &system_config.aux_active);
-            bio_put(i, 1);
         } else {
             system_bio_update_purpose_and_label(true, i, BP_PIN_IO, labels[0]);
-            //system_set_active(true, i, &system_config.aux_active);
-            bio_put(i, 0);
         }
         system_set_active(true, i, &system_config.aux_active);
     }
-    gpio_put_masked((0xff<<8), ((uint32_t)result->out_data << 8u));
+    gpio_put_masked(((uint32_t)mask), 0xff); // make buffers outputs
+    gpio_put_masked(((uint32_t)mask<<8), ((uint32_t)result->out_data << 8u));
+    gpio_set_dir_masked(((uint32_t)mask<<8), 0xff<<8); // make pins outputs
 }
 
 // This function is called when the user enters 'r' to read data

@@ -562,9 +562,15 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
         .stop_alt = bpio_DataRequest_stop_alt(data_request)
     };
 
-    if(request.bytes_read > BPIO_MAX_READ_SIZE) {
+    size_t data_buf_size = request.bytes_read;
+
+    if(system_config.mode == HWSPI && request.start_alt){
+        data_buf_size = request.bytes_write + request.bytes_read;
+    }
+
+    if(data_buf_size > BPIO_MAX_READ_SIZE) {
         static const char *data_read_error_msg = "Data read size too large";
-        if(bpio_debug) printf("[Data Request] Error: %s (%d bytes)\r\n", data_read_error_msg, request.bytes_read);
+        if(bpio_debug) printf("[Data Request] Error: %s (%d bytes)\r\n", data_read_error_msg, data_buf_size);
         error = data_read_error_msg;
         goto data_response_error;
     }
@@ -577,14 +583,12 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
         printf("[Data Request] Stop main condition: %s\r\n", request.stop_main ? "true" : "false");
         printf("[Data Request] Stop alternate condition: %s\r\n", request.stop_alt ? "true" : "false");
     }
-
+ 
     //**************TIME END: 40uS
     bpio_DataResponse_start(B);
     bpio_DataResponse_data_read_start(B);
-    size_t data_buf_size = request.bytes_read;
     uint8_t *data_read = bpio_DataResponse_data_read_extend(B, data_buf_size); // Reserve space for data read
 
-    //if(bpio_debug) printf("[Data Request] Protocol request\r\n");
     if(bpio_mode_handlers[system_config.mode].bpio_handler(&request, data_write, data_read)){
         bpio_DataResponse_data_read_truncate(B, 0); 
         static const char* request_error_msg = "Protocol request failed";

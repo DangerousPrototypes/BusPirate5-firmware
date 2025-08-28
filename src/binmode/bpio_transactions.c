@@ -129,22 +129,13 @@ i2c_bpio_cleanup:
 uint32_t bpio_hwspi_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read) {
     if(request->debug) printf("[SPI] Performing transaction\r\n");
 
+    uint8_t *read_ptr = data_read; 
+
     if(request->start_main||request->start_alt) {
         // CS active
         if(request->debug) printf("[SPI] CS active\r\n");
-        //mode_config.read_with_write=request->start_alt;
         spi_set_cs(M_SPI_SELECT);
     }
-#if 0
-    if(request->bytes_write > 0) {
-        if(request->debug) printf("[SPI] Writing %d bytes\r\n", request->bytes_write);
-        //write data (how to handle write with read?)
-        //maybe return all the wwr bytes, then the read bytes?
-        for(size_t i = 0; i < request->bytes_write; i++) {
-            uint8_t read_byte = hwspi_write_read(flatbuffers_uint8_vec_at(data_write, i));
-        }
-    }
-#else
 
     //utilize the SPI buffer
     if(request->bytes_write > 0) {
@@ -160,17 +151,18 @@ uint32_t bpio_hwspi_transaction(struct bpio_data_request_t *request, flatbuffers
             tight_loop_contents();
         }
         while (spi_is_readable(M_SPI_PORT)) {
-            (void)spi_get_hw(M_SPI_PORT)->dr; // Drain RX FIFO
+            uint8_t rx_byte = (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
+            if(request->start_alt) {
+                *read_ptr++ = rx_byte;  // Store byte and increment pointer
+            }
         }           
     }
-#endif
 
     if(request->bytes_read > 0) {
         if(request->debug) printf("[SPI] Reading %d bytes\r\n", request->bytes_read);
         // read data
-        //uint8_t *data_buf = (uint8_t *)request->data_buf;
         for(uint32_t i = 0; i < request->bytes_read; i++) {
-            data_read[i] = (uint8_t)hwspi_write_read(0xFF); // send dummy byte
+            *read_ptr++ = (uint8_t)hwspi_write_read(0xFF);  // Store and increment
         } 
     }
 

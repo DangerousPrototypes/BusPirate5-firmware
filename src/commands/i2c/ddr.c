@@ -892,6 +892,7 @@ static const char* const usage[] = {
     "Lock a NVM block 0-15:%s ddr5 lock -b 0",
     "Unlock a NVM block 0-15:%s ddr5 unlock -b 0",
     "Check/generate CRC for JEDEC blocks 0-7:%s ddr5 crc -f example.bin",
+    "Patch/update CRC in file:%s ddr5 patch -f example.bin",
     "DDR5 write file **MUST** be exactly 1024 bytes long"
 };
 
@@ -905,6 +906,7 @@ static const struct ui_help_options options[] = {
     { 0, "lock", T_HELP_DDR5_LOCK },      // lock
     { 0, "unlock", T_HELP_DDR5_UNLOCK },  // unlock
     { 0, "crc", T_HELP_DDR5_CRC },        // crc
+    { 0, "patch", T_HELP_DDR5_PATCH },    // patch
     { 0, "-f", T_HELP_DDR5_FILE_FLAG },   // file to read/write/verify
     { 0, "-s", UI_HEX_HELP_START }, // start address for dump
     { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
@@ -921,7 +923,8 @@ enum ddr5_actions_enum {
     DDR5_VERIFY,
     DDR5_LOCK,
     DDR5_UNLOCK,
-    DDR5_CRC
+    DDR5_CRC,
+    DDR5_PATCH
 };
 
 static const struct cmdln_action_t ddr5_actions[] = {
@@ -932,7 +935,8 @@ static const struct cmdln_action_t ddr5_actions[] = {
     { DDR5_VERIFY, "verify" },
     { DDR5_LOCK, "lock" },
     { DDR5_UNLOCK, "unlock" },
-    { DDR5_CRC, "crc" }
+    { DDR5_CRC, "crc" },
+    { DDR5_PATCH, "patch" }
 };
 
 void ddr5_handler(struct command_result* res) {
@@ -951,7 +955,7 @@ void ddr5_handler(struct command_result* res) {
 
     char file[13];
     FIL file_handle;                                                  // file handle
-    if ((action == DDR5_WRITE || action == DDR5_READ || action== DDR5_VERIFY || action == DDR5_CRC)) {
+    if ((action == DDR5_WRITE || action == DDR5_READ || action== DDR5_VERIFY || action == DDR5_CRC || action == DDR5_PATCH)) {
         
         if(file_get_args(file, sizeof(file))){; // get the file name from the command line arguments
             return;
@@ -1032,6 +1036,35 @@ void ddr5_handler(struct command_result* res) {
             break;
         case DDR5_CRC:
             printf("Checking CRC for JEDEC blocks 0-7, file: %s\r\n", file);
+            ddr5_crc_file(&file_handle, buffer);
+            break;
+        case DDR5_PATCH:
+            printf("Checking CRC for JEDEC blocks 0-7, file: %s\r\n", file);
+            //get file size
+            if(file_size_check(&file_handle, DDR5_SPD_SIZE)) break; // check if the file size is 1024 bytes
+            if(file_read(&file_handle, buffer, DDR5_SPD_SIZE, NULL)) break; // read the all bytes from the file
+            if(file_close(&file_handle)) break; // close the file
+            printf("Stored CRC (bytes 510:511): 0x%02X 0x%02X\r\n", buffer[510], buffer[511]);
+            // check the CRC of the first 512 bytes
+            uint16_t crc= ddr5_crc16(buffer, 510);
+            printf("Calculated CRC: 0x%02X 0x%02X\r\n", crc&0xff, crc >> 8);
+            if(crc == (buffer[511] << 8 | buffer[510])){
+                printf("CRC is already correct, no need to patch\r\n");
+                break;
+            }
+            // open the file for writing
+            if(file_open(&file_handle, file, FA_WRITE | FA_READ)) break; // open the file for writing
+            // patch the CRC
+            buffer[510] = crc & 0xff;
+            buffer[511] = crc >> 8;
+            printf("Patching CRC in file to: 0x%02X 0x%02X\r\n", buffer[510], buffer[511]);
+            // write the buffer to the file
+            if(file_write(&file_handle, buffer, DDR5_SPD_SIZE)) break; // if the write was unsuccessful (file closed in lower layer)
+            if(file_close(&file_handle)) break; // close the file
+            printf("File patched successfully :)\r\n");
+            //verify the patch
+            printf("Verifying patched file CRC:\r\n");
+            if(file_open(&file_handle, file, FA_READ)) break; // open the file for reading
             ddr5_crc_file(&file_handle, buffer);
             break;
         default:

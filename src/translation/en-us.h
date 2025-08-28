@@ -581,6 +581,7 @@ static char const * const en_us[]={
 	[T_HELP_DDR5_LOCK]="Lock DDR5 SPD NVM block (64 bytes per block)",
 	[T_HELP_DDR5_UNLOCK]="Unlock DDR5 SPD NVM block",
 	[T_HELP_DDR5_CRC]="Calculate/verify CRC of JEDEC blocks 0-7 in a file",
+	[T_HELP_DDR5_PATCH]="Update correct CRC values for blocks 0-7 in a file",
 	[T_HELP_DDR5_FILE_FLAG]="File flag. Speficy a file to write, read, verify or check CRC",
 	[T_HELP_DDR5_BLOCK_FLAG]="Block flag. Speficy a DDR5 SPD NVM block to lock or unlock (0 - 15)",
 };

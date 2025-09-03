@@ -468,6 +468,8 @@ set(buspirate_common
         displays.h
         display/default.c
         display/default.h
+        display/disabled.c
+        display/disabled.h
         ui/ui_lcd.c
         ui/ui_lcd.h
         display/scope.h

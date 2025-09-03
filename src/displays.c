@@ -8,6 +8,7 @@
 #include "displays.h"
 
 #include "display/default.h"
+#include "display/disabled.h"
 #ifdef BP_USE_SCOPE
 #include "display/scope.h"
 #endif
@@ -37,6 +38,17 @@ struct _display displays[MAXDISPLAY] = {
         scope_lcd_update, // scope screen write
     },
 #endif
+    {
+        noperiodic,               // service to regular poll whether a byte ahs arrived
+        disp_disabled_setup,      // setup UI
+        disp_disabled_setup_exc,  // real setup
+        disp_disabled_cleanup,    // cleanup for HiZ
+        disp_disabled_settings,   // display settings
+        0,                        // display small help about the protocol
+        "Disabled (Screen Off)",  // friendly name (promptname)
+        0,                        // scope specific commands
+        disp_disabled_lcd_update, // screen write
+    },
 };
 /* For Emacs:
  * Local Variables:

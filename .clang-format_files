@@ -101,6 +101,8 @@ display/background_image_v4.h
 display/background.h
 display/default.c
 display/default.h
+display/disabled.c
+display/disabled.h
 display/robot16.h
 display/robot5x16.h
 display/robot5xx16.h

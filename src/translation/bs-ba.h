@@ -563,6 +563,7 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_DDR5_LOCK                 ] = NULL,
     [ T_HELP_DDR5_UNLOCK               ] = NULL,
     [ T_HELP_DDR5_CRC                  ] = NULL,
+    [ T_HELP_DDR5_PATCH                ] = NULL,
     [ T_HELP_DDR5_FILE_FLAG            ] = NULL,
     [ T_HELP_DDR5_BLOCK_FLAG           ] = NULL,
 

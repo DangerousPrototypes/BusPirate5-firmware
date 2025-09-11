@@ -175,6 +175,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HWI2C_TIMEOUT                  ] = "Timeout I2C",
     [ T_HWI2C_I2C_ERROR                ] = "Errore bus I2C",
     [ T_HELP_I2C_TCS34725              ] = NULL,
+    [ T_HELP_I2C_FUSB302               ] = NULL,
     [ T_HW2WIRE_SPEED_MENU             ] = "Velocità 2WIRE",
     [ T_HW2WIRE_RST_LOW                ] = "RST BASSO",
     [ T_HW2WIRE_RST_HIGH               ] = "RST ALTO",

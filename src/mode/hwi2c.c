@@ -18,6 +18,7 @@
 #include "ui/ui_help.h"
 #include "commands/i2c/ddr.h"
 #include "commands/eeprom/eeprom_i2c.h"
+#include "commands/i2c/usbpdo.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -80,6 +81,12 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .command="tcs3472",
         .func=&demo_tcs34725,
         .description_text=T_HELP_I2C_TCS34725,
+        .supress_fala_capture=true
+    },
+    {
+        .command="fusb302",
+        .func=&fusb302_handler,
+        .description_text=T_HELP_I2C_FUSB302,
         .supress_fala_capture=true
     }, 
 };

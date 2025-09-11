@@ -1,0 +1,1 @@
+void fusb302_handler(struct command_result* res);

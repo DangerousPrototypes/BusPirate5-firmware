@@ -1,6 +1,26 @@
+/*
+ * Portions of this code are adapted from:
+ * https://github.com/Ralim/usb-pd
+ * 
+ * PD Buddy Firmware Library - USB Power Delivery for everyone
+ * Copyright 2017-2018 Clayton G. Hobbs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
+#include <string.h>
 #include "pirate.h"
 #include "pirate/hwi2c_pio.h"
 #include "ui/ui_term.h"
@@ -11,6 +31,7 @@
 #include "ui/ui_help.h"
 #include "ui/ui_cmdln.h"
 #include "binmode/fala.h"
+#include "commands/i2c/usbpdo.h"
 
 // FUSB302 I2C address and register definitions
 #define FUSB302_I2C_ADDR 0x22
@@ -73,116 +94,31 @@ typedef struct {
     uint16_t current_ma;
     uint16_t power_mw;
 } pdo_info_t;
+
 // FUSB302 I2C read/write helper functions
-static bool fusb302_write_reg(uint8_t reg, uint8_t value) {
-    struct _bytecode result;
-    
-    // Start condition
-    hwi2c_start(&result, NULL);
-    if (result.error) return false;
-    
-    // Write device address
-    result.out_data = (FUSB302_I2C_ADDR << 1) | 0; // Write mode
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    // Write register address
-    result.out_data = reg;
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    // Write data
-    result.out_data = value;
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    // Stop condition
-    hwi2c_stop(&result, NULL);
-    return !result.error;
+static bool fusb_write_reg(uint8_t reg, uint8_t value) {
+    if(i2c_write(FUSB302_I2C_ADDR<<1, (uint8_t[]){reg, value}, 2u)) return true; 
+    return false; 
 }
 
-static bool fusb302_read_reg(uint8_t reg, uint8_t *value) {
-    struct _bytecode result;
-    
-    // Start condition and write register address
-    hwi2c_start(&result, NULL);
-    if (result.error) return false;
-    
-    result.out_data = (FUSB302_I2C_ADDR << 1) | 0; // Write mode
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    result.out_data = reg;
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    // Repeated start for read
-    hwi2c_start(&result, NULL);
-    if (result.error) return false;
-    
-    result.out_data = (FUSB302_I2C_ADDR << 1) | 1; // Read mode
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    // Read data with NACK
-    struct _bytecode next;
-    next.command = SYN_STOP;
-    hwi2c_read(&result, &next);
-    if (result.error) return false;
-    
-    *value = result.in_data;
-    
-    // Stop condition
-    hwi2c_stop(&result, NULL);
-    return !result.error;
+static bool fusb_read_reg(uint8_t reg, uint8_t *value) {
+    //setup the register to read
+    if(i2c_write(FUSB302_I2C_ADDR<<1, (uint8_t[]){reg}, 1u)) return true; 
+    //read the register
+    if(i2c_read((FUSB302_I2C_ADDR<<1)|1, value, 1u)) return true;
+    return false;
 }
 
-static bool fusb302_read_fifo(uint8_t *buffer, uint8_t length) {
-    struct _bytecode result;
-    
-    // Start condition
-    hwi2c_start(&result, NULL);
-    if (result.error) return false;
-    
-    result.out_data = (FUSB302_I2C_ADDR << 1) | 0; // Write mode
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    result.out_data = FUSB302_REG_FIFOS;
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    // Repeated start for read
-    hwi2c_start(&result, NULL);
-    if (result.error) return false;
-    
-    result.out_data = (FUSB302_I2C_ADDR << 1) | 1; // Read mode
-    hwi2c_write(&result, NULL);
-    if (result.error) return false;
-    
-    // Read data bytes
-    for (uint8_t i = 0; i < length; i++) {
-        if (i == length - 1) {
-            // Last byte - send NACK
-            struct _bytecode next;
-            next.command = SYN_STOP;
-            hwi2c_read(&result, &next);
-        } else {
-            // Send ACK
-            hwi2c_read(&result, NULL);
-        }
-        if (result.error) return false;
-        buffer[i] = result.in_data;
-    }
-    
-    // Stop condition
-    hwi2c_stop(&result, NULL);
-    return !result.error;
+static bool fusb_read_fifo(uint8_t *buffer, uint8_t length) {
+    if(i2c_write(FUSB302_I2C_ADDR<<1, (uint8_t[]){FUSB302_REG_FIFOS}, 1u)) return true;
+
+    if(i2c_read((FUSB302_I2C_ADDR<<1)|1, buffer, length)) return true;
+    return false;
 }
 
 static bool fusb302_init(void) {
     // Software reset
-    if (!fusb302_write_reg(FUSB302_REG_RESET, FUSB302_RESET_SW)) {
+    if (fusb_write_reg(FUSB302_REG_RESET, FUSB302_RESET_SW)) {
         printf("Error: Failed to reset FUSB302\r\n");
         return false;
     }
@@ -190,27 +126,27 @@ static bool fusb302_init(void) {
     sleep_ms(10);
     
     // Power up all components
-    if (!fusb302_write_reg(FUSB302_REG_POWER, FUSB302_POWER_ALL)) {
+    if (fusb_write_reg(FUSB302_REG_POWER, FUSB302_POWER_ALL)) {
         printf("Error: Failed to power up FUSB302\r\n");
         return false;
     }
     /*
     // Configure for DFP (Downstream Facing Port) mode
     // Configure for UFP (Upstream Facing Port) mode - we are receiving power
-    if (!fusb302_write_reg(FUSB302_REG_CONTROL2, 0x00)) {  // UFP mode (clear DFP bit)
+    if (!fusb_write_reg(FUSB302_REG_CONTROL2, 0x00)) {  // UFP mode (clear DFP bit)
         printf("Error: Failed to set UFP mode\r\n");
         return false;
     }
     
     // Set slicing threshold
-    if (!fusb302_write_reg(FUSB302_REG_SLICE, FUSB302_SLICE_SDAC_HYS)) {
+    if (!fusb_write_reg(FUSB302_REG_SLICE, FUSB302_SLICE_SDAC_HYS)) {
         printf("Error: Failed to set slicing threshold\r\n");
         return false;
     }
         */
     
     // Enable CC1 monitoring (try CC1 first)
-    if (!fusb302_write_reg(FUSB302_REG_SWITCHES0, FUSB302_SWITCHES0_CC1_EN)) {
+    if (fusb_write_reg(FUSB302_REG_SWITCHES0, FUSB302_SWITCHES0_CC1_EN)) {
         printf("Error: Failed to enable CC1 monitoring\r\n");
         return false;
     }
@@ -268,28 +204,28 @@ static bool fusb302_read_source_capabilities(pdo_info_t *pdos, uint8_t *num_pdos
     *num_pdos = 0;
     
     // Clear interrupts
-    fusb302_read_reg(FUSB302_REG_INTERRUPT, &interrupt);
-    fusb302_read_reg(FUSB302_REG_INTERRUPTA, &interrupt);
-    fusb302_read_reg(FUSB302_REG_INTERRUPTB, &interrupt);
+    fusb_read_reg(FUSB302_REG_INTERRUPT, &interrupt);
+    fusb_read_reg(FUSB302_REG_INTERRUPTA, &interrupt);
+    fusb_read_reg(FUSB302_REG_INTERRUPTB, &interrupt);
     
     printf("Waiting for Source Capabilities message...\r\n");
     
     // Wait for a message (timeout after ~2 seconds)
     uint32_t timeout = 200;
     while (timeout-- > 0) {
-        fusb302_read_reg(FUSB302_REG_STATUS1, &status);
+        fusb_read_reg(FUSB302_REG_STATUS1, &status);
         
-        if (status & 0x20) { // RX_FULL bit
+        if (!(status & 0x20)) { // RX_Empty bit
             // Read the message from FIFO
             uint8_t token1, token2;
-            if (!fusb302_read_fifo(&token1, 1) || token1 != PD_TOKEN_SOP) {
+            if (fusb_read_fifo(&token1, 1) || token1 != PD_TOKEN_SOP) {
                 printf("Error: Invalid SOP token\r\n");
                 continue;
             }
             
             // Read header
             uint8_t header[2];
-            if (!fusb302_read_fifo(header, 2)) {
+            if (fusb_read_fifo(header, 2)) {
                 printf("Error: Failed to read message header\r\n");
                 continue;
             }
@@ -304,7 +240,7 @@ static bool fusb302_read_source_capabilities(pdo_info_t *pdos, uint8_t *num_pdos
                 // Read PDOs
                 for (uint8_t i = 0; i < num_data_objs && i < 7; i++) {
                     uint8_t pdo_bytes[4];
-                    if (!fusb302_read_fifo(pdo_bytes, 4)) {
+                    if (fusb_read_fifo(pdo_bytes, 4)) {
                         printf("Error: Failed to read PDO %d\r\n", i);
                         continue;
                     }
@@ -318,16 +254,154 @@ static bool fusb302_read_source_capabilities(pdo_info_t *pdos, uint8_t *num_pdos
                 
                 // Read CRC and EOP
                 uint8_t crc[4];
-                fusb302_read_fifo(crc, 4);
-                fusb302_read_fifo(&token2, 1);
-                
+                fusb_read_fifo(crc, 4);
+                //fusb_read_fifo(&token2, 1);
                 return true;
             }
         }
         
         sleep_ms(10);
     }
+    return false;
     
+}
+
+bool fusb_reset(){
+  /* Flush the TX buffer */
+  if (fusb_write_reg(FUSB_CONTROL0, 0x44)) return true;
+  /* Flush the RX buffer */
+  if (fusb_write_reg(FUSB_CONTROL1, FUSB_CONTROL1_RX_FLUSH)) return true;
+  /* Reset the PD logic */
+  // This triggers the source to send capabilities
+  if (fusb_write_reg(FUSB_RESET, FUSB_RESET_PD_RESET)) return true;
+  return false;
+}
+
+
+bool fusb_read_id(){
+  // Return true if read of the revision ID is sane
+  uint8_t version = 0;
+
+  if(fusb_read_reg(FUSB_DEVICE_ID, &version)) return true;
+  if (version == 0 || version == 0xFF) return true;
+
+  return false;
+}
+
+
+bool runCCLineSelection(){
+    uint8_t cc1, cc2;
+
+    /* Measure CC1 */
+    if (fusb_write_reg(FUSB_SWITCHES0, 0x07)) return true;
+    busy_wait_ms(10);
+    if(fusb_read_reg(FUSB_STATUS0, &cc1)) return true;
+
+    /* Measure CC2 */
+    if (fusb_write_reg(FUSB_SWITCHES0, 0x0B)) return true;
+    busy_wait_ms(10);
+    if(fusb_read_reg(FUSB_STATUS0, &cc2)) return true;
+
+    if((cc1 & FUSB_STATUS0_BC_LVL) == 0 && (cc2 & FUSB_STATUS0_BC_LVL) == 0){
+        printf("No CC line detected!\r\n");
+        return true;
+    }
+
+    /* Select the correct CC line for BMC signaling; also enable AUTO_CRC */
+    if ((cc1 & FUSB_STATUS0_BC_LVL) > (cc2 & FUSB_STATUS0_BC_LVL)) {
+        // TX_CC1|AUTO_CRC|SPECREV0
+        if (fusb_write_reg(FUSB_SWITCHES1, 0x25))  return true;
+        // PWDN1|PWDN2|MEAS_CC1
+        if (fusb_write_reg(FUSB_SWITCHES0, 0x07))  return true;
+        printf("Using CC1\r\n");
+    } else {
+        // TX_CC2|AUTO_CRC|SPECREV0
+        if (fusb_write_reg(FUSB_SWITCHES1, 0x26))  return true;
+        // PWDN1|PWDN2|MEAS_CC2
+        if (fusb_write_reg(FUSB_SWITCHES0, 0x0B))  return true;
+        printf("Using CC2\r\n");
+    }
+    return false;
+}
+
+bool fusb_send_hardrst(){
+  /* Send a hard reset */
+  if(fusb_write_reg(FUSB_CONTROL3, 0x07 | FUSB_CONTROL3_SEND_HARD_RESET)) return true;
+  busy_wait_ms(100);
+  return false;
+}
+
+
+bool fusb_setup(void){
+
+
+  /* Fully reset the FUSB302B */
+  if (fusb_write_reg(FUSB_RESET, FUSB_RESET_SW_RES)) return true;
+
+  busy_wait_ms(10);
+  uint8_t tries = 0;
+  while (fusb_read_id()) {
+    busy_wait_ms(10);
+    tries++;
+    if (tries > 5) {
+      return true; // Welp :(
+    }
+  }
+
+  /* Turn on all power */
+  if (fusb_write_reg(FUSB_POWER, 0x0F)) return true;
+
+  /* Set interrupt masks */
+  // Setting to 0 so interrupts are allowed
+  if (fusb_write_reg(FUSB_MASK1, 0x00)) return true;
+  if (fusb_write_reg(FUSB_MASKA, 0x00)) return true;
+  if (fusb_write_reg(FUSB_MASKB, 0x00)) return true;
+  if (fusb_write_reg(FUSB_CONTROL0, 0b11 << 2)) return true;
+
+  /* Enable automatic retransmission */
+  if (fusb_write_reg(FUSB_CONTROL3, 0x07)) return true;
+  // set defaults
+  if (fusb_write_reg(FUSB_CONTROL2, 0x00)) return true;
+  /* Flush the RX buffer */
+  if (fusb_write_reg(FUSB_CONTROL1, FUSB_CONTROL1_RX_FLUSH)) return true;
+
+  if (runCCLineSelection()) return true;
+  if (fusb_reset()) return true;
+
+  return false;
+}
+
+bool fusb_write_fifo(const uint8_t *buffer, uint8_t length) {
+    uint8_t data[65];
+
+    if(length +1 > sizeof(data)) return true; // Prevent overflow
+
+    data[0] = FUSB302_REG_FIFOS;
+    memcpy(&data[1], buffer, length);
+    //for (uint8_t i = 0; i < length; i++) {
+    //    data[i + 1] = buffer[i];
+    //}
+    if(i2c_write(FUSB302_I2C_ADDR<<1, data, length + 1)) return true;
+    return false;
+}
+
+bool fusb_send_message(const pd_msg *msg){
+    /* Token sequences for the FUSB302B */
+    static uint8_t sop_seq[5] = {FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP2, FUSB_FIFO_TX_PACKSYM};
+    static const uint8_t eop_seq[4] = {FUSB_FIFO_TX_JAM_CRC, FUSB_FIFO_TX_EOP, FUSB_FIFO_TX_TXOFF, FUSB_FIFO_TX_TXON};
+
+    /* Get the length of the message: a two-octet header plus NUMOBJ four-octet
+    * data objects */
+    uint8_t msg_len = 2 + 4 * PD_NUMOBJ_GET(msg);
+
+    /* Set the number of bytes to be transmitted in the packet */
+    sop_seq[4] = FUSB_FIFO_TX_PACKSYM | msg_len;
+
+    /* Write all three parts of the message to the TX FIFO */
+    fusb_write_fifo((uint8_t *)sop_seq, 5);
+    fusb_write_fifo((uint8_t *)msg->bytes, msg_len);
+    fusb_write_fifo((uint8_t *)eop_seq, 4);
+    return false;
 }
 
 // Command usage and help
@@ -340,11 +414,11 @@ static const char * const usage[]={
 };
 
 static const struct ui_help_options options[]={
-    {0,"", T_HELP_FUSB302_INIT},
+/*    {0,"", T_HELP_FUSB302_INIT},
     {0,"", T_HELP_FUSB302_ID},
     {0,"", T_HELP_FUSB302_STATUS},
     {0,"", T_HELP_FUSB302_SCAN},
-    {0,"", T_HELP_FUSB302_REQUEST}
+    {0,"", T_HELP_FUSB302_REQUEST}*/
 };
 
 enum fusb302_actions_enum {
@@ -395,7 +469,7 @@ void fusb302_handler(struct command_result* res) {
         
         case FUSB302_ID: {
             uint8_t device_id;
-            if (fusb302_read_reg(FUSB302_REG_DEVICE_ID, &device_id)) {
+            if (!fusb_read_reg(FUSB302_REG_DEVICE_ID, &device_id)) {
                 printf("FUSB302 Device ID: 0x%02X\r\n", device_id);
                 if ((device_id & 0xF0) == 0x90) {
                     printf("  Chip: FUSB302\r\n");
@@ -411,8 +485,8 @@ void fusb302_handler(struct command_result* res) {
         
         case FUSB302_STATUS: {
             uint8_t status0, status1;
-            if (fusb302_read_reg(FUSB302_REG_STATUS0, &status0) &&
-                fusb302_read_reg(FUSB302_REG_STATUS1, &status1)) {
+            if (!fusb_read_reg(FUSB302_REG_STATUS0, &status0) &&
+                !fusb_read_reg(FUSB302_REG_STATUS1, &status1)) {
                 printf("FUSB302 Status:\r\n");
                 printf("  STATUS0: 0x%02X\r\n", status0);
                 printf("  STATUS1: 0x%02X\r\n", status1);
@@ -428,41 +502,31 @@ void fusb302_handler(struct command_result* res) {
         case FUSB302_SCAN: {
             printf("Scanning for USB PD source capabilities...\r\n");
             
-            // Try CC1 first
-            printf("Trying CC1...\r\n");
-            fusb302_write_reg(FUSB302_REG_SWITCHES0, FUSB302_SWITCHES0_CC1_EN);
-            sleep_ms(100);
+            if(fusb_setup()){
+                printf("FUSB302 setup failed\r\n");
+                break;
+            }
             
             if (fusb302_read_source_capabilities(available_pdos, &num_available_pdos)) {
                 printf("\r\nAvailable Power Profiles:\r\n");
                 for (uint8_t i = 0; i < num_available_pdos; i++) {
                     fusb302_print_pdo(i + 1, &available_pdos[i]);
                 }
-            } else {
-                // Try CC2
-                printf("Trying CC2...\r\n");
-                fusb302_write_reg(FUSB302_REG_SWITCHES0, FUSB302_SWITCHES0_CC2_EN);
-                sleep_ms(100);
-                
-                if (fusb302_read_source_capabilities(available_pdos, &num_available_pdos)) {
-                    printf("\r\nAvailable Power Profiles:\r\n");
-                    for (uint8_t i = 0; i < num_available_pdos; i++) {
-                        fusb302_print_pdo(i + 1, &available_pdos[i]);
-                    }
-                } else {
-                    printf("No USB PD source detected on CC1 or CC2\r\n");
-                }
+                fusb_send_hardrst();
+            }else{
+                printf("No USB PD source detected\r\n");
             }
+
             break;
         }
         
         case FUSB302_REQUEST: {
             uint32_t profile_num;
-            if (!cmdln_args_get_uint(&profile_num)) {
+            /*if (!cmdln_args_get_uint(&profile_num)) {
                 printf("Error: Profile number required\r\n");
                 printf("Usage: fusb302 request <profile>\r\n");
                 break;
-            }
+            }*/
             
             if (num_available_pdos == 0) {
                 printf("Error: No PDOs available. Run 'fusb302 scan' first.\r\n");

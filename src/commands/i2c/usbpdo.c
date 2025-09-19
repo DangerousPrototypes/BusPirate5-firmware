@@ -32,43 +32,7 @@
 #include "ui/ui_cmdln.h"
 #include "binmode/fala.h"
 #include "commands/i2c/usbpdo.h"
-
-// FUSB302 I2C address and register definitions
-#define FUSB302_I2C_ADDR 0x22
-
-// FUSB302 Register Map
-#define FUSB302_REG_DEVICE_ID 0x01
-#define FUSB302_REG_SWITCHES0 0x02
-#define FUSB302_REG_SWITCHES1 0x03
-#define FUSB302_REG_MEASURE 0x04
-#define FUSB302_REG_SLICE 0x05
-#define FUSB302_REG_CONTROL0 0x06
-#define FUSB302_REG_CONTROL1 0x07
-#define FUSB302_REG_CONTROL2 0x08
-#define FUSB302_REG_CONTROL3 0x09
-#define FUSB302_REG_MASK 0x0A
-#define FUSB302_REG_POWER 0x0B
-#define FUSB302_REG_RESET 0x0C
-#define FUSB302_REG_OCPREG 0x0D
-#define FUSB302_REG_MASKA 0x0E
-#define FUSB302_REG_MASKB 0x0F
-#define FUSB302_REG_CONTROL4 0x10
-#define FUSB302_REG_STATUS0A 0x3C
-#define FUSB302_REG_STATUS1A 0x3D
-#define FUSB302_REG_INTERRUPTA 0x3E
-#define FUSB302_REG_INTERRUPTB 0x3F
-#define FUSB302_REG_STATUS0 0x40
-#define FUSB302_REG_STATUS1 0x41
-#define FUSB302_REG_INTERRUPT 0x42
-#define FUSB302_REG_FIFOS 0x43
-
-// FUSB302 Control/Configuration Values
-#define FUSB302_POWER_ALL 0x0F        // Enable all power
-#define FUSB302_RESET_SW 0x01         // Software reset
-#define FUSB302_SWITCHES0_CC1_EN 0x07 // Enable CC1 pull-up and monitoring
-#define FUSB302_SWITCHES0_CC2_EN 0x0B // Enable CC2 pull-up and monitoring
-#define FUSB302_CONTROL2_MODE 0x02    // DFP mode
-#define FUSB302_SLICE_SDAC_HYS 0x37   // Typical slicing threshold
+#include "usb_rx.h"
 
 // USB PD message tokens
 #define PD_TOKEN_SOP 0xE0
@@ -118,7 +82,7 @@ static bool fusb_read_reg(uint8_t reg, uint8_t* value) {
 }
 
 static bool fusb_read_fifo(uint8_t* buffer, uint8_t length) {
-    if (i2c_write(FUSB302B_ADDR, (uint8_t[]){ FUSB302_REG_FIFOS }, 1u)) {
+    if (i2c_write(FUSB302B_ADDR, (uint8_t[]){ FUSB_FIFOS }, 1u)) {
         return true;
     }
 
@@ -135,7 +99,7 @@ bool fusb_write_fifo(const uint8_t* buffer, uint8_t length) {
         return true; // Prevent overflow
     }
 
-    data[0] = FUSB302_REG_FIFOS;
+    data[0] = FUSB_FIFOS;
     memcpy(&data[1], buffer, length);
     if (i2c_write(FUSB302B_ADDR, data, length + 1)) {
         return true;
@@ -143,247 +107,24 @@ bool fusb_write_fifo(const uint8_t* buffer, uint8_t length) {
     return false;
 }
 
-static void fusb302_decode_pdo(uint32_t pdo, pdo_info_t* info) {
-    info->pdo = pdo;
-    info->type = (pdo >> 30) & 0x3;
-
-    switch (info->type) {
-        case PDO_TYPE_FIXED:
-            info->voltage_mv = ((pdo >> 10) & 0x3FF) * 50; // Voltage in 50mV units
-            info->current_ma = (pdo & 0x3FF) * 10;         // Current in 10mA units
-            info->power_mw = (info->voltage_mv * info->current_ma) / 1000;
-            break;
-
-        case PDO_TYPE_VARIABLE:
-            // For variable PDOs, we show max voltage and current
-            info->voltage_mv = ((pdo >> 20) & 0x3FF) * 50; // Max voltage
-            info->current_ma = (pdo & 0x3FF) * 10;         // Current
-            info->power_mw = (info->voltage_mv * info->current_ma) / 1000;
-            break;
-
-        case PDO_TYPE_BATTERY:
-            // For battery PDOs
-            info->voltage_mv = ((pdo >> 20) & 0x3FF) * 50; // Max voltage
-            info->power_mw = (pdo & 0x3FF) * 250;          // Power in 250mW units
-            info->current_ma = (info->power_mw * 1000) / info->voltage_mv;
-            break;
-
-        default:
-            info->voltage_mv = 0;
-            info->current_ma = 0;
-            info->power_mw = 0;
-            break;
+bool fusb_read_id(uint8_t* version) {
+    // Return true if read of the revision ID is sane
+    *version = 0;
+    if (fusb_read_reg(FUSB_DEVICE_ID, version)) {
+        return true;
     }
-}
-
-static void fusb302_print_pdo(uint8_t index, pdo_info_t* pdo) {
-    const char* type_names[] = { "Fixed", "Battery", "Variable", "Reserved" };
-
-    printf("  %d: %s Supply - %u.%03uV @ %u.%03uA (%u.%03uW)\r\n",
-           index,
-           type_names[pdo->type],
-           pdo->voltage_mv / 1000,
-           pdo->voltage_mv % 1000,
-           pdo->current_ma / 1000,
-           pdo->current_ma % 1000,
-           pdo->power_mw / 1000,
-           pdo->power_mw % 1000);
-}
-
-#if 0
-static bool fusb302_read_source_capabilities(pdo_info_t* pdos, uint8_t* num_pdos) {
-    uint8_t status, interrupt;
-    uint8_t fifo_data[64];
-    *num_pdos = 0;
-
-    // Clear interrupts
-    fusb_read_reg(FUSB302_REG_INTERRUPT, &interrupt);
-    fusb_read_reg(FUSB302_REG_INTERRUPTA, &interrupt);
-    fusb_read_reg(FUSB302_REG_INTERRUPTB, &interrupt);
-
-    printf("Waiting for Source Capabilities message...\r\n");
-
-    // Wait for a message (timeout after ~2 seconds)
-    uint32_t timeout = 200;
-    while (timeout-- > 0) {
-        fusb_read_reg(FUSB302_REG_STATUS1, &status);
-
-        if (!(status & 0x20)) { // RX_Empty bit
-            // Read the message from FIFO
-            uint8_t token1, token2;
-            if (fusb_read_fifo(&token1, 1) || token1 != PD_TOKEN_SOP) {
-                printf("Error: Invalid SOP token\r\n");
-                continue;
-            }
-
-            // Read header
-            uint8_t header[2];
-            if (fusb_read_fifo(header, 2)) {
-                printf("Error: Failed to read message header\r\n");
-                continue;
-            }
-
-            uint16_t msg_header = (header[1] << 8) | header[0];
-            uint8_t msg_type = msg_header & PD_HEADER_MSG_TYPE_MASK;
-            uint8_t num_data_objs = (msg_header & PD_HEADER_NUM_DATA_OBJS_MASK) >> PD_HEADER_NUM_DATA_OBJS_SHIFT;
-
-            if (msg_type == PD_MSG_TYPE_SOURCE_CAPABILITIES) {
-                printf("Received Source Capabilities with %d PDOs:\r\n", num_data_objs);
-
-                // Read PDOs
-                for (uint8_t i = 0; i < num_data_objs && i < 7; i++) {
-                    uint8_t pdo_bytes[4];
-                    if (fusb_read_fifo(pdo_bytes, 4)) {
-                        printf("Error: Failed to read PDO %d\r\n", i);
-                        continue;
-                    }
-
-                    uint32_t pdo = (pdo_bytes[3] << 24) | (pdo_bytes[2] << 16) | (pdo_bytes[1] << 8) | pdo_bytes[0];
-
-                    fusb302_decode_pdo(pdo, &pdos[i]);
-                    (*num_pdos)++;
-                }
-
-                // Read CRC and EOP
-                uint8_t crc[4];
-                fusb_read_fifo(crc, 4);
-                // fusb_read_fifo(&token2, 1);
-                return true;
-            }
-        }
-
-        sleep_ms(10);
+    if (*version == 0 || *version == 0xFF) {
+        return true;
     }
     return false;
 }
-#endif
 
-
-
-// PD message types
-#define PD_MSG_TYPE_GET_SOURCE_CAP 0b111
-
-bool fusb_send_get_source_cap() {
-    /* Token sequences for the FUSB302B */
-    static uint8_t sop_seq[5] = {
-        FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP2, FUSB_FIFO_TX_PACKSYM
-    };
-    static const uint8_t eop_seq[4] = { FUSB_FIFO_TX_JAM_CRC, FUSB_FIFO_TX_EOP, FUSB_FIFO_TX_TXOFF, FUSB_FIFO_TX_TXON };
-
-    /* Get_Source_Cap is a control message with no data objects */
-    uint8_t msg_len = 2; // Just header
-    uint8_t header[2];
-
-    // Build header for Get_Source_Cap message
-    header[0] = 0b10 << 6; // version: PD 3.0
-    header[0] |= PD_MSG_TYPE_GET_SOURCE_CAP; // Message type
-    header[1] = (pdo_msg_id & 0x7) << 1;    // Message ID, no data objects
-
-    /* Set the number of bytes to be transmitted in the packet */
-    sop_seq[4] = FUSB_FIFO_TX_PACKSYM | msg_len;
-
-    /* Write all three parts of the message to the TX FIFO */
-    if (fusb_write_fifo((uint8_t*)sop_seq, 5)) {
+bool fusb_send_hardrst() {
+    /* Send a hard reset */
+    if (fusb_write_reg(FUSB_CONTROL3, 0x07 | FUSB_CONTROL3_SEND_HARD_RESET)) {
         return true;
     }
-    if (fusb_write_fifo(header, msg_len)) {
-        return true;
-    }
-    if (fusb_write_fifo((uint8_t*)eop_seq, 4)) {
-        return true;
-    }
-
-    // increment message ID
-    pdo_msg_id = (pdo_msg_id + 1) & 0x7;
-
-    return false;
-}
-
-// Modify the fusb302_read_source_capabilities function to accept a parameter
-static bool fusb302_read_source_capabilities(pdo_info_t* pdos, uint8_t* num_pdos, bool send_request) {
-    uint8_t status, interrupt;
-    *num_pdos = 0;
-
-    // Clear interrupts
-    fusb_read_reg(FUSB302_REG_INTERRUPT, &interrupt);
-    fusb_read_reg(FUSB302_REG_INTERRUPTA, &interrupt);
-    fusb_read_reg(FUSB302_REG_INTERRUPTB, &interrupt);
-
-    // Flush RX buffer first
-    fusb_write_reg(FUSB_CONTROL1, FUSB_CONTROL1_RX_FLUSH);
-
-    if (send_request) {
-        printf("Sending Get_Source_Cap message...\r\n");
-        if (fusb_send_get_source_cap()) {
-            printf("Error: Failed to send Get_Source_Cap message\r\n");
-            return false;
-        }
-    }
-
-    printf("Waiting for Source Capabilities message...\r\n");
-
-    // Wait for a message (timeout after ~2 seconds)
-    uint32_t timeout = 200;
-    while (timeout-- > 0) {
-        fusb_read_reg(FUSB302_REG_STATUS1, &status);
-
-        if (!(status & 0x20)) { // RX_Empty bit
-            // Read the message from FIFO
-            uint8_t token1;
-            if (fusb_read_fifo(&token1, 1) || token1 != PD_TOKEN_SOP) {
-                printf("Error: Invalid SOP token (0x%02X)\r\n", token1);
-                // Flush and continue
-                fusb_write_reg(FUSB_CONTROL1, FUSB_CONTROL1_RX_FLUSH);
-                continue;
-            }
-
-            // Read header
-            uint8_t header[2];
-            if (fusb_read_fifo(header, 2)) {
-                printf("Error: Failed to read message header\r\n");
-                continue;
-            }
-
-            uint16_t msg_header = (header[1] << 8) | header[0];
-            uint8_t msg_type = msg_header & PD_HEADER_MSG_TYPE_MASK;
-            uint8_t num_data_objs = (msg_header & PD_HEADER_NUM_DATA_OBJS_MASK) >> PD_HEADER_NUM_DATA_OBJS_SHIFT;
-
-            printf("Received message type: %d, data objects: %d\r\n", msg_type, num_data_objs);
-
-            if (msg_type == PD_MSG_TYPE_SOURCE_CAPABILITIES) {
-                printf("Received Source Capabilities with %d PDOs:\r\n", num_data_objs);
-
-                // Read PDOs
-                for (uint8_t i = 0; i < num_data_objs && i < 7; i++) {
-                    uint8_t pdo_bytes[4];
-                    if (fusb_read_fifo(pdo_bytes, 4)) {
-                        printf("Error: Failed to read PDO %d\r\n", i);
-                        continue;
-                    }
-
-                    uint32_t pdo = (pdo_bytes[3] << 24) | (pdo_bytes[2] << 16) | (pdo_bytes[1] << 8) | pdo_bytes[0];
-
-                    fusb302_decode_pdo(pdo, &pdos[i]);
-                    (*num_pdos)++;
-                }
-
-                // Read CRC and EOP
-                uint8_t crc[4];
-                fusb_read_fifo(crc, 4);
-                return true;
-            } else {
-                // Skip this message - read remaining data objects and CRC
-                for (uint8_t i = 0; i < num_data_objs; i++) {
-                    uint8_t dummy[4];
-                    fusb_read_fifo(dummy, 4);
-                }
-                uint8_t crc[4];
-                fusb_read_fifo(crc, 4);
-            }
-        }
-
-        sleep_ms(10);
-    }
+    busy_wait_ms(100);
     return false;
 }
 
@@ -405,19 +146,7 @@ bool fusb_reset() {
     return false;
 }
 
-bool fusb_read_id(uint8_t* version) {
-    // Return true if read of the revision ID is sane
-    *version = 0;
-    if (fusb_read_reg(FUSB_DEVICE_ID, version)) {
-        return true;
-    }
-    if (*version == 0 || *version == 0xFF) {
-        return true;
-    }
-    return false;
-}
-
-bool runCCLineSelection() {
+bool fusb_cc_line_detect(uint8_t *cc_used) {
     uint8_t cc1, cc2;
 
     /* Measure CC1 */
@@ -439,7 +168,8 @@ bool runCCLineSelection() {
     }
 
     if ((cc1 & FUSB_STATUS0_BC_LVL) == 0 && (cc2 & FUSB_STATUS0_BC_LVL) == 0) {
-        printf("No CC line detected!\r\n");
+        //printf("No CC line detected!\r\n");
+        *cc_used = 0;
         return true;
     }
 
@@ -453,7 +183,8 @@ bool runCCLineSelection() {
         if (fusb_write_reg(FUSB_SWITCHES0, 0x07)) {
             return true;
         }
-        printf("Using CC1\r\n");
+        //printf("Using CC1\r\n");
+        *cc_used = 1;
     } else {
         // TX_CC2|AUTO_CRC|SPECREV0
         if (fusb_write_reg(FUSB_SWITCHES1, 0x26)) {
@@ -463,17 +194,9 @@ bool runCCLineSelection() {
         if (fusb_write_reg(FUSB_SWITCHES0, 0x0B)) {
             return true;
         }
-        printf("Using CC2\r\n");
+        //printf("Using CC2\r\n");
+        *cc_used = 2;
     }
-    return false;
-}
-
-bool fusb_send_hardrst() {
-    /* Send a hard reset */
-    if (fusb_write_reg(FUSB_CONTROL3, 0x07 | FUSB_CONTROL3_SEND_HARD_RESET)) {
-        return true;
-    }
-    busy_wait_ms(100);
     return false;
 }
 
@@ -523,22 +246,33 @@ bool fusb_setup(void) {
         return true;
     }
     /* Flush the RX buffer */
-    if (fusb_write_reg(FUSB_CONTROL1, FUSB_CONTROL1_RX_FLUSH)) {
+    if (fusb_write_reg(FUSB_CONTROL1, FUSB_CONTROL1_RX_FLUSH|FUSB_CONTROL1_ENSOP2DB|FUSB_CONTROL1_ENSOP1DB|FUSB_CONTROL1_ENSOP2|FUSB_CONTROL1_ENSOP1)) {
         return true;
     }
-
-    if (runCCLineSelection()) {
+#if 0
+    if (fusb_cc_line_detect()) {
         return true;
     }
     if (fusb_reset()) {
         return true;
     }
     pdo_msg_id = 0;
+#endif
     return false;
 }
 
-// reference: https://github.com/CRImier/HaD_talking_pd
-bool fusb_pdo_request(uint8_t pdo_pos, uint16_t current, uint16_t max_current) {
+typedef struct __attribute__((packed)) pdo_sop_header {
+    uint8_t version:2;
+    uint8_t port_data_role:1;
+    uint8_t msg_type:5;
+    uint8_t extended:1;
+    uint8_t num_data_objs:3;
+    uint8_t msg_id:3;
+    uint8_t port_power_role:1;
+} pdo_sop_header_t;
+
+
+bool fusb_send_msg(uint8_t pdo_msg_type, uint8_t object_count, const uint8_t* data, uint8_t data_len) {
     /* Token sequences for the FUSB302B */
     static uint8_t sop_seq[5] = {
         FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP1, FUSB_FIFO_TX_SOP2, FUSB_FIFO_TX_PACKSYM
@@ -547,87 +281,326 @@ bool fusb_pdo_request(uint8_t pdo_pos, uint16_t current, uint16_t max_current) {
 
     /* Get the length of the message: a two-octet header plus NUMOBJ four-octet
      * data objects */
-    uint8_t obj_count = 1;
-    uint8_t pdo_len = 2 + (4 * obj_count);
-    uint8_t pdo[6]={0,0,0,0,0,0};
+    uint8_t msg_len = 2 + data_len; // header + data
+#if 1
+    uint8_t header[2];
 
-    // 2 byte header, big endian
-    pdo[0] = 0b10 << 6; // version: PD 3.0
-    pdo[0] |= 0b00010;   // message type: request
+    // Build header for message
+    header[0] = 0b10 << 6; //0b10 << 6; // version: PD 3.0
+    header[0] |= pdo_msg_type & 0x0F; // Message type
+    header[1] = (object_count & 0x7) << 4; // Number of data objects
+    header[1] |= (pdo_msg_id & 0x7) << 1;    // Message ID
+#else
 
-    pdo[1] |= obj_count << 4;        // number of data objects
-    pdo[1] |= (pdo_msg_id & 0b111) << 1; // message ID
-
-    // packing max current into fields
-    uint16_t max_current_b = max_current; // 10
-    uint16_t max_current_l = max_current_b & 0xff;
-    uint16_t max_current_h = max_current_b >> 8;
-    pdo[2] = max_current_l;
-    pdo[3] |= max_current_h;
-
-    // packing current into fields
-    uint16_t current_b = current; // 10
-    uint16_t current_l = current_b & 0x3f;
-    uint16_t current_h = current_b >> 6;
-    pdo[3] |= current_l << 2;
-    pdo[4] |= current_h;
-
-    pdo[5] |= (pdo_pos + 1) << 4; // PDO profile object position
-    pdo[5] |= 0b1;                // no suspend
-
+    pdo_sop_header_t header = {
+        .version = 0b01, // PD 3.0
+        .port_data_role = 0, // Sink
+        .msg_type = pdo_msg_type & 0x1F,
+        .extended = 0,
+        .num_data_objs = object_count & 0x7,
+        .msg_id = pdo_msg_id & 0x7,
+        .port_power_role = 0 // Sink
+    };
+#endif
     /* Set the number of bytes to be transmitted in the packet */
-    sop_seq[4] = FUSB_FIFO_TX_PACKSYM | pdo_len;
+    sop_seq[4] = FUSB_FIFO_TX_PACKSYM | msg_len;
 
     /* Write all three parts of the message to the TX FIFO */
     if (fusb_write_fifo((uint8_t*)sop_seq, 5)) {
         return true;
     }
-    if (fusb_write_fifo((uint8_t*)pdo, pdo_len)) {
+    if (fusb_write_fifo((const uint8_t*)&header, 2)) {
+        return true;
+    }
+    if (data_len > 0 && fusb_write_fifo(data, data_len)) {
         return true;
     }
     if (fusb_write_fifo((uint8_t*)eop_seq, 4)) {
         return true;
     }
-
+    //printf("msg_id: %d\r\n", pdo_msg_id);
     // increment message ID
-    pdo_msg_id = (pdo_msg_id + 1) & 0b111;
+    pdo_msg_id = (pdo_msg_id + 1) & 0x7;  
 
     return false;
 }
 
+static void fusb_decode_pdo(uint32_t pdo, pdo_info_t* info) {
+    info->pdo = pdo;
+    info->type = (pdo >> 30) & 0x3;
 
+    switch (info->type) {
+        case PDO_TYPE_FIXED:
+            info->voltage_mv = ((pdo >> 10) & 0x3FF) * 50; // Voltage in 50mV units
+            info->current_ma = (pdo & 0x3FF) * 10;         // Current in 10mA units
+            info->power_mw = (info->voltage_mv * info->current_ma) / 1000;
+            break;
+
+        case PDO_TYPE_VARIABLE:
+            // For variable PDOs, we show max voltage and current
+            info->voltage_mv = ((pdo >> 20) & 0x3FF) * 50; // Max voltage
+            info->current_ma = (pdo & 0x3FF) * 10;         // Current
+            info->power_mw = (info->voltage_mv * info->current_ma) / 1000;
+            break;
+
+        case PDO_TYPE_BATTERY:
+            // For battery PDOs
+            info->voltage_mv = ((pdo >> 20) & 0x3FF) * 50; // Max voltage
+            info->power_mw = (pdo & 0x3FF) * 250;          // Power in 250mW units
+            info->current_ma = (info->power_mw * 1000) / info->voltage_mv;
+            break;
+
+        default:
+            info->voltage_mv = 0;
+            info->current_ma = 0;
+            info->power_mw = 0;
+            break;
+    }
+}
+
+static void fusb_print_pdo(uint8_t index, pdo_info_t* pdo) {
+    const char* type_names[] = { "Fixed", "Battery", "Variable", "Reserved" };
+
+    printf("  %d: %s Supply - %u.%03uV @ %u.%03uA (%u.%03uW)\r\n",
+           index,
+           type_names[pdo->type],
+           pdo->voltage_mv / 1000,
+           pdo->voltage_mv % 1000,
+           pdo->current_ma / 1000,
+           pdo->current_ma % 1000,
+           pdo->power_mw / 1000,
+           pdo->power_mw % 1000);
+}
+
+// PD message types
+#define PD_MSG_TYPE_GET_SOURCE_CAP 0b111
+bool fusb_send_get_source_cap() {
+    /* Get_Source_Cap is a control message with no data objects */
+    return fusb_send_msg(PD_MSG_TYPE_GET_SOURCE_CAP, 0, NULL, 0);
+}
+
+#define PD_MSG_TYPE_REQUEST 0b10
+// reference: https://github.com/CRImier/HaD_talking_pd
+bool fusb_pdo_request(uint8_t pdo_pos, uint16_t current, uint16_t max_current) {
+    uint8_t pdo[4] = {0};
+
+    // packing max current into fields
+    uint16_t max_current_b = max_current; // 10
+    uint16_t max_current_l = max_current_b & 0xff;
+    uint16_t max_current_h = max_current_b >> 8;
+    pdo[0] = max_current_l;
+    pdo[1] |= max_current_h;
+
+    // packing current into fields
+    uint16_t current_b = current; // 10
+    uint16_t current_l = current_b & 0x3f;
+    uint16_t current_h = current_b >> 6;
+    pdo[1] |= current_l << 2;
+    pdo[2] |= current_h;
+
+    pdo[3] |= (pdo_pos + 1) << 4; // PDO profile object position
+    pdo[3] |= 0b1;                // no suspend
+
+    /* Send the Request message with one data object */
+    return fusb_send_msg(PD_MSG_TYPE_REQUEST, 1, pdo, sizeof(pdo));
+}
+
+bool fusb_pdo_hard_reset() {
+    //try hard reset
+    uint8_t control3;
+    if(fusb_read_reg(FUSB_CONTROL3, &control3)) {
+        return true;
+    }
+    control3 |= FUSB_CONTROL3_SEND_HARD_RESET;
+    if(fusb_write_reg(FUSB_CONTROL3, control3)) {
+        return true;
+    }
+
+    busy_wait_ms(10);
+
+    pdo_msg_id = 0; //reset message ID
+    return false;
+}
+
+
+#if 0
+static bool fusb_read_source_capabilities(pdo_info_t* pdos, uint8_t* num_pdos) {
+    uint8_t status, interrupt;
+    uint8_t fifo_data[64];
+    *num_pdos = 0;
+
+    // Clear interrupts
+    fusb_read_reg(FUSB302_REG_INTERRUPT, &interrupt);
+    fusb_read_reg(FUSB302_REG_INTERRUPTA, &interrupt);
+    fusb_read_reg(FUSB302_REG_INTERRUPTB, &interrupt);
+
+    printf("Waiting for Source Capabilities message...\r\n");
+
+    // Wait for a message (timeout after ~2 seconds)
+    uint32_t timeout = 200;
+    while (timeout-- > 0) {
+        fusb_read_reg(FUSB302_REG_STATUS1, &status);
+
+        if (!(status & 0x20)) { // RX_Empty bit
+            // Read the message from FIFO
+            uint8_t token1, token2;
+            if (fusb_read_fifo(&token1, 1) || token1 != PD_TOKEN_SOP) {
+                printf("Error: Invalid SOP token\r\n");
+                continue;
+            }
+
+            // Read header
+            uint8_t header[2];
+            if (fusb_read_fifo(header, 2)) {
+                printf("Error: Failed to read message header\r\n");
+                continue;
+            }
+
+            uint16_t msg_header = (header[1] << 8) | header[0];
+            uint8_t msg_type = msg_header & PD_HEADER_MSG_TYPE_MASK;
+            uint8_t num_data_objs = (msg_header & PD_HEADER_NUM_DATA_OBJS_MASK) >> PD_HEADER_NUM_DATA_OBJS_SHIFT;
+
+            if (msg_type == PD_MSG_TYPE_SOURCE_CAPABILITIES) {
+                printf("Received Source Capabilities with %d PDOs:\r\n", num_data_objs);
+
+                // Read PDOs
+                for (uint8_t i = 0; i < num_data_objs && i < 7; i++) {
+                    uint8_t pdo_bytes[4];
+                    if (fusb_read_fifo(pdo_bytes, 4)) {
+                        printf("Error: Failed to read PDO %d\r\n", i);
+                        continue;
+                    }
+
+                    uint32_t pdo = (pdo_bytes[3] << 24) | (pdo_bytes[2] << 16) | (pdo_bytes[1] << 8) | pdo_bytes[0];
+
+                    fusb_decode_pdo(pdo, &pdos[i]);
+                    (*num_pdos)++;
+                }
+
+                // Read CRC and EOP
+                uint8_t crc[4];
+                fusb_read_fifo(crc, 4);
+                // fusb_read_fifo(&token2, 1);
+                return true;
+            }
+        }
+
+        sleep_ms(10);
+    }
+    return false;
+}
+#endif
+
+// Modify the fusb302_read_source_capabilities function to accept a parameter
+static bool fusb_read_source_capabilities(pdo_info_t* pdos, uint8_t* num_pdos, bool send_request) {
+    uint8_t status, interrupt;
+    *num_pdos = 0;
+
+    // Clear interrupts
+    fusb_read_reg(FUSB_INTERRUPT, &interrupt);
+    fusb_read_reg(FUSB_INTERRUPTA, &interrupt);
+    fusb_read_reg(FUSB_INTERRUPTB, &interrupt);
+
+    // Flush RX buffer first
+    fusb_write_reg(FUSB_CONTROL1, FUSB_CONTROL1_RX_FLUSH);
+
+    if (send_request) {
+        printf("Sending Get_Source_Cap message...\r\n");
+        if (fusb_send_get_source_cap()) {
+            printf("Error: Failed to send Get_Source_Cap message\r\n");
+            return false;
+        }
+    }
+
+    //printf("Waiting for Source Capabilities message...\r\n");
+
+    // Wait for a message (timeout after ~2 seconds)
+    uint32_t timeout = 200;
+    while (timeout-- > 0) {
+        fusb_read_reg(FUSB_STATUS1, &status);
+
+        if (!(status & 0x20)) { // RX_Empty bit
+            // Read the message from FIFO
+            uint8_t token1;
+            if (fusb_read_fifo(&token1, 1) || token1 != PD_TOKEN_SOP) {
+                printf("Error: Invalid SOP token (0x%02X)\r\n", token1);
+                // Flush and continue
+                fusb_write_reg(FUSB_CONTROL1, FUSB_CONTROL1_RX_FLUSH);
+                continue;
+            }
+
+            // Read header
+            uint8_t header[2];
+            if (fusb_read_fifo(header, 2)) {
+                printf("Error: Failed to read message header\r\n");
+                continue;
+            }
+
+            printf("Header raw: 0x%02X 0x%02X\r\n", header[0], header[1]);
+            uint16_t msg_header = (header[1] << 8) | header[0];
+            uint8_t msg_type = msg_header & PD_HEADER_MSG_TYPE_MASK;
+            uint8_t num_data_objs = (msg_header & PD_HEADER_NUM_DATA_OBJS_MASK) >> PD_HEADER_NUM_DATA_OBJS_SHIFT;
+            uint8_t pdo_version = (header[0] >> 6) & 0x3;
+            printf("Received message type: %d, data objects: %d, PDO version: %d\r\n", msg_type, num_data_objs, pdo_version);
+
+            if (msg_type == PD_MSG_TYPE_SOURCE_CAPABILITIES) {
+                // Read PDOs
+                for (uint8_t i = 0; i < num_data_objs && i < 7; i++) {
+                    uint8_t pdo_bytes[4];
+                    if (fusb_read_fifo(pdo_bytes, 4)) {
+                        printf("Error: Failed to read PDO %d\r\n", i);
+                        continue;
+                    }
+
+                    uint32_t pdo = (pdo_bytes[3] << 24) | (pdo_bytes[2] << 16) | (pdo_bytes[1] << 8) | pdo_bytes[0];
+
+                    fusb_decode_pdo(pdo, &pdos[i]);
+                    (*num_pdos)++;
+                }
+
+                // Read CRC and EOP
+                uint8_t crc[4];
+                fusb_read_fifo(crc, 4);
+                return true;
+            } else {
+                // Skip this message - read remaining data objects and CRC
+                for (uint8_t i = 0; i < num_data_objs; i++) {
+                    uint8_t dummy[4];
+                    fusb_read_fifo(dummy, 4);
+                }
+                uint8_t crc[4];
+                fusb_read_fifo(crc, 4);
+            }
+        }
+
+        sleep_ms(1);
+    }
+    return false;
+}
 
 // Command usage and help
 static const char* const usage[] = {
-    "fusb302 init", "fusb302 id", "fusb302 status", "fusb302 scan", "fusb302 request <profile>"
+    "show chip ID and status info:%s fusb302 status", 
+    "scan and select PDO profiles:%s fusb302 scan"
 };
 
 static const struct ui_help_options options[] = {
-    /*    {0,"", T_HELP_FUSB302_INIT},
-        {0,"", T_HELP_FUSB302_ID},
-        {0,"", T_HELP_FUSB302_STATUS},
-        {0,"", T_HELP_FUSB302_SCAN},
-        {0,"", T_HELP_FUSB302_REQUEST}*/
+        {1,"", T_HELP_I2C_FUSB302},
+        {0,"status", T_HELP_I2C_FUSB302_STATUS},
+        {0,"scan", T_HELP_I2C_FUSB302_SCAN},
 };
 
-enum fusb302_actions_enum {
-    FUSB302_INIT = 0,
-    FUSB302_ID,
-    FUSB302_STATUS,
+enum fusb_actions_enum {
+    FUSB302_STATUS=0,
     FUSB302_SCAN,
-    FUSB302_REQUEST
 };
 
-static const struct cmdln_action_t fusb302_actions[] = { { FUSB302_INIT, "init" },
-                                                         { FUSB302_ID, "id" },
-                                                         { FUSB302_STATUS, "status" },
-                                                         { FUSB302_SCAN, "scan" },
-                                                         { FUSB302_REQUEST, "request" } };
-
-static pdo_info_t available_pdos[7];
-static uint8_t num_available_pdos = 0;
+static const struct cmdln_action_t fusb_actions[] = {{ FUSB302_STATUS, "status" },{ FUSB302_SCAN, "scan" }};
 
 void fusb302_handler(struct command_result* res) {
+    static pdo_info_t available_pdos[7];
+    static uint8_t num_available_pdos = 0;
+
     if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
         return;
     }
@@ -636,7 +609,7 @@ void fusb302_handler(struct command_result* res) {
     }
 
     uint32_t action;
-    if (cmdln_args_get_action(fusb302_actions, count_of(fusb302_actions), &action)) {
+    if (cmdln_args_get_action(fusb_actions, count_of(fusb_actions), &action)) {
         ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
         return;
     }
@@ -645,7 +618,7 @@ void fusb302_handler(struct command_result* res) {
 
     switch (action) {
 
-        case FUSB302_ID: {
+        case FUSB302_STATUS: {
             uint8_t device_id;
             if (!fusb_read_id(&device_id)) {
                 printf("Device ID: 0x%02X\r\n", device_id);
@@ -654,16 +627,15 @@ void fusb302_handler(struct command_result* res) {
                     printf("Revision: %d\r\n", device_id & 0x0F);
                 } else {
                     printf("Warning: Unexpected device ID\r\n");
+                    goto fusb302_cleanup;
                 }
             } else {
                 printf("Error: Failed to read device ID\r\n");
+                goto fusb302_cleanup;
             }
-            break;
-        }
 
-        case FUSB302_STATUS: {
             uint8_t status0, status1;
-            if (!fusb_read_reg(FUSB302_REG_STATUS0, &status0) && !fusb_read_reg(FUSB302_REG_STATUS1, &status1)) {
+            if (!fusb_read_reg(FUSB_STATUS0, &status0) && !fusb_read_reg(FUSB_STATUS1, &status1)) {
                 printf("FUSB302 Status:\r\n");
                 printf("  STATUS0: 0x%02X\r\n", status0);
                 printf("  STATUS1: 0x%02X\r\n", status1);
@@ -677,127 +649,142 @@ void fusb302_handler(struct command_result* res) {
         }
 
         case FUSB302_SCAN: {
-            printf("Scanning for USB PD source capabilities...\r\n");
-
             if (fusb_setup()) {
                 printf("FUSB302 setup failed\r\n");
                 break;
             }
 
-            if (fusb302_read_source_capabilities(available_pdos, &num_available_pdos, false)) {
-                printf("\r\nAvailable Power Profiles:\r\n");
-                for (uint8_t i = 0; i < num_available_pdos; i++) {
-                    fusb302_print_pdo(i + 1, &available_pdos[i]);
-                }
-                uint8_t profile = 0;
-                pdo_info_t* selected_pdo = &available_pdos[0];
-                printf("Requesting initial profile %d: %u.%03uV @ %u.%03uA\r\n",
-                       1,
-                       selected_pdo->voltage_mv / 1000,
-                       selected_pdo->voltage_mv % 1000,
-                       selected_pdo->current_ma / 1000,
-                       selected_pdo->current_ma % 1000);
-                
-                if (fusb_pdo_request(0, selected_pdo->current_ma / 10, selected_pdo->current_ma / 10)) {
-                    printf("Failed to send PD message\r\n");
-                } else {
-                    printf("PD Request message sent\r\n");
+            uint8_t cc_used = 0;
+            char c;
+            // any key to exit
+            printf("Waiting for attach, x to exit...\r\n");
+            while(true){
+                if(rx_fifo_try_get(&c) && (c=='x')){
+                    printf("Exiting scan...\r\n");
+                    goto fusb302_cleanup;
                 }
 
-                busy_wait_ms(500); //delay
-                selected_pdo = &available_pdos[1];
-                printf("Requesting second profile %d: %u.%03uV @ %u.%03uA\r\n",
-                       2,
-                       selected_pdo->voltage_mv / 1000,
-                       selected_pdo->voltage_mv % 1000,
-                       selected_pdo->current_ma / 1000,
-                       selected_pdo->current_ma % 1000);
+                if(fusb_cc_line_detect(&cc_used)){
+                    continue;
+                }
+                printf("Attached on CC%d\r\nSending PD HARD_RESET\r\n", cc_used);
 
-                if (fusb_pdo_request(1, selected_pdo->current_ma / 10, selected_pdo->current_ma / 10)) {
-                    printf("Failed to send PD message\r\n");
-                } else {
-                    printf("PD Request message sent\r\n");
-                }     
+                if(fusb_pdo_hard_reset()){
+                    printf("PDO hard reset failed\r\n"); //explore soft and hard reset
+                    continue;
+                }
                 
-                busy_wait_ms(500); //delay
-                selected_pdo = &available_pdos[2];
-                printf("Requesting second profile %d: %u.%03uV @ %u.%03uA\r\n",
-                       3,
-                       selected_pdo->voltage_mv / 1000,
-                       selected_pdo->voltage_mv % 1000,
-                       selected_pdo->current_ma / 1000,
-                       selected_pdo->current_ma % 1000);
-
-                if (fusb_pdo_request(2, selected_pdo->current_ma / 10, selected_pdo->current_ma / 10)) {
-                    printf("Failed to send PD message\r\n");
-                } else {
-                    printf("PD Request message sent\r\n");
-                }                     
-
-                busy_wait_ms(500); //delay
-                printf("Requesting source capabilities...\r\n");
-                
-                // Check if device is already initialized
-                uint8_t device_id;
-                if (fusb_read_id(&device_id)) {
-                    printf("Error: FUSB302 not detected. Run 'fusb302 scan' first.\r\n");
-                    break;
+                printf("Requesting Source Capabilities\r\n");
+                if(fusb_reset()){
+                    printf("FUSB302 reset failed\r\n"); 
+                    continue;
                 }
 
-                // Request capabilities without reset
-                if (fusb302_read_source_capabilities(available_pdos, &num_available_pdos, true)) {
+                if (!fusb_read_source_capabilities(available_pdos, &num_available_pdos, false)) {
+                    printf("No Source Capabilities received\r\n");
+                    continue;
+                }
+
+                //scan for 5v safe voltage
+                for(uint8_t i = 0; i < num_available_pdos; i++) {
+                    if(available_pdos[i].voltage_mv == 5000){
+                        pdo_info_t* selected_pdo = &available_pdos[0];      
+                        if (fusb_pdo_request(0, selected_pdo->current_ma / 10, selected_pdo->current_ma / 10)) {
+                            printf("Failed to send PD message\r\n");
+                            continue;
+                        } else {
+                            printf("Requested 5 volt profile\r\n");
+                            fusb_print_pdo(i + 1, &available_pdos[i]);
+                        }                            
+                        break;
+                    }
+                }
+
+                //interactive loop to request profiles
+                while(true){
                     printf("\r\nAvailable Power Profiles:\r\n");
                     for (uint8_t i = 0; i < num_available_pdos; i++) {
-                        fusb302_print_pdo(i + 1, &available_pdos[i]);
+                        fusb_print_pdo(i + 1, &available_pdos[i]);
                     }
-                } else {
-                    printf("Failed to get source capabilities\r\n");
-                }                
 
+                    printf("Enter profile number to request (1-%d), 0 to rescan, x to exit: ", num_available_pdos);
+                    //wait for input
+                    while(!rx_fifo_try_get(&c));
 
-            } else {
-                printf("No USB PD source detected\r\n");
+                    if(c == 'x'){
+                        printf("\r\nExiting scan...\r\n");
+                        goto fusb302_cleanup;
+                    }
+                    uint32_t profile_num = c - '0';
+                    if(profile_num == 0){
+                        printf("\r\nRescanning...\r\n");
+                        break; //break to outer loop to rescan
+                    }
+                    if (profile_num < 1 || profile_num > (num_available_pdos)) {
+                        printf("\r\nError: Invalid profile number. Available profiles: 1-%d\r\n", num_available_pdos);
+                        continue;
+                    }
+
+                    pdo_info_t* selected_pdo = &available_pdos[profile_num - 1];
+                    printf("\r\nRequested profile:");
+                    fusb_print_pdo(profile_num, selected_pdo);
+                    if(selected_pdo->voltage_mv > 20000){
+                        printf("Error: %d.%dV exceeds FUSB302 limit (20V).\r\n", selected_pdo->voltage_mv/1000, selected_pdo->voltage_mv%1000);
+                        continue;
+                    }
+                    if (fusb_pdo_request(profile_num - 1, selected_pdo->current_ma / 10, selected_pdo->current_ma / 10)) {
+                        printf("Failed to send PD message\r\n");
+                        continue;
+                    } 
+                    uint8_t statusa;
+                    if(!fusb_read_reg(FUSB_STATUS0A, &statusa)){
+                        if(statusa & FUSB_STATUS0A_RETRYFAIL){
+                            printf("Error: Retry count exceeded\r\n");
+                        }
+                        if(statusa & FUSB_STATUS0A_SOFTRST){
+                            printf("Error: Soft reset detected\r\n");
+                        }
+                        if(statusa & FUSB_STATUS0A_HARDRST){
+                            printf("Error: Hard reset detected\r\n");
+                        }
+                    }else{
+                        printf("Error: Failed to read status0a\r\n");
+                    }                    
+                }
+                
+                #if 0
+                if (fusb_read_source_capabilities(available_pdos, &num_available_pdos, true)) {
+                    //check the error bits in status0a
+                    uint8_t statusa;
+                    if(!fusb_read_reg(FUSB_STATUS0A, &statusa)){
+                        if(statusa & FUSB_STATUS0A_RETRYFAIL){
+                            printf("Error: Retry count exceeded\r\n");
+                        }
+                        if(statusa & FUSB_STATUS0A_SOFTRST){
+                            printf("Error: Soft reset detected\r\n");
+                        }
+                        if(statusa & FUSB_STATUS0A_HARDRST){
+                            printf("Error: Hard reset detected\r\n");
+                        }
+                    }
+
+                    printf("\r\nAvailable Power Profiles:\r\n");
+                    for (uint8_t i = 0; i < num_available_pdos; i++) {
+                        fusb_print_pdo(i + 1, &available_pdos[i]);
+                    }
+                }
+                #endif
             }
             break;
         }
 
-        case FUSB302_REQUEST: {
-            uint32_t profile_num;
-            /*if (!cmdln_args_get_uint(&profile_num)) {
-                printf("Error: Profile number required\r\n");
-                printf("Usage: fusb302 request <profile>\r\n");
-                break;
-            }*/
-
-            if (num_available_pdos == 0) {
-                printf("Error: No PDOs available. Run 'fusb302 scan' first.\r\n");
-                break;
-            }
-
-            if (profile_num < 1 || profile_num > num_available_pdos) {
-                printf("Error: Invalid profile number. Available profiles: 1-%d\r\n", num_available_pdos);
-                break;
-            }
-
-            pdo_info_t* selected_pdo = &available_pdos[profile_num - 1];
-            printf("Requesting profile %d: %u.%03uV @ %u.%03uA\r\n",
-                   (int)profile_num,
-                   selected_pdo->voltage_mv / 1000,
-                   selected_pdo->voltage_mv % 1000,
-                   selected_pdo->current_ma / 1000,
-                   selected_pdo->current_ma % 1000);
-
-            // TODO: Implement actual PD request message
-            printf("Note: PD request implementation is not yet complete.\r\n");
-            printf("This would send a Request message for the selected PDO.\r\n");
-            break;
-        }
 
         default:
             printf("Unknown action\r\n");
             break;
     }
 
+fusb302_cleanup:
     // we manually control any FALA capture
     fala_stop_hook();
     fala_notify_hook();

@@ -174,6 +174,9 @@ static char const * const en_us[]={
 	[T_HWI2C_TIMEOUT]="I2C timeout",
 	[T_HWI2C_I2C_ERROR]="I2C bus error",
 	[T_HELP_I2C_TCS34725]="read color sensor data from TCS3472x sensor",
+	[T_HELP_I2C_FUSB302]="interface with FUSB302 USB-C Power Delivery controller",
+	[T_HELP_I2C_FUSB302_STATUS]="read ID and status registers",
+	[T_HELP_I2C_FUSB302_SCAN]="scan and select PDO profiles",
 	//2WIRE
 	[T_HW2WIRE_SPEED_MENU]="2WIRE speed",
 	[T_HW2WIRE_RST_LOW]="RST LOW",
@@ -584,6 +587,10 @@ static char const * const en_us[]={
 	[T_HELP_DDR5_PATCH]="Update correct CRC values for blocks 0-7 in a file",
 	[T_HELP_DDR5_FILE_FLAG]="File flag. Speficy a file to write, read, verify or check CRC",
 	[T_HELP_DDR5_BLOCK_FLAG]="Block flag. Speficy a DDR5 SPD NVM block to lock or unlock (0 - 15)",
+	[T_HELP_I2C_I2CDUMP]="Dump common I2C device registers",
+	[T_HELP_I2C_I2CDUMP_ADDRESS]="7-bit I2C device address (default 0x50)",
+	[T_HELP_I2C_I2CDUMP_REG_WIDTH]="Address register width in bytes (1 - 4, default 1)",
+	[T_HELP_I2C_I2CDUMP_REG_ADDR]="Starting register address (default 0x00)",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

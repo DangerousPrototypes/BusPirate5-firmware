@@ -19,6 +19,7 @@
 #include "commands/i2c/ddr.h"
 #include "commands/eeprom/eeprom_i2c.h"
 #include "commands/i2c/i2c.h"
+#include "commands/i2c/usbpdo.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -82,14 +83,19 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .func=&demo_tcs34725,
         .description_text=T_HELP_I2C_TCS34725,
         .supress_fala_capture=true
+    },
+    {
+        .command="fusb302",
+        .func=&fusb302_handler,
+        .description_text=T_HELP_I2C_FUSB302,
+        .supress_fala_capture=true
     }, 
     {
         .command="i2c",
         .func=&i2c_dump_handler,
-        .description_text=T_HELP_I2C_TCS34725,
+        .description_text=T_HELP_I2C_I2CDUMP,
         .supress_fala_capture=true
     },     
-
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 

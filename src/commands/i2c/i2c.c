@@ -33,14 +33,14 @@ static const char* const usage[] = {
 };
 
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_I2C_EEPROM },               // command help
+    { 1, "", T_HELP_I2C_I2CDUMP },               // command help
     { 0, "dump", T_HELP_EEPROM_DUMP },  
     { 0, "read", T_HELP_EEPROM_READ },      // read
-    { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // alternate I2C address (default is 0x50)
-    { 0, "-w", T_HELP_EEPROM_ADDRESS_FLAG },   // register address width in bytes
-    { 0, "-r", T_HELP_EEPROM_ADDRESS_FLAG }, // register address to start dumping from
+    { 0, "-a", T_HELP_I2C_I2CDUMP_ADDRESS }, // alternate I2C address (default is 0x50)
+    { 0, "-w", T_HELP_I2C_I2CDUMP_REG_WIDTH },   // register address width in bytes
+    { 0, "-r", T_HELP_I2C_I2CDUMP_REG_ADDR }, // register address to start dumping from
+    { 0, "-f", T_HELP_SLE4442_FILE_FLAG },   // file to read/write/verify
     { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },   // number of bytes to dump
-    { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
     { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
     { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
     { 0, "-h", T_HELP_FLAG },   // help

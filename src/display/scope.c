@@ -249,6 +249,9 @@ uint32_t scope_setup_exc(void) {
     if (!x) {
         return 0;
     }
+
+    lcd_enable();
+
     fb = x;
     display_buffer = (uint16_t*)&x[VS * HS / 2];                                        // 2 byte aligned
     capture_buffer = (volatile uint16_t*)&x[VS * HS / 2 + 2 * BUFFERS * CAPTURE_DEPTH]; // 2 byte aligned

@@ -175,6 +175,9 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HWI2C_TIMEOUT                  ] = NULL,
     [ T_HWI2C_I2C_ERROR                ] = "I2C bus greška",
     [ T_HELP_I2C_TCS34725              ] = NULL,
+    [ T_HELP_I2C_FUSB302               ] = NULL,
+    [ T_HELP_I2C_FUSB302_STATUS        ] = NULL,
+    [ T_HELP_I2C_FUSB302_SCAN          ] = NULL,
     [ T_HW2WIRE_SPEED_MENU             ] = NULL,
     [ T_HW2WIRE_RST_LOW                ] = NULL,
     [ T_HW2WIRE_RST_HIGH               ] = NULL,
@@ -566,5 +569,9 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_DDR5_PATCH                ] = NULL,
     [ T_HELP_DDR5_FILE_FLAG            ] = NULL,
     [ T_HELP_DDR5_BLOCK_FLAG           ] = NULL,
+    [ T_HELP_I2C_I2CDUMP               ] = NULL,
+    [ T_HELP_I2C_I2CDUMP_ADDRESS       ] = NULL,
+    [ T_HELP_I2C_I2CDUMP_REG_WIDTH     ] = NULL,
+    [ T_HELP_I2C_I2CDUMP_REG_ADDR      ] = NULL,
 
 };

@@ -175,6 +175,8 @@ static char const * const en_us[]={
 	[T_HWI2C_I2C_ERROR]="I2C bus error",
 	[T_HELP_I2C_TCS34725]="read color sensor data from TCS3472x sensor",
 	[T_HELP_I2C_FUSB302]="interface with FUSB302 USB-C Power Delivery controller",
+	[T_HELP_I2C_FUSB302_STATUS]="read ID and status registers",
+	[T_HELP_I2C_FUSB302_SCAN]="scan and select PDO profiles",
 	//2WIRE
 	[T_HW2WIRE_SPEED_MENU]="2WIRE speed",
 	[T_HW2WIRE_RST_LOW]="RST LOW",

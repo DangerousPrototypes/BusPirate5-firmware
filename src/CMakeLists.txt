@@ -185,8 +185,6 @@ set(buspirate_common
         commands/global/macro.h
         commands/global/script.c
         commands/global/script.h
-        commands/global/tutorial.c
-        commands/global/tutorial.h
         commands/global/button_scr.c
         commands/global/button_scr.h
         commands/global/smps.c

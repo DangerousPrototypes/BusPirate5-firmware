@@ -96,7 +96,7 @@ static bool exec_macro_id(const char* id) {
 
     disk_get_line_id(macro_file, id, line, sizeof(line));
     if (!line[0]) {
-        printf("Macro not fund\r\n");
+        printf("Macro not found\r\n");
         return true;
     }
 

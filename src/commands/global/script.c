@@ -29,6 +29,7 @@ static const char* const usage[] = {
     "Script files are stored in text files with the .scr extension",
     "Lines starting with '#' are comments",
     "Other lines are inserted into the command prompt",
+    "Exit with 'x' during execution",
     "Example:",
     "# This is my example script file",
     "# The 'pause' command waits for any key press",
@@ -105,17 +106,30 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
             }
             //mark end of command
             cmdln_try_add(0x00);
-            // todo: x for exit
+
             if (pause_for_input) {
                 //while (ui_term_get_user_input() != 0xff)
                 char c;
                 while(!rx_fifo_try_get(&c)); // user hit enter
+                if(c|0x20 == 'x') {
+                    printf("Script execution aborted by user\r\n");
+                    f_close(&fil);
+                    return false;
+                }
             }
 
             printf("\r\n");
             bool error = ui_process_commands();
             if (error && exit_on_error) {
                 return true;
+            }
+            char c;
+           if(rx_fifo_try_get(&c)){
+                if(c|0x20 == 'x') {
+                    printf("Script execution aborted by user\r\n");
+                    f_close(&fil);
+                    return false;
+                }            
             }
         }
     }

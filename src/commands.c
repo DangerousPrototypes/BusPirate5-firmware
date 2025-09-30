@@ -30,7 +30,6 @@
 #include "commands/global/i_info.h"
 #include "commands/global/macro.h"
 #include "commands/global/script.h"
-#include "commands/global/tutorial.h"
 #include "commands/global/button_scr.h"
 #include "commands/global/smps.h"
 #include "commands/global/cls.h"
@@ -89,7 +88,6 @@ const struct _global_command_struct commands[] = {
 { .command="dummy",     .allow_hiz=true,  .func=&dummy_handler,                      .help_text=0x00 }, // "dummy"
 { .command="help",      .allow_hiz=true,  .func=&help_handler,                       .help_text=0x00 },
 { .command="macro",     .allow_hiz=true,  .func=&macro_handler,                      .help_text=0x00 },
-{ .command="tutorial",  .allow_hiz=true,  .func=&tutorial_handler,                   .help_text=0x00 },
 { .command="script",    .allow_hiz=true,  .func=&script_handler,                     .help_text=0x00 },
 { .command="button",    .allow_hiz=true,  .func=&button_scr_handler,                 .help_text=0x00 },
 { .command="cls",       .allow_hiz=true,  .func=&ui_display_clear,                   .help_text=0x00 },

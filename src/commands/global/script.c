@@ -99,9 +99,6 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
                 if (file[i] == '\r' || file[i] == '\n' || file[i] == '\0') {
                     break;
                 }
-                //rx_fifo_add(&file[i]); // BUGBUG -- breaks FIFO queue only being added to by Core1
-                // cmdln_try_add(&file[i]);
-                //tx_fifo_put(&file[i]);
                 ui_term_cmdln_char_insert(&file[i]);
             }
             //mark end of command

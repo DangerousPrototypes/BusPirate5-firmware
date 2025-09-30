@@ -25,15 +25,13 @@ static const char* const usage[] = {
     "Load macros:%s macro -f <file>",
     "List macros:%s macro -l",
     "Run macro 1:%s macro 1",
-    "Macro 1 help:%s macro 1 -h",
     "Macro system help:%s macro -h",
-    "List macro files:%s macro -a",
     "",
     "Macro files:",
-    " Macros are stored in text files with the .mcr extension",
+    " Macros are stored in text files",
     " Lines starting with '#' are comments",
     " Lines starting with '#!' are macro usage instructions",
-    " Every macro line includes an id (>0), a separator ':', and bus syntax",
+    " Every macro line includes an id (>0), a separator ':', and commands",
     "Example:",
     " # This is my example macro file",
     " #! Read 5 bytes from an I2C EEPROM",
@@ -54,17 +52,29 @@ void macro_handler(struct command_result* res) {
     }
 
     // list of mcr files
+    #if 0
     if (cmdln_args_find_flag('a' | 0x20)) {
         printf("Available macro files:\r\n");
         storage_ls("", "mcr", LS_FILES /*| LS_SIZE*/); // disk ls should be integrated with existing list function???
         return;
     }
+    #endif
 
     // file to load?
     command_var_t arg;
     bool file_flag = cmdln_args_find_flag_string('f' | 0x20, &arg, sizeof(macro_file), macro_file);
     if (file_flag) {
-        printf("Set current file macro to: '%s'\r\n", macro_file);
+        // does file exist?
+        FIL fil;    /* File object needed for each open file */
+        FRESULT fr; /* FatFs return code */
+        fr = f_open(&fil, macro_file, FA_READ);
+        if (fr != FR_OK) {
+            printf("'%s' not found\r\n", macro_file);
+            res->error = true;
+            return;
+        }
+        f_close(&fil);
+        printf("Set macro file: '%s'\r\n", macro_file);
         return;
     }
 
@@ -87,7 +97,7 @@ void macro_handler(struct command_result* res) {
         return;
     }
 
-    printf("Nothing to do. Use -h for help.\r\n");
+    ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
 }
 
 static bool exec_macro_id(const char* id) {
@@ -111,21 +121,13 @@ static bool exec_macro_id(const char* id) {
         return true;
     }
     m++;
-
-    // FIXME: injecting the bus syntax into cmd line (i.e. simulating
-    // user input) is probably not the best solution... :-/
-    // printf("Inject cmd\r\n");
-    // TODO: there is a way to advance through the cmdln queue that leaves a history pointer so up and down work
-    // I think instead of of reading to end, we need to advance to the next buffer position
-    char c;
-    while (cmdln_try_remove(&c))
-        ;
-    while (*m && cmdln_try_add(m)) {
+    
+    cmdln_next_buf_pos();
+    while (*m && ui_term_cmdln_char_insert(m)) {
         m++;
     }
-    cmdln_try_add('\0');
-    // printf("Process syntax\r\n");
-    return ui_process_syntax(); // I think we're going to run into issues with the ui_process loop if &&||; are used....
+    cmdln_try_add(0x00);
+    return ui_process_commands(); // I think we're going to run into issues with the ui_process loop if &&||; are used....
 }
 
 void disk_show_macro_file(const char* location) {
@@ -144,10 +146,11 @@ void disk_show_macro_file(const char* location) {
             line[line_len - 1] = '\0';
         }
         // Show only usage and macros
+        //printf("%s\r\n", line);
         if (line[0] == '#' && line[1] == '!' && line[2]) {
-            printf("%s.-%s %s%s\r\n", ui_term_color_prompt(), ui_term_color_info(), line + 3, ui_term_color_reset());
+            printf("%s%s%s\r\n", ui_term_color_info(), line, ui_term_color_reset());
         } else if (strchr(line, ':')) {
-            printf("%s%s%s\r\n\r\n", ui_term_color_prompt(), line, ui_term_color_reset());
+            printf("%s%s%s\r\n", ui_term_color_prompt(), line, ui_term_color_reset());
         }
     }
     f_close(&fil);

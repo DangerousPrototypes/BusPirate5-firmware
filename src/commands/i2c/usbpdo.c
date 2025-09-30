@@ -50,11 +50,14 @@
 #define PDO_TYPE_FIXED 0
 #define PDO_TYPE_BATTERY 1
 #define PDO_TYPE_VARIABLE 2
+#define PDO_TYPE_AUGMENTED 3
 
 typedef struct {
     uint32_t pdo;
     uint8_t type;
+    uint8_t apdo_type;
     uint16_t voltage_mv;
+    uint16_t min_voltage_mv;
     uint16_t current_ma;
     uint16_t power_mw;
 } pdo_info_t;
@@ -329,6 +332,8 @@ static void fusb_decode_pdo(uint32_t pdo, pdo_info_t* info) {
     info->pdo = pdo;
     info->type = (pdo >> 30) & 0x3;
 
+    printf("PDO Raw: 0x%08X Type: %d\r\n", pdo, info->type);
+
     switch (info->type) {
         case PDO_TYPE_FIXED:
             info->voltage_mv = ((pdo >> 10) & 0x3FF) * 50; // Voltage in 50mV units
@@ -349,6 +354,14 @@ static void fusb_decode_pdo(uint32_t pdo, pdo_info_t* info) {
             info->power_mw = (pdo & 0x3FF) * 250;          // Power in 250mW units
             info->current_ma = (info->power_mw * 1000) / info->voltage_mv;
             break;
+        case PDO_TYPE_AUGMENTED:
+            info->apdo_type = (pdo >> 28) & 0x3;
+            //maximum volts 24:17
+            info->voltage_mv = ((pdo >> 17) & 0xFF) * 100; // Max voltage in 100mV units
+            info->min_voltage_mv = ((pdo >> 8) & 0xFF) * 100; // Min voltage in 100mV units
+            info->current_ma = (pdo & 0x7F) * 50;          // Current in 50mA units
+            info->power_mw = (info->voltage_mv * info->current_ma) / 1000;
+            break;
 
         default:
             info->voltage_mv = 0;
@@ -359,7 +372,24 @@ static void fusb_decode_pdo(uint32_t pdo, pdo_info_t* info) {
 }
 
 static void fusb_print_pdo(uint8_t index, pdo_info_t* pdo) {
-    const char* type_names[] = { "Fixed", "Battery", "Variable", "Reserved" };
+    const char* type_names[] = { "Fixed", "Battery", "Variable", "APDO" };
+
+    if(pdo->type == PDO_TYPE_AUGMENTED) {
+        //printf("  APDO Type: %d\r\n", info->apdo_type);
+        // PPS APDO
+        printf("  %d: %s Supply - %u.%03uV to %u.%03uV @ %u.%03uA (%u.%03uW)\r\n",
+               index,
+               type_names[pdo->type],
+               pdo->min_voltage_mv / 1000,
+               pdo->min_voltage_mv % 1000,
+               pdo->voltage_mv / 1000,
+               pdo->voltage_mv % 1000,
+               pdo->current_ma / 1000,
+               pdo->current_ma % 1000,
+               pdo->power_mw / 1000,
+               pdo->power_mw % 1000);
+        return;
+    }
 
     printf("  %d: %s Supply - %u.%03uV @ %u.%03uA (%u.%03uW)\r\n",
            index,

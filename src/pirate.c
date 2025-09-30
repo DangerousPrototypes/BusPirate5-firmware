@@ -556,16 +556,14 @@ static void core0_infinite_loop(void) {
                         default:
                             break;
                     }
-                    // show welcome
-                    // ui_info_print_info(&args, &res);
 
                     bp_state = BP_SM_COMMAND_PROMPT;
+
                 } else if (result.error) { // user hit enter but not a valid option
                     PRINT_VERBOSE("Repeating prompt to allow VT100 mode.\n");
                     printf("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
                 }
-                // printf("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
-                // button_irq_enable(0, &button_irq_callback); //enable button interrupt
+                
                 break;
             case BP_SM_GET_INPUT:
                 // it seems like we need an array where we can add our function for periodic service?
@@ -587,6 +585,7 @@ static void core0_infinite_loop(void) {
                     printf("\r\n");
                     bp_state = BP_SM_PROCESS_COMMAND;
                     button_irq_disable(0); 
+                    break;
                 }
 
                 enum button_codes press_code = button_check_press(0);
@@ -615,7 +614,7 @@ static void core0_infinite_loop(void) {
                 }
                 cmdln_next_buf_pos();
                 bp_state = BP_SM_GET_INPUT;
-                // button_irq_enable(0, &button_irq_callback);
+                button_irq_enable(0, &button_irq_callback);
                 break;
 
             default:

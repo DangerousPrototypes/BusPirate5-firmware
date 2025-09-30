@@ -45,7 +45,12 @@ void tutorial_handler(struct command_result* res) {
         return;
     }
     char location[32];
-    cmdln_args_string_by_position(1, sizeof(location), location);
+    if(!cmdln_args_string_by_position(1, sizeof(location), location)){
+        printf("Specify a tutorial file to run\r\n");
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+        res->error = true;
+        return;
+    }
 
     if (script_exec(location, true, true, true, false)) {
         res->error = true;

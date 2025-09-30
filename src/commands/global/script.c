@@ -48,7 +48,12 @@ void script_handler(struct command_result* res) {
     bool show_comments = !cmdln_args_find_flag('d' | 0x20);
     bool exit_on_error = cmdln_args_find_flag('e' | 0x20);
     char location[32];
-    cmdln_args_string_by_position(1, sizeof(location), location);
+    if(!cmdln_args_string_by_position(1, sizeof(location), location)){
+        printf("Specify a script file to run\r\n");
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+        res->error = true;
+        return;
+    }
     if (script_exec(location, pause_for_input, show_comments, false, exit_on_error)) {
         res->error = true;
     }
@@ -106,7 +111,7 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
                 char c;
                 while(!rx_fifo_try_get(&c)); // user hit enter
             }
-            
+
             printf("\r\n");
             bool error = ui_process_commands();
             if (error && exit_on_error) {

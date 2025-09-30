@@ -24,7 +24,7 @@ bool button_get(uint8_t button_id) {
     #elif RPI_PLATFORM == RP2350  
         return !gpio_get(EXT1);
     #else
-        #error "Platform not speficied in button.c"
+        #error "Platform not specified in button.c"
     #endif
 }
 // check button press type

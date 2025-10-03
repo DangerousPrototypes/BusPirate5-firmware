@@ -268,8 +268,10 @@ set(buspirate_common
         lib/tsl2561/driver_tsl2561.h
         commands/i2c/sniff.c 
         commands/i2c/sniff.h
-        commands/i2c/ddr.c
-        commands/i2c/ddr.h
+        commands/i2c/ddr5.c
+        commands/i2c/ddr5.h
+        commands/i2c/ddr4.c
+        commands/i2c/ddr4.h        
         commands/eeprom/eeprom_i2c.c 
         commands/eeprom/eeprom_i2c.h
         commands/i2c/i2c.c

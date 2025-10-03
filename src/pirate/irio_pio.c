@@ -96,6 +96,7 @@ int irio_pio_rx_init(uint pin_num){
     // Desired period in microseconds
     float desired_period_us = 1.0f;
     _irio_pio_rx_init(pin_num, bio2bufiopin[BIO0], bio2bufiopin[BIO1], desired_period_us);   
+    return 1;
 }
 
 void irio_pio_rx_deinit(uint pin_num){

@@ -230,26 +230,32 @@ uint32_t hwuart_setup_exc(void) {
     system_bio_update_purpose_and_label(true, M_UART_TX, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_UART_RX, BP_PIN_MODE, pin_labels[1]);
 
-    bio_set_function(M_UART_CTS, GPIO_FUNC_UART);
-    bio_set_function(M_UART_RTS, GPIO_FUNC_SIO);
-    bio_output(M_UART_RTS);
-    if (mode_config.flow_control) {
+    gpio_set_outover(bio2bufiopin[M_UART_TX], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
+    gpio_set_inover(bio2bufiopin[M_UART_RX], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
+
+
+    if (!mode_config.flow_control) {
+        uart_set_hw_flow(M_UART_PORT, false, false);
+    } else {
+        bio_set_function(M_UART_CTS, GPIO_FUNC_UART);
+        bio_set_function(M_UART_RTS, GPIO_FUNC_SIO);
+        bio_output(M_UART_RTS);
         // only show the pins if flow control is enabled in order to avoid confusion
         system_bio_update_purpose_and_label(true, M_UART_RTS, BP_PIN_MODE, pin_labels[2]);
         system_bio_update_purpose_and_label(true, M_UART_CTS, BP_PIN_MODE, pin_labels[3]);
+        gpio_set_inover(bio2bufiopin[M_UART_CTS], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
+        gpio_set_outover(bio2bufiopin[M_UART_RTS], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
+        // 0: ready to receive
+        // 1: not ready to receive
+        bio_put(M_UART_RTS, 1);   
+        // only enable CTS, as we are toggling RTS manually
+        //
+        // hw_flow RTS doesn't work with inverted signals, i.e. doesn't set RTS high
+        // when we can read the data. So we're setting RTS manually.
+        uart_set_hw_flow(M_UART_PORT, mode_config.flow_control, false);             
     }
-    gpio_set_inover(bio2bufiopin[M_UART_CTS], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
-    gpio_set_outover(bio2bufiopin[M_UART_RTS], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
-    // 0: ready to receive
-    // 1: not ready to receive
-    bio_put(M_UART_RTS, 1);
-    // only enable CTS, as we are toggling RTS manually
-    //
-    // hw_flow RTS doesn't work with inverted signals, i.e. doesn't set RTS high
-    // when we can read the data. So we're setting RTS manually.
-    uart_set_hw_flow(M_UART_PORT, mode_config.flow_control, false);
-    gpio_set_outover(bio2bufiopin[M_UART_TX], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
-    gpio_set_inover(bio2bufiopin[M_UART_RX], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
+
+
 
     return 1;
 }
@@ -340,6 +346,13 @@ void hwuart_cleanup(void) {
     uart_deinit(M_UART_PORT);
     system_bio_update_purpose_and_label(false, M_UART_TX, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_UART_RX, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_UART_RTS, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, M_UART_CTS, BP_PIN_MODE, 0);    
+    gpio_set_outover(bio2bufiopin[M_UART_TX], GPIO_OVERRIDE_NORMAL);
+    gpio_set_inover(bio2bufiopin[M_UART_RX], GPIO_OVERRIDE_NORMAL);
+    gpio_set_inover(bio2bufiopin[M_UART_CTS], GPIO_OVERRIDE_NORMAL);
+    gpio_set_outover(bio2bufiopin[M_UART_RTS], GPIO_OVERRIDE_NORMAL);
+    uart_set_hw_flow(M_UART_PORT, false, false);  
     // reset all pins to safe mode (done before mode change, but we do it here to be safe)
     bio_init();
     // update modeConfig pins

@@ -137,6 +137,7 @@ uint32_t bpio_hwspi_transaction(struct bpio_data_request_t *request, flatbuffers
         spi_set_cs(M_SPI_SELECT);
     }
 
+    #if 0
     //utilize the SPI buffer
     if(request->bytes_write > 0) {
         if(request->debug) printf("[SPI] Writing %d bytes\r\n", request->bytes_write);
@@ -157,6 +158,42 @@ uint32_t bpio_hwspi_transaction(struct bpio_data_request_t *request, flatbuffers
             }
         }           
     }
+    #endif
+
+    if(request->bytes_write > 0) {
+        if(request->debug) printf("[SPI] Writing %d bytes\r\n", request->bytes_write);
+        // write data
+        if(!request->start_alt){
+            for(uint32_t i = 0; i < request->bytes_write; i++) {
+                while (!spi_is_writable(M_SPI_PORT)) {
+                    tight_loop_contents();
+                }
+                spi_get_hw(M_SPI_PORT)->dr = flatbuffers_uint8_vec_at(data_write, i);
+            }
+            while (spi_is_busy(M_SPI_PORT)) {
+                tight_loop_contents();
+            }
+            while (spi_is_readable(M_SPI_PORT)) {
+                uint8_t rx_byte = (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
+            }
+        }else{
+            for(uint32_t i = 0; i < request->bytes_write; i++) {
+                while (!spi_is_writable(M_SPI_PORT)) {
+                    tight_loop_contents();
+                }
+                spi_get_hw(M_SPI_PORT)->dr = flatbuffers_uint8_vec_at(data_write, i);
+                while (spi_is_busy(M_SPI_PORT)) {
+                    tight_loop_contents();
+                }
+                while (!spi_is_readable(M_SPI_PORT)){
+                    tight_loop_contents();
+                }
+                uint8_t rx_byte = (uint8_t)spi_get_hw(M_SPI_PORT)->dr;
+                *read_ptr++ = rx_byte;  // Store byte and increment pointer                               
+            }            
+
+        }           
+    }    
 
     if(request->bytes_read > 0) {
         if(request->debug) printf("[SPI] Reading %d bytes\r\n", request->bytes_read);

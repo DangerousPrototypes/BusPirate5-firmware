@@ -58,7 +58,19 @@ struct minmea_time {
     int microseconds;
 };
 
+// provide backwards compatibility to users expecting a null-terminated string
+// instead of a struct
+union minmea_type {
+  char buf[6];
+  struct {
+    char talker_id[2];
+    char sentence_id[3];
+    char null_terminator;
+  };
+};
+
 struct minmea_sentence_gbs {
+    union minmea_type type;
     struct minmea_time time;
     struct minmea_float err_latitude;
     struct minmea_float err_longitude;
@@ -70,6 +82,7 @@ struct minmea_sentence_gbs {
 };
 
 struct minmea_sentence_rmc {
+    union minmea_type type;
     struct minmea_time time;
     bool valid;
     struct minmea_float latitude;
@@ -81,6 +94,7 @@ struct minmea_sentence_rmc {
 };
 
 struct minmea_sentence_gga {
+    union minmea_type type;
     struct minmea_time time;
     struct minmea_float latitude;
     struct minmea_float longitude;
@@ -109,6 +123,7 @@ enum minmea_faa_mode {
 };
 
 struct minmea_sentence_gll {
+    union minmea_type type;
     struct minmea_float latitude;
     struct minmea_float longitude;
     struct minmea_time time;
@@ -117,6 +132,7 @@ struct minmea_sentence_gll {
 };
 
 struct minmea_sentence_gst {
+    union minmea_type type;
     struct minmea_time time;
     struct minmea_float rms_deviation;
     struct minmea_float semi_major_deviation;
@@ -139,6 +155,7 @@ enum minmea_gsa_fix_type {
 };
 
 struct minmea_sentence_gsa {
+    union minmea_type type;
     char mode;
     int fix_type;
     int sats[12];
@@ -155,6 +172,7 @@ struct minmea_sat_info {
 };
 
 struct minmea_sentence_gsv {
+    union minmea_type type;
     int total_msgs;
     int msg_nr;
     int total_sats;
@@ -162,6 +180,7 @@ struct minmea_sentence_gsv {
 };
 
 struct minmea_sentence_vtg {
+    union minmea_type type;
     struct minmea_float true_track_degrees;
     struct minmea_float magnetic_track_degrees;
     struct minmea_float speed_knots;
@@ -170,6 +189,7 @@ struct minmea_sentence_vtg {
 };
 
 struct minmea_sentence_zda {
+    union minmea_type type;
     struct minmea_time time;
     struct minmea_date date;
     int hour_offset;
@@ -192,6 +212,11 @@ bool minmea_check(const char *sentence, bool strict);
 bool minmea_talker_id(char talker[3], const char *sentence);
 
 /**
+ * Get sentence id as string.
+ */
+const char* minmea_sentence(enum minmea_sentence_id id);
+
+/**
  * Determine sentence identifier.
  */
 enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict);
@@ -203,7 +228,7 @@ enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict);
  * f - fractional, returned as value + scale (struct minmea_float *)
  * i - decimal, default zero (int *)
  * s - string (char *)
- * t - talker identifier and type (char *)
+ * t - talker identifier and type (union minmea_type *)
  * D - date (struct minmea_date *)
  * T - time stamp (struct minmea_time *)
  * _ - ignore this field

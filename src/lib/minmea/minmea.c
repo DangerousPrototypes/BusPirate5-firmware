@@ -13,8 +13,8 @@
 #include <stdarg.h>
 
 #define timegm mktime 
-
 #define boolstr(s) ((s) ? "true" : "false")
+#define countof(array) (sizeof(array) / sizeof(array[0]))
 
 static int hex2int(char c)
 {
@@ -240,7 +240,7 @@ bool minmea_scan(const char *sentence, const char *format, ...)
                 *buf = '\0';
             } break;
 
-            case 't': { // NMEA talker+sentence identifier (char *).
+            case 't': { // NMEA talker identifier and type (union minmea_type *).
                 // This field is always mandatory.
                 if (!field)
                     goto parse_error;
@@ -251,9 +251,9 @@ bool minmea_scan(const char *sentence, const char *format, ...)
                     if (!minmea_isfield(field[1+f]))
                         goto parse_error;
 
-                char *buf = va_arg(ap, char *);
-                memcpy(buf, field+1, 5);
-                buf[5] = '\0';
+                union minmea_type *buf = va_arg(ap, union minmea_type *);
+                memcpy(buf, field+1, (sizeof(*buf) - sizeof(buf->null_terminator)));
+                buf->null_terminator = '\0';
             } break;
 
             case 'D': { // Date (int, int, int), -1 if empty.
@@ -339,15 +339,40 @@ parse_error:
 
 bool minmea_talker_id(char talker[3], const char *sentence)
 {
-    char type[6];
-    if (!minmea_scan(sentence, "t", type))
+    union minmea_type type;
+    if (!minmea_scan(sentence, "t", &type))
         return false;
 
-    talker[0] = type[0];
-    talker[1] = type[1];
+    talker[0] = type.talker_id[0];
+    talker[1] = type.talker_id[1];
     talker[2] = '\0';
 
     return true;
+}
+
+struct sentence_id_map_entry {
+    const char *str;
+    enum minmea_sentence_id id;
+};
+
+struct sentence_id_map_entry sentence_id_map[] = {
+    { "INVALID", MINMEA_INVALID },
+    { "GBS", MINMEA_SENTENCE_GBS },
+    { "GGA", MINMEA_SENTENCE_GGA },
+    { "GLL", MINMEA_SENTENCE_GLL },
+    { "GSA", MINMEA_SENTENCE_GSA },
+    { "GST", MINMEA_SENTENCE_GST },
+    { "GSV", MINMEA_SENTENCE_GSV },
+    { "RMC", MINMEA_SENTENCE_RMC },
+    { "VTG", MINMEA_SENTENCE_VTG },
+    { "ZDA", MINMEA_SENTENCE_ZDA },
+};
+
+const char* minmea_sentence(enum minmea_sentence_id id) {
+    if (id < 0 || id >= (int)countof(sentence_id_map)) {
+        return "UNKNOWN";
+    }
+    return sentence_id_map[id].str;
 }
 
 enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict)
@@ -355,28 +380,15 @@ enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict)
     if (!minmea_check(sentence, strict))
         return MINMEA_INVALID;
 
-    char type[6];
-    if (!minmea_scan(sentence, "t", type))
+    union minmea_type type;
+    if (!minmea_scan(sentence, "t", &type))
         return MINMEA_INVALID;
 
-    if (!strcmp(type+2, "GBS"))
-        return MINMEA_SENTENCE_GBS;
-    if (!strcmp(type+2, "GGA"))
-        return MINMEA_SENTENCE_GGA;
-    if (!strcmp(type+2, "GLL"))
-        return MINMEA_SENTENCE_GLL;
-    if (!strcmp(type+2, "GSA"))
-        return MINMEA_SENTENCE_GSA;
-    if (!strcmp(type+2, "GST"))
-        return MINMEA_SENTENCE_GST;
-    if (!strcmp(type+2, "GSV"))
-        return MINMEA_SENTENCE_GSV;
-    if (!strcmp(type+2, "RMC"))
-        return MINMEA_SENTENCE_RMC;
-    if (!strcmp(type+2, "VTG"))
-        return MINMEA_SENTENCE_VTG;
-    if (!strcmp(type+2, "ZDA"))
-        return MINMEA_SENTENCE_ZDA;
+    for (uint i = 0; i < countof(sentence_id_map); i++) {
+        if (!memcmp(type.sentence_id, sentence_id_map[i].str, sizeof(type.sentence_id))) {
+            return sentence_id_map[i].id;
+        }
+    }
 
     return MINMEA_UNKNOWN;
 }
@@ -384,9 +396,8 @@ enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict)
 bool minmea_parse_gbs(struct minmea_sentence_gbs *frame, const char *sentence)
 {
     // $GNGBS,170556.00,3.0,2.9,8.3,,,,*5C
-    char type[6];
     if (!minmea_scan(sentence, "tTfffifff",
-            type,
+            &frame->type,
             &frame->time,
             &frame->err_latitude,
             &frame->err_longitude,
@@ -397,7 +408,7 @@ bool minmea_parse_gbs(struct minmea_sentence_gbs *frame, const char *sentence)
             &frame->stddev
             ))
         return false;
-    if (strcmp(type+2, "GBS"))
+    if (memcmp(frame->type.sentence_id, "GBS", sizeof(frame->type.sentence_id)))
         return false;
 
     return true;
@@ -406,13 +417,12 @@ bool minmea_parse_gbs(struct minmea_sentence_gbs *frame, const char *sentence)
 bool minmea_parse_rmc(struct minmea_sentence_rmc *frame, const char *sentence)
 {
     // $GPRMC,081836,A,3751.65,S,14507.36,E,000.0,360.0,130998,011.3,E*62
-    char type[6];
     char validity;
     int latitude_direction;
     int longitude_direction;
     int variation_direction;
     if (!minmea_scan(sentence, "tTcfdfdffDfd",
-            type,
+            &frame->type,
             &frame->time,
             &validity,
             &frame->latitude, &latitude_direction,
@@ -422,7 +432,7 @@ bool minmea_parse_rmc(struct minmea_sentence_rmc *frame, const char *sentence)
             &frame->date,
             &frame->variation, &variation_direction))
         return false;
-    if (strcmp(type+2, "RMC"))
+    if (memcmp(frame->type.sentence_id, "RMC", sizeof(frame->type.sentence_id)))
         return false;
 
     frame->valid = (validity == 'A');
@@ -436,12 +446,11 @@ bool minmea_parse_rmc(struct minmea_sentence_rmc *frame, const char *sentence)
 bool minmea_parse_gga(struct minmea_sentence_gga *frame, const char *sentence)
 {
     // $GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
-    char type[6];
     int latitude_direction;
     int longitude_direction;
 
     if (!minmea_scan(sentence, "tTfdfdiiffcfcf_",
-            type,
+            &frame->type,
             &frame->time,
             &frame->latitude, &latitude_direction,
             &frame->longitude, &longitude_direction,
@@ -452,7 +461,7 @@ bool minmea_parse_gga(struct minmea_sentence_gga *frame, const char *sentence)
             &frame->height, &frame->height_units,
             &frame->dgps_age))
         return false;
-    if (strcmp(type+2, "GGA"))
+    if (memcmp(frame->type.sentence_id, "GGA", sizeof(frame->type.sentence_id)))
         return false;
 
     frame->latitude.value *= latitude_direction;
@@ -464,10 +473,9 @@ bool minmea_parse_gga(struct minmea_sentence_gga *frame, const char *sentence)
 bool minmea_parse_gsa(struct minmea_sentence_gsa *frame, const char *sentence)
 {
     // $GPGSA,A,3,04,05,,09,12,,,24,,,,,2.5,1.3,2.1*39
-    char type[6];
 
     if (!minmea_scan(sentence, "tciiiiiiiiiiiiifff",
-            type,
+            &frame->type,
             &frame->mode,
             &frame->fix_type,
             &frame->sats[0],
@@ -486,7 +494,7 @@ bool minmea_parse_gsa(struct minmea_sentence_gsa *frame, const char *sentence)
             &frame->hdop,
             &frame->vdop))
         return false;
-    if (strcmp(type+2, "GSA"))
+    if (memcmp(frame->type.sentence_id, "GSA", sizeof(frame->type.sentence_id)))
         return false;
 
     return true;
@@ -495,19 +503,18 @@ bool minmea_parse_gsa(struct minmea_sentence_gsa *frame, const char *sentence)
 bool minmea_parse_gll(struct minmea_sentence_gll *frame, const char *sentence)
 {
     // $GPGLL,3723.2475,N,12158.3416,W,161229.487,A,A*41$;
-    char type[6];
     int latitude_direction;
     int longitude_direction;
 
     if (!minmea_scan(sentence, "tfdfdTc;c",
-            type,
+            &frame->type,
             &frame->latitude, &latitude_direction,
             &frame->longitude, &longitude_direction,
             &frame->time,
             &frame->status,
             &frame->mode))
         return false;
-    if (strcmp(type+2, "GLL"))
+    if (memcmp(frame->type.sentence_id, "GLL", sizeof(frame->type.sentence_id)))
         return false;
 
     frame->latitude.value *= latitude_direction;
@@ -519,10 +526,8 @@ bool minmea_parse_gll(struct minmea_sentence_gll *frame, const char *sentence)
 bool minmea_parse_gst(struct minmea_sentence_gst *frame, const char *sentence)
 {
     // $GPGST,024603.00,3.2,6.6,4.7,47.3,5.8,5.6,22.0*58
-    char type[6];
-
     if (!minmea_scan(sentence, "tTfffffff",
-            type,
+            &frame->type,
             &frame->time,
             &frame->rms_deviation,
             &frame->semi_major_deviation,
@@ -532,7 +537,7 @@ bool minmea_parse_gst(struct minmea_sentence_gst *frame, const char *sentence)
             &frame->longitude_error_deviation,
             &frame->altitude_error_deviation))
         return false;
-    if (strcmp(type+2, "GST"))
+    if (memcmp(frame->type.sentence_id, "GST", sizeof(frame->type.sentence_id)))
         return false;
 
     return true;
@@ -545,10 +550,9 @@ bool minmea_parse_gsv(struct minmea_sentence_gsv *frame, const char *sentence)
     // $GPGSV,4,2,11,08,51,203,30,09,45,215,28*75
     // $GPGSV,4,4,13,39,31,170,27*40
     // $GPGSV,4,4,13*7B
-    char type[6];
 
     if (!minmea_scan(sentence, "tiii;iiiiiiiiiiiiiiii",
-            type,
+            &frame->type,
             &frame->total_msgs,
             &frame->msg_nr,
             &frame->total_sats,
@@ -571,9 +575,8 @@ bool minmea_parse_gsv(struct minmea_sentence_gsv *frame, const char *sentence)
             )) {
         return false;
     }
-    if (strcmp(type+2, "GSV"))
+    if (memcmp(frame->type.sentence_id, "GSV", sizeof(frame->type.sentence_id)))
         return false;
-
     return true;
 }
 
@@ -583,11 +586,10 @@ bool minmea_parse_vtg(struct minmea_sentence_vtg *frame, const char *sentence)
     // $GPVTG,156.1,T,140.9,M,0.0,N,0.0,K*41
     // $GPVTG,096.5,T,083.5,M,0.0,N,0.0,K,D*22
     // $GPVTG,188.36,T,,M,0.820,N,1.519,K,A*3F
-    char type[6];
     char c_true, c_magnetic, c_knots, c_kph, c_faa_mode;
 
     if (!minmea_scan(sentence, "t;fcfcfcfcc",
-            type,
+            &frame->type,
             &frame->true_track_degrees,
             &c_true,
             &frame->magnetic_track_degrees,
@@ -598,7 +600,7 @@ bool minmea_parse_vtg(struct minmea_sentence_vtg *frame, const char *sentence)
             &c_kph,
             &c_faa_mode))
         return false;
-    if (strcmp(type+2, "VTG"))
+    if (memcmp(frame->type.sentence_id, "VTG", sizeof(frame->type.sentence_id)))
         return false;
     // values are only valid with the accompanying characters
     if (c_true != 'T')
@@ -617,10 +619,8 @@ bool minmea_parse_vtg(struct minmea_sentence_vtg *frame, const char *sentence)
 bool minmea_parse_zda(struct minmea_sentence_zda *frame, const char *sentence)
 {
   // $GPZDA,201530.00,04,07,2002,00,00*60
-  char type[6];
-
   if(!minmea_scan(sentence, "tTiiiii",
-          type,
+            &frame->type,
           &frame->time,
           &frame->date.day,
           &frame->date.month,
@@ -628,7 +628,7 @@ bool minmea_parse_zda(struct minmea_sentence_zda *frame, const char *sentence)
           &frame->hour_offset,
           &frame->minute_offset))
       return false;
-  if (strcmp(type+2, "ZDA"))
+    if (memcmp(frame->type.sentence_id, "ZDA", sizeof(frame->type.sentence_id)))
       return false;
 
   // check offsets

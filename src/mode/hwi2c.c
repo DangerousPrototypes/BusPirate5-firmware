@@ -21,6 +21,7 @@
 #include "commands/eeprom/eeprom_i2c.h"
 #include "commands/i2c/i2c.h"
 #include "commands/i2c/usbpdo.h"
+#include "commands/i2c/usbpd.h" 
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -97,6 +98,12 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_I2CDUMP,
         .supress_fala_capture=true
     },     
+    {
+        .command="usbpd",
+        .func=&usbpd_handler,
+        .description_text=T_HELP_I2C_USBPD,
+        .supress_fala_capture=true
+    },      
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 

@@ -591,6 +591,13 @@ static char const * const en_us[]={
 	[T_HELP_I2C_I2CDUMP_ADDRESS]="7-bit I2C device address (default 0x50)",
 	[T_HELP_I2C_I2CDUMP_REG_WIDTH]="Address register width in bytes (1 - 4, default 1)",
 	[T_HELP_I2C_I2CDUMP_REG_ADDR]="Starting register address (default 0x00)",
+	[T_HELP_I2C_USBPD]="interface with USB-C Power Delivery controller AP33772S",
+	[T_HELP_I2C_USBPD_STATUS]="Show USB PD profiles and status",
+	[T_HELP_I2C_USBPD_REQUEST]="Request a Power Delivery profile (PDO)",
+	[T_HELP_I2C_USBPD_RESET]="Request a USB PD hard reset",
+	[T_HELP_I2C_USBPD_PDO_INDEX]="Power Delivery profile index (1 - n)",
+	[T_HELP_I2C_USBPD_VOLTAGE]="Voltage in mV for adjustable (PPS) PDO request",
+	[T_HELP_I2C_USBPD_CURRENT]="Current in mA for PDO request (optional, default max)",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

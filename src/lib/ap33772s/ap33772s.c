@@ -1,13 +1,14 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
 #define _POSIX_C_SOURCE 200809L
+#include <stdio.h>
+#include "pico/stdlib.h"
+#include "pirate.h"
 
 #include "ap33772s.h"
 #include "ap33772s_int.h"
 
 #include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
 /**
@@ -272,6 +273,7 @@ int ap33772s_get_power_capabilities(ap33772s_ref dev)
     return 0;
 }
 
+#if 0
 ap33772s_ref ap33772s_init(const struct ap33772s_bus_delegate *delegate)
 {
     if (!delegate || !delegate->read || !delegate->write || !delegate->delay_us) {
@@ -279,7 +281,9 @@ ap33772s_ref ap33772s_init(const struct ap33772s_bus_delegate *delegate)
         return NULL;
     }
 
-    struct ap33772s *dev = calloc(1, sizeof(*dev));
+    //struct ap33772s *dev = calloc(1, sizeof(*dev));
+    struct ap33772s dev_instance;
+    struct ap33772s *dev = &dev_instance;
     if (!dev) {
         return NULL;
     }
@@ -291,11 +295,13 @@ ap33772s_ref ap33772s_init(const struct ap33772s_bus_delegate *delegate)
 
     return dev;
 }
-
+#endif
+#if 0
 void ap33772s_destroy(ap33772s_ref dev)
 {
     free(dev);
 }
+#endif
 
 int ap33772s_reset_device(ap33772s_ref dev)
 {
@@ -589,11 +595,12 @@ int ap33772s_read_vreq(ap33772s_ref dev, int *voltage_mv)
     if (!dev || !voltage_mv) {
         return -EINVAL;
     }
-    uint8_t raw = 0;
-    int ret = ap33772s_read_u8(dev, AP33772S_CMD_VREQ, &raw);
+    uint16_t raw = 0;
+    int ret = ap33772s_read_u16(dev, AP33772S_CMD_VREQ, &raw);
     if (ret < 0) {
         return ret;
     }
+    //printf("DEBUG: VREQ raw=0x%04X\n", raw);
     *voltage_mv = raw * 50;  // LSB = 50mV
     return 0;
 }
@@ -603,11 +610,12 @@ int ap33772s_read_ireq(ap33772s_ref dev, int *current_ma)
     if (!dev || !current_ma) {
         return -EINVAL;
     }
-    uint8_t raw = 0;
-    int ret = ap33772s_read_u8(dev, AP33772S_CMD_IREQ, &raw);
+    uint16_t raw = 0;
+    int ret = ap33772s_read_u16(dev, AP33772S_CMD_IREQ, &raw);
     if (ret < 0) {
         return ret;
     }
+    //printf("DEBUG: IREQ raw=0x%04X\n", raw);
     *current_ma = raw * 10;  // LSB = 10mA
     return 0;
 }

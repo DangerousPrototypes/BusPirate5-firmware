@@ -23,7 +23,9 @@ bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8
 bool i2c_write(uint8_t addr, uint8_t *data, uint16_t len);
 bool i2c_read(uint8_t addr, uint8_t *data, uint8_t len);
 
-
+// High level functions with register as variable
+bool i2c_write_reg(uint8_t addr, uint8_t *reg, uint8_t reg_len, const uint8_t *data, uint8_t data_len);
+bool i2c_read_reg(uint8_t addr, uint8_t *reg, uint8_t reg_len, uint8_t *data, uint8_t data_len);
 
 // ---------------------------------------------------------------
 // Functions with timeout

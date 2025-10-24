@@ -309,53 +309,58 @@ hwi2c_status_t pio_i2c_transaction_array_repeat_start(uint8_t addr, uint8_t* txb
     if (pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
     return HWI2C_OK;
 }
-#if 0
 
-// yet another function for I2C transactions, this one is used by the flat buffer interface
-hwi2c_status_t pio_i2c_transaction_bpio(uint8_t* txbuf, uint txlen, uint8_t* rxbuf, uint rxlen, uint32_t timeout) {
-    hwi2c_status_t i2c_result;
+/******************************************* */
+/* I2C functions accepting register as a variable */
+/************************************************/
 
-    // always send a start
-    if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
+bool i2c_write_reg(uint8_t addr, uint8_t *reg, uint8_t reg_len, const uint8_t *data, uint8_t data_len) {
+    uint32_t timeout = 0xfffffu; // default timeout for I2C operations
+    if(pio_i2c_start_timeout(timeout)) return true;
+    hwi2c_status_t i2c_result = pio_i2c_write_timeout(addr, timeout);
+    if(i2c_result != HWI2C_OK) return true;
 
-    // if txlen is >1 (just the address), we need to write data
-    if(txlen > 1){
-        // send txbuf[0] (i2c address) with the last bit low
-        i2c_result = pio_i2c_write_timeout(txbuf[0]&~0b1, timeout);
-        if(i2c_result != HWI2C_OK) return i2c_result;
-        *txbuf++;
-        --txlen;
-        //write out remaining data
-        while (txlen) {
-            --txlen;
-            i2c_result = pio_i2c_write_timeout(*txbuf++, timeout);
-            if(i2c_result != HWI2C_OK) return i2c_result;
-        }
-        // if we have no read data, we can stop here
-        if(rxlen == 0) {
-            goto pio_i2c_transaction_bpio_cleanup;
-        }
-        // if we have read data, we need to restart
-        if(pio_i2c_restart_timeout(timeout)) return HWI2C_TIMEOUT;
+    for(uint8_t i = 0; i < reg_len; i++) {
+        i2c_result = pio_i2c_write_timeout(reg[i], timeout);
+        if(i2c_result != HWI2C_OK) return true;
+    }
+    for(uint8_t i = 0; i < data_len; i++) {
+        i2c_result = pio_i2c_write_timeout(data[i], timeout);
+        if(i2c_result != HWI2C_OK) return true;
+    }
+    if (pio_i2c_stop_timeout(timeout)) return true;
+    if (pio_i2c_wait_idle_extern(timeout)) return true;
+    return false;
+}
+
+bool i2c_read_reg(uint8_t addr, uint8_t *reg, uint8_t reg_len, uint8_t *data, uint8_t data_len) {
+    uint32_t timeout = 0xfffffu; // default timeout for I2C operations
+    if(pio_i2c_start_timeout(timeout)) return true;
+    hwi2c_status_t i2c_result = pio_i2c_write_timeout(addr, timeout);
+    if(i2c_result != HWI2C_OK) return true;
+
+    for(uint8_t i = 0; i < reg_len; i++) {
+        i2c_result = pio_i2c_write_timeout(reg[i], timeout);
+        if(i2c_result != HWI2C_OK) return true;
     }
     
-    //send the read address with the last bit high
-    i2c_result = pio_i2c_write_timeout(txbuf[0]|0b1, timeout); //note, don't force the last bit high, its mysterious
-    if(i2c_result != HWI2C_OK) return i2c_result;
+    if(pio_i2c_stop_timeout(timeout)) return true;
+    busy_wait_ms(2);
+    if(pio_i2c_start_timeout(timeout)) return true;
+    //if(pio_i2c_restart_timeout(timeout)) return HWI2C_TIMEOUT;
 
-    // read data
-    while(rxlen){
-        --rxlen;
-        pio_i2c_read_timeout(rxbuf++, rxlen!=0, timeout);
+    i2c_result = pio_i2c_write_timeout(addr|1u, timeout); //note, don't force the last bit high, its mysterious
+    if(i2c_result != HWI2C_OK) return true;
+
+    while(data_len){
+        --data_len;
+        pio_i2c_read_timeout(data++, data_len!=0, timeout);
     }
 
-    // stop and wait for PIO to be idle
-pio_i2c_transaction_bpio_cleanup:
-    if (pio_i2c_stop_timeout(timeout)) return HWI2C_TIMEOUT;
-    if (pio_i2c_wait_idle_timeout(timeout)) return HWI2C_TIMEOUT;
-    return HWI2C_OK;
+    if (pio_i2c_stop_timeout(timeout)) return true;
+    if (pio_i2c_wait_idle_extern(timeout)) return true;
+    return false;
 }
-    #endif
 
 /***********************************************/
 /*High level functions with user error messages*/

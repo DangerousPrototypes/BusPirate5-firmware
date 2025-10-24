@@ -573,5 +573,12 @@ static char const * const pl_pl[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_I2C_I2CDUMP_ADDRESS       ] = NULL,
     [ T_HELP_I2C_I2CDUMP_REG_WIDTH     ] = NULL,
     [ T_HELP_I2C_I2CDUMP_REG_ADDR      ] = NULL,
+    [ T_HELP_I2C_USBPD                 ] = NULL,
+    [ T_HELP_I2C_USBPD_STATUS          ] = NULL,
+    [ T_HELP_I2C_USBPD_REQUEST         ] = NULL,
+    [ T_HELP_I2C_USBPD_RESET           ] = NULL,
+    [ T_HELP_I2C_USBPD_PDO_INDEX       ] = NULL,
+    [ T_HELP_I2C_USBPD_VOLTAGE         ] = NULL,
+    [ T_HELP_I2C_USBPD_CURRENT         ] = NULL,
 
 };

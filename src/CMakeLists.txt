@@ -278,6 +278,10 @@ set(buspirate_common
         commands/i2c/i2c.h
         commands/i2c/usbpdo.c 
         commands/i2c/usbpdo.h
+        commands/i2c/usbpd.c 
+        commands/i2c/usbpd.h
+        lib/ap33772s/ap33772s.c
+        lib/ap33772s/ap33772s.h 
 
         # SPI
         mode/hwspi.c

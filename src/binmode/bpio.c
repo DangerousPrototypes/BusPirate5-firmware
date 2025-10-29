@@ -64,12 +64,15 @@ uint32_t time_start, time_end;
 
 bool bpio_debug = false;
 
+typedef bool (*bpio_configure_func_t)(bpio_mode_configuration_t *bpio_mode_config);
+typedef uint32_t (*bpio_handler_func_t)(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
+
 struct bpio_mode_handlers_t {
-    bool (*bpio_configure)(bpio_mode_configuration_t *bpio_mode_config);
-    uint32_t (*bpio_handler)(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
+    bpio_configure_func_t bpio_configure;
+    bpio_handler_func_t   bpio_handler;
 };
 
-static const struct bpio_mode_handlers_t bpio_mode_handlers[] = {
+static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
     [HW1WIRE]={
         .bpio_configure = bpio_1wire_configure,
         .bpio_handler = bpio_hw1wire_transaction
@@ -90,7 +93,13 @@ bool mode_change_new(const char *mode_name, bpio_mode_configuration_t *mode_conf
     // compare mode name to modes.protocol_name
     for (uint8_t i = 0; i < count_of(modes); i++) {
         if (strcasecmp(mode_name, modes[i].protocol_name) == 0) {
-            if(bpio_mode_handlers[i].bpio_handler==NULL) {
+            // NOTE: It should not matter if the protocol does not have specific support via BPIO.
+            //       For example, it should be allowed to transition to HiZ mode.
+            if (i == HIZ) {
+                // switching to HiZ mode is always allowed
+                if(bpio_debug) printf("[Mode Change] Switching to HiZ mode\r\n");
+            }
+            else if(bpio_mode_handlers[i].bpio_handler==NULL) {
                 if(bpio_debug) printf("[Mode Change] Protocol %s does not support BPIO handler\r\n", mode_name);
                 return true;
             }
@@ -537,7 +546,7 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
     bpio_DataRequest_table_t data_request = (bpio_DataRequest_table_t) bpio_RequestPacket_contents(packet);
     test_assert(data_request != 0);
     const char *error = NULL;
-                
+
     // Check if data_write is present and get its value.
     flatbuffers_uint8_vec_t data_write;
     uint16_t data_write_len = 0;
@@ -589,7 +598,15 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
     bpio_DataResponse_data_read_start(B);
     uint8_t *data_read = bpio_DataResponse_data_read_extend(B, data_buf_size); // Reserve space for data read
 
-    if(bpio_mode_handlers[system_config.mode].bpio_handler(&request, data_write, data_read)){
+
+    bpio_handler_func_t bpio_handler = bpio_mode_handlers[system_config.mode].bpio_handler;
+    if(NULL == bpio_handler) {
+        bpio_DataResponse_data_read_truncate(B, 0);
+        static const char *no_handler_error_msg = "No BPIO handler for current mode";
+        if(bpio_debug) printf("[Data Request] Error: %s\r\n", no_handler_error_msg);
+        error = no_handler_error_msg;
+    }
+    else if(bpio_handler(&request, data_write, data_read)){
         bpio_DataResponse_data_read_truncate(B, 0); 
         static const char* request_error_msg = "Protocol request failed";
         if(bpio_debug) printf("[Data Request] %s\r\n", request_error_msg);

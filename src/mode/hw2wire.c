@@ -39,30 +39,32 @@ const struct _mode_command_struct hw2wire_commands[] = {
 };
 const uint32_t hw2wire_commands_count = count_of(hw2wire_commands);
 
-uint32_t hw2wire_setup(void) {
-    // menu items options
-    static const struct prompt_item i2c_data_bits_menu[] = { { T_HWI2C_DATA_BITS_MENU_1 },
-                                                             { T_HWI2C_DATA_BITS_MENU_2 } };
-    static const struct prompt_item i2c_speed_menu[] = { { T_HWI2C_SPEED_MENU_1 } };
+// menu items options
+static const struct prompt_item i2c_data_bits_menu[] = { { T_HWI2C_DATA_BITS_MENU_1 },
+                                                            { T_HWI2C_DATA_BITS_MENU_2 } };
+static const struct prompt_item i2c_speed_menu[] = { { T_HWI2C_SPEED_MENU_1 } };
 
-    static const struct ui_prompt i2c_menu[] = { { .description = T_HW2WIRE_SPEED_MENU,
-                                                   .menu_items = i2c_speed_menu,
-                                                   .menu_items_count = count_of(i2c_speed_menu),
-                                                   .prompt_text = T_HWI2C_SPEED_PROMPT,
-                                                   .minval = 1,
-                                                   .maxval = 1000,
-                                                   .defval = 400,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_int_cfg },
-                                                 { .description = T_HWI2C_DATA_BITS_MENU,
-                                                   .menu_items = i2c_data_bits_menu,
-                                                   .menu_items_count = count_of(i2c_data_bits_menu),
-                                                   .prompt_text = T_HWI2C_DATA_BITS_PROMPT,
-                                                   .minval = 0,
-                                                   .maxval = 0,
-                                                   .defval = 1,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_list_cfg } };
+static const struct ui_prompt i2c_menu[] = { { .description = T_HW2WIRE_SPEED_MENU,
+                                                .menu_items = i2c_speed_menu,
+                                                .menu_items_count = count_of(i2c_speed_menu),
+                                                .prompt_text = T_HWI2C_SPEED_PROMPT,
+                                                .minval = 1,
+                                                .maxval = 1000,
+                                                .defval = 400,
+                                                .menu_action = 0,
+                                                .config = &prompt_int_cfg },
+                                                { .description = T_HWI2C_DATA_BITS_MENU,
+                                                .menu_items = i2c_data_bits_menu,
+                                                .menu_items_count = count_of(i2c_data_bits_menu),
+                                                .prompt_text = T_HWI2C_DATA_BITS_PROMPT,
+                                                .minval = 0,
+                                                .maxval = 0,
+                                                .defval = 1,
+                                                .menu_action = 0,
+                                                .config = &prompt_list_cfg } };
+
+
+uint32_t hw2wire_setup(void) {
 
     const char config_file[] = "bp2wire.bp";
 
@@ -268,4 +270,20 @@ static uint8_t checkshort(void) {
 
 uint32_t hw2wire_get_speed(void) {
     return hw2wire_mode_config.baudrate * 1000;
+}
+
+//-----------------------------------------
+// Flatbuffer/binary access functions
+//-----------------------------------------
+bool bpio_hw2wire_configure(bpio_mode_configuration_t *bpio_mode_config){
+    //set defaults, check range
+    hw2wire_mode_config.baudrate= i2c_menu[0].defval;
+    if(hw2wire_mode_config.baudrate< i2c_menu[0].minval || hw2wire_mode_config.baudrate> i2c_menu[0].maxval){
+        if(bpio_mode_config->debug) printf("[2WIRE] Invalid speed %d kHz\r\n", hw2wire_mode_config.baudrate);
+        return false;
+    }
+        
+    if(bpio_mode_config->debug) printf("[2WIRE] Speed %d Hz\r\n", bpio_mode_config->speed);
+    hw2wire_mode_config.baudrate=bpio_mode_config->speed/1000; // convert to kHz
+    return true;  
 }

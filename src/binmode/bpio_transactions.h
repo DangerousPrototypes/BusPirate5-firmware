@@ -1,3 +1,11 @@
+#ifndef BPIO_TRANSACTIONS_H
+#define BPIO_TRANSACTIONS_H
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "bpio_reader.h"
+
+
 struct bpio_data_request_t {
     bool debug; // Debug flag
     bool start_main; // Start main condition
@@ -9,6 +17,10 @@ struct bpio_data_request_t {
     bool stop_alt;  // Stop alternate condition
 };
 
-uint32_t bpio_hw1wire_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
-uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
-uint32_t bpio_hwspi_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
+// Transaction function prototypes (now included from individual headers)
+// Legacy function prototypes for transactions not yet split out
+uint32_t bpio_led_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
+uint32_t bpio_infrared_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
+
+#endif // BPIO_TRANSACTIONS_H
+

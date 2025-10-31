@@ -48,3 +48,14 @@ void hiz_help(void) {
     printf("To enter an active mode type 'm' and press enter.\r\n");
     ui_help_mode_commands(hiz_commands, hiz_commands_count);
 }
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_hiz_configure(bpio_mode_configuration_t *bpio_mode_config){
+    return true;  
+}
+
+

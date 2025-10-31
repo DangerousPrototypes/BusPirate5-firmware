@@ -44,7 +44,15 @@
 #include "bpio_reader.h"  
 #include "bpio_verifier.h"
 #include "lib/nanocobs/cobs.h"
-#include "binmode/bpio_transactions.h"
+#include "binmode/bpio_1wire.h"
+#include "binmode/bpio_i2c.h"
+#include "binmode/bpio_spi.h"
+#include "binmode/bpio_2wire.h"
+#include "binmode/bpio_3wire.h"
+#include "binmode/bpio_hiz.h"
+#include "binmode/bpio_dio.h"
+#include "mode/hiz.h"
+#include "mode/hw2wire.h"
 
 const char dirtyproto_mode_name[] = "BPIO2 flatbuffer interface";
 uint32_t time_start, time_end;
@@ -66,13 +74,18 @@ bool bpio_debug = false;
 
 typedef bool (*bpio_configure_func_t)(bpio_mode_configuration_t *bpio_mode_config);
 typedef uint32_t (*bpio_handler_func_t)(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
-
+typedef uint32_t (*bpio_async_handler_func_t)(uint8_t *data_read);
 struct bpio_mode_handlers_t {
     bpio_configure_func_t bpio_configure;
     bpio_handler_func_t   bpio_handler;
+    bpio_async_handler_func_t bpio_async_handler;
 };
 
 static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
+    [HIZ]={
+        .bpio_configure = bpio_hiz_configure,
+        .bpio_handler = bpio_hiz_transaction
+    },
     [HW1WIRE]={
         .bpio_configure = bpio_1wire_configure,
         .bpio_handler = bpio_hw1wire_transaction
@@ -84,7 +97,41 @@ static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
     [HWSPI]={
         .bpio_configure = bpio_hwspi_configure,
         .bpio_handler = bpio_hwspi_transaction
-    }    
+    },
+    [HW2WIRE]={
+        .bpio_configure = bpio_hw2wire_configure,
+        .bpio_handler = bpio_hw2wire_transaction
+    },
+    [HW3WIRE]={
+        .bpio_configure = NULL,
+        .bpio_handler = bpio_hw3wire_transaction
+    },
+    [DIO]={
+        .bpio_configure = NULL,
+        .bpio_handler = bpio_dio_transaction
+    },
+    [HWLED]={
+        .bpio_configure = NULL,
+        .bpio_handler = bpio_led_transaction
+    },
+    //need async handler in some way
+    [INFRARED]={
+        .bpio_configure = NULL,
+        .bpio_handler = bpio_infrared_transaction
+    },
+    [JTAG]={
+        .bpio_configure = NULL,
+        .bpio_handler = NULL
+    },
+    [HWUART]={
+        .bpio_configure = NULL,
+        .bpio_handler = NULL
+    },
+    [HWHDUART]={
+        .bpio_configure = NULL,
+        .bpio_handler = NULL
+    }   
+
 };
 
 void error_response(const char *error_msg, flatcc_builder_t *B, uint8_t *buf);
@@ -95,11 +142,12 @@ bool mode_change_new(const char *mode_name, bpio_mode_configuration_t *mode_conf
         if (strcasecmp(mode_name, modes[i].protocol_name) == 0) {
             // NOTE: It should not matter if the protocol does not have specific support via BPIO.
             //       For example, it should be allowed to transition to HiZ mode.
-            if (i == HIZ) {
+            if(bpio_debug) printf("[Mode Change] Switching to mode %s\r\n", mode_name);
+            /*if (i == HIZ) {
                 // switching to HiZ mode is always allowed
                 if(bpio_debug) printf("[Mode Change] Switching to HiZ mode\r\n");
             }
-            else if(bpio_mode_handlers[i].bpio_handler==NULL) {
+            else*/ if(bpio_mode_handlers[i].bpio_handler==NULL) {
                 if(bpio_debug) printf("[Mode Change] Protocol %s does not support BPIO handler\r\n", mode_name);
                 return true;
             }

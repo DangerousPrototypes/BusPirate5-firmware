@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
-#ifndef _PIO_I2C_H
-#define _PIO_I2C_H
+#ifndef _PIO_HW2WIRE_H
+#define _PIO_HW2WIRE_H
 
 #include "hw2wire.pio.h"
 

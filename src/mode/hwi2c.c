@@ -49,6 +49,11 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_EEPROM,
         .supress_fala_capture=true
     }, 
+    {   .command="ddr4", 
+        .func=&ddr4_handler, 
+        .description_text=T_HELP_DDR5, 
+        .supress_fala_capture=true
+    },     
     {   .command="ddr5", 
         .func=&ddr5_handler, 
         .description_text=T_HELP_DDR5, 

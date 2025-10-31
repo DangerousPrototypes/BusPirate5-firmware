@@ -444,7 +444,20 @@ set(buspirate_common
         binmode/bpio.c
         binmode/bpio.h
         binmode/bpio_transactions.h
-        binmode/bpio_transactions.c
+        binmode/bpio_1wire.c
+        binmode/bpio_1wire.h
+        binmode/bpio_i2c.c
+        binmode/bpio_i2c.h
+        binmode/bpio_spi.c
+        binmode/bpio_spi.h
+        binmode/bpio_2wire.c
+        binmode/bpio_2wire.h
+        binmode/bpio_3wire.c
+        binmode/bpio_3wire.h
+        binmode/bpio_hiz.c
+        binmode/bpio_hiz.h
+        binmode/bpio_dio.c
+        binmode/bpio_dio.h
         binmode/legacy4third.c
         binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c

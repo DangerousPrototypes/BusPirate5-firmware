@@ -53,7 +53,12 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .func=&ddr5_handler, 
         .description_text=T_HELP_DDR5, 
         .supress_fala_capture=true
-    },       
+    },   
+    {   .command="ddr4", 
+        .func=&ddr4_handler, 
+        .description_text=T_HELP_DDR4, 
+        .supress_fala_capture=true
+    },          
     {
         .command="sht3x", 
         .func=&demo_sht3x, 

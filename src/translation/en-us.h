@@ -593,7 +593,7 @@ static char const * const en_us[]={
 	[T_HELP_DDR4_WRITE]="Write file to DDR4 SPD",
 	[T_HELP_DDR4_READ]="Read DDR4 SPD to a file",
 	[T_HELP_DDR4_VERIFY]="Verify DDR4 SPD against file",
-	[T_HELP_DDR4_LOCK]="Lock DDR4 SPD block (64 bytes per block)",
+	[T_HELP_DDR4_LOCK]="Lock DDR4 SPD block (128 bytes per block)",
 	[T_HELP_DDR4_UNLOCK]="Unlock all DDR4 SPD blocks",
 	[T_HELP_DDR4_CRC]="Calculate/verify CRC of JEDEC bytes 0-125 in a file",
 	[T_HELP_DDR4_PATCH]="Update correct CRC values for bytes 0-125 in a file",
@@ -610,6 +610,7 @@ static char const * const en_us[]={
 	[T_HELP_I2C_USBPD_PDO_INDEX]="Power Delivery profile index (1 - n)",
 	[T_HELP_I2C_USBPD_VOLTAGE]="Voltage in mV for adjustable (PPS) PDO request",
 	[T_HELP_I2C_USBPD_CURRENT]="Current in mA for PDO request (optional, default max)",
+	[T_HELP_I2C_MPU6050]="interface with MPU-6050 6-axis IMU sensor",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

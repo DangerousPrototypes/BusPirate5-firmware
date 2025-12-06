@@ -282,6 +282,10 @@ set(buspirate_common
         commands/i2c/usbpd.h
         lib/ap33772s/ap33772s.c
         lib/ap33772s/ap33772s.h 
+        lib/mpu6050_light/mpu6050_light.h
+        lib/mpu6050_light/mpu6050_light.c
+        commands/i2c/mpu6050.c
+        commands/i2c/mpu6050.h
 
         # SPI
         mode/hwspi.c

@@ -22,6 +22,7 @@
 #include "commands/i2c/i2c.h"
 #include "commands/i2c/usbpdo.h"
 #include "commands/i2c/usbpd.h" 
+#include "commands/i2c/mpu6050.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -108,7 +109,13 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .func=&usbpd_handler,
         .description_text=T_HELP_I2C_USBPD,
         .supress_fala_capture=true
-    },      
+    },  
+    {
+        .command="mpu6050",
+        .func=&mpu6050_handler,
+        .description_text=T_HELP_I2C_MPU6050,
+        .supress_fala_capture=true
+    },    
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 

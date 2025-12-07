@@ -73,7 +73,7 @@ uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request, flatbuffers
         for(uint32_t i = 0; i < request->bytes_write; i++) {
             // send txbuf[0] (i2c address) with the last bit low
             if(i ==0 && (request->start_main||request->start_alt)) {
-                if(request->debug) printf("[I2C] Write address 0x%02X\r\n", request->data_buf[0]&~0b1);
+                if(request->debug) printf("[I2C] Write address 0x%02X\r\n", flatbuffers_uint8_vec_at(data_write, 0)&~0b1);
                 // if we have a start condition, we need to write the address with the last bit low
                 //i2c_result = pio_i2c_write_timeout(request->data_buf[0]&~0b1, timeout);
                 i2c_result = pio_i2c_write_timeout(flatbuffers_uint8_vec_at(data_write, 0)&~0b1, timeout);
@@ -97,7 +97,7 @@ uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request, flatbuffers
     }
 
     if(request->start_main || request->start_alt){
-        if(request->debug) printf("[I2C] Read address 0x%02X\r\n", request->data_buf[0]|0b1);
+        if(request->debug) printf("[I2C] Read address 0x%02X\r\n", flatbuffers_uint8_vec_at(data_write, 0)|0b1);
         //send the read address with the last bit high
         //i2c_result = pio_i2c_write_timeout(request->data_buf[0]|0b1, timeout);
         i2c_result = pio_i2c_write_timeout(flatbuffers_uint8_vec_at(data_write, 0)|0b1, timeout);

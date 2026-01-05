@@ -84,7 +84,7 @@ static void up_vtest(void);
 
 // eproms
 static void writeeprom(uint32_t ictype);
-static void readeprom(uint32_t ictype);
+static void readeprom(uint32_t ictype, uint8_t mode);
 static void readepromid(int pins);
 static void blankeprom(uint32_t ictype);
 
@@ -111,10 +111,11 @@ static bool verbose=true;
 
 static void systickeltest(void);
 
-static const char pin_labels[][5] = { "Vpp5", "VppH", "Vpp0" };
-#define PIN_VPP0  BIO3
-#define PIN_VPP5  BIO1
-#define PIN_VPPH  BIO2
+static const char pin_labels[][5] = { "Vcc", "Vpp", "VccH", "VppH" };
+#define PIN_VSENSE_VCC  BIO0
+#define PIN_VSENSE_VPP  BIO1
+#define PIN_VCCH        BIO2
+#define PIN_VPPH        BIO3
 
 // magic starts here
 void spi_up_handler(struct command_result* res) {
@@ -148,7 +149,7 @@ void spi_up_handler(struct command_result* res) {
     char type[10];
     uint32_t pins=0, kbit=0, ictype=0;
     uint32_t boffset, foffset, doffset, length, id;
-    bool read=false, write=false, readid=false, blank=false;    // eprom flags
+    bool read=false, write=false, readid=false, blank=false, verify=false;    // eprom flags
     bool clear=false, crc=false, show=false;
     int i;
     uint8_t clearbyte;
@@ -283,8 +284,6 @@ void spi_up_handler(struct command_result* res) {
               }
             }
 
-            printf(" %d, %d, %d\r\n", numpins, starttest, endtest);
-
             if(numpins==0)
             {
               printf("Not found!");
@@ -369,6 +368,7 @@ void spi_up_handler(struct command_result* res) {
             else if (strcmp(action_str, "readid") == 0) readid=true;
             else if (strcmp(action_str, "blank") == 0) blank=true;
             else if (strcmp(action_str, "write") == 0) write=true;  
+            else if (strcmp(action_str, "verify") == 0) verify=true;  
             else
             {
               printf("no action defined (read, readid, write or blank)\r\n");
@@ -413,16 +413,17 @@ void spi_up_handler(struct command_result* res) {
             }
             else if(!readid)
             {
-                printf("Use -t to specify DRAM type\r\n");
+                printf("Use -t to specify EPROM type\r\n");
                 system_config.error = 1;
                 return;
             }
             
             
-            if(read) readeprom(ictype);
+            if(read) readeprom(ictype, EPROM_READ);
             else if(readid) readepromid(32);
             else if(write) writeeprom(ictype);
-            else if(blank) blankeprom(ictype);
+            else if(blank) readeprom(ictype, EPROM_BLANK);
+            else if(verify) readeprom(ictype, EPROM_VERIFY);
           }
         }
 
@@ -452,8 +453,6 @@ static void init_up(void)
   
   setpullups(0x00000000l);    // disable pullups
   setdirection(0xFFFFFFFFl);  // all inputs
-  
-  printf("init()\r\n");
 }
 
 // setup the pullups 
@@ -496,6 +495,7 @@ static void setdirection(uint32_t iodir)
   hwspi_deselect();
 }
 
+// TODO: add read and write only functions to speed things up.
 // write/read pins 
 static uint32_t pins(uint32_t pinout)
 {
@@ -541,51 +541,57 @@ static uint32_t pins(uint32_t pinout)
 
 static void claimextrapins(void)
 {
-  system_bio_update_purpose_and_label(true, PIN_VPP5, BP_PIN_MODE, pin_labels[0]);
-  system_bio_update_purpose_and_label(true, PIN_VPPH, BP_PIN_MODE, pin_labels[1]);
-  system_bio_update_purpose_and_label(true, PIN_VPP0, BP_PIN_MODE, pin_labels[2]);
-  bio_output(PIN_VPP5);
-  bio_put(PIN_VPP5, 0);
-  system_set_active(true, PIN_VPP5, &system_config.aux_active);
+  system_bio_update_purpose_and_label(true, PIN_VSENSE_VCC, BP_PIN_MODE, pin_labels[0]);
+  system_bio_update_purpose_and_label(true, PIN_VSENSE_VPP, BP_PIN_MODE, pin_labels[1]);
+  system_bio_update_purpose_and_label(true, PIN_VCCH, BP_PIN_MODE, pin_labels[2]);
+  system_bio_update_purpose_and_label(true, PIN_VPPH, BP_PIN_MODE, pin_labels[3]);
+  
+  bio_input(PIN_VSENSE_VCC);
+  system_set_active(true, PIN_VSENSE_VCC, &system_config.aux_active);
+
+  bio_input(PIN_VSENSE_VPP);
+  system_set_active(true, PIN_VSENSE_VPP, &system_config.aux_active);
+  
+  bio_output(PIN_VCCH);
+  bio_put(PIN_VCCH, 0);
+  system_set_active(true, PIN_VCCH, &system_config.aux_active);
+  
   bio_output(PIN_VPPH);
-  bio_put(PIN_VPPH, 0);
-  system_set_active(true, PIN_VPPH, &system_config.aux_active);
-  bio_output(PIN_VPP0);
-  bio_put(PIN_VPP0, 1); 
+  bio_put(PIN_VPPH, 0); 
   system_set_active(true, PIN_VPPH, &system_config.aux_active);
   
 }
 
 static void unclaimextrapins(void)
 {
-  system_bio_update_purpose_and_label(false, PIN_VPP5, BP_PIN_MODE, pin_labels[0]);
-  system_bio_update_purpose_and_label(false, PIN_VPPH, BP_PIN_MODE, pin_labels[1]);
-  system_bio_update_purpose_and_label(false, PIN_VPP0, BP_PIN_MODE, pin_labels[2]);
+  system_bio_update_purpose_and_label(false, PIN_VSENSE_VCC, BP_PIN_MODE, pin_labels[0]);
+  system_bio_update_purpose_and_label(false, PIN_VSENSE_VPP, BP_PIN_MODE, pin_labels[1]);
+  system_bio_update_purpose_and_label(false, PIN_VCCH, BP_PIN_MODE, pin_labels[2]);
+  system_bio_update_purpose_and_label(false, PIN_VPPH, BP_PIN_MODE, pin_labels[3]);
   
-  bio_input(PIN_VPP5);
-  system_set_active(false, PIN_VPP5, &system_config.aux_active);
+  bio_input(PIN_VSENSE_VCC);
+  system_set_active(false, PIN_VSENSE_VCC, &system_config.aux_active);
+  bio_input(PIN_VSENSE_VPP);
+  system_set_active(false, PIN_VSENSE_VPP, &system_config.aux_active);
+  bio_input(PIN_VCCH);
+  system_set_active(false, PIN_VCCH, &system_config.aux_active);
   bio_input(PIN_VPPH);
-  system_set_active(false, PIN_VPPH, &system_config.aux_active);
-  bio_input(PIN_VPP0);
   system_set_active(false, PIN_VPPH, &system_config.aux_active);
 }
 
 static void setvpp(uint8_t voltage)
 {
-  bio_put(PIN_VPP0, 0);
-  bio_put(PIN_VPP5, 0);
   bio_put(PIN_VPPH, 0);
   
-  if(voltage==0)  bio_put(PIN_VPP0, 1);
-  else if(voltage==1)  bio_put(PIN_VPP5, 1);
-  else bio_put(PIN_VPPH, 1);
+  if(voltage==2) bio_put(PIN_VPPH, 1);    // the schotky diode takes care of the other states 
 }
 
 static void setvdd(uint8_t voltage)
 {
-  // TODO: make it work
+  bio_put(PIN_VCCH, 0);
+  
+  if(voltage==2) bio_put(PIN_VCCH, 1);    // the schotky diode takes care of the other states 
 }
-
 
 // displays how the IC should be placed in the programmer
 static void icprint(int pins, int vcc, int gnd, int vpp)
@@ -782,7 +788,7 @@ static void readepromid(int numpins)
 
   // put device to sleep
   setvpp(0);
-  pins(UP_27XX_VPP|UP_27XX_OE|UP_27XX_CE);
+  pins(UP_27XX_OE|UP_27XX_CE);  // vpp??
 
   //decode
   id1=0;
@@ -810,18 +816,18 @@ static void readepromid(int numpins)
 
   printf("manufacturerID = %02X, deviceID = %02X\r\n", id1, id2);
   
-  id1=0x8f;
-  id2=0x04;
   found=false;
 
   for(i=0; i<(sizeof(up_devices)/sizeof(up_device)); i++)
   {
     if((up_devices[i].id1==id1)&&(up_devices[i].id2==id2))
     {
-      printf("Found: id %d: %s %s\r\n", i, manufacturers[up_devices[i].mnameid], up_devices[i].name);
-
-      //break;
-      // TODO: handle multiple hits
+      found=true;
+      printf("Found: %s %s ",manufacturers[up_devices[i].mnameid], up_devices[i].name);
+      printf(" Vcc=%d.%02dV,", (up_devices[i].Vcc>>2), (up_devices[i].Vcc&0x03)*25);
+      printf(" Vdd=%d.%02dV,", (up_devices[i].Vdd>>2), (up_devices[i].Vdd&0x03)*25);
+      printf(" Vpp=%d.%02dV,", (up_devices[i].Vpp>>2), (up_devices[i].Vpp&0x03)*25);
+      printf(" pulse=%d\r\n",up_devices[i].pulse);
     }
   }
   
@@ -935,12 +941,16 @@ static void writeeprom(uint32_t ictype)
   while(!rx_fifo_try_get(&c));
 }
 
+
+
 // read eprom
-static void readeprom(uint32_t ictype)
+static void readeprom(uint32_t ictype, uint8_t mode)
 {
-  uint32_t dutin, dutout, epromaddress, kbit, pgm;
-  int i, j;
-  char c;
+  uint32_t dutin, dutout, epromaddress, pgm, temp;
+  uint32_t starttime;
+  int i, j, kbit;
+  char c, device;
+  bool blank=true, verify=true;
   
   switch(ictype)
   {
@@ -960,11 +970,11 @@ static void readeprom(uint32_t ictype)
                           pgm=0;
                           icprint(28, 28, 14, 33);
                           break;
-    case UP_EPROM_27010:  kbit=1024;                    // weird stuff
+    case UP_EPROM_27010:  kbit=1024;                    // seems ok
                           pgm=UP_27XX_PGM32|UP_27XX_VPP32;
                           icprint(32, 32, 16, 33);
                           break;
-    case UP_EPROM_27020:  kbit=2048;
+    case UP_EPROM_27020:  kbit=2048;                    // seems ok
                           pgm=UP_27XX_PGM32|UP_27XX_VPP32;
                           icprint(32, 32, 16, 33);
                           break;
@@ -1005,6 +1015,15 @@ static void readeprom(uint32_t ictype)
  
   //printf("Reading device %s\r\n", device.name);
   
+  if((mode!=EPROM_BLANK)&&(kbit>1024))
+  {
+    printf("Warning!! only 1024Kbit/128Kbyte will be read\r\n");
+    kbit=1024;
+  }
+  
+  // benchmark it!
+  starttime=time_us_32();
+  
   for(j=0; j<kbit; j++)
   {
     printf("Reading EPROM 0x%05X %c\r", j*128, rotate[j&0x07]);
@@ -1018,18 +1037,29 @@ static void readeprom(uint32_t ictype)
       dutin|=lut_27xx_mi[((epromaddress>>8)&0x0FF)];
       dutin|=lut_27xx_hi[((epromaddress>>16)&0x0FF)];
     
-      upbuffer[epromaddress]=0;
+      temp=0;
       
       dutout=pins(dutin);
       
-      if(dutout&UP_27XX_D0) upbuffer[epromaddress]|=0x01;
-      if(dutout&UP_27XX_D1) upbuffer[epromaddress]|=0x02;
-      if(dutout&UP_27XX_D2) upbuffer[epromaddress]|=0x04;
-      if(dutout&UP_27XX_D3) upbuffer[epromaddress]|=0x08;
-      if(dutout&UP_27XX_D4) upbuffer[epromaddress]|=0x10;
-      if(dutout&UP_27XX_D5) upbuffer[epromaddress]|=0x20;
-      if(dutout&UP_27XX_D6) upbuffer[epromaddress]|=0x40;
-      if(dutout&UP_27XX_D7) upbuffer[epromaddress]|=0x80;
+      if(dutout&UP_27XX_D0) temp|=0x01;
+      if(dutout&UP_27XX_D1) temp|=0x02;
+      if(dutout&UP_27XX_D2) temp|=0x04;
+      if(dutout&UP_27XX_D3) temp|=0x08;
+      if(dutout&UP_27XX_D4) temp|=0x10;
+      if(dutout&UP_27XX_D5) temp|=0x20;
+      if(dutout&UP_27XX_D6) temp|=0x40;
+      if(dutout&UP_27XX_D7) temp|=0x80;
+      
+      switch(mode)
+      {
+        case EPROM_READ:    upbuffer[epromaddress]=temp;
+                            break;
+        case EPROM_BLANK:   if(temp!=0xFF) blank=false;
+                            break;
+        case EPROM_VERIFY:  if(upbuffer[epromaddress]!=temp) verify=false;
+                            break;
+        default:            break;
+      }
 
       pins(dutin|UP_27XX_OE);
     }  
@@ -1038,7 +1068,19 @@ static void readeprom(uint32_t ictype)
   
   pins(UP_27XX_OE|UP_27XX_CE);
   
-  //dumpbuffer(0, 32768);
+  switch(mode)
+  {
+    case EPROM_BLANK:   if(blank) printf("Device is blank\r\n");
+                        else printf("Device is not blank!\r\n");
+                        break;
+    case EPROM_VERIFY:  if(verify) printf("Device is verified OK\r\n");
+                        else printf("Device is verified not OK!\r\n");
+                        break;
+    default:            break;
+  }
+
+  
+  printf("Took %d ms to execute\r\n", ((time_us_32()-starttime)/1000));
 }
 
 // blank check eprom
@@ -1266,24 +1308,28 @@ static void writebuffer(uint32_t start, uint32_t len, char *fname)
 }
 
 /// --------------------------------------------------------------------- logictest helpers
+// explanation of the tests here: https://github.com/Johnlon/integrated-circuit-tester
+//
+
 static void testlogicic(int numpins, uint16_t logicteststart, uint16_t logictestend)
 {
   int i, pin, vcc, gnd;
   int pinoffset;
-  uint32_t dutin, dutout, direction, pullups, expected;
+  uint32_t dutin, dutout, direction, pullups, expected, clock, ignore;
+  uint32_t starttime;
   char pintest, c;
-  
+
   pinoffset=(32-numpins)/2;
 
   // find the vcc and gnd pins
   for(i=0; i<numpins; i++)
   {
-    if(numpins==14) pintest=logictest14[0][i];
-    else if(numpins==16) pintest=logictest16[0][i];
-    else if(numpins==20) pintest=logictest20[0][i];
-    else if(numpins==24) pintest=logictest24[0][i];
-    else if(numpins==28) pintest=logictest28[0][i];
-    else if(numpins==40) pintest=logictest40[0][i];  
+    if(numpins==14) pintest=logictest14[logicteststart][i];
+    else if(numpins==16) pintest=logictest16[logicteststart][i];
+    else if(numpins==20) pintest=logictest20[logicteststart][i];
+    else if(numpins==24) pintest=logictest24[logicteststart][i];
+    else if(numpins==28) pintest=logictest28[logicteststart][i];
+    else if(numpins==40) pintest=logictest40[logicteststart][i];  
 
     if(pintest=='V') vcc=i+1;
     if(pintest=='G') gnd=i+1;
@@ -1303,14 +1349,17 @@ static void testlogicic(int numpins, uint16_t logicteststart, uint16_t logictest
   setvpp(0);
   setvcc(1);
 
+  starttime=time_us_32();
 
   for(i=logicteststart; i<logictestend; i++)
   {
     dutin=0;
+    clock=0;
     dutout=0;
     direction=0;
     pullups=0;
     expected=0;
+    ignore=0;
     
     for(pin=0; pin<numpins; pin++)
     {
@@ -1326,52 +1375,91 @@ static void testlogicic(int numpins, uint16_t logicteststart, uint16_t logictest
          (pintest=='G'))                    // GND (user should jumper properly)
       {
         //dutin|=matrix[pinoffset+pin];     // pin=0
+        //clock|=matrix[pinoffset+pin];     // no clock for this pin
         //direction|=matrix[pinoffset+pin]; // output
         //pullups|=matrix[pinoffset+pin];   // no pullup
         //expected|=matrix[pinoffset+pin];  // expect 0
+        //ignore|=matrix[pinoffset+pin];    // don't ignore this pin
       }
       else if(pintest=='1')                 // output 1
       {
         dutin|=matrix[pinoffset+pin];       // pin=1
+        //clock|=matrix[pinoffset+pin];     // no clock for this pin
         //direction|=matrix[pinoffset+pin]; // output
         //pullups|=matrix[pinoffset+pin];   // no pullup
         expected|=matrix[pinoffset+pin];    // expect 1
+        //ignore|=matrix[pinoffset+pin];    // don't ignore this pin
       }
       else if(pintest=='L')                 // input 0
       {
         //dutin|=matrix[pinoffset+pin];     // don't care
+        //clock|=matrix[pinoffset+pin];     // no clock for this pin
         direction|=matrix[pinoffset+pin];   // input
         //pullups|=matrix[pinoffset+pin];   // no pullup ?
         //expected|=matrix[pinoffset+pin];  // expect 0
+        //ignore|=matrix[pinoffset+pin];    // don't ignore this pin
       }
       else if(pintest=='H')                 // input 1/Z(?)
       {
         //dutin|=matrix[pinoffset+pin];     // don't care
+        //clock|=matrix[pinoffset+pin];     // no clock for this pin
         direction|=matrix[pinoffset+pin];   // input
         //pullups|=matrix[pinoffset+pin];   // no pullup ?
         expected|=matrix[pinoffset+pin];    // expect 1
+        //ignore|=matrix[pinoffset+pin];    // don't ignore this pin
       }
       else if(pintest=='Z')                 // input Z, let pullup do its work
       {
         //dutin|=matrix[pinoffset+pin];     // don't care
+        //clock|=matrix[pinoffset+pin];     // no clock for this pin
         direction|=matrix[pinoffset+pin];   // input
         pullups|=matrix[pinoffset+pin];     // pullup
         expected|=matrix[pinoffset+pin];    // expect 1
+        //ignore|=matrix[pinoffset+pin];    // don't ignore this pin
       }
-      // TODO: clock, dontcare
+      else if(pintest=='C')                 // clock pin 0 -> 1 -> 0
+      {
+        //dutin|=matrix[pinoffset+pin];     // pin=0 -> 1 -> 0
+        clock|=matrix[pinoffset+pin];       // set clock for this pin
+        //direction|=matrix[pinoffset+pin]; // output
+        //pullups|=matrix[pinoffset+pin];   // pullup
+        //expected|=matrix[pinoffset+pin];  // expect 0
+        //ignore|=matrix[pinoffset+pin];    // don't ignore this pin
+      }
+      else if(pintest=='X')                 // ignore pin
+      {
+        //dutin|=matrix[pinoffset+pin];     // dont care
+        //clock|=matrix[pinoffset+pin];     // no clock for this pin
+        direction|=matrix[pinoffset+pin];   // input
+        //pullups|=matrix[pinoffset+pin];   // pullup
+        expected|=matrix[pinoffset+pin];    // expect 1
+        ignore|=matrix[pinoffset+pin];      // ignore this pin
+      }
     }
     
     // actually test
     setpullups(pullups);	
     setdirection(direction);
-    dutout=pins(dutin);
     
-//    printf(" Pass %d, (P:0x%08X D:0x%08X I:0x%08X O:0x%08XE:0x%08X) ", i, pullups, direction, dutin, dutout, expected);
+    // do we have a clock signal?
+    if(clock)
+    {
+      dutout=pins(dutin);
+      dutout=pins(dutin|clock);
+      dutout=pins(dutin);
+    }
+    else dutout=pins(dutin);
+    
+    // mask dont care pins
+    dutout|=ignore;
+    
     printf(" Pass %d ", ((i-logicteststart)+1));
     
     if(dutout==expected) printf("OK\r\n");
     else printf("Not OK\r\n");
   }
+  
+  printf("Took %d ms to execute\r\n", ((time_us_32()-starttime)/1000));
   
   setvpp(0);
   setvcc(0);
@@ -1432,6 +1520,7 @@ static void testdram41(uint8_t variant)
   bool d;
   char c;
   bool ok=1;
+  uint32_t starttime;
   
   switch(variant)
   {
@@ -1457,6 +1546,7 @@ static void testdram41(uint8_t variant)
     return;
   }
   
+  starttime=time_us_32();
 
   setpullups(UP_DRAM41_PU);
   setdirection(UP_DRAM41_DIR);
@@ -1536,7 +1626,7 @@ static void testdram41(uint8_t variant)
   if(ok) printf("OK\r\n");
   else printf("NOK\r\n");
 
-  //time_us_64();
+  printf("Took %d ms to execute\r\n", ((time_us_32()-starttime)/1000));
   
   setvpp(0);
   setvcc(0);

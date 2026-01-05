@@ -76,12 +76,12 @@ UP_IO25, UP_IO26, UP_IO27, UP_IO28, UP_IO29, UP_IO30, UP_IO31, UP_IO32
 #define UP_27XX_D6    UP_IO20
 #define UP_27XX_D7    UP_IO21
 
-#define UP_27XX_VPP28 UP_IO03
-#define UP_27XX_VPP32 UP_IO01
+#define UP_27XX_VPP28 UP_IO03   // vpp signal on 28pin devices
+#define UP_27XX_VPP32 UP_IO01   // vpp signal on 32pin devices
 #define UP_27XX_CE    UP_IO22
 #define UP_27XX_OE    UP_IO24
 #define UP_27XX_PGM28 UP_IO29   // /PGM signal on 28pin devices
-#define UP_27XX_PGM32 UP_IO29   // /PGM signal on 28pin devices
+#define UP_27XX_PGM32 UP_IO31   // /PGM signal on 32pin devices
 
 #define UP_27XX_PU  (UP_IO13|UP_IO14|UP_IO15|UP_IO17|UP_IO18|UP_IO19|UP_IO20|UP_IO21)
 #define UP_27XX_DIR  (UP_IO13|UP_IO14|UP_IO15|UP_IO17|UP_IO18|UP_IO19|UP_IO20|UP_IO21)

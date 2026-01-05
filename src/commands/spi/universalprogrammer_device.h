@@ -96,8 +96,8 @@ typedef struct up_device {
   uint8_t   id2;
   uint8_t   pins;
   uint8_t   type;
-  uint8_t   Vcc;
   uint8_t   Vdd;
+  uint8_t   Vcc;
   uint8_t   Vpp;
   uint16_t  pulse;
   uint8_t   retries;

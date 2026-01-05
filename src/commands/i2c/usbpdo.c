@@ -66,7 +66,7 @@ static uint8_t pdo_msg_id = 0;
 
 // FUSB302 I2C read/write helper functions
 static bool fusb_write_reg(uint8_t reg, uint8_t value) {
-    if (i2c_write(FUSB302B01_ADDR, (uint8_t[]){ reg, value }, 2u)) {
+    if (i2c_write(FUSB302B_ADDR, (uint8_t[]){ reg, value }, 2u)) {
         return true;
     }
     return false;
@@ -74,22 +74,22 @@ static bool fusb_write_reg(uint8_t reg, uint8_t value) {
 
 static bool fusb_read_reg(uint8_t reg, uint8_t* value) {
     // setup the register to read
-    if (i2c_write(FUSB302B01_ADDR, (uint8_t[]){ reg }, 1u)) {
+    if (i2c_write(FUSB302B_ADDR, (uint8_t[]){ reg }, 1u)) {
         return true;
     }
     // read the register
-    if (i2c_read((FUSB302B01_ADDR) | 1, value, 1u)) {
+    if (i2c_read((FUSB302B_ADDR) | 1, value, 1u)) {
         return true;
     }
     return false;
 }
 
 static bool fusb_read_fifo(uint8_t* buffer, uint8_t length) {
-    if (i2c_write(FUSB302B01_ADDR, (uint8_t[]){ FUSB_FIFOS }, 1u)) {
+    if (i2c_write(FUSB302B_ADDR, (uint8_t[]){ FUSB_FIFOS }, 1u)) {
         return true;
     }
 
-    if (i2c_read((FUSB302B01_ADDR) | 1, buffer, length)) {
+    if (i2c_read((FUSB302B_ADDR) | 1, buffer, length)) {
         return true;
     }
     return false;
@@ -104,7 +104,7 @@ bool fusb_write_fifo(const uint8_t* buffer, uint8_t length) {
 
     data[0] = FUSB_FIFOS;
     memcpy(&data[1], buffer, length);
-    if (i2c_write(FUSB302B01_ADDR, data, length + 1)) {
+    if (i2c_write(FUSB302B_ADDR, data, length + 1)) {
         return true;
     }
     return false;

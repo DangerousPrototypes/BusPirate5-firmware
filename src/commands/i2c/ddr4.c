@@ -325,13 +325,13 @@ typedef struct __attribute__((packed)) {
 void ddr4_spd_print_general_section(const ddr4_spd_general_section_t* spd);
 const char* ddr4_spd_get_module_type_string(uint8_t module_type);
 
-bool ddr4_poll_idle(void){
+bool ddr4_poll_idle(uint8_t smash){
     uint32_t timeout = 0xffffu; 
     // wait for the write to complete
     hwi2c_status_t i2c_result;
     do {
         if(pio_i2c_start_timeout(0xffff)) return true;
-        i2c_result = pio_i2c_write_timeout((DDR4_SPD_I2C_ADDR_7BIT<<1), 0xffffff);
+        i2c_result = pio_i2c_write_timeout((DDR4_SPD_I2C_ADDR_7BIT<<1)|smash, 0xffffff);
         if(pio_i2c_stop_timeout(0xffff)) return true;
         if(i2c_result == HWI2C_OK) return false; //idle
         timeout --;
@@ -400,13 +400,10 @@ bool ddr4_lock_block(uint8_t block_number) {
     if(ddr4_get_lock_status(block_number, &lock_status)) {
         return true; // I2C error
     }
-    #if 0
-    if(ddr4_poll_idle(0x6D)){
+    if(ddr4_poll_idle(0b10)){
         printf("Error: Timeout waiting for lock operation to complete\r\n");
         return true; // timeout
     }
-    #endif
-    busy_wait_ms(100); //wait 100ms for the lock to take effect, datasheet suggests 4ms max
     if(!lock_status) {
         printf("Error: Verification failed, block %d is not locked\r\n", block_number);
         return true; // verification failed
@@ -423,13 +420,10 @@ bool ddr4_unlock_blocks(void){
         printf("Error: Unlock blocks command failed\r\n");
         return true; // failed to unlock
     }
-    #if 0
-    if(ddr4_poll_idle(0x6D)){
+    if(ddr4_poll_idle(0b10)){
         printf("Error: Timeout waiting for unlock operation to complete\r\n");
         return true; // timeout
     }
-    #endif
-    busy_wait_ms(100); //wait 100ms for the unlock to take effect, datasheet suggests 4ms max
     //verify all blocks unlocked
     for(uint8_t block=0; block<4; block++){
         bool lock_status;
@@ -613,7 +607,7 @@ bool ddr4_write_from_file(FIL *file_handle, uint8_t *buffer) {
             }
  
             // wait for the write to complete
-            if(ddr4_poll_idle()) return true; // wait until the write operation is complete
+            if(ddr4_poll_idle(0x00)) return true; // wait until the write operation is complete
         }
     }
 

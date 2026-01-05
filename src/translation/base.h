@@ -608,7 +608,7 @@ enum T_translations{
     T_HELP_I2C_USBPD_PDO_INDEX,
     T_HELP_I2C_USBPD_VOLTAGE,
     T_HELP_I2C_USBPD_CURRENT,
-    T_HELP_I2C_MPU6050,
+    T_HELP_SPI_UP,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

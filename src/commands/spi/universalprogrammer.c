@@ -1,0 +1,1546 @@
+// TODO: BIO use, pullups, psu
+/*
+    Welcome to dummy.c, a growing demonstration of how to add commands to the Bus Pirate firmware.
+    You can also use this file as the basis for your own commands.
+    Type "dummy" at the Bus Pirate prompt to see the output of this command
+    Temporary info available at https://forum.buspirate.com/t/command-line-parser-for-developers/235
+*/
+#include <stdio.h>
+#include <string.h>
+#include "pico/stdlib.h"
+#include "pirate.h"
+#include "command_struct.h"       // File system related
+#include "fatfs/ff.h"       // File system related
+#include "pirate/storage.h" // File system related
+#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+// #include "ui/ui_prompt.h" // User prompts and menu system
+// #include "ui/ui_const.h"  // Constants and strings
+#include "ui/ui_help.h"    // Functions to display help in a standardized way
+#include "system_config.h" // Stores current Bus Pirate system configuration
+#include "pirate/amux.h"   // Analog voltage measurement functions
+#include "pirate/button.h" // Button press functions
+#include "msc_disk.h"
+#include "pirate/hwspi.h"
+
+#include "pirate/bio.h"
+#include "usb_rx.h"
+#include "pirate/mem.h"
+#include "commands/spi/universalprogrammer.h"
+#include "commands/spi/universalprogrammer_pinout.h"
+#include "commands/spi/universalprogrammer_device.h"
+
+#include "commands/spi/up_lut27xx.h"
+#include "commands/spi/up_lutdram41xx.h"
+#include "commands/spi/up_logicic.h"
+#include "commands/spi/up_eproms.h"
+
+// This array of strings is used to display help USAGE examples for the dummy command
+static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
+                                     "Initialize:%s dummy init",
+                                     "Test:%s dummy test",
+                                     "Test, require button press:%s dummy test -b",
+                                     "Integer, value required:%s dummy -i 123",
+                                     "Create/write/read file:%s dummy -f dummy.txt",
+                                     "Kitchen sink:%s dummy test -b -i 123 -f dummy.txt" };
+
+// This is a struct of help strings for each option/flag/variable the command accepts
+// Record type 1 is a section header
+// Record type 0 is a help item displayed as: "command" "help text"
+// This system uses the T_ constants defined in translation/ to display the help text in the user's preferred language
+// To add a new T_ constant:
+//      1. open the master translation en-us.h
+//      2. add a T_ tag and the help text
+//      3. Run json2h.py, which will rebuild the translation files, adding defaults where translations are missing
+//      values
+//      4. Use the new T_ constant in the help text for the command
+static const struct ui_help_options options[] = {
+    { 1, "", T_HELP_DUMMY_COMMANDS },    // section heading
+    { 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
+    { 0, "test", T_HELP_DUMMY_TEST },    // test is an example we'll find by position
+    { 1, "", T_HELP_DUMMY_FLAGS },       // section heading for flags
+    { 0, "-b", T_HELP_DUMMY_B_FLAG },    //-a flag, with no optional string or integer
+    { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer
+    { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string
+};
+
+//forward declarations
+// hardware
+static void init_up(void);
+static void setpullups(uint32_t pullups);
+static void setdirection(uint32_t iodir);
+static uint32_t pins(uint32_t pinout);
+static void claimextrapins(void);
+static void unclaimextrapins(void);
+static void setvpp(uint8_t voltage);
+static void setvdd(uint8_t voltage);
+#define setvcc(x) setvdd(x);
+
+// print how to connect
+static void icprint(int pins, int vcc, int gnd, int vpp);
+
+// tests
+static void up_test(void);
+static void up_vtest(void);
+
+// eproms
+static void writeeprom(uint32_t ictype);
+static void readeprom(uint32_t ictype);
+static void readepromid(int pins);
+static void blankeprom(uint32_t ictype);
+
+// buffer functions
+static void dumpbuffer(uint32_t start, uint32_t len);
+static void crcbuffer(uint32_t start, uint32_t len);
+static void clearbuffer(uint32_t start, uint32_t len, uint8_t fillbyte);
+static void readbuffer(uint32_t start, uint32_t fstart, uint32_t len, char *fname); 
+static void writebuffer(uint32_t start, uint32_t len, char *fname);
+
+// logic tests
+static void testlogicic(int numpins, uint16_t logicteststart, uint16_t logictestend);
+
+// dram tests
+static void writedram41(uint32_t col, uint32_t row, bool data);
+static bool readdram41(uint32_t col, uint32_t row);
+static void initdram41(void);
+static void testdram41(uint8_t variant);
+
+// local vars/consts
+static uint8_t *upbuffer=NULL;
+static const char rotate[] = "|/-\\|/-\\";
+static bool verbose=true;
+
+static void systickeltest(void);
+
+static const char pin_labels[][5] = { "Vpp5", "VppH", "Vpp0" };
+#define PIN_VPP0  BIO3
+#define PIN_VPP5  BIO1
+#define PIN_VPPH  BIO2
+
+// magic starts here
+void spi_up_handler(struct command_result* res) {
+    uint32_t value; // somewhere to keep an integer value
+    char fname[13];  // somewhere to keep a string value (8.3 filename + 0x00 = 13 characters max)
+
+    // the help -h flag can be serviced by the command line parser automatically, or from within the command
+    // the action taken is set by the help_text variable of the command struct entry for this command
+    // 1. a single T_ constant help entry assigned in the commands[] struct in commands.c will be shown automatically
+    // 2. if the help assignment in commands[] struct is 0x00, it can be handled here (or ignored)
+    // res.help_flag is set by the command line parser if the user enters -h
+    // we can use the ui_help_show function to display the help text we configured above
+    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+        return;
+    }
+
+    // ui_help_check_vout_vref() checks for a valid voltage on the Vout pin
+    // if the voltage is too low, the command print an error message and return false
+    // checking for a voltage, if needed, and issuing an error or reminder saves a lot of frustration for everyone
+    if(!ui_help_check_vout_vref())
+    {
+        return;
+    }
+
+    // you can have multiple parameters in multiple positions
+    // we have two possible parameters: init and test, which
+    // our parameter is the first argument following the command itself, but you can use it however works best
+    char action_str[9];              // somewhere to store the parameter string
+    bool eprom = false, test = false, logic=false, vtest=false, dram=false;             // some flags to keep track of what we want to do
+    command_var_t arg; 
+    char type[10];
+    uint32_t pins=0, kbit=0, ictype=0;
+    uint32_t boffset, foffset, doffset, length, id;
+    bool read=false, write=false, readid=false, blank=false;    // eprom flags
+    bool clear=false, crc=false, show=false;
+    int i;
+    uint8_t clearbyte;
+    
+    int numpins;
+    uint16_t starttest, endtest;
+    
+    // allocate 128k buffer if not done already
+    if(!upbuffer)
+    {
+      printf("trying to allocate big buffer\r\n"); 
+      upbuffer=mem_alloc(128*1024, BP_BIG_BUFFER_UP);
+      if(!upbuffer)
+      {
+        printf("Can't allocate 128kb buffer\r\n");
+        system_config.error = 1;
+        return;
+      }
+    }
+    
+    // init up
+    init_up();
+    claimextrapins();
+    setvpp(0);
+    setvdd(0);
+    
+    if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
+
+        // universal
+        if(cmdln_args_find_flag('q')) verbose=false;
+            else verbose=true;
+
+      
+        if (strcmp(action_str, "test") == 0)
+        {
+            test = true;
+            
+            up_test();
+        }
+        else if (strcmp(action_str, "vtest") == 0)
+        {
+            vtest = true;
+            
+            up_vtest();
+        }
+        else if (strcmp(action_str, "dram") == 0)
+        {
+            dram = true;
+            
+            if(cmdln_args_find_flag_string('t', &arg, 10, type))
+            {
+              if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
+              else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
+              else
+              {
+                printf("DRAM type unknown\r\n");
+                printf(" available are: 4164, 41256\r\n");
+                system_config.error = 1;
+                return;
+              }
+            }
+            else
+            {
+              printf("Use -t to specify DRAM type\r\n");
+              system_config.error = 1;
+              return;
+            }
+            
+            testdram41(ictype);
+        }
+        else if (strcmp(action_str, "logic") == 0)
+        {
+            logic = true;
+            
+            numpins=0;
+            
+            if(cmdln_args_find_flag_string('t', &arg, 10, type))
+            {
+              for(i=0; i<(sizeof(logicic14)/sizeof(up_logic)); i++)
+              {
+                if (strcmp(type, logicic14[i].name) == 0)
+                {
+                  numpins=14;
+                  starttest=logicic14[i].start;
+                  endtest=logicic14[i].end;
+                }
+              }
+              for(i=0; i<(sizeof(logicic16)/sizeof(up_logic)); i++)
+              {
+                if (strcmp(type, logicic16[i].name) == 0)
+                {
+                  numpins=16;
+                  starttest=logicic16[i].start;
+                  endtest=logicic16[i].end;
+                }
+              }
+              for(i=0; i<(sizeof(logicic20)/sizeof(up_logic)); i++)
+              {
+                if (strcmp(type, logicic20[i].name) == 0)
+                {
+                  numpins=20;
+                  starttest=logicic20[i].start;
+                  endtest=logicic20[i].end;
+                }
+              }
+              for(i=0; i<(sizeof(logicic24)/sizeof(up_logic)); i++)
+              {
+                if (strcmp(type, logicic24[i].name) == 0)
+                {
+                  numpins=24;
+                  starttest=logicic24[i].start;
+                  endtest=logicic24[i].end;
+                }
+              }
+              for(i=0; i<(sizeof(logicic28)/sizeof(up_logic)); i++)
+              {
+                if (strcmp(type, logicic28[i].name) == 0)
+                {
+                  numpins=28;
+                  starttest=logicic28[i].start;
+                  endtest=logicic28[i].end;
+                }
+              }
+              for(i=0; i<(sizeof(logicic40)/sizeof(up_logic)); i++)
+              {
+                if (strcmp(type, logicic40[i].name) == 0)
+                {
+                  numpins=40;
+                  starttest=logicic40[i].start;
+                  endtest=logicic40[i].end;
+                }
+              }
+            }
+
+            printf(" %d, %d, %d\r\n", numpins, starttest, endtest);
+
+            if(numpins==0)
+            {
+              printf("Not found!");
+              system_config.error = 1;
+              return;
+            }
+            
+            testlogicic(numpins, starttest, endtest);
+        }
+        else if (strcmp(action_str, "buffer") == 0) 
+        {
+          if (cmdln_args_string_by_position(2, sizeof(action_str), action_str))
+          {
+            if (strcmp(action_str, "read") == 0) read=true;
+            else if (strcmp(action_str, "write") == 0) write=true;  
+            else if (strcmp(action_str, "crc") == 0) crc=true;
+            else if (strcmp(action_str, "clear") == 0) clear=true;
+            else if (strcmp(action_str, "show") == 0) show=true;
+            else
+            {
+              printf("no action defined (read, write, crc, blank)\r\n");
+              system_config.error = 1;
+              return;
+            }
+            
+            if(cmdln_args_find_flag_uint32('o', &arg, &value)) boffset=value; // bufferoffset
+            else boffset=0;
+            
+            if(cmdln_args_find_flag_uint32('O', &arg, &value)) foffset=value; // fileoffset
+            else foffset=0;
+            
+            if(cmdln_args_find_flag_uint32('l', &arg, &value)) length=value; // length
+            else length=128*1024;
+
+            if(cmdln_args_find_flag_uint32('b', &arg, &value)) clearbyte=(value&0x0FF); // clearbyte
+            else clearbyte=0x00;
+            
+            if((read|write)&&(!cmdln_args_find_flag_string('f', &arg, 13, fname)))
+            {
+              printf("No filename given\r\n");
+              system_config.error = 1;
+              return;
+            }
+           
+            //sanity checks
+            if(length>128*1024)
+            {
+              printf("length should be less then 131072\r\n");
+              system_config.error = 1;
+              return;
+            }
+
+            if(boffset>128*1024)
+            {
+              printf("buffer offset should be less then 131072\r\n");
+              system_config.error = 1;
+              return;
+            }
+
+            if((boffset+length)>128*1024)
+            {
+              printf("buffer offset+length should be less then 131072\r\n");
+              system_config.error = 1;
+              return;
+            }
+
+            
+            if(show) dumpbuffer(boffset, length);
+            else if(crc) crcbuffer(boffset, length);
+            else if(clear) clearbuffer(boffset, length, clearbyte);
+            else if(write) writebuffer(boffset, length, fname);
+            else if(read) readbuffer(boffset, foffset, length, fname);
+          }
+        }
+        else if (strcmp(action_str, "eprom") == 0) 
+        {
+          eprom = true;
+
+          if (cmdln_args_string_by_position(2, sizeof(action_str), action_str))
+          {
+            if (strcmp(action_str, "read") == 0) read=true;
+            else if (strcmp(action_str, "readid") == 0) readid=true;
+            else if (strcmp(action_str, "blank") == 0) blank=true;
+            else if (strcmp(action_str, "write") == 0) write=true;  
+            else
+            {
+              printf("no action defined (read, readid, write or blank)\r\n");
+              system_config.error = 1;
+              return;
+            }     
+            
+            // TODO: figure this out
+            if(cmdln_args_find_flag_string('t', &arg, 10, type))
+            {
+              printf("type = %s \r\n", type);
+              
+              if(strcmp(type, "2764")==0) ictype=UP_EPROM_2764;
+              else if(strcmp(type, "27c64")==0) ictype=UP_EPROM_2764;
+              else if(strcmp(type, "27128")==0) ictype=UP_EPROM_27128;
+              else if(strcmp(type, "27c128")==0) ictype=UP_EPROM_27128;
+              else if(strcmp(type, "27256")==0) ictype=UP_EPROM_27256;
+              else if(strcmp(type, "27c256")==0) ictype=UP_EPROM_27256;
+              else if(strcmp(type, "27512")==0) ictype=UP_EPROM_27512;
+              else if(strcmp(type, "27c512")==0) ictype=UP_EPROM_27512;
+              else if(strcmp(type, "27010")==0) ictype=UP_EPROM_27010;
+              else if(strcmp(type, "27c010")==0) ictype=UP_EPROM_27010;
+              else if(strcmp(type, "27020")==0) ictype=UP_EPROM_27020;
+              else if(strcmp(type, "27c020")==0) ictype=UP_EPROM_27020;
+              else if(strcmp(type, "27040")==0) ictype=UP_EPROM_27040;
+              else if(strcmp(type, "27c040")==0) ictype=UP_EPROM_27040;
+              else if(strcmp(type, "27080")==0) ictype=UP_EPROM_27080;
+              else if(strcmp(type, "27c080")==0) ictype=UP_EPROM_27080;
+              else
+              {
+                printf("EPROM type unknown\r\n");
+                printf(" available are: 2764, 27128, 27256, 27512, 27010, 27020, 27040, 27080\r\n");
+                printf("              27c64, 27c128, 27c256, 27c512, 27c010, 27c020, 27c040, 27c080\r\n");
+                system_config.error = 1;
+                return;
+              }
+                
+              if(kbit<1024) pins=28;
+              else pins=32;
+              
+              // epromtype handling
+            }
+            else if(!readid)
+            {
+                printf("Use -t to specify DRAM type\r\n");
+                system_config.error = 1;
+                return;
+            }
+            
+            
+            if(read) readeprom(ictype);
+            else if(readid) readepromid(32);
+            else if(write) writeeprom(ictype);
+            else if(blank) blankeprom(ictype);
+          }
+        }
+
+    } 
+    else
+    {
+        printf("%s\r\n", GET_T(T_HELP_HELP_COMMAND));
+        system_config.error = 1;
+    }
+    
+    // 
+    init_up();
+    setvcc(0);  // to be sure
+    setvpp(0);  // to be sure
+}
+
+/// --------------------------------------------------------------------- Hardware helpers
+// setup mcp23s17 chips
+static void init_up(void)
+{
+  // enable addressing in SPI
+  hwspi_select();
+  hwspi_write((uint8_t) 0x40);
+  hwspi_write((uint8_t) 0x0A);
+  hwspi_write((uint8_t) 0x08);
+  hwspi_deselect();
+  
+  setpullups(0x00000000l);    // disable pullups
+  setdirection(0xFFFFFFFFl);  // all inputs
+  
+  printf("init()\r\n");
+}
+
+// setup the pullups 
+static void setpullups(uint32_t pullups)
+{
+  // set pullups IC1
+  hwspi_select();
+  hwspi_write((uint8_t) 0x40);
+  hwspi_write((uint8_t) 0x0C);
+  hwspi_write((uint8_t) (pullups>>24)&0x0FF);
+  hwspi_write((uint8_t) (pullups>>16)&0x0FF);
+  hwspi_deselect();
+  
+  // set pullups IC2
+  hwspi_select();
+  hwspi_write((uint8_t) 0x42);
+  hwspi_write((uint8_t) 0x0C);
+  hwspi_write((uint8_t) (pullups>>8)&0x0FF);
+  hwspi_write((uint8_t) pullups&0x0FF);
+  hwspi_deselect();
+}
+
+// setup the io-direction 
+static void setdirection(uint32_t iodir)
+{
+  // set direction on IC1
+  hwspi_select();
+  hwspi_write((uint8_t) 0x40);
+  hwspi_write((uint8_t) 0x00);
+  hwspi_write((uint8_t) (iodir>>24)&0x0FF);
+  hwspi_write((uint8_t) (iodir>>16)&0x0FF);
+  hwspi_deselect();
+  
+  // set direction on IC2
+  hwspi_select();
+  hwspi_write((uint8_t) 0x42);
+  hwspi_write((uint8_t) 0x00);
+  hwspi_write((uint8_t) (iodir>>8)&0x0FF);
+  hwspi_write((uint8_t) iodir&0x0FF);
+  hwspi_deselect();
+}
+
+// write/read pins 
+static uint32_t pins(uint32_t pinout)
+{
+  uint32_t pinin;
+  
+  // set pins on IC1
+  hwspi_select();
+  hwspi_write((uint8_t) 0x40);
+  hwspi_write((uint8_t) 0x12);
+  hwspi_write((uint8_t) (pinout>>24)&0x0FF);
+  hwspi_write((uint8_t) (pinout>>16)&0x0FF);
+  hwspi_deselect();
+
+  // set pins IC2
+  hwspi_select();
+  hwspi_write((uint8_t) 0x42);
+  hwspi_write((uint8_t) 0x12);
+  hwspi_write((uint8_t) (pinout>>8)&0x0FF);
+  hwspi_write((uint8_t) pinout&0x0FF);
+  hwspi_deselect();
+  
+  // read pins on IC1
+  hwspi_select();
+  hwspi_write((uint8_t) 0x41);
+  hwspi_write((uint8_t) 0x12);
+  pinin=hwspi_read();
+  pinin<<=8;
+  pinin|=hwspi_read();
+  pinin<<=8;
+  hwspi_deselect();
+
+  // read pins IC2
+  hwspi_select();
+  hwspi_write((uint8_t) 0x43);
+  hwspi_write((uint8_t) 0x12);
+  pinin|=hwspi_read();
+  pinin<<=8;
+  pinin|=hwspi_read();
+  hwspi_deselect();
+
+  return pinin; 
+}
+
+static void claimextrapins(void)
+{
+  system_bio_update_purpose_and_label(true, PIN_VPP5, BP_PIN_MODE, pin_labels[0]);
+  system_bio_update_purpose_and_label(true, PIN_VPPH, BP_PIN_MODE, pin_labels[1]);
+  system_bio_update_purpose_and_label(true, PIN_VPP0, BP_PIN_MODE, pin_labels[2]);
+  bio_output(PIN_VPP5);
+  bio_put(PIN_VPP5, 0);
+  system_set_active(true, PIN_VPP5, &system_config.aux_active);
+  bio_output(PIN_VPPH);
+  bio_put(PIN_VPPH, 0);
+  system_set_active(true, PIN_VPPH, &system_config.aux_active);
+  bio_output(PIN_VPP0);
+  bio_put(PIN_VPP0, 1); 
+  system_set_active(true, PIN_VPPH, &system_config.aux_active);
+  
+}
+
+static void unclaimextrapins(void)
+{
+  system_bio_update_purpose_and_label(false, PIN_VPP5, BP_PIN_MODE, pin_labels[0]);
+  system_bio_update_purpose_and_label(false, PIN_VPPH, BP_PIN_MODE, pin_labels[1]);
+  system_bio_update_purpose_and_label(false, PIN_VPP0, BP_PIN_MODE, pin_labels[2]);
+  
+  bio_input(PIN_VPP5);
+  system_set_active(false, PIN_VPP5, &system_config.aux_active);
+  bio_input(PIN_VPPH);
+  system_set_active(false, PIN_VPPH, &system_config.aux_active);
+  bio_input(PIN_VPP0);
+  system_set_active(false, PIN_VPPH, &system_config.aux_active);
+}
+
+static void setvpp(uint8_t voltage)
+{
+  bio_put(PIN_VPP0, 0);
+  bio_put(PIN_VPP5, 0);
+  bio_put(PIN_VPPH, 0);
+  
+  if(voltage==0)  bio_put(PIN_VPP0, 1);
+  else if(voltage==1)  bio_put(PIN_VPP5, 1);
+  else bio_put(PIN_VPPH, 1);
+}
+
+static void setvdd(uint8_t voltage)
+{
+  // TODO: make it work
+}
+
+
+// displays how the IC should be placed in the programmer
+static void icprint(int pins, int vcc, int gnd, int vpp)
+{
+  int i;
+  char left[4], right[4];
+
+  // magic stuff happening here
+  // pinoffset=(32-numpins)/2;
+  //  
+
+  vcc=((32-pins)/2)+vcc;
+  gnd=((32-pins)/2)+gnd;
+  vpp=((32-pins)/2)+vpp;
+
+  if(verbose)
+  {
+    if(pins==32) printf("              --_--\r\n");
+    else         printf("\r\n");
+    
+    for(i=0; i<16; i++)
+    {
+      if((pins/2)==(16-i)-1)
+      {
+        printf(" IO%02d      -  --_--  -      IO%02d\r\n", i+1, (32-i));
+      }
+      else if((pins/2)>=(16-i))
+      {
+        if(vcc==i+1) strcpy(left, "Vcc");
+        else if(gnd==i+1) strcpy(left, "GND");
+        else if(vpp==i+1) strcpy(left, "Vpp");
+        else strcpy(left,"[=]");
+        
+        if(vcc==32-i) strcpy(right, "Vcc");
+        else if(gnd==32-i) strcpy(right, "GND");
+        else if(vpp==32-i) strcpy(right, "Vpp");
+        else strcpy(right,"[=]");
+        
+        printf(" IO%02d  %s --|     |-- %s  IO%02d\r\n", i+1, left, right, (32-i));
+      }
+      else
+      {
+        printf(" IO%02d      -         -      IO%02d\r\n", i+1, (32-i));
+      }
+    }
+    printf("              -----\r\n");
+  }
+  else
+    printf("Connect Vcc to IO%02d, Vpp to IO%02d and GND to IO%02d, Jumper all other IOs\r\n", vcc, vpp, gnd);
+    
+}
+
+
+/// --------------------------------------------------------------------- Hardware test
+// let the user tweak the voltages
+static void up_vtest(void)
+{
+  char c;
+  
+  setvpp(0);
+  setvcc(0);
+  setpullups(0);              // disable pullups
+  setdirection(0xFFFFFFFFl);  // all inputs
+  
+  printf("IC disconnected?\r\n");
+  
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+  
+  setvpp(2);
+  setvcc(2);
+  printf("Tweak Vdd and Vpp to desired value. Press any key to continue\r\n");
+  
+  while(!rx_fifo_try_get(&c));
+
+  setvpp(0);
+  setvcc(0);
+}
+
+// basic hardware test
+static void up_test(void)
+{
+  int i;
+  char c;
+  uint32_t pin;
+  
+  setpullups(0xFFFFFFFFl);    // enable pullups
+  setdirection(0xFFFFFFFFl);  // all inputs
+
+  printf("initialized, all pin input, pullups are on\r\n");
+
+  printf("Input test\r\n\r\n");
+  while(1)
+  {
+    printf(" pins = %08X %c\r", pins(0x00000000l), rotate[i&0x07]);
+    i++;
+    
+    busy_wait_us(100000);
+    
+    if (rx_fifo_try_get(&c))
+    {
+      break;
+    }
+  }
+
+  printf("\r\nOutput test\r\n\r\n");
+  pin=0x00000001l;
+  setpullups(0);              // disable pullups
+  setdirection(0x00000000l);  // all outputs
+  while(1)
+  {
+    printf(" pins = %08X %c\r", pins(pin), rotate[i&0x07]);
+    i++;
+    pin<<=1;
+    if(pin==0) pin=0x00000001l;
+    
+    busy_wait_us(100000);
+    
+    if (rx_fifo_try_get(&c))
+    {
+      break;
+    }
+  }
+
+  printf("\r\nVpp+Vdd test\r\n\r\n");
+
+  while(1)
+  {
+    setvpp(0);
+    printf(" Vpp, Vdd = 0V       \r");
+    busy_wait_us(2000000);
+    setvpp(1);
+    printf(" Vpp, Vdd = 5V       \r");
+    busy_wait_us(2000000);
+    setvpp(2);
+    printf(" Vpp, Vdd = 5V++     \r");
+    if (rx_fifo_try_get(&c))
+    {
+      break;
+    }
+    busy_wait_us(2000000);
+  }
+}
+
+/// --------------------------------------------------------------------- EPROM 27xxx functions
+// read the epromid
+static void readepromid(int numpins)
+{
+  char c;
+  uint32_t temp1, temp2;
+  uint8_t id1, id2;
+  int i;
+  bool found;
+  
+
+  // does this work on non eproms (flash,eeprom)?
+  if(numpins==24) icprint(24, 24, 12, 22);  // not 2732!!
+  else if(numpins==28) icprint(28, 28, 14, 24); // not 27512! 
+  else if(numpins==32) icprint(32, 32, 16, 26); // not 27080!
+  else
+  {
+    printf("wrong number of pins\r\n");
+    system_config.error = 1;
+    return;
+  }
+  
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+  
+  // TODO: check if vpp=12.5, vcc=5?
+  // setup for 27xxx eprom 
+  setpullups(UP_27XX_PU);
+  setdirection(UP_27XX_DIR);
+  pins(UP_27XX_OE|UP_27XX_CE); //vpp?
+  
+  // apply 12.5V to A9, vcc/vdd=5
+  setvdd(1);
+  setvpp(2);
+
+  // read idcodes
+  temp1=pins(UP_27XX_VPP28);            // manufacturer
+  temp2=pins(UP_27XX_VPP28|UP_27XX_A0); // device
+
+  // put device to sleep
+  setvpp(0);
+  pins(UP_27XX_VPP|UP_27XX_OE|UP_27XX_CE);
+
+  //decode
+  id1=0;
+  id2=0;
+  
+  //decode id1 (manufacturer)
+  if(temp1&UP_27XX_D0) id1|=0x01;
+  if(temp1&UP_27XX_D1) id1|=0x02;
+  if(temp1&UP_27XX_D2) id1|=0x04;
+  if(temp1&UP_27XX_D3) id1|=0x08;
+  if(temp1&UP_27XX_D4) id1|=0x10;
+  if(temp1&UP_27XX_D5) id1|=0x20;
+  if(temp1&UP_27XX_D6) id1|=0x40;
+  if(temp1&UP_27XX_D7) id1|=0x80;
+
+  //decode id2 (device)
+  if(temp2&UP_27XX_D0) id2|=0x01;
+  if(temp2&UP_27XX_D1) id2|=0x02;
+  if(temp2&UP_27XX_D2) id2|=0x04;
+  if(temp2&UP_27XX_D3) id2|=0x08;
+  if(temp2&UP_27XX_D4) id2|=0x10;
+  if(temp2&UP_27XX_D5) id2|=0x20;
+  if(temp2&UP_27XX_D6) id2|=0x40;
+  if(temp2&UP_27XX_D7) id2|=0x80;
+
+  printf("manufacturerID = %02X, deviceID = %02X\r\n", id1, id2);
+  
+  id1=0x8f;
+  id2=0x04;
+  found=false;
+
+  for(i=0; i<(sizeof(up_devices)/sizeof(up_device)); i++)
+  {
+    if((up_devices[i].id1==id1)&&(up_devices[i].id2==id2))
+    {
+      printf("Found: id %d: %s %s\r\n", i, manufacturers[up_devices[i].mnameid], up_devices[i].name);
+
+      //break;
+      // TODO: handle multiple hits
+    }
+  }
+  
+  // did we found anything?
+  if(found)
+  {
+    printf("Please crosscheck with datasheet !!\r\n");
+  }
+  
+  setvcc(0); //depower device
+}
+
+// write buffer to eprom
+static void writeeprom(uint32_t ictype)
+{
+  int i,j,retry;
+  uint32_t epromaddress, dutin, dutout;
+  //uint8_t pulse,retries;
+  char c;
+   
+  // setup hardware
+  setvpp(1);
+  setvcc(1);
+
+  // setup for eprom 
+  setpullups(UP_27XX_PU);
+  setdirection(UP_27XX_DIR);
+  pins(UP_27XX_OE|UP_27XX_CE);
+  
+  switch(ictype)
+  {
+    case UP_EPROM_2764:
+    case UP_EPROM_27128:
+    case UP_EPROM_27256:  icprint(28, 28, 14, 1);
+                          break;
+    case UP_EPROM_27512:  icprint(28, 28, 14, 1); //wrong!!
+                          break;
+    case UP_EPROM_27010:
+    case UP_EPROM_27020:
+    case UP_EPROM_27040:  icprint(32, 32, 16, 1);
+                          break;
+    case UP_EPROM_27080:  icprint(32, 32, 16, 1); // wrong!!
+                          break;
+    default:              printf("wrong number of pins\r\n");
+                          system_config.error = 1;
+                          return;
+  }
+  
+  // print handy info
+  //printf("Programming %s, pulse=%dus, retries=%d,", device.name, device.pulse*4, device.retries); 
+  //printf(" Vdd=%d.%02dV, Vpp=%d.%02dV\r\n", (device.Vdd>>2), (device.Vdd&0x03)*25, (device.Vpp>>2), (device.Vpp&0x03)*25);
+  
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+    
+  // apply Vcchi Vpp
+  setvpp(2);
+  setvcc(2);
+
+  for(j=0; j<32*8; j++)
+  {
+    printf("Programming 0x%05X %c\r", j*128, rotate[j&0x07]);
+
+    for(i=0; i<128; i++)
+    {
+      epromaddress=j*128+i;
+
+      dutin=lut_27xx_lo[(epromaddress&0x0FF)];
+      dutin|=lut_27xx_mi[((epromaddress>>8)&0x0FF)];
+      dutin|=lut_27xx_hi[((epromaddress>>16)&0x0FF)];    
+      
+      //TODO: from buffer
+      dutin|=lut_27xx_dat[(epromaddress&0x0FF)];
+      
+      //for(retry=device.retries; retry>0; retry--)
+      for(retry=10; retry>0; retry--)
+      {
+        pins(dutin|UP_27XX_CE|UP_27XX_OE);  // inhibit
+        setdirection(0);                    // datapins to output
+        pins(dutin|UP_27XX_OE);             // program
+        busy_wait_us(100);                  // pulse
+        pins(dutin|UP_27XX_CE|UP_27XX_OE);  // inhibit
+        setdirection(UP_27XX_DIR);          // datapins to input
+        dutout=pins(dutin|UP_27XX_CE);      // read
+        
+        if(dutout==(dutin|UP_27XX_CE)) break;
+      }
+      
+      if(retry==0)
+      {
+        printf("\r\nVerify error. device is broken\r\n");
+        setdirection(UP_27XX_DIR);
+        pins(dutin|UP_27XX_CE|UP_27XX_OE);
+        break;
+      }
+    }
+    if(retry==0)  break;
+  }
+  
+  printf("\r\nDone. disconnect Vpp\r\n");
+  setdirection(UP_27XX_DIR);
+  pins(dutin|UP_27XX_CE|UP_27XX_OE);
+  setvpp(0);
+  setvcc(0);
+  while(!rx_fifo_try_get(&c));
+}
+
+// read eprom
+static void readeprom(uint32_t ictype)
+{
+  uint32_t dutin, dutout, epromaddress, kbit, pgm;
+  int i, j;
+  char c;
+  
+  switch(ictype)
+  {
+    case UP_EPROM_2764:   kbit=64;                      // seems ok
+                          pgm=UP_27XX_PGM28|UP_27XX_VPP28;
+                          icprint(28, 28, 14, 33);
+                          break;
+    case UP_EPROM_27128:  kbit=128;                     // not in partsbin
+                          pgm=UP_27XX_PGM28|UP_27XX_VPP28;
+                          icprint(28, 28, 14, 33);
+                          break;
+    case UP_EPROM_27256:  kbit=256;                     // seems ok
+                          pgm=0;
+                          icprint(28, 28, 14, 33);
+                          break;
+    case UP_EPROM_27512:  kbit=512;                     // seems ok
+                          pgm=0;
+                          icprint(28, 28, 14, 33);
+                          break;
+    case UP_EPROM_27010:  kbit=1024;                    // weird stuff
+                          pgm=UP_27XX_PGM32|UP_27XX_VPP32;
+                          icprint(32, 32, 16, 33);
+                          break;
+    case UP_EPROM_27020:  kbit=2048;
+                          pgm=UP_27XX_PGM32|UP_27XX_VPP32;
+                          icprint(32, 32, 16, 33);
+                          break;
+    case UP_EPROM_27040:  kbit=4096;
+                          pgm=UP_27XX_VPP32;
+                          icprint(32, 32, 16, 33);
+                          break;
+    case UP_EPROM_27080:  kbit=8192;
+                          pgm=0;
+                          icprint(32, 32, 16, 33);
+                          break;
+    default:              printf("unknown EPROM\r\n");
+                          system_config.error = 1;
+                          return;
+  }
+  
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+ 
+  // setup hardware 
+  setvpp(1);
+  setvcc(1);
+
+  // setup for eprom
+  // TODO: if Vpp is a pin make it high
+  setpullups(UP_27XX_PU);
+  setdirection(UP_27XX_DIR);
+  pins(UP_27XX_OE|UP_27XX_CE);
+
+ 
+  // TODO: check Vpp, Vdd
+ 
+  //printf("Reading device %s\r\n", device.name);
+  
+  for(j=0; j<kbit; j++)
+  {
+    printf("Reading EPROM 0x%05X %c\r", j*128, rotate[j&0x07]);
+    
+    for(i=0; i<128; i++)
+    {
+      epromaddress=j*128+i;
+      
+      dutin=pgm;
+      dutin|=lut_27xx_lo[(epromaddress&0x0FF)];
+      dutin|=lut_27xx_mi[((epromaddress>>8)&0x0FF)];
+      dutin|=lut_27xx_hi[((epromaddress>>16)&0x0FF)];
+    
+      upbuffer[epromaddress]=0;
+      
+      dutout=pins(dutin);
+      
+      if(dutout&UP_27XX_D0) upbuffer[epromaddress]|=0x01;
+      if(dutout&UP_27XX_D1) upbuffer[epromaddress]|=0x02;
+      if(dutout&UP_27XX_D2) upbuffer[epromaddress]|=0x04;
+      if(dutout&UP_27XX_D3) upbuffer[epromaddress]|=0x08;
+      if(dutout&UP_27XX_D4) upbuffer[epromaddress]|=0x10;
+      if(dutout&UP_27XX_D5) upbuffer[epromaddress]|=0x20;
+      if(dutout&UP_27XX_D6) upbuffer[epromaddress]|=0x40;
+      if(dutout&UP_27XX_D7) upbuffer[epromaddress]|=0x80;
+
+      pins(dutin|UP_27XX_OE);
+    }  
+  }
+  printf("\r\n");
+  
+  pins(UP_27XX_OE|UP_27XX_CE);
+  
+  //dumpbuffer(0, 32768);
+}
+
+// blank check eprom
+static void blankeprom(uint32_t ictype)
+{
+  uint32_t dutin, dutout, epromaddress;
+  int i, j;
+  bool blank=true;
+  char c;
+  
+  // setup hardware (TODO: check if not done??)
+  setvcc(1);
+  setvpp(1);
+
+  // setup for eprom
+  // TODO: if Vpp is a pin make it high
+  setpullups(UP_27XX_PU);
+  setdirection(UP_27XX_DIR);
+  pins(UP_27XX_OE|UP_27XX_CE);
+  
+  switch(ictype)
+  {
+    case UP_EPROM_2764:
+    case UP_EPROM_27128:
+    case UP_EPROM_27256:  icprint(28, 28, 14, 1);
+                          break;
+    case UP_EPROM_27512:  icprint(28, 28, 14, 1); //wrong
+                          break;
+    case UP_EPROM_27010:
+    case UP_EPROM_27020:
+    case UP_EPROM_27040:  icprint(32, 32, 16, 1);
+                          break;
+    case UP_EPROM_27080:  icprint(32, 32, 16, 1); // wrong!!
+                          break;
+    default:              printf("wrong number of pins\r\n");
+                          system_config.error = 1;
+                          return;
+  }
+
+  
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+ 
+  // TODO: check Vpp, Vdd
+ 
+  //printf("Reading device %s\r\n", device.name);
+  
+  for(j=1; j<32*8; j++) // 256Kbit
+  {
+    printf("Blankcheck EPROM 0x%05X %c\r", j*128, rotate[j&0x07]);
+    
+    for(i=0; i<128; i++)
+    {
+      epromaddress=j*128+i;
+      
+      dutin=lut_27xx_lo[(epromaddress&0x0FF)];
+      dutin|=lut_27xx_mi[((epromaddress>>8)&0x0FF)];
+      dutin|=lut_27xx_hi[((epromaddress>>16)&0x0FF)];
+    
+      dutout=pins(dutin);
+
+      if((dutout&UP_27XX_DIR)!=lut_27xx_dat[0xFF])
+      {
+        blank=false;
+        break;
+      }
+
+      pins(dutin|UP_27XX_OE);
+    }
+    if(!blank) break;
+  }
+  printf("\r\n");
+  
+  setvpp(0);
+  setvcc(0);  
+
+  if(blank) printf("Device is blank\r\n");
+  else printf("Device is not blank\r\n");
+}
+
+
+/// --------------------------------------------------------------------- buffer helpers
+// print the buffer to the screen
+static void dumpbuffer(uint32_t start, uint32_t len)
+{
+  int i, j;
+  
+  // dump to screen
+  for(j=0; j<len; j+=16)
+  {
+    printf(" 0x%05X: ", start+j);
+
+    for(i=0; i<16; i++)
+    {
+      printf("%02X ", upbuffer[start+j+i]);
+    }
+
+    printf("  ");
+
+    for(i=0; i<16; i++)
+    {
+      printf("%c", ((upbuffer[start+j+i]>=0x20)&(upbuffer[start+j+i]<0x7F))?upbuffer[start+j+i]:'.');
+    }
+    
+    printf("\r\n");
+  }
+}
+
+// move to a generic crc.c/crc.h ??
+#include "commands/spi/universalprogrammer/ccitt.c"
+#include "commands/spi/universalprogrammer/ccitt32.c"
+#include "commands/spi/universalprogrammer/zip.c"
+
+static void crcbuffer(uint32_t start, uint32_t len)
+{
+  printf("Checksum of the buffer from 0x%05X, len %d\r\n", start, len);
+  printf("CRC16 (CCITT) = 0x%04X\r\n", ccitt16_updcrc(-1, upbuffer+start, len));
+  printf("CRC32 (CCITT) = 0x%08X\r\n", ccitt32_updcrc(-1, upbuffer+start, len));
+  printf("ZIPCRC = 0x%08X\r\n", zip_updcrc(-1, upbuffer+start, len));
+}
+
+static void clearbuffer(uint32_t start, uint32_t len, uint8_t fillbyte)
+{
+  int i;
+  
+  for(i=start; i<start+len; i++) upbuffer[i]=fillbyte;
+}
+
+static void readbuffer(uint32_t start, uint32_t fstart, uint32_t len, char *fname)
+{
+  FIL file_handle;
+  unsigned int bytes_read;
+
+  /* Open file and read */
+  // open the file
+  //result = f_open(&file_handle, fname, FA_READ); // open the file for reading
+  if (f_open(&file_handle, fname, FA_READ)!=FR_OK)
+  {
+      printf("Error opening file %s for reading\r\n", fname);
+      system_config.error = true; // set the error flag
+      return;
+  }
+  // if the file was opened
+  printf("File %s opened for reading\r\n", fname);
+
+  // check filesize
+
+  // seek offset
+  if(f_lseek(&file_handle, fstart)==FR_OK)
+  {
+    printf("Skipped %d bytes\r\n", fstart);
+  }
+  else
+  {                                    
+      printf("Error skipping bytes file %s\r\n", fname);
+      system_config.error = true; // set the error flag
+  }
+
+  // read the file
+  
+  //result = f_read(&file_handle, buffer, sizeof(buffer), &bytes_read); // read the data from the file
+  if (f_read(&file_handle, upbuffer+start, len, &bytes_read) == FR_OK)
+  {                                              // if the read was successful
+      printf("Read %d bytes from file %s\r\n", bytes_read, fname);
+      
+  }
+  else 
+  {                                     // error reading file
+      printf("Error reading file %s\r\n", fname);
+      system_config.error = true; // set the error flag
+  }
+
+  // close the file
+  //result = f_close(&file_handle); // close the file
+  if (f_close(&file_handle) != FR_OK) 
+  {
+      printf("Error closing file %s\r\n", fname);
+      system_config.error = true; // set the error flag
+      return;
+  }
+  // if the file was closed
+  printf("File %s closed\r\n", fname);
+}
+
+static void writebuffer(uint32_t start, uint32_t len, char *fname)
+{
+  FIL file_handle;
+//  FRESULT result;
+  unsigned int bytes_written; // somewhere to store the number of bytes written
+
+  if (f_open(&file_handle, fname, FA_CREATE_NEW | FA_WRITE))
+  {                                        
+    printf("Error creating file %s\r\n", fname);
+    system_config.error = true;
+    return;
+  }
+
+  if (f_write(&file_handle, upbuffer+start, len, &bytes_written))
+  {
+    printf("Error writing to file %s\r\n", fname);
+    if (f_close(&file_handle))
+    {
+      printf("Error closing file %s after error writing to file -- reboot recommended\r\n", fname);
+    }
+    system_config.error = true; // set the error flag
+    return;
+  }
+
+  printf("Wrote %d bytes to file %s\r\n", bytes_written, fname);
+
+  if (f_close(&file_handle))
+  {
+      printf("Error closing file %s\r\n", fname);
+      system_config.error = true; // set the error flag
+      return;
+  }
+
+  refresh_usbmsdrive();
+}
+
+/// --------------------------------------------------------------------- logictest helpers
+static void testlogicic(int numpins, uint16_t logicteststart, uint16_t logictestend)
+{
+  int i, pin, vcc, gnd;
+  int pinoffset;
+  uint32_t dutin, dutout, direction, pullups, expected;
+  char pintest, c;
+  
+  pinoffset=(32-numpins)/2;
+
+  // find the vcc and gnd pins
+  for(i=0; i<numpins; i++)
+  {
+    if(numpins==14) pintest=logictest14[0][i];
+    else if(numpins==16) pintest=logictest16[0][i];
+    else if(numpins==20) pintest=logictest20[0][i];
+    else if(numpins==24) pintest=logictest24[0][i];
+    else if(numpins==28) pintest=logictest28[0][i];
+    else if(numpins==40) pintest=logictest40[0][i];  
+
+    if(pintest=='V') vcc=i+1;
+    if(pintest=='G') gnd=i+1;
+  }
+
+  icprint(numpins, vcc, gnd, 33);
+
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+  
+  setvpp(0);
+  setvcc(1);
+
+
+  for(i=logicteststart; i<logictestend; i++)
+  {
+    dutin=0;
+    dutout=0;
+    direction=0;
+    pullups=0;
+    expected=0;
+    
+    for(pin=0; pin<numpins; pin++)
+    {
+      if(numpins==14) pintest=logictest14[i][pin];
+      else if(numpins==16) pintest=logictest16[i][pin];
+      else if(numpins==20) pintest=logictest20[i][pin];
+      else if(numpins==24) pintest=logictest24[i][pin];
+      else if(numpins==28) pintest=logictest28[i][pin];
+      else if(numpins==40) pintest=logictest40[i][pin];
+      
+      if((pintest=='0')||                   // output 0
+         (pintest=='V')||                   // Vcc/Vdd  (user should jumper properly)
+         (pintest=='G'))                    // GND (user should jumper properly)
+      {
+        //dutin|=matrix[pinoffset+pin];     // pin=0
+        //direction|=matrix[pinoffset+pin]; // output
+        //pullups|=matrix[pinoffset+pin];   // no pullup
+        //expected|=matrix[pinoffset+pin];  // expect 0
+      }
+      else if(pintest=='1')                 // output 1
+      {
+        dutin|=matrix[pinoffset+pin];       // pin=1
+        //direction|=matrix[pinoffset+pin]; // output
+        //pullups|=matrix[pinoffset+pin];   // no pullup
+        expected|=matrix[pinoffset+pin];    // expect 1
+      }
+      else if(pintest=='L')                 // input 0
+      {
+        //dutin|=matrix[pinoffset+pin];     // don't care
+        direction|=matrix[pinoffset+pin];   // input
+        //pullups|=matrix[pinoffset+pin];   // no pullup ?
+        //expected|=matrix[pinoffset+pin];  // expect 0
+      }
+      else if(pintest=='H')                 // input 1/Z(?)
+      {
+        //dutin|=matrix[pinoffset+pin];     // don't care
+        direction|=matrix[pinoffset+pin];   // input
+        //pullups|=matrix[pinoffset+pin];   // no pullup ?
+        expected|=matrix[pinoffset+pin];    // expect 1
+      }
+      else if(pintest=='Z')                 // input Z, let pullup do its work
+      {
+        //dutin|=matrix[pinoffset+pin];     // don't care
+        direction|=matrix[pinoffset+pin];   // input
+        pullups|=matrix[pinoffset+pin];     // pullup
+        expected|=matrix[pinoffset+pin];    // expect 1
+      }
+      // TODO: clock, dontcare
+    }
+    
+    // actually test
+    setpullups(pullups);	
+    setdirection(direction);
+    dutout=pins(dutin);
+    
+//    printf(" Pass %d, (P:0x%08X D:0x%08X I:0x%08X O:0x%08XE:0x%08X) ", i, pullups, direction, dutin, dutout, expected);
+    printf(" Pass %d ", ((i-logicteststart)+1));
+    
+    if(dutout==expected) printf("OK\r\n");
+    else printf("Not OK\r\n");
+  }
+  
+  setvpp(0);
+  setvcc(0);
+}
+
+/// --------------------------------------------------------------------- dramtest helpers
+static void initdram41(void)
+{
+  busy_wait_us(1000);
+  
+  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W              |UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W              |UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W              |UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W              |UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W              |UP_DRAM41_CAS                       );
+  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                       );
+}
+
+static void writedram41(uint32_t col, uint32_t row, bool data)
+{
+  uint32_t dat;
+
+  if(data) dat=UP_DRAM41_DI;
+  else dat=0;
+  
+//  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                       );    // w=1, ras=1, cas=1 
+  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS|lut_dram41xx[row]    );    // w=1, ras=1, cas=1, row addres 
+  pins(UP_DRAM41_W              |UP_DRAM41_CAS|lut_dram41xx[row]    );    // w=0, ras=0, cas=1, ras=hi address , data on the bus
+  pins(UP_DRAM41_W              |UP_DRAM41_CAS|lut_dram41xx[col]    );    // w=0, ras=0, cas=1, ras=hi address , data on the bus
+  pins(UP_DRAM41_W                            |lut_dram41xx[col]|dat);    // w=1, ras=0, cas=0, cas=low address, data on the bus
+  pins(                                                          dat);    // w=1, ras=1, cas=1, data on the bus
+  pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                      );    // w=1, ras=1, cas=0
+}
+
+static bool readdram41(uint32_t col, uint32_t row)
+{
+  uint32_t dat;
+  
+      pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS|lut_dram41xx[row]     );    // w=1, ras=1, cas=1, row addres 
+      pins(UP_DRAM41_W              |UP_DRAM41_CAS|lut_dram41xx[row]     );    // w=0, ras=0, cas=1, ras=hi address , data on the bus
+      pins(UP_DRAM41_W              |UP_DRAM41_CAS|lut_dram41xx[col]     );    // w=0, ras=0, cas=1, ras=hi address , data on the bus
+      pins(UP_DRAM41_W                            |lut_dram41xx[col]     );    // w=1, ras=0, cas=0, cas=low address, data on the bus
+  dat=pins(UP_DRAM41_W                                                   );    // w=1, ras=1, cas=1, data on the bus
+      pins(UP_DRAM41_W|UP_DRAM41_RAS|UP_DRAM41_CAS                       );    // w=1, ras=1, cas=0
+
+  return (dat&UP_DRAM41_DO);
+}
+
+
+static void testdram41(uint8_t variant)
+{
+  unsigned int row,col, rowend, colend;
+  bool d;
+  char c;
+  bool ok=1;
+  
+  switch(variant)
+  {
+    case UP_DRAM_4164:  rowend=0x100;
+                        colend=0x100;
+                        break;
+    case UP_DRAM_41256: rowend=0x200;
+                        colend=0x200;
+                        break;
+    default:            printf("Unknown DRAM !!\r\n");
+                        system_config.error = 1;
+                        return;
+  }
+  
+  icprint(16, 8, 16, 33);
+  
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+  
+
+  setpullups(UP_DRAM41_PU);
+  setdirection(UP_DRAM41_DIR);
+  setvpp(0);
+  setvcc(1);
+  initdram41();
+  
+  // All 0s
+  for(row=0; row<rowend; row++)
+  {
+    printf("\rAll 0s .. row 0x%03X %c ", row, rotate[(row)&0x07]);
+    for(col=0; col<colend; col++)
+    {
+      writedram41(row, col, 0);
+      if(readdram41(row, col)!=0)
+      {
+        break;
+      }
+    }
+  }
+ 
+  if(ok) printf("OK\r\n");
+  else printf("NOK\r\n");
+
+   // All 1s
+  for(row=0; row<rowend; row++)
+  {
+    printf("\rAll 1s .. row 0x%03X %c ", row, rotate[(row)&0x07]);
+    for(col=0; col<colend; col++)
+    {
+      writedram41(row, col, 1);
+      if(readdram41(row, col)!=1)
+      {
+        break;
+      }
+    }
+  }
+ 
+  if(ok) printf("OK\r\n");
+  else printf("NOK\r\n");
+
+  // All 0101s
+  d=0;
+  for(row=0; row<rowend; row++)
+  {
+    printf("\rAll 0101s .. row 0x%03X %c ", row, rotate[(row)&0x07]);
+    for(col=0; col<colend; col++)
+    {
+      writedram41(row, col, d);
+      if(readdram41(row, col)!=d)
+      {
+        break;
+      }
+      d^=1;
+    }
+  }
+ 
+  if(ok) printf("OK\r\n");
+  else printf("NOK\r\n");
+
+  // All 1010s
+  d=1;
+  for(row=0; row<rowend; row++)
+  {
+    printf("\rAll 1010s .. row 0x%03X %c ", row, rotate[(row)&0x07]);
+    for(col=0; col<colend; col++)
+    {
+      writedram41(row, col, d);
+      if(readdram41(row, col)!=d)
+      {
+        break;
+      }
+      d^=1;
+    }
+  }
+ 
+  if(ok) printf("OK\r\n");
+  else printf("NOK\r\n");
+
+  //time_us_64();
+  
+  setvpp(0);
+  setvcc(0);
+}
+
+
+

@@ -592,6 +592,6 @@ static char const * const pl_pl[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_I2C_USBPD_PDO_INDEX       ] = NULL,
     [ T_HELP_I2C_USBPD_VOLTAGE         ] = NULL,
     [ T_HELP_I2C_USBPD_CURRENT         ] = NULL,
-    [ T_HELP_I2C_MPU6050               ] = NULL,
+    [ T_HELP_SPI_UP                    ] = NULL,
 
 };

@@ -86,7 +86,6 @@ static void up_vtest(void);
 static void writeeprom(uint32_t ictype);
 static void readeprom(uint32_t ictype, uint8_t mode);
 static void readepromid(int pins);
-static void blankeprom(uint32_t ictype);
 
 // buffer functions
 static void dumpbuffer(uint32_t start, uint32_t len);
@@ -103,6 +102,15 @@ static void writedram41(uint32_t col, uint32_t row, bool data);
 static bool readdram41(uint32_t col, uint32_t row);
 static void initdram41(void);
 static void testdram41(uint8_t variant);
+
+// til305 fun
+static void testtil305(void);
+
+// move to a generic crc.c/crc.h ??
+#include "commands/spi/universalprogrammer/ccitt.c"
+#include "commands/spi/universalprogrammer/ccitt32.c"
+#include "commands/spi/universalprogrammer/zip.c"
+
 
 // local vars/consts
 static uint8_t *upbuffer=NULL;
@@ -194,6 +202,10 @@ void spi_up_handler(struct command_result* res) {
             vtest = true;
             
             up_vtest();
+        }
+        else if (strcmp(action_str, "til305") == 0)
+        {
+          testtil305();
         }
         else if (strcmp(action_str, "dram") == 0)
         {
@@ -1083,91 +1095,6 @@ static void readeprom(uint32_t ictype, uint8_t mode)
   printf("Took %d ms to execute\r\n", ((time_us_32()-starttime)/1000));
 }
 
-// blank check eprom
-static void blankeprom(uint32_t ictype)
-{
-  uint32_t dutin, dutout, epromaddress;
-  int i, j;
-  bool blank=true;
-  char c;
-  
-  // setup hardware (TODO: check if not done??)
-  setvcc(1);
-  setvpp(1);
-
-  // setup for eprom
-  // TODO: if Vpp is a pin make it high
-  setpullups(UP_27XX_PU);
-  setdirection(UP_27XX_DIR);
-  pins(UP_27XX_OE|UP_27XX_CE);
-  
-  switch(ictype)
-  {
-    case UP_EPROM_2764:
-    case UP_EPROM_27128:
-    case UP_EPROM_27256:  icprint(28, 28, 14, 1);
-                          break;
-    case UP_EPROM_27512:  icprint(28, 28, 14, 1); //wrong
-                          break;
-    case UP_EPROM_27010:
-    case UP_EPROM_27020:
-    case UP_EPROM_27040:  icprint(32, 32, 16, 1);
-                          break;
-    case UP_EPROM_27080:  icprint(32, 32, 16, 1); // wrong!!
-                          break;
-    default:              printf("wrong number of pins\r\n");
-                          system_config.error = 1;
-                          return;
-  }
-
-  
-  printf("Is this correct? y to continue\r\n");
-  while(!rx_fifo_try_get(&c));
-  if(c!='y')
-  {
-    printf("Aborted!!\r\n");
-    system_config.error = 1;
-    return;
-  }
- 
-  // TODO: check Vpp, Vdd
- 
-  //printf("Reading device %s\r\n", device.name);
-  
-  for(j=1; j<32*8; j++) // 256Kbit
-  {
-    printf("Blankcheck EPROM 0x%05X %c\r", j*128, rotate[j&0x07]);
-    
-    for(i=0; i<128; i++)
-    {
-      epromaddress=j*128+i;
-      
-      dutin=lut_27xx_lo[(epromaddress&0x0FF)];
-      dutin|=lut_27xx_mi[((epromaddress>>8)&0x0FF)];
-      dutin|=lut_27xx_hi[((epromaddress>>16)&0x0FF)];
-    
-      dutout=pins(dutin);
-
-      if((dutout&UP_27XX_DIR)!=lut_27xx_dat[0xFF])
-      {
-        blank=false;
-        break;
-      }
-
-      pins(dutin|UP_27XX_OE);
-    }
-    if(!blank) break;
-  }
-  printf("\r\n");
-  
-  setvpp(0);
-  setvcc(0);  
-
-  if(blank) printf("Device is blank\r\n");
-  else printf("Device is not blank\r\n");
-}
-
-
 /// --------------------------------------------------------------------- buffer helpers
 // print the buffer to the screen
 static void dumpbuffer(uint32_t start, uint32_t len)
@@ -1194,11 +1121,6 @@ static void dumpbuffer(uint32_t start, uint32_t len)
     printf("\r\n");
   }
 }
-
-// move to a generic crc.c/crc.h ??
-#include "commands/spi/universalprogrammer/ccitt.c"
-#include "commands/spi/universalprogrammer/ccitt32.c"
-#include "commands/spi/universalprogrammer/zip.c"
 
 static void crcbuffer(uint32_t start, uint32_t len)
 {
@@ -1631,6 +1553,82 @@ static void testdram41(uint8_t variant)
   setvpp(0);
   setvcc(0);
 }
+
+/// --------------------------------------------------------------------- til305 helpers
+static void testtil305(void)
+{
+  int i;
+  
+  setpullups(0);
+  setdirection(0xFFFFFFFFl&(!(UP_TIL305_COL1|UP_TIL305_COL2|UP_TIL305_COL3|UP_TIL305_COL4|UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7)));
+
+  pins(UP_TIL305_COL1               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+  pins(UP_TIL305_COL2               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+  pins(UP_TIL305_COL3               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+  pins(UP_TIL305_COL4               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+  pins(UP_TIL305_COL5               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+}
+
 
 
 

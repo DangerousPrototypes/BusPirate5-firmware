@@ -263,130 +263,137 @@ void spi_up_handler(struct command_result* res) {
     claimextrapins();
     setvpp(0);
     setvdd(0);
+
+    // common function to parse the command line verb or action
+    uint32_t action;
+    if(cmdln_args_get_action(eeprom_actions, count_of(eeprom_actions), &action)){
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+        return;
+    }
     
-    if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
+    //if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
 
-        // universal
-        if(cmdln_args_find_flag('q')) verbose=false;
-            else verbose=true;
+    // universal
+    if(cmdln_args_find_flag('q')) verbose=false;
+        else verbose=true;
 
-      
-        if (strcmp(action_str, "test") == 0)
+    switch(action){
+      case UP_TEST:
+        test = true;
+        up_test();
+        break;
+      case UP_VTEST:
+        vtest = true;
+        up_vtest();
+        break;
+      case UP_TIL305:
+        testtil305();
+        break;
+      case UP_DRAM:
+        dram = true;
+        
+        if(cmdln_args_find_flag_string('t', &arg, 10, type))
         {
-            test = true;
-            
-            up_test();
+          if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
+          else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
+          else
+          {
+            printf("DRAM type unknown\r\n");
+            printf(" available are: 4164, 41256\r\n");
+            system_config.error = 1;
+            return;
+          }
         }
-        else if (strcmp(action_str, "vtest") == 0)
+        else
         {
-            vtest = true;
-            
-            up_vtest();
+          printf("Use -t to specify DRAM type\r\n");
+          system_config.error = 1;
+          return;
         }
-        else if (strcmp(action_str, "til305") == 0)
+        
+        testdram41(ictype);
+        break;
+      case UP_LOGIC:
+        logic = true;          
+        numpins=0;
+        
+        if(cmdln_args_find_flag_string('t', &arg, 10, type))
         {
-          testtil305();
-        }
-        else if (strcmp(action_str, "dram") == 0)
-        {
-            dram = true;
-            
-            if(cmdln_args_find_flag_string('t', &arg, 10, type))
-            {
-              if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
-              else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
-              else
-              {
-                printf("DRAM type unknown\r\n");
-                printf(" available are: 4164, 41256\r\n");
-                system_config.error = 1;
-                return;
-              }
-            }
-            else
-            {
-              printf("Use -t to specify DRAM type\r\n");
-              system_config.error = 1;
-              return;
-            }
-            
-            testdram41(ictype);
-        }
-        else if (strcmp(action_str, "logic") == 0)
-        {
-            logic = true;
-            
-            numpins=0;
-            
-            if(cmdln_args_find_flag_string('t', &arg, 10, type))
-            {
-              for(i=0; i<(sizeof(logicic14)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic14[i].name) == 0)
-                {
-                  numpins=14;
-                  starttest=logicic14[i].start;
-                  endtest=logicic14[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic16)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic16[i].name) == 0)
-                {
-                  numpins=16;
-                  starttest=logicic16[i].start;
-                  endtest=logicic16[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic20)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic20[i].name) == 0)
-                {
-                  numpins=20;
-                  starttest=logicic20[i].start;
-                  endtest=logicic20[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic24)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic24[i].name) == 0)
-                {
-                  numpins=24;
-                  starttest=logicic24[i].start;
-                  endtest=logicic24[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic28)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic28[i].name) == 0)
-                {
-                  numpins=28;
-                  starttest=logicic28[i].start;
-                  endtest=logicic28[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic40)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic40[i].name) == 0)
-                {
-                  numpins=40;
-                  starttest=logicic40[i].start;
-                  endtest=logicic40[i].end;
-                }
-              }
-            }
+          if(!up_logic_find(type, &numpins, &starttest, &endtest)){
+            printf("Not found!");
+            system_config.error = 1;
+            return;
+          }
 
-            if(numpins==0)
+          #if 0       
+          for(i=0; i<(sizeof(logicic14)/sizeof(up_logic)); i++)
+          {
+            if (strcmp(type, logicic14[i].name) == 0)
             {
-              printf("Not found!");
-              system_config.error = 1;
-              return;
+              numpins=14;
+              starttest=logicic14[i].start;
+              endtest=logicic14[i].end;
             }
-            
-            testlogicic(numpins, starttest, endtest);
+          }
+          for(i=0; i<(sizeof(logicic16)/sizeof(up_logic)); i++)
+          {
+            if (strcmp(type, logicic16[i].name) == 0)
+            {
+              numpins=16;
+              starttest=logicic16[i].start;
+              endtest=logicic16[i].end;
+            }
+          }
+          for(i=0; i<(sizeof(logicic20)/sizeof(up_logic)); i++)
+          {
+            if (strcmp(type, logicic20[i].name) == 0)
+            {
+              numpins=20;
+              starttest=logicic20[i].start;
+              endtest=logicic20[i].end;
+            }
+          }
+          for(i=0; i<(sizeof(logicic24)/sizeof(up_logic)); i++)
+          {
+            if (strcmp(type, logicic24[i].name) == 0)
+            {
+              numpins=24;
+              starttest=logicic24[i].start;
+              endtest=logicic24[i].end;
+            }
+          }
+          for(i=0; i<(sizeof(logicic28)/sizeof(up_logic)); i++)
+          {
+            if (strcmp(type, logicic28[i].name) == 0)
+            {
+              numpins=28;
+              starttest=logicic28[i].start;
+              endtest=logicic28[i].end;
+            }
+          }
+          for(i=0; i<(sizeof(logicic40)/sizeof(up_logic)); i++)
+          {
+            if (strcmp(type, logicic40[i].name) == 0)
+            {
+              numpins=40;
+              starttest=logicic40[i].start;
+              endtest=logicic40[i].end;
+            }
+          }
         }
-        else if (strcmp(action_str, "buffer") == 0) 
+
+        if(numpins==0)
         {
+          printf("Not found!");
+          system_config.error = 1;
+          return;
+        }
+          #endif
+        
+          testlogicic(numpins, starttest, endtest);
+        }
+      break;
+      case UP_BUFFER:
           if (cmdln_args_string_by_position(2, sizeof(action_str), action_str))
           {
             if (strcmp(action_str, "read") == 0) read=true;
@@ -450,9 +457,8 @@ void spi_up_handler(struct command_result* res) {
             else if(write) writebuffer(boffset, length, fname);
             else if(read) readbuffer(boffset, foffset, length, fname);
           }
-        }
-        else if (strcmp(action_str, "eprom") == 0) 
-        {
+        break;
+      case UP_EEPROM:
           eprom = true;
 
           if (cmdln_args_string_by_position(2, sizeof(action_str), action_str))
@@ -471,6 +477,15 @@ void spi_up_handler(struct command_result* res) {
             
             if(cmdln_args_find_flag_string('t', &arg, 10, type))
             {
+              if(!up_eprom_find_type(type, &ictype))
+              {
+                printf("EPROM type unknown\r\n");
+                printf(" available are: 2764, 27128, 27256, 27512, 27010, 27020, 27040, 27080\r\n");
+                printf("              27c64, 27c128, 27c256, 27c512, 27c010, 27c020, 27c040, 27c080\r\n");
+                system_config.error = 1;
+                return;
+              }
+              #if 0
               if(strcmp(type, "2764")==0) ictype=UP_EPROM_2764;
               else if(strcmp(type, "27c64")==0) ictype=UP_EPROM_2764;
               else if(strcmp(type, "27128")==0) ictype=UP_EPROM_27128;
@@ -495,6 +510,7 @@ void spi_up_handler(struct command_result* res) {
                 system_config.error = 1;
                 return;
               }
+              #endif
 
             }
             else if(!readid)
@@ -518,13 +534,11 @@ void spi_up_handler(struct command_result* res) {
             else if(blank) readeprom(ictype, page, EPROM_BLANK);
             else if(verify) readeprom(ictype, page, EPROM_VERIFY);
           }
-        }
-
-    } 
-    else
-    {
-        printf("%s\r\n", GET_T(T_HELP_HELP_COMMAND));
-        system_config.error = 1;
+        break;
+      default: //should never get here, should throw help
+        printf("No action defined (test, vtest, dram, logic, buffer, eprom)\r\n");
+        system_config.error = 1;  
+        return;
     }
     
     // 
@@ -940,7 +954,7 @@ static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
   int i,j,retry, kbit;
   uint32_t epromaddress, dutin, dutout, pgm;
   char c;
-   
+  
   switch(ictype)
   {
     case UP_EPROM_2764:   kbit=64;                      // not tested
@@ -1077,7 +1091,7 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
   int i, j, kbit;
   char c, device;
   bool blank=true, verify=true;
-  
+
   switch(ictype)
   {
     case UP_EPROM_2764:   kbit=64;                      // seems ok

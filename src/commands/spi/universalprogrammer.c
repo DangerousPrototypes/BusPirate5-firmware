@@ -1,4 +1,12 @@
-// TODO: BIO use, pullups, psu
+
+/*
+    handler for the UP command. needs the universal programmer 'plank' (https:// xx) 
+    
+    (C) Chris van Dongen 2025-26
+
+*/
+
+
 /*
     Welcome to dummy.c, a growing demonstration of how to add commands to the Bus Pirate firmware.
     You can also use this file as the basis for your own commands.
@@ -30,9 +38,15 @@
 #include "commands/spi/universalprogrammer_device.h"
 
 #include "commands/spi/up_lut27xx.h"
+#include "commands/spi/up_lut62xx.h"
 #include "commands/spi/up_lutdram41xx.h"
 #include "commands/spi/up_logicic.h"
 #include "commands/spi/up_eproms.h"
+
+// move to a generic crc.c/crc.h ??
+#include "commands/spi/ccitt.c"
+#include "commands/spi/ccitt32.c"
+#include "commands/spi/zip.c"
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
@@ -101,16 +115,11 @@ static void testlogicic(int numpins, uint16_t logicteststart, uint16_t logictest
 static void writedram41(uint32_t col, uint32_t row, bool data);
 static bool readdram41(uint32_t col, uint32_t row);
 static void initdram41(void);
-static void testdram41(uint8_t variant);
+static void testdram41(uint32_t variant);
+static void testsram62(uint32_t variant);
 
 // til305 fun
 static void testtil305(void);
-
-// move to a generic crc.c/crc.h ??
-#include "commands/spi/universalprogrammer/ccitt.c"
-#include "commands/spi/universalprogrammer/ccitt32.c"
-#include "commands/spi/universalprogrammer/zip.c"
-
 
 // local vars/consts
 static uint8_t *upbuffer=NULL;
@@ -152,7 +161,7 @@ void spi_up_handler(struct command_result* res) {
     // we have two possible parameters: init and test, which
     // our parameter is the first argument following the command itself, but you can use it however works best
     char action_str[9];              // somewhere to store the parameter string
-    bool eprom = false, test = false, logic=false, vtest=false, dram=false;             // some flags to keep track of what we want to do
+    bool eprom = false, test = false, logic=false, vtest=false, ram=false;             // some flags to keep track of what we want to do
     command_var_t arg; 
     char type[10];
     uint32_t pins=0, kbit=0, ictype=0, pulse;
@@ -207,30 +216,34 @@ void spi_up_handler(struct command_result* res) {
         {
           testtil305();
         }
-        else if (strcmp(action_str, "dram") == 0)
+        else if (strcmp(action_str, "ram") == 0)
         {
-            dram = true;
-            
+            ram = true;
+ 
             if(cmdln_args_find_flag_string('t', &arg, 10, type))
             {
               if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
               else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
+              else if(strcmp(type, "6264")==0) ictype=UP_SRAM_6264;
+              else if(strcmp(type, "62256")==0) ictype=UP_SRAM_62256;
+              else if(strcmp(type, "621024")==0) ictype=UP_SRAM_621024;
               else
               {
-                printf("DRAM type unknown\r\n");
-                printf(" available are: 4164, 41256\r\n");
+                printf("RAM type unknown\r\n");
+                printf(" available are: 4164, 41256, 6264, 62256, 621024\r\n");
                 system_config.error = 1;
                 return;
               }
             }
             else
             {
-              printf("Use -t to specify DRAM type\r\n");
+              printf("Use -t to specify SRAM type\r\n");
               system_config.error = 1;
               return;
             }
             
-            testdram41(ictype);
+            if(ictype<UP_SRAM_6264) testdram41(ictype);
+            else testsram62(ictype);
         }
         else if (strcmp(action_str, "logic") == 0)
         {
@@ -336,8 +349,7 @@ void spi_up_handler(struct command_result* res) {
             if((read|write)&&(!cmdln_args_find_flag_string('f', &arg, 13, fname)))
             {
               printf("No filename given\r\n");
-              system_config.error = 1;  printf(", Vpp=%d.%03d", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
-
+              system_config.error = 1;  
               return;
             }
            
@@ -987,8 +999,6 @@ static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
   while(!rx_fifo_try_get(&c));
 }
 
-
-
 // read eprom
 static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
 {
@@ -1483,7 +1493,7 @@ static bool readdram41(uint32_t col, uint32_t row)
 }
 
 
-static void testdram41(uint8_t variant)
+static void testdram41(uint32_t variant)
 {
   unsigned int row,col, rowend, colend;
   bool d;
@@ -1585,7 +1595,7 @@ static void testdram41(uint8_t variant)
     {
       writedram41(row, col, d);
       if(readdram41(row, col)!=d)
-      {
+      {    
         break;
       }
       d^=1;
@@ -1595,6 +1605,96 @@ static void testdram41(uint8_t variant)
   if(ok) printf("OK\r\n");
   else printf("NOK\r\n");
 
+  printf("Took %d ms to execute\r\n", ((time_us_32()-starttime)/1000));
+  
+  setvpp(0);
+  setvcc(0);
+}
+
+
+uint8_t sramtest[] = { 0x00, 0xFF, 0xAA, 0x55 };
+
+static void testsram62(uint32_t variant)
+{
+  int i, j, kbit, pass, test;
+  uint8_t testchar;
+  uint32_t sramaddress, dutin, dutout, starttime, ce2, we;
+  bool ok=true;
+  char c;
+  
+  switch(variant)
+  {
+    case UP_SRAM_6264:    kbit=64;
+                          ce2=UP_62XX_CE2_28;
+                          icprint(28, 28, 14, 33);
+                          break;
+    case UP_SRAM_62256:   kbit=256;
+                          ce2=0;
+                          icprint(28, 28, 14, 33);
+                          break;
+    case UP_SRAM_621024:  kbit=1024;
+                          ce2=UP_62XX_CE2_32;
+                          icprint(32, 32, 16, 33);
+                          break;
+    default:              printf("Unknown SRAM !!\r\n");
+                          system_config.error = 1;
+                          return;
+  }
+
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+
+  starttime=time_us_32();
+
+  setpullups(UP_27XX_PU);
+  setdirection(UP_27XX_DIR);
+  setvpp(0);
+  setvcc(1);
+
+  for(test=0; test<sizeof(sramtest); test++)
+  {
+    testchar=sramtest[test];
+    for(j=0; j<kbit; j++)
+    {
+      printf("\r test #%d (0x%02X) SRAM 0x%05X %c ", test, sramtest[test], j*128, rotate[j&0x07]);
+
+      for(i=0; i<128; i++)
+      {
+        sramaddress=j*128+i;
+
+        dutin=lut_62xx_lo[(sramaddress&0x0FF)];
+        dutin|=lut_62xx_mi[((sramaddress>>8)&0x0FF)];
+        dutin|=lut_62xx_hi[((sramaddress>>16)&0x0FF)];    
+        
+        dutin|=lut_27xx_dat[testchar];
+        
+        pins(dutin|UP_62XX_CE1|UP_62XX_OE|UP_62XX_WE);      // deselect ic
+        setdirection(0);                                    // datapins to output
+        pins(dutin|UP_62XX_OE|ce2);                         // write
+        pins(dutin|UP_62XX_CE1|UP_62XX_OE|UP_62XX_WE);      // deselect
+        setdirection(UP_27XX_DIR);                          // datapins to input
+        dutout=pins(dutin|UP_62XX_WE|ce2);                  // read back
+        
+        if(dutout!=(dutin|UP_62XX_WE|ce2))
+        {
+          ok=false; 
+          break;
+        }
+      }
+      testchar^=0xFF; //invert the byte
+    }
+    if(ok) printf("OK\r\n");
+    else printf("NOK\r\n");
+    
+    ok=true;
+  }
+  
   printf("Took %d ms to execute\r\n", ((time_us_32()-starttime)/1000));
   
   setvpp(0);

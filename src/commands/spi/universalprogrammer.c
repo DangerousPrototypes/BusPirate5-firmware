@@ -848,6 +848,34 @@ static void up_test(void)
   }
 }
 
+
+typedef struct {
+  uint32_t pin_mask;
+  uint8_t bit_value;
+} up_bit_map_t;
+
+static const up_bit_map_t up_data_bus_map[] = {
+  {UP_27XX_D0, 0x01},
+  {UP_27XX_D1, 0x02},
+  {UP_27XX_D2, 0x04},
+  {UP_27XX_D3, 0x08},
+  {UP_27XX_D4, 0x10},
+  {UP_27XX_D5, 0x20},
+  {UP_27XX_D6, 0x40},
+  {UP_27XX_D7, 0x80},
+};
+
+static uint8_t up_decode_bits(uint32_t value, const up_bit_map_t *map, size_t count)
+{
+  uint8_t out = 0;
+  for (size_t i = 0; i < count; i++) {
+    if (value & map[i].pin_mask) {
+      out |= map[i].bit_value;
+    }
+  }
+  return out;
+}
+
 /// --------------------------------------------------------------------- EPROM 27xxx functions
 // read the epromid
 static void readepromid(int numpins)
@@ -898,6 +926,13 @@ static void readepromid(int numpins)
   setvpp(0);
   pins(UP_27XX_OE|UP_27XX_CE);  // vpp??
 
+  //decode id1 (manufacturer)
+  id1 = up_decode_bits(temp1, up_data_bus_map, count_of(up_data_bus_map));
+
+  //decode id2 (device)
+  id2 = up_decode_bits(temp2, up_data_bus_map, count_of(up_data_bus_map));
+
+  #if 0
   //decode
   id1=0;
   id2=0;
@@ -921,6 +956,8 @@ static void readepromid(int numpins)
   if(temp2&UP_27XX_D5) id2|=0x20;
   if(temp2&UP_27XX_D6) id2|=0x40;
   if(temp2&UP_27XX_D7) id2|=0x80;
+
+  #endif
 
   printf("manufacturerID = %02X, deviceID = %02X\r\n", id1, id2);
   
@@ -1245,7 +1282,8 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
       temp=0;
       
       dutout=pins(dutin);
-      
+      temp = up_decode_bits(dutout, up_data_bus_map, count_of(up_data_bus_map));
+      #if 0
       if(dutout&UP_27XX_D0) temp|=0x01;
       if(dutout&UP_27XX_D1) temp|=0x02;
       if(dutout&UP_27XX_D2) temp|=0x04;
@@ -1254,6 +1292,7 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
       if(dutout&UP_27XX_D5) temp|=0x20;
       if(dutout&UP_27XX_D6) temp|=0x40;
       if(dutout&UP_27XX_D7) temp|=0x80;
+      #endif
       
       switch(mode)
       {

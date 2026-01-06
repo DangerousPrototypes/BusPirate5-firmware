@@ -948,6 +948,32 @@ static void readepromid(int numpins)
   setvcc(0); //depower device
 }
 
+
+struct epromconfig
+{
+  uint8_t ictype;
+  uint32_t kbit;
+  uint32_t page;
+  uint32_t pgm_write;
+  uint32_t pgm_read;
+  uint8_t pins;
+  uint8_t vcc;
+  uint8_t gnd;
+  uint8_t vpp;
+};
+
+static const struct epromconfig upeeprom[]={
+  {UP_EPROM_2764,   64,   0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
+  {UP_EPROM_27128,  128,  0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
+  {UP_EPROM_27256,  256,  0, 0,              28, 28, 14, 1},
+  {UP_EPROM_27512,  512,  0, 0,              28, 28, 14, 1},
+  {UP_EPROM_27010, 1024, 0, UP_27XX_PGM32,UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
+  {UP_EPROM_27020, 2048, 1024, UP_27XX_PGM32,UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
+  {UP_EPROM_27040, 4096, 1024, 0,              32, 32, 16, 1},
+  {UP_EPROM_27080, 8192, 1024, 0,              32, 32, 16, 1}
+
+};
+
 // write buffer to eprom
 static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
 {
@@ -955,6 +981,19 @@ static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
   uint32_t epromaddress, dutin, dutout, pgm;
   char c;
   
+
+  if(ictype >= count_of(upeeprom))
+  {
+    printf("unknown EPROM\r\n");
+    system_config.error = 1;
+    return;
+  }
+
+  kbit=upeeprom[ictype].kbit;
+  page*=upeeprom[ictype].page;
+  pgm=upeeprom[ictype].pgm_write;
+  icprint(upeeprom[ictype].pins, upeeprom[ictype].vcc, upeeprom[ictype].gnd, upeeprom[ictype].vpp);
+  #if 0
   switch(ictype)
   {
     case UP_EPROM_2764:   kbit=64;                      // not tested
@@ -1001,7 +1040,7 @@ static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
                           system_config.error = 1;
                           return;
   }
-  
+  #endif
   // warning for big eproms
   if(kbit>1024)
   {
@@ -1092,6 +1131,18 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
   char c, device;
   bool blank=true, verify=true;
 
+  if(ictype >= count_of(upeeprom))
+  {
+    printf("unknown EPROM\r\n");
+    system_config.error = 1;
+    return;
+  }
+  kbit=upeeprom[ictype].kbit;
+  page*=upeeprom[ictype].page;
+  pgm=upeeprom[ictype].pgm_read;
+  icprint(upeeprom[ictype].pins, upeeprom[ictype].vcc, upeeprom[ictype].gnd, 33);
+  #if 0
+  
   switch(ictype)
   {
     case UP_EPROM_2764:   kbit=64;                      // seems ok
@@ -1138,6 +1189,7 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
                           system_config.error = 1;
                           return;
   }
+#endif
   
   // warning for big eproms
   if((mode!=EPROM_BLANK)&&(kbit>1024))

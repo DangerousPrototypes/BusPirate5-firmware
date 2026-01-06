@@ -125,6 +125,86 @@ static const char pin_labels[][5] = { "Vcc", "Vpp", "VccH", "VppH" };
 #define PIN_VCCH        BIO2
 #define PIN_VPPH        BIO3
 
+
+enum up_actions_enum {
+    UP_TEST,
+    UP_VTEST,
+    UP_TIL305,
+    UP_DRAM,
+    UP_LOGIC,
+    UP_BUFFER,
+    UP_EEPROM,
+};
+
+static const struct cmdln_action_t eeprom_actions[] = {
+    {UP_TEST, "test"},
+    {UP_VTEST, "vtest"},
+    {UP_TIL305, "til305"},
+    {UP_DRAM, "dram"},  
+    {UP_LOGIC, "logic"},
+    {UP_BUFFER, "buffer"},
+    {UP_EEPROM, "eprom"},
+};    
+
+// Single descriptor for all logic tables
+typedef struct {
+  const up_logic* table;
+  size_t count;
+  int numpins;
+} up_logic_table_desc_t;
+
+static const up_logic_table_desc_t up_logic_tables[] = {
+  {logicic14, count_of(logicic14), 14},
+  {logicic16, count_of(logicic16), 16},
+  {logicic20, count_of(logicic20), 20},
+  {logicic24, count_of(logicic24), 24},
+  {logicic28, count_of(logicic28), 28},
+  {logicic40, count_of(logicic40), 40},
+};
+
+static bool up_logic_find(const char* type, int* numpins, uint16_t* starttest, uint16_t* endtest)
+{
+  for (size_t t = 0; t < count_of(up_logic_tables); t++) {
+    const up_logic_table_desc_t* lt = &up_logic_tables[t];
+    for (size_t i = 0; i < lt->count; i++) {
+      if (strcmp(type, lt->table[i].name) == 0) {
+        *numpins   = lt->numpins;
+        *starttest = lt->table[i].start;
+        *endtest   = lt->table[i].end;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+typedef struct {
+  const char* name;
+  uint32_t ictype;
+} up_eprom_alias_t;
+
+static const up_eprom_alias_t up_eprom_aliases[] = {
+  {"2764",   UP_EPROM_2764},  {"27C64",  UP_EPROM_2764},
+  {"27128",  UP_EPROM_27128}, {"27C128", UP_EPROM_27128},
+  {"27256",  UP_EPROM_27256}, {"27C256", UP_EPROM_27256},
+  {"27512",  UP_EPROM_27512}, {"27C512", UP_EPROM_27512},
+  {"27010",  UP_EPROM_27010}, {"27C010", UP_EPROM_27010},
+  {"27020",  UP_EPROM_27020}, {"27C020", UP_EPROM_27020},
+  {"27040",  UP_EPROM_27040}, {"27C040", UP_EPROM_27040},
+  {"27080",  UP_EPROM_27080}, {"27C080", UP_EPROM_27080},
+};
+
+static bool up_eprom_find_type(const char* name, uint32_t* out_ictype)
+{
+  for (size_t i = 0; i < count_of(up_eprom_aliases); i++) {
+    if (strcmp(name, up_eprom_aliases[i].name) == 0) {
+      *out_ictype = up_eprom_aliases[i].ictype;
+      return true;
+    }
+  }
+  return false;
+}
+
 // magic starts here
 void spi_up_handler(struct command_result* res) {
     uint32_t value; // somewhere to keep an integer value

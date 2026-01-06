@@ -83,8 +83,8 @@ static void up_test(void);
 static void up_vtest(void);
 
 // eproms
-static void writeeprom(uint32_t ictype);
-static void readeprom(uint32_t ictype, uint8_t mode);
+static void writeeprom(uint32_t ictype, uint32_t page, int pulse);
+static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode);
 static void readepromid(int pins);
 
 // buffer functions
@@ -155,8 +155,8 @@ void spi_up_handler(struct command_result* res) {
     bool eprom = false, test = false, logic=false, vtest=false, dram=false;             // some flags to keep track of what we want to do
     command_var_t arg; 
     char type[10];
-    uint32_t pins=0, kbit=0, ictype=0;
-    uint32_t boffset, foffset, doffset, length, id;
+    uint32_t pins=0, kbit=0, ictype=0, pulse;
+    uint32_t boffset, foffset, doffset, length, id, page;
     bool read=false, write=false, readid=false, blank=false, verify=false;    // eprom flags
     bool clear=false, crc=false, show=false;
     int i;
@@ -336,7 +336,8 @@ void spi_up_handler(struct command_result* res) {
             if((read|write)&&(!cmdln_args_find_flag_string('f', &arg, 13, fname)))
             {
               printf("No filename given\r\n");
-              system_config.error = 1;
+              system_config.error = 1;  printf(", Vpp=%d.%03d", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
+
               return;
             }
            
@@ -388,11 +389,8 @@ void spi_up_handler(struct command_result* res) {
               return;
             }     
             
-            // TODO: figure this out
             if(cmdln_args_find_flag_string('t', &arg, 10, type))
             {
-              printf("type = %s \r\n", type);
-              
               if(strcmp(type, "2764")==0) ictype=UP_EPROM_2764;
               else if(strcmp(type, "27c64")==0) ictype=UP_EPROM_2764;
               else if(strcmp(type, "27128")==0) ictype=UP_EPROM_27128;
@@ -417,11 +415,7 @@ void spi_up_handler(struct command_result* res) {
                 system_config.error = 1;
                 return;
               }
-                
-              if(kbit<1024) pins=28;
-              else pins=32;
-              
-              // epromtype handling
+
             }
             else if(!readid)
             {
@@ -430,12 +424,19 @@ void spi_up_handler(struct command_result* res) {
                 return;
             }
             
-            
-            if(read) readeprom(ictype, EPROM_READ);
-            else if(readid) readepromid(32);
-            else if(write) writeeprom(ictype);
-            else if(blank) readeprom(ictype, EPROM_BLANK);
-            else if(verify) readeprom(ictype, EPROM_VERIFY);
+            if(cmdln_args_find_flag_uint32('p', &arg, &value))
+            {
+              page=value;     // page to read, page=128k for read
+              pulse=value;    // pulse for write
+              pins=value;     // pins for readid
+            }
+            else page=0;
+           
+            if(read) readeprom(ictype, page, EPROM_READ);
+            else if(readid) readepromid(pins);
+            else if(write) writeeprom(ictype, page, pulse);
+            else if(blank) readeprom(ictype, page, EPROM_BLANK);
+            else if(verify) readeprom(ictype, page, EPROM_VERIFY);
           }
         }
 
@@ -775,6 +776,7 @@ static void readepromid(int numpins)
     return;
   }
   
+  printf("Vpp=%d.%03d \r\n", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
   printf("Is this correct? y to continue\r\n");
   while(!rx_fifo_try_get(&c));
   if(c!='y')
@@ -853,13 +855,78 @@ static void readepromid(int numpins)
 }
 
 // write buffer to eprom
-static void writeeprom(uint32_t ictype)
+static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
 {
-  int i,j,retry;
-  uint32_t epromaddress, dutin, dutout;
-  //uint8_t pulse,retries;
+  int i,j,retry, kbit;
+  uint32_t epromaddress, dutin, dutout, pgm;
   char c;
    
+  switch(ictype)
+  {
+    case UP_EPROM_2764:   kbit=64;                      // not tested
+                          page=0;
+                          pgm=UP_27XX_PGM28;
+                          icprint(28, 28, 14, 1);
+                          break;
+    case UP_EPROM_27128:  kbit=128;                     // not in partsbin
+                          page=0;
+                          pgm=UP_27XX_PGM28;
+                          icprint(28, 28, 14, 1);
+                          break;
+    case UP_EPROM_27256:  kbit=256;                     // not tested
+                          page=0;
+                          pgm=0;
+                          icprint(28, 28, 14, 1);
+                          break;
+    case UP_EPROM_27512:  kbit=512;                     // not tested
+                          page=0;
+                          pgm=0;
+                          icprint(28, 28, 14, 1);
+                          break;
+    case UP_EPROM_27010:  kbit=1024;                    // not tested
+                          page=0;
+                          pgm=UP_27XX_PGM32;
+                          icprint(32, 32, 16, 1);
+                          break;
+    case UP_EPROM_27020:  kbit=2048;                    // not tested
+                          page*=1024;
+                          pgm=UP_27XX_PGM32;
+                          icprint(32, 32, 16, 1);
+                          break;
+    case UP_EPROM_27040:  kbit=4096;                    // not tested
+                          page*=1024;
+                          pgm=0;
+                          icprint(32, 32, 16, 1);
+                          break;
+    case UP_EPROM_27080:  kbit=8192;                    // not tested, not in partsbin
+                          page*=1024;
+                          pgm=0;
+                          icprint(32, 32, 16, 1);
+                          break;
+    default:              printf("unknown EPROM\r\n");
+                          system_config.error = 1;
+                          return;
+  }
+  
+  // warning for big eproms
+  if(kbit>1024)
+  {
+    printf("WARNING: only 1024Kbit/128Kbyte will be written, page %d selected\r\n", (page/1024));
+    kbit=1024;
+  }
+  
+  printf("Current Vdd=%d.%03d", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) % 1000));
+  printf(", Vpp=%d.%03d", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
+  printf("and pulse=%d\r\n", pulse);
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+
   // setup hardware
   setvpp(1);
   setvcc(1);
@@ -869,43 +936,11 @@ static void writeeprom(uint32_t ictype)
   setdirection(UP_27XX_DIR);
   pins(UP_27XX_OE|UP_27XX_CE);
   
-  switch(ictype)
-  {
-    case UP_EPROM_2764:
-    case UP_EPROM_27128:
-    case UP_EPROM_27256:  icprint(28, 28, 14, 1);
-                          break;
-    case UP_EPROM_27512:  icprint(28, 28, 14, 1); //wrong!!
-                          break;
-    case UP_EPROM_27010:
-    case UP_EPROM_27020:
-    case UP_EPROM_27040:  icprint(32, 32, 16, 1);
-                          break;
-    case UP_EPROM_27080:  icprint(32, 32, 16, 1); // wrong!!
-                          break;
-    default:              printf("wrong number of pins\r\n");
-                          system_config.error = 1;
-                          return;
-  }
-  
-  // print handy info
-  //printf("Programming %s, pulse=%dus, retries=%d,", device.name, device.pulse*4, device.retries); 
-  //printf(" Vdd=%d.%02dV, Vpp=%d.%02dV\r\n", (device.Vdd>>2), (device.Vdd&0x03)*25, (device.Vpp>>2), (device.Vpp&0x03)*25);
-  
-  printf("Is this correct? y to continue\r\n");
-  while(!rx_fifo_try_get(&c));
-  if(c!='y')
-  {
-    printf("Aborted!!\r\n");
-    system_config.error = 1;
-    return;
-  }
-    
   // apply Vcchi Vpp
   setvpp(2);
   setvcc(2);
 
-  for(j=0; j<32*8; j++)
+  for(j=page; j<(page+kbit); j++)
   {
     printf("Programming 0x%05X %c\r", j*128, rotate[j&0x07]);
 
@@ -917,19 +952,18 @@ static void writeeprom(uint32_t ictype)
       dutin|=lut_27xx_mi[((epromaddress>>8)&0x0FF)];
       dutin|=lut_27xx_hi[((epromaddress>>16)&0x0FF)];    
       
-      //TODO: from buffer
-      dutin|=lut_27xx_dat[(epromaddress&0x0FF)];
+      dutin|=lut_27xx_dat[upbuffer[(epromaddress&0x1FFFF)]];
       
       //for(retry=device.retries; retry>0; retry--)
       for(retry=10; retry>0; retry--)
       {
-        pins(dutin|UP_27XX_CE|UP_27XX_OE);  // inhibit
-        setdirection(0);                    // datapins to output
-        pins(dutin|UP_27XX_OE);             // program
-        busy_wait_us(100);                  // pulse
-        pins(dutin|UP_27XX_CE|UP_27XX_OE);  // inhibit
-        setdirection(UP_27XX_DIR);          // datapins to input
-        dutout=pins(dutin|UP_27XX_CE);      // read
+        pins(dutin|UP_27XX_CE|UP_27XX_OE);      // inhibit
+        setdirection(0);                        // datapins to output
+        pins(dutin|UP_27XX_OE);                 // program
+        busy_wait_us(pulse);                    // pulse
+        pins(dutin|UP_27XX_CE|UP_27XX_OE|pgm);  // inhibit
+        setdirection(UP_27XX_DIR);              // datapins to input
+        dutout=pins(dutin|UP_27XX_CE);          // read
         
         if(dutout==(dutin|UP_27XX_CE)) break;
       }
@@ -956,7 +990,7 @@ static void writeeprom(uint32_t ictype)
 
 
 // read eprom
-static void readeprom(uint32_t ictype, uint8_t mode)
+static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
 {
   uint32_t dutin, dutout, epromaddress, pgm, temp;
   uint32_t starttime;
@@ -967,34 +1001,42 @@ static void readeprom(uint32_t ictype, uint8_t mode)
   switch(ictype)
   {
     case UP_EPROM_2764:   kbit=64;                      // seems ok
+                          page=0;
                           pgm=UP_27XX_PGM28|UP_27XX_VPP28;
                           icprint(28, 28, 14, 33);
                           break;
     case UP_EPROM_27128:  kbit=128;                     // not in partsbin
+                          page=0;
                           pgm=UP_27XX_PGM28|UP_27XX_VPP28;
                           icprint(28, 28, 14, 33);
                           break;
     case UP_EPROM_27256:  kbit=256;                     // seems ok
+                          page=0;
                           pgm=0;
                           icprint(28, 28, 14, 33);
                           break;
     case UP_EPROM_27512:  kbit=512;                     // seems ok
+                          page=0;
                           pgm=0;
                           icprint(28, 28, 14, 33);
                           break;
     case UP_EPROM_27010:  kbit=1024;                    // seems ok
+                          page=0;
                           pgm=UP_27XX_PGM32|UP_27XX_VPP32;
                           icprint(32, 32, 16, 33);
                           break;
     case UP_EPROM_27020:  kbit=2048;                    // seems ok
+                          page*=1024;
                           pgm=UP_27XX_PGM32|UP_27XX_VPP32;
                           icprint(32, 32, 16, 33);
                           break;
     case UP_EPROM_27040:  kbit=4096;
+                          page*=1024;
                           pgm=UP_27XX_VPP32;
                           icprint(32, 32, 16, 33);
                           break;
     case UP_EPROM_27080:  kbit=8192;
+                          page*=1024;
                           pgm=0;
                           icprint(32, 32, 16, 33);
                           break;
@@ -1003,6 +1045,19 @@ static void readeprom(uint32_t ictype, uint8_t mode)
                           return;
   }
   
+  // warning for big eproms
+  if((mode!=EPROM_BLANK)&&(kbit>1024))
+  {
+    printf("WARNING: only 1024Kbit/128Kbyte will be read, page %d selected\r\n", (page/1024));
+    kbit=1024;
+  }
+  
+  // blankcheck the whole eprom
+  if(mode==EPROM_BLANK)
+  {
+    page=0;
+  }
+ 
   printf("Is this correct? y to continue\r\n");
   while(!rx_fifo_try_get(&c));
   if(c!='y')
@@ -1024,19 +1079,11 @@ static void readeprom(uint32_t ictype, uint8_t mode)
 
  
   // TODO: check Vpp, Vdd
- 
-  //printf("Reading device %s\r\n", device.name);
-  
-  if((mode!=EPROM_BLANK)&&(kbit>1024))
-  {
-    printf("Warning!! only 1024Kbit/128Kbyte will be read\r\n");
-    kbit=1024;
-  }
   
   // benchmark it!
   starttime=time_us_32();
   
-  for(j=0; j<kbit; j++)
+  for(j=page; j<(page+kbit); j++)
   {
     printf("Reading EPROM 0x%05X %c\r", j*128, rotate[j&0x07]);
     
@@ -1064,11 +1111,11 @@ static void readeprom(uint32_t ictype, uint8_t mode)
       
       switch(mode)
       {
-        case EPROM_READ:    upbuffer[epromaddress]=temp;
+        case EPROM_READ:    upbuffer[(epromaddress&0x1FFFF)]=temp;
                             break;
         case EPROM_BLANK:   if(temp!=0xFF) blank=false;
                             break;
-        case EPROM_VERIFY:  if(upbuffer[epromaddress]!=temp) verify=false;
+        case EPROM_VERIFY:  if(upbuffer[(epromaddress&0x1FFFF)]!=temp) verify=false;
                             break;
         default:            break;
       }

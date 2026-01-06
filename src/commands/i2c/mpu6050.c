@@ -47,7 +47,7 @@ static const char* const usage[] = {
 };
 
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_I2C_MPU6050 },
+    /*{ 1, "", T_HELP_I2C_MPU6050 },*/
     { 0, "-h", T_HELP_FLAG },   // help
 };  
 

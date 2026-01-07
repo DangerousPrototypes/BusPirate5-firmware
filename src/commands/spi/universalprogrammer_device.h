@@ -1,5 +1,11 @@
+/*
+    handler for the UP command. needs the universal programmer 'plank' (https:// xx) 
+    
+    (C) Chris van Dongen 2025-26
 
-// 
+*/
+
+// no volt 
 #define UP_VOLT_0000  ((0<<2)|0)
 
 // vcc/vdd

@@ -1,5 +1,5 @@
-
 /*
+
     handler for the UP command. needs the universal programmer 'plank' (https:// xx) 
     
     (C) Chris van Dongen 2025-26
@@ -89,9 +89,12 @@ static void unclaimextrapins(void);
 static void setvpp(uint8_t voltage);
 static void setvdd(uint8_t voltage);
 #define setvcc(x) setvdd(x);
+static uint32_t sendspi (uint32_t otherpins, uint32_t mosi, uint32_t miso, uint32_t clk, uint32_t cs, int numbits, int mode, uint32_t datain);
+static uint32_t setcs(uint32_t otherpins, uint32_t cs, int mode, int active);
 
-// print how to connect
+// usefull info for the user
 static void icprint(int pins, int vcc, int gnd, int vpp);
+void printbin(uint32_t d);
 
 // tests
 static void up_test(void);
@@ -119,14 +122,18 @@ static void initdram41(void);
 static void testdram41(uint32_t variant);
 static void testsram62(uint32_t variant);
 
-// til305 fun
+// display fun
 static void testdl1414(void);
 static void testtil305(void);
+
+// spirom
+void spiromreadid(void);
 
 // local vars/consts
 static uint8_t *upbuffer=NULL;
 static const char rotate[] = "|/-\\|/-\\";
 static bool verbose=true;
+static bool debug=false;      // print the bits on the ZIF socket
 
 static void systickeltest(void);
 
@@ -213,6 +220,10 @@ void spi_up_handler(struct command_result* res) {
             vtest = true;
             
             up_vtest();
+        }
+        else if (strcmp(action_str, "spirom") == 0)
+        {
+            spiromreadid();
         }
         else if (strcmp(action_str, "display") == 0)
         {
@@ -464,7 +475,10 @@ void spi_up_handler(struct command_result* res) {
             else if(verify) readeprom(ictype, page, EPROM_VERIFY);
           }
         }
-
+        else
+        {
+          printf("Unknown command\r\n");
+        }
     } 
     else
     {
@@ -511,6 +525,13 @@ static void setpullups(uint32_t pullups)
   hwspi_write((uint8_t) (pullups>>8)&0x0FF);
   hwspi_write((uint8_t) pullups&0x0FF);
   hwspi_deselect();
+  
+  if(debug)
+  {
+    printf(" pull() ");
+    printbin(pullups);
+    printf("\r\n");
+  }
 }
 
 // setup the io-direction 
@@ -531,6 +552,13 @@ static void setdirection(uint32_t iodir)
   hwspi_write((uint8_t) (iodir>>8)&0x0FF);
   hwspi_write((uint8_t) iodir&0x0FF);
   hwspi_deselect();
+  
+  if(debug)
+  {
+    printf(" dir()  ");
+    printbin(iodir);
+    printf("\r\n");
+  }
 }
 
 // TODO: add read and write only functions to speed things up.
@@ -573,7 +601,14 @@ static uint32_t pins(uint32_t pinout)
   pinin<<=8;
   pinin|=hwspi_read();
   hwspi_deselect();
-
+  
+  if(debug)
+  {
+    printf(" pins() ");
+    printbin(pinin);
+    printf("\r\n");
+  }
+  
   return pinin; 
 }
 
@@ -681,6 +716,126 @@ static void icprint(int pins, int vcc, int gnd, int vpp)
     printf("Connect Vcc to IO%02d, Vpp to IO%02d and GND to IO%02d, Jumper all other IOs\r\n", vcc, vpp, gnd);
     
 }
+
+void printbin(uint32_t d)
+{
+  int i;
+  uint32_t mask;
+  
+  mask=0x80000000l;
+  
+  for(i=0; i<32; i++)
+  {
+    if(d&mask) printf("1");
+    else printf("0");
+    
+    mask>>=1;
+  }
+}
+
+// spi functions
+uint32_t setcs(uint32_t otherpins, uint32_t cs, int mode, int active)
+{
+  uint32_t dutin;
+  
+  dutin=otherpins;
+  
+  if(active)
+  {
+    if(mode&UP_SPI_CSMASK) dutin|=cs;     // cs=1
+    else dutin&=~cs;                      // cs=0
+  }
+  else
+  {
+    if(mode&UP_SPI_CSMASK) dutin&=~cs;    // cs=0
+    else dutin|=cs;                       // cs=1
+  }
+
+  pins(dutin);
+  
+  return dutin;
+}
+
+uint32_t sendspi (uint32_t otherpins, uint32_t mosi, uint32_t miso, uint32_t clk, uint32_t cs, int numbits, int mode, uint32_t datain)
+{
+  int i;
+  uint32_t dutin, dutout, mask, dataout;
+
+  dutin=otherpins;
+  dataout=0;
+  mask=0x80000000l;
+  
+  mask>>=(32-numbits);
+
+  // clk idle
+  if(mode&UP_SPI_CPOLMASK) dutin|=clk;  // clk=1
+  else dutin&=~clk;                     // clk=0
+  
+  pins(dutin);                          // everything is idle
+
+  // CS asserted
+  if(mode&UP_SPI_CSMASK) dutin|=cs;     // cs=1
+  else dutin&=~cs;                      // cs=0
+  
+  // cpha=0 put new data on bus
+  if(!(mode&UP_SPI_CPHAMASK))        // cpha=0 
+  {
+    if(datain&mask) dutin|=mosi;
+    else dutin&=~mosi;
+    mask>>=1;
+  }
+  
+  pins(dutin);                          // assert cs and new data (if necessary)
+  
+  // clock numbits in and out
+  for(i=0; i<numbits; i++)
+  {
+    // flip clock
+    dutin^=clk;
+    
+    if(mode&UP_SPI_CPHAMASK)          // cpha=1: new data on mosi
+    {
+      if(datain&mask) dutin|=mosi;        // mosi=1
+      else dutin&=~mosi;                  // mosi=0
+      mask>>=1;
+    }
+
+    dutout=pins(dutin);
+    
+    if(!(mode&UP_SPI_CPHAMASK))       // cpha=0: sample miso
+    {
+      dataout<<=1;
+      if(dutout&miso) dataout|=1;
+    }
+    
+    // flip clock again
+    dutin^=clk;
+    
+    if(!(mode&UP_SPI_CPHAMASK))       // cpha=0: new data on mosi
+    {
+      if(datain&mask) dutin|=mosi;
+      else dutin&=~mosi;
+      mask>>=1;
+    }
+    
+    dutout=pins(dutin);
+    
+    if(mode&UP_SPI_CPHAMASK)          // cpha=1: sample miso
+    {
+      dataout<<=1;
+      if(dutout&miso) dataout|=1;
+    }
+  }
+  
+  // clk idle
+//  if(mode&UP_SPI_CPOLMASK) dutin|=clk;  // clk=1
+//  else dutin&=~clk;                     // clk=0
+  
+  pins(dutin);                          // everything is idle
+  
+  return dataout;
+}
+
 
 
 /// --------------------------------------------------------------------- Hardware test
@@ -1505,7 +1660,6 @@ static bool readdram41(uint32_t col, uint32_t row)
   return (dat&UP_DRAM41_DO);
 }
 
-
 static void testdram41(uint32_t variant)
 {
   unsigned int row,col, rowend, colend;
@@ -1827,6 +1981,50 @@ static void testtil305(void)
   pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
   busy_wait_us(100000);
 
+}
+
+/// --------------------------------------------------------------------- spirom helpers
+void spiromreadid(void)
+{
+  uint32_t dutin, id, id2;
+  char c;
+  
+  icprint(8, 8, 4, 33);
+  
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+  
+  setpullups(UP_SPIROM_8PIN_PU);
+  setdirection(UP_SPIROM_8PIN_DIR);
+  setvcc(1);
+  setvpp(0);
+  
+  dutin=(UP_SPIROM_8PIN_CS|UP_SPIROM_8PIN_WP|UP_SPIROM_8PIN_HOLD);
+  pins(dutin);
+
+  // command 0x90
+  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0, UP_CS_ACTIVE);
+     sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0,  8, UP_SPIMODE0_CS0, 0x90);
+     sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 24, UP_SPIMODE0_CS0, 0);
+  id=sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 16, UP_SPIMODE0_CS0, 0);
+  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0, UP_CS_INACTIVE);
+  
+  // command 0x9F
+  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0, UP_CS_ACTIVE);
+      sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0,  8, UP_SPIMODE0_CS0, 0x9F);
+  id2=sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 24, UP_SPIMODE0_CS0, 0);
+  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0, UP_CS_INACTIVE);
+  
+  printf(" id-0x90=%08X id-0x9F=%08X\r\n", id, id2);
+  
+  setvcc(0);
+  setvpp(0);
 }
 
 

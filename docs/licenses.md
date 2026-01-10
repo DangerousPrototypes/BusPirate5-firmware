@@ -32,6 +32,7 @@ All the people listed below hold copyrights to code in this project:
 * Copyright (c) 2021 Jaroslav Kysela <perex@perex.cz>
 * Copyright (c) 2014-2019 Marco Paland (info@paland.com), PALANDesign Hannover, Germany
 * Copyright (c) 2017,2019 Two Blue Cubes Ltd. All rights reserved.
+* Copyright (c) 2025-2026 Chris van Dongen, SMDprutser
 
 
 ## LGPL3

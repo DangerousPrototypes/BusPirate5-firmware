@@ -475,6 +475,7 @@ static char const * const en_us[]={
 	[T_HELP_GCMD_W_ENABLE]="Enable onboard power supply, show configuration menu",
 	[T_HELP_GCMD_W_VOLTS]="Voltage, 0.8-5.0volts",
 	[T_HELP_GCMD_W_CURRENT_LIMIT]="Current limit, 0-500mA",
+	[T_HELP_GCMD_W_UNDERVOLTAGE]="Undervoltage limit <percent>",
 	[T_HELP_GCMD_P]="onboard pull-up resistors",
 	[T_HELP_HELP]="help for Bus Pirate commands and modes",
 	[T_HELP_SYS_COMMAND]="Commands to access the help system",

@@ -196,15 +196,6 @@ void spi_cleanup(void) {
     system_bio_update_purpose_and_label(false, M_SPI_CDO, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_SPI_CDI, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
-    // update system_config pins
-    system_config.misoport = 0;
-    system_config.mosiport = 0;
-    system_config.csport = 0;
-    system_config.clkport = 0;
-    system_config.misopin = 0;
-    system_config.mosipin = 0;
-    system_config.cspin = 0;
-    system_config.clkpin = 0;
 }
 
 bool spi_preflight_sanity_check(void){

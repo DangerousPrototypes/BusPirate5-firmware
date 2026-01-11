@@ -47,7 +47,7 @@ uint32_t usbpd_setup_exc(void) {
   }
 
   // 5V power on
-  psucmd_enable(5.0, 20.0, false);
+  psucmd_enable(5.0, 20.0, false, 100);
 
   sleep_ms(500);
 

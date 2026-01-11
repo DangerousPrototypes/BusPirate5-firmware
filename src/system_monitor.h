@@ -1,4 +1,4 @@
-bool monitor(bool current_sense);
+bool monitor(void);
 void monitor_init(void);
 void monitor_reset(void);
 void monitor_force_update(void);

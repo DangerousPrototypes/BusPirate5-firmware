@@ -14,6 +14,7 @@
 #include "pirate/mcu.h"
 #include "pirate/amux.h"
 #include "pirate/mem.h" //big buffer owner defines
+#include "pirate/psu.h"
 
 // show voltages/pinstates
 void ui_info_print_pin_names(void) {
@@ -30,7 +31,7 @@ void ui_info_print_pin_labels(void) {
     // pin function
 
     // TODO: combine this with the version above in separate function
-    if (system_config.psu) {
+    if (psu_status.enabled) {
         uint32_t isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000) / 4095));
         printf("%s%d.%d%smA\t",
                ui_term_color_num_float(),

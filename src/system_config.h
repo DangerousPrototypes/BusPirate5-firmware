@@ -73,30 +73,18 @@ typedef struct _system_config {
     _pwm_config freq_config[BIO_MAX_PINS]; // holds PWM or FREQ settings for easier display later
     uint8_t freq_active;                   // freq measure active, one bit per channel/pin
     uint8_t aux_active;                    // user controlled aux pins are outputs, resets when used as inputs
-
+    #if 0
     uint8_t psu; // psu (0=off, 1=on)
-                 // uint8_t psu_dat_bits_readable;  // dac bits in human readable format
-    // uint16_t psu_dac_bits_mask;          // 8/10/12 bit psu dac possible, this is the bitmask 0xff 0x3ff or 0x7ff
-    uint16_t psu_dac_v_set; // psu voltage adjust DAC setting
-    uint16_t psu_dac_i_set; // psu current limit DAC setting
     uint32_t psu_voltage;   // psu voltage output setting in decimal * 10000
     bool psu_current_limit_en;
     uint32_t psu_current_limit; // psu current limit in decimal * 10000
     bool psu_current_error;     // psu over current limit fuse tripped
+    bool psu_undervoltage_error;
     bool psu_error;             // error, usually with the dac
     bool psu_irq_en;
+    #endif
 
     uint8_t error; // error occurred
-
-    // TODO: rework this here and in pin info function
-    uint32_t csport; // cs is located on this port/gpio
-    uint32_t cspin;
-    uint32_t misoport; // cs is located on this port/gpio
-    uint32_t misopin;
-    uint32_t clkport; // cs is located on this port/gpio
-    uint32_t clkpin;
-    uint32_t mosiport; // cs is located on this port/gpio
-    uint32_t mosipin;
 
     uint32_t big_buffer_owner;
 

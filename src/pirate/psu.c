@@ -70,6 +70,7 @@ void psu_current_limit_override(bool enable) {
     #else
         #error "Platform not speficied in psu.c"
     #endif
+    psu_status.current_limit_override = enable;
 }
 
 void psu_set_v(float volts, struct psu_status_t* psu) {
@@ -81,9 +82,9 @@ void psu_set_v(float volts, struct psu_status_t* psu) {
         vset = PWM_TOP + 1;
     }
 
-    psu->voltage_requested = volts;
-    psu->voltage_actual_i = ((vset * psu_v_per_bit) + (PSU_V_LOW * 10));
-    psu->voltage_actual = (float)((float)((vset * psu_v_per_bit) + (PSU_V_LOW * 10)) / (float)10000);
+    psu->voltage_requested_float = volts;
+    psu->voltage_actual_int = ((vset * psu_v_per_bit) + (PSU_V_LOW * 10));
+    psu->voltage_actual_float = (float)((float)((vset * psu_v_per_bit) + (PSU_V_LOW * 10)) / (float)10000);
     // inverse for VREG margining
     psu->voltage_dac_value = (PWM_TOP - vset);
 }
@@ -95,9 +96,9 @@ void psu_set_i(float current, struct psu_status_t* psu) {
     float iact = (float)((float)iset * psu_i_per_bit) / 10000;
 
     psu->current_dac_value = (uint32_t)iset;
-    psu->current_requested = current;
-    psu->current_actual_i = (uint32_t)((float)iset * (float)psu_i_per_bit);
-    psu->current_actual = iact;
+    psu->current_requested_float = current;
+    psu->current_actual_int = (uint32_t)((float)iset * (float)psu_i_per_bit);
+    psu->current_actual_float = iact;
 }
 
 void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
@@ -130,17 +131,66 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
     // printf("GPIO: %d, slice: %d, v_chan: %d, i_chan: %d",PSU_PWM_VREG_ADJ,slice_num,v_chan_num,i_chan_num);
 }
 
+// deal with floating limit better (eg 0.7)
+void psu_set_undervoltage_limit(struct psu_status_t* psu, uint8_t undervoltage_percent) {
+    if (undervoltage_percent == 100) {
+        psu->undervoltage_limit_override = true;
+    }else{
+        psu->undervoltage_limit_override = false;
+    }
+    psu->undervoltage_percent = undervoltage_percent;
+    // calculate limit in mV (for display)
+    psu->undervoltage_limit_int = (psu_status.voltage_actual_int - ((float)psu_status.voltage_actual_int * ((float)undervoltage_percent/100.f)));
+    // calculate raw ADC counts for fast comparison: adc = (mV * 4096) / 66000
+    psu->undervoltage_limit_adc = (uint16_t)((psu->undervoltage_limit_int * 4096UL) / 66000UL);
+}
+
 bool psu_fuse_ok(void) {
+    if(psu_status.error_overcurrent) {
+        return false;
+    }
     uint32_t fuse = amux_read(HW_ADC_MUX_CURRENT_DETECT);
-    // printf("Fuse: %d\r\n",fuse);
+    //printf("Fuse: %d\r\n",fuse);
     return (fuse > 300);
 }
 
-bool psu_vout_ok(struct psu_status_t* psu) {
-    return (amux_read(HW_ADC_MUX_VREF_VOUT) > 100); // todo calculate an actual voltage to 10%
+bool psu_vout_ok(void) {
+    if(psu_status.undervoltage_limit_override) {
+        return true;
+    }
+    if(psu_status.error_undervoltage) {
+        return false;
+    }
+    // compare raw ADC counts directly - no runtime math needed
+    return (amux_read(HW_ADC_MUX_VREF_VOUT) > psu_status.undervoltage_limit_adc);
 }
 
-bool psu_backflow_ok(struct psu_status_t* psu) {
+bool psu_poll_fuse_vout_error(void) {
+    if(!psu_status.enabled) {
+        return false;
+    }
+    bool error = false;
+    if (!psu_fuse_ok()) {
+        psu_status.error_overcurrent = true;
+        psu_status.error_pending = true;
+        error = true;
+    }
+    if (!psu_vout_ok()) {
+        psu_status.error_undervoltage = true;
+        psu_status.error_pending = true;
+        error = true;
+    }
+    if(error) {
+        psu_disable();
+    }   
+    return error;
+}
+
+void psu_clear_error_flag(void) {
+    psu_status.error_pending = false;
+}
+
+bool psu_backflow_ok(void) {
     return (amux_read(HW_ADC_MUX_VREF_VOUT) < (amux_read(HW_ADC_MUX_VREG_OUT) + 100)); //+100? TODO: fine tuning
 }
 
@@ -165,14 +215,21 @@ void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
 }
 
 void psu_disable(void) {
+    psu_status.enabled = false;
     psu_vreg_enable(false);
     psu_dac_set(PWM_TOP, 0);
     psu_current_limit_override(false);
     busy_wait_ms(1);
-    psu_fuse_reset(); // reset fuse so it isn't draining current from the opamp
+    psu_fuse_reset(); // reset fuse so it isn't draining current from the opamp    
 }
 
-uint32_t psu_enable(float volts, float current, bool current_limit_override) {
+uint32_t psu_enable(float volts, float current, bool current_limit_override, uint8_t undervoltage_percent) {
+
+    // setup the config struct
+    psu_disable();
+    psu_status.error_overcurrent = false;
+    psu_status.error_undervoltage = false;
+    psu_status.error_pending = false;
 
     psu_set_v(volts, &psu_status);
     if (!current_limit_override) {
@@ -180,6 +237,8 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
     } else {
         psu_status.current_dac_value = PWM_TOP; // override, set to 100% current
     }
+
+    psu_set_undervoltage_limit(&psu_status, undervoltage_percent);
 
     // printf("V dac: 0x%04X I dac: 0x%04X\r\n",psu_status.voltage_dac_value, psu_status.current_dac_value);
     // start with override engaged because the inrush will often trip the fuse on low limits
@@ -193,28 +252,34 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
     if (!current_limit_override) {
         psu_current_limit_override(false);
         psu_dac_set(psu_status.voltage_dac_value, psu_status.current_dac_value);
-        busy_wait_ms(200);
+        busy_wait_ms(500);
         if (!psu_fuse_ok()) { // did the fuse blow?
             psu_disable();
             return PSU_ERROR_FUSE_TRIPPED;
         }
     }
 
-    if (!psu_vout_ok(&psu_status)) { // did the vout voltage drop?
+    if (!psu_vout_ok()) { // did the vout voltage drop?
         psu_disable();
         return PSU_ERROR_VOUT_LOW;
     }
 
-    if (!psu_backflow_ok(&psu_status)) { // is vreg_out < vref_vout?
+    if (!psu_backflow_ok()) { // is vreg_out < vref_vout?
         psu_disable();
         return PSU_ERROR_BACKFLOW;
     }
+
+    psu_status.enabled = true;
 
     return PSU_OK;
 }
 
 void psu_init(void) {
     psu_vreg_enable(false);
+    psu_status.enabled = false;
+    psu_status.error_overcurrent = false;
+    psu_status.error_undervoltage = false;
+    psu_status.error_pending = false;
 
     #if BP_HW_PSU_PWM
         // pin and PWM setup

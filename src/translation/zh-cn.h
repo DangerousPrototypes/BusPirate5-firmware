@@ -459,6 +459,7 @@ static char const * const zh_cn[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_GCMD_W_ENABLE             ] = NULL,
     [ T_HELP_GCMD_W_VOLTS              ] = NULL,
     [ T_HELP_GCMD_W_CURRENT_LIMIT      ] = NULL,
+    [ T_HELP_GCMD_W_UNDERVOLTAGE       ] = NULL,
     [ T_HELP_GCMD_P                    ] = NULL,
     [ T_HELP_HELP                      ] = NULL,
     [ T_HELP_SYS_COMMAND               ] = NULL,

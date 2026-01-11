@@ -459,6 +459,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_GCMD_W_ENABLE             ] = "Abilita l'alimentazione integrata, mostra il menu di configurazione",
     [ T_HELP_GCMD_W_VOLTS              ] = "Tensione, 0,8-5,0 volt",
     [ T_HELP_GCMD_W_CURRENT_LIMIT      ] = "Limite di corrente, 0-500mA",
+    [ T_HELP_GCMD_W_UNDERVOLTAGE       ] = NULL,
     [ T_HELP_GCMD_P                    ] = "resistenze di pull-up integrate",
     [ T_HELP_HELP                      ] = "aiuto per i comandi e le modalità Bus Pirate",
     [ T_HELP_SYS_COMMAND               ] = "Comandi per accedere al sistema di aiuto",

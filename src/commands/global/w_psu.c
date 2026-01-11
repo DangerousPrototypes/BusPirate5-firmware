@@ -151,15 +151,18 @@ void psucmd_enable_handler(struct command_result* res) {
                ui_term_color_reset());
     }
 
-    //if(has_undervoltage_alarm) {
-        printf("%sUndervoltage alarm: %s%d.%d%sV (%d%%)\r\n",
-            ui_term_color_notice(),
+    printf("%sUndervoltage limit: ", ui_term_color_notice());
+
+    if(undervoltage_percent == 100) {
+        printf("%s%s\r\n", ui_term_color_reset(), GET_T(T_MODE_DISABLED));
+    } else {
+        printf("%s%d.%d%sV (%d%%)\r\n",
             ui_term_color_num_float(),
             psu_status.undervoltage_limit_int/10000,
             ( psu_status.undervoltage_limit_int%10000)/100,
             ui_term_color_reset(),
             undervoltage_percent);
-    //}
+    }
 
     // power supply: enabled
     printf("\r\n%s%s:  %s%s\r\n",

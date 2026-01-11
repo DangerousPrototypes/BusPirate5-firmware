@@ -15,7 +15,7 @@
 
 void target_power(int x){
     if (x)
-        psu_enable(5.0f,0.0f,true);
+        psu_enable(5.0f,0.0f,true, 100);
     else
         psu_disable();
 }

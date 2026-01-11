@@ -13,6 +13,7 @@
 #include "display/scope.h"
 #include "pirate/intercore_helpers.h"
 #include "tusb.h"
+#include "pirate/psu.h"
 
 uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
     uint32_t len = 0;
@@ -21,20 +22,31 @@ uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
 
     len += ui_term_color_text_background_buf(&buf[len], buffLen - len, 0x000000, BP_COLOR_GREY);
 
-    if (system_config.psu) {
+    if (psu_status.enabled) {
         temp = snprintf(&buf[len],
                         buffLen - len,
                         "Vout: %u.%uV",
-                        (system_config.psu_voltage) / 10000,
-                        ((system_config.psu_voltage) % 10000) / 100);
+                        (psu_status.voltage_actual_int) / 10000,
+                        ((psu_status.voltage_actual_int) % 10000) / 100);
         len += temp;
         cnt += temp;
-        if (system_config.psu_current_limit_en) {
+
+        if (!psu_status.current_limit_override) {
             temp = snprintf(&buf[len],
                             buffLen - len,
                             "/%u.%umA max",
-                            (system_config.psu_current_limit) / 10000,
-                            ((system_config.psu_current_limit) % 10000) / 100);
+                            (psu_status.current_actual_int) / 10000,
+                            ((psu_status.current_actual_int) % 10000) / 100);
+            len += temp;
+            cnt += temp;
+        }
+
+        if(!psu_status.undervoltage_limit_override){
+            temp = snprintf(&buf[len],
+                            buffLen - len,
+                            "/%u.%uV min",
+                            (psu_status.undervoltage_limit_int) / 10000,
+                            ((psu_status.undervoltage_limit_int) % 10000) / 100);
             len += temp;
             cnt += temp;
         }
@@ -43,13 +55,22 @@ uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
         cnt += temp;
     }
 
-    if (system_config.psu_error) {
+    if (psu_status.error_overcurrent) {
         // show Power Supply: ERROR
         temp = snprintf(&buf[len],
                         buffLen - len,
                         "Vout: ERROR > %u.%umA | ",
-                        (system_config.psu_current_limit) / 10000,
-                        ((system_config.psu_current_limit) % 10000) / 100);
+                        (psu_status.current_actual_int) / 10000,
+                        ((psu_status.current_actual_int) % 10000) / 100);
+        len += temp;
+        cnt += temp;
+    }else if (psu_status.error_undervoltage){
+        // show Power Supply: ERROR
+        temp = snprintf(&buf[len],
+                        buffLen - len,
+                        "Vout: ERROR < %u.%uV | ",
+                        (psu_status.undervoltage_limit_int) / 10000,
+                        ((psu_status.undervoltage_limit_int) % 10000) / 100);
         len += temp;
         cnt += temp;
     }
@@ -58,11 +79,7 @@ uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
         // show Pull-up resistors ON
         temp = snprintf(&buf[len],
                         buffLen - len,
-                        "Pull-ups: ON | ",
-                        (system_config.psu_voltage) / 10000,
-                        ((system_config.psu_voltage) % 10000) / 100,
-                        (system_config.psu_current_limit) / 10000,
-                        ((system_config.psu_current_limit) % 10000) / 100);
+                        "Pull-ups: ON | ");
         len += temp;
         cnt += temp;
     }

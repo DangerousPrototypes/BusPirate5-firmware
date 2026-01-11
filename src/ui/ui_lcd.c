@@ -404,7 +404,7 @@ void lcd_screensaver_enable(void) {
 }
 
 void lcd_screensaver_disable(void) {
-    monitor(system_config.psu);
+    monitor();
     if (displays[system_config.display].display_lcd_update) {
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL|UI_UPDATE_FORCE);
     }

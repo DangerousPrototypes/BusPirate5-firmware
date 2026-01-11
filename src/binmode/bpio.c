@@ -241,16 +241,15 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, 
     // PSU status
     if(query_flags & (1u << bpio_StatusRequestTypes_PSU) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
         if(bpio_debug) printf("[Status Request] PSU status requested\r\n");
-        bpio_StatusResponse_psu_enabled_add(B, system_config.psu);
-        bpio_StatusResponse_psu_set_mv_add(B, system_config.psu_voltage/10);
-        bpio_StatusResponse_psu_set_ma_add(B, system_config.psu_current_limit/10000);
+        bpio_StatusResponse_psu_enabled_add(B, psu_status.enabled);
+        bpio_StatusResponse_psu_set_mv_add(B, psu_status.voltage_actual_int/10);
+        bpio_StatusResponse_psu_set_ma_add(B, psu_status.current_actual_int/ 10000);
         uint32_t vout, isense, vreg;
         bool fuse;
         psu_measure(&vout, &isense, &vreg, &fuse);
         bpio_StatusResponse_psu_measured_mv_add(B, vout);
         bpio_StatusResponse_psu_measured_ma_add(B, isense/1000);
-        bpio_StatusResponse_psu_current_error_add(B, system_config.psu_current_error);
-
+        bpio_StatusResponse_psu_current_error_add(B, psu_status.error_overcurrent||psu_status.error_undervoltage);
     }
 
     //ADC status, return the voltage on IO0...IO7
@@ -399,7 +398,7 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
 
         if(bpio_debug) printf("[Config Request] PSU Voltage: %f, Current: %f, Override: %s\r\n", (float)voltage_mv/1000.0f, (float)current_ma, current_limit_override?"true":"false");
         
-        uint8_t psu_error = psucmd_enable((float)voltage_mv/1000.0f, (float)current_ma, current_limit_override);
+        uint8_t psu_error = psucmd_enable((float)voltage_mv/1000.0f, (float)current_ma, current_limit_override, 100);
         if (psu_error) {
             static const char *psu_error_msg = "Power supply initialization failed";
             if(bpio_debug) printf("[Config Request] Error: %s (%d)\r\n", psu_error_msg, psu_error);

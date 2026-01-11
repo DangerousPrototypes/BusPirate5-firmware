@@ -577,7 +577,7 @@ void sump_logic_analyzer_service(void) {
                 cdc_sump_init();
                 cdc_sump_init_connect();
                 if (system_config.mode == 0 || !tud_cdc_n_connected(0)) {
-                    psu_enable(3.3, 100, true);
+                    psu_enable(3.3, 100, true, 100);
                 }
                 state = SLA_STATE_SERVICE;
             }

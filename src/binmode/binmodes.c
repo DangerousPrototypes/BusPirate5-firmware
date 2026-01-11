@@ -153,7 +153,7 @@ inline void binmode_setup(void) {
         if(binmodes[system_config.binmode_select].psu_en_current==0) {
             i_override = true;
         }
-        psucmd_enable(binmodes[system_config.binmode_select].psu_en_voltage, binmodes[system_config.binmode_select].psu_en_current, i_override);
+        psucmd_enable(binmodes[system_config.binmode_select].psu_en_voltage, binmodes[system_config.binmode_select].psu_en_current, i_override, 100);
         //system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VOUT, ui_const_pin_states[1]);
         //monitor_clear_current(); // reset current so the LCD gets all characters
      }

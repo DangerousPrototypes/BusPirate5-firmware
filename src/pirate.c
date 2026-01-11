@@ -431,7 +431,7 @@ static void main_system_initialization(void) {
     lcd_backlight_enable(false);
 #endif
 
-    monitor(system_config.psu);
+    monitor();
     if (displays[system_config.display].display_lcd_update) {
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
@@ -626,7 +626,7 @@ static void core0_infinite_loop(void) {
         // system error, over current error, etc
         if (system_config.error) {
             printf("\x07");        // bell!
-            psucmd_over_current(); // check for PSU error, reset and show warning
+            psucmd_show_clear_error(); // check for PSU error, reset and show warning
             system_config.error = 0;
             bp_state = BP_SM_COMMAND_PROMPT;
         }
@@ -790,16 +790,12 @@ static void core1_infinite_loop(void) {
         // also receive input from RTT, if available
         rx_from_rtt_terminal();
 
-        if (system_config.psu == 1 &&
-            system_config.psu_irq_en == true &&
-            !psu_fuse_ok()
-            ) {
-            system_config.psu_irq_en = false;
+        if (psu_poll_fuse_vout_error()) {
             psucmd_irq_callback();
         }
 
         if (lcd_update_request) {
-            monitor(system_config.psu); // TODO: fix monitor to return bool up_volts and up_current
+            monitor(); // TODO: fix monitor to return bool up_volts and up_current
             uint32_t update_flags = 0;//core0_requested_update_flags;
             //core0_requested_update_flags = 0;
             if (lcd_update_force) {
@@ -812,7 +808,7 @@ static void core1_infinite_loop(void) {
             if (monitor_voltage_changed()) {
                 update_flags |= UI_UPDATE_VOLTAGES; // pin voltages
             }
-            if (system_config.psu && monitor_current_changed()) {
+            if (psu_status.enabled && monitor_current_changed()) {
                 update_flags |= UI_UPDATE_CURRENT; // psu current sense
             }
             if (system_config.info_bar_changed) {

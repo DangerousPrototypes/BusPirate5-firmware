@@ -29,6 +29,7 @@
 #include "pirate/button.h" // Button press functions
 #include "msc_disk.h"
 #include "pirate/hwspi.h"
+#include "pirate/lsb.h"
 
 #include "pirate/bio.h"
 #include "usb_rx.h"
@@ -92,6 +93,9 @@ static void setvdd(uint8_t voltage);
 static uint32_t sendspi (uint32_t otherpins, uint32_t mosi, uint32_t miso, uint32_t clk, uint32_t cs, int numbits, int mode, uint32_t datain);
 static uint32_t setcs(uint32_t otherpins, uint32_t cs, int mode, int active);
 
+static void setextrapinic1(bool pin);
+static void setextrapinic2(bool pin);
+
 // usefull info for the user
 static void icprint(int pins, int vcc, int gnd, int vpp);
 void printbin(uint32_t d);
@@ -128,6 +132,9 @@ static void testtil305(void);
 
 // spirom
 void spiromreadid(void);
+
+// microchip pic
+void picreadids(void);
 
 // local vars/consts
 static uint8_t *upbuffer=NULL;
@@ -208,6 +215,8 @@ void spi_up_handler(struct command_result* res) {
         if(cmdln_args_find_flag('q')) verbose=false;
             else verbose=true;
 
+        if(cmdln_args_find_flag('d')) debug=true;
+            else debug=false;
       
         if (strcmp(action_str, "test") == 0)
         {
@@ -224,6 +233,10 @@ void spi_up_handler(struct command_result* res) {
         else if (strcmp(action_str, "spirom") == 0)
         {
             spiromreadid();
+        }
+        else if (strcmp(action_str, "pic") == 0)
+        {
+            picreadids();
         }
         else if (strcmp(action_str, "display") == 0)
         {
@@ -612,6 +625,24 @@ static uint32_t pins(uint32_t pinout)
   return pinin; 
 }
 
+static void setextrapinic1(bool pin)
+{
+  hwspi_select();
+  hwspi_write((uint8_t) 0x40);  // ic1
+  hwspi_write((uint8_t) 0x0A);
+  hwspi_write((uint8_t) 0x08|(pin?0x00:0x02));
+  hwspi_deselect();
+}
+
+static void setextrapinic2(bool pin)
+{
+  hwspi_select();
+  hwspi_write((uint8_t) 0x42);  // ic2
+  hwspi_write((uint8_t) 0x0A);
+  hwspi_write((uint8_t) 0x08|(pin?0x00:0x02));
+  hwspi_deselect();
+}
+
 static void claimextrapins(void)
 {
   system_bio_update_purpose_and_label(true, PIN_VSENSE_VCC, BP_PIN_MODE, pin_labels[0]);
@@ -671,10 +702,6 @@ static void icprint(int pins, int vcc, int gnd, int vpp)
 {
   int i;
   char left[4], right[4];
-
-  // magic stuff happening here
-  // pinoffset=(32-numpins)/2;
-  //  
 
   vcc=((32-pins)/2)+vcc;
   gnd=((32-pins)/2)+gnd;
@@ -763,8 +790,13 @@ uint32_t sendspi (uint32_t otherpins, uint32_t mosi, uint32_t miso, uint32_t clk
 
   dutin=otherpins;
   dataout=0;
+
+  if(mode&UP_SPI_BITORDER)  //lsb_convert(uint32_t d, uint8_t num_bits);
+  {
+    datain=lsb_convert(datain, numbits);
+  }
+
   mask=0x80000000l;
-  
   mask>>=(32-numbits);
 
   // clk idle
@@ -827,16 +859,15 @@ uint32_t sendspi (uint32_t otherpins, uint32_t mosi, uint32_t miso, uint32_t clk
     }
   }
   
-  // clk idle
-//  if(mode&UP_SPI_CPOLMASK) dutin|=clk;  // clk=1
-//  else dutin&=~clk;                     // clk=0
-  
   pins(dutin);                          // everything is idle
-  
+
+  if(mode&UP_SPI_BITORDER)
+  {
+    dataout=lsb_convert(dataout, numbits);
+  }
+
   return dataout;
 }
-
-
 
 /// --------------------------------------------------------------------- Hardware test
 // let the user tweak the voltages
@@ -863,74 +894,105 @@ static void up_vtest(void)
   setvcc(2);
   printf("Tweak Vdd and Vpp to desired value. Press any key to continue\r\n");
   
-  while(!rx_fifo_try_get(&c));
+  // TODO: show measured voltages
+  while(!rx_fifo_try_get(&c))
+  {
+    printf("Vcc=%d.%03d  ", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) % 1000));
+    printf("Vpp=%d.%03d \r", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
+  }
+
+  printf("\r\n");
 
   setvpp(0);
   setvcc(0);
 }
 
-// basic hardware test
+// new basic test
 static void up_test(void)
 {
   int i;
+  uint32_t dutin, dutout;
   char c;
-  uint32_t pin;
+ 
+  printf("Is no chip attached?\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+
+  // output test
+  printf("1. Output test\r\n");
+  setvcc(0);
+  setvpp(0);
+  setpullups(0);
+  setdirection(0);
+  pins(0);
   
-  setpullups(0xFFFFFFFFl);    // enable pullups
-  setdirection(0xFFFFFFFFl);  // all inputs
-
-  printf("initialized, all pin input, pullups are on\r\n");
-
-  printf("Input test\r\n\r\n");
-  while(1)
+  for(i=0; i<32; i++)
   {
-    printf(" pins = %08X %c\r", pins(0x00000000l), rotate[i&0x07]);
-    i++;
-    
-    busy_wait_us(100000);
-    
-    if (rx_fifo_try_get(&c))
-    {
-      break;
-    }
+    pins(matrix[i]);
+    printf(" IO%02d = 1\r", i+1);
+    while(!rx_fifo_try_get(&c));
   }
-
-  printf("\r\nOutput test\r\n\r\n");
-  pin=0x00000001l;
-  setpullups(0);              // disable pullups
-  setdirection(0x00000000l);  // all outputs
-  while(1)
+  printf("\r\n");
+  
+  // input test
+  printf("2. Input test (pullups on, use GND)\r\n");
+  setdirection(0xFFFFFFFFl);
+  setpullups(0xFFFFFFFFl);
+  while(!rx_fifo_try_get(&c))
   {
-    printf(" pins = %08X %c\r", pins(pin), rotate[i&0x07]);
-    i++;
-    pin<<=1;
-    if(pin==0) pin=0x00000001l;
-    
-    busy_wait_us(100000);
-    
-    if (rx_fifo_try_get(&c))
+    dutout=pins(0);
+    for(i=0; i<32; i++)
     {
-      break;
+      if(!(dutout&matrix[i])) printf(" IO%02d low\r", i+1);
     }
+    busy_wait_us(200);
   }
+  printf("\r\n");
 
-  printf("\r\nVpp+Vdd test\r\n\r\n");
-
-  while(1)
+  // Vcc voltage rail test
+  // TODO; wait for new hardware and test it
+  printf("3a. Vcc Voltagerail test\r\n");
+  
+  printf("Vcc=0\r\n");
+  setvcc(0);
+  while(!rx_fifo_try_get(&c));
+  
+  printf("Vcc=Vcc\r\n");
+  setvcc(1);
+  while(!rx_fifo_try_get(&c));
+  
+  printf("Vcc=Vcch\r\n");
+  setvcc(2);
+  while(!rx_fifo_try_get(&c));
+  
+  // Vpp voltage rail test
+  // TODO; wait for new hardware and test it
+  printf("3b. Vpp Voltagerail test\r\n");
+  
+  printf("Vpp=0\r\n");
+  setvpp(0);
+  while(!rx_fifo_try_get(&c));
+  
+  printf("Vpp=Vcc\r\n");
+  setvpp(1);
+  while(!rx_fifo_try_get(&c));
+  
+  printf("Vcc=Vcch\r\n");
+  setvpp(2);
+  while(!rx_fifo_try_get(&c));
+  
+  // Vcch, VppH measurement
+  // TODO: wait for new hardware
+  printf("3c. voltages\r\n");
+  while(!rx_fifo_try_get(&c))
   {
-    setvpp(0);
-    printf(" Vpp, Vdd = 0V       \r");
-    busy_wait_us(2000000);
-    setvpp(1);
-    printf(" Vpp, Vdd = 5V       \r");
-    busy_wait_us(2000000);
-    setvpp(2);
-    printf(" Vpp, Vdd = 5V++     \r");
-    if (rx_fifo_try_get(&c))
-    {
-      break;
-    }
-    busy_wait_us(2000000);
+    printf("Vcc=%d.%03d  ", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) % 1000));
+    printf("Vpp=%d.%03d \r", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
   }
 }
 
@@ -1778,7 +1840,6 @@ static void testdram41(uint32_t variant)
   setvcc(0);
 }
 
-
 uint8_t sramtest[] = { 0x00, 0xFF, 0xAA, 0x55 };
 
 static void testsram62(uint32_t variant)
@@ -2009,22 +2070,128 @@ void spiromreadid(void)
   pins(dutin);
 
   // command 0x90
-  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0, UP_CS_ACTIVE);
-     sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0,  8, UP_SPIMODE0_CS0, 0x90);
-     sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 24, UP_SPIMODE0_CS0, 0);
-  id=sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 16, UP_SPIMODE0_CS0, 0);
-  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0, UP_CS_INACTIVE);
+  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0_MSB, UP_CS_ACTIVE);
+     sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0,  8, UP_SPIMODE0_CS0_MSB, 0x90);
+     sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 24, UP_SPIMODE0_CS0_MSB, 0);
+  id=sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 16, UP_SPIMODE0_CS0_MSB, 0);
+  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0_MSB, UP_CS_INACTIVE);
   
   // command 0x9F
-  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0, UP_CS_ACTIVE);
-      sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0,  8, UP_SPIMODE0_CS0, 0x9F);
-  id2=sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 24, UP_SPIMODE0_CS0, 0);
-  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0, UP_CS_INACTIVE);
+  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0_MSB, UP_CS_ACTIVE);
+      sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0,  8, UP_SPIMODE0_CS0_MSB, 0x9F);
+  id2=sendspi(dutin, UP_SPIROM_8PIN_MOSI, UP_SPIROM_8PIN_MISO, UP_SPIROM_8PIN_CLK, 0, 24, UP_SPIMODE0_CS0_MSB, 0);
+  dutin=setcs(dutin, UP_SPIROM_8PIN_CS, UP_SPIMODE0_CS0_MSB, UP_CS_INACTIVE);
   
   printf(" id-0x90=%08X id-0x9F=%08X\r\n", id, id2);
   
   setvcc(0);
   setvpp(0);
+}
+
+
+/// --------------------------------------------------------------------- microchip helpers
+
+#define PIC_CMD_LOADCFG   0x00
+#define PIC_CMD_LOADD_PM  0x02
+#define PIC_CMD_LOADD_DM  0x03
+#define PIC_CMD_READD_PM  0x04
+#define PIC_CMD_READD_DM  0x05
+#define PIC_CMD_INCRADR   0x06
+#define PIC_CMD_PROG      0x08
+#define PIC_CMD_PROGSTART 0x18
+#define PIC_CMD_PROGEND   0x0A
+#define PIC_CMD_ERASE_PM  0x09
+#define PIC_CMD_ERASE_DM  0x0B
+
+// move to inline?
+void picsendcmd(uint32_t cmd)
+{
+  sendspi(0, UP_PIC_8PIN_PDAT, 0, UP_PIC_8PIN_PCLK, 0, 6, UP_SPIMODE1_CS0_LSB, cmd);
+}
+
+void picsenddata(uint32_t dat)
+{
+  sendspi(0, UP_PIC_8PIN_PDAT, 0, UP_PIC_8PIN_PCLK, 0, 16, UP_SPIMODE1_CS0_LSB, dat);
+}
+
+uint32_t picreaddata(void)
+{
+  uint32_t data;
+  
+  setdirection(UP_PIC_8PIN_DIR|UP_PIC_8PIN_PDAT);
+  data=sendspi(0, 0, UP_PIC_8PIN_PDAT, UP_PIC_8PIN_PCLK, 0, 16, UP_SPIMODE1_CS0_LSB, 0);
+  setdirection(UP_PIC_8PIN_DIR);
+
+  return data;
+}
+
+
+// only tested with 12f629
+// TODO: find the pics in the icinf.xml and export
+void picreadids(void)
+{
+  uint32_t id1, id2, id3, id4, id5, devid, revid;
+  char c;
+
+  icprint(8, 1, 8, 4);
+  
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+
+  setvcc(0);
+  setvpp(0);
+
+  setpullups(UP_PIC_8PIN_PU);
+  setdirection(UP_PIC_8PIN_DIR);
+  pins(0);
+  setvpp(2);
+  busy_wait_us(1000);
+  setvcc(1);  
+  
+  // TODO: remove later
+  while(!rx_fifo_try_get(&c));
+  
+  picsendcmd(PIC_CMD_LOADCFG);      // 0x2000
+  picsenddata(0);
+  
+  picsendcmd(PIC_CMD_READD_PM);
+  id1=picreaddata();
+  id1=(id1>>1)&0x3FFF;
+  
+  picsendcmd(PIC_CMD_INCRADR);      // 0x2001
+  picsendcmd(PIC_CMD_READD_PM);
+  id2=picreaddata();
+  id2=(id2>>1)&0x3FFF;
+  
+  picsendcmd(PIC_CMD_INCRADR);      // 0x2002
+  picsendcmd(PIC_CMD_READD_PM);
+  id3=picreaddata();
+  id3=(id3>>1)&0x3FFF;
+
+  picsendcmd(PIC_CMD_INCRADR);      // 0x2003
+  picsendcmd(PIC_CMD_READD_PM);
+  id4=picreaddata();
+  id4=(id4>>1)&0x3FFF;
+  
+  picsendcmd(PIC_CMD_INCRADR);      // 0x2004
+  picsendcmd(PIC_CMD_INCRADR);      // 0x2005
+  picsendcmd(PIC_CMD_INCRADR);      // 0x2006
+
+  picsendcmd(PIC_CMD_READD_PM);
+  id5=picreaddata();
+  id5=(id5>>1)&0x3FFF;
+  
+  devid=(id5>>5);
+  revid=(id5&0x001f);
+  
+  printf("userids: 0x%08X 0x%08X 0x%08X 0x%08X\r\n", id1, id2, id3, id4);
+  printf("dev 0x%03X rev 0x%02X\r\n", devid, revid);
 }
 
 

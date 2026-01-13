@@ -256,7 +256,6 @@ void spi_up_handler(struct command_result* res) {
     // we have two possible parameters: init and test, which
     // our parameter is the first argument following the command itself, but you can use it however works best
     char action_str[9];              // somewhere to store the parameter string
-    bool eprom = false, test = false, logic=false, vtest=false, ram=false, dram=false;            // some flags to keep track of what we want to do
     command_var_t arg; 
     char type[10];
     uint32_t pins=0, kbit=0, ictype=0, pulse;
@@ -295,29 +294,19 @@ void spi_up_handler(struct command_result* res) {
         return;
     }
     
-    //if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
-
     // universal
     verbose = !cmdln_args_find_flag('q'); // quiet flag
 
     switch(action){
       case UP_TEST:
-        test = true;
         up_test();
         break;
 
       case UP_VTEST:
-        vtest = true;
         up_vtest();
         break;
 
-      case UP_TIL305:
-        testtil305();
-        break;
-
       case UP_DRAM:
-        dram = true;
-        
         if(!cmdln_args_find_flag_string('t', &arg, 10, type))
         {
           printf("Use -t to specify DRAM type\r\n");
@@ -361,8 +350,6 @@ void spi_up_handler(struct command_result* res) {
           break;
 
       case UP_RAM:
-        ram = true;
-
         if(!cmdln_args_find_flag_string('t', &arg, 10, type))
         {
           printf("Use -t to specify RAM type\r\n");
@@ -387,8 +374,7 @@ void spi_up_handler(struct command_result* res) {
         else testsram62(ictype);
         break;
 
-      case UP_LOGIC:
-        logic = true;          
+      case UP_LOGIC:     
         numpins=0;
         
         if(!cmdln_args_find_flag_string('t', &arg, 10, type))
@@ -476,8 +462,6 @@ up_buffer_error:
         break;
 
       case UP_EEPROM:
-        eprom = true;
-
         if (!cmdln_args_string_by_position(2, sizeof(action_str), action_str))
         {
           goto up_eeprom_error;

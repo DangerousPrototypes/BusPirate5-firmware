@@ -50,13 +50,16 @@
 #include "commands/spi/zip.c"
 
 // This array of strings is used to display help USAGE examples for the dummy command
-static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
-                                     "Initialize:%s dummy init",
-                                     "Test:%s dummy test",
-                                     "Test, require button press:%s dummy test -b",
-                                     "Integer, value required:%s dummy -i 123",
-                                     "Create/write/read file:%s dummy -f dummy.txt",
-                                     "Kitchen sink:%s dummy test -b -i 123 -f dummy.txt" };
+static const char* const usage[] = { "up [test|vtest|dram|logic|buffer|eprom|spirom|display|ram]\r\n\t[-t <device>]",
+                                     "Adapter test:%s up test",
+                                     "Adapter voltage test:%s up vtest",
+                                     "DRAM test:%s up dram -t <device>",
+                                     "Logic IC test:%s up logic -t <device>",
+                                     "Firmware buffer:%s up buffer read -f <filename>",
+                                     "EEPROM read/readid/blank/write/verify:%s up eprom read -t <device>",
+                                     "SPI ROM readid/read:%s up spirom readid -t <device>",
+                                     "Display test:%s up display -t <device>",
+                                     "RAM test:%s up ram -t <device>" };
 
 // This is a struct of help strings for each option/flag/variable the command accepts
 // Record type 1 is a section header
@@ -69,13 +72,7 @@ static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nte
 //      values
 //      4. Use the new T_ constant in the help text for the command
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_DUMMY_COMMANDS },    // section heading
-    { 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
-    { 0, "test", T_HELP_DUMMY_TEST },    // test is an example we'll find by position
-    { 1, "", T_HELP_DUMMY_FLAGS },       // section heading for flags
-    { 0, "-b", T_HELP_DUMMY_B_FLAG },    //-a flag, with no optional string or integer
-    { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer
-    { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string
+    0
 };
 
 //forward declarations
@@ -147,7 +144,6 @@ static const char pin_labels[][5] = { "Vcc", "Vpp", "VccH", "VppH" };
 enum up_actions_enum {
     UP_TEST,
     UP_VTEST,
-    UP_TIL305,
     UP_DRAM,
     UP_LOGIC,
     UP_BUFFER,
@@ -160,7 +156,6 @@ enum up_actions_enum {
 static const struct cmdln_action_t eeprom_actions[] = {
     {UP_TEST, "test"},
     {UP_VTEST, "vtest"},
-    {UP_TIL305, "til305"},
     {UP_DRAM, "dram"},  
     {UP_LOGIC, "logic"},
     {UP_BUFFER, "buffer"},

@@ -29,7 +29,11 @@
 #include "pirate/button.h" // Button press functions
 #include "msc_disk.h"
 #include "pirate/hwspi.h"
+<<<<<<< HEAD
 #include "pirate/lsb.h"
+=======
+#include "ui/ui_term.h"
+>>>>>>> d0a71eebde257a69c8b1c93783d7a7acebb17475
 
 #include "pirate/bio.h"
 #include "usb_rx.h"
@@ -51,13 +55,16 @@
 #include "commands/spi/zip.c"
 
 // This array of strings is used to display help USAGE examples for the dummy command
-static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nteger) <value>] [-f <file>]",
-                                     "Initialize:%s dummy init",
-                                     "Test:%s dummy test",
-                                     "Test, require button press:%s dummy test -b",
-                                     "Integer, value required:%s dummy -i 123",
-                                     "Create/write/read file:%s dummy -f dummy.txt",
-                                     "Kitchen sink:%s dummy test -b -i 123 -f dummy.txt" };
+static const char* const usage[] = { "up [test|vtest|dram|logic|buffer|eprom|spirom|display|ram]\r\n\t[-t <device>]",
+                                     "Adapter test:%s up test",
+                                     "Adapter voltage test:%s up vtest",
+                                     "DRAM test:%s up dram -t <device>",
+                                     "Logic IC test:%s up logic -t <device>",
+                                     "Firmware buffer:%s up buffer read -f <filename>",
+                                     "EEPROM read/readid/blank/write/verify:%s up eprom read -t <device>",
+                                     "SPI ROM readid/read:%s up spirom readid -t <device>",
+                                     "Display test:%s up display -t <device>",
+                                     "RAM test:%s up ram -t <device>" };
 
 // This is a struct of help strings for each option/flag/variable the command accepts
 // Record type 1 is a section header
@@ -70,13 +77,7 @@ static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nte
 //      values
 //      4. Use the new T_ constant in the help text for the command
 static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_DUMMY_COMMANDS },    // section heading
-    { 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
-    { 0, "test", T_HELP_DUMMY_TEST },    // test is an example we'll find by position
-    { 1, "", T_HELP_DUMMY_FLAGS },       // section heading for flags
-    { 0, "-b", T_HELP_DUMMY_B_FLAG },    //-a flag, with no optional string or integer
-    { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer
-    { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string
+    0
 };
 
 //forward declarations
@@ -150,6 +151,103 @@ static const char pin_labels[][5] = { "Vcc", "Vpp", "VccH", "VppH" };
 #define PIN_VCCH        BIO2
 #define PIN_VPPH        BIO3
 
+
+enum up_actions_enum {
+    UP_TEST,
+    UP_VTEST,
+    UP_DRAM,
+    UP_LOGIC,
+    UP_BUFFER,
+    UP_EEPROM,
+    UP_SPIROM,
+    UP_DISPLAY,
+    UP_RAM
+};
+
+static const struct cmdln_action_t eeprom_actions[] = {
+    {UP_TEST, "test"},
+    {UP_VTEST, "vtest"},
+    {UP_DRAM, "dram"},  
+    {UP_LOGIC, "logic"},
+    {UP_BUFFER, "buffer"},
+    {UP_EEPROM, "eprom"},
+    {UP_SPIROM, "spirom"},
+    {UP_DISPLAY, "display"},
+    {UP_RAM, "ram"},
+};    
+
+// Single descriptor for all logic tables
+typedef struct {
+  const up_logic* table;
+  size_t count;
+  int numpins;
+} up_logic_table_desc_t;
+
+static const up_logic_table_desc_t up_logic_tables[] = {
+  {logicic14, count_of(logicic14), 14},
+  {logicic16, count_of(logicic16), 16},
+  {logicic20, count_of(logicic20), 20},
+  {logicic24, count_of(logicic24), 24},
+  {logicic28, count_of(logicic28), 28},
+  {logicic40, count_of(logicic40), 40},
+};
+
+static bool up_logic_find(const char* type, int* numpins, uint16_t* starttest, uint16_t* endtest)
+{
+  for (size_t t = 0; t < count_of(up_logic_tables); t++) {
+    const up_logic_table_desc_t* lt = &up_logic_tables[t];
+    for (size_t i = 0; i < lt->count; i++) {
+      if (strcmp(type, lt->table[i].name) == 0) {
+        *numpins   = lt->numpins;
+        *starttest = lt->table[i].start;
+        *endtest   = lt->table[i].end;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+static void print_logic_types(void)
+{
+  printf("Supported logic IC types:\r\n");
+  for (size_t t = 0; t < count_of(up_logic_tables); t++) {
+    const up_logic_table_desc_t* lt = &up_logic_tables[t];
+    printf("%s%d-pin types:%s\r\n", ui_term_color_info(), lt->numpins, ui_term_color_reset());
+    for (size_t i = 0; i < lt->count; i++) {
+      printf("%s\t", lt->table[i].name);
+    }
+    printf("\r\n\r\n");
+  }
+}
+
+typedef struct {
+  const char* name;
+  uint32_t ictype;
+} up_eprom_alias_t;
+
+static const up_eprom_alias_t up_eprom_aliases[] = {
+  {"2764",   UP_EPROM_2764},  {"27C64",  UP_EPROM_2764},
+  {"27128",  UP_EPROM_27128}, {"27C128", UP_EPROM_27128},
+  {"27256",  UP_EPROM_27256}, {"27C256", UP_EPROM_27256},
+  {"27512",  UP_EPROM_27512}, {"27C512", UP_EPROM_27512},
+  {"27010",  UP_EPROM_27010}, {"27C010", UP_EPROM_27010},
+  {"27020",  UP_EPROM_27020}, {"27C020", UP_EPROM_27020},
+  {"27040",  UP_EPROM_27040}, {"27C040", UP_EPROM_27040},
+  {"27080",  UP_EPROM_27080}, {"27C080", UP_EPROM_27080},
+};
+
+static bool up_eprom_find_type(const char* name, uint32_t* out_ictype)
+{
+  for (size_t i = 0; i < count_of(up_eprom_aliases); i++) {
+    if (strcmp(name, up_eprom_aliases[i].name) == 0) {
+      *out_ictype = up_eprom_aliases[i].ictype;
+      return true;
+    }
+  }
+  return false;
+}
+
 // magic starts here
 void spi_up_handler(struct command_result* res) {
     uint32_t value; // somewhere to keep an integer value
@@ -177,7 +275,6 @@ void spi_up_handler(struct command_result* res) {
     // we have two possible parameters: init and test, which
     // our parameter is the first argument following the command itself, but you can use it however works best
     char action_str[9];              // somewhere to store the parameter string
-    bool eprom = false, test = false, logic=false, vtest=false, ram=false;             // some flags to keep track of what we want to do
     command_var_t arg; 
     char type[10];
     uint32_t pins=0, kbit=0, ictype=0, pulse;
@@ -208,22 +305,41 @@ void spi_up_handler(struct command_result* res) {
     claimextrapins();
     setvpp(0);
     setvdd(0);
+
+    // common function to parse the command line verb or action
+    uint32_t action;
+    if(cmdln_args_get_action(eeprom_actions, count_of(eeprom_actions), &action)){
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+        return;
+    }
     
-    if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
+    // universal
+    verbose = !cmdln_args_find_flag('q'); // quiet flag
 
-        // universal
-        if(cmdln_args_find_flag('q')) verbose=false;
-            else verbose=true;
+    switch(action){
+      case UP_TEST:
+        up_test();
+        break;
 
+<<<<<<< HEAD
         if(cmdln_args_find_flag('d')) debug=true;
             else debug=false;
       
         if (strcmp(action_str, "test") == 0)
+=======
+      case UP_VTEST:
+        up_vtest();
+        break;
+
+      case UP_DRAM:
+        if(!cmdln_args_find_flag_string('t', &arg, 10, type))
+>>>>>>> d0a71eebde257a69c8b1c93783d7a7acebb17475
         {
-            test = true;
-            
-            up_test();
+          printf("Use -t to specify DRAM type\r\n");
+          system_config.error = 1;
+          return;
         }
+<<<<<<< HEAD
         else if (strcmp(action_str, "vtest") == 0)
         {
             vtest = true;
@@ -345,158 +461,210 @@ void spi_up_handler(struct command_result* res) {
                 }
               }
             }
+=======
+>>>>>>> d0a71eebde257a69c8b1c93783d7a7acebb17475
 
-            if(numpins==0)
-            {
-              printf("Not found!");
-              system_config.error = 1;
-              return;
-            }
-            
-            testlogicic(numpins, starttest, endtest);
-        }
-        else if (strcmp(action_str, "buffer") == 0) 
-        {
-          if (cmdln_args_string_by_position(2, sizeof(action_str), action_str))
-          {
-            if (strcmp(action_str, "read") == 0) read=true;
-            else if (strcmp(action_str, "write") == 0) write=true;  
-            else if (strcmp(action_str, "crc") == 0) crc=true;
-            else if (strcmp(action_str, "clear") == 0) clear=true;
-            else if (strcmp(action_str, "show") == 0) show=true;
-            else
-            {
-              printf("no action defined (read, write, crc, blank)\r\n");
-              system_config.error = 1;
-              return;
-            }
-            
-            if(cmdln_args_find_flag_uint32('o', &arg, &value)) boffset=value; // bufferoffset
-            else boffset=0;
-            
-            if(cmdln_args_find_flag_uint32('O', &arg, &value)) foffset=value; // fileoffset
-            else foffset=0;
-            
-            if(cmdln_args_find_flag_uint32('l', &arg, &value)) length=value; // length
-            else length=128*1024;
-
-            if(cmdln_args_find_flag_uint32('b', &arg, &value)) clearbyte=(value&0x0FF); // clearbyte
-            else clearbyte=0x00;
-            
-            if((read|write)&&(!cmdln_args_find_flag_string('f', &arg, 13, fname)))
-            {
-              printf("No filename given\r\n");
-              system_config.error = 1;  
-              return;
-            }
-           
-            //sanity checks
-            if(length>128*1024)
-            {
-              printf("length should be less then 131072\r\n");
-              system_config.error = 1;
-              return;
-            }
-
-            if(boffset>128*1024)
-            {
-              printf("buffer offset should be less then 131072\r\n");
-              system_config.error = 1;
-              return;
-            }
-
-            if((boffset+length)>128*1024)
-            {
-              printf("buffer offset+length should be less then 131072\r\n");
-              system_config.error = 1;
-              return;
-            }
-
-            
-            if(show) dumpbuffer(boffset, length);
-            else if(crc) crcbuffer(boffset, length);
-            else if(clear) clearbuffer(boffset, length, clearbyte);
-            else if(write) writebuffer(boffset, length, fname);
-            else if(read) readbuffer(boffset, foffset, length, fname);
-          }
-        }
-        else if (strcmp(action_str, "eprom") == 0) 
-        {
-          eprom = true;
-
-          if (cmdln_args_string_by_position(2, sizeof(action_str), action_str))
-          {
-            if (strcmp(action_str, "read") == 0) read=true;
-            else if (strcmp(action_str, "readid") == 0) readid=true;
-            else if (strcmp(action_str, "blank") == 0) blank=true;
-            else if (strcmp(action_str, "write") == 0) write=true;  
-            else if (strcmp(action_str, "verify") == 0) verify=true;  
-            else
-            {
-              printf("no action defined (read, readid, write or blank)\r\n");
-              system_config.error = 1;
-              return;
-            }     
-            
-            if(cmdln_args_find_flag_string('t', &arg, 10, type))
-            {
-              if(strcmp(type, "2764")==0) ictype=UP_EPROM_2764;
-              else if(strcmp(type, "27c64")==0) ictype=UP_EPROM_2764;
-              else if(strcmp(type, "27128")==0) ictype=UP_EPROM_27128;
-              else if(strcmp(type, "27c128")==0) ictype=UP_EPROM_27128;
-              else if(strcmp(type, "27256")==0) ictype=UP_EPROM_27256;
-              else if(strcmp(type, "27c256")==0) ictype=UP_EPROM_27256;
-              else if(strcmp(type, "27512")==0) ictype=UP_EPROM_27512;
-              else if(strcmp(type, "27c512")==0) ictype=UP_EPROM_27512;
-              else if(strcmp(type, "27010")==0) ictype=UP_EPROM_27010;
-              else if(strcmp(type, "27c010")==0) ictype=UP_EPROM_27010;
-              else if(strcmp(type, "27020")==0) ictype=UP_EPROM_27020;
-              else if(strcmp(type, "27c020")==0) ictype=UP_EPROM_27020;
-              else if(strcmp(type, "27040")==0) ictype=UP_EPROM_27040;
-              else if(strcmp(type, "27c040")==0) ictype=UP_EPROM_27040;
-              else if(strcmp(type, "27080")==0) ictype=UP_EPROM_27080;
-              else if(strcmp(type, "27c080")==0) ictype=UP_EPROM_27080;
-              else
-              {
-                printf("EPROM type unknown\r\n");
-                printf(" available are: 2764, 27128, 27256, 27512, 27010, 27020, 27040, 27080\r\n");
-                printf("              27c64, 27c128, 27c256, 27c512, 27c010, 27c020, 27c040, 27c080\r\n");
-                system_config.error = 1;
-                return;
-              }
-
-            }
-            else if(!readid)
-            {
-                printf("Use -t to specify EPROM type\r\n");
-                system_config.error = 1;
-                return;
-            }
-            
-            if(cmdln_args_find_flag_uint32('p', &arg, &value))
-            {
-              page=value;     // page to read, page=128k for read
-              pulse=value;    // pulse for write
-              pins=value;     // pins for readid
-            }
-            else page=0;
-           
-            if(read) readeprom(ictype, page, EPROM_READ);
-            else if(readid) readepromid(pins);
-            else if(write) writeeprom(ictype, page, pulse);
-            else if(blank) readeprom(ictype, page, EPROM_BLANK);
-            else if(verify) readeprom(ictype, page, EPROM_VERIFY);
-          }
-        }
+        if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
+        else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
         else
         {
-          printf("Unknown command\r\n");
+          printf("DRAM type unknown\r\n");
+          printf(" available are: 4164, 41256\r\n");
+          system_config.error = 1;
+          return;
         }
-    } 
-    else
-    {
-        printf("%s\r\n", GET_T(T_HELP_HELP_COMMAND));
-        system_config.error = 1;
+        testdram41(ictype);
+        break;
+
+      case UP_SPIROM:
+          spiromreadid();
+          break;
+
+      case UP_DISPLAY:
+          if(!cmdln_args_find_flag_string('t', &arg, 10, type))
+          {
+            printf("Use -t to specify DISPLAY type\r\n");
+            system_config.error = 1;
+            return;
+          }
+
+          if(strcmp(type, "dl1414")==0) testdl1414();
+          else if(strcmp(type, "til305")==0) testtil305();
+          else
+          {
+            printf("DISPLAY type unknown\r\n");
+            printf(" available are: dl1414, til305\r\n");
+            system_config.error = 1;
+            return;
+          }
+          break;
+
+      case UP_RAM:
+        if(!cmdln_args_find_flag_string('t', &arg, 10, type))
+        {
+          printf("Use -t to specify RAM type\r\n");
+          system_config.error = 1;
+          return;
+        }
+
+        if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
+        else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
+        else if(strcmp(type, "6264")==0) ictype=UP_SRAM_6264;
+        else if(strcmp(type, "62256")==0) ictype=UP_SRAM_62256;
+        else if(strcmp(type, "621024")==0) ictype=UP_SRAM_621024;
+        else
+        {
+          printf("RAM type unknown\r\n");
+          printf(" available are: 4164, 41256, 6264, 62256, 621024\r\n");
+          system_config.error = 1;
+          return;
+        }
+        
+        if(ictype<UP_SRAM_6264) testdram41(ictype);
+        else testsram62(ictype);
+        break;
+
+      case UP_LOGIC:     
+        numpins=0;
+        
+        if(!cmdln_args_find_flag_string('t', &arg, 10, type))
+        {
+          printf("Use -t to specify LOGIC IC type\r\n");
+          system_config.error = 1;
+          return;
+        }
+
+        if(!up_logic_find(type, &numpins, &starttest, &endtest))
+        {
+          printf("Not found: %s\r\n", type);
+          print_logic_types();
+          system_config.error = 1;
+          return;
+        }        
+        testlogicic(numpins, starttest, endtest);
+      break;
+      
+      case UP_BUFFER:
+        if (!cmdln_args_string_by_position(2, sizeof(action_str), action_str))
+        {
+          goto up_buffer_error;
+        }
+
+        if (strcmp(action_str, "read") == 0) read=true;
+        else if (strcmp(action_str, "write") == 0) write=true;  
+        else if (strcmp(action_str, "crc") == 0) crc=true;
+        else if (strcmp(action_str, "clear") == 0) clear=true;
+        else if (strcmp(action_str, "show") == 0) show=true;
+        else
+        {
+up_buffer_error:
+          printf("no action defined (read, write, crc, blank)\r\n");
+          system_config.error = 1;
+          return;
+        }
+        
+        if(cmdln_args_find_flag_uint32('o', &arg, &value)) boffset=value; // bufferoffset
+        else boffset=0;
+        
+        if(cmdln_args_find_flag_uint32('O', &arg, &value)) foffset=value; // fileoffset
+        else foffset=0;
+        
+        if(cmdln_args_find_flag_uint32('l', &arg, &value)) length=value; // length
+        else length=128*1024;
+
+        if(cmdln_args_find_flag_uint32('b', &arg, &value)) clearbyte=(value&0x0FF); // clearbyte
+        else clearbyte=0x00;
+        
+        if((read|write)&&(!cmdln_args_find_flag_string('f', &arg, 13, fname)))
+        {
+          printf("No filename given\r\n");
+          system_config.error = 1;  
+          return;
+        }
+        
+        //sanity checks
+        if(length>128*1024)
+        {
+          printf("length should be less then 131072\r\n");
+          system_config.error = 1;
+          return;
+        }
+
+        if(boffset>128*1024)
+        {
+          printf("buffer offset should be less then 131072\r\n");
+          system_config.error = 1;
+          return;
+        }
+
+        if((boffset+length)>128*1024)
+        {
+          printf("buffer offset+length should be less then 131072\r\n");
+          system_config.error = 1;
+          return;
+        }
+
+        
+        if(show) dumpbuffer(boffset, length);
+        else if(crc) crcbuffer(boffset, length);
+        else if(clear) clearbuffer(boffset, length, clearbyte);
+        else if(write) writebuffer(boffset, length, fname);
+        else if(read) readbuffer(boffset, foffset, length, fname);
+        break;
+
+      case UP_EEPROM:
+        if (!cmdln_args_string_by_position(2, sizeof(action_str), action_str))
+        {
+          goto up_eeprom_error;
+        }
+
+        if (strcmp(action_str, "read") == 0) read=true;
+        else if (strcmp(action_str, "readid") == 0) readid=true;
+        else if (strcmp(action_str, "blank") == 0) blank=true;
+        else if (strcmp(action_str, "write") == 0) write=true;  
+        else if (strcmp(action_str, "verify") == 0) verify=true;  
+        else
+        {
+up_eeprom_error:
+          printf("no action defined (read, readid, write or blank)\r\n");
+          system_config.error = 1;
+          return;
+        }     
+          
+        if(!readid && !cmdln_args_find_flag_string('t', &arg, 10, type))
+        {
+          printf("Use -t to specify EPROM type\r\n");
+          system_config.error = 1;
+          return;
+        }              
+        if(!readid && !up_eprom_find_type(type, &ictype))
+        {
+          printf("EPROM type unknown\r\n");
+          printf(" available are: 2764, 27128, 27256, 27512, 27010, 27020, 27040, 27080\r\n");
+          printf("              27c64, 27c128, 27c256, 27c512, 27c010, 27c020, 27c040, 27c080\r\n");
+          system_config.error = 1;
+          return;
+        }
+            
+        if(cmdln_args_find_flag_uint32('p', &arg, &value))
+        {
+          page=value;     // page to read, page=128k for read
+          pulse=value;    // pulse for write
+          pins=value;     // pins for readid
+        }
+        else page=0;
+           
+        if(read) readeprom(ictype, page, EPROM_READ);
+        else if(readid) readepromid(pins);
+        else if(write) writeeprom(ictype, page, pulse);
+        else if(blank) readeprom(ictype, page, EPROM_BLANK);
+        else if(verify) readeprom(ictype, page, EPROM_VERIFY);
+        break;
+
+      default: //should never get here, should throw help
+        printf("No action defined (test, vtest, dram, logic, buffer, eprom)\r\n");
+        system_config.error = 1;  
+        return;
     }
     
     // 
@@ -996,6 +1164,50 @@ static void up_test(void)
   }
 }
 
+
+#if 0
+typedef struct {
+  uint32_t pin_mask;
+  uint8_t bit_value;
+} up_bit_map_t;
+
+static const up_bit_map_t up_data_bus_map[] = {
+  {UP_27XX_D0, 0x01},
+  {UP_27XX_D1, 0x02},
+  {UP_27XX_D2, 0x04},
+  {UP_27XX_D3, 0x08},
+  {UP_27XX_D4, 0x10},
+  {UP_27XX_D5, 0x20},
+  {UP_27XX_D6, 0x40},
+  {UP_27XX_D7, 0x80},
+};
+
+static uint8_t up_decode_bits(uint32_t value, const up_bit_map_t *map, size_t count)
+{
+  uint8_t out = 0;
+  for (size_t i = 0; i < count; i++) {
+    if (value & map[i].pin_mask) {
+      out |= map[i].bit_value;
+    }
+  }
+  return out;
+}
+
+#endif
+
+static void up_decode_bits(uint32_t dutout, uint8_t* temp)
+{
+  *temp = 0;
+  if(dutout&UP_27XX_D0) *temp|=0x01;
+  if(dutout&UP_27XX_D1) *temp|=0x02;
+  if(dutout&UP_27XX_D2) *temp|=0x04;
+  if(dutout&UP_27XX_D3) *temp|=0x08;
+  if(dutout&UP_27XX_D4) *temp|=0x10;
+  if(dutout&UP_27XX_D5) *temp|=0x20;
+  if(dutout&UP_27XX_D6) *temp|=0x40;
+  if(dutout&UP_27XX_D7) *temp|=0x80;
+}
+
 /// --------------------------------------------------------------------- EPROM 27xxx functions
 // read the epromid
 static void readepromid(int numpins)
@@ -1046,6 +1258,15 @@ static void readepromid(int numpins)
   setvpp(0);
   pins(UP_27XX_OE|UP_27XX_CE);  // vpp??
 
+  //decode id1 (manufacturer)
+  //id1 = up_decode_bits(temp1, up_data_bus_map, count_of(up_data_bus_map));
+  up_decode_bits(temp1, &id1);
+
+  //decode id2 (device)
+  //id2 = up_decode_bits(temp2, up_data_bus_map, count_of(up_data_bus_map));
+  up_decode_bits(temp2, &id2);
+
+  #if 0
   //decode
   id1=0;
   id2=0;
@@ -1069,6 +1290,8 @@ static void readepromid(int numpins)
   if(temp2&UP_27XX_D5) id2|=0x20;
   if(temp2&UP_27XX_D6) id2|=0x40;
   if(temp2&UP_27XX_D7) id2|=0x80;
+
+  #endif
 
   printf("manufacturerID = %02X, deviceID = %02X\r\n", id1, id2);
   
@@ -1096,13 +1319,52 @@ static void readepromid(int numpins)
   setvcc(0); //depower device
 }
 
+
+struct epromconfig
+{
+  uint8_t ictype;
+  uint32_t kbit;
+  uint32_t page;
+  uint32_t pgm_write;
+  uint32_t pgm_read;
+  uint8_t pins;
+  uint8_t vcc;
+  uint8_t gnd;
+  uint8_t vpp;
+};
+
+static const struct epromconfig upeeprom[]={
+  {UP_EPROM_2764,   64,   0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
+  {UP_EPROM_27128,  128,  0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
+  {UP_EPROM_27256,  256,  0, 0,              28, 28, 14, 1},
+  {UP_EPROM_27512,  512,  0, 0,              28, 28, 14, 1},
+  {UP_EPROM_27010, 1024, 0, UP_27XX_PGM32,UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
+  {UP_EPROM_27020, 2048, 1024, UP_27XX_PGM32,UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
+  {UP_EPROM_27040, 4096, 1024, 0,              32, 32, 16, 1},
+  {UP_EPROM_27080, 8192, 1024, 0,              32, 32, 16, 1}
+
+};
+
 // write buffer to eprom
 static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
 {
   int i,j,retry, kbit;
   uint32_t epromaddress, dutin, dutout, pgm;
   char c;
-   
+  
+
+  if(ictype >= count_of(upeeprom))
+  {
+    printf("unknown EPROM\r\n");
+    system_config.error = 1;
+    return;
+  }
+
+  kbit=upeeprom[ictype].kbit;
+  page*=upeeprom[ictype].page;
+  pgm=upeeprom[ictype].pgm_write;
+  icprint(upeeprom[ictype].pins, upeeprom[ictype].vcc, upeeprom[ictype].gnd, upeeprom[ictype].vpp);
+  #if 0
   switch(ictype)
   {
     case UP_EPROM_2764:   kbit=64;                      // not tested
@@ -1149,7 +1411,7 @@ static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
                           system_config.error = 1;
                           return;
   }
-  
+  #endif
   // warning for big eproms
   if(kbit>1024)
   {
@@ -1237,54 +1499,18 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
   int i, j, kbit;
   char c, device;
   bool blank=true, verify=true;
-  
-  switch(ictype)
+
+  if(ictype >= count_of(upeeprom))
   {
-    case UP_EPROM_2764:   kbit=64;                      // seems ok
-                          page=0;
-                          pgm=UP_27XX_PGM28|UP_27XX_VPP28;
-                          icprint(28, 28, 14, 33);
-                          break;
-    case UP_EPROM_27128:  kbit=128;                     // not in partsbin
-                          page=0;
-                          pgm=UP_27XX_PGM28|UP_27XX_VPP28;
-                          icprint(28, 28, 14, 33);
-                          break;
-    case UP_EPROM_27256:  kbit=256;                     // seems ok
-                          page=0;
-                          pgm=0;
-                          icprint(28, 28, 14, 33);
-                          break;
-    case UP_EPROM_27512:  kbit=512;                     // seems ok
-                          page=0;
-                          pgm=0;
-                          icprint(28, 28, 14, 33);
-                          break;
-    case UP_EPROM_27010:  kbit=1024;                    // seems ok
-                          page=0;
-                          pgm=UP_27XX_PGM32|UP_27XX_VPP32;
-                          icprint(32, 32, 16, 33);
-                          break;
-    case UP_EPROM_27020:  kbit=2048;                    // seems ok
-                          page*=1024;
-                          pgm=UP_27XX_PGM32|UP_27XX_VPP32;
-                          icprint(32, 32, 16, 33);
-                          break;
-    case UP_EPROM_27040:  kbit=4096;
-                          page*=1024;
-                          pgm=UP_27XX_VPP32;
-                          icprint(32, 32, 16, 33);
-                          break;
-    case UP_EPROM_27080:  kbit=8192;
-                          page*=1024;
-                          pgm=0;
-                          icprint(32, 32, 16, 33);
-                          break;
-    default:              printf("unknown EPROM\r\n");
-                          system_config.error = 1;
-                          return;
+    printf("unknown EPROM\r\n");
+    system_config.error = 1;
+    return;
   }
-  
+  kbit=upeeprom[ictype].kbit;
+  page*=upeeprom[ictype].page;
+  pgm=upeeprom[ictype].pgm_read;
+  icprint(upeeprom[ictype].pins, upeeprom[ictype].vcc, upeeprom[ictype].gnd, 33);
+   
   // warning for big eproms
   if((mode!=EPROM_BLANK)&&(kbit>1024))
   {
@@ -1336,10 +1562,11 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
       dutin|=lut_27xx_mi[((epromaddress>>8)&0x0FF)];
       dutin|=lut_27xx_hi[((epromaddress>>16)&0x0FF)];
     
-      temp=0;
-      
+      uint8_t decoded_byte;      
       dutout=pins(dutin);
-      
+      //temp = up_decode_bits(dutout, up_data_bus_map, count_of(up_data_bus_map));
+      up_decode_bits(dutout, &decoded_byte);
+      #if 0
       if(dutout&UP_27XX_D0) temp|=0x01;
       if(dutout&UP_27XX_D1) temp|=0x02;
       if(dutout&UP_27XX_D2) temp|=0x04;
@@ -1348,14 +1575,15 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
       if(dutout&UP_27XX_D5) temp|=0x20;
       if(dutout&UP_27XX_D6) temp|=0x40;
       if(dutout&UP_27XX_D7) temp|=0x80;
+      #endif
       
       switch(mode)
       {
-        case EPROM_READ:    upbuffer[(epromaddress&0x1FFFF)]=temp;
+        case EPROM_READ:    upbuffer[(epromaddress&0x1FFFF)]=decoded_byte;
                             break;
-        case EPROM_BLANK:   if(temp!=0xFF) blank=false;
+        case EPROM_BLANK:   if(decoded_byte!=0xFF) blank=false;
                             break;
-        case EPROM_VERIFY:  if(upbuffer[(epromaddress&0x1FFFF)]!=temp) verify=false;
+        case EPROM_VERIFY:  if(upbuffer[(epromaddress&0x1FFFF)]!=decoded_byte) verify=false;
                             break;
         default:            break;
       }

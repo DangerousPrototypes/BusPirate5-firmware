@@ -197,6 +197,19 @@ static bool up_logic_find(const char* type, int* numpins, uint16_t* starttest, u
   return false;
 }
 
+static void print_logic_types(void)
+{
+  printf("Supported logic IC types:\r\n");
+  for (size_t t = 0; t < count_of(up_logic_tables); t++) {
+    const up_logic_table_desc_t* lt = &up_logic_tables[t];
+    printf("%d-pin types:\r\n", lt->numpins);
+    for (size_t i = 0; i < lt->count; i++) {
+      printf("%s ", lt->table[i].name);
+    }
+    printf("\r\n");
+  }
+}
+
 typedef struct {
   const char* name;
   uint32_t ictype;
@@ -382,6 +395,7 @@ void spi_up_handler(struct command_result* res) {
         if(!up_logic_find(type, &numpins, &starttest, &endtest))
         {
           printf("Not found: %s\r\n", type);
+          print_logic_types();
           system_config.error = 1;
           return;
         }        

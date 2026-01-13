@@ -29,11 +29,8 @@
 #include "pirate/button.h" // Button press functions
 #include "msc_disk.h"
 #include "pirate/hwspi.h"
-<<<<<<< HEAD
 #include "pirate/lsb.h"
-=======
 #include "ui/ui_term.h"
->>>>>>> d0a71eebde257a69c8b1c93783d7a7acebb17475
 
 #include "pirate/bio.h"
 #include "usb_rx.h"
@@ -161,7 +158,8 @@ enum up_actions_enum {
     UP_EEPROM,
     UP_SPIROM,
     UP_DISPLAY,
-    UP_RAM
+    UP_RAM,
+    UP_PIC
 };
 
 static const struct cmdln_action_t eeprom_actions[] = {
@@ -174,6 +172,7 @@ static const struct cmdln_action_t eeprom_actions[] = {
     {UP_SPIROM, "spirom"},
     {UP_DISPLAY, "display"},
     {UP_RAM, "ram"},
+    {UP_PIC, "pic"},
 };    
 
 // Single descriptor for all logic tables
@@ -313,156 +312,27 @@ void spi_up_handler(struct command_result* res) {
         return;
     }
     
-    // universal
+    // universal commands
     verbose = !cmdln_args_find_flag('q'); // quiet flag
-
+    debug = cmdln_args_find_flag('d'); // debug flag
+    
     switch(action){
       case UP_TEST:
         up_test();
         break;
 
-<<<<<<< HEAD
-        if(cmdln_args_find_flag('d')) debug=true;
-            else debug=false;
-      
-        if (strcmp(action_str, "test") == 0)
-=======
       case UP_VTEST:
         up_vtest();
         break;
 
       case UP_DRAM:
         if(!cmdln_args_find_flag_string('t', &arg, 10, type))
->>>>>>> d0a71eebde257a69c8b1c93783d7a7acebb17475
         {
           printf("Use -t to specify DRAM type\r\n");
           system_config.error = 1;
           return;
         }
-<<<<<<< HEAD
-        else if (strcmp(action_str, "vtest") == 0)
-        {
-            vtest = true;
-            
-            up_vtest();
-        }
-        else if (strcmp(action_str, "spirom") == 0)
-        {
-            spiromreadid();
-        }
-        else if (strcmp(action_str, "pic") == 0)
-        {
-            picreadids();
-        }
-        else if (strcmp(action_str, "display") == 0)
-        {
-          if(cmdln_args_find_flag_string('t', &arg, 10, type))
-          {
-            if(strcmp(type, "dl1414")==0) testdl1414();
-            else if(strcmp(type, "til305")==0) testtil305();
-            else
-            {
-              printf("DISPLAY type unknown\r\n");
-              printf(" available are: dl1414, til305\r\n");
-              system_config.error = 1;
-              return;
-            }
-          }
-        }
-        else if (strcmp(action_str, "ram") == 0)
-        {
-            ram = true;
- 
-            if(cmdln_args_find_flag_string('t', &arg, 10, type))
-            {
-              if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
-              else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
-              else if(strcmp(type, "6264")==0) ictype=UP_SRAM_6264;
-              else if(strcmp(type, "62256")==0) ictype=UP_SRAM_62256;
-              else if(strcmp(type, "621024")==0) ictype=UP_SRAM_621024;
-              else
-              {
-                printf("RAM type unknown\r\n");
-                printf(" available are: 4164, 41256, 6264, 62256, 621024\r\n");
-                system_config.error = 1;
-                return;
-              }
-            }
-            else
-            {
-              printf("Use -t to specify SRAM type\r\n");
-              system_config.error = 1;
-              return;
-            }
-            
-            if(ictype<UP_SRAM_6264) testdram41(ictype);
-            else testsram62(ictype);
-        }
-        else if (strcmp(action_str, "logic") == 0)
-        {
-            logic = true;
-            
-            numpins=0;
-            
-            if(cmdln_args_find_flag_string('t', &arg, 10, type))
-            {
-              for(i=0; i<(sizeof(logicic14)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic14[i].name) == 0)
-                {
-                  numpins=14;
-                  starttest=logicic14[i].start;
-                  endtest=logicic14[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic16)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic16[i].name) == 0)
-                {
-                  numpins=16;
-                  starttest=logicic16[i].start;
-                  endtest=logicic16[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic20)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic20[i].name) == 0)
-                {
-                  numpins=20;
-                  starttest=logicic20[i].start;
-                  endtest=logicic20[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic24)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic24[i].name) == 0)
-                {
-                  numpins=24;
-                  starttest=logicic24[i].start;
-                  endtest=logicic24[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic28)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic28[i].name) == 0)
-                {
-                  numpins=28;
-                  starttest=logicic28[i].start;
-                  endtest=logicic28[i].end;
-                }
-              }
-              for(i=0; i<(sizeof(logicic40)/sizeof(up_logic)); i++)
-              {
-                if (strcmp(type, logicic40[i].name) == 0)
-                {
-                  numpins=40;
-                  starttest=logicic40[i].start;
-                  endtest=logicic40[i].end;
-                }
-              }
-            }
-=======
->>>>>>> d0a71eebde257a69c8b1c93783d7a7acebb17475
+
 
         if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
         else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
@@ -478,6 +348,10 @@ void spi_up_handler(struct command_result* res) {
 
       case UP_SPIROM:
           spiromreadid();
+          break;
+
+      case UP_PIC:
+          picreadids();
           break;
 
       case UP_DISPLAY:

@@ -298,248 +298,234 @@ void spi_up_handler(struct command_result* res) {
     //if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
 
     // universal
-    if(cmdln_args_find_flag('q')) verbose=false;
-        else verbose=true;
+    verbose = !cmdln_args_find_flag('q'); // quiet flag
 
     switch(action){
       case UP_TEST:
         test = true;
         up_test();
         break;
+
       case UP_VTEST:
         vtest = true;
         up_vtest();
         break;
+
       case UP_TIL305:
         testtil305();
         break;
+
       case UP_DRAM:
         dram = true;
         
-        if(cmdln_args_find_flag_string('t', &arg, 10, type))
-        {
-          if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
-          else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
-          else
-          {
-            printf("DRAM type unknown\r\n");
-            printf(" available are: 4164, 41256\r\n");
-            system_config.error = 1;
-            return;
-          }
-        }
-        else
+        if(!cmdln_args_find_flag_string('t', &arg, 10, type))
         {
           printf("Use -t to specify DRAM type\r\n");
           system_config.error = 1;
           return;
         }
+
+        if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
+        else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
+        else
+        {
+          printf("DRAM type unknown\r\n");
+          printf(" available are: 4164, 41256\r\n");
+          system_config.error = 1;
+          return;
+        }
         testdram41(ictype);
         break;
+
       case UP_SPIROM:
           spiromreadid();
           break;
+
       case UP_DISPLAY:
-          if(cmdln_args_find_flag_string('t', &arg, 10, type))
+          if(!cmdln_args_find_flag_string('t', &arg, 10, type))
           {
-            if(strcmp(type, "dl1414")==0) testdl1414();
-            else if(strcmp(type, "til305")==0) testtil305();
-            else
-            {
-              printf("DISPLAY type unknown\r\n");
-              printf(" available are: dl1414, til305\r\n");
-              system_config.error = 1;
-              return;
-            }
+            printf("Use -t to specify DISPLAY type\r\n");
+            system_config.error = 1;
+            return;
+          }
+
+          if(strcmp(type, "dl1414")==0) testdl1414();
+          else if(strcmp(type, "til305")==0) testtil305();
+          else
+          {
+            printf("DISPLAY type unknown\r\n");
+            printf(" available are: dl1414, til305\r\n");
+            system_config.error = 1;
+            return;
           }
           break;
 
       case UP_RAM:
         ram = true;
 
-        if(cmdln_args_find_flag_string('t', &arg, 10, type))
+        if(!cmdln_args_find_flag_string('t', &arg, 10, type))
         {
-          if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
-          else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
-          else if(strcmp(type, "6264")==0) ictype=UP_SRAM_6264;
-          else if(strcmp(type, "62256")==0) ictype=UP_SRAM_62256;
-          else if(strcmp(type, "621024")==0) ictype=UP_SRAM_621024;
-          else
-          {
-            printf("RAM type unknown\r\n");
-            printf(" available are: 4164, 41256, 6264, 62256, 621024\r\n");
-            system_config.error = 1;
-            return;
-          }
+          printf("Use -t to specify RAM type\r\n");
+          system_config.error = 1;
+          return;
         }
+
+        if(strcmp(type, "4164")==0) ictype=UP_DRAM_4164;
+        else if(strcmp(type, "41256")==0) ictype=UP_DRAM_41256;
+        else if(strcmp(type, "6264")==0) ictype=UP_SRAM_6264;
+        else if(strcmp(type, "62256")==0) ictype=UP_SRAM_62256;
+        else if(strcmp(type, "621024")==0) ictype=UP_SRAM_621024;
         else
         {
-          printf("Use -t to specify SRAM type\r\n");
+          printf("RAM type unknown\r\n");
+          printf(" available are: 4164, 41256, 6264, 62256, 621024\r\n");
           system_config.error = 1;
           return;
         }
         
         if(ictype<UP_SRAM_6264) testdram41(ictype);
         else testsram62(ictype);
-        
         break;
 
       case UP_LOGIC:
         logic = true;          
         numpins=0;
         
-        if(cmdln_args_find_flag_string('t', &arg, 10, type))
+        if(!cmdln_args_find_flag_string('t', &arg, 10, type))
         {
-          if(!up_logic_find(type, &numpins, &starttest, &endtest)){
-            printf("Not found!");
-            system_config.error = 1;
-            return;
-          }        
-          testlogicic(numpins, starttest, endtest);
+          printf("Use -t to specify LOGIC IC type\r\n");
+          system_config.error = 1;
+          return;
         }
+
+        if(!up_logic_find(type, &numpins, &starttest, &endtest))
+        {
+          printf("Not found: %s\r\n", type);
+          system_config.error = 1;
+          return;
+        }        
+        testlogicic(numpins, starttest, endtest);
       break;
       
       case UP_BUFFER:
-          if (cmdln_args_string_by_position(2, sizeof(action_str), action_str))
-          {
-            if (strcmp(action_str, "read") == 0) read=true;
-            else if (strcmp(action_str, "write") == 0) write=true;  
-            else if (strcmp(action_str, "crc") == 0) crc=true;
-            else if (strcmp(action_str, "clear") == 0) clear=true;
-            else if (strcmp(action_str, "show") == 0) show=true;
-            else
-            {
-              printf("no action defined (read, write, crc, blank)\r\n");
-              system_config.error = 1;
-              return;
-            }
-            
-            if(cmdln_args_find_flag_uint32('o', &arg, &value)) boffset=value; // bufferoffset
-            else boffset=0;
-            
-            if(cmdln_args_find_flag_uint32('O', &arg, &value)) foffset=value; // fileoffset
-            else foffset=0;
-            
-            if(cmdln_args_find_flag_uint32('l', &arg, &value)) length=value; // length
-            else length=128*1024;
+        if (!cmdln_args_string_by_position(2, sizeof(action_str), action_str))
+        {
+          goto up_buffer_error;
+        }
 
-            if(cmdln_args_find_flag_uint32('b', &arg, &value)) clearbyte=(value&0x0FF); // clearbyte
-            else clearbyte=0x00;
-            
-            if((read|write)&&(!cmdln_args_find_flag_string('f', &arg, 13, fname)))
-            {
-              printf("No filename given\r\n");
-              system_config.error = 1;  
-              return;
-            }
-           
-            //sanity checks
-            if(length>128*1024)
-            {
-              printf("length should be less then 131072\r\n");
-              system_config.error = 1;
-              return;
-            }
+        if (strcmp(action_str, "read") == 0) read=true;
+        else if (strcmp(action_str, "write") == 0) write=true;  
+        else if (strcmp(action_str, "crc") == 0) crc=true;
+        else if (strcmp(action_str, "clear") == 0) clear=true;
+        else if (strcmp(action_str, "show") == 0) show=true;
+        else
+        {
+up_buffer_error:
+          printf("no action defined (read, write, crc, blank)\r\n");
+          system_config.error = 1;
+          return;
+        }
+        
+        if(cmdln_args_find_flag_uint32('o', &arg, &value)) boffset=value; // bufferoffset
+        else boffset=0;
+        
+        if(cmdln_args_find_flag_uint32('O', &arg, &value)) foffset=value; // fileoffset
+        else foffset=0;
+        
+        if(cmdln_args_find_flag_uint32('l', &arg, &value)) length=value; // length
+        else length=128*1024;
 
-            if(boffset>128*1024)
-            {
-              printf("buffer offset should be less then 131072\r\n");
-              system_config.error = 1;
-              return;
-            }
+        if(cmdln_args_find_flag_uint32('b', &arg, &value)) clearbyte=(value&0x0FF); // clearbyte
+        else clearbyte=0x00;
+        
+        if((read|write)&&(!cmdln_args_find_flag_string('f', &arg, 13, fname)))
+        {
+          printf("No filename given\r\n");
+          system_config.error = 1;  
+          return;
+        }
+        
+        //sanity checks
+        if(length>128*1024)
+        {
+          printf("length should be less then 131072\r\n");
+          system_config.error = 1;
+          return;
+        }
 
-            if((boffset+length)>128*1024)
-            {
-              printf("buffer offset+length should be less then 131072\r\n");
-              system_config.error = 1;
-              return;
-            }
+        if(boffset>128*1024)
+        {
+          printf("buffer offset should be less then 131072\r\n");
+          system_config.error = 1;
+          return;
+        }
 
-            
-            if(show) dumpbuffer(boffset, length);
-            else if(crc) crcbuffer(boffset, length);
-            else if(clear) clearbuffer(boffset, length, clearbyte);
-            else if(write) writebuffer(boffset, length, fname);
-            else if(read) readbuffer(boffset, foffset, length, fname);
-          }
+        if((boffset+length)>128*1024)
+        {
+          printf("buffer offset+length should be less then 131072\r\n");
+          system_config.error = 1;
+          return;
+        }
+
+        
+        if(show) dumpbuffer(boffset, length);
+        else if(crc) crcbuffer(boffset, length);
+        else if(clear) clearbuffer(boffset, length, clearbyte);
+        else if(write) writebuffer(boffset, length, fname);
+        else if(read) readbuffer(boffset, foffset, length, fname);
         break;
+
       case UP_EEPROM:
-          eprom = true;
+        eprom = true;
 
-          if (cmdln_args_string_by_position(2, sizeof(action_str), action_str))
-          {
-            if (strcmp(action_str, "read") == 0) read=true;
-            else if (strcmp(action_str, "readid") == 0) readid=true;
-            else if (strcmp(action_str, "blank") == 0) blank=true;
-            else if (strcmp(action_str, "write") == 0) write=true;  
-            else if (strcmp(action_str, "verify") == 0) verify=true;  
-            else
-            {
-              printf("no action defined (read, readid, write or blank)\r\n");
-              system_config.error = 1;
-              return;
-            }     
-            
-            if(cmdln_args_find_flag_string('t', &arg, 10, type))
-            {
-              if(!up_eprom_find_type(type, &ictype))
-              {
-                printf("EPROM type unknown\r\n");
-                printf(" available are: 2764, 27128, 27256, 27512, 27010, 27020, 27040, 27080\r\n");
-                printf("              27c64, 27c128, 27c256, 27c512, 27c010, 27c020, 27c040, 27c080\r\n");
-                system_config.error = 1;
-                return;
-              }
-              #if 0
-              if(strcmp(type, "2764")==0) ictype=UP_EPROM_2764;
-              else if(strcmp(type, "27c64")==0) ictype=UP_EPROM_2764;
-              else if(strcmp(type, "27128")==0) ictype=UP_EPROM_27128;
-              else if(strcmp(type, "27c128")==0) ictype=UP_EPROM_27128;
-              else if(strcmp(type, "27256")==0) ictype=UP_EPROM_27256;
-              else if(strcmp(type, "27c256")==0) ictype=UP_EPROM_27256;
-              else if(strcmp(type, "27512")==0) ictype=UP_EPROM_27512;
-              else if(strcmp(type, "27c512")==0) ictype=UP_EPROM_27512;
-              else if(strcmp(type, "27010")==0) ictype=UP_EPROM_27010;
-              else if(strcmp(type, "27c010")==0) ictype=UP_EPROM_27010;
-              else if(strcmp(type, "27020")==0) ictype=UP_EPROM_27020;
-              else if(strcmp(type, "27c020")==0) ictype=UP_EPROM_27020;
-              else if(strcmp(type, "27040")==0) ictype=UP_EPROM_27040;
-              else if(strcmp(type, "27c040")==0) ictype=UP_EPROM_27040;
-              else if(strcmp(type, "27080")==0) ictype=UP_EPROM_27080;
-              else if(strcmp(type, "27c080")==0) ictype=UP_EPROM_27080;
-              else
-              {
-                printf("EPROM type unknown\r\n");
-                printf(" available are: 2764, 27128, 27256, 27512, 27010, 27020, 27040, 27080\r\n");
-                printf("              27c64, 27c128, 27c256, 27c512, 27c010, 27c020, 27c040, 27c080\r\n");
-                system_config.error = 1;
-                return;
-              }
-              #endif
+        if (!cmdln_args_string_by_position(2, sizeof(action_str), action_str))
+        {
+          goto up_eeprom_error;
+        }
 
-            }
-            else if(!readid)
-            {
-                printf("Use -t to specify EPROM type\r\n");
-                system_config.error = 1;
-                return;
-            }
+        if (strcmp(action_str, "read") == 0) read=true;
+        else if (strcmp(action_str, "readid") == 0) readid=true;
+        else if (strcmp(action_str, "blank") == 0) blank=true;
+        else if (strcmp(action_str, "write") == 0) write=true;  
+        else if (strcmp(action_str, "verify") == 0) verify=true;  
+        else
+        {
+up_eeprom_error:
+          printf("no action defined (read, readid, write or blank)\r\n");
+          system_config.error = 1;
+          return;
+        }     
+          
+        if(!readid && !cmdln_args_find_flag_string('t', &arg, 10, type))
+        {
+          printf("Use -t to specify EPROM type\r\n");
+          system_config.error = 1;
+          return;
+        }              
+        if(!readid && !up_eprom_find_type(type, &ictype))
+        {
+          printf("EPROM type unknown\r\n");
+          printf(" available are: 2764, 27128, 27256, 27512, 27010, 27020, 27040, 27080\r\n");
+          printf("              27c64, 27c128, 27c256, 27c512, 27c010, 27c020, 27c040, 27c080\r\n");
+          system_config.error = 1;
+          return;
+        }
             
-            if(cmdln_args_find_flag_uint32('p', &arg, &value))
-            {
-              page=value;     // page to read, page=128k for read
-              pulse=value;    // pulse for write
-              pins=value;     // pins for readid
-            }
-            else page=0;
+        if(cmdln_args_find_flag_uint32('p', &arg, &value))
+        {
+          page=value;     // page to read, page=128k for read
+          pulse=value;    // pulse for write
+          pins=value;     // pins for readid
+        }
+        else page=0;
            
-            if(read) readeprom(ictype, page, EPROM_READ);
-            else if(readid) readepromid(pins);
-            else if(write) writeeprom(ictype, page, pulse);
-            else if(blank) readeprom(ictype, page, EPROM_BLANK);
-            else if(verify) readeprom(ictype, page, EPROM_VERIFY);
-          }
+        if(read) readeprom(ictype, page, EPROM_READ);
+        else if(readid) readepromid(pins);
+        else if(write) writeeprom(ictype, page, pulse);
+        else if(blank) readeprom(ictype, page, EPROM_BLANK);
+        else if(verify) readeprom(ictype, page, EPROM_VERIFY);
         break;
+
       default: //should never get here, should throw help
         printf("No action defined (test, vtest, dram, logic, buffer, eprom)\r\n");
         system_config.error = 1;  

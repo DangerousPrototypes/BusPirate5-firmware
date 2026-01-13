@@ -29,6 +29,7 @@
 #include "pirate/button.h" // Button press functions
 #include "msc_disk.h"
 #include "pirate/hwspi.h"
+#include "ui/ui_term.h"
 
 #include "pirate/bio.h"
 #include "usb_rx.h"
@@ -202,11 +203,11 @@ static void print_logic_types(void)
   printf("Supported logic IC types:\r\n");
   for (size_t t = 0; t < count_of(up_logic_tables); t++) {
     const up_logic_table_desc_t* lt = &up_logic_tables[t];
-    printf("%d-pin types:\r\n", lt->numpins);
+    printf("%s%d-pin types:%s\r\n", ui_term_color_info(), lt->numpins, ui_term_color_reset());
     for (size_t i = 0; i < lt->count; i++) {
-      printf("%s ", lt->table[i].name);
+      printf("%s\t", lt->table[i].name);
     }
-    printf("\r\n");
+    printf("\r\n\r\n");
   }
 }
 

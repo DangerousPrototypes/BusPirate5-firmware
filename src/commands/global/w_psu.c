@@ -217,9 +217,10 @@ void psucmd_enable_handler(struct command_result* res) {
 
 // cleanup on mode exit, etc
 void psucmd_disable(void) {
-    system_config.info_bar_changed = true;
-    monitor_clear_current(); // reset current so the LCD gets all characters next time
+    psu_disable();
     system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[0]); // change back to vref type pin
+    monitor_clear_current(); // reset current so the LCD gets all characters next time
+    system_config.info_bar_changed = true;
 }
 
 void psucmd_disable_handler(struct command_result* res) {

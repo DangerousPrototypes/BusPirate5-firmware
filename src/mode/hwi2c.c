@@ -8,6 +8,7 @@
 #include "mode/hwi2c.h"
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
+#include "ui/ui_cmdln.h"
 #include "hwi2c.pio.h"
 #include "pirate/hwi2c_pio.h"
 #include "pirate/storage.h"
@@ -171,6 +172,12 @@ uint32_t hwi2c_setup(void) {
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
         hwi2c_settings();
+
+        //check for -y flag
+        if (cmdln_args_find_flag('y')) {
+            return 1; // skip prompts, use previous settings
+        }
+
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
             return 0;

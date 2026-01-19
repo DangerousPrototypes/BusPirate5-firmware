@@ -61,9 +61,9 @@ uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request, flatbuffers
         return true; // Nothing to do
     }
     #endif
-    if(request->debug) printf("[I2C] START\r\n");
-
+    
     if(request->start_main||request->start_alt) {
+        if(request->debug) printf("[I2C] START\r\n");
         if(pio_i2c_start_timeout(timeout)) return HWI2C_TIMEOUT;
     }
 
@@ -96,7 +96,12 @@ uint32_t bpio_hwi2c_transaction(struct bpio_data_request_t *request, flatbuffers
 
     }
 
-    if(request->start_main || request->start_alt){
+    if(request->bytes_read == 0) {
+        //if(request->debug) printf("[I2C] No read requested, finishing transaction\r\n");
+        goto i2c_bpio_cleanup;
+    }
+
+    if(request->start_main || request->start_alt) {
         if(request->debug) printf("[I2C] Read address 0x%02X\r\n", flatbuffers_uint8_vec_at(data_write, 0)|0b1);
         //send the read address with the last bit high
         //i2c_result = pio_i2c_write_timeout(request->data_buf[0]|0b1, timeout);

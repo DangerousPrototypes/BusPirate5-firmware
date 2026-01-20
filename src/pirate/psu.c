@@ -28,6 +28,9 @@
 
 struct psu_status_t psu_status;
 
+/// @brief Reset the PSU current fuse/trigger
+/// @param  None
+/// @return None
 static void psu_fuse_reset(void) {
     // reset current trigger
     #if BP_HW_IOEXP_595
@@ -43,7 +46,9 @@ static void psu_fuse_reset(void) {
     #endif
 }
 
-// TODO: rename this function, it actually controls if the current limit circuit is connected to the VREG
+/// @brief Enable or disable the PSU VREG/current limit connection
+/// @param  enable  true to enable VREG/current connection, false to disable
+/// @return None
 void psu_vreg_enable(bool enable) {
     #if BP_HW_IOEXP_595
         if (enable) {
@@ -58,6 +63,9 @@ void psu_vreg_enable(bool enable) {
     #endif
 }
 
+/// @brief Override or restore the current limiting circuitry
+/// @param  enable  true to disable current limiting (override), false to enable limiting
+/// @return None
 void psu_current_limit_override(bool enable) {
     #if BP_HW_IOEXP_595
         if (enable) {
@@ -73,6 +81,10 @@ void psu_current_limit_override(bool enable) {
     psu_status.current_limit_override = enable;
 }
 
+/// @brief Calculate and set voltage-related fields in the PSU status
+/// @param  volts  Requested voltage in volts (float)
+/// @param  psu    Pointer to a `psu_status_t` struct to update
+/// @return None
 void psu_set_v(float volts, struct psu_status_t* psu) {
     uint32_t psu_v_per_bit = ((PSU_V_RANGE) / PWM_TOP);
     uint32_t vset = (uint32_t)((float)volts * 10000);
@@ -89,6 +101,10 @@ void psu_set_v(float volts, struct psu_status_t* psu) {
     psu->voltage_dac_value = (PWM_TOP - vset);
 }
 
+/// @brief Calculate and set current-related fields in the PSU status
+/// @param  current  Requested current in mA (float)
+/// @param  psu      Pointer to a `psu_status_t` struct to update
+/// @return None
 void psu_set_i(float current, struct psu_status_t* psu) {
     float psu_i_per_bit = ((float)(PSU_I_RANGE) / (float)PWM_TOP);
     float iset = (float)((float)current * 10000);
@@ -101,6 +117,10 @@ void psu_set_i(float current, struct psu_status_t* psu) {
     psu->current_actual_float = iact;
 }
 
+/// @brief Apply DAC/PWM values for voltage and current outputs
+/// @param  v_dac  Voltage DAC/PWM value
+/// @param  i_dac  Current DAC/PWM value
+/// @return None
 void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
     #if BP_HW_PSU_PWM
         uint slice_num = pwm_gpio_to_slice_num(PSU_PWM_VREG_ADJ);
@@ -132,6 +152,10 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
 }
 
 // deal with floating limit better (eg 0.7)
+/// @brief Configure undervoltage alarm threshold in the PSU status
+/// @param  psu                   Pointer to a `psu_status_t` struct to update
+/// @param  undervoltage_percent  Undervoltage threshold as percent (1-100), 100 to disable
+/// @return None
 void psu_set_undervoltage_limit(struct psu_status_t* psu, uint8_t undervoltage_percent) {
     if (undervoltage_percent == 100) {
         psu->undervoltage_limit_override = true;
@@ -145,6 +169,9 @@ void psu_set_undervoltage_limit(struct psu_status_t* psu, uint8_t undervoltage_p
     psu->undervoltage_limit_adc = (uint16_t)((psu->undervoltage_limit_int * 4096UL) / 66000UL);
 }
 
+/// @brief Check whether the PSU current fuse/limit indicates OK
+/// @param  None
+/// @return true if fuse/current detection indicates OK, false if blown/overcurrent
 bool psu_fuse_ok(void) {
     if(psu_status.error_overcurrent) {
         return false;
@@ -154,6 +181,9 @@ bool psu_fuse_ok(void) {
     return (fuse > 300);
 }
 
+/// @brief Check whether Vout is above the configured undervoltage limit
+/// @param  None
+/// @return true if Vout is OK, false if undervoltage detected
 bool psu_vout_ok(void) {
     if(psu_status.undervoltage_limit_override) {
         return true;
@@ -165,6 +195,12 @@ bool psu_vout_ok(void) {
     return (amux_read(HW_ADC_MUX_VREF_VOUT) > psu_status.undervoltage_limit_adc);
 }
 
+/// @brief 
+/// @param  
+/// @return 
+/// @brief Poll PSU sensors for fuse or Vout errors and handle them
+/// @param  None
+/// @return true if an error was detected and handled, false otherwise
 bool psu_poll_fuse_vout_error(void) {
     if(!psu_status.enabled) {
         return false;
@@ -192,26 +228,47 @@ bool psu_poll_fuse_vout_error(void) {
     return error;
 }
 
+/// @brief Clear the pending PSU error flag
+/// @param  None
+/// @return None
 void psu_clear_error_flag(void) {
     psu_status.error_pending = false;
 }
 
+/// @brief Check for backflow condition between VREG and VOUT
+/// @param  None
+/// @return true if backflow is not detected, false if backflow present
 bool psu_backflow_ok(void) {
     return (amux_read(HW_ADC_MUX_VREF_VOUT) < (amux_read(HW_ADC_MUX_VREG_OUT) + 100)); //+100? TODO: fine tuning
 }
 
+/// @brief Measure and return the current in mA
+/// @param  None
+/// @return Current measurement in milliamps (mA)
 uint32_t psu_measure_current(void) {
     return (amux_read_current() * ((500 * 1000) / 4095));
 }
 
+/// @brief Measure and return the VREG voltage
+/// @param  None
+/// @return VREG voltage scaled (units as used elsewhere in code)
 uint32_t psu_measure_vreg(void) {
     return hw_adc_to_volts_x2(amux_read(HW_ADC_MUX_VREG_OUT));
 }
 
+/// @brief Measure and return the VOUT voltage
+/// @param  None
+/// @return VOUT voltage scaled (units as used elsewhere in code)
 uint32_t psu_measure_vout(void) {
     return hw_adc_to_volts_x2(amux_read(HW_ADC_MUX_VREF_VOUT));
 }
 
+/// @brief Sweep ADC multiplexer and read Vout, Isense, Vreg and fuse status
+/// @param  vout   Pointer to store measured VOUT value
+/// @param  isense Pointer to store measured current sense value
+/// @param  vreg   Pointer to store measured VREG value
+/// @param  fuse   Pointer to store fuse boolean (true if fuse OK)
+/// @return None
 void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     amux_sweep();
     *isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000) / 4095));
@@ -220,6 +277,9 @@ void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     *fuse = (hw_adc_raw[HW_ADC_MUX_CURRENT_DETECT] > 300);
 }
 
+/// @brief Disable the PSU hardware and reset related state
+/// @param  None
+/// @return None
 void psu_disable(void) {
     psu_status.enabled = false;
     psu_vreg_enable(false);
@@ -229,6 +289,12 @@ void psu_disable(void) {
     psu_fuse_reset(); // reset fuse so it isn't draining current from the opamp    
 }
 
+/// @brief Enable and configure the PSU with requested settings
+/// @param  volts                   Requested voltage in volts (float)
+/// @param  current                 Requested current in mA (float)
+/// @param  current_limit_override  true to disable current limiting, false to enforce limit
+/// @param  undervoltage_percent    Undervoltage threshold percent (1-100), 100 to disable
+/// @return PSU_OK on success or an error code (PSU_ERROR_*) on failure
 uint32_t psu_enable(float volts, float current, bool current_limit_override, uint8_t undervoltage_percent) {
 
     // setup the config struct
@@ -280,6 +346,9 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override, uin
     return PSU_OK;
 }
 
+/// @brief Initialize PSU hardware and status
+/// @param  None
+/// @return None
 void psu_init(void) {
     psu_vreg_enable(false);
     psu_status.enabled = false;

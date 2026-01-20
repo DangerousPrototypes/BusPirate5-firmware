@@ -18,6 +18,9 @@ uint32_t amux_read_current(void);
 // place into the global arrays hw_adc_raw and hw_adc_voltage
 void amux_sweep(void);
 
+//access to ADC busy state
+void adc_busy_wait(bool enable);
+
 // reset the averaging of all channels, start with the current value
 // useful if you expect a step-change of the inputs
 extern bool reset_adc_average;

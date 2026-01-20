@@ -11,16 +11,17 @@
 #include "display/scope.h"
 #include "ui/ui_cmdln.h"
 #include "pirate/psu.h"
+#include "pirate/amux.h"
 #include "ui/ui_help.h"
 
 const char* const psucmd_usage[] = {
     "w|W\t<v> <i> [-u <%%>]",
-    "Disable: w",
-    "Enable, with menu: W",
-    "Enable 5v, 50mA fuse, 10%% default undervoltage limit: W 5 50",
-    "Enable 3.3v, 300mA default fuse, 10%% default undervoltage limit: W 3.3",
-    "Enable 3.3v, 100mA fuse, 20%% undervoltage limit: W 3.3 100 -u 20",
-    "Enable 3.3v, no fuse, no undervoltage limit: W 3.3 0 -u 100",
+    "Disable:%s w",
+    "Enable, with menu:%s W",
+    "Enable 5v, 50mA fuse, 10%% default undervoltage limit:%s W 5 50",
+    "Enable 3.3v, 300mA default fuse, 10%% default undervoltage limit:%s W 3.3",
+    "Enable 3.3v, 100mA fuse, 20%% undervoltage limit:%s W 3.3 100 -u 20",
+    "Enable 3.3v, no fuse, no undervoltage limit:%s W 3.3 0 -u 100",
 };
 
 const struct ui_help_options psucmd_options[] = {
@@ -217,6 +218,8 @@ void psucmd_enable_handler(struct command_result* res) {
 
 // cleanup on mode exit, etc
 void psucmd_disable(void) {
+    //there is a chance for a race condition if an ADC conversion is ongoing when we disable the PSU
+    //this causes a spurious short circuit warning because the ADC reads 0V on VOUT during the disable process
     psu_disable();
     system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[0]); // change back to vref type pin
     monitor_clear_current(); // reset current so the LCD gets all characters next time

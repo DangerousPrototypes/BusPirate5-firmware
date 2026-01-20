@@ -172,17 +172,23 @@ bool psu_poll_fuse_vout_error(void) {
     bool error = false;
     if (!psu_fuse_ok()) {
         psu_status.error_overcurrent = true;
-        psu_status.error_pending = true;
         error = true;
     }
     if (!psu_vout_ok()) {
         psu_status.error_undervoltage = true;
-        psu_status.error_pending = true;
         error = true;
     }
-    if(error) {
+    // Re-check enabled flag to avoid race condition with psu_disable() on other core
+    // If PSU was intentionally disabled between our initial check and now, don't flag as error
+    if(error && psu_status.enabled) {
         psu_disable();
-    }   
+        psu_status.error_pending = true;
+    } else {
+        // PSU was disabled intentionally, clear any false error flags we may have set
+        psu_status.error_overcurrent = false;
+        psu_status.error_undervoltage = false;
+        error = false;
+    }
     return error;
 }
 

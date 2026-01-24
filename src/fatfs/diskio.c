@@ -14,7 +14,7 @@
 #ifdef BP_HW_STORAGE_TFCARD
     #include "fatfs/tf_card.h"
 #elif defined(BP_HW_STORAGE_NAND)
-    #include "../nand/nand_ftl_diskio.h"
+    #include "../nand2/nand_ftl_diskio.h"
 #else
     #error "No storage device defined in diskio.c"
 #endif

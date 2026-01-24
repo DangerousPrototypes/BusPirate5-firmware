@@ -490,6 +490,13 @@ static void core0_infinite_loop(void) {
         // but the terminal will not be responsive if the service is blocking
         binmode_service();
 
+        enum button_codes press_code = button_check_press(0);
+        if (press_code != BP_BUTT_NO_PRESS) {
+            button_irq_disable(0);
+            button_exec(press_code);         // execute script based on the button press type
+            //bp_state = BP_SM_COMMAND_PROMPT; // return to command prompt
+        }
+
         if (tud_cdc_n_connected(0)) {
             if (!has_been_connected) {
                 PRINT_INFO("New terminal connection detected ... making USB storage read-only.\n");
@@ -587,13 +594,14 @@ static void core0_infinite_loop(void) {
                     button_irq_disable(0); 
                     break;
                 }
-
+                #if 0
                 enum button_codes press_code = button_check_press(0);
                 if (press_code != BP_BUTT_NO_PRESS) {
                     button_irq_disable(0);
                     button_exec(press_code);         // execute script based on the button press type
                     bp_state = BP_SM_COMMAND_PROMPT; // return to command prompt
                 }
+                #endif
                 break;
             case BP_SM_PROCESS_COMMAND:
                 system_config.error = ui_process_commands();

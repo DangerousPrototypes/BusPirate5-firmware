@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "pirate.h"
 #include "dhara/nand.h"
 #include "dhara/map.h"
 #include "dhara/error.h"
@@ -39,9 +40,9 @@ static esp_err_t dhara_init(spi_nand_flash_device_t *handle)
     dhara_priv_data->dhara_nand.num_blocks = handle->chip.num_blocks;
 
     dhara_map_init(&dhara_priv_data->dhara_map, &dhara_priv_data->dhara_nand, handle->work_buffer, handle->config.gc_factor);
-    dhara_error_t ignored;
-    dhara_map_resume(&dhara_priv_data->dhara_map, &ignored);
-
+    dhara_error_t ignored=0;
+    int i = dhara_map_resume(&dhara_priv_data->dhara_map, &ignored);
+    printf("Error code from dhara_map_resume: %d, %d\r\n", i, ignored);
     return ESP_OK;
 }
 

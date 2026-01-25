@@ -69,6 +69,9 @@ void storage_init(void) {
 
 uint8_t storage_mount(void) {
     FRESULT fr; /* FatFs return code */
+    //system_config.storage_available = 0;
+    //system_config.storage_mount_error = 13;
+    //return 1;
     fr = f_mount(&fs, "", 1);
     if (fr != FR_OK) {
         system_config.storage_available = 0;
@@ -261,6 +264,11 @@ bool storage_ls(const char* location, const char* ext, const uint8_t flags) {
     DIR dir;
     FILINFO fno;
     int nfile, ndir;
+
+    //disk_initialize(0);
+    storage_mount();
+    printf("Error code: %d\r\n", system_config.storage_mount_error);
+    return false;
 
     fr = f_opendir(&dir, location); /* Open the directory */
     if (fr != FR_OK) {

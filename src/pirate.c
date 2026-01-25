@@ -332,10 +332,11 @@ static void main_system_initialization(void) {
     }
     spi_set_baudrate(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
 #elif defined(BP_HW_STORAGE_NAND)
+
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: Mounting SPI Flash\n"
         );
-    storage_mount();
+    //storage_mount();
 
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: loading config file\n"
@@ -356,6 +357,7 @@ static void main_system_initialization(void) {
         rgb_set_effect(LED_EFFECT_PARTY_MODE);
         system_config.led_effect = LED_EFFECT_PARTY_MODE;
     }
+
 #else
     #error "Storage device not defined in pirate.c"
 #endif
@@ -496,7 +498,7 @@ static void core0_infinite_loop(void) {
             button_exec(press_code);         // execute script based on the button press type
             //bp_state = BP_SM_COMMAND_PROMPT; // return to command prompt
         }
-
+#if 0
         if (tud_cdc_n_connected(0)) {
             if (!has_been_connected) {
                 PRINT_INFO("New terminal connection detected ... making USB storage read-only.\n");
@@ -513,7 +515,7 @@ static void core0_infinite_loop(void) {
             }
             make_usbmsdrive_writable();
         }
-
+#endif
         switch (bp_state) {
             case BP_SM_DISPLAY_MODE:
                 // config file option loaded, wait for any key

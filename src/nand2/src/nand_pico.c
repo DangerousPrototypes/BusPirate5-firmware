@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "pirate.h"
 #include "pico/stdlib.h"
 #include "pico/mutex.h"
 #include "../include/spi_nand_flash.h"
@@ -46,6 +47,8 @@ static esp_err_t detect_chip(spi_nand_flash_device_t *dev)
     };
     spi_nand_execute_transaction(dev, &t);
     NAND_LOGD(TAG, "%s: manufacturer_id: %x\n", __func__, manufacturer_id); 
+
+    printf("Detected SPI NAND Manufacturer ID: 0x%02X\n", manufacturer_id);
 
     switch (manufacturer_id) {
     case SPI_NAND_FLASH_ALLIANCE_MI:
@@ -89,7 +92,7 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
     RETURN_ON_FALSE(config->spi != NULL, ESP_ERR_INVALID_ARG, TAG, "SPI instance pointer cannot be NULL");
 
     if (!config->gc_factor) {
-        config->gc_factor = 45;
+        config->gc_factor = 4;
     }
 
     *handle = calloc(1, sizeof(spi_nand_flash_device_t));
@@ -107,10 +110,10 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
     (*handle)->chip.flags = 0;
 
     esp_err_t ret = ESP_OK;
-
+    printf("Starting NAND chip detection...\r\n");
     GOTO_ON_ERROR(detect_chip(*handle), fail, TAG, "Failed to detect nand chip");
     GOTO_ON_ERROR(unprotect_chip(*handle), fail, TAG, "Failed to clear protection register");
-
+    printf("NAND chip detected and unprotected successfully.\r\n");
     (*handle)->chip.page_size = 1 << (*handle)->chip.log2_page_size;
     (*handle)->chip.block_size = (1 << (*handle)->chip.log2_ppb) * (*handle)->chip.page_size;
 

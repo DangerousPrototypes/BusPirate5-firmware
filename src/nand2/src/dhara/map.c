@@ -312,7 +312,7 @@ static int auto_gc(struct dhara_map *m, dhara_error_t *err)
 	if (dhara_journal_size(&m->journal) < dhara_map_capacity(m))
 		return 0;
 
-	for (i = 0; i <= m->gc_ratio; i++)
+	for (i = 0; i < m->gc_ratio; i++)
 		if (dhara_map_gc(m, err) < 0)
 			return -1;
 
@@ -494,8 +494,7 @@ int dhara_map_sync(struct dhara_map *m, dhara_error_t *err)
 			ret = pad_queue(m, &my_err);
 		} else {
 			ret = raw_gc(m, p, &my_err);
-			if (!ret)
-				dhara_journal_dequeue(&m->journal);
+			dhara_journal_dequeue(&m->journal);
 		}
 
 		if ((ret < 0) && (try_recover(m, my_err, err) < 0))

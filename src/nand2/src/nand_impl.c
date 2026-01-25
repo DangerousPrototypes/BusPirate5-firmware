@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include "pico/stdlib.h"
+#include "pirate.h"
 #include "../include/spi_nand_oper.h"
 #include "../include/spi_nand_flash.h"
 #include "../include/nand.h"
@@ -25,10 +26,10 @@
 #define TAG "spi_nand"
 
 // Logging macros
-#define NAND_LOGD(tag, fmt, ...) ((void)0) // printf("[D][%s] " fmt "\n", tag, ##__VA_ARGS__)
-#define NAND_LOGI(tag, fmt, ...) printf("[I][%s] " fmt "\n", tag, ##__VA_ARGS__)
-#define NAND_LOGW(tag, fmt, ...) printf("[W][%s] " fmt "\n", tag, ##__VA_ARGS__)
-#define NAND_LOGE(tag, fmt, ...) printf("[E][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define NAND_LOGD(tag, fmt, ...) printf("[D][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
+#define NAND_LOGI(tag, fmt, ...) printf("[I][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
+#define NAND_LOGW(tag, fmt, ...) printf("[W][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
+#define NAND_LOGE(tag, fmt, ...) printf("[E][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
 #define NAND_LOGV(tag, fmt, ...) ((void)0) // Verbose disabled
 
 // Helper macros

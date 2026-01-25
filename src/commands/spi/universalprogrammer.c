@@ -733,6 +733,7 @@ static void setvpp(uint8_t voltage)
   bio_put(PIN_VPPH, 0);
   
   if(voltage==2) bio_put(PIN_VPPH, 1);    // the schotky diode takes care of the other states 
+  else setextrapinic2(voltage);
 }
 
 static void setvdd(uint8_t voltage)
@@ -740,6 +741,8 @@ static void setvdd(uint8_t voltage)
   bio_put(PIN_VCCH, 0);
   
   if(voltage==2) bio_put(PIN_VCCH, 1);    // the schotky diode takes care of the other states 
+  if(voltage>=1) setextrapinic1(0);       // power the DUT
+  else setextrapinic1(1);
 }
 
 // displays how the IC should be placed in the programmer
@@ -786,7 +789,6 @@ static void icprint(int pins, int vcc, int gnd, int vpp)
   }
   else
     printf("Connect Vcc to IO%02d, Vpp to IO%02d and GND to IO%02d, Jumper all other IOs\r\n", vcc, vpp, gnd);
-    
 }
 
 void printbin(uint32_t d)
@@ -935,15 +937,13 @@ static void up_vtest(void)
     return;
   }
   
-  setvpp(2);
-  setvcc(2);
   printf("Tweak Vdd and Vpp to desired value. Press any key to continue\r\n");
   
   // TODO: show measured voltages
   while(!rx_fifo_try_get(&c))
   {
-    printf("Vcc=%d.%03d  ", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) % 1000));
-    printf("Vpp=%d.%03d \r", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
+    printf("Vcc=%d.%03d  ", (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), ((5*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1])) % 1000));
+    printf("Vpp=%d.%03d \r", (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), ((5*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1])) % 1000));
   }
 
   printf("\r\n");
@@ -1015,6 +1015,8 @@ static void up_test(void)
   setvcc(2);
   while(!rx_fifo_try_get(&c));
   
+  setvcc(0);
+  
   // Vpp voltage rail test
   // TODO; wait for new hardware and test it
   printf("3b. Vpp Voltagerail test\r\n");
@@ -1031,13 +1033,15 @@ static void up_test(void)
   setvpp(2);
   while(!rx_fifo_try_get(&c));
   
+  setvpp(0);
+  
   // Vcch, VppH measurement
   // TODO: wait for new hardware
   printf("3c. voltages\r\n");
   while(!rx_fifo_try_get(&c))
   {
-    printf("Vcc=%d.%03d  ", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) % 1000));
-    printf("Vpp=%d.%03d \r", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
+    printf("Vcc=%d.%03d  ", (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) % 1000));
+    printf("Vpp=%d.%03d \r", (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
   }
 }
 
@@ -1107,7 +1111,7 @@ static void readepromid(int numpins)
     return;
   }
   
-  printf("Vpp=%d.%03d \r\n", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
+  printf("Vpp=%d.%03d \r\n", (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
   printf("Is this correct? y to continue\r\n");
   while(!rx_fifo_try_get(&c));
   if(c!='y')
@@ -1211,14 +1215,14 @@ struct epromconfig
 };
 
 static const struct epromconfig upeeprom[]={
-  {UP_EPROM_2764,   64,   0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
-  {UP_EPROM_27128,  128,  0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
-  {UP_EPROM_27256,  256,  0, 0,              28, 28, 14, 1},
-  {UP_EPROM_27512,  512,  0, 0,              28, 28, 14, 1},
-  {UP_EPROM_27010, 1024, 0, UP_27XX_PGM32,UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
-  {UP_EPROM_27020, 2048, 1024, UP_27XX_PGM32,UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
-  {UP_EPROM_27040, 4096, 1024, 0,              32, 32, 16, 1},
-  {UP_EPROM_27080, 8192, 1024, 0,              32, 32, 16, 1}
+  {UP_EPROM_2764,    64,    0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
+  {UP_EPROM_27128,  128,    0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
+  {UP_EPROM_27256,  256,    0, 0            , 0                          , 28, 28, 14, 1},
+  {UP_EPROM_27512,  512,    0, 0            , 0                          , 28, 28, 14, 1},
+  {UP_EPROM_27010, 1024,    0, UP_27XX_PGM32, UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
+  {UP_EPROM_27020, 2048, 1024, UP_27XX_PGM32, UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
+  {UP_EPROM_27040, 4096, 1024, 0            , 0                          , 32, 32, 16, 1},
+  {UP_EPROM_27080, 8192, 1024, 0            , 0                          , 32, 32, 16, 1}
 
 };
 
@@ -1241,6 +1245,8 @@ static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
   page*=upeeprom[ictype].page;
   pgm=upeeprom[ictype].pgm_write;
   icprint(upeeprom[ictype].pins, upeeprom[ictype].vcc, upeeprom[ictype].gnd, upeeprom[ictype].vpp);
+  
+  
   #if 0
   switch(ictype)
   {
@@ -1296,8 +1302,8 @@ static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
     kbit=1024;
   }
   
-  printf("Current Vdd=%d.%03d", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) % 1000));
-  printf(", Vpp=%d.%03d", (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (4*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
+  printf("Current Vdd=%d.%03d", (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) / 1000), (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VCC + 1]) % 1000));
+  printf(", Vpp=%d.%03d", (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) / 1000), (5*(*hw_pin_voltage_ordered[PIN_VSENSE_VPP + 1]) % 1000));
   printf("and pulse=%d\r\n", pulse);
   printf("Is this correct? y to continue\r\n");
   while(!rx_fifo_try_get(&c));
@@ -1387,7 +1393,7 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
   page*=upeeprom[ictype].page;
   pgm=upeeprom[ictype].pgm_read;
   icprint(upeeprom[ictype].pins, upeeprom[ictype].vcc, upeeprom[ictype].gnd, 33);
-   
+  
   // warning for big eproms
   if((mode!=EPROM_BLANK)&&(kbit>1024))
   {
@@ -1757,7 +1763,7 @@ static void hexreadbuffer(char *fname)
       {
         checksum+=((parsehex(line[i++])<<4)|(parsehex(line[i++])));
       }
-    }
+     }
     else
     {
       error=true;

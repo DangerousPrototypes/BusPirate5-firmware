@@ -84,8 +84,8 @@ static esp_err_t unprotect_chip(spi_nand_flash_device_t *dev)
     return ret;
 }
 
-static uint8_t work[2048+1];
-static uint8_t read[2048+1];
+static uint8_t work[2048+4];
+static uint8_t read[2048+4];
 
 esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_flash_device_t **handle)
 {
@@ -156,15 +156,12 @@ esp_err_t spi_nand_erase_chip(spi_nand_flash_device_t *handle)
     NAND_LOGW(TAG, "Entire chip is being erased");
     esp_err_t ret = ESP_OK;
 
-    mutex_enter_blocking(&handle->mutex);
     ret = handle->ops->erase_chip(handle);
     if (ret) {
-        goto end;
+        return ret;
     }
     handle->ops->deinit(handle);
 
-end:
-    mutex_exit(&handle->mutex);
     return ret;
 }
 
@@ -190,14 +187,12 @@ esp_err_t spi_nand_flash_read_sector(spi_nand_flash_device_t *handle, uint8_t *b
 {
     esp_err_t ret = ESP_OK;
 
-    mutex_enter_blocking(&handle->mutex);
     ret = handle->ops->read(handle, buffer, sector_id);
     if (ret == ESP_OK && handle->chip.ecc_data.ecc_corrected_bits_status) {
         if (s_need_data_refresh(handle)) {
             ret = handle->ops->write(handle, buffer, sector_id);
         }
     }
-    mutex_exit(&handle->mutex);
 
     return ret;
 }
@@ -206,9 +201,7 @@ esp_err_t spi_nand_flash_copy_sector(spi_nand_flash_device_t *handle, uint32_t s
 {
     esp_err_t ret = ESP_OK;
 
-    mutex_enter_blocking(&handle->mutex);
     ret = handle->ops->copy_sector(handle, src_sec, dst_sec);
-    mutex_exit(&handle->mutex);
 
     return ret;
 }
@@ -217,9 +210,7 @@ esp_err_t spi_nand_flash_write_sector(spi_nand_flash_device_t *handle, const uin
 {
     esp_err_t ret = ESP_OK;
 
-    mutex_enter_blocking(&handle->mutex);
     ret = handle->ops->write(handle, buffer, sector_id);
-    mutex_exit(&handle->mutex);
 
     return ret;
 }
@@ -228,9 +219,7 @@ esp_err_t spi_nand_flash_trim(spi_nand_flash_device_t *handle, uint32_t sector_i
 {
     esp_err_t ret = ESP_OK;
 
-    mutex_enter_blocking(&handle->mutex);
     ret = handle->ops->trim(handle, sector_id);
-    mutex_exit(&handle->mutex);
 
     return ret;
 }
@@ -239,9 +228,7 @@ esp_err_t spi_nand_flash_sync(spi_nand_flash_device_t *handle)
 {
     esp_err_t ret = ESP_OK;
 
-    mutex_enter_blocking(&handle->mutex);
     ret = handle->ops->sync(handle);
-    mutex_exit(&handle->mutex);
 
     return ret;
 }

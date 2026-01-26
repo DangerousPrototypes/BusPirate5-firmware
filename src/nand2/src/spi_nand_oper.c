@@ -12,11 +12,13 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "hardware/gpio.h"
+#include "pirate.h"
 #include "../include/spi_nand_oper.h"
 
 // Select the chip (active low)
 static inline void cs_select(spi_nand_flash_device_t *handle)
 {
+    spi_busy_wait(true);
     gpio_put(handle->config.cs_pin, 0);
 }
 
@@ -24,6 +26,7 @@ static inline void cs_select(spi_nand_flash_device_t *handle)
 static inline void cs_deselect(spi_nand_flash_device_t *handle)
 {
     gpio_put(handle->config.cs_pin, 1);
+    spi_busy_wait(false);
 }
 
 esp_err_t spi_nand_execute_transaction(spi_nand_flash_device_t *handle, spi_nand_transaction_t *transaction)

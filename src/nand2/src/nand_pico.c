@@ -144,7 +144,6 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
     (*handle)->temp_buffer = malloc((*handle)->chip.page_size + 1);
     GOTO_ON_FALSE((*handle)->temp_buffer != NULL, ESP_ERR_NO_MEM, fail, TAG, "nomem");
     #endif
-    mutex_init(&(*handle)->mutex);
 
     GOTO_ON_ERROR(nand_register_dev(*handle), fail, TAG, "Failed to register nand dev");
 

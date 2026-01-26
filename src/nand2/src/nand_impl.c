@@ -19,18 +19,24 @@
 #define ROM_WAIT_THRESHOLD_US 1000
 
 #define MAX_PAGE_SIZE 2048
-//static uint8_t copy_buffer[MAX_PAGE_SIZE];
-//static mutex_t copy_buffer_mutex;
-//static bool copy_buffer_mutex_initialized = false;
 
 #define TAG "spi_nand"
 
+#define NAND_DEBUG_ENABLE 0
 // Logging macros
-#define NAND_LOGD(tag, fmt, ...) printf("[D][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
-#define NAND_LOGI(tag, fmt, ...) printf("[I][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
-#define NAND_LOGW(tag, fmt, ...) printf("[W][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
-#define NAND_LOGE(tag, fmt, ...) printf("[E][%s] " fmt "\r\n", tag, ##__VA_ARGS__)
-#define NAND_LOGV(tag, fmt, ...) ((void)0) // Verbose disabled
+#if NAND_DEBUG_ENABLE
+    #define NAND_LOGD(tag, fmt, ...) printf("[D][%s] " fmt "\n", tag, ##__VA_ARGS__)
+    #define NAND_LOGI(tag, fmt, ...) printf("[I][%s] " fmt "\n", tag, ##__VA_ARGS__)
+    #define NAND_LOGW(tag, fmt, ...) printf("[W][%s] " fmt "\n", tag, ##__VA_ARGS__)
+    #define NAND_LOGE(tag, fmt, ...) printf("[E][%s] " fmt "\n", tag, ##__VA_ARGS__)
+    #define NAND_LOGV(tag, fmt, ...) ((void)0) // Verbose disabled
+#else
+    #define NAND_LOGD(tag, fmt, ...) ((void)0)
+    #define NAND_LOGI(tag, fmt, ...) ((void)0)
+    #define NAND_LOGW(tag, fmt, ...) ((void)0)
+    #define NAND_LOGE(tag, fmt, ...) ((void)0)
+    #define NAND_LOGV(tag, fmt, ...) ((void)0) // Verbose disabled
+#endif
 
 // Helper macros
 #define RETURN_ON_ERROR(x) do { esp_err_t err_rc_ = (x); if (err_rc_ != ESP_OK) return err_rc_; } while(0)

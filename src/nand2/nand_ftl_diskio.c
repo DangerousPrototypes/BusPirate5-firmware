@@ -35,7 +35,7 @@ static spi_nand_flash_device_t *flash;
 
 // public function definitions
 DSTATUS diskio_initialize(BYTE drv) {
-    printf("diskio_initialize called with drv=%d\r\n", drv);
+    //printf("diskio_initialize called with drv=%d\r\n", drv);
     if (drv) {
         return STA_NOINIT; /* Supports only drive 0 */
     }
@@ -52,10 +52,10 @@ DSTATUS diskio_initialize(BYTE drv) {
         .io_mode = SPI_NAND_IO_MODE_SIO,
         .gc_factor = 4, //same as previous NAND driver
     };
-    printf("Initializing SPI NAND flash on SPI port %p with CS pin %d\r\n", (void*)SPI_PORT, PIN_CS);
+    //printf("Initializing SPI NAND flash on SPI port %p with CS pin %d\r\n", (void*)SPI_PORT, PIN_CS);
     spi_nand_flash_device_t *nand_flash_device_handle;    
     esp_err_t ret = spi_nand_flash_init_device(&nand_flash_config, &nand_flash_device_handle);
-    printf("spi_nand_flash_init_device returned %d\r\n", ret);
+    //printf("spi_nand_flash_init_device returned %d\r\n", ret);
     if (ret != ESP_OK) {
         //LOG_E(TAG, "Failed to initialize NAND flash: %d", ret);
         //*out_handle = NULL;

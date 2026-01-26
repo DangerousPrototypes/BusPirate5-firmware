@@ -13,8 +13,21 @@
 #include "../include/nand_private/nand_flash_devices.h"
 
 #define TAG "nand_gigadevice"
-#define NAND_LOGD(tag, fmt, ...) ((void)0)
-#define NAND_LOGE(tag, fmt, ...) printf("[E][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define NAND_DEBUG_ENABLE 0
+// Logging macros
+#if NAND_DEBUG_ENABLE
+    #define NAND_LOGD(tag, fmt, ...) printf("[D][%s] " fmt "\n", tag, ##__VA_ARGS__)
+    #define NAND_LOGI(tag, fmt, ...) printf("[I][%s] " fmt "\n", tag, ##__VA_ARGS__)
+    #define NAND_LOGW(tag, fmt, ...) printf("[W][%s] " fmt "\n", tag, ##__VA_ARGS__)
+    #define NAND_LOGE(tag, fmt, ...) printf("[E][%s] " fmt "\n", tag, ##__VA_ARGS__)
+    #define NAND_LOGV(tag, fmt, ...) ((void)0) // Verbose disabled
+#else
+    #define NAND_LOGD(tag, fmt, ...) ((void)0)
+    #define NAND_LOGI(tag, fmt, ...) ((void)0)
+    #define NAND_LOGW(tag, fmt, ...) ((void)0)
+    #define NAND_LOGE(tag, fmt, ...) ((void)0)
+    #define NAND_LOGV(tag, fmt, ...) ((void)0) // Verbose disabled
+#endif
 
 #define RETURN_ON_ERROR(x) do { esp_err_t err_rc_ = (x); if (err_rc_ != ESP_OK) return err_rc_; } while(0)
 

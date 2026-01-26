@@ -42,7 +42,7 @@ static esp_err_t dhara_init(spi_nand_flash_device_t *handle)
     dhara_map_init(&dhara_priv_data->dhara_map, &dhara_priv_data->dhara_nand, handle->work_buffer, handle->config.gc_factor);
     dhara_error_t ignored=0;
     int i = dhara_map_resume(&dhara_priv_data->dhara_map, &ignored);
-    printf("Error code from dhara_map_resume: %d, %d\r\n", i, ignored);
+    //printf("Error code from dhara_map_resume: %d, %d\r\n", i, ignored);
     return ESP_OK;
 }
 

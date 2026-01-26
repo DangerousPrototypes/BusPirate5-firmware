@@ -317,10 +317,10 @@ static dhara_page_t find_last_group(struct dhara_journal *j,
 	int low = 0;
 	int high = num_groups - 1;
 
-	printf("Finding last group in block %u with %u groups\r\n",
-	       blk, num_groups);
-	printf("log2_ppc=%u, log2_ppb=%u\r\n",
-	       j->log2_ppc, j->nand->log2_ppb);
+	// printf("Finding last group in block %u with %u groups\r\n",
+	//        blk, num_groups);
+	// printf("log2_ppc=%u, log2_ppb=%u\r\n",
+	//        j->log2_ppc, j->nand->log2_ppb);
 
 	/* If a checkpoint group is completely unprogrammed, everything
 	 * following it will be completely unprogrammed also.
@@ -416,16 +416,16 @@ int dhara_journal_resume(struct dhara_journal *j, dhara_error_t *err)
 		return -1;
 	}
 
-	printf("First checkpoint block at %u\r\n", first);
+	// printf("First checkpoint block at %u\r\n", first);
 
 	/* Find the last checkpoint-containing block in this epoch */
 	j->epoch = hdr_get_epoch(j->page_buf);
 	last = find_last_checkblock(j, first);
-	printf("Last checkpoint block at %u\r\n", last);
+	// printf("Last checkpoint block at %u\r\n", last);
 
 	/* Find the last programmed checkpoint group in the block */
 	last_group = find_last_group(j, last);
-	printf("Last checkpoint group page %u\r\n", last_group);
+	// printf("Last checkpoint group page %u\r\n", last_group);
 
 	/* Perform a linear scan to find the last good checkpoint (and
 	 * therefore the root).
@@ -434,22 +434,22 @@ int dhara_journal_resume(struct dhara_journal *j, dhara_error_t *err)
 		reset_journal(j);
 		return -1;
 	}
-	printf("Journal root page %u\r\n", j->root);
+	// printf("Journal root page %u\r\n", j->root);
 
 	/* Restore settings from checkpoint */
 	j->tail = hdr_get_tail(j->page_buf);
 	j->bb_current = hdr_get_bb_current(j->page_buf);
 	j->bb_last = hdr_get_bb_last(j->page_buf);
 	hdr_clear_user(j->page_buf, j->nand->log2_page_size);
-	printf("Restored tail=%u, bb_current=%u, bb_last=%u\r\n",
-	       j->tail, j->bb_current, j->bb_last);
+	// printf("Restored tail=%u, bb_current=%u, bb_last=%u\r\n",
+	//        j->tail, j->bb_current, j->bb_last);
 
 	/* Perform another linear scan to find the next free user page */
 	if (find_head(j, last_group, err) < 0) {
 		reset_journal(j);
 		return -1;
 	}
-	printf("Journal head page %u\r\n", j->head);
+	// printf("Journal head page %u\r\n", j->head);
 
 	j->flags = 0;
 	j->tail_sync = j->tail;

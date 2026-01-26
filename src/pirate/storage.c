@@ -69,9 +69,6 @@ void storage_init(void) {
 
 uint8_t storage_mount(void) {
     FRESULT fr; /* FatFs return code */
-    //system_config.storage_available = 0;
-    //system_config.storage_mount_error = 13;
-    //return 1;
     fr = f_mount(&fs, "", 1);
     if (fr != FR_OK) {
         system_config.storage_available = 0;

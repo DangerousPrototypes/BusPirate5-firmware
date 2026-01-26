@@ -336,7 +336,7 @@ static void main_system_initialization(void) {
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: Mounting SPI Flash\n"
         );
-    //storage_mount();
+    storage_mount();
 
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: loading config file\n"
@@ -498,7 +498,7 @@ static void core0_infinite_loop(void) {
             button_exec(press_code);         // execute script based on the button press type
             //bp_state = BP_SM_COMMAND_PROMPT; // return to command prompt
         }
-#if 0
+
         if (tud_cdc_n_connected(0)) {
             if (!has_been_connected) {
                 PRINT_INFO("New terminal connection detected ... making USB storage read-only.\n");
@@ -515,7 +515,7 @@ static void core0_infinite_loop(void) {
             }
             make_usbmsdrive_writable();
         }
-#endif
+
         switch (bp_state) {
             case BP_SM_DISPLAY_MODE:
                 // config file option loaded, wait for any key

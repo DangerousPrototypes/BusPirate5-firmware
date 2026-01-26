@@ -266,11 +266,6 @@ bool storage_ls(const char* location, const char* ext, const uint8_t flags) {
     FILINFO fno;
     int nfile, ndir;
 
-    //disk_initialize(0);
-    storage_mount();
-    printf("Error code: %d\r\n", system_config.storage_mount_error);
-    return false;
-
     fr = f_opendir(&dir, location); /* Open the directory */
     if (fr != FR_OK) {
         return false;

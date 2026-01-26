@@ -22,11 +22,20 @@
 
 #define TAG "nand_flash"
 
-// Logging macros
+// Logging macros - set NAND_DEBUG_ENABLE to 1 to enable debug output
+#define NAND_DEBUG_ENABLE 0
+
+#if NAND_DEBUG_ENABLE
 #define NAND_LOGD(tag, fmt, ...) printf("[D][%s] " fmt "\n", tag, ##__VA_ARGS__)
 #define NAND_LOGI(tag, fmt, ...) printf("[I][%s] " fmt "\n", tag, ##__VA_ARGS__)
 #define NAND_LOGW(tag, fmt, ...) printf("[W][%s] " fmt "\n", tag, ##__VA_ARGS__)
 #define NAND_LOGE(tag, fmt, ...) printf("[E][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#else
+#define NAND_LOGD(tag, fmt, ...) ((void)0)
+#define NAND_LOGI(tag, fmt, ...) ((void)0)
+#define NAND_LOGW(tag, fmt, ...) ((void)0)
+#define NAND_LOGE(tag, fmt, ...) ((void)0)
+#endif
 
 // Helper macros
 #define RETURN_ON_ERROR(x) do { esp_err_t err_rc_ = (x); if (err_rc_ != ESP_OK) return err_rc_; } while(0)
@@ -48,7 +57,8 @@ static esp_err_t detect_chip(spi_nand_flash_device_t *dev)
     spi_nand_execute_transaction(dev, &t);
     NAND_LOGD(TAG, "%s: manufacturer_id: %x\n", __func__, manufacturer_id); 
 
-    printf("Detected SPI NAND Manufacturer ID: 0x%02X\n", manufacturer_id);
+    // Uncomment for early boot debugging (before printf initialized)
+    // printf("Detected SPI NAND Manufacturer ID: 0x%02X\n", manufacturer_id);
 
     switch (manufacturer_id) {
     case SPI_NAND_FLASH_ALLIANCE_MI:
@@ -110,10 +120,11 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
     (*handle)->chip.flags = 0;
 
     esp_err_t ret = ESP_OK;
-    printf("Starting NAND chip detection...\r\n");
+    // Uncomment for early boot debugging (before printf initialized)
+    // printf("Starting NAND chip detection...\r\n");
     GOTO_ON_ERROR(detect_chip(*handle), fail, TAG, "Failed to detect nand chip");
     GOTO_ON_ERROR(unprotect_chip(*handle), fail, TAG, "Failed to clear protection register");
-    printf("NAND chip detected and unprotected successfully.\r\n");
+    // printf("NAND chip detected and unprotected successfully.\r\n");
     (*handle)->chip.page_size = 1 << (*handle)->chip.log2_page_size;
     (*handle)->chip.block_size = (1 << (*handle)->chip.log2_ppb) * (*handle)->chip.page_size;
 

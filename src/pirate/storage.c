@@ -78,6 +78,7 @@ uint8_t storage_mount(void) {
         system_config.storage_mount_error = fr;
     } else {
         system_config.storage_available = 1;
+        system_config.storage_mount_error = 0;  // Clear error on success
         system_config.storage_fat_type = fs.fs_type;
         system_config.storage_size = fs.csize * fs.n_fatent * BP_FLASH_DISK_BLOCK_SIZE * 1E-9; // 2048E-9; //512E-9;
     }

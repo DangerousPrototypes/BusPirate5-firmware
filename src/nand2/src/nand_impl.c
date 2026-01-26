@@ -84,7 +84,7 @@ static uint16_t get_column_address(spi_nand_flash_device_t *handle, uint32_t blo
     }
     return column_addr;
 }
-
+#if 0
 esp_err_t nand_is_bad(spi_nand_flash_device_t *handle, uint32_t block, bool *is_bad_status)
 {
     uint32_t first_block_page = block * (1 << handle->chip.log2_ppb);
@@ -106,15 +106,35 @@ fail:
     NAND_LOGE(TAG, "Error in nand_is_bad %d", ret);
     return ret;
 }
+#endif
+
+esp_err_t nand_is_bad(spi_nand_flash_device_t *handle, uint32_t block, bool *is_bad_status)
+{
+    uint32_t first_block_page = block * (1 << handle->chip.log2_ppb);
+    uint8_t bad_block_indicator;  // Change to single byte
+    esp_err_t ret = ESP_OK;
+
+    GOTO_ON_ERROR(read_page_and_wait(handle, first_block_page, NULL), fail);
+    uint16_t column_addr = get_column_address(handle, block, handle->chip.page_size);
+    GOTO_ON_ERROR(spi_nand_read(handle, &bad_block_indicator, column_addr, 1), fail);  // Read 1 byte
+
+    *is_bad_status = (bad_block_indicator == 0x00);  // Bad if first byte is 0x00
+    NAND_LOGD(TAG, "is_bad, block=%"PRIu32", page=%"PRIu32", indicator=0x%02x", 
+              block, first_block_page, bad_block_indicator);
+    return ret;
+fail:
+    NAND_LOGE(TAG, "Error in nand_is_bad %d", ret);
+    return ret;
+}
 
 esp_err_t nand_mark_bad(spi_nand_flash_device_t *handle, uint32_t block)
 {
     esp_err_t ret = ESP_OK;
 
     uint32_t first_block_page = block * (1 << handle->chip.log2_ppb);
-    uint16_t bad_block_indicator = 0;
+    uint8_t bad_block_indicator = 0x00;
     uint8_t status;
-    NAND_LOGD(TAG, "mark_bad, block=%"PRIu32", page=%"PRIu32",indicator = %04x", block, first_block_page, bad_block_indicator);
+    NAND_LOGD(TAG, "mark_bad, block=%"PRIu32", page=%"PRIu32",indicator = %02x", block, first_block_page, bad_block_indicator);
 
     GOTO_ON_ERROR(read_page_and_wait(handle, first_block_page, NULL), fail);
     GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
@@ -129,7 +149,7 @@ esp_err_t nand_mark_bad(spi_nand_flash_device_t *handle, uint32_t block)
 
     uint16_t column_addr = get_column_address(handle, block, handle->chip.page_size);
 
-    GOTO_ON_ERROR(spi_nand_program_load(handle, (const uint8_t *)&bad_block_indicator, column_addr, 2), fail);
+    GOTO_ON_ERROR(spi_nand_program_load(handle, (const uint8_t *)&bad_block_indicator, column_addr, 1), fail);
     GOTO_ON_ERROR(program_execute_and_wait(handle, first_block_page, NULL), fail);
 
     return ret;
@@ -184,7 +204,6 @@ esp_err_t nand_prog(spi_nand_flash_device_t *handle, uint32_t page, const uint8_
 {
     NAND_LOGV(TAG, "prog, page=%"PRIu32",", page);
     esp_err_t ret = ESP_OK;
-    uint16_t used_marker = 0;
     uint8_t status;
 
     uint32_t block = page >> handle->chip.log2_ppb;
@@ -193,7 +212,6 @@ esp_err_t nand_prog(spi_nand_flash_device_t *handle, uint32_t page, const uint8_
     GOTO_ON_ERROR(read_page_and_wait(handle, page, NULL), fail);
     GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
     GOTO_ON_ERROR(spi_nand_program_load(handle, data, column_addr, handle->chip.page_size), fail);
-    GOTO_ON_ERROR(spi_nand_program_load(handle, (uint8_t *)&used_marker, column_addr + handle->chip.page_size + 2, 2), fail);
 
     GOTO_ON_ERROR(program_execute_and_wait(handle, page, &status), fail);
 
@@ -207,7 +225,7 @@ fail:
     NAND_LOGE(TAG, "Error in nand_prog %d", ret);
     return ret;
 }
-
+#if 0
 esp_err_t nand_is_free(spi_nand_flash_device_t *handle, uint32_t page, bool *is_free_status)
 {
     esp_err_t ret = ESP_OK;
@@ -223,6 +241,31 @@ esp_err_t nand_is_free(spi_nand_flash_device_t *handle, uint32_t page, bool *is_
     memcpy(&used_marker, handle->read_buffer, sizeof(used_marker));
     NAND_LOGD(TAG, "is free, page=%"PRIu32", used_marker=%04x,", page, used_marker);
     *is_free_status = (used_marker == 0xFFFF);
+    return ret;
+fail:
+    NAND_LOGE(TAG, "Error in nand_is_free %d", ret);
+    return ret;
+}
+#endif
+esp_err_t nand_is_free(spi_nand_flash_device_t *handle, uint32_t page, bool *is_free_status)
+{
+    esp_err_t ret = ESP_OK;
+    uint32_t block = page >> handle->chip.log2_ppb;
+    uint16_t column_addr = get_column_address(handle, block, 0);
+    size_t check_len = handle->chip.page_size + 4; // page + some spare area
+    
+    GOTO_ON_ERROR(read_page_and_wait(handle, page, NULL), fail);
+    GOTO_ON_ERROR(spi_nand_read(handle, handle->read_buffer, column_addr, check_len), fail);
+    
+    *is_free_status = true;
+    uint32_t comp_word = 0xFFFFFFFF;
+    for (size_t i = 0; i < check_len; i += sizeof(comp_word)) {
+        if (memcmp(&comp_word, &handle->read_buffer[i], sizeof(comp_word)) != 0) {
+            *is_free_status = false;
+            break;
+        }
+    }
+    NAND_LOGD(TAG, "is free, page=%"PRIu32", is_free=%d,", page, *is_free_status);
     return ret;
 fail:
     NAND_LOGE(TAG, "Error in nand_is_free %d", ret);
@@ -314,8 +357,6 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
 
         GOTO_ON_ERROR(spi_nand_program_load(handle, copy_buf, dst_column_addr, handle->chip.page_size), fail);
 
-        uint16_t used_marker = 0;
-        GOTO_ON_ERROR(spi_nand_program_load(handle, (uint8_t *)&used_marker, dst_column_addr + handle->chip.page_size + 2, 2), fail);
         GOTO_ON_ERROR(program_execute_and_wait(handle, dst, &status), fail);
 
         if ((status & STAT_PROGRAM_FAILED) != 0) {
@@ -323,12 +364,12 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
             return ESP_ERR_NOT_FINISHED;
         }
         copy_buf = NULL;
-    }
-
-    GOTO_ON_ERROR(program_execute_and_wait(handle, dst, &status), fail);
-    if ((status & STAT_PROGRAM_FAILED) != 0) {
-        NAND_LOGD(TAG, "copy, prog failed");
-        return ESP_ERR_NOT_FINISHED;
+    } else {
+        GOTO_ON_ERROR(program_execute_and_wait(handle, dst, &status), fail);
+        if ((status & STAT_PROGRAM_FAILED) != 0) {
+            NAND_LOGD(TAG, "copy, prog failed");
+            return ESP_ERR_NOT_FINISHED;
+        }
     }
 
     return ret;

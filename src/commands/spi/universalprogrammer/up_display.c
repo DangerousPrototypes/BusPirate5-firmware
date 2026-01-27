@@ -1,0 +1,123 @@
+/*
+    display test for the universal programmer 'plank' (https:// xx) 
+    
+    (C) Chris van Dongen 2025-26
+
+*/
+
+
+/// --------------------------------------------------------------------- display helpers
+
+void putc_dl1414(uint8_t addr, uint8_t c)
+{
+  uint32_t dutin;
+  
+  dutin=lut_dl1414[(c&0x7F)];
+  dutin|=((addr&0x01)?UP_DL1414_A0:0);
+  dutin|=((addr&0x02)?UP_DL1414_A1:0);
+  
+  pins(dutin|UP_DL1414_WR);
+  pins(dutin             );
+  pins(dutin|UP_DL1414_WR);
+
+}
+static void testdl1414(void)
+{
+  int i;
+  uint32_t dutin;
+  
+  setpullups(UP_DL1414_PU);
+  setdirection(UP_DL1414_DIR);
+  
+  for(i=0x00; i<0x80; i++)
+  {
+    putc_dl1414(3, i  );
+    putc_dl1414(2, i+1);
+    putc_dl1414(1, i+2);
+    putc_dl1414(0, i+3);
+    
+    busy_wait_us(100000);
+  }
+  
+  // turn display off (display space)
+  putc_dl1414(3, ' ');
+  putc_dl1414(2, ' ');
+  putc_dl1414(1, ' ');
+  putc_dl1414(0, ' ');
+
+}
+
+static void testtil305(void)
+{
+  int i;
+  
+  setpullups(UP_TIL305_PU);
+  setdirection(UP_TIL305_DIR);
+
+  pins(UP_TIL305_COL1               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL1|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+  pins(UP_TIL305_COL2               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL2|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+  pins(UP_TIL305_COL3               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL3|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+  pins(UP_TIL305_COL4               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL4|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+  pins(UP_TIL305_COL5               |UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1               |UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3               |UP_TIL305_ROW5|UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4               |UP_TIL305_ROW6|UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5               |UP_TIL305_ROW7);  
+  busy_wait_us(100000);
+  pins(UP_TIL305_COL5|UP_TIL305_ROW1|UP_TIL305_ROW2|UP_TIL305_ROW3|UP_TIL305_ROW4|UP_TIL305_ROW5|UP_TIL305_ROW6               );  
+  busy_wait_us(100000);
+
+}
+

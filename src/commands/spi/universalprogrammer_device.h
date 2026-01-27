@@ -84,24 +84,8 @@
 #define UP_TYPE_27XXX  0
 #define UP_TYPE_25XXX  1
 
-// (flash)eprom types
-#define UP_EPROM_2764     0
-#define UP_EPROM_27128    1
-#define UP_EPROM_27256    2
-#define UP_EPROM_27512    3
-#define UP_EPROM_27010    4
-#define UP_EPROM_27020    5
-#define UP_EPROM_27040    6
-#define UP_EPROM_27080    7
 
-// dram/sram types
-#define UP_DRAM_4164    0
-#define UP_DRAM_41256   1
-#define UP_SRAM_6264    0x100
-#define UP_SRAM_62256   0x101
-#define UP_SRAM_621024  0x102
-
-
+// eprom only for now
 typedef struct up_device {
   char      name[16];
   uint16_t  mnameid;

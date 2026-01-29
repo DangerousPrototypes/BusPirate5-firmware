@@ -80,6 +80,7 @@ struct spi_nand_flash_device_t {
     uint8_t *work_buffer;
     uint8_t *read_buffer;
     uint8_t *temp_buffer;
+    const char *manufacturer_name;
     mutex_t mutex;
 };
 

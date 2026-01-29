@@ -14,6 +14,9 @@
 
 #define TAG "nand_xtx"
 #define NAND_DEBUG_ENABLE 0
+
+static const char MANUFACTURER_NAME[] = "XTX";
+
 // Logging macros
 #if NAND_DEBUG_ENABLE
     #define NAND_LOGD(tag, fmt, ...) printf("[D][%s] " fmt "\n", tag, ##__VA_ARGS__)
@@ -33,6 +36,7 @@
 
 esp_err_t spi_nand_xtx_init(spi_nand_flash_device_t *dev)
 {
+    dev->manufacturer_name = MANUFACTURER_NAME;
     esp_err_t ret = ESP_OK;
     uint8_t device_id = 0;
     spi_nand_transaction_t t = {

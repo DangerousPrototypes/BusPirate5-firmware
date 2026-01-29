@@ -96,6 +96,7 @@ static esp_err_t unprotect_chip(spi_nand_flash_device_t *dev)
 
 static uint8_t work[2048+4];
 static uint8_t read[2048+4];
+static spi_nand_flash_device_t static_device_handle;
 
 esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_flash_device_t **handle)
 {
@@ -105,10 +106,9 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
         config->gc_factor = 4;
     }
 
-    *handle = calloc(1, sizeof(spi_nand_flash_device_t));
-    if (*handle == NULL) {
-        return ESP_ERR_NO_MEM;
-    }
+    // Use static allocation instead of calloc for embedded system
+    memset(&static_device_handle, 0, sizeof(spi_nand_flash_device_t));
+    *handle = &static_device_handle;
 
     memcpy(&(*handle)->config, config, sizeof(spi_nand_flash_config_t));
 
@@ -157,7 +157,7 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
     return ret;
 
 fail:
-    free(*handle);
+    // No free() needed - using static allocation
     return ret;
 }
 
@@ -246,6 +246,36 @@ esp_err_t spi_nand_flash_sync(spi_nand_flash_device_t *handle)
 esp_err_t spi_nand_flash_get_capacity(spi_nand_flash_device_t *handle, uint32_t *number_of_sectors)
 {
     return handle->ops->get_capacity(handle, number_of_sectors);
+}
+
+const char *spi_nand_flash_print_manufacturer(void)
+{
+    spi_nand_flash_device_t *handle = &static_device_handle;
+    
+    if (handle->manufacturer_name == NULL) {
+        return "";
+    }
+
+    return handle->manufacturer_name;
+}
+
+void spi_nand_flash_print_info(void)
+{
+    spi_nand_flash_device_t *handle = &static_device_handle;
+    
+    if (handle->manufacturer_name == NULL) {
+        printf("NAND: No device initialized\r\n");
+        return;
+    }
+    
+    printf("NAND Flash Information:\r\n");
+    printf("  Manufacturer: %s\r\n", handle->manufacturer_name);
+    printf("  Page size: %lu bytes\r\n", (unsigned long)handle->chip.page_size);
+    printf("  Block size: %lu bytes\r\n", (unsigned long)handle->chip.block_size);
+    printf("  Pages per block: %u\r\n", (1 << handle->chip.log2_ppb));
+    printf("  Total blocks: %lu\r\n", (unsigned long)handle->chip.num_blocks);
+    printf("  Total capacity: %lu KB\r\n", 
+           (unsigned long)((handle->chip.num_blocks * handle->chip.block_size) / 1024));
 }
 
 esp_err_t spi_nand_flash_get_sector_size(spi_nand_flash_device_t *handle, uint32_t *sector_size)

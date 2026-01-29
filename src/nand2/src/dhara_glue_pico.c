@@ -29,9 +29,13 @@ typedef struct {
     spi_nand_flash_device_t *parent_handle;
 } spi_nand_flash_dhara_priv_data_t;
 
+static spi_nand_flash_dhara_priv_data_t static_dhara_priv_data;
+
 static esp_err_t dhara_init(spi_nand_flash_device_t *handle)
 {
-    spi_nand_flash_dhara_priv_data_t *dhara_priv_data = calloc(1, sizeof(spi_nand_flash_dhara_priv_data_t));
+    // Use static allocation instead of calloc for embedded system
+    memset(&static_dhara_priv_data, 0, sizeof(spi_nand_flash_dhara_priv_data_t));
+    spi_nand_flash_dhara_priv_data_t *dhara_priv_data = &static_dhara_priv_data;
     handle->ops_priv_data = dhara_priv_data;
     dhara_priv_data->parent_handle = handle;
 

@@ -14,6 +14,9 @@
 
 #define TAG "nand_winbond"
 #define NAND_DEBUG_ENABLE 0
+
+static const char MANUFACTURER_NAME[] = "Winbond";
+
 // Logging macros
 #if NAND_DEBUG_ENABLE
     #define NAND_LOGD(tag, fmt, ...) printf("[D][%s] " fmt "\n", tag, ##__VA_ARGS__)

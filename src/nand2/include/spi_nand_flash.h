@@ -157,6 +157,20 @@ esp_err_t spi_nand_flash_get_block_num(spi_nand_flash_device_t *handle, uint32_t
  */
 esp_err_t spi_nand_flash_deinit_device(spi_nand_flash_device_t *handle);
 
+/** @brief Print NAND flash information including manufacturer name.
+ *
+ * Uses the internal static device handle, so no parameters needed.
+ */
+void spi_nand_flash_print_info(void);
+
+/** @brief Get NAND flash manufacturer name.
+ *
+ * Uses the internal static device handle, so no parameters needed.
+ *
+ * @return Pointer to manufacturer name string, or empty string if no device initialized.
+ */
+const char *spi_nand_flash_print_manufacturer(void);
+
 #ifdef __cplusplus
 }
 #endif

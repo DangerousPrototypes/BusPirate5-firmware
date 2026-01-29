@@ -19,6 +19,7 @@
 #include "commands/global/freq.h"
 #include "timestamp.h"
 #include "binmode/binmodes.h"
+#include "nand2/include/spi_nand_flash.h"
 /*
 static const char * const usage[]=
 {
@@ -79,17 +80,21 @@ void i_info_handler(struct command_result* res) {
 
     // TF flash card information
     if (system_config.storage_available) {
-        printf("%s: %s%6.2fGB%s (%s %s)\r\n",
+        printf("%s: %s%1.2fGB%s %s (%s %s)\r\n",
                GET_T(T_INFO_TF_CARD),
                ui_term_color_num_float(),
                system_config.storage_size,
                ui_term_color_reset(),
+               spi_nand_flash_print_manufacturer(),
                storage_fat_type_labels[system_config.storage_fat_type - 1],
                GET_T(T_INFO_FILE_SYSTEM));
+        //spi_nand_flash_print_info();
 
     } else {
         printf("%s: %s\r\n", GET_T(T_INFO_TF_CARD), GET_T(T_NOT_DETECTED));
+        printf("Storage mount error: %d\r\n", system_config.storage_mount_error);
     }
+    
 
     // config file loaded
     do {

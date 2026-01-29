@@ -225,8 +225,6 @@ set(buspirate_common
         pirate/onewire_library.c
         commands/eeprom/eeprom_1wire.h
         commands/eeprom/eeprom_1wire.c
-        commands/global/jep106_lookup.c
-        commands/global/jep106_lookup.h
 
         # UART
         mode/hwuart.h

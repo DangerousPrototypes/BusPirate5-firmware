@@ -10,15 +10,6 @@
 #include "ui/ui_cmdln.h"
 #include "lib/jep106/jep106.h"
 
-
-
-static const char *decode_jep106_jedec_id(uint8_t b0, uint8_t b1){
-    int bank=(b0 & 0xf);
-    int id=(b1 & 0x7f); //SPD JEDEC ID is lower 7 bits, no parity bit. Bit 7 = 1 = bank > 0
-    return jep106_table_manufacturer(bank, id); //returns a string
-}
-
-
 static const char* const usage[] = {
     "jep106 <bank> <device id>",
     "Lookup JEP106 ID (Micron):%s jep106 0x00 0x2c",

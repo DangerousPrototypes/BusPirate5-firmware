@@ -11,7 +11,7 @@
 #include "lib/jep106/jep106.h"
 
 static const char* const usage[] = {
-    "jep106 <bank> <device id>",
+    "jep106 <bank number> <vendor id>",
     "Lookup JEP106 ID (Micron):%s jep106 0x00 0x2c",
     "Lookup JEP106 ID (Sinker):%s jep106 0x0a 0xab"
 };
@@ -29,25 +29,27 @@ void jep106_handler(struct command_result* res) {
 
     uint32_t bank;
     if(!cmdln_args_uint32_by_position(1, &bank)){
-        printf("Missing bank argument\r\n");
+        printf("Missing bank number argument\r\n\r\n");
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
         return;
     }
     
     uint32_t id;
     if(!cmdln_args_uint32_by_position(2, &id)){
-        printf("Missing device id argument\r\n");
+        printf("Missing vendor id argument\r\n\r\n");
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
         return;
     }
 
     //error if bank = 0 and id bit 7 is set
     if((bank == 0) && (id & 0x80)){
-        printf("Invalid JEP106 ID: bank 0 cannot have bit 7 set in device id\r\n");
+        printf("Invalid JEP106 ID: bank 0 cannot have bit 7 set in vendor id\r\n");
         return;
     }
     
     //error if bank > 0 and id bit 7 is clear
     if((bank > 0) && !(id & 0x80)){
-        printf("Invalid JEP106 ID: bank > 0 must have bit 7 set in device id\r\n");
+        printf("Invalid JEP106 ID: bank > 0 must have bit 7 set in vendor id\r\n");
         return;
     }
 

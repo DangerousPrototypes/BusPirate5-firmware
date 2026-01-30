@@ -53,14 +53,12 @@ uint32_t bpio_hw2wire_transaction(struct bpio_data_request_t *request, flatbuffe
     }
 
     if(request->stop_main) {
-        // CS inactive
         if(request->debug) printf("[2WIRE] STOP\r\n");
         pio_hw2wire_stop();
     }
 
     if(request->stop_alt) {
-        // CS inactive
-        if(request->debug) printf("[2WIRE] CS inactive (alt)\r\n");
+        if(request->debug) printf("[2WIRE] RST low\r\n");
         bio_output(M_2WIRE_RST);
     }
 

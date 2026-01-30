@@ -31,12 +31,9 @@ uint32_t bpio_hwuart_transaction(struct bpio_data_request_t *request, flatbuffer
         if(request->debug) printf("[UART] Reading %d bytes\r\n", request->bytes_read);
         for(uint32_t i = 0; i < request->bytes_read; i++) {
             // Wait for data with timeout (avoid blocking forever)
-            uint32_t timeout = time_us_32();
-            while(!uart_is_readable(M_UART_PORT)) {
-                if(time_us_32() - timeout > 1000000) { // 1 second timeout
-                    if(request->debug) printf("[UART] Read timeout at byte %d\r\n", i);
-                    return true; // Error - timeout
-                }
+            if(!uart_is_readable_within_us(M_UART_PORT, 1000000)) { // 1 second timeout
+                if(request->debug) printf("[UART] Read timeout at byte %d\r\n", i);
+                return true; // Error - timeout
             }
             data_read[i] = (uint8_t)uart_getc(M_UART_PORT);
         }
@@ -58,16 +55,18 @@ uint32_t bpio_hwuart_async_handler(uint8_t *data_read) {
     data_read[0] = (uint8_t)uart_getc(M_UART_PORT);
     uint32_t bytes_read = 1;
     
-    // Wait ~2 byte times to let more data arrive and batch into single packet
-    // At 115200 baud: ~87us per byte, so wait ~175us
-    // At 9600 baud: ~1042us per byte, so wait ~2ms
-    // Use conservative 200us which works well for common baud rates (9600-921600)
-    sleep_us(200);
-    
-    // Read remaining bytes that arrived during delay
+    // Wait up to 200us for more data to arrive and batch into single packet
+    // Returns immediately if data arrives sooner, improving responsiveness
+    // At 115200 baud: ~87us per byte, so typically captures 2-3 bytes
+    // At 9600 baud: ~1042us per byte, so may not capture additional bytes
+    // Only wait if FIFO empty - then batch whatever arrives
+    if(!uart_is_readable(M_UART_PORT)) {
+        uart_is_readable_within_us(M_UART_PORT, 200);
+    }
+
+    // Drain all available data
     while(uart_is_readable(M_UART_PORT) && bytes_read < BPIO_MAX_READ_SIZE) {
-        data_read[bytes_read] = (uint8_t)uart_getc(M_UART_PORT);
-        bytes_read++;
+        data_read[bytes_read++] = (uint8_t)uart_getc(M_UART_PORT);
     }
     
     return bytes_read;

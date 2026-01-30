@@ -460,6 +460,8 @@ set(buspirate_common
         binmode/bpio_2wire.h
         binmode/bpio_3wire.c
         binmode/bpio_3wire.h
+        binmode/bpio_uart.c
+        binmode/bpio_uart.h
         binmode/bpio_hiz.c
         binmode/bpio_hiz.h
         binmode/bpio_dio.c

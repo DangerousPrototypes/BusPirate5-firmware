@@ -23,6 +23,25 @@
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
 
+bool bpio_hwuart_configure(bpio_mode_configuration_t *bpio_mode_config){
+    if(bpio_mode_config->debug) printf("[UART] Configuring - Speed %d baud, %d%c%d\r\n", 
+        bpio_mode_config->speed,
+        bpio_mode_config->data_bits,
+        bpio_mode_config->parity ? 'E' : 'N',
+        bpio_mode_config->stop_bits);
+    
+    mode_config.baudrate = bpio_mode_config->speed;
+    mode_config.data_bits = bpio_mode_config->data_bits;
+    mode_config.stop_bits = bpio_mode_config->stop_bits;
+    mode_config.parity = bpio_mode_config->parity ? UART_PARITY_EVEN : UART_PARITY_NONE;
+    mode_config.flow_control = bpio_mode_config->flow_control ? 1 : 0;
+    mode_config.invert = bpio_mode_config->signal_inversion ? 1 : 0;
+    mode_config.async_print = false; // Disabled by default, async data handled via BPIO packets
+    mode_config.blocking = 0; // Non-blocking
+    
+    return true;  
+}
+
 // command configuration
 const struct _mode_command_struct hwuart_commands[] = {
     {   .command="gps", 

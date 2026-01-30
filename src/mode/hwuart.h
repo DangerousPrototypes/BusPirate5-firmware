@@ -30,3 +30,5 @@ typedef struct _uart_mode_config {
 
 extern const struct _mode_command_struct hwuart_commands[];
 extern const uint32_t hwuart_commands_count;
+
+bool bpio_hwuart_configure(bpio_mode_configuration_t *bpio_mode_config);

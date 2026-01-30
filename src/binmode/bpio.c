@@ -54,8 +54,10 @@
 #include "binmode/bpio_dio.h"
 #include "binmode/bpio_led.h"
 #include "binmode/bpio_infrared.h"
+#include "binmode/bpio_uart.h"
 #include "mode/hiz.h"
 #include "mode/hw2wire.h"
+#include "mode/hwuart.h"
 
 const char dirtyproto_mode_name[] = "BPIO2 flatbuffer interface";
 uint32_t time_start, time_end;
@@ -127,8 +129,9 @@ static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
         .bpio_handler = NULL
     },
     [HWUART]={
-        .bpio_configure = NULL,
-        .bpio_handler = NULL
+        .bpio_configure = bpio_hwuart_configure,
+        .bpio_handler = bpio_hwuart_transaction,
+        .bpio_async_handler = bpio_hwuart_async_handler
     },
     [HWHDUART]={
         .bpio_configure = NULL,
@@ -697,6 +700,45 @@ const static struct _bpio_function_t bpio_handlers[]={
     [bpio_RequestPacketContents_DataRequest] = { .func = data_request },
 };
 
+void bpio_check_async_data(flatcc_builder_t *B, uint8_t *buf) {
+    // Check if current mode supports async handler
+    if(!bpio_mode_handlers[system_config.mode].bpio_async_handler) {
+        return; // Mode doesn't support async data
+    }
+    
+    // Allocate buffer for async data
+    uint8_t async_data[BPIO_MAX_READ_SIZE];
+    
+    // Call mode's async handler to check for data
+    uint32_t bytes_read = bpio_mode_handlers[system_config.mode].bpio_async_handler(async_data);
+    
+    if(bytes_read == 0) {
+        return; // No async data available
+    }
+    
+    if(bpio_debug) printf("[Async Data] %d bytes from %s\r\n", bytes_read, modes[system_config.mode].protocol_name);
+    
+    // Build async DataResponse packet (similar pattern to normal data_request)
+    flatcc_builder_reset(B);
+    
+    bpio_DataResponse_start(B);
+    bpio_DataResponse_data_read_start(B);
+    uint8_t *data_read_buf = bpio_DataResponse_data_read_extend(B, bytes_read);
+    memcpy(data_read_buf, async_data, bytes_read);
+    bpio_DataResponse_data_read_end(B);
+    
+    // Mark as async (unsolicited) data
+    bpio_DataResponse_is_async_add(B, true);
+    
+    bpio_DataResponse_ref_t data_response = bpio_DataResponse_end(B);
+    
+    bpio_ResponsePacket_start_as_root(B);
+    bpio_ResponsePacket_contents_DataResponse_add(B, data_response);
+    bpio_ResponsePacket_end_as_root(B);
+    
+    send_packet(B, buf);
+}
+
 void error_response(const char *error_msg, flatcc_builder_t *B, uint8_t *buf) {
     if(bpio_debug) printf("[Error Response] %s\r\n", error_msg);
     flatcc_builder_reset(B);//25uS
@@ -731,7 +773,12 @@ void dirtyproto_mode_setup(void) {
 // handler needs to be cooperative multitasking until mode is enabled
 void dirtyproto_mode(void) {
     uint8_t buf[BPIO_MAX_COBS_SIZE]; // used to store the flatbuffer data, and for COBS encoded output
-    if (!tud_cdc_n_available(CDC_INTF)) return; // No data available, exit early 
+    
+    // Check for async data if no request is pending
+    if (!tud_cdc_n_available(CDC_INTF)) {
+        bpio_check_async_data(B, buf);
+        return; // No data available, exit early
+    } 
 
     bpio_debug = (system_config.bpio_debug_enable && tud_cdc_n_connected(0));
     

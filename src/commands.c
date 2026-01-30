@@ -24,7 +24,6 @@
 #include "commands/global/pause.h"
 #include "commands/global/h_help.h"
 #include "commands/global/cmd_selftest.h"
-#include "commands/global/a_auxio.h"
 #include "commands/global/dummy.h"
 #include "commands/global/disk.h"
 #include "commands/global/i_info.h"

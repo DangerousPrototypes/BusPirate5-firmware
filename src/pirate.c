@@ -91,20 +91,18 @@ static bool should_disable_unique_usb_serial_number(void) {
             "Init: system_config.disable_unique_usb_serial_number is TRUE\n"
             );
         result = true;
-    } else
-    if (system_config.storage_fat_type == 0) {
+    } else if (system_config.storage_fat_type == 0) {
         BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
             "Init: Storage unformatted ... disabling unique USB serial number\n"
             );
         result = true;
-    } else
-    // if (!system_config.config_loaded_from_file) {
-    //     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-    //         "Init: no configuration ... disabling unique USB serial number\n"
-    //         );
-    //     result = true;
-    // } else
-    if (storage_file_exists("FACTORY.USB")) {
+    } else if (storage_file_exists("FACTORY.USB")) {
+        // if (!system_config.config_loaded_from_file) {
+        //     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        //         "Init: no configuration ... disabling unique USB serial number\n"
+        //         );
+        //     result = true;
+        // } else
         BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
             "Init: `\\FACTORY.USB` file exists ... disabling unique USB serial number\n"
             );

@@ -621,7 +621,8 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
         .bytes_write = data_write_len, // Use the length of the data write vector
         .bytes_read = bpio_DataRequest_bytes_read(data_request),
         .stop_main = bpio_DataRequest_stop_main(data_request),
-        .stop_alt = bpio_DataRequest_stop_alt(data_request)
+        .stop_alt = bpio_DataRequest_stop_alt(data_request),
+        .bitwise_ops = bpio_DataRequest_bitwise_ops(data_request)
     };
 
     size_t data_buf_size = request.bytes_read;
@@ -644,6 +645,9 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
         printf("[Data Request] Bytes to read: %d\r\n", request.bytes_read);
         printf("[Data Request] Stop main condition: %s\r\n", request.stop_main ? "true" : "false");
         printf("[Data Request] Stop alternate condition: %s\r\n", request.stop_alt ? "true" : "false");
+        if(request.bitwise_ops) {
+            printf("[Data Request] Bitwise operations: %d\r\n", flatbuffers_uint8_vec_len(request.bitwise_ops));
+        }
     }
  
     //**************TIME END: 40uS

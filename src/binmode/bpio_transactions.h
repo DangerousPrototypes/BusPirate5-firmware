@@ -15,6 +15,8 @@ struct bpio_data_request_t {
     const char *data_buf;    // Data buffer 
     bool stop_main;          // Stop main condition  
     bool stop_alt;           // Stop alternate condition
+    // Bitwise pin operations (2wire/3wire modes only)
+    flatbuffers_uint8_vec_t bitwise_ops;  // Vector of BitwiseOps values
 };
 
 // All transaction function prototypes are now in individual module headers:

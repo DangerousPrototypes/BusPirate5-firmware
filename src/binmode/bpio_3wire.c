@@ -6,6 +6,7 @@
 #include "bpio_3wire.h"
 #include "bpio_transactions.h"
 #include "pirate/hw3wire_pio.h"
+#include "pirate/bio.h"
 #include "ui/ui_format.h"
 #include "system_config.h"
 
@@ -66,6 +67,49 @@ uint32_t bpio_hw3wire_transaction(struct bpio_data_request_t *request, flatbuffe
     if(request->stop_main || request->stop_alt) {
         if(request->debug) printf("[3WIRE] CS inactive\r\n");
         hw3wire_set_cs(M_3WIRE_DESELECT);
+    }
+
+    // Bitwise pin operations
+    if(request->bitwise_ops) {
+        uint32_t bitwise_ops_len = flatbuffers_uint8_vec_len(request->bitwise_ops);
+        if(bitwise_ops_len > 0) {
+            if(request->debug) printf("[3WIRE] Processing %d bitwise operations\r\n", bitwise_ops_len);
+            
+            for(uint32_t i = 0; i < bitwise_ops_len; i++) {
+                uint8_t op = flatbuffers_uint8_vec_at(request->bitwise_ops, i);
+                
+                if(request->debug) printf("[3WIRE] Bitwise op[%d]: 0x%02X\r\n", i, op);
+                
+                uint8_t pin_mask = 0;
+                uint8_t pin_value = 0;
+                
+                // Data pin (MOSI) operations (bits 0-1)
+                // 3wire: bit 0 = MOSI
+                if(op & 0x01) { pin_mask |= 0x01; pin_value &= ~0x01; }  // DATA_LOW
+                if(op & 0x02) { pin_mask |= 0x01; pin_value |= 0x01; }   // DATA_HIGH
+                
+                // Clock pin (SCLK) operations (bits 2-3)
+                // 3wire: bit 1 = SCLK
+                if(op & 0x04) { pin_mask |= 0x02; pin_value &= ~0x02; }  // CLOCK_LOW
+                if(op & 0x08) { pin_mask |= 0x02; pin_value |= 0x02; }   // CLOCK_HIGH
+                
+                // Special case: CLOCK_PULSE (0x0C = both clock bits set)
+                if((op & 0x0C) == 0x0C) {
+                    if(request->debug) printf("[3WIRE] Clock pulse\r\n");
+                    pio_hw3wire_clock_tick();
+                } else if(pin_mask) {
+                    // Set pins according to mask and value
+                    if(request->debug) printf("[3WIRE] Set mask 0x%02X value 0x%02X\r\n", pin_mask, pin_value);
+                    pio_hw3wire_set_mask(pin_mask, pin_value);
+                }
+                
+                // Read operation (bit 4) - read MISO pin
+                if(op & 0x10) {
+                    if(request->debug) printf("[3WIRE] Read bit\r\n");
+                    *read_ptr++ = bio_get(M_3WIRE_MISO);
+                }
+            }
+        }
     }
 
     return false;

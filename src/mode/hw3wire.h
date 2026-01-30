@@ -14,12 +14,14 @@ void hw3wire_macro(uint32_t macro);
 uint32_t hw3wire_setup(void);
 uint32_t hw3wire_setup_exc(void);
 void hw3wire_cleanup(void);
+void hw3wire_set_cs(uint8_t cs);
 // void hw3wire_pins(void);
 void hw3wire_settings(void);
 void hw3wire_printI2Cflags(void);
 void hw3wire_help(void);
 uint32_t hw3wire_get_speed(void);
 bool hw3wire_preflight_sanity_check(void);
+bool bpio_hw3wire_configure(bpio_mode_configuration_t *bpio_mode_config);
 
 typedef struct _hw3wire_mode_config {
     uint32_t baudrate;

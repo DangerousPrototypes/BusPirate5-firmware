@@ -6,6 +6,8 @@
  * Demo code for PIO 1-Wire interface
  */
 
+#include "hardware/pio.h"
+
 struct owobj {
     PIO pio;     /* pio object (pio0/pio1) */
     uint sm;     /* state machine number */

@@ -464,6 +464,10 @@ set(buspirate_common
         binmode/bpio_hiz.h
         binmode/bpio_dio.c
         binmode/bpio_dio.h
+        binmode/bpio_led.c
+        binmode/bpio_led.h
+        binmode/bpio_infrared.c
+        binmode/bpio_infrared.h
         binmode/legacy4third.c
         binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c

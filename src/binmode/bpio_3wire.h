@@ -9,6 +9,13 @@
 struct bpio_data_request_t;
 
 /**
+ * @brief Configure 3-Wire mode for BPIO
+ * @param bpio_mode_config Configuration structure with speed, polarity, phase, etc.
+ * @return true on success, false on error
+ */
+bool bpio_hw3wire_configure(bpio_mode_configuration_t *bpio_mode_config);
+
+/**
  * @brief Perform a 3-Wire transaction
  * @param request Transaction request structure containing debug flags, byte counts, and control flags
  * @param data_write Flatbuffer vector containing data to write

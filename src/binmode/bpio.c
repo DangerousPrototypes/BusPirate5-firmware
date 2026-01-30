@@ -44,6 +44,7 @@
 #include "bpio_reader.h"  
 #include "bpio_verifier.h"
 #include "lib/nanocobs/cobs.h"
+#include "binmode/bpio_transactions.h"
 #include "binmode/bpio_1wire.h"
 #include "binmode/bpio_i2c.h"
 #include "binmode/bpio_spi.h"
@@ -51,6 +52,8 @@
 #include "binmode/bpio_3wire.h"
 #include "binmode/bpio_hiz.h"
 #include "binmode/bpio_dio.h"
+#include "binmode/bpio_led.h"
+#include "binmode/bpio_infrared.h"
 #include "mode/hiz.h"
 #include "mode/hw2wire.h"
 
@@ -103,7 +106,7 @@ static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
         .bpio_handler = bpio_hw2wire_transaction
     },
     [HW3WIRE]={
-        .bpio_configure = NULL,
+        .bpio_configure = bpio_hw3wire_configure,
         .bpio_handler = bpio_hw3wire_transaction
     },
     [DIO]={
@@ -111,7 +114,7 @@ static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
         .bpio_handler = bpio_dio_transaction
     },
     [HWLED]={
-        .bpio_configure = NULL,
+        .bpio_configure = bpio_led_configure,
         .bpio_handler = bpio_led_transaction
     },
     //need async handler in some way

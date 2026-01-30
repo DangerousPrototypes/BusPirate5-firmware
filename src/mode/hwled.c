@@ -20,7 +20,7 @@
 #include "pio_config.h"
 #include "binmode/logicanalyzer.h"
 
-static struct _pio_config pio_config;
+struct _pio_config pio_config;
 
 // command configuration
 const struct _mode_command_struct hwled_commands[] = { 0 };
@@ -36,13 +36,7 @@ static const char led_device_type[][7] = {
     "APA102",
 };
 
-enum M_LED_DEVICE_TYPE {
-    M_LED_WS2812,
-    M_LED_APA102,
-    M_LED_WS2812_ONBOARD
-};
-
-static struct _led_mode_config mode_config;
+led_mode_config_t hwled_mode_config;
 
 static uint8_t device_cleanup;
 
@@ -84,8 +78,8 @@ uint32_t hwled_setup(void) {
     const char config_file[] = "bpled.bp";
     const mode_config_t config_t[] = {
         // clang-format off
-        { "$.device", &mode_config.device, MODE_CONFIG_FORMAT_DECIMAL },
-        //{ "$.num_leds", &mode_config.num_leds, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.device", &hwled_mode_config.device, MODE_CONFIG_FORMAT_DECIMAL },
+        //{ "$.num_leds", &hwled_mode_config.num_leds, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };
 
@@ -101,15 +95,15 @@ uint32_t hwled_setup(void) {
         }
     }
 
-    ui_prompt_uint32(&result, &leds_menu[0], &mode_config.device);
+    ui_prompt_uint32(&result, &leds_menu[0], &hwled_mode_config.device);
     if (result.exit) {
         return 0;
     }
-    mode_config.device--;
-    /*if (mode_config.device == 2) {
-        mode_config.num_leds = RGB_LEN;
+    hwled_mode_config.device--;
+    /*if (hwled_mode_config.device == 2) {
+        hwled_mode_config.num_leds = RGB_LEN;
     } else {
-        ui_prompt_uint32(&result, &leds_menu[1], &mode_config.num_leds);
+        ui_prompt_uint32(&result, &leds_menu[1], &hwled_mode_config.num_leds);
         if (result.exit) {
             return 0;
         }
@@ -124,10 +118,10 @@ uint32_t hwled_setup(void) {
 uint32_t hwled_setup_exc(void) {
     pio_config.pio = PIO_MODE_PIO;
     pio_config.sm = 0;
-    switch (mode_config.device) {
+    switch (hwled_mode_config.device) {
         case M_LED_WS2812:
             system_bio_update_purpose_and_label(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
-            mode_config.baudrate = 800000;
+            hwled_mode_config.baudrate = 800000;
             bio_buf_output(M_LED_SDO);
             // success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &pio_config.pio,
             // &pio_config.sm, &pio_config.offset, bio2bufiopin[M_LED_SDO], 1, true); hard_assert(success);
@@ -140,14 +134,14 @@ uint32_t hwled_setup_exc(void) {
                                 pio_config.sm,
                                 pio_config.offset,
                                 bio2bufiopin[M_LED_SDO],
-                                (float)mode_config.baudrate,
+                                (float)hwled_mode_config.baudrate,
                                 false);  
             system_config.num_bits=24;          
             break;
         case M_LED_APA102:
             system_bio_update_purpose_and_label(true, M_LED_SDO, BP_PIN_MODE, pin_labels[0]);
             system_bio_update_purpose_and_label(true, M_LED_SCL, BP_PIN_MODE, pin_labels[1]);
-            mode_config.baudrate = (5 * 1000 * 1000);
+            hwled_mode_config.baudrate = (5 * 1000 * 1000);
             bio_buf_output(M_LED_SDO);
             bio_buf_output(M_LED_SCL);
             // success = pio_claim_free_sm_and_add_program_for_gpio_range(&apa102_mini_program, &pio_config.pio,
@@ -160,7 +154,7 @@ uint32_t hwled_setup_exc(void) {
             apa102_mini_program_init(pio_config.pio,
                                      pio_config.sm,
                                      pio_config.offset,
-                                     mode_config.baudrate,
+                                     hwled_mode_config.baudrate,
                                      bio2bufiopin[M_LED_SCL],
                                      bio2bufiopin[M_LED_SDO]);
             system_config.num_bits=32;            
@@ -170,7 +164,7 @@ uint32_t hwled_setup_exc(void) {
             rgb_set_all(0, 0, 0);
             pio_config.pio = PIO_RGB_LED_PIO;
             pio_config.sm = PIO_RGB_LED_SM;
-            mode_config.baudrate = 800000;
+            hwled_mode_config.baudrate = 800000;
             system_config.num_bits=24;
             #if BP_VER == 5
                 logic_analyzer_set_base_pin(RGB_CDO);
@@ -180,21 +174,21 @@ uint32_t hwled_setup_exc(void) {
             printf("\r\nError: Invalid device type");
             return 0;
     }
-    device_cleanup = mode_config.device;
-    system_config.subprotocol_name = led_device_type[mode_config.device];
+    device_cleanup = hwled_mode_config.device;
+    system_config.subprotocol_name = led_device_type[hwled_mode_config.device];
 
     return 1;
 }
 
 bool hwled_preflight_sanity_check(void){
-    if (mode_config.device == M_LED_WS2812_ONBOARD) {
+    if (hwled_mode_config.device == M_LED_WS2812_ONBOARD) {
         return true;
     }
     return ui_help_sanity_check(true, 0x00);
 }
 
 void hwled_start(struct _bytecode* result, struct _bytecode* next) {
-    switch (mode_config.device) {
+    switch (hwled_mode_config.device) {
         case M_LED_WS2812:
         case M_LED_WS2812_ONBOARD:
             hwled_wait_idle();  //wait until the FIFO is empty and the state machine is idle 
@@ -211,7 +205,7 @@ void hwled_start(struct _bytecode* result, struct _bytecode* next) {
 }
 
 void hwled_stop(struct _bytecode* result, struct _bytecode* next) {
-    switch (mode_config.device) {
+    switch (hwled_mode_config.device) {
         case M_LED_WS2812:
         case M_LED_WS2812_ONBOARD:
             hwled_wait_idle();  //wait until the FIFO is empty and the state machine is idle    
@@ -236,7 +230,7 @@ void hwled_write(struct _bytecode* result, struct _bytecode* next) {
     // UNDOCUMENTED: 
     //   Order in which the bytes are sent is NOT documented here.
     //   Caller must test to determin the proper RGB value order for their hardware.
-    switch (mode_config.device) {
+    switch (hwled_mode_config.device) {
         // TODO: add support for RGBW   (RGB + white)?
         // TODO: add support for RGBWW  (RGB + cool white + warm white)?
         // TODO: add support for RGBWWA (RGB + cool white + warm white + amber)?
@@ -300,8 +294,8 @@ void hwled_cleanup(void) {
 }
 
 void hwled_settings(void) {
-    ui_prompt_mode_settings_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(leds_type_menu[mode_config.device].description), 0x00);
-    //ui_prompt_mode_settings_int(GET_T(T_HWLED_NUM_LEDS_MENU), mode_config.num_leds, 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(leds_type_menu[hwled_mode_config.device].description), 0x00);
+    //ui_prompt_mode_settings_int(GET_T(T_HWLED_NUM_LEDS_MENU), hwled_mode_config.num_leds, 0x00);
 }
 
 void hwled_help(void) {
@@ -309,7 +303,7 @@ void hwled_help(void) {
 }
 
 uint32_t hwled_get_speed(void) {
-    return mode_config.baudrate;
+    return hwled_mode_config.baudrate;
 }
 
 // NOTE: Function must have no parameters ... this is a protocol entry point.
@@ -317,4 +311,15 @@ void hwled_wait_idle(void) {
     if(!pio_sm_wait_idle(pio_config.pio, pio_config.sm, 0xffffff)){
         printf("Timeout, error!");
     }        
+}
+
+//-----------------------------------------
+//
+
+
+bool hwled_bpio_configure(bpio_mode_configuration_t *bpio_mode_config) {
+    // Map submode to device type  
+    hwled_mode_config.device = bpio_mode_config->submode;
+    
+    return true;
 }

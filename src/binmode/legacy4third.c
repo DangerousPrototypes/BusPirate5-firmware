@@ -296,7 +296,7 @@ void legacy_protocol(void) {
                 if ((extended_info & 0b00001000) == 0) {
                     disable_psu_legacy();
                 } else {
-                    uint32_t result = psucmd_enable(psu_voltage, psu_current_limit, false);
+                    uint32_t result = psucmd_enable(psu_voltage, psu_current_limit, false, 100);
                     if (result) {
                         if (binmode_debug) {
                             printf("\r\nPSU ERROR CODE %d", result);

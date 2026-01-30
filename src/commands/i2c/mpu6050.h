@@ -1,0 +1,1 @@
+void mpu6050_handler(struct command_result* res) ;

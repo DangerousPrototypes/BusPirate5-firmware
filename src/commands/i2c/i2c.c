@@ -14,6 +14,7 @@
 #include "pirate/file.h" // File handling related
 #include "pirate/hwi2c_pio.h"
 
+#define I2C_DUMP_MAX_BUFFER_SIZE 1024
 enum i2c_dump_actions_enum {
     I2CDUMP_DUMP=0,
     I2CDUMP_READ,
@@ -27,7 +28,7 @@ const struct cmdln_action_t i2c_dump_actions[] = {
 static const char* const usage[] = {
     "i2c [dump|read]\r\n\t[-a <7 bit i2c address>] [-w <register width>] [-r <register address>] [-b <bytes>] [-f <file>] [-h(elp)]",
     "Dump 16 bytes from device:%s i2c dump -a 0x50 -w 1 -r 0x00 -b 16",
-    "Read 256 bytes to file:%s i2c read -a 0x50 -w 1 -r 0x00 -b 16 -f example.bin",
+    "Read 256 bytes to file:%s i2c read -a 0x50 -w 1 -r 0x00 -b 256 -f example.bin",
     "Dump device with 2 byte wide register:%s i2c dump -a 0x50 -w 2 -r 0x0000 -b 64",
     "Dump device with 3 bytes wide register:%s i2c dump -a 0x50 -w 3 -r 0x000000 -b 64",
 };
@@ -99,6 +100,10 @@ static bool i2c_get_args(struct i2c_dump_t *args) {
     // file to read/write/verify
     if ((args->action == I2CDUMP_READ)) {
         if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
+        if(args->data_size_bytes > I2C_DUMP_MAX_BUFFER_SIZE){
+            printf("Error: Data size exceeds maximum buffer size (%d bytes)\r\n", I2C_DUMP_MAX_BUFFER_SIZE);
+            return true;
+        }
     }
 
     return false;
@@ -142,6 +147,37 @@ bool i2c_dump(struct i2c_dump_t *eeprom){
 }
 
 
+
+bool i2c_dump_file(struct i2c_dump_t *eeprom){
+    uint8_t buf[I2C_DUMP_MAX_BUFFER_SIZE];
+
+    // copy the start address to an array
+    uint8_t j =0;
+    for (int16_t cnt = eeprom->register_address_width - 1; cnt >= 0; cnt--) {
+        buf[j]= (eeprom->register_address >> (cnt * 8)) & 0xFF; // write the register address byte by byte
+        j++;
+     }
+    //printf("Buf: %02X %02X\r\n", buf[0], buf[1]); // print the first byte of the buffer
+    // read the data from the EEPROM
+    if (i2c_transaction((eeprom->i2c_address_7bit<<1) | 0, buf, eeprom->register_address_width, buf, eeprom->data_size_bytes)) {
+        return true; // error
+    }
+
+    printf("Writing %d bytes to file: %s\r\n", eeprom->data_size_bytes, eeprom->file_name);
+    FIL file_handle;                                                  // file handle
+    if(file_open(&file_handle, eeprom->file_name, FA_CREATE_ALWAYS | FA_WRITE)) return true; // create the file, overwrite if it exists
+
+    // write the data to the file
+    if(file_write(&file_handle, buf, eeprom->data_size_bytes)) { 
+        return true; // if the write was unsuccessful (file closed in lower layer)
+    }
+    // close the file
+    f_close(&file_handle); // close the file
+    printf("Success :)\r\n");
+
+    return false;
+}
+
 void i2c_dump_handler(struct command_result* res) {
     if(res->help_flag) {
         //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
@@ -168,6 +204,13 @@ void i2c_dump_handler(struct command_result* res) {
         i2c_dump(&eeprom);
         goto i2c_dump_cleanup; // no need to continue
     }
+    if (eeprom.action==I2CDUMP_READ) {
+        if(i2c_dump_file(&eeprom)) {
+            printf("Error during I2C read\r\n");
+            goto i2c_dump_cleanup; // error during read
+        }
+    }
+    
  #if 0
     if (eeprom.action == I2CDUMP_ERASE || eeprom.action == I2CDUMP_TEST) {
         if(eeprom_action_erase(&eeprom, buf, sizeof(buf), verify_buf, sizeof(verify_buf), eeprom.verify_flag || eeprom.action == I2CDUMP_TEST)) {

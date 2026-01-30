@@ -89,7 +89,7 @@ void system_init(void) {
     system_config.pwm_active = 0;  // todo: store the period and duty cycle in array of structs
     system_config.freq_active = 0; // todo: store ranging info in array of structs
     system_config.aux_active = 0;
-
+#if 0
     system_config.psu = 0;
     system_config.psu_current_limit_en = false;
     system_config.psu_voltage = 0;
@@ -97,17 +97,8 @@ void system_init(void) {
     system_config.psu_current_error = false;
     system_config.psu_error = false;
     system_config.psu_irq_en = false;
-
+#endif
     system_config.error = 0;
-
-    system_config.mosiport = 0;
-    system_config.mosipin = 0;
-    system_config.misoport = 0;
-    system_config.misopin = 0;
-    system_config.csport = 0;
-    system_config.cspin = 0;
-    system_config.clkport = 0;
-    system_config.clkpin = 0;
 
     system_config.big_buffer_owner = BP_BIG_BUFFER_NONE;
 

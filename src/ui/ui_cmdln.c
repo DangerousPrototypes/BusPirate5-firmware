@@ -421,6 +421,10 @@ bool cmdln_args_float_by_position(uint32_t pos, float* value) {
             if (!cmdln_try_peek(rptr, &c)) {
                 return false;
             }
+            if( c=='-') {
+                //encountered flag, end of positional arguments
+                return false;
+            }
             if ((c >= '0') && (c <= '9')) // first part of decimal
             {
                 struct prompt_result result;

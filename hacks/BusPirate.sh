@@ -16,12 +16,12 @@
 # To Install:
 #    install BusPirateSetup.sh ~/bin/BusPirate
 
-# Time-stamp: <2024-12-11 09:33:01 (grymoire)> 
+# Time-stamp: <2024-12-11 09:33:01 (grymoire)>
 
 
 CONFIG=config # Configuration file in ~/.config/buspirate
 
-connect() { # Connect to BusPirate 
+connect() { # Connect to BusPirate
     # This function connects to the BP with your choice of terminal emulator
     # It evaluates the variable $CMD, which was set up by BusPirateSetup
     # You can override this variable here if you wish, and skip this setion
@@ -34,20 +34,20 @@ connect() { # Connect to BusPirate
     then
         printf "error: CMD not defined. Re-run BusPirateSetup\n"; exit
     fi
-    
+
     if [ "$VERBOSE" -gt 0 ]
     then
            printf "Port: %s, Baud: %d\n" "$PORT" "$BAUD"
            printf "%s\n" "$CMD"
     fi
-    
+
     eval "$CMD"
-    
+
 }
 
 usage() {
     # shellcheck disable=SC2046
-	printf "%s: ERROR: %s\n" $(basename "$0") "$@" 1>&2
+    printf "%s: ERROR: %s\n" $(basename "$0") "$@" 1>&2
     # shellcheck disable=SC2046
     printf "usage: %s [-n] [-v] [port] [baud]\n" $(basename "$0") 1>&2
     printf "          -n = Do not look for a /mnt/%s/BUS_PIRATE5 directory\n" "$USER" 1>&2
@@ -71,66 +71,68 @@ setup() {
                 printf "%s\n" "Okay - I'll use the defaults"
                 ;;
         esac
-        
+
     fi
     }
 check() {
     # Checks that the  Bus Pirate is mounted
     #Is it in bootloader mode and an BP5?
-    if [ -d "/media/$USER/RPI-RP2" ]
-    then
-        if [ -f "$FW/$RP2040FIRMWARE" ]
-        then
-       		printf "Do you want me to install the new firmware %s? " "$FW/$RP2040FIRMWARE"
-	        read -r answer
-            case "$answer" in
-                [Yy]* )
-                    cp "$FW/$RP2040FIRMWARE" /media/"$USER"/RPI-RP2
-                    exit
-                    ;;
-                * )
-	                printf "In boot mode - Unplug and replug the BusPirate\n"
-                    exit
-                    ;;
-            esac
-        else
-            printf "%s\n" "I did not see the firmware located in $FW/$RP2040FIRMWARE"
-	        printf "%s\n" "Unplug and replug the BusPirate to get out of boot mode"
-            exit
-        fi
-        
-    elif [ -d "/media/$USER/RP2350" ] # BusPirate 6 or 5xl
-    then
-        if [ -f "$FW/$RP2350FIRMWARE" ]
-        then
-            printf "Do you want me to install the new firmware %s? " "$FW/$RP2350FIRMWARE"
-            read -r answer
-            case "$answer" in
-                [Yy]* )
-                    cp "$FW/$RP2350FIRMWARE" /media/"$USER"/RP2350
-                    exit
-                    ;;
-                * )
-	                printf "In boot mode - Unplug and replug the BusPirate\n"
-                    exit
-                    ;;
-            esac
-        else
-            
-            printf "%s\n" "I did not see the firmware located in $FW/$RP2350FIRMWARE"
-	        printf "%s\n" "Unplug and replug the BusPirate to get out of boot mode"
-            exit
-        fi
-        
-    elif [ -d "/media/$USER/BUS_PIRATE5/" ]
-    then
-        :
-        # Looks good
-    else
-        printf "%s\n" "No file system mounted - Please plug in your Bus Pirate"    
-        exit 1
-	fi
+    for MOUNTLOCATION in "/media" "/run/media"
+    do
+      if [ -d "$MOUNTLOCATION/$USER/RPI-RP2" ]
+      then
+          if [ -f "$FW/$RP2040FIRMWARE" ]
+          then
+         		printf "Do you want me to install the new firmware %s? " "$FW/$RP2040FIRMWARE"
+  	        read -r answer
+              case "$answer" in
+                  [Yy]* )
+                      cp "$FW/$RP2040FIRMWARE" $MOUNTLOCATION/"$USER"/RPI-RP2
+                      exit
+                      ;;
+                  * )
+  	                printf "In boot mode - Unplug and replug the BusPirate\n"
+                      exit
+                      ;;
+              esac
+          else
+              printf "%s\n" "I did not see the firmware located in $FW/$RP2040FIRMWARE"
+  	        printf "%s\n" "Unplug and replug the BusPirate to get out of boot mode"
+              exit
+          fi
 
+      elif [ -d "$MOUNTLOCATION/$USER/RP2350" ] # BusPirate 6 or 5xl
+      then
+          if [ -f "$FW/$RP2350FIRMWARE" ]
+          then
+              printf "Do you want me to install the new firmware %s? " "$FW/$RP2350FIRMWARE"
+              read -r answer
+              case "$answer" in
+                  [Yy]* )
+                      cp "$FW/$RP2350FIRMWARE" $MOUNTLOCATION/"$USER"/RP2350
+                      exit
+                      ;;
+                  * )
+  	                printf "In boot mode - Unplug and replug the BusPirate\n"
+                      exit
+                      ;;
+              esac
+          else
+
+              printf "%s\n" "I did not see the firmware located in $FW/$RP2350FIRMWARE"
+  	        printf "%s\n" "Unplug and replug the BusPirate to get out of boot mode"
+              exit
+          fi
+
+      elif [ -d "$MOUNTLOCATION/$USER/BUS_PIRATE5/" ]
+      then
+          :
+          # Looks good
+          exit
+  	  fi
+    done
+    printf "%s\n" "No file system mounted - Please plug in your Bus Pirate"
+    exit 1
 }
 
 
@@ -146,7 +148,7 @@ then
         -v) VERBOSE=1; shift;;  # enable verbose mode
         -*) usage "Unknown argument '$1'";;
     esac
-fi    
+fi
 
 PORT=${1:-"/dev/ttyACM0"} # default port
 BAUD=${2:-"11520"} # default baud rate - if you really want to change it
@@ -155,7 +157,7 @@ BAUD=${2:-"11520"} # default baud rate - if you really want to change it
 if [ ! -f "$HOME/.config/buspirate/${CONFIG}" ]
 then
     setup
-else 
+else
     # Default variables - if you don't specify them in the config file
     #Some variables you might need to change - if you have a config file, these values will be overwritten
     # by the values in the config file
@@ -174,12 +176,9 @@ fi
 
 
 
-
 if [ "$CHECK" -eq 1 ]
 then
     # check for mounted filesystems
     check
 fi
 connect
-
-

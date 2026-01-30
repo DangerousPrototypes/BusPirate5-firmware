@@ -273,11 +273,6 @@ void hwhduart_cleanup(void) {
 
     // reset all pins to safe mode (done before mode change, but we do it here to be safe)
     bio_init();
-    // update modeConfig pins
-    system_config.misoport = 0;
-    system_config.mosiport = 0;
-    system_config.misopin = 0;
-    system_config.mosipin = 0;
 }
 
 void hwhduart_settings(void) {

@@ -21,7 +21,7 @@ void pio_i2c_cleanup(void);
 // High level functions with user error messages
 bool i2c_transaction(uint8_t addr, uint8_t *write_data, uint8_t write_len, uint8_t *read_data, uint16_t read_len);
 bool i2c_write(uint8_t addr, uint8_t *data, uint16_t len);
-bool i2c_read(uint8_t addr, uint8_t *data, uint8_t len);
+bool i2c_read(uint8_t addr, uint8_t *data, uint16_t len);
 
 // High level functions with register as variable
 bool i2c_write_reg(uint8_t addr, uint8_t *reg, uint8_t reg_len, const uint8_t *data, uint8_t data_len);

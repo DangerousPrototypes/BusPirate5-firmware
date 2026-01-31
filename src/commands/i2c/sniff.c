@@ -28,10 +28,10 @@ static const char pin_labels[][5] = {
 //help variables
 const char* const i2c_sniff_help[] = {
     "sniff [-q] [-7] [-r]",
-    "Start the I2C sniffer: sniff",
-    "Supress (quiet) ACK in output: sniff -q",
-    "Print (raw) data, no '[',']','R''W'",
-    "Show 7-bit address: sniff -7",
+    "Start the I2C sniffer:%s sniff",
+    "Supress (quiet) ACK in output:%s sniff -q",
+    "Print (raw) data, no '[',']','R''W':%s sniff -r",
+    "Show 7-bit address:%s sniff -7",
     "",
     "pico-i2c-sniff by @jjsch-dev https://github.com/jjsch-dev/pico_i2c_sniffer",
     "Max speed: 500kHz",

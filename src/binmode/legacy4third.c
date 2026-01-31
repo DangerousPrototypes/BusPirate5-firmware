@@ -28,7 +28,7 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include <math.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "queue.h"
+
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "pirate.h"

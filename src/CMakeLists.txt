@@ -528,6 +528,7 @@ set(buspirate_common
         lib/bp_linenoise/linenoise.c
         lib/bp_linenoise/ln_cmdreader.h
         lib/bp_linenoise/ln_cmdreader.c
+
         msc_disk.c
         msc_disk.h
         usb_descriptors.c

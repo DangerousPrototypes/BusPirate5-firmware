@@ -76,6 +76,15 @@ void cmdln_end_linear(void) {
 }
 
 /**
+ * @brief Enable linear buffer mode (for linenoise integration).
+ * @details Called when linenoise has set up bp_cmdln directly.
+ *          Assumes bp_cmdln_init_reader() was already called.
+ */
+void cmdln_enable_linear_mode(void) {
+    use_linear_buffer = true;
+}
+
+/**
  * @brief Get the linear buffer for direct access.
  * @return Pointer to null-terminated linear command buffer
  */

@@ -601,8 +601,10 @@ static void core0_infinite_loop(void) {
                 }
                 break;
             case BP_SM_PROCESS_COMMAND:
-                // Linenoise already set up linear buffer - just process
+                // Linenoise already set up linear buffer via cmdln_enable_linear_mode()
                 system_config.error = ui_process_commands();
+                // Reset to non-linear mode
+                cmdln_end_linear();
                 bp_state = BP_SM_COMMAND_PROMPT;
                 break;
             case BP_SM_COMMAND_PROMPT:

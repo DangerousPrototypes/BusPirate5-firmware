@@ -214,6 +214,12 @@ void cmdln_get_command_pointer(struct _command_pointer* cp);
 void cmdln_copy_to_linear(void);
 
 /**
+ * @brief Enable linear buffer mode (for linenoise integration).
+ * @details Called when linenoise has set up bp_cmdln directly.
+ */
+void cmdln_enable_linear_mode(void);
+
+/**
  * @brief Reset to circular buffer mode after command processing.
  */
 void cmdln_end_linear(void);

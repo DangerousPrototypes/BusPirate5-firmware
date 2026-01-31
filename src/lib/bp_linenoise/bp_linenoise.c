@@ -169,11 +169,26 @@ static void ln_write_esc_num(bp_linenoise_state_t *state, const char *prefix, in
     ln_write_str(state, buf);
 }
 
-// Calculate display width of string (simplified - assumes ASCII)
+// Calculate display width of string (handles ANSI escape sequences)
 static size_t display_width(const char *s, size_t len) {
-    // For now, treat each byte as one column
-    // TODO: proper UTF-8 width calculation
-    return len;
+    size_t width = 0;
+    size_t i = 0;
+    
+    while (i < len) {
+        if (s[i] == '\x1b' && i + 1 < len && s[i + 1] == '[') {
+            // ANSI escape sequence: skip until 'm' or end
+            i += 2;  // Skip ESC [
+            while (i < len && s[i] != 'm') {
+                i++;
+            }
+            if (i < len) i++;  // Skip 'm'
+        } else {
+            // Regular character
+            width++;
+            i++;
+        }
+    }
+    return width;
 }
 
 // Refresh the line on screen

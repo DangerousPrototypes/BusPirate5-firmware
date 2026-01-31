@@ -89,6 +89,7 @@ uint32_t ui_term_linenoise_feed(void) {
             // Line complete - set up linear buffer reader
             bp_linenoise_stop(&ln_state);
             bp_cmdln_init_reader(ln_state.buf, ln_state.len);
+            cmdln_enable_linear_mode();  // Enable linear mode for parsing
             
             // Add to history (if not empty)
             if (ln_state.len > 0) {
@@ -183,6 +184,7 @@ bool ui_prompt_linenoise_input(const char *prompt) {
             case BP_LN_ENTER:
                 bp_linenoise_stop(&ln_prompt_state);
                 bp_cmdln_init_reader(ln_prompt_state.buf, ln_prompt_state.len);
+                cmdln_enable_linear_mode();  // Enable linear mode for parsing
                 return true;
                 
             case BP_LN_CTRL_C:
@@ -211,6 +213,7 @@ uint32_t ui_prompt_linenoise_feed(void) {
         case BP_LN_ENTER:
             bp_linenoise_stop(&ln_prompt_state);
             bp_cmdln_init_reader(ln_prompt_state.buf, ln_prompt_state.len);
+            cmdln_enable_linear_mode();  // Enable linear mode for parsing
             return 0xff;
             
         case BP_LN_CTRL_C:

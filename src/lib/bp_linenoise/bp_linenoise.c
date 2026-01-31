@@ -140,9 +140,17 @@ enum {
     BACKSPACE = 127
 };
 
-// Static history storage
+// Static history storage (circular buffer)
 static char history_buf[BP_LINENOISE_HISTORY_MAX][BP_LINENOISE_MAX_LINE + 1];
-static int history_len = 0;
+static int history_head = 0;   // Next write position
+static int history_count = 0;  // Number of entries (0..MAX)
+
+// Get history entry by age (0 = newest, 1 = second newest, etc.)
+static char* history_get(int age) {
+    if (age < 0 || age >= history_count) return NULL;
+    int idx = (history_head - 1 - age + BP_LINENOISE_HISTORY_MAX) % BP_LINENOISE_HISTORY_MAX;
+    return history_buf[idx];
+}
 
 // Helper: write a string using callback
 static void ln_write_str(bp_linenoise_state_t *state, const char *s) {
@@ -492,7 +500,7 @@ void bp_linenoise_edit_move_end(bp_linenoise_state_t *state) {
 }
 
 void bp_linenoise_edit_history_prev(bp_linenoise_state_t *state) {
-    if (history_len == 0) {
+    if (history_count == 0) {
         return;
     }
     
@@ -501,16 +509,18 @@ void bp_linenoise_edit_history_prev(bp_linenoise_state_t *state) {
         memcpy(state->history_save, state->buf, state->len + 1);
     }
     
-    if (state->history_index < history_len) {
+    if (state->history_index < history_count) {
         state->history_index++;
         
-        // Load from history (history is stored newest first)
-        int hist_idx = history_len - state->history_index;
-        strncpy(state->buf, history_buf[hist_idx], state->buflen);
-        state->buf[state->buflen] = '\0';
-        state->len = strlen(state->buf);
-        state->pos = state->len;
-        refresh_line(state);
+        // Load from history (circular buffer, 0 = newest)
+        char *hist = history_get(state->history_index - 1);
+        if (hist) {
+            strncpy(state->buf, hist, state->buflen);
+            state->buf[state->buflen] = '\0';
+            state->len = strlen(state->buf);
+            state->pos = state->len;
+            refresh_line(state);
+        }
     }
 }
 
@@ -522,8 +532,10 @@ void bp_linenoise_edit_history_next(bp_linenoise_state_t *state) {
             // Restore saved line
             strncpy(state->buf, state->history_save, state->buflen);
         } else {
-            int hist_idx = history_len - state->history_index;
-            strncpy(state->buf, history_buf[hist_idx], state->buflen);
+            char *hist = history_get(state->history_index - 1);
+            if (hist) {
+                strncpy(state->buf, hist, state->buflen);
+            }
         }
         state->buf[state->buflen] = '\0';
         state->len = strlen(state->buf);
@@ -585,29 +597,31 @@ bool bp_linenoise_history_add(bp_linenoise_state_t *state, const char *line) {
         return false;  // Don't add empty lines
     }
     
-    // Don't add duplicates (check last entry)
-    if (history_len > 0 && strcmp(history_buf[history_len - 1], line) == 0) {
+    // Don't add duplicates (check newest entry)
+    char *newest = history_get(0);
+    if (newest && strcmp(newest, line) == 0) {
         return false;
     }
     
-    // If history is full, shift everything down
-    if (history_len >= BP_LINENOISE_HISTORY_MAX) {
-        memmove(history_buf[0], history_buf[1], 
-                (BP_LINENOISE_HISTORY_MAX - 1) * (BP_LINENOISE_MAX_LINE + 1));
-        history_len = BP_LINENOISE_HISTORY_MAX - 1;
-    }
+    // Write at head position (circular - overwrites oldest when full)
+    strncpy(history_buf[history_head], line, BP_LINENOISE_MAX_LINE);
+    history_buf[history_head][BP_LINENOISE_MAX_LINE] = '\0';
     
-    // Add new entry
-    strncpy(history_buf[history_len], line, BP_LINENOISE_MAX_LINE);
-    history_buf[history_len][BP_LINENOISE_MAX_LINE] = '\0';
-    history_len++;
+    // Advance head
+    history_head = (history_head + 1) % BP_LINENOISE_HISTORY_MAX;
+    
+    // Update count (cap at max)
+    if (history_count < BP_LINENOISE_HISTORY_MAX) {
+        history_count++;
+    }
     
     return true;
 }
 
 void bp_linenoise_history_clear(bp_linenoise_state_t *state) {
     (void)state;
-    history_len = 0;
+    history_head = 0;
+    history_count = 0;
 }
 
 void bp_linenoise_set_cols(bp_linenoise_state_t *state, size_t cols) {

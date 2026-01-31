@@ -16,9 +16,13 @@
 #include "ui/ui_cmdln.h"
 #include "ui/ui_statusbar.h"
 
-// Global linenoise state
+// Main command line linenoise state (has history)
 static bp_linenoise_state_t ln_state;
 static bool ln_initialized = false;
+
+// Sub-prompt linenoise state (no history, simpler prompts)
+static bp_linenoise_state_t ln_prompt_state;
+static bool ln_prompt_initialized = false;
 
 // I/O callbacks for linenoise
 static bool ln_try_read(char *c) {
@@ -132,4 +136,98 @@ size_t ui_term_linenoise_get_len(void) {
  */
 void ui_term_linenoise_clear_history(void) {
     bp_linenoise_history_clear(&ln_state);
+}
+
+/*
+ * =============================================================================
+ * Sub-prompt support (for ui_prompt.c - voltage, current, y/n prompts, etc.)
+ * =============================================================================
+ * These use a separate linenoise state with NO history.
+ * Provides full line editing for sub-prompts.
+ */
+
+/**
+ * @brief Initialize prompt linenoise session (no history).
+ */
+static void ui_prompt_linenoise_init(void) {
+    if (!ln_prompt_initialized) {
+        bp_linenoise_init(&ln_prompt_state, ln_try_read, ln_read_blocking, ln_write, 
+                          system_config.terminal_ansi_columns);
+        ln_prompt_initialized = true;
+    }
+}
+
+/**
+ * @brief Get user input for a sub-prompt (blocking, with line editing).
+ * @param prompt  The prompt string to display (already printed by caller typically)
+ * @return true if line complete (Enter), false if cancelled (Ctrl+C) or error
+ * 
+ * After return, the linear buffer reader (bp_cmdln) is set up for parsing.
+ */
+bool ui_prompt_linenoise_input(const char *prompt) {
+    ui_prompt_linenoise_init();
+    
+    // Start editing with prompt (if provided, otherwise empty)
+    bp_linenoise_start(&ln_prompt_state, prompt ? prompt : "");
+    
+    // Block until line complete or cancelled
+    while (true) {
+        if (system_config.error) {
+            bp_linenoise_stop(&ln_prompt_state);
+            return false;
+        }
+        
+        bp_linenoise_result_t result = bp_linenoise_feed(&ln_prompt_state);
+        
+        switch (result) {
+            case BP_LN_ENTER:
+                bp_linenoise_stop(&ln_prompt_state);
+                bp_cmdln_init_reader(ln_prompt_state.buf, ln_prompt_state.len);
+                return true;
+                
+            case BP_LN_CTRL_C:
+            case BP_LN_CTRL_D:
+                bp_linenoise_stop(&ln_prompt_state);
+                return false;
+                
+            default:
+                // Continue editing
+                break;
+        }
+    }
+}
+
+/**
+ * @brief Get user input for sub-prompt (non-blocking feed).
+ * @return Result code matching ui_term_linenoise_feed() 
+ */
+uint32_t ui_prompt_linenoise_feed(void) {
+    bp_linenoise_result_t result = bp_linenoise_feed(&ln_prompt_state);
+    
+    switch (result) {
+        case BP_LN_CONTINUE:
+            return 0;
+            
+        case BP_LN_ENTER:
+            bp_linenoise_stop(&ln_prompt_state);
+            bp_cmdln_init_reader(ln_prompt_state.buf, ln_prompt_state.len);
+            return 0xff;
+            
+        case BP_LN_CTRL_C:
+        case BP_LN_CTRL_D:
+            bp_linenoise_stop(&ln_prompt_state);
+            return 0xfe;
+            
+        default:
+            return 1;
+    }
+}
+
+/**
+ * @brief Start a sub-prompt editing session.
+ * @param prompt  Prompt to display (can be empty string "")
+ */
+void ui_prompt_linenoise_start(const char *prompt) {
+    ui_prompt_linenoise_init();
+    bp_linenoise_start(&ln_prompt_state, prompt ? prompt : "");
 }

@@ -55,4 +55,29 @@ size_t ui_term_linenoise_get_len(void);
  */
 void ui_term_linenoise_clear_history(void);
 
+/*
+ * =============================================================================
+ * Sub-prompt support (ui_prompt.c)
+ * =============================================================================
+ */
+
+/**
+ * @brief Get user input for sub-prompt (blocking, with line editing).
+ * @param prompt  Prompt to display (or NULL for no prompt)
+ * @return true on Enter (line ready), false on Ctrl+C/error
+ */
+bool ui_prompt_linenoise_input(const char *prompt);
+
+/**
+ * @brief Start a sub-prompt editing session (non-blocking).
+ * @param prompt  Prompt to display (or NULL/"" for no prompt)
+ */
+void ui_prompt_linenoise_start(const char *prompt);
+
+/**
+ * @brief Feed input to sub-prompt linenoise (non-blocking).
+ * @return Same codes as ui_term_linenoise_feed()
+ */
+uint32_t ui_prompt_linenoise_feed(void);
+
 #endif // UI_TERM_LINENOISE_H

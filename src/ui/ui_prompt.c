@@ -24,6 +24,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
 #include "ui/ui_term.h"
+#include "ui/ui_term_linenoise.h"
 #include "ui/ui_info.h"
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
@@ -121,12 +122,10 @@ bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu) {
 // used internally in ui_prompt
 // gets user input until <enter> or return false if system error
 bool ui_prompt_user_input(void) {
-    cmdln_next_buf_pos(); // flush all input
-    do {
-        if (system_config.error) {
-            return false;
-        }
-    } while (ui_term_get_user_input() != 0xff);
+    // Use linenoise for input (empty prompt - caller already printed it)
+    if (!ui_prompt_linenoise_input("")) {
+        return false;  // Cancelled or error
+    }
     ui_parse_consume_whitespace();
     return true;
 }

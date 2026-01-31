@@ -7,6 +7,6 @@
 /**
  * @brief Handler for pause command.
  * @param res  Command result structure
- * @note Syntax: pause <ms> - Pause for specified milliseconds
+ * @note Syntax: pause \<ms\> - Pause for specified milliseconds
  */
 void pause_handler(struct command_result* res);

@@ -14,7 +14,7 @@ bool psucmd_init(void);
 /**
  * @brief Handler for PSU enable command (W).
  * @param res  Command result structure
- * @note Syntax: W <volts> <mA> [-u <percent>]
+ * @note Syntax: W \<volts\> \<mA\> [-u \<percent\>]
  */
 void psucmd_enable_handler(struct command_result* res);
 

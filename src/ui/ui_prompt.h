@@ -110,3 +110,5 @@ void ui_prompt_mode_settings_string(const char* label, const char* string, const
 // default prompt configurations for general purpose mode setup
 extern const struct ui_prompt_config prompt_int_cfg;
 extern const struct ui_prompt_config prompt_list_cfg;
+
+/** @} */

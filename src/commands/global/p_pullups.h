@@ -13,7 +13,7 @@ void pullups_init(void);
 /**
  * @brief Handler for pullup enable command (P).
  * @param res  Command result structure
- * @note Syntax: P [value] [-d] [-p <pins>]
+ * @note Syntax: P [value] [-d] [-p \<pins\>]
  */
 void pullups_enable_handler(struct command_result* res);
 

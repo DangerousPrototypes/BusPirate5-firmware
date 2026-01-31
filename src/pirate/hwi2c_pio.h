@@ -206,4 +206,6 @@ void pio_i2c_resume_after_error(void);
 //void pio_i2c_wait_idle(void);
 //void pio_i2c_put16(uint16_t data);
 
+/** @} */
+
 #endif

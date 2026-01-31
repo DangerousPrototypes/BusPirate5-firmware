@@ -115,8 +115,12 @@ bool spiflash_verify(uint32_t start_address,
 
 /**
  * @brief Force dump of SPI flash (ignore errors).
- * @param start_address  Start address
- * @param end_address    End address
+ * @param start_address  Start address for dump
+ * @param end_address    End address for dump
+ * @param buf_size       Buffer size in bytes
+ * @param buf            Buffer for flash data
+ * @param flash_info     SFUD flash device information structure
+ * @param file_name      Output filename for dump
  */
 bool spiflash_force_dump(uint32_t start_address,
                          uint32_t end_address,

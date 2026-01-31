@@ -7,6 +7,6 @@
 /**
  * @brief Handler for macro command.
  * @param res  Command result structure
- * @note Syntax: macro <#> [-f <file>] [-l] [-h]
+ * @note Syntax: macro \<#\> [-f \<file\>] [-l] [-h]
  */
 void macro_handler(struct command_result* res);

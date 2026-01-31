@@ -520,6 +520,10 @@ set(buspirate_common
         usb_tx.h
         usb_rx.c
         usb_rx.h
+
+        # Line editing library (adapted linenoise)
+        lib/bp_linenoise/bp_linenoise.h
+        lib/bp_linenoise/bp_linenoise.c
         msc_disk.c
         msc_disk.h
         usb_descriptors.c

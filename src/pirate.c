@@ -594,7 +594,11 @@ static void core0_infinite_loop(void) {
                 }
                 break;
             case BP_SM_PROCESS_COMMAND:
+                // Copy command from circular buffer to linear buffer for processing
+                cmdln_copy_to_linear();
                 system_config.error = ui_process_commands();
+                // Reset to circular buffer mode
+                cmdln_end_linear();
                 bp_state = BP_SM_COMMAND_PROMPT;
                 break;
             case BP_SM_COMMAND_PROMPT:

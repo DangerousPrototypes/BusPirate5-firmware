@@ -103,6 +103,7 @@ const struct ui_help_options global_commands[] = {
     { 0, "logic", T_HELP_CMD_LOGIC },
     { 0, "smps", T_HELP_CMD_SMPS },
     { 0, "= x/| x", T_HELP_1_2 },
+    { 0, "jep106", T_HELP_GLOBAL_JEP106_LOOKUP },
 
     // enter a mode to use protocols
     { 1, "", T_HELP_SECTION_MODE },

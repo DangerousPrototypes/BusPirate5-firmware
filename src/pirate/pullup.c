@@ -1,3 +1,19 @@
+/**
+ * @file pullup.c
+ * @brief Programmable pullup/pulldown resistor control implementation.
+ * @details Controls two MCP23017 I2C I/O expanders (addresses 0x40 and 0x42) that
+ *          drive resistor networks. Each of 8 I/O pins has access to 4 resistors
+ *          (2.2K, 4.7K, 10K, 1M) that can be enabled in parallel to achieve
+ *          standard pullup/pulldown values. Direction is controlled separately
+ *          to configure pullup (high) vs pulldown (low) operation.
+ *          
+ *          Resistor allocation on I2C expanders:
+ *          - Each pin occupies 4 bits across the 16-bit port (one per resistor value)
+ *          - Pins 0-3 on expander 0x42, pins 4-7 on expander 0x40
+ *          - Configuration register (0x06): 0=output, 1=input (inverted logic)
+ *          - Output register (0x02): sets direction when enabled
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"

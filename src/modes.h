@@ -1,57 +1,88 @@
-// #include "pirate.h"
+/**
+ * @file modes.h
+ * @brief Protocol mode enumeration and dispatch structure
+ * 
+ * This file defines the protocol mode system including mode IDs
+ * and the mode dispatch structure that provides function pointers
+ * for all protocol operations.
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
+/**
+ * @brief Protocol mode enumeration
+ * 
+ * Defines all available protocol modes. The actual modes included
+ * depend on compile-time configuration flags (BP_USE_*).
+ * 
+ * @note HIZ (high-impedance) is always mode 0
+ * @note MAXPROTO defines the total number of modes
+ */
 enum {
-    HIZ = 0,
+    HIZ = 0,  /**< High-impedance mode (all pins inputs) */
 #ifdef BP_USE_HW1WIRE
-    HW1WIRE,
+    HW1WIRE,  /**< 1-Wire protocol (Dallas/Maxim) */
 #endif
 #ifdef BP_USE_HWUART
-    HWUART,
+    HWUART,   /**< UART protocol */
 #endif
 #ifdef BP_USE_HWHDUART
-    HWHDUART,
+    HWHDUART, /**< Half-duplex UART */
 #endif
 #ifdef BP_USE_HWI2C
-    HWI2C,
+    HWI2C,    /**< I2C protocol */
 #endif
 #ifdef BP_USE_HWSPI
-    HWSPI,
+    HWSPI,    /**< SPI protocol */
 #endif
 #ifdef BP_USE_HW2WIRE
-    HW2WIRE,
+    HW2WIRE,  /**< 2-Wire protocol */
 #endif
 #ifdef BP_USE_HW3WIRE
-    HW3WIRE,
+    HW3WIRE,  /**< 3-Wire protocol */
 #endif
 #ifdef BP_USE_DIO
-    DIO,
+    DIO,      /**< Digital I/O mode */
 #endif
 #ifdef BP_USE_HWLED
-    HWLED,
+    HWLED,    /**< LED control (WS2812, APA102) */
 #endif
 #ifdef BP_USE_INFRARED
-    INFRARED,
+    INFRARED, /**< Infrared transmit/receive */
 #endif
 #ifdef BP_USE_JTAG
-    JTAG,
+    JTAG,     /**< JTAG protocol */
 #endif
 #ifdef BP_USE_I2S
-    I2S,
+    I2S,      /**< I2S audio */
 #endif
-#ifdef BP_USE_LCDI2C // future
-    LCDI2C,
+#ifdef BP_USE_LCDI2C
+    LCDI2C,   /**< LCD I2C (future) */
 #endif
 #ifdef BP_USE_LCDSPI
-    LCDSPI,
+    LCDSPI,   /**< LCD SPI */
 #endif
 #ifdef BP_USE_USBPD
-    USBPD,
+    USBPD,    /**< USB Power Delivery */
 #endif
 #ifdef BP_USE_DUMMY1
-    DUMMY1,
+    DUMMY1,   /**< Dummy/test mode */
 #endif
-    MAXPROTO
+    MAXPROTO  /**< Total number of protocol modes */
 };
 
+/**
+ * @brief Protocol mode dispatch structure
+ * 
+ * This structure defines all function pointers for a protocol mode,
+ * providing a consistent interface for:
+ * - Protocol operations (start, stop, read, write)
+ * - Pin manipulation (clock, data)
+ * - Setup and cleanup
+ * - User interface (help, settings)
+ * - Mode-specific commands
+ */
 typedef struct _mode {
     void (*protocol_start)(struct _bytecode* result, struct _bytecode* next);      // start
     void (*protocol_start_alt)(struct _bytecode* result, struct _bytecode* next);  // start with read

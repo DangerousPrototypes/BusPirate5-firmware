@@ -1,3 +1,9 @@
+/**
+ * @file msc_disk.h
+ * @brief USB Mass Storage Class disk interface.
+ * @details Provides USB MSC drive management for file system access.
+ */
+
 /*
  * The MIT License (MIT)
  *
@@ -23,17 +29,27 @@
  *
  */
 
-// remove and insert the usbms drive to force the host to sync its contents
+/**
+ * @brief Refresh USB MSC drive.
+ */
 void refresh_usbmsdrive(void);
 
-// remove the usb drive and prepare to make it read only on the host
+/**
+ * @brief Prepare USB MSC drive for read-only mode.
+ */
 void prepare_usbmsdrive_readonly(void);
 
-// insert the usbms drive to expose it to the host
+/**
+ * @brief Insert USB MSC drive.
+ */
 void insert_usbmsdrive(void);
 
-// make the usb drive appear read write on the host
+/**
+ * @brief Make USB MSC drive writable.
+ */
 void make_usbmsdrive_writable(void);
 
-// remove before jump to bootloader
+/**
+ * @brief Eject USB MSC drive before bootloader jump.
+ */
 void eject_usbmsdrive(void);

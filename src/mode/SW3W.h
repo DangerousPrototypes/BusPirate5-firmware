@@ -1,3 +1,8 @@
+/**
+ * @file SW3W.h
+ * @brief Software 3-wire mode interface.
+ * @details Provides bit-banged 3-wire/SPI protocol mode.
+ */
 
 void SW3W_start(void);
 void SW3W_startr(void);

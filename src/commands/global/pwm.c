@@ -1,3 +1,22 @@
+/**
+ * @file pwm.c
+ * @brief PWM generation command implementation.
+ * @details Implements the g/G commands for generating PWM signals:
+ *          - g: Disable PWM on all pins
+ *          - G: Enable PWM with interactive configuration
+ *          
+ *          Features:
+ *          - Frequency range: ~7.5Hz to 125MHz (system clock dependent)
+ *          - Duty cycle: 0-100% in 0.1% steps
+ *          - Uses hardware PWM peripheral (8 slices, 16 channels)
+ *          - Automatic calculation of divider and wrap values
+ *          
+ *          Limitations:
+ *          - Cannot share PWM slice with frequency counter
+ *          - Pins 0-1 may conflict with PSU PWM (hardware limitation)
+ *          - Both channels of a PWM slice run at same frequency
+ */
+
 #include <stdio.h>
 #include <math.h>
 #include "pico/stdlib.h"

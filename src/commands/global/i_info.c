@@ -1,3 +1,17 @@
+/**
+ * @file i_info.c
+ * @brief System information display command implementation.
+ * @details Implements the 'i' command to display comprehensive system information:
+ *          - Hardware version and FCC compliance notice
+ *          - Firmware version, hash, and build timestamp
+ *          - MCU type, RAM size, flash size, unique ID
+ *          - Storage information (TF card size, free space)
+ *          - Current mode and pin configuration
+ *          - Pin voltages and VOUT/VREG status
+ *          - Frequency measurement if active
+ *          - Binary mode status
+ */
+
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"

@@ -1,3 +1,19 @@
+/**
+ * @file bpio_3wire.c
+ * @brief Binary mode 3-wire protocol transaction handler
+ * 
+ * Implements BPIO (Binary Protocol IO) transactions for 3-wire SPI protocols.
+ * Supports:
+ * - Chip select control
+ * - Full-duplex data transfer
+ * - Read-with-write mode
+ * - Bitwise pin manipulation
+ * - Configurable bit order
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -10,10 +26,40 @@
 #include "ui/ui_format.h"
 #include "system_config.h"
 
-// Forward declare hw3wire_set_cs since we can't include mode/hw3wire.h
-// (would create circular dependency)
+/** Forward declaration to avoid circular dependency with mode/hw3wire.h */
 extern void hw3wire_set_cs(uint8_t cs);
 
+/**
+ * @brief Execute a 3-wire protocol transaction
+ * 
+ * This function implements a complete 3-wire SPI transaction including:
+ * 1. Chip select assertion (if requested)
+ * 2. Data write phase (normal or read-with-write)
+ * 3. Additional read phase (if requested)
+ * 4. Chip select deassertion (if requested)
+ * 5. Bitwise pin operations (if requested)
+ * 
+ * @param[in] request Transaction request structure containing:
+ *   - debug: Enable debug output
+ *   - start_main/start_alt: CS control flags
+ *   - bytes_write: Number of bytes to write
+ *   - bytes_read: Number of bytes to read
+ *   - stop_main/stop_alt: CS deassert flags
+ *   - bitwise_ops: Optional bitwise pin operations
+ * 
+ * @param[in] data_write Flatbuffer vector containing bytes to write
+ * @param[out] data_read Buffer to store read bytes
+ * 
+ * @return 0 on success, non-zero on error
+ * 
+ * @note start_alt flag enables read-with-write mode where read data
+ *       is captured during the write phase
+ * @note Bit order is applied according to system_config.bit_order
+ * @note Bitwise operations encoding:
+ *       - Bits 0-1: MOSI control (01=low, 10=high)
+ *       - Bits 2-3: SCLK control (01=low, 10=high, 11=pulse)
+ *       - Bit 4: Read MISO
+ */
 uint32_t bpio_hw3wire_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read) {
     if(request->debug) printf("[3WIRE] Performing transaction\r\n");
 

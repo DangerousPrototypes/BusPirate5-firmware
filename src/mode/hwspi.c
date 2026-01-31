@@ -1,3 +1,22 @@
+/**
+ * @file hwspi.c
+ * @brief Hardware SPI mode implementation.
+ * @details Implements SPI master protocol using RP2040/RP2350 hardware SPI peripheral.
+ *          Features:
+ *          - Speed: 1kHz to 62.5MHz
+ *          - Data bits: 4-8 bits
+ *          - Clock polarity and phase control
+ *          - Configurable CS idle state
+ *          - Flash programming support (via SFUD library)
+ *          - SPI EEPROM support
+ *          
+ *          Pin mapping:
+ *          - CLK:  Clock output
+ *          - MOSI: Master out, slave in
+ *          - MISO: Master in, slave out
+ *          - CS:   Chip select (active low by default)
+ */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"

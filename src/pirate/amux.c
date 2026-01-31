@@ -1,3 +1,26 @@
+/**
+ * @file amux.c
+ * @brief Analog multiplexer (AMUX) control and ADC management
+ * 
+ * This file implements the analog multiplexer system for Bus Pirate, which
+ * allows reading voltages from multiple sources through a single ADC channel.
+ * 
+ * The AMUX system provides:
+ * - Voltage measurement on all 8 BIO pins
+ * - Power supply voltage monitoring
+ * - Current sense measurement
+ * - Multi-core safe ADC access with spinlocks
+ * - Averaging for noise reduction
+ * 
+ * Hardware:
+ * - CD4067 16-channel analog multiplexer
+ * - RP2040 ADC (12-bit)
+ * - Voltage dividers for different ranges
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
@@ -9,14 +32,22 @@
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
 
-// lock_core_t core;
-spin_lock_t* adc_spin_lock;
-uint adc_spin_lock_num;
+spin_lock_t* adc_spin_lock;    /**< Spinlock for multi-core ADC access protection */
+uint adc_spin_lock_num;        /**< Spinlock number */
 
-// is executed on the next average calculation
-bool reset_adc_average = false;
+bool reset_adc_average = false; /**< Flag to reset ADC averaging */
 
-// gives protected access to adc (core safe)
+/**
+ * @brief Provide protected access to ADC (core-safe)
+ * 
+ * Uses spinlock to ensure only one core accesses the ADC at a time.
+ * When enable=true, blocks until ADC is available.
+ * 
+ * @param enable true to acquire lock, false to release
+ * 
+ * @note Must call with enable=false when done to release lock
+ * @warning Blocking call when enable=true
+ */
 void adc_busy_wait(bool enable) {
     static bool busy = false;
 
@@ -36,6 +67,17 @@ void adc_busy_wait(bool enable) {
     } while (true);
 }
 
+/**
+ * @brief Initialize analog multiplexer and ADC subsystem
+ * 
+ * Sets up:
+ * - ADC peripheral
+ * - GPIO pins for ADC input
+ * - Spinlock for multi-core protection
+ * - Averaging reset flag
+ * 
+ * @note Does nothing if scope is running (scope owns ADC)
+ */
 void amux_init(void) {
     if (scope_running) { // scope is using the analog subsystem
         return;
@@ -50,8 +92,18 @@ void amux_init(void) {
     reset_adc_average = true;
 }
 
-// select AMUX input source, use the channel defines from the platform header
-// only effects the 4067CD analog mux, you cannot get the current measurement from here
+/**
+ * @brief Select AMUX input channel
+ * 
+ * Configures the CD4067 analog multiplexer to route the specified
+ * input channel to the ADC.
+ * 
+ * @param channel Channel number (0-15, platform-specific defines)
+ * @return true if successful, false if scope is running
+ * 
+ * @note Does not affect current sense input (separate ADC channel)
+ * @note Channel definitions are platform-specific (see platform headers)
+ */
 bool amux_select_input(uint16_t channel) {
     if (scope_running) {
         return false; // scope is using the analog subsystem
@@ -75,6 +127,14 @@ bool amux_select_input(uint16_t channel) {
     return true;
 }
 
+/**
+ * @brief Select AMUX input using BIO pin number
+ * 
+ * Convenience function that maps BIO pin numbers to AMUX channels.
+ * 
+ * @param bio BIO pin number (0-7)
+ * @return true if successful, false if scope is running
+ */
 bool amux_select_bio(uint8_t bio) {
     if (scope_running) {
         return false; // scope is using the analog subsystem
@@ -83,7 +143,18 @@ bool amux_select_bio(uint8_t bio) {
     return true;
 }
 
-// read from AMUX using channel list in platform header file
+/**
+ * @brief Read voltage from specified AMUX channel
+ * 
+ * Selects the channel, waits for settling, and performs ADC conversion.
+ * Uses spinlock for multi-core safety.
+ * 
+ * @param channel AMUX channel number
+ * @return 12-bit ADC reading (0-4095), or 0 if scope is running
+ * 
+ * @note Briefly grounds the channel before measurement to clear charge
+ * @note Includes 60μs settling time
+ */
 uint32_t amux_read(uint8_t channel) {
     if (scope_running) { // scope is using the analog subsystem
         return 0;

@@ -1,3 +1,9 @@
+/**
+ * @file hw3wire.h
+ * @brief 3-wire PIO protocol mode interface.
+ * @details Provides 3-wire protocol mode using PIO state machines.
+ */
+
 void hw3wire_start(struct _bytecode* result, struct _bytecode* next);
 void hw3wire_start_alt(struct _bytecode* result, struct _bytecode* next);
 void hw3wire_stop(struct _bytecode* result, struct _bytecode* next);
@@ -15,7 +21,6 @@ uint32_t hw3wire_setup(void);
 uint32_t hw3wire_setup_exc(void);
 void hw3wire_cleanup(void);
 void hw3wire_set_cs(uint8_t cs);
-// void hw3wire_pins(void);
 void hw3wire_settings(void);
 void hw3wire_printI2Cflags(void);
 void hw3wire_help(void);

@@ -1,3 +1,9 @@
+/**
+ * @file bpio_dio.h
+ * @brief BPIO Digital I/O transaction handler.
+ * @details Provides binary protocol DIO transaction handling.
+ */
+
 #ifndef BPIO_DIO_H
 #define BPIO_DIO_H
 
@@ -9,11 +15,11 @@
 struct bpio_data_request_t;
 
 /**
- * @brief Perform a DIO (Digital I/O) transaction
- * @param request Transaction request structure containing debug flags, byte counts, and control flags
- * @param data_write Flatbuffer vector containing data to write
- * @param data_read Buffer to store read data
- * @return 0 on success, non-zero on error
+ * @brief Perform a DIO (Digital I/O) transaction.
+ * @param request     Transaction request structure containing debug flags, byte counts, and control flags
+ * @param data_write  Flatbuffer vector containing data to write
+ * @param data_read   Buffer to store read data
+ * @return            0 on success, non-zero on error
  */
 uint32_t bpio_dio_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
 

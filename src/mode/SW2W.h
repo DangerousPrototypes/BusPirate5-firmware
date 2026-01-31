@@ -1,3 +1,8 @@
+/**
+ * @file SW2W.h
+ * @brief Software 2-wire mode interface.
+ * @details Provides bit-banged 2-wire protocol mode.
+ */
 
 void SW2W_start(void);
 void SW2W_startr(void);
@@ -19,7 +24,6 @@ void SW2W_setup_exc(void);
 void SW2W_cleanup(void);
 void SW2W_pins(void);
 void SW2W_settings(void);
-
 void SW2W_setDATAmode(uint8_t input);
 
 #define SW2W_INPUT 1

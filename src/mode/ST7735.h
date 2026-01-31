@@ -1,4 +1,8 @@
-
+/**
+ * @file ST7735.h
+ * @brief ST7735 TFT LCD driver mode interface.
+ * @details Provides mode for controlling ST7735-based color TFT displays.
+ */
 
 void ST7735_setup(void);
 void ST7735_cleanup(void);

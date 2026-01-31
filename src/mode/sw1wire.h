@@ -1,3 +1,8 @@
+/**
+ * @file sw1wire.h
+ * @brief Software 1-Wire mode interface.
+ * @details Provides bit-banged 1-Wire/Dallas protocol mode.
+ */
 
 void ONEWIRE_start(void);
 void ONEWIRE_startr(void);
@@ -19,7 +24,6 @@ void ONEWIRE_setup_exc(void);
 void ONEWIRE_cleanup(void);
 void ONEWIRE_pins(void);
 void ONEWIRE_settings(void);
-
 unsigned char OWReset(void);
 unsigned char OWBit(unsigned char c);
 unsigned char OWByte(unsigned char OWbyte);

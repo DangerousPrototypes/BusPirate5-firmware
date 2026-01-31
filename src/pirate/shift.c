@@ -1,3 +1,18 @@
+/**
+ * @file shift.c
+ * @brief 74HC595 shift register control implementation.
+ * @details Controls 16-bit I/O expansion using two cascaded 74HC595 shift registers.
+ *          Used on BP5 Rev8/Rev9 for hardware control that requires more GPIO pins
+ *          than the RP2040 package provides:
+ *          - Display backlight and reset
+ *          - PSU current limit control and fuse reset
+ *          - Analog multiplexer channel selection
+ *          
+ *          Data format: 2 bytes (16 bits) sent MSB first via SPI
+ *          Latch timing: Pulse SHIFT_LATCH high to update outputs
+ *          Speed: Runs at reduced SPI speed (BP_SPI_SHIFT_SPEED) for reliability
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"

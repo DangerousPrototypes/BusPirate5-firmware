@@ -1,3 +1,27 @@
+/**
+ * @file hwuart.c
+ * @brief Hardware UART mode implementation.
+ * @details Implements UART (serial) protocol using PIO-based full-duplex communication.
+ *          Features:
+ *          - Baud rate: 300 to 1,000,000 bps (configurable)
+ *          - Data bits: 5-8
+ *          - Parity: None, Even, Odd
+ *          - Stop bits: 1 or 2
+ *          - Hardware flow control (RTS/CTS)
+ *          - Signal inversion support
+ *          - Async data printing
+ *          - GPS NMEA decoder
+ *          - UART bridge mode
+ *          - Monitor mode for testing
+ *          - Glitch testing
+ *          
+ *          Pin mapping:
+ *          - TX:  Transmit output
+ *          - RX:  Receive input
+ *          - RTS: Request to send (flow control)
+ *          - CTS: Clear to send (flow control)
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>

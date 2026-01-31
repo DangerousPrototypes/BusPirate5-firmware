@@ -1,3 +1,24 @@
+/**
+ * @file macro.c
+ * @brief Macro script execution command implementation.
+ * @details Implements the macro command for loading and executing script files:
+ *          - macro -f <file>: Load macro file
+ *          - macro -l: List macros in current file
+ *          - macro <#>: Execute macro by ID number
+ *          
+ *          Macro file format:
+ *          - Lines starting with '#' are comments
+ *          - Lines starting with '#!' are usage instructions
+ *          - Macro lines: <id>:<commands>
+ *          - Example: 1:[0xa0 0][0xa1 r:5]  # Read 5 bytes from I2C EEPROM
+ *          
+ *          Features:
+ *          - Stores macro scripts in .mcr text files
+ *          - Supports numbered macros for quick execution
+ *          - Interactive usage help from file comments
+ *          - Button binding for macro execution
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

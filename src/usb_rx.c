@@ -1,3 +1,20 @@
+/**
+ * @file usb_rx.c
+ * @brief USB, UART, and RTT receive buffer management
+ * 
+ * This file implements the receive side of the user interface buffering system.
+ * It handles input from multiple sources:
+ * - USB CDC (normal mode)
+ * - UART (debug mode)
+ * - SEGGER RTT (Real Time Transfer)
+ * 
+ * All input sources are funneled into ring buffers that are consumed by
+ * the command processor on Core1.
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -13,32 +30,51 @@
 #include "system_config.h"
 #include "debug_uart.h"
 
-// USB RX:
-// This file contains the code for the user interface ring buffer
-// and IO method. USB is the normal IO, but running a chip under debug
-// on a USB attached device is a nightmare. BP_DEBUG_ENABLED In the /platform/ folder
-// configuration file enables a UART debugging option. All user interface IO
-// will be routed to one of the two UARTs (selectable) on the Bus Pirate buffered IO pins
-// UART debug mode is way over engineered using DMA et al, and has some predelection for bugs
-// in status bar updates
-
 void rx_uart_irq_handler(void);
 
-queue_t rx_fifo;
-queue_t bin_rx_fifo;
-#define RX_FIFO_LENGTH_IN_BITS 7 // tinyUSB requires 2^n buffer size, so declare in bits.   2^3=8, 2^7=128, 2^9=512, etc.
-#define RX_FIFO_LENGTH_IN_BYTES (0x0001 << RX_FIFO_LENGTH_IN_BITS)
-char rx_buf[RX_FIFO_LENGTH_IN_BYTES];
-char bin_rx_buf[RX_FIFO_LENGTH_IN_BYTES];
+/** @defgroup rx_buffers RX Buffer Definitions
+ * @brief Receive ring buffers for multiple input sources
+ * @{
+ */
 
-// init buffer (and IRQ for UART debug mode)
+queue_t rx_fifo;     /**< Main receive FIFO for terminal input */
+queue_t bin_rx_fifo; /**< Binary mode receive FIFO */
+
+/** RX FIFO size in bits (2^7 = 128 bytes) - TinyUSB requires power of 2 */
+#define RX_FIFO_LENGTH_IN_BITS 7
+/** RX FIFO size in bytes */
+#define RX_FIFO_LENGTH_IN_BYTES (0x0001 << RX_FIFO_LENGTH_IN_BITS)
+
+char rx_buf[RX_FIFO_LENGTH_IN_BYTES];     /**< RX buffer storage */
+char bin_rx_buf[RX_FIFO_LENGTH_IN_BYTES]; /**< Binary RX buffer storage */
+
+/** @} */ // end of rx_buffers
+
+/**
+ * @brief Initialize receive FIFOs
+ * 
+ * Sets up the ring buffers for regular and binary mode reception.
+ * Buffer sizes must be powers of 2 for queue and DMA operation.
+ * 
+ * @note Can be called from either core
+ */
 void rx_fifo_init(void) {
     // OK to call from either core
     queue2_init(&rx_fifo, rx_buf, RX_FIFO_LENGTH_IN_BYTES); // buffer size must be 2^n for queue AND DMA rollover
     queue2_init(&bin_rx_fifo, bin_rx_buf, RX_FIFO_LENGTH_IN_BYTES);
 }
 
-// enables receive interrupt for ALREADY configured debug uarts (see init in debug.c)
+/**
+ * @brief Enable UART receive interrupt for debug mode
+ * 
+ * Configures the UART interrupt handler for receiving debug terminal input.
+ * The interrupt is set as exclusive to Core1 to prevent deadlocks.
+ * 
+ * @pre Debug UART must already be configured (see debug_uart.c)
+ * @pre Must be called from Core1
+ * 
+ * @warning Calling from any core other than Core1 will trigger assertion
+ */
 void rx_uart_init_irq(void) {
     // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
     // irq_set_exclusive_handler() sets the interrupt to be exclusive to the current core.
@@ -51,7 +87,16 @@ void rx_uart_init_irq(void) {
     uart_set_irq_enables(debug_uart[system_config.terminal_uart_number].uart, true, false);
 }
 
-// UART interrupt handler
+/**
+ * @brief UART receive interrupt handler
+ * 
+ * Reads all available bytes from the UART RX FIFO and pushes them into
+ * the rx_fifo buffer for processing by the command interpreter.
+ * 
+ * @pre Must execute on Core1 only
+ * @warning Uses blocking queue add from ISR context - potential deadlock risk
+ * @bug BUGBUG - blocking call from ISR context
+ */
 void rx_uart_irq_handler(void) {
     BP_ASSERT_CORE1(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
     // while bytes available shove them in the buffer
@@ -61,15 +106,30 @@ void rx_uart_irq_handler(void) {
     }
 }
 
+/**
+ * @brief Initialize USB subsystem
+ * 
+ * Initializes the TinyUSB stack for USB CDC communication.
+ * 
+ * @pre Must be called from Core1
+ */
 void rx_usb_init(void) {
     BP_ASSERT_CORE1();
     tusb_init();
 }
 
-
-// Get data from host over RTT, and pushes to RX queue until either queue is full or RTT input is empty.
-// If RX queue is full, store the last character in a local static variable.  Always use that character
-// (if positive) first when entering the function.  Thus, no RTT input characters are ever lost.
+/**
+ * @brief Read data from SEGGER RTT and push to RX queue
+ * 
+ * This function polls RTT for input characters and adds them to the rx_fifo.
+ * If the queue is full, the last character is stored in a static variable
+ * and retried on the next call, ensuring no characters are lost.
+ * 
+ * @pre Must be called from Core1 only
+ * 
+ * @note Uses static variable to preserve characters when queue is full
+ * @note Non-blocking - returns immediately if no data or queue is full
+ */
 void rx_from_rtt_terminal(void) {
     BP_ASSERT_CORE1(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
 

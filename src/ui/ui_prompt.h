@@ -1,51 +1,88 @@
+/**
+ * @file ui_prompt.h
+ * @brief User interface prompt and menu system.
+ * @details Provides interactive menu system with validation, default values,
+ *          and various input types (integers, lists, pins).
+ */
+
+/**
+ * @brief Single menu item descriptor.
+ */
 typedef struct prompt_item {
-    uint description;
+    uint description;  ///< Translation key for item description
 } prompt_item;
 
+/**
+ * @brief Menu prompt configuration structure.
+ */
 typedef struct ui_prompt {
-    uint description;
-    const struct prompt_item* menu_items;
-    uint menu_items_count;
-    uint prompt_text;
-    uint32_t minval;
-    uint32_t maxval;
-    uint32_t defval;
-    uint32_t (*menu_action)(uint32_t a, uint32_t b);
-    const struct ui_prompt_config* config;
+    uint description;                      ///< Translation key for menu description
+    const struct prompt_item* menu_items;  ///< Array of menu items
+    uint menu_items_count;                 ///< Number of menu items
+    uint prompt_text;                      ///< Translation key for prompt text
+    uint32_t minval;                       ///< Minimum valid value
+    uint32_t maxval;                       ///< Maximum valid value
+    uint32_t defval;                       ///< Default value
+    uint32_t (*menu_action)(uint32_t a, uint32_t b); ///< Optional action callback
+    const struct ui_prompt_config* config; ///< Menu behavior configuration
 } ui_prompt;
 
+/**
+ * @brief Menu behavior configuration.
+ */
 typedef struct ui_prompt_config {
-    bool allow_prompt_text;
-    bool allow_prompt_defval;
-    bool allow_defval;
-    bool allow_exit;
-    bool (*menu_print)(const struct ui_prompt* menu);
-    bool (*menu_prompt)(const struct ui_prompt* menu);
-    bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
+    bool allow_prompt_text;    ///< Show prompt text
+    bool allow_prompt_defval;  ///< Show default value in prompt
+    bool allow_defval;         ///< Accept default value
+    bool allow_exit;           ///< Allow exit without selection
+    bool (*menu_print)(const struct ui_prompt* menu);        ///< Custom menu printer
+    bool (*menu_prompt)(const struct ui_prompt* menu);       ///< Custom prompt printer
+    bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value); ///< Custom validator
 } ui_prompt_config;
 
+/**
+ * @brief Result of prompt interaction.
+ */
 typedef struct prompt_result {
-    uint8_t number_format;
-    bool success;
-    bool exit;
-    bool no_value;
-    bool default_value;
-    bool error;
+    uint8_t number_format; ///< Number format used (hex/dec/bin)
+    bool success;          ///< User provided valid value
+    bool exit;             ///< User requested exit
+    bool no_value;         ///< User provided empty input
+    bool default_value;    ///< User accepted default
+    bool error;            ///< Error occurred during prompt
 } prompt_result;
 
-// takes a menu config struct and shows a time/menu/prompt accepts and validates user input
+/**
+ * @brief Display menu, prompt user, and validate input.
+ * @param[out] result  Result structure
+ * @param menu         Menu configuration
+ * @param[out] value   Validated user input
+ * @return true on success, false on error
+ */
 bool ui_prompt_uint32(struct prompt_result* result, const struct ui_prompt* menu, uint32_t* value);
 
-// helper functions for ui_prompt_uint32
-// ORDERED LISTS
+/**
+ * @name Ordered list menu helpers
+ * @{
+ */
 bool ui_prompt_menu_ordered_list(const struct ui_prompt* menu);
 bool ui_prompt_prompt_ordered_list(const struct ui_prompt* menu);
 bool ui_prompt_validate_ordered_list(const struct ui_prompt* menu, uint32_t* value);
-// INTEGER
+/** @} */
+
+/**
+ * @name Integer input menu helpers
+ * @{
+ */
 bool ui_prompt_menu_int(const struct ui_prompt* menu);
 bool ui_prompt_prompt_int(const struct ui_prompt* menu);
 bool ui_prompt_validate_int(const struct ui_prompt* menu, uint32_t* value);
-// BIO PINS
+/** @} */
+
+/**
+ * @name I/O pin selection menu helpers
+ * @{
+ */
 bool ui_prompt_menu_bio_pin(const struct ui_prompt* menu);
 bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu);
 

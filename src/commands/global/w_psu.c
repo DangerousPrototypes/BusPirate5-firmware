@@ -1,3 +1,23 @@
+/**
+ * @file w_psu.c
+ * @brief Power supply (PSU) control command implementation.
+ * @details Implements the w/W commands for controlling the programmable power supply:
+ *          - w: Disable PSU
+ *          - W: Enable PSU with interactive menu or command-line arguments
+ *          
+ *          Command syntax:
+ *          - W <volts> <mA> [-u <percent>]
+ *          - Voltage range: 0.8V to 5.0V
+ *          - Current range: 0 to 500mA (0 disables current limiting)
+ *          - Undervoltage: 1-100% (100 disables undervoltage protection)
+ *          
+ *          Features:
+ *          - Overcurrent protection with automatic shutdown
+ *          - Configurable undervoltage monitoring
+ *          - Real-time voltage and current measurement
+ *          - Integration with system status bar
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"

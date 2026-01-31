@@ -1,3 +1,9 @@
+/**
+ * @file hw2wire.h
+ * @brief 2-wire PIO protocol mode interface.
+ * @details Provides 2-wire protocol mode using PIO state machines.
+ */
+
 void hw2wire_start(struct _bytecode* result, struct _bytecode* next);
 void hw2wire_start_alt(struct _bytecode* result, struct _bytecode* next);
 void hw2wire_stop(struct _bytecode* result, struct _bytecode* next);
@@ -14,7 +20,6 @@ void hw2wire_macro(uint32_t macro);
 uint32_t hw2wire_setup(void);
 uint32_t hw2wire_setup_exc(void);
 void hw2wire_cleanup(void);
-// void hw2wire_pins(void);
 void hw2wire_settings(void);
 void hw2wire_printI2Cflags(void);
 void hw2wire_help(void);

@@ -97,22 +97,40 @@
 #define SUMP_FLAG1_EXT_CLOCK 0x0040
 #define SUMP_FLAG1_INV_EXT_CLOCK 0x0080 /* capture on falling edge */
 #define SUMP_FLAG1_ENABLE_RLE 0x0100
-#define SUMP_FLAG1_SWAP16 0x0200   /* swap upper/lower 16 bits */
-#define SUMP_FLAG1_EXT_TEST 0x0400 /* output pattern on bits 31:16 */
-#define SUMP_FLAG1_INT_TEST 0x0800 /* internal test pattern */
+#define SUMP_FLAG1_SWAP16 0x0200   /**< Swap upper/lower 16 bits */
+#define SUMP_FLAG1_EXT_TEST 0x0400 /**< Output pattern on bits 31:16 */
+#define SUMP_FLAG1_INT_TEST 0x0800 /**< Internal test pattern */
 #define SUMP_FLAG1_RLE_MODE_MASK 0xc000
-#define SUMP_FLAG1_RLE_MODE0 0x0000 /* issue <value> & <rle-count> as pairs */
-#define SUMP_FLAG1_RLE_MODE1 0x4000 /* issue <value> & <rle-count> as pairs */
-#define SUMP_FLAG1_RLE_MODE2 0x8000 /* <values> reissued approximately every 256 <rle-count> fields */
-#define SUMP_FLAG1_RLE_MODE3 0xc000 /* <values> can be followed by unlimited numbers of <rle-counts> */
+#define SUMP_FLAG1_RLE_MODE0 0x0000 /**< Issue <value> & <rle-count> as pairs */
+#define SUMP_FLAG1_RLE_MODE1 0x4000 /**< Issue <value> & <rle-count> as pairs */
+#define SUMP_FLAG1_RLE_MODE2 0x8000 /**< Values reissued every ~256 rle-count fields */
+#define SUMP_FLAG1_RLE_MODE3 0xc000 /**< Values followed by unlimited rle-counts */
 
+/**
+ * @brief Initialize CDC SUMP interface.
+ */
 void cdc_sump_init(void);
-void cdc_sump_task(void);
-// void cdc_sump_line_coding(cdc_line_coding_t const* line_coding);
 
+/**
+ * @brief SUMP task handler.
+ */
+void cdc_sump_task(void);
+
+/**
+ * @brief Setup SUMP logic analyzer mode.
+ */
 void sump_logic_analyzer_setup(void);
+
+/**
+ * @brief Service SUMP logic analyzer.
+ */
 void sump_logic_analyzer_service(void);
+
+/**
+ * @brief Cleanup SUMP logic analyzer mode.
+ */
 void sump_logic_analyzer_cleanup(void);
+
 extern const char sump_logic_analyzer_name[];
 
 #endif /* SUMP_H_ */

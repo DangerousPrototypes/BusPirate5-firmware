@@ -1,3 +1,18 @@
+/**
+ * @file ui_cmdln.c
+ * @brief Command line buffer and argument parsing implementation.
+ * @details Implements circular buffer command line with:
+ *          - History scrolling through previous commands
+ *          - Command chaining with delimiters (; || &&)
+ *          - Argument parsing (flags, positions, types)
+ *          - Multiple number formats (hex, decimal, binary)
+ *          
+ *          Buffer structure:
+ *          - Circular buffer with separate read/write/cursor pointers
+ *          - Commands separated by 0x00 terminators
+ *          - History maintained in same circular buffer
+ */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>

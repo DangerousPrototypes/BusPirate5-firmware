@@ -1,3 +1,23 @@
+/**
+ * @file p_pullups.c
+ * @brief Programmable pullup/pulldown resistor command implementation.
+ * @details Implements the p/P commands for controlling pullup/pulldown resistors:
+ *          - p: Disable all pullups/pulldowns
+ *          - P: Enable pullups with configuration
+ *          
+ *          Command syntax (BP5 Rev10+ with I2C resistor network):
+ *          - P [value] [-d] [-p <pins>]
+ *          - Values: OFF, 1.3K, 1.5K, 1.8K, 2.2K, 3.2K, 4.7K, 10K, 1M
+ *          - -d: Pull down instead of pull up
+ *          - -p: Specify pins (e.g., -p 0123 for pins 0-3)
+ *          
+ *          Hardware implementation:
+ *          - Uses two MCP23017 I2C I/O expanders
+ *          - Four resistors per pin (2.2K, 4.7K, 10K, 1M)
+ *          - Values achieved by parallel combination
+ *          - Direction controlled separately (pullup vs pulldown)
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"

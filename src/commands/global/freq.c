@@ -1,3 +1,25 @@
+/**
+ * @file freq.c
+ * @brief Frequency measurement command implementation.
+ * @details Implements the f/F commands for measuring signal frequency and duty cycle:
+ *          - f: Single measurement
+ *          - F: Continuous measurement with real-time updates
+ *          
+ *          Command syntax:
+ *          - f [pin]: Single measurement on pin (or menu if no pin)
+ *          - F [pin]: Continuous measurement on pin (or menu if no pin)
+ *          
+ *          Measurement method:
+ *          - Uses RP2040 PWM hardware in counter mode
+ *          - Can measure period and duty cycle simultaneously
+ *          - Supports frequencies from ~1Hz to several MHz
+ *          - Only available on pins with PWM channel B
+ *          
+ *          Limitations:
+ *          - Cannot share PWM slice with active PWM output
+ *          - Cannot measure on pins 0-1 if PSU uses PWM (hardware conflict)
+ */
+
 #include <stdio.h>
 #include <math.h>
 #include "pico/stdlib.h"

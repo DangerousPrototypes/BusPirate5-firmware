@@ -1,3 +1,18 @@
+/**
+ * @file storage.c
+ * @brief Flash storage and FAT filesystem implementation.
+ * @details Provides FatFS wrapper for persistent storage:
+ *          - Onboard SPI flash (BP5 Rev10+)
+ *          - TF/microSD card with hot-plug detection (BP5 Rev8/Rev9)
+ *          
+ *          Features:
+ *          - Automatic mount/unmount on card insertion/removal
+ *          - JSON-based configuration file persistence
+ *          - Binary data logging with automatic file rollover
+ *          - Directory listing and file operations
+ *          - FAT12/FAT16/FAT32/exFAT support via FatFS
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>

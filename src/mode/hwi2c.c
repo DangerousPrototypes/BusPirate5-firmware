@@ -1,3 +1,21 @@
+/**
+ * @file hwi2c.c
+ * @brief Hardware I2C mode implementation.
+ * @details Implements I2C master protocol using PIO-based bit-banging.
+ *          Features:
+ *          - Speed: 5kHz to 1MHz
+ *          - Optional clock stretching support
+ *          - Device scanning (scan command)
+ *          - Sensor demos (SHT3x, SHT4x, SI7021, MS5611, TSL2561, TCS3472, MPU6050)
+ *          - EEPROM support
+ *          - DDR4/DDR5 SPD reading
+ *          - USB PD source capability reading
+ *          
+ *          Pin mapping:
+ *          - SDA: Data line (bidirectional, open-drain)
+ *          - SCL: Clock line (bidirectional, open-drain)
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>

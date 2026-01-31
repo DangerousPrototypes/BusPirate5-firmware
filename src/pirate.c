@@ -51,6 +51,7 @@
 // #include "mode/logicanalyzer.h"
 #include "msc_disk.h"
 #include "pirate/intercore_helpers.h"
+#include "ui/ui_term_linenoise.h"
 // #include "display/robot16.h"
 #ifdef BP_SPLASH_ENABLED
     #include BP_SPLASH_FILE
@@ -572,17 +573,23 @@ static void core0_infinite_loop(void) {
                     break;
                 }
                 
-                uint8_t key_pressed = (uint8_t)ui_term_get_user_input();
+                uint32_t ln_result = ui_term_linenoise_feed();
                 
-                //all keys deal with screensaver
-                if(key_pressed) { //0x01 is a key press, 0xff is enter
+                // All keys deal with screensaver
+                if (ln_result) {  // Any non-zero = key activity
                     lcd_screensaver_alarm_reset();
                 }
 
-                if (key_pressed==0xff) { //enter
+                if (ln_result == 0xff) {  // Enter - line complete
                     printf("\r\n");
                     bp_state = BP_SM_PROCESS_COMMAND;
                     button_irq_disable(0); 
+                    break;
+                }
+                
+                if (ln_result == 0xfe) {  // Ctrl+C - cancel
+                    printf("^C\r\n");
+                    bp_state = BP_SM_COMMAND_PROMPT;
                     break;
                 }
 
@@ -594,27 +601,31 @@ static void core0_infinite_loop(void) {
                 }
                 break;
             case BP_SM_PROCESS_COMMAND:
-                // Copy command from circular buffer to linear buffer for processing
-                cmdln_copy_to_linear();
+                // Linenoise already set up linear buffer - just process
                 system_config.error = ui_process_commands();
-                // Reset to circular buffer mode
-                cmdln_end_linear();
                 bp_state = BP_SM_COMMAND_PROMPT;
                 break;
             case BP_SM_COMMAND_PROMPT:
-                if (system_config.subprotocol_name) {
-                    printf("%s%s-(%s)>%s \x03",
-                           ui_term_color_prompt(),
-                           modes[system_config.mode].protocol_name,
-                           system_config.subprotocol_name,
-                           ui_term_color_reset());
-                } else {
-                    printf("%s%s>%s \x03",
-                           ui_term_color_prompt(),
-                           modes[system_config.mode].protocol_name,
-                           ui_term_color_reset());
+                {
+                    // Build prompt string for linenoise
+                    static char prompt_buf[128];
+                    if (system_config.subprotocol_name) {
+                        snprintf(prompt_buf, sizeof(prompt_buf), "%s%s-(%s)>%s ",
+                                 ui_term_color_prompt(),
+                                 modes[system_config.mode].protocol_name,
+                                 system_config.subprotocol_name,
+                                 ui_term_color_reset());
+                    } else {
+                        snprintf(prompt_buf, sizeof(prompt_buf), "%s%s>%s ",
+                                 ui_term_color_prompt(),
+                                 modes[system_config.mode].protocol_name,
+                                 ui_term_color_reset());
+                    }
+                    // Start linenoise editing session (outputs prompt)
+                    ui_term_linenoise_start(prompt_buf);
+                    // Output end-of-prompt marker for test tools (invisible)
+                    printf("\x03");
                 }
-                cmdln_next_buf_pos();
                 bp_state = BP_SM_GET_INPUT;
                 button_irq_enable(0, &button_irq_callback);
                 break;

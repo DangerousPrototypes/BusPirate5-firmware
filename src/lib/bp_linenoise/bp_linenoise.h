@@ -22,8 +22,8 @@
 #include <stddef.h>
 
 // Configuration
-#define BP_LINENOISE_MAX_LINE    512   // Maximum line length
-#define BP_LINENOISE_HISTORY_MAX 20    // Number of history entries
+#define BP_LINENOISE_MAX_LINE    256   // Maximum line length
+#define BP_LINENOISE_HISTORY_MAX 8     // Number of history entries
 
 /*
  * =============================================================================

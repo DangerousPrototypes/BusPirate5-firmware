@@ -394,6 +394,8 @@ set(buspirate_common
         ui/ui_help.h
         ui/ui_term.c
         ui/ui_term.h
+        ui/ui_term_linenoise.c
+        ui/ui_term_linenoise.h
         ui/ui_statusbar.c
         ui/ui_statusbar.h
         ui/ui_hex.c

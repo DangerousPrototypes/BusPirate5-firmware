@@ -20,9 +20,6 @@
 #define __bpio_StatusRequestTypes_formal_args , bpio_StatusRequestTypes_enum_t v0
 #define __bpio_StatusRequestTypes_call_args , v0
 __flatbuffers_build_scalar(flatbuffers_, bpio_StatusRequestTypes, bpio_StatusRequestTypes_enum_t)
-#define __bpio_BitwiseOps_formal_args , bpio_BitwiseOps_enum_t v0
-#define __bpio_BitwiseOps_call_args , v0
-__flatbuffers_build_scalar(flatbuffers_, bpio_BitwiseOps, bpio_BitwiseOps_enum_t)
 
 typedef flatbuffers_union_ref_t bpio_RequestPacketContents_union_ref_t;
 typedef flatbuffers_union_vec_ref_t bpio_RequestPacketContents_union_vec_ref_t;
@@ -59,7 +56,7 @@ __flatbuffers_build_table(flatbuffers_, bpio_ConfigurationResponse, 1)
 static const flatbuffers_voffset_t __bpio_DataRequest_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_DataRequest_ref_t;
 static bpio_DataRequest_ref_t bpio_DataRequest_clone(flatbuffers_builder_t *B, bpio_DataRequest_table_t t);
-__flatbuffers_build_table(flatbuffers_, bpio_DataRequest, 7)
+__flatbuffers_build_table(flatbuffers_, bpio_DataRequest, 6)
 
 static const flatbuffers_voffset_t __bpio_DataResponse_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_DataResponse_ref_t;
@@ -132,11 +129,9 @@ static inline bpio_ConfigurationResponse_ref_t bpio_ConfigurationResponse_create
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_ConfigurationResponse, bpio_ConfigurationResponse_file_identifier, bpio_ConfigurationResponse_type_identifier)
 
 #define __bpio_DataRequest_formal_args ,\
-  flatbuffers_bool_t v0, flatbuffers_bool_t v1, flatbuffers_uint8_vec_ref_t v2, uint16_t v3,\
-  flatbuffers_bool_t v4, flatbuffers_bool_t v5, flatbuffers_uint8_vec_ref_t v6
+  flatbuffers_bool_t v0, flatbuffers_bool_t v1, flatbuffers_uint8_vec_ref_t v2, uint16_t v3, flatbuffers_bool_t v4, flatbuffers_bool_t v5
 #define __bpio_DataRequest_call_args ,\
-  v0, v1, v2, v3,\
-  v4, v5, v6
+  v0, v1, v2, v3, v4, v5
 static inline bpio_DataRequest_ref_t bpio_DataRequest_create(flatbuffers_builder_t *B __bpio_DataRequest_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_DataRequest, bpio_DataRequest_file_identifier, bpio_DataRequest_type_identifier)
 
@@ -483,13 +478,11 @@ __flatbuffers_build_vector_field(2, flatbuffers_, bpio_DataRequest_data_write, f
 __flatbuffers_build_scalar_field(3, flatbuffers_, bpio_DataRequest_bytes_read, flatbuffers_uint16, uint16_t, 2, 2, UINT16_C(0), bpio_DataRequest)
 __flatbuffers_build_scalar_field(4, flatbuffers_, bpio_DataRequest_stop_main, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_DataRequest)
 __flatbuffers_build_scalar_field(5, flatbuffers_, bpio_DataRequest_stop_alt, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_DataRequest)
-__flatbuffers_build_vector_field(6, flatbuffers_, bpio_DataRequest_bitwise_ops, flatbuffers_uint8, uint8_t, bpio_DataRequest)
 
 static inline bpio_DataRequest_ref_t bpio_DataRequest_create(flatbuffers_builder_t *B __bpio_DataRequest_formal_args)
 {
     if (bpio_DataRequest_start(B)
         || bpio_DataRequest_data_write_add(B, v2)
-        || bpio_DataRequest_bitwise_ops_add(B, v6)
         || bpio_DataRequest_bytes_read_add(B, v3)
         || bpio_DataRequest_start_main_add(B, v0)
         || bpio_DataRequest_start_alt_add(B, v1)
@@ -505,7 +498,6 @@ static bpio_DataRequest_ref_t bpio_DataRequest_clone(flatbuffers_builder_t *B, b
     __flatbuffers_memoize_begin(B, t);
     if (bpio_DataRequest_start(B)
         || bpio_DataRequest_data_write_pick(B, t)
-        || bpio_DataRequest_bitwise_ops_pick(B, t)
         || bpio_DataRequest_bytes_read_pick(B, t)
         || bpio_DataRequest_start_main_pick(B, t)
         || bpio_DataRequest_start_alt_pick(B, t)

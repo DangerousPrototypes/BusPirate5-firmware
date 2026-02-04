@@ -23,6 +23,7 @@
 #include "bpio_transactions.h"
 #include "pirate/hw3wire_pio.h"
 #include "pirate/bio.h"
+#include "command_struct.h"
 #include "ui/ui_format.h"
 #include "system_config.h"
 

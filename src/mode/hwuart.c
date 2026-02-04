@@ -251,18 +251,19 @@ uint32_t hwuart_setup(void) {
 
     mode_config.async_print = false;
 
-    return 1;
-}
-
-uint32_t hwuart_setup_exc(void) {
-    // setup peripheral
     mode_config.baudrate_actual = uart_init(M_UART_PORT, mode_config.baudrate);
     printf("\r\n%s%s: %u %s%s",
            ui_term_color_notice(),
            GET_T(T_UART_ACTUAL_SPEED_BAUD),
            mode_config.baudrate_actual,
            GET_T(T_UART_BAUD),
-           ui_term_color_reset());
+           ui_term_color_reset());    
+
+    return 1;
+}
+
+uint32_t hwuart_setup_exc(void) {
+    // setup peripheral
     uart_set_format(M_UART_PORT, mode_config.data_bits, mode_config.stop_bits, mode_config.parity);
     // set buffers to correct position
     bio_buf_output(M_UART_TX); // tx

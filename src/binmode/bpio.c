@@ -622,7 +622,7 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
         .bytes_read = bpio_DataRequest_bytes_read(data_request),
         .stop_main = bpio_DataRequest_stop_main(data_request),
         .stop_alt = bpio_DataRequest_stop_alt(data_request),
-        .bitwise_ops = bpio_DataRequest_bitwise_ops(data_request)
+        //.bitwise_ops = bpio_DataRequest_bitwise_ops(data_request)
     };
 
     size_t data_buf_size = request.bytes_read;
@@ -719,6 +719,15 @@ void bpio_check_async_data(flatcc_builder_t *B, uint8_t *buf) {
     if(bytes_read == 0) {
         return; // No async data available
     }
+
+    if(bpio_debug){
+        printf("[Async Data] Received %d bytes: ", bytes_read);
+        for(uint32_t i = 0; i < bytes_read; i++) {
+            // Process async_data[i] if needed
+            printf("%c", async_data[i]);
+        }
+        printf("\r\n");
+    }
     
     if(bpio_debug) printf("[Async Data] %d bytes from %s\r\n", bytes_read, modes[system_config.mode].protocol_name);
     
@@ -780,7 +789,9 @@ void dirtyproto_mode(void) {
     
     // Check for async data if no request is pending
     if (!tud_cdc_n_available(CDC_INTF)) {
-        bpio_check_async_data(B, buf);
+        if(tud_cdc_n_connected(CDC_INTF)){
+            bpio_check_async_data(B, buf);
+        }
         return; // No data available, exit early
     } 
 

@@ -208,44 +208,6 @@ static inline int bpio_StatusRequestTypes_is_known_value(bpio_StatusRequestTypes
     }
 }
 
-typedef uint8_t bpio_BitwiseOps_enum_t;
-__flatbuffers_define_integer_type(bpio_BitwiseOps, bpio_BitwiseOps_enum_t, 8)
-#define bpio_BitwiseOps_NONE ((bpio_BitwiseOps_enum_t)UINT8_C(0))
-#define bpio_BitwiseOps_DATA_LOW ((bpio_BitwiseOps_enum_t)UINT8_C(1))
-#define bpio_BitwiseOps_DATA_HIGH ((bpio_BitwiseOps_enum_t)UINT8_C(2))
-#define bpio_BitwiseOps_CLOCK_LOW ((bpio_BitwiseOps_enum_t)UINT8_C(4))
-#define bpio_BitwiseOps_CLOCK_HIGH ((bpio_BitwiseOps_enum_t)UINT8_C(8))
-#define bpio_BitwiseOps_CLOCK_PULSE ((bpio_BitwiseOps_enum_t)UINT8_C(12))
-#define bpio_BitwiseOps_READ ((bpio_BitwiseOps_enum_t)UINT8_C(16))
-
-static inline const char *bpio_BitwiseOps_name(bpio_BitwiseOps_enum_t value)
-{
-    switch (value) {
-    case bpio_BitwiseOps_NONE: return "NONE";
-    case bpio_BitwiseOps_DATA_LOW: return "DATA_LOW";
-    case bpio_BitwiseOps_DATA_HIGH: return "DATA_HIGH";
-    case bpio_BitwiseOps_CLOCK_LOW: return "CLOCK_LOW";
-    case bpio_BitwiseOps_CLOCK_HIGH: return "CLOCK_HIGH";
-    case bpio_BitwiseOps_CLOCK_PULSE: return "CLOCK_PULSE";
-    case bpio_BitwiseOps_READ: return "READ";
-    default: return "";
-    }
-}
-
-static inline int bpio_BitwiseOps_is_known_value(bpio_BitwiseOps_enum_t value)
-{
-    switch (value) {
-    case bpio_BitwiseOps_NONE: return 1;
-    case bpio_BitwiseOps_DATA_LOW: return 1;
-    case bpio_BitwiseOps_DATA_HIGH: return 1;
-    case bpio_BitwiseOps_CLOCK_LOW: return 1;
-    case bpio_BitwiseOps_CLOCK_HIGH: return 1;
-    case bpio_BitwiseOps_CLOCK_PULSE: return 1;
-    case bpio_BitwiseOps_READ: return 1;
-    default: return 0;
-    }
-}
-
 
 
 struct bpio_StatusRequest_table { uint8_t unused__; };
@@ -371,7 +333,6 @@ __flatbuffers_define_vector_field(2, bpio_DataRequest, data_write, flatbuffers_u
 __flatbuffers_define_scalar_field(3, bpio_DataRequest, bytes_read, flatbuffers_uint16, uint16_t, UINT16_C(0))
 __flatbuffers_define_scalar_field(4, bpio_DataRequest, stop_main, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(5, bpio_DataRequest, stop_alt, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
-__flatbuffers_define_vector_field(6, bpio_DataRequest, bitwise_ops, flatbuffers_uint8_vec_t, 0)
 
 struct bpio_DataResponse_table { uint8_t unused__; };
 

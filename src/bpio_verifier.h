@@ -342,7 +342,6 @@ static int bpio_DataRequest_verify_table(flatcc_table_verifier_descriptor_t *td)
     if ((ret = flatcc_verify_field(td, 3, 2, 2) /* bytes_read */)) return ret;
     if ((ret = flatcc_verify_field(td, 4, 1, 1) /* stop_main */)) return ret;
     if ((ret = flatcc_verify_field(td, 5, 1, 1) /* stop_alt */)) return ret;
-    if ((ret = flatcc_verify_vector_field(td, 6, 0, 1, 1, INT64_C(4294967295)) /* bitwise_ops */)) return ret;
     return flatcc_verify_ok;
 }
 

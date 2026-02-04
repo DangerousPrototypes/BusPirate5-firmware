@@ -96,6 +96,7 @@ table ConfigurationResponse{
 
 // Bitwise pin control operations for 2wire and 3wire modes
 // Values can be combined using bitwise OR for atomic operations
+/*
 enum BitwiseOps:ubyte {
   NONE = 0,
   
@@ -111,7 +112,7 @@ enum BitwiseOps:ubyte {
   // Read operation (bit 4)
   READ = 16            // 0x10 = 0b00010000 - Read data input pin
 }
-
+*/
 table DataRequest {
   start_main:bool; // Start condition.
   start_alt:bool; // Alternate start condition.
@@ -119,7 +120,7 @@ table DataRequest {
   bytes_read:uint16; // Number of bytes to read.
   stop_main:bool; // Stop condition.
   stop_alt:bool; // Alternate stop condition.
-  bitwise_ops:[ubyte]; // NEW in 2.2: Bitwise pin operations (2wire/3wire only) - array of BitwiseOps values
+  //bitwise_ops:[ubyte]; // NEW in 2.2: Bitwise pin operations (2wire/3wire only) - array of BitwiseOps values
 }
 
 table DataResponse {

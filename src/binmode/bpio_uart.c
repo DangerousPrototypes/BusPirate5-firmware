@@ -22,7 +22,8 @@ uint32_t bpio_hwuart_transaction(struct bpio_data_request_t *request, flatbuffer
     if(request->bytes_write > 0) {
         if(request->debug) printf("[UART] Writing %d bytes\r\n", request->bytes_write);
         for(uint32_t i = 0; i < request->bytes_write; i++) {
-            uart_putc_raw(M_UART_PORT, flatbuffers_uint8_vec_at(data_write, i));
+            //uart_putc_raw(M_UART_PORT, flatbuffers_uint8_vec_at(data_write, i));
+            uart_putc_raw(M_UART_PORT, 'G');
         }
     }
 
@@ -45,6 +46,7 @@ uint32_t bpio_hwuart_transaction(struct bpio_data_request_t *request, flatbuffer
 // UART async handler for BPIO
 // Checks for unsolicited incoming UART data and reads it into buffer
 // Returns number of bytes read (0 if no data available)
+//TODO: UART is dispatched to multiple processes!!!
 uint32_t bpio_hwuart_async_handler(uint8_t *data_read) {
     // Check if UART has data available
     if(!uart_is_readable(M_UART_PORT)) {

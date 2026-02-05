@@ -263,6 +263,7 @@ uint32_t hwuart_setup(void) {
 }
 
 uint32_t hwuart_setup_exc(void) {
+    mode_config.baudrate_actual = uart_init(M_UART_PORT, mode_config.baudrate);
     // setup peripheral
     uart_set_format(M_UART_PORT, mode_config.data_bits, mode_config.stop_bits, mode_config.parity);
     // set buffers to correct position
@@ -299,7 +300,10 @@ uint32_t hwuart_setup_exc(void) {
         uart_set_hw_flow(M_UART_PORT, mode_config.flow_control, false);             
     }
 
-
+    // drain the buffer of any glitch bytes from setup
+    while (uart_is_readable(M_UART_PORT)) {
+        uart_getc(M_UART_PORT);
+    }
 
     return 1;
 }
@@ -311,20 +315,20 @@ bool hwuart_preflight_sanity_check(void){
 void hwuart_periodic(void) {
     if (mode_config.async_print && uart_is_readable(M_UART_PORT)) {
         // printf("ASYNC: %d\r\n", uart_getc(M_UART_PORT));
-        bio_put(M_UART_RTS, 0);
+        if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
         uint32_t temp = uart_getc(M_UART_PORT);
-        bio_put(M_UART_RTS, 1);
+        if(mode_config.flow_control) bio_put(M_UART_RTS, 1);
         ui_format_print_number_2(&periodic_attributes, &temp);
     }
 }
 
 void hwuart_open(struct _bytecode* result, struct _bytecode* next) {    
     // clear FIFO and enable UART
-    bio_put(M_UART_RTS, 0);
+    if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
     while (uart_is_readable(M_UART_PORT)) {
         uart_getc(M_UART_PORT);
     }
-    bio_put(M_UART_RTS, 1);
+    if(mode_config.flow_control) bio_put(M_UART_RTS, 1);
 
     mode_config.async_print = false;
     result->data_message = GET_T(T_UART_OPEN);
@@ -360,14 +364,14 @@ void hwuart_read(struct _bytecode* result, struct _bytecode* next) {
         }
     }
 
-    bio_put(M_UART_RTS, 0);
+    if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
     if (uart_is_readable(M_UART_PORT)) {
         result->in_data = uart_getc(M_UART_PORT);
     } else {
         result->error = SERR_ERROR;
         result->error_message = GET_T(T_UART_NO_DATA_READ);
     }
-    bio_put(M_UART_RTS, 1);
+    if(mode_config.flow_control) bio_put(M_UART_RTS, 1);
 }
 
 void hwuart_macro(uint32_t macro) {

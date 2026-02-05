@@ -22,8 +22,7 @@ uint32_t bpio_hwuart_transaction(struct bpio_data_request_t *request, flatbuffer
     if(request->bytes_write > 0) {
         if(request->debug) printf("[UART] Writing %d bytes\r\n", request->bytes_write);
         for(uint32_t i = 0; i < request->bytes_write; i++) {
-            //uart_putc_raw(M_UART_PORT, flatbuffers_uint8_vec_at(data_write, i));
-            uart_putc_raw(M_UART_PORT, 'G');
+            uart_putc_raw(M_UART_PORT, flatbuffers_uint8_vec_at(data_write, i));
         }
     }
 

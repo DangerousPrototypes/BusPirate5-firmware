@@ -38,7 +38,7 @@ uint32_t bpio_led_transaction(struct bpio_data_request_t *request, flatbuffers_u
     uint32_t device = hwled_mode_config.device;
     
     // Handle START condition using device-specific function
-    if(request->start_main) {
+    if(request->start_main || request->start_alt) {
         if(request->debug) printf("[LED] START\r\n");
         led_devices[device].start();
     }
@@ -49,30 +49,25 @@ uint32_t bpio_led_transaction(struct bpio_data_request_t *request, flatbuffers_u
         
         if(request->debug) printf("[LED] Writing %d bytes\r\n", request->bytes_write);
         
-        // Onboard RGB requires 32-bit packed format, others use byte stream
-        if(device == M_LED_WS2812_ONBOARD) {
-            // Pack bytes into 32-bit color values (multiple colors if available)
-            uint32_t i = 0;
-            while(i < request->bytes_write) {
-                uint32_t color = 0;
-                // Pack up to 4 bytes, padding with 0x00 if incomplete
-                for(uint32_t j = 0; j < 4 && i < request->bytes_write; j++) {
-                    color |= ((uint32_t)data[i++] << (24 - j * 8));
-                }
-                led_devices[device].write(color);
-                bytes_written += 4;
+        // All LED devices require 32-bit packed values:
+        // WS2812/ONBOARD: 3 bytes per pixel (RGB) - packed in lower 24 bits
+        // APA102: 4 bytes per pixel (brightness + RGB) - packed in full 32 bits
+        uint32_t bytes_per_pixel = (device == M_LED_APA102) ? 4 : 3;
+        uint32_t i = 0;
+        
+        while(i < request->bytes_write) {
+            uint32_t color = 0;
+            // Pack bytes into 32-bit value
+            for(uint32_t j = 0; j < bytes_per_pixel && i < request->bytes_write; j++) {
+                color |= ((uint32_t)data[i++] << (8 * ((bytes_per_pixel-1) - j)));
             }
-        } else {
-            // WS2812 and APA102: stream bytes to PIO
-            for(uint32_t i = 0; i < request->bytes_write; i++) {
-                led_devices[device].write(data[i]);
-                bytes_written++;
-            }
+            led_devices[device].write(color);
+            bytes_written += bytes_per_pixel;
         }
     }
     
     // Handle STOP condition using device-specific function
-    if(request->stop_main) {
+    if(request->stop_main || request->stop_alt) {
         if(request->debug) printf("[LED] STOP\r\n");
         led_devices[device].stop();
     }

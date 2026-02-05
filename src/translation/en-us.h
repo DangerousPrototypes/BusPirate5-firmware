@@ -575,6 +575,8 @@ static char const * const en_us[]={
     [T_HELP_UART_GLITCH_CONFIG]="Configure UART glitch parameters",
 	[T_I2C_SNIFF]="I2C sniffer",
 	[T_I2C_SNIFF_QUIET]="Quiet mode, don't show ACKs",
+    [T_I2C_SNIFF_RAW]="Raw, only show data",
+    [T_I2C_SNIFF_7_BIT_ADDRESSES]="Use 7bit i2c addresses",
 	//DDR5 command in I2C
 	[T_HELP_DDR5]="read, write and probe DDR5 SPD chips",
 	[T_HELP_DDR5_PROBE]="Show DDR5 SPD chip and NVM/EEPROM status",

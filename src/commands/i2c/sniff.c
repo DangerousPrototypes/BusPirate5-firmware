@@ -1,3 +1,5 @@
+// Modified by Dawid Korad Kohnke 2026
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -25,9 +27,11 @@ static const char pin_labels[][5] = {
 
 //help variables
 const char* const i2c_sniff_help[] = {
-    "sniff [-q]",
-    "Start the I2C sniffer: sniff",
-    "Supress (quiet) ACK in output: sniff -q",
+    "sniff [-q] [-7] [-r]",
+    "Start the I2C sniffer:%s sniff",
+    "Supress (quiet) ACK in output:%s sniff -q",
+    "Print (raw) data, no '[',']','R''W':%s sniff -r",
+    "Show 7-bit address:%s sniff -7",
     "",
     "pico-i2c-sniff by @jjsch-dev https://github.com/jjsch-dev/pico_i2c_sniffer",
     "Max speed: 500kHz",
@@ -36,6 +40,8 @@ const char* const i2c_sniff_help[] = {
 const struct ui_help_options i2c_sniff_options[] = {
     { 1, "", T_I2C_SNIFF },
     { 0, "q", T_I2C_SNIFF_QUIET },
+    { 0, "r", T_I2C_SNIFF_RAW },
+    { 0, "7", T_I2C_SNIFF_7_BIT_ADDRESSES},
     { 0, "h", T_HELP_FLAG },
 };
 
@@ -45,8 +51,14 @@ void i2c_sniff(struct command_result* res){
         return;
     }
 
-    //check arguments for quiet mode
+    // check arguments
     bool quiet = cmdln_args_find_flag('q');
+    
+    bool raw = cmdln_args_find_flag('r');
+
+    //-7 prints address as W[0xXX]/R[0xXX] (7-bit address + direction),
+    // instead of raw 8-bit address byte.
+    bool addr7 = cmdln_args_find_flag('7');
 
     // Full speed for the PIO clock divider
     float div = 1;
@@ -113,6 +125,7 @@ void i2c_sniff(struct command_result* res){
     if(quiet){  // we duplicate the loop to avoid the quiet test inside the time sensitive parts
                 // this is cheating, we really should have a buffer and a separate thread to handle the output
         printf("Quiet mode enabled, ACKs will not be displayed\r\n");
+        bool expect_addr = false; //Next DATA after START is address byte
         while(true){
             bool new_val = (pio_sm_get_rx_fifo_level(pio_main.pio, pio_main.sm ) > 0);
             if (new_val) {
@@ -126,14 +139,48 @@ void i2c_sniff(struct command_result* res){
                 bool ack = (val & 1) ? false : true;
                 //printf("val: %x, ev_code: %x, data:%x, ack: %d \r\n", val, ev_code, data, ack);
                 if (ev_code == EV_START) {
-                    printf("[");
+                    if (!raw) {
+                        printf("[");
+                    }
+                    expect_addr = true;
+
                 } else if (ev_code == EV_STOP) {
-                    printf("]\r\n");
+                    if (!raw) {
+                        printf("]\r\n");
+                    } else {
+                        printf("\r\n");
+                    }
+                    expect_addr = false;
+
                 } else if (ev_code == EV_DATA) {
-                    if(ack){
-                        printf(" 0x%02X", data);
-                    }else{
-                        printf(" 0x%02X-", data);
+                    if (addr7 && expect_addr) {
+                        uint8_t addr = (uint8_t)(data >> 1);
+                        bool rd = (data & 0x01) != 0;
+                        if (!raw) {
+                            printf(" %c[0x%02X]", rd ? 'R' : 'W', addr);
+                        } else {
+                            printf(" 0x%02X", addr);
+                        }
+                        if (!ack) {
+                            printf("-");
+                        }
+
+                        expect_addr = false;
+                    } else {
+                        if (!raw) {
+                            if (ack) {
+                                printf(" 0x[%02X]", data);
+                            } else {
+                                printf(" 0x[%02X-]", data);
+                            }
+                        } else {
+                             if (ack) {
+                                printf(" 0x%02X", data);
+                            } else {
+                                printf(" 0x%02X-", data);
+                            }
+                        } 
+                        expect_addr = false;
                     }
                 } else {
                     printf("U\r\n");
@@ -150,10 +197,12 @@ void i2c_sniff(struct command_result* res){
 
         }
     }else{
+        bool expect_addr = false; // Next DATA after START is address byte
         while(true){
             bool new_val = (pio_sm_get_rx_fifo_level(pio_main.pio, pio_main.sm ) > 0);
             if (new_val) {
                 uint32_t val = pio_sm_get(pio_main.pio, pio_main.sm);
+
                 // The format of the uint32_t returned by the sniffer is composed of two event
                 // code bits (EV1 = Bit13, EV0 = Bit12), and when it comes to data, the nine least
                 // significant bits correspond to (ACK = Bit0), and the value 8 bits
@@ -163,11 +212,38 @@ void i2c_sniff(struct command_result* res){
                 bool ack = (val & 1) ? false : true;
                 //printf("val: %x, ev_code: %x, data:%x, ack: %d \r\n", val, ev_code, data, ack);
                 if (ev_code == EV_START) {
-                    printf("[");
+                    if (!raw){
+                        printf("[");
+                    }
+                    expect_addr = true;
+
                 } else if (ev_code == EV_STOP) {
-                    printf("]\r\n");
+                    if (!raw){
+                        printf("]\r\n");
+                    } else {
+                        printf("\r\n");
+                    }
+                    expect_addr = false;
+
                 } else if (ev_code == EV_DATA) {
-                    printf(" 0x%02X%c", data, (ack ? '+' : '-'));
+                    if (addr7 && expect_addr) {
+                        uint8_t addr = (uint8_t)(data >> 1);
+                        bool rd = (data & 0x01) != 0;
+                        if (!raw){
+                            printf(" %c[0x%02X]%c", rd ? 'R' : 'W', addr, (ack ? '+' : '-'));
+                        } else {
+                            printf(" 0x%02X%c", addr, (ack ? '+' : '-'));
+                        }
+                        expect_addr = false;
+                    } else {
+                        if (!raw){
+                            printf(" [0x%02X]%c", data, (ack ? '+' : '-'));
+                        } else {
+                            printf(" 0x%02X%c", data, (ack ? '+' : '-'));
+                        }
+                        expect_addr = false;
+                    }
+
                 } else {
                     printf("U\r\n");
                 }            

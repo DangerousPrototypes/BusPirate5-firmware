@@ -20,7 +20,6 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "queue.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "pirate.h"

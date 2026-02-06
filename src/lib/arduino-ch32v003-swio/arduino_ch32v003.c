@@ -7,7 +7,7 @@
 #include "swio.h"
 #include "pirate/psu.h"
 #include "system_config.h"
-#include "queue.h"
+
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "tusb.h"

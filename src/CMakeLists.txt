@@ -514,9 +514,8 @@ set(buspirate_common
         display/background_image_v4.h
         display/robot16.h
         
-        # USB
-        queue.c
-        queue.h
+        # USB - SPSC queues for inter-core communication
+        spsc_queue.h
         usb_tx.c
         usb_tx.h
         usb_rx.c

@@ -9,7 +9,11 @@
  * - SEGGER RTT (Real Time Transfer)
  * 
  * All input sources are funneled into ring buffers that are consumed by
- * the command processor on Core1.
+ * the command processor on Core0.
+ * 
+ * Thread safety: Uses lock-free SPSC queues
+ * - Producer: Core1 (USB/UART/RTT handlers)
+ * - Consumer: Core0 (command processing)
  * 
  * @author Bus Pirate Project
  * @date 2024-2026
@@ -18,9 +22,8 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "queue.h"
+#include "spsc_queue.h"
 #include "hardware/dma.h"
-// #include "buf.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "hardware/uart.h"
@@ -37,31 +40,31 @@ void rx_uart_irq_handler(void);
  * @{
  */
 
-queue_t rx_fifo;     /**< Main receive FIFO for terminal input */
-queue_t bin_rx_fifo; /**< Binary mode receive FIFO */
+spsc_queue_t rx_fifo;     /**< Main receive FIFO for terminal input */
+spsc_queue_t bin_rx_fifo; /**< Binary mode receive FIFO */
 
 /** RX FIFO size in bits (2^7 = 128 bytes) - TinyUSB requires power of 2 */
 #define RX_FIFO_LENGTH_IN_BITS 7
 /** RX FIFO size in bytes */
 #define RX_FIFO_LENGTH_IN_BYTES (0x0001 << RX_FIFO_LENGTH_IN_BITS)
 
-char rx_buf[RX_FIFO_LENGTH_IN_BYTES];     /**< RX buffer storage */
-char bin_rx_buf[RX_FIFO_LENGTH_IN_BYTES]; /**< Binary RX buffer storage */
+uint8_t rx_buf[RX_FIFO_LENGTH_IN_BYTES];     /**< RX buffer storage */
+uint8_t bin_rx_buf[RX_FIFO_LENGTH_IN_BYTES]; /**< Binary RX buffer storage */
 
 /** @} */ // end of rx_buffers
 
 /**
  * @brief Initialize receive FIFOs
  * 
- * Sets up the ring buffers for regular and binary mode reception.
- * Buffer sizes must be powers of 2 for queue and DMA operation.
+ * Sets up the lock-free SPSC ring buffers for regular and binary mode reception.
+ * Buffer sizes must be powers of 2 for efficient modulo operation.
  * 
  * @note Can be called from either core
  */
 void rx_fifo_init(void) {
     // OK to call from either core
-    queue2_init(&rx_fifo, rx_buf, RX_FIFO_LENGTH_IN_BYTES); // buffer size must be 2^n for queue AND DMA rollover
-    queue2_init(&bin_rx_fifo, bin_rx_buf, RX_FIFO_LENGTH_IN_BYTES);
+    spsc_queue_init(&rx_fifo, rx_buf, RX_FIFO_LENGTH_IN_BYTES);
+    spsc_queue_init(&bin_rx_fifo, bin_rx_buf, RX_FIFO_LENGTH_IN_BYTES);
 }
 
 /**
@@ -94,15 +97,15 @@ void rx_uart_init_irq(void) {
  * the rx_fifo buffer for processing by the command interpreter.
  * 
  * @pre Must execute on Core1 only
- * @warning Uses blocking queue add from ISR context - potential deadlock risk
- * @bug BUGBUG - blocking call from ISR context
+ * @note Uses non-blocking add - drops characters if queue is full (better than deadlock)
  */
 void rx_uart_irq_handler(void) {
     BP_ASSERT_CORE1(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
     // while bytes available shove them in the buffer
     while (uart_is_readable(debug_uart[system_config.terminal_uart_number].uart)) {
         uint8_t c = uart_getc(debug_uart[system_config.terminal_uart_number].uart);
-        queue2_add_blocking(&rx_fifo, &c); // BUGBUG -- blocking call from ISR!
+        // Use try_add instead of blocking - better to drop chars than deadlock in ISR
+        spsc_queue_try_add(&rx_fifo, c);
     }
 }
 
@@ -142,7 +145,7 @@ void rx_from_rtt_terminal(void) {
     // Still might not be any characters available, but if one was obtained...
     while (current_character >= 0) {
         // Try to add it to the RX FIFO...
-        if (!queue2_try_add(&rx_fifo, (char*)&current_character)) {
+        if (!spsc_queue_try_add(&rx_fifo, (uint8_t)current_character)) {
             // and if that fails, store the character for the next time
             // this function is called
             last_character = current_character;
@@ -167,50 +170,49 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts) {
 // insert a byte into the queue
 void rx_fifo_add(char* c) {
     BP_ASSERT_CORE1(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
-    queue2_add_blocking(&rx_fifo, c);
+    spsc_queue_add_blocking(&rx_fifo, (uint8_t)*c);
 }
 
 // functions to access the ring buffer from other code
 // block until a byte is available, remove from buffer
 void rx_fifo_get_blocking(char* c) {
     BP_ASSERT_CORE0(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be drained from core0 (deadlock risk)
-    queue2_remove_blocking(&rx_fifo, c);
+    spsc_queue_remove_blocking(&rx_fifo, (uint8_t*)c);
 }
 // try to get a byte, remove from buffer if available, return false if no byte
 bool rx_fifo_try_get(char* c) {
     // OK to call from either core
-    return queue2_try_remove(&rx_fifo, c);
+    return spsc_queue_try_remove(&rx_fifo, (uint8_t*)c);
 }
 // block until a byte is available, return byte but leave in buffer
 void rx_fifo_peek_blocking(char* c) {
     BP_ASSERT_CORE0(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be drained from core0 (deadlock risk)
-    queue2_peek_blocking(&rx_fifo, c);
+    spsc_queue_peek_blocking(&rx_fifo, (uint8_t*)c);
 }
 // try to peek at next byte, return byte but leave in buffer, return false if no byte
 bool rx_fifo_try_peek(char* c) {
     // OK to call from either core
-    return queue2_try_peek(&rx_fifo, c);
+    return spsc_queue_try_peek(&rx_fifo, (uint8_t*)c);
 }
 
 // BINMODE queue
 void bin_rx_fifo_add(char* c) {
     BP_ASSERT_CORE1();
-    queue2_add_blocking(&bin_rx_fifo, c);
+    spsc_queue_add_blocking(&bin_rx_fifo, (uint8_t)*c);
 }
 
 void bin_rx_fifo_get_blocking(char* c) {
     BP_ASSERT_CORE0(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be drained from core0 (deadlock risk)
-    queue2_remove_blocking(&bin_rx_fifo, c);
+    spsc_queue_remove_blocking(&bin_rx_fifo, (uint8_t*)c);
 }
 
 void bin_rx_fifo_available_bytes(uint16_t* cnt) {
     // OK to call from either core
-    queue_available_bytes(&bin_rx_fifo, cnt);
+    *cnt = (uint16_t)spsc_queue_level(&bin_rx_fifo);
 }
 
 bool bin_rx_fifo_try_get(char* c) {
     // OK to call from either core
-    bool result = queue2_try_remove(&bin_rx_fifo, c);
-    // if(result) printf("%.2x ", (*c));
+    bool result = spsc_queue_try_remove(&bin_rx_fifo, (uint8_t*)c);
     return result;
 }

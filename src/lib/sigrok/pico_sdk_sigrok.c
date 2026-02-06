@@ -9,7 +9,7 @@
 #include "pico/stdlib.h" //uart definitions
 #include <stdlib.h>		 //atoi,atol
 #include "pirate.h"
-#include "queue.h"
+
 #include "pirate/bio.h"
 #include "hardware/gpio.h"
 // Note: Hardware libraries must be added to CMakelists.txt

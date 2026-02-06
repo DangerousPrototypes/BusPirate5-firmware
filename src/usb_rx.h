@@ -2,11 +2,12 @@
  * @file usb_rx.h
  * @brief USB receive queue management.
  * @details Provides USB and terminal input queue handling for normal and binary modes.
+ *          Uses lock-free SPSC queues for thread-safe inter-core communication.
  */
 
-#include "queue.h"
-extern queue_t rx_fifo;
-extern queue_t bin_rx_fifo;
+#include "spsc_queue.h"
+extern spsc_queue_t rx_fifo;
+extern spsc_queue_t bin_rx_fifo;
 
 /**
  * @brief Initialize receive FIFO.

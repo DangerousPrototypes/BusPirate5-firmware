@@ -1,0 +1,36 @@
+PROJECT_NAME           = "Bus Pirate 5"
+PROJECT_BRIEF          = "Open source bus interface and hardware hacking tool"
+PROJECT_LOGO           = 
+OUTPUT_DIRECTORY       = docs
+
+INPUT                  = src/
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h
+EXCLUDE_PATTERNS       = */flatcc/* */fatfs/* */dhara/* */mjson/* */printf-4.0.0/* */lib/*
+
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = NO
+EXTRACT_PRIVATE        = NO
+
+# HTML Output
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_COLORSTYLE        = LIGHT
+HTML_DYNAMIC_SECTIONS  = YES
+HTML_INDEX_NUM_ENTRIES = 100
+
+# Navigation
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+
+# Search
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+
+# Diagrams
+HAVE_DOT               = NO
+
+# XML (disabled for pure HTML)
+GENERATE_XML           = NO

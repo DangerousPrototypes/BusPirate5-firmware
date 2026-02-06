@@ -104,16 +104,16 @@ static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
         .bpio_handler = bpio_hwspi_transaction
     },
     [HW2WIRE]={
-        .bpio_configure = bpio_hw2wire_configure,
-        .bpio_handler = bpio_hw2wire_transaction
+        .bpio_configure = NULL, //bpio_hw2wire_configure,
+        .bpio_handler = NULL, //bpio_hw2wire_transaction
     },
     [HW3WIRE]={
-        .bpio_configure = bpio_hw3wire_configure,
-        .bpio_handler = bpio_hw3wire_transaction
+        .bpio_configure = NULL, //bpio_hw3wire_configure,
+        .bpio_handler = NULL, //bpio_hw3wire_transaction
     },
     [DIO]={
         .bpio_configure = NULL,
-        .bpio_handler = bpio_dio_transaction
+        .bpio_handler = NULL, //bpio_dio_transaction
     },
     [HWLED]={
         .bpio_configure = bpio_led_configure,
@@ -122,7 +122,7 @@ static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
     //need async handler in some way
     [INFRARED]={
         .bpio_configure = NULL,
-        .bpio_handler = bpio_infrared_transaction
+        .bpio_handler = NULL, //bpio_infrared_transaction
     },
     [JTAG]={
         .bpio_configure = NULL,
@@ -870,7 +870,7 @@ bpio_mode_read_end:
     }
 
     uint16_t minimum_version_minor = bpio_RequestPacket_minimum_version_minor_get(packet);
-    if(minimum_version_minor > 0) {
+    if(minimum_version_minor > 2) {
         if(bpio_debug) printf("[BPIO] Warning: Minimum version minor %d, this may not be compatible\r\n", minimum_version_minor);
         error_response("Flatbuffers minimum version minor not met, update the Bus Pirate firmware", B, buf);
         return;

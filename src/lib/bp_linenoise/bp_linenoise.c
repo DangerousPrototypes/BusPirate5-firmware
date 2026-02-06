@@ -191,12 +191,25 @@ static size_t display_width(const char *s, size_t len) {
     return width;
 }
 
-// Refresh the line on screen
+// Refresh the line on screen, with optional ghost-text hint
 static void refresh_line(bp_linenoise_state_t *state) {
     char seq[32];
     size_t pwidth = state->plen;
     size_t bufwidth = display_width(state->buf, state->len);
     size_t poswidth = display_width(state->buf, state->pos);
+    
+    // Query hints callback for ghost text
+    const char *hint = NULL;
+    size_t hintlen = 0;
+    if (state->hints_callback && state->len > 0 && state->pos == state->len) {
+        hint = state->hints_callback(state->buf, state->len);
+        if (hint && hint[0]) {
+            hintlen = strlen(hint);
+        } else {
+            hint = NULL;
+        }
+    }
+    state->hint_suffix = hint;  // Cache for TAB acceptance
     
     // Calculate visible portion if line is too long
     char *buf = state->buf;
@@ -212,7 +225,7 @@ static void refresh_line(bp_linenoise_state_t *state) {
         bufwidth--;
     }
     
-    // Trim from right if still too long
+    // Trim from right if still too long (ignoring hint for now)
     while (pwidth + bufwidth > state->cols && len > 0) {
         len--;
         bufwidth--;
@@ -227,10 +240,18 @@ static void refresh_line(bp_linenoise_state_t *state) {
     // Write buffer content
     state->write(buf, len);
     
+    // Write ghost text hint (dim color) if available and fits
+    if (hint && pwidth + bufwidth + hintlen < state->cols) {
+        // Use dim + dark white (90 = bright black / dark gray)
+        ln_write_str(state, "\x1b[36m");
+        state->write(hint, hintlen);
+        ln_write_str(state, "\x1b[0m");
+    }
+    
     // Erase to end of line
     ln_write_str(state, "\x1b[0K");
     
-    // Move cursor to correct position
+    // Move cursor to correct position (at end of typed text, before hint)
     snprintf(seq, sizeof(seq), "\r\x1b[%dC", (int)(poswidth + pwidth));
     ln_write_str(state, seq);
 }
@@ -278,7 +299,8 @@ bp_linenoise_result_t bp_linenoise_feed(bp_linenoise_state_t *state) {
             
         case CTRL_D:
             if (state->len > 0) {
-                bp_linenoise_edit_delete(state);
+                if (!state->simple_mode)
+                    bp_linenoise_edit_delete(state);
             } else {
                 return BP_LN_CTRL_D;
             }
@@ -290,54 +312,114 @@ bp_linenoise_result_t bp_linenoise_feed(bp_linenoise_state_t *state) {
             
         case BACKSPACE:
         case CTRL_H:
-            bp_linenoise_edit_backspace(state);
+            if (state->simple_mode) {
+                // Simple mode: use basic terminal backspace
+                if (state->pos > 0 && state->len > 0) {
+                    memmove(state->buf + state->pos - 1,
+                            state->buf + state->pos,
+                            state->len - state->pos);
+                    state->pos--;
+                    state->len--;
+                    state->buf[state->len] = '\0';
+                    // Backspace + space + backspace to erase character
+                    ln_write_str(state, "\b \b");
+                }
+            } else {
+                bp_linenoise_edit_backspace(state);
+            }
             break;
             
         case TAB:
-            if (state->completion_callback) {
-                state->completion_callback(state->buf, state->len);
+            // Primary: accept inline ghost-text hint if available
+            if (state->hint_suffix && state->hint_suffix[0]) {
+                size_t hlen = strlen(state->hint_suffix);
+                if (state->len + hlen <= state->buflen) {
+                    memcpy(state->buf + state->len, state->hint_suffix, hlen);
+                    state->len += hlen;
+                    state->pos = state->len;
+                    state->buf[state->len] = '\0';
+                    state->hint_suffix = NULL;  // Clear consumed hint
+                    refresh_line(state);
+                }
+                break;
             }
-            // TODO: Implement tab completion
+            // Fallback: multi-match completion (show list)
+            if (state->completion_callback) {
+                bp_linenoise_completions_t lc = { .count = 0 };
+                state->completion_callback(state->buf, state->len, &lc);
+                
+                if (lc.count == 0) {
+                    ln_write_str(state, "\x07");  // Bell
+                } else if (lc.count == 1) {
+                    size_t cmd_len = strlen(lc.entries[0]);
+                    if (cmd_len <= state->buflen) {
+                        memcpy(state->buf, lc.entries[0], cmd_len);
+                        state->buf[cmd_len] = '\0';
+                        state->pos = cmd_len;
+                        state->len = cmd_len;
+                        refresh_line(state);
+                    }
+                } else {
+                    // Show all matches below
+                    ln_write_str(state, "\r\n");
+                    for (size_t i = 0; i < lc.count; i++) {
+                        ln_write_str(state, lc.entries[i]);
+                        ln_write_str(state, "  ");
+                    }
+                    ln_write_str(state, "\r\n");
+                    refresh_line(state);
+                }
+            }
             break;
             
         case CTRL_A:  // Home
-            bp_linenoise_edit_move_home(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_move_home(state);
             break;
             
         case CTRL_E:  // End
-            bp_linenoise_edit_move_end(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_move_end(state);
             break;
             
         case CTRL_F:  // Forward (right)
-            bp_linenoise_edit_move_right(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_move_right(state);
             break;
             
         case CTRL_K:  // Kill to end of line
-            bp_linenoise_edit_delete_to_end(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_delete_to_end(state);
             break;
             
         case CTRL_L:  // Clear screen
-            bp_linenoise_clear_screen(state);
+            if (!state->simple_mode)
+                bp_linenoise_clear_screen(state);
             break;
             
         case CTRL_N:  // Next in history
-            bp_linenoise_edit_history_next(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_history_next(state);
             break;
             
         case CTRL_P:  // Previous in history
-            bp_linenoise_edit_history_prev(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_history_prev(state);
             break;
             
         case CTRL_T:  // Transpose characters
-            bp_linenoise_edit_transpose(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_transpose(state);
             break;
             
         case CTRL_U:  // Delete whole line
-            bp_linenoise_edit_delete_line(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_delete_line(state);
             break;
             
         case CTRL_W:  // Delete previous word
-            bp_linenoise_edit_delete_word(state);
+            if (!state->simple_mode)
+                bp_linenoise_edit_delete_word(state);
             break;
             
         case ESC:  // Escape sequence
@@ -356,35 +438,44 @@ bp_linenoise_result_t bp_linenoise_feed(bp_linenoise_state_t *state) {
                         if (seq[2] == '~') {
                             switch (seq[1]) {
                                 case '1':  // Home (some terminals)
-                                    bp_linenoise_edit_move_home(state);
+                                    if (!state->simple_mode)
+                                        bp_linenoise_edit_move_home(state);
                                     break;
                                 case '3':  // Delete
-                                    bp_linenoise_edit_delete(state);
+                                    if (!state->simple_mode)
+                                        bp_linenoise_edit_delete(state);
                                     break;
                                 case '4':  // End (some terminals)
-                                    bp_linenoise_edit_move_end(state);
+                                    if (!state->simple_mode)
+                                        bp_linenoise_edit_move_end(state);
                                     break;
                             }
                         }
                     } else {
                         switch (seq[1]) {
                             case 'A':  // Up
-                                bp_linenoise_edit_history_prev(state);
+                                if (!state->simple_mode)
+                                    bp_linenoise_edit_history_prev(state);
                                 break;
                             case 'B':  // Down
-                                bp_linenoise_edit_history_next(state);
+                                if (!state->simple_mode)
+                                    bp_linenoise_edit_history_next(state);
                                 break;
                             case 'C':  // Right
-                                bp_linenoise_edit_move_right(state);
+                                if (!state->simple_mode)
+                                    bp_linenoise_edit_move_right(state);
                                 break;
                             case 'D':  // Left
-                                bp_linenoise_edit_move_left(state);
+                                if (!state->simple_mode)
+                                    bp_linenoise_edit_move_left(state);
                                 break;
                             case 'H':  // Home
-                                bp_linenoise_edit_move_home(state);
+                                if (!state->simple_mode)
+                                    bp_linenoise_edit_move_home(state);
                                 break;
                             case 'F':  // End
-                                bp_linenoise_edit_move_end(state);
+                                if (!state->simple_mode)
+                                    bp_linenoise_edit_move_end(state);
                                 break;
                         }
                     }
@@ -393,10 +484,12 @@ bp_linenoise_result_t bp_linenoise_feed(bp_linenoise_state_t *state) {
                     state->read_blocking(&seq[1]);
                     switch (seq[1]) {
                         case 'H':  // Home
-                            bp_linenoise_edit_move_home(state);
+                            if (!state->simple_mode)
+                                bp_linenoise_edit_move_home(state);
                             break;
                         case 'F':  // End
-                            bp_linenoise_edit_move_end(state);
+                            if (!state->simple_mode)
+                                bp_linenoise_edit_move_end(state);
                             break;
                     }
                 }
@@ -440,8 +533,12 @@ void bp_linenoise_edit_insert(bp_linenoise_state_t *state, char c) {
         state->len++;
         state->buf[state->len] = '\0';
         
-        // Optimization: if at end and line fits, just write the char
-        if (state->plen + state->len < state->cols) {
+        // If hints are active, always refresh so ghost text updates.
+        // Otherwise use fast path: just write the char (avoids blowing
+        // out sub-prompts that print their own prompt text separately).
+        if (state->hints_callback) {
+            refresh_line(state);
+        } else if (state->plen + state->len < state->cols) {
             ln_write_char(state, c);
         } else {
             refresh_line(state);
@@ -651,4 +748,13 @@ void bp_linenoise_clear_screen(bp_linenoise_state_t *state) {
 void bp_linenoise_set_completion(bp_linenoise_state_t *state,
                                   bp_ln_completion_fn callback) {
     state->completion_callback = callback;
+}
+
+void bp_linenoise_set_hints(bp_linenoise_state_t *state,
+                             bp_ln_hints_fn callback) {
+    state->hints_callback = callback;
+}
+
+void bp_linenoise_set_simple_mode(bp_linenoise_state_t *state, bool enable) {
+    state->simple_mode = enable;
 }

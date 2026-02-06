@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
 #include "pico/stdlib.h"      // For tight_loop_contents()
 #include "hardware/sync.h"    // For __dmb()
 
@@ -69,7 +70,9 @@ typedef struct {
  */
 static inline void spsc_queue_init(spsc_queue_t* q, uint8_t* buffer, uint32_t capacity) {
     // Verify capacity is power of 2
-    // assert((capacity & (capacity - 1)) == 0);
+    #ifndef NDEBUG
+    assert((capacity & (capacity - 1)) == 0 && capacity > 0);
+    #endif
     q->head = 0;
     q->tail = 0;
     q->buffer = buffer;
@@ -92,15 +95,16 @@ static inline bool spsc_queue_try_add(spsc_queue_t* q, uint8_t data) {
     uint32_t next_head = (head + 1) & q->mask;
     
     // Check if queue is full
-    // Read tail with acquire semantics (ensure we see consumer's updates)
+    // Stale tail is safe: may falsely report full, caller retries
     if (next_head == q->tail) {
         return false;  // Full
     }
     
-    // Write data
+    // Write data to buffer
     q->buffer[head] = data;
     
-    // Memory barrier: ensure data write is visible before head update
+    // Release barrier: ensure data write is visible before head update
+    // Pairs with acquire barrier in consumer's try_remove/try_peek
     __dmb();
     
     // Publish new head position
@@ -139,18 +143,20 @@ static inline bool spsc_queue_try_remove(spsc_queue_t* q, uint8_t* data) {
     uint32_t tail = q->tail;
     
     // Check if queue is empty
-    // Read head with acquire semantics (ensure we see producer's updates)
+    // Stale head is safe: may falsely report empty, caller retries
     if (tail == q->head) {
         return false;  // Empty
     }
     
-    // Memory barrier: ensure we read data after confirming not empty
+    // Acquire barrier: ensure we see data written before head was updated
+    // Pairs with release barrier in producer's try_add
     __dmb();
     
-    // Read data
+    // Read data from buffer
     *data = q->buffer[tail];
     
-    // Memory barrier: ensure data read completes before tail update
+    // Release barrier: ensure data read completes before tail update is visible
+    // Prevents producer from seeing free slot and overwriting before read finishes
     __dmb();
     
     // Publish new tail position
@@ -228,12 +234,8 @@ static inline uint32_t spsc_queue_level(spsc_queue_t* q) {
     uint32_t head = q->head;
     uint32_t tail = q->tail;
     
-    // Handle wrap-around
-    if (head >= tail) {
-        return head - tail;
-    } else {
-        return q->capacity - tail + head;
-    }
+    // Handle wrap-around using mask
+    return (head - tail) & q->mask;
 }
 
 /**

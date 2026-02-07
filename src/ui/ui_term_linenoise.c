@@ -15,10 +15,6 @@
 #include "ui/ui_term.h"
 #include "ui/ui_cmdln.h"
 #include "ui/ui_statusbar.h"
-#include "command_struct.h"
-#include "commands.h"
-#include "bytecode.h"  // For struct _bytecode used in modes.h
-#include "modes.h"
 
 // Main command line linenoise state (has history)
 static bp_linenoise_state_t ln_state;
@@ -44,93 +40,11 @@ static void ln_write(const char *s, size_t len) {
 }
 
 /**
- * @brief Tab completion callback for Bus Pirate commands.
- * @details Matches the current input against global commands and
- *          mode-specific commands for the active protocol.
- */
-static void bp_completion_callback(const char *buf, size_t len, bp_linenoise_completions_t *lc) {
-    if (len == 0) {
-        return;  // Don't complete empty input
-    }
-    
-    // Match against global commands
-    for (uint32_t i = 0; i < commands_count; i++) {
-        if (strncmp(buf, commands[i].command, len) == 0) {
-            bp_linenoise_add_completion(lc, commands[i].command);
-        }
-    }
-    
-    // Match against mode-specific commands (if any)
-    const struct _mode_command_struct *mode_cmds = modes[system_config.mode].mode_commands;
-    const uint32_t *mode_count_ptr = modes[system_config.mode].mode_commands_count;
-    if (mode_cmds && mode_count_ptr && *mode_count_ptr > 0) {
-        uint32_t mode_count = *mode_count_ptr;
-        for (uint32_t i = 0; i < mode_count; i++) {
-            if (mode_cmds[i].func && strncmp(buf, mode_cmds[i].command, len) == 0) {
-                bp_linenoise_add_completion(lc, mode_cmds[i].command);
-            }
-        }
-    }
-}
-
-/**
- * @brief Hints callback for inline ghost-text completion.
- * @details Finds the best (longest) matching command and returns the
- *          remaining suffix to display as dim ghost text.
- *          E.g. user types "hel" → returns "p" (for "help").
- */
-static const char* bp_hints_callback(const char *buf, size_t len) {
-    if (len == 0) {
-        return NULL;
-    }
-    
-    const char *best = NULL;
-    size_t best_len = 0;
-    
-    // Search global commands for best (longest) prefix match
-    for (uint32_t i = 0; i < commands_count; i++) {
-        size_t cmd_len = strlen(commands[i].command);
-        if (cmd_len > len && strncmp(buf, commands[i].command, len) == 0) {
-            // Prefer the longest matching command (e.g. "help" over "h")
-            if (cmd_len > best_len) {
-                best = commands[i].command;
-                best_len = cmd_len;
-            }
-        }
-    }
-    
-    // Search mode-specific commands
-    const struct _mode_command_struct *mode_cmds = modes[system_config.mode].mode_commands;
-    const uint32_t *mode_count_ptr = modes[system_config.mode].mode_commands_count;
-    if (mode_cmds && mode_count_ptr && *mode_count_ptr > 0) {
-        uint32_t mode_count = *mode_count_ptr;
-        for (uint32_t i = 0; i < mode_count; i++) {
-            if (mode_cmds[i].func) {
-                size_t cmd_len = strlen(mode_cmds[i].command);
-                if (cmd_len > len && strncmp(buf, mode_cmds[i].command, len) == 0) {
-                    if (cmd_len > best_len) {
-                        best = mode_cmds[i].command;
-                        best_len = cmd_len;
-                    }
-                }
-            }
-        }
-    }
-    
-    if (best) {
-        return best + len;  // Return suffix after what user typed
-    }
-    return NULL;
-}
-
-/**
  * @brief Initialize linenoise for terminal use.
  * @param cols  Terminal width in columns
  */
 void ui_term_linenoise_init(size_t cols) {
     bp_linenoise_init(&ln_state, ln_try_read, ln_read_blocking, ln_write, cols);
-    bp_linenoise_set_completion(&ln_state, bp_completion_callback);
-    bp_linenoise_set_hints(&ln_state, bp_hints_callback);
     ln_initialized = true;
 }
 
@@ -240,7 +154,6 @@ static void ui_prompt_linenoise_init(void) {
     if (!ln_prompt_initialized) {
         bp_linenoise_init(&ln_prompt_state, ln_try_read, ln_read_blocking, ln_write, 
                           system_config.terminal_ansi_columns);
-        bp_linenoise_set_simple_mode(&ln_prompt_state, true);
         ln_prompt_initialized = true;
     }
 }

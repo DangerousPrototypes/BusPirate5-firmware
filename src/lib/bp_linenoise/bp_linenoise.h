@@ -120,37 +120,8 @@ typedef bool (*bp_ln_read_char_fn)(char *c);           // Non-blocking char read
 typedef void (*bp_ln_read_char_blocking_fn)(char *c);  // Blocking char read
 typedef void (*bp_ln_write_fn)(const char *s, size_t len);  // Write string
 
-// Completion support
-#define BP_LINENOISE_COMPLETIONS_MAX 16
-
-typedef struct {
-    size_t count;
-    const char *entries[BP_LINENOISE_COMPLETIONS_MAX];  // Pointers to command strings (no alloc)
-} bp_linenoise_completions_t;
-
-/**
- * @brief Add a completion candidate.
- * @param lc      Completions structure
- * @param entry   Command string (pointer must remain valid, e.g. from const array)
- */
-static inline void bp_linenoise_add_completion(bp_linenoise_completions_t *lc, const char *entry) {
-    if (lc->count < BP_LINENOISE_COMPLETIONS_MAX) {
-        lc->entries[lc->count++] = entry;
-    }
-}
-
-// Completion callback: called with current buffer, should populate completions
-typedef void (*bp_ln_completion_fn)(const char *buf, size_t len, bp_linenoise_completions_t *lc);
-
-/**
- * @brief Hints callback: returns the suffix to show as ghost text.
- * @param buf   Current edit buffer (null-terminated)
- * @param len   Length of current input
- * @return Pointer to hint suffix string (must remain valid until next call), or NULL.
- *         The returned string is the part AFTER what the user typed.
- *         E.g. if user typed "hel" and best match is "help", return "p".
- */
-typedef const char* (*bp_ln_hints_fn)(const char *buf, size_t len);
+// Completion callback (optional)
+typedef void (*bp_ln_completion_fn)(const char *buf, size_t len);
 
 /**
  * @brief Line editing state.
@@ -173,15 +144,12 @@ typedef struct {
     bp_ln_read_char_blocking_fn read_blocking;
     bp_ln_write_fn write;
     
-    // Optional completion and hints
+    // Optional completion
     bp_ln_completion_fn completion_callback;
-    bp_ln_hints_fn hints_callback;
-    const char *hint_suffix;  // Current ghost text (points into static buffer, NULL if none)
     
     // State flags
     bool initialized;
     bool multiline;     // Multi-line mode (not yet implemented)
-    bool simple_mode;   // Simple mode: no history, no full-line refresh (for sub-prompts)
 } bp_linenoise_state_t;
 
 /**
@@ -268,30 +236,12 @@ void bp_linenoise_set_cols(bp_linenoise_state_t *state, size_t cols);
 void bp_linenoise_clear_screen(bp_linenoise_state_t *state);
 
 /**
- * @brief Set completion callback (for TAB multi-match fallback).
+ * @brief Set completion callback.
  * @param state     State structure  
  * @param callback  Completion callback function
  */
 void bp_linenoise_set_completion(bp_linenoise_state_t *state, 
                                   bp_ln_completion_fn callback);
-
-/**
- * @brief Set hints callback (for inline ghost-text completion).
- * @param state     State structure
- * @param callback  Hints callback function
- */
-void bp_linenoise_set_hints(bp_linenoise_state_t *state,
-                             bp_ln_hints_fn callback);
-
-/**
- * @brief Enable simple mode (no history, no full-line refresh).
- * @param state   State structure
- * @param enable  true to enable simple mode
- * @details Use for sub-prompts (y/n, value entry) where the caller
- *          prints the prompt text separately and linenoise should
- *          not do full-line redraws.
- */
-void bp_linenoise_set_simple_mode(bp_linenoise_state_t *state, bool enable);
 
 // Editing functions (can be called directly for programmatic control)
 void bp_linenoise_edit_insert(bp_linenoise_state_t *state, char c);

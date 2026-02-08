@@ -137,7 +137,7 @@ void flash(struct command_result* res) {
         goto flash_cleanup; // no need to continue
     }
 
-    if (flash_action == FLASH_ERASE || erase_flag || flash_action == FLASH_TEST) {
+    if (flash_action == FLASH_ERASE || (erase_flag && FLASH_WRITE) || flash_action == FLASH_TEST) {
         if (!spiflash_erase(&flash_info)) {
             goto flash_cleanup;
         }

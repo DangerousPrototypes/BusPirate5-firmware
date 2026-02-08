@@ -1,3 +1,19 @@
+/**
+ * @file ui_prompt.c
+ * @brief User interface prompt and menu system implementation.
+ * @details Implements interactive menu system with multiple input types:
+ *          - Ordered lists (numbered menu items)
+ *          - Integer input with min/max validation
+ *          - I/O pin selection with availability checking
+ *          
+ *          Features:
+ *          - Default value support
+ *          - Input validation
+ *          - Multiple number formats (hex, decimal, binary)
+ *          - Custom validators and formatters
+ *          - Exit/cancel support
+ */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"

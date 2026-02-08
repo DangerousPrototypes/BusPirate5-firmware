@@ -1,30 +1,95 @@
+/**
+ * @file amux.h
+ * @brief Analog multiplexer (AMUX) interface and ADC control
+ * 
+ * Declares functions for analog multiplexer control and ADC measurements.
+ * 
+ * @author Bus Pirate Project  
+ * @date 2024-2026
+ */
+
+/**
+ * @brief Initialize analog multiplexer and ADC
+ */
 void amux_init(void);
-// select AMUX input source, use the channel defines from the platform header
-// only effects the 4067CD analog mux, you cannot get the current measurement from here
+
+/**
+ * @brief Select AMUX input channel
+ * @param channel Channel number (platform-specific)
+ * @return true if successful, false if scope running
+ * @note Only affects 4067 analog mux, not current sense
+ */
 bool amux_select_input(uint16_t channel);
-// set the AMUX input source using the BIO pin number
+
+/**
+ * @brief Select AMUX input using BIO pin number
+ * @param bio BIO pin number (0-7)
+ * @return true if successful, false if scope running
+ */
 bool amux_select_bio(uint8_t bio);
-// read from AMUX using channel list in platform header file
+
+/**
+ * @brief Read voltage from AMUX channel
+ * @param channel Channel number
+ * @return 12-bit ADC value (0-4095)
+ */
 uint32_t amux_read(uint8_t channel);
-// read from presently selected AMUX channel
+
+/**
+ * @brief Read from currently selected AMUX channel
+ * @return 12-bit ADC value (0-4095)
+ */
 uint32_t amux_read_present_channel(void);
-// read from AMUX using BIO pin number
+
+/**
+ * @brief Read voltage from BIO pin
+ * @param bio BIO pin number (0-7)
+ * @return 12-bit ADC value (0-4095)
+ */
 uint32_t amux_read_bio(uint8_t bio);
-// this is actually on a different ADC and not the AMUX
-// but this is the best place for it I think
-// voltage is not /2 so we can use the full range of the ADC
+
+/**
+ * @brief Read current sense (separate ADC channel)
+ * @return 12-bit ADC value (0-4095)
+ * @note Voltage not divided by 2, uses full ADC range
+ */
 uint32_t amux_read_current(void);
-// read all the AMUX channels and the current sense
-// place into the global arrays hw_adc_raw and hw_adc_voltage
+
+/**
+ * @brief Read all AMUX channels and current sense
+ * 
+ * Sweeps all channels and stores results in global arrays:
+ * - hw_adc_raw[]: Raw ADC values
+ * - hw_adc_voltage[]: Converted voltages
+ */
 void amux_sweep(void);
 
-// reset the averaging of all channels, start with the current value
-// useful if you expect a step-change of the inputs
+/**
+ * @brief Control ADC busy/lock state
+ * @param enable true to acquire lock, false to release
+ */
+void adc_busy_wait(bool enable);
+
+/**
+ * @brief Flag to reset averaging
+ * 
+ * Set to true to reset averaging of all channels and start with current value.
+ * Useful when expecting step-change of inputs.
+ */
 extern bool reset_adc_average;
 
-// use power-of-two values for efficient division
+/** Number of samples for averaging (power of 2 for efficient division) */
 #define ADC_AVG_TIMES 64
 
+/**
+ * @brief Calculate average from sum
+ * 
+ * @param avgsum Sum of ADC_AVG_TIMES samples
+ * @return Averaged value with correct rounding
+ * 
+ * @note Uses power-of-2 division for efficiency
+ * @note Adds ADC_AVG_TIMES/2 before division for proper rounding
+ */
 inline uint32_t get_adc_average(uint32_t avgsum)
 {
     // add ADC_AVG_TIMES/2 before division for correct rounding instead of cutting of decimals

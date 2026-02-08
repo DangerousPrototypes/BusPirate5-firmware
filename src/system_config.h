@@ -1,53 +1,95 @@
+/**
+ * @file system_config.h
+ * @brief System-wide configuration structure and initialization
+ * 
+ * This file defines the global system configuration structure that holds
+ * all runtime settings for the Bus Pirate including terminal settings,
+ * LED effects, storage configuration, mode settings, and pin assignments.
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #pragma once
 
 #include "./pirate/rgb.h" // for `led_effect_t` enumeration
 
+/**
+ * @brief PWM (Pulse Width Modulation) configuration structure
+ */
 typedef struct _pwm_config {
-    float period;
-    float dutycycle;
-
+    float period;      /**< PWM period in seconds */
+    float dutycycle;   /**< Duty cycle as a fraction (0.0 to 1.0) */
 } _pwm_config;
 
+/**
+ * @brief Main system configuration structure
+ * 
+ * This structure contains all global system settings including terminal configuration,
+ * LED effects, hardware settings, protocol mode configuration, and pin assignments.
+ * 
+ * @note Most settings are uint32_t to standardize JSON parsing
+ * @todo Separate persisted settings into a dedicated struct
+ */
 typedef struct _system_config {
-    // NOTE: Most settings are uint32_t due to desire to standardize the JSON parsing.
-    // TODO: Put _persisted_ settings into a separate struct.
-    bool config_loaded_from_file;
-    uint32_t disable_unique_usb_serial_number;
+    /** @name Configuration Loading */
+    /**@{*/
+    bool config_loaded_from_file;                /**< True if configuration was loaded from storage */
+    uint32_t disable_unique_usb_serial_number;   /**< Disable unique USB serial number (for manufacturing) */
+    /**@}*/
 
-    uint8_t hardware_revision;
+    /** @name Hardware Information */
+    /**@{*/
+    uint8_t hardware_revision;                   /**< Hardware revision number */
+    /**@}*/
 
-    uint32_t terminal_language;
+    /** @name Terminal Settings */
+    /**@{*/
+    uint32_t terminal_language;                  /**< UI language selection */
+    uint32_t terminal_usb_enable;                /**< Enable USB CDC terminal */
+    uint32_t terminal_uart_enable;               /**< Enable UART terminal on IO pins */
+    uint32_t terminal_uart_number;               /**< UART number to use for terminal (0 or 1) */
+    /**@}*/
 
-    uint32_t terminal_usb_enable; // enable USB CDC terminal
+    /** @name Debug Settings */
+    /**@{*/
+    uint32_t debug_uart_enable;                  /**< Initialize UART for developer debugging */
+    uint32_t debug_uart_number;                  /**< UART number for debugging (0 or 1) */
+    /**@}*/
 
-    uint32_t terminal_uart_enable; // enable UART terminal on IO pins
-    uint32_t terminal_uart_number; // which UART to use
+    /** @name LCD Settings */
+    /**@{*/
+    uint32_t lcd_screensaver_active;             /**< LCD screensaver currently active */
+    uint32_t lcd_timeout;                        /**< LCD screensaver timeout in seconds */
+    /**@}*/
 
-    uint32_t debug_uart_enable; // initializes a UART for general developer use
-    uint32_t debug_uart_number; // which UART to use
-
-    uint32_t lcd_screensaver_active;
-    uint32_t lcd_timeout;
-
-    uint32_t led_color;
-    uint32_t led_brightness_divisor;
+    /** @name LED Settings */
+    /**@{*/
+    uint32_t led_color;                          /**< RGB color value (0xRRGGBB) */
+    uint32_t led_brightness_divisor;             /**< Brightness divisor (10=10%, 5=20%, etc) */
     union {
-        uint32_t led_effect_as_uint32; // for json, which needs this to be uint32 (sigh)
-        led_effect_t led_effect;
+        uint32_t led_effect_as_uint32;           /**< LED effect as uint32 for JSON parsing */
+        led_effect_t led_effect;                 /**< LED effect enumeration */
     };
+    /**@}*/
 
-    uint8_t terminal_ansi_rows;
-    uint8_t terminal_ansi_columns;
-    uint32_t terminal_ansi_color;
-    uint32_t terminal_ansi_statusbar;
-    bool terminal_ansi_statusbar_update;
-    bool terminal_hide_cursor;
-    bool terminal_ansi_statusbar_pause;
-    uint8_t terminal_update;
+    /** @name Terminal Display Settings */
+    /**@{*/
+    uint8_t terminal_ansi_rows;                  /**< Terminal rows for ANSI display */
+    uint8_t terminal_ansi_columns;               /**< Terminal columns for ANSI display */
+    uint32_t terminal_ansi_color;                /**< ANSI color scheme */
+    uint32_t terminal_ansi_statusbar;            /**< Status bar display mode */
+    bool terminal_ansi_statusbar_update;         /**< Status bar needs update */
+    bool terminal_hide_cursor;                   /**< Hide terminal cursor */
+    bool terminal_ansi_statusbar_pause;          /**< Status bar updates paused */
+    uint8_t terminal_update;                     /**< Terminal update flags */
+    /**@}*/
 
-    uint8_t storage_available;
-    uint8_t storage_mount_error;
-    uint8_t storage_fat_type;
+    /** @name Storage Settings */
+    /**@{*/
+    uint8_t storage_available;                   /**< Storage device available */
+    uint8_t storage_mount_error;                 /**< Storage mount error code */
+    uint8_t storage_fat_type;                    /**< FAT filesystem type (12/16/32) */
     float storage_size;
 
     uint32_t display_format; // display format (dec, hex, oct, bin)
@@ -73,30 +115,18 @@ typedef struct _system_config {
     _pwm_config freq_config[BIO_MAX_PINS]; // holds PWM or FREQ settings for easier display later
     uint8_t freq_active;                   // freq measure active, one bit per channel/pin
     uint8_t aux_active;                    // user controlled aux pins are outputs, resets when used as inputs
-
+    #if 0
     uint8_t psu; // psu (0=off, 1=on)
-                 // uint8_t psu_dat_bits_readable;  // dac bits in human readable format
-    // uint16_t psu_dac_bits_mask;          // 8/10/12 bit psu dac possible, this is the bitmask 0xff 0x3ff or 0x7ff
-    uint16_t psu_dac_v_set; // psu voltage adjust DAC setting
-    uint16_t psu_dac_i_set; // psu current limit DAC setting
     uint32_t psu_voltage;   // psu voltage output setting in decimal * 10000
     bool psu_current_limit_en;
     uint32_t psu_current_limit; // psu current limit in decimal * 10000
     bool psu_current_error;     // psu over current limit fuse tripped
+    bool psu_undervoltage_error;
     bool psu_error;             // error, usually with the dac
     bool psu_irq_en;
+    #endif
 
     uint8_t error; // error occurred
-
-    // TODO: rework this here and in pin info function
-    uint32_t csport; // cs is located on this port/gpio
-    uint32_t cspin;
-    uint32_t misoport; // cs is located on this port/gpio
-    uint32_t misopin;
-    uint32_t clkport; // cs is located on this port/gpio
-    uint32_t clkpin;
-    uint32_t mosiport; // cs is located on this port/gpio
-    uint32_t mosipin;
 
     uint32_t big_buffer_owner;
 

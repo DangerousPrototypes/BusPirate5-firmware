@@ -1,9 +1,27 @@
+/**
+ * @file usb_tx.c
+ * @brief USB and UART transmit buffer management
+ * 
+ * This file implements the transmit side of the user interface buffering system.
+ * It handles both USB CDC and UART debug output, with support for VT100 status bar
+ * updates and DMA transfers.
+ * 
+ * The TX system uses lock-free SPSC ring buffers for regular output and status bar output,
+ * with a state machine to manage status bar refresh without corrupting output.
+ * 
+ * Thread safety: Uses lock-free SPSC queues
+ * - Producer: Core0 (printf output, command output)
+ * - Consumer: Core1 (USB/UART transmission)
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "queue.h"
+#include "spsc_queue.h"
 #include "hardware/dma.h"
-// #include "buf.h"
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "usb_rx.h"
@@ -13,36 +31,55 @@
 #include "system_config.h"
 #include "debug_uart.h"
 
-// USB TX:
-// This file contains the code for the user interface ring buffer
-// and IO method. USB is the normal IO, but running a chip under debug
-// on a USB attached device is a nightmare. BP_DEBUG_ENABLED In the /platform/ folder
-// configuration file enables a UART debugging option. All user interface IO
-// will be routed to one of the two UARTs (selectable) on the Bus Pirate buffered IO pins
-// UART debug mode is way over engineered using DMA et al, and has some predelection for bugs
-// in status bar updates
+/** @defgroup tx_buffers TX Buffer Definitions
+ * @brief Transmit ring buffers and status bar management
+ * @{
+ */
 
-// TODO: rework all the TX stuff into a nice struct with clearer naming
-queue_t tx_fifo;
-queue_t bin_tx_fifo;
-#define TX_FIFO_LENGTH_IN_BITS 10 // 2^n buffer size. 2^3=8, 2^9=512
+spsc_queue_t tx_fifo;              /**< Main transmit FIFO for regular output */
+spsc_queue_t bin_tx_fifo;          /**< Binary mode transmit FIFO */
+
+/** TX FIFO size in bits (2^10 = 1024 bytes) */
+#define TX_FIFO_LENGTH_IN_BITS 10
+/** TX FIFO size in bytes */
 #define TX_FIFO_LENGTH_IN_BYTES (0x0001 << TX_FIFO_LENGTH_IN_BITS)
-char tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));
-char bin_tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));
 
+uint8_t tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));     /**< TX buffer storage */
+uint8_t bin_tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048))); /**< Binary TX buffer storage */
+
+/** Maximum size of status bar buffer */
 #define MAXIMUM_STATUS_BAR_BUFFER_BYTES 1024
-char tx_sb_buf[MAXIMUM_STATUS_BAR_BUFFER_BYTES];
-uint16_t tx_sb_buf_cnt = 0;
-uint16_t tx_sb_buf_index = 0;
-bool tx_sb_buf_ready = false;
+char tx_sb_buf[MAXIMUM_STATUS_BAR_BUFFER_BYTES]; /**< Status bar buffer */
+uint16_t tx_sb_buf_cnt = 0;                      /**< Number of valid characters in status bar */
+uint16_t tx_sb_buf_index = 0;                    /**< Current position in status bar buffer */
+bool tx_sb_buf_ready = false;                    /**< Status bar ready to transmit */
 
+/** @} */ // end of tx_buffers
+
+/**
+ * @brief Initialize transmit FIFOs
+ * 
+ * Sets up the lock-free SPSC ring buffers for regular and binary mode transmission.
+ * Buffer sizes must be powers of 2 for efficient modulo operation.
+ * 
+ * @note Can be called from either core
+ */
 void tx_fifo_init(void) {
     // OK to call from either core
-    queue2_init(&tx_fifo, tx_buf, TX_FIFO_LENGTH_IN_BYTES); // buffer size must be 2^n for queue AND DMA rollover
-    queue2_init(&bin_tx_fifo, bin_tx_buf, TX_FIFO_LENGTH_IN_BYTES); // buffer size must be 2^n for queue AND DMA
-                                                                    // rollover
+    spsc_queue_init(&tx_fifo, tx_buf, TX_FIFO_LENGTH_IN_BYTES);
+    spsc_queue_init(&bin_tx_fifo, bin_tx_buf, TX_FIFO_LENGTH_IN_BYTES);
 }
 
+/**
+ * @brief Mark status bar buffer as ready for transmission
+ * 
+ * @param valid_characters_in_status_bar Number of valid characters in status bar buffer
+ * 
+ * @pre Must be called from Core1
+ * @pre valid_characters_in_status_bar <= MAXIMUM_STATUS_BAR_BUFFER_BYTES
+ * 
+ * @warning This function asserts if not called from Core1
+ */
 void tx_sb_start(uint32_t valid_characters_in_status_bar) {
 
     BP_ASSERT_CORE1();
@@ -51,16 +88,34 @@ void tx_sb_start(uint32_t valid_characters_in_status_bar) {
     tx_sb_buf_ready = true;
 }
 
+/**
+ * @brief Service the transmit FIFO and status bar updates
+ * 
+ * This function implements a state machine that:
+ * - Drains regular output from tx_fifo to USB/UART
+ * - Manages status bar refresh timing
+ * - Ensures status bar doesn't corrupt regular output
+ * 
+ * State machine:
+ * - IDLE: Send regular output or prepare status bar
+ * - STATUSBAR_DELAY: Wait for TX FIFO to drain before status bar
+ * - STATUSBAR_TX: Transmit status bar buffer
+ * 
+ * @pre Must be called from Core1 only
+ * @note Status bar updates are delayed until TX FIFO is empty to prevent VT100 corruption
+ */
 void tx_fifo_service(void) {
     BP_ASSERT_CORE1(); // tx fifo is drained from core1 only
 
-// state machine:
-#define IDLE 0
-#define STATUSBAR_DELAY 1
-#define STATUSBAR_TX 2
+/** @name TX State Machine States */
+/**@{*/
+#define IDLE 0             /**< Idle state - send regular output */
+#define STATUSBAR_DELAY 1  /**< Waiting for TX FIFO to drain */
+#define STATUSBAR_TX 2     /**< Transmitting status bar */
+/**@}*/
     static uint8_t tx_state = IDLE;
 
-    uint16_t bytes_available;
+    uint32_t bytes_available;
     char data[64];
     uint8_t i = 0;
 
@@ -72,10 +127,10 @@ void tx_fifo_service(void) {
 
     switch (tx_state) {
         case IDLE:
-            queue_available_bytes(&tx_fifo, &bytes_available);
+            bytes_available = spsc_queue_level(&tx_fifo);
             if (bytes_available) {
                 i = 0;
-                while (queue2_try_remove(&tx_fifo, &data[i])) {
+                while (spsc_queue_try_remove(&tx_fifo, (uint8_t*)&data[i])) {
                     i++;
                     if (i >= 64) {
                         break;
@@ -98,7 +153,7 @@ void tx_fifo_service(void) {
             // test: check that no bytes in tx_fifo minimum 2 cycles in a row
             // prevent the status bar from being wiped out by the VT100 setup commands
             // that might be pending in the TX FIFO
-            queue_available_bytes(&tx_fifo, &bytes_available);
+            bytes_available = spsc_queue_level(&tx_fifo);
             tx_state = (bytes_available ? IDLE : STATUSBAR_TX);
             return; // return for next cycle
 
@@ -151,28 +206,28 @@ void tx_fifo_service(void) {
 
 void tx_fifo_put(char* c) {
     BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
-    queue2_add_blocking(&tx_fifo, c);
+    spsc_queue_add_blocking(&tx_fifo, (uint8_t)*c);
 }
 
 void tx_fifo_try_put(char* c) {
     BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
-    queue2_try_add(&tx_fifo, c);
+    spsc_queue_try_add(&tx_fifo, (uint8_t)*c);
 }
 
 void bin_tx_fifo_put(const char c) {
     BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
-    queue2_add_blocking(&bin_tx_fifo, &c);
+    spsc_queue_add_blocking(&bin_tx_fifo, (uint8_t)c);
 }
 
 bool bin_tx_fifo_try_get(char* c) {
     BP_ASSERT_CORE1(); // tx fifo is drained from core1 only
-    return queue2_try_remove(&bin_tx_fifo, c);
+    return spsc_queue_try_remove(&bin_tx_fifo, (uint8_t*)c);
 }
 
 void bin_tx_fifo_service(void) {
     BP_ASSERT_CORE1(); // tx fifo is drained from core1 only
 
-    uint16_t bytes_available;
+    uint32_t bytes_available;
     char data[64];
     uint8_t i = 0;
 
@@ -181,10 +236,10 @@ void bin_tx_fifo_service(void) {
         return;
     }
 
-    queue_available_bytes(&bin_tx_fifo, &bytes_available);
+    bytes_available = spsc_queue_level(&bin_tx_fifo);
     if (bytes_available) {
         i = 0;
-        while (queue2_try_remove(&bin_tx_fifo, &data[i])) {
+        while (spsc_queue_try_remove(&bin_tx_fifo, (uint8_t*)&data[i])) {
             i++;
             if (i >= 64) {
                 break;
@@ -198,9 +253,5 @@ void bin_tx_fifo_service(void) {
 
 bool bin_tx_not_empty(void) {
     // OK to check empty from either core
-    uint16_t cnt;
-    // gets the number of additional bytes that can be added to the queue
-    queue_available_bytes(&bin_tx_fifo, &cnt);
-    // If that differs from the total size of the queue, then it's not empty
-    return cnt != TX_FIFO_LENGTH_IN_BYTES;
+    return !spsc_queue_is_empty(&bin_tx_fifo);
 }

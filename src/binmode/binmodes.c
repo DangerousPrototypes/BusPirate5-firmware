@@ -1,3 +1,22 @@
+/**
+ * @file binmodes.c
+ * @brief Binary mode management and dispatch table
+ * 
+ * This file implements the binary mode system for Bus Pirate, which provides
+ * direct protocol access without the command-line interface. Binary modes include:
+ * - SUMP Logic Analyzer
+ * - DirtyProto (legacy Bus Pirate 4 protocol)
+ * - Arduino CH32V003 programmer
+ * - FALAIO (logic analyzer)
+ * - IRtoy modes (IRMAN, AIR)
+ * - BPIO (Binary Protocol IO)
+ * 
+ * Each mode can configure terminal locking, power supply, pullups, and cleanup behavior.
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -22,6 +41,16 @@
 #include "ui/ui_term.h"
 #include "tusb.h"
 
+/**
+ * @brief Lock or unlock the terminal during binary mode operation
+ * 
+ * When locked, the terminal displays a message and prevents command input.
+ * This is used by binary modes that need exclusive access to the USB/UART interface.
+ * 
+ * @param lock true to lock terminal, false to unlock
+ * 
+ * @note Only displays messages if USB CDC is connected
+ */
 void binmode_terminal_lock(bool lock) {
     system_config.binmode_lock_terminal = lock;
     if (!tud_cdc_n_connected(0)) {
@@ -34,9 +63,26 @@ void binmode_terminal_lock(bool lock) {
     }
 }
 
+/**
+ * @brief Null function placeholder for unused binmode callbacks
+ * 
+ * Used in the binmode dispatch table when a particular callback
+ * is not needed by a specific binary mode.
+ */
 void binmode_null_func_void(void) {
     return;
 }
+
+/**
+ * @brief Binary mode dispatch table
+ * 
+ * This table defines all available binary modes and their configuration:
+ * - Terminal locking behavior
+ * - Configuration save capability
+ * - Mode switching behavior
+ * - Power supply and pullup defaults
+ * - Setup, service, and cleanup callbacks
+ */
 
 const binmode_t binmodes[] = {
     {
@@ -153,7 +199,7 @@ inline void binmode_setup(void) {
         if(binmodes[system_config.binmode_select].psu_en_current==0) {
             i_override = true;
         }
-        psucmd_enable(binmodes[system_config.binmode_select].psu_en_voltage, binmodes[system_config.binmode_select].psu_en_current, i_override);
+        psucmd_enable(binmodes[system_config.binmode_select].psu_en_voltage, binmodes[system_config.binmode_select].psu_en_current, i_override, 100);
         //system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VOUT, ui_const_pin_states[1]);
         //monitor_clear_current(); // reset current so the LCD gets all characters
      }

@@ -1,4 +1,8 @@
-
+/**
+ * @file HD44780.h
+ * @brief HD44780 character LCD driver mode interface.
+ * @details Provides mode for controlling HD44780-compatible character LCDs.
+ */
 
 void HD44780_setup(void);
 void HD44780_cleanup(void);

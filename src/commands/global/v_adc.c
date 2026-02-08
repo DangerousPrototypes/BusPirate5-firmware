@@ -1,3 +1,26 @@
+/**
+ * @file v_adc.c
+ * @brief ADC voltage measurement command implementation.
+ * @details Implements the v/V commands for measuring voltages on I/O pins:
+ *          - v: Single voltage measurement
+ *          - V: Continuous voltage measurement with averaging
+ *          
+ *          Command syntax:
+ *          - v [pin]: Measure voltage on pin (or all pins if omitted)
+ *          - V [pin]: Continuous measurement on pin (or all pins)
+ *          
+ *          Measurement specifications:
+ *          - Resolution: 12-bit ADC (0-4096 counts)
+ *          - Range: 0 to 6.6V (2:1 resistor divider)
+ *          - Accuracy: Depends on reference voltage calibration
+ *          - Averaging: Exponential moving average for V command
+ *          
+ *          Pin voltage routing:
+ *          - Uses CD4067 analog multiplexer
+ *          - Automatically sweeps all ADC channels
+ *          - Results cached for display
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/adc.h"

@@ -1,0 +1,1 @@
+cd /home/ian/bp5fw && gcc -O2 -Wall -Wextra -Wpedantic -pthread -Itests/stubs -o tests/test_spsc_queue tests/test_spsc_queue.c && ./tests/test_spsc_queue

@@ -1,3 +1,15 @@
+/**
+ * @file modes.c
+ * @brief Protocol mode management and function dispatch
+ * 
+ * This file implements the protocol mode system for Bus Pirate, including
+ * mode registration, null function handlers, and the main mode dispatch table.
+ * Modes include 1-Wire, I2C, SPI, UART, and many others.
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -63,13 +75,30 @@
 #include "mode/up.h"
 #endif
 
-// nulfuncs
-// these are the dummy functions when something ain't used
+/**
+ * @defgroup null_funcs Null Function Handlers
+ * @brief Dummy functions for unimplemented mode operations
+ * 
+ * These functions are used as placeholders in the mode dispatch table
+ * when a particular operation is not supported by a mode.
+ * @{
+ */
+
+/**
+ * @brief Null function handler (void -> void)
+ * @note Prints error message and sets error flag
+ */
 void nullfunc1(void) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
 }
 
+/**
+ * @brief Null function handler (uint32_t -> uint32_t)
+ * @param c Input parameter (ignored)
+ * @return Always returns 0x0000
+ * @note Prints error message and sets error flag
+ */
 uint32_t nullfunc2(uint32_t c) {
     (void)c;
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
@@ -77,29 +106,52 @@ uint32_t nullfunc2(uint32_t c) {
     return 0x0000;
 }
 
+/**
+ * @brief Null function handler (void -> uint32_t)
+ * @return Always returns 0x0000
+ * @note Prints error message and sets error flag
+ */
 uint32_t nullfunc3(void) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return 0x0000;
 }
 
+/**
+ * @brief Null function handler (uint32_t -> void)
+ * @param c Input parameter (ignored)
+ * @note Prints error message and sets error flag
+ */
 void nullfunc4(uint32_t c) {
     (void)c;
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
 }
 
+/**
+ * @brief Null function handler (void -> const char*)
+ * @return Always returns empty string
+ * @note Prints error message and sets error flag
+ */
 const char* nullfunc5(void) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return "";    
 }
 
+/**
+ * @brief Null function handler (uint8_t -> uint32_t)
+ * @param next_command Next command byte (ignored)
+ * @return Always returns 0x0000
+ * @note Prints error message and sets error flag
+ */
 uint32_t nullfunc6(uint8_t next_command) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return 0x0000;
 }
+
+/** @} */ // end of null_funcs group
 
 uint32_t nullfunc7_no_error(void) {
     return 0;

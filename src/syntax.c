@@ -236,6 +236,11 @@ compiler_get_attributes:
             return SSTATUS_ERROR;
         }
 
+        if (syntax_io.out_cnt >= SYN_MAX_LENGTH) {
+            printf("Syntax output buffer overflow (max %d commands)\r\n", SYN_MAX_LENGTH);
+            return SSTATUS_ERROR;
+        }
+
         syntax_io.out_cnt++;
     }
 

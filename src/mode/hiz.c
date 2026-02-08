@@ -1,3 +1,16 @@
+/**
+ * @file hiz.c
+ * @brief High-impedance (HiZ) safe mode implementation.
+ * @details HiZ is the default safe mode that:
+ *          - Sets all I/O pins to high-impedance inputs
+ *          - Disables power supply output
+ *          - Disables pull-up/pull-down resistors
+ *          - Disables PWM and auxiliary functions
+ *          
+ *          This mode is entered automatically on startup and when
+ *          exiting other modes to prevent damage to connected circuits.
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -48,3 +61,14 @@ void hiz_help(void) {
     printf("To enter an active mode type 'm' and press enter.\r\n");
     ui_help_mode_commands(hiz_commands, hiz_commands_count);
 }
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_hiz_configure(bpio_mode_configuration_t *bpio_mode_config){
+    return true;  
+}
+
+

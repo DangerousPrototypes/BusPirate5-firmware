@@ -475,6 +475,7 @@ static char const * const en_us[]={
 	[T_HELP_GCMD_W_ENABLE]="Enable onboard power supply, show configuration menu",
 	[T_HELP_GCMD_W_VOLTS]="Voltage, 0.8-5.0volts",
 	[T_HELP_GCMD_W_CURRENT_LIMIT]="Current limit, 0-500mA",
+	[T_HELP_GCMD_W_UNDERVOLTAGE]="Undervoltage limit <percent>",
 	[T_HELP_GCMD_P]="onboard pull-up resistors",
 	[T_HELP_HELP]="help for Bus Pirate commands and modes",
 	[T_HELP_SYS_COMMAND]="Commands to access the help system",
@@ -574,6 +575,8 @@ static char const * const en_us[]={
     [T_HELP_UART_GLITCH_CONFIG]="Configure UART glitch parameters",
 	[T_I2C_SNIFF]="I2C sniffer",
 	[T_I2C_SNIFF_QUIET]="Quiet mode, don't show ACKs",
+    [T_I2C_SNIFF_RAW]="Raw, only show data",
+    [T_I2C_SNIFF_7_BIT_ADDRESSES]="Use 7bit i2c addresses",
 	//DDR5 command in I2C
 	[T_HELP_DDR5]="read, write and probe DDR5 SPD chips",
 	[T_HELP_DDR5_PROBE]="Show DDR5 SPD chip and NVM/EEPROM status",
@@ -614,6 +617,9 @@ static char const * const en_us[]={
 	
 	[T_HELP_SPI_UP]="read, write and erase parallel chips",
 	//[T_HELP_SPI_UP]="",
+
+        [T_HELP_I2C_MPU6050]="interface with MPU-6050 6-axis IMU sensor",
+	[T_HELP_GLOBAL_JEP106_LOOKUP]="lookup vendor name from 2 byte JEDEC JEP106 ID code",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

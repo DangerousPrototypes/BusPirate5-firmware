@@ -1,3 +1,18 @@
+/**
+ * @file ui_cmdln.c
+ * @brief Command line buffer and argument parsing implementation.
+ * @details Implements circular buffer command line with:
+ *          - History scrolling through previous commands
+ *          - Command chaining with delimiters (; || &&)
+ *          - Argument parsing (flags, positions, types)
+ *          - Multiple number formats (hex, decimal, binary)
+ *          
+ *          Buffer structure:
+ *          - Circular buffer with separate read/write/cursor pointers
+ *          - Commands separated by 0x00 terminators
+ *          - History maintained in same circular buffer
+ */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -419,6 +434,10 @@ bool cmdln_args_float_by_position(uint32_t pos, float* value) {
         } else {
             // before decimal
             if (!cmdln_try_peek(rptr, &c)) {
+                return false;
+            }
+            if( c=='-') {
+                //encountered flag, end of positional arguments
                 return false;
             }
             if ((c >= '0') && (c <= '9')) // first part of decimal

@@ -225,6 +225,8 @@ set(buspirate_common
         pirate/onewire_library.c
         commands/eeprom/eeprom_1wire.h
         commands/eeprom/eeprom_1wire.c
+        commands/global/jep106_lookup.c
+        commands/global/jep106_lookup.h
 
         # UART
         mode/hwuart.h
@@ -450,7 +452,26 @@ set(buspirate_common
         binmode/bpio.c
         binmode/bpio.h
         binmode/bpio_transactions.h
-        binmode/bpio_transactions.c
+        binmode/bpio_1wire.c
+        binmode/bpio_1wire.h
+        binmode/bpio_i2c.c
+        binmode/bpio_i2c.h
+        binmode/bpio_spi.c
+        binmode/bpio_spi.h
+        binmode/bpio_2wire.c
+        binmode/bpio_2wire.h
+        binmode/bpio_3wire.c
+        binmode/bpio_3wire.h
+        binmode/bpio_uart.c
+        binmode/bpio_uart.h
+        binmode/bpio_hiz.c
+        binmode/bpio_hiz.h
+        binmode/bpio_dio.c
+        binmode/bpio_dio.h
+        binmode/bpio_led.c
+        binmode/bpio_led.h
+        binmode/bpio_infrared.c
+        binmode/bpio_infrared.h
         binmode/legacy4third.c
         binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c
@@ -495,9 +516,8 @@ set(buspirate_common
         display/background_image_v4.h
         display/robot16.h
         
-        # USB
-        queue.c
-        queue.h
+        # USB - SPSC queues for inter-core communication
+        spsc_queue.h
         usb_tx.c
         usb_tx.h
         usb_rx.c

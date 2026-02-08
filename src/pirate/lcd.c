@@ -1,3 +1,17 @@
+/**
+ * @file lcd.c
+ * @brief LCD display hardware control implementation.
+ * @details Manages low-level LCD hardware signals:
+ *          - Chip select (DISPLAY_CS)
+ *          - Data/Parameter select (DISPLAY_DP)
+ *          - Backlight control (DISPLAY_BACKLIGHT)
+ *          - Hardware reset (DISPLAY_RESET)
+ *          
+ *          Platform differences:
+ *          - BP5 Rev8/Rev9: Backlight and reset via 74HC595 shift register
+ *          - BP5 Rev10+: Direct GPIO control for backlight and reset
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pirate.h"

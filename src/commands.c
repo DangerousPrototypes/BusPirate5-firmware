@@ -24,7 +24,6 @@
 #include "commands/global/pause.h"
 #include "commands/global/h_help.h"
 #include "commands/global/cmd_selftest.h"
-#include "commands/global/a_auxio.h"
 #include "commands/global/dummy.h"
 #include "commands/global/disk.h"
 #include "commands/global/i_info.h"
@@ -39,6 +38,7 @@
 #include "commands/global/image.h"
 #include "commands/global/dump.h"
 #include "commands/global/hex.h"
+#include "commands/global/jep106_lookup.h"
 #if RPI_PLATFORM == RP2350
 #include "commands/global/otpdump.h"
 #endif
@@ -101,7 +101,8 @@ const struct _global_command_struct commands[] = {
 #endif
 { .command="ovrclk",    .allow_hiz=true,  .func=&ovrclk_handler,                     .help_text=0x00 },
 { .command="flat",      .allow_hiz=true,  .func=&flat_handler,                       .help_text=0x00 }, // flatbuffers test command
-    // clang-format on
+{ .command="jep106", .allow_hiz=true, .func=&jep106_handler,       .help_text=0x00 }, // jep106_lookup
+// clang-format on
 };
 
 const uint32_t commands_count = count_of(commands);

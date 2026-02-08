@@ -29,7 +29,7 @@
 #include "ui/ui_flags.h"
 #include "commands/global/button_scr.h"
 #include "commands/global/freq.h"
-#include "queue.h"
+#include "spsc_queue.h"
 #include "usb_tx.h"
 #include "usb_rx.h"
 #include "debug_uart.h"
@@ -91,20 +91,18 @@ static bool should_disable_unique_usb_serial_number(void) {
             "Init: system_config.disable_unique_usb_serial_number is TRUE\n"
             );
         result = true;
-    } else
-    if (system_config.storage_fat_type == 0) {
+    } else if (system_config.storage_fat_type == 0) {
         BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
             "Init: Storage unformatted ... disabling unique USB serial number\n"
             );
         result = true;
-    } else
-    // if (!system_config.config_loaded_from_file) {
-    //     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-    //         "Init: no configuration ... disabling unique USB serial number\n"
-    //         );
-    //     result = true;
-    // } else
-    if (storage_file_exists("FACTORY.USB")) {
+    } else if (storage_file_exists("FACTORY.USB")) {
+        // if (!system_config.config_loaded_from_file) {
+        //     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        //         "Init: no configuration ... disabling unique USB serial number\n"
+        //         );
+        //     result = true;
+        // } else
         BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
             "Init: `\\FACTORY.USB` file exists ... disabling unique USB serial number\n"
             );
@@ -431,7 +429,7 @@ static void main_system_initialization(void) {
     lcd_backlight_enable(false);
 #endif
 
-    monitor(system_config.psu);
+    monitor();
     if (displays[system_config.display].display_lcd_update) {
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
@@ -626,7 +624,7 @@ static void core0_infinite_loop(void) {
         // system error, over current error, etc
         if (system_config.error) {
             printf("\x07");        // bell!
-            psucmd_over_current(); // check for PSU error, reset and show warning
+            psucmd_show_clear_error(); // check for PSU error, reset and show warning
             system_config.error = 0;
             bp_state = BP_SM_COMMAND_PROMPT;
         }
@@ -743,25 +741,23 @@ static void assert_error()
     BP_ASSERT(false);
 }
 
-static queue_t* queues[2] = { &rx_fifo, &bin_rx_fifo };
+static spsc_queue_t* queues[2] = { &rx_fifo, &bin_rx_fifo };
 
 static void tud_cdc_rx_task() {
 
     BP_ASSERT_CORE1(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
 
-    char buf[64];
+    uint8_t buf[64];
     bool enabled[2] = { system_config.terminal_usb_enable, system_config.binmode_usb_rx_queue_enable };
     uint32_t available = 0;
     for (uint8_t itf = 0; itf < 2; itf++) {
         if (enabled[itf] && (available = tud_cdc_n_available(itf))) {
-            uint16_t used_space = 0;
-            queue_available_bytes_unsafe(queues[itf], &used_space);
-            uint32_t free_space = rx_fifo.element_count - used_space - 1;
+            uint32_t free_space = spsc_queue_free(queues[itf]);
             if (free_space) {
                 uint32_t count = tud_cdc_n_read(itf, buf, MIN(available, free_space));
                 // while bytes available shove them in the buffer
                 for (uint32_t i = 0; i < count; i++) {
-                    bool success = queue2_try_add(queues[itf], &buf[i]);
+                    bool success = spsc_queue_try_add(queues[itf], buf[i]);
                     if (!success)
                         assert_error();
                 }
@@ -790,16 +786,12 @@ static void core1_infinite_loop(void) {
         // also receive input from RTT, if available
         rx_from_rtt_terminal();
 
-        if (system_config.psu == 1 &&
-            system_config.psu_irq_en == true &&
-            !psu_fuse_ok()
-            ) {
-            system_config.psu_irq_en = false;
+        if (psu_poll_fuse_vout_error()) {
             psucmd_irq_callback();
         }
 
         if (lcd_update_request) {
-            monitor(system_config.psu); // TODO: fix monitor to return bool up_volts and up_current
+            monitor(); // TODO: fix monitor to return bool up_volts and up_current
             uint32_t update_flags = 0;//core0_requested_update_flags;
             //core0_requested_update_flags = 0;
             if (lcd_update_force) {
@@ -812,7 +804,7 @@ static void core1_infinite_loop(void) {
             if (monitor_voltage_changed()) {
                 update_flags |= UI_UPDATE_VOLTAGES; // pin voltages
             }
-            if (system_config.psu && monitor_current_changed()) {
+            if (psu_status.enabled && monitor_current_changed()) {
                 update_flags |= UI_UPDATE_CURRENT; // psu current sense
             }
             if (system_config.info_bar_changed) {

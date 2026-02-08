@@ -1,3 +1,15 @@
+/**
+ * @file system_config.c
+ * @brief System configuration initialization and management
+ * 
+ * This file implements initialization functions for the global system
+ * configuration structure, setting default values for terminal settings,
+ * LED effects, protocol modes, and hardware settings.
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -13,8 +25,20 @@
 #include "ui/ui_term.h"
 #include "pirate/rgb.h"
 
-struct _system_config system_config;
+struct _system_config system_config; /**< Global system configuration instance */
 
+/**
+ * @brief Initialize system configuration with default values
+ * 
+ * Sets all configuration parameters to their default values including:
+ * - Terminal settings (USB/UART, language, display)
+ * - LED effects and colors
+ * - Protocol mode defaults
+ * - Pin assignments and functions
+ * - Storage and buffer settings
+ * 
+ * @note Must be called during system initialization before accessing system_config
+ */
 void system_init(void) {
     memset(&system_config, 0, sizeof(_system_config));
     // Note: setting values to zero / false is redundant, but... it's OK to be explicit.
@@ -89,7 +113,7 @@ void system_init(void) {
     system_config.pwm_active = 0;  // todo: store the period and duty cycle in array of structs
     system_config.freq_active = 0; // todo: store ranging info in array of structs
     system_config.aux_active = 0;
-
+#if 0
     system_config.psu = 0;
     system_config.psu_current_limit_en = false;
     system_config.psu_voltage = 0;
@@ -97,17 +121,8 @@ void system_init(void) {
     system_config.psu_current_error = false;
     system_config.psu_error = false;
     system_config.psu_irq_en = false;
-
+#endif
     system_config.error = 0;
-
-    system_config.mosiport = 0;
-    system_config.mosipin = 0;
-    system_config.misoport = 0;
-    system_config.misopin = 0;
-    system_config.csport = 0;
-    system_config.cspin = 0;
-    system_config.clkport = 0;
-    system_config.clkpin = 0;
 
     system_config.big_buffer_owner = BP_BIG_BUFFER_NONE;
 

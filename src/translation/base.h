@@ -475,6 +475,7 @@ enum T_translations{
     T_HELP_GCMD_W_ENABLE,
     T_HELP_GCMD_W_VOLTS,
     T_HELP_GCMD_W_CURRENT_LIMIT,
+    T_HELP_GCMD_W_UNDERVOLTAGE,
     T_HELP_GCMD_P,
     T_HELP_HELP,
     T_HELP_SYS_COMMAND,
@@ -573,6 +574,8 @@ enum T_translations{
     T_HELP_UART_GLITCH_CONFIG,
     T_I2C_SNIFF,
     T_I2C_SNIFF_QUIET,
+    T_I2C_SNIFF_RAW,
+    T_I2C_SNIFF_7_BIT_ADDRESSES,
     T_HELP_DDR5,
     T_HELP_DDR5_PROBE,
     T_HELP_DDR5_DUMP,
@@ -609,6 +612,8 @@ enum T_translations{
     T_HELP_I2C_USBPD_VOLTAGE,
     T_HELP_I2C_USBPD_CURRENT,
     T_HELP_SPI_UP,
+    T_HELP_I2C_MPU6050,
+    T_HELP_GLOBAL_JEP106_LOOKUP,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

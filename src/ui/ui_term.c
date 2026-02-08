@@ -1,3 +1,19 @@
+/**
+ * @file ui_term.c
+ * @brief Terminal control and VT100 support implementation.
+ * @details Implements terminal detection and control:
+ *          - VT100 terminal detection via cursor position query
+ *          - RGB and 256-color ANSI color support
+ *          - Command-line editing (cursor movement, history)
+ *          - Progress bar display
+ *          
+ *          Color system:
+ *          - Detects terminal capabilities on startup
+ *          - Falls back to no-color mode if terminal unsupported
+ *          - Supports both full RGB and 256-color ANSI modes
+ *          - Optional ANSI_COLOR_256 library integration (LGPL3)
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>

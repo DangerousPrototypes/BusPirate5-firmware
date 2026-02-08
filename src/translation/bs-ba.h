@@ -459,6 +459,7 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_GCMD_W_ENABLE             ] = NULL,
     [ T_HELP_GCMD_W_VOLTS              ] = NULL,
     [ T_HELP_GCMD_W_CURRENT_LIMIT      ] = NULL,
+    [ T_HELP_GCMD_W_UNDERVOLTAGE       ] = NULL,
     [ T_HELP_GCMD_P                    ] = NULL,
     [ T_HELP_HELP                      ] = NULL,
     [ T_HELP_SYS_COMMAND               ] = NULL,
@@ -557,6 +558,8 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_UART_GLITCH_CONFIG        ] = NULL,
     [ T_I2C_SNIFF                      ] = NULL,
     [ T_I2C_SNIFF_QUIET                ] = NULL,
+    [ T_I2C_SNIFF_RAW                  ] = NULL,
+    [ T_I2C_SNIFF_7_BIT_ADDRESSES      ] = NULL,
     [ T_HELP_DDR5                      ] = NULL,
     [ T_HELP_DDR5_PROBE                ] = NULL,
     [ T_HELP_DDR5_DUMP                 ] = NULL,
@@ -593,5 +596,7 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_I2C_USBPD_VOLTAGE         ] = NULL,
     [ T_HELP_I2C_USBPD_CURRENT         ] = NULL,
     [ T_HELP_SPI_UP                    ] = NULL,
+    [ T_HELP_I2C_MPU6050               ] = NULL,
+    [ T_HELP_GLOBAL_JEP106_LOOKUP      ] = NULL,
 
 };

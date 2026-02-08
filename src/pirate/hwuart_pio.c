@@ -1,3 +1,20 @@
+/**
+ * @file hwuart_pio.c
+ * @brief UART protocol PIO implementation.
+ * @details Implements full-duplex UART using two PIO state machines:
+ *          - SM0: RX (receive)
+ *          - SM1: TX (transmit)
+ *          
+ *          Supports:
+ *          - Data bits: 5-8
+ *          - Parity: none, even, odd
+ *          - Stop bits: 1 or 2
+ *          - Configurable baud rates
+ *          
+ *          The PIO programs handle framing automatically, with parity
+ *          and extra stop bits calculated and programmed at init time.
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>

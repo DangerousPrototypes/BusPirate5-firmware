@@ -1,6 +1,9 @@
-// TODO: Short/pullup detection
-// TODO: read/write mode tracking
-// TODO: speed validation
+/**
+ * @file SWI2C.h
+ * @brief Software I2C mode interface.
+ * @details Provides bit-banged I2C protocol mode.
+ */
+
 void SWI2C_start(void);
 void SWI2C_stop(void);
 uint32_t SWI2C_write(uint32_t d);

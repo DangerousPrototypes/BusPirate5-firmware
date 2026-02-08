@@ -1,3 +1,27 @@
+/**
+ * @file hwuart.c
+ * @brief Hardware UART mode implementation.
+ * @details Implements UART (serial) protocol using PIO-based full-duplex communication.
+ *          Features:
+ *          - Baud rate: 300 to 1,000,000 bps (configurable)
+ *          - Data bits: 5-8
+ *          - Parity: None, Even, Odd
+ *          - Stop bits: 1 or 2
+ *          - Hardware flow control (RTS/CTS)
+ *          - Signal inversion support
+ *          - Async data printing
+ *          - GPS NMEA decoder
+ *          - UART bridge mode
+ *          - Monitor mode for testing
+ *          - Glitch testing
+ *          
+ *          Pin mapping:
+ *          - TX:  Transmit output
+ *          - RX:  Receive input
+ *          - RTS: Request to send (flow control)
+ *          - CTS: Clear to send (flow control)
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -22,6 +46,25 @@
 
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
+
+bool bpio_hwuart_configure(bpio_mode_configuration_t *bpio_mode_config){
+    if(bpio_mode_config->debug) printf("[UART] Configuring - Speed %d baud, %d%c%d\r\n", 
+        bpio_mode_config->speed,
+        bpio_mode_config->data_bits,
+        bpio_mode_config->parity ? 'E' : 'N',
+        bpio_mode_config->stop_bits);
+    
+    mode_config.baudrate = bpio_mode_config->speed;
+    mode_config.data_bits = bpio_mode_config->data_bits;
+    mode_config.stop_bits = bpio_mode_config->stop_bits;
+    mode_config.parity = bpio_mode_config->parity ? UART_PARITY_EVEN : UART_PARITY_NONE;
+    mode_config.flow_control = bpio_mode_config->flow_control ? 1 : 0;
+    mode_config.invert = bpio_mode_config->signal_inversion ? 1 : 0;
+    mode_config.async_print = false; // Disabled by default, async data handled via BPIO packets
+    mode_config.blocking = 0; // Non-blocking
+    
+    return true;  
+}
 
 // command configuration
 const struct _mode_command_struct hwuart_commands[] = {
@@ -208,18 +251,20 @@ uint32_t hwuart_setup(void) {
 
     mode_config.async_print = false;
 
-    return 1;
-}
-
-uint32_t hwuart_setup_exc(void) {
-    // setup peripheral
     mode_config.baudrate_actual = uart_init(M_UART_PORT, mode_config.baudrate);
     printf("\r\n%s%s: %u %s%s",
            ui_term_color_notice(),
            GET_T(T_UART_ACTUAL_SPEED_BAUD),
            mode_config.baudrate_actual,
            GET_T(T_UART_BAUD),
-           ui_term_color_reset());
+           ui_term_color_reset());    
+
+    return 1;
+}
+
+uint32_t hwuart_setup_exc(void) {
+    mode_config.baudrate_actual = uart_init(M_UART_PORT, mode_config.baudrate);
+    // setup peripheral
     uart_set_format(M_UART_PORT, mode_config.data_bits, mode_config.stop_bits, mode_config.parity);
     // set buffers to correct position
     bio_buf_output(M_UART_TX); // tx
@@ -255,7 +300,10 @@ uint32_t hwuart_setup_exc(void) {
         uart_set_hw_flow(M_UART_PORT, mode_config.flow_control, false);             
     }
 
-
+    // drain the buffer of any glitch bytes from setup
+    while (uart_is_readable(M_UART_PORT)) {
+        uart_getc(M_UART_PORT);
+    }
 
     return 1;
 }
@@ -267,20 +315,20 @@ bool hwuart_preflight_sanity_check(void){
 void hwuart_periodic(void) {
     if (mode_config.async_print && uart_is_readable(M_UART_PORT)) {
         // printf("ASYNC: %d\r\n", uart_getc(M_UART_PORT));
-        bio_put(M_UART_RTS, 0);
+        if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
         uint32_t temp = uart_getc(M_UART_PORT);
-        bio_put(M_UART_RTS, 1);
+        if(mode_config.flow_control) bio_put(M_UART_RTS, 1);
         ui_format_print_number_2(&periodic_attributes, &temp);
     }
 }
 
 void hwuart_open(struct _bytecode* result, struct _bytecode* next) {    
     // clear FIFO and enable UART
-    bio_put(M_UART_RTS, 0);
+    if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
     while (uart_is_readable(M_UART_PORT)) {
         uart_getc(M_UART_PORT);
     }
-    bio_put(M_UART_RTS, 1);
+    if(mode_config.flow_control) bio_put(M_UART_RTS, 1);
 
     mode_config.async_print = false;
     result->data_message = GET_T(T_UART_OPEN);
@@ -316,14 +364,14 @@ void hwuart_read(struct _bytecode* result, struct _bytecode* next) {
         }
     }
 
-    bio_put(M_UART_RTS, 0);
+    if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
     if (uart_is_readable(M_UART_PORT)) {
         result->in_data = uart_getc(M_UART_PORT);
     } else {
         result->error = SERR_ERROR;
         result->error_message = GET_T(T_UART_NO_DATA_READ);
     }
-    bio_put(M_UART_RTS, 1);
+    if(mode_config.flow_control) bio_put(M_UART_RTS, 1);
 }
 
 void hwuart_macro(uint32_t macro) {
@@ -355,11 +403,6 @@ void hwuart_cleanup(void) {
     uart_set_hw_flow(M_UART_PORT, false, false);  
     // reset all pins to safe mode (done before mode change, but we do it here to be safe)
     bio_init();
-    // update modeConfig pins
-    system_config.misoport = 0;
-    system_config.mosiport = 0;
-    system_config.misopin = 0;
-    system_config.mosipin = 0;
 }
 
 void hwuart_settings(void) {

@@ -1,3 +1,17 @@
+/**
+ * @file i_info.c
+ * @brief System information display command implementation.
+ * @details Implements the 'i' command to display comprehensive system information:
+ *          - Hardware version and FCC compliance notice
+ *          - Firmware version, hash, and build timestamp
+ *          - MCU type, RAM size, flash size, unique ID
+ *          - Storage information (TF card size, free space)
+ *          - Current mode and pin configuration
+ *          - Pin voltages and VOUT/VREG status
+ *          - Frequency measurement if active
+ *          - Binary mode status
+ */
+
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -11,6 +25,7 @@
 #include "pirate/mcu.h"
 #include "pirate/storage.h"
 #include "pirate/mem.h"
+#include "pirate/psu.h"
 #include "bytecode.h"
 #include "modes.h"
 #include "ui/ui_const.h"
@@ -145,7 +160,8 @@ void i_info_handler(struct command_result* res) {
                ui_term_color_reset(),
                ui_const_pin_states[system_config.pullup_enabled]);
 
-        if (system_config.psu && !system_config.psu_error) {
+        //if (system_config.psu && !system_config.psu_error) {
+        if (psu_status.enabled && (!psu_status.error_overcurrent && !psu_status.error_undervoltage)) {
             printf("%s%s:%s %s (%u.%uV/%u.%uV)\r\n",
                    ui_term_color_info(),
                    GET_T(T_INFO_POWER_SUPPLY),
@@ -153,8 +169,8 @@ void i_info_handler(struct command_result* res) {
                    GET_T(T_ON),
                    (*hw_pin_voltage_ordered[0]) / 1000,
                    ((*hw_pin_voltage_ordered[0]) % 1000) / 100,
-                   (system_config.psu_voltage) / 10000,
-                   ((system_config.psu_voltage) % 10000) / 100);
+                   (psu_status.voltage_actual_int) / 10000,
+                   ((psu_status.voltage_actual_int) % 10000) / 100);
 
             uint32_t isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) *
                                ((500 * 1000) / 4095)); // TODO: move this to a PSU function for all calls
@@ -164,8 +180,8 @@ void i_info_handler(struct command_result* res) {
                    ui_term_color_reset(),
                    (isense / 1000),
                    ((isense % 1000) / 100),
-                   (system_config.psu_current_limit) / 10000,
-                   ((system_config.psu_current_limit) % 10000) / 100);
+                   (psu_status.current_actual_int) / 10000,
+                   ((psu_status.current_actual_int) % 10000) / 100);
         } else {
             printf("%s%s:%s %s\r\n",
                    ui_term_color_info(),
@@ -173,14 +189,25 @@ void i_info_handler(struct command_result* res) {
                    ui_term_color_reset(),
                    GET_T(T_OFF));
 
-            if (system_config.psu_error) {
+            //if (system_config.psu_error) {
+            if (psu_status.error_overcurrent){
                 printf("%s%s:%s %s (exceeded %u.%umA)\r\n",
                        ui_term_color_info(),
                        GET_T(T_INFO_CURRENT_LIMIT),
                        ui_term_color_reset(),
                        ui_const_pin_states[5],
-                       (system_config.psu_current_limit) / 10000,
-                       ((system_config.psu_current_limit) % 10000) / 100);
+                       (psu_status.current_actual_int) / 10000,
+                       ((psu_status.current_actual_int) % 10000) / 100);
+            }
+            
+            if(psu_status.error_undervoltage){
+                printf("%s%s:%s %s (below %u.%uV)\r\n",
+                       ui_term_color_info(),
+                       "Undervoltage", //GET_T(T_INFO_VOLTAGE_UNDERVOLTAGE),
+                       ui_term_color_reset(),
+                       ui_const_pin_states[5],
+                       (psu_status.undervoltage_limit_int) / 10000,
+                       ((psu_status.undervoltage_limit_int) % 10000) / 100);
             }
         }
 

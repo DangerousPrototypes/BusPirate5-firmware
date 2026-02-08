@@ -1,3 +1,14 @@
+/**
+ * @file l_bitorder.c
+ * @brief Bit order control commands implementation.
+ * @details Implements the l/L commands for controlling bit transfer order:
+ *          - L: MSB-first (most significant bit first) 0b10000000
+ *          - l: LSB-first (least significant bit first) 0b00000001
+ *          
+ *          Affects:
+ *          - Data transfer in protocol modes
+ *          - Number display formatting
+ */
 
 #include <stdio.h>
 #include "pico/stdlib.h"

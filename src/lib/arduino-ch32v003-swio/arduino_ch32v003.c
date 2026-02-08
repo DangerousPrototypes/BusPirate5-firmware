@@ -7,7 +7,7 @@
 #include "swio.h"
 #include "pirate/psu.h"
 #include "system_config.h"
-#include "queue.h"
+
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "tusb.h"
@@ -15,7 +15,7 @@
 
 void target_power(int x){
     if (x)
-        psu_enable(5.0f,0.0f,true);
+        psu_enable(5.0f,0.0f,true, 100);
     else
         psu_disable();
 }

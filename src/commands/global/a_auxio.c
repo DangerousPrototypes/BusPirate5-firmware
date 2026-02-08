@@ -1,3 +1,17 @@
+/**
+ * @file a_auxio.c
+ * @brief Auxiliary I/O control commands implementation.
+ * @details Implements direct pin control commands:
+ *          - a <pin>: Set pin as output low
+ *          - A <pin>: Set pin as output high
+ *          - @ <pin>: Set pin as input and read current value
+ *          
+ *          Features:
+ *          - Validates pin availability (not in use by mode)
+ *          - Updates pin labels to show aux status
+ *          - Preserves aux pins across mode changes
+ */
+
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"

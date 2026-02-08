@@ -332,3 +332,15 @@ ui_term_color_reset());
 uint32_t hw3wire_get_speed(void) {
     return mode_config.baudrate;
 }
+
+//-----------------------------------------
+//
+// Flatbuffer/binary access functions
+//-----------------------------------------
+
+bool bpio_hw3wire_configure(bpio_mode_configuration_t *bpio_mode_config){
+    if(bpio_mode_config->debug) printf("[3WIRE] Speed %d Hz\r\n", bpio_mode_config->speed);
+    mode_config.baudrate = bpio_mode_config->speed;
+    mode_config.cs_idle = bpio_mode_config->chip_select_idle;
+    return true;  
+}

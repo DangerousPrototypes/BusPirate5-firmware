@@ -1,3 +1,21 @@
+/**
+ * @file hwi2c.c
+ * @brief Hardware I2C mode implementation.
+ * @details Implements I2C master protocol using PIO-based bit-banging.
+ *          Features:
+ *          - Speed: 5kHz to 1MHz
+ *          - Optional clock stretching support
+ *          - Device scanning (scan command)
+ *          - Sensor demos (SHT3x, SHT4x, SI7021, MS5611, TSL2561, TCS3472, MPU6050)
+ *          - EEPROM support
+ *          - DDR4/DDR5 SPD reading
+ *          - USB PD source capability reading
+ *          
+ *          Pin mapping:
+ *          - SDA: Data line (bidirectional, open-drain)
+ *          - SCL: Clock line (bidirectional, open-drain)
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -8,6 +26,7 @@
 #include "mode/hwi2c.h"
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
+#include "ui/ui_cmdln.h"
 #include "hwi2c.pio.h"
 #include "pirate/hwi2c_pio.h"
 #include "pirate/storage.h"
@@ -49,6 +68,11 @@ const struct _mode_command_struct hwi2c_commands[] = {
         .description_text=T_HELP_I2C_EEPROM,
         .supress_fala_capture=true
     }, 
+    {   .command="ddr4", 
+        .func=&ddr4_handler, 
+        .description_text=T_HELP_DDR5, 
+        .supress_fala_capture=true
+    },     
     {   .command="ddr5", 
         .func=&ddr5_handler, 
         .description_text=T_HELP_DDR5, 
@@ -164,6 +188,12 @@ uint32_t hwi2c_setup(void) {
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
         hwi2c_settings();
+
+        //check for -y flag
+        if (cmdln_args_find_flag('y')) {
+            return 1; // skip prompts, use previous settings
+        }
+
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
             return 0;

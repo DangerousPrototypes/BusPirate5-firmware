@@ -1,4 +1,20 @@
 /**
+ * @file hw2wire_pio.c
+ * @brief 2-Wire (I2C) protocol PIO implementation.
+ * @details PIO-based I2C master with bit-level control for bus manipulation.
+ *          Supports standard I2C operations plus low-level primitives for
+ *          clock stretching, bus scanning, and custom protocols.
+ *          
+ *          Features:
+ *          - Configurable baudrate
+ *          - START/STOP/RESTART conditions
+ *          - NAK detection
+ *          - Manual clock ticking for recovery
+ *          - Direct pin manipulation for debugging
+ * @copyright Copyright (c) 2021 Raspberry Pi (Trading) Ltd. (BSD-3-Clause)
+ */
+
+/**
  * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
  *
  * SPDX-License-Identifier: BSD-3-Clause

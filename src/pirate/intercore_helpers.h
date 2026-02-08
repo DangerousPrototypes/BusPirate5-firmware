@@ -1,3 +1,9 @@
+/**
+ * @file intercore_helpers.h
+ * @brief Inter-core messaging helpers for RP2040/RP2350.
+ * @details Provides safe wrappers for multicore FIFO communication between cores.
+ */
+
 // Inter-Core Messages
 
 #include "pico/multicore.h"
@@ -39,13 +45,17 @@ static_assert(sizeof(bp_icm_message_t) == sizeof(uint8_t),
 static_assert(sizeof(bp_icm_raw_message_t) == sizeof(uint32_t),
               "sizeof(bp_icm_raw_message_t) must be sizeof(uint32_t) to be used by intercore messaging");
 
-// While core1 has a single point where these messages are received / responded to,
-// core0 sends the messages from many files.
-// Funnel into low-overhead wrapper to catch errors in cross-core synchronization,
-// because debugging such issues is ... non-trivial.
+/**
+ * @brief Send synchronous message from core0 to core1.
+ * @param message_id  Message identifier
+ * @note Waits for core1 acknowledgment before returning
+ */
 void icm_core0_send_message_synchronous(bp_icm_message_t message_id);
 
-// These are ultra-low overhead ... maybe even zero overhead with full optimizations.
+/**
+ * @brief Get raw intercore message (core1).
+ * @return  Raw message structure
+ */
 inline bp_icm_raw_message_t icm_core1_get_raw_message() {
     bp_icm_raw_message_t result;
     result.raw = multicore_fifo_pop_blocking();

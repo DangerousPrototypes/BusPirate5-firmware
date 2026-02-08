@@ -92,7 +92,7 @@ bool selftest_psu(float volts, float current, bool current_limit_override) {
     // psu test
     // psu to 1.8, 2.5, 3.3, 5.0 volt test
     printf("PSU ENABLE: ");
-    uint32_t result = psu_enable(volts, current, current_limit_override);
+    uint32_t result = psu_enable(volts, current, current_limit_override, 100);
     if (result) {
         printf("PSU ERROR CODE %d\r\n", result);
         return true;
@@ -321,7 +321,7 @@ bool selftest_current_override(void) {
     // 1. Test with current override
     pullup_enable();
     printf("CURRENT OVERRIDE: ");
-    uint32_t result = psu_enable(3.3, 0, true);
+    uint32_t result = psu_enable(3.3, 0, true, 100);
     if (result == 0) {
         printf("OK\r\n");
     } else {
@@ -340,7 +340,7 @@ bool selftest_current_limit(void) {
         bio_put(pin, 0);
     }
     // 2. Enable wth 0 limit and check the return error code of the PSU
-    uint32_t result = psu_enable(3.3, 0, false);
+    uint32_t result = psu_enable(3.3, 0, false, 100);
     if (result == PSU_ERROR_FUSE_TRIPPED) {
         printf("OK\r\n");
     } else {
@@ -562,8 +562,10 @@ void cmd_selftest(void) {
         printf("\r\n\r\nPASS :)\r\n");
     }
 
-    system_config.psu_current_error = false;
-    system_config.psu_error = false;
+    psu_status.enabled = false;
+    psu_status.error_overcurrent = false;
+    psu_status.error_undervoltage = false;
+    psu_status.error_pending = false;
     system_config.error = false;
 
     // enable system interrupts

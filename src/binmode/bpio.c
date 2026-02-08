@@ -20,7 +20,6 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "queue.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "pirate.h"
@@ -45,6 +44,19 @@
 #include "bpio_verifier.h"
 #include "lib/nanocobs/cobs.h"
 #include "binmode/bpio_transactions.h"
+#include "binmode/bpio_1wire.h"
+#include "binmode/bpio_i2c.h"
+#include "binmode/bpio_spi.h"
+#include "binmode/bpio_2wire.h"
+#include "binmode/bpio_3wire.h"
+#include "binmode/bpio_hiz.h"
+#include "binmode/bpio_dio.h"
+#include "binmode/bpio_led.h"
+#include "binmode/bpio_infrared.h"
+#include "binmode/bpio_uart.h"
+#include "mode/hiz.h"
+#include "mode/hw2wire.h"
+#include "mode/hwuart.h"
 
 const char dirtyproto_mode_name[] = "BPIO2 flatbuffer interface";
 uint32_t time_start, time_end;
@@ -66,13 +78,18 @@ bool bpio_debug = false;
 
 typedef bool (*bpio_configure_func_t)(bpio_mode_configuration_t *bpio_mode_config);
 typedef uint32_t (*bpio_handler_func_t)(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
-
+typedef uint32_t (*bpio_async_handler_func_t)(uint8_t *data_read);
 struct bpio_mode_handlers_t {
     bpio_configure_func_t bpio_configure;
     bpio_handler_func_t   bpio_handler;
+    bpio_async_handler_func_t bpio_async_handler;
 };
 
 static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
+    [HIZ]={
+        .bpio_configure = bpio_hiz_configure,
+        .bpio_handler = bpio_hiz_transaction
+    },
     [HW1WIRE]={
         .bpio_configure = bpio_1wire_configure,
         .bpio_handler = bpio_hw1wire_transaction
@@ -84,7 +101,42 @@ static const struct bpio_mode_handlers_t bpio_mode_handlers[count_of(modes)] = {
     [HWSPI]={
         .bpio_configure = bpio_hwspi_configure,
         .bpio_handler = bpio_hwspi_transaction
-    }    
+    },
+    [HW2WIRE]={
+        .bpio_configure = NULL, //bpio_hw2wire_configure,
+        .bpio_handler = NULL, //bpio_hw2wire_transaction
+    },
+    [HW3WIRE]={
+        .bpio_configure = NULL, //bpio_hw3wire_configure,
+        .bpio_handler = NULL, //bpio_hw3wire_transaction
+    },
+    [DIO]={
+        .bpio_configure = NULL,
+        .bpio_handler = NULL, //bpio_dio_transaction
+    },
+    [HWLED]={
+        .bpio_configure = bpio_led_configure,
+        .bpio_handler = bpio_led_transaction
+    },
+    //need async handler in some way
+    [INFRARED]={
+        .bpio_configure = NULL,
+        .bpio_handler = NULL, //bpio_infrared_transaction
+    },
+    [JTAG]={
+        .bpio_configure = NULL,
+        .bpio_handler = NULL
+    },
+    [HWUART]={
+        .bpio_configure = bpio_hwuart_configure,
+        .bpio_handler = bpio_hwuart_transaction,
+        .bpio_async_handler = bpio_hwuart_async_handler
+    },
+    [HWHDUART]={
+        .bpio_configure = NULL,
+        .bpio_handler = NULL
+    }   
+
 };
 
 void error_response(const char *error_msg, flatcc_builder_t *B, uint8_t *buf);
@@ -95,11 +147,12 @@ bool mode_change_new(const char *mode_name, bpio_mode_configuration_t *mode_conf
         if (strcasecmp(mode_name, modes[i].protocol_name) == 0) {
             // NOTE: It should not matter if the protocol does not have specific support via BPIO.
             //       For example, it should be allowed to transition to HiZ mode.
-            if (i == HIZ) {
+            if(bpio_debug) printf("[Mode Change] Switching to mode %s\r\n", mode_name);
+            /*if (i == HIZ) {
                 // switching to HiZ mode is always allowed
                 if(bpio_debug) printf("[Mode Change] Switching to HiZ mode\r\n");
             }
-            else if(bpio_mode_handlers[i].bpio_handler==NULL) {
+            else*/ if(bpio_mode_handlers[i].bpio_handler==NULL) {
                 if(bpio_debug) printf("[Mode Change] Protocol %s does not support BPIO handler\r\n", mode_name);
                 return true;
             }
@@ -241,16 +294,15 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, 
     // PSU status
     if(query_flags & (1u << bpio_StatusRequestTypes_PSU) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
         if(bpio_debug) printf("[Status Request] PSU status requested\r\n");
-        bpio_StatusResponse_psu_enabled_add(B, system_config.psu);
-        bpio_StatusResponse_psu_set_mv_add(B, system_config.psu_voltage/10);
-        bpio_StatusResponse_psu_set_ma_add(B, system_config.psu_current_limit/10000);
+        bpio_StatusResponse_psu_enabled_add(B, psu_status.enabled);
+        bpio_StatusResponse_psu_set_mv_add(B, psu_status.voltage_actual_int/10);
+        bpio_StatusResponse_psu_set_ma_add(B, psu_status.current_actual_int/ 10000);
         uint32_t vout, isense, vreg;
         bool fuse;
         psu_measure(&vout, &isense, &vreg, &fuse);
         bpio_StatusResponse_psu_measured_mv_add(B, vout);
         bpio_StatusResponse_psu_measured_ma_add(B, isense/1000);
-        bpio_StatusResponse_psu_current_error_add(B, system_config.psu_current_error);
-
+        bpio_StatusResponse_psu_current_error_add(B, psu_status.error_overcurrent||psu_status.error_undervoltage);
     }
 
     //ADC status, return the voltage on IO0...IO7
@@ -399,7 +451,7 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
 
         if(bpio_debug) printf("[Config Request] PSU Voltage: %f, Current: %f, Override: %s\r\n", (float)voltage_mv/1000.0f, (float)current_ma, current_limit_override?"true":"false");
         
-        uint8_t psu_error = psucmd_enable((float)voltage_mv/1000.0f, (float)current_ma, current_limit_override);
+        uint8_t psu_error = psucmd_enable((float)voltage_mv/1000.0f, (float)current_ma, current_limit_override, 100);
         if (psu_error) {
             static const char *psu_error_msg = "Power supply initialization failed";
             if(bpio_debug) printf("[Config Request] Error: %s (%d)\r\n", psu_error_msg, psu_error);
@@ -568,7 +620,8 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
         .bytes_write = data_write_len, // Use the length of the data write vector
         .bytes_read = bpio_DataRequest_bytes_read(data_request),
         .stop_main = bpio_DataRequest_stop_main(data_request),
-        .stop_alt = bpio_DataRequest_stop_alt(data_request)
+        .stop_alt = bpio_DataRequest_stop_alt(data_request),
+        //.bitwise_ops = bpio_DataRequest_bitwise_ops(data_request)
     };
 
     size_t data_buf_size = request.bytes_read;
@@ -591,6 +644,9 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
         printf("[Data Request] Bytes to read: %d\r\n", request.bytes_read);
         printf("[Data Request] Stop main condition: %s\r\n", request.stop_main ? "true" : "false");
         printf("[Data Request] Stop alternate condition: %s\r\n", request.stop_alt ? "true" : "false");
+        if(request.bitwise_ops) {
+            printf("[Data Request] Bitwise operations: %d\r\n", flatbuffers_uint8_vec_len(request.bitwise_ops));
+        }
     }
  
     //**************TIME END: 40uS
@@ -647,6 +703,54 @@ const static struct _bpio_function_t bpio_handlers[]={
     [bpio_RequestPacketContents_DataRequest] = { .func = data_request },
 };
 
+void bpio_check_async_data(flatcc_builder_t *B, uint8_t *buf) {
+    // Check if current mode supports async handler
+    if(!bpio_mode_handlers[system_config.mode].bpio_async_handler) {
+        return; // Mode doesn't support async data
+    }
+    
+    // Allocate buffer for async data
+    uint8_t async_data[BPIO_MAX_READ_SIZE];
+    
+    // Call mode's async handler to check for data
+    uint32_t bytes_read = bpio_mode_handlers[system_config.mode].bpio_async_handler(async_data);
+    
+    if(bytes_read == 0) {
+        return; // No async data available
+    }
+
+    if(bpio_debug){
+        printf("[Async Data] Received %d bytes: ", bytes_read);
+        for(uint32_t i = 0; i < bytes_read; i++) {
+            // Process async_data[i] if needed
+            printf("%c", async_data[i]);
+        }
+        printf("\r\n");
+    }
+    
+    if(bpio_debug) printf("[Async Data] %d bytes from %s\r\n", bytes_read, modes[system_config.mode].protocol_name);
+    
+    // Build async DataResponse packet (similar pattern to normal data_request)
+    flatcc_builder_reset(B);
+    
+    bpio_DataResponse_start(B);
+    bpio_DataResponse_data_read_start(B);
+    uint8_t *data_read_buf = bpio_DataResponse_data_read_extend(B, bytes_read);
+    memcpy(data_read_buf, async_data, bytes_read);
+    bpio_DataResponse_data_read_end(B);
+    
+    // Mark as async (unsolicited) data
+    bpio_DataResponse_is_async_add(B, true);
+    
+    bpio_DataResponse_ref_t data_response = bpio_DataResponse_end(B);
+    
+    bpio_ResponsePacket_start_as_root(B);
+    bpio_ResponsePacket_contents_DataResponse_add(B, data_response);
+    bpio_ResponsePacket_end_as_root(B);
+    
+    send_packet(B, buf);
+}
+
 void error_response(const char *error_msg, flatcc_builder_t *B, uint8_t *buf) {
     if(bpio_debug) printf("[Error Response] %s\r\n", error_msg);
     flatcc_builder_reset(B);//25uS
@@ -681,7 +785,14 @@ void dirtyproto_mode_setup(void) {
 // handler needs to be cooperative multitasking until mode is enabled
 void dirtyproto_mode(void) {
     uint8_t buf[BPIO_MAX_COBS_SIZE]; // used to store the flatbuffer data, and for COBS encoded output
-    if (!tud_cdc_n_available(CDC_INTF)) return; // No data available, exit early 
+    
+    // Check for async data if no request is pending
+    if (!tud_cdc_n_available(CDC_INTF)) {
+        if(tud_cdc_n_connected(CDC_INTF)){
+            bpio_check_async_data(B, buf);
+        }
+        return; // No data available, exit early
+    } 
 
     bpio_debug = (system_config.bpio_debug_enable && tud_cdc_n_connected(0));
     
@@ -758,7 +869,7 @@ bpio_mode_read_end:
     }
 
     uint16_t minimum_version_minor = bpio_RequestPacket_minimum_version_minor_get(packet);
-    if(minimum_version_minor > 0) {
+    if(minimum_version_minor > 2) {
         if(bpio_debug) printf("[BPIO] Warning: Minimum version minor %d, this may not be compatible\r\n", minimum_version_minor);
         error_response("Flatbuffers minimum version minor not met, update the Bus Pirate firmware", B, buf);
         return;

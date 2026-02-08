@@ -1,3 +1,23 @@
+/**
+ * @file hw1wire.c
+ * @brief Hardware 1-Wire mode implementation.
+ * @details Implements 1-Wire (Dallas/Maxim) protocol using PIO-based timing control.
+ *          Features:
+ *          - Standard speed (15.4kHz) and overdrive (125kHz) support
+ *          - ROM search algorithm for device enumeration
+ *          - DS18B20 temperature sensor support
+ *          - 1-Wire EEPROM support
+ *          - Automatic device discovery
+ *          
+ *          Pin mapping:
+ *          - OWD: One-wire data (bidirectional, open-drain)
+ *          
+ *          Protocol features:
+ *          - Reset/presence detection
+ *          - ROM commands (Search, Read, Match, Skip)
+ *          - CRC8 verification
+ */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"

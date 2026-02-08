@@ -5,6 +5,7 @@
 #include "pirate/amux.h"
 #include "command_struct.h"
 #include "display/scope.h"
+#include "pirate/psu.h"
 
 static char voltages_value[HW_PINS - 1][4];
 static uint32_t voltages_update_mask[3];
@@ -102,9 +103,11 @@ bool monitor_current_changed(void) {
     return (bool)current_update_mask;
 }
 
-bool monitor(bool current_sense) {
+bool monitor(void) {
     char c;
 
+    bool current_sense = psu_status.enabled;
+    
     // TODO hw_adc helper functions - do conversion on request, and cache it????
     if (scope_running) { // scope is using the analog subsystem
         return 0;

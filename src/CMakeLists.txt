@@ -361,6 +361,10 @@ set(buspirate_common
         # DUMMY MODE
         mode/dummy1.c
         mode/dummy1.h 
+        
+        # UNIVERSAL PROGRAMMER MODE
+        mode/up.c
+        mode/up.h
 
         # UI
         ui/ui_cmdln.c

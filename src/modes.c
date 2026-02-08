@@ -59,6 +59,9 @@
 #ifdef BP_USE_I2S
 #include "mode/i2s.h"
 #endif
+#ifdef BP_USE_UP
+#include "mode/up.h"
+#endif
 
 // nulfuncs
 // these are the dummy functions when something ain't used
@@ -627,6 +630,37 @@ struct _mode modes[] = {
         .mode_commands = dummy1_commands,              // mode specific commands
         .mode_commands_count = &dummy1_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = NULL,      // sanity check before executing syntax
+    },
+#endif
+#ifdef BP_USE_UP
+    [UP] = {
+        .protocol_name = "UP",                       // friendly name (promptname)
+        .protocol_start = up_start,                  // start
+        .protocol_start_alt = up_start,              // start with read
+        .protocol_stop = up_stop,                    // stop
+        .protocol_stop_alt = up_stop,                // stop with read
+        .protocol_write = up_write,                  // send(/read) max 32 bit
+        .protocol_read = up_read,                    // read max 32 bit
+        .protocol_clkh = nullfunc1_temp,                    // set clk high
+        .protocol_clkl = nullfunc1_temp,                    // set clk low
+        .protocol_dath = nullfunc1_temp,                    // set dat hi
+        .protocol_datl = nullfunc1_temp,                    // set dat lo
+        .protocol_dats = nullfunc1_temp,                    // toggle dat (?)
+        .protocol_tick_clock = nullfunc1_temp,               // toggle clk (?)
+        .protocol_bitr = nullfunc1_temp,                    // read 1 bit (?)
+        .protocol_periodic = noperiodic,            // service to regular poll whether a byte ahs arrived
+        .protocol_macro = up_macro,                  // macro
+        .protocol_setup = up_setup,                  // setup UI
+        .protocol_setup_exc = up_setup_exc,          // real setup
+        .protocol_cleanup = up_cleanup,              // cleanup for HiZ
+        //.protocol_pins=up_pins,				// display pin config
+        .protocol_settings = up_settings,          // display settings
+        .protocol_help = up_help,                  // display small help about the protocol
+        .mode_commands = up_commands,              // mode specific commands
+        .mode_commands_count = &up_commands_count, // mode specific commands count
+        .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = NULL,      // sanity check before executing syntax
     },
 #endif
 };

@@ -54,6 +54,7 @@
 #define     BP_USE_JTAG
 //#define BP_USE_I2S
 // #define     BP_USE_USBPD
+#define BP_USE_UP
 
 // enable display support
 // #define		DISPLAY_USE_HD44780	// is always enabled
@@ -188,6 +189,12 @@ void spi_busy_wait_internal(bool enable, const char *file, int line);
 // LED settings
 #define M_LED_SDO BIO0
 #define M_LED_SCL BIO1 // only used on APA102
+
+// universal programmer settings
+#define M_UP_VSENSE_VCC  BIO0
+#define M_UP_VSENSE_VPP  BIO1
+#define M_UP_VCCH        BIO2
+#define M_UP_VPPH        BIO3
 
 typedef struct {
     bool debug;                 // Debug flag for BPIO

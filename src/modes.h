@@ -49,6 +49,9 @@ enum {
 #ifdef BP_USE_DUMMY1
     DUMMY1,
 #endif
+#ifdef BP_USE_UP
+    UP,
+#endif
     MAXPROTO
 };
 

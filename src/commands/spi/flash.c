@@ -98,6 +98,13 @@ void flash(struct command_result* res) {
         printf("Missing file name (-f)\r\n");
         return;
     }
+
+    // error if read/verify and erase flag is set, doesn't make sense to erase if just reading or verifying
+    if((flash_action == FLASH_READ || flash_action == FLASH_VERIFY) && erase_flag) {
+        printf("Erase flag (-e) cannot be used with read or verify actions\r\n");
+        return;
+    }
+
     bool override_flag = cmdln_args_find_flag('o' | 0x20);
 
     // start and end rage? bytes to write/dump???

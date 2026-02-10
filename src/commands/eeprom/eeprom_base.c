@@ -7,6 +7,7 @@
 #include "command_struct.h"
 #include "ui/ui_help.h"
 #include "ui/ui_cmdln.h" //for cmdln_action_t
+#include "ui/ui_prompt.h"
 //#include "binmode/fala.h"
 #include "fatfs/ff.h"       // File system related
 #include "ui/ui_hex.h" // Hex display related
@@ -15,6 +16,25 @@
 #include "pirate/file.h" // File handling related
 //#include "pirate/hwspi.h" // SPI related functions
 #include "eeprom_base.h"
+
+bool eeprom_confirm_action(void){
+    if(cmdln_args_find_flag('y')) {
+        return true; // override with -y
+    }
+    cmdln_next_buf_pos();
+    printf("This action may modify the EEPROM contents. Do you want to continue?\r\ny/n> \x03");
+    uint32_t confirm;
+    do {
+        confirm = ui_prompt_yes_no();
+    } while (confirm > 1);
+
+    if(confirm != 1) {
+        printf("\r\nAborted by user\r\n");
+        return false;
+    }
+    return true;
+
+}
 
 void eeprom_display_devices(const struct eeprom_device_t *eeprom_devices, uint8_t count) {
     printf("\r\nAvailable EEPROM devices:\r\n");

@@ -170,3 +170,9 @@ bool eeprom_action_read(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_s
  * @return                 true on success
  */
 bool eeprom_action_verify(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size);
+
+/**
+ * @brief Confirm destructive action with user.
+ * @return true if user confirms, false if aborted
+ */
+bool eeprom_confirm_action(void);

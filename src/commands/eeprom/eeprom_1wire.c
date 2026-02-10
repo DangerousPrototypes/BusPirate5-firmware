@@ -117,6 +117,7 @@ static const struct ui_help_options options[] = {
     { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
     { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
     { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
+    { 0, "-y", T_HELP_FLASH_YES_OVERRIDE }, // override yes/no prompt for destructive actions
     { 0, "-h", T_HELP_FLAG },   // help
 };  //protect, -p, -t, -w?
 
@@ -414,6 +415,11 @@ void onewire_eeprom_handler(struct command_result* res) {
 
     char buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading/writing
     uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading data from EEPROM
+
+    //confirm destruction actions
+    if(eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_WRITE || eeprom.action == EEPROM_TEST|| eeprom.action == EEPROM_PROTECT){
+        if(!eeprom_confirm_action()) return; // if user does not confirm, exit
+    }
 
     //we manually control any FALA capture
     fala_start_hook(); 

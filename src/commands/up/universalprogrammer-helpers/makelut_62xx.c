@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "../universalprogrammer_pinout.h"
+#include "../ram.h"
 
 int main(void)
 {
@@ -58,11 +59,30 @@ int main(void)
     if((i&0x07)==0) printf("\r\n");
     temp=0;
     
-    if(i&0x01) temp|=UP_27XX_A16;
+    if(i&0x01) temp|=UP_62XX_A16;
     
     printf(" 0x%08X,", temp);
   }
   printf("\r\n};\r\n\r\n");
   
+  
+  printf("const uint32_t lut_62xx_dat[] ={");
+  
+  for(i=0; i<256; i++)
+  {
+    if((i&0x07)==0) printf("\r\n");
+    temp=0;
+    
+    if(i&0x01) temp|=UP_62XX_D0;
+    if(i&0x02) temp|=UP_62XX_D1;
+    if(i&0x04) temp|=UP_62XX_D2;
+    if(i&0x08) temp|=UP_62XX_D3;
+    if(i&0x10) temp|=UP_62XX_D4;
+    if(i&0x20) temp|=UP_62XX_D5;
+    if(i&0x40) temp|=UP_62XX_D6;
+    if(i&0x80) temp|=UP_62XX_D7;   
+    printf(" 0x%08X,", temp);
+  }
+  printf("\r\n};\r\n\r\n");
   return 0;
 }

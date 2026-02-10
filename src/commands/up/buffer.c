@@ -5,6 +5,172 @@
 
 */
 
+#include <stdio.h>
+#include <string.h>
+#include "pico/stdlib.h"
+#include "pirate.h"
+#include "command_struct.h"       // File system related
+#include "fatfs/ff.h"       // File system related
+#include "pirate/storage.h" // File system related
+#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+// #include "ui/ui_prompt.h" // User prompts and menu system
+// #include "ui/ui_const.h"  // Constants and strings
+#include "ui/ui_help.h"    // Functions to display help in a standardized way
+#include "system_config.h" // Stores current Bus Pirate system configuration
+#include "pirate/amux.h"   // Analog voltage measurement functions
+#include "pirate/button.h" // Button press functions
+#include "msc_disk.h"
+#include "pirate/hwspi.h"
+#include "pirate/lsb.h"
+#include "ui/ui_term.h"
+#include "bytecode.h"   
+#include "pirate/bio.h"
+#include "usb_rx.h"
+#include "pirate/mem.h"
+#include "lib/crc/crc.h"
+
+#include "mode/up.h"
+#include "commands/up/universalprogrammer_pinout.h"
+#include "commands/up/test.h"
+
+static void dumpbuffer(uint32_t start, uint32_t len);
+static void crcbuffer(uint32_t start, uint32_t len);
+static void clearbuffer(uint32_t start, uint32_t len, uint8_t fillbyte);
+static void readbuffer(uint32_t start, uint32_t fstart, uint32_t len, char *fname);
+static void hexreadbuffer(char *fname);
+static void writebuffer(uint32_t start, uint32_t len, char *fname);
+
+
+enum uptest_actions_enum {
+    UP_BUFFER_READ,
+    UP_BUFFER_WRITE,
+    UP_BUFFER_CRC,
+    UP_BUFFER_CLEAR,
+    UP_BUFFER_SHOW,
+    UP_BUFFER_HEXREAD,
+
+};
+
+static const struct cmdln_action_t uptest_actions[] = {
+    {UP_BUFFER_READ, "read"},
+    {UP_BUFFER_WRITE, "write"},
+    {UP_BUFFER_CRC, "crc"},
+    {UP_BUFFER_CLEAR, "clear"},
+    {UP_BUFFER_SHOW, "show"},
+    {UP_BUFFER_HEXREAD, "hexread"},
+};    
+
+static const char* const usage[] = { "up [test|vtest|dram|logic|buffer|eprom|spirom|display|ram]\r\n\t[-t <device>]",
+                                     "Adapter test:%s up test",
+                                     "Adapter voltage test:%s up vtest",
+                                     "DRAM test:%s up dram -t <device>",
+                                     "Logic IC test:%s up logic -t <device>",
+                                     "Firmware buffer:%s up buffer read -f <filename>",
+                                     "EEPROM read/readid/blank/write/verify:%s up eprom read -t <device>",
+                                     "SPI ROM readid/read:%s up spirom readid -t <device>",
+                                     "Display test:%s up display -t <device>",
+                                     "RAM test:%s up ram -t <device>" };
+
+static const struct ui_help_options options[] = {
+    0
+};
+
+void up_buffer_handler(struct command_result* res)
+{
+    uint32_t action;
+    uint32_t boffset, foffset, doffset, length, value;
+    uint8_t clearbyte;
+    command_var_t arg;
+    char fname[13];  
+    
+    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+        return;
+    }
+
+    if(!ui_help_check_vout_vref())
+    {
+        return;
+    }
+
+    if(cmdln_args_get_action(uptest_actions, count_of(uptest_actions), &action)){
+        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+        return;
+    }
+    
+    if(cmdln_args_find_flag_uint32('o', &arg, &value)) boffset=value; // bufferoffset
+    else boffset=0;
+    
+    if(cmdln_args_find_flag_uint32('O', &arg, &value)) foffset=value; // fileoffset
+    else foffset=0;
+    
+    if(cmdln_args_find_flag_uint32('l', &arg, &value)) length=value; // length
+    else length=128*1024;
+
+    if(cmdln_args_find_flag_uint32('b', &arg, &value)) clearbyte=(value&0x0FF); // clearbyte
+    else clearbyte=0x00;
+    
+    if((action==UP_BUFFER_READ|action==UP_BUFFER_WRITE|action==UP_BUFFER_HEXREAD)&&(!cmdln_args_find_flag_string('f', &arg, 13, fname)))
+    {
+      printf("No filename given\r\n");
+      system_config.error = 1;  
+      return;
+    }
+    
+    //sanity checks
+    if(length>128*1024)
+    {
+      printf("length should be less then 131072\r\n");
+      system_config.error = 1;
+      return;
+    }
+
+    if(boffset>128*1024)
+    {
+      printf("buffer offset should be less then 131072\r\n");
+      system_config.error = 1;
+      return;
+    }
+
+    if((boffset+length)>128*1024)
+    {
+      printf("buffer offset+length should be less then 131072\r\n");
+      system_config.error = 1;
+      return;
+    }
+
+    switch(action)
+    {
+      case UP_BUFFER_READ:
+        readbuffer(boffset, foffset, length, fname);
+        break;
+      case UP_BUFFER_WRITE:
+        writebuffer(boffset, length, fname);
+        break;
+      case UP_BUFFER_CRC:
+        crcbuffer(boffset, length);
+        break;
+      case UP_BUFFER_SHOW:
+        dumpbuffer(boffset, length);
+        break;
+      case UP_BUFFER_CLEAR:
+        readbuffer(boffset, foffset, length, fname);
+        break;
+      case UP_BUFFER_HEXREAD:
+        hexreadbuffer(fname);
+        break;
+      default: //should never get here, should throw help
+        printf("No action defined (test, vtest, dram, logic, buffer, eprom)\r\n");
+        system_config.error = 1;  
+        return;
+    }
+    
+    up_init();      // to be sure
+    up_setvcc(0);  // to be sure
+    up_setvpp(0);  // to be sure
+}
+
+
+
 /// --------------------------------------------------------------------- buffer helpers
 // print the buffer to the screen
 static void dumpbuffer(uint32_t start, uint32_t len)
@@ -18,14 +184,14 @@ static void dumpbuffer(uint32_t start, uint32_t len)
 
     for(i=0; i<16; i++)
     {
-      printf("%02X ", upbuffer[start+j+i]);
+      printf("%02X ", up_buffer[start+j+i]);
     }
 
     printf("  ");
 
     for(i=0; i<16; i++)
     {
-      printf("%c", ((upbuffer[start+j+i]>=0x20)&(upbuffer[start+j+i]<0x7F))?upbuffer[start+j+i]:'.');
+      printf("%c", ((up_buffer[start+j+i]>=0x20)&(up_buffer[start+j+i]<0x7F))?up_buffer[start+j+i]:'.');
     }
     
     printf("\r\n");
@@ -35,16 +201,16 @@ static void dumpbuffer(uint32_t start, uint32_t len)
 static void crcbuffer(uint32_t start, uint32_t len)
 {
   printf("Checksum of the buffer from 0x%05X, len %d\r\n", start, len);
-  printf("CRC16 (CCITT) = 0x%04X\r\n", ccitt16_updcrc(-1, upbuffer+start, len));
-  printf("CRC32 (CCITT) = 0x%08X\r\n", ccitt32_updcrc(-1, upbuffer+start, len));
-  printf("ZIPCRC = 0x%08X\r\n", zip_updcrc(-1, upbuffer+start, len));
+  printf("CRC16 (CCITT) = 0x%04X\r\n", ccitt16_updcrc(-1, up_buffer+start, len));
+  printf("CRC32 (CCITT) = 0x%08X\r\n", ccitt32_updcrc(-1, up_buffer+start, len));
+  printf("ZIPCRC = 0x%08X\r\n", zip_updcrc(-1, up_buffer+start, len));
 }
 
 static void clearbuffer(uint32_t start, uint32_t len, uint8_t fillbyte)
 {
   int i;
   
-  for(i=start; i<start+len; i++) upbuffer[i]=fillbyte;
+  for(i=start; i<start+len; i++) up_buffer[i]=fillbyte;
 }
 
 static void readbuffer(uint32_t start, uint32_t fstart, uint32_t len, char *fname)
@@ -80,7 +246,7 @@ static void readbuffer(uint32_t start, uint32_t fstart, uint32_t len, char *fnam
   // read the file
   
   //result = f_read(&file_handle, buffer, sizeof(buffer), &bytes_read); // read the data from the file
-  if (f_read(&file_handle, upbuffer+start, len, &bytes_read) == FR_OK)
+  if (f_read(&file_handle, up_buffer+start, len, &bytes_read) == FR_OK)
   {                                              // if the read was successful
       printf("Read %d bytes from file %s\r\n", bytes_read, fname);
       
@@ -238,8 +404,8 @@ static void hexreadbuffer(char *fname)
       printf("data len=%d\r\n",len);
       for(j=0; j<len ;j++)
       {
-        upbuffer[baseaddr+offset+j]=((parsehex(line[i++])<<4)|(parsehex(line[i++])));
-        checksum+=upbuffer[baseaddr+offset+j];
+        up_buffer[baseaddr+offset+j]=((parsehex(line[i++])<<4)|(parsehex(line[i++])));
+        checksum+=up_buffer[baseaddr+offset+j];
       }
     }
     else if(recordtype==0x01) // end of file
@@ -333,7 +499,7 @@ static void writebuffer(uint32_t start, uint32_t len, char *fname)
     return;
   }
 
-  if (f_write(&file_handle, upbuffer+start, len, &bytes_written))
+  if (f_write(&file_handle, up_buffer+start, len, &bytes_written))
   {
     printf("Error writing to file %s\r\n", fname);
     if (f_close(&file_handle))

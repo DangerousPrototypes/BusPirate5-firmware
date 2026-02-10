@@ -16,6 +16,6 @@
 #define UP_SPIROM_8PIN_PU   (0)
 #define UP_SPIROM_8PIN_DIR  (UP_SPIROM_8PIN_MISO)
 
-void spiromreadid(void);
 
+void up_spirom_handler(struct command_result* res);
 

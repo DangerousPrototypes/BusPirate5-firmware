@@ -296,8 +296,8 @@ set(buspirate_common
         commands/spi/spiflash.c
         commands/spi/sniff.c
         commands/spi/sniff.h
-        commands/spi/universalprogrammer.h
-        commands/spi/universalprogrammer.c
+#        commands/spi/universalprogrammer.h
+#        commands/spi/universalprogrammer.c
         lib/sfud/inc/sfud.h
         lib/sfud/inc/sfud.c
         lib/sfud/inc/sfud_cfg.h
@@ -367,7 +367,27 @@ set(buspirate_common
         # UNIVERSAL PROGRAMMER MODE
         mode/up.c
         mode/up.h
-
+        commands/up/test.c
+        commands/up/test.h
+	commands/up/logicic.c
+	commands/up/logicic.h
+	commands/up/pic.c
+	commands/up/pic.h
+	commands/up/ram.c
+	commands/up/ram.h
+	commands/up/display.c
+	commands/up/display.h
+	commands/up/spirom.c
+	commands/up/spirom.h
+	commands/up/eprom.c
+	commands/up/eprom.h
+	commands/up/buffer.c
+	commands/up/buffer.h
+	lib/crc/crc_crc16.c
+	lib/crc/crc_crc32.c
+	lib/crc/crc_zip.c
+	lib/crc/crc.h
+	
         # UI
         ui/ui_cmdln.c
         ui/ui_cmdln.h

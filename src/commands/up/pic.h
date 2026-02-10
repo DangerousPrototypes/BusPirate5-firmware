@@ -25,5 +25,8 @@
 #define PIC_CMD_ERASE_PM  0x09
 #define PIC_CMD_ERASE_DM  0x0B
 
-void picreadids(void);
+
+void up_pic_handler(struct command_result* res);
+
+//void picreadids(void);
 

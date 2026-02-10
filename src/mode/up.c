@@ -10,6 +10,7 @@
 #include "bytecode.h"   // Bytecode structure for data IO
 #include "pirate/bio.h" // Buffered pin IO functions
 #include "ui/ui_help.h"
+#include "ui/ui_term.h"
 
 #include "hardware/spi.h"
 #include "pirate/hwspi.h"
@@ -17,15 +18,70 @@
 #include "pirate/mem.h"
 #include "pirate/lsb.h"
 
+#include "commands/global/w_psu.h"
+#include "pirate/psu.h"
+
+#include "commands/up/test.h"
+#include "commands/up/logicic.h"
+#include "commands/up/pic.h"
+#include "commands/up/ram.h"
+#include "commands/up/display.h"
+#include "commands/up/spirom.h"
+#include "commands/up/eprom.h"
+#include "commands/up/buffer.h"
 #include "up.h"
 
 
 uint8_t *up_buffer=NULL;
-bool verbose=true;
-bool debug=false;      // print the bits on the ZIF socket
+bool up_verbose=true;
+bool up_debug=false;      // print the bits on the ZIF socket
+const char rotate[] = "|/-\\|/-\\";
+
 
 // command configuration
-const struct _mode_command_struct up_commands[] = { 0 };
+const struct _mode_command_struct up_commands[] = {
+{   .command="test", 
+        .func=&up_test_handler, 
+        .description_text=T_HELP_SPI_UP, 
+        .supress_fala_capture=true
+    },
+    {   .command="logicic", 
+        .func=&up_logic_handler, 
+        .description_text=T_HELP_SPI_UP, 
+        .supress_fala_capture=true
+    },
+    {   .command="pic", 
+        .func=&up_pic_handler, 
+        .description_text=T_HELP_SPI_UP, 
+        .supress_fala_capture=true
+    },
+    {   .command="ram", 
+        .func=&up_ram_handler, 
+        .description_text=T_HELP_SPI_UP, 
+        .supress_fala_capture=true
+    },
+    {   .command="display", 
+        .func=&up_display_handler, 
+        .description_text=T_HELP_SPI_UP, 
+        .supress_fala_capture=true
+    },
+    {   .command="spirom", 
+        .func=&up_spirom_handler, 
+        .description_text=T_HELP_SPI_UP, 
+        .supress_fala_capture=true
+    },
+    {   .command="eprom", 
+        .func=&up_eprom_handler, 
+        .description_text=T_HELP_SPI_UP, 
+        .supress_fala_capture=true
+    },
+    {   .command="buffer", 
+        .func=&up_buffer_handler, 
+        .description_text=T_HELP_SPI_UP, 
+        .supress_fala_capture=true
+    },
+};
+
 const uint32_t up_commands_count = count_of(up_commands);
 
 static const char pin_labels[][5] = { "Vcc", "Vpp", "VccH", "VppH", "CLK", "MOSI", "MISO", "CS" };
@@ -43,10 +99,13 @@ uint32_t up_setup(void) {
 // Setup execution. This is where we actually configure any hardware.
 uint32_t up_setup_exc(void) {
 
+    uint32_t psu_result;
+
     // setup spi
     spi_init(M_SPI_PORT, UP_SPISPEED);
     hwspi_init(UP_NBITS, UP_CPOL, UP_CPHA);
     
+    // setup BP pins
     system_bio_update_purpose_and_label(true, M_UP_VSENSE_VCC, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_UP_VSENSE_VPP, BP_PIN_MODE, pin_labels[1]);
     system_bio_update_purpose_and_label(true, M_UP_VCCH, BP_PIN_MODE, pin_labels[2]);
@@ -71,8 +130,35 @@ uint32_t up_setup_exc(void) {
     bio_put(M_UP_VPPH, 0); 
     system_set_active(true, M_UP_VPPH, &system_config.aux_active);
 
-    printf("-UP- setup_exc()\r\n");
+    // psu stuff
+    psu_result = psucmd_enable(5.0f, 300.0f, false, 10);
     
+    switch(psu_result)
+    {
+      case PSU_ERROR_FUSE_TRIPPED:
+          ui_help_error(T_PSU_CURRENT_LIMIT_ERROR);
+          break;    
+      case PSU_ERROR_VOUT_LOW:
+          ui_help_error(T_PSU_SHORT_ERROR);
+          break;
+      case PSU_ERROR_BACKFLOW:
+          printf("%s\r\nError: Vout > on-board power supply. Backflow prevention activated\r\n\tIs an external voltage connected to Vout/Vref pin?\r\n%s",
+            ui_term_color_warning(),
+            ui_term_color_reset()); 
+          break;
+      default: 
+    }
+
+    if(psu_result==PSU_OK)
+    {
+      printf ("Warning PSU is on!!\r\n");
+    }
+    else
+    {
+      system_config.error = 1;
+      return 0;
+    }
+
     // allocate 128k buffer 
     printf("trying to allocate big buffer\r\n"); 
     up_buffer=mem_alloc(128*1024, BP_BIG_BUFFER_UP);
@@ -106,6 +192,9 @@ void up_cleanup(void) {
     
     mem_free(up_buffer);
     up_buffer=NULL;
+    
+    psucmd_disable();
+
 }
 
 // Handler for any numbers the user enters (1, 0x01, 0b1) or string data "string"
@@ -244,10 +333,10 @@ void up_setpullups(uint32_t pullups)
   hwspi_write((uint8_t) pullups&0x0FF);
   hwspi_deselect();
   
-  if(debug)
+  if(up_debug)
   {
     printf(" pull() ");
-    printbin(pullups);
+    up_printbin(pullups);
     printf("\r\n");
   }
 }
@@ -271,10 +360,10 @@ void up_setdirection(uint32_t iodir)
   hwspi_write((uint8_t) iodir&0x0FF);
   hwspi_deselect();
   
-  if(debug)
+  if(up_debug)
   {
     printf(" dir()  ");
-    printbin(iodir);
+    up_printbin(iodir);
     printf("\r\n");
   }
 }
@@ -320,10 +409,10 @@ uint32_t up_pins(uint32_t pinout)
   pinin|=hwspi_read();
   hwspi_deselect();
   
-  if(debug)
+  if(up_debug)
   {
     printf(" pins() ");
-    printbin(pinin);
+    up_printbin(pinin);
     printf("\r\n");
   }
   
@@ -375,7 +464,7 @@ void up_icprint(int pins, int vcc, int gnd, int vpp)
   gnd=((32-pins)/2)+gnd;
   vpp=((32-pins)/2)+vpp;
 
-  if(verbose)
+  if(up_verbose)
   {
     if(pins==32) printf("              --_--\r\n");
     else         printf("\r\n");

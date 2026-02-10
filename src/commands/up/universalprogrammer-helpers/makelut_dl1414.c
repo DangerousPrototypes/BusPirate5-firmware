@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "../universalprogrammer_pinout.h"
+#include "../display.h"
 
 int main(void)
 {

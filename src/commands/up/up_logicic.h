@@ -3,10 +3,7 @@
 // uses .xml from https://gitlab.com/DavidGriffith/minipro
 // MIT license
 
-typedef struct up_logic {
-  char    name[16];
-  uint16_t start, end;
-} up_logic;
+
 
 static const up_logic logicic14[] ={
   { "4000", 0, 8 },

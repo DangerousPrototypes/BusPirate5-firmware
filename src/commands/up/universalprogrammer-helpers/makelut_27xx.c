@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "../universalprogrammer_pinout.h"
+#include "../eprom.h"
 
 int main(void)
 {

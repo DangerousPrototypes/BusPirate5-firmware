@@ -78,10 +78,6 @@ static const up_eprom_alias_t up_eprom_aliases[] = {
   {"27080",  UP_EPROM_27080}, {"27C080", UP_EPROM_27080},
 };
 
-
-static void writeeprom(uint32_t ictype, uint32_t page, int pulse);
-static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode);
-static void readepromid(int pins);
-static bool up_eprom_find_type(const char* name, uint32_t* out_ictype);
+void up_eprom_handler(struct command_result* res);
 
 

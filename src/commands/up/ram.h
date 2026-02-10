@@ -53,6 +53,14 @@
 #define UP_62XX_A15   UP_IO31
 #define UP_62XX_A16   UP_IO02
 
+#define UP_62XX_D0    UP_IO13
+#define UP_62XX_D1    UP_IO14
+#define UP_62XX_D2    UP_IO15
+#define UP_62XX_D3    UP_IO17
+#define UP_62XX_D4    UP_IO18
+#define UP_62XX_D5    UP_IO19
+#define UP_62XX_D6    UP_IO20
+#define UP_62XX_D7    UP_IO21
 
 #define UP_62XX_CE1     UP_IO22
 #define UP_62XX_CE2_28  UP_IO28   // CE2 signal on 28pin devices
@@ -60,11 +68,10 @@
 #define UP_62XX_OE      UP_IO24
 #define UP_62XX_WE      UP_IO29
 
-static void writedram41(uint32_t col, uint32_t row, bool data);
-static bool readdram41(uint32_t col, uint32_t row);
-static void initdram41(void);
-static void testdram41(uint32_t variant);
-static void testsram62(uint32_t variant);
+#define UP_62XX_PU  (UP_IO13|UP_IO14|UP_IO15|UP_IO17|UP_IO18|UP_IO19|UP_IO20|UP_IO21)
+#define UP_62XX_DIR  (UP_IO13|UP_IO14|UP_IO15|UP_IO17|UP_IO18|UP_IO19|UP_IO20|UP_IO21)
+
+void up_ram_handler(struct command_result* res);
 
 
 

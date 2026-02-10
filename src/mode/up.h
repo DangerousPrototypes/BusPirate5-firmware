@@ -21,7 +21,7 @@ extern const struct _mode_command_struct up_commands[];
 extern const uint32_t up_commands_count;
 
 // hw settings
-#define UP_SPISPEED 10500 // 10416Khz; 10000->8928Khz
+#define UP_SPISPEED 10500000 // 10416Khz; 10000->8928Khz
 #define UP_NBITS  8
 #define UP_CPOL   1
 #define UP_CPHA   1
@@ -77,8 +77,14 @@ uint32_t up_setcs(uint32_t otherpins, uint32_t cs, int mode, int active);
 
 
 // usefull info for the user
-static void up_printic(int pins, int vcc, int gnd, int vpp);
+void up_icprint(int pins, int vcc, int gnd, int vpp);
 
-void printbin(uint32_t d);
+void up_printbin(uint32_t d);
+
+
+extern uint8_t *up_buffer;
+extern bool up_verbose;
+extern bool up_debug;      // print the bits on the ZIF socket
+extern const char rotate[];
 
 

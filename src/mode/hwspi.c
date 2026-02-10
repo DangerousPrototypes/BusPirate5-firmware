@@ -39,7 +39,7 @@
 #include "commands/spi/sniff.h"
 #include "usb_rx.h"
 #include "commands/eeprom/eeprom_spi.h"
-#include "commands/spi/universalprogrammer.h"
+//#include "commands/spi/universalprogrammer.h"
 
 // command configuration
 const struct _mode_command_struct hwspi_commands[] = {
@@ -54,13 +54,15 @@ const struct _mode_command_struct hwspi_commands[] = {
         .supress_fala_capture=true
 
     },
+    
+/*  
     {   .command="up", 
         .func=&spi_up_handler, 
         .description_text=T_HELP_SPI_UP, 
         .supress_fala_capture=true
 
     },
-    
+*/    
 /*    {   .command="sniff", 
         .func=&sniff_handler, 
         .description_text=T_SPI_CMD_SNIFF, 

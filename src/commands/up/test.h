@@ -5,6 +5,6 @@
 
 */
 
-static void up_test(void);
-static void up_vtest(void);
+void up_test_handler(struct command_result* res);
+
 

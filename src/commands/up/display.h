@@ -41,7 +41,6 @@
 #define UP_DL1414_PU (0)
 #define UP_DL1414_DIR (0)
 
-static void testdl1414(void);
-static void testtil305(void);
+void up_display_handler(struct command_result* res);
 
 

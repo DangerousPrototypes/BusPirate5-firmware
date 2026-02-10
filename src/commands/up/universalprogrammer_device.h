@@ -86,6 +86,7 @@
 
 
 // eprom only for now
+// todo: extend with other stuff
 typedef struct up_device {
   char      name[16];
   uint16_t  mnameid;

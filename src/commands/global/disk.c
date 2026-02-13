@@ -25,174 +25,6 @@
 #include "ui/ui_cmdln.h"
 #include "pirate/storage.h"
 
-#if 0
-#define DEF_ROW_SIZE 16
-#define PRINTABLE(_c) (_c > 0x1f && _c < 0x7f ? _c : '.')
-
-static const char* const hex_usage[] = { "hex <file> [-d(address)] [-a(ascii)] [-s <size>]",
-                                         "Print file contents in HEX:%s hex example.bin -d -a -s 8",
-                                         "press 'x' to quit pager" };
-static const struct ui_help_options hex_options[] = { { 1, "", T_HELP_DISK_HEX }, // section heading
-                                                      { 0, "<file>", T_HELP_DISK_HEX_FILE },
-                                                      { 0, "-d", T_HELP_DISK_HEX_ADDR },
-                                                      { 0, "-a", T_HELP_DISK_HEX_ASCII },
-                                                      { 0, "-s <size>", T_HELP_DISK_HEX_SIZE },
-                                                      { 0, "-t <off>", T_HELP_DISK_HEX_OFF },
-                                                      { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF } };
-
-// Show flags
-#define HEX_NONE 0x00
-#define HEX_ADDR 0x01
-#define HEX_ASCII 0x02
-
-// shown_off:  starting shown offset, used for display only
-// page_lines: number of lines per page. 0 means no paging
-// row_size:   row size in bytes
-// flags:      show flags (address and ascii only for now)
-static uint32_t hex_dump(
-    FIL* fil, uint32_t shown_off, const uint16_t page_lines, const uint16_t row_size, const uint8_t flags) {
-    const bool flag_addr = flags & HEX_ADDR;
-    const bool flag_ascii = flags & HEX_ASCII;
-    const uint32_t page_size = page_lines ? page_lines * row_size : (uint32_t)-1;
-    char buf[512];
-    uint32_t buf_off = 0;
-    uint32_t line_start_off = 0;
-    uint32_t tot_read = 0;
-    bool print_addr = false;
-
-    if (flag_addr) {
-        print_addr = true;
-    }
-    UINT bytes_read = 0;
-    while (true) {
-        f_read(fil, &buf, MIN(sizeof(buf), page_size), &bytes_read);
-        tot_read += bytes_read;
-        if (!bytes_read) {
-            // Flush last line
-            if (flag_ascii) {
-                uint16_t rem = buf_off % row_size;
-                if (rem) {
-                    for (uint16_t j = 0; j < row_size - rem; j++) {
-                        printf("   ");
-                    }
-                    printf(" |");
-                    for (uint16_t j = 0; j < rem; j++) {
-                        printf("%c", PRINTABLE(buf[line_start_off + j]));
-                    }
-                    printf("|");
-                }
-            }
-            break;
-        }
-        for (UINT i = 0; i < bytes_read; i++) {
-            if (print_addr) {
-                print_addr = false;
-                printf("%08X  ", shown_off);
-            }
-            printf("%02x ", buf[i]);
-            buf_off++;
-            shown_off++;
-            if (!(buf_off % row_size)) {
-                if (flag_ascii) {
-                    printf(" |");
-                    for (uint16_t j = 0; j < row_size; j++) {
-                        printf("%c", PRINTABLE(buf[line_start_off + j]));
-                    }
-                    printf("|");
-                }
-                printf("\r\n");
-                if (flag_addr) {
-                    print_addr = true;
-                }
-                line_start_off = buf_off;
-            }
-        }
-        if (tot_read >= page_size) {
-            break;
-        }
-    }
-    return bytes_read;
-}
-
-void disk_hex_handler(struct command_result* res) {
-    // check help
-    if (ui_help_show(res->help_flag, hex_usage, count_of(hex_usage), &hex_options[0], count_of(hex_options))) {
-        return;
-    }
-
-    FIL fil;    /* File object needed for each open file */
-    FRESULT fr; /* FatFs return code */
-    char location[32];
-    uint32_t off = 0;
-    uint32_t row_size = DEF_ROW_SIZE;
-    uint8_t flags = HEX_ADDR | HEX_ASCII; // default to both address and ascii
-    uint32_t bytes_read = 0;
-    uint16_t page_lines = 0;
-    uint32_t seek_off = 0;
-    uint32_t pager_off = 0;
-    command_var_t arg;
-    char recv_char;
-
-    cmdln_args_string_by_position(1, sizeof(location), location);
-    fr = f_open(&fil, location, FA_READ);
-    if (fr != FR_OK) {
-        storage_file_error(fr);
-        res->error = true;
-        return;
-    }
-/*
-    if (cmdln_args_find_flag('d' | 0x20)) {
-        flags |= HEX_ADDR;
-    }
-    if (cmdln_args_find_flag('a' | 0x20)) {
-        flags |= HEX_ASCII;
-    }
-*/
-    if (!cmdln_args_find_flag_uint32('s' | 0x20, &arg, &row_size)) {
-        row_size = DEF_ROW_SIZE;
-    }
-    if (!cmdln_args_find_flag_uint32('t' | 0x20, &arg, &seek_off)) {
-        seek_off = 0;
-    }
-    if (cmdln_args_find_flag('c' | 0x20)) {
-        pager_off = 1;
-    }
-
-    page_lines = system_config.terminal_ansi_rows;
-    f_lseek(&fil, seek_off);
-    off = seek_off;
-    printf("\r\n");
-    
-    //show header if row size is 16
-    if(row_size == 16){
-        printf("          00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\r\n");
-        printf("---------------------------------------------------------\r\n");
-    }
-
-    while ((bytes_read = hex_dump(&fil, off, page_lines, row_size, flags)) > 0) {
-        off += bytes_read;
-
-        if (pager_off) {
-            continue;
-        }
-
-        recv_char = ui_term_cmdln_wait_char('\0');
-        switch (recv_char) {
-            // give the user the ability to bail out
-            case 'x':
-                goto exit_hex_dump_early;
-                break;
-            // anything else just keep going
-            default:
-                break;
-        }
-    }
-
-exit_hex_dump_early:
-    f_close(&fil);
-    printf("\r\n");
-}
-#endif 
 static const char* const cat_usage[] = {
     "cat <file>",
     "Print file contents:%s cat example.txt",
@@ -359,14 +191,6 @@ uint8_t disk_format(void) {
     return fr;
 }
 
-bool disk_format_confirm(void) {
-    uint32_t confirm;
-    do {
-        confirm = ui_prompt_yes_no();
-    } while (confirm > 1);
-    return confirm;
-}
-
 static const char* const format_usage[] = {
     "format",
     "Format storage:%s format",
@@ -383,13 +207,18 @@ void disk_format_handler(struct command_result* res) {
         return;
     }
 
-    cmdln_next_buf_pos();
-    printf("Erase the internal storage?\r\ny/n> \x03");
-    if (disk_format_confirm() == false) {
+    prompt_result presult;
+    bool confirm;
+
+    printf("Erase the internal storage?");
+    ui_prompt_bool(&presult, false, false, false, &confirm);
+    if (!confirm) {
         return;
     }
-    printf("\r\nAre you sure?\r\ny/n> \x03");
-    if (disk_format_confirm() == false) {
+
+    printf("Are you sure?");
+    ui_prompt_bool(&presult, false, false, false, &confirm);
+    if (!confirm) {
         return;
     }
     printf("\r\n\r\nFormatting...\r\n");

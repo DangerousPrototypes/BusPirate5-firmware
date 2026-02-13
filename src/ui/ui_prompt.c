@@ -327,6 +327,7 @@ const struct ui_prompt_config prompt_list_cfg = {
 };
 
 // this is state machine friendly
+#if 0
 bool ui_prompt_vt100_mode(prompt_result* result, uint32_t* value) {
     *result = empty_result;
     char c;
@@ -359,35 +360,7 @@ bool ui_prompt_vt100_mode(prompt_result* result, uint32_t* value) {
 
     return true;
 }
-
-uint32_t ui_prompt_yes_no(void) {
-    char c;
-
-    //return 1;
-
-    if (ui_term_get_user_input() != 0xff) {
-        return 2;
-    }
-
-    if (!cmdln_try_remove(&c)) {
-        return 2;
-    }
-
-    cmdln_next_buf_pos();
-
-    c |= 0x20; // to lowercase
-
-    switch (c) {
-        case 'y':
-            return 1;
-        case 'n':
-            return 0;
-        default:
-            return 3;
-    }
-
-    return 3;
-}
+    #endif
 
 void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units) {
     printf(" %s%s%s: %d %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), value, units);

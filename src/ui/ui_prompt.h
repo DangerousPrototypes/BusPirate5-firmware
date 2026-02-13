@@ -101,7 +101,6 @@ bool ui_prompt_any_key_continue(struct prompt_result* result,
                                 bool refresh);
 bool ui_prompt_vt100_mode(prompt_result* result, uint32_t* value);
 void ui_prompt_invalid_option(void);
-uint32_t ui_prompt_yes_no(void);
 bool ui_prompt_bool(prompt_result* result, bool defval_show, bool defval, bool allow_exit, bool* user_value);
 
 void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units);

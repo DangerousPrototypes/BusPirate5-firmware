@@ -36,19 +36,13 @@ bool selftest_rp2350_e9_fix(void){
 }
 
 bool selftest_format_nand(void) {
-    uint32_t value;
     struct prompt_result presult;
+    bool confirm;
     if (!system_config.storage_available) {
-        printf("No file system!\r\nFormat the Bus Pirate NAND flash?\r\nALL DATA WILL BE DESTROYED.\r\n y/n> ");
-        cmdln_next_buf_pos();
-        while (1) {
-            ui_prompt_vt100_mode(&presult, &value);
-            if (presult.success) {
-                break;
-            }
-        }
-        printf("\r\n\r\n");
-        if (value == 'y') {
+        printf("No file system!\r\nFormat the Bus Pirate NAND flash?\r\nALL DATA WILL BE DESTROYED.");
+        ui_prompt_bool(&presult, false, false, false, &confirm);
+        printf("\r\n");
+        if (confirm) {
             uint8_t fr = storage_format();
             if (fr) {
                 storage_file_error(fr);

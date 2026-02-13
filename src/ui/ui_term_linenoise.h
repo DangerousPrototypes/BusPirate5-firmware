@@ -80,4 +80,19 @@ void ui_prompt_linenoise_start(const char *prompt);
  */
 uint32_t ui_prompt_linenoise_feed(void);
 
+/*
+ * =============================================================================
+ * Command injection (macros / scripts)
+ * =============================================================================
+ */
+
+/**
+ * @brief Inject a command string for processing (no echo/editing).
+ * @details Writes string into linenoise buffer and sets up linear reader.
+ *          Used by macros and scripts to feed commands directly.
+ * @param str  Null-terminated command string
+ * @return true if string fit in buffer, false if truncated
+ */
+bool ui_term_linenoise_inject_string(const char *str);
+
 #endif // UI_TERM_LINENOISE_H

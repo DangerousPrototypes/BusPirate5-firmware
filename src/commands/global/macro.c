@@ -35,6 +35,7 @@
 #include "pirate/amux.h"   // Analog voltage measurement functions
 #include "pirate/button.h" // Button press functions
 #include "ui/ui_term.h"    // Terminal functions
+#include "ui/ui_term_linenoise.h"
 #include "ui/ui_process.h"
 
 static bool exec_macro_id(const char* id);
@@ -142,13 +143,10 @@ static bool exec_macro_id(const char* id) {
         return true;
     }
     m++;
-    
-    cmdln_next_buf_pos();
-    while (*m && ui_term_cmdln_char_insert(m)) {
-        m++;
-    }
-    cmdln_try_add(0x00);
-    return ui_process_commands(); // I think we're going to run into issues with the ui_process loop if &&||; are used....
+
+    ui_term_linenoise_inject_string(m);
+    bool error = ui_process_commands();
+    return error;
 }
 
 void disk_show_macro_file(const char* location) {

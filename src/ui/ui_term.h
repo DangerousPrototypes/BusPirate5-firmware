@@ -117,22 +117,26 @@ void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progr
 void ui_term_progress_bar_cleanup(ui_term_progress_bar_t* pb);
 
 /**
- * @brief Get user input character.
- * @return Input character
- */
-uint32_t ui_term_get_user_input(void);
-
-/**
- * @name Command-line editing functions
+ * @name Command-line editing functions (DEPRECATED)
+ * @details These functions are deprecated. Use linenoise-based equivalents:
+ *   - ui_term_get_user_input → ui_prompt_linenoise_feed()
+ *   - ui_term_cmdln_char_insert → ui_term_linenoise_inject_string()
  * @{
  */
-bool ui_term_cmdln_char_insert(char* c);
-bool ui_term_cmdln_char_backspace(void);
-bool ui_term_cmdln_char_delete(void);
-void ui_term_cmdln_fkey(char* c);
-void ui_term_cmdln_arrow_keys(char* c);
-int ui_term_cmdln_history(int ptr);
-char ui_term_cmdln_wait_char(char c);
+// uint32_t ui_term_get_user_input(void);     // Use ui_prompt_linenoise_feed()
+// bool ui_term_cmdln_char_insert(char* c);   // Use ui_term_linenoise_inject_string()
+// bool ui_term_cmdln_char_backspace(void);   // Handled by linenoise internally
+// bool ui_term_cmdln_char_delete(void);      // Handled by linenoise internally
+// void ui_term_cmdln_fkey(char* c);          // Handled by linenoise internally
+// void ui_term_cmdln_arrow_keys(char* c);    // Handled by linenoise internally
+// int ui_term_cmdln_history(int ptr);        // Handled by linenoise internally
 /** @} */
+
+/**
+ * @brief Wait for a specific char from the terminal (or any if NUL).
+ * @param c  Character to wait for, or '\\0' for any character
+ * @return The character received
+ */
+char ui_term_cmdln_wait_char(char c);
 
 #endif

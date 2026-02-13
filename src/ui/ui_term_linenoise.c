@@ -14,7 +14,6 @@
 #include "lib/bp_linenoise/linenoise.h"
 #include "lib/bp_linenoise/ln_cmdreader.h"
 #include "ui/ui_term.h"
-#include "ui/ui_cmdln.h"
 #include "ui/ui_statusbar.h"
 #include "command_struct.h"
 #include "commands.h"
@@ -98,7 +97,6 @@ uint32_t ui_term_linenoise_feed(void) {
             // Line complete - set up linear buffer reader
             linenoiseEditStop(&ln_state);
             ln_cmdln_init(ln_state.buf, ln_state.len);
-            cmdln_enable_linear_mode();  // Enable linear mode for parsing
             
             // Add to history (if not empty)
             if (ln_state.len > 0) {
@@ -194,7 +192,6 @@ bool ui_prompt_linenoise_input(const char *prompt) {
             case LN_ENTER:
                 linenoiseEditStop(&ln_prompt_state);
                 ln_cmdln_init(ln_prompt_state.buf, ln_prompt_state.len);
-                cmdln_enable_linear_mode();  // Enable linear mode for parsing
                 return true;
                 
             case LN_CTRL_C:
@@ -223,7 +220,6 @@ uint32_t ui_prompt_linenoise_feed(void) {
         case LN_ENTER:
             linenoiseEditStop(&ln_prompt_state);
             ln_cmdln_init(ln_prompt_state.buf, ln_prompt_state.len);
-            cmdln_enable_linear_mode();  // Enable linear mode for parsing
             return 0xff;
             
         case LN_CTRL_C:
@@ -279,7 +275,6 @@ bool ui_term_linenoise_inject_string(const char *str) {
 
     /* Set up the linear reader so cmdln_try_peek/remove route here. */
     ln_cmdln_init(ln_state.buf, ln_state.len);
-    cmdln_enable_linear_mode();
 
     return (slen == strlen(str));
 }

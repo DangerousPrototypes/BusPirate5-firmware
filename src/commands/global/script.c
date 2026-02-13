@@ -14,6 +14,7 @@
 #include "pirate/amux.h"   // Analog voltage measurement functions
 #include "pirate/button.h" // Button press functions
 #include "ui/ui_term.h"    // Terminal functions
+#include "ui/ui_term_linenoise.h"
 #include "ui/ui_process.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
@@ -84,7 +85,6 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
                 printf("%sTip: <enter> to continue%s\r\n", ui_term_color_prompt(), ui_term_color_reset());
                 show_tip = false;
             }
-            cmdln_next_buf_pos();
             if (system_config.subprotocol_name) {
                 printf("%s%s-(%s)>%s ",
                        ui_term_color_prompt(),
@@ -95,14 +95,18 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
                 printf(
                     "%s%s>%s ", ui_term_color_prompt(), modes[system_config.mode].protocol_name, ui_term_color_reset());
             }
-            for (uint32_t i = 0; i < sizeof(file); i++) {
-                if (file[i] == '\r' || file[i] == '\n' || file[i] == '\0') {
-                    break;
+            // Strip trailing \r\n and inject into linenoise buffer
+            {
+                size_t slen = 0;
+                for (size_t i = 0; i < sizeof(file); i++) {
+                    if (file[i] == '\r' || file[i] == '\n' || file[i] == '\0') {
+                        break;
+                    }
+                    slen++;
                 }
-                ui_term_cmdln_char_insert(&file[i]);
+                file[slen] = '\0';
             }
-            //mark end of command
-            cmdln_try_add(0x00);
+            ui_term_linenoise_inject_string(file);
 
             if (pause_for_input) {
                 //while (ui_term_get_user_input() != 0xff)

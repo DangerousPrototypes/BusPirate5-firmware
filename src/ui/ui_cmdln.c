@@ -31,26 +31,7 @@
 struct _command_line cmdln;          // everything the user entered before <enter>
 struct _command_info_t command_info; // the current command and position in the buffer
 
-// Flag to use linear buffer for parsing
-static bool use_linear_buffer = false;
-
 static const struct prompt_result empty_result;
-
-/**
- * @brief Reset to circular buffer mode after command processing.
- */
-void cmdln_end_linear(void) {
-    use_linear_buffer = false;
-}
-
-/**
- * @brief Enable linear buffer mode (for linenoise integration).
- * @details Called when linenoise has set up the linear reader directly.
- *          Assumes ln_cmdln_init() was already called.
- */
-void cmdln_enable_linear_mode(void) {
-    use_linear_buffer = true;
-}
 
 void cmdln_init(void) {
     for (uint32_t i = 0; i < UI_CMDBUFFSIZE; i++) {
@@ -82,43 +63,15 @@ bool cmdln_try_add(char* c) {
 }
 
 bool cmdln_try_remove(char* c) {
-    // Use linear buffer if enabled
-    if (use_linear_buffer) {
-        if (ln_cmdln_try_peek(0, c)) {
-            ln_cmdln_try_discard(1);
-            return true;
-        }
-        return false;
+    if (ln_cmdln_try_peek(0, c)) {
+        ln_cmdln_try_discard(1);
+        return true;
     }
-    
-    // Original circular buffer implementation
-    if (cmdln_pu(cmdln.rptr) == cmdln_pu(cmdln.wptr)) {
-        return false;
-    }
-
-    (*c) = cmdln.buf[cmdln.rptr];
-    cmdln.rptr = cmdln_pu(cmdln.rptr + 1);
-    return true;
+    return false;
 }
 
 bool cmdln_try_peek(uint32_t i, char* c) {
-    // Use linear buffer if enabled
-    if (use_linear_buffer) {
-        return ln_cmdln_try_peek(i, c);
-    }
-    
-    // Original circular buffer implementation
-    if (cmdln_pu(cmdln.rptr + i) == cmdln_pu(cmdln.wptr)) {
-        return false;
-    }
-
-    (*c) = cmdln.buf[cmdln_pu(cmdln.rptr + i)];
-
-    if ((*c) == 0x00) {
-        return false;
-    }
-
-    return true;
+    return ln_cmdln_try_peek(i, c);
 }
 
 bool cmdln_try_peek_pointer(struct _command_pointer* cp, uint32_t i, char* c) {
@@ -131,19 +84,7 @@ bool cmdln_try_peek_pointer(struct _command_pointer* cp, uint32_t i, char* c) {
 }
 
 bool cmdln_try_discard(uint32_t i) {
-    // Use linear buffer if enabled
-    if (use_linear_buffer) {
-        return ln_cmdln_try_discard(i);
-    }
-    
-    // Original circular buffer implementation
-    // this isn't very effective, maybe just not use it??
-    // if(cmdln_pu(cmdln.rptr+i) == cmdln_pu(cmdln.wprt))
-    //{
-    //    return false;
-    //}
-    cmdln.rptr = cmdln_pu(cmdln.rptr + i);
-    return true;
+    return ln_cmdln_try_discard(i);
 }
 
 bool cmdln_next_buf_pos(void) {

@@ -1,17 +1,10 @@
 /**
  * @file ui_cmdln.c
- * @brief Command line buffer and argument parsing implementation.
- * @details Implements circular buffer command line with:
- *          - History scrolling through previous commands
+ * @brief Command line argument parsing implementation.
+ * @details Provides argument parsing using linenoise linear buffer:
  *          - Command chaining with delimiters (; || &&)
  *          - Argument parsing (flags, positions, types)
  *          - Multiple number formats (hex, decimal, binary)
- *          
- *          Buffer structure:
- *          - Circular buffer with separate read/write/cursor pointers
- *          - Commands separated by 0x00 terminators
- *          - History maintained in same circular buffer
- *          
  */
 
 #include <stdbool.h>
@@ -27,83 +20,9 @@
 #include "ui/ui_cmdln.h"
 #include "lib/bp_linenoise/ln_cmdreader.h"
 
-// the command line struct with buffer and several pointers
-struct _command_line cmdln;          // everything the user entered before <enter>
 struct _command_info_t command_info; // the current command and position in the buffer
 
 static const struct prompt_result empty_result;
-
-void cmdln_init(void) {
-    for (uint32_t i = 0; i < UI_CMDBUFFSIZE; i++) {
-        cmdln.buf[i] = 0x00;
-    }
-    cmdln.wptr = 0;
-    cmdln.rptr = 0;
-    cmdln.histptr = 0;
-    cmdln.cursptr = 0;
-}
-// pointer update, rolls over
-uint32_t cmdln_pu(uint32_t i) {
-    return ((i) & (UI_CMDBUFFSIZE - 1));
-}
-
-void cmdln_get_command_pointer(struct _command_pointer* cp) {
-    cp->wptr = cmdln.wptr;
-    cp->rptr = cmdln.rptr;
-}
-
-bool cmdln_try_add(char* c) {
-    // TODO: leave one space for 0x00 command seperator????
-    if (cmdln_pu(cmdln.wptr + 1) == cmdln_pu(cmdln.rptr)) {
-        return false;
-    }
-    cmdln.buf[cmdln.wptr] = (*c);
-    cmdln.wptr = cmdln_pu(cmdln.wptr + 1);
-    return true;
-}
-
-bool cmdln_try_remove(char* c) {
-    if (ln_cmdln_try_peek(0, c)) {
-        ln_cmdln_try_discard(1);
-        return true;
-    }
-    return false;
-}
-
-bool cmdln_try_peek(uint32_t i, char* c) {
-    return ln_cmdln_try_peek(i, c);
-}
-
-bool cmdln_try_peek_pointer(struct _command_pointer* cp, uint32_t i, char* c) {
-    if (cmdln_pu(cp->rptr + i) == cmdln_pu(cp->wptr)) {
-        return false;
-    }
-
-    (*c) = cmdln.buf[cmdln_pu(cp->rptr + i)];
-    return true;
-}
-
-bool cmdln_try_discard(uint32_t i) {
-    return ln_cmdln_try_discard(i);
-}
-
-bool cmdln_next_buf_pos(void) {
-    cmdln.rptr = cmdln.wptr;
-    cmdln.cursptr = cmdln.wptr;
-    cmdln.histptr = 0;
-}
-
-// These are new functions to ease argument and options parsing
-//  Isolate the next command between the current read pointer and 0x00, (?test?) end of pointer, ; || && (next commmand)
-//  functions to move within the single command range
-
-uint32_t cmdln_get_length_pointer(struct _command_line* cp) {
-    if (cp->rptr > cp->wptr) {
-        return (UI_CMDBUFFSIZE - cp->rptr) + cp->wptr;
-    } else {
-        return cp->wptr - cp->rptr;
-    }
-}
 
 // consume white space (0x20, space)
 //  non_white_space = true, consume non-white space characters (not space)
@@ -519,48 +438,6 @@ cmdln_find_next_command_success:
     command_info.startptr = cp->startptr;
     command_info.endptr = cp->endptr;
     return true;
-}
-
-// function for debugging the command line arguments parsers
-//  shows all commands and all detected positions
-bool cmdln_info(void) {
-    // start and end point?
-    printf("Input start: %d, end %d\r\n", cmdln.rptr, cmdln.wptr);
-    // how many characters?
-    printf("Input length: %d\r\n", cmdln_get_length_pointer(&cmdln));
-    uint32_t i = 0;
-    struct _command_info_t cp;
-    cp.nextptr = 0;
-    while (cmdln_find_next_command(&cp)) {
-        printf("Command: %s, delimiter: %c\r\n", cp.command, cp.delimiter);
-        uint32_t pos = 0;
-        char str[9];
-        while (cmdln_args_string_by_position(pos, 9, str)) {
-            printf("String pos: %d, value: %s\r\n", pos, str);
-            pos++;
-        }
-    }
-}
-
-// function for debugging the command line arguments parsers
-//  shows all integers and all detected positions
-bool cmdln_info_uint32(void) {
-    // start and end point?
-    printf("Input start: %d, end %d\r\n", cmdln.rptr, cmdln.wptr);
-    // how many characters?
-    printf("Input length: %d\r\n", cmdln_get_length_pointer(&cmdln));
-    uint32_t i = 0;
-    struct _command_info_t cp;
-    cp.nextptr = 0;
-    while (cmdln_find_next_command(&cp)) {
-        printf("Command: %s, delimiter: %c\r\n", cp.command, cp.delimiter);
-        uint32_t pos = 0;
-        uint32_t value = 0;
-        while (cmdln_args_uint32_by_position(pos, &value)) {
-            printf("Integer pos: %d, value: %d\r\n", pos, value);
-            pos++;
-        }
-    }
 }
 
 //get first argument following command, search in a list of actions, error if not found

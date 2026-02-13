@@ -1,28 +1,9 @@
 /**
  * @file ui_cmdln.h
- * @brief Command line buffer and argument parsing interface.
- * @details Provides circular buffer command line with history,
- *          command parsing, and argument extraction.
+ * @brief Command line argument parsing interface.
+ * @details Provides command parsing and argument extraction.
+ *          Uses linenoise linear buffer via ln_cmdreader.
  */
-
-/**
- * @brief Circular command line buffer with history.
- */
-struct _command_line {
-    uint32_t wptr;     ///< Write pointer
-    uint32_t rptr;     ///< Read pointer  
-    uint32_t histptr;  ///< History scroll pointer
-    uint32_t cursptr;  ///< Cursor position pointer
-    char buf[UI_CMDBUFFSIZE]; ///< Circular buffer
-};
-
-/**
- * @brief Command buffer pointer snapshot.
- */
-struct _command_pointer {
-    uint32_t wptr;  ///< Write pointer snapshot
-    uint32_t rptr;  ///< Read pointer snapshot
-};
 
 /**
  * @brief Command parsing state.
@@ -126,90 +107,10 @@ bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char* str);
 bool cmdln_find_next_command(struct _command_info_t* cp);
 
 /**
- * @brief Get command info (for debugging).
- * @return true on success
- */
-bool cmdln_info(void);
-
-/**
- * @brief Get command info with uint32 parsing (for debugging).
- * @return true on success
- */
-bool cmdln_info_uint32(void);
-
-/**
- * @name Buffer management functions
+ * @name Buffer access (provided by ln_cmdreader macros)
+ * @details cmdln_try_peek, cmdln_try_discard, cmdln_try_remove
+ *          are macros defined in ln_cmdreader.h mapping to ln_cmdln_*.
  * @{
  */
-
-/**
- * @brief Update pointer with circular buffer rollover.
- * @param i  Pointer value
- * @return Wrapped pointer value
- */
-uint32_t cmdln_pu(uint32_t i);
-
-/**
- * @brief Try to add byte to command buffer.
- * @param c  Character to add
- * @return false if buffer full
- */
-bool cmdln_try_add(char* c);
-
-/**
- * @brief Try to remove byte from command buffer.
- * @param[out] c  Removed character
- * @return false if buffer empty
- */
-bool cmdln_try_remove(char* c);
-
-/**
- * @brief Try to peek at byte without advancing pointer.
- * @param i      Offset from read pointer
- * @param[out] c Peeked character
- * @return false if end of buffer
- * @note Use sequentially (peek(0) before peek(1)) to avoid buffer overrun
- */
-bool cmdln_try_peek(uint32_t i, char* c);
-
-/**
- * @brief Try to discard n bytes by advancing read pointer.
- * @param i  Number of bytes to discard
- * @return false if end of buffer
- * @note Should be used with try_peek to confirm before discarding
- */
-bool cmdln_try_discard(uint32_t i);
-
-/**
- * @brief Move read pointer to write pointer for next command.
- * @details Advances to next command position, enabling history scrolling.
- * @return Always true
- */
-bool cmdln_next_buf_pos(void);
-
-/**
- * @brief Initialize command line buffer.
- */
-void cmdln_init(void);
-
-/**
- * @brief Try to peek using custom pointer.
- * @param cp     Custom pointer structure
- * @param i      Offset from read pointer
- * @param[out] c Peeked character
- * @return false if end of buffer
- */
-bool cmdln_try_peek_pointer(struct _command_pointer* cp, uint32_t i, char* c);
-
-/**
- * @brief Get snapshot of current buffer pointers.
- * @param[out] cp  Pointer snapshot
- */
-void cmdln_get_command_pointer(struct _command_pointer* cp);
-
+#include "lib/bp_linenoise/ln_cmdreader.h"
 /** @} */
-
-/**
- * @brief Global command line buffer.
- */
-extern struct _command_line cmdln;

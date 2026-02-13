@@ -73,15 +73,13 @@ size_t ln_cmdln_remaining(void);
 
 /*
  * =============================================================================
- * Compatibility Layer
+ * Compatibility Macros
  * =============================================================================
- * When BP_USE_LINEAR_CMDLN is defined, the old cmdln_try_* functions
- * redirect to the new linear buffer reader. This allows incremental migration.
+ * Map the legacy cmdln_try_* names to the ln_cmdln_* functions.
+ * All callers use these names; the underlying implementation is ln_cmdreader.
  */
-#ifdef BP_USE_LINEAR_CMDLN
 #define cmdln_try_peek(i, c)    ln_cmdln_try_peek((i), (c))
 #define cmdln_try_discard(i)    ln_cmdln_try_discard((i))
 #define cmdln_try_remove(c)     (ln_cmdln_try_peek(0, (c)) ? (ln_cmdln_try_discard(1), true) : false)
-#endif
 
 #endif /* LN_CMDREADER_H */

@@ -326,42 +326,6 @@ const struct ui_prompt_config prompt_list_cfg = {
     &ui_prompt_validate_ordered_list // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
 };
 
-// this is state machine friendly
-#if 0
-bool ui_prompt_vt100_mode(prompt_result* result, uint32_t* value) {
-    *result = empty_result;
-    char c;
-
-    //*value = 'y';
-    //return true;
-
-    if (ui_term_get_user_input() != 0xff) {
-        return false;
-    }
-
-    if (!cmdln_try_remove(&c)) {
-        return false;
-    }
-
-    c |= 0x20; // to lowercase
-
-    switch (c) {
-        case 'y':
-        case 'n':
-            *value = (uint32_t)c;
-            result->success = true;
-            break;
-        default:
-            result->error = true; // flag that enter was pressed but nothing was entered correctly
-            break;
-    }
-
-    cmdln_next_buf_pos();
-
-    return true;
-}
-    #endif
-
 void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units) {
     printf(" %s%s%s: %d %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), value, units);
 }

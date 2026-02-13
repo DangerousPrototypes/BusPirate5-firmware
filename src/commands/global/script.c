@@ -109,7 +109,6 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
             ui_term_linenoise_inject_string(file);
 
             if (pause_for_input) {
-                //while (ui_term_get_user_input() != 0xff)
                 char c;
                 while(!rx_fifo_try_get(&c)); // user hit enter
                 if(c|0x20 == 'x') {

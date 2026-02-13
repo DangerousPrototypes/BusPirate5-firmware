@@ -389,7 +389,7 @@ char* ui_term_cursor_hide(void) {
 char* ui_term_cursor_show(void) {
     return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color ? "\033[?25h" : "";
 }
-
+#if 0
 // handles the user input
 uint32_t ui_term_get_user_input(void) {
     char c;
@@ -703,7 +703,7 @@ void ui_term_progress_bar(uint32_t current, uint32_t total) {
     }
     printf("%s]\r\033[1C", ui_term_color_prompt());
 }
-
+#endif
 void ui_term_progress_bar_draw(ui_term_progress_bar_t* pb) {
     system_config.terminal_hide_cursor = true;
     busy_wait_ms(1);

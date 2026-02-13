@@ -12,9 +12,6 @@
  *          - Commands separated by 0x00 terminators
  *          - History maintained in same circular buffer
  *          
- *          Migration to linear buffer:
- *          - When BP_USE_LINEAR_CMDLN is defined, parsing uses linear reader
- *          - Call cmdln_copy_to_linear() before processing to set up reader
  */
 
 #include <stdbool.h>
@@ -28,45 +25,16 @@
 #include "ui/ui_const.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_cmdln.h"
-#include "lib/bp_linenoise/bp_linenoise.h"
+#include "lib/bp_linenoise/ln_cmdreader.h"
 
 // the command line struct with buffer and several pointers
 struct _command_line cmdln;          // everything the user entered before <enter>
 struct _command_info_t command_info; // the current command and position in the buffer
 
-// Linear buffer for command processing (receives copy from circular buffer)
-static char cmdln_linear_buf[BP_LINENOISE_MAX_LINE + 1];
-static size_t cmdln_linear_len = 0;
-
-// Flag to use linear buffer for parsing (set after cmdln_copy_to_linear)
+// Flag to use linear buffer for parsing
 static bool use_linear_buffer = false;
 
 static const struct prompt_result empty_result;
-
-/**
- * @brief Copy current command from circular buffer to linear buffer.
- * @details Call this before processing a command to set up the linear reader.
- *          The linear buffer is then used by bp_cmdln_try_peek/discard.
- */
-void cmdln_copy_to_linear(void) {
-    cmdln_linear_len = 0;
-    uint32_t i = cmdln.rptr;
-    
-    // Copy from rptr to wptr (or until null terminator)
-    while (i != cmdln.wptr && cmdln_linear_len < BP_LINENOISE_MAX_LINE) {
-        char c = cmdln.buf[cmdln_pu(i)];
-        if (c == 0x00) break;  // Stop at null terminator
-        cmdln_linear_buf[cmdln_linear_len++] = c;
-        i = cmdln_pu(i + 1);
-    }
-    cmdln_linear_buf[cmdln_linear_len] = '\0';
-    
-    // Initialize the linear reader
-    bp_cmdln_init_reader(cmdln_linear_buf, cmdln_linear_len);
-    
-    // Enable linear buffer mode for parsing
-    use_linear_buffer = true;
-}
 
 /**
  * @brief Reset to circular buffer mode after command processing.
@@ -77,27 +45,11 @@ void cmdln_end_linear(void) {
 
 /**
  * @brief Enable linear buffer mode (for linenoise integration).
- * @details Called when linenoise has set up bp_cmdln directly.
- *          Assumes bp_cmdln_init_reader() was already called.
+ * @details Called when linenoise has set up the linear reader directly.
+ *          Assumes ln_cmdln_init() was already called.
  */
 void cmdln_enable_linear_mode(void) {
     use_linear_buffer = true;
-}
-
-/**
- * @brief Get the linear buffer for direct access.
- * @return Pointer to null-terminated linear command buffer
- */
-const char* cmdln_get_linear_buf(void) {
-    return cmdln_linear_buf;
-}
-
-/**
- * @brief Get length of linear buffer content.
- * @return Length in bytes
- */
-size_t cmdln_get_linear_len(void) {
-    return cmdln_linear_len;
 }
 
 void cmdln_init(void) {
@@ -108,8 +60,6 @@ void cmdln_init(void) {
     cmdln.rptr = 0;
     cmdln.histptr = 0;
     cmdln.cursptr = 0;
-    cmdln_linear_len = 0;
-    cmdln_linear_buf[0] = '\0';
 }
 // pointer update, rolls over
 uint32_t cmdln_pu(uint32_t i) {
@@ -134,8 +84,8 @@ bool cmdln_try_add(char* c) {
 bool cmdln_try_remove(char* c) {
     // Use linear buffer if enabled
     if (use_linear_buffer) {
-        if (bp_cmdln_try_peek(0, c)) {
-            bp_cmdln_try_discard(1);
+        if (ln_cmdln_try_peek(0, c)) {
+            ln_cmdln_try_discard(1);
             return true;
         }
         return false;
@@ -154,7 +104,7 @@ bool cmdln_try_remove(char* c) {
 bool cmdln_try_peek(uint32_t i, char* c) {
     // Use linear buffer if enabled
     if (use_linear_buffer) {
-        return bp_cmdln_try_peek(i, c);
+        return ln_cmdln_try_peek(i, c);
     }
     
     // Original circular buffer implementation
@@ -183,7 +133,7 @@ bool cmdln_try_peek_pointer(struct _command_pointer* cp, uint32_t i, char* c) {
 bool cmdln_try_discard(uint32_t i) {
     // Use linear buffer if enabled
     if (use_linear_buffer) {
-        return bp_cmdln_try_discard(i);
+        return ln_cmdln_try_discard(i);
     }
     
     // Original circular buffer implementation

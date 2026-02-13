@@ -449,13 +449,31 @@ static int utf8CharWidth(uint32_t cp) {
 /* Calculate the display width of a UTF-8 string of 'len' bytes.
  * This is used for cursor positioning in the terminal.
  * Handles grapheme clusters: characters joined by ZWJ contribute 0 width
- * after the first character in the sequence. */
+ * after the first character in the sequence.
+ * Skips ANSI escape sequences (ESC [ ... final_byte) so that color codes
+ * in prompts don't inflate the reported width. */
 static size_t utf8StrWidth(const char *s, size_t len) {
     size_t width = 0;
     size_t i = 0;
     int after_zwj = 0;  /* Track if previous char was ZWJ */
 
     while (i < len) {
+        /* Skip ANSI escape sequences: ESC [ <params> <final byte 0x40-0x7E>
+         * Also handles ESC ( and other two-byte sequences. */
+        if ((unsigned char)s[i] == 0x1b && i + 1 < len) {
+            i++; /* skip ESC */
+            if (s[i] == '[') {
+                /* CSI sequence: skip until 0x40-0x7E */
+                i++;
+                while (i < len && (unsigned char)s[i] < 0x40) i++;
+                if (i < len) i++; /* skip final byte */
+            } else {
+                /* Two-byte escape (e.g. ESC ( B): skip one more byte */
+                i++;
+            }
+            continue;
+        }
+
         size_t clen;
         uint32_t cp = utf8DecodeChar(s + i, &clen);
 

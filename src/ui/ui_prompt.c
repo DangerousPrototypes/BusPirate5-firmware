@@ -331,6 +331,9 @@ bool ui_prompt_vt100_mode(prompt_result* result, uint32_t* value) {
     *result = empty_result;
     char c;
 
+    //*value = 'y';
+    //return true;
+
     if (ui_term_get_user_input() != 0xff) {
         return false;
     }
@@ -359,6 +362,8 @@ bool ui_prompt_vt100_mode(prompt_result* result, uint32_t* value) {
 
 uint32_t ui_prompt_yes_no(void) {
     char c;
+
+    //return 1;
 
     if (ui_term_get_user_input() != 0xff) {
         return 2;

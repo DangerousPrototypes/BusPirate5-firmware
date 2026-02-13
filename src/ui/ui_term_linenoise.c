@@ -1,7 +1,7 @@
 /**
  * @file ui_term_linenoise.c
  * @brief Linenoise integration for Bus Pirate terminal.
- * @details Connects bp_linenoise to USB CDC I/O and the command processing system.
+ * @details Connects linenoise to USB CDC I/O and the command processing system.
  */
 
 #include <stdio.h>
@@ -11,7 +11,8 @@
 #include "system_config.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
-#include "lib/bp_linenoise/bp_linenoise.h"
+#include "lib/bp_linenoise/linenoise.h"
+#include "lib/bp_linenoise/ln_cmdreader.h"
 #include "ui/ui_term.h"
 #include "ui/ui_cmdln.h"
 #include "ui/ui_statusbar.h"
@@ -21,11 +22,11 @@
 #include "modes.h"
 
 // Main command line linenoise state (has history)
-static bp_linenoise_state_t ln_state;
+static struct linenoiseState ln_state;
 static bool ln_initialized = false;
 
 // Sub-prompt linenoise state (no history, simpler prompts)
-static bp_linenoise_state_t ln_prompt_state;
+static struct linenoiseState ln_prompt_state;
 static bool ln_prompt_initialized = false;
 
 // I/O callbacks for linenoise
@@ -43,94 +44,16 @@ static void ln_write(const char *s, size_t len) {
     }
 }
 
-/**
- * @brief Tab completion callback for Bus Pirate commands.
- * @details Matches the current input against global commands and
- *          mode-specific commands for the active protocol.
- */
-static void bp_completion_callback(const char *buf, size_t len, bp_linenoise_completions_t *lc) {
-    if (len == 0) {
-        return;  // Don't complete empty input
-    }
-    
-    // Match against global commands
-    for (uint32_t i = 0; i < commands_count; i++) {
-        if (strncmp(buf, commands[i].command, len) == 0) {
-            bp_linenoise_add_completion(lc, commands[i].command);
-        }
-    }
-    
-    // Match against mode-specific commands (if any)
-    const struct _mode_command_struct *mode_cmds = modes[system_config.mode].mode_commands;
-    const uint32_t *mode_count_ptr = modes[system_config.mode].mode_commands_count;
-    if (mode_cmds && mode_count_ptr && *mode_count_ptr > 0) {
-        uint32_t mode_count = *mode_count_ptr;
-        for (uint32_t i = 0; i < mode_count; i++) {
-            if (mode_cmds[i].func && strncmp(buf, mode_cmds[i].command, len) == 0) {
-                bp_linenoise_add_completion(lc, mode_cmds[i].command);
-            }
-        }
-    }
-}
-
-/**
- * @brief Hints callback for inline ghost-text completion.
- * @details Finds the best (longest) matching command and returns the
- *          remaining suffix to display as dim ghost text.
- *          E.g. user types "hel" → returns "p" (for "help").
- */
-static const char* bp_hints_callback(const char *buf, size_t len) {
-    if (len == 0) {
-        return NULL;
-    }
-    
-    const char *best = NULL;
-    size_t best_len = 0;
-    
-    // Search global commands for best (longest) prefix match
-    for (uint32_t i = 0; i < commands_count; i++) {
-        size_t cmd_len = strlen(commands[i].command);
-        if (cmd_len > len && strncmp(buf, commands[i].command, len) == 0) {
-            // Prefer the longest matching command (e.g. "help" over "h")
-            if (cmd_len > best_len) {
-                best = commands[i].command;
-                best_len = cmd_len;
-            }
-        }
-    }
-    
-    // Search mode-specific commands
-    const struct _mode_command_struct *mode_cmds = modes[system_config.mode].mode_commands;
-    const uint32_t *mode_count_ptr = modes[system_config.mode].mode_commands_count;
-    if (mode_cmds && mode_count_ptr && *mode_count_ptr > 0) {
-        uint32_t mode_count = *mode_count_ptr;
-        for (uint32_t i = 0; i < mode_count; i++) {
-            if (mode_cmds[i].func) {
-                size_t cmd_len = strlen(mode_cmds[i].command);
-                if (cmd_len > len && strncmp(buf, mode_cmds[i].command, len) == 0) {
-                    if (cmd_len > best_len) {
-                        best = mode_cmds[i].command;
-                        best_len = cmd_len;
-                    }
-                }
-            }
-        }
-    }
-    
-    if (best) {
-        return best + len;  // Return suffix after what user typed
-    }
-    return NULL;
-}
+// TODO: completion and hints callbacks will be wired up in a future phase
+// once the linenoise.h callback signatures are adapted for embedded use.
 
 /**
  * @brief Initialize linenoise for terminal use.
  * @param cols  Terminal width in columns
  */
 void ui_term_linenoise_init(size_t cols) {
-    bp_linenoise_init(&ln_state, ln_try_read, ln_read_blocking, ln_write, cols);
-    bp_linenoise_set_completion(&ln_state, bp_completion_callback);
-    bp_linenoise_set_hints(&ln_state, bp_hints_callback);
+    linenoiseSetCallbacks(&ln_state, ln_try_read, ln_read_blocking, ln_write, cols);
+    // TODO: wire up completion/hints callbacks in a future phase
     ln_initialized = true;
 }
 
@@ -140,7 +63,7 @@ void ui_term_linenoise_init(size_t cols) {
  */
 void ui_term_linenoise_set_cols(size_t cols) {
     if (ln_initialized) {
-        bp_linenoise_set_cols(&ln_state, cols);
+        linenoiseSetCols(&ln_state, cols);
     }
 }
 
@@ -152,7 +75,7 @@ void ui_term_linenoise_start(const char *prompt) {
     if (!ln_initialized) {
         ui_term_linenoise_init(80);  // Default width
     }
-    bp_linenoise_start(&ln_state, prompt);
+    linenoiseStartEdit(&ln_state, prompt);
 }
 
 /**
@@ -165,35 +88,35 @@ void ui_term_linenoise_start(const char *prompt) {
  *         0xfd = screen refresh requested (Ctrl+B)
  */
 uint32_t ui_term_linenoise_feed(void) {
-    bp_linenoise_result_t result = bp_linenoise_feed(&ln_state);
+    linenoiseResult result = linenoiseEditFeedResult(&ln_state);
     
     switch (result) {
-        case BP_LN_CONTINUE:
+        case LN_CONTINUE:
             return 0;  // No input or still editing
             
-        case BP_LN_ENTER:
+        case LN_ENTER:
             // Line complete - set up linear buffer reader
-            bp_linenoise_stop(&ln_state);
-            bp_cmdln_init_reader(ln_state.buf, ln_state.len);
+            linenoiseEditStop(&ln_state);
+            ln_cmdln_init(ln_state.buf, ln_state.len);
             cmdln_enable_linear_mode();  // Enable linear mode for parsing
             
             // Add to history (if not empty)
             if (ln_state.len > 0) {
-                bp_linenoise_history_add(&ln_state, ln_state.buf);
+                linenoiseHistoryAdd(ln_state.buf);
             }
             return 0xff;  // Signal: line complete
             
-        case BP_LN_CTRL_C:
+        case LN_CTRL_C:
             // Ctrl+C - cancel current line
-            bp_linenoise_stop(&ln_state);
+            linenoiseEditStop(&ln_state);
             return 0xfe;
             
-        case BP_LN_CTRL_D:
+        case LN_CTRL_D:
             // Ctrl+D on empty line - treat as cancel
-            bp_linenoise_stop(&ln_state);
+            linenoiseEditStop(&ln_state);
             return 0xfe;
             
-        case BP_LN_REFRESH:
+        case LN_REFRESH:
             // Ctrl+B - screen refresh requested
             return 0xfd;
             
@@ -207,7 +130,7 @@ uint32_t ui_term_linenoise_feed(void) {
  * @return Pointer to null-terminated line
  */
 const char* ui_term_linenoise_get_line(void) {
-    return bp_linenoise_get_line(&ln_state);
+    return ln_state.buf;
 }
 
 /**
@@ -215,14 +138,14 @@ const char* ui_term_linenoise_get_line(void) {
  * @return Length in bytes
  */
 size_t ui_term_linenoise_get_len(void) {
-    return bp_linenoise_get_len(&ln_state);
+    return ln_state.len;
 }
 
 /**
  * @brief Clear history.
  */
 void ui_term_linenoise_clear_history(void) {
-    bp_linenoise_history_clear(&ln_state);
+    linenoiseHistoryClear();
 }
 
 /*
@@ -238,9 +161,9 @@ void ui_term_linenoise_clear_history(void) {
  */
 static void ui_prompt_linenoise_init(void) {
     if (!ln_prompt_initialized) {
-        bp_linenoise_init(&ln_prompt_state, ln_try_read, ln_read_blocking, ln_write, 
-                          system_config.terminal_ansi_columns);
-        bp_linenoise_set_simple_mode(&ln_prompt_state, true);
+        linenoiseSetCallbacks(&ln_prompt_state, ln_try_read, ln_read_blocking, ln_write,
+                              system_config.terminal_ansi_columns);
+        linenoiseSetSimpleMode(&ln_prompt_state, true);
         ln_prompt_initialized = true;
     }
 }
@@ -250,33 +173,33 @@ static void ui_prompt_linenoise_init(void) {
  * @param prompt  The prompt string to display (already printed by caller typically)
  * @return true if line complete (Enter), false if cancelled (Ctrl+C) or error
  * 
- * After return, the linear buffer reader (bp_cmdln) is set up for parsing.
+ * After return, the linear buffer reader is set up for parsing.
  */
 bool ui_prompt_linenoise_input(const char *prompt) {
     ui_prompt_linenoise_init();
     
     // Start editing with prompt (if provided, otherwise empty)
-    bp_linenoise_start(&ln_prompt_state, prompt ? prompt : "");
+    linenoiseStartEdit(&ln_prompt_state, prompt ? prompt : "");
     
     // Block until line complete or cancelled
     while (true) {
         if (system_config.error) {
-            bp_linenoise_stop(&ln_prompt_state);
+            linenoiseEditStop(&ln_prompt_state);
             return false;
         }
         
-        bp_linenoise_result_t result = bp_linenoise_feed(&ln_prompt_state);
+        linenoiseResult result = linenoiseEditFeedResult(&ln_prompt_state);
         
         switch (result) {
-            case BP_LN_ENTER:
-                bp_linenoise_stop(&ln_prompt_state);
-                bp_cmdln_init_reader(ln_prompt_state.buf, ln_prompt_state.len);
+            case LN_ENTER:
+                linenoiseEditStop(&ln_prompt_state);
+                ln_cmdln_init(ln_prompt_state.buf, ln_prompt_state.len);
                 cmdln_enable_linear_mode();  // Enable linear mode for parsing
                 return true;
                 
-            case BP_LN_CTRL_C:
-            case BP_LN_CTRL_D:
-                bp_linenoise_stop(&ln_prompt_state);
+            case LN_CTRL_C:
+            case LN_CTRL_D:
+                linenoiseEditStop(&ln_prompt_state);
                 return false;
                 
             default:
@@ -291,21 +214,21 @@ bool ui_prompt_linenoise_input(const char *prompt) {
  * @return Result code matching ui_term_linenoise_feed() 
  */
 uint32_t ui_prompt_linenoise_feed(void) {
-    bp_linenoise_result_t result = bp_linenoise_feed(&ln_prompt_state);
+    linenoiseResult result = linenoiseEditFeedResult(&ln_prompt_state);
     
     switch (result) {
-        case BP_LN_CONTINUE:
+        case LN_CONTINUE:
             return 0;
             
-        case BP_LN_ENTER:
-            bp_linenoise_stop(&ln_prompt_state);
-            bp_cmdln_init_reader(ln_prompt_state.buf, ln_prompt_state.len);
+        case LN_ENTER:
+            linenoiseEditStop(&ln_prompt_state);
+            ln_cmdln_init(ln_prompt_state.buf, ln_prompt_state.len);
             cmdln_enable_linear_mode();  // Enable linear mode for parsing
             return 0xff;
             
-        case BP_LN_CTRL_C:
-        case BP_LN_CTRL_D:
-            bp_linenoise_stop(&ln_prompt_state);
+        case LN_CTRL_C:
+        case LN_CTRL_D:
+            linenoiseEditStop(&ln_prompt_state);
             return 0xfe;
             
         default:
@@ -319,5 +242,44 @@ uint32_t ui_prompt_linenoise_feed(void) {
  */
 void ui_prompt_linenoise_start(const char *prompt) {
     ui_prompt_linenoise_init();
-    bp_linenoise_start(&ln_prompt_state, prompt ? prompt : "");
+    linenoiseStartEdit(&ln_prompt_state, prompt ? prompt : "");
+}
+
+/*
+ * =============================================================================
+ * Command injection (for macros and scripts)
+ * =============================================================================
+ * Writes a command string directly into the main linenoise buffer
+ * and sets up the linear reader for immediate parsing.
+ * No echo, no editing — just buffer injection.
+ */
+
+/**
+ * @brief Inject a command string for processing (no echo/editing).
+ * @details Used by macros and scripts to feed commands directly into
+ *          the command processing pipeline. Writes the string into the
+ *          main linenoise state buffer and sets up the linear reader.
+ * @param str  Null-terminated command string to inject
+ * @return true if string fit in buffer, false if truncated
+ */
+bool ui_term_linenoise_inject_string(const char *str) {
+    if (!ln_initialized) {
+        ui_term_linenoise_init(80);
+    }
+
+    size_t slen = strlen(str);
+    if (slen > BP_LINENOISE_MAX_LINE) {
+        slen = BP_LINENOISE_MAX_LINE;
+    }
+
+    memcpy(ln_state.buf, str, slen);
+    ln_state.buf[slen] = '\0';
+    ln_state.len = slen;
+    ln_state.pos = slen;
+
+    /* Set up the linear reader so cmdln_try_peek/remove route here. */
+    ln_cmdln_init(ln_state.buf, ln_state.len);
+    cmdln_enable_linear_mode();
+
+    return (slen == strlen(str));
 }

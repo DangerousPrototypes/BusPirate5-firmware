@@ -208,14 +208,8 @@ bool cmdln_try_peek_pointer(struct _command_pointer* cp, uint32_t i, char* c);
 void cmdln_get_command_pointer(struct _command_pointer* cp);
 
 /**
- * @brief Copy current command from circular to linear buffer.
- * @details Sets up bp_cmdln reader for command processing.
- */
-void cmdln_copy_to_linear(void);
-
-/**
  * @brief Enable linear buffer mode (for linenoise integration).
- * @details Called when linenoise has set up bp_cmdln directly.
+ * @details Called when linenoise has set up the linear reader directly.
  */
 void cmdln_enable_linear_mode(void);
 
@@ -223,18 +217,6 @@ void cmdln_enable_linear_mode(void);
  * @brief Reset to circular buffer mode after command processing.
  */
 void cmdln_end_linear(void);
-
-/**
- * @brief Get the linear buffer for direct access.
- * @return Pointer to null-terminated linear command buffer
- */
-const char* cmdln_get_linear_buf(void);
-
-/**
- * @brief Get length of linear buffer content.
- * @return Length in bytes
- */
-size_t cmdln_get_linear_len(void);
 
 /** @} */
 

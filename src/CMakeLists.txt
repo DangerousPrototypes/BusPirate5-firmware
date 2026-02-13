@@ -523,9 +523,11 @@ set(buspirate_common
         usb_rx.c
         usb_rx.h
 
-        # Line editing library (adapted linenoise)
-        lib/bp_linenoise/bp_linenoise.h
-        lib/bp_linenoise/bp_linenoise.c
+        # Line editing library (linenoise with BP_EMBEDDED support)
+        lib/bp_linenoise/linenoise.h
+        lib/bp_linenoise/linenoise.c
+        lib/bp_linenoise/ln_cmdreader.h
+        lib/bp_linenoise/ln_cmdreader.c
         msc_disk.c
         msc_disk.h
         usb_descriptors.c
@@ -744,6 +746,7 @@ foreach(revision ${revisions})
         target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=1)
         target_compile_definitions(${revision} PUBLIC PICO_STACK_SIZE=4096)        
         target_compile_definitions(${revision} PRIVATE PICO_MALLOC_PANIC=0)
+        target_compile_definitions(${revision} PUBLIC BP_EMBEDDED=1)
 
         # Add to your foreach(revision ${revisions}) loop after target_link_libraries
         target_link_options(${revision} PRIVATE 

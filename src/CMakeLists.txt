@@ -529,6 +529,10 @@ set(buspirate_common
         lib/bp_linenoise/ln_cmdreader.h
         lib/bp_linenoise/ln_cmdreader.c
 
+        # Expression evaluator library
+        lib/bp_expr/bp_expr.h
+        lib/bp_expr/bp_expr.c        
+
         msc_disk.c
         msc_disk.h
         usb_descriptors.c

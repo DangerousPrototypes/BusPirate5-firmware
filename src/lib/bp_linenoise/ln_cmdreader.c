@@ -53,3 +53,9 @@ size_t ln_cmdln_remaining(void) {
     }
     return ln_cmdln.len - ln_cmdln.pos;
 }
+
+void ln_cmdln_advance_to(const char *p) {
+    if (p >= ln_cmdln.buf && p <= ln_cmdln.buf + ln_cmdln.len) {
+        ln_cmdln.pos = (size_t)(p - ln_cmdln.buf);
+    }
+}

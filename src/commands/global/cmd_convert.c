@@ -40,8 +40,8 @@ void cmd_convert_base_handler(struct command_result* res) {
     uint32_t result = 0;
     
     // Get the expression (everything after "=")
-    const char *expr = bp_cmdln_current();
-    size_t len = bp_cmdln_remaining();
+    const char *expr = ln_cmdln_current();
+    size_t len = ln_cmdln_remaining();
     
     // Skip leading whitespace
     while (len > 0 && (*expr == ' ' || *expr == '\t')) {

@@ -8,78 +8,67 @@
 #include "ui/ui_parse.h"
 #include "ui/ui_const.h"
 #include "ui/ui_cmdln.h"
+#include "lib/bp_linenoise/ln_cmdreader.h"
+#include "lib/bp_number/bp_number.h"
 
 static const struct prompt_result empty_result;
 
-bool ui_parse_get_hex(struct prompt_result* result, uint32_t* value) {
-    char c;
+// Helper to convert bp_num_format_t to df_* constants
+static inline uint8_t format_to_df(bp_num_format_t fmt) {
+    switch (fmt) {
+        case BP_NUM_HEX: return df_hex;
+        case BP_NUM_BIN: return df_bin;
+        case BP_NUM_DEC: 
+        default:         return df_dec;
+    }
+}
 
+bool ui_parse_get_hex(struct prompt_result* result, uint32_t* value) {
     *result = empty_result;
     result->no_value = true;
-    (*value) = 0;
+    *value = 0;
 
-    while (cmdln_try_peek(0, &c)) // peek at next char
-    {
-        if (((c >= '0') && (c <= '9'))) {
-            (*value) <<= 4;
-            (*value) += (c - 0x30);
-        } else if (((c | 0x20) >= 'a') && ((c | 0x20) <= 'f')) {
-            (*value) <<= 4;
-            c |= 0x20;              // to lowercase
-            (*value) += (c - 0x57); // 0x61 ('a') -0xa
-        } else {
-            return false;
-        }
-        cmdln_try_discard(1); // discard
-        result->success = true;
-        result->no_value = false;
+    const char *p = ln_cmdln_current();
+    if (!bp_num_hex(&p, value)) {
+        return false;
     }
-
-    return result->success;
+    
+    ln_cmdln_advance_to(p);
+    result->success = true;
+    result->no_value = false;
+    return true;
 }
 
 bool ui_parse_get_bin(struct prompt_result* result, uint32_t* value) {
-    char c;
     *result = empty_result;
     result->no_value = true;
-    (*value) = 0;
+    *value = 0;
 
-    while (cmdln_try_peek(0, &c)) // peek at next char
-    {
-        if ((c < '0') || (c > '1')) {
-            return false;
-        }
-        (*value) <<= 1;
-        (*value) += c - 0x30;
-        cmdln_try_discard(1); // discard
-        result->success = true;
-        result->no_value = false;
+    const char *p = ln_cmdln_current();
+    if (!bp_num_bin(&p, value)) {
+        return false;
     }
-
-    return result->success;
+    
+    ln_cmdln_advance_to(p);
+    result->success = true;
+    result->no_value = false;
+    return true;
 }
 
 bool ui_parse_get_dec(struct prompt_result* result, uint32_t* value) {
-    char c;
-
     *result = empty_result;
     result->no_value = true;
-    (*value) = 0;
+    *value = 0;
 
-    while (cmdln_try_peek(0, &c)) // peek at next char
-    {
-        if ((c < '0') || (c > '9')) // if there is a char, and it is in range
-        {
-            return false;
-        }
-        (*value) *= 10;
-        (*value) += (c - 0x30);
-        cmdln_try_discard(1); // discard
-        result->success = true;
-        result->no_value = false;
+    const char *p = ln_cmdln_current();
+    if (!bp_num_dec(&p, value)) {
+        return false;
     }
-
-    return result->success;
+    
+    ln_cmdln_advance_to(p);
+    result->success = true;
+    result->no_value = false;
+    return true;
 }
 
 // decodes value from the cmdline
@@ -87,81 +76,73 @@ bool ui_parse_get_dec(struct prompt_result* result, uint32_t* value) {
 // 0xXXXX hexadecimal
 // 0bXXXX bin
 bool ui_parse_get_int(struct prompt_result* result, uint32_t* value) {
-    bool r1, r2;
-    char p1, p2;
-
     *result = empty_result;
     *value = 0;
 
-    r1 = cmdln_try_peek(0, &p1);
-    r2 = cmdln_try_peek(1, &p2);
-
-    if (!r1 || (p1 == 0x00)) // no data, end of data, or no value entered on prompt
-    {
+    const char *p = ln_cmdln_current();
+    
+    // Check for empty input
+    if (*p == '\0') {
         result->no_value = true;
         return false;
     }
 
-    if (r2 && (p2 | 0x20) == 'x') // HEX
-    {
-        cmdln_try_discard(2); // remove 0x
-        ui_parse_get_hex(result, value);
-        result->number_format = df_hex;  // whatever from ui_const
-    } else if (r2 && (p2 | 0x20) == 'b') // BIN
-    {
-        cmdln_try_discard(2); // remove 0b
-        ui_parse_get_bin(result, value);
-        result->number_format = df_bin; // whatever from ui_const
-    } else                              // DEC
-    {
-        ui_parse_get_dec(result, value);
-        result->number_format = df_dec; // whatever from ui_const
+    bp_num_format_t fmt;
+    if (!bp_num_u32(&p, value, &fmt)) {
+        result->no_value = true;
+        return false;
     }
-
-    return result->success;
+    
+    ln_cmdln_advance_to(p);
+    result->success = true;
+    result->no_value = false;
+    result->number_format = format_to_df(fmt);
+    return true;
 }
 
 bool ui_parse_get_string(struct prompt_result* result, char* str, uint8_t* size) {
-    char c;
     uint8_t max_size = *size;
 
     *result = empty_result;
     result->no_value = true;
     *size = 0;
 
-    while (max_size-- && cmdln_try_peek(0, &c)) {
+    const char *p = ln_cmdln_current();
+    while (max_size-- && *p != '\0') {
+        char c = *p;
         if (c <= ' ') {
             break;
         } else if (c <= '~') {
             *str++ = c;
             (*size)++;
         }
-        cmdln_try_remove(&c);
+        p++;
         result->success = true;
         result->no_value = false;
     }
+    ln_cmdln_advance_to(p);
+    
     // Terminate string
     *str = '\0';
 
     return result->success;
 }
 
-// eats up the spaces and comma's from the cmdline
+// eats up the spaces and commas from the cmdline
 void ui_parse_consume_whitespace(void) {
-    char c;
-    while (cmdln_try_peek(0, &c) && (c == ' ' || c == ',')) {
-        cmdln_try_discard(1);
+    const char *p = ln_cmdln_current();
+    while (*p == ' ' || *p == ',') {
+        p++;
     }
+    ln_cmdln_advance_to(p);
 }
 
 bool ui_parse_get_macro(struct prompt_result* result, uint32_t* value) {
-    char c;
-    bool r;
-
-    // cmdln_try_discard(1); // advance 1 position '('
-    ui_parse_get_int(result, value); // get number
-    r = cmdln_try_remove(&c);        // advance 1 position ')'
-    if (r && c == ')') {
+    ui_parse_get_int(result, value);  // get number
+    
+    const char *p = ln_cmdln_current();
+    if (*p == ')') {
+        ln_cmdln_advance_to(p + 1);  // consume ')'
         result->success = true;
     } else {
         result->error = true;
@@ -185,25 +166,21 @@ bool ui_parse_get_dot(uint32_t* value) {
 
 // get trailing information for a command, for example :10 or .10
 bool ui_parse_get_delimited_sequence(struct prompt_result* result, char delimiter, uint32_t* value) {
-    char c;
     *result = empty_result;
 
-    if (cmdln_try_peek(0, &c)) // advance one, did we reach the end?
-    {
-        if (c == delimiter) // we have a change in bits \o/
-        {
-            // check that the next char is actually numeric before continue
-            //  prevents eating consecutive .... s
-            if (cmdln_try_peek(1, &c)) {
-                if (c >= '0' && c <= '9') {
-                    cmdln_try_discard(1); // discard delimiter
-                    ui_parse_get_int(result, value);
-                    result->success = true;
-                    return true;
-                }
-            }
+    const char *p = ln_cmdln_current();
+    if (*p == delimiter) {
+        // Check that the next char is actually numeric
+        // prevents eating consecutive .... s
+        if (p[1] >= '0' && p[1] <= '9') {
+            p++;  // skip delimiter
+            ln_cmdln_advance_to(p);
+            ui_parse_get_int(result, value);
+            result->success = true;
+            return true;
         }
     }
+
     result->no_value = true;
     return false;
 }
@@ -226,113 +203,83 @@ bool ui_parse_get_attributes(struct prompt_result* result, uint32_t* attr, uint8
 }
 
 bool ui_parse_get_bool(struct prompt_result* result, bool* value) {
+    *result = empty_result;
 
-    bool r;
-    char c;
+    const char *p = ln_cmdln_current();
+    char c = *p;
 
-    *result = empty_result; // initialize result with empty result
-
-    r = cmdln_try_peek(0, &c);
-    if (!r || c == 0x00) // user pressed enter only
-    {
+    if (c == '\0') {
         result->no_value = true;
-    } else if (r && ((c | 0x20) == 'x')) // exit
-    {
+    } else if ((c | 0x20) == 'x') {  // exit
         result->exit = true;
-    } else if (((c | 0x20) == 'y')) // yes or no
-    {
+        p++;
+    } else if ((c | 0x20) == 'y') {  // yes
         result->success = true;
         (*value) = true;
-    } else if (((c | 0x20) == 'n')) {
+        p++;
+    } else if ((c | 0x20) == 'n') {  // no
         result->success = true;
         (*value) = false;
-    } else // bad result (not number)
-    {
+        p++;
+    } else {
         result->error = true;
+        p++;  // discard bad char
     }
-    cmdln_try_discard(1); // discard
+
+    ln_cmdln_advance_to(p);
     return true;
 }
 
 // get a float from user input
 bool ui_parse_get_float(struct prompt_result* result, float* value) {
-    uint32_t number = 0;
-    uint32_t decimal = 0;
-    int j = 0;
-    bool r;
-    char c;
-    *result = empty_result; // initialize result with empty result
+    *result = empty_result;
 
-    r = cmdln_try_peek(0, &c);
-    if (!r || c == 0x00) // user pressed enter only
-    {
+    const char *p = ln_cmdln_current();
+    char c = *p;
+
+    if (c == '\0') {
         result->no_value = true;
-    } else if (r && ((c | 0x20) == 'x')) // exit
-    {
+        return true;
+    } else if ((c | 0x20) == 'x') {  // exit
         result->exit = true;
-    } else if (((c >= '0') && (c <= '9')) || (c == '.') || (c = ',')) // 1-9 decimal
-    {
-        if ((c >= '0') && (c <= '9')) // there is a number before the . or ,
-        {
-            ui_parse_get_dec(result, &number);
-        }
-
-        r = cmdln_try_peek(0, &c);
-        if (r && (c == '.' || c == ',')) {
-            cmdln_try_discard(1);         // discard seperator
-            while (cmdln_try_peek(0, &c)) // peek at next char
-            {
-                if ((c < '0') || (c > '9')) // if there is a char, and it is in range
-                {
-                    break;
-                }
-
-                decimal *= 10;
-                decimal += (c - 0x30);
-                cmdln_try_discard(1); // discard
-                j++;                  // track digits so we can find the proper divider later...
-            }
-        }
-
-        (*value) = (float)number;
-        (*value) += ((float)decimal / (float)pow(10, j));
-
-        result->success = true;
-
-    } else { // bad result (not number)
-        result->error = true;
-        return false;
+        ln_cmdln_advance_to(p + 1);
+        return true;
     }
 
-    return true;
+    // Try to parse float (handles integer, decimal, or both)
+    if (bp_num_float(&p, value)) {
+        result->success = true;
+        ln_cmdln_advance_to(p);
+        return true;
+    }
+
+    result->error = true;
+    return false;
 }
 
 bool ui_parse_get_uint32(struct prompt_result* result, uint32_t* value) {
-    bool r;
-    char c;
+    *result = empty_result;
 
-    *result = empty_result; // initialize result with empty result
+    const char *p = ln_cmdln_current();
+    char c = *p;
 
-    r = cmdln_try_peek(0, &c);
-    if (!r || c == 0x00) // user pressed enter only
-    {
+    if (c == '\0') {
         result->no_value = true;
-    } else if (r && ((c | 0x20) == 'x')) // exit
-    {
+        return true;
+    } else if ((c | 0x20) == 'x') {  // exit
         result->exit = true;
-    } else if ((c >= '0') && (c <= '9')) // 1-9 decimal
-    {
+        ln_cmdln_advance_to(p + 1);
+        return true;
+    } else if (c >= '0' && c <= '9') {
         return ui_parse_get_dec(result, value);
-    } else // bad result (not number)
-    {
-        result->error = true;
     }
-    cmdln_try_discard(1); // discard
+
+    result->error = true;
+    ln_cmdln_advance_to(p + 1);  // discard bad char
     return true;
 }
 
 bool ui_parse_get_units(struct prompt_result* result, char* units, uint8_t length, uint8_t* unit_type) {
-    char c;
     uint8_t i = 0;
     *result = empty_result;
 
@@ -343,21 +290,19 @@ bool ui_parse_get_units(struct prompt_result* result, char* units, uint8_t lengt
         units[i] = 0x00;
     }
 
+    const char *p = ln_cmdln_current();
     i = 0;
-    while (cmdln_try_peek(0, &c)) {
-        if ((i < length) && c != 0x00 && c != ' ') {
-            units[i] = (c | 0x20); // to lower case
-            i++;
-            cmdln_try_discard(1);
-        } else {
-            break;
-        }
+    while (i < length && *p != '\0' && *p != ' ') {
+        units[i] = (*p | 0x20);  // to lower case
+        i++;
+        p++;
     }
+    ln_cmdln_advance_to(p);
     units[length - 1] = 0x00;
 
     // TODO: write our own little string compare...
     if (units[0] == 'n' && units[1] == 's') {
-        // ms
+        // ns
         (*unit_type) = freq_ns;
     } else if (units[0] == 'u' && units[1] == 's') {
         // us

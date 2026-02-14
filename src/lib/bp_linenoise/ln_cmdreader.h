@@ -71,6 +71,12 @@ const char *ln_cmdln_current(void);
  */
 size_t ln_cmdln_remaining(void);
 
+/**
+ * @brief Advance reader position to a specific pointer within the buffer.
+ * @param p  Pointer within buf (must be >= buf and <= buf+len)
+ */
+void ln_cmdln_advance_to(const char *p);
+
 /*
  * =============================================================================
  * Compatibility Macros

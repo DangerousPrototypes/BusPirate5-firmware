@@ -360,6 +360,8 @@ static char const * const en_us[]={
 	[T_HELP_FLASH_FILE_FLAG]="File flag. File to write, read or verify",
 	[T_HELP_FLASH_ERASE_FLAG]="Erase flag. Add erase before write",
 	[T_HELP_FLASH_VERIFY_FLAG]="Verify flag. Add verify after write or erase",
+	[T_HELP_FLASH_OVERRIDE]="Read without detect (0x03 command), -b to specify bytes to read",
+	[T_HELP_FLASH_YES_OVERRIDE]="Override yes/no prompt for destructive actions (erase, write, test)",
 	//EEPROM command help
 	[T_HELP_I2C_EEPROM]="read, write and erase 24XX series I2C EEPROM chips",
 	[T_HELP_SPI_EEPROM]="read, write and erase 25XX series SPI EEPROM chips",

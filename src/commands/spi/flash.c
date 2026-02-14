@@ -14,6 +14,7 @@
 #include "spiflash.h"
 #include "ui/ui_cmdln.h"
 #include "ui/ui_help.h"
+#include "ui/ui_prompt.h"
 #include "system_config.h"
 #include "pirate/amux.h"
 #include "binmode/fala.h"
@@ -48,6 +49,8 @@ static const struct ui_help_options options[] = {
     { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
     { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
     { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
+    { 0, "-o", T_HELP_FLASH_OVERRIDE }, // override flash chip detection, use with -b to specify bytes to read
+    { 0, "-y", T_HELP_FLASH_YES_OVERRIDE }, // override yes/no prompt for destructive actions
 };
 
 enum flash_actions {
@@ -98,6 +101,29 @@ void flash(struct command_result* res) {
         printf("Missing file name (-f)\r\n");
         return;
     }
+
+    // error if read/verify and erase flag is set, doesn't make sense to erase if just reading or verifying
+    if((flash_action == FLASH_READ || flash_action == FLASH_VERIFY) && erase_flag) {
+        printf("Erase flag (-e) cannot be used with read or verify actions\r\n");
+        return;
+    }
+
+    // prompt yes/not for destructive action: erase, write, test (override with -y)
+    if((flash_action == FLASH_ERASE || flash_action == FLASH_WRITE || flash_action == FLASH_TEST) && 
+        (!cmdln_args_find_flag('y' | 0x20))){
+            cmdln_next_buf_pos();
+            printf("This action may modify the SPI flash contents. Do you want to continue?\r\ny/n> \x03");
+            uint32_t confirm;
+            do {
+                confirm = ui_prompt_yes_no();
+            } while (confirm > 1);
+
+            if(confirm != 1) {
+                printf("\r\nAborted by user\r\n");
+                return;
+            }
+    }
+
     bool override_flag = cmdln_args_find_flag('o' | 0x20);
 
     // start and end rage? bytes to write/dump???
@@ -137,7 +163,7 @@ void flash(struct command_result* res) {
         goto flash_cleanup; // no need to continue
     }
 
-    if (flash_action == FLASH_ERASE || erase_flag || flash_action == FLASH_TEST) {
+    if (flash_action == FLASH_ERASE || (erase_flag && FLASH_WRITE) || flash_action == FLASH_TEST) {
         if (!spiflash_erase(&flash_info)) {
             goto flash_cleanup;
         }

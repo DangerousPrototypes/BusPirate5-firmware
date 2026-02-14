@@ -83,6 +83,7 @@ static const struct ui_help_options options[] = {
     { 0, "-t", T_HELP_EEPROM_SPI_TEST_FLAG },   // test chip for block protection features
     { 0, "-p", T_HELP_EEPROM_PROTECT_FLAG }, // set block protection bits (BP1, BP0)
     { 0, "-w", T_HELP_EEPROM_SPI_WPEN_FLAG },   // set Write Pin ENable (WPEN)
+    { 0, "-y", T_HELP_FLASH_YES_OVERRIDE }, // override yes/no prompt for destructive actions
     { 0, "-h", T_HELP_FLAG },   // help
 };
 
@@ -567,6 +568,11 @@ void spi_eeprom_handler(struct command_result* res) {
 
     char buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading/writing
     uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading data from EEPROM
+
+    //confirm destruction actions
+    if(eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_WRITE || eeprom.action == EEPROM_TEST|| eeprom.action == EEPROM_PROTECT){
+        if(!eeprom_confirm_action()) return; // if user does not confirm, exit
+    }
 
     //we manually control any FALA capture
     fala_start_hook(); 

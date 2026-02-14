@@ -19,6 +19,11 @@ struct _command_info_t {
 };
 
 /**
+ * @brief Global command parsing state (set by cmdln_find_next_command).
+ */
+extern struct _command_info_t command_info;
+
+/**
  * @brief Parsed command argument information.
  */
 typedef struct command_var_struct {
@@ -98,6 +103,16 @@ bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t* value);
  * @return true on success
  */
 bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char* str);
+
+/**
+ * @brief Get pointer to raw text after command name.
+ * @details Returns a direct pointer into the line buffer, past the command
+ *          word and leading whitespace. No copy is made.
+ * @param[out] out  Pointer to remaining text
+ * @param[out] len  Length of remaining text
+ * @return true if text exists after command, false if empty
+ */
+bool cmdln_args_remainder(const char **out, size_t *len);
 
 /**
  * @brief Find next command in buffer.

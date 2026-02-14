@@ -39,17 +39,9 @@ void cmd_convert_base(uint32_t value, uint32_t num_bits) {
 void cmd_convert_base_handler(struct command_result* res) {
     uint32_t result = 0;
     
-    // Get the expression (everything after "=")
-    const char *expr = ln_cmdln_current();
-    size_t len = ln_cmdln_remaining();
-    
-    // Skip leading whitespace
-    while (len > 0 && (*expr == ' ' || *expr == '\t')) {
-        expr++;
-        len--;
-    }
-    
-    if (len == 0) {
+    const char *expr;
+    size_t len;
+    if (!cmdln_args_remainder(&expr, &len)) {
         printf("Usage: = <expression>\r\n");
         printf("  Operators: + - * / %% & | ^ ~ << >>\r\n");
         printf("  Numbers: 0xFF 0b1010 255\r\n");

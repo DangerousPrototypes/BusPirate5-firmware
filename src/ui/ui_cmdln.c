@@ -375,6 +375,28 @@ bool cmdln_args_float_by_position(uint32_t pos, float* value) {
     return false;
 }
 
+// Get a direct pointer to everything after the command name (position 0).
+// Skips the command word and leading whitespace, returns pointer into ln_cmdln.buf.
+bool cmdln_args_remainder(const char **out, size_t *len) {
+    uint32_t rptr = 0;
+
+    // Skip command word (position 0 non-whitespace)
+    if (!cmdln_consume_white_space(&rptr, false)) return false;  // skip leading ws
+    if (!cmdln_consume_white_space(&rptr, true))  return false;  // skip command word
+    if (!cmdln_consume_white_space(&rptr, false)) {
+        // No trailing content after command
+        return false;
+    }
+
+    uint32_t start = command_info.startptr + rptr;
+    uint32_t end   = command_info.endptr + 1;  // endptr is inclusive
+    if (start >= end) return false;
+
+    *out = ln_cmdln.buf + start;
+    *len = end - start;
+    return true;
+}
+
 // finds the next command in user input
 // could be a single command ending in 0x00
 // could be multiple commands chained with ; || &&

@@ -476,7 +476,7 @@ static void core0_infinite_loop(void) {
     };
 
     uint8_t bp_state = 0;
-    uint32_t value;
+    
     struct prompt_result result;
     //alarm_id_t screensaver;
     bool has_been_connected = false;
@@ -509,79 +509,57 @@ static void core0_infinite_loop(void) {
 
         switch (bp_state) {
             case BP_SM_DISPLAY_MODE:
+                // start linenoise prompt, 
+                // don't show any prompt text yet, just wait for user input
+                ui_prompt_vt100_mode_start("");
+                bp_state = BP_SM_DISPLAY_MODE_WAIT;
+                break;
+
+            case BP_SM_DISPLAY_MODE_WAIT:
+                uint32_t value;
+                if (!ui_prompt_vt100_mode_feed(&value)) {
+                    break; // still editing, return to main loop
+                }
+                // user hit enter, now used any saved config or prompt the user to select a display mode
+                lcd_screensaver_alarm_reset();
                 // config file option loaded, wait for any key
                 // for ASCII mode terminal_ansi_color is always false
                 // this has the side effect of always prompting if the saved mode is ASCII
                 // this is a feature, not a bug -
-                // it lets new users escape from ASCII mode without learning of the config menus
+                // it lets new users escape from ASCII mode without learning of the config menus                
                 if (system_config.terminal_ansi_color) {
-                    char c;
-                    if (rx_fifo_try_get(&c)) {
-                        value = 's';
-                        // skip straight to setup
-                        goto display_mode_done;
-                    }
-                } else {
-                    // Start non-blocking linenoise prompt for y/n
-                    //printf("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
-                    ui_prompt_linenoise_start("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
-                    bp_state = BP_SM_DISPLAY_MODE_WAIT;
-                }
-                break;
+                    goto display_mode_done_saved;
+                }          
+                
+                if(value == 'n'){
+                    // user requested ASCII mode
+                    system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
+                    system_config.terminal_ansi_statusbar = false;
+                    printf("\r\n"); // make pretty
+                }else if(value == 'y') {
+                    // user requested VT100 mode
+                    // no configuration exists, default to status bar enabled
+                    system_config.terminal_ansi_color = UI_TERM_FULL_COLOR;
+                    system_config.terminal_ansi_statusbar = true;
 
-            case BP_SM_DISPLAY_MODE_WAIT: {
-                // Non-blocking poll for y/n input
-                uint32_t vt100_result = ui_prompt_linenoise_feed();
-                if (vt100_result == 0xff) {
-                    // Enter pressed - check what they typed
-                    char c;
-                    if (cmdln_try_remove(&c)) {
-                        c |= 0x20; // to lowercase
-                        if (c == 'y' || c == 'n') {
-                            value = (uint32_t)c;
-                            goto display_mode_done;
-                        }
+                display_mode_done_saved:// case were configuration already exists
+                    if (!ui_term_detect()) { // Do we detect a VT100 ANSI terminal? what is the size?
+                        break;
                     }
-                    // Default or empty = yes
-                    value = 'y';
-                    goto display_mode_done;
-                } else if (vt100_result == 0xfe) {
-                    // Ctrl+C - default to yes
-                    value = 'y';
-                    goto display_mode_done;
-                }
-                // else: still waiting for input, loop again
-                break;
-            }
-
-            display_mode_done:
-                lcd_screensaver_alarm_reset();
-                switch (value) {
-                    case 'n': // user requested ASCII mode
-                        system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
-                        system_config.terminal_ansi_statusbar = false;
-                        printf("\r\n"); // make pretty
-                        break;
-                    case 'y': // user requested VT100 mode
-                        // no configuration exists, default to status bar enabled
-                        system_config.terminal_ansi_color = UI_TERM_FULL_COLOR;
-                        system_config.terminal_ansi_statusbar = true;
-                    case 's':                    // case were configuration already exists
-                        if (!ui_term_detect()) { // Do we detect a VT100 ANSI terminal? what is the size?
-                            break;
-                        }
-                        // if something goes wrong with detection, the next function will skip internally
-                        ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
-                        // this sets the scroll region for the status bar (if enabled)
-                        // and does the initial painting of the full statusbar
-                        if (system_config.terminal_ansi_statusbar) {
-                            ui_statusbar_init();
-                            ui_statusbar_update_blocking();
-                        }
-                        break;
-                    default:
-                        break;
-                }
+                    // if something goes wrong with detection, the next function will skip internally
+                    ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
+                    // this sets the scroll region for the status bar (if enabled)
+                    // and does the initial painting of the full statusbar
+                    if (system_config.terminal_ansi_statusbar) {
+                        ui_statusbar_init();
+                        ui_statusbar_update_blocking();
+                    }
+                }else{ 
+                    // if value is not y/n, then we got enter with no parameters
+                    // show the user the prompt               
+                    ui_prompt_vt100_mode_start("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
+                    break;
+                }    
 
                 bp_state = BP_SM_COMMAND_PROMPT;
                 break;

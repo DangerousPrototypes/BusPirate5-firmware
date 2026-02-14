@@ -722,6 +722,8 @@ static void linenoiseBeep(void) {
 #ifndef BP_EMBEDDED
     fprintf(stderr, "\x7");
     fflush(stderr);
+#else
+    printf("\x7");
 #endif
 }
 

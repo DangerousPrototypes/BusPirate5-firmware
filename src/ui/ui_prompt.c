@@ -130,6 +130,38 @@ bool ui_prompt_user_input(void) {
     return true;
 }
 
+/**
+ * @brief Start non-blocking VT100 y/n prompt.
+ * @param prompt  Prompt string to display
+ */
+void ui_prompt_vt100_mode_start(const char *prompt) {
+    ui_prompt_linenoise_start(prompt);
+}
+
+/**
+ * @brief Poll non-blocking VT100 y/n prompt.
+ * @param[out] value  Receives 'y' or 'n' when complete
+ * @return true when user has answered, false while still editing
+ *
+ * Only 'y' and 'n' are accepted;
+ */
+bool ui_prompt_vt100_mode_feed(uint32_t *value) {
+    uint32_t ln_res = ui_prompt_linenoise_feed();
+    if (ln_res == 0xff) {
+        *value = 0x00; //invalid input
+        // Enter pressed — read first char
+        char ch;
+        if (cmdln_try_remove(&ch)) {
+            ch |= 0x20; // lowercase
+            if(ch == 'y' || ch == 'n') {
+                *value = ch;
+            }
+        }
+        return true;
+    }
+    return false; // still editing
+}
+
 // a glorious yes or no prompt, with xit and enter for default
 bool ui_prompt_bool(prompt_result* result, bool defval_show, bool defval, bool allow_exit, bool* user_value) {
     while (true) {

@@ -5,11 +5,7 @@
  *          reordering bits (MSB/LSB), and display formatting.
  */
 
-/**
- * @brief Print number using current display format.
- * @param d  Value to print
- */
-void ui_format_print_number(uint32_t d);
+struct command_attributes;  // Forward declaration
 
 /**
  * @brief Reorder bits according to current bit order setting.
@@ -38,9 +34,8 @@ void ui_format_print_number_3(uint32_t value, uint32_t num_bits, uint32_t displa
  * @param d         Pointer to value
  * @param num_bits  Number of bits
  * @param bit_order Bit order (true=MSB, false=LSB)
- * @return Reordered value
  */
-uint32_t ui_format_bitorder_manual(uint32_t* d, uint8_t num_bits, bool bit_order);
+void ui_format_bitorder_manual(uint32_t* d, uint8_t num_bits, bool bit_order);
 
 /**
  * @brief Convert value to LSB-first order.

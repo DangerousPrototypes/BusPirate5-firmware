@@ -108,18 +108,14 @@ void flash(struct command_result* res) {
         return;
     }
 
-    // prompt yes/not for destructive action: erase, write, test (override with -y)
+    // prompt yes/no for destructive action: erase, write, test (override with -y)
     if((flash_action == FLASH_ERASE || flash_action == FLASH_WRITE || flash_action == FLASH_TEST) && 
         (!cmdln_args_find_flag('y' | 0x20))){
-            cmdln_next_buf_pos();
-            printf("This action may modify the SPI flash contents. Do you want to continue?\r\ny/n> \x03");
-            uint32_t confirm;
-            do {
-                confirm = ui_prompt_yes_no();
-            } while (confirm > 1);
-
-            if(confirm != 1) {
-                printf("\r\nAborted by user\r\n");
+            printf("This action may modify the SPI flash contents. Do you want to continue?");
+            prompt_result confirm_result;
+            bool confirm;
+            if (!ui_prompt_bool(&confirm_result, false, false, false, &confirm) || !confirm) {
+                printf("Aborted by user\r\n");
                 return;
             }
     }

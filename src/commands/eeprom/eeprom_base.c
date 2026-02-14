@@ -21,19 +21,14 @@ bool eeprom_confirm_action(void){
     if(cmdln_args_find_flag('y')) {
         return true; // override with -y
     }
-    cmdln_next_buf_pos();
-    printf("This action may modify the EEPROM contents. Do you want to continue?\r\ny/n> \x03");
-    uint32_t confirm;
-    do {
-        confirm = ui_prompt_yes_no();
-    } while (confirm > 1);
-
-    if(confirm != 1) {
-        printf("\r\nAborted by user\r\n");
+    printf("This action may modify the EEPROM contents. Do you want to continue?");
+    prompt_result result;
+    bool confirm;
+    if (!ui_prompt_bool(&result, false, false, false, &confirm) || !confirm) {
+        printf("Aborted by user\r\n");
         return false;
     }
     return true;
-
 }
 
 void eeprom_display_devices(const struct eeprom_device_t *eeprom_devices, uint8_t count) {

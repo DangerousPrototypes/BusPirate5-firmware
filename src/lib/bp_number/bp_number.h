@@ -30,12 +30,13 @@
 
 /**
  * @brief Number format detected during parsing.
+ * @note Values match df_* in ui_const.h: 0=none/auto, 1=hex, 2=dec, 3=bin.
  */
 typedef enum {
-    BP_NUM_NONE = 0,    ///< No number found
-    BP_NUM_DEC,         ///< Decimal (123)
-    BP_NUM_HEX,         ///< Hexadecimal (0x7B or 0X7B)
-    BP_NUM_BIN,         ///< Binary (0b1111011 or 0B1111011)
+    BP_NUM_NONE = 0,    ///< No number found (matches df_auto)
+    BP_NUM_HEX,         ///< Hexadecimal (0x7B) (matches df_hex)
+    BP_NUM_DEC,         ///< Decimal (123) (matches df_dec)
+    BP_NUM_BIN,         ///< Binary (0b1111011) (matches df_bin)
     BP_NUM_FLOAT,       ///< Float (3.14)
 } bp_num_format_t;
 

@@ -13,16 +13,6 @@
 
 static const struct prompt_result empty_result;
 
-// Helper to convert bp_num_format_t to df_* constants
-static inline uint8_t format_to_df(bp_num_format_t fmt) {
-    switch (fmt) {
-        case BP_NUM_HEX: return df_hex;
-        case BP_NUM_BIN: return df_bin;
-        case BP_NUM_DEC: 
-        default:         return df_dec;
-    }
-}
-
 bool ui_parse_get_hex(struct prompt_result* result, uint32_t* value) {
     *result = empty_result;
     result->no_value = true;
@@ -96,7 +86,7 @@ bool ui_parse_get_int(struct prompt_result* result, uint32_t* value) {
     ln_cmdln_advance_to(p);
     result->success = true;
     result->no_value = false;
-    result->number_format = format_to_df(fmt);
+    result->number_format = (uint8_t)fmt;
     return true;
 }
 

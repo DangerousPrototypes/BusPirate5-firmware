@@ -66,6 +66,8 @@ SYNTAX_STATUS ui_process_syntax(void) {
     return result;
 }
 
+// macros are deprecated
+#if 0
 bool ui_process_macro(void) {
     uint32_t temp;
     prompt_result result;
@@ -79,6 +81,7 @@ bool ui_process_macro(void) {
     }
     return false;
 }
+#endif 
 
 //returns error = true or false
 bool ui_process_commands(void) {
@@ -98,9 +101,11 @@ bool ui_process_commands(void) {
             case '}':
                 return (ui_process_syntax()==SSTATUS_ERROR)?true:false; // first character is { [ or >, process as syntax
                 break;
+            #if 0 // macros are deprecated
             case '(':
                 return ui_process_macro(); // first character is (, mode macro
                 break;
+            #endif
         }
         // process as a command
         char command_string[MAX_COMMAND_LENGTH];
@@ -194,6 +199,8 @@ bool ui_process_commands(void) {
                     goto cmd_ok;
                 }
             }
+
+            //nothing in this branch actually uses this
             if (modes[system_config.mode].protocol_command) {
                 if (modes[system_config.mode].protocol_command(&result)) {
                     goto cmd_ok;

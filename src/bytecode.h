@@ -5,6 +5,12 @@
  *          The bytecode system allows user commands to be parsed once and executed multiple times.
  */
 
+#ifndef BYTECODE_H
+#define BYTECODE_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
 /**
  * @brief Main bytecode instruction structure.
  * @details Represents a single bytecode instruction for protocol operations.
@@ -127,3 +133,5 @@ enum SYNTAX {
     SYN_ADC,
     // SYN_FREQ
 };
+
+#endif // BYTECODE_H

@@ -11,6 +11,11 @@
  * @date 2024-2026
  */
 
+#ifndef SYNTAX_H
+#define SYNTAX_H
+
+#include "bytecode.h"
+
 /**
  * @brief Compile user command string into bytecode
  * 
@@ -53,3 +58,5 @@ SYNTAX_STATUS syntax_run(void);
  * @return SSTATUS_ERROR if error occurred during formatting
  */
 SYNTAX_STATUS syntax_post(void);
+
+#endif // SYNTAX_H

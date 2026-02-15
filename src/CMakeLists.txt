@@ -385,7 +385,6 @@ set(buspirate_common
         ui/ui_info.h
         ui/ui_info.c
         ui/ui_format.c
-        ui/ui_format.c
         ui/ui_init.c
         ui/ui_init.h
         ui/ui_const.h
@@ -418,7 +417,10 @@ set(buspirate_common
 
         # syntax and commands
         syntax.h
-        syntax.c
+        syntax_internal.h
+        syntax_compile.c
+        syntax_run.c
+        syntax_post.c
         syntax_struct.h
         command_struct.h
         bytecode.h

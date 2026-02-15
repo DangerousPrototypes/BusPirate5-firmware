@@ -376,6 +376,8 @@ set(buspirate_common
         ui/ui_parse.h
         lib/bp_number/bp_number.c
         lib/bp_number/bp_number.h
+        lib/bp_args/bp_cmd.c
+        lib/bp_args/bp_cmd.h
         ui/ui_prompt.h
         ui/ui_prompt.c
         ui/ui_mode.c

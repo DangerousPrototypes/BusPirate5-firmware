@@ -6,6 +6,9 @@
 
 #define MAX_COMMAND_LENGTH 10
 
+/* Forward declare bp_command_def_t so we don't force-include bp_cmd.h everywhere */
+struct bp_command_def;
+
 /**
  * @brief Command execution result structure.
  */
@@ -27,6 +30,7 @@ struct _global_command_struct {
     bool allow_hiz;                   /**< Allow execution in HiZ mode */
     void (*func)(struct command_result* res); /**< Function to execute */
     uint32_t help_text;               /**< Translation string for help, 0x00 = self-managed */
+    const struct bp_command_def *def;  /**< Unified command definition (NULL = legacy) */
 };
 
 /**
@@ -37,6 +41,7 @@ struct _mode_command_struct {
     void (*func)(struct command_result* res); /**< Function to execute */
     uint32_t description_text;        /**< Help and command list description */
     bool supress_fala_capture;        /**< Disable follow-along logic analyzer */
+    const struct bp_command_def *def;  /**< Unified command definition (NULL = legacy) */
 };
 
 /**

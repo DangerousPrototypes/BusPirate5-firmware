@@ -435,6 +435,11 @@ bool bp_cmd_get_remainder(const bp_command_def_t *def,
  *          then flags with short/long names and arg hints.
  */
 void bp_cmd_help_show(const bp_command_def_t *def) {
+    // Column alignment: left column target width (characters).
+    // If the label fits within this, pad to the column with spaces.
+    // If it overflows, just use a single space before the description.
+    #define HELP_COL_WIDTH 16
+
     // Usage examples
     if (def->usage && def->usage_count > 0) {
         printf("usage:\r\n");
@@ -456,10 +461,18 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
     // Action verbs
     if (def->actions && def->action_count > 0) {
         for (uint32_t i = 0; i < def->action_count; i++) {
-            printf("%s%s%s\t%s%s%s\r\n",
+            int len = strlen(def->actions[i].verb);
+            printf("%s%s%s",
                    ui_term_color_prompt(),
                    def->actions[i].verb,
-                   ui_term_color_reset(),
+                   ui_term_color_reset());
+            // Pad or space
+            if (len < HELP_COL_WIDTH) {
+                printf("%*s", HELP_COL_WIDTH - len, "");
+            } else {
+                printf(" ");
+            }
+            printf("%s%s%s\r\n",
                    ui_term_color_info(),
                    def->actions[i].description ? GET_T(def->actions[i].description) : "",
                    ui_term_color_reset());
@@ -470,7 +483,7 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
     if (def->opts) {
         for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
             const bp_command_opt_t *o = &def->opts[i];
-            char flag_str[32];
+            char flag_str[48];
             int pos = 0;
 
             // Build flag display: "-f, --file <file>"
@@ -482,13 +495,20 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
                 pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, "--%s", o->long_name);
             }
             if (o->arg_hint) {
-                snprintf(flag_str + pos, sizeof(flag_str) - pos, " %s", o->arg_hint);
+                pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, " %s", o->arg_hint);
             }
 
-            printf("%s%s%s\t%s%s%s\r\n",
+            printf("%s%s%s",
                    ui_term_color_prompt(),
                    flag_str,
-                   ui_term_color_reset(),
+                   ui_term_color_reset());
+            // Pad or space
+            if (pos < HELP_COL_WIDTH) {
+                printf("%*s", HELP_COL_WIDTH - pos, "");
+            } else {
+                printf(" ");
+            }
+            printf("%s%s%s\r\n",
                    ui_term_color_info(),
                    o->description ? GET_T(o->description) : "",
                    ui_term_color_reset());

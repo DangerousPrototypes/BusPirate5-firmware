@@ -74,7 +74,7 @@ const struct _global_command_struct commands[] = {
 { .command="i",         .allow_hiz=true,  .func=&i_info_handler,                     .def=&i_info_def, .description_text=T_CMDLN_INFO,         .category=CMD_CAT_SYSTEM },
 { .command="reboot",    .allow_hiz=true,  .func=&cmd_mcu_reboot_handler,             .def=&reboot_def, .description_text=T_CMDLN_REBOOT,       .category=CMD_CAT_SYSTEM },
 { .command="$",         .allow_hiz=true,  .func=&cmd_mcu_jump_to_bootloader_handler, .def=&bootloader_def, .description_text=T_CMDLN_BOOTLOAD,     .category=CMD_CAT_SYSTEM },
-{ .command="~",         .allow_hiz=true,  .func=&cmd_selftest_handler,               .description_text=T_CMDLN_SELFTEST,     .category=CMD_CAT_SYSTEM },
+{ .command="~",         .allow_hiz=true,  .func=&cmd_selftest_handler,               .def=&cmd_selftest_def, .description_text=T_CMDLN_SELFTEST,     .category=CMD_CAT_SYSTEM },
 { .command="bug",       .allow_hiz=true,  .func=&bug_handler,                        .def=&bug_def, .description_text=0x00,                 .category=CMD_CAT_SYSTEM },
 { .command="ovrclk",    .allow_hiz=true,  .func=&ovrclk_handler,                     .def=&ovrclk_def, .description_text=0x00,                 .category=CMD_CAT_SYSTEM },
 // Files: storage and file operations
@@ -97,7 +97,7 @@ const struct _global_command_struct commands[] = {
 { .command="macro",     .allow_hiz=true,  .func=&macro_handler,     .def=&macro_def,     .description_text=T_HELP_CMD_MACRO,     .category=CMD_CAT_SCRIPT },
 { .command="pause",     .allow_hiz=true,  .func=&pause_handler,     .def=&pause_def,     .description_text=T_HELP_CMD_PAUSE,     .category=CMD_CAT_SCRIPT },
 // Tools: utilities and converters
-{ .command="logic",     .allow_hiz=true,  .func=&logic_handler,                      .description_text=T_HELP_CMD_LOGIC,     .category=CMD_CAT_TOOLS },
+{ .command="logic",     .allow_hiz=true,  .func=&logic_handler,                      .def=&logic_def, .description_text=T_HELP_CMD_LOGIC,     .category=CMD_CAT_TOOLS },
 { .command="smps",      .allow_hiz=true,  .func=&smps_handler,      .def=&smps_def,      .description_text=T_HELP_CMD_SMPS,      .category=CMD_CAT_SYSTEM },
 { .command="=",         .allow_hiz=true,  .func=&cmd_convert_base_handler,           .def=&convert_base_def, .description_text=T_CMDLN_INT_FORMAT,   .category=CMD_CAT_TOOLS },
 { .command="|",         .allow_hiz=true,  .func=&cmd_convert_inverse_handler,        .def=&convert_inverse_def, .description_text=T_CMDLN_INT_INVERSE,  .category=CMD_CAT_TOOLS },

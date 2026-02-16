@@ -10,3 +10,4 @@
  * @note Captures digital signals on I/O pins and exports to sigrok format
  */
 void logic_handler(struct command_result* res);
+extern const struct bp_command_def logic_def;

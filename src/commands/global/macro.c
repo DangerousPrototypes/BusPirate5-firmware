@@ -27,7 +27,7 @@
 #include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -60,7 +60,22 @@ static const char* const usage[] = {
     " 1:[0xa0 0][0xa1 r:5]",
 };
 
-static const struct ui_help_options options[] = { 0 };
+static const bp_command_opt_t macro_opts[] = {
+    { "all",  'a', BP_ARG_NONE,     NULL,     T_HELP_CMD_MACRO_FILES},
+    { "file", 'f', BP_ARG_REQUIRED, "<file>", T_HELP_CMD_MACRO_LOAD },
+    { "list", 'l', BP_ARG_NONE,     NULL,     T_HELP_CMD_MACRO_LIST },
+    { 0 }
+};
+
+const bp_command_def_t macro_def = {
+    .name         = "macro",
+    .description  = T_HELP_CMD_MACRO,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = macro_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 #define MACRO_FNAME_LEN 13
 #define ID_MAX_LEN 32
@@ -69,13 +84,13 @@ static char macro_file[MACRO_FNAME_LEN];
 void macro_handler(struct command_result* res) {
     char value[ID_MAX_LEN];
 
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&macro_def, res->help_flag)) {
         return;
     }
 
     // list of mcr files
     #if 0
-    if (cmdln_args_find_flag('a' | 0x20)) {
+    if (bp_cmd_find_flag(&macro_def, 'a')) {
         printf("Available macro files:\r\n");
         storage_ls("", "mcr", LS_FILES /*| LS_SIZE*/); // disk ls should be integrated with existing list function???
         return;
@@ -83,8 +98,7 @@ void macro_handler(struct command_result* res) {
     #endif
 
     // file to load?
-    command_var_t arg;
-    bool file_flag = cmdln_args_find_flag_string('f' | 0x20, &arg, sizeof(macro_file), macro_file);
+    bool file_flag = bp_cmd_get_string(&macro_def, 'f', macro_file, sizeof(macro_file));
     if (file_flag) {
         // does file exist?
         FIL fil;    /* File object needed for each open file */
@@ -101,7 +115,7 @@ void macro_handler(struct command_result* res) {
     }
 
     // list macros
-    bool list_flag = cmdln_args_find_flag('l' | 0x20);
+    bool list_flag = bp_cmd_find_flag(&macro_def, 'l');
     if (list_flag) {
         // is a macro file loaded?
         // list macros
@@ -112,14 +126,14 @@ void macro_handler(struct command_result* res) {
 
     // run macro
 
-    if (cmdln_args_string_by_position(1, ID_MAX_LEN, value)) {
+    if (bp_cmd_get_positional_string(&macro_def, 1, value, ID_MAX_LEN)) {
         // is a macro file loaded?
         // does this macro exist?
         exec_macro_id(value); // has return value to flag error
         return;
     }
 
-    ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+    bp_cmd_help_show(&macro_def);
 }
 
 static bool exec_macro_id(const char* id) {

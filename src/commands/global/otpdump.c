@@ -14,7 +14,7 @@
 #include "command_struct.h"       // File system related
 //#include "fatfs/ff.h"       // File system related
 //#include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -36,24 +36,21 @@ static const char* const usage[] = {
     "By default, this command will show only non-blank rows.",
 };
 
-// This is a struct of help strings for each option/flag/variable the command accepts
-// Record type 1 is a section header
-// Record type 0 is a help item displayed as: "command" "help text"
-// This system uses the T_ constants defined in translation/ to display the help text in the user's preferred language
-// To add a new T_ constant:
-//      1. open the master translation en-us.h
-//      2. add a T_ tag and the help text
-//      3. Run json2h.py, which will rebuild the translation files, adding defaults where translations are missing
-//      values
-//      4. Use the new T_ constant in the help text for the command
-static const struct ui_help_options cmdline_options[] = {
-    /*{ 1, "", T_HELP_DUMMY_COMMANDS },    // section heading
-    { 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
-    { 0, "test", T_HELP_DUMMY_TEST },    // test is an example we'll find by position
-    { 1, "", T_HELP_DUMMY_FLAGS },       // section heading for flags
-    { 0, "-b", T_HELP_DUMMY_B_FLAG },    //-a flag, with no optional string or integer
-    { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer*/
-    { 1, "", T_HELP_DUMMY_COMMANDS},
+static const bp_command_opt_t otpdump_opts[] = {
+    { "row",   'r', BP_ARG_REQUIRED, "<start>", T_HELP_FLAG },
+    { "count", 'c', BP_ARG_REQUIRED, "<count>", T_HELP_FLAG },
+    { "all",   'a', BP_ARG_NONE,     NULL,      T_HELP_FLAG },
+    { 0 }
+};
+
+const bp_command_def_t otpdump_def = {
+    .name         = "otpdump",
+    .description  = T_HELP_DUMMY_COMMANDS,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = otpdump_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 typedef struct _PARSED_OTP_COMMAND_OPTIONS {
@@ -168,39 +165,28 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
     options->MaximumRows = OTP_ROW_COUNT;
     options->ShowAllRows = false; // normal dump is only non-zero data
 
-    command_var_t arg;
     // NOTE: Optimizer will do its job.  Below formatting allows collapsing
     //       the code while allowing all main decision points to be at top level.
 
     // Parse the row count first, so if omitted, can auto-adjust row count later
     uint32_t row_count = 0u;
 
-    bool row_count_flag = cmdln_args_find_flag_uint32('c', &arg, &row_count);
-    if (row_count_flag && !arg.has_value) {
-        printf(
-            "ERROR: Row count requires an integer argument\r\n"
-            );
-        res->error = true;
-    } else if (row_count_flag && arg.has_value && (row_count > OTP_ROW_COUNT || row_count == 0)) {
+    bool row_count_flag = bp_cmd_get_uint32(&otpdump_def, 'c', &row_count);
+    if (row_count_flag && (row_count > OTP_ROW_COUNT || row_count == 0)) {
         printf(
             "ERROR: Row count (-c) must be in range [1..%" PRId16 "] (0x0..0x%" PRIx16 ")\r\n",
             OTP_ROW_COUNT, OTP_ROW_COUNT
             );
         // ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
         res->error = true;
-    } else if (row_count_flag && arg.has_value) {
+    } else if (row_count_flag) {
         options->MaximumRows = row_count; // bounds checked above
     }
 
 
     uint32_t start_row = 0;
-    bool start_row_flag = cmdln_args_find_flag_uint32('r', &arg, &start_row);
-    if (start_row_flag && !arg.has_value) {
-        printf(
-            "ERROR: Start row requires an integer argument\r\n"
-            );
-        res->error = true;
-    } else if (start_row_flag && arg.has_value && start_row > LAST_OTP_ROW) {
+    bool start_row_flag = bp_cmd_get_uint32(&otpdump_def, 'r', &start_row);
+    if (start_row_flag && start_row > LAST_OTP_ROW) {
         printf(
             "ERROR: Start row (-r) must be in range [0..%" PRId16 "] (0x0..0x%" PRIx16 ")\r\n",
             LAST_OTP_ROW, LAST_OTP_ROW
@@ -209,7 +195,7 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
     } else if (res->error) {
         // no checks of row count vs. start row ...
         // already had an error earlier and thus not meaningful check
-    } else if (start_row_flag && arg.has_value && row_count_flag) {
+    } else if (start_row_flag && row_count_flag) {
         uint16_t maximum_start_row = OTP_ROW_COUNT - options->MaximumRows;
         // no automatic adjustment if both start and count arguments were provided.
         // instead, validate that the start + count are within bounds.
@@ -222,7 +208,7 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
                 );
             res->error = true;
         }
-    } else if (start_row_flag && arg.has_value) {
+    } else if (start_row_flag) {
         options->StartRow = start_row;
         // automatically adjust the row count
         // (only when row count not explicitly provided)
@@ -233,7 +219,7 @@ static void parse_otp_command_line(PARSED_OTP_COMMAND_OPTIONS* options, struct c
         }
     }
 
-    options->ShowAllRows = cmdln_args_find_flag('a');
+    options->ShowAllRows = bp_cmd_find_flag(&otpdump_def, 'a');
     return;
 }
 

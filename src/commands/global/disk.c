@@ -22,20 +22,27 @@
 #include "ui/ui_help.h"
 #include "pirate/storage.h"
 #include "pirate/mem.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "pirate/storage.h"
 
 static const char* const cat_usage[] = {
     "cat <file>",
     "Print file contents:%s cat example.txt",
 };
-static const struct ui_help_options cat_options[] = {
-    { 1, "", T_HELP_DISK_CAT }, // section heading
-    { 0, "<file>", T_HELP_DISK_CAT_FILE },
+
+const bp_command_def_t disk_cat_def = {
+    .name         = "cat",
+    .description  = T_HELP_DISK_CAT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = cat_usage,
+    .usage_count  = count_of(cat_usage),
 };
+
 void disk_cat_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, cat_usage, count_of(cat_usage), &cat_options[0], count_of(cat_options))) {
+    if (bp_cmd_help_check(&disk_cat_def, res->help_flag)) {
         return;
     }
 
@@ -43,7 +50,7 @@ void disk_cat_handler(struct command_result* res) {
     FRESULT fr; /* FatFs return code */
     char file[512];
     char location[32];
-    cmdln_args_string_by_position(1, sizeof(location), location);
+    bp_cmd_get_positional_string(&disk_cat_def, 1, location, sizeof(location));
     fr = f_open(&fil, location, FA_READ);
     if (fr != FR_OK) {
         storage_file_error(fr);
@@ -64,19 +71,26 @@ static const char* const mkdir_usage[] = {
     "mkdir <dir>",
     "Create directory:%s mkdir dir",
 };
-static const struct ui_help_options mkdir_options[] = {
-    { 1, "", T_HELP_DISK_MKDIR }, // section heading
-    { 0, "<dir>", T_HELP_DISK_MKDIR_DIR },
+
+const bp_command_def_t disk_mkdir_def = {
+    .name         = "mkdir",
+    .description  = T_HELP_DISK_MKDIR,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = mkdir_usage,
+    .usage_count  = count_of(mkdir_usage),
 };
+
 void disk_mkdir_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, mkdir_usage, count_of(mkdir_usage), &mkdir_options[0], count_of(mkdir_options))) {
+    if (bp_cmd_help_check(&disk_mkdir_def, res->help_flag)) {
         return;
     }
 
     FRESULT fr;
     char location[32];
-    cmdln_args_string_by_position(1, sizeof(location), location);
+    bp_cmd_get_positional_string(&disk_mkdir_def, 1, location, sizeof(location));
     fr = f_mkdir(location);
     if (fr != FR_OK) {
         storage_file_error(fr);
@@ -88,19 +102,26 @@ static const char* const cd_usage[] = {
     "cd <dir>",
     "Change directory:%s cd dir",
 };
-static const struct ui_help_options cd_options[] = {
-    { 1, "", T_HELP_DISK_CD }, // section heading
-    { 0, "<dir>", T_HELP_DISK_CD_DIR },
+
+const bp_command_def_t disk_cd_def = {
+    .name         = "cd",
+    .description  = T_HELP_DISK_CD,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = cd_usage,
+    .usage_count  = count_of(cd_usage),
 };
+
 void disk_cd_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, cd_usage, count_of(cd_usage), &cd_options[0], count_of(cd_options))) {
+    if (bp_cmd_help_check(&disk_cd_def, res->help_flag)) {
         return;
     }
 
     FRESULT fr;
     char location[32];
-    cmdln_args_string_by_position(1, sizeof(location), location);
+    bp_cmd_get_positional_string(&disk_cd_def, 1, location, sizeof(location));
     fr = f_chdir(location);
     if (fr != FR_OK) {
         storage_file_error(fr);
@@ -118,20 +139,26 @@ static const char* const rm_usage[] = {
     "Delete file:%s rm example.txt",
     "Delete directory:%s rm dir",
 };
-static const struct ui_help_options rm_options[] = {
-    { 1, "", T_HELP_DISK_RM }, // section heading
-    { 0, "<file>", T_HELP_DISK_RM_FILE },
-    { 0, "<dir>", T_HELP_DISK_RM_DIR },
+
+const bp_command_def_t disk_rm_def = {
+    .name         = "rm",
+    .description  = T_HELP_DISK_RM,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = rm_usage,
+    .usage_count  = count_of(rm_usage),
 };
+
 void disk_rm_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, rm_usage, count_of(rm_usage), &rm_options[0], count_of(rm_options))) {
+    if (bp_cmd_help_check(&disk_rm_def, res->help_flag)) {
         return;
     }
 
     FRESULT fr;
     char location[32];
-    cmdln_args_string_by_position(1, sizeof(location), location);
+    bp_cmd_get_positional_string(&disk_rm_def, 1, location, sizeof(location));
     fr = f_unlink(location);
     if (fr != FR_OK) {
         storage_file_error(fr);
@@ -144,19 +171,26 @@ static const char* const ls_usage[] = {
     "Show current directory contents:%s ls",
     "Show directory contents:%s ls /dir",
 };
-static const struct ui_help_options ls_options[] = {
-    { 1, "", T_HELP_DISK_LS }, // section heading
-    { 0, "<dir>", T_HELP_DISK_LS_DIR },
+
+const bp_command_def_t disk_ls_def = {
+    .name         = "ls",
+    .description  = T_HELP_DISK_LS,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = ls_usage,
+    .usage_count  = count_of(ls_usage),
 };
+
 void disk_ls_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, ls_usage, count_of(ls_usage), &ls_options[0], count_of(ls_options))) {
+    if (bp_cmd_help_check(&disk_ls_def, res->help_flag)) {
         return;
     }
 
     // is there a trailing path to ls?
     char location[32];
-    cmdln_args_string_by_position(1, sizeof(location), location);
+    bp_cmd_get_positional_string(&disk_ls_def, 1, location, sizeof(location));
 
     if (!storage_ls(location, NULL, LS_ALL)) {
         res->error = true;
@@ -195,15 +229,20 @@ static const char* const format_usage[] = {
     "format",
     "Format storage:%s format",
 };
-static const struct ui_help_options format_options[] = {
-    { 1, "", T_HELP_DISK_FORMAT }, // section heading
-    { 0, "format", T_HELP_DISK_FORMAT_CMD },
+
+const bp_command_def_t disk_format_def = {
+    .name         = "format",
+    .description  = T_HELP_DISK_FORMAT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = format_usage,
+    .usage_count  = count_of(format_usage),
 };
 
 void disk_format_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(
-            res->help_flag, format_usage, count_of(format_usage), &format_options[0], count_of(format_options))) {
+    if (bp_cmd_help_check(&disk_format_def, res->help_flag)) {
         return;
     }
 
@@ -229,44 +268,49 @@ void disk_format_handler(struct command_result* res) {
     }
 }
 
-static const char* const label_usage[] = { "label <get|set> [label name]",
+static const char* const label_usage[] = { "label [get|set] <name>",
                                            "Get flash storage label name:%s label get",
                                            "Set flash storage label name:%s label set <name>" };
-
-static const struct ui_help_options label_options[] = {
-    { 1, "", T_HELP_DISK_LABEL },
-    { 0, "get", T_HELP_DISK_LABEL_GET },
-    { 0, "set", T_HELP_DISK_LABEL_SET },
-};
 
 typedef enum label_sub_commands {
     GET_LABEL,
     SET_LABEL,
     INVALID_LABEL_CMD,
 } label_sub_cmd_e;
+
+static const bp_command_action_t label_actions[] = {
+    { GET_LABEL, "get", T_HELP_DISK_LABEL_GET },
+    { SET_LABEL, "set", T_HELP_DISK_LABEL_SET },
+};
+
+const bp_command_def_t disk_label_def = {
+    .name         = "label",
+    .description  = T_HELP_DISK_LABEL,
+    .actions      = label_actions,
+    .action_count = count_of(label_actions),
+    .opts         = NULL,
+    .usage        = label_usage,
+    .usage_count  = count_of(label_usage),
+};
+
 #define MAX_LABEL_LENGTH (11)
 
 void disk_label_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, label_usage, count_of(label_usage), &label_options[0], count_of(label_options))) {
+    if (bp_cmd_help_check(&disk_label_def, res->help_flag)) {
         return;
     }
 
     char command_string[4];
     char label_string[MAX_LABEL_LENGTH + 2]; // maximum label length for fat12/16 is 11 characters
     FRESULT f_result;
-    label_sub_cmd_e command = INVALID_LABEL_CMD;
+    uint32_t command = INVALID_LABEL_CMD;
     DWORD label_id;
     res->error = true;
 
-    if (!cmdln_args_string_by_position(1, sizeof(command_string), command_string)) {
+    if (!bp_cmd_get_action(&disk_label_def, &command)) {
         printf("Missing command argument, please provide either get or set commands\r\n");
         return;
-    }
-    if (strcmp(command_string, "get") == 0) {
-        command = GET_LABEL;
-    } else if (strcmp(command_string, "set") == 0) {
-        command = SET_LABEL;
     }
 
     switch (command) {
@@ -281,7 +325,7 @@ void disk_label_handler(struct command_result* res) {
             break;
 
         case SET_LABEL:
-            if (!cmdln_args_string_by_position(2, sizeof(label_string), label_string)) {
+            if (!bp_cmd_get_positional_string(&disk_label_def, 2, label_string, sizeof(label_string))) {
                 printf("Missing label argument, please provide a name to set the label to\r\n");
                 return;
             }

@@ -6,7 +6,7 @@
 #include "command_struct.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
 #include "ui/ui_lcd.h"
@@ -216,30 +216,41 @@ static const char* const usage[] = {
     "Usage:%s image <file> [-d] [-h]",
     "Read info:%s image example.bmp",
     "Draw on display:%s image example.bmp -d",
-    "Read formats: BITMAPINFOHEADER V1 (40Bytes), V2 (52B), V3 (54B)",
-    "Draw formats: 16-bit (565) and 24-bit bitmaps, 240x320 pixels",
+    "Read formats:%s BITMAPINFOHEADER V1 (40Bytes), V2 (52B), V3 (54B)",
+    "Draw formats:%s 16-bit (565) and 24-bit bitmaps, 240x320 pixels",
 };
 
-static const struct ui_help_options options[] = {
-    { 0, "-h", T_HELP_FLAG },
+static const bp_command_opt_t image_opts[] = {
+    { "draw", 'd', BP_ARG_NONE, NULL, T_HELP_CMD_IMAGE_DRAW },
+    { 0 }
+};
+
+const bp_command_def_t image_def = {
+    .name         = "image",
+    .description  = T_HELP_CMD_IMAGE,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = image_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void image_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options))) {
+    if (bp_cmd_help_check(&image_def, res->help_flag)) {
         return;
     }
 
     // use cmdln_args_string_by_position to get the image file name
     char file[13];
-    if (cmdln_args_string_by_position(1, sizeof(file), file)) {
+    if (bp_cmd_get_positional_string(&image_def, 1, file, sizeof(file))) {
         printf("Opening file %s\r\n", file);
     } else {
-        ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options));
+        bp_cmd_help_show(&image_def);
         return;
     }
 
     // check for the -d flag
-    bool draw = cmdln_args_find_flag('d');
+    bool draw = bp_cmd_find_flag(&image_def, 'd');
 
     FIL file_handle; // file handle
     FRESULT result;  // file system result

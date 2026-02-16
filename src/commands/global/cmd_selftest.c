@@ -6,7 +6,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_help.h"
 #include "pico/multicore.h"
 #include "pirate/storage.h"
@@ -573,15 +573,19 @@ static const char* const usage[] = {
     "Warning:%s Self-test is only available in HiZ mode",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_GCMD_SELFTEST }, // command help
-    { 0, "~", T_HELP_GCMD_SELFTEST_CMD },
-    { 0, "-h", T_HELP_GCMD_SELFTEST_H_FLAG },
+const bp_command_def_t cmd_selftest_def = {
+    .name         = "~",
+    .description  = T_HELP_GCMD_SELFTEST,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void cmd_selftest_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&cmd_selftest_def, res->help_flag)) {
         return;
     }
 

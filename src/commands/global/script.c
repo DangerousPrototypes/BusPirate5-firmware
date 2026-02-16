@@ -6,7 +6,7 @@
 #include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -23,7 +23,7 @@
 #include "commands/global/script.h"
 
 static const char* const usage[] = {
-    "script <file> [-p(ause for <enter>)] [-d (hiDe comments)] [-e(xit on error)] [-h(elp)]",
+    "script <file> [-p(ause for <enter>)] [-d (hiDe comments)] [-a(bort on error)] [-h(elp)]",
     "Run script:%s script example.scr",
     "",
     "Script files:",
@@ -32,27 +32,42 @@ static const char* const usage[] = {
     "Other lines are inserted into the command prompt",
     "Exit with 'x' during execution",
     "Example:",
-    "# This is my example script file",
-    "# The 'pause' command waits for any key press",
-    "pause",
-    "# Did it pause?",
+    "%s# This is my example script file",
+    "%s# The 'pause' command waits for any key press",
+    "%spause",
+    "%s# Did it pause?",
 };
 
-static const struct ui_help_options options[] = { 0 };
+static const bp_command_opt_t script_opts[] = {
+    { "pause",      'p', BP_ARG_NONE, NULL, T_HELP_CMD_SCRIPT_PAUSE },
+    { "hide",'d', BP_ARG_NONE, NULL, T_HELP_CMD_SCRIPT_HIDE_COMMENTS },
+    { "abort", 'a', BP_ARG_NONE, NULL, T_HELP_CMD_SCRIPT_ERROR_EXIT },
+    { 0 }
+};
+
+const bp_command_def_t script_def = {
+    .name         = "script",
+    .description  = T_HELP_CMD_SCRIPT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = script_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 void script_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&script_def, res->help_flag)) {
         return;
     }
 
-    bool pause_for_input = cmdln_args_find_flag('p' | 0x20);
-    bool show_comments = !cmdln_args_find_flag('d' | 0x20);
-    bool exit_on_error = cmdln_args_find_flag('e' | 0x20);
+    bool pause_for_input = bp_cmd_find_flag(&script_def, 'p');
+    bool show_comments = !bp_cmd_find_flag(&script_def, 'd');
+    bool exit_on_error = bp_cmd_find_flag(&script_def, 'a');
     char location[32];
-    if(!cmdln_args_string_by_position(1, sizeof(location), location)){
+    if(!bp_cmd_get_positional_string(&script_def, 1, location, sizeof(location))){
         printf("Specify a script file to run\r\n");
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+        bp_cmd_help_show(&script_def);
         res->error = true;
         return;
     }

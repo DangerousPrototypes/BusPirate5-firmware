@@ -10,3 +10,4 @@
  * @note Controls internal buck-boost converter on/off
  */
 void smps_handler(struct command_result* res);
+extern const struct bp_command_def smps_def;

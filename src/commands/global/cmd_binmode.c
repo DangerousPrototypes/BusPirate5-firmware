@@ -5,7 +5,7 @@
 #include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -23,7 +23,15 @@ static const char* const usage[] = {
     "Configure the active binary mode:%s binmode",
 };
 
-static const struct ui_help_options options[] = { 0};
+const bp_command_def_t cmd_binmode_def = {
+    .name         = "binmode",
+    .description  = T_CONFIG_BINMODE_SELECT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 bool binmode_prompt_menu(const struct ui_prompt* menu) {
     for (uint8_t i = 0; i < count_of(binmodes); i++) {
@@ -41,7 +49,7 @@ bool binmode_check_range(const struct ui_prompt* menu, uint32_t* value) {
 
 void cmd_binmode_handler(struct command_result* res) {
     // we can use the ui_help_show function to display the help text we configured above
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&cmd_binmode_def, res->help_flag)) {
         // Current binmode 
         printf("%sActive binmode:%s %s\r\n", ui_term_color_info(), ui_term_color_reset(), binmodes[system_config.binmode_select].binmode_name);
         return;

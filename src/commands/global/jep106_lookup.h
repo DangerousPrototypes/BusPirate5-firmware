@@ -8,4 +8,4 @@
  * @brief Handler for JEP106 lookup command.
  * @param res  Command result structure
  */
-void jep106_handler(struct command_result* res);
+void jep106_handler(struct command_result* res);extern const struct bp_command_def jep106_def;

@@ -11,3 +11,4 @@
  * @param res  Command result structure
  */
 void otpdump_handler(struct command_result* res);
+extern const struct bp_command_def otpdump_def;

@@ -47,7 +47,15 @@ uint8_t disk_format(void);
 void disk_format_handler(struct command_result* res);
 
 /**
- * @brief Set/display volume label.
+ * @brief Storage label operations (get/set label name).
  * @param res  Command result structure
  */
 void disk_label_handler(struct command_result* res);
+
+extern const struct bp_command_def disk_cat_def;
+extern const struct bp_command_def disk_mkdir_def;
+extern const struct bp_command_def disk_cd_def;
+extern const struct bp_command_def disk_rm_def;
+extern const struct bp_command_def disk_ls_def;
+extern const struct bp_command_def disk_format_def;
+extern const struct bp_command_def disk_label_def;

@@ -9,3 +9,4 @@
  * @param res  Command result structure
  */
 void hex_handler(struct command_result* res);
+extern const struct bp_command_def hex_def;

@@ -6,7 +6,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "usb_rx.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "pirate/button.h"
 
 static const char* const usage[] = {
@@ -16,21 +16,32 @@ static const char* const usage[] = {
     "'x' key to exit (e.g. script mode):%s pause -x",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_CMD_PAUSE }, // command help
-    { 0, "-k", T_HELP_CMD_PAUSE_KEY },  { 0, "-b", T_HELP_CMD_PAUSE_BUTTON },
-    { 0, "-x", T_HELP_CMD_PAUSE_EXIT }, { 0, "-h", T_HELP_FLAG },
+static const bp_command_opt_t pause_opts[] = {
+    { "key",    'k', BP_ARG_NONE, NULL, T_HELP_CMD_PAUSE_KEY },
+    { "button", 'b', BP_ARG_NONE, NULL, T_HELP_CMD_PAUSE_BUTTON },
+    { "exit",   'x', BP_ARG_NONE, NULL, T_HELP_CMD_PAUSE_EXIT },
+    { 0 }
+};
+
+const bp_command_def_t pause_def = {
+    .name         = "pause",
+    .description  = T_HELP_CMD_PAUSE,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = pause_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void pause_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options))) {
+    if (bp_cmd_help_check(&pause_def, res->help_flag)) {
         return;
     }
 
     // check for -b button flag
-    bool pause_for_button = cmdln_args_find_flag('b' | 0x20);
-    bool pause_for_key = cmdln_args_find_flag('k' | 0x20) || !pause_for_button;
-    bool exit_on_x = cmdln_args_find_flag('x' | 0x20);
+    bool pause_for_button = bp_cmd_find_flag(&pause_def, 'b');
+    bool pause_for_key = bp_cmd_find_flag(&pause_def, 'k') || !pause_for_button;
+    bool exit_on_x = bp_cmd_find_flag(&pause_def, 'x');
 
     // print option messages
     if (pause_for_key) {

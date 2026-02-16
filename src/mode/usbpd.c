@@ -27,7 +27,6 @@ const struct _mode_command_struct usbpd_commands[] = {
   {
     .command="sniff",
     .func=&usbpd_sniff,
-    .description_text=T_I2C_SNIFF,
     .supress_fala_capture=true
   },    
 };

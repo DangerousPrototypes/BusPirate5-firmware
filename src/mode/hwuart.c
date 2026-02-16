@@ -70,21 +70,17 @@ bool bpio_hwuart_configure(bpio_mode_configuration_t *bpio_mode_config){
 const struct _mode_command_struct hwuart_commands[] = {
     {   .func=&nmea_decode_handler,
         .def=&nmea_decode_def,
-        .description_text=T_HELP_UART_NMEA, 
         .supress_fala_capture=true
     },
     {   .func=&uart_bridge_handler,
         .def=&uart_bridge_def,
-        .description_text=T_HELP_UART_BRIDGE, 
         .supress_fala_capture=true
     },
     {   .func=&uart_monitor_handler, 
-        .description_text=T_UART_CMD_TEST, 
         .supress_fala_capture=false
     },
     {   .func=&uart_glitch_handler,
         .def=&uart_glitch_def,
-        .description_text=T_HELP_UART_GLITCH, 
         .supress_fala_capture=false
     },
 };

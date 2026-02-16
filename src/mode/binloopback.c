@@ -23,7 +23,6 @@ static struct command_attributes periodic_attributes;
 const struct _mode_command_struct binloopback_commands[] = {
     /*{ .command="", 
         .func=&function, 
-        .description_text=T_MODE_COMMAND_DESCRIPTION, 
         .supress_fala_capture=false
     },*/
 };

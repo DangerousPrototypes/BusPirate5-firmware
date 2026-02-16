@@ -134,11 +134,15 @@ void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uin
     printf(
         "\r\n%s%s%s mode commands:%s\r\n", ui_term_color_prompt(), mode, ui_term_color_info(), ui_term_color_reset());
     for (uint32_t i = 0; i < count; i++) {
+        const char *desc = "Description not set. Try -h for command help";
+        if (commands[i].def && commands[i].def->description) {
+            desc = GET_T(commands[i].def->description);
+        }
         printf("%s%s%s\t%s%s\r\n",
                ui_term_color_prompt(),
                commands[i].def ? commands[i].def->name : "?",
                ui_term_color_info(),
-               commands[i].description_text ? GET_T(commands[i].description_text) : "Description not set. Try -h for command help",
+               desc,
                ui_term_color_reset());
     }
 }

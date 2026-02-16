@@ -157,24 +157,20 @@ void irtoy_test(struct command_result* res) {
 // command configuration
 const struct _mode_command_struct infrared_commands[] = {
     {   .func=&irtoy_test, 
-        .description_text=T_INFRARED_CMD_TEST, 
         .supress_fala_capture=false
     },
     {   .func=&tvbgone_player,
         .def=&tvbgone_def,
-        .description_text=T_IR_CMD_TV_BGONE,  
         .supress_fala_capture=true
     },
     {
         .func=&irtx_handler,
         .def=&irtx_def,
-        .description_text=T_IR_CMD_IRTX,  
         .supress_fala_capture=false
     },
     {
         .func=&irrx_handler,
         .def=&irrx_def,
-        .description_text=T_IR_CMD_IRRX,  
         .supress_fala_capture=false
     }    
 };

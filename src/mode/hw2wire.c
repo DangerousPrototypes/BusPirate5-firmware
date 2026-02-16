@@ -28,12 +28,10 @@ static uint8_t checkshort(void);
 const struct _mode_command_struct hw2wire_commands[] = {
     {   .func=&sle4442,
         .def=&sle4442_def,
-        .description_text=T_HELP_SLE4442, 
         .supress_fala_capture=true
     },
     {   .func=&hw2w_sniff,
         .def=&hw2w_sniff_def,
-        .description_text=T_HW2WIRE_SNIFF,
         .supress_fala_capture=false
     }
 };

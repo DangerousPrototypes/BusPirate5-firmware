@@ -40,7 +40,6 @@ struct _i2s_mode_config i2s_mode_config;
 const struct _mode_command_struct i2s_commands[] = { 
     {   .func=&sine_handler,
         .def=&sine_def,
-        .description_text=T_HELP_UART_NMEA, 
         .supress_fala_capture=false
     },
  };

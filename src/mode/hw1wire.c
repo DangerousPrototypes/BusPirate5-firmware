@@ -51,17 +51,14 @@
 const struct _mode_command_struct hw1wire_commands[] = {
     {   .func=&onewire_test_romsearch,
         .def=&scan_1wire_def,
-        .description_text=T_HELP_1WIRE_SCAN, 
         .supress_fala_capture=true
     },
     {   .func=&onewire_eeprom_handler,
         .def=&eeprom_1wire_def,
-        .description_text=T_HELP_1WIRE_EEPROM,
         .supress_fala_capture=true
     },
     {   .func=&onewire_test_ds18b20_conversion,
         .def=&ds18b20_def,
-        .description_text=T_HELP_1WIRE_DS18B20,
         .supress_fala_capture=true
     },  
 };

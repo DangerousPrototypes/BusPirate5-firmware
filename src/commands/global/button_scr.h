@@ -13,6 +13,8 @@
  */
 void button_scr_handler(struct command_result* res);
 
+extern const struct bp_command_def button_scr_def;
+
 /**
  * @brief Execute script bound to button code.
  * @param button_code  Button event code

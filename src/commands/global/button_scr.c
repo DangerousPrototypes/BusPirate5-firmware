@@ -8,7 +8,6 @@
 #include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
 #include "ui/ui_term.h"     // Terminal functions
 #include "ui/ui_process.h"
 #include "usb_rx.h"
@@ -18,6 +17,7 @@
 #include "ui/ui_help.h" // Functions to display help in a standardized way
 #include "commands/global/script.h"
 #include "button_scr.h"
+#include "lib/bp_args/bp_cmd.h"
 
 #define BUTTON_FLAG_HIDE_COMMENTS 1u << 0
 #define BUTTON_FLAG_EXIT_ON_ERROR 1u << 1
@@ -36,6 +36,23 @@ static button_press_type_t button_press_types[] = { { "short", "button.scr" }, {
 
 static const uint8_t num_button_press_types = count_of(button_press_types);
 
+enum button_scr_actions {
+    BUTTON_SHORT = 1,
+    BUTTON_LONG = 2
+};
+
+static const bp_command_action_t button_scr_action_defs[] = {
+    { BUTTON_SHORT, "short", T_HELP_BUTTON_SHORT },
+    { BUTTON_LONG,  "long",  T_HELP_BUTTON_LONG },
+};
+
+static const bp_command_opt_t button_scr_opts[] = {
+    { "file",    'f', BP_ARG_REQUIRED, "<file>", T_HELP_BUTTON_FILE },
+    { "hide",    'd', BP_ARG_NONE,     NULL,     T_HELP_BUTTON_HIDE },
+    { "exit",    'e', BP_ARG_NONE,     NULL,     T_HELP_BUTTON_EXIT },
+    { 0 }
+};
+
 static const char* const usage[] = {
     "button [short|long] [-f <file>] [-d (hiDe comments)] [-e(xit on error)] [-h(elp)]",
     "Assign script file to short button press:%s button short -f example.scr",
@@ -44,47 +61,37 @@ static const char* const usage[] = {
     "Default script files are 'button.scr' and 'buttlong.scr' in the root directory",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_BUTTON },        { 0, "short", T_HELP_BUTTON_SHORT }, { 0, "long", T_HELP_BUTTON_LONG },
-    { 0, "-f", T_HELP_BUTTON_FILE }, { 0, "-d", T_HELP_BUTTON_HIDE },     { 0, "-e", T_HELP_BUTTON_EXIT },
-    { 0, "-h", T_HELP_FLAG },
+const bp_command_def_t button_scr_def = {
+    .name         = "button",
+    .description  = T_HELP_BUTTON,
+    .actions      = button_scr_action_defs,
+    .action_count = count_of(button_scr_action_defs),
+    .opts         = button_scr_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void button_scr_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&button_scr_def, res->help_flag)) {
         return;
     }
 
-    // find our action
-    char action[6]; // short or long
-    uint8_t button_code = 0;
-
-    // first thing following the command (0) is the action (1)
-    // determine short or long etc
-    // This could be an array of string references. Then strcmp in a loop and use the index as the action type
-    cmdln_args_string_by_position(1, sizeof(action), action);
-
-    for (uint8_t i = 0; i < num_button_press_types; i++) {
-        if (strcmp(action, button_press_types[i].verb) == 0) {
-            button_code = i + 1;
-            break;
-        }
-    }
-
-    if (button_code == 0) {
-        printf("Invalid action. Try button -h for help\r\n");
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+    // get action
+    uint32_t button_action = 0;
+    if (!bp_cmd_get_action(&button_scr_def, &button_action)) {
+        bp_cmd_help_show(&button_scr_def);
         res->error = true;
         return;
     }
 
+    uint8_t button_code = (uint8_t)button_action;  // BUTTON_SHORT=1 or BUTTON_LONG=2
+
     // grab the file name, error if none
     char button_script_file[BP_FILENAME_MAX];
-    command_var_t arg;
-    if (!cmdln_args_find_flag_string('f', &arg, BP_FILENAME_MAX - 1, button_script_file)) {
+    if (!bp_cmd_get_string(&button_scr_def, 'f', button_script_file, BP_FILENAME_MAX - 1)) {
         printf("Specify a script file with the -f flag (-f script.scr)\r\n");
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+        bp_cmd_help_show(&button_scr_def);
         return;
     }
 
@@ -108,10 +115,10 @@ void button_scr_handler(struct command_result* res) {
     printf("Button script file set to '%s'\r\n", button_script_file);
 
     // set other flag options
-    if (cmdln_args_find_flag('d' | 0x20)) {
+    if (bp_cmd_find_flag(&button_scr_def, 'd')) {
         button_flags[button_code - 1] |= BUTTON_FLAG_HIDE_COMMENTS;
     }
-    if (cmdln_args_find_flag('e' | 0x20)) {
+    if (bp_cmd_find_flag(&button_scr_def, 'e')) {
         button_flags[button_code - 1] |= BUTTON_FLAG_EXIT_ON_ERROR;
     }
 }

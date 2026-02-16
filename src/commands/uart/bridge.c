@@ -8,25 +8,35 @@
 #include "command_struct.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "bytecode.h"
 #include "mode/hwuart.h"
 #include "pirate/button.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static const char* const usage[] = { "bridge\t[-h(elp)] [-t(oolbar)]",
                                      "Transparent UART bridge:%s bridge",
                                      "Exit:%s press Bus Pirate button" };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_UART_BRIDGE }, // command help
-    { 0, "-t", T_HELP_UART_BRIDGE_TOOLBAR },
-    { 0, "-h", T_HELP_FLAG }, // help
+static const bp_command_opt_t bridge_opts[] = {
+    { "toolbar", 't', BP_ARG_NONE, NULL, T_HELP_UART_BRIDGE_TOOLBAR },
+    { 0 }
+};
+
+const bp_command_def_t uart_bridge_def = {
+    .name = "bridge",
+    .description = T_HELP_UART_BRIDGE,
+    .actions = NULL,
+    .action_count = 0,
+    .opts = bridge_opts,
+    .usage = usage,
+    .usage_count = count_of(usage),
 };
 
 void uart_bridge_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&uart_bridge_def, res->help_flag)) {
         return;
     }
     if (!ui_help_check_vout_vref()) {
@@ -34,7 +44,7 @@ void uart_bridge_handler(struct command_result* res) {
     }
 
     bool toolbar_state = system_config.terminal_ansi_statusbar_pause;
-    bool pause_toolbar = !cmdln_args_find_flag('t' | 0x20);
+    bool pause_toolbar = !bp_cmd_find_flag(&uart_bridge_def, 't');
     if (pause_toolbar) {
         system_config.terminal_ansi_statusbar_pause = true;
     }

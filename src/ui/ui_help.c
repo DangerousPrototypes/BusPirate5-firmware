@@ -11,6 +11,58 @@
 #include "bytecode.h"
 #include "modes.h"
 #include "pirate/bio.h"
+#include "commands.h"
+#include "lib/bp_args/bp_cmd.h"
+
+/**
+ * @brief Category heading translation keys.
+ * @details Indexed by enum cmd_category. CMD_CAT_HIDDEN has no heading.
+ */
+static const uint32_t category_headings[] = {
+    [CMD_CAT_IO]        = T_HELP_SECTION_IO,
+    [CMD_CAT_CONFIGURE] = T_HELP_SECTION_CONFIGURE,
+    [CMD_CAT_SYSTEM]    = T_HELP_SECTION_SYSTEM,
+    [CMD_CAT_FILES]     = T_HELP_SECTION_FILES,
+    [CMD_CAT_SCRIPT]    = T_HELP_SECTION_SCRIPT,
+    [CMD_CAT_TOOLS]     = T_HELP_SECTION_TOOLS,
+    [CMD_CAT_MODE]      = T_HELP_SECTION_MODE,
+    [CMD_CAT_HIDDEN]    = 0, // never printed
+};
+
+void ui_help_global_commands(void) {
+    for (uint8_t cat = 0; cat < CMD_CAT_HIDDEN; cat++) {
+        // Print category heading
+        if (category_headings[cat]) {
+            printf("\r\n%s%s%s\r\n",
+                   ui_term_color_info(),
+                   GET_T(category_headings[cat]),
+                   ui_term_color_reset());
+        }
+
+        // Walk commands[], print every entry matching this category
+        for (uint32_t i = 0; i < commands_count; i++) {
+            if (commands[i].category != cat) continue;
+
+            // Resolve description: def->description > description_text > fallback
+            const char *desc;
+            if (commands[i].def && commands[i].def->description) {
+                desc = GET_T(commands[i].def->description);
+            } else if (commands[i].description_text) {
+                desc = GET_T(commands[i].description_text);
+            } else {
+                desc = "No description. Try -h";
+            }
+
+            printf("%s%s%s\t%s%s%s\r\n",
+                   ui_term_color_prompt(),
+                   commands[i].command,
+                   ui_term_color_reset(),
+                   ui_term_color_info(),
+                   desc,
+                   ui_term_color_reset());
+        }
+    }
+}
 
 // displays the help
 // NOTE: update if the count of "\r\n" prints in the switch statement below changes

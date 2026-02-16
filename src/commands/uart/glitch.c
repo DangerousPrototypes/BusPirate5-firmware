@@ -50,7 +50,7 @@
 #include "command_struct.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_prompt.h"
 #include "bytecode.h"
 #include "pirate/button.h"
@@ -73,6 +73,22 @@
 static const char* const usage[] = { "glitch\t[-h(elp)] [-c(onfig)]",
                                      "UART glitch generator.  Note that times are in terms of nanoseconds * 10; therefore, a setting of 3 = 30ns",
                                      "Exit:%s press Bus Pirate button" };
+
+static const bp_command_opt_t glitch_opts[] = {
+    { "config", 'c', BP_ARG_NONE, NULL, T_HELP_LOGIC_INFO },
+    { 0 }
+};
+
+const bp_command_def_t uart_glitch_def = {
+    .name = "glitch",
+    .description = T_HELP_UART_GLITCH,
+    .actions = NULL,
+    .action_count = 0,
+    .opts = glitch_opts,
+    .usage = usage,
+    .usage_count = count_of(usage),
+};
+
 // config struct
 typedef struct _uart_glitch_config {
     uint32_t glitch_trg;        // character sent from BP UART to trigger the glitch
@@ -86,13 +102,6 @@ typedef struct _uart_glitch_config {
 } _uart_glitch_config;
 
 static struct _uart_glitch_config uart_glitch_config;
-
-// help text
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_UART_GLITCH }, // command help
-    { 0, "-h", T_HELP_FLAG }, // help
-    { 0, "-c", T_HELP_LOGIC_INFO } // show config
-};
 
 // LCD display pin text
 static const char pin_labels[][5] = { "TRG", "RDY" };
@@ -400,11 +409,11 @@ void teardown_uart_glitch_hardware() {
 void uart_glitch_handler(struct command_result* res) {
     PRINT_INFO("glitch::Starting main glitch handler\r\n");
 
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&uart_glitch_def, res->help_flag)) {
         return;
     }
 
-    if (cmdln_args_find_flag('c')) {
+    if (bp_cmd_find_flag(&uart_glitch_def, 'c')) {
         glitch_settings();
         return;
     }

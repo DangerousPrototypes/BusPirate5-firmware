@@ -77,3 +77,11 @@ void ui_help_error(uint32_t error);
  * @param mode      Mode name string
  */
 void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uint32_t count, const char* mode);
+
+/**
+ * @brief Auto-generate global command help grouped by category.
+ * @details Walks commands[] array, prints each category heading followed
+ *          by commands in that category with their descriptions.
+ *          Hidden commands (CMD_CAT_HIDDEN) are skipped.
+ */
+void ui_help_global_commands(void);

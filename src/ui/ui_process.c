@@ -132,10 +132,11 @@ bool ui_process_commands(void) {
                 command_type = GLOBAL;
                 // global help handler (optional, set config in commands.c)
                 if (cmdln_args_find_flag('h')) {
-                    if (commands[user_cmd_id].help_text != 0x00) {
+                    if (commands[user_cmd_id].description_text != 0x00 && !commands[user_cmd_id].def) {
+                        // Legacy one-liner help for unmigrated commands
                         printf("%s%s%s\r\n",
                                ui_term_color_info(),
-                               GET_T(commands[user_cmd_id].help_text),
+                               GET_T(commands[user_cmd_id].description_text),
                                ui_term_color_reset());
                         return false;
                     } else { // let app know we requested help

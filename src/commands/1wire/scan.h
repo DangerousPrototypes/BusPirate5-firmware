@@ -9,3 +9,5 @@
  * @param res  Command result structure
  */
 void onewire_test_romsearch(struct command_result* res);
+
+extern const struct bp_command_def scan_1wire_def;

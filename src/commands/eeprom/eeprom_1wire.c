@@ -33,7 +33,7 @@ SOFTWARE.
 #include "ui/ui_term.h"
 #include "command_struct.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 #include "fatfs/ff.h"       // File system related
 #include "ui/ui_hex.h" // Hex display related
@@ -77,15 +77,27 @@ enum eeprom_actions_enum {
     EEPROM_PROTECT
 };
 
-static const struct cmdln_action_t eeprom_actions[] = {
-    { EEPROM_DUMP, "dump" },
-    { EEPROM_ERASE, "erase" },
-    { EEPROM_WRITE, "write" },
-    { EEPROM_READ, "read" },
-    { EEPROM_VERIFY, "verify" },
-    { EEPROM_TEST, "test" },
-    { EEPROM_LIST, "list"  },
-    { EEPROM_PROTECT, "protect"}
+static const bp_command_action_t eeprom_1wire_action_defs[] = {
+    { EEPROM_DUMP,    "dump",    T_HELP_EEPROM_DUMP },
+    { EEPROM_ERASE,   "erase",   T_HELP_EEPROM_ERASE },
+    { EEPROM_WRITE,   "write",   T_HELP_EEPROM_WRITE },
+    { EEPROM_READ,    "read",    T_HELP_EEPROM_READ },
+    { EEPROM_VERIFY,  "verify",  T_HELP_EEPROM_VERIFY },
+    { EEPROM_TEST,    "test",    T_HELP_EEPROM_TEST },
+    { EEPROM_LIST,    "list",    T_HELP_EEPROM_LIST },
+    { EEPROM_PROTECT, "protect", T_HELP_EEPROM_PROTECT },
+};
+
+static const bp_command_opt_t eeprom_1wire_opts[] = {
+    { "device",   'd', BP_ARG_REQUIRED, "<device>", T_HELP_EEPROM_DEVICE_FLAG },
+    { "file",     'f', BP_ARG_REQUIRED, "<file>",   T_HELP_EEPROM_FILE_FLAG },
+    { "verify",   'v', BP_ARG_NONE,     NULL,       T_HELP_EEPROM_VERIFY_FLAG },
+    { "start",    's', BP_ARG_REQUIRED, "<addr>",   UI_HEX_HELP_START },
+    { "bytes",    'b', BP_ARG_REQUIRED, "<count>",  UI_HEX_HELP_BYTES },
+    { "quiet",    'q', BP_ARG_NONE,     NULL,       UI_HEX_HELP_QUIET },
+    { "nopager",  'c', BP_ARG_NONE,     NULL,       T_HELP_DISK_HEX_PAGER_OFF },
+    { "yes",      'y', BP_ARG_NONE,     NULL,       T_HELP_FLASH_YES_OVERRIDE },
+    { 0 }
 };
 
 static const char* const usage[] = {
@@ -101,25 +113,15 @@ static const char* const usage[] = {
     "Show write protect control block:%s eeprom protect -d ds2431",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_1WIRE_EEPROM },               // command help
-    { 0, "dump", T_HELP_EEPROM_DUMP },  
-    { 0, "erase", T_HELP_EEPROM_ERASE },    // erase
-    { 0, "write", T_HELP_EEPROM_WRITE },    // write
-    { 0, "read", T_HELP_EEPROM_READ },      // read
-    { 0, "verify", T_HELP_EEPROM_VERIFY },  // verify
-    { 0, "test", T_HELP_EEPROM_TEST },      // test
-    { 0, "list", T_HELP_EEPROM_LIST},      // list devices
-    { 0, "protect", T_HELP_EEPROM_PROTECT }, // protect
-    { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
-    { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG }, // with verify (after write)
-    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
-    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-    { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
-    { 0, "-y", T_HELP_FLASH_YES_OVERRIDE }, // override yes/no prompt for destructive actions
-    { 0, "-h", T_HELP_FLAG },   // help
-};  //protect, -p, -t, -w?
+const bp_command_def_t eeprom_1wire_def = {
+    .name = "eeprom",
+    .description = T_HELP_1WIRE_EEPROM,
+    .actions = eeprom_1wire_action_defs,
+    .action_count = count_of(eeprom_1wire_action_defs),
+    .opts = eeprom_1wire_opts,
+    .usage = usage,
+    .usage_count = count_of(usage),
+};
 
 //-----------------------------------------------------------------------
 // 1-Wire EEPROM hardware abstraction layer functions
@@ -327,48 +329,47 @@ static const struct eeprom_device_t eeprom_devices[] = {
 //---------------------------------------------------------------------------
 
 static bool eeprom_get_args(struct eeprom_info *args) {
-    command_var_t arg;
-    char arg_str[9];
-    
-    // common function to parse the command line verb or action
-    if(cmdln_args_get_action(eeprom_actions, count_of(eeprom_actions), &args->action)){
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+    // Parse action
+    if (!bp_cmd_get_action(&eeprom_1wire_def, &args->action)) {
+        bp_cmd_help_show(&eeprom_1wire_def);
         return true;
     }
 
     if(args->action == EEPROM_LIST) {
-        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display devices if list action
+        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices));
         printf("Compatible with common 1-Wire EEPROMs: DS/GX2431, DS24x33.\r\n");
         printf("3.3volts is suitable for most devices.\r\n");
-        return true; // no error, just listing devices
+        return true;
     }
     
-    if(!cmdln_args_find_flag_string('d', &arg, sizeof(arg_str), arg_str)){
+    // Device name (required)
+    char dev_name[9] = {0};
+    if (!bp_cmd_get_string(&eeprom_1wire_def, 'd', dev_name, sizeof(dev_name))) {
         printf("Missing EEPROM device name: -d <device name>\r\n");
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices));
         return true;
     }
 
-    // we have a device name, find it in the list
-    uint8_t eeprom_type = 0xFF; // invalid by default
-    strupr(arg_str);
+    // Find device in list
+    uint8_t eeprom_type = 0xFF;
+    strupr(dev_name);
     for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
-        if(strcmp(arg_str, eeprom_devices[i].name) == 0) {
-            eeprom_type = i; // found the device
+        if(strcmp(dev_name, eeprom_devices[i].name) == 0) {
+            eeprom_type = i;
             break;
         }
     }
 
     if(eeprom_type == 0xFF) {
-        printf("Invalid EEPROM device name: %s\r\n", arg_str);
+        printf("Invalid EEPROM device name: %s\r\n", dev_name);
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices));
-        return true; // error
+        return true;
     }
  
     args->device = &eeprom_devices[eeprom_type];
 
     // verify_flag
-    args->verify_flag = cmdln_args_find_flag('v' | 0x20);
+    args->verify_flag = bp_cmd_find_flag(&eeprom_1wire_def, 'v');
 
     // test block protect bits
     //args->protect_test_flag = cmdln_args_find_flag('t' | 0x20);
@@ -399,10 +400,8 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 }
 
 void onewire_eeprom_handler(struct command_result* res) {
-    if(res->help_flag) {
-        //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
-        return; // if help was shown, exit
+    if (bp_cmd_help_check(&eeprom_1wire_def, res->help_flag)) {
+        return;
     }
     struct eeprom_info eeprom;
     // bus specific arguments (action, protect blocks, etc)

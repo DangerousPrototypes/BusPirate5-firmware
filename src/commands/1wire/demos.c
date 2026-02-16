@@ -19,6 +19,7 @@
 #include "hardware/pio.h"
 #include "pirate/hw1wire_pio.h"
 #include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 
 static const char* const ds18b20_usage[] = {
@@ -26,14 +27,18 @@ static const char* const ds18b20_usage[] = {
     "measure temperature (single sensor bus only):%s ds18b20",
 };
 
-static const struct ui_help_options ds18b20_options[] = {
-    { 1, "", T_HELP_1WIRE_DS18B20 }, // command help
-    { 0, "-h", T_HELP_FLAG },        // help
+const bp_command_def_t ds18b20_def = {
+    .name = "ds18b20",
+    .description = T_HELP_1WIRE_DS18B20,
+    .actions = NULL,
+    .action_count = 0,
+    .opts = NULL,
+    .usage = ds18b20_usage,
+    .usage_count = count_of(ds18b20_usage),
 };
 
 void onewire_test_ds18b20_conversion(struct command_result* res) {
-    if (ui_help_show(
-            res->help_flag, ds18b20_usage, count_of(ds18b20_usage), &ds18b20_options[0], count_of(ds18b20_options))) {
+    if (bp_cmd_help_check(&ds18b20_def, res->help_flag)) {
         return;
     }
 

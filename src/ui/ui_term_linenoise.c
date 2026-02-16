@@ -19,6 +19,7 @@
 #include "commands.h"
 #include "bytecode.h"  // For struct _bytecode used in modes.h
 #include "modes.h"
+#include "lib/bp_args/bp_cmd_linenoise.h"
 
 // Main command line linenoise state (has history)
 static struct linenoiseState ln_state;
@@ -43,8 +44,7 @@ static void ln_write(const char *s, size_t len) {
     }
 }
 
-// TODO: completion and hints callbacks will be wired up in a future phase
-// once the linenoise.h callback signatures are adapted for embedded use.
+
 
 /**
  * @brief Initialize linenoise for terminal use.
@@ -52,7 +52,7 @@ static void ln_write(const char *s, size_t len) {
  */
 void ui_term_linenoise_init(size_t cols) {
     linenoiseSetCallbacks(&ln_state, ln_try_read, ln_read_blocking, ln_write, cols);
-    // TODO: wire up completion/hints callbacks in a future phase
+    //bp_cmd_linenoise_init();
     ln_initialized = true;
 }
 

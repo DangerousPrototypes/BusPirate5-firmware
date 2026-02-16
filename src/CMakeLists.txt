@@ -378,6 +378,8 @@ set(buspirate_common
         lib/bp_number/bp_number.h
         lib/bp_args/bp_cmd.c
         lib/bp_args/bp_cmd.h
+        lib/bp_args/bp_cmd_linenoise.c
+        lib/bp_args/bp_cmd_linenoise.h
         ui/ui_prompt.h
         ui/ui_prompt.c
         ui/ui_mode.c

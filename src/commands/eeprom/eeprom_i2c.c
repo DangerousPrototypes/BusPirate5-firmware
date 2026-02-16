@@ -6,7 +6,7 @@
 #include "ui/ui_term.h"
 #include "command_struct.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 #include "fatfs/ff.h"       // File system related
 #include "ui/ui_hex.h" // Hex display related
@@ -29,48 +29,37 @@ enum eeprom_actions_enum {
     EEPROM_LIST
 };
 
-const struct cmdln_action_t eeprom_actions[] = {
-    { EEPROM_DUMP, "dump" },
-    { EEPROM_ERASE, "erase" },
-    { EEPROM_WRITE, "write" },
-    { EEPROM_READ, "read" },
-    { EEPROM_VERIFY, "verify" },
-    { EEPROM_TEST, "test" },
-    { EEPROM_LIST, "list"  }
+static const bp_command_action_t eeprom_i2c_action_defs[] = {
+    { EEPROM_DUMP,   "dump",   T_HELP_EEPROM_DUMP },
+    { EEPROM_ERASE,  "erase",  T_HELP_EEPROM_ERASE },
+    { EEPROM_WRITE,  "write",  T_HELP_EEPROM_WRITE },
+    { EEPROM_READ,   "read",   T_HELP_EEPROM_READ },
+    { EEPROM_VERIFY, "verify", T_HELP_EEPROM_VERIFY },
+    { EEPROM_TEST,   "test",   T_HELP_EEPROM_TEST },
+    { EEPROM_LIST,   "list",   T_HELP_EEPROM_LIST },
 };
 
-static const char* const usage[] = {
-    "eeprom [dump|erase|write|read|verify|test|list]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-h(elp)]",
-    "List available EEPROM devices:%s eeprom list",
-    "Display contents (x to exit):%s eeprom dump -d 24x02",
-    "Display 16 bytes starting at address 0x60:%s eeprom dump -d 24x02 -s 0x60 -b 16",
-    "Erase, verify:%s eeprom erase -d 24x02 -v",
-    "Write from file, verify:%s eeprom write -d 24x02 -f example.bin -v",
-    "Read to file, verify:%s eeprom read -d 24x02 -f example.bin -v",
-    "Verify against file:%s eeprom verify -d 24x02 -f example.bin",
-    "Test chip (full erase/write/verify):%s eeprom test -d 24x02",
-    "Use alternate I2C address (0x50 default):%s eeprom dump -d 24x02 -a 0x53",
+static const bp_command_opt_t eeprom_i2c_opts[] = {
+    { "device",   'd', BP_ARG_REQUIRED, "<device>", T_HELP_EEPROM_DEVICE_FLAG },
+    { "file",     'f', BP_ARG_REQUIRED, "<file>",   T_HELP_EEPROM_FILE_FLAG },
+    { "verify",   'v', BP_ARG_NONE,     NULL,        T_HELP_EEPROM_VERIFY_FLAG },
+    { "start",    's', BP_ARG_REQUIRED, "<addr>",   UI_HEX_HELP_START },
+    { "bytes",    'b', BP_ARG_REQUIRED, "<count>",  UI_HEX_HELP_BYTES },
+    { "quiet",    'q', BP_ARG_NONE,     NULL,        UI_HEX_HELP_QUIET },
+    { "nopager",  'c', BP_ARG_NONE,     NULL,        T_HELP_DISK_HEX_PAGER_OFF },
+    { "address",  'a', BP_ARG_REQUIRED, "<i2caddr>",T_HELP_EEPROM_ADDRESS_FLAG },
+    { "yes",      'y', BP_ARG_NONE,     NULL,        T_HELP_FLASH_YES_OVERRIDE },
+    { 0 }
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_I2C_EEPROM },               // command help
-    { 0, "dump", T_HELP_EEPROM_DUMP },  
-    { 0, "erase", T_HELP_EEPROM_ERASE },    // erase
-    { 0, "write", T_HELP_EEPROM_WRITE },    // write
-    { 0, "read", T_HELP_EEPROM_READ },      // read
-    { 0, "verify", T_HELP_EEPROM_VERIFY },  // verify
-    { 0, "test", T_HELP_EEPROM_TEST },      // test
-    { 0, "list", T_HELP_EEPROM_LIST},      // list devices
-    { 0, "-f", T_HELP_EEPROM_FILE_FLAG },   // file to read/write/verify
-    { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG }, // with verify (after write)
-    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
-    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-    { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
-    { 0, "-a", T_HELP_EEPROM_ADDRESS_FLAG }, // alternate I2C address (default is 0x50)
-    { 0, "-y", T_HELP_FLASH_YES_OVERRIDE }, // override yes/no prompt for destructive actions
-    { 0, "-h", T_HELP_FLAG },   // help
-};  
+const bp_command_def_t eeprom_i2c_def = {
+    .name = "eeprom",
+    .description = T_HELP_I2C_EEPROM,
+    .actions = eeprom_i2c_action_defs,
+    .action_count = count_of(eeprom_i2c_action_defs),
+    .opts = eeprom_i2c_opts,
+    // Usage and options arrays removed; help is now handled by bp_cmd API
+};
 #if 0
 uint32_t i2c_eeprom_determineSize(const bool debug)
 {
@@ -212,65 +201,61 @@ static const struct eeprom_device_t eeprom_devices[] = {
 };
 
 static bool eeprom_get_args(struct eeprom_info *args) {
-    command_var_t arg;
-    char arg_str[9];
-    
-    // common function to parse the command line verb or action
-    if(cmdln_args_get_action(eeprom_actions, count_of(eeprom_actions), &args->action)){
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+    // Parse action
+    if (!bp_cmd_get_action(&eeprom_i2c_def, &args->action)) {
+        bp_cmd_help_show(&eeprom_i2c_def);
         return true;
     }
 
+    // List action: just display devices and info
     if(args->action == EEPROM_LIST) {
-        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display devices if list action
+        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices));
         printf("Compatible with most common 24X I2C EEPROMs: AT24C, 24C/LC/AA/FC, etc.\r\n");
         printf("3.3volts is suitable for most devices.\r\n");
-        return true; // no error, just listing devices
-    }
-    
-    if(!cmdln_args_find_flag_string('d', &arg, sizeof(arg_str), arg_str)){
-        printf("Missing EEPROM device name: -d <device name>\r\n");
-        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
         return true;
     }
 
-    // we have a device name, find it in the list
-    uint8_t eeprom_type = 0xFF; // invalid by default
-    strupr(arg_str);
-    for(uint8_t i = 0; i <count_of(eeprom_devices); i++) {
-        if(strcmp(arg_str, eeprom_devices[i].name) == 0) {
-            eeprom_type = i; // found the device
+    // Device name (required)
+    char dev_name[9] = {0};
+    if (!bp_cmd_get_string(&eeprom_i2c_def, 'd', dev_name, sizeof(dev_name))) {
+        printf("Missing EEPROM device name: -d <device name>\r\n");
+        eeprom_display_devices(eeprom_devices, count_of(eeprom_devices));
+        return true;
+    }
+    strupr(dev_name);
+    uint8_t eeprom_type = 0xFF;
+    for(uint8_t i = 0; i < count_of(eeprom_devices); i++) {
+        if(strcmp(dev_name, eeprom_devices[i].name) == 0) {
+            eeprom_type = i;
             break;
         }
     }
-
     if(eeprom_type == 0xFF) {
-        printf("Invalid EEPROM device name: %s\r\n", arg_str);
+        printf("Invalid EEPROM device name: %s\r\n", dev_name);
         eeprom_display_devices(eeprom_devices, count_of(eeprom_devices));
-        return true; // error
+        return true;
     }
- 
     args->device = &eeprom_devices[eeprom_type];
 
-    uint32_t i2c_address = I2C_EEPROM_DEFAULT_ADDRESS; // default I2C address for EEPROMs
-    if(cmdln_args_find_flag_uint32('a' | 0x20, &arg, &i2c_address)) {
+    // I2C address (optional, default)
+    uint32_t i2c_address = I2C_EEPROM_DEFAULT_ADDRESS;
+    if (bp_cmd_get_uint32(&eeprom_i2c_def, 'a', &i2c_address)) {
         if (i2c_address > 0x7F) {
-            printf("Invalid I2C address: %d\r\n", args->device_address);
-            return true; // error
+            printf("Invalid I2C address: %d\r\n", i2c_address);
+            return true;
         }
     }
-    args->device_address = i2c_address; // set the device address
-
+    args->device_address = i2c_address;
 
     // verify_flag
-    args->verify_flag = cmdln_args_find_flag('v' | 0x20);
+    args->verify_flag = bp_cmd_find_flag(&eeprom_i2c_def, 'v');
 
     // file to read/write/verify
-    if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action==EEPROM_VERIFY)) {
+    if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action == EEPROM_VERIFY)) {
         if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
     }
 
-    // let hex editor parse its own arguments
+    // let hex editor parse its own arguments (future)
     //if(ui_hex_get_args(args->device->size_bytes, &args->start_address, &args->user_bytes)) return true;
 
     return false;
@@ -278,31 +263,30 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
 
 void i2c_eeprom_handler(struct command_result* res) {
-    if(res->help_flag) {
-        //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
-        return; // if help was shown, exit
-    }
-    
-    struct eeprom_info eeprom;
-    if(eeprom_get_args(&eeprom)) {       
+    if (bp_cmd_help_check(&eeprom_i2c_def, res->help_flag)) {
         return;
     }
 
-    if(i2c_mode_config.clock_stretch) {
+    struct eeprom_info eeprom;
+    if (eeprom_get_args(&eeprom)) {
+        return;
+    }
+
+    if (i2c_mode_config.clock_stretch) {
         printf("Error: I2C Clock stretching is enabled.\r\nEnter I2C mode again and select clock stretching DISABLED.\r\n");
         return;
     }
 
-    //nice full description of chip and capabilities
-    printf("%s: %d bytes,  %d block select bits, %d byte address, %d byte pages\r\n\r\n", eeprom.device->name, eeprom.device->size_bytes, eeprom.device->block_select_bits, eeprom.device->address_bytes, eeprom.device->page_bytes);
+    // Print chip info
+    printf("%s: %d bytes,  %d block select bits, %d byte address, %d byte pages\r\n\r\n",
+        eeprom.device->name, eeprom.device->size_bytes, eeprom.device->block_select_bits, eeprom.device->address_bytes, eeprom.device->page_bytes);
 
-    char buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading/writing
-    uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE]; // buffer for reading data from EEPROM
+    char buf[EEPROM_ADDRESS_PAGE_SIZE];
+    uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE];
 
-    //confirm destruction actions
-    if((eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_WRITE || eeprom.action == EEPROM_TEST)) {
-        if(!eeprom_confirm_action()) return; // if user does not confirm, exit
+    // Confirm destructive actions
+    if ((eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_WRITE || eeprom.action == EEPROM_TEST)) {
+        if (!eeprom_confirm_action()) return;
     }
 
     //we manually control any FALA capture
@@ -356,5 +340,4 @@ i2c_eeprom_cleanup:
     //we manually control any FALA capture
     fala_stop_hook();
     fala_notify_hook();
-
 }

@@ -19,6 +19,7 @@
 #include "hardware/pio.h"
 #include "pirate/hw1wire_pio.h"
 #include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 
 static const char* const usage[] = {
@@ -26,9 +27,14 @@ static const char* const usage[] = {
     "Scan 1-Wire address space:%s scan",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_1WIRE_SCAN }, // command help
-    { 0, "-h", T_HELP_FLAG },     // help
+const bp_command_def_t scan_1wire_def = {
+    .name = "scan",
+    .description = T_HELP_1WIRE_SCAN,
+    .actions = NULL,
+    .action_count = 0,
+    .opts = NULL,
+    .usage = usage,
+    .usage_count = count_of(usage),
 };
 
 // device list from: http://owfs.sourceforge.net/commands.html
@@ -167,8 +173,7 @@ void ds1wire_id(unsigned char famID) {
 #define TRUE 1
 #define FALSE 0
 void onewire_test_romsearch(struct command_result* res) {
-    // check help
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&scan_1wire_def, res->help_flag)) {
         return;
     }
 

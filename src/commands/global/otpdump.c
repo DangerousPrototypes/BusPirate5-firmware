@@ -293,20 +293,15 @@ void dump_otp(uint16_t start_row, uint16_t row_count, bool show_all_rows) {
 }
 
 void otpdump_handler(struct command_result* res) {
-
-    // the help -h flag can be serviced by the command line parser automatically, or from within the command
-    // the action taken is set by the help_text variable of the command struct entry for this command
-    // 1. a single T_ constant help entry assigned in the commands[] struct in commands.c will be shown automatically
-    // 2. if the help assignment in commands[] struct is 0x00, it can be handled here (or ignored)
-    // res.help_flag is set by the command line parser if the user enters -h
-    // we can use the ui_help_show function to display the help text we configured above
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &cmdline_options[0], count_of(cmdline_options))) {
+    // Show help if requested
+    if (bp_cmd_help_check(&otpdump_def, res->help_flag)) {
         return;
     }
+
     PARSED_OTP_COMMAND_OPTIONS options;
     parse_otp_command_line(&options, res);
     if (res->error) {
-        ui_help_show(true, usage, count_of(usage), &cmdline_options[0], count_of(cmdline_options));
+        bp_cmd_help_show(&otpdump_def);
         return;
     }
 

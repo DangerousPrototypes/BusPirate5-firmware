@@ -163,18 +163,21 @@ const struct _mode_command_struct infrared_commands[] = {
     },
     {   .command="tvbgone",
         .func=&tvbgone_player,
+        .def=&tvbgone_def,
         .description_text=T_IR_CMD_TV_BGONE,  
         .supress_fala_capture=true
     },
     {
         .command="irtx",
         .func=&irtx_handler,
+        .def=&irtx_def,
         .description_text=T_IR_CMD_IRTX,  
         .supress_fala_capture=false
     },
     {
         .command="irrx",
         .func=&irrx_handler,
+        .def=&irrx_def,
         .description_text=T_IR_CMD_IRRX,  
         .supress_fala_capture=false
     }    

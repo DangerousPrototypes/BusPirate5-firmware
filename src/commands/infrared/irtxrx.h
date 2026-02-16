@@ -15,3 +15,6 @@ void irrx_handler(struct command_result *res);
  * @param res  Command result structure
  */
 void irtx_handler(struct command_result *res);
+
+extern const struct bp_command_def irtx_def;
+extern const struct bp_command_def irrx_def;

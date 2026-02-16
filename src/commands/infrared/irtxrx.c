@@ -11,7 +11,7 @@
 #include "hardware/pwm.h"
 #include "hardware/gpio.h"
 #include "pirate/bio.h"
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "fatfs/ff.h"       // File system related
@@ -28,10 +28,19 @@ static const char* const usage_tx[] = {
 	"Transmit from file:%s irtx -f example.air",
 };
 
-static const struct ui_help_options options_tx[] = {
-	{ 1, "", T_IR_CMD_IRTX },    //Transmit IR signals (aIR format)
-	{ 0, "-f", T_HELP_IRTX_FILE_FLAG }, //Transmit one or more aIR packets from a file
-    { 0, "-h", T_HELP_FLAG },			//Show help
+static const bp_command_opt_t irtx_opts[] = {
+	{ "file", 'f', BP_ARG_REQUIRED, "<file>", T_HELP_IRTX_FILE_FLAG },
+	{ 0 }
+};
+
+const bp_command_def_t irtx_def = {
+	.name         = "irtx",
+	.description  = T_IR_CMD_IRTX,
+	.actions      = NULL,
+	.action_count = 0,
+	.opts         = irtx_opts,
+	.usage        = usage_tx,
+	.usage_count  = count_of(usage_tx),
 };
 
 static const char* const usage_rx[] = {
@@ -44,11 +53,20 @@ static const char* const usage_rx[] = {
 	"*default",
 };
 
-static const struct ui_help_options options_rx[] = {
-	{ 1, "", T_IR_CMD_IRRX },    //Receive, save and transmit IR signals (aIR format)
-	{ 0, "-f", T_HELP_IRRX_FILE_FLAG }, //Specify filename for saved signals
-	{ 0, "-s", T_HELP_IRRX_SENSOR_FLAG }, //Specify sensor for received signals
-    { 0, "-h", T_HELP_FLAG },			//Show help
+static const bp_command_opt_t irrx_opts[] = {
+	{ "file",   'f', BP_ARG_REQUIRED, "<file>",   T_HELP_IRRX_FILE_FLAG },
+	{ "sensor", 's', BP_ARG_REQUIRED, "<sensor>", T_HELP_IRRX_SENSOR_FLAG },
+	{ 0 }
+};
+
+const bp_command_def_t irrx_def = {
+	.name         = "irrx",
+	.description  = T_IR_CMD_IRRX,
+	.actions      = NULL,
+	.action_count = 0,
+	.opts         = irrx_opts,
+	.usage        = usage_rx,
+	.usage_count  = count_of(usage_rx),
 };
 
 //returns true (success) false (failed)
@@ -137,7 +155,7 @@ bool irtx_transmit(char* buffer){
 }
 
 void irtx_handler(struct command_result *res){
-    if (ui_help_show(res->help_flag, usage_tx, count_of(usage_tx), options_tx, count_of(options_tx))) {
+    if (bp_cmd_help_check(&irtx_def, res->help_flag)) {
         return;
     }
 
@@ -145,8 +163,7 @@ void irtx_handler(struct command_result *res){
 
 	//if -f flag, transmit from file
 	char file[13];
-	command_var_t arg;
-	if(cmdln_args_find_flag_string('f', &arg, sizeof(file), file)){
+	if(bp_cmd_get_string(&irtx_def, 'f', file, sizeof(file))){
 		//get the filename
 		printf("Transmitting from file %s\r\n", file);
 		//open the file
@@ -190,7 +207,7 @@ void irtx_handler(struct command_result *res){
 	
 	}else{
 		//try to parse from the command line
-		if(cmdln_args_string_by_position(1, sizeof(buffer), buffer)){
+		if(bp_cmd_get_positional_string(&irtx_def, 1, buffer, sizeof(buffer))){
 			printf("\r\nTransmitting from command line\r\n");
 			//here's the deal: the command line parser is removing the final ';'
 			// as it is a seperation character for multiple commands
@@ -219,11 +236,11 @@ void irtx_handler(struct command_result *res){
 
 	printf("Nothing to do, showing help\r\n");
 	//nothing to do, show help
-	ui_help_show(true, usage_tx, count_of(usage_tx), options_tx, count_of(options_tx));
+	bp_cmd_help_show(&irtx_def);
 }
 
 void irrx_handler(struct command_result *res){
-	if (ui_help_show(res->help_flag, usage_rx, count_of(usage_rx), options_rx, count_of(options_rx))) {
+	if (bp_cmd_help_check(&irrx_def, res->help_flag)) {
         return;
     }
 
@@ -233,8 +250,7 @@ void irrx_handler(struct command_result *res){
 	FRESULT result;
 	bool save_file=false;
 	char file[13];
-	command_var_t arg;
-	if(cmdln_args_find_flag_string('f', &arg, sizeof(file), file)){
+	if(bp_cmd_get_string(&irrx_def, 'f', file, sizeof(file))){
 		printf("Saving to file %s\r\n", file);
 		save_file=true;
 		//open file
@@ -266,7 +282,7 @@ void irrx_handler(struct command_result *res){
 	//default to 38kHz demod
 	uint8_t rx_sensor=1;
 	char sensor[6];
-	if(cmdln_args_find_flag_string('s', &arg, sizeof(sensor), sensor)){
+	if(bp_cmd_get_string(&irrx_def, 's', sensor, sizeof(sensor))){
 		//find the sensor
 		strlwr(sensor);
 		for(uint8_t i=0; i<count_of(ir_rx_pins); i++){

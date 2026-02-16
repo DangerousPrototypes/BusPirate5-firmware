@@ -27,6 +27,7 @@
  * @param res  Command result structure
  */
 void fusb302_handler(struct command_result* res);
+extern const struct bp_command_def fusb302_def;
 
 #ifndef FUSB302_DEFINES
 #define FUSB302_DEFINES

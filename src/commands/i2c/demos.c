@@ -9,7 +9,7 @@
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "lib/ms5611/ms5611.h"
 #include "lib/tsl2561/driver_tsl2561.h"
 #include "binmode/fala.h"
@@ -28,11 +28,19 @@ static const char* const sht4x_usage[] = {
     "Read SHT4x:%s sht4x",
 };
 
-static const struct ui_help_options sht4x_options[] = {0};
+const bp_command_def_t sht4x_def = {
+    .name         = "sht4x",
+    .description  = T_HELP_I2C_SHT4X,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = sht4x_usage,
+    .usage_count  = count_of(sht4x_usage),
+};
 
 void demo_sht4x(struct command_result* res){
     printf("SHT40/41/43/45 Temperature and Humidity Sensor Demo\r\n");
-    if (ui_help_show(res->help_flag||!ui_help_sanity_check(true,0x00), sht4x_usage, count_of(sht4x_usage), &sht4x_options[0], count_of(sht4x_options))) {
+    if (bp_cmd_help_check(&sht4x_def, res->help_flag)||!ui_help_sanity_check(true,0x00)) {
         return;
     }
 
@@ -74,18 +82,22 @@ static const char* const sht3x_usage[] = {
     "Read SHT3x:%s sht3x",
 };
 
-static const struct ui_help_options sht3x_options[] = {0};
+const bp_command_def_t sht3x_def = {
+    .name         = "sht3x",
+    .description  = T_HELP_I2C_SHT3X,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = sht3x_usage,
+    .usage_count  = count_of(sht3x_usage),
+};
 
 void demo_sht3x(struct command_result* res) {
     printf("SHT30/31/35 Temperature and Humidity Sensor Demo\r\n");
 
-    if(ui_help_show(res->help_flag||!ui_help_sanity_check(true,0x00), sht3x_usage, count_of(sht3x_usage), &sht3x_options[0], count_of(sht3x_options))) {
+    if(bp_cmd_help_check(&sht3x_def, res->help_flag)||!ui_help_sanity_check(true,0x00)) {
         return;
     }
-    /*if (!ui_help_sanity_check(true,0x00)) {
-        ui_help_show(true, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options));
-        return;
-    }*/
     fala_start_hook();
 
     #define SHT3X_ADDRESS 0x44 << 1u // SHT3x default I2C address
@@ -124,15 +136,29 @@ static const char* const tcs34725_usage[] = {
     "Read with 60x gain, 10 integration cycles:%s tcs3472 -g 60 -i 10",
 };
 
-static const struct ui_help_options tcs34725_options[] = {0};
+static const bp_command_opt_t tcs34725_opts[] = {
+    { "gain",        'g', BP_ARG_REQUIRED, "<1,4,16*,60>", T_HELP_I2C_TCS34725_GAIN },
+    { "integration", 'i', BP_ARG_REQUIRED, "<1-256*>",     T_HELP_I2C_TCS34725_INTEGRATION },
+    { 0 }
+};
+
+const bp_command_def_t tcs34725_def = {
+    .name         = "tcs3472",
+    .description  = T_HELP_I2C_TCS34725,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = tcs34725_opts,
+    .usage        = tcs34725_usage,
+    .usage_count  = count_of(tcs34725_usage),
+};
 
 // based on https://github.com/ControlEverythingCommunity/TCS34725/blob/master/C/TCS34725.c
 void demo_tcs34725(struct command_result* res) {
-    if (ui_help_show(res->help_flag, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options))) {
+    if (bp_cmd_help_check(&tcs34725_def, res->help_flag)) {
         return;
     }
     if (!ui_help_sanity_check(true,0x00)) {
-        ui_help_show(true, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options));
+        bp_cmd_help_show(&tcs34725_def);
         return;
     }
     
@@ -145,10 +171,9 @@ void demo_tcs34725(struct command_result* res) {
     printf("Press SPACE to exit\r\n");
 
     //get gain and integration time
-    command_var_t arg;
     uint8_t gain; // default gain 16x
     uint32_t user_gain=16;
-    cmdln_args_find_flag_uint32('g', &arg, &user_gain);
+    bp_cmd_get_uint32(&tcs34725_def, 'g', &user_gain);
     switch(user_gain) {
         case 1: gain = 0b00; break; // 1x
         case 4: gain = 0b01; break; // 4x
@@ -156,16 +181,16 @@ void demo_tcs34725(struct command_result* res) {
         case 60: gain = 0b11; break; // 60x
         default:
             printf("Invalid gain value: %d\r\n\r\n", user_gain);
-            ui_help_show(true, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options));
+            bp_cmd_help_show(&tcs34725_def);
             return;
     }
 
     uint32_t integration_cycles = 256; // default integration time 700ms
-    if(cmdln_args_find_flag_uint32('i', &arg, &integration_cycles)){
+    if(bp_cmd_get_uint32(&tcs34725_def, 'i', &integration_cycles)){
         if(integration_cycles < 1 || integration_cycles > 256){
             printf("Invalid integration cycles: %d\r\n\r\n", integration_cycles);
             //show help
-            ui_help_show(true, tcs34725_usage, count_of(tcs34725_usage), &tcs34725_options[0], count_of(tcs34725_options));
+            bp_cmd_help_show(&tcs34725_def);
             return;
         }
     }
@@ -249,17 +274,22 @@ static const char* const tsl2561_usage[] = {
     "Show LUX:%s tsl2561",
 };
 
-static const struct ui_help_options tsl2561_options[] = {
-    { 1, "", T_HELP_I2C_TSL2561 },               // flash command help  
-    { 0, "-h", T_HELP_HELP }               // help flag   
+const bp_command_def_t tsl2561_def = {
+    .name         = "tsl2561",
+    .description  = T_HELP_I2C_TSL2561,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = tsl2561_usage,
+    .usage_count  = count_of(tsl2561_usage),
 };
 
 void demo_tsl2561(struct command_result* res) {
-    if (ui_help_show(res->help_flag, tsl2561_usage, count_of(tsl2561_usage), &tsl2561_options[0], count_of(tsl2561_options))) {
+    if (bp_cmd_help_check(&tsl2561_def, res->help_flag)) {
         return;
     }
     if (!ui_help_sanity_check(true,0x00)) {
-        ui_help_show(true, tsl2561_usage, count_of(tsl2561_usage), &tsl2561_options[0], count_of(tsl2561_options));
+        bp_cmd_help_show(&tsl2561_def);
         return;
     }
 
@@ -327,17 +357,22 @@ static const char* const ms5611_usage[] = {
     "Show temperature and pressure:%s ms5611",
 };
 
-static const struct ui_help_options ms5611_options[] = {
-    { 1, "", T_HELP_I2C_MS5611},               // flash command help  
-    { 0, "-h", T_HELP_HELP }               // help flag   
+const bp_command_def_t ms5611_def = {
+    .name         = "ms5611",
+    .description  = T_HELP_I2C_MS5611,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = ms5611_usage,
+    .usage_count  = count_of(ms5611_usage),
 };
 
 void demo_ms5611(struct command_result* res) {
-    if (ui_help_show(res->help_flag, ms5611_usage, count_of(ms5611_usage), &ms5611_options[0], count_of(ms5611_options))) {
+    if (bp_cmd_help_check(&ms5611_def, res->help_flag)) {
         return;
     }
     if (!ui_help_sanity_check(true,0x00)) {
-        ui_help_show(true, ms5611_usage, count_of(ms5611_usage), &ms5611_options[0], count_of(ms5611_options));
+        bp_cmd_help_show(&ms5611_def);
         return;
     }    
     // PS high, CSB low
@@ -376,17 +411,22 @@ static const char* const si7021_usage[] = {
     "Show temperature and humidity:%s si7021",
 };
 
-static const struct ui_help_options si7021_options[] = {
-    { 1, "", T_HELP_I2C_SI7021},               // flash command help  
-    { 0, "-h", T_HELP_HELP }               // help flag   
+const bp_command_def_t si7021_def = {
+    .name         = "si7021",
+    .description  = T_HELP_I2C_SI7021,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = si7021_usage,
+    .usage_count  = count_of(si7021_usage),
 };
 
 void demo_si7021(struct command_result* res) {
-    if (ui_help_show(res->help_flag, si7021_usage, count_of(si7021_usage), &si7021_options[0], count_of(si7021_options))) {
+    if (bp_cmd_help_check(&si7021_def, res->help_flag)) {
         return;
     }
     if (!ui_help_sanity_check(true,0x00)) {
-        ui_help_show(true, si7021_usage, count_of(si7021_usage), &si7021_options[0], count_of(si7021_options));
+        bp_cmd_help_show(&si7021_def);
         return;
     }    
 

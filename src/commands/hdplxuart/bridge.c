@@ -15,24 +15,33 @@
 #include "usb_tx.h"
 #include "pirate/bio.h"
 #include "pirate/hwuart_pio.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static const char* const usage[] = { "bridge\t[-h(elp)]",
                                      "Transparent UART bridge:%s bridge",
                                      "Exit:%s press Bus Pirate button" };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_UART_BRIDGE }, // command help
-    { 0, "-t", T_HELP_UART_BRIDGE_TOOLBAR },
-    { 0, "-s", T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO },
-    { 0, "-h", T_HELP_FLAG }, // help
+static const bp_command_opt_t hduart_bridge_opts[] = {
+    { "toolbar",  't', BP_ARG_NONE, NULL, T_HELP_UART_BRIDGE_TOOLBAR },
+    { "suppress", 's', BP_ARG_NONE, NULL, T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO },
+    { 0 }
+};
+
+const bp_command_def_t hduart_bridge_def = {
+    .name         = "bridge",
+    .description  = T_HELP_UART_BRIDGE,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = hduart_bridge_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void hduart_bridge_handler(struct command_result* res) {
     uint32_t raw;
     uint8_t cooked;
 
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&hduart_bridge_def, res->help_flag)) {
         return;
     }
     if (!ui_help_check_vout_vref()) {
@@ -41,12 +50,12 @@ void hduart_bridge_handler(struct command_result* res) {
     static const char label[] = "RTS";
 
     bool toolbar_state = system_config.terminal_ansi_statusbar_pause;
-    bool pause_toolbar = !cmdln_args_find_flag('t' | 0x20);
+    bool pause_toolbar = !bp_cmd_find_flag(&hduart_bridge_def, 't');
     if (pause_toolbar) {
         system_config.terminal_ansi_statusbar_pause = true;
     }
 
-    bool suppress_local_echo = cmdln_args_find_flag('s' | 0x20);
+    bool suppress_local_echo = bp_cmd_find_flag(&hduart_bridge_def, 's');
 
     system_bio_update_purpose_and_label(true, BIO2, BP_PIN_MODE, label);
     bio_output(BIO2);

@@ -6,7 +6,7 @@
 #include "ui/ui_term.h"
 #include "command_struct.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 #include "pirate/hwi2c_pio.h"
 #include "lib/mpu6050_light/mpu6050_light.h"
@@ -46,17 +46,19 @@ static const char* const usage[] = {
     "mpu6050 read:%s mpu6050",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_I2C_MPU6050 },
-    { 0, "-h", T_HELP_FLAG },   // help
-};  
-
+const bp_command_def_t mpu6050_def = {
+    .name         = "mpu6050",
+    .description  = T_HELP_I2C_MPU6050,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 void mpu6050_handler(struct command_result* res) {
-    if(res->help_flag) {
-        //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
-        return; // if help was shown, exit
+    if(bp_cmd_help_check(&mpu6050_def, res->help_flag)) {
+        return;
     }
     mpu6050_t mpu;
 

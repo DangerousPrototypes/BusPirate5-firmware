@@ -39,7 +39,7 @@ Some functions adapted from C++ for the Bus Pirate project by Ian Lesnet Septemb
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "lib/ms5611/ms5611.h"
 #include "lib/tsl2561/driver_tsl2561.h"
 #include "binmode/fala.h"
@@ -869,25 +869,6 @@ static const char* const usage[] = {
     "DDR4 write file **MUST** be exactly 512 bytes long"
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_DDR4 },               // flash command help  
-    { 0, "probe", T_HELP_DDR4_PROBE },    // probe
-    { 0, "dump", T_HELP_DDR4_DUMP },      // dump
-    { 0, "write", T_HELP_DDR4_WRITE },    // write
-    { 0, "read", T_HELP_DDR4_READ },      // read
-    { 0, "verify", T_HELP_DDR4_VERIFY },  // verify
-    { 0, "lock", T_HELP_DDR4_LOCK },      // lock
-    { 0, "unlock", T_HELP_DDR4_UNLOCK },  // unlock
-    { 0, "crc", T_HELP_DDR4_CRC },        // crc
-    { 0, "patch", T_HELP_DDR4_PATCH },    // patch
-    { 0, "-f", T_HELP_DDR4_FILE_FLAG },   // file to read/write/verify
-    { 0, "-b", T_HELP_DDR4_BLOCK_FLAG },  
-    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
-    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-    { 0, "-h", T_HELP_HELP }               // help flag
-};
-
 enum ddr4_actions_enum {
     DDR4_PROBE=0,
     DDR4_DUMP,
@@ -900,20 +881,39 @@ enum ddr4_actions_enum {
     DDR4_PATCH
 };
 
-static const struct cmdln_action_t ddr4_actions[] = {
-    { DDR4_PROBE, "probe" },
-    { DDR4_DUMP, "dump" },
-    { DDR4_READ, "read" },
-    { DDR4_WRITE, "write" },
-    { DDR4_VERIFY, "verify" },
-    { DDR4_LOCK, "lock" },
-    { DDR4_UNLOCK, "unlock" },
-    { DDR4_CRC, "crc" },
-    { DDR4_PATCH, "patch" }
+static const bp_command_action_t ddr4_action_defs[] = {
+    { DDR4_PROBE,  "probe",  T_HELP_DDR4_PROBE },
+    { DDR4_DUMP,   "dump",   T_HELP_DDR4_DUMP },
+    { DDR4_READ,   "read",   T_HELP_DDR4_READ },
+    { DDR4_WRITE,  "write",  T_HELP_DDR4_WRITE },
+    { DDR4_VERIFY, "verify", T_HELP_DDR4_VERIFY },
+    { DDR4_LOCK,   "lock",   T_HELP_DDR4_LOCK },
+    { DDR4_UNLOCK, "unlock", T_HELP_DDR4_UNLOCK },
+    { DDR4_CRC,    "crc",    T_HELP_DDR4_CRC },
+    { DDR4_PATCH,  "patch",  T_HELP_DDR4_PATCH },
+};
+
+static const bp_command_opt_t ddr4_opts[] = {
+    { "file",  'f', BP_ARG_REQUIRED, "<file>",  T_HELP_DDR4_FILE_FLAG },
+    { "block", 'b', BP_ARG_REQUIRED, "<block>", T_HELP_DDR4_BLOCK_FLAG },
+    { "start", 's', BP_ARG_REQUIRED, "<addr>",  UI_HEX_HELP_START },
+    { "bytes", 'b', BP_ARG_REQUIRED, "<count>", UI_HEX_HELP_BYTES },
+    { "quiet", 'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
+    { 0 }
+};
+
+const bp_command_def_t ddr4_def = {
+    .name         = "ddr4",
+    .description  = T_HELP_DDR4,
+    .actions      = ddr4_action_defs,
+    .action_count = count_of(ddr4_action_defs),
+    .opts         = ddr4_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void ddr4_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&ddr4_def, res->help_flag)) {
         return;
     }
     if (!ui_help_sanity_check(true,0x00)) {
@@ -921,8 +921,8 @@ void ddr4_handler(struct command_result* res) {
     }
 
     uint32_t action;
-    if(cmdln_args_get_action(ddr4_actions, count_of(ddr4_actions), &action)){
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+    if(!bp_cmd_get_action(&ddr4_def, &action)){
+        bp_cmd_help_show(&ddr4_def);
         return;        
     }
 
@@ -943,17 +943,11 @@ void ddr4_handler(struct command_result* res) {
         if(file_open(&file_handle, file, file_status)) return; // create the file, overwrite if it exists
     }
     
-    command_var_t arg;
     uint32_t block_flag;
     bool lock_update=false;
     if(action == DDR4_LOCK || action == DDR4_UNLOCK) {
-        if(!cmdln_args_find_flag_uint32('b', &arg, &block_flag)){ // block to lock/unlock
-            if(arg.has_arg){
-                printf("Missing block number: -b <block number>\r\n");
-                return;
-            }else{ //no block, just show current status
-                lock_update = false; //we will not update the lock bits, just read them
-            }
+        if(!bp_cmd_get_uint32(&ddr4_def, 'b', &block_flag)){ // block to lock/unlock
+            lock_update = false; //we will not update the lock bits, just read them
         }else if(block_flag > 3) {
             printf("Block number must be between 0 and 3\r\n");
             return;

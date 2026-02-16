@@ -9,3 +9,4 @@
  * @param res  Command result structure
  */
 void ddr4_handler(struct command_result* res);
+extern const struct bp_command_def ddr4_def;

@@ -6,7 +6,7 @@
 #include "ui/ui_term.h"
 #include "command_struct.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 #include "fatfs/ff.h"       // File system related
 #include "ui/ui_hex.h" // Hex display related
@@ -15,15 +15,6 @@
 #include "pirate/hwi2c_pio.h"
 
 #define I2C_DUMP_MAX_BUFFER_SIZE 1024
-enum i2c_dump_actions_enum {
-    I2CDUMP_DUMP=0,
-    I2CDUMP_READ,
-};
-
-const struct cmdln_action_t i2c_dump_actions[] = {
-    { I2CDUMP_DUMP, "dump" },
-    { I2CDUMP_READ, "read" },
-};
 
 static const char* const usage[] = {
     "i2c [dump|read]\r\n\t[-a <7 bit i2c address>] [-w <register width>] [-r <register address>] [-b <bytes>] [-f <file>] [-h(elp)]",
@@ -33,18 +24,35 @@ static const char* const usage[] = {
     "Dump device with 3 bytes wide register:%s i2c dump -a 0x50 -w 3 -r 0x000000 -b 64",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_I2C_I2CDUMP },               // command help
-    { 0, "dump", T_HELP_EEPROM_DUMP },  
-    { 0, "read", T_HELP_EEPROM_READ },      // read
-    { 0, "-a", T_HELP_I2C_I2CDUMP_ADDRESS }, // alternate I2C address (default is 0x50)
-    { 0, "-w", T_HELP_I2C_I2CDUMP_REG_WIDTH },   // register address width in bytes
-    { 0, "-r", T_HELP_I2C_I2CDUMP_REG_ADDR }, // register address to start dumping from
-    { 0, "-f", T_HELP_SLE4442_FILE_FLAG },   // file to read/write/verify
-    { 0, "-b", T_HELP_EEPROM_BYTES_FLAG },   // number of bytes to dump
-    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-    { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
-    { 0, "-h", T_HELP_FLAG },   // help
+enum i2c_dump_actions_enum {
+    I2CDUMP_DUMP=0,
+    I2CDUMP_READ,
+};
+
+static const bp_command_action_t i2c_dump_action_defs[] = {
+    { I2CDUMP_DUMP, "dump", T_HELP_EEPROM_DUMP },
+    { I2CDUMP_READ, "read", T_HELP_EEPROM_READ },
+};
+
+static const bp_command_opt_t i2c_dump_opts[] = {
+    { "address",    'a', BP_ARG_REQUIRED, "<7-bit>", T_HELP_I2C_I2CDUMP_ADDRESS },
+    { "regwidth",   'w', BP_ARG_REQUIRED, "<bytes>", T_HELP_I2C_I2CDUMP_REG_WIDTH },
+    { "regaddr",    'r', BP_ARG_REQUIRED, "<addr>",  T_HELP_I2C_I2CDUMP_REG_ADDR },
+    { "file",       'f', BP_ARG_REQUIRED, "<file>",  T_HELP_SLE4442_FILE_FLAG },
+    { "bytes",      'b', BP_ARG_REQUIRED, "<count>", T_HELP_EEPROM_BYTES_FLAG },
+    { "quiet",      'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
+    { "nopager",    'c', BP_ARG_NONE,     NULL,      T_HELP_DISK_HEX_PAGER_OFF },
+    { 0 }
+};
+
+const bp_command_def_t i2c_dump_def = {
+    .name         = "i2c",
+    .description  = T_HELP_I2C_I2CDUMP,
+    .actions      = i2c_dump_action_defs,
+    .action_count = count_of(i2c_dump_action_defs),
+    .opts         = i2c_dump_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };  
 
 struct i2c_dump_t {
@@ -57,17 +65,15 @@ struct i2c_dump_t {
 };
 
 static bool i2c_get_args(struct i2c_dump_t *args) {
-    command_var_t arg;
-    char arg_str[9];
     
     // common function to parse the command line verb or action
-    if(cmdln_args_get_action(i2c_dump_actions, count_of(i2c_dump_actions), &args->action)){
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+    if(!bp_cmd_get_action(&i2c_dump_def, &args->action)){
+        bp_cmd_help_show(&i2c_dump_def);
         return true;
     }
     
     uint32_t i2c_address;
-    if(!cmdln_args_find_flag_uint32('a', &arg, &i2c_address)) {
+    if(!bp_cmd_get_uint32(&i2c_dump_def, 'a', &i2c_address)) {
         //printf("Missing I2C 7 bit address: -a <address>\r\n");
         printf("Using default I2C address: 0x50\r\n");
         i2c_address = 0x50; // default I2C address
@@ -79,19 +85,19 @@ static bool i2c_get_args(struct i2c_dump_t *args) {
     }
     args->i2c_address_7bit= i2c_address; // set the device address
 
-    if(!cmdln_args_find_flag_uint32('w', &arg, &args->register_address_width)) {
+    if(!bp_cmd_get_uint32(&i2c_dump_def, 'w', &args->register_address_width)) {
         //printf("Missing register width: -w <reg. width>\r\n");
         printf("Using default register width: 1 byte\r\n");
         args->register_address_width = 1; // default register width
     }
 
-    if(!cmdln_args_find_flag_uint32('r', &arg, &args->register_address)) {
+    if(!bp_cmd_get_uint32(&i2c_dump_def, 'r', &args->register_address)) {
         //printf("Missing register address: -r <reg. address>\r\n");
         printf("Using default register address: 0x00\r\n");
         args->register_address = 0; // default register address
     }
 
-    if(!cmdln_args_find_flag_uint32('b', &arg, &args->data_size_bytes)) {
+    if(!bp_cmd_get_uint32(&i2c_dump_def, 'b', &args->data_size_bytes)) {
         //printf("Missing byte length: -b <bytes>\r\n");
         printf("Using default bytes: 16 bytes\r\n");
         args->data_size_bytes = 16; // default data size
@@ -179,10 +185,8 @@ bool i2c_dump_file(struct i2c_dump_t *eeprom){
 }
 
 void i2c_dump_handler(struct command_result* res) {
-    if(res->help_flag) {
-        //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
-        return; // if help was shown, exit
+    if(bp_cmd_help_check(&i2c_dump_def, res->help_flag)) {
+        return;
     }
     
     struct i2c_dump_t eeprom;

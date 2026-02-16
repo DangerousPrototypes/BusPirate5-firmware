@@ -9,3 +9,4 @@
  * @param res  Command result structure
  */
 void i2c_search_addr(struct command_result* res);
+extern const struct bp_command_def scan_i2c_def;

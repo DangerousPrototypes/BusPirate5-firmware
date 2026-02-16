@@ -6,12 +6,17 @@
 #include "ui/ui_term.h"
 #include "command_struct.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 #include "pirate/hwi2c_pio.h"
 #include "lib/ap33772s/ap33772s.h"
 #include "lib/ap33772s/ap33772s_int.h"
 
+enum usbpd_actions_enum {
+    USBPD_STATUS=0,
+    USBPD_REQUEST,
+    USBPD_RESET,
+};
 
 static const char* const usage[] = {
     "usbpd [status|request|reset]\r\n\t[-p <PDO index>] [-v <mV>] [-i <mA>] [-h(elp)]",
@@ -21,16 +26,28 @@ static const char* const usage[] = {
     "send USB PD hard reset:%s usbpd reset"
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_I2C_USBPD },
-    { 0, "status", T_HELP_I2C_USBPD_STATUS}, 
-    { 0, "request", T_HELP_I2C_USBPD_REQUEST },
-    { 0, "reset", T_HELP_I2C_USBPD_RESET },
-    { 0, "-p", T_HELP_I2C_USBPD_PDO_INDEX },
-    { 0, "-v", T_HELP_I2C_USBPD_VOLTAGE },
-    { 0, "-i", T_HELP_I2C_USBPD_CURRENT },
-    { 0, "-h", T_HELP_FLAG },   // help
-};  
+static const bp_command_action_t usbpd_action_defs[] = {
+    { USBPD_STATUS,  "status",  T_HELP_I2C_USBPD_STATUS },
+    { USBPD_REQUEST, "request", T_HELP_I2C_USBPD_REQUEST },
+    { USBPD_RESET,   "reset",   T_HELP_I2C_USBPD_RESET },
+};
+
+static const bp_command_opt_t usbpd_opts[] = {
+    { "pdo",     'p', BP_ARG_REQUIRED, "<index>", T_HELP_I2C_USBPD_PDO_INDEX },
+    { "voltage", 'v', BP_ARG_REQUIRED, "<mV>",    T_HELP_I2C_USBPD_VOLTAGE },
+    { "current", 'i', BP_ARG_REQUIRED, "<mA>",    T_HELP_I2C_USBPD_CURRENT },
+    { 0 }
+};
+
+const bp_command_def_t usbpd_def = {
+    .name         = "usbpd",
+    .description  = T_HELP_I2C_USBPD,
+    .actions      = usbpd_action_defs,
+    .action_count = count_of(usbpd_action_defs),
+    .opts         = usbpd_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 static void print_measurements(ap33772s_ref dev)
 {
@@ -334,30 +351,16 @@ void usbpd_profiles_print(ap33772s_ref dev){
     }
 }
 
-enum usbpd_actions_enum {
-    USBPD_STATUS = 0,
-    USBPD_REQUEST,
-    USBPD_RESET,
-};
-
-// action list: status, fixed, pps, avs, reset
-const struct cmdln_action_t usbpd_actions[] = {
-    { USBPD_STATUS, "status" },
-    { USBPD_REQUEST, "request" },
-    { USBPD_RESET, "reset" },
-};
 
 
 void usbpd_handler(struct command_result* res) {
-    if(res->help_flag) {
-        //eeprom_display_devices(eeprom_devices, count_of(eeprom_devices)); // display the available EEPROM devices
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
-        return; // if help was shown, exit
+    if(bp_cmd_help_check(&usbpd_def, res->help_flag)) {
+        return;
     }
 
     uint32_t action;
-    if (cmdln_args_get_action(usbpd_actions, count_of(usbpd_actions), &action)) {
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+    if (!bp_cmd_get_action(&usbpd_def, &action)) {
+        bp_cmd_help_show(&usbpd_def);
         return;
     }    
 
@@ -393,8 +396,7 @@ void usbpd_handler(struct command_result* res) {
         uint32_t pdo_index = 0;
         uint32_t req_mv = 0;
         uint32_t req_ma = 0;
-        command_var_t arg;
-        if(!cmdln_args_find_flag_uint32('p' | 0x20, &arg, &pdo_index)){
+        if(!bp_cmd_get_uint32(&usbpd_def, 'p', &pdo_index)){
             printf("Specify PDO index to request with -p <index>\r\n");
             return;
         }
@@ -418,7 +420,7 @@ void usbpd_handler(struct command_result* res) {
             //set voltage to max
             req_mv = info.voltage_max_mv;
         }else{
-            if(!cmdln_args_find_flag_uint32('v' | 0x20, &arg, &req_mv)){
+            if(!bp_cmd_get_uint32(&usbpd_def, 'v', &req_mv)){
                 printf("Specify requested voltage in mV with -v <mV> for PPS/AVS PDOs\r\n");
                 return;
             }
@@ -430,7 +432,7 @@ void usbpd_handler(struct command_result* res) {
         }
 
         //if specified, must be within limits, else max
-        if(!cmdln_args_find_flag_uint32('i' | 0x20, &arg, &req_ma)){
+        if(!bp_cmd_get_uint32(&usbpd_def, 'i', &req_ma)){
             //not specified, use max
             req_ma = info.current_max_ma;
         }else{

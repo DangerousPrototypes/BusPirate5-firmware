@@ -11,7 +11,7 @@
 #include "mode/hwi2c.h"
 #include "lib/i2c_address_list/dev_i2c_addresses.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 
 static const char* const usage[] = {
@@ -20,17 +20,26 @@ static const char* const usage[] = {
     "Scan, list possible part numbers:%s scan -v",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_I2C_SCAN },           // command help
-    { 0, "-v", T_HELP_I2C_SCAN_VERBOSE }, // verbose
-    { 0, "-h", T_HELP_FLAG },             // help
+static const bp_command_opt_t scan_i2c_opts[] = {
+    { "verbose", 'v', BP_ARG_NONE, NULL, T_HELP_I2C_SCAN_VERBOSE },
+    { 0 }
+};
+
+const bp_command_def_t scan_i2c_def = {
+    .name         = "scan",
+    .description  = T_HELP_I2C_SCAN,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = scan_i2c_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 bool i2c_search_check_addr(uint8_t address);
 
 void i2c_search_addr(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&scan_i2c_def, res->help_flag)) {
         return;
     }
 
@@ -39,7 +48,7 @@ void i2c_search_addr(struct command_result* res) {
         return;
     }
 
-    bool verbose = cmdln_args_find_flag('v');
+    bool verbose = bp_cmd_find_flag(&scan_i2c_def, 'v');
     bool color = false;
     uint16_t device_count = 0;
     uint16_t device_pairs = 0;

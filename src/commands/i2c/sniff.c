@@ -16,7 +16,7 @@
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
 #include "usb_rx.h"
 #include "usb_tx.h"
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"    // New command definition system
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -37,28 +37,37 @@ const char* const i2c_sniff_help[] = {
     "Max speed: 500kHz",
 };
 
-const struct ui_help_options i2c_sniff_options[] = {
-    { 1, "", T_I2C_SNIFF },
-    { 0, "q", T_I2C_SNIFF_QUIET },
-    { 0, "r", T_I2C_SNIFF_RAW },
-    { 0, "7", T_I2C_SNIFF_7_BIT_ADDRESSES},
-    { 0, "h", T_HELP_FLAG },
+static const bp_command_opt_t sniff_i2c_opts[] = {
+    { "quiet",  'q', BP_ARG_NONE, NULL, T_I2C_SNIFF_QUIET },
+    { "raw",    'r', BP_ARG_NONE, NULL, T_I2C_SNIFF_RAW },
+    { "addr7",  '7', BP_ARG_NONE, NULL, T_I2C_SNIFF_7_BIT_ADDRESSES },
+    { 0 }
+};
+
+const bp_command_def_t sniff_i2c_def = {
+    .name         = "sniff",
+    .description  = T_I2C_SNIFF,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = sniff_i2c_opts,
+    .usage        = i2c_sniff_help,
+    .usage_count  = count_of(i2c_sniff_help),
 };
 
 void i2c_sniff(struct command_result* res){ 
     //if -h show help
-    if (ui_help_show(res->help_flag, i2c_sniff_help, count_of(i2c_sniff_help), &i2c_sniff_options[0], count_of(i2c_sniff_options))) {
+    if (bp_cmd_help_check(&sniff_i2c_def, res->help_flag)) {
         return;
     }
 
     // check arguments
-    bool quiet = cmdln_args_find_flag('q');
+    bool quiet = bp_cmd_find_flag(&sniff_i2c_def, 'q');
     
-    bool raw = cmdln_args_find_flag('r');
+    bool raw = bp_cmd_find_flag(&sniff_i2c_def, 'r');
 
     //-7 prints address as W[0xXX]/R[0xXX] (7-bit address + direction),
     // instead of raw 8-bit address byte.
-    bool addr7 = cmdln_args_find_flag('7');
+    bool addr7 = bp_cmd_find_flag(&sniff_i2c_def, '7');
 
     // Full speed for the PIO clock divider
     float div = 1;

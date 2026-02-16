@@ -54,12 +54,14 @@ struct _i2c_mode_config i2c_mode_config;
 const struct _mode_command_struct hwi2c_commands[] = {
     {   .command="scan", 
         .func=&i2c_search_addr, 
+        .def=&scan_i2c_def,
         .description_text=T_HELP_I2C_SCAN, 
         .supress_fala_capture=true
     },
     {
         .command="sniff",
         .func=&i2c_sniff,
+        .def=&sniff_i2c_def,
         .description_text=T_I2C_SNIFF,
         .supress_fala_capture=true
     },
@@ -72,67 +74,79 @@ const struct _mode_command_struct hwi2c_commands[] = {
     },    
     {   .command="ddr5", 
         .func=&ddr5_handler, 
+        .def=&ddr5_def,
         .description_text=T_HELP_DDR5, 
         .supress_fala_capture=true
     },   
     {   .command="ddr4", 
         .func=&ddr4_handler, 
+        .def=&ddr4_def,
         .description_text=T_HELP_DDR4, 
         .supress_fala_capture=true
     },          
     {
         .command="sht3x", 
         .func=&demo_sht3x, 
+        .def=&sht3x_def,
         .description_text=T_HELP_I2C_SHT3X, 
         .supress_fala_capture=true
     },    
     {   .command="sht4x", 
         .func=&demo_sht4x, 
+        .def=&sht4x_def,
         .description_text=T_HELP_I2C_SHT4X, 
         .supress_fala_capture=true
     },    
     {   .command="si7021", 
         .func=&demo_si7021, 
+        .def=&si7021_def,
         .description_text=T_HELP_I2C_SI7021, 
         .supress_fala_capture=true
     },
     {   .command="ms5611", 
         .func=&demo_ms5611, 
+        .def=&ms5611_def,
         .description_text=T_HELP_I2C_MS5611, 
         .supress_fala_capture=true
     },
     {   .command="tsl2561", 
         .func=&demo_tsl2561, 
+        .def=&tsl2561_def,
         .description_text=T_HELP_I2C_TSL2561, 
         .supress_fala_capture=true
     },
     {
         .command="tcs3472",
         .func=&demo_tcs34725,
+        .def=&tcs34725_def,
         .description_text=T_HELP_I2C_TCS34725,
         .supress_fala_capture=true
     },
     {
         .command="fusb302",
         .func=&fusb302_handler,
+        .def=&fusb302_def,
         .description_text=T_HELP_I2C_FUSB302,
         .supress_fala_capture=true
     }, 
     {
         .command="i2c",
         .func=&i2c_dump_handler,
+        .def=&i2c_dump_def,
         .description_text=T_HELP_I2C_I2CDUMP,
         .supress_fala_capture=true
     },     
     {
         .command="usbpd",
         .func=&usbpd_handler,
+        .def=&usbpd_def,
         .description_text=T_HELP_I2C_USBPD,
         .supress_fala_capture=true
     },  
     {
         .command="mpu6050",
         .func=&mpu6050_handler,
+        .def=&mpu6050_def,
         .description_text=T_HELP_I2C_MPU6050,
         .supress_fala_capture=true
     },    

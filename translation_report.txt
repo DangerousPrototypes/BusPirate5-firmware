@@ -1,0 +1,203 @@
+================================================================================
+Bus Pirate 5 Translation Checker
+================================================================================
+
+Parsing translation file: src/translation/en-us.h
+Found 600 translation entries
+
+Scanning source directory: src
+Excluding: src/translation
+Found 585 source files to check
+
+--------------------------------------------------------------------------------
+CHECKING FOR UNUSED TRANSLATION ENTRIES
+--------------------------------------------------------------------------------
+
+Found 88 unused translation entries:
+
+  T_CMDLN_HELP_DISPLAY                     = "hd - show display mode specific help screen."
+  T_CMDLN_HELP_MODE                        = "h - show mode specific help screen."
+  T_CMDLN_LOAD                             = "load <file> <device> - load contents of <file> to flash <..."
+  T_CMDLN_LOGIC                            = "logic <frequency in kHz> <samples> <trigger pin> <trigger..."
+  T_CMDLN_NO_HELP                          = "Help not currently available for this command."
+  T_CONFIG_LEDS_COLOR_RAINBOW              = "Rainbow"
+  T_HELP_1_10                              = "Show volts all IOs (once/CONT)"
+  T_HELP_1_11                              = "Measure freq on IOx (once/CONT)"
+  T_HELP_1_12                              = "Generate frequency (off/ON)"
+  T_HELP_1_14                              = "Bus Pirate version and status info"
+  T_HELP_1_15                              = "Bitorder (msb/LSB)"
+  T_HELP_1_16                              = "Change to a protocol mode such as I2C"
+  T_HELP_1_17                              = "Choose how numbers are displayed"
+  T_HELP_1_18                              = "Pull-up resistors (off/ON)"
+  T_HELP_1_19                              = "-"
+  T_HELP_1_2                               = "Converts x/reverse x"
+  T_HELP_1_20                              = "Show volts/states"
+  T_HELP_1_21                              = "Power supply (off/ON)"
+  T_HELP_1_22                              = "Show volts on IOx (once/CONT)"
+  T_HELP_1_23                              = "Monitor freq (off/ON)"
+  T_HELP_1_3                               = "Self test"
+  T_HELP_1_5                               = "Jump to bootloader"
+  T_HELP_1_9                               = "Configure terminal, language, LEDs"
+  T_HELP_2_18                              = "Bit read"
+  T_HELP_2_21                              = "User macro x/list all"
+  T_HELP_2_22                              = "User macro assign x"
+  T_HELP_CAPTURE_LA                        = "Logic analyzer interface"
+  T_HELP_CAPTURE_SCOPE                     = "Oscilloscope interface"
+  T_HELP_CMD_CAT                           = "Print file contents as text"
+  T_HELP_CMD_CD                            = "Change directory"
+  T_HELP_CMD_DUMP                          = "Repeat read command, save ouput to storage"
+  T_HELP_CMD_FLASH                         = "Erase, write, read and verify SPI flash chips"
+  T_HELP_CMD_HEX                           = "Print file contents in HEX"
+  T_HELP_CMD_LS                            = "List files"
+  T_HELP_CMD_MKDIR                         = "Make directory"
+  T_HELP_CMD_RM                            = "Remove file/directory"
+  T_HELP_CMD_TUTORIAL                      = "Run tutorial files"
+  T_HELP_COMMAND_AUX                       = "Set IO x state (low/HI/READ)"
+  T_HELP_COMMAND_DISPLAY                   = "Change screen display mode"
+  T_HELP_DISK_CAT_FILE                     = "Name of file in 8.3 format (example1.txt)"
+  T_HELP_DISK_CD_DIR                       = "Directory name, 8 characters max"
+  T_HELP_DISK_FORMAT_CMD                   = "All data will be lost, answer 'y' twice to continue"
+  T_HELP_DISK_HEX_ADDR                     = "Disable address offset"
+  T_HELP_DISK_HEX_ASCII                    = "Disable ASCII dump"
+  T_HELP_DISK_HEX_FILE                     = "Name of file in 8.3 format (example1.bin)"
+  T_HELP_DISK_HEX_OFF                      = "Set file read start offset in bytes"
+  T_HELP_DISK_HEX_SIZE                     = "Set line size in bytes"
+  T_HELP_DISK_LS_DIR                       = "List contents of this directory, optional"
+  T_HELP_DISK_MKDIR_DIR                    = "Directory name, 8 characters max"
+  T_HELP_DISK_RM_DIR                       = "Name of directory to delete, 8 characters max"
+  T_HELP_DISK_RM_FILE                      = "Name of file to delete, 8.3 format"
+  T_HELP_DUMMY_FLAGS                       = "Dummy flags"
+  T_HELP_DUMMY_INIT                        = "Dummy init command"
+  T_HELP_DUMMY_TEST                        = "Dummy test command"
+  T_HELP_FLASH_INIT                        = "Reset and initialize flash chip. Default if no options given"
+  T_HELP_GCMD_SELFTEST_CMD                 = "Run self-test"
+  T_HELP_GCMD_SELFTEST_H_FLAG              = "Self-test help"
+  T_HELP_GCMD_W_CURRENT_LIMIT              = "Current limit, 0-500mA"
+  T_HELP_GCMD_W_DISABLE                    = "Disable onboard power supply"
+  T_HELP_GCMD_W_ENABLE                     = "Enable onboard power supply, show configuration menu"
+  T_HELP_GCMD_W_VOLTS                      = "Voltage, 0.8-5.0volts"
+  T_HELP_HELP_DISPLAY                      = "Help with a display mode such as the scope"
+  T_HELP_LOGIC_SAMPLES                     = "set number of samples"
+  T_HELP_LOGIC_TRIGGER_LEVEL               = "set trigger level, 0-1"
+  T_HELP_LOGIC_TRIGGER_PIN                 = "set trigger pin, 0-7"
+  T_HELP_SECTION_CAPTURE                   = "measure analog and digital signals"
+  T_HELP_SECTION_PROGRAMS                  = "useful commands and mini-programs"
+  T_HELP_SYSTEM_REBOOT                     = "Reboot the Bus Pirate"
+  T_HELP_UART_GLITCH_CONFIG                = "Configure UART glitch parameters"
+  T_HELP_UART_GLITCH_EXIT                  = "UART Glitcher.  Press Bus Pirate button to exit."
+  T_HELP_VADC                              = "measure voltage on IO pins"
+  T_HELP_VADC_CONTINUOUS                   = "Continuous measurement"
+  T_HELP_VADC_IO                           = "IO pin number, 0-7"
+  T_HELP_VADC_SINGLE                       = "Single measurement"
+  T_HW2WIRE_SNIFF                          = "Sniff 8 bit data with start and stop bits (SLE4442, TM1640)"
+  T_HWI2C_CLOCK_STRETCH_PROMPT             = "(OFF)"
+  T_HWI2C_I2C_ERROR                        = "I2C bus error"
+  T_HWI2C_NO_PULLUP_DETECTED               = "no pull-up detected"
+  T_HWI2C_NO_VOUT_DETECTED                 = "no power detected"
+  T_INFO_BOOTLOADER                        = "Bootloader"
+  T_INFRARED_CMD_TEST                      = "Test IR RX/TX Toy plank"
+  T_JTAG_BLUETAG_DESCRIPTION               = "Find JTAG and SWD pinouts"
+  T_JTAG_BLUETAG_FLAGS                     = "Flags"
+  T_MHZ                                    = "MHz"
+  T_PSU_ALREADY_DISABLED_ERROR             = "Power supply already disabled"
+  T_PSU_DAC_ERROR                          = "PSU DAC error, please run self-test"
+  T_SPI_CMD_SNIFF                          = "SPI sniffer"
+  T_UART_NO_DATA_TIMEOUT                   = "Data read timeout"
+
+Summary: 512 used, 88 unused
+
+--------------------------------------------------------------------------------
+CHECKING FOR DUPLICATE TRANSLATION TEXT
+--------------------------------------------------------------------------------
+
+Found 15 sets of duplicate text:
+
+1. Text: "Data bits"
+   Used by 4 keys:
+     - T_HWI2C_DATA_BITS_MENU                   [USED]
+     - T_HWSPI_BITS_MENU                        [USED]
+     - T_I2S_DATA_BITS_MENU                     [USED]
+     - T_UART_DATA_BITS_MENU                    [USED]
+
+2. Text: "kHz (%s%dkHz*%s)"
+   Used by 3 keys:
+     - T_HWI2C_SPEED_PROMPT                     [USED]
+     - T_HWSPI_SPEED_PROMPT                     [USED]
+     - T_IR_TX_SPEED_PROMPT                     [USED]
+
+3. Text: "Bits (%s%d*%s)"
+   Used by 3 keys:
+     - T_HWSPI_BITS_PROMPT                      [USED]
+     - T_I2S_DATA_BITS_PROMPT                   [USED]
+     - T_UART_DATA_BITS_PROMPT                  [USED]
+
+4. Text: "Pull-up resistors"
+   Used by 2 keys:
+     - T_INFO_PULLUP_RESISTORS                  [USED]
+     - T_MODE_PULLUP_RESISTORS                  [USED]
+
+5. Text: "Power supply"
+   Used by 2 keys:
+     - T_INFO_POWER_SUPPLY                      [USED]
+     - T_MODE_POWER_SUPPLY                      [USED]
+
+6. Text: "Actual speed"
+   Used by 2 keys:
+     - T_HWSPI_ACTUAL_SPEED_KHZ                 [USED]
+     - T_UART_ACTUAL_SPEED_BAUD                 [USED]
+
+7. Text: "Parity"
+   Used by 2 keys:
+     - T_UART_PARITY_MENU                       [USED]
+     - T_UART_PARITY_PROMPT                     [USED]
+
+8. Text: "None"
+   Used by 2 keys:
+     - T_UART_FLOW_CONTROL_MENU_1               [USED]
+     - T_UART_PARITY_MENU_1                     [USED]
+
+9. Text: "Bits"
+   Used by 2 keys:
+     - T_HWI2C_DATA_BITS_PROMPT                 [USED]
+     - T_UART_STOP_BITS_PROMPT                  [USED]
+
+10. Text: "1 - 255"
+   Used by 2 keys:
+     - T_UART_GLITCH_FAIL_MENU_1                [USED]
+     - T_UART_GLITCH_TRG_MENU_1                 [USED]
+
+11. Text: "1 - 5000000"
+   Used by 2 keys:
+     - T_UART_GLITCH_DLY_MENU_1                 [USED]
+     - T_UART_GLITCH_LNG_MENU_1                 [USED]
+
+12. Text: "IO pin number, 0-7"
+   Used by 2 keys:
+     - T_HELP_AUXIO_IO                          [USED]
+     - T_HELP_VADC_IO                           [UNUSED]
+
+13. Text: "Directory name, 8 characters max"
+   Used by 2 keys:
+     - T_HELP_DISK_CD_DIR                       [UNUSED]
+     - T_HELP_DISK_MKDIR_DIR                    [UNUSED]
+
+14. Text: "Exit script on error"
+   Used by 2 keys:
+     - T_HELP_BUTTON_EXIT                       [USED]
+     - T_HELP_CMD_SCRIPT_ERROR_EXIT             [USED]
+
+15. Text: "File flag. Specify a file to write, read, verify or check..."
+   Used by 2 keys:
+     - T_HELP_DDR4_FILE_FLAG                    [USED]
+     - T_HELP_DDR5_FILE_FLAG                    [USED]
+
+Summary: 15 duplicate text groups
+
+================================================================================
+FINAL SUMMARY
+================================================================================
+Total translations:     600
+Used translations:      512
+Unused translations:    88
+Duplicate text groups:  15
+

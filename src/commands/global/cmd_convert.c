@@ -8,7 +8,7 @@
 #include "ui/ui_format.h"
 #include "pirate/lsb.h"
 #include "ui/ui_const.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "lib/bp_expr/bp_expr.h"
 
 const char* const base_usage[] = {
@@ -18,10 +18,23 @@ const char* const base_usage[] = {
     "Ops: + - * / % & | ^ ~ << >>",
 };
 
-const struct ui_help_options base_options[] = {
-    { 1, "", T_HELP_GCMD_P }, // command help
-    { 0, "p", T_CONFIG_DISABLE },
-    { 0, "P", T_CONFIG_ENABLE },
+const bp_command_def_t convert_base_def = {
+    .name = "=",
+    .description = T_CMDLN_INT_FORMAT,
+    .usage = base_usage,
+    .usage_count = count_of(base_usage)
+};
+
+const char *const inverse_usage[] = {
+    "| <value>",
+    "Inverse bits: | 0x12345678",
+};
+
+const bp_command_def_t convert_inverse_def = {
+    .name = "|",
+    .description = T_CMDLN_INT_INVERSE,
+    .usage = inverse_usage,
+    .usage_count = count_of(inverse_usage)
 };
 
 void cmd_convert_base(uint32_t value, uint32_t num_bits) {
@@ -41,10 +54,13 @@ void cmd_convert_base_handler(struct command_result* res) {
     
     const char *expr;
     size_t len;
-    if (!cmdln_args_remainder(&expr, &len)) {
-        printf("Usage: = <expression>\r\n");
-        printf("  Operators: + - * / %% & | ^ ~ << >>\r\n");
-        printf("  Numbers: 0xFF 0b1010 255\r\n");
+
+    if(bp_cmd_help_check(&convert_base_def, res->help_flag)) {
+        return;
+    }
+
+    if (!bp_cmd_get_remainder(&convert_base_def, &expr, &len)) {
+        bp_cmd_help_show(&convert_base_def);
         return;
     }
     
@@ -67,7 +83,18 @@ void cmd_convert_base_handler(struct command_result* res) {
 
 void cmd_convert_inverse_handler(struct command_result* res) {
     uint32_t temp = 0;
-    bool has_value = cmdln_args_uint32_by_position(1, &temp);
+
+    if(bp_cmd_help_check(&convert_inverse_def, res->help_flag)) {
+        return;
+    }
+
+    bool has_value = bp_cmd_get_positional_uint32(&convert_inverse_def, 1, &temp);
+
+    if (!has_value) {
+        bp_cmd_help_show(&convert_inverse_def);
+        return;
+    }
+
     lsb_get(&temp, system_config.num_bits, 1);
 
     printf(" %s| ", ui_term_color_reset());

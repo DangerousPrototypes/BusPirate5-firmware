@@ -4,6 +4,9 @@
  * @details Provides commands to convert numbers between hex/dec/bin formats.
  */
 
+extern const struct bp_command_def convert_base_def;
+extern const struct bp_command_def convert_inverse_def;
+
 /**
  * @brief Convert and display value in all bases.
  * @param value     Value to convert

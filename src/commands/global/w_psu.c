@@ -29,7 +29,7 @@
 #include "system_monitor.h"
 #include "commands/global/w_psu.h"
 #include "display/scope.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "pirate/psu.h"
 #include "pirate/amux.h"
 #include "ui/ui_help.h"
@@ -44,11 +44,24 @@ const char* const psucmd_usage[] = {
     "Enable 3.3v, no fuse, no undervoltage limit:%s W 3.3 0 -u 100",
 };
 
-const struct ui_help_options psucmd_options[] = {
-    { 1, "", T_HELP_GCMD_W }, // command help
-    { 0, "w", T_HELP_GCMD_W_DISABLE }, { 0, "W", T_HELP_GCMD_W_ENABLE },
-    { 0, "<v>", T_HELP_GCMD_W_VOLTS }, { 0, "<i>", T_HELP_GCMD_W_CURRENT_LIMIT },
-    { 0, "-u <%>", T_HELP_GCMD_W_UNDERVOLTAGE }
+static const bp_command_opt_t psucmd_opts[] = {
+    { "undervoltage", 'u', BP_ARG_REQUIRED, "<%>", T_HELP_GCMD_W_UNDERVOLTAGE },
+    { 0 }
+};
+
+const bp_command_def_t psucmd_enable_def = {
+    .name = "W",
+    .description = T_CMDLN_PSU_EN,
+    .opts = psucmd_opts,
+    .usage = psucmd_usage,
+    .usage_count = count_of(psucmd_usage)
+};
+
+const bp_command_def_t psucmd_disable_def = {
+    .name = "w",
+    .description = T_CMDLN_PSU_DIS,
+    .usage = psucmd_usage,
+    .usage_count = count_of(psucmd_usage)
 };
 
 // current limit fuse tripped
@@ -85,8 +98,7 @@ void psucmd_enable_handler(struct command_result* res) {
     bool current_limit_override = false;
 
     // check help
-    if (ui_help_show(
-            res->help_flag, psucmd_usage, count_of(psucmd_usage), &psucmd_options[0], count_of(psucmd_options))) {
+    if (bp_cmd_help_check(&psucmd_enable_def, res->help_flag)) {
         return;
     }
 
@@ -97,17 +109,16 @@ void psucmd_enable_handler(struct command_result* res) {
         return;
     }
 
-    bool has_volts = cmdln_args_float_by_position(1, &volts);
-    bool has_current = cmdln_args_float_by_position(2, &current);
+    bool has_volts = bp_cmd_get_positional_float(&psucmd_enable_def, 1, &volts);
+    bool has_current = bp_cmd_get_positional_float(&psucmd_enable_def, 2, &current);
     if (has_volts && !has_current) {
         // default current limit when no argument given
         current = 300.0f;
     }
 
     // user selected to disable PSU when the voltage sags below X % 
-    command_var_t args;
     uint32_t undervoltage_percent = 10;
-    bool has_undervoltage_alarm = cmdln_args_find_flag_uint32('u', &args, &undervoltage_percent);
+    bool has_undervoltage_alarm = bp_cmd_get_uint32(&psucmd_enable_def, 'u', &undervoltage_percent);
 
     //if(has_undervoltage_alarm) {
         if(undervoltage_percent < 1 || undervoltage_percent > 100) {
@@ -248,8 +259,7 @@ void psucmd_disable(void) {
 
 void psucmd_disable_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(
-            res->help_flag, psucmd_usage, count_of(psucmd_usage), &psucmd_options[0], count_of(psucmd_options))) {
+    if (bp_cmd_help_check(&psucmd_disable_def, res->help_flag)) {
         return;
     }
 

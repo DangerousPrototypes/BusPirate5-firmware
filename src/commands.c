@@ -50,17 +50,13 @@ const struct _global_command_struct commands[] = {
     // clang-format off
 //                                                                                                                    category
 // IO: pin control, power, measurement
-{ .command="W",         .allow_hiz=false, .func=&psucmd_enable_handler,              .description_text=T_CMDLN_PSU_EN,       .category=CMD_CAT_IO },
-{ .command="w",         .allow_hiz=false, .func=&psucmd_disable_handler,             .description_text=T_CMDLN_PSU_DIS,      .category=CMD_CAT_IO },
-{ .command="P",         .allow_hiz=false, .func=&pullups_enable_handler,             .description_text=T_CMDLN_PULLUPS_EN,   .category=CMD_CAT_IO },
-{ .command="p",         .allow_hiz=false, .func=&pullups_disable_handler,            .description_text=T_CMDLN_PULLUPS_DIS,  .category=CMD_CAT_IO },
-{ .command="a",         .allow_hiz=false, .func=&auxio_low_handler,                  .description_text=T_CMDLN_AUX_LOW,      .category=CMD_CAT_IO },
-{ .command="A",         .allow_hiz=false, .func=&auxio_high_handler,                 .description_text=T_CMDLN_AUX_HIGH,     .category=CMD_CAT_IO },
-{ .command="@",         .allow_hiz=true,  .func=&auxio_input_handler,                .description_text=T_CMDLN_AUX_IN,       .category=CMD_CAT_IO },
+{ .command="W",         .allow_hiz=false, .func=&psucmd_enable_handler,              .def=&psucmd_enable_def, .description_text=T_CMDLN_PSU_EN,       .category=CMD_CAT_IO },
+{ .command="w",         .allow_hiz=false, .func=&psucmd_disable_handler,             .def=&psucmd_disable_def, .description_text=T_CMDLN_PSU_DIS,      .category=CMD_CAT_IO },
+{ .command="a",         .allow_hiz=false, .func=&auxio_low_handler,                  .def=&auxio_low_def, .description_text=T_CMDLN_AUX_LOW,      .category=CMD_CAT_IO },
+{ .command="A",         .allow_hiz=false, .func=&auxio_high_handler,                 .def=&auxio_high_def, .description_text=T_CMDLN_AUX_HIGH,     .category=CMD_CAT_IO },
+{ .command="@",         .allow_hiz=true,  .func=&auxio_input_handler,                .def=&auxio_input_def, .description_text=T_CMDLN_AUX_IN,       .category=CMD_CAT_IO },
 { .command="f",         .allow_hiz=true,  .func=&freq_single,                        .def=&freq_single_def, .description_text=T_CMDLN_FREQ_ONE,     .category=CMD_CAT_IO },
 { .command="F",         .allow_hiz=true,  .func=&freq_cont,                          .def=&freq_cont_def, .description_text=T_CMDLN_FREQ_CONT,    .category=CMD_CAT_IO },
-{ .command="G",         .allow_hiz=false, .func=&pwm_configure_enable,               .description_text=T_CMDLN_PWM_CONFIG,   .category=CMD_CAT_IO },
-{ .command="g",         .allow_hiz=false, .func=&pwm_configure_disable,              .description_text=T_CMDLN_PWM_DIS,      .category=CMD_CAT_IO },
 { .command="v",         .allow_hiz=true,  .func=&adc_measure_single,                 .def=&adc_single_def, .description_text=T_CMDLN_ADC_ONE,      .category=CMD_CAT_IO },
 { .command="V",         .allow_hiz=true,  .func=&adc_measure_cont,                   .def=&adc_cont_def, .description_text=T_CMDLN_ADC_CONT,     .category=CMD_CAT_IO },
 // Configure: terminal, display, mode config
@@ -76,7 +72,7 @@ const struct _global_command_struct commands[] = {
 { .command="$",         .allow_hiz=true,  .func=&cmd_mcu_jump_to_bootloader_handler, .def=&bootloader_def, .description_text=T_CMDLN_BOOTLOAD,     .category=CMD_CAT_SYSTEM },
 { .command="~",         .allow_hiz=true,  .func=&cmd_selftest_handler,               .description_text=T_CMDLN_SELFTEST,     .category=CMD_CAT_SYSTEM },
 { .command="bug",       .allow_hiz=true,  .func=&bug_handler,                        .def=&bug_def, .description_text=0x00,                 .category=CMD_CAT_SYSTEM },
-{ .command="ovrclk",    .allow_hiz=true,  .func=&ovrclk_handler,                     .description_text=0x00,                 .category=CMD_CAT_SYSTEM },
+{ .command="ovrclk",    .allow_hiz=true,  .func=&ovrclk_handler,                     .def=&ovrclk_def, .description_text=0x00,                 .category=CMD_CAT_SYSTEM },
 // Files: storage and file operations
 { .command="ls",        .allow_hiz=true,  .func=&disk_ls_handler,                    .description_text=T_CMDLN_LS,           .category=CMD_CAT_FILES },
 { .command="cd",        .allow_hiz=true,  .func=&disk_cd_handler,                    .description_text=T_CMDLN_CD,           .category=CMD_CAT_FILES },
@@ -99,8 +95,8 @@ const struct _global_command_struct commands[] = {
 // Tools: utilities and converters
 { .command="logic",     .allow_hiz=true,  .func=&logic_handler,                      .description_text=T_HELP_CMD_LOGIC,     .category=CMD_CAT_TOOLS },
 { .command="smps",      .allow_hiz=true,  .func=&smps_handler,                       .description_text=T_HELP_CMD_SMPS,      .category=CMD_CAT_TOOLS },
-{ .command="=",         .allow_hiz=true,  .func=&cmd_convert_base_handler,           .description_text=T_CMDLN_INT_FORMAT,   .category=CMD_CAT_TOOLS },
-{ .command="|",         .allow_hiz=true,  .func=&cmd_convert_inverse_handler,        .description_text=T_CMDLN_INT_INVERSE,  .category=CMD_CAT_TOOLS },
+{ .command="=",         .allow_hiz=true,  .func=&cmd_convert_base_handler,           .def=&convert_base_def, .description_text=T_CMDLN_INT_FORMAT,   .category=CMD_CAT_TOOLS },
+{ .command="|",         .allow_hiz=true,  .func=&cmd_convert_inverse_handler,        .def=&convert_inverse_def, .description_text=T_CMDLN_INT_INVERSE,  .category=CMD_CAT_TOOLS },
 { .command="jep106",    .allow_hiz=true,  .func=&jep106_handler,                     .description_text=T_HELP_GLOBAL_JEP106_LOOKUP, .category=CMD_CAT_TOOLS },
 // Mode: mode selection and binmode
 { .command="m",         .allow_hiz=true,  .func=&ui_mode_enable_args,                .description_text=T_CMDLN_MODE,         .category=CMD_CAT_MODE },

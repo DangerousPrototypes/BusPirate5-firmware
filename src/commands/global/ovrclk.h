@@ -4,6 +4,8 @@
  * @details Provides command to adjust system clock frequency.
  */
 
+extern const struct bp_command_def ovrclk_def;
+
 /**
  * @brief Handler for overclock command.
  * @param res  Command result structure

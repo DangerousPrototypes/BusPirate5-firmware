@@ -5,6 +5,10 @@
  *          separate from current protocol mode.
  */
 
+extern const struct bp_command_def auxio_high_def;
+extern const struct bp_command_def auxio_low_def;
+extern const struct bp_command_def auxio_input_def;
+
 /**
  * @brief Handler for aux pin high command (A).
  * @param res  Command result structure

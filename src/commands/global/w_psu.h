@@ -5,6 +5,9 @@
  *          with voltage, current limiting, and undervoltage protection.
  */
 
+extern const struct bp_command_def psucmd_enable_def;
+extern const struct bp_command_def psucmd_disable_def;
+
 /**
  * @brief Initialize PSU command subsystem.
  * @return true on success, false on failure

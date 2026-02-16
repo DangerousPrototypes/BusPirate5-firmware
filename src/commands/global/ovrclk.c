@@ -12,7 +12,7 @@
 #include "command_struct.h"       // File system related
 //#include "fatfs/ff.h"       // File system related
 //#include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -39,7 +39,20 @@ static const char* const usage[] = { "ovrclk \t[-m <MHz> | -k <kHz>] [-v <core m
                                      "Overclock:%s ovrclk -m 135",
                                      "Change core voltage:%s ovrclk -v 1150 (850-1300mV valid)",};
 
-static const struct ui_help_options options[] = { 0 };
+static const bp_command_opt_t ovrclk_opts[] = {
+    { "mhz",  'm', BP_ARG_REQUIRED, "<MHz>", 0x00 },
+    { "khz",  'k', BP_ARG_REQUIRED, "<kHz>", 0x00 },
+    { "volt", 'v', BP_ARG_REQUIRED, "<mV>",  0x00 },
+    { 0 }
+};
+
+const bp_command_def_t ovrclk_def = {
+    .name = "ovrclk",
+    .description = 0x00,
+    .opts = ovrclk_opts,
+    .usage = usage,
+    .usage_count = count_of(usage)
+};
 
 void ovrclk_handler(struct command_result* res) {
     #ifndef BP_OVERCLOCK_ENABLED
@@ -50,22 +63,17 @@ void ovrclk_handler(struct command_result* res) {
     printf("!!Use at your own risk!!!\r\n\r\n");
     #endif
     
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&ovrclk_def, res->help_flag)) {
         return;
     }
 
     uint32_t v_value;
     uint32_t m_value; // somewhere to keep an integer value
     uint32_t k_value; // somewhere to keep an integer value
-    command_var_t arg; // this struct will contain additional information about the integer
-                       // such as the format the user enter, so we can react differently to DEC/HEX/BIN formats
-                       //  it also helps future proof code because we can add variables later without reworking every
-                       //  place the function is used
-    // check for the -i flag with an integer value
     
-    bool v_flag = cmdln_args_find_flag_uint32('v', &arg, &v_value);
-    bool m_flag = cmdln_args_find_flag_uint32('m', &arg, &m_value);
-    bool k_flag = cmdln_args_find_flag_uint32('k', &arg, &k_value);
+    bool v_flag = bp_cmd_get_uint32(&ovrclk_def, 'v', &v_value);
+    bool m_flag = bp_cmd_get_uint32(&ovrclk_def, 'm', &m_value);
+    bool k_flag = bp_cmd_get_uint32(&ovrclk_def, 'k', &k_value);
 
     /*enum vreg_voltage {
         VREG_VOLTAGE_0_85 = 0b0110,    ///< 0.85v
@@ -130,7 +138,7 @@ void ovrclk_handler(struct command_result* res) {
 
     if(!m_flag && !k_flag && !v_flag){
         printf("Nothing to do\r\n");
-        ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options));
+        bp_cmd_help_show(&ovrclk_def);
     }
 
 }

@@ -35,22 +35,35 @@
 #include "commands/global/freq.h"
 #include "usb_rx.h"
 #include "pirate/amux.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_help.h"
 
 static const char* const usage[] = {
-    "v/V <io> [-h(elp)]",
+    "v/V [io]",
     "Measure pin 0 voltage:%s v 0",
     "Continuous measurement pin 0:%s V 0",
     "Measure voltage on all pins:%s v",
     "Continuous measurement on all pins:%s V",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_VADC }, // command help
-    { 0, "v", T_HELP_VADC_SINGLE },
-    { 0, "V", T_HELP_VADC_CONTINUOUS },
-    { 0, "<io>", T_HELP_VADC_IO },
+const bp_command_def_t adc_single_def = {
+    .name         = "v",
+    .description  = T_CMDLN_ADC_ONE,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
+
+const bp_command_def_t adc_cont_def = {
+    .name         = "V",
+    .description  = T_CMDLN_ADC_CONT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void adc_measure(struct command_result* res, bool refresh);
@@ -100,11 +113,12 @@ void adc_measure_cont(struct command_result* res) {
 }
 
 void adc_measure(struct command_result* res, bool refresh) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    const bp_command_def_t *def = refresh ? &adc_cont_def : &adc_single_def;
+    if (bp_cmd_help_check(def, res->help_flag)) {
         return;
     }
     uint32_t temp;
-    bool has_value = cmdln_args_uint32_by_position(1, &temp);
+    bool has_value = bp_cmd_get_positional_uint32(def, 1, &temp);
 
     if (!has_value) { // show voltage on all pins
         if (refresh) {

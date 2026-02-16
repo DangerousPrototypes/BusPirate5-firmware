@@ -4,6 +4,8 @@
  * @details Provides commands to detect and work around hardware errata.
  */
 
+extern const struct bp_command_def bug_def;
+
 /**
  * @brief Handler for bug detection command.
  * @param res  Command result structure

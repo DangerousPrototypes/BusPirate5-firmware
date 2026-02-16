@@ -18,3 +18,6 @@ void adc_measure_single(struct command_result* res);
  * @note Syntax: V [pin] - continuously measures specified pin or all pins
  */
 void adc_measure_cont(struct command_result* res);
+
+extern const struct bp_command_def adc_single_def;
+extern const struct bp_command_def adc_cont_def;

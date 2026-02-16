@@ -8,4 +8,5 @@
  * @brief Clear screen and redisplay statusbar.
  * @param res  Command result structure
  */
+extern const struct bp_command_def cls_def;
 void ui_display_clear(struct command_result* res);

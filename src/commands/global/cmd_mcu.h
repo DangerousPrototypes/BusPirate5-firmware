@@ -31,3 +31,6 @@ void cmd_mcu_jump_to_bootloader(void);
  * @param res  Command result structure
  */
 void cmd_mcu_jump_to_bootloader_handler(struct command_result* res);
+
+extern const struct bp_command_def reboot_def;
+extern const struct bp_command_def bootloader_def;

@@ -17,6 +17,9 @@ void freq_cont(struct command_result* res);
  */
 void freq_single(struct command_result* res);
 
+extern const struct bp_command_def freq_single_def;
+extern const struct bp_command_def freq_cont_def;
+
 /**
  * @brief Measure frequency on specified pin.
  * @param pin      I/O pin number (0-7)

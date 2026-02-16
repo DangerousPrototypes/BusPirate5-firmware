@@ -21,6 +21,22 @@
 #include "ui/ui_term.h"
 #include "ui/ui_cmdln.h"
 #include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
+
+static const char* const usage[] = {
+    "i",
+    "Display system information:%s i",
+};
+
+const bp_command_def_t i_info_def = {
+    .name         = "i",
+    .description  = T_CMDLN_INFO,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 #include "pirate/amux.h"
 #include "pirate/mcu.h"
 #include "pirate/storage.h"
@@ -52,7 +68,9 @@ static const struct ui_help_options options[]={
 // display ui_info_print_info about the buspirate
 // when not in HiZ mode it dumps info about the pins/voltags etc.
 void i_info_handler(struct command_result* res) {
-    // if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
+    if (bp_cmd_help_check(&i_info_def, res->help_flag)) {
+        return;
+    }
     int i;
     amux_sweep();
 

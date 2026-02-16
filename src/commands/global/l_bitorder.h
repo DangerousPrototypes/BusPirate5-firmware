@@ -28,3 +28,6 @@ void bitorder_lsb(void);
  * @note Displays: LSB 0b00000001
  */
 void bitorder_lsb_handler(struct command_result* res);
+
+extern const struct bp_command_def bitorder_msb_def;
+extern const struct bp_command_def bitorder_lsb_def;

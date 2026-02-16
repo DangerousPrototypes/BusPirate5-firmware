@@ -33,13 +33,48 @@
 #include "ui/ui_const.h"
 #include "ui/ui_term.h"
 #include "ui/ui_info.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 
 #include "commands/global/freq.h"
 
+static const char* const freq_single_usage[] = {
+    "f [pin]",
+    "Measure frequency once:%s f",
+    "Measure frequency on pin 2:%s f 2",
+};
+
+static const char* const freq_cont_usage[] = {
+    "F [pin]",
+    "Continuous frequency measurement:%s F",
+    "Continuous frequency on pin 2:%s F 2",
+};
+
+const bp_command_def_t freq_single_def = {
+    .name         = "f",
+    .description  = T_CMDLN_FREQ_ONE,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = freq_single_usage,
+    .usage_count  = count_of(freq_single_usage),
+};
+
+const bp_command_def_t freq_cont_def = {
+    .name         = "F",
+    .description  = T_CMDLN_FREQ_CONT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = freq_cont_usage,
+    .usage_count  = count_of(freq_cont_usage),
+};
+
 void freq_single(struct command_result* res) {
+    if (bp_cmd_help_check(&freq_single_def, res->help_flag)) {
+        return;
+    }
     uint32_t temp;
-    bool has_value = cmdln_args_uint32_by_position(1, &temp);
+    bool has_value = bp_cmd_get_positional_uint32(&freq_single_def, 1, &temp);
     if (!has_value) // show config menu
     {
         if (!freq_configure_disable()) {
@@ -54,8 +89,11 @@ void freq_single(struct command_result* res) {
 }
 
 void freq_cont(struct command_result* res) {
+    if (bp_cmd_help_check(&freq_cont_def, res->help_flag)) {
+        return;
+    }
     uint32_t temp;
-    bool has_value = cmdln_args_uint32_by_position(1, &temp);
+    bool has_value = bp_cmd_get_positional_uint32(&freq_cont_def, 1, &temp);
     if (!has_value) // show config menu
     {
         if (!freq_configure_enable()) {

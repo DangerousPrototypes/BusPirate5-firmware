@@ -12,6 +12,7 @@
 #include "system_config.h"
 #include "ui/ui_cmdln.h"
 #include "displays.h"
+#include "lib/bp_args/bp_cmd.h"
 
 // Syntax operators: not real commands, always manually maintained
 static const struct ui_help_options syntax_help[] = {
@@ -60,6 +61,13 @@ static const struct ui_help_options help_options[] = {
     { 0, "-h", T_HELP_SYS_HELP },
 };
 
+const struct bp_command_def help_def = {
+    .name = "help",
+    .description = T_HELP_HELP,
+    .usage = help_usage,
+    .usage_count = count_of(help_usage)
+};
+
 void help_display(void) {
     if (displays[system_config.display].display_help) {
         displays[system_config.display].display_help();
@@ -93,12 +101,12 @@ void help_global(void) {
 
 void help_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, help_usage, count_of(help_usage), &help_options[0], count_of(help_options))) {
+    if (bp_cmd_help_check(&help_def, res->help_flag)) {
         return;
     }
     // check mode|global|display
     char action[9];
-    cmdln_args_string_by_position(1, sizeof(action), action);
+    bp_cmd_get_positional_string(&help_def, 1, action, sizeof(action));
     bool mode = (strcmp(action, "mode") == 0);
     bool display = (strcmp(action, "display") == 0);
     if (mode) {

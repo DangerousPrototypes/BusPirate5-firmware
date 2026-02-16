@@ -14,6 +14,8 @@ void help_mode(void);
  */
 void help_global(void);
 
+extern const struct bp_command_def help_def;
+
 /**
  * @brief Handler for help command (h).
  * @param res  Command result structure

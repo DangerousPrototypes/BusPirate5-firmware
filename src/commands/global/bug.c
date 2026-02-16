@@ -13,11 +13,16 @@
 #include "pirate/psu.h"
 #include "hardware/pio.h"
 #include "pwm.pio.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static const char* const usage[] = { "replicate hardware bugs", "Test errata E9:%s bug e9" };
 
-static const struct ui_help_options options[] = {
-    { 0, "-h", T_HELP_FLAG },
+
+const struct bp_command_def bug_def = {
+    .name = "bug",
+    .description = 0x00,
+    .usage = usage,
+    .usage_count = count_of(usage)
 };
 
 // Write `period` to the input shift register
@@ -97,13 +102,13 @@ void e9_qualify(void) {
 }
 
 void bug_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options))) {
+    if (bp_cmd_help_check(&bug_def, res->help_flag)) {
         return;
     }
 
     char bug_str[4];
     bool verb_e9 = false;
-    if (cmdln_args_string_by_position(1, sizeof(bug_str), bug_str)) {
+    if (bp_cmd_get_positional_string(&bug_def, 1, bug_str, sizeof(bug_str))) {
         if (strcmp(bug_str, "e9") == 0) {
             verb_e9 = true;
         } else if (strcmp(bug_str, "qe9") == 0) {
@@ -112,7 +117,7 @@ void bug_handler(struct command_result* res) {
     }
 
     // look for a flag
-    bool has_a = cmdln_args_find_flag('a');
+    bool has_a = bp_cmd_find_flag(&bug_def, 'a');
 
     if (verb_e9) {
 

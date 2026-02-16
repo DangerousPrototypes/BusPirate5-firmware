@@ -7,6 +7,7 @@
 #include "ui/ui_statusbar.h"
 #include "ui/ui_help.h"
 #include "ui/ui_flags.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static const char* const usage[] = {
     "cls",
@@ -14,11 +15,19 @@ static const char* const usage[] = {
     "Note: will attempt to detect and initialize VT100 ANSI terminal",
 };
 
-static const struct ui_help_options options[] = { 0 };
+const bp_command_def_t cls_def = {
+    .name         = "cls",
+    .description  = T_HELP_CMD_CLS,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 void ui_display_clear(struct command_result* res) {
     BP_ASSERT_CORE0();
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&cls_def, res->help_flag)) {
         return;
     }
 

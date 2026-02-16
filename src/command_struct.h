@@ -54,7 +54,7 @@ struct _global_command_struct {
  * @brief Mode-specific command structure definition.
  */
 struct _mode_command_struct {
-    const char* command; /**< Command line string */
+    //const char* command; /**< Command line string */
     void (*func)(struct command_result* res); /**< Function to execute */
     const struct bp_command_def *def;  /**< Unified command definition (NULL = legacy) */
     //deprecate after full migration to bp_command_def_t: use description in def instead

@@ -31,8 +31,7 @@ const struct _mode_command_struct hwhduart_commands[] = { // Function Help
         .description_text=0x00, 
         .supress_fala_capture=false
     },*/
-    {   .command="bridge", 
-        .func=&hduart_bridge_handler, 
+    {   .func=&hduart_bridge_handler, 
         .def=&hduart_bridge_def,
         .description_text=T_HELP_UART_BRIDGE, 
         .supress_fala_capture=true

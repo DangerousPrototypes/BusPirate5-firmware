@@ -13,7 +13,7 @@
 #include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -31,24 +31,16 @@ static const char* const usage[] = { "sine [Hz]",
                                      "Generate 2000Hz sine wave:%s sine 2000",
                                      "Generate 1000Hz sine wave for 5 seconds:%s sine 1000 -s 5" };
 
-// This is a struct of help strings for each option/flag/variable the command accepts
-// Record type 1 is a section header
-// Record type 0 is a help item displayed as: "command" "help text"
-// This system uses the T_ constants defined in translation/ to display the help text in the user's preferred language
-// To add a new T_ constant:
-//      1. open the master translation en-us.h
-//      2. add a T_ tag and the help text
-//      3. Run json2h.py, which will rebuild the translation files, adding defaults where translations are missing
-//      values
-//      4. Use the new T_ constant in the help text for the command
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_DUMMY_COMMANDS },    // section heading
-    { 0, "init", T_HELP_DUMMY_INIT },    // init is an example we'll find by position
-    { 0, "test", T_HELP_DUMMY_TEST },    // test is an example we'll find by position
-    { 1, "", T_HELP_DUMMY_FLAGS },       // section heading for flags
-    { 0, "-b", T_HELP_DUMMY_B_FLAG },    //-a flag, with no optional string or integer
-    { 0, "-i", T_HELP_DUMMY_I_FLAG },    //-b flag, with optional integer
-    { 0, "-f", T_HELP_DUMMY_FILE_FLAG }, //-f flag, a file name string
+
+// Command definition (not static - will be extern'd)
+const bp_command_def_t sine_def = {
+    .name         = "sine",
+    .description  = T_HELP_DUMMY_COMMANDS,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 // WAV file header structure
@@ -69,24 +61,17 @@ typedef struct {
 } wav_header_t;
 
 void sine_handler(struct command_result* res) {
-    uint32_t value; // somewhere to keep an integer value
     char file[13];  // somewhere to keep a string value (8.3 filename + 0x00 = 13 characters max)
 
-    // the help -h flag can be serviced by the command line parser automatically, or from within the command
-    // the action taken is set by the help_text variable of the command struct entry for this command
-    // 1. a single T_ constant help entry assigned in the commands[] struct in commands.c will be shown automatically
-    // 2. if the help assignment in commands[] struct is 0x00, it can be handled here (or ignored)
-    // res.help_flag is set by the command line parser if the user enters -h
-    // we can use the ui_help_show function to display the help text we configured above
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    // Help check - new bp_cmd API
+    if (bp_cmd_help_check(&sine_def, res->help_flag)) {
         return;
     }
 
     FIL file_handle;                                                  // file handle
     FRESULT fresult;  
     wav_header_t header;
-    command_var_t arg;
-    bool f_flag = cmdln_args_find_flag_string('f', &arg, sizeof(file), file);
+    bool f_flag = bp_cmd_get_string(&sine_def, 'f', file, sizeof(file));
 
     if(!f_flag){
         printf("Set a file name with -f flag to read a WAV file header.\r\n");

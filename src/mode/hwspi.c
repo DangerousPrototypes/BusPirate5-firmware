@@ -42,20 +42,17 @@
 
 // command configuration
 const struct _mode_command_struct hwspi_commands[] = {
-    {   .command="flash", 
-        .func=&flash, 
+    {   .func=&flash, 
         .description_text=T_HELP_CMD_FLASH, 
         .supress_fala_capture=true
     },
-    {   .command="eeprom", 
-        .func=&spi_eeprom_handler, 
+    {   .func=&spi_eeprom_handler, 
         .description_text=T_HELP_SPI_EEPROM, 
         .supress_fala_capture=true
 
     },
 #if 0
-    {   .command="sniff", 
-        .func=&sniff_handler,
+    {   .func=&sniff_handler,
         .def=&sniff_def,
         .description_text=T_SPI_CMD_SNIFF, 
         .supress_fala_capture=true

@@ -13,7 +13,7 @@
 #include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -36,63 +36,59 @@ static const char* const usage[] = { "bluetag [jtag|swd] [-c <channels>] [-v(ers
                                      "",
                                      "blueTag by @Aodrulez https://github.com/Aodrulez/blueTag" };
 
-// This is a struct of help strings for each option/flag/variable the command accepts
-// Record type 1 is a section header
-// Record type 0 is a help item displayed as: "command" "help text"
-// This system uses the T_ constants defined in translation/ to display the help text in the user's preferred language
-// To add a new T_ constant:
-//      1. open the master translation en-us.h
-//      2. add a T_ tag and the help text
-//      3. Run json2h.py, which will rebuild the translation files, adding defaults where translations are missing
-//      values
-//      4. Use the new T_ constant in the help text for the command
-static const struct ui_help_options options[] = {
-    { 1, "", T_JTAG_BLUETAG_OPTIONS },    // section heading
-    { 0, "jtag", T_JTAG_BLUETAG_JTAG },    // jtag is an example we'll find by position
-    { 0, "swd", T_JTAG_BLUETAG_SWD },      // swd is an example we'll find by position
-    { 1, "", T_JTAG_BLUETAG_FLAGS },       // section heading for flags
-    { 0, "-c", T_JTAG_BLUETAG_CHANNELS },  //-c flag, with optional integer
-    { 0, "-v", T_JTAG_BLUETAG_VERSION },   //-v flag, show version
-    { 0, "-d", T_JTAG_BLUETAG_DISABLE },   //-d flag, disable pin pulsing
+enum bluetag_actions {
+    BLUETAG_JTAG = 0,
+    BLUETAG_SWD,
+};
+
+static const bp_command_action_t bluetag_action_defs[] = {
+    { BLUETAG_JTAG, "jtag", T_JTAG_BLUETAG_JTAG },
+    { BLUETAG_SWD,  "swd",  T_JTAG_BLUETAG_SWD },
+};
+
+static const bp_command_opt_t bluetag_opts[] = {
+    { "channels", 'c', BP_ARG_REQUIRED, "<count>", T_JTAG_BLUETAG_CHANNELS },
+    { "version",  'v', BP_ARG_NONE,     NULL,      T_JTAG_BLUETAG_VERSION },
+    { "disable",  'd', BP_ARG_NONE,     NULL,      T_JTAG_BLUETAG_DISABLE },
+    { 0 }
+};
+
+const bp_command_def_t bluetag_def = {
+    .name         = "bluetag",
+    .description  = T_JTAG_BLUETAG_OPTIONS,
+    .actions      = bluetag_action_defs,
+    .action_count = count_of(bluetag_action_defs),
+    .opts         = bluetag_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 static void bluetag_cli(void);
 
 void bluetag_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&bluetag_def, res->help_flag)) {
         return;
     }
 
     //print version
-    if(cmdln_args_find_flag('v')){
+    if(bp_cmd_find_flag(&bluetag_def, 'v')){
         printf("\r\nCurrent version: %s\r\n\r\n", version);
         return;
     }
 
     // check for option verb
-    char action_str[5];              // somewhere to store the parameter string
-    bool jtag=false;
-    bool swd=false;
-    if(cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
-        if (strcmp(action_str, "jtag") == 0) {
-            jtag = true;
-        }else if (strcmp(action_str, "swd") == 0) {
-            swd = true;
-        }else{
-            printf("Invalid option: %s\r\n", action_str);
-            return;
-        }
+    uint32_t action;
+    if(bp_cmd_get_action(&bluetag_def, &action)) {
 
         //disable pin pulsing
-        bool disable_pulse=cmdln_args_find_flag('d');
+        bool disable_pulse=bp_cmd_find_flag(&bluetag_def, 'd');
         if(disable_pulse){
             printf("\r\nDisabled pin pulsing\r\n\r\n");
         }
 
         //number of channels
-        command_var_t arg;
         uint32_t channels=0;
-        bool c_flag = cmdln_args_find_flag_uint32('c', &arg, &channels);
+        bool c_flag = bp_cmd_get_uint32(&bluetag_def, 'c', &channels);
         if(!c_flag){
             printf("\r\nSpecify the number of channels with the -c flag, -h for help\r\n");
             return;
@@ -101,8 +97,8 @@ void bluetag_handler(struct command_result* res) {
         }
 
         // lets do jtag!
-        if(jtag){
-            if(jtag && (channels < 4 || channels > 8)){
+        if(action == BLUETAG_JTAG){
+            if(channels < 4 || channels > 8){
                 printf("Invalid number of JTAG channels (min 4, max 8)\r\n");
                 return;
             }
@@ -127,7 +123,7 @@ void bluetag_handler(struct command_result* res) {
             }            
         }
         
-        if(swd){
+        if(action == BLUETAG_SWD){
             if(channels < 2 || channels > 8){
                 printf("Invalid number of SWD channels (min 2, max 8)\r\n");
                 return;

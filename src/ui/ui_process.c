@@ -15,6 +15,7 @@
 #include "ui/ui_parse.h"
 #include "ui/ui_term.h"
 #include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "string.h"
 #include "syntax.h"
 #include "pirate/intercore_helpers.h"
@@ -158,7 +159,8 @@ bool ui_process_commands(void) {
         if (!command_type) {
             if (modes[system_config.mode].mode_commands_count) {
                 for (int i = 0; i < *modes[system_config.mode].mode_commands_count; i++) {
-                    if (strcmp(command_string, modes[system_config.mode].mode_commands[i].command) == 0) {
+                    if (modes[system_config.mode].mode_commands[i].def && 
+                        strcmp(command_string, modes[system_config.mode].mode_commands[i].def->name) == 0) {
                         user_cmd_id = i;
                         command_type = MODE;
                         // mode help handler

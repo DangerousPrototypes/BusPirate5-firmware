@@ -136,7 +136,7 @@ void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uin
     for (uint32_t i = 0; i < count; i++) {
         printf("%s%s%s\t%s%s\r\n",
                ui_term_color_prompt(),
-               commands[i].command,
+               commands[i].def ? commands[i].def->name : "?",
                ui_term_color_info(),
                commands[i].description_text ? GET_T(commands[i].description_text) : "Description not set. Try -h for command help",
                ui_term_color_reset());

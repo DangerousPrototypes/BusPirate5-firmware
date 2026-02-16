@@ -546,8 +546,8 @@ set(buspirate_common
         usb_descriptors.c
 
 	# USBPD 
-        mode/usbpd.c            
-        mode/usbpd.h
+        #mode/usbpd.c            
+        #mode/usbpd.h
 
         # I2S
         mode/i2s.c

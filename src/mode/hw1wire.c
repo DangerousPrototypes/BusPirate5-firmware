@@ -49,20 +49,17 @@
 
 // command configuration
 const struct _mode_command_struct hw1wire_commands[] = {
-    {   .command="scan", 
-        .func=&onewire_test_romsearch,
+    {   .func=&onewire_test_romsearch,
         .def=&scan_1wire_def,
         .description_text=T_HELP_1WIRE_SCAN, 
         .supress_fala_capture=true
     },
-    {   .command="eeprom", 
-        .func=&onewire_eeprom_handler,
+    {   .func=&onewire_eeprom_handler,
         .def=&eeprom_1wire_def,
         .description_text=T_HELP_1WIRE_EEPROM,
         .supress_fala_capture=true
     },
-    {   .command="ds18b20", 
-        .func=&onewire_test_ds18b20_conversion,
+    {   .func=&onewire_test_ds18b20_conversion,
         .def=&ds18b20_def,
         .description_text=T_HELP_1WIRE_DS18B20,
         .supress_fala_capture=true

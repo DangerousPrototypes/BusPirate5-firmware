@@ -6,6 +6,7 @@
 */
 
 // (flash)eprom types
+// TODO: move to enum?
 #define UP_EPROM_2764     0
 #define UP_EPROM_27128    1
 #define UP_EPROM_27256    2
@@ -14,6 +15,12 @@
 #define UP_EPROM_27020    5
 #define UP_EPROM_27040    6
 #define UP_EPROM_27080    7
+#define UP_EPROM_2332LL   8
+#define UP_EPROM_2332LH   9
+#define UP_EPROM_2332HL   10
+#define UP_EPROM_2332HH   11
+#define UP_EPROM_2364L    12
+#define UP_EPROM_2364H    13
 
 // eprom modes
 #define EPROM_READ    0
@@ -62,6 +69,38 @@
 #define UP_27XX_PU  (UP_IO13|UP_IO14|UP_IO15|UP_IO17|UP_IO18|UP_IO19|UP_IO20|UP_IO21)
 #define UP_27XX_DIR  (UP_IO13|UP_IO14|UP_IO15|UP_IO17|UP_IO18|UP_IO19|UP_IO20|UP_IO21)
 
+// pinout 2332-64
+
+#define UP_23XX_A0    UP_IO12 
+#define UP_23XX_A1    UP_IO11 
+#define UP_23XX_A2    UP_IO10 
+#define UP_23XX_A3    UP_IO09 
+#define UP_23XX_A4    UP_IO08 
+#define UP_23XX_A5    UP_IO07 
+#define UP_23XX_A6    UP_IO06 
+#define UP_23XX_A7    UP_IO05 
+#define UP_23XX_A8    UP_IO27 
+#define UP_23XX_A9    UP_IO26 
+#define UP_23XX_A10   UP_IO23 
+#define UP_23XX_A11   UP_IO22 
+#define UP_23XX_A12   UP_IO25 
+ 
+#define UP_23XX_D0    UP_IO13
+#define UP_23XX_D1    UP_IO14
+#define UP_23XX_D2    UP_IO15
+#define UP_23XX_D3    UP_IO17
+#define UP_23XX_D4    UP_IO18
+#define UP_23XX_D5    UP_IO19
+#define UP_23XX_D6    UP_IO20
+#define UP_23XX_D7    UP_IO21
+
+#define UP_23XX_CS1   UP_IO24
+#define UP_23XX_CS2   UP_IO25
+
+#define UP_23XX_PU  (UP_IO13|UP_IO14|UP_IO15|UP_IO17|UP_IO18|UP_IO19|UP_IO20|UP_IO21)
+#define UP_23XX_DIR  (UP_IO13|UP_IO14|UP_IO15|UP_IO17|UP_IO18|UP_IO19|UP_IO20|UP_IO21)
+
+
 typedef struct {
   const char* name;
   uint32_t ictype;
@@ -76,6 +115,13 @@ static const up_eprom_alias_t up_eprom_aliases[] = {
   {"27020",  UP_EPROM_27020}, {"27C020", UP_EPROM_27020},
   {"27040",  UP_EPROM_27040}, {"27C040", UP_EPROM_27040},
   {"27080",  UP_EPROM_27080}, {"27C080", UP_EPROM_27080},
+  {"2332ll", UP_EPROM_2332LL},
+  {"2332lh", UP_EPROM_2332LH},
+  {"2332hl", UP_EPROM_2332HL},
+  {"2332hh", UP_EPROM_2332HH},
+  {"2364l",  UP_EPROM_2364L}, 
+  {"2364h",  UP_EPROM_2364H},
+  
 };
 
 void up_eprom_handler(struct command_result* res);

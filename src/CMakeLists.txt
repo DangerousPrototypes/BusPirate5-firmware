@@ -385,6 +385,8 @@ set(buspirate_common
 	commands/up/buffer.h
 	lib/crc/crc_crc16.c
 	lib/crc/crc_crc32.c
+	lib/crc/crc_crc32_2.c
+	lib/crc/crc_crc32c.c
 	lib/crc/crc_zip.c
 	lib/crc/crc.h
 	

@@ -153,7 +153,7 @@ void up_buffer_handler(struct command_result* res)
         dumpbuffer(boffset, length);
         break;
       case UP_BUFFER_CLEAR:
-        readbuffer(boffset, foffset, length, fname);
+        clearbuffer(boffset, length, clearbyte); 
         break;
       case UP_BUFFER_HEXREAD:
         hexreadbuffer(fname);
@@ -202,7 +202,9 @@ static void crcbuffer(uint32_t start, uint32_t len)
 {
   printf("Checksum of the buffer from 0x%05X, len %d\r\n", start, len);
   printf("CRC16 (CCITT) = 0x%04X\r\n", ccitt16_updcrc(-1, up_buffer+start, len));
-  printf("CRC32 (CCITT) = 0x%08X\r\n", ccitt32_updcrc(-1, up_buffer+start, len));
+  printf("CRC32 (CCITT) = 0x%08X\r\n", ccitt32_updcrc(0xFFFFFFFF, up_buffer+start, len));
+  printf("CRC32 (2) (CCITT) = 0x%08X\r\n", crc32_byte(up_buffer+start, len));
+  printf("CRC32C (CCITT) = 0x%08X\r\n", ccitt32c_updcrc(0xFFFFFFFF, up_buffer+start, len));
   printf("ZIPCRC = 0x%08X\r\n", zip_updcrc(-1, up_buffer+start, len));
 }
 

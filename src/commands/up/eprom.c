@@ -13,7 +13,7 @@
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
 #include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
-// #include "ui/ui_prompt.h" // User prompts and menu system
+#include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
 #include "system_config.h" // Stores current Bus Pirate system configuration
@@ -33,11 +33,14 @@
 #include "commands/up/universalprogrammer_device.h"
 #include "commands/up/up_eproms.h"
 #include "commands/up/up_lut27xx.h"
+#include "commands/up/up_lut23xx.h"
 #include "commands/up/eprom.h"
 
-static void writeeprom(uint32_t ictype, uint32_t page, int pulse);
-static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode);
-static void readepromid(int pins);
+static void write27eprom(uint32_t ictype, uint32_t page, int pulse);
+static void read23eprom(uint32_t ictype, uint8_t mode);
+static void read27eprom(uint32_t ictype, uint32_t page, uint8_t mode);
+static void read27epromid(int pins);
+
 static bool up_eprom_find_type(const char* name, uint32_t* out_ictype);
 
 enum uptest_actions_enum {
@@ -104,6 +107,7 @@ void up_eprom_handler(struct command_result* res)
       printf("EPROM type unknown\r\n");
       printf(" available are: 2764, 27128, 27256, 27512, 27010, 27020, 27040, 27080\r\n");
       printf("              27c64, 27c128, 27c256, 27c512, 27c010, 27c020, 27c040, 27c080\r\n");
+      printf("              2332ll, 2332lh, 2332hl, 2332hh, 2364l, 2364h (l=/CSx, h=CSx)\r\n");
       system_config.error = 1;
       return;
     }
@@ -119,19 +123,42 @@ void up_eprom_handler(struct command_result* res)
     switch(action)
     {
       case UP_EPROM_READ:
-        readeprom(ictype, page, EPROM_READ);
+        if((ictype>=UP_EPROM_2764)&&(ictype<=UP_EPROM_27080))
+          read27eprom(ictype, page, EPROM_READ);
+        else if((ictype>=UP_EPROM_2332LL)&&(ictype<=UP_EPROM_2364H))
+          read23eprom(ictype, EPROM_READ);
         break;
       case UP_EPROM_BLANK:
-        readeprom(ictype, page, EPROM_BLANK);
+        if((ictype>=UP_EPROM_2764)&&(ictype<=UP_EPROM_27080))
+          read27eprom(ictype, page, EPROM_BLANK);
+        else if((ictype>=UP_EPROM_2332LL)&&(ictype<=UP_EPROM_2364H))
+          read23eprom(ictype, EPROM_BLANK);
         break;
       case UP_EPROM_VERIFY:
-        readeprom(ictype, page, EPROM_VERIFY);
+        if((ictype>=UP_EPROM_2764)&&(ictype<=UP_EPROM_27080))
+          read27eprom(ictype, page, EPROM_VERIFY);
+        else if((ictype>=UP_EPROM_2332LL)&&(ictype<=UP_EPROM_2364H))
+          read23eprom(ictype, EPROM_VERIFY);
         break;  
       case UP_EPROM_READID:
-        readepromid(pins);
+        if((ictype>=UP_EPROM_2764)&&(ictype<=UP_EPROM_27080))
+          read27epromid(pins);
+        else if((ictype>=UP_EPROM_2332LL)&&(ictype<=UP_EPROM_2364H))
+        {
+          printf("Not supported!!\r\n");
+          system_config.error=1;
+          return;
+        }
         break;  
       case UP_EPROM_WRITE:
-        writeeprom(ictype, page, pulse);
+        if((ictype>=UP_EPROM_2764)&&(ictype<=UP_EPROM_27080))
+          write27eprom(ictype, page, pulse);
+        else if((ictype>=UP_EPROM_2764)&&(ictype<=UP_EPROM_27080))
+        {
+          printf("Not supported!!\r\n");
+          system_config.error=1;
+          return;
+        }
         break;  
       default: //should never get here, should throw help
         printf("No action defined (test, vtest, dram, logic, buffer, eprom)\r\n");
@@ -139,7 +166,7 @@ void up_eprom_handler(struct command_result* res)
         return;
     }
     
-    up_init();      // to be sure
+    up_init();     // to be sure
     up_setvcc(0);  // to be sure
     up_setvpp(0);  // to be sure
 }
@@ -193,7 +220,7 @@ static void up_decode_bits(uint32_t dutout, uint8_t* temp)
 
 
 // read the epromid
-static void readepromid(int numpins)
+static void read27epromid(int numpins)
 {
   char c;
   uint32_t temp1, temp2;
@@ -325,12 +352,18 @@ static const struct epromconfig upeeprom[]={
   {UP_EPROM_27010, 1024,    0, UP_27XX_PGM32, UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
   {UP_EPROM_27020, 2048, 1024, UP_27XX_PGM32, UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
   {UP_EPROM_27040, 4096, 1024, 0            , 0                          , 32, 32, 16, 1},
-  {UP_EPROM_27080, 8192, 1024, 0            , 0                          , 32, 32, 16, 1}
+  {UP_EPROM_27080, 8192, 1024, 0            , 0                          , 32, 32, 16, 1},
+  {UP_EPROM_2332LL,  32,    0, 0            , 0                          , 24, 24, 12, 1},
+  {UP_EPROM_2332LH,  32,    0, 0            , 0                          , 24, 24, 12, 1},
+  {UP_EPROM_2332HL,  32,    0, 0            , 0                          , 24, 24, 12, 1},
+  {UP_EPROM_2332HH,  32,    0, 0            , 0                          , 24, 24, 12, 1},
+  {UP_EPROM_2364L,   64,    0, 0            , 0                          , 24, 24, 12, 1},
+  {UP_EPROM_2364H,   64,    0, 0            , 0                          , 24, 24, 12, 1},
 
 };
 
 // write buffer to eprom
-static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
+static void write27eprom(uint32_t ictype, uint32_t page, int pulse)
 {
   int i,j,retry, kbit;
   uint32_t epromaddress, dutin, dutout, pgm;
@@ -477,7 +510,7 @@ static void writeeprom(uint32_t ictype, uint32_t page, int pulse)
 }
 
 // read eprom
-static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
+static void read27eprom(uint32_t ictype, uint32_t page, uint8_t mode)
 {
   uint32_t dutin, dutout, epromaddress, pgm, temp;
   uint32_t starttime;
@@ -595,7 +628,111 @@ static void readeprom(uint32_t ictype, uint32_t page, uint8_t mode)
   printf("Took %d ms to execute\r\n", ((time_us_32()-starttime)/1000));
 }
 
+static void read23eprom(uint32_t ictype, uint8_t mode)
+{
+  uint32_t dutin, dutout, epromaddress, temp;
+  uint32_t starttime;
+  uint32_t csactive, csdeactive;
+  int i, j, kbit;
+  char c, device;
+  bool blank=true, verify=true;
 
+  if(ictype >= count_of(upeeprom))
+  {
+    printf("unknown EPROM\r\n");
+    system_config.error = 1;
+    return;
+  }
+  
+  kbit=upeeprom[ictype].kbit;
+  up_icprint(upeeprom[ictype].pins, upeeprom[ictype].vcc, upeeprom[ictype].gnd, 33);
+ 
+  printf("Is this correct? y to continue\r\n");
+  while(!rx_fifo_try_get(&c));
+  if(c!='y')
+  {
+    printf("Aborted!!\r\n");
+    system_config.error = 1;
+    return;
+  }
+  
+  // setup hardware 
+  up_setvpp(1);
+  up_setvcc(1);
+
+  // setup for eprom
+  up_setpullups(UP_23XX_PU);
+  up_setdirection(UP_23XX_DIR);
+  
+  // cs magic. the 23xx have a configurable CS or /CS (at factory)
+  csactive=0;
+  csdeactive=0;
+  
+  // not asserted
+  if((ictype==UP_EPROM_2332LL)||(ictype==UP_EPROM_2332HL)||(ictype==UP_EPROM_2364L)) csdeactive|=UP_23XX_CS1;
+  if((ictype==UP_EPROM_2332LL)||(ictype==UP_EPROM_2332LH)) csdeactive|=UP_23XX_CS2;
+  
+  //asserted
+  if((ictype==UP_EPROM_2332LH)||(ictype==UP_EPROM_2332HH)||(ictype==UP_EPROM_2364H)) csactive|=UP_23XX_CS1;
+  if((ictype==UP_EPROM_2332HL)||(ictype==UP_EPROM_2332HH)) csactive|=UP_23XX_CS2;
+  
+  up_pins(csdeactive);
+ 
+  // TODO: check Vpp, Vdd
+  
+  // benchmark it!
+  starttime=time_us_32();
+  
+  for(j=0; j<kbit; j++)
+  {
+    printf("Reading EPROM 0x%05X %c\r", j*128, rotate[j&0x07]);
+    
+    for(i=0; i<128; i++)
+    {
+      epromaddress=j*128+i;
+      
+      dutin =lut_23xx_lo[(epromaddress&0x0FF)];
+      dutin|=lut_23xx_mi[((epromaddress>>8)&0x0FF)];
+    
+      uint8_t decoded_byte;      
+      dutout=up_pins(dutin|csactive);
+      //temp = up_decode_bits(dutout, up_data_bus_map, count_of(up_data_bus_map));
+      up_decode_bits(dutout, &decoded_byte);
+
+      switch(mode)
+      {
+        case EPROM_READ:    up_buffer[(epromaddress&0x1FFFF)]=decoded_byte;
+                            break;
+        case EPROM_BLANK:   if(decoded_byte!=0xFF) blank=false;
+                            break;
+        case EPROM_VERIFY:  if(up_buffer[(epromaddress&0x1FFFF)]!=decoded_byte) verify=false;
+                            break;
+        default:            break;
+      }
+
+      up_pins(dutin|csdeactive);
+    }  
+  }
+  printf("\r\n");
+  
+  up_pins(csdeactive);
+  
+  switch(mode)
+  {
+    case EPROM_BLANK:   if(blank) printf("Device is blank\r\n");
+                        else printf("Device is not blank!\r\n");
+                        break;
+    case EPROM_VERIFY:  if(verify) printf("Device is verified OK\r\n");
+                        else printf("Device is verified not OK!\r\n");
+                        break;
+    default:            break;
+  }
+
+  
+  printf("Took %d ms to execute\r\n", ((time_us_32()-starttime)/1000));
+}
+
+// TODO: caseinsensitive
 static bool up_eprom_find_type(const char* name, uint32_t* out_ictype)
 {
   for (size_t i = 0; i < count_of(up_eprom_aliases); i++) {

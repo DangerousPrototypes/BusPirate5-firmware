@@ -298,8 +298,8 @@ set(buspirate_common
         commands/spi/flash.h
         commands/spi/spiflash.h
         commands/spi/spiflash.c
-        commands/spi/sniff.c
-        commands/spi/sniff.h
+        #commands/spi/sniff.c
+        #commands/spi/sniff.h
         lib/sfud/inc/sfud.h
         lib/sfud/inc/sfud.c
         lib/sfud/inc/sfud_cfg.h

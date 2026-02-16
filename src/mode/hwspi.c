@@ -36,7 +36,7 @@
 #include "commands/spi/flash.h"
 #include "ui/ui_help.h"
 #include "pirate/hwspi.h"
-#include "commands/spi/sniff.h"
+//#include "commands/spi/sniff.h"
 #include "usb_rx.h"
 #include "commands/eeprom/eeprom_spi.h"
 
@@ -53,13 +53,14 @@ const struct _mode_command_struct hwspi_commands[] = {
         .supress_fala_capture=true
 
     },
-    
-/*    {   .command="sniff", 
-        .func=&sniff_handler, 
+#if 0
+    {   .command="sniff", 
+        .func=&sniff_handler,
+        .def=&sniff_def,
         .description_text=T_SPI_CMD_SNIFF, 
         .supress_fala_capture=true
-    },    
-    */
+    },
+#endif
 };
 const uint32_t hwspi_commands_count = count_of(hwspi_commands);
 

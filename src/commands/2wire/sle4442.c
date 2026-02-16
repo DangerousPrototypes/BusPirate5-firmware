@@ -8,7 +8,7 @@
 #include "command_struct.h"
 #include "pirate/hw2wire_pio.h"
 #include "pirate/bio.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_help.h"
 #include "ui/ui_format.h"
 #include "bytecode.h"
@@ -37,39 +37,6 @@ typedef struct __attribute__((packed)) sle44xx_atr_struct {
     bool read_with_defined_length : 1;
     uint16_t rfu2 : 16;
 } sle44xx_atr_t;
-
-static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]\r\n\t[-a <address>] [-v <value>] [-p "
-                                     "<current psc>] [-n <new psc>] [-f <dump file>] [-s <start address>] [-b <bytes>] [-h(elp)]",
-                                     "Initialize and probe:%s sle4442 init",
-                                     "Dump contents:%s sle4442 dump",
-                                     "Dump 32 bytes starting at address 0x50:%s sle4442 dump -s 0x50 -b 32",
-                                     "Dump contents to file:%s sle4442 dump -f dump.bin", 
-                                     "Dump format:%s DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"                                     
-                                     "Unlock card:%s sle4442 unlock -p 0xffffff",
-                                     "Write a value:%s sle4442 write -a 0xff -v 0x55",
-                                     "Erase memory:%s sle4442 erase",
-                                     "Update PSC:%s sle4442 psc -p 0xffffff -n 0x000000",
-                                     "Write protection mem:%s sle4442 protect -v 0x000000",
-                                    }; 
-
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_SLE4442 }, // command help
-    { 0, "init", T_HELP_SLE4442_INIT },
-    { 0, "dump", T_HELP_SLE4442_DUMP },
-    { 0, "unlock", T_HELP_SLE4442_UNLOCK },
-    { 0, "write", T_HELP_SLE4442_WRITE },
-    { 0, "erase", T_HELP_SLE4442_ERASE },
-    { 0, "psc", T_HELP_SLE4442_PSC },
-    { 0, "-a", T_HELP_SLE4442_ADDRESS_FLAG },
-    { 0, "-v", T_HELP_SLE4442_VALUE_FLAG },
-    { 0, "-p", T_HELP_SLE4442_CURRENT_PSC_FLAG },
-    { 0, "-n", T_HELP_SLE4442_NEW_PSC_FLAG },
-    { 0, "-f", T_HELP_SLE4442_FILE_FLAG },
-    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
-    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-    { 0, "-h", T_HELP_HELP } // help flag
-};
 
 uint32_t sle4442_ticks(void) {
     for (uint32_t i = 0; i < 0x100; i++) {
@@ -252,6 +219,21 @@ bool sle4442_update_psc(uint32_t new_psc, uint8_t* data) {
     }
 }
 
+
+static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]\r\n\t[-a <address>] [-v <value>] [-p "
+                                     "<current psc>] [-n <new psc>] [-f <dump file>] [-s <start address>] [-b <bytes>] [-h(elp)]",
+                                     "Initialize and probe:%s sle4442 init",
+                                     "Dump contents:%s sle4442 dump",
+                                     "Dump 32 bytes starting at address 0x50:%s sle4442 dump -s 0x50 -b 32",
+                                     "Dump contents to file:%s sle4442 dump -f dump.bin", 
+                                     "Dump format:%s DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"                                     
+                                     "Unlock card:%s sle4442 unlock -p 0xffffff",
+                                     "Write a value:%s sle4442 write -a 0xff -v 0x55",
+                                     "Erase memory:%s sle4442 erase",
+                                     "Update PSC:%s sle4442 psc -p 0xffffff -n 0x000000",
+                                     "Write protection mem:%s sle4442 protect -v 0x000000",
+                                    }; 
+
 enum sle4442_action_enum {
     SLE4442_INIT = 0,
     SLE4442_DUMP,
@@ -263,40 +245,51 @@ enum sle4442_action_enum {
     SLE4442_PROTECT
 };
 
-const struct cmdln_action_t sle4442_actions[] = {
-    { SLE4442_INIT, "init" },
-    { SLE4442_DUMP, "dump" },
-    { SLE4442_UNLOCK, "unlock" },
-    { SLE4442_WRITE, "write" },
-    { SLE4442_ERASE, "erase" },
-    { SLE4442_PSC, "psc" },
-    { SLE4442_GLITCH, "glitch" },
-    { SLE4442_PROTECT, "protect" }
+static const bp_command_action_t sle4442_action_defs[] = {
+    { SLE4442_INIT,    "init",    T_HELP_SLE4442_INIT },
+    { SLE4442_DUMP,    "dump",    T_HELP_SLE4442_DUMP },
+    { SLE4442_UNLOCK,  "unlock",  T_HELP_SLE4442_UNLOCK },
+    { SLE4442_WRITE,   "write",   T_HELP_SLE4442_WRITE },
+    { SLE4442_ERASE,   "erase",   T_HELP_SLE4442_ERASE },
+    { SLE4442_PSC,     "psc",     T_HELP_SLE4442_PSC },
+    //{ SLE4442_GLITCH,  "glitch",  T_HELP_SLE4442_GLITCH },
+    { SLE4442_PROTECT, "protect", T_HELP_SLE4442_PROTECT },
+};
+
+static const bp_command_opt_t sle4442_opts[] = {
+    { "address", 'a', BP_ARG_REQUIRED, "<address>", T_HELP_SLE4442_ADDRESS_FLAG },
+    { "value",   'v', BP_ARG_REQUIRED, "<value>",   T_HELP_SLE4442_VALUE_FLAG },
+    { "current", 'p', BP_ARG_REQUIRED, "<psc>",     T_HELP_SLE4442_CURRENT_PSC_FLAG },
+    { "new",     'n', BP_ARG_REQUIRED, "<psc>",     T_HELP_SLE4442_NEW_PSC_FLAG },
+    { "file",    'f', BP_ARG_REQUIRED, "<file>",    T_HELP_SLE4442_FILE_FLAG },
+    { "start",   's', BP_ARG_REQUIRED, "<addr>",    UI_HEX_HELP_START },
+    { "bytes",   'b', BP_ARG_REQUIRED, "<count>",   UI_HEX_HELP_BYTES },
+    { "quiet",   'q', BP_ARG_NONE,     NULL,        UI_HEX_HELP_QUIET },
+    { 0 }
+};
+
+const bp_command_def_t sle4442_def = {
+    .name         = "sle4442",
+    .description  = T_HELP_SLE4442,
+    .actions      = sle4442_action_defs,
+    .action_count = count_of(sle4442_action_defs),
+    .opts         = sle4442_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void sle4442(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&sle4442_def, res->help_flag)) {
         return;
     }
 
     // parse command line
-    #if 0
-    char action[9];
-    cmdln_args_string_by_position(1, sizeof(action), action);
-
-    bool dump = (strcmp(action, "dump") == 0);
-    bool unlock = (strcmp(action, "unlock") == 0);
-    bool write = (strcmp(action, "write") == 0);
-    bool erase = (strcmp(action, "erase") == 0);
-    bool protect = (strcmp(action, "protect") == 0);
-    bool update_psc = (strcmp(action, "psc") == 0);
-
-    bool glitch = (strcmp(action, "glitch") == 0);
-    #endif
-
     uint32_t action = SLE4442_INIT; // default action
-    if(cmdln_args_get_action(sle4442_actions, count_of(sle4442_actions), &action));
+    if (!bp_cmd_get_action(&sle4442_def, &action)) {
+        bp_cmd_help_show(&sle4442_def);
+        return;
+    }
 
     if (hw2wire_mode_config.baudrate > (51)) {
         printf("Whoa there! %dkHz is probably too fast. Try 50kHz\r\n", hw2wire_mode_config.baudrate);
@@ -326,8 +319,7 @@ void sle4442(struct command_result* res) {
     if (action == SLE4442_GLITCH) {
         // unlock card, reset password attempts
         uint32_t psc;
-        command_var_t arg;
-        if (!cmdln_args_find_flag_uint32('p', &arg, &psc)) {
+        if (!bp_cmd_get_uint32(&sle4442_def, 'p', &psc)) {
             printf("Specify a 24 bit (3 byte) PSC with the -p flag (-p 0xffffff)\r\n");
             goto sle4442_cleanup;
         }
@@ -410,8 +402,7 @@ void sle4442(struct command_result* res) {
         printf("\r\n");
 
         char file[13];
-        command_var_t arg;
-        bool file_flag = cmdln_args_find_flag_string('f'|0x20, &arg, sizeof(file), file);
+        bool file_flag = bp_cmd_get_string(&sle4442_def, 'f', file, sizeof(file));
         if(file_flag){
             FIL fil;		/* File object needed for each open file */
             printf("Dumping to %s...\r\n", file);
@@ -452,8 +443,7 @@ void sle4442(struct command_result* res) {
     if (action == SLE4442_UNLOCK || action == SLE4442_PSC) {
         // get cmdln flag -p uint32
         uint32_t psc;
-        command_var_t arg;
-        if (!cmdln_args_find_flag_uint32('p', &arg, &psc)) {
+        if (!bp_cmd_get_uint32(&sle4442_def, 'p', &psc)) {
             printf("Specify a 24 bit PSC with the -p flag (-p 0xffffff)\r\n");
             goto sle4442_cleanup;
         }
@@ -505,8 +495,7 @@ void sle4442(struct command_result* res) {
 
     if (action == SLE4442_PSC) {
         uint32_t new_psc;
-        command_var_t arg;
-        if (!cmdln_args_find_flag_uint32('n', &arg, &new_psc)) {
+        if (!bp_cmd_get_uint32(&sle4442_def, 'n', &new_psc)) {
             printf("Specify a new 24 bit PSC with the -n flag (-n 0xffffff)\r\n");
             goto sle4442_cleanup;
         }
@@ -533,13 +522,12 @@ void sle4442(struct command_result* res) {
     }
 
     if (action == SLE4442_WRITE) {
-        command_var_t arg;
         uint32_t val = 0, addr = 0;
-        if (!cmdln_args_find_flag_uint32('v', &arg, &val)) {
+        if (!bp_cmd_get_uint32(&sle4442_def, 'v', &val)) {
             printf("Specify 8bit write value -v flag (-v 0xff)\r\n");
             goto sle4442_cleanup;
         }
-        if (!cmdln_args_find_flag_uint32('a', &arg, &addr)) {
+        if (!bp_cmd_get_uint32(&sle4442_def, 'a', &addr)) {
             printf("Specify 8bit address -a flag (-a 0x32)\r\n");
             goto sle4442_cleanup;
         }
@@ -549,9 +537,8 @@ void sle4442(struct command_result* res) {
     }
 
     if (action == SLE4442_PROTECT) {
-        command_var_t arg;
         uint32_t prtmem = 0;
-        if (!cmdln_args_find_flag_uint32('v', &arg, &prtmem)) {
+        if (!bp_cmd_get_uint32(&sle4442_def, 'v', &prtmem)) {
             printf("Specify 32 bit protection mem value -v flag (-v 0xffffffff)\r\n");
             goto sle4442_cleanup;
         }

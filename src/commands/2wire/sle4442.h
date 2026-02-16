@@ -9,3 +9,5 @@
  * @param res  Command result structure
  */
 void sle4442(struct command_result* res);
+
+extern const struct bp_command_def sle4442_def;

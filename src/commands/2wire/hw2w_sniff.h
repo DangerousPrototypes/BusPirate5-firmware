@@ -9,3 +9,5 @@
  * @param res  Command result structure
  */
 void hw2w_sniff(struct command_result* res);
+
+extern const struct bp_command_def hw2w_sniff_def;

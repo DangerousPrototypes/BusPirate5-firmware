@@ -47,23 +47,36 @@ static const struct ui_help_options global_commands_more_help[] = {
 };
 
 static const char* const help_usage[] = {
-    "?|help [mode|display] [-h(elp)]",
+    "?|help [global|mode|display] [-n(opager)] [-h(elp)]",
     "Show help and all commands:%s help",
+    "Show help and all commands:%s help global",
     "Show help and commands for current mode:%s help mode",
     "Show help and commands for current display mode:%s help display",
 };
 
-static const struct ui_help_options help_options[] = {
-    { 1, "", T_HELP_HELP }, // command help
-    { 0, "?/help", T_HELP_SYS_COMMAND },
-    { 0, "mode", T_HELP_SYS_MODE },
-    { 0, "display", T_HELP_SYS_DISPLAY },
-    { 0, "-h", T_HELP_SYS_HELP },
+enum help_actions {
+    HELP_GLOBAL = 0,
+    HELP_MODE,
+    HELP_DISPLAY
+};
+
+static const bp_command_action_t help_action_defs[] = {
+    { HELP_GLOBAL,  "global",  T_HELP_SYS_COMMAND },
+    { HELP_MODE,    "mode",    T_HELP_SYS_MODE },
+    { HELP_DISPLAY, "display", T_HELP_SYS_DISPLAY },
+};
+
+static const bp_command_opt_t help_opts[] = {
+    { "nopager", 'n', BP_ARG_NONE, NULL, T_HELP_DISK_HEX_PAGER_OFF },
+    { 0 }
 };
 
 const struct bp_command_def help_def = {
     .name = "help",
     .description = T_HELP_HELP,
+    .actions = help_action_defs,
+    .action_count = count_of(help_action_defs),
+    .opts = help_opts,
     .usage = help_usage,
     .usage_count = count_of(help_usage)
 };
@@ -81,7 +94,14 @@ void help_mode(void) {
     modes[system_config.mode].protocol_help();
 }
 
-void help_global(void) {
+void help_global(bool disable_pager) {
+    // Reset or disable pager based on flag
+    if (disable_pager) {
+        ui_help_pager_disable();
+    } else {
+        ui_help_pager_reset();
+    }
+
     // Auto-generated global commands grouped by category
     ui_help_global_commands();
 
@@ -100,20 +120,27 @@ void help_global(void) {
 }
 
 void help_handler(struct command_result* res) {
-    // check help
     if (bp_cmd_help_check(&help_def, res->help_flag)) {
         return;
     }
-    // check mode|global|display
-    char action[9];
-    bp_cmd_get_positional_string(&help_def, 1, action, sizeof(action));
-    bool mode = (strcmp(action, "mode") == 0);
-    bool display = (strcmp(action, "display") == 0);
-    if (mode) {
-        help_mode();
-    } else if (display) {
-        help_display();
-    } else {
-        help_global();
+
+    // Check for nopager flag
+    bool nopager = bp_cmd_find_flag(&help_def, 'n');
+
+    // Get action verb (default to global if none specified)
+    uint32_t help_action = HELP_GLOBAL;
+    bp_cmd_get_action(&help_def, &help_action);
+
+    switch (help_action) {
+        case HELP_MODE:
+            help_mode();
+            break;
+        case HELP_DISPLAY:
+            help_display();
+            break;
+        case HELP_GLOBAL:
+        default:
+            help_global(nopager);
+            break;
     }
 }

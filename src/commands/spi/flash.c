@@ -66,7 +66,7 @@ static const bp_command_opt_t flash_opts[] = {
     { 0 }
 };
 
-static const bp_command_def_t flash_def = {
+const bp_command_def_t flash_def = {
     .name         = "flash",
     .description  = T_HELP_FLASH,
     .actions      = flash_action_defs,

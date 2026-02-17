@@ -861,7 +861,7 @@ static const char* const usage[] = {
     "Write SPD from file, verify:%s ddr4 write -f example.bin",
     "Read SPD to file, verify:%s ddr4 read -f example.bin",
     "Verify against file:%s ddr4 verify -f example.bin",
-    "Show block lock status:%s ddr4 lock -or- ddr4 unlock",
+    "Show block lock status:%s ddr4 lock",
     "Lock a block 0-3:%s ddr4 lock -b 0",
     "Unlock all blocks 0-3:%s ddr4 unlock",
     "Check/generate CRC for JEDEC bytes 0-125:%s ddr4 crc -f example.bin",

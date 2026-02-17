@@ -31,7 +31,7 @@
 //#define DEF_ROW_SIZE 16
 //#define PRINTABLE(_c) (_c > 0x1f && _c < 0x7f ? _c : '.')
 
-static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <bytes>] [-p (disable pager)] [-a (disable address column)]",
+static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <bytes>] [-c (disable pager)] [-q (disable address column)]",
                                          "Print file contents in HEX:%s hex example.bin",
                                          "Print 32 bytes starting at address 0x50:%s hex example.bin -s 0x50 -b 32",
                                          "Disable address and ASCII columns:%s hex example.bin -q",

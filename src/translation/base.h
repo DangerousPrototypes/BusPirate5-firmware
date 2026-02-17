@@ -228,6 +228,7 @@ enum T_translations{
     T_IR_CMD_TV_BGONE,
     T_IR_CMD_IRRX,
     T_IR_CMD_IRTX,
+    T_IR_CMD_TEST,
     T_HELP_IRTX_FILE_FLAG,
     T_HELP_IRRX_FILE_FLAG,
     T_HELP_IRRX_SENSOR_FLAG,

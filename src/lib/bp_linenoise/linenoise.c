@@ -1190,6 +1190,7 @@ static void refreshLineWithFlags(struct linenoiseState *l, int flags) {
 
 /* Utility function to avoid specifying REFRESH_ALL all the times. */
 static void refreshLine(struct linenoiseState *l) {
+    if (l->simple_mode) return; /* Never do full refresh in simple mode. */
     refreshLineWithFlags(l,REFRESH_ALL);
 }
 

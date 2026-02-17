@@ -42,10 +42,12 @@
 
 // command configuration
 const struct _mode_command_struct hwspi_commands[] = {
-    {   .func=&flash, 
+    {   .def=&flash_def,
+        .func=&flash, 
         .supress_fala_capture=true
     },
-    {   .func=&spi_eeprom_handler, 
+    {   .def=&eeprom_spi_def,
+        .func=&spi_eeprom_handler, 
         .supress_fala_capture=true
 
     },

@@ -212,6 +212,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_IR_CMD_TV_BGONE                ] = NULL,
     [ T_IR_CMD_IRRX                    ] = NULL,
     [ T_IR_CMD_IRTX                    ] = NULL,
+    [ T_IR_CMD_TEST                    ] = NULL,
     [ T_HELP_IRTX_FILE_FLAG            ] = NULL,
     [ T_HELP_IRRX_FILE_FLAG            ] = NULL,
     [ T_HELP_IRRX_SENSOR_FLAG          ] = NULL,

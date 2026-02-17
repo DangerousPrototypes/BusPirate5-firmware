@@ -212,6 +212,7 @@ static char const * const pl_pl[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_IR_CMD_TV_BGONE                ] = "TV-B-Gone, wyłączanie wielu marek telewizorów",
     [ T_IR_CMD_IRRX                    ] = "Odbiór, nagrywanie i retransmisja sygnałów IR (format aIR)",
     [ T_IR_CMD_IRTX                    ] = "Nadawanie sygnałów IR (format aIR)",
+    [ T_IR_CMD_TEST                    ] = NULL,
     [ T_HELP_IRTX_FILE_FLAG            ] = "Wyślij jeden lub więcej pakietów aIR z pliku",
     [ T_HELP_IRRX_FILE_FLAG            ] = "Podaj nazwę pliku do zapisu sygnałów",
     [ T_HELP_IRRX_SENSOR_FLAG          ] = "Wybierz czujnik do odbioru (38B/38D/56D)",

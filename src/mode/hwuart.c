@@ -76,9 +76,9 @@ const struct _mode_command_struct hwuart_commands[] = {
         .def=&uart_bridge_def,
         .supress_fala_capture=true
     },
-    {   .func=&uart_monitor_handler, 
+    /*{   .func=&uart_monitor_handler, 
         .supress_fala_capture=false
-    },
+    },*/
     {   .func=&uart_glitch_handler,
         .def=&uart_glitch_def,
         .supress_fala_capture=false

@@ -29,8 +29,22 @@
 #include "commands/infrared/tvbgone.h"
 #include "pirate/irio_pio.h"
 #include "commands/infrared/irtxrx.h"
+#include "lib/bp_args/bp_cmd.h"
 
+static const char* const irtoy_test_usage[] = {
+    "test",
+    "Test IR Toy v3 hardware:%s test",
+};
 
+const bp_command_def_t irtoy_test_def = {
+    .name         = "test",
+    .description  = T_IR_CMD_TEST,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = irtoy_test_usage,
+    .usage_count  = count_of(irtoy_test_usage),
+};
 
 static struct _infrared_mode_config mode_config;
 static uint8_t device_cleanup;
@@ -123,6 +137,9 @@ bool irtoy_test_rx(int bio) {
 }
 // irtoy_test function
 void irtoy_test(struct command_result* res) {
+    if (bp_cmd_help_check(&irtoy_test_def, res->help_flag)) {
+        return;
+    }
 
     uint8_t fails = 0;
     printf("Test pull-ups\r\n");
@@ -156,7 +173,8 @@ void irtoy_test(struct command_result* res) {
 
 // command configuration
 const struct _mode_command_struct infrared_commands[] = {
-    {   .func=&irtoy_test, 
+    {   .func=&irtoy_test,
+        .def=&irtoy_test_def,
         .supress_fala_capture=false
     },
     {   .func=&tvbgone_player,

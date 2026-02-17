@@ -35,7 +35,7 @@ static const char* const hw2w_sniff_help[] = {
 
 const bp_command_def_t hw2w_sniff_def = {
     .name         = "sniff",
-    .description  = T_I2C_SNIFF,
+    .description  = T_HW2WIRE_SNIFF,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,

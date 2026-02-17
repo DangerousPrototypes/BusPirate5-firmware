@@ -29,19 +29,52 @@ static const uint32_t category_headings[] = {
     [CMD_CAT_HIDDEN]    = 0, // never printed
 };
 
+/*
+ * Shared pager state — allows multiple help functions called in
+ * sequence (e.g. help_global) to share a continuous row counter
+ * so the page break doesn't reset at each section boundary.
+ */
+static uint16_t pager_row;
+static uint8_t  pager_rows;
+
+void ui_help_pager_reset(void) {
+    pager_row = 0;
+    pager_rows = system_config.terminal_ansi_rows;
+    // leave a few rows of margin; guard against underflow
+    if (pager_rows > 4) {
+        pager_rows -= 4;
+    }
+}
+
+void ui_help_pager_disable(void) {
+    pager_row = 0;
+    pager_rows = 0xFF; // disable paging by setting to max value
+}
+
+static void pager_check(void) {
+    if (pager_row > 0 && (pager_row % pager_rows) == 0) {
+        ui_term_cmdln_wait_char('\0');
+    }
+}
+
 void ui_help_global_commands(void) {
+
     for (uint8_t cat = 0; cat < CMD_CAT_HIDDEN; cat++) {
         // Print category heading
         if (category_headings[cat]) {
+            pager_check();
             printf("\r\n%s%s%s\r\n",
                    ui_term_color_info(),
                    GET_T(category_headings[cat]),
                    ui_term_color_reset());
+            pager_row += 2; // blank line + heading
         }
 
         // Walk commands[], print every entry matching this category
         for (uint32_t i = 0; i < commands_count; i++) {
             if (commands[i].category != cat) continue;
+
+            pager_check();
 
             // Resolve description: def->description > description_text > fallback
             const char *desc;
@@ -60,28 +93,19 @@ void ui_help_global_commands(void) {
                    ui_term_color_info(),
                    desc,
                    ui_term_color_reset());
+            pager_row++;
         }
     }
 }
 
 // displays the help
-// NOTE: update if the count of "\r\n" prints in the switch statement below changes
-// case1(3) + case0(3) + case\n(1) = 7
-#define PAGER_PER_HELP_ROWS 7
 void ui_help_options(const struct ui_help_options(*help), uint32_t count) {
-    // set the pager rows for a pause, fix the integer wrap around if something weird is going on
-    uint8_t pager_rows = system_config.terminal_ansi_rows - PAGER_PER_HELP_ROWS;
-    if (pager_rows > system_config.terminal_ansi_rows) {
-        pager_rows = system_config.terminal_ansi_rows;
-    }
-
     for (uint i = 0; i < count; i++) {
-        if ((i > 0) && ((i % pager_rows) == 0)) {
-            ui_term_cmdln_wait_char('\0');
-        }
+        pager_check();
         switch (help[i].help) {
             case 1: // heading
                 printf("\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(help[i].description), ui_term_color_reset());
+                pager_row += 2;
                 break;
             case 0: // help item
                 printf("%s%s%s\t%s%s%s\r\n",
@@ -91,9 +115,11 @@ void ui_help_options(const struct ui_help_options(*help), uint32_t count) {
                        ui_term_color_info(),
                        GET_T(help[i].description),
                        ui_term_color_reset());
+                pager_row++;
                 break;
             case '\n':
                 printf("\r\n");
+                pager_row++;
                 break;
             default:
                 break;
@@ -117,7 +143,7 @@ bool ui_help_show(bool help_flag,
                   const struct ui_help_options* options,
                   uint32_t count_of_options) {
     if (help_flag) {
-
+        ui_help_pager_reset();
         ui_help_usage(usage, count_of_usage);
         printf("%s", ui_term_color_reset());
 
@@ -130,10 +156,12 @@ bool ui_help_show(bool help_flag,
 }
 
 void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uint32_t count, const char* mode) {
-    // printf("\r\nAvailable mode commands:\r\n");
+    pager_check();
     printf(
         "\r\n%s%s%s mode commands:%s\r\n", ui_term_color_prompt(), mode, ui_term_color_info(), ui_term_color_reset());
+    pager_row += 2;
     for (uint32_t i = 0; i < count; i++) {
+        pager_check();
         const char *desc = "Description not set. Try -h for command help";
         if (commands[i].def && commands[i].def->description) {
             desc = GET_T(commands[i].def->description);
@@ -144,6 +172,7 @@ void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uin
                ui_term_color_info(),
                desc,
                ui_term_color_reset());
+        pager_row++;
     }
 }
 

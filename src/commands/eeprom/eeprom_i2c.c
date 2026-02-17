@@ -52,13 +52,27 @@ static const bp_command_opt_t eeprom_i2c_opts[] = {
     { 0 }
 };
 
+static const char* const usage[] = {
+    "eeprom [dump|erase|write|read|verify|test|list]\r\n\t[-d <device>] [-f <file>] [-v(verify)] [-s <start address>] [-b <bytes>] [-a <i2c address>] [-h(elp)]",
+    "List available EEPROM devices:%s eeprom list",
+    "Display contents (x to exit):%s eeprom dump -d 24x02",
+    "Display 16 bytes starting at address 0x60:%s eeprom dump -d 24x02 -s 0x60 -b 16",
+    "Erase, verify:%s eeprom erase -d 24x02 -v",
+    "Write from file, verify:%s eeprom write -d 24x02 -f example.bin -v",
+    "Read to file, verify:%s eeprom read -d 24x02 -f example.bin -v",
+    "Verify against file:%s eeprom verify -d 24x02 -f example.bin",
+    "Test chip (full erase/write/verify):%s eeprom test -d 24x02",
+    "Use alternate I2C address (0x50 default):%s eeprom dump -d 24x02 -a 0x53",
+};
+
 const bp_command_def_t eeprom_i2c_def = {
     .name = "eeprom",
     .description = T_HELP_I2C_EEPROM,
     .actions = eeprom_i2c_action_defs,
     .action_count = count_of(eeprom_i2c_action_defs),
     .opts = eeprom_i2c_opts,
-    // Usage and options arrays removed; help is now handled by bp_cmd API
+    .usage = usage,
+    .usage_count = count_of(usage),
 };
 #if 0
 uint32_t i2c_eeprom_determineSize(const bool debug)

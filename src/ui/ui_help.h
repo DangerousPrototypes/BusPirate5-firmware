@@ -85,3 +85,16 @@ void ui_help_mode_commands_exec(const struct _mode_command_struct* commands, uin
  *          Hidden commands (CMD_CAT_HIDDEN) are skipped.
  */
 void ui_help_global_commands(void);
+
+/**
+ * @brief Reset shared help pager row counter.
+ * @details Call before a sequence of help display functions
+ *          to ensure continuous paging across sections.
+ */
+void ui_help_pager_reset(void);
+
+/**
+ * @brief Disable paging for help output.
+ * @details Sets pager to never pause, useful for scripts or redirected output.
+ */
+void ui_help_pager_disable(void);

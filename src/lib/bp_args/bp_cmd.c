@@ -109,6 +109,9 @@ static bool cmd_scan_flag(const bp_command_def_t *def, char flag,
                 } else {
                     // Flag expects value but none present
                     if (match) {
+                        if (opt->arg_type == BP_ARG_REQUIRED) {
+                            printf("option -%c requires an argument\r\n", flag);
+                        }
                         *val = NULL;
                         *val_len = 0;
                         return true; // flag found, but missing value

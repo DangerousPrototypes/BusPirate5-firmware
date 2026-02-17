@@ -20,17 +20,17 @@
 #include "lib/bp_args/bp_cmd.h"
 
 static const char* const msb_usage[] = {
-    "L",
-    "Set bit order to MSB-first:%s L",
+    "l",
+    "Set bit order to MSB-first:%s l",
 };
 
 static const char* const lsb_usage[] = {
-    "l",
-    "Set bit order to LSB-first:%s l",
+    "L",
+    "Set bit order to LSB-first:%s L",
 };
 
 const bp_command_def_t bitorder_msb_def = {
-    .name         = "L",
+    .name         = "l",
     .description  = T_CMDLN_BITORDER_MSB,
     .actions      = NULL,
     .action_count = 0,
@@ -40,7 +40,7 @@ const bp_command_def_t bitorder_msb_def = {
 };
 
 const bp_command_def_t bitorder_lsb_def = {
-    .name         = "l",
+    .name         = "L",
     .description  = T_CMDLN_BITORDER_LSB,
     .actions      = NULL,
     .action_count = 0,

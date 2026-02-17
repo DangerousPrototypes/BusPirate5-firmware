@@ -216,6 +216,7 @@ static char const * const en_us[]={
 	[T_IR_CMD_TV_BGONE]="TV-B-Gone, turn off many brands of TV",
 	[T_IR_CMD_IRRX]="Receive, record, retransmit IR signals (aIR format)",
 	[T_IR_CMD_IRTX]="Transmit IR signals (aIR format)",
+	[T_IR_CMD_TEST]="Test IR Toy v3 hardware",
 	[T_HELP_IRTX_FILE_FLAG]="Transmit one or more aIR packets from a file",
 	[T_HELP_IRRX_FILE_FLAG]="Specify filename for saved signals",
 	[T_HELP_IRRX_SENSOR_FLAG]="Specify sensor for received signals (38B/38D/56D)irtx -h",

@@ -15,3 +15,5 @@ void flash(struct command_result* res);
  * @param res  Command result structure
  */
 void load(struct command_result* res);
+
+extern const struct bp_command_def flash_def;

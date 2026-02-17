@@ -52,7 +52,7 @@ static void ln_write(const char *s, size_t len) {
  */
 void ui_term_linenoise_init(size_t cols) {
     linenoiseSetCallbacks(&ln_state, ln_try_read, ln_read_blocking, ln_write, cols);
-    //bp_cmd_linenoise_init();
+    bp_cmd_linenoise_init();
     ln_initialized = true;
 }
 

@@ -26,6 +26,12 @@
 #include <stddef.h>
 #include <string.h>
 
+/* Hint ghost-text appearance.  Adjust these to taste.
+ * color: standard ANSI (e.g. 90=dark grey, 37=white, 36=cyan)
+ * bold:  0=normal, 1=bold */
+#define BP_CMD_HINT_COLOR  95
+#define BP_CMD_HINT_BOLD    0
+
 /*
  * Upper bound on the number of defs we collect per callback invocation.
  * Global commands + largest mode command set.  If a mode has more than
@@ -87,9 +93,8 @@ static char *bp_cmd_ln_hints(const char *buf, int *color, int *bold) {
     const char *hint = bp_cmd_hint(buf, len, defs, count);
     if (!hint) return NULL;
 
-    /* Dim grey ghost text */
-    *color = 90;
-    *bold  = 0;
+    *color = BP_CMD_HINT_COLOR;
+    *bold  = BP_CMD_HINT_BOLD;
 
     /* bp_cmd_hint returns a static buffer — safe to return directly.
      * Cast away const: linenoise prototype is char*, but the static

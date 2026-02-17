@@ -16,12 +16,20 @@ static const char* const usage[] = {
     "Lookup JEP106 ID (Sinker):%s jep106 0x0a 0xab"
 };
 
+static const bp_command_positional_t jep106_positionals[] = {
+    { "bank",   "<bank number>", 0, true },
+    { "id",     "<vendor id>",   0, true },
+    { 0 }
+};
+
 const bp_command_def_t jep106_def = {
     .name         = "jep106",
     .description  = T_HELP_GLOBAL_JEP106_LOOKUP,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = jep106_positionals,
+    .positional_count = 2,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };

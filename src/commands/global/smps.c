@@ -32,12 +32,19 @@ static const bp_command_opt_t smps_opts[] = {
     { 0 }
 };
 
+static const bp_command_positional_t smps_positionals[] = {
+    { "voltage", "<volts>", 0, false },
+    { 0 }
+};
+
 const bp_command_def_t smps_def = {
     .name         = "smps",
     .description  = T_HELP_CMD_SMPS,
     .actions      = NULL,
     .action_count = 0,
     .opts         = smps_opts,
+    .positionals      = smps_positionals,
+    .positional_count = 1,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };

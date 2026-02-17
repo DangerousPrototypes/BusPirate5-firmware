@@ -55,6 +55,26 @@ static const bp_command_opt_t *find_opt_in_def(const bp_command_def_t *def, char
 }
 
 /**
+ * @brief Find option descriptor by long name in command def.
+ * @param def       Command definition
+ * @param name      Start of long name (without --)
+ * @param name_len  Length of the name (may not be null-terminated)
+ * @return Option pointer, or NULL if not found / no opts defined.
+ */
+static const bp_command_opt_t *find_opt_by_long_name(const bp_command_def_t *def,
+                                                     const char *name, size_t name_len) {
+    if (!def->opts) return NULL;
+    for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
+        if (def->opts[i].long_name &&
+            strlen(def->opts[i].long_name) == name_len &&
+            memcmp(def->opts[i].long_name, name, name_len) == 0) {
+            return &def->opts[i];
+        }
+    }
+    return NULL;
+}
+
+/**
  * @brief Scan command line for a specific flag.
  * @details Uses def->opts to know which other flags consume values,
  *          ensuring correct skip-over behavior.
@@ -128,11 +148,66 @@ static bool cmd_scan_flag(const bp_command_def_t *def, char flag,
             continue;
         }
 
-        // Skip long option --name[=value] or --name value
+        // Long option --name[=value] or --name value
         if (*p == '-' && p + 1 < end && p[1] == '-') {
             p += 2;
-            p = skip_tok(p, end); // skip --name or --name=value
-            // TODO: could match long names here too
+            const char *name_start = p;
+            // Find end of name (stop at '=' or whitespace)
+            while (p < end && *p != '=' && *p != ' ' && *p != '\t' && *p != '\0') p++;
+            size_t name_len = p - name_start;
+
+            const bp_command_opt_t *opt = find_opt_by_long_name(def, name_start, name_len);
+
+            // Check if this long name matches the requested short flag
+            bool match = (opt && opt->short_name &&
+                         ((opt->short_name | 0x20) == (flag | 0x20)));
+
+            if (opt && opt->arg_type != BP_ARG_NONE) {
+                // This flag consumes a value — check for =value or next token
+                if (p < end && *p == '=') {
+                    p++; // skip '='
+                    const char *v = p;
+                    size_t vl = tok_len(p, end);
+                    p = v + vl;
+                    if (match) {
+                        *val = v;
+                        *val_len = vl;
+                        return true;
+                    }
+                } else {
+                    // Value is next token
+                    p = skip_ws(p, end);
+                    if (p < end && *p != '-' && *p != '\0') {
+                        const char *v = p;
+                        size_t vl = tok_len(p, end);
+                        p = v + vl;
+                        if (match) {
+                            *val = v;
+                            *val_len = vl;
+                            return true;
+                        }
+                    } else {
+                        if (match) {
+                            if (opt->arg_type == BP_ARG_REQUIRED) {
+                                printf("option --%.*s requires an argument\r\n",
+                                       (int)name_len, name_start);
+                            }
+                            *val = NULL;
+                            *val_len = 0;
+                            return true;
+                        }
+                    }
+                }
+            } else {
+                // Flag-only or skip to end of token
+                if (*p == '=') p = skip_tok(p, end); // skip any =junk
+                else p = skip_ws(p, end);
+                if (match) {
+                    *val = NULL;
+                    *val_len = 0;
+                    return true;
+                }
+            }
             continue;
         }
 
@@ -182,7 +257,18 @@ bool bp_cmd_get_action(const bp_command_def_t *def, uint32_t *action) {
             }
             // Long option
             p += 2;
-            p = skip_tok(p, end);
+            const char *nm = p;
+            while (p < end && *p != '=' && *p != ' ' && *p != '\t' && *p != '\0') p++;
+            size_t nm_len = p - nm;
+            const bp_command_opt_t *opt2 = find_opt_by_long_name(def, nm, nm_len);
+            if (p < end && *p == '=') {
+                p = skip_tok(p, end);
+            } else if (opt2 && opt2->arg_type != BP_ARG_NONE) {
+                p = skip_ws(p, end);
+                if (p < end && *p != '-' && *p != '\0') {
+                    p = skip_tok(p, end);
+                }
+            }
             continue;
         }
 
@@ -326,10 +412,21 @@ static bool cmd_get_positional_token(const bp_command_def_t *def, uint32_t pos,
             continue;
         }
 
-        // Skip long flags: --name[=value]
+        // Skip long flags: --name[=value] or --name value
         if (*p == '-' && p + 1 < end && p[1] == '-') {
             p += 2;
-            p = skip_tok(p, end);
+            const char *nm = p;
+            while (p < end && *p != '=' && *p != ' ' && *p != '\t' && *p != '\0') p++;
+            size_t nm_len = p - nm;
+            const bp_command_opt_t *opt = find_opt_by_long_name(def, nm, nm_len);
+            if (p < end && *p == '=') {
+                p = skip_tok(p, end); // skip =value
+            } else if (opt && opt->arg_type != BP_ARG_NONE) {
+                p = skip_ws(p, end);
+                if (p < end && *p != '-' && *p != '\0') {
+                    p = skip_tok(p, end); // skip flag's value
+                }
+            }
             continue;
         }
 
@@ -482,6 +579,36 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
         }
     }
 
+    // Positional arguments
+    if (def->positionals && def->positional_count > 0) {
+        for (uint32_t i = 0; i < def->positional_count; i++) {
+            const bp_command_positional_t *pa = &def->positionals[i];
+            if (!pa->name) break;
+
+            char arg_str[48];
+            int pos;
+            if (pa->required) {
+                pos = snprintf(arg_str, sizeof(arg_str), "<%s>", pa->name);
+            } else {
+                pos = snprintf(arg_str, sizeof(arg_str), "[%s]", pa->name);
+            }
+
+            printf("%s%s%s",
+                   ui_term_color_prompt(),
+                   arg_str,
+                   ui_term_color_reset());
+            if (pos < HELP_COL_WIDTH) {
+                printf("%*s", HELP_COL_WIDTH - pos, "");
+            } else {
+                printf(" ");
+            }
+            printf("%s%s%s\r\n",
+                   ui_term_color_info(),
+                   pa->description ? GET_T(pa->description) : "",
+                   ui_term_color_reset());
+        }
+    }
+
     // Flags
     if (def->opts) {
         for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
@@ -560,13 +687,15 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         }
     }
     if (!def) {
-        // Partial command match — suggest first matching command name
-        for (size_t i = 0; i < count; i++) {
-            if (defs[i] && defs[i]->name &&
-                cmd_len < strlen(defs[i]->name) &&
-                memcmp(cmd_start, defs[i]->name, cmd_len) == 0) {
-                snprintf(hint_buf, sizeof(hint_buf), "%s", defs[i]->name + cmd_len);
-                return hint_buf;
+        // Partial command match — only if still typing the first token
+        if (p >= end) {
+            for (size_t i = 0; i < count; i++) {
+                if (defs[i] && defs[i]->name &&
+                    cmd_len < strlen(defs[i]->name) &&
+                    memcmp(cmd_start, defs[i]->name, cmd_len) == 0) {
+                    snprintf(hint_buf, sizeof(hint_buf), "%s", defs[i]->name + cmd_len);
+                    return hint_buf;
+                }
             }
         }
         return NULL;
@@ -611,11 +740,64 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         }
     }
 
+    // If last token is "--", suggest first available long flag
+    if (last_tok && last_tok[0] == '-' && tok_len(last_tok, end) >= 2 &&
+        last_tok[1] == '-' && def->opts) {
+        size_t tl = tok_len(last_tok, end);
+        const char *typed_name = last_tok + 2;
+        size_t typed_len = tl - 2;
+
+        if (typed_len == 0) {
+            // Bare "--": suggest first long flag name
+            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
+                if (def->opts[i].long_name) {
+                    if (def->opts[i].arg_hint) {
+                        snprintf(hint_buf, sizeof(hint_buf), "%s %s",
+                                 def->opts[i].long_name, def->opts[i].arg_hint);
+                    } else {
+                        snprintf(hint_buf, sizeof(hint_buf), "%s",
+                                 def->opts[i].long_name);
+                    }
+                    return hint_buf;
+                }
+            }
+        } else {
+            // Partial long flag: suggest matching completion
+            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
+                if (def->opts[i].long_name) {
+                    size_t ln_len = strlen(def->opts[i].long_name);
+                    if (typed_len < ln_len &&
+                        memcmp(typed_name, def->opts[i].long_name, typed_len) == 0) {
+                        const char *rest = def->opts[i].long_name + typed_len;
+                        if (def->opts[i].arg_hint) {
+                            snprintf(hint_buf, sizeof(hint_buf), "%s %s",
+                                     rest, def->opts[i].arg_hint);
+                        } else {
+                            snprintf(hint_buf, sizeof(hint_buf), "%s", rest);
+                        }
+                        return hint_buf;
+                    }
+                }
+            }
+        }
+    }
+
     // If last token is a complete flag like "-f", suggest its arg_hint
-    if (last_tok && *last_tok == '-' && tok_len(last_tok, end) == 2) {
+    if (last_tok && *last_tok == '-' && tok_len(last_tok, end) == 2 && last_tok[1] != '-') {
         char fc = last_tok[1];
         const bp_command_opt_t *opt = find_opt_in_def(def, fc | 0x20);
         if (!opt) opt = find_opt_in_def(def, fc);
+        if (opt && opt->arg_hint) {
+            snprintf(hint_buf, sizeof(hint_buf), " %s", opt->arg_hint);
+            return hint_buf;
+        }
+    }
+
+    // If last token is a complete long flag like "--file", suggest its arg_hint
+    if (last_tok && last_tok[0] == '-' && tok_len(last_tok, end) > 2 &&
+        last_tok[1] == '-' && def->opts) {
+        size_t tl = tok_len(last_tok, end);
+        const bp_command_opt_t *opt = find_opt_by_long_name(def, last_tok + 2, tl - 2);
         if (opt && opt->arg_hint) {
             snprintf(hint_buf, sizeof(hint_buf), " %s", opt->arg_hint);
             return hint_buf;
@@ -631,6 +813,81 @@ const char *bp_cmd_hint(const char *buf, size_t len,
                 snprintf(hint_buf, sizeof(hint_buf), "%s", def->actions[i].verb + tl);
                 return hint_buf;
             }
+        }
+    }
+
+    // Positional argument hint: count how many positional tokens the user has
+    // entered so far and suggest the next expected positional arg.
+    if (def->positionals && def->positional_count > 0) {
+        // Count positional tokens (skip flags and their values)
+        uint32_t pos_count = 0;
+        const char *scan = buf;
+        const char *scan_end = end;
+
+        // Skip command name
+        scan = skip_ws(scan, scan_end);
+        scan = skip_tok(scan, scan_end);
+
+        while (scan < scan_end) {
+            scan = skip_ws(scan, scan_end);
+            if (scan >= scan_end || *scan == '\0') break;
+
+            if (*scan == '-') {
+                // Skip flag
+                if (scan + 1 < scan_end && scan[1] == '-') {
+                    // Long flag
+                    scan += 2;
+                    const char *nm = scan;
+                    while (scan < scan_end && *scan != '=' && *scan != ' ' &&
+                           *scan != '\t' && *scan != '\0') scan++;
+                    size_t nm_len = scan - nm;
+                    const bp_command_opt_t *opt = find_opt_by_long_name(def, nm, nm_len);
+                    if (*scan == '=') scan = skip_tok(scan, scan_end);
+                    else if (opt && opt->arg_type != BP_ARG_NONE) {
+                        scan = skip_ws(scan, scan_end);
+                        if (scan < scan_end && *scan != '-') scan = skip_tok(scan, scan_end);
+                    }
+                } else if (scan + 1 < scan_end && scan[1] != ' ' && scan[1] != '\0') {
+                    // Short flag
+                    char oc = scan[1];
+                    scan += 2;
+                    const bp_command_opt_t *opt = find_opt_in_def(def, oc | 0x20);
+                    if (!opt) opt = find_opt_in_def(def, oc);
+                    if (opt && opt->arg_type != BP_ARG_NONE) {
+                        scan = skip_ws(scan, scan_end);
+                        if (scan < scan_end && *scan != '-') scan = skip_tok(scan, scan_end);
+                    }
+                } else {
+                    scan = skip_tok(scan, scan_end);
+                }
+                continue;
+            }
+
+            // Non-flag token = positional
+            pos_count++;
+            scan = skip_tok(scan, scan_end);
+        }
+
+        // Check if trailing whitespace (cursor at new token position)
+        bool at_new_token = (len > 0 && (buf[len-1] == ' ' || buf[len-1] == '\t'));
+
+        // Determine which positional to hint
+        uint32_t hint_pos;
+        if (at_new_token) {
+            hint_pos = pos_count; // next positional (0-based into array)
+        } else {
+            // Currently typing a token — already counted, so suggest current
+            hint_pos = (pos_count > 0) ? pos_count - 1 : 0;
+        }
+
+        // Don't hint positional if the user is typing an action verb (already handled)
+        // or a flag. Only hint if we're past existing action verbs.
+        if (at_new_token && hint_pos < def->positional_count) {
+            snprintf(hint_buf, sizeof(hint_buf), " %s",
+                     def->positionals[hint_pos].hint ?
+                     def->positionals[hint_pos].hint :
+                     def->positionals[hint_pos].name);
+            return hint_buf;
         }
     }
 
@@ -652,9 +909,9 @@ void bp_cmd_completion(const char *buf, size_t len,
     size_t cmd_len = p - cmd_start;
     if (cmd_len == 0) return;
 
-    // Check if we're still typing the command name
+    // Check if we're still typing the command name (no space after it)
     if (p >= end) {
-        // Complete command names
+        // Complete command names (prefix matches)
         for (size_t i = 0; i < count; i++) {
             if (defs[i] && defs[i]->name &&
                 cmd_len <= strlen(defs[i]->name) &&
@@ -686,36 +943,76 @@ void bp_cmd_completion(const char *buf, size_t len,
         while (scan < end && *scan != ' ' && *scan != '\t') scan++;
     }
 
-    size_t tl = tok_len(last_tok, end);
-    static char comp_buf[64];
+    size_t tl = (last_tok < end) ? tok_len(last_tok, end) : 0;
+    bool last_is_flag = (last_tok < end && *last_tok == '-');
+
+    /*
+     * Completion buffer pool.  In BP_EMBEDDED mode linenoiseAddCompletion()
+     * stores the pointer we give it — it does NOT copy the string.  So each
+     * completion needs its own persistent buffer.  We keep a small static
+     * ring that is re-used each time the completion callback is invoked
+     * (linenoise rebuilds the table from scratch on every key).
+     */
+    #define COMP_SLOTS 16
+    #define COMP_BUF_SZ 64
+    static char comp_pool[COMP_SLOTS][COMP_BUF_SZ];
+    static int  comp_next;          /* next free slot */
+    comp_next = 0;                  /* reset each invocation */
+
+    #define COMP_BUF() (comp_next < COMP_SLOTS ? comp_pool[comp_next++] : NULL)
 
     // Complete action verbs
-    if (last_tok && *last_tok != '-' && def->actions) {
+    if (!last_is_flag && def->actions) {
         for (uint32_t i = 0; i < def->action_count; i++) {
             if (tl <= strlen(def->actions[i].verb) &&
                 memcmp(last_tok, def->actions[i].verb, tl) == 0) {
                 // Build full line up to last_tok, then append completed verb
                 size_t prefix_len = last_tok - buf;
-                if (prefix_len + strlen(def->actions[i].verb) < sizeof(comp_buf)) {
-                    memcpy(comp_buf, buf, prefix_len);
-                    strcpy(comp_buf + prefix_len, def->actions[i].verb);
-                    add_completion(comp_buf, userdata);
+                char *cb = COMP_BUF();
+                if (cb && prefix_len + strlen(def->actions[i].verb) < COMP_BUF_SZ) {
+                    memcpy(cb, buf, prefix_len);
+                    strcpy(cb + prefix_len, def->actions[i].verb);
+                    add_completion(cb, userdata);
                 }
             }
         }
     }
 
     // Complete flag names
-    if (last_tok && *last_tok == '-' && tl <= 2 && def->opts) {
-        for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
-            if (def->opts[i].short_name) {
-                char flag_str[4] = { '-', def->opts[i].short_name, '\0' };
-                if (tl == 1 || (tl == 2 && last_tok[1] == def->opts[i].short_name)) {
+    if (last_is_flag && def->opts) {
+        if (tl >= 2 && last_tok[1] == '-') {
+            // Long flag completion: --name
+            const char *typed_name = last_tok + 2;
+            size_t typed_len = tl - 2;
+            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
+                if (def->opts[i].long_name &&
+                    typed_len <= strlen(def->opts[i].long_name) &&
+                    memcmp(typed_name, def->opts[i].long_name, typed_len) == 0) {
                     size_t prefix_len = last_tok - buf;
-                    if (prefix_len + 2 < sizeof(comp_buf)) {
-                        memcpy(comp_buf, buf, prefix_len);
-                        strcpy(comp_buf + prefix_len, flag_str);
-                        add_completion(comp_buf, userdata);
+                    size_t long_len = strlen(def->opts[i].long_name);
+                    char *cb = COMP_BUF();
+                    if (cb && prefix_len + 2 + long_len < COMP_BUF_SZ) {
+                        memcpy(cb, buf, prefix_len);
+                        cb[prefix_len] = '-';
+                        cb[prefix_len + 1] = '-';
+                        strcpy(cb + prefix_len + 2, def->opts[i].long_name);
+                        add_completion(cb, userdata);
+                    }
+                }
+            }
+        } else if (tl <= 2) {
+            // Short flag completion: -x
+            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
+                if (def->opts[i].short_name) {
+                    char flag_str[4] = { '-', def->opts[i].short_name, '\0' };
+                    if (tl == 1 || (tl == 2 && last_tok[1] == def->opts[i].short_name)) {
+                        size_t prefix_len = last_tok - buf;
+                        char *cb = COMP_BUF();
+                        if (cb && prefix_len + 2 < COMP_BUF_SZ) {
+                            memcpy(cb, buf, prefix_len);
+                            strcpy(cb + prefix_len, flag_str);
+                            add_completion(cb, userdata);
+                        }
                     }
                 }
             }

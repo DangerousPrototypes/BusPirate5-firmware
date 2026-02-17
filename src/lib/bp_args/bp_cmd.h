@@ -104,6 +104,25 @@ typedef struct {
 
 /*
  * =============================================================================
+ * Positional argument descriptor
+ * =============================================================================
+ */
+
+/**
+ * @brief Positional argument descriptor.
+ * @details Defines a positional (non-flag) argument for help display and hinting.
+ *          Order in the array matches position index (1-based in the API).
+ *          Terminate arrays with {0}.
+ */
+typedef struct {
+    const char *name;         ///< Argument name for display: "bank", "voltage"
+    const char *hint;         ///< Value placeholder for hints: "<volts>", "<addr>"
+    uint32_t    description;  ///< Translation key for help text
+    bool        required;     ///< true if argument is required
+} bp_command_positional_t;
+
+/*
+ * =============================================================================
  * Full command definition
  * =============================================================================
  */
@@ -121,7 +140,10 @@ typedef struct bp_command_def {
     uint32_t action_count;                  ///< Number of actions
 
     const bp_command_opt_t *opts;           ///< Flags/options, {0}-terminated
-    
+
+    const bp_command_positional_t *positionals; ///< Positional args, {0}-terminated, NULL if none
+    uint32_t positional_count;              ///< Number of positional args
+
     const char *const *usage;               ///< Usage example strings
     uint32_t usage_count;                   ///< Number of usage lines
 } bp_command_def_t;

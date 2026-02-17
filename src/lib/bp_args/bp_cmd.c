@@ -705,9 +705,15 @@ const char *bp_cmd_hint(const char *buf, size_t len,
     while (p < end && (*p == ' ' || *p == '\t')) p++;
 
     if (p >= end) {
-        // Nothing after command — suggest first action verb if available
+        // Nothing after command — suggest first action verb or positional
         if (def->actions && def->action_count > 0) {
             snprintf(hint_buf, sizeof(hint_buf), " %s", def->actions[0].verb);
+            return hint_buf;
+        }
+        if (def->positionals && def->positional_count > 0) {
+            const bp_command_positional_t *pa = &def->positionals[0];
+            snprintf(hint_buf, sizeof(hint_buf), " %s",
+                     pa->hint ? pa->hint : pa->name);
             return hint_buf;
         }
         return NULL;
@@ -819,6 +825,10 @@ const char *bp_cmd_hint(const char *buf, size_t len,
     // Positional argument hint: count how many positional tokens the user has
     // entered so far and suggest the next expected positional arg.
     if (def->positionals && def->positional_count > 0) {
+        // Don't hint positional if the user is currently typing a flag
+        bool last_is_flag_tok = (last_tok < end && *last_tok == '-');
+        if (last_is_flag_tok) return NULL;
+
         // Count positional tokens (skip flags and their values)
         uint32_t pos_count = 0;
         const char *scan = buf;
@@ -1016,6 +1026,18 @@ void bp_cmd_completion(const char *buf, size_t len,
                     }
                 }
             }
+        }
+    }
+
+    /* Fallback: if no completions were added, echo the current input as a
+     * single completion so linenoise doesn't insert a literal tab char.  */
+    if (comp_next == 0) {
+        char *cb = COMP_BUF();
+        if (cb) {
+            size_t copylen = (len < COMP_BUF_SZ - 1) ? len : COMP_BUF_SZ - 1;
+            memcpy(cb, buf, copylen);
+            cb[copylen] = '\0';
+            add_completion(cb, userdata);
         }
     }
 }

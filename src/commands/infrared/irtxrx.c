@@ -33,12 +33,19 @@ static const bp_command_opt_t irtx_opts[] = {
 	{ 0 }
 };
 
+static const bp_command_positional_t irtx_positionals[] = {
+	{ "packet", "aIR packet", 0, false },
+	{ 0 }
+};
+
 const bp_command_def_t irtx_def = {
 	.name         = "irtx",
 	.description  = T_IR_CMD_IRTX,
 	.actions      = NULL,
 	.action_count = 0,
 	.opts         = irtx_opts,
+	.positionals      = irtx_positionals,
+	.positional_count = 1,
 	.usage        = usage_tx,
 	.usage_count  = count_of(usage_tx),
 };

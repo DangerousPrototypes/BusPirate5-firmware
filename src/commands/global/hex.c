@@ -45,12 +45,19 @@ static const bp_command_opt_t hex_opts[] = {
     { 0 }
 };
 
+static const bp_command_positional_t hex_positionals[] = {
+    { "file", "file", 0, true },
+    { 0 }
+};
+
 const bp_command_def_t hex_def = {
     .name         = "hex",
     .description  = T_HELP_DISK_HEX,
     .actions      = NULL,
     .action_count = 0,
     .opts         = hex_opts,
+    .positionals      = hex_positionals,
+    .positional_count = 1,
     .usage        = hex_usage,
     .usage_count  = count_of(hex_usage),
 };

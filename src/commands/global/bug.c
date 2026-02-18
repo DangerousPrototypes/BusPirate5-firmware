@@ -17,10 +17,16 @@
 
 static const char* const usage[] = { "replicate hardware bugs", "Test errata E9:%s bug e9" };
 
+static const bp_command_positional_t bug_positionals[] = {
+    { "bug", "e9", 0, false },
+    { 0 }
+};
 
 const struct bp_command_def bug_def = {
     .name = "bug",
     .description = 0x00,
+    .positionals      = bug_positionals,
+    .positional_count = 1,
     .usage = usage,
     .usage_count = count_of(usage)
 };

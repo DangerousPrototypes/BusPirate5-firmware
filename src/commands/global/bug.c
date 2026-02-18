@@ -26,7 +26,7 @@ static const bp_command_positional_t bug_positionals[] = {
 };
 
 static const bp_command_opt_t bug_opts[] = {
-    { "all", 'a', BP_ARG_NONE, NULL, "Test all IOs for E9" },
+    { "all", 'a', BP_ARG_NONE, NULL, T_HELP_GCMD_BUG_ALL_PINS },
     { 0 }
 };
 

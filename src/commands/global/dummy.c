@@ -38,19 +38,12 @@ static const bp_command_opt_t dummy_opts[] = {
     { 0 }
 };
 
-static const bp_command_positional_t dummy_positionals[] = {
-    { "action", "init|test", 0, false },
-    { 0 }
-};
-
 const bp_command_def_t dummy_def = {
     .name = "dummy",
     .description = 0x00,
     .actions = NULL,
     .action_count = 0,
     .opts = dummy_opts,
-    .positionals      = dummy_positionals,
-    .positional_count = 1,
     .usage = usage,
     .usage_count = count_of(usage)
 };

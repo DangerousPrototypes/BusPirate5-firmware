@@ -319,7 +319,6 @@ static const bp_command_action_t label_actions[] = {
 };
 
 static const bp_command_positional_t disk_label_positionals[] = {
-    { "command", "get|set", 0, true  },
     { "name",    "label",   0, false },
     { 0 }
 };
@@ -331,7 +330,7 @@ const bp_command_def_t disk_label_def = {
     .action_count = count_of(label_actions),
     .opts         = NULL,
     .positionals      = disk_label_positionals,
-    .positional_count = 2,
+    .positional_count = 1,
     .usage        = label_usage,
     .usage_count  = count_of(label_usage),
 };

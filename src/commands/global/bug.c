@@ -21,7 +21,7 @@ static const char* const usage[] = {
 };
 
 static const bp_command_positional_t bug_positionals[] = {
-    { "bug", "e9", 0, false },
+    { "bug", "e9", T_HELP_GCMD_BUG_ID, false },
     { 0 }
 };
 

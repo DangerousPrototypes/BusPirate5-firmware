@@ -225,7 +225,7 @@ static const bp_command_opt_t image_opts[] = {
 };
 
 static const bp_command_positional_t image_positionals[] = {
-    { "file", "file", 0, true },
+    { "file", "file", T_HELP_GCMD_IMAGE_FILE, true },
     { 0 }
 };
 

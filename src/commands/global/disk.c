@@ -30,12 +30,19 @@ static const char* const cat_usage[] = {
     "Print file contents:%s cat example.txt",
 };
 
+static const bp_command_positional_t disk_cat_positionals[] = {
+    { "file", "file", 0, true },
+    { 0 }
+};
+
 const bp_command_def_t disk_cat_def = {
     .name         = "cat",
     .description  = T_HELP_DISK_CAT,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = disk_cat_positionals,
+    .positional_count = 1,
     .usage        = cat_usage,
     .usage_count  = count_of(cat_usage),
 };
@@ -72,12 +79,19 @@ static const char* const mkdir_usage[] = {
     "Create directory:%s mkdir dir",
 };
 
+static const bp_command_positional_t disk_mkdir_positionals[] = {
+    { "dir", "dir", 0, true },
+    { 0 }
+};
+
 const bp_command_def_t disk_mkdir_def = {
     .name         = "mkdir",
     .description  = T_HELP_DISK_MKDIR,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = disk_mkdir_positionals,
+    .positional_count = 1,
     .usage        = mkdir_usage,
     .usage_count  = count_of(mkdir_usage),
 };
@@ -103,12 +117,19 @@ static const char* const cd_usage[] = {
     "Change directory:%s cd dir",
 };
 
+static const bp_command_positional_t disk_cd_positionals[] = {
+    { "dir", "dir", 0, true },
+    { 0 }
+};
+
 const bp_command_def_t disk_cd_def = {
     .name         = "cd",
     .description  = T_HELP_DISK_CD,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = disk_cd_positionals,
+    .positional_count = 1,
     .usage        = cd_usage,
     .usage_count  = count_of(cd_usage),
 };
@@ -140,12 +161,19 @@ static const char* const rm_usage[] = {
     "Delete directory:%s rm dir",
 };
 
+static const bp_command_positional_t disk_rm_positionals[] = {
+    { "path", "file", 0, false },
+    { 0 }
+};
+
 const bp_command_def_t disk_rm_def = {
     .name         = "rm",
     .description  = T_HELP_DISK_RM,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = disk_rm_positionals,
+    .positional_count = 1,
     .usage        = rm_usage,
     .usage_count  = count_of(rm_usage),
 };
@@ -172,12 +200,19 @@ static const char* const ls_usage[] = {
     "Show directory contents:%s ls /dir",
 };
 
+static const bp_command_positional_t disk_ls_positionals[] = {
+    { "dir", "dir", 0, false },
+    { 0 }
+};
+
 const bp_command_def_t disk_ls_def = {
     .name         = "ls",
     .description  = T_HELP_DISK_LS,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = disk_ls_positionals,
+    .positional_count = 1,
     .usage        = ls_usage,
     .usage_count  = count_of(ls_usage),
 };
@@ -283,12 +318,20 @@ static const bp_command_action_t label_actions[] = {
     { SET_LABEL, "set", T_HELP_DISK_LABEL_SET },
 };
 
+static const bp_command_positional_t disk_label_positionals[] = {
+    { "command", "get|set", 0, true  },
+    { "name",    "label",   0, false },
+    { 0 }
+};
+
 const bp_command_def_t disk_label_def = {
     .name         = "label",
     .description  = T_HELP_DISK_LABEL,
     .actions      = label_actions,
     .action_count = count_of(label_actions),
     .opts         = NULL,
+    .positionals      = disk_label_positionals,
+    .positional_count = 2,
     .usage        = label_usage,
     .usage_count  = count_of(label_usage),
 };

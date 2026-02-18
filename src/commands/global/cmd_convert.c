@@ -30,9 +30,16 @@ const char *const inverse_usage[] = {
     "Inverse bits: | 0x12345678",
 };
 
+static const bp_command_positional_t convert_inverse_positionals[] = {
+    { "value", "value", 0, true },
+    { 0 }
+};
+
 const bp_command_def_t convert_inverse_def = {
     .name = "|",
     .description = T_CMDLN_INT_INVERSE,
+    .positionals      = convert_inverse_positionals,
+    .positional_count = 1,
     .usage = inverse_usage,
     .usage_count = count_of(inverse_usage)
 };

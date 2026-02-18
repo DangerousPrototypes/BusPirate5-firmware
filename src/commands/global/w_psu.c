@@ -49,10 +49,18 @@ static const bp_command_opt_t psucmd_opts[] = {
     { 0 }
 };
 
+static const bp_command_positional_t psucmd_enable_positionals[] = {
+    { "voltage", "volts", 0, false },
+    { "current", "mA",   0, false },
+    { 0 }
+};
+
 const bp_command_def_t psucmd_enable_def = {
     .name = "W",
     .description = T_CMDLN_PSU_EN,
     .opts = psucmd_opts,
+    .positionals      = psucmd_enable_positionals,
+    .positional_count = 2,
     .usage = psucmd_usage,
     .usage_count = count_of(psucmd_usage)
 };

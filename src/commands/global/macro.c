@@ -67,12 +67,19 @@ static const bp_command_opt_t macro_opts[] = {
     { 0 }
 };
 
+static const bp_command_positional_t macro_positionals[] = {
+    { "id", "macro#", 0, false },
+    { 0 }
+};
+
 const bp_command_def_t macro_def = {
     .name         = "macro",
     .description  = T_HELP_CMD_MACRO,
     .actions      = NULL,
     .action_count = 0,
     .opts         = macro_opts,
+    .positionals      = macro_positionals,
+    .positional_count = 1,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };

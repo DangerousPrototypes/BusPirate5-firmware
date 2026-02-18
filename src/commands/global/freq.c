@@ -49,12 +49,19 @@ static const char* const freq_cont_usage[] = {
     "Continuous frequency on pin 2:%s F 2",
 };
 
+static const bp_command_positional_t freq_positionals[] = {
+    { "pin", "pin", 0, false },
+    { 0 }
+};
+
 const bp_command_def_t freq_single_def = {
     .name         = "f",
     .description  = T_CMDLN_FREQ_ONE,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = freq_positionals,
+    .positional_count = 1,
     .usage        = freq_single_usage,
     .usage_count  = count_of(freq_single_usage),
 };
@@ -65,6 +72,8 @@ const bp_command_def_t freq_cont_def = {
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = freq_positionals,
+    .positional_count = 1,
     .usage        = freq_cont_usage,
     .usage_count  = count_of(freq_cont_usage),
 };

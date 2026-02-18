@@ -22,8 +22,8 @@
 #include "ui/ui_prompt.h"
 
 static const char* const usage[] = {
-    "smps\t<v> [-s]",
-    "Set SMPS to <v> volts: %s smps 12.3",
+    "smps\t[volts] [-s]",
+    "Set SMPS to volts: %s smps 12.3",
     "Show SMPS ADC setpoints (diagnostic):%s smps -s",
 };
 
@@ -33,7 +33,7 @@ static const bp_command_opt_t smps_opts[] = {
 };
 
 static const bp_command_positional_t smps_positionals[] = {
-    { "voltage", "volts", T_HELP_GCMD_SMPS_VOLTAGE, false },
+    { "volts", "volts", T_HELP_GCMD_SMPS_VOLTAGE, false },
     { 0 }
 };
 

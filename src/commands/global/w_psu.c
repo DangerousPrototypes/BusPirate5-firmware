@@ -35,7 +35,7 @@
 #include "ui/ui_help.h"
 
 const char* const psucmd_usage[] = {
-    "w|W\t<volts> <current> [-u <%%>]",
+    "w|W\t[volts] [current] [-u <%%>]",
     "Disable:%s w",
     "Enable, with menu:%s W",
     "Enable 5v, 50mA fuse, 10%% undervoltage limit:%s W 5 50",

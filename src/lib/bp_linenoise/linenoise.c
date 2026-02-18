@@ -1217,6 +1217,23 @@ void linenoiseShow(struct linenoiseState *l) {
  * On error writing to the terminal -1 is returned, otherwise 0. */
 int linenoiseEditInsert(struct linenoiseState *l, const char *c, size_t clen) {
     if (l->len + clen <= l->buflen) {
+#ifdef BP_EMBEDDED
+        if (l->simple_mode) {
+            /* Simple mode: always append at end and echo directly.
+             * No refreshLine (it's a no-op), no hints, no completions.
+             * Cursor movement is disabled so pos should always equal len,
+             * but handle mid-insert safely just in case. */
+            if (l->pos < l->len) {
+                memmove(l->buf+l->pos+clen, l->buf+l->pos, l->len-l->pos);
+            }
+            memcpy(l->buf+l->pos, c, clen);
+            l->pos += clen;
+            l->len += clen;
+            l->buf[l->len] = '\0';
+            if (lnWrite(l,c,clen) == -1) return -1;
+            return 0;
+        }
+#endif
         if (l->len == l->pos) {
             /* Append at end of line. */
             memcpy(l->buf+l->pos, c, clen);

@@ -72,11 +72,11 @@ static const bp_command_action_t flash_action_defs[] = {
 };
 
 static const bp_command_opt_t flash_opts[] = {
-    { "file",     'f', BP_ARG_REQUIRED, "<file>",    T_HELP_FLASH_FILE_FLAG },
+    { "file",     'f', BP_ARG_REQUIRED, "file",    T_HELP_FLASH_FILE_FLAG },
     { "erase",    'e', BP_ARG_NONE,     NULL,        T_HELP_FLASH_ERASE_FLAG },
     { "verify",   'v', BP_ARG_NONE,     NULL,        T_HELP_FLASH_VERIFY_FLAG },
-    { "start",    's', BP_ARG_REQUIRED, "<addr>",    UI_HEX_HELP_START },
-    { "bytes",    'b', BP_ARG_REQUIRED, "<count>",   UI_HEX_HELP_BYTES },
+    { "start",    's', BP_ARG_REQUIRED, "addr",    UI_HEX_HELP_START },
+    { "bytes",    'b', BP_ARG_REQUIRED, "count",   UI_HEX_HELP_BYTES },
     { "quiet",    'q', BP_ARG_NONE,     NULL,        UI_HEX_HELP_QUIET },
     { "nopager",  'c', BP_ARG_NONE,     NULL,        T_HELP_DISK_HEX_PAGER_OFF },
     { "override", 'o', BP_ARG_NONE,     NULL,        T_HELP_FLASH_OVERRIDE },
@@ -255,7 +255,7 @@ Extract flag entries from the OLD `ui_help_options[]` and convert them. Ignore e
 { 0, "-v", T_HELP_EEPROM_VERIFY_FLAG },
 
 // NEW opts[] entries:
-{ "file",   'f', BP_ARG_REQUIRED, "<file>", T_HELP_EEPROM_FILE_FLAG },
+{ "file",   'f', BP_ARG_REQUIRED, "file", T_HELP_EEPROM_FILE_FLAG },
 { "verify", 'v', BP_ARG_NONE,     NULL,     T_HELP_EEPROM_VERIFY_FLAG },
 { 0 }   // sentinel
 ```
@@ -264,7 +264,7 @@ Rules for the 5 fields:
 1. **`long_name`** — descriptive name for `--long` style (pick a sensible word)
 2. **`short_name`** — the flag character (same as the old `-x` flag)
 3. **`arg_type`** — `BP_ARG_NONE` for boolean flags, `BP_ARG_REQUIRED` if the flag takes a value
-4. **`arg_hint`** — placeholder string for help display (e.g. `"<file>"`, `"<addr>"`), `NULL` for boolean flags
+4. **`arg_hint`** — bare word placeholder for help display (e.g. `"file"`, `"addr"`), `NULL` for boolean flags. **Do NOT include `<>` or `[]` brackets** — the renderer auto-wraps with `<>` for `BP_ARG_REQUIRED` or `[]` for `BP_ARG_OPTIONAL`.
 5. **`description`** — translation key (reuse the same key from the old `options[]`)
 
 **Determine arg_type by examining usage in the handler:**
@@ -374,6 +374,7 @@ Before submitting, verify:
 - [ ] `usage[]` array kept (unchanged)
 - [ ] New `bp_command_action_t` array created with 3-field entries (if command has subcommands)
 - [ ] New `bp_command_opt_t` array created with `{ 0 }` sentinel (if command has flags)
+- [ ] `arg_hint` values are bare words — no `<>` or `[]` brackets (auto-wrapped by renderer)
 - [ ] `const bp_command_def_t xxx_def = { ... };` is NOT `static`
 - [ ] Handler uses `bp_cmd_help_check()` instead of `ui_help_show()`
 - [ ] Handler uses `bp_cmd_get_action()` with correct return-value sense (true=success)
@@ -394,7 +395,7 @@ typedef struct {
     const char *long_name;      // "--file" (without --)
     char        short_name;     // 'f'
     bp_arg_type_t arg_type;     // BP_ARG_NONE | BP_ARG_REQUIRED | BP_ARG_OPTIONAL
-    const char *arg_hint;       // "<file>" or NULL
+    const char *arg_hint;       // bare word: "file", "addr" (auto-wrapped with <>/[]), or NULL
     uint32_t    description;    // T_HELP_* translation key
 } bp_command_opt_t;
 

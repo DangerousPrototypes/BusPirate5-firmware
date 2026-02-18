@@ -35,22 +35,22 @@
 #include "ui/ui_help.h"
 
 const char* const psucmd_usage[] = {
-    "w|W\t<v> <i> [-u <%%>]",
+    "w|W\t<volts> <current> [-u <%%>]",
     "Disable:%s w",
     "Enable, with menu:%s W",
-    "Enable 5v, 50mA fuse, 10%% default undervoltage limit:%s W 5 50",
-    "Enable 3.3v, 300mA default fuse, 10%% default undervoltage limit:%s W 3.3",
+    "Enable 5v, 50mA fuse, 10%% undervoltage limit:%s W 5 50",
+    "Enable 3.3v, 300mA default fuse, 10%% undervoltage limit:%s W 3.3",
     "Enable 3.3v, 100mA fuse, 20%% undervoltage limit:%s W 3.3 100 -u 20",
     "Enable 3.3v, no fuse, no undervoltage limit:%s W 3.3 0 -u 100",
 };
 
 static const bp_command_opt_t psucmd_opts[] = {
-    { "undervoltage", 'u', BP_ARG_REQUIRED, "%%", T_HELP_GCMD_W_UNDERVOLTAGE },
+    { "undervoltage", 'u', BP_ARG_REQUIRED, "%", T_HELP_GCMD_W_UNDERVOLTAGE },
     { 0 }
 };
 
 static const bp_command_positional_t psucmd_enable_positionals[] = {
-    { "voltage", "volts", T_HELP_GCMD_W_VOLTS, false },
+    { "volts", "volts", T_HELP_GCMD_W_VOLTS, false },
     { "current", "mA",   T_HELP_GCMD_W_CURRENT_LIMIT, false },
     { 0 }
 };

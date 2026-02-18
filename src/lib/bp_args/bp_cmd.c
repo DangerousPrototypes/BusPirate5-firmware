@@ -539,15 +539,14 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
     // If the label fits within this, pad to the column with spaces.
     // If it overflows, just use a single space before the description.
     #define HELP_COL_WIDTH 16
+    #define HELP_INDENT "  "
 
-    // Usage examples
+    // Synopsis (first line of usage[])
     if (def->usage && def->usage_count > 0) {
         printf("usage:\r\n");
-        for (uint32_t i = 0; i < def->usage_count; i++) {
-            printf("%s", ui_term_color_info());
-            printf(def->usage[i], ui_term_color_reset());
-            printf("\r\n");
-        }
+        printf("%s%s", HELP_INDENT, ui_term_color_info());
+        printf(def->usage[0], ui_term_color_reset());
+        printf("%s\r\n", ui_term_color_reset());
     }
 
     // Section heading from description
@@ -560,9 +559,11 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
 
     // Action verbs
     if (def->actions && def->action_count > 0) {
+        printf("\r\nactions:\r\n");
         for (uint32_t i = 0; i < def->action_count; i++) {
             int len = strlen(def->actions[i].verb);
-            printf("%s%s%s",
+            printf("%s%s%s%s",
+                   HELP_INDENT,
                    ui_term_color_prompt(),
                    def->actions[i].verb,
                    ui_term_color_reset());
@@ -581,6 +582,7 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
 
     // Positional arguments
     if (def->positionals && def->positional_count > 0) {
+        printf("\r\npositional arguments:\r\n");
         for (uint32_t i = 0; i < def->positional_count; i++) {
             const bp_command_positional_t *pa = &def->positionals[i];
             if (!pa->name) break;
@@ -593,7 +595,8 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
                 pos = snprintf(arg_str, sizeof(arg_str), "[%s]", pa->name);
             }
 
-            printf("%s%s%s",
+            printf("%s%s%s%s",
+                   HELP_INDENT,
                    ui_term_color_prompt(),
                    arg_str,
                    ui_term_color_reset());
@@ -611,6 +614,7 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
 
     // Flags
     if (def->opts) {
+        printf("\r\noptions:\r\n");
         for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
             const bp_command_opt_t *o = &def->opts[i];
             char flag_str[48];
@@ -632,7 +636,8 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
                 }
             }
 
-            printf("%s%s%s",
+            printf("%s%s%s%s",
+                   HELP_INDENT,
                    ui_term_color_prompt(),
                    flag_str,
                    ui_term_color_reset());
@@ -646,6 +651,16 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
                    ui_term_color_info(),
                    o->description ? GET_T(o->description) : "",
                    ui_term_color_reset());
+        }
+    }
+
+    // Examples (usage[] lines 1+)
+    if (def->usage && def->usage_count > 1) {
+        printf("\r\nexamples:\r\n");
+        for (uint32_t i = 1; i < def->usage_count; i++) {
+            printf("%s%s", HELP_INDENT, ui_term_color_info());
+            printf(def->usage[i], ui_term_color_reset());
+            printf("\r\n");
         }
     }
 }

@@ -33,7 +33,7 @@ static const bp_command_opt_t smps_opts[] = {
 };
 
 static const bp_command_positional_t smps_positionals[] = {
-    { "voltage", "volts", T_HELP_GCMD_SMPS_VOLTAGE, false },
+    { "voltage", "volts", 0, false },
     { 0 }
 };
 

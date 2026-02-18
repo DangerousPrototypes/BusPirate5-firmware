@@ -68,7 +68,7 @@ static const bp_command_opt_t macro_opts[] = {
 };
 
 static const bp_command_positional_t macro_positionals[] = {
-    { "id", "macro#", T_HELP_GCMD_MACRO_ID, false },
+    { "id", "macro#", 0, false },
     { 0 }
 };
 

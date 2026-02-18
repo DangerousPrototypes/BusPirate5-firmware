@@ -31,9 +31,16 @@ static const char* const usage[] = {
     "Pin 5 input, read value:%s @ 5",
 };
 
+static const bp_command_positional_t auxio_positionals[] = {
+    { "io", "pin", 0, true },
+    { 0 }
+};
+
 const bp_command_def_t auxio_low_def = {
     .name = "a",
     .description = T_CMDLN_AUX_LOW,
+    .positionals      = auxio_positionals,
+    .positional_count = 1,
     .usage = usage,
     .usage_count = count_of(usage)
 };
@@ -41,6 +48,8 @@ const bp_command_def_t auxio_low_def = {
 const bp_command_def_t auxio_high_def = {
     .name = "A",
     .description = T_CMDLN_AUX_HIGH,
+    .positionals      = auxio_positionals,
+    .positional_count = 1,
     .usage = usage,
     .usage_count = count_of(usage)
 };
@@ -48,6 +57,8 @@ const bp_command_def_t auxio_high_def = {
 const bp_command_def_t auxio_input_def = {
     .name = "@",
     .description = T_CMDLN_AUX_IN,
+    .positionals      = auxio_positionals,
+    .positional_count = 1,
     .usage = usage,
     .usage_count = count_of(usage)
 };

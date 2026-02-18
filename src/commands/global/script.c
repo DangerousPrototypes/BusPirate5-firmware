@@ -45,12 +45,19 @@ static const bp_command_opt_t script_opts[] = {
     { 0 }
 };
 
+static const bp_command_positional_t script_positionals[] = {
+    { "file", "file", 0, true },
+    { 0 }
+};
+
 const bp_command_def_t script_def = {
     .name         = "script",
     .description  = T_HELP_CMD_SCRIPT,
     .actions      = NULL,
     .action_count = 0,
     .opts         = script_opts,
+    .positionals      = script_positionals,
+    .positional_count = 1,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };

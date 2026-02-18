@@ -225,12 +225,19 @@ static const bp_command_opt_t image_opts[] = {
     { 0 }
 };
 
+static const bp_command_positional_t image_positionals[] = {
+    { "file", "file", 0, true },
+    { 0 }
+};
+
 const bp_command_def_t image_def = {
     .name         = "image",
     .description  = T_HELP_CMD_IMAGE,
     .actions      = NULL,
     .action_count = 0,
     .opts         = image_opts,
+    .positionals      = image_positionals,
+    .positional_count = 1,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };

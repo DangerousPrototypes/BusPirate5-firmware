@@ -46,12 +46,19 @@ static const char* const usage[] = {
     "Continuous measurement on all pins:%s V",
 };
 
+static const bp_command_positional_t adc_positionals[] = {
+    { "io", "pin", 0, false },
+    { 0 }
+};
+
 const bp_command_def_t adc_single_def = {
     .name         = "v",
     .description  = T_CMDLN_ADC_ONE,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = adc_positionals,
+    .positional_count = 1,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };
@@ -62,6 +69,8 @@ const bp_command_def_t adc_cont_def = {
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = adc_positionals,
+    .positional_count = 1,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };

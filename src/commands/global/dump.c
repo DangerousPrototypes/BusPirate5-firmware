@@ -28,12 +28,20 @@ static const char* const usage[] = {
     "Read X bytes to a file:%s dump 256 example.bin",
 };
 
+static const bp_command_positional_t dump_positionals[] = {
+    { "bytes", "bytes", 0, true  },
+    { "file",  "file",  0, true  },
+    { 0 }
+};
+
 const bp_command_def_t dump_def = {
     .name         = "dump",
     .description  = T_CMDLN_DUMP,
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = dump_positionals,
+    .positional_count = 2,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };

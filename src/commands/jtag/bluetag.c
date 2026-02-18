@@ -47,7 +47,7 @@ static const bp_command_action_t bluetag_action_defs[] = {
 };
 
 static const bp_command_opt_t bluetag_opts[] = {
-    { "channels", 'c', BP_ARG_REQUIRED, "<count>", T_JTAG_BLUETAG_CHANNELS },
+    { "channels", 'c', BP_ARG_REQUIRED, "count", T_JTAG_BLUETAG_CHANNELS },
     { "version",  'v', BP_ARG_NONE,     NULL,      T_JTAG_BLUETAG_VERSION },
     { "disable",  'd', BP_ARG_NONE,     NULL,      T_JTAG_BLUETAG_DISABLE },
     { 0 }

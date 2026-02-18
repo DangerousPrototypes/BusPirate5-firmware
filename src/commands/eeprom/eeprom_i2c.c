@@ -40,14 +40,14 @@ static const bp_command_action_t eeprom_i2c_action_defs[] = {
 };
 
 static const bp_command_opt_t eeprom_i2c_opts[] = {
-    { "device",   'd', BP_ARG_REQUIRED, "<device>", T_HELP_EEPROM_DEVICE_FLAG },
-    { "file",     'f', BP_ARG_REQUIRED, "<file>",   T_HELP_EEPROM_FILE_FLAG },
+    { "device",   'd', BP_ARG_REQUIRED, "device", T_HELP_EEPROM_DEVICE_FLAG },
+    { "file",     'f', BP_ARG_REQUIRED, "file",   T_HELP_EEPROM_FILE_FLAG },
     { "verify",   'v', BP_ARG_NONE,     NULL,        T_HELP_EEPROM_VERIFY_FLAG },
-    { "start",    's', BP_ARG_REQUIRED, "<addr>",   UI_HEX_HELP_START },
-    { "bytes",    'b', BP_ARG_REQUIRED, "<count>",  UI_HEX_HELP_BYTES },
+    { "start",    's', BP_ARG_REQUIRED, "addr",   UI_HEX_HELP_START },
+    { "bytes",    'b', BP_ARG_REQUIRED, "count",  UI_HEX_HELP_BYTES },
     { "quiet",    'q', BP_ARG_NONE,     NULL,        UI_HEX_HELP_QUIET },
     { "nopager",  'c', BP_ARG_NONE,     NULL,        T_HELP_DISK_HEX_PAGER_OFF },
-    { "address",  'a', BP_ARG_REQUIRED, "<i2caddr>",T_HELP_EEPROM_ADDRESS_FLAG },
+    { "address",  'a', BP_ARG_REQUIRED, "i2caddr",T_HELP_EEPROM_ADDRESS_FLAG },
     { "yes",      'y', BP_ARG_NONE,     NULL,        T_HELP_FLASH_YES_OVERRIDE },
     { 0 }
 };

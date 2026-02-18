@@ -625,7 +625,11 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
                 pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, "--%s", o->long_name);
             }
             if (o->arg_hint) {
-                pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, " %s", o->arg_hint);
+                if (o->arg_type == BP_ARG_REQUIRED) {
+                    pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, " <%s>", o->arg_hint);
+                } else {
+                    pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, " [%s]", o->arg_hint);
+                }
             }
 
             printf("%s%s%s",
@@ -712,8 +716,12 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         }
         if (def->positionals && def->positional_count > 0) {
             const bp_command_positional_t *pa = &def->positionals[0];
-            snprintf(hint_buf, sizeof(hint_buf), " %s",
-                     pa->hint ? pa->hint : pa->name);
+            const char *h = pa->hint ? pa->hint : pa->name;
+            if (pa->required) {
+                snprintf(hint_buf, sizeof(hint_buf), " <%s>", h);
+            } else {
+                snprintf(hint_buf, sizeof(hint_buf), " [%s]", h);
+            }
             return hint_buf;
         }
         return NULL;
@@ -736,7 +744,7 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
             if (def->opts[i].short_name) {
                 if (def->opts[i].arg_hint) {
-                    snprintf(hint_buf, sizeof(hint_buf), "%c %s",
+                    snprintf(hint_buf, sizeof(hint_buf), "%c <%s>",
                              def->opts[i].short_name, def->opts[i].arg_hint);
                 } else {
                     snprintf(hint_buf, sizeof(hint_buf), "%c", def->opts[i].short_name);
@@ -758,7 +766,7 @@ const char *bp_cmd_hint(const char *buf, size_t len,
             for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
                 if (def->opts[i].long_name) {
                     if (def->opts[i].arg_hint) {
-                        snprintf(hint_buf, sizeof(hint_buf), "%s %s",
+                        snprintf(hint_buf, sizeof(hint_buf), "%s <%s>",
                                  def->opts[i].long_name, def->opts[i].arg_hint);
                     } else {
                         snprintf(hint_buf, sizeof(hint_buf), "%s",
@@ -776,7 +784,7 @@ const char *bp_cmd_hint(const char *buf, size_t len,
                         memcmp(typed_name, def->opts[i].long_name, typed_len) == 0) {
                         const char *rest = def->opts[i].long_name + typed_len;
                         if (def->opts[i].arg_hint) {
-                            snprintf(hint_buf, sizeof(hint_buf), "%s %s",
+                            snprintf(hint_buf, sizeof(hint_buf), "%s <%s>",
                                      rest, def->opts[i].arg_hint);
                         } else {
                             snprintf(hint_buf, sizeof(hint_buf), "%s", rest);
@@ -794,7 +802,7 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         const bp_command_opt_t *opt = find_opt_in_def(def, fc | 0x20);
         if (!opt) opt = find_opt_in_def(def, fc);
         if (opt && opt->arg_hint) {
-            snprintf(hint_buf, sizeof(hint_buf), " %s", opt->arg_hint);
+            snprintf(hint_buf, sizeof(hint_buf), " <%s>", opt->arg_hint);
             return hint_buf;
         }
     }
@@ -805,7 +813,7 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         size_t tl = tok_len(last_tok, end);
         const bp_command_opt_t *opt = find_opt_by_long_name(def, last_tok + 2, tl - 2);
         if (opt && opt->arg_hint) {
-            snprintf(hint_buf, sizeof(hint_buf), " %s", opt->arg_hint);
+            snprintf(hint_buf, sizeof(hint_buf), " <%s>", opt->arg_hint);
             return hint_buf;
         }
     }
@@ -893,10 +901,14 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         // Don't hint positional if the user is typing an action verb (already handled)
         // or a flag. Only hint if we're past existing action verbs.
         if (at_new_token && hint_pos < def->positional_count) {
-            snprintf(hint_buf, sizeof(hint_buf), " %s",
-                     def->positionals[hint_pos].hint ?
-                     def->positionals[hint_pos].hint :
-                     def->positionals[hint_pos].name);
+            const char *h = def->positionals[hint_pos].hint ?
+                            def->positionals[hint_pos].hint :
+                            def->positionals[hint_pos].name;
+            if (def->positionals[hint_pos].required) {
+                snprintf(hint_buf, sizeof(hint_buf), " <%s>", h);
+            } else {
+                snprintf(hint_buf, sizeof(hint_buf), " [%s]", h);
+            }
             return hint_buf;
         }
     }

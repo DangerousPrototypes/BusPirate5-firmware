@@ -31,12 +31,12 @@ static const bp_command_action_t logic_action_defs[] = {
 
 static const bp_command_opt_t logic_opts[] = {
     { "info",       'i', BP_ARG_NONE,     NULL,       T_HELP_LOGIC_INFO },
-    { "oversample", 'o', BP_ARG_REQUIRED, "<rate>",   T_HELP_LOGIC_OVERSAMPLE },
-    { "frequency",  'f', BP_ARG_REQUIRED, "<freq>",   T_HELP_LOGIC_FREQUENCY },
-    { "lowchar",    '0', BP_ARG_REQUIRED, "<char>",   T_HELP_LOGIC_LOW_CHAR },
-    { "highchar",   '1', BP_ARG_REQUIRED, "<char>",   T_HELP_LOGIC_HIGH_CHAR },
-    { "debug",      'd', BP_ARG_REQUIRED, "<level>",  T_HELP_LOGIC_DEBUG },
-    { "base",       'b', BP_ARG_REQUIRED, "<pin>",    T_HELP_LOGIC_INFO },  // undocumented
+    { "oversample", 'o', BP_ARG_REQUIRED, "rate",   T_HELP_LOGIC_OVERSAMPLE },
+    { "frequency",  'f', BP_ARG_REQUIRED, "freq",   T_HELP_LOGIC_FREQUENCY },
+    { "lowchar",    '0', BP_ARG_REQUIRED, "char",   T_HELP_LOGIC_LOW_CHAR },
+    { "highchar",   '1', BP_ARG_REQUIRED, "char",   T_HELP_LOGIC_HIGH_CHAR },
+    { "debug",      'd', BP_ARG_REQUIRED, "level",  T_HELP_LOGIC_DEBUG },
+    { "base",       'b', BP_ARG_REQUIRED, "pin",    T_HELP_LOGIC_INFO },  // undocumented
     { 0 }
 };
 

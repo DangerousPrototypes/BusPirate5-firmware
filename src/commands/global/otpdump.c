@@ -37,8 +37,8 @@ static const char* const usage[] = {
 };
 
 static const bp_command_opt_t otpdump_opts[] = {
-    { "row",   'r', BP_ARG_REQUIRED, "<start>", T_HELP_FLAG },
-    { "count", 'c', BP_ARG_REQUIRED, "<count>", T_HELP_FLAG },
+    { "row",   'r', BP_ARG_REQUIRED, "start", T_HELP_FLAG },
+    { "count", 'c', BP_ARG_REQUIRED, "count", T_HELP_FLAG },
     { "all",   'a', BP_ARG_NONE,     NULL,      T_HELP_FLAG },
     { 0 }
 };

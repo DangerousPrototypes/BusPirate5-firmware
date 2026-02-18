@@ -35,11 +35,11 @@ static const bp_command_action_t i2c_dump_action_defs[] = {
 };
 
 static const bp_command_opt_t i2c_dump_opts[] = {
-    { "address",    'a', BP_ARG_REQUIRED, "<7-bit>", T_HELP_I2C_I2CDUMP_ADDRESS },
-    { "regwidth",   'w', BP_ARG_REQUIRED, "<bytes>", T_HELP_I2C_I2CDUMP_REG_WIDTH },
-    { "regaddr",    'r', BP_ARG_REQUIRED, "<addr>",  T_HELP_I2C_I2CDUMP_REG_ADDR },
-    { "file",       'f', BP_ARG_REQUIRED, "<file>",  T_HELP_SLE4442_FILE_FLAG },
-    { "bytes",      'b', BP_ARG_REQUIRED, "<count>", T_HELP_EEPROM_BYTES_FLAG },
+    { "address",    'a', BP_ARG_REQUIRED, "7-bit", T_HELP_I2C_I2CDUMP_ADDRESS },
+    { "regwidth",   'w', BP_ARG_REQUIRED, "bytes", T_HELP_I2C_I2CDUMP_REG_WIDTH },
+    { "regaddr",    'r', BP_ARG_REQUIRED, "addr",  T_HELP_I2C_I2CDUMP_REG_ADDR },
+    { "file",       'f', BP_ARG_REQUIRED, "file",  T_HELP_SLE4442_FILE_FLAG },
+    { "bytes",      'b', BP_ARG_REQUIRED, "count", T_HELP_EEPROM_BYTES_FLAG },
     { "quiet",      'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
     { "nopager",    'c', BP_ARG_NONE,     NULL,      T_HELP_DISK_HEX_PAGER_OFF },
     { 0 }

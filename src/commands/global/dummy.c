@@ -33,8 +33,8 @@ static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nte
 // New bp_command_opt_t array for flags
 static const bp_command_opt_t dummy_opts[] = {
     { "button", 'b', BP_ARG_NONE,     NULL,      T_HELP_DUMMY_B_FLAG },
-    { "integer",'i', BP_ARG_REQUIRED, "<value>", T_HELP_DUMMY_I_FLAG },
-    { "file",   'f', BP_ARG_REQUIRED, "<file>",  T_HELP_DUMMY_FILE_FLAG },
+    { "integer",'i', BP_ARG_REQUIRED, "value", T_HELP_DUMMY_I_FLAG },
+    { "file",   'f', BP_ARG_REQUIRED, "file",  T_HELP_DUMMY_FILE_FLAG },
     { 0 }
 };
 

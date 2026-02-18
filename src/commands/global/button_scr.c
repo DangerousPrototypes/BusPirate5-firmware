@@ -47,7 +47,7 @@ static const bp_command_action_t button_scr_action_defs[] = {
 };
 
 static const bp_command_opt_t button_scr_opts[] = {
-    { "file",    'f', BP_ARG_REQUIRED, "<file>", T_HELP_BUTTON_FILE },
+    { "file",    'f', BP_ARG_REQUIRED, "file", T_HELP_BUTTON_FILE },
     { "hide",    'd', BP_ARG_NONE,     NULL,     T_HELP_BUTTON_HIDE },
     { "exit",    'e', BP_ARG_NONE,     NULL,     T_HELP_BUTTON_EXIT },
     { 0 }

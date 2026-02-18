@@ -921,10 +921,10 @@ static const bp_command_action_t ddr5_action_defs[] = {
 };
 
 static const bp_command_opt_t ddr5_opts[] = {
-    { "file",  'f', BP_ARG_REQUIRED, "<file>",  T_HELP_DDR5_FILE_FLAG },
-    { "block", 'b', BP_ARG_REQUIRED, "<block>", T_HELP_DDR5_BLOCK_FLAG },
-    { "start", 's', BP_ARG_REQUIRED, "<addr>",  UI_HEX_HELP_START },
-    { "bytes", 'b', BP_ARG_REQUIRED, "<count>", UI_HEX_HELP_BYTES },
+    { "file",  'f', BP_ARG_REQUIRED, "file",  T_HELP_DDR5_FILE_FLAG },
+    { "block", 'b', BP_ARG_REQUIRED, "block", T_HELP_DDR5_BLOCK_FLAG },
+    { "start", 's', BP_ARG_REQUIRED, "addr",  UI_HEX_HELP_START },
+    { "bytes", 'b', BP_ARG_REQUIRED, "count", UI_HEX_HELP_BYTES },
     { "quiet", 'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
     { 0 }
 };

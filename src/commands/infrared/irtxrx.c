@@ -29,7 +29,7 @@ static const char* const usage_tx[] = {
 };
 
 static const bp_command_opt_t irtx_opts[] = {
-	{ "file", 'f', BP_ARG_REQUIRED, "<file>", T_HELP_IRTX_FILE_FLAG },
+	{ "file", 'f', BP_ARG_REQUIRED, "file", T_HELP_IRTX_FILE_FLAG },
 	{ 0 }
 };
 
@@ -54,8 +54,8 @@ static const char* const usage_rx[] = {
 };
 
 static const bp_command_opt_t irrx_opts[] = {
-	{ "file",   'f', BP_ARG_REQUIRED, "<file>",   T_HELP_IRRX_FILE_FLAG },
-	{ "sensor", 's', BP_ARG_REQUIRED, "<sensor>", T_HELP_IRRX_SENSOR_FLAG },
+	{ "file",   'f', BP_ARG_REQUIRED, "file",   T_HELP_IRRX_FILE_FLAG },
+	{ "sensor", 's', BP_ARG_REQUIRED, "sensor", T_HELP_IRRX_SENSOR_FLAG },
 	{ 0 }
 };
 

@@ -54,11 +54,11 @@ static const bp_command_action_t flash_action_defs[] = {
 };
 
 static const bp_command_opt_t flash_opts[] = {
-    { "file",     'f', BP_ARG_REQUIRED, "<file>",    T_HELP_FLASH_FILE_FLAG },
+    { "file",     'f', BP_ARG_REQUIRED, "file",    T_HELP_FLASH_FILE_FLAG },
     { "erase",    'e', BP_ARG_NONE,     NULL,        T_HELP_FLASH_ERASE_FLAG },
     { "verify",   'v', BP_ARG_NONE,     NULL,        T_HELP_FLASH_VERIFY_FLAG },
-    { "start",    's', BP_ARG_REQUIRED, "<addr>",    UI_HEX_HELP_START },
-    { "bytes",    'b', BP_ARG_REQUIRED, "<count>",   UI_HEX_HELP_BYTES },
+    { "start",    's', BP_ARG_REQUIRED, "addr",    UI_HEX_HELP_START },
+    { "bytes",    'b', BP_ARG_REQUIRED, "count",   UI_HEX_HELP_BYTES },
     { "quiet",    'q', BP_ARG_NONE,     NULL,        UI_HEX_HELP_QUIET },
     { "nopager",  'c', BP_ARG_NONE,     NULL,        T_HELP_DISK_HEX_PAGER_OFF },
     { "override", 'o', BP_ARG_NONE,     NULL,        T_HELP_FLASH_OVERRIDE },

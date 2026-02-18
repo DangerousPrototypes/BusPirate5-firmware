@@ -12,8 +12,8 @@
  * @example
  *     // ── Define once ──
  *     static const bp_command_opt_t flash_opts[] = {
- *         {"file",  'f', BP_ARG_REQUIRED, "<file>", T_HELP_FLASH_FILE_FLAG},
- *         {"erase", 'e', BP_ARG_NONE,     NULL,     T_HELP_FLASH_ERASE_FLAG},
+ *         {"file",  'f', BP_ARG_REQUIRED, "file", T_HELP_FLASH_FILE_FLAG},
+ *         {"erase", 'e', BP_ARG_NONE,     NULL,   T_HELP_FLASH_ERASE_FLAG},
  *         {0}
  *     };
  *     static const bp_command_action_t flash_actions[] = {
@@ -82,7 +82,7 @@ typedef struct {
     const char *long_name;    ///< Long option name (without --), NULL if none
     char        short_name;   ///< Short option character, 0 if none
     bp_arg_type_t arg_type;   ///< BP_ARG_NONE / REQUIRED / OPTIONAL
-    const char *arg_hint;     ///< Value placeholder for help/hints: "<file>", NULL if flag-only
+    const char *arg_hint;     ///< Value placeholder for help/hints (bare word, auto-wrapped with <>/[]): "file", NULL if flag-only
     uint32_t    description;  ///< Translation key for help text
 } bp_command_opt_t;
 
@@ -116,7 +116,7 @@ typedef struct {
  */
 typedef struct {
     const char *name;         ///< Argument name for display: "bank", "voltage"
-    const char *hint;         ///< Value placeholder for hints: "<volts>", "<addr>"
+    const char *hint;         ///< Value placeholder for hints (bare word, auto-wrapped with <>/[]): "volts", "addr"
     uint32_t    description;  ///< Translation key for help text
     bool        required;     ///< true if argument is required
 } bp_command_positional_t;

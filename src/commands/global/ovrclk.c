@@ -40,9 +40,9 @@ static const char* const usage[] = { "ovrclk \t[-m <MHz> | -k <kHz>] [-v <core m
                                      "Change core voltage:%s ovrclk -v 1150 (850-1300mV valid)",};
 
 static const bp_command_opt_t ovrclk_opts[] = {
-    { "mhz",  'm', BP_ARG_REQUIRED, "<MHz>", 0x00 },
-    { "khz",  'k', BP_ARG_REQUIRED, "<kHz>", 0x00 },
-    { "volt", 'v', BP_ARG_REQUIRED, "<mV>",  0x00 },
+    { "mhz",  'm', BP_ARG_REQUIRED, "MHz", 0x00 },
+    { "khz",  'k', BP_ARG_REQUIRED, "kHz", 0x00 },
+    { "volt", 'v', BP_ARG_REQUIRED, "mV",  0x00 },
     { 0 }
 };
 

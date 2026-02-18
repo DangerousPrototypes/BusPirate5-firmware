@@ -62,7 +62,7 @@ static const char* const usage[] = {
 
 static const bp_command_opt_t macro_opts[] = {
     { "all",  'a', BP_ARG_NONE,     NULL,     T_HELP_CMD_MACRO_FILES},
-    { "file", 'f', BP_ARG_REQUIRED, "<file>", T_HELP_CMD_MACRO_LOAD },
+    { "file", 'f', BP_ARG_REQUIRED, "file", T_HELP_CMD_MACRO_LOAD },
     { "list", 'l', BP_ARG_NONE,     NULL,     T_HELP_CMD_MACRO_LIST },
     { 0 }
 };

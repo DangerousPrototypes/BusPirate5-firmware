@@ -226,7 +226,7 @@ static const char* const usage[] = { "sle4442 [init|dump|unlock|write|erase|psc]
                                      "Dump contents:%s sle4442 dump",
                                      "Dump 32 bytes starting at address 0x50:%s sle4442 dump -s 0x50 -b 32",
                                      "Dump contents to file:%s sle4442 dump -f dump.bin", 
-                                     "Dump format:%s DATA[0:255],SECMEM[256:259],PRTMEM[260:263]"                                     
+                                     "Dump format:%s DATA[0:255],SECMEM[256:259],PRTMEM[260:263]",                                     
                                      "Unlock card:%s sle4442 unlock -p 0xffffff",
                                      "Write a value:%s sle4442 write -a 0xff -v 0x55",
                                      "Erase memory:%s sle4442 erase",
@@ -257,13 +257,13 @@ static const bp_command_action_t sle4442_action_defs[] = {
 };
 
 static const bp_command_opt_t sle4442_opts[] = {
-    { "address", 'a', BP_ARG_REQUIRED, "<address>", T_HELP_SLE4442_ADDRESS_FLAG },
-    { "value",   'v', BP_ARG_REQUIRED, "<value>",   T_HELP_SLE4442_VALUE_FLAG },
-    { "current", 'p', BP_ARG_REQUIRED, "<psc>",     T_HELP_SLE4442_CURRENT_PSC_FLAG },
-    { "new",     'n', BP_ARG_REQUIRED, "<psc>",     T_HELP_SLE4442_NEW_PSC_FLAG },
-    { "file",    'f', BP_ARG_REQUIRED, "<file>",    T_HELP_SLE4442_FILE_FLAG },
-    { "start",   's', BP_ARG_REQUIRED, "<addr>",    UI_HEX_HELP_START },
-    { "bytes",   'b', BP_ARG_REQUIRED, "<count>",   UI_HEX_HELP_BYTES },
+    { "address", 'a', BP_ARG_REQUIRED, "address", T_HELP_SLE4442_ADDRESS_FLAG },
+    { "value",   'v', BP_ARG_REQUIRED, "value",   T_HELP_SLE4442_VALUE_FLAG },
+    { "current", 'p', BP_ARG_REQUIRED, "psc",     T_HELP_SLE4442_CURRENT_PSC_FLAG },
+    { "new",     'n', BP_ARG_REQUIRED, "psc",     T_HELP_SLE4442_NEW_PSC_FLAG },
+    { "file",    'f', BP_ARG_REQUIRED, "file",    T_HELP_SLE4442_FILE_FLAG },
+    { "start",   's', BP_ARG_REQUIRED, "addr",    UI_HEX_HELP_START },
+    { "bytes",   'b', BP_ARG_REQUIRED, "count",   UI_HEX_HELP_BYTES },
     { "quiet",   'q', BP_ARG_NONE,     NULL,        UI_HEX_HELP_QUIET },
     { 0 }
 };

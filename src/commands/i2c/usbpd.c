@@ -33,9 +33,9 @@ static const bp_command_action_t usbpd_action_defs[] = {
 };
 
 static const bp_command_opt_t usbpd_opts[] = {
-    { "pdo",     'p', BP_ARG_REQUIRED, "<index>", T_HELP_I2C_USBPD_PDO_INDEX },
-    { "voltage", 'v', BP_ARG_REQUIRED, "<mV>",    T_HELP_I2C_USBPD_VOLTAGE },
-    { "current", 'i', BP_ARG_REQUIRED, "<mA>",    T_HELP_I2C_USBPD_CURRENT },
+    { "pdo",     'p', BP_ARG_REQUIRED, "index", T_HELP_I2C_USBPD_PDO_INDEX },
+    { "voltage", 'v', BP_ARG_REQUIRED, "mV",    T_HELP_I2C_USBPD_VOLTAGE },
+    { "current", 'i', BP_ARG_REQUIRED, "mA",    T_HELP_I2C_USBPD_CURRENT },
     { 0 }
 };
 

@@ -38,8 +38,8 @@ static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <b
                                          "press 'x' to quit pager" };
 
 static const bp_command_opt_t hex_opts[] = {
-    { "start",   's', BP_ARG_REQUIRED, "<addr>",  UI_HEX_HELP_START },
-    { "bytes",   'b', BP_ARG_REQUIRED, "<count>", UI_HEX_HELP_BYTES },
+    { "start",   's', BP_ARG_REQUIRED, "addr",  UI_HEX_HELP_START },
+    { "bytes",   'b', BP_ARG_REQUIRED, "count", UI_HEX_HELP_BYTES },
     { "quiet",   'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
     { "nopager", 'c', BP_ARG_NONE,     NULL,      T_HELP_DISK_HEX_PAGER_OFF },
     { 0 }

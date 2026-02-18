@@ -137,8 +137,8 @@ static const char* const tcs34725_usage[] = {
 };
 
 static const bp_command_opt_t tcs34725_opts[] = {
-    { "gain",        'g', BP_ARG_REQUIRED, "<1,4,16*,60>", T_HELP_I2C_TCS34725_GAIN },
-    { "integration", 'i', BP_ARG_REQUIRED, "<1-256*>",     T_HELP_I2C_TCS34725_INTEGRATION },
+    { "gain",        'g', BP_ARG_REQUIRED, "1,4,16*,60", T_HELP_I2C_TCS34725_GAIN },
+    { "integration", 'i', BP_ARG_REQUIRED, "1-256*",     T_HELP_I2C_TCS34725_INTEGRATION },
     { 0 }
 };
 

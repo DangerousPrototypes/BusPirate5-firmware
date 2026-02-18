@@ -45,16 +45,26 @@ const char* const psucmd_usage[] = {
 };
 
 static const bp_command_opt_t psucmd_opts[] = {
-    { "undervoltage", 'u', BP_ARG_REQUIRED, "<%>", T_HELP_GCMD_W_UNDERVOLTAGE },
+    { "undervoltage", 'u', BP_ARG_REQUIRED, "%%", T_HELP_GCMD_W_UNDERVOLTAGE },
+    { 0 }
+};
+
+static const bp_command_positional_t psucmd_enable_positionals[] = {
+    { "voltage", "volts", T_HELP_GCMD_W_VOLTS, false },
+    { "current", "mA",   T_HELP_GCMD_W_CURRENT_LIMIT, false },
     { 0 }
 };
 
 const bp_command_def_t psucmd_enable_def = {
-    .name = "W",
-    .description = T_CMDLN_PSU_EN,
-    .opts = psucmd_opts,
-    .usage = psucmd_usage,
-    .usage_count = count_of(psucmd_usage)
+    .name         = "W",
+    .description  = T_CMDLN_PSU_EN,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = psucmd_opts,
+    .positionals      = psucmd_enable_positionals,
+    .positional_count = 2,
+    .usage        = psucmd_usage,
+    .usage_count  = count_of(psucmd_usage),
 };
 
 const bp_command_def_t psucmd_disable_def = {

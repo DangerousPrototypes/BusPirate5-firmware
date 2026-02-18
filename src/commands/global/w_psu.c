@@ -35,7 +35,7 @@
 #include "ui/ui_help.h"
 
 const char* const psucmd_usage[] = {
-    "w|W\t<volts> <current> [-u <%%>]",
+    "w|W\t[volts] [current] [-u <%%>]",
     "Disable:%s w",
     "Enable, with menu:%s W",
     "Enable 5v, 50mA fuse, 10%% undervoltage limit:%s W 5 50",
@@ -52,12 +52,6 @@ static const bp_command_opt_t psucmd_opts[] = {
 static const bp_command_positional_t psucmd_enable_positionals[] = {
     { "volts", "volts", T_HELP_GCMD_W_VOLTS, false },
     { "current", "mA",   T_HELP_GCMD_W_CURRENT_LIMIT, false },
-    { 0 }
-};
-
-static const bp_command_positional_t psucmd_enable_positionals[] = {
-    { "voltage", "volts", 0, false },
-    { "current", "mA",   0, false },
     { 0 }
 };
 

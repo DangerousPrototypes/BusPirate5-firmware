@@ -15,10 +15,18 @@
 #include "pwm.pio.h"
 #include "lib/bp_args/bp_cmd.h"
 
-static const char* const usage[] = { "replicate hardware bugs", "Test errata E9:%s bug e9" };
+static const char* const usage[] = { 
+    "bug\t<bug> [-a]", 
+    "Test errata E9:%s bug e9" 
+};
 
 static const bp_command_positional_t bug_positionals[] = {
     { "bug", "e9", 0, false },
+    { 0 }
+};
+
+static const bp_command_opt_t bug_opts[] = {
+    { "all", 'a', BP_ARG_NONE, NULL, "Test all IOs for E9" },
     { 0 }
 };
 
@@ -28,7 +36,8 @@ const struct bp_command_def bug_def = {
     .positionals      = bug_positionals,
     .positional_count = 1,
     .usage = usage,
-    .usage_count = count_of(usage)
+    .usage_count = count_of(usage),
+    .opts = bug_opts,
 };
 
 // Write `period` to the input shift register

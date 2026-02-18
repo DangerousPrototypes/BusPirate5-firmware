@@ -212,7 +212,6 @@ void process_bitmap(FIL* file_handle, bool draw) {
 }
 
 static const char* const usage[] = {
-    "Read BMP info and display image file on LCD",
     "Usage:%s image <file> [-d] [-h]",
     "Read info:%s image example.bmp",
     "Draw on display:%s image example.bmp -d",

@@ -34,7 +34,7 @@ static const bp_command_opt_t irtx_opts[] = {
 };
 
 static const bp_command_positional_t irtx_positionals[] = {
-	{ "packet", "aIR packet", 0, false },
+	{ "aIR packet", "packet", 0, false },
 	{ 0 }
 };
 

@@ -43,7 +43,7 @@ void disk_show_macro_file(const char* location);
 void disk_get_line_id(const char* location, const char* id, char* line, int max_len);
 
 static const char* const usage[] = {
-    "macro <#>\r\n\t[-f <file>] [-a] [-l] [-h(elp)]",
+    "macro [id]\r\n\t[-f <file>] [-a] [-l] [-h(elp)]",
     "Load macros:%s macro -f <file>",
     "List macros:%s macro -l",
     "Run macro 1:%s macro 1",

@@ -11,7 +11,7 @@
 #include "lib/jep106/jep106.h"
 
 static const char* const usage[] = {
-    "jep106 <bank number> <vendor id>",
+    "jep106 <bank> <vendor>",
     "Lookup JEP106 ID (Micron):%s jep106 0x00 0x2c",
     "Lookup JEP106 ID (Sinker):%s jep106 0x0a 0xab"
 };

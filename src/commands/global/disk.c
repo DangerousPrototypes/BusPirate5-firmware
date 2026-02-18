@@ -156,7 +156,7 @@ void disk_cd_handler(struct command_result* res) {
 }
 
 static const char* const rm_usage[] = {
-    "rm [<file>|<dir>]",
+    "rm <file|dir>",
     "Delete file:%s rm example.txt",
     "Delete directory:%s rm dir",
 };
@@ -195,7 +195,7 @@ void disk_rm_handler(struct command_result* res) {
 }
 
 static const char* const ls_usage[] = {
-    "ls <dir>",
+    "ls [dir]",
     "Show current directory contents:%s ls",
     "Show directory contents:%s ls /dir",
 };
@@ -303,9 +303,9 @@ void disk_format_handler(struct command_result* res) {
     }
 }
 
-static const char* const label_usage[] = { "label [get|set] <name>",
+static const char* const label_usage[] = { "label [get|set] [label]",
                                            "Get flash storage label name:%s label get",
-                                           "Set flash storage label name:%s label set <name>" };
+                                           "Set flash storage label name:%s label set [label]" };
 
 typedef enum label_sub_commands {
     GET_LABEL,
@@ -319,7 +319,7 @@ static const bp_command_action_t label_actions[] = {
 };
 
 static const bp_command_positional_t disk_label_positionals[] = {
-    { "name",    "label",   0, false },
+    { "label",    "label",   0, false },
     { 0 }
 };
 

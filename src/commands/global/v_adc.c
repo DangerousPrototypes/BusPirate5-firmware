@@ -47,7 +47,7 @@ static const char* const usage[] = {
 };
 
 static const bp_command_positional_t adc_positionals[] = {
-    { "io", "pin", 0, false },
+    { "io", "pin", T_HELP_GCMD_ADC_PIN, false },
     { 0 }
 };
 

@@ -17,8 +17,8 @@ static const char* const usage[] = {
 };
 
 static const bp_command_positional_t jep106_positionals[] = {
-    { "bank",   "bank number", 0, true },
-    { "id",     "vendor id",   0, true },
+    { "bank",   "bank number", T_HELP_GCMD_JEP106_BANK, true },
+    { "id",     "vendor id",   T_HELP_GCMD_JEP106_ID, true },
     { 0 }
 };
 

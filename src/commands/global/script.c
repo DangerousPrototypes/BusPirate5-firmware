@@ -46,7 +46,7 @@ static const bp_command_opt_t script_opts[] = {
 };
 
 static const bp_command_positional_t script_positionals[] = {
-    { "file", "file", 0, true },
+    { "file", "file", T_HELP_GCMD_SCRIPT_FILE, true },
     { 0 }
 };
 

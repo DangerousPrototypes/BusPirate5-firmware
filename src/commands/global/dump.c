@@ -29,8 +29,8 @@ static const char* const usage[] = {
 };
 
 static const bp_command_positional_t dump_positionals[] = {
-    { "bytes", "bytes", 0, true  },
-    { "file",  "file",  0, true  },
+    { "bytes", "bytes", T_HELP_GCMD_DUMP_BYTES, true  },
+    { "file",  "file",  T_HELP_GCMD_DUMP_FILE, true  },
     { 0 }
 };
 

@@ -32,7 +32,7 @@ static const char* const usage[] = {
 };
 
 static const bp_command_positional_t auxio_positionals[] = {
-    { "io", "pin", 0, true },
+    { "io", "pin", T_HELP_GCMD_AUXIO_PIN, true },
     { 0 }
 };
 

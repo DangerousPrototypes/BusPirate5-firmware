@@ -50,7 +50,7 @@ static const char* const freq_cont_usage[] = {
 };
 
 static const bp_command_positional_t freq_positionals[] = {
-    { "pin", "pin", 0, false },
+    { "pin", "pin", T_HELP_GCMD_FREQ_PIN, false },
     { 0 }
 };
 

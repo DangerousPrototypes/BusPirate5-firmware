@@ -55,12 +55,6 @@ static const bp_command_positional_t psucmd_enable_positionals[] = {
     { 0 }
 };
 
-static const bp_command_positional_t psucmd_enable_positionals[] = {
-    { "voltage", "volts", 0, false },
-    { "current", "mA",   0, false },
-    { 0 }
-};
-
 const bp_command_def_t psucmd_enable_def = {
     .name         = "W",
     .description  = T_CMDLN_PSU_EN,

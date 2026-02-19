@@ -31,7 +31,7 @@ static const char* const cat_usage[] = {
 };
 
 static const bp_command_positional_t disk_cat_positionals[] = {
-    { "file", "file", T_HELP_GCMD_DISK_CAT_FILE, true },
+    { "file", NULL, T_HELP_GCMD_DISK_CAT_FILE, true },
     { 0 }
 };
 
@@ -80,7 +80,7 @@ static const char* const mkdir_usage[] = {
 };
 
 static const bp_command_positional_t disk_mkdir_positionals[] = {
-    { "dir", "dir", T_HELP_GCMD_DISK_MKDIR_DIR, true },
+    { "dir", NULL, T_HELP_GCMD_DISK_MKDIR_DIR, true },
     { 0 }
 };
 
@@ -118,7 +118,7 @@ static const char* const cd_usage[] = {
 };
 
 static const bp_command_positional_t disk_cd_positionals[] = {
-    { "dir", "dir", T_HELP_GCMD_DISK_CD_DIR, true },
+    { "dir", NULL, T_HELP_GCMD_DISK_CD_DIR, true },
     { 0 }
 };
 
@@ -201,7 +201,7 @@ static const char* const ls_usage[] = {
 };
 
 static const bp_command_positional_t disk_ls_positionals[] = {
-    { "dir", "dir", T_HELP_GCMD_DISK_LS_DIR, false },
+    { "dir", NULL, T_HELP_GCMD_DISK_LS_DIR, false },
     { 0 }
 };
 
@@ -319,7 +319,7 @@ static const bp_command_action_t label_actions[] = {
 };
 
 static const bp_command_positional_t disk_label_positionals[] = {
-    { "label",    "label",   T_HELP_GCMD_DISK_LABEL_NAME, false },
+    { "label",    NULL,      T_HELP_GCMD_DISK_LABEL_NAME, false },
     { 0 }
 };
 

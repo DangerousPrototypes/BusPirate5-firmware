@@ -30,10 +30,17 @@ static const char* const usage[] = { "dummy [init|test]\r\n\t[-b(utton)] [-i(nte
                                      "Create/write/read file:%s dummy -f dummy.txt",
                                      "Kitchen sink:%s dummy test -b -i 123 -f dummy.txt" };
 
+// Constraint for -i flag: accept 0-65535, default 0
+static const bp_val_constraint_t integer_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 65535, .def = 0 },
+    .prompt = 0,
+};
+
 // New bp_command_opt_t array for flags
 static const bp_command_opt_t dummy_opts[] = {
     { "button", 'b', BP_ARG_NONE,     NULL,      T_HELP_DUMMY_B_FLAG },
-    { "integer",'i', BP_ARG_REQUIRED, "value", T_HELP_DUMMY_I_FLAG },
+    { "integer",'i', BP_ARG_REQUIRED, "value", T_HELP_DUMMY_I_FLAG, &integer_range },
     { "file",   'f', BP_ARG_REQUIRED, "file",  T_HELP_DUMMY_FILE_FLAG },
     { 0 }
 };
@@ -131,25 +138,19 @@ void dummy_handler(struct command_result* res) {
     }
 
     //-i is a flag with an additional integer parameter
-    // check if a flag is present and get the integer value
-    // returns true if flag is present AND has an integer value
-    // if the user entered a string value, it generally also fail with false
-    // check for the -i flag with an integer value
-    bool i_flag = bp_cmd_get_uint32(&dummy_def, 'i', &value);
-    // if the flag is set, print the value
-    if (i_flag) {
+    // bp_cmd_flag() uses the constraint to parse, validate, and provide a default
+    // it returns BP_CMD_OK (present + valid), BP_CMD_MISSING (not present, default written),
+    // or BP_CMD_INVALID (present but out of range or unparseable — error already printed)
+    bp_cmd_status_t i_status = bp_cmd_flag(&dummy_def, 'i', &value);
+    if (i_status == BP_CMD_OK) {
         printf("Flag -i is set with value %d\r\n", value);
-    } else { // error parsing flag and value
-        // Note: new API doesn't provide number_format or has_arg info
-        if (false) { // placeholder - can't detect this case with new API
-            printf("Flag -i is set with no or invalid integer value. Try -i 0\r\n");
-            // setting a system config error flag will
-            // effect if the next commands chained with || or && will run
-            system_config.error = true; // set the error flag
-            return;
-        } else { // flag/arg not entered
-            printf("Flag -i is not set\r\n");
-        }
+    } else if (i_status == BP_CMD_INVALID) {
+        // constraint violation: the API already printed the range error
+        printf("Flag -i has an invalid value. Try -i 0\r\n");
+        system_config.error = true;
+        return;
+    } else { // BP_CMD_MISSING — flag not entered, default (0) written to value
+        printf("Flag -i is not set (default: %d)\r\n", value);
     }
 
     // -f is a flag with an additional string parameter

@@ -31,7 +31,7 @@ const char *const inverse_usage[] = {
 };
 
 static const bp_command_positional_t convert_inverse_positionals[] = {
-    { "value", "value", T_HELP_GCMD_CONVERT_INVERSE_VALUE, true },
+    { "value", NULL, T_HELP_GCMD_CONVERT_INVERSE_VALUE, true },
     { 0 }
 };
 

@@ -133,6 +133,7 @@ typedef struct {
         } choice;
     };
     uint32_t prompt;          ///< Translation key for interactive prompt text (0 = none)
+    uint32_t hint;            ///< Translation key for hint text below prompt (0 = none)
 } bp_val_constraint_t;
 
 /*
@@ -213,9 +214,6 @@ typedef struct bp_command_def {
 
     const bp_command_positional_t *positionals; ///< Positional args, {0}-terminated, NULL if none
     uint32_t positional_count;              ///< Number of positional args
-    uint32_t positional_start;              ///< Command-line position where positionals begin
-                                            ///< (0 or 1 = right after command name, 2 = skip one extra token, etc.)
-                                            ///< For mode setups: 2 ("m uart <here>"). Default: 0 → treated as 1.
 
     const char *const *usage;               ///< Usage example strings
     uint32_t usage_count;                   ///< Number of usage lines
@@ -374,8 +372,7 @@ typedef enum {
  *          Does NOT prompt. Returns immediately.
  *
  * @param def   Command definition
- * @param pos   Positional index (1-based into the def's positionals array)
- *              The actual command-line position is computed using def->positional_start.
+ * @param pos   Positional index (1-based)
  * @param out   Pointer to result variable (type must match constraint)
  * @return BP_CMD_OK if parsed and valid, BP_CMD_MISSING if not on cmdline,
  *         BP_CMD_INVALID if present but out of range (error already printed)

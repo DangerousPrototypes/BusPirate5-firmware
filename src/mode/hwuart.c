@@ -100,23 +100,19 @@ static const struct prompt_item uart_parity_menu[] = { { T_UART_PARITY_MENU_1 },
  * =============================================================================
  * Command-line usage:
  *   m uart                              → full interactive wizard
- *   m uart 115200                       → 115200 8N1, all defaults
- *   m uart 115200 --parity even         → override one thing
- *   m uart 9600 -d 7 -p odd -s 2       → override multiple
+ *   m uart -b 115200                    → 115200 8N1, all defaults
+ *   m uart -b 115200 --parity even      → override one thing
+ *   m uart -b 9600 -d 7 -p odd -s 2    → override multiple
  *
- * Position 2 = baud rate (pos 0 = "m", pos 1 = "uart").
- * Everything else is flags with sensible defaults.
+ * All parameters are flags. No positionals.
  */
 
-// Baud rate — the one positional
+// Baud rate — flag -b / --baud
 static const bp_val_constraint_t uart_baud_range = {
     .type = BP_VAL_UINT32,
     .u = { .min = 1, .max = 7372800, .def = 115200 },
     .prompt = T_UART_SPEED_MENU,
-};
-
-static const bp_command_positional_t uart_setup_positionals[] = {
-    { "baud", "bps", 0, false, &uart_baud_range },  // cmdline pos 2
+    .hint = T_UART_SPEED_MENU_1,
 };
 
 // Data bits — flag -d / --databits
@@ -124,6 +120,7 @@ static const bp_val_constraint_t uart_databits_range = {
     .type = BP_VAL_UINT32,
     .u = { .min = 5, .max = 8, .def = 8 },
     .prompt = T_UART_DATA_BITS_MENU,
+    .hint = T_UART_DATA_BITS_MENU_1,
 };
 
 // Parity — flag -p / --parity (none/even/odd)
@@ -172,20 +169,18 @@ static const bp_val_constraint_t uart_invert_choice = {
 };
 
 static const bp_command_opt_t uart_setup_opts[] = {
-    { "databits", 'd', BP_ARG_REQUIRED, "5-8",          0, &uart_databits_range },
+    { "baud",     'b', BP_ARG_REQUIRED, "1-7372800",     0, &uart_baud_range },
+    { "databits", 'd', BP_ARG_REQUIRED, "5-8",           0, &uart_databits_range },
     { "parity",   'p', BP_ARG_REQUIRED, "none/even/odd", 0, &uart_parity_choice },
     { "stopbits", 's', BP_ARG_REQUIRED, "1/2",           0, &uart_stopbits_choice },
-    { "flow",     'f', BP_ARG_REQUIRED, "off/rts",        0, &uart_flow_choice },
-    { "invert",   'i', BP_ARG_REQUIRED, "normal/invert",  0, &uart_invert_choice },
+    { "flow",     'f', BP_ARG_REQUIRED, "off/rts",       0, &uart_flow_choice },
+    { "invert",   'i', BP_ARG_REQUIRED, "normal/invert", 0, &uart_invert_choice },
     { 0 },
 };
 
 static const bp_command_def_t uart_setup_def = {
     .name = "uart",
     .description = 0,
-    .positionals = uart_setup_positionals,
-    .positional_count = count_of(uart_setup_positionals),
-    .positional_start = 2,  // "m uart <baud>" — positionals begin at cmdline position 2
     .opts = uart_setup_opts,
 };
 
@@ -213,29 +208,29 @@ uint32_t hwuart_setup(void) {
         // clang-format off
     };
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        hwuart_settings();
-        prompt_result result;
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0;
-        }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
-        }
-    }
-
-    // Try baud rate from command line (def positional 1; cmdline pos 2 via positional_start)
-    bp_cmd_status_t st = bp_cmd_positional(&uart_setup_def, 1, &mode_config.baudrate);
+    // Check if any flag is present — if so, command-line mode; otherwise wizard
+    bp_cmd_status_t st = bp_cmd_flag(&uart_setup_def, 'b', &mode_config.baudrate);
     if (st == BP_CMD_INVALID) return 0;
 
     bool interactive = (st == BP_CMD_MISSING);
 
     if (interactive) {
-        // ── Full interactive wizard ──
-        // Prompt for each setting in sequence
 
+        // check for saved config and offer to use it
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            hwuart_settings();
+            prompt_result result;
+            bool user_value;
+            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
+                return 0;
+            }
+            if (user_value) {
+                return 1; // user said yes, use the saved settings
+            }
+        }
+
+        // ── Full interactive wizard ──
         if (bp_cmd_prompt(&uart_baud_range, &mode_config.baudrate) != BP_CMD_OK) return 0;
 
         if (bp_cmd_prompt(&uart_databits_range, &temp) != BP_CMD_OK) return 0;
@@ -254,11 +249,11 @@ uint32_t hwuart_setup(void) {
         mode_config.invert = temp;
     } else {
         // ── Command-line mode ──
-        // Baud already parsed. Flags override defaults, no prompts.
+        // Baud already parsed. Remaining flags use defaults if absent.
 
         st = bp_cmd_flag(&uart_setup_def, 'd', &temp);
         if (st == BP_CMD_INVALID) return 0;
-        mode_config.data_bits = (uint8_t)temp; // default written by bp_cmd_flag if MISSING
+        mode_config.data_bits = (uint8_t)temp;
 
         st = bp_cmd_flag(&uart_setup_def, 'p', &temp);
         if (st == BP_CMD_INVALID) return 0;

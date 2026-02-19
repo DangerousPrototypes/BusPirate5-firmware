@@ -648,6 +648,9 @@ static bp_cmd_status_t val_prompt_loop(const bp_val_constraint_t *c, void *out) 
         // CHOICE already printed \r\n before menu; others need it here
         if (c->type != BP_VAL_CHOICE) {
             printf("\r\n");
+            if (c->hint) {
+                printf(" %s%s%s\r\n", ui_term_color_info(), GET_T(c->hint), ui_term_color_reset());
+            }
         }
         printf("%sx to exit ", ui_term_color_prompt());
         switch (c->type) {
@@ -775,28 +778,22 @@ bp_cmd_status_t bp_cmd_positional(const bp_command_def_t *def,
         return BP_CMD_MISSING; // no constraint = can't know the type
     }
 
-    // Map def index to command-line position.
-    // positional_start: 0 or 1 = right after command name (default).
-    //                   2 = skip one extra token (e.g. "m uart <here>").
-    uint32_t start = def->positional_start ? def->positional_start : 1;
-    uint32_t cmdline_pos = pos + start - 1;
-
     // Parse from command line using type-appropriate getter
     bool found = false;
     switch (c->type) {
         case BP_VAL_FLOAT:
-            found = bp_cmd_get_positional_float(def, cmdline_pos, (float *)out);
+            found = bp_cmd_get_positional_float(def, pos, (float *)out);
             break;
         case BP_VAL_UINT32:
-            found = bp_cmd_get_positional_uint32(def, cmdline_pos, (uint32_t *)out);
+            found = bp_cmd_get_positional_uint32(def, pos, (uint32_t *)out);
             break;
         case BP_VAL_INT32:
-            found = bp_cmd_get_positional_int32(def, cmdline_pos, (int32_t *)out);
+            found = bp_cmd_get_positional_int32(def, pos, (int32_t *)out);
             break;
         case BP_VAL_CHOICE: {
             // Try string match first, then numeric
             const char *tok; size_t tlen;
-            if (cmd_get_positional_token(def, cmdline_pos, &tok, &tlen)) {
+            if (cmd_get_positional_token(def, pos, &tok, &tlen)) {
                 if (val_match_choice(c, tok, tlen, (uint32_t *)out)) {
                     found = true;
                 } else {

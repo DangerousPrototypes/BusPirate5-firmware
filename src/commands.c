@@ -103,7 +103,7 @@ const struct _global_command_struct commands[] = {
 { .command="|",         .allow_hiz=true,  .func=&cmd_convert_inverse_handler,        .def=&convert_inverse_def, .description_text=T_CMDLN_INT_INVERSE,  .category=CMD_CAT_TOOLS },
 { .command="jep106",    .allow_hiz=true,  .func=&jep106_handler,    .def=&jep106_def,    .description_text=T_HELP_GLOBAL_JEP106_LOOKUP,.category=CMD_CAT_SYSTEM },
 // Mode: mode selection and binmode
-{ .command="m",         .allow_hiz=true,  .func=&ui_mode_enable_args,                .description_text=T_CMDLN_MODE,         .category=CMD_CAT_MODE },
+{ .command="m",         .allow_hiz=true,  .func=&ui_mode_enable_args, .def=&mode_def,  .description_text=T_CMDLN_MODE,         .category=CMD_CAT_MODE },
 { .command="binmode",   .allow_hiz=true,  .func=&cmd_binmode_handler,.def=&cmd_binmode_def,.description_text=T_CONFIG_BINMODE_SELECT, .category=CMD_CAT_MODE },
 // Hidden: aliases and internal commands (not shown in help)
 { .command="?",         .allow_hiz=true,  .func=&help_handler,                       .def=&help_def, .description_text=0x00,                 .category=CMD_CAT_HIDDEN },

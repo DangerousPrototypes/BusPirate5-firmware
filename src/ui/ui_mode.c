@@ -13,96 +13,127 @@
 #include "ui/ui_cmdln.h"
 #include "binmode/binmodes.h"
 #include "binmode/fala.h"
-#include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
 
-bool ui_mode_list(const struct ui_prompt* menu) {
-    for (uint i = 0; i < (*menu).menu_items_count; i++) {
-        printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), modes[i].protocol_name, ui_term_color_reset());
+/*
+ * =============================================================================
+ * Action delegate — queries modes[] directly, no parallel array
+ * =============================================================================
+ */
+
+/**
+ * @brief Return the protocol_name at index, or NULL if past end.
+ */
+static const char *mode_verb_at(uint32_t index) {
+    return (index < MAXPROTO) ? modes[index].protocol_name : NULL;
+}
+
+/**
+ * @brief Case-insensitive match of a user token against modes[].protocol_name.
+ * @details Writes the mode index into *action_out on match.
+ */
+static bool mode_match(const char *tok, size_t len, uint32_t *action_out) {
+    for (uint32_t i = 0; i < MAXPROTO; i++) {
+        size_t nlen = strlen(modes[i].protocol_name);
+        if (nlen != len) continue;
+        bool match = true;
+        for (size_t j = 0; j < len; j++) {
+            if ((tok[j] | 0x20) != (modes[i].protocol_name[j] | 0x20)) {
+                match = false;
+                break;
+            }
+        }
+        if (match) {
+            *action_out = i;
+            return true;
+        }
     }
+    return false;
+}
+
+static const bp_action_delegate_t mode_delegate = {
+    .verb_at = mode_verb_at,
+    .match   = mode_match,
+};
+
+/*
+ * =============================================================================
+ * Command definition
+ * =============================================================================
+ */
+
+static const char * const mode_usage[] = {
+    "m <mode>",
+    "Change mode with menu: m",
+    "Change mode to UART: m uart",
+};
+
+const bp_command_def_t mode_def = {
+    .name        = "m",
+    .description = T_CMDLN_MODE,
+    .action_delegate = &mode_delegate,
+    .usage       = mode_usage,
+    .usage_count = 3,
+};
+
+/*
+ * =============================================================================
+ * Interactive mode selection prompt
+ * =============================================================================
+ */
+
+/**
+ * @brief Print mode list and prompt user to pick one.
+ * @param[out] mode  Selected mode index (0-based)
+ * @return true if user picked a mode, false if exited
+ */
+static bool mode_interactive_prompt(uint32_t *mode) {
+    printf("\r\n%s%s%s\r\n", ui_term_color_info(),
+           GET_T(T_MODE_MODE_SELECTION), ui_term_color_reset());
+
+    for (uint32_t i = 0; i < MAXPROTO; i++) {
+        printf(" %lu. %s%s%s\r\n",
+               (unsigned long)(i + 1),
+               ui_term_color_info(),
+               modes[i].protocol_name,
+               ui_term_color_reset());
+    }
+
+    printf("\r\n%sx to exit ", ui_term_color_prompt());
+    printf(">%s \x03", ui_term_color_reset());
+
+    if (!ui_prompt_user_input()) return false;
+
+    prompt_result result;
+    uint32_t pick;
+    ui_parse_get_uint32(&result, &pick);
+
+    if (result.exit) return false;
+    if (!result.success || pick == 0 || pick > MAXPROTO) {
+        ui_prompt_invalid_option();
+        return false;
+    }
+
+    *mode = pick - 1;
     return true;
 }
 
-static const char* const usage[] = {
-    "m [mode name|mode number] [-h]",
-    "Change mode with menu:%s m",
-    "Change mode to I2C:%s m i2c",
-    "Change mode to menu option 5:%s m 5",
-};
-
-static const struct ui_help_options options[] = {  };
+/*
+ * =============================================================================
+ * Mode change command handler
+ * =============================================================================
+ */
 
 void ui_mode_enable_args(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
-        return;
-    }    
+    // New help system
+    if (bp_cmd_help_check(&mode_def, res->help_flag)) return;
+
     uint32_t mode;
-    bool error=true;
 
-    //bool has_value = cmdln_args_uint32_by_position(1, &mode);
-
-    char action_str[32];
-    bool has_string = cmdln_args_string_by_position(1, sizeof(action_str), action_str);
-
-    if(has_string){
-        uint32_t action_len = strlen(action_str);
-        if(action_len>2){ //parse text
-            strupr(action_str);
-            for(uint8_t i=0; i<count_of(modes); i++) {
-                //create a strupr version of the protocol name
-                char protocol_name_upper[32];
-                strcpy(protocol_name_upper, modes[i].protocol_name);
-                strupr(protocol_name_upper);
-                if (strcmp(action_str, protocol_name_upper) == 0) {
-                    mode = i;
-                    error = false;
-                    goto mode_configure;
-                }
-            }
-            ui_prompt_invalid_option();            
-        }else{ //try to parse number
-            for(uint8_t i=0; i<action_len; i++) {
-                if(action_str[i] < '0' || action_str[i] > '9') {
-                    ui_prompt_invalid_option();
-                    error = true;
-                    goto mode_configure;
-                }
-            }
-            mode = atoi(action_str);
-            if(mode > MAXPROTO || mode == 0){
-                ui_prompt_invalid_option();
-                error = true;
-            }else{
-                mode--;
-                error = false;
-            }
-        }
-    }
-
-mode_configure:
-
-    if (error) { // no integer found
-
-        static const struct ui_prompt_config cfg = {
-            true,                            // bool allow_prompt_text;
-            false,                           // bool allow_prompt_defval;
-            false,                           // bool allow_defval;
-            true,                            // bool allow_exit;
-            &ui_mode_list,                   // bool (*menu_print)(const struct ui_prompt* menu);
-            &ui_prompt_prompt_ordered_list,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-            &ui_prompt_validate_ordered_list // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-        };
-
-        static const struct ui_prompt mode_menu = {
-            T_MODE_MODE_SELECTION, 0, count_of(modes), T_MODE_MODE, 0, 0, 0, 0, &cfg
-        };
-
-        prompt_result result;
-        ui_prompt_uint32(&result, &mode_menu, &mode);
-        if (result.exit) { // user bailed, stay in current mode
-            //(*response).error=true;
-            return;
-        }
-        mode--;
+    // Try to get mode name from command line via delegate
+    if (!bp_cmd_get_action(&mode_def, &mode)) {
+        // No mode on command line — interactive prompt
+        if (!mode_interactive_prompt(&mode)) return;
     }
 
     printf("\r\n%s%s:%s %s",
@@ -111,114 +142,19 @@ mode_configure:
         ui_term_color_reset(),
         modes[mode].protocol_name);
 
-    // ok, start setup dialog
-    if (!modes[mode].protocol_setup()) { // user bailed on setup steps
-        //(*response).error=true;
-        return;
-    }
+    // Run mode setup dialog (may prompt for params)
+    if (!modes[mode].protocol_setup()) return;
 
     modes[system_config.mode].protocol_cleanup();   // switch to HiZ
-    modes[0].protocol_setup_exc();                  // disables power suppy etc.
+    modes[0].protocol_setup_exc();                  // disables power supply etc.
     system_config.mode = mode;                      // setup the new mode
-    if(!modes[system_config.mode].protocol_setup_exc()){ // execute the mode setup
+    if (!modes[system_config.mode].protocol_setup_exc()) {
         printf("\r\nFailed to setup mode %s", modes[system_config.mode].protocol_name);
-        //something went wrong
         modes[0].protocol_setup_exc();
         system_config.mode = 0;
     }
-    fala_mode_change_hook();                        // notify follow along logic analyzer of new frequency
-
-    if (system_config.mode == 0) { // TODO: do something to show the mode (LED? LCD?)
-        // gpio_clear(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
-    } else {
-        // gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
-    }
+    fala_mode_change_hook();                        // notify follow along logic analyzer
 }
-
-/*
-
-
-
-
-void ui_mode_enable(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t mode;
-    bool error;
-
-    prompt_result result;
-    ui_parse_get_attributes(&result, &mode, 1);
-
-    if( result.error || result.no_value || result.exit || ((mode)>MAXPROTO) || ((mode)==0) )
-    {
-        if( result.success && (mode)>MAXPROTO )
-        {
-            ui_prompt_invalid_option();
-        }
-        error=true;
-    }
-    else
-    {
-        (mode)--; //adjust down one from user choice
-        error=false;
-    }
-
-    if(error)			// no integer found
-    {
-        static const struct ui_prompt_config cfg={
-            true, //bool allow_prompt_text;
-            false, //bool allow_prompt_defval;
-            false, //bool allow_defval;
-            true, //bool allow_exit;
-            &ui_mode_list, //bool (*menu_print)(const struct ui_prompt* menu);
-            &ui_prompt_prompt_ordered_list,     //bool (*menu_prompt)(const struct ui_prompt* menu);
-            &ui_prompt_validate_ordered_list //bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-        };
-
-        static const struct ui_prompt mode_menu={
-            T_MODE_MODE_SELECTION,
-            0,
-            MAXPROTO,
-            T_MODE_MODE,
-            0,0,0,
-            0,
-            &cfg
-        };
-
-        prompt_result result;
-        ui_prompt_uint32(&result, &mode_menu, &mode);
-        if(result.exit) //user bailed, stay in current mode
-        {
-            (*response).error=true;
-            return;
-        }
-        mode--;
-    }
-
-    //ok, start setup dialog
-    if(!modes[mode].protocol_setup()) //user bailed on setup steps
-    {
-        (*response).error=true;
-        return;
-    }
-
-    modes[system_config.mode].protocol_cleanup();   // switch to HiZ
-    modes[0].protocol_setup_exc();			        // disables power suppy etc.
-    system_config.mode=mode;                        // setup the new mode
-    modes[system_config.mode].protocol_setup_exc(); // execute the mode setup
-
-    if(system_config.mode==0) //TODO: do something to show the mode (LED? LCD?)
-    {
-        //gpio_clear(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
-    }
-    else
-    {
-        //gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
-    }
-
-    printf("\r\n%s%s:%s %s", ui_term_color_info(), GET_T(T_MODE_MODE), ui_term_color_reset(),
-modes[system_config.mode].protocol_name);
-
-}*/
 
 bool int_display_menu(const struct ui_prompt* menu) {
     printf(" %sCurrent setting: %s%s\r\n",

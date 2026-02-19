@@ -172,6 +172,25 @@ typedef struct {
     uint32_t    description;  ///< Translation key for help text
 } bp_command_action_t;
 
+/**
+ * @brief Action verb delegate for dynamic/external verb sources.
+ * @details When a command's verbs come from a runtime data structure
+ *          (e.g. the modes[] array), set action_delegate instead of
+ *          the static actions array. All 5 action pipelines
+ *          (get_action, help, hint-first, hint-partial, completion)
+ *          will call through these two functions.
+ *
+ * verb_at(index) — Return the verb string at the given index,
+ *                  or NULL if index >= count.  Used to enumerate.
+ * match(tok, len, action_out) — Case-insensitive match of a user
+ *                  token against the verb source. Writes the action
+ *                  enum value into *action_out on match.
+ */
+typedef struct {
+    const char *(*verb_at)(uint32_t index);  ///< Return verb at index, NULL = end
+    bool (*match)(const char *tok, size_t len, uint32_t *action_out); ///< Match token → action
+} bp_action_delegate_t;
+
 /*
  * =============================================================================
  * Positional argument descriptor
@@ -209,6 +228,7 @@ typedef struct bp_command_def {
 
     const bp_command_action_t *actions;     ///< Subcommand verbs, NULL if none
     uint32_t action_count;                  ///< Number of actions
+    const bp_action_delegate_t *action_delegate; ///< Dynamic verb source, NULL = use actions array
 
     const bp_command_opt_t *opts;           ///< Flags/options, {0}-terminated
 

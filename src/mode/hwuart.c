@@ -277,6 +277,9 @@ uint32_t hwuart_setup(void) {
     mode_config.async_print = false;
 
     mode_config.baudrate_actual = uart_init(M_UART_PORT, mode_config.baudrate);
+    
+    hwuart_settings();
+
     printf("\r\n%s%s: %u %s%s",
            ui_term_color_notice(),
            GET_T(T_UART_ACTUAL_SPEED_BAUD),

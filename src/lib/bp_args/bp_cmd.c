@@ -43,6 +43,30 @@ static bool tok_eq(const char *token, size_t len, const char *str) {
 }
 
 /**
+ * @brief Case-insensitive token equality check.
+ */
+static bool tok_eq_ci(const char *token, size_t len, const char *str) {
+    size_t slen = strlen(str);
+    if (len != slen) return false;
+    for (size_t i = 0; i < len; i++) {
+        if ((token[i] | 0x20) != (str[i] | 0x20)) return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Case-insensitive prefix match: does token start with prefix?
+ */
+static bool tok_prefix_ci(const char *token, size_t tok_len,
+                          const char *full, size_t full_len) {
+    if (tok_len >= full_len) return false;
+    for (size_t i = 0; i < tok_len; i++) {
+        if ((token[i] | 0x20) != (full[i] | 0x20)) return false;
+    }
+    return true;
+}
+
+/**
  * @brief Find option descriptor by short name in command def.
  * @return Option pointer, or NULL if not found / no opts defined.
  */
@@ -229,7 +253,9 @@ static bool cmd_scan_flag(const bp_command_def_t *def, char flag,
  */
 
 bool bp_cmd_get_action(const bp_command_def_t *def, uint32_t *action) {
-    if (!def->actions || def->action_count == 0) return false;
+    bool has_actions = (def->actions && def->action_count > 0);
+    bool has_delegate = (def->action_delegate != NULL);
+    if (!has_actions && !has_delegate) return false;
 
     const char *p = ln_cmdln_current();
     const char *end = p + ln_cmdln_remaining();
@@ -276,10 +302,14 @@ bool bp_cmd_get_action(const bp_command_def_t *def, uint32_t *action) {
 
         // This is a positional token — try to match as action verb
         size_t tl = tok_len(p, end);
-        for (uint32_t i = 0; i < def->action_count; i++) {
-            if (tok_eq(p, tl, def->actions[i].verb)) {
-                *action = def->actions[i].action;
-                return true;
+        if (has_delegate) {
+            if (def->action_delegate->match(p, tl, action)) return true;
+        } else {
+            for (uint32_t i = 0; i < def->action_count; i++) {
+                if (tok_eq(p, tl, def->actions[i].verb)) {
+                    *action = def->actions[i].action;
+                    return true;
+                }
             }
         }
 
@@ -955,7 +985,25 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
     }
 
     // Action verbs
-    if (def->actions && def->action_count > 0) {
+    if (def->action_delegate) {
+        printf("\r\nactions:\r\n");
+        for (uint32_t i = 0; ; i++) {
+            const char *verb = def->action_delegate->verb_at(i);
+            if (!verb) break;
+            int len = strlen(verb);
+            printf("%s%s%s%s",
+                   HELP_INDENT,
+                   ui_term_color_prompt(),
+                   verb,
+                   ui_term_color_reset());
+            if (len < HELP_COL_WIDTH) {
+                printf("%*s", HELP_COL_WIDTH - len, "");
+            } else {
+                printf(" ");
+            }
+            printf("\r\n");
+        }
+    } else if (def->actions && def->action_count > 0) {
         printf("\r\nactions:\r\n");
         for (uint32_t i = 0; i < def->action_count; i++) {
             int len = strlen(def->actions[i].verb);
@@ -1122,7 +1170,13 @@ const char *bp_cmd_hint(const char *buf, size_t len,
 
     if (p >= end) {
         // Nothing after command — suggest first action verb or positional
-        if (def->actions && def->action_count > 0) {
+        if (def->action_delegate) {
+            const char *first = def->action_delegate->verb_at(0);
+            if (first) {
+                snprintf(hint_buf, sizeof(hint_buf), " %s", first);
+                return hint_buf;
+            }
+        } else if (def->actions && def->action_count > 0) {
             snprintf(hint_buf, sizeof(hint_buf), " %s", def->actions[0].verb);
             return hint_buf;
         }
@@ -1231,13 +1285,25 @@ const char *bp_cmd_hint(const char *buf, size_t len,
     }
 
     // Partial action verb match
-    if (last_tok && *last_tok != '-' && def->actions) {
+    if (last_tok && *last_tok != '-') {
         size_t tl = tok_len(last_tok, end);
-        for (uint32_t i = 0; i < def->action_count; i++) {
-            size_t vl = strlen(def->actions[i].verb);
-            if (tl < vl && memcmp(last_tok, def->actions[i].verb, tl) == 0) {
-                snprintf(hint_buf, sizeof(hint_buf), "%s", def->actions[i].verb + tl);
-                return hint_buf;
+        if (def->action_delegate) {
+            for (uint32_t i = 0; ; i++) {
+                const char *verb = def->action_delegate->verb_at(i);
+                if (!verb) break;
+                size_t vl = strlen(verb);
+                if (tok_prefix_ci(last_tok, tl, verb, vl)) {
+                    snprintf(hint_buf, sizeof(hint_buf), "%s", verb + tl);
+                    return hint_buf;
+                }
+            }
+        } else if (def->actions) {
+            for (uint32_t i = 0; i < def->action_count; i++) {
+                size_t vl = strlen(def->actions[i].verb);
+                if (tl < vl && memcmp(last_tok, def->actions[i].verb, tl) == 0) {
+                    snprintf(hint_buf, sizeof(hint_buf), "%s", def->actions[i].verb + tl);
+                    return hint_buf;
+                }
             }
         }
     }
@@ -1396,17 +1462,34 @@ void bp_cmd_completion(const char *buf, size_t len,
     #define COMP_BUF() (comp_next < COMP_SLOTS ? comp_pool[comp_next++] : NULL)
 
     // Complete action verbs
-    if (!last_is_flag && def->actions) {
-        for (uint32_t i = 0; i < def->action_count; i++) {
-            if (tl <= strlen(def->actions[i].verb) &&
-                memcmp(last_tok, def->actions[i].verb, tl) == 0) {
-                // Build full line up to last_tok, then append completed verb
-                size_t prefix_len = last_tok - buf;
-                char *cb = COMP_BUF();
-                if (cb && prefix_len + strlen(def->actions[i].verb) < COMP_BUF_SZ) {
-                    memcpy(cb, buf, prefix_len);
-                    strcpy(cb + prefix_len, def->actions[i].verb);
-                    add_completion(cb, userdata);
+    if (!last_is_flag) {
+        if (def->action_delegate) {
+            for (uint32_t i = 0; ; i++) {
+                const char *verb = def->action_delegate->verb_at(i);
+                if (!verb) break;
+                size_t vl = strlen(verb);
+                if (tl <= vl && tok_prefix_ci(last_tok, tl, verb, vl + 1)) {
+                    size_t prefix_len = last_tok - buf;
+                    char *cb = COMP_BUF();
+                    if (cb && prefix_len + vl < COMP_BUF_SZ) {
+                        memcpy(cb, buf, prefix_len);
+                        strcpy(cb + prefix_len, verb);
+                        add_completion(cb, userdata);
+                    }
+                }
+            }
+        } else if (def->actions) {
+            for (uint32_t i = 0; i < def->action_count; i++) {
+                if (tl <= strlen(def->actions[i].verb) &&
+                    memcmp(last_tok, def->actions[i].verb, tl) == 0) {
+                    // Build full line up to last_tok, then append completed verb
+                    size_t prefix_len = last_tok - buf;
+                    char *cb = COMP_BUF();
+                    if (cb && prefix_len + strlen(def->actions[i].verb) < COMP_BUF_SZ) {
+                        memcpy(cb, buf, prefix_len);
+                        strcpy(cb + prefix_len, def->actions[i].verb);
+                        add_completion(cb, userdata);
+                    }
                 }
             }
         }

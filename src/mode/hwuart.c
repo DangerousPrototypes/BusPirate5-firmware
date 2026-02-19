@@ -43,6 +43,7 @@
 #include "commands/uart/bridge.h"
 #include "commands/uart/monitor.h"
 #include "commands/uart/glitch.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
@@ -88,80 +89,105 @@ const uint32_t hwuart_commands_count = count_of(hwuart_commands);
 
 static const char pin_labels[][5] = { "TX->", "RX<-", "RTS", "CTS" };
 
-static const struct prompt_item uart_speed_menu[] = { { T_UART_SPEED_MENU_1 } };
+// Keep prompt_item arrays used by hwuart_settings() for display
 static const struct prompt_item uart_parity_menu[] = { { T_UART_PARITY_MENU_1 },
                                                        { T_UART_PARITY_MENU_2 },
                                                        { T_UART_PARITY_MENU_3 } };
-static const struct prompt_item uart_data_bits_menu[] = { { T_UART_DATA_BITS_MENU_1 } };
-static const struct prompt_item uart_stop_bits_menu[] = { { T_UART_STOP_BITS_MENU_1 }, { T_UART_STOP_BITS_MENU_2 } };
-static const struct prompt_item uart_blocking_menu[] = { { T_UART_BLOCKING_MENU_1 }, { T_UART_BLOCKING_MENU_2 } };
-static const struct prompt_item uart_flow_control_menu[] = { { T_UART_FLOW_CONTROL_MENU_1 },
-                                                             { T_UART_FLOW_CONTROL_MENU_2 } };
-static const struct prompt_item uart_invert_menu[] = { { T_UART_INVERT_MENU_1 }, { T_UART_INVERT_MENU_2 } };
 
-static const struct ui_prompt uart_menu[] = { [0] = { .description = T_UART_SPEED_MENU,
-                                                      .menu_items = uart_speed_menu,
-                                                      .menu_items_count = count_of(uart_speed_menu),
-                                                      .prompt_text = T_UART_SPEED_PROMPT,
-                                                      .minval = 1,
-                                                      .maxval = 7372800,
-                                                      .defval = 115200,
-                                                      .menu_action = 0,
-                                                      .config = &prompt_int_cfg },
-                                              [1] = { .description = T_UART_PARITY_MENU,
-                                                      .menu_items = uart_parity_menu,
-                                                      .menu_items_count = count_of(uart_parity_menu),
-                                                      .prompt_text = T_UART_PARITY_PROMPT,
-                                                      .minval = 0,
-                                                      .maxval = 0,
-                                                      .defval = 1,
-                                                      .menu_action = 0,
-                                                      .config = &prompt_list_cfg },
-                                              [2] = { .description = T_UART_DATA_BITS_MENU,
-                                                      .menu_items = uart_data_bits_menu,
-                                                      .menu_items_count = count_of(uart_data_bits_menu),
-                                                      .prompt_text = T_UART_DATA_BITS_PROMPT,
-                                                      .minval = 5,
-                                                      .maxval = 8,
-                                                      .defval = 8,
-                                                      .menu_action = 0,
-                                                      .config = &prompt_int_cfg },
-                                              [3] = { .description = T_UART_STOP_BITS_MENU,
-                                                      .menu_items = uart_stop_bits_menu,
-                                                      .menu_items_count = count_of(uart_stop_bits_menu),
-                                                      .prompt_text = T_UART_STOP_BITS_PROMPT,
-                                                      .minval = 0,
-                                                      .maxval = 0,
-                                                      .defval = 1,
-                                                      .menu_action = 0,
-                                                      .config = &prompt_list_cfg },
-                                              [4] = { .description = T_UART_BLOCKING_MENU,
-                                                      .menu_items = uart_blocking_menu,
-                                                      .menu_items_count = count_of(uart_blocking_menu),
-                                                      .prompt_text = T_UART_BLOCKING_PROMPT,
-                                                      .minval = 0,
-                                                      .maxval = 0,
-                                                      .defval = 1,
-                                                      .menu_action = 0,
-                                                      .config = &prompt_list_cfg },
-                                              [5] = { .description = T_UART_FLOW_CONTROL_MENU,
-                                                      .menu_items = uart_flow_control_menu,
-                                                      .menu_items_count = count_of(uart_flow_control_menu),
-                                                      .prompt_text = T_UART_FLOW_CONTROL_PROMPT,
-                                                      .minval = 0,
-                                                      .maxval = 0,
-                                                      .defval = 1,
-                                                      .menu_action = 0,
-                                                      .config = &prompt_list_cfg },
-                                              [6] = { .description = T_UART_INVERT_MENU,
-                                                      .menu_items = uart_invert_menu,
-                                                      .menu_items_count = count_of(uart_invert_menu),
-                                                      .prompt_text = T_UART_INVERT_PROMPT,
-                                                      .minval = 0,
-                                                      .maxval = 0,
-                                                      .defval = 1,
-                                                      .menu_action = 0,
-                                                      .config = &prompt_list_cfg } };
+/*
+ * =============================================================================
+ * Constraint-based mode setup
+ * =============================================================================
+ * Command-line usage:
+ *   m uart                              → full interactive wizard
+ *   m uart 115200                       → 115200 8N1, all defaults
+ *   m uart 115200 --parity even         → override one thing
+ *   m uart 9600 -d 7 -p odd -s 2       → override multiple
+ *
+ * Position 2 = baud rate (pos 0 = "m", pos 1 = "uart").
+ * Everything else is flags with sensible defaults.
+ */
+
+// Baud rate — the one positional
+static const bp_val_constraint_t uart_baud_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 7372800, .def = 115200 },
+    .prompt = T_UART_SPEED_MENU,
+};
+
+static const bp_command_positional_t uart_setup_positionals[] = {
+    { "baud", "bps", 0, false, &uart_baud_range },  // cmdline pos 2
+};
+
+// Data bits — flag -d / --databits
+static const bp_val_constraint_t uart_databits_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 5, .max = 8, .def = 8 },
+    .prompt = T_UART_DATA_BITS_MENU,
+};
+
+// Parity — flag -p / --parity (none/even/odd)
+static const bp_val_choice_t parity_choices[] = {
+    { "none", "n", T_UART_PARITY_MENU_1, 0 },  // UART_PARITY_NONE
+    { "even", "e", T_UART_PARITY_MENU_2, 1 },  // UART_PARITY_EVEN
+    { "odd",  "o", T_UART_PARITY_MENU_3, 2 },  // UART_PARITY_ODD
+};
+static const bp_val_constraint_t uart_parity_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = parity_choices, .count = 3, .def = 0 }, // default = none
+    .prompt = T_UART_PARITY_MENU,
+};
+
+// Stop bits — flag -s / --stopbits
+static const bp_val_choice_t stopbits_choices[] = {
+    { "1", NULL, T_UART_STOP_BITS_MENU_1, 1 },
+    { "2", NULL, T_UART_STOP_BITS_MENU_2, 2 },
+};
+static const bp_val_constraint_t uart_stopbits_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = stopbits_choices, .count = 2, .def = 1 },
+    .prompt = T_UART_STOP_BITS_MENU,
+};
+
+// Flow control — flag -f / --flow
+static const bp_val_choice_t flow_choices[] = {
+    { "off",  NULL, T_UART_FLOW_CONTROL_MENU_1, 0 },
+    { "rts",  NULL, T_UART_FLOW_CONTROL_MENU_2, 1 },
+};
+static const bp_val_constraint_t uart_flow_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = flow_choices, .count = 2, .def = 0 },
+    .prompt = T_UART_FLOW_CONTROL_MENU,
+};
+
+// Signal inversion — flag -i / --invert
+static const bp_val_choice_t invert_choices[] = {
+    { "normal", NULL, T_UART_INVERT_MENU_1, 0 },
+    { "invert", NULL, T_UART_INVERT_MENU_2, 1 },
+};
+static const bp_val_constraint_t uart_invert_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = invert_choices, .count = 2, .def = 0 },
+    .prompt = T_UART_INVERT_MENU,
+};
+
+static const bp_command_opt_t uart_setup_opts[] = {
+    { "databits", 'd', BP_ARG_REQUIRED, "5-8",          0, &uart_databits_range },
+    { "parity",   'p', BP_ARG_REQUIRED, "none/even/odd", 0, &uart_parity_choice },
+    { "stopbits", 's', BP_ARG_REQUIRED, "1/2",           0, &uart_stopbits_choice },
+    { "flow",     'f', BP_ARG_REQUIRED, "off/rts",        0, &uart_flow_choice },
+    { "invert",   'i', BP_ARG_REQUIRED, "normal/invert",  0, &uart_invert_choice },
+    { 0 },
+};
+
+static const bp_command_def_t uart_setup_def = {
+    .name = "uart",
+    .description = 0,
+    .positionals = uart_setup_positionals,
+    .positional_count = count_of(uart_setup_positionals),
+    .positional_start = 2,  // "m uart <baud>" — positionals begin at cmdline position 2
+    .opts = uart_setup_opts,
+};
 
 uint32_t hwuart_setup(void) {
     uint32_t temp;
@@ -174,8 +200,6 @@ uint32_t hwuart_setup(void) {
     periodic_attributes.value = 0;         // integer value parsed from command line
     periodic_attributes.dot = 0;           // value after .
     periodic_attributes.colon = 0;         // value after :
-
-    prompt_result result;
 
     const char config_file[] = "bpuart.bp";
     const mode_config_t config_t[] = {
@@ -192,6 +216,7 @@ uint32_t hwuart_setup(void) {
     if (storage_load_mode(config_file, config_t, count_of(config_t))) {
         printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
         hwuart_settings();
+        prompt_result result;
         bool user_value;
         if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
             return 0;
@@ -201,46 +226,56 @@ uint32_t hwuart_setup(void) {
         }
     }
 
-    ui_prompt_uint32(&result, &uart_menu[0], &mode_config.baudrate);
-    if (result.exit) {
-        return 0;
-    }
+    // Try baud rate from command line (def positional 1; cmdline pos 2 via positional_start)
+    bp_cmd_status_t st = bp_cmd_positional(&uart_setup_def, 1, &mode_config.baudrate);
+    if (st == BP_CMD_INVALID) return 0;
 
-    ui_prompt_uint32(&result, &uart_menu[2], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.data_bits = (uint8_t)temp;
+    bool interactive = (st == BP_CMD_MISSING);
 
-    ui_prompt_uint32(&result, &uart_menu[1], &temp); // could also just subtract one...
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.parity = (uint8_t)temp;
-    // uart_parity_t { UART_PARITY_NONE, UART_PARITY_EVEN, UART_PARITY_ODD }
-    // subtract 1 for actual parity setting
-    mode_config.parity--;
+    if (interactive) {
+        // ── Full interactive wizard ──
+        // Prompt for each setting in sequence
 
-    ui_prompt_uint32(&result, &uart_menu[3], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.stop_bits = (uint8_t)temp;
-    // block=(ui_prompt_int(UARTBLOCKINGMENU, 1, 2, 2)-1);
+        if (bp_cmd_prompt(&uart_baud_range, &mode_config.baudrate) != BP_CMD_OK) return 0;
 
-    ui_prompt_uint32(&result, &uart_menu[5], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.flow_control = temp;
-    mode_config.flow_control--;
+        if (bp_cmd_prompt(&uart_databits_range, &temp) != BP_CMD_OK) return 0;
+        mode_config.data_bits = (uint8_t)temp;
 
-    ui_prompt_uint32(&result, &uart_menu[6], &temp);
-    if (result.exit) {
-        return 0;
+        if (bp_cmd_prompt(&uart_parity_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.parity = (uint8_t)temp;
+
+        if (bp_cmd_prompt(&uart_stopbits_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.stop_bits = (uint8_t)temp;
+
+        if (bp_cmd_prompt(&uart_flow_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.flow_control = temp;
+
+        if (bp_cmd_prompt(&uart_invert_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.invert = temp;
+    } else {
+        // ── Command-line mode ──
+        // Baud already parsed. Flags override defaults, no prompts.
+
+        st = bp_cmd_flag(&uart_setup_def, 'd', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.data_bits = (uint8_t)temp; // default written by bp_cmd_flag if MISSING
+
+        st = bp_cmd_flag(&uart_setup_def, 'p', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.parity = (uint8_t)temp;
+
+        st = bp_cmd_flag(&uart_setup_def, 's', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.stop_bits = (uint8_t)temp;
+
+        st = bp_cmd_flag(&uart_setup_def, 'f', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.flow_control = temp;
+
+        st = bp_cmd_flag(&uart_setup_def, 'i', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.invert = temp;
     }
-    mode_config.invert = temp;
-    mode_config.invert--;
 
     storage_save_mode(config_file, config_t, count_of(config_t));
 

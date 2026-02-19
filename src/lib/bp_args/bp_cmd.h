@@ -69,6 +69,74 @@ typedef enum {
 
 /*
  * =============================================================================
+ * Value constraint (optional validation / auto-prompt)
+ * =============================================================================
+ */
+
+/**
+ * @brief Constraint value type tag.
+ */
+typedef enum {
+    BP_VAL_NONE = 0,    ///< No constraint (skip validation)
+    BP_VAL_UINT32,      ///< Unsigned 32-bit integer range
+    BP_VAL_INT32,       ///< Signed 32-bit integer range
+    BP_VAL_FLOAT,       ///< Floating-point range
+    BP_VAL_CHOICE,      ///< Named choice from a fixed set (e.g. parity: none/even/odd)
+} bp_val_type_t;
+
+/**
+ * @brief Single named choice entry for BP_VAL_CHOICE constraints.
+ * @details Maps a name string (and optional short alias) to an integer value.
+ *          Used for both command-line parsing and interactive numbered menus.
+ *
+ * @example
+ *     static const bp_val_choice_t parity_choices[] = {
+ *         { "none", "n", T_UART_PARITY_MENU_1, 0 },
+ *         { "even", "e", T_UART_PARITY_MENU_2, 1 },
+ *         { "odd",  "o", T_UART_PARITY_MENU_3, 2 },
+ *     };
+ */
+typedef struct {
+    const char *name;       ///< Full name for cmdline match: "even", "odd", "none"
+    const char *alias;      ///< Short alias: "e", "o", "n" (NULL = none)
+    uint32_t    label;      ///< T_ translation key for interactive menu display
+    uint32_t    value;      ///< The actual stored value (written to *out)
+} bp_val_choice_t;
+
+/**
+ * @brief Optional value constraint.
+ * @details Attach via pointer to a positional or option descriptor.
+ *          NULL pointer = no validation (fully backward compatible).
+ *          When present, the parser/prompt helpers can:
+ *          1. Range-check a parsed value and print an error.
+ *          2. Prompt the user interactively if the value was not supplied.
+ *
+ * @note   Allocate as `static const` next to your positional/opt tables.
+ *
+ * @example
+ *     static const bp_val_constraint_t voltage_range = {
+ *         .type = BP_VAL_FLOAT,
+ *         .f = { .min = 0.8f, .max = 5.0f, .def = 3.3f },
+ *         .prompt = 0,   // translation key, 0 = no interactive prompt text
+ *     };
+ */
+typedef struct {
+    bp_val_type_t type;       ///< Which union member is active
+    union {
+        struct { uint32_t min, max, def; } u;   ///< BP_VAL_UINT32
+        struct { int32_t  min, max, def; } i;   ///< BP_VAL_INT32
+        struct { float    min, max, def; } f;   ///< BP_VAL_FLOAT
+        struct {                                 ///< BP_VAL_CHOICE
+            const bp_val_choice_t *choices;      ///< Array of named choices
+            uint32_t count;                      ///< Number of choices
+            uint32_t def;                        ///< Default value (matches a choice .value)
+        } choice;
+    };
+    uint32_t prompt;          ///< Translation key for interactive prompt text (0 = none)
+} bp_val_constraint_t;
+
+/*
+ * =============================================================================
  * Unified option descriptor
  * =============================================================================
  */
@@ -84,6 +152,7 @@ typedef struct {
     bp_arg_type_t arg_type;   ///< BP_ARG_NONE / REQUIRED / OPTIONAL
     const char *arg_hint;     ///< Value placeholder for help/hints (bare word, auto-wrapped with <>/[]): "file", NULL if flag-only
     uint32_t    description;  ///< Translation key for help text
+    const bp_val_constraint_t *constraint; ///< Optional value constraint, NULL = no validation
 } bp_command_opt_t;
 
 /*
@@ -116,9 +185,10 @@ typedef struct {
  */
 typedef struct {
     const char *name;         ///< Argument name for display: "bank", "voltage"
-    const char *hint;         ///< Value placeholder for hints (bare word, auto-wrapped with <>/[]): "volts", "addr"
+    const char *hint;         ///< Value placeholder for hints (bare word, auto-wrapped with <>/[]): "volts", "addr". NULL = use name
     uint32_t    description;  ///< Translation key for help text
     bool        required;     ///< true if argument is required
+    const bp_val_constraint_t *constraint; ///< Optional value constraint, NULL = no validation
 } bp_command_positional_t;
 
 /*
@@ -143,6 +213,9 @@ typedef struct bp_command_def {
 
     const bp_command_positional_t *positionals; ///< Positional args, {0}-terminated, NULL if none
     uint32_t positional_count;              ///< Number of positional args
+    uint32_t positional_start;              ///< Command-line position where positionals begin
+                                            ///< (0 or 1 = right after command name, 2 = skip one extra token, etc.)
+                                            ///< For mode setups: 2 ("m uart <here>"). Default: 0 → treated as 1.
 
     const char *const *usage;               ///< Usage example strings
     uint32_t usage_count;                   ///< Number of usage lines
@@ -275,6 +348,81 @@ bool bp_cmd_get_positional_float(const bp_command_def_t *def, uint32_t pos,
  */
 bool bp_cmd_get_remainder(const bp_command_def_t *def,
                           const char **out, size_t *len);
+
+/*
+ * =============================================================================
+ * Constraint-aware argument resolution
+ * =============================================================================
+ */
+
+/**
+ * @brief Result status from constraint-aware argument fetch.
+ */
+typedef enum {
+    BP_CMD_OK = 0,       ///< Value obtained and valid
+    BP_CMD_MISSING,      ///< Not supplied on command line
+    BP_CMD_INVALID,      ///< Supplied but failed validation (error already printed)
+    BP_CMD_EXIT,         ///< User exited interactive prompt
+} bp_cmd_status_t;
+
+/**
+ * @brief Parse positional argument from command line and validate.
+ * @details Uses the constraint attached to the positional descriptor to:
+ *          1. Select the correct parser (float/uint32/int32) from the type tag
+ *          2. Range-check the parsed value, print error if out of range
+ *
+ *          Does NOT prompt. Returns immediately.
+ *
+ * @param def   Command definition
+ * @param pos   Positional index (1-based into the def's positionals array)
+ *              The actual command-line position is computed using def->positional_start.
+ * @param out   Pointer to result variable (type must match constraint)
+ * @return BP_CMD_OK if parsed and valid, BP_CMD_MISSING if not on cmdline,
+ *         BP_CMD_INVALID if present but out of range (error already printed)
+ *
+ * @example
+ *     float volts;
+ *     bp_cmd_status_t s = bp_cmd_positional(&def, 1, &volts);
+ *     if (s == BP_CMD_INVALID) { res->error = true; return; }
+ *     if (s == BP_CMD_MISSING) {
+ *         s = bp_cmd_prompt(&voltage_range, &volts);
+ *         ...
+ *     }
+ */
+bp_cmd_status_t bp_cmd_positional(const bp_command_def_t *def,
+                                  uint32_t pos, void *out);
+
+/**
+ * @brief Parse flag/option value from command line and validate.
+ * @details Uses the constraint attached to the option descriptor to:
+ *          1. Select the correct parser from the type tag
+ *          2. Range-check the parsed value, print error if out of range
+ *
+ *          If the flag is not present, writes the constraint's default
+ *          value to `out` and returns BP_CMD_MISSING.
+ *
+ * @param def   Command definition
+ * @param flag  Short flag character (e.g. 'u')
+ * @param out   Pointer to result variable (type must match constraint)
+ * @return BP_CMD_OK if parsed and valid, BP_CMD_MISSING if flag not present
+ *         (default written to out), BP_CMD_INVALID if present but out of range
+ */
+bp_cmd_status_t bp_cmd_flag(const bp_command_def_t *def,
+                            char flag, void *out);
+
+/**
+ * @brief Interactive prompt loop driven by a constraint.
+ * @details Prints the constraint's prompt text, shows default, loops
+ *          until the user provides a valid value or exits.
+ *
+ *          Works for any constraint — positional, flag, or standalone.
+ *          The developer already has the constraint; no need to look it up.
+ *
+ * @param con   Value constraint (must not be NULL)
+ * @param out   Pointer to result variable (type must match constraint)
+ * @return BP_CMD_OK if valid value obtained, BP_CMD_EXIT if user cancelled
+ */
+bp_cmd_status_t bp_cmd_prompt(const bp_val_constraint_t *con, void *out);
 
 /*
  * =============================================================================

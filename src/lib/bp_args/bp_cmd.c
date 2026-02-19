@@ -9,8 +9,10 @@
 #include "bp_cmd.h"
 #include "lib/bp_number/bp_number.h"
 #include "lib/bp_linenoise/ln_cmdreader.h"
-#include "ui/ui_term.h"
 #include "pirate.h"
+#include "ui/ui_term.h"
+#include "ui/ui_prompt.h"
+#include "ui/ui_parse.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -521,6 +523,404 @@ bool bp_cmd_get_remainder(const bp_command_def_t *def,
     *out = p;
     *len = end - p;
     return true;
+}
+
+/*
+ * =============================================================================
+ * Constraint validation (internal)
+ * =============================================================================
+ */
+
+/**
+ * @brief Validate a value against a constraint.
+ * @return true if value is within range or no constraint.
+ */
+static bool val_check(const bp_val_constraint_t *c, const void *val) {
+    if (!c || c->type == BP_VAL_NONE) return true;
+    switch (c->type) {
+        case BP_VAL_FLOAT: {
+            float v = *(const float *)val;
+            return (v >= c->f.min && v <= c->f.max);
+        }
+        case BP_VAL_UINT32: {
+            uint32_t v = *(const uint32_t *)val;
+            return (v >= c->u.min && v <= c->u.max);
+        }
+        case BP_VAL_INT32: {
+            int32_t v = *(const int32_t *)val;
+            return (v >= c->i.min && v <= c->i.max);
+        }
+        case BP_VAL_CHOICE: {
+            uint32_t v = *(const uint32_t *)val;
+            for (uint32_t i = 0; i < c->choice.count; i++) {
+                if (c->choice.choices[i].value == v) return true;
+            }
+            return false;
+        }
+        default: return true;
+    }
+}
+
+/**
+ * @brief Print a consistent range-error message from constraint data.
+ * @param c      Constraint with min/max
+ * @param label  Human name for the value (e.g. "Current"), NULL = "Value"
+ * @param units  Unit suffix (e.g. "mA"), NULL = none
+ * @param out    Pointer to the rejected value (type matches c->type), NULL = don't show
+ */
+static void val_print_range_error(const bp_val_constraint_t *c,
+                                  const char *label, const char *units,
+                                  const void *out) {
+    if (!c) return;
+    if (!label) label = "Value";
+    if (!units) units = "";
+    switch (c->type) {
+        case BP_VAL_FLOAT:
+            printf("%s%s out of range", ui_term_color_warning(), label);
+            if (out) printf(": %s%1.2f%s", ui_term_color_reset(), *(const float *)out, ui_term_color_warning());
+            printf(", expected %1.2f%s to %1.2f%s%s\r\n",
+                   c->f.min, units, c->f.max, units, ui_term_color_reset());
+            break;
+        case BP_VAL_UINT32:
+            printf("%s%s out of range", ui_term_color_warning(), label);
+            if (out) printf(": %s%lu%s", ui_term_color_reset(), (unsigned long)*(const uint32_t *)out, ui_term_color_warning());
+            printf(", expected %lu%s to %lu%s%s\r\n",
+                   (unsigned long)c->u.min, units, (unsigned long)c->u.max, units, ui_term_color_reset());
+            break;
+        case BP_VAL_INT32:
+            printf("%s%s out of range", ui_term_color_warning(), label);
+            if (out) printf(": %s%ld%s", ui_term_color_reset(), (long)*(const int32_t *)out, ui_term_color_warning());
+            printf(", expected %ld%s to %ld%s%s\r\n",
+                   (long)c->i.min, units, (long)c->i.max, units, ui_term_color_reset());
+            break;
+        case BP_VAL_CHOICE:
+            printf("%s%s: unknown value%s\r\n", ui_term_color_warning(), label, ui_term_color_reset());
+            printf("  expected: ");
+            for (uint32_t i = 0; i < c->choice.count; i++) {
+                if (i) printf(", ");
+                printf("%s", c->choice.choices[i].name);
+            }
+            printf("\r\n");
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+ * @brief Find the default choice index (0-based) for display purposes.
+ */
+static uint32_t val_choice_default_index(const bp_val_constraint_t *c) {
+    for (uint32_t i = 0; i < c->choice.count; i++) {
+        if (c->choice.choices[i].value == c->choice.def) return i;
+    }
+    return 0;
+}
+
+/**
+ * @brief Self-contained interactive prompt loop driven by a constraint.
+ * @details Prints description + default, loops until valid input or exit.
+ *          Uses ui_parse_get_float/uint32 directly (no ui_prompt_float dependency).
+ *          For BP_VAL_CHOICE: prints numbered menu, user picks by number.
+ */
+static bp_cmd_status_t val_prompt_loop(const bp_val_constraint_t *c, void *out) {
+    prompt_result result;
+
+    while (true) {
+        // For choice type, print the numbered menu first
+        if (c->type == BP_VAL_CHOICE) {
+            uint32_t def_idx = val_choice_default_index(c);
+            printf("\r\n");
+            for (uint32_t i = 0; i < c->choice.count; i++) {
+                const char *display = c->choice.choices[i].label
+                    ? GET_T(c->choice.choices[i].label)
+                    : c->choice.choices[i].name;
+                printf(" %lu. %s%s%s%s\r\n",
+                       (unsigned long)(i + 1),
+                       ui_term_color_info(),
+                       display,
+                       (i == def_idx) ? "*" : "",
+                       ui_term_color_reset());
+            }
+        }
+
+        // Print prompt: "x to exit (default) >"
+        // CHOICE already printed \r\n before menu; others need it here
+        if (c->type != BP_VAL_CHOICE) {
+            printf("\r\n");
+        }
+        printf("%sx to exit ", ui_term_color_prompt());
+        switch (c->type) {
+            case BP_VAL_FLOAT:
+                printf("(%1.2f)", c->f.def);
+                break;
+            case BP_VAL_UINT32:
+                printf("(%lu)", (unsigned long)c->u.def);
+                break;
+            case BP_VAL_INT32:
+                printf("(%ld)", (long)c->i.def);
+                break;
+            case BP_VAL_CHOICE:
+                printf("(%lu)", (unsigned long)(val_choice_default_index(c) + 1));
+                break;
+            default: break;
+        }
+        printf(" >%s \x03", ui_term_color_reset());
+
+        if (!ui_prompt_user_input()) {
+            return BP_CMD_EXIT;
+        }
+
+        // Parse based on constraint type
+        switch (c->type) {
+            case BP_VAL_FLOAT:
+                ui_parse_get_float(&result, (float *)out);
+                break;
+            case BP_VAL_UINT32:
+                ui_parse_get_uint32(&result, (uint32_t *)out);
+                break;
+            case BP_VAL_INT32: {
+                // int32 via uint32 parse then cast
+                uint32_t tmp;
+                ui_parse_get_uint32(&result, &tmp);
+                if (result.success) *(int32_t *)out = (int32_t)tmp;
+                break;
+            }
+            case BP_VAL_CHOICE: {
+                // Interactive: user picks by 1-based number
+                uint32_t pick;
+                ui_parse_get_uint32(&result, &pick);
+                if (result.success && pick >= 1 && pick <= c->choice.count) {
+                    *(uint32_t *)out = c->choice.choices[pick - 1].value;
+                } else if (result.success) {
+                    result.success = false; // out of range
+                }
+                break;
+            }
+            default:
+                return BP_CMD_MISSING;
+        }
+
+        printf("\r\n");
+
+        if (result.exit) {
+            return BP_CMD_EXIT;
+        }
+
+        // Enter with no value = accept default
+        if (result.no_value) {
+            switch (c->type) {
+                case BP_VAL_FLOAT:  *(float *)out    = c->f.def; break;
+                case BP_VAL_UINT32: *(uint32_t *)out = c->u.def; break;
+                case BP_VAL_INT32:  *(int32_t *)out  = c->i.def; break;
+                case BP_VAL_CHOICE: *(uint32_t *)out = c->choice.def; break;
+                default: break;
+            }
+            return BP_CMD_OK;
+        }
+
+        if (result.success && val_check(c, out)) {
+            return BP_CMD_OK;
+        }
+
+        // Invalid — print range and loop
+        val_print_range_error(c, NULL, NULL, out);
+    }
+}
+
+/*
+ * =============================================================================
+ * Constraint-aware argument resolution
+ * =============================================================================
+ */
+
+/**
+ * @brief Match a raw token against a choice table (case-insensitive).
+ * @details Tries name first, then alias. Writes the choice's .value to *out.
+ * @return true if matched
+ */
+static bool val_match_choice(const bp_val_constraint_t *c,
+                             const char *tok, size_t tok_len,
+                             uint32_t *out) {
+    for (uint32_t i = 0; i < c->choice.count; i++) {
+        const bp_val_choice_t *ch = &c->choice.choices[i];
+        // Match full name
+        if (ch->name && strlen(ch->name) == tok_len) {
+            bool match = true;
+            for (size_t j = 0; j < tok_len; j++) {
+                if ((tok[j] | 0x20) != (ch->name[j] | 0x20)) { match = false; break; }
+            }
+            if (match) { *out = ch->value; return true; }
+        }
+        // Match alias
+        if (ch->alias && strlen(ch->alias) == tok_len) {
+            bool match = true;
+            for (size_t j = 0; j < tok_len; j++) {
+                if ((tok[j] | 0x20) != (ch->alias[j] | 0x20)) { match = false; break; }
+            }
+            if (match) { *out = ch->value; return true; }
+        }
+    }
+    return false;
+}
+
+bp_cmd_status_t bp_cmd_positional(const bp_command_def_t *def,
+                                  uint32_t pos, void *out) {
+    // Look up constraint from def's positionals array (1-based index)
+    const bp_val_constraint_t *c = NULL;
+    if (def->positionals && pos > 0 && pos <= def->positional_count) {
+        c = def->positionals[pos - 1].constraint;
+    }
+    if (!c || c->type == BP_VAL_NONE) {
+        return BP_CMD_MISSING; // no constraint = can't know the type
+    }
+
+    // Map def index to command-line position.
+    // positional_start: 0 or 1 = right after command name (default).
+    //                   2 = skip one extra token (e.g. "m uart <here>").
+    uint32_t start = def->positional_start ? def->positional_start : 1;
+    uint32_t cmdline_pos = pos + start - 1;
+
+    // Parse from command line using type-appropriate getter
+    bool found = false;
+    switch (c->type) {
+        case BP_VAL_FLOAT:
+            found = bp_cmd_get_positional_float(def, cmdline_pos, (float *)out);
+            break;
+        case BP_VAL_UINT32:
+            found = bp_cmd_get_positional_uint32(def, cmdline_pos, (uint32_t *)out);
+            break;
+        case BP_VAL_INT32:
+            found = bp_cmd_get_positional_int32(def, cmdline_pos, (int32_t *)out);
+            break;
+        case BP_VAL_CHOICE: {
+            // Try string match first, then numeric
+            const char *tok; size_t tlen;
+            if (cmd_get_positional_token(def, cmdline_pos, &tok, &tlen)) {
+                if (val_match_choice(c, tok, tlen, (uint32_t *)out)) {
+                    found = true;
+                } else {
+                    // Try numeric (1-based pick like interactive menu)
+                    uint32_t pick;
+                    const char *p = tok;
+                    bp_num_format_t fmt;
+                    if (bp_num_u32(&p, &pick, &fmt) && pick >= 1 && pick <= c->choice.count) {
+                        *(uint32_t *)out = c->choice.choices[pick - 1].value;
+                        found = true;
+                    } else {
+                        // Token present but unrecognized — invalid
+                        val_print_range_error(c, def->positionals[pos - 1].name, NULL, NULL);
+                        return BP_CMD_INVALID;
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            return BP_CMD_MISSING;
+    }
+
+    if (!found) {
+        // Not supplied — write default and return MISSING
+        switch (c->type) {
+            case BP_VAL_FLOAT:  *(float *)out    = c->f.def; break;
+            case BP_VAL_UINT32: *(uint32_t *)out = c->u.def; break;
+            case BP_VAL_INT32:  *(int32_t *)out  = c->i.def; break;
+            case BP_VAL_CHOICE: *(uint32_t *)out = c->choice.def; break;
+            default: break;
+        }
+        return BP_CMD_MISSING;
+    }
+
+    // Validate against constraint
+    if (val_check(c, out)) {
+        return BP_CMD_OK;
+    }
+    const bp_command_positional_t *p = &def->positionals[pos - 1];
+    val_print_range_error(c, p->name, NULL, out);
+    return BP_CMD_INVALID;
+}
+
+bp_cmd_status_t bp_cmd_flag(const bp_command_def_t *def,
+                            char flag, void *out) {
+    // Find the option descriptor to get its constraint
+    const bp_val_constraint_t *c = NULL;
+    const bp_command_opt_t *opt = NULL;
+    if (def->opts) {
+        for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
+            if (def->opts[i].short_name == flag) {
+                opt = &def->opts[i];
+                c = opt->constraint;
+                break;
+            }
+        }
+    }
+    if (!c || c->type == BP_VAL_NONE) {
+        return BP_CMD_MISSING;
+    }
+
+    // Parse flag value from command line
+    bool found = false;
+    switch (c->type) {
+        case BP_VAL_FLOAT:
+            found = bp_cmd_get_float(def, flag, (float *)out);
+            break;
+        case BP_VAL_UINT32:
+            found = bp_cmd_get_uint32(def, flag, (uint32_t *)out);
+            break;
+        case BP_VAL_INT32:
+            found = bp_cmd_get_int32(def, flag, (int32_t *)out);
+            break;
+        case BP_VAL_CHOICE: {
+            // Get raw string token from flag value
+            const char *val;
+            size_t val_len;
+            if (cmd_scan_flag(def, flag, &val, &val_len) && val && val_len > 0) {
+                if (val_match_choice(c, val, val_len, (uint32_t *)out)) {
+                    found = true;
+                } else {
+                    // Token present but unrecognized
+                    val_print_range_error(c, opt ? opt->long_name : NULL, NULL, NULL);
+                    return BP_CMD_INVALID;
+                }
+            }
+            break;
+        }
+        default:
+            return BP_CMD_MISSING;
+    }
+
+    if (!found) {
+        // Not supplied — write default and return MISSING
+        switch (c->type) {
+            case BP_VAL_FLOAT:  *(float *)out    = c->f.def; break;
+            case BP_VAL_UINT32: *(uint32_t *)out = c->u.def; break;
+            case BP_VAL_INT32:  *(int32_t *)out  = c->i.def; break;
+            case BP_VAL_CHOICE: *(uint32_t *)out = c->choice.def; break;
+            default: break;
+        }
+        return BP_CMD_MISSING;
+    }
+
+    // Validate
+    if (val_check(c, out)) {
+        return BP_CMD_OK;
+    }
+    val_print_range_error(c, opt ? opt->long_name : NULL, NULL, out);
+    return BP_CMD_INVALID;
+}
+
+bp_cmd_status_t bp_cmd_prompt(const bp_val_constraint_t *con, void *out) {
+    if (!con || con->type == BP_VAL_NONE) {
+        return BP_CMD_EXIT;
+    }
+
+    // Print description from constraint prompt key
+    if (con->prompt) {
+        printf("%s%s%s", ui_term_color_info(), GET_T(con->prompt), ui_term_color_reset());
+    }
+
+    return val_prompt_loop(con, out);
 }
 
 /*

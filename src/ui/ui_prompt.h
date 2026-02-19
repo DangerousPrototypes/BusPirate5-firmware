@@ -100,6 +100,7 @@ bool ui_prompt_any_key_continue(struct prompt_result* result,
                                 uint8_t pin,
                                 bool refresh);
 void ui_prompt_invalid_option(void);
+bool ui_prompt_user_input(void);
 bool ui_prompt_bool(prompt_result* result, bool defval_show, bool defval, bool allow_exit, bool* user_value);
 void ui_prompt_vt100_mode_start(const char *prompt);
 bool ui_prompt_vt100_mode_feed(uint32_t *value);

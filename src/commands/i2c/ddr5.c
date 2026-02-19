@@ -881,7 +881,7 @@ bool ddr5_lock(uint8_t block, bool lock, bool update) {
 }
 
 static const char* const usage[] = {
-    "ddr5 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-b <block number>|<bytes>] [-s <start address>] [-h(elp)]",
+    "ddr5 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-B <block>] [-b <bytes>] [-s <start>] [-h(elp)]",
     "Probe DDR5 SPD:%s ddr5 probe",
     "Show DDR5 SPD NVM contents:%s ddr5 dump",
     "Show 32 bytes starting at address 0x50:%s ddr5 dump -s 0x50 -b 32",
@@ -889,8 +889,8 @@ static const char* const usage[] = {
     "Read SPD NVM to file, verify:%s ddr5 read -f example.bin",
     "Verify against file:%s ddr5 verify -f example.bin",
     "Show NVM block lock status:%s ddr5 lock -or- ddr5 unlock",
-    "Lock a NVM block 0-15:%s ddr5 lock -b 0",
-    "Unlock a NVM block 0-15:%s ddr5 unlock -b 0",
+    "Lock a NVM block 0-15:%s ddr5 lock -B 0",
+    "Unlock a NVM block 0-15:%s ddr5 unlock -B 0",
     "Check/generate CRC for JEDEC blocks 0-7:%s ddr5 crc -f example.bin",
     "Patch/update CRC in file:%s ddr5 patch -f example.bin",
     "DDR5 write file **MUST** be exactly 1024 bytes long"
@@ -920,9 +920,16 @@ static const bp_command_action_t ddr5_action_defs[] = {
     { DDR5_PATCH,  "patch",  T_HELP_DDR5_PATCH },
 };
 
+// Constraint for -b block flag: DDR5 has blocks 0-15
+static const bp_val_constraint_t ddr5_block_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 15, .def = 0 },
+    .prompt = 0,
+};
+
 static const bp_command_opt_t ddr5_opts[] = {
     { "file",  'f', BP_ARG_REQUIRED, "file",  T_HELP_DDR5_FILE_FLAG },
-    { "block", 'b', BP_ARG_REQUIRED, "block", T_HELP_DDR5_BLOCK_FLAG },
+    { "block", 'B', BP_ARG_REQUIRED, "block", T_HELP_DDR5_BLOCK_FLAG, &ddr5_block_range },
     { "start", 's', BP_ARG_REQUIRED, "addr",  UI_HEX_HELP_START },
     { "bytes", 'b', BP_ARG_REQUIRED, "count", UI_HEX_HELP_BYTES },
     { "quiet", 'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
@@ -973,14 +980,11 @@ void ddr5_handler(struct command_result* res) {
     uint32_t block_flag;
     bool lock_update=false;
     if(action == DDR5_LOCK || action == DDR5_UNLOCK) {
-        if(!bp_cmd_get_uint32(&ddr5_def, 'b', &block_flag)){ // block to lock/unlock
-            lock_update = false; //we will not update the lock bits, just read them
-        }else if(block_flag > 15) {
-            printf("Block number must be between 0 and 15\r\n");
-            return;
-        }else{
-            lock_update = true; //we will update the lock bits
+        bp_cmd_status_t bs = bp_cmd_flag(&ddr5_def, 'B', &block_flag);
+        if(bs == BP_CMD_INVALID) {
+            return; // range error already printed by constraint
         }
+        lock_update = (bs == BP_CMD_OK); // only update if user explicitly specified a block
     }
 
     fala_start_hook();  

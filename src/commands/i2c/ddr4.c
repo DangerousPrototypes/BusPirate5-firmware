@@ -854,7 +854,7 @@ bool ddr4_probe(uint8_t *buffer) {
 }
 
 static const char* const usage[] = {
-    "ddr4 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-b <block number>|<bytes>] [-s <start address>] [-h(elp)]",
+    "ddr4 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-B <block>] [-b <bytes>] [-s <start>] [-h(elp)]",
     "Probe DDR4 SPD:%s ddr4 probe",
     "Show DDR4 SPD contents:%s ddr4 dump",
     "Show 32 bytes starting at address 0x50:%s ddr4 dump -s 0x50 -b 32",
@@ -862,7 +862,7 @@ static const char* const usage[] = {
     "Read SPD to file, verify:%s ddr4 read -f example.bin",
     "Verify against file:%s ddr4 verify -f example.bin",
     "Show block lock status:%s ddr4 lock",
-    "Lock a block 0-3:%s ddr4 lock -b 0",
+    "Lock a block 0-3:%s ddr4 lock -B 0",
     "Unlock all blocks 0-3:%s ddr4 unlock",
     "Check/generate CRC for JEDEC bytes 0-125:%s ddr4 crc -f example.bin",
     "Patch/update CRC in file:%s ddr4 patch -f example.bin",
@@ -893,9 +893,16 @@ static const bp_command_action_t ddr4_action_defs[] = {
     { DDR4_PATCH,  "patch",  T_HELP_DDR4_PATCH },
 };
 
+// Constraint for -b block flag: DDR4 has blocks 0-3
+static const bp_val_constraint_t ddr4_block_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 3, .def = 0 },
+    .prompt = 0,
+};
+
 static const bp_command_opt_t ddr4_opts[] = {
     { "file",  'f', BP_ARG_REQUIRED, "file",  T_HELP_DDR4_FILE_FLAG },
-    { "block", 'b', BP_ARG_REQUIRED, "block", T_HELP_DDR4_BLOCK_FLAG },
+    { "block", 'B', BP_ARG_REQUIRED, "block", T_HELP_DDR4_BLOCK_FLAG, &ddr4_block_range },
     { "start", 's', BP_ARG_REQUIRED, "addr",  UI_HEX_HELP_START },
     { "bytes", 'b', BP_ARG_REQUIRED, "count", UI_HEX_HELP_BYTES },
     { "quiet", 'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
@@ -946,14 +953,11 @@ void ddr4_handler(struct command_result* res) {
     uint32_t block_flag;
     bool lock_update=false;
     if(action == DDR4_LOCK || action == DDR4_UNLOCK) {
-        if(!bp_cmd_get_uint32(&ddr4_def, 'b', &block_flag)){ // block to lock/unlock
-            lock_update = false; //we will not update the lock bits, just read them
-        }else if(block_flag > 3) {
-            printf("Block number must be between 0 and 3\r\n");
-            return;
-        }else{
-            lock_update = true; //we will update the lock bits
+        bp_cmd_status_t bs = bp_cmd_flag(&ddr4_def, 'B', &block_flag);
+        if(bs == BP_CMD_INVALID) {
+            return; // range error already printed by constraint
         }
+        lock_update = (bs == BP_CMD_OK); // only update if user explicitly specified a block
     }
 
     fala_start_hook();  

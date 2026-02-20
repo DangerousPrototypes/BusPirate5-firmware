@@ -65,12 +65,6 @@ static const char pin_labels[][5] = { "CLK", "MOSI", "MISO", "CS" };
 
 static struct _spi_mode_config mode_config;
 
-// Keep prompt_item arrays used by spi_settings() for display
-static const struct prompt_item spi_polarity_menu[] = { { T_HWSPI_CLOCK_POLARITY_MENU_1 },
-                                                        { T_HWSPI_CLOCK_POLARITY_MENU_2 } };
-static const struct prompt_item spi_phase_menu[] = { { T_HWSPI_CLOCK_PHASE_MENU_1 }, { T_HWSPI_CLOCK_PHASE_MENU_2 } };
-static const struct prompt_item spi_idle_menu[] = { { T_HWSPI_CS_IDLE_MENU_1 }, { T_HWSPI_CS_IDLE_MENU_2 } };
-
 // Speed — flag -s / --speed (kHz; stored as Hz)
 static const bp_val_constraint_t spi_speed_range = {
     .type = BP_VAL_UINT32,
@@ -322,9 +316,9 @@ void spi_pins(void)
 void spi_settings(void) {
     ui_prompt_mode_settings_int(GET_T(T_HWSPI_SPEED_MENU), mode_config.baudrate / 1000, GET_T(T_KHZ));
     ui_prompt_mode_settings_int(GET_T(T_HWSPI_BITS_MENU), mode_config.data_bits, 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_POLARITY_MENU),GET_T(spi_polarity_menu[mode_config.clock_polarity].description), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_PHASE_MENU), GET_T(spi_phase_menu[mode_config.clock_phase].description), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(spi_idle_menu[mode_config.cs_idle].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_POLARITY_MENU), GET_T(polarity_choices[mode_config.clock_polarity].label), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_PHASE_MENU), GET_T(phase_choices[mode_config.clock_phase].label), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(csidle_choices[mode_config.cs_idle].label), 0x00);
 }
 
 void spi_printSPIflags(void) {

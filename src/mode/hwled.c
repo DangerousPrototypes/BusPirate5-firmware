@@ -205,11 +205,6 @@ static void onboard_write(uint32_t pixel_data) {
 }
 
 
-// Keep prompt_item array used by hwled_settings() for display
-static const struct prompt_item leds_type_menu[] = { { T_HWLED_DEVICE_MENU_1 },
-                                                     { T_HWLED_DEVICE_MENU_2 },
-                                                     { T_HWLED_DEVICE_MENU_3 } };
-
 // Device type — flag -d / --device
 static const bp_val_choice_t led_device_choices[] = {
     { "ws2812",   NULL, T_HWLED_DEVICE_MENU_1, 0 },
@@ -340,7 +335,7 @@ void hwled_cleanup(void) {
 }
 
 void hwled_settings(void) {
-    ui_prompt_mode_settings_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(leds_type_menu[hwled_mode_config.device].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(led_device_choices[hwled_mode_config.device].label), 0x00);
     //ui_prompt_mode_settings_int(GET_T(T_HWLED_NUM_LEDS_MENU), hwled_mode_config.num_leds, 0x00);
 }
 

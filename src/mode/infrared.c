@@ -206,15 +206,6 @@ static const char pin_labels[][5]={
 
 static const uint8_t ir_rx_pins[] = {BIO3, BIO5, BIO7};
 
-// Keep prompt_item arrays used by infrared_settings() for display
-static const struct prompt_item infrared_rx_sensor_menu[] = { //{ T_IR_RX_SENSOR_MENU_LEARNER },
-                                                        { T_IR_RX_SENSOR_MENU_BARRIER },
-                                                        { T_IR_RX_SENSOR_MENU_38K_DEMOD },
-                                                        {T_IR_RX_SENSOR_MENU_56K_DEMOD} };
-static const struct prompt_item infrared_protocol_menu[] = { {T_IR_PROTOCOL_MENU_RAW}, 
-                                                            { T_IR_PROTOCOL_MENU_NEC },
-                                                            { T_IR_PROTOCOL_MENU_RC5 } };   
-
 // Protocol — flag -p / --protocol
 static const bp_val_choice_t infrared_protocol_choices[] = {
     { "raw", NULL, T_IR_PROTOCOL_MENU_RAW, 0 },
@@ -457,7 +448,7 @@ uint32_t infrared_get_speed(void) {
 }
 
 void infrared_settings(void) {
-    ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_menu[mode_config.protocol].description), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rx_sensor_menu[mode_config.rx_sensor].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_choices[mode_config.protocol].label), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rxsensor_choices[mode_config.rx_sensor].label), 0x00);
     ui_prompt_mode_settings_int(GET_T(T_IR_TX_SPEED_MENU), mode_config.tx_freq/1000, GET_T(T_KHZ));
 }

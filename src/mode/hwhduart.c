@@ -45,11 +45,6 @@ static const char pin_labels[][5] = {
     "RTS",
 };
 
-// Keep prompt_item arrays used by hwhduart_settings() for display
-static const struct prompt_item uart_parity_menu[] = { { T_UART_PARITY_MENU_1 },
-                                                        { T_UART_PARITY_MENU_2 },
-                                                        { T_UART_PARITY_MENU_3 } };
-
 // Baud rate — flag -b / --baud
 static const bp_val_constraint_t hduart_baud_range = {
     .type = BP_VAL_UINT32,
@@ -281,8 +276,7 @@ void hwhduart_settings(void) {
     ui_prompt_mode_settings_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
     //printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
     ui_prompt_mode_settings_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
-    //printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description));
-    ui_prompt_mode_settings_string(GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_UART_PARITY_MENU), GET_T(hduart_parity_choices[mode_config.parity].label), 0x00);
     //printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
     ui_prompt_mode_settings_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
 

@@ -28,9 +28,6 @@ static uint8_t checkshort(void);
 const struct _mode_command_struct hw3wire_commands[] = { 0 };
 const uint32_t hw3wire_commands_count = count_of(hw3wire_commands);
 
-// Keep prompt_item array used by hw3wire_settings() for display
-static const struct prompt_item hw3wire_idle_menu[] = { { T_HWSPI_CS_IDLE_MENU_1 }, { T_HWSPI_CS_IDLE_MENU_2 } };
-
 // Speed — flag -s / --speed (kHz; stored as Hz)
 static const bp_val_constraint_t hw3wire_speed_range = {
     .type = BP_VAL_UINT32,
@@ -253,7 +250,7 @@ void hw3wire_macro(uint32_t macro) {
 
 void hw3wire_settings(void) {
     ui_prompt_mode_settings_int(GET_T(T_SPEED), mode_config.baudrate/1000, GET_T(T_KHZ));
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(hw3wire_idle_menu[mode_config.cs_idle].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(hw3wire_csidle_choices[mode_config.cs_idle].label), 0x00);
 }
 
 void hw3wire_help(void) {

@@ -569,9 +569,8 @@ struct _mode modes[] = {
         .mode_commands = i2s_commands,              // mode specific commands
         .mode_commands_count = &i2s_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+        .setup_def = &i2s_setup_def,        // command def for mode setup flags
     },
-#endif
-#ifdef BP_USE_LCDI2C
     [LCDI2C] = {
         .protocol_name = "LCDI2C",                       // friendly name (promptname)
         .protocol_start = nullfunc1,                     // start

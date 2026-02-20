@@ -291,6 +291,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwhduart_commands_count, // mode specific commands count
         .protocol_get_speed = hwhduart_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwhduart_preflight_sanity_check, // sanity check before executing syntax
+        .setup_def = &hduart_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HWI2C

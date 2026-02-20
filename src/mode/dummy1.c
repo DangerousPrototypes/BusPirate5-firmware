@@ -20,6 +20,7 @@
 #include "pirate/bio.h" // Buffered pin IO functions
 #include "ui/ui_help.h"
 #include "dummy1.h"
+#include "lib/bp_args/bp_cmd.h"  // New constraint-based setup system
 
 static uint32_t returnval;
 
@@ -31,13 +32,79 @@ const uint32_t dummy1_commands_count = count_of(dummy1_commands);
 // No more than 4 characters long
 static const char pin_labels[][5] = { "OUT1", "OUT2", "OUT3", "IN1" };
 
-// Pre-setup step. Show user menus for any configuration options.
-// The Bus Pirate hardware is not "clean" and reset at this point.
-// Any previous mode may still be running. This is only a configuration step,
-// the user may cancel out of the menu and return to the previous mode.
-// Don't touch hardware yet, save the settings in variables for later.
+// ---- New constraint-based setup system (teaching example) ----
+//
+// Step 1: Define a range constraint for an integer parameter.
+//         Fields: type, u.min, u.max, u.def, prompt (T_ key), hint (T_ key)
+static const bp_val_constraint_t dummy1_speed_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 1000, .def = 100 },
+    .prompt = 0,       // placeholder — no translation key yet
+    .hint = 0,         // placeholder
+};
+
+// Step 2: Define a named-choice constraint for an enum-like parameter.
+//         Each bp_val_choice_t has: name (CLI string), alias (short), label (T_ key), value (stored int).
+static const bp_val_choice_t dummy1_output_choices[] = {
+    { "push-pull",  "pp", 0, 0 },  // value=0 stored in config
+    { "open-drain", "od", 0, 1 },  // value=1 stored in config
+};
+static const bp_val_constraint_t dummy1_output_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = dummy1_output_choices, .count = 2, .def = 0 },
+    .prompt = 0,       // placeholder
+};
+
+// Step 3: Declare the flag/option table.
+//         Each entry: long-name, short-char, arg-type, hint-string, description-T_, constraint pointer.
+//         The table MUST end with a sentinel { 0 } entry.
+static const bp_command_opt_t dummy1_setup_opts[] = {
+    { "speed",  's', BP_ARG_REQUIRED, "1-1000",                0, &dummy1_speed_range },
+    { "output", 'o', BP_ARG_REQUIRED, "push-pull/open-drain",  0, &dummy1_output_choice },
+    { 0 },  // sentinel — required
+};
+
+// Step 4: Declare the command definition (non-static so it can be exported).
+//         .name matches the lowercase protocol_name used in modes.c.
+const bp_command_def_t dummy1_setup_def = {
+    .name = "dummy1",
+    .description = 0,
+    .opts = dummy1_setup_opts,
+};
+
+// Step 5: Implement the setup function using the dual-path interactive/CLI pattern.
+//         - Check a "primary" flag to decide between interactive and CLI mode.
+//         - Interactive: optionally offer saved settings, then prompt each parameter.
+//         - CLI: parse remaining flags, using defaults for any that are absent.
 uint32_t dummy1_setup(void) {
-    printf("\r\n-DUMMY1- setup()\r\n");
+    // Detect interactive vs CLI mode by checking the primary flag (-s/--speed).
+    // bp_cmd_flag() returns BP_CMD_MISSING if the flag was not given on the CLI,
+    // BP_CMD_OK if it was (value written to last arg), or BP_CMD_INVALID on error.
+    uint32_t speed = 0;
+    bp_cmd_status_t st = bp_cmd_flag(&dummy1_setup_def, 's', &speed);
+    if (st == BP_CMD_INVALID) return 0;  // parse error
+    bool interactive = (st == BP_CMD_MISSING);
+
+    uint32_t output = 0;
+
+    if (interactive) {
+        // Interactive path: show a prompt for each parameter.
+        printf("\r\n-DUMMY1- setup()\r\n");
+
+        if (bp_cmd_prompt(&dummy1_speed_range, &speed) != BP_CMD_OK) return 0;
+
+        if (bp_cmd_prompt(&dummy1_output_choice, &output) != BP_CMD_OK) return 0;
+    } else {
+        // CLI path: primary flag already parsed; collect the remaining flags.
+        // BP_CMD_MISSING means the flag was absent — the constraint default is used.
+        st = bp_cmd_flag(&dummy1_setup_def, 'o', &output);
+        if (st == BP_CMD_INVALID) return 0;
+    }
+
+    // Store the collected values (would normally go into a config struct).
+    (void)speed;
+    (void)output;
+
     return 1;
 }
 

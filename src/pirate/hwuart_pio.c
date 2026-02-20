@@ -83,6 +83,8 @@ void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint3
 void hwuart_pio_deinit(void) {
     // pio_remove_program_and_unclaim_sm(&uart_rx_program, pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset);
     // pio_remove_program_and_unclaim_sm(&uart_tx_program, pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset);
+    pio_sm_set_enabled(pio_config_rx.pio, pio_config_rx.sm, false);
+    pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
     pio_remove_program(pio_config_rx.pio, pio_config_rx.program, pio_config_rx.offset);
     pio_remove_program(pio_config_tx.pio, pio_config_tx.program, pio_config_tx.offset);
 }

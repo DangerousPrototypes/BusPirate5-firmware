@@ -195,3 +195,4 @@ typedef struct _spi_mode_config {
 
 extern const struct _mode_command_struct hwspi_commands[];
 extern const uint32_t hwspi_commands_count;
+extern const struct bp_command_def spi_setup_def;

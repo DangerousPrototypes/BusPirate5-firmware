@@ -352,6 +352,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwspi_commands_count, // mode specific commands count
         .protocol_get_speed = spi_get_speed,          // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = spi_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &spi_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HW2WIRE

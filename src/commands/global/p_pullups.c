@@ -24,11 +24,11 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "command_struct.h"
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "pirate/amux.h"
 #include "pirate/pullup.h"
+#include "lib/bp_args/bp_cmd.h"
 
 #if BP_HW_PULLX
 const char* const p_usage[] = {
@@ -40,10 +40,32 @@ const char* const p_usage[] = {
     "Disable: p",
 };
 
-const struct ui_help_options p_options[] = {
-    { 1, "", T_HELP_GCMD_P }, // command help
-    { 0, "p", T_CONFIG_DISABLE },
-    { 0, "P", T_CONFIG_ENABLE },
+static const bp_command_opt_t pullx_opts[] = {
+    { "down", 'd', BP_ARG_NONE, NULL, 0, NULL },
+    { "pins", 'p', BP_ARG_REQUIRED, "01234567", 0, NULL },
+    { 0 }
+};
+
+static const bp_command_positional_t pullx_positionals[] = {
+    { "value", NULL, 0, false, NULL },
+    { 0 }
+};
+
+const bp_command_def_t pullups_enable_def = {
+    .name = "P",
+    .description = T_HELP_GCMD_P,
+    .opts = pullx_opts,
+    .positionals = pullx_positionals,
+    .positional_count = 1,
+    .usage = p_usage,
+    .usage_count = count_of(p_usage),
+};
+
+const bp_command_def_t pullups_disable_def = {
+    .name = "p",
+    .description = T_HELP_GCMD_P,
+    .usage = p_usage,
+    .usage_count = count_of(p_usage),
 };
 #else
 const char* const p_usage[] = {
@@ -52,10 +74,18 @@ const char* const p_usage[] = {
     "Enable: P",
 };
 
-const struct ui_help_options p_options[] = {
-    { 1, "", T_HELP_GCMD_P }, // command help
-    { 0, "p", T_CONFIG_DISABLE },
-    { 0, "P", T_CONFIG_ENABLE },
+const bp_command_def_t pullups_enable_def = {
+    .name = "P",
+    .description = T_HELP_GCMD_P,
+    .usage = p_usage,
+    .usage_count = count_of(p_usage),
+};
+
+const bp_command_def_t pullups_disable_def = {
+    .name = "p",
+    .description = T_HELP_GCMD_P,
+    .usage = p_usage,
+    .usage_count = count_of(p_usage),
 };
 #endif
 
@@ -85,7 +115,7 @@ const struct ui_help_options p_options[] = {
         //search for trailing arguments
         char action_str[9]; // somewhere to store the parameter string
         bool r_found = false; // default pullup value (10K)
-        if (cmdln_args_string_by_position(1, sizeof(action_str), action_str)) {
+        if (bp_cmd_get_positional_string(&pullups_enable_def, 1, action_str, sizeof(action_str))) {
             strupr(action_str);
             for(uint8_t i=0; i<count_of(pullx_options); i++) {
                 if (strcmp(action_str, pullx_options[i].name) == 0) {
@@ -106,15 +136,14 @@ const struct ui_help_options p_options[] = {
         }
 
         //pull up is the default
-        if(cmdln_args_find_flag('d')) {
+        if(bp_cmd_find_flag(&pullups_enable_def, 'd')) {
             (*direction) = 0;
         }else{
             (*direction) = 1;
         }
 
-        command_var_t arg;
         (*pin_args)=0;
-        if(cmdln_args_find_flag_string('p',&arg, sizeof(action_str), action_str)) {
+        if(bp_cmd_get_string(&pullups_enable_def, 'p', action_str, sizeof(action_str))) {
             for(uint8_t i=0; i<sizeof(action_str); i++) {
                 if(action_str[i]==0) break;
                 if(action_str[i] < '0' || action_str[i] > '7') {
@@ -138,7 +167,7 @@ void pullups_enable(void) {
 }
 
 void pullups_enable_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, p_usage, count_of(p_usage), &p_options[0], count_of(p_options))) {
+    if (bp_cmd_help_check(&pullups_enable_def, res->help_flag)) {
         #if BP_HW_PULLX
             pullx_show_settings();
         #endif
@@ -218,7 +247,7 @@ void pullups_disable(void) {
 }
 
 void pullups_disable_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, p_usage, count_of(p_usage), &p_options[0], count_of(p_options))) {
+    if (bp_cmd_help_check(&pullups_disable_def, res->help_flag)) {
         return;
     }
 

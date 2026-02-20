@@ -32,3 +32,6 @@ void pullups_enable(void);
  * @brief Disable all pullup/pulldown resistors.
  */
 void pullups_disable(void);
+
+extern const struct bp_command_def pullups_enable_def;
+extern const struct bp_command_def pullups_disable_def;

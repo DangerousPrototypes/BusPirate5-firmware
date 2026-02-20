@@ -477,6 +477,7 @@ struct _mode modes[] = {
         .protocol_command = NULL,                     // per mode command parser - ignored if 0
         .protocol_wait_done = hwled_wait_idle,        // wait for the protocol to finish
         .protocol_preflight_sanity_check = hwled_preflight_sanity_check,      // sanity check before executing syntax      
+        .setup_def = &led_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_INFRARED

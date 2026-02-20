@@ -1,12 +1,193 @@
 # Architecture Smell Audit — Bus Pirate 5/6/7 Firmware
 
 **Date:** 2026-02-20
-**Scope:** Full codebase audit excluding 16 previously documented findings
+**Scope:** Full codebase audit — all findings (previously identified + new)
 **Target:** RP2040 (264KB RAM, Cortex-M0+) / RP2350 (512KB RAM, Cortex-M33)
 
 ---
 
-## Critical Findings
+## Previously Identified Findings
+
+These issues were identified in earlier audit passes and are included here for completeness.
+
+### P1. `system_config` God-Struct Shared Between Cores Without Synchronization
+
+**Severity:** Critical
+**Files:** `src/system_config.h`
+
+The monolithic `system_config` struct (130+ fields) is accessed from both Core 0 (UI/commands) and Core 1 (USB/LCD/RGB) with no mutex, spinlock, or memory barriers. Fields like `pin_changed`, `terminal_usb_enable`, and display state are written by Core 0 and read by Core 1 concurrently.
+
+**Impact:** Torn reads on multi-byte fields, stale cached values due to missing barriers, and undefined behavior from data races. On Cortex-M0+ (no hardware cache coherency), writes may not be visible across cores without explicit `__dmb()`.
+
+**Status:** Open — requires incremental refactoring to split into per-core or synchronized sections.
+
+---
+
+### P2. 194KB+ Static Buffer Allocation (73% of RP2040 RAM)
+
+**Severity:** Critical
+**Files:** `src/pirate/mem.c`, `src/syntax_compile.c`, various
+
+~194KB of the RP2040's 264KB RAM is statically allocated: 128KB big buffer (`mem.c`), ~56KB syntax buffers, plus global state. Leaves ~70KB for stack, TinyUSB, and runtime allocations.
+
+**Impact:** No headroom for new features. Stack overflow risk on deep call chains (USB callbacks + FatFS + NAND). Any new static allocation can push the firmware past RP2040 limits.
+
+**Status:** Open — architectural constraint, not easily fixable without redesign.
+
+---
+
+### P3. `lcd_update_request` Written From ISR Without `volatile`
+
+**Severity:** Critical
+**Files:** `src/pirate.c`
+
+The `lcd_update_request` flag is written from a timer interrupt callback (`lcd_timer_callback`) and read from the Core 1 main loop. It is declared as a plain `bool`, not `volatile`.
+
+**Impact:** The compiler may optimize away the read in the main loop, caching the value in a register. The LCD could stop updating or miss update requests entirely.
+
+**Status:** Open.
+
+---
+
+### P4. `mem_alloc` Not Thread-Safe (Plain `bool` Flag)
+
+**Severity:** Critical
+**Files:** `src/pirate/mem.c:17, 21–35`
+
+The `allocated` flag is a plain `bool` with no synchronization. The check-then-set pattern (`if (!allocated) { allocated = true; }`) is not atomic. Both cores could simultaneously see `allocated == false` and both proceed to "allocate" the buffer.
+
+**Impact:** Double allocation of the single 128KB big buffer — both owners corrupt each other's data.
+
+**Status:** Open.
+
+---
+
+### P5. Four Incompatible Error-Handling Mechanisms
+
+**Severity:** Medium
+**Files:** Various
+
+The codebase uses four different error reporting patterns: return codes, `printf` to terminal, `assert_error()` system halt, and silent failure. There's no unified error propagation model.
+
+**Impact:** Inconsistent user experience and difficult debugging. Some errors hang the system while equivalent errors in other paths are silently ignored.
+
+**Status:** Open — requires codebase-wide policy decision.
+
+---
+
+### P6. Platform Headers Duplicating Enums and `static const` Arrays
+
+**Severity:** Medium
+**Files:** `src/platform/bpi5-rev9.h`, `src/platform/bpi5-rev10.h`, `src/platform/bpi6-rev2.h`, etc.
+
+Each platform header redeclares the same enums and `static const` arrays (pin mappings, ADC channels, color palettes). Changes must be propagated manually across all headers.
+
+**Impact:** Maintenance burden and copy-paste divergence. Adding a new board requires duplicating hundreds of lines.
+
+**Status:** Open.
+
+---
+
+### P7. `pirate.h` as God-Header Triggering Full Rebuilds
+
+**Severity:** Medium
+**Files:** `src/pirate.h`
+
+Nearly every source file includes `pirate.h`, which transitively includes platform headers, system config, and hardware definitions. Any change to `pirate.h` or its transitive includes triggers a full rebuild.
+
+**Impact:** Slow iteration during development. On CI, a one-line change to a platform constant rebuilds the entire firmware.
+
+**Status:** Open.
+
+---
+
+### P8. 700 Lines of Boilerplate in `modes.c` (Fixable With Defaults Macro)
+
+**Severity:** Medium
+**Files:** `src/modes.c`
+
+Each mode registration block repeats ~25 function pointer assignments. Most modes only override a few callbacks; the rest are identical defaults.
+
+**Impact:** Adding a new mode requires copying ~25 lines of boilerplate. Easy to miss one pointer, causing a NULL dereference crash.
+
+**Recommended fix:** A `MODE_DEFAULTS()` macro that fills the struct with safe defaults, then modes only override what they need.
+
+**Status:** Open.
+
+---
+
+### P9. CMake Flat File List With No Library Targets
+
+**Severity:** Medium
+**Files:** `CMakeLists.txt`
+
+All source files are listed in a single flat `add_executable()` call with no intermediate library targets. There's no modularity in the build graph.
+
+**Impact:** No incremental build benefit from module boundaries. Cannot build/test subsystems independently.
+
+**Status:** Open.
+
+---
+
+### P10. Inconsistent Naming Across Mode Implementations
+
+**Severity:** Low
+**Files:** `src/mode/*.c`
+
+Mode function naming varies: some use `mode_setup()`, others `mode_setup_exc()`. Some modes prefix with the mode name (`spi_write`), others don't. No consistent convention.
+
+**Impact:** Makes code navigation and refactoring harder. Grep for patterns is unreliable.
+
+**Status:** Open.
+
+---
+
+### P11. `BP_PENDANTIC` Typo
+
+**Severity:** Low
+**Files:** `src/pirate.h`
+
+The macro `BP_PENDANTIC` should be `BP_PEDANTIC`. Typo propagated through conditional compilation guards.
+
+**Status:** Open — trivial rename.
+
+---
+
+### P12. Unstable Mode Enum IDs Across Builds With Different Feature Flags
+
+**Severity:** Medium
+**Files:** `src/modes.h`, `src/modes.c`
+
+Mode enum values are assigned sequentially and shift when `BP_USE_*` feature flags change. A build with `BP_USE_HW1WIRE` disabled produces different IDs for all subsequent modes.
+
+**Impact:** Binary mode clients that use numeric mode IDs will break when firmware is rebuilt with different feature flags. Saved configuration referencing mode IDs may load the wrong mode.
+
+**Status:** Open.
+
+---
+
+### P13. `reserve_for_future_mode_specific_allocations` Wasting 10KB
+
+**Severity:** Low
+**Files:** `src/system_config.h`
+
+A 10KB reserved array in `system_config` exists for future mode-specific allocations. It's never used.
+
+**Impact:** Wastes 10KB of the 264KB RP2040 RAM budget (3.8%).
+
+**Status:** Open — can be removed when needed.
+
+---
+
+### P14–P16. Well-Designed Subsystems (No Action Needed)
+
+- **P14. SPSC queues** (`src/spsc_queue.h`): Correct lock-free implementation with proper barriers. ✅
+- **P15. Syntax pipeline** (`src/syntax_compile.c`, `src/syntax_run.c`, `src/syntax_post.c`): Clean three-phase architecture. ✅
+- **P16. Mode dispatch table** (`src/modes.h`, `src/modes.c`): Function-pointer polymorphism is correct. ✅
+
+---
+
+## New Critical Findings
 
 ### 1. PSU Current-Limit DAC Never Written — Comparison Instead of Assignment
 
@@ -309,6 +490,26 @@ These patterns are well-designed and should be preserved:
 ## Priority Table
 
 Ranked by (impact × likelihood / effort). Items marked ✅ have been fixed in this audit.
+
+### Previously Identified Findings
+
+| # | Finding | Severity | Impact | Status |
+|---|---------|----------|--------|--------|
+| P1 | `system_config` god-struct cross-core races | Critical | Data corruption, undefined behavior | Open |
+| P2 | 194KB+ static allocation (73% RAM) | Critical | No headroom, stack overflow risk | Open |
+| P3 | `lcd_update_request` not `volatile` (ISR) | Critical | LCD stops updating | Open |
+| P4 | `mem_alloc` not thread-safe | Critical | Double allocation, data corruption | Open |
+| P5 | Four incompatible error-handling mechanisms | Medium | Inconsistent behavior | Open |
+| P6 | Platform headers duplicate enums/arrays | Medium | Maintenance burden | Open |
+| P7 | `pirate.h` god-header full rebuilds | Medium | Slow builds | Open |
+| P8 | 700 lines boilerplate in `modes.c` | Medium | Copy-paste bugs | Open |
+| P9 | CMake flat file list | Medium | No modularity | Open |
+| P10 | Inconsistent mode naming | Low | Navigation difficulty | Open |
+| P11 | `BP_PENDANTIC` typo | Low | Cosmetic | Open |
+| P12 | Unstable mode enum IDs | Medium | Config/binary protocol breakage | Open |
+| P13 | 10KB reserved array wasted | Low | 3.8% RAM waste | Open |
+
+### New Findings From This Audit
 
 | # | Finding | Severity | Impact | Effort | Status |
 |---|---------|----------|--------|--------|--------|

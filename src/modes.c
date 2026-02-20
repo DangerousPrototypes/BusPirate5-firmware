@@ -384,9 +384,8 @@ struct _mode modes[] = {
         .mode_commands_count = &hw2wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw2wire_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw2wire_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &hw2wire_setup_def,        // command def for mode setup flags
     },
-#endif
-#ifdef BP_USE_HW3WIRE
     [HW3WIRE] = {
         .protocol_name = "3WIRE",                        // friendly name (promptname)
         .protocol_start = hw3wire_start,                 // start

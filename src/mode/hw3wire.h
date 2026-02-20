@@ -38,3 +38,4 @@ typedef struct _hw3wire_mode_config {
 extern const struct _mode_command_struct hw3wire_commands[];
 extern const uint32_t hw3wire_commands_count;
 //extern struct _hw3wire_mode_config hw3wire_mode_config;
+extern const struct bp_command_def hw3wire_setup_def;

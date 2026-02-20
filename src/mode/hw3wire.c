@@ -18,6 +18,7 @@
 #include "ui/ui_format.h"
 #include "ui/ui_help.h"
 #include "commands/2wire/sle4442.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static const char pin_labels[][5] = { "MOSI", "SCLK", "MISO", "CS" };
 struct _hw3wire_mode_config mode_config;
@@ -27,63 +28,42 @@ static uint8_t checkshort(void);
 const struct _mode_command_struct hw3wire_commands[] = { 0 };
 const uint32_t hw3wire_commands_count = count_of(hw3wire_commands);
 
-
-static const struct prompt_item hw3wire_speed_menu[] = { { T_HW3WIRE_SPEED_MENU_1 } };
-static const struct prompt_item hw3wire_bits_menu[] = { { T_HWSPI_BITS_MENU_1 } };
-static const struct prompt_item hw3wire_polarity_menu[] = { { T_HWSPI_CLOCK_POLARITY_MENU_1 },
-                                                        { T_HWSPI_CLOCK_POLARITY_MENU_2 } };
-static const struct prompt_item hw3wire_phase_menu[] = { { T_HWSPI_CLOCK_PHASE_MENU_1 }, { T_HWSPI_CLOCK_PHASE_MENU_2 } };
+// Keep prompt_item array used by hw3wire_settings() for display
 static const struct prompt_item hw3wire_idle_menu[] = { { T_HWSPI_CS_IDLE_MENU_1 }, { T_HWSPI_CS_IDLE_MENU_2 } };
+
+// Speed — flag -s / --speed (kHz; stored as Hz)
+static const bp_val_constraint_t hw3wire_speed_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 3900, .def = 100 },
+    .prompt = T_SPEED,
+    .hint = T_HW3WIRE_SPEED_MENU_1,
+};
+
+// CS idle — flag -c / --csidle
+static const bp_val_choice_t hw3wire_csidle_choices[] = {
+    { "low",  NULL, T_HWSPI_CS_IDLE_MENU_1, 0 },
+    { "high", NULL, T_HWSPI_CS_IDLE_MENU_2, 1 },
+};
+static const bp_val_constraint_t hw3wire_csidle_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = hw3wire_csidle_choices, .count = 2, .def = 1 },
+    .prompt = T_HWSPI_CS_IDLE_MENU,
+};
+
+static const bp_command_opt_t hw3wire_setup_opts[] = {
+    { "speed",  's', BP_ARG_REQUIRED, "1-3900",   0, &hw3wire_speed_range },
+    { "csidle", 'c', BP_ARG_REQUIRED, "low/high", 0, &hw3wire_csidle_choice },
+    { 0 },
+};
+
+const bp_command_def_t hw3wire_setup_def = {
+    .name = "3wire",
+    .description = 0,
+    .opts = hw3wire_setup_opts,
+};
 
 uint32_t hw3wire_setup(void) {
     uint32_t temp;
-
-    static const struct ui_prompt hw3wire_menu[] = { { .description = T_SPEED,
-                                                   .menu_items = hw3wire_speed_menu,
-                                                   .menu_items_count = count_of(hw3wire_speed_menu),
-                                                   .prompt_text = T_HWSPI_SPEED_PROMPT,
-                                                   .minval = 1,
-                                                   .maxval = 3900,
-                                                   .defval = 100,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_int_cfg },
-                                                { .description = T_HWSPI_BITS_MENU,
-                                                   .menu_items = hw3wire_bits_menu,
-                                                   .menu_items_count = count_of(hw3wire_bits_menu),
-                                                   .prompt_text = T_HWSPI_BITS_PROMPT,
-                                                   .minval = 4,
-                                                   .maxval = 8,
-                                                   .defval = 8,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_int_cfg },
-                                                 { .description = T_HWSPI_CLOCK_POLARITY_MENU,
-                                                   .menu_items = hw3wire_polarity_menu,
-                                                   .menu_items_count = count_of(hw3wire_polarity_menu),
-                                                   .prompt_text = T_HWSPI_CLOCK_POLARITY_PROMPT,
-                                                   .minval = 0,
-                                                   .maxval = 0,
-                                                   .defval = 1,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_list_cfg },
-                                                 { .description = T_HWSPI_CLOCK_PHASE_MENU,
-                                                   .menu_items = hw3wire_phase_menu,
-                                                   .menu_items_count = count_of(hw3wire_phase_menu),
-                                                   .prompt_text = T_HWSPI_CLOCK_PHASE_PROMPT,
-                                                   .minval = 0,
-                                                   .maxval = 0,
-                                                   .defval = 1,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_list_cfg },
-                                                 { .description = T_HWSPI_CS_IDLE_MENU,
-                                                   .menu_items = hw3wire_idle_menu,
-                                                   .menu_items_count = count_of(hw3wire_idle_menu),
-                                                   .prompt_text = T_HWSPI_CS_IDLE_PROMPT,
-                                                   .minval = 0,
-                                                   .maxval = 0,
-                                                   .defval = 2,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_list_cfg } };
-    prompt_result result;
 
     const char config_file[] = "bp3wire.bp";
 
@@ -97,51 +77,40 @@ uint32_t hw3wire_setup(void) {
         // clang-format on
     };
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        hw3wire_settings();
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0;
+    // Detect interactive vs CLI mode by checking the primary flag
+    bp_cmd_status_t st = bp_cmd_flag(&hw3wire_setup_def, 's', &temp);
+    if (st == BP_CMD_INVALID) return 0;
+    bool interactive = (st == BP_CMD_MISSING);
+
+    if (interactive) {
+        prompt_result result;
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            hw3wire_settings();
+            bool user_value;
+            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
+                return 0;
+            }
+            if (user_value) {
+                return 1; // user said yes, use the saved settings
+            }
         }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
-        }
-    }
 
-    ui_prompt_uint32(&result, &hw3wire_menu[0], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.baudrate = temp * 1000;
-/*
-    ui_prompt_uint32(&result, &hw3wire_menu[1], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.data_bits = (uint8_t)temp;
-    system_config.num_bits = (uint8_t)temp;
+        if (bp_cmd_prompt(&hw3wire_speed_range, &temp) != BP_CMD_OK) return 0;
+        mode_config.baudrate = temp * 1000;
 
-    ui_prompt_uint32(&result, &hw3wire_menu[2], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.clock_polarity = (uint8_t)((temp - 1));
+        if (bp_cmd_prompt(&hw3wire_csidle_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.cs_idle = (uint8_t)temp;
+    } else {
+        // Speed already parsed — multiply by 1000 to convert kHz → Hz
+        mode_config.baudrate = temp * 1000;
 
-    ui_prompt_uint32(&result, &hw3wire_menu[3], &temp);
-    if (result.exit) {
-        return 0;
+        st = bp_cmd_flag(&hw3wire_setup_def, 'c', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.cs_idle = (uint8_t)temp;
     }
-    mode_config.clock_phase = (uint8_t)(temp - 1);
-*/
-    ui_prompt_uint32(&result, &hw3wire_menu[4], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.cs_idle = (uint8_t)(temp - 1);
 
     storage_save_mode(config_file, config_t, count_of(config_t));
-    //}
 
     return 1;
 }

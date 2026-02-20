@@ -413,6 +413,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hw3wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw3wire_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw3wire_preflight_sanity_check,      // sanity check before executing syntax 
+        .setup_def = &hw3wire_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_DIO

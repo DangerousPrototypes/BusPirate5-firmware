@@ -19,8 +19,20 @@
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = {
-    "binmode",
+    "binmode [number]",
     "Configure the active binary mode:%s binmode",
+    "Select binmode 2:%s binmode 2",
+};
+
+static const bp_val_constraint_t binmode_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = BINMODE_MAXPROTO, .def = 1 },
+    .prompt = T_CONFIG_BINMODE_SELECT,
+};
+
+static const bp_command_positional_t binmode_positionals[] = {
+    { "number", NULL, T_CONFIG_BINMODE_SELECT, false, &binmode_range },
+    { 0 }
 };
 
 const bp_command_def_t cmd_binmode_def = {
@@ -29,23 +41,11 @@ const bp_command_def_t cmd_binmode_def = {
     .actions      = NULL,
     .action_count = 0,
     .opts         = NULL,
+    .positionals      = binmode_positionals,
+    .positional_count = 1,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };
-
-bool binmode_prompt_menu(const struct ui_prompt* menu) {
-    for (uint8_t i = 0; i < count_of(binmodes); i++) {
-        printf(" %d. %s\r\n", i + 1, binmodes[i].binmode_name);
-    }
-    return true;
-}
-
-bool binmode_check_range(const struct ui_prompt* menu, uint32_t* value) {
-    if ((*value > 0) && (*value < (count_of(binmodes) + 1))) {
-        return true;
-    }
-    return false;
-}
 
 void cmd_binmode_handler(struct command_result* res) {
     // we can use the ui_help_show function to display the help text we configured above
@@ -55,19 +55,21 @@ void cmd_binmode_handler(struct command_result* res) {
         return;
     }
 
-    static const struct ui_prompt_config binmode_menu_config = {
-        false, false, false, true, &binmode_prompt_menu, &ui_prompt_prompt_ordered_list, &binmode_check_range
-    };
-
-    static const struct ui_prompt binmode_menu = { T_CONFIG_BINMODE_SELECT, 0, 0, 0, 0, 0, 0, 0, &binmode_menu_config };
-
-    prompt_result result;
     uint32_t binmode_number;
-    ui_prompt_uint32(&result, &binmode_menu, &binmode_number);
-
-    if (result.exit) {
-        (*res).error = true;
+    bp_cmd_status_t s = bp_cmd_positional(&cmd_binmode_def, 1, &binmode_number);
+    if (s == BP_CMD_INVALID) {
+        res->error = true;
         return;
+    }
+    if (s == BP_CMD_MISSING) {
+        // print the dynamic binmode menu, then prompt for a number
+        for (uint8_t i = 0; i < count_of(binmodes); i++) {
+            printf(" %d. %s\r\n", i + 1, binmodes[i].binmode_name);
+        }
+        if (bp_cmd_prompt(&binmode_range, &binmode_number) != BP_CMD_OK) {
+            res->error = true;
+            return;
+        }
     }
 
     binmode_number--;
@@ -84,6 +86,7 @@ void cmd_binmode_handler(struct command_result* res) {
     // outputting text before the terminal is open will cause crash on startup
     if(binmodes[system_config.binmode_select].can_save_config) {
         printf("\r\n%sSave setting?%s", ui_term_color_info(), ui_term_color_reset());
+        prompt_result result;
         bool user_value;
         ui_prompt_bool(&result, true, true, false, &user_value);
         if (user_value) {

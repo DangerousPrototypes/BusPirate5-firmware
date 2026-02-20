@@ -15,6 +15,7 @@
 #include "hwuart.pio.h"
 #include "pirate/bio.h"
 #include "pio_config.h"
+#include "lib/bp_args/bp_cmd.h"
 
 //static struct _pio_config pio_config;
 
@@ -22,13 +23,15 @@ static const char* const usage[] = {
     "sim\t[-h(elp)]",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_UART_BRIDGE }, // command help
-    { 0, "-h", T_HELP_FLAG },      // help
+const bp_command_def_t simcard_def = {
+    .name = "sim",
+    .description = T_HELP_UART_BRIDGE,
+    .usage = usage,
+    .usage_count = count_of(usage),
 };
 
 void simcard_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&simcard_def, res->help_flag)) {
         return;
     }
     if (!ui_help_check_vout_vref()) {

@@ -33,7 +33,7 @@
 
 // #include "pwd.h"
 #include "commands/global/freq.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 
 uint32_t pwm_get_settings(float* pwm_hz_actual, float* duty_user_value);
 uint8_t pwm_freq_find(
@@ -41,64 +41,120 @@ uint8_t pwm_freq_find(
 
 uint32_t pwm_divider, pwm_top, pwm_duty;
 
-bool pwm_check_pin_is_available(const struct ui_prompt* menu, uint32_t* i) {
+static const char* const pwm_enable_usage[] = {
+    "G [pin]",
+    "Enable PWM with menu:%s G",
+    "Enable PWM on pin 2:%s G 2",
+};
+
+static const char* const pwm_disable_usage[] = {
+    "g [pin]",
+    "Disable PWM on all active pins:%s g",
+    "Disable PWM on pin 2:%s g 2",
+};
+
+static const bp_val_constraint_t pwm_pin_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 7, .def = 0 },
+    .prompt = T_MODE_CHOOSE_AVAILABLE_PIN,
+};
+
+static const bp_command_positional_t pwm_positionals[] = {
+    { "pin", NULL, 0, false, &pwm_pin_range },
+    { 0 }
+};
+
+const bp_command_def_t pwm_enable_def = {
+    .name = "G",
+    .description = 0,
+    .positionals = pwm_positionals,
+    .positional_count = 1,
+    .usage = pwm_enable_usage,
+    .usage_count = count_of(pwm_enable_usage),
+};
+
+const bp_command_def_t pwm_disable_def = {
+    .name = "g",
+    .description = 0,
+    .positionals = pwm_positionals,
+    .positional_count = 1,
+    .usage = pwm_disable_usage,
+    .usage_count = count_of(pwm_disable_usage),
+};
+
+bool pwm_check_pin_is_available(uint32_t i) {
     // label should be 0, not in use
     // FREQ on the B channel should not be in use!
     // PWM should not already be in use on A or B channel of this slice
 
     // bounds check
-    if ((*i) >= count_of(bio2bufiopin)) {
+    if (i >= count_of(bio2bufiopin)) {
         return 0;
     }
 
     // temp fix for power supply PWM sharing
     #ifdef BP_HW_PSU_PWM_IO_BUG
-        if ((*i) == 0 || (*i) == 1) {
+        if (i == 0 || i == 1) {
             return 0;
         }
     #endif
 
-    return (system_config.pin_labels[(*i) + 1] == 0 &&
-            !(system_config.freq_active & (0b11 << ((uint8_t)((*i) % 2 ? (*i) - 1 : (*i))))) &&
-            !(system_config.pwm_active & (0b11 << ((uint8_t)((*i) % 2 ? (*i) - 1 : (*i))))));
+    return (system_config.pin_labels[i + 1] == 0 &&
+            !(system_config.freq_active & (0b11 << ((uint8_t)(i % 2 ? i - 1 : i)))) &&
+            !(system_config.pwm_active & (0b11 << ((uint8_t)(i % 2 ? i - 1 : i)))));
 }
 
-bool pwm_check_pin_is_active(const struct ui_prompt* menu, uint32_t* i) {
+bool pwm_check_pin_is_active(uint32_t i) {
     // bounds check
-    if ((*i) >= count_of(bio2bufiopin)) {
+    if (i >= count_of(bio2bufiopin)) {
         return 0;
     }
 
-    return (system_config.pwm_active & (0x01 << ((uint8_t)(*i))));
+    return (system_config.pwm_active & (0x01 << ((uint8_t)i)));
 }
 
 // TODO: future feature - g.5/G.5 enable/disable PWM with previous setting, prompt if no previous settings
 void pwm_configure_enable(struct command_result* res) {
     uint32_t pin;
 
-    printf("%s%s%s", ui_term_color_info(), GET_T(T_MODE_PWM_GENERATE_FREQUENCY), ui_term_color_reset());
-
-    static const struct ui_prompt_config freq_menu_enable_config = {
-        false, false, false, true, &ui_prompt_menu_bio_pin, &ui_prompt_prompt_ordered_list, &pwm_check_pin_is_available
-    };
-
-    static const struct ui_prompt freq_menu_enable = { T_MODE_CHOOSE_AVAILABLE_PIN, 0, 0, 0, 0, 0, 0, 0,
-                                                       &freq_menu_enable_config };
-
-    prompt_result result;
-    ui_prompt_uint32(&result, &freq_menu_enable, &pin);
-
-    if (result.exit) {
-        (*res).error = true;
+    if (bp_cmd_help_check(&pwm_enable_def, res->help_flag)) {
         return;
     }
 
-    if (result.error) {
-        // no pins available, show user current pinout
-        // TODO: instead show channel/slice representation and explain assigned function
-        ui_info_print_pin_names();
-        ui_info_print_pin_labels();
-        (*res).error = true;
+    bp_cmd_status_t s = bp_cmd_positional(&pwm_enable_def, 1, &pin);
+    if (s == BP_CMD_INVALID) {
+        res->error = true;
+        return;
+    }
+    if (s == BP_CMD_MISSING) {
+        printf("%s%s%s\r\n", ui_term_color_info(), GET_T(T_MODE_PWM_GENERATE_FREQUENCY), ui_term_color_reset());
+
+        // print available pins
+        bool any_available = false;
+        for (uint32_t i = 0; i < count_of(bio2bufiopin); i++) {
+            if (pwm_check_pin_is_available(i)) {
+                printf(" %d. IO%d\r\n", i, i);
+                any_available = true;
+            }
+        }
+
+        if (!any_available) {
+            // no pins available, show user current pinout
+            ui_info_print_pin_names();
+            ui_info_print_pin_labels();
+            res->error = true;
+            return;
+        }
+
+        if (bp_cmd_prompt(&pwm_pin_range, &pin) != BP_CMD_OK) {
+            res->error = true;
+            return;
+        }
+    }
+
+    if (!pwm_check_pin_is_available(pin)) {
+        printf("IO%d is not available for PWM generation\r\n", (uint8_t)pin);
+        res->error = true;
         return;
     }
 
@@ -136,22 +192,29 @@ void pwm_configure_enable(struct command_result* res) {
 
 void pwm_configure_disable(struct command_result* res) {
     uint32_t pin;
-    uint32_t temp;
-    bool has_value = cmdln_args_uint32_by_position(1, &temp);
+
+    if (bp_cmd_help_check(&pwm_disable_def, res->help_flag)) {
+        return;
+    }
+
     if (system_config.pwm_active == 0) // no pwm active, just exit
     {
         printf("Frequency generation not active on any IO pins!");
         (*res).error = true;
         return;
-    } else if (has_value) {
-        // first make sure the freq is present and available
-        if (temp >= count_of(bio2bufiopin)) {
-            printf("Pin IO%d is invalid!", temp);
+    }
+
+    bp_cmd_status_t s = bp_cmd_positional(&pwm_disable_def, 1, &pin);
+    if (s == BP_CMD_INVALID) {
+        res->error = true;
+        return;
+    } else if (s == BP_CMD_OK) {
+        // pin provided on command line — validate bounds
+        if (pin >= count_of(bio2bufiopin)) {
+            printf("Pin IO%d is invalid!", (uint8_t)pin);
             (*res).error = true;
             return;
         }
-        pin = temp;
-
     } // if only one pwm is active, just disable that one
     else if (system_config.pwm_active && !(system_config.pwm_active & (system_config.pwm_active - 1))) {
         // find pwm to disable
@@ -160,24 +223,15 @@ void pwm_configure_disable(struct command_result* res) {
     {
         printf("%s%s%s", ui_term_color_info(), "Disable frequency generation", ui_term_color_reset());
 
-        static const struct ui_prompt_config freq_menu_disable_config = {
-            false, false, false, true, &ui_prompt_menu_bio_pin, &ui_prompt_prompt_ordered_list, &pwm_check_pin_is_active
-        };
-
-        static const struct ui_prompt freq_menu_disable = { T_MODE_CHOOSE_AVAILABLE_PIN, 0, 0, 0, 0, 0, 0, 0,
-                                                            &freq_menu_disable_config };
-
-        prompt_result result;
-        ui_prompt_uint32(&result, &freq_menu_disable, &pin);
-
-        if (result.exit) {
-            (*res).error = true;
-            return;
+        // print active pins
+        for (uint32_t i = 0; i < count_of(bio2bufiopin); i++) {
+            if (pwm_check_pin_is_active(i)) {
+                printf(" %d. IO%d\r\n", i, i);
+            }
         }
 
-        if (result.error) {
+        if (bp_cmd_prompt(&pwm_pin_range, &pin) != BP_CMD_OK) {
             // no pins available, show user current pinout
-            // TODO: instead show channel/slice representation and explain assigned function
             ui_info_print_pin_names();
             ui_info_print_pin_labels();
             (*res).error = true;
@@ -186,8 +240,8 @@ void pwm_configure_disable(struct command_result* res) {
     }
 
     // no pwm on this pin!
-    if (!(system_config.pwm_active & (0x01 << pin))) {
-        printf("Error: frequency generator not active on IO%d", pin);
+    if (!pwm_check_pin_is_active(pin)) {
+        printf("Error: frequency generator not active on IO%d", (uint8_t)pin);
         (*res).error = true;
         return;
     }

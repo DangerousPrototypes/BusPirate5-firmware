@@ -1,3 +1,8 @@
++++
+weight = 90405
+title = 'bp_cmd Patterns & Recipes'
++++
+
 # bp_cmd Patterns & Recipes
 
 > Quick-reference cookbook of common `bp_cmd` patterns found in the Bus Pirate firmware.

@@ -1,3 +1,8 @@
++++
+weight = 90411
+title = 'Pin & BIO System'
++++
+
 # Pin & BIO System
 
 > Developer guide to the Bus Pirate buffered I/O pin subsystem — direction control, voltage reading, pin claiming, and platform mappings.

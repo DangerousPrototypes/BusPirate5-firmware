@@ -1,3 +1,8 @@
++++
+weight = 90418
+title = 'Adding a New Display Mode'
++++
+
 # Adding a New Display Mode
 
 > How to implement and register a custom display mode in the Bus Pirate firmware.

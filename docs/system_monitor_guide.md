@@ -1,3 +1,8 @@
++++
+weight = 90415
+title = 'System Monitor & Power Supply'
++++
+
 # System Monitor & Power Supply
 
 > Voltage/current monitoring, ADC multiplexer, and PSU control for Bus Pirate hardware.

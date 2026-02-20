@@ -1,3 +1,8 @@
++++
+weight = 90407
+title = 'Translation & Localization'
++++
+
 # Translation & Localization System
 
 > Developer guide for the Bus Pirate translation system — how strings are managed, translated, and selected at runtime.

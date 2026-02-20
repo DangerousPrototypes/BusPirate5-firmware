@@ -1,3 +1,8 @@
++++
+weight = 90419
+title = 'Host-Side Testing'
++++
+
 # Host-Side Testing
 
 > Run pure-logic unit tests on the host machine without embedded hardware.

@@ -1,3 +1,8 @@
++++
+weight = 90408
+title = 'Build System & Targets'
++++
+
 # Build System & Targets
 
 > Developer guide to the Bus Pirate CMake build system, platform selection, and firmware build targets.

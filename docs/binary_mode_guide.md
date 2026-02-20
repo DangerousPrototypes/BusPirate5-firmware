@@ -1,3 +1,8 @@
++++
+weight = 90417
+title = 'Implementing a New Binary Mode'
++++
+
 # Implementing a New Binary Mode
 
 > Step-by-step guide to adding a new binary mode for programmatic USB access to the Bus Pirate.

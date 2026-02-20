@@ -1,3 +1,8 @@
++++
+weight = 90406
+title = 'Syntax & Bytecode Pipeline'
++++
+
 # Syntax & Bytecode Pipeline
 
 > Developer guide to the three-phase compile → execute → display pipeline that turns user syntax into protocol operations.

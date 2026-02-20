@@ -1,3 +1,8 @@
++++
+weight = 90412
+title = 'Storage & Persistence'
++++
+
 # Storage & Persistence
 
 > Developer guide for the Bus Pirate storage system — saving and loading mode configuration and system settings via FatFS on NAND flash or TF/microSD card.

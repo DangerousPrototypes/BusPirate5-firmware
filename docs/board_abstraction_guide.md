@@ -1,3 +1,8 @@
++++
+weight = 90409
+title = 'Board Abstraction & Platform Porting'
++++
+
 # Board Abstraction & Platform Porting
 
 > How Bus Pirate firmware maps hardware variants through a header cascade, feature flags, and per-board pin definitions.

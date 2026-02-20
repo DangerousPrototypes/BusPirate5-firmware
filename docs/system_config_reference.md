@@ -1,3 +1,8 @@
++++
+weight = 90414
+title = 'system_config Reference'
++++
+
 # system_config Reference
 
 > Global runtime configuration struct holding all Bus Pirate settings, state, and pin assignments.

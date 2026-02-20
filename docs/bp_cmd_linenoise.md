@@ -1,3 +1,8 @@
++++
+weight = 90404
+title = 'bp_cmd Linenoise Integration'
++++
+
 # bp_cmd Linenoise Integration
 
 > Developer reference for hint generation and tab-completion bridging between `bp_cmd` and the linenoise line-editing library.

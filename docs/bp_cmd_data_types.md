@@ -1,3 +1,8 @@
++++
+weight = 90401
+title = 'bp_cmd Data Types'
++++
+
 # bp_cmd Data Types
 
 > Developer reference for every type defined in `src/lib/bp_args/bp_cmd.h` — the unified command definition, parsing, and validation API.

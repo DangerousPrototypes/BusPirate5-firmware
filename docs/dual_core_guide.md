@@ -1,3 +1,8 @@
++++
+weight = 90410
+title = 'Dual-Core Architecture'
++++
+
 # Dual-Core Architecture
 
 > Developer guide to the RP2040/RP2350 dual-core design in Bus Pirate firmware: core responsibilities, inter-core communication via lock-free SPSC queues, and memory barrier conventions.

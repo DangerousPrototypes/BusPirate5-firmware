@@ -1,3 +1,8 @@
++++
+weight = 90403
+title = 'bp_cmd Interactive Prompting'
++++
+
 # bp_cmd Interactive Prompting
 
 > Developer reference for driving interactive prompts via `bp_cmd_prompt()` and the dual-path (CLI / interactive) pattern.

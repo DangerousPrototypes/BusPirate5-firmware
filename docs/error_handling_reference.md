@@ -1,3 +1,8 @@
++++
+weight = 90416
+title = 'Error Handling Conventions'
++++
+
 # Error Handling Conventions
 
 > Quick reference for error signaling patterns used across the Bus Pirate firmware.

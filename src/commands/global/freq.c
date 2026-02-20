@@ -92,6 +92,7 @@ void freq_single(struct command_result* res) {
     bp_cmd_status_t s = bp_cmd_positional(&freq_single_def, 1, &temp);
     if (s == BP_CMD_INVALID) {
         res->error = 1;
+        return;
     } else if (s == BP_CMD_MISSING) // show config menu
     {
         if (!freq_configure_disable()) {
@@ -113,6 +114,7 @@ void freq_cont(struct command_result* res) {
     bp_cmd_status_t s = bp_cmd_positional(&freq_cont_def, 1, &temp);
     if (s == BP_CMD_INVALID) {
         res->error = 1;
+        return;
     } else if (s == BP_CMD_MISSING) // show config menu
     {
         if (!freq_configure_enable()) {

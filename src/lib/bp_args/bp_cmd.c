@@ -1205,15 +1205,33 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         while (p < end && *p != ' ' && *p != '\t') p++;
     }
 
+    // Resolve sub-def: if a completed action verb is present, use its
+    // setup_def for flag hinting (e.g. "m uart -b" → uart flags)
+    const bp_command_def_t *eff_def = def;
+    if (def->action_delegate && def->action_delegate->def_for_verb) {
+        const char *first_arg = skip_ws(buf + (cmd_start - buf) + cmd_len, end);
+        if (first_arg < end && *first_arg != '-') {
+            size_t fa_len = tok_len(first_arg, end);
+            // Only if this token is complete (has content after it)
+            if (first_arg + fa_len < end) {
+                uint32_t act;
+                if (def->action_delegate->match(first_arg, fa_len, &act)) {
+                    const bp_command_def_t *sub = def->action_delegate->def_for_verb(act);
+                    if (sub) eff_def = sub;
+                }
+            }
+        }
+    }
+
     // If last token is "-", suggest first available flag
-    if (last_tok && *last_tok == '-' && tok_len(last_tok, end) == 1 && def->opts) {
-        for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
-            if (def->opts[i].short_name) {
-                if (def->opts[i].arg_hint) {
+    if (last_tok && *last_tok == '-' && tok_len(last_tok, end) == 1 && eff_def->opts) {
+        for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+            if (eff_def->opts[i].short_name) {
+                if (eff_def->opts[i].arg_hint) {
                     snprintf(hint_buf, sizeof(hint_buf), "%c <%s>",
-                             def->opts[i].short_name, def->opts[i].arg_hint);
+                             eff_def->opts[i].short_name, eff_def->opts[i].arg_hint);
                 } else {
-                    snprintf(hint_buf, sizeof(hint_buf), "%c", def->opts[i].short_name);
+                    snprintf(hint_buf, sizeof(hint_buf), "%c", eff_def->opts[i].short_name);
                 }
                 return hint_buf;
             }
@@ -1222,36 +1240,36 @@ const char *bp_cmd_hint(const char *buf, size_t len,
 
     // If last token is "--", suggest first available long flag
     if (last_tok && last_tok[0] == '-' && tok_len(last_tok, end) >= 2 &&
-        last_tok[1] == '-' && def->opts) {
+        last_tok[1] == '-' && eff_def->opts) {
         size_t tl = tok_len(last_tok, end);
         const char *typed_name = last_tok + 2;
         size_t typed_len = tl - 2;
 
         if (typed_len == 0) {
             // Bare "--": suggest first long flag name
-            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
-                if (def->opts[i].long_name) {
-                    if (def->opts[i].arg_hint) {
+            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                if (eff_def->opts[i].long_name) {
+                    if (eff_def->opts[i].arg_hint) {
                         snprintf(hint_buf, sizeof(hint_buf), "%s <%s>",
-                                 def->opts[i].long_name, def->opts[i].arg_hint);
+                                 eff_def->opts[i].long_name, eff_def->opts[i].arg_hint);
                     } else {
                         snprintf(hint_buf, sizeof(hint_buf), "%s",
-                                 def->opts[i].long_name);
+                                 eff_def->opts[i].long_name);
                     }
                     return hint_buf;
                 }
             }
         } else {
             // Partial long flag: suggest matching completion
-            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
-                if (def->opts[i].long_name) {
-                    size_t ln_len = strlen(def->opts[i].long_name);
+            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                if (eff_def->opts[i].long_name) {
+                    size_t ln_len = strlen(eff_def->opts[i].long_name);
                     if (typed_len < ln_len &&
-                        memcmp(typed_name, def->opts[i].long_name, typed_len) == 0) {
-                        const char *rest = def->opts[i].long_name + typed_len;
-                        if (def->opts[i].arg_hint) {
+                        memcmp(typed_name, eff_def->opts[i].long_name, typed_len) == 0) {
+                        const char *rest = eff_def->opts[i].long_name + typed_len;
+                        if (eff_def->opts[i].arg_hint) {
                             snprintf(hint_buf, sizeof(hint_buf), "%s <%s>",
-                                     rest, def->opts[i].arg_hint);
+                                     rest, eff_def->opts[i].arg_hint);
                         } else {
                             snprintf(hint_buf, sizeof(hint_buf), "%s", rest);
                         }
@@ -1265,8 +1283,8 @@ const char *bp_cmd_hint(const char *buf, size_t len,
     // If last token is a complete flag like "-f", suggest its arg_hint
     if (last_tok && *last_tok == '-' && tok_len(last_tok, end) == 2 && last_tok[1] != '-') {
         char fc = last_tok[1];
-        const bp_command_opt_t *opt = find_opt_in_def(def, fc | 0x20);
-        if (!opt) opt = find_opt_in_def(def, fc);
+        const bp_command_opt_t *opt = find_opt_in_def(eff_def, fc | 0x20);
+        if (!opt) opt = find_opt_in_def(eff_def, fc);
         if (opt && opt->arg_hint) {
             snprintf(hint_buf, sizeof(hint_buf), " <%s>", opt->arg_hint);
             return hint_buf;
@@ -1275,9 +1293,9 @@ const char *bp_cmd_hint(const char *buf, size_t len,
 
     // If last token is a complete long flag like "--file", suggest its arg_hint
     if (last_tok && last_tok[0] == '-' && tok_len(last_tok, end) > 2 &&
-        last_tok[1] == '-' && def->opts) {
+        last_tok[1] == '-' && eff_def->opts) {
         size_t tl = tok_len(last_tok, end);
-        const bp_command_opt_t *opt = find_opt_by_long_name(def, last_tok + 2, tl - 2);
+        const bp_command_opt_t *opt = find_opt_by_long_name(eff_def, last_tok + 2, tl - 2);
         if (opt && opt->arg_hint) {
             snprintf(hint_buf, sizeof(hint_buf), " <%s>", opt->arg_hint);
             return hint_buf;
@@ -1304,6 +1322,25 @@ const char *bp_cmd_hint(const char *buf, size_t len,
                     snprintf(hint_buf, sizeof(hint_buf), "%s", def->actions[i].verb + tl);
                     return hint_buf;
                 }
+            }
+        }
+    }
+
+    // After a resolved sub-def verb, suggest the first flag from the sub-def.
+    // Fires when cursor is at a new token position (trailing space) and the
+    // sub-def has opts to offer — e.g. "m uart " → " -b <1-7372800>"
+    if (eff_def != def && eff_def->opts &&
+        len > 0 && (buf[len - 1] == ' ' || buf[len - 1] == '\t')) {
+        for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+            if (eff_def->opts[i].short_name) {
+                if (eff_def->opts[i].arg_hint) {
+                    snprintf(hint_buf, sizeof(hint_buf), " -%c <%s>",
+                             eff_def->opts[i].short_name, eff_def->opts[i].arg_hint);
+                } else {
+                    snprintf(hint_buf, sizeof(hint_buf), " -%c",
+                             eff_def->opts[i].short_name);
+                }
+                return hint_buf;
             }
         }
     }
@@ -1461,6 +1498,23 @@ void bp_cmd_completion(const char *buf, size_t len,
 
     #define COMP_BUF() (comp_next < COMP_SLOTS ? comp_pool[comp_next++] : NULL)
 
+    // Resolve sub-def: if a completed action verb is present, use its
+    // setup_def for flag completion (e.g. "m uart -b" → uart flags)
+    const bp_command_def_t *eff_def = def;
+    if (def->action_delegate && def->action_delegate->def_for_verb) {
+        const char *first_arg = skip_ws(buf + (cmd_start - buf) + cmd_len, end);
+        if (first_arg < end && *first_arg != '-') {
+            size_t fa_len = tok_len(first_arg, end);
+            if (first_arg + fa_len < end) {
+                uint32_t act;
+                if (def->action_delegate->match(first_arg, fa_len, &act)) {
+                    const bp_command_def_t *sub = def->action_delegate->def_for_verb(act);
+                    if (sub) eff_def = sub;
+                }
+            }
+        }
+    }
+
     // Complete action verbs
     if (!last_is_flag) {
         if (def->action_delegate) {
@@ -1496,33 +1550,33 @@ void bp_cmd_completion(const char *buf, size_t len,
     }
 
     // Complete flag names
-    if (last_is_flag && def->opts) {
+    if (last_is_flag && eff_def->opts) {
         if (tl >= 2 && last_tok[1] == '-') {
             // Long flag completion: --name
             const char *typed_name = last_tok + 2;
             size_t typed_len = tl - 2;
-            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
-                if (def->opts[i].long_name &&
-                    typed_len <= strlen(def->opts[i].long_name) &&
-                    memcmp(typed_name, def->opts[i].long_name, typed_len) == 0) {
+            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                if (eff_def->opts[i].long_name &&
+                    typed_len <= strlen(eff_def->opts[i].long_name) &&
+                    memcmp(typed_name, eff_def->opts[i].long_name, typed_len) == 0) {
                     size_t prefix_len = last_tok - buf;
-                    size_t long_len = strlen(def->opts[i].long_name);
+                    size_t long_len = strlen(eff_def->opts[i].long_name);
                     char *cb = COMP_BUF();
                     if (cb && prefix_len + 2 + long_len < COMP_BUF_SZ) {
                         memcpy(cb, buf, prefix_len);
                         cb[prefix_len] = '-';
                         cb[prefix_len + 1] = '-';
-                        strcpy(cb + prefix_len + 2, def->opts[i].long_name);
+                        strcpy(cb + prefix_len + 2, eff_def->opts[i].long_name);
                         add_completion(cb, userdata);
                     }
                 }
             }
         } else if (tl <= 2) {
             // Short flag completion: -x
-            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
-                if (def->opts[i].short_name) {
-                    char flag_str[4] = { '-', def->opts[i].short_name, '\0' };
-                    if (tl == 1 || (tl == 2 && last_tok[1] == def->opts[i].short_name)) {
+            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                if (eff_def->opts[i].short_name) {
+                    char flag_str[4] = { '-', eff_def->opts[i].short_name, '\0' };
+                    if (tl == 1 || (tl == 2 && last_tok[1] == eff_def->opts[i].short_name)) {
                         size_t prefix_len = last_tok - buf;
                         char *cb = COMP_BUF();
                         if (cb && prefix_len + 2 < COMP_BUF_SZ) {

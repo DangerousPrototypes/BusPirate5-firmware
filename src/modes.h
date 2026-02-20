@@ -113,6 +113,7 @@ typedef struct _mode {
     uint32_t (*protocol_command)(struct command_result* result); // per mode command parser - ignored if 0
     //void (*protocol_lcd_update)(uint32_t flags);                 // replacement for ui_lcd_update if non-0
     bool (*protocol_preflight_sanity_check)(void); // sanity check before executing syntax
+    const struct bp_command_def *setup_def;       // command def for mode setup flags (NULL = none)
 } _mode;
 
 extern struct _mode modes[MAXPROTO];

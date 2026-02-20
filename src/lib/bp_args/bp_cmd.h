@@ -185,10 +185,15 @@ typedef struct {
  * match(tok, len, action_out) — Case-insensitive match of a user
  *                  token against the verb source. Writes the action
  *                  enum value into *action_out on match.
+ * def_for_verb(action) — Return the command definition for the
+ *                  resolved action verb, or NULL if the verb has
+ *                  no sub-definition. Used for flag hinting and
+ *                  contextual help after the verb is resolved.
  */
 typedef struct {
     const char *(*verb_at)(uint32_t index);  ///< Return verb at index, NULL = end
     bool (*match)(const char *tok, size_t len, uint32_t *action_out); ///< Match token → action
+    const struct bp_command_def *(*def_for_verb)(uint32_t action); ///< Sub-def for resolved verb, NULL = none
 } bp_action_delegate_t;
 
 /*

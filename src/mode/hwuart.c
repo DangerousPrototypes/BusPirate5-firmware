@@ -178,7 +178,7 @@ static const bp_command_opt_t uart_setup_opts[] = {
     { 0 },
 };
 
-static const bp_command_def_t uart_setup_def = {
+const bp_command_def_t uart_setup_def = {
     .name = "uart",
     .description = 0,
     .opts = uart_setup_opts,

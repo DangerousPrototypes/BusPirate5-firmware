@@ -124,5 +124,6 @@ bool hwuart_preflight_sanity_check(void);
 
 extern const struct _mode_command_struct hwuart_commands[];
 extern const uint32_t hwuart_commands_count;
+extern const struct bp_command_def uart_setup_def;
 
 bool bpio_hwuart_configure(bpio_mode_configuration_t *bpio_mode_config);

@@ -260,6 +260,7 @@ struct _mode modes[] = {
         .protocol_get_speed = hwuart_get_speed,        // get the current speed setting of the protocol
         .protocol_wait_done = hwuart_wait_done,        // wait for the protocol to finish
         .protocol_preflight_sanity_check=hwuart_preflight_sanity_check, // sanity check before executing syntax
+        .setup_def = &uart_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HWHDUART

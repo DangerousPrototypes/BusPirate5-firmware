@@ -51,9 +51,19 @@ static bool mode_match(const char *tok, size_t len, uint32_t *action_out) {
     return false;
 }
 
+/**
+ * @brief Return the setup_def for a resolved mode action, or NULL if none.
+ * @details Used by linenoise hint/completion to switch to the mode's
+ *          flag definitions after the verb is resolved.
+ */
+static const bp_command_def_t *mode_def_for_verb(uint32_t action) {
+    return (action < MAXPROTO) ? (const bp_command_def_t *)modes[action].setup_def : NULL;
+}
+
 static const bp_action_delegate_t mode_delegate = {
-    .verb_at = mode_verb_at,
-    .match   = mode_match,
+    .verb_at      = mode_verb_at,
+    .match        = mode_match,
+    .def_for_verb = mode_def_for_verb,
 };
 
 /*
@@ -63,9 +73,12 @@ static const bp_action_delegate_t mode_delegate = {
  */
 
 static const char * const mode_usage[] = {
-    "m <mode>",
-    "Change mode with menu: m",
-    "Change mode to UART: m uart",
+    "m [-h] [mode] [-h] [mode_flags]",
+    "Change mode with menu:%s m",
+    "Change mode to UART:%s m uart",
+    "Change mode to UART with baud 9600:%s m uart -b 9600",
+    "m command help:%s m -h",
+    "m uart mode help:%s m uart -h",
 };
 
 const bp_command_def_t mode_def = {
@@ -125,8 +138,17 @@ static bool mode_interactive_prompt(uint32_t *mode) {
  */
 
 void ui_mode_enable_args(struct command_result* res) {
-    // New help system
-    if (bp_cmd_help_check(&mode_def, res->help_flag)) return;
+    // Contextual help: "m uart -h" shows UART flags, "m -h" shows mode list
+    if (res->help_flag) {
+        uint32_t help_mode;
+        if (bp_cmd_get_action(&mode_def, &help_mode) &&
+            modes[help_mode].setup_def) {
+            bp_cmd_help_show((const bp_command_def_t *)modes[help_mode].setup_def);
+        } else {
+            bp_cmd_help_show(&mode_def);
+        }
+        return;
+    }
 
     uint32_t mode;
 
@@ -146,11 +168,11 @@ void ui_mode_enable_args(struct command_result* res) {
     if (!modes[mode].protocol_setup()) return;
 
     modes[system_config.mode].protocol_cleanup();   // switch to HiZ
-    modes[0].protocol_setup_exc();                  // disables power supply etc.
+    modes[HIZ].protocol_setup_exc();                  // disables power supply etc.
     system_config.mode = mode;                      // setup the new mode
     if (!modes[system_config.mode].protocol_setup_exc()) {
         printf("\r\nFailed to setup mode %s", modes[system_config.mode].protocol_name);
-        modes[0].protocol_setup_exc();
+        modes[HIZ].protocol_setup_exc();
         system_config.mode = 0;
     }
     fala_mode_change_hook();                        // notify follow along logic analyzer

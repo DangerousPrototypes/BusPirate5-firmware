@@ -130,3 +130,4 @@ bool bpio_hwi2c_configure(bpio_mode_configuration_t *bpio_mode_config);
 extern struct _i2c_mode_config i2c_mode_config;
 extern const struct _mode_command_struct hwi2c_commands[];
 extern const uint32_t hwi2c_commands_count;
+extern const struct bp_command_def i2c_setup_def;

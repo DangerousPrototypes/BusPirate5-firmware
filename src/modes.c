@@ -321,6 +321,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwi2c_commands_count, // mode specific commands count
         .protocol_get_speed = hwi2c_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwi2c_preflight_sanity_check, // sanity check before executing syntax
+        .setup_def = &i2c_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HWSPI

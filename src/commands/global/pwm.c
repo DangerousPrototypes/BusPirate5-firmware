@@ -221,7 +221,7 @@ void pwm_configure_disable(struct command_result* res) {
         pin = log2(system_config.pwm_active);
     } else // multiple pwm active, show menu for user to choose which to disable
     {
-        printf("%s%s%s\r\n", ui_term_color_info(), "Disable frequency generation", ui_term_color_reset());
+        printf("%s%s%s", ui_term_color_info(), "Disable frequency generation", ui_term_color_reset());
 
         // print active pins
         for (uint32_t i = 0; i < count_of(bio2bufiopin); i++) {
@@ -231,6 +231,9 @@ void pwm_configure_disable(struct command_result* res) {
         }
 
         if (bp_cmd_prompt(&pwm_pin_range, &pin) != BP_CMD_OK) {
+            // no pins available, show user current pinout
+            ui_info_print_pin_names();
+            ui_info_print_pin_labels();
             (*res).error = true;
             return;
         }

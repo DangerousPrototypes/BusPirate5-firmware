@@ -30,7 +30,7 @@ static const bp_command_opt_t monitor_opts[] = {
 };
 
 const bp_command_def_t uart_monitor_def = {
-    .name = "test",
+    .name = "monitor",
     .description = T_UART_CMD_TEST,
     .opts = monitor_opts,
     .usage = usage,

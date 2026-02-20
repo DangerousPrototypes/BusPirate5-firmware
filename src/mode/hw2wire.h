@@ -39,3 +39,4 @@ typedef struct _hw2wire_mode_config {
 extern const struct _mode_command_struct hw2wire_commands[];
 extern const uint32_t hw2wire_commands_count;
 extern struct _hw2wire_mode_config hw2wire_mode_config;
+extern const struct bp_command_def hw2wire_setup_def;

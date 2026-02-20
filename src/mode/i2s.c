@@ -31,6 +31,7 @@
 #include "commands/i2s/sine.h" // sine wave generation functions
 #include "pirate/storage.h"
 #include "fatfs/ff.h"       // File system related
+#include "lib/bp_args/bp_cmd.h"
 
 static uint32_t returnval;
 struct _pio_config i2s_pio_config_out,  i2s_pio_config_in;
@@ -49,29 +50,32 @@ const uint32_t i2s_commands_count = count_of(i2s_commands);
 // No more than 4 characters long
 static const char pin_labels[][5] = { "DATO", "CLKO", "WSO", "DATI", "CLKI", "WSI" };
 
+// Sample rate — flag -f / --freq (Hz)
+static const bp_val_constraint_t i2s_freq_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 4000, .max = 96000, .def = 44100 },
+    .prompt = T_I2S_SPEED_MENU,
+    .hint = T_I2S_SPEED_MENU_1,
+};
 
-static const struct prompt_item i2s_speed_menu[] = { { T_I2S_SPEED_MENU_1 } };
-static const struct prompt_item i2s_data_bits_menu[] = { { T_I2S_DATA_BITS_MENU_1 } };
+// Data bits — flag -d / --databits (currently fixed at 16)
+static const bp_val_constraint_t i2s_databits_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 16, .max = 16, .def = 16 },
+    .prompt = T_I2S_DATA_BITS_MENU,
+    .hint = T_I2S_DATA_BITS_MENU_1,
+};
 
-static const struct ui_prompt i2s_menu[] = { 
-    [0] = { .description = T_I2S_SPEED_MENU,
-    .menu_items = i2s_speed_menu,
-    .menu_items_count = count_of(i2s_speed_menu),
-    .prompt_text = T_I2S_SPEED_PROMPT,
-    .minval = 4000,
-    .maxval = 96000,
-    .defval = 44100,
-    .menu_action = 0,
-    .config = &prompt_int_cfg },
-    [1] = { .description = T_I2S_DATA_BITS_MENU,
-    .menu_items = i2s_data_bits_menu,
-    .menu_items_count = count_of(i2s_data_bits_menu),
-    .prompt_text = T_I2S_DATA_BITS_PROMPT,
-    .minval = 16,
-    .maxval = 16,
-    .defval = 16,
-    .menu_action = 0,
-    .config = &prompt_int_cfg }
+static const bp_command_opt_t i2s_setup_opts[] = {
+    { "freq",     'f', BP_ARG_REQUIRED, "4000-96000", 0, &i2s_freq_range },
+    { "databits", 'd', BP_ARG_REQUIRED, "16",         0, &i2s_databits_range },
+    { 0 },
+};
+
+const bp_command_def_t i2s_setup_def = {
+    .name = "i2s",
+    .description = 0,
+    .opts = i2s_setup_opts,
 };
 
 void i2s_settings(void) {
@@ -94,7 +98,8 @@ static bool update_pio_frequency(uint32_t sample_freq, bool enable) {
 // the user may cancel out of the menu and return to the previous mode.
 // Don't touch hardware yet, save the settings in variables for later.
 uint32_t i2s_setup(void) {
-    prompt_result result;
+    uint32_t new_freq;
+    uint32_t new_bits;
 
     const char config_file[] = "bpi2s.bp";
     const mode_config_t config_t[] = {
@@ -104,33 +109,43 @@ uint32_t i2s_setup(void) {
         // clang-format off
     };    
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        i2s_settings();
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
+    // Detect interactive vs CLI mode by checking the primary flag
+    bp_cmd_status_t st = bp_cmd_flag(&i2s_setup_def, 'f', &new_freq);
+    if (st == BP_CMD_INVALID) return 0;
+    bool interactive = (st == BP_CMD_MISSING);
+
+    if (interactive) {
+        prompt_result result;
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            i2s_settings();
+            bool user_value;
+            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
+                return 0;
+            }
+            if (user_value) {
+                return 1; // user said yes, use the saved settings
+            }
+        }
+
+        // Prompt for frequency, loop until PIO can support the selected rate
+        do {
+            if (bp_cmd_prompt(&i2s_freq_range, &new_freq) != BP_CMD_OK) return 0;
+        } while (!update_pio_frequency(new_freq, false));
+
+        if (bp_cmd_prompt(&i2s_databits_range, &new_bits) != BP_CMD_OK) return 0;
+    } else {
+        // CLI mode — validate frequency once
+        if (!update_pio_frequency(new_freq, false)) {
+            printf("Unsupported frequency: %u Hz\r\n", (unsigned)new_freq);
             return 0;
         }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
-        }
+
+        st = bp_cmd_flag(&i2s_setup_def, 'd', &new_bits);
+        if (st == BP_CMD_INVALID) return 0;
     }
 
-    uint32_t new_freq;
-    do {
-        // Show the user the menu and get the frequency
-        ui_prompt_uint32(&result, &i2s_menu[0], &new_freq);
-        if (result.exit) {
-            return 0; // user exited the menu
-        }
-    } while(!update_pio_frequency(new_freq, false)); 
-
-    uint32_t new_bits;
-    ui_prompt_uint32(&result, &i2s_menu[1], &new_bits);
-    if (result.exit) {
-        return 0;
-    }
-    i2s_mode_config.freq = new_freq; // save the frequency
+    i2s_mode_config.freq = new_freq;
     i2s_mode_config.bits = (uint8_t)new_bits;
 
     storage_save_mode(config_file, config_t, count_of(config_t));

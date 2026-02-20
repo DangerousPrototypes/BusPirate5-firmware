@@ -36,3 +36,4 @@ typedef struct _uart_mode_config{
 */
 extern const struct _mode_command_struct hwhduart_commands[];
 extern const uint32_t hwhduart_commands_count;
+extern const struct bp_command_def hduart_setup_def;

@@ -19,6 +19,7 @@
 #include "ui/ui_help.h"
 #include "pio_config.h"
 #include "binmode/logicanalyzer.h"
+#include "lib/bp_args/bp_cmd.h"
 
 struct _pio_config pio_config;
 
@@ -204,39 +205,30 @@ static void onboard_write(uint32_t pixel_data) {
 }
 
 
-static const struct prompt_item leds_type_menu[] = { { T_HWLED_DEVICE_MENU_1 },
-                                                     { T_HWLED_DEVICE_MENU_2 },
-                                                     { T_HWLED_DEVICE_MENU_3 } };
-//static const struct prompt_item leds_num_menu[] = { { T_HWLED_NUM_LEDS_MENU_1 } };
+// Device type — flag -d / --device
+static const bp_val_choice_t led_device_choices[] = {
+    { "ws2812",   NULL, T_HWLED_DEVICE_MENU_1, 0 },
+    { "apa102",   NULL, T_HWLED_DEVICE_MENU_2, 1 },
+    { "onboard",  NULL, T_HWLED_DEVICE_MENU_3, 2 },
+};
+static const bp_val_constraint_t led_device_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = led_device_choices, .count = 3, .def = 0 },
+    .prompt = T_HWLED_DEVICE_MENU,
+};
 
-static const struct ui_prompt leds_menu[] = {
-    {
-        .description = T_HWLED_DEVICE_MENU,
-        .menu_items = leds_type_menu,
-        .menu_items_count = count_of(leds_type_menu),
-        .prompt_text = T_HWLED_DEVICE_PROMPT,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    },
-    /*{
-        .description = T_HWLED_NUM_LEDS_MENU,
-        .menu_items = leds_num_menu,
-        .menu_items_count = count_of(leds_num_menu),
-        .prompt_text = T_HWLED_NUM_LEDS_PROMPT,
-        .minval = 1,
-        .maxval = 10000,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_int_cfg
-    }*/
+static const bp_command_opt_t led_setup_opts[] = {
+    { "device", 'd', BP_ARG_REQUIRED, "ws2812/apa102/onboard", 0, &led_device_choice },
+    { 0 },
+};
+
+const bp_command_def_t led_setup_def = {
+    .name = "led",
+    .description = 0,
+    .opts = led_setup_opts,
 };
 
 uint32_t hwled_setup(void) {
-
-    prompt_result result;
 
     const char config_file[] = "bpled.bp";
     const mode_config_t config_t[] = {
@@ -246,35 +238,34 @@ uint32_t hwled_setup(void) {
         // clang-format on
     };
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        hwled_settings();
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0;
-        }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
-        }
-    }
+    // Detect interactive vs CLI mode by checking the primary flag
+    uint32_t temp;
+    bp_cmd_status_t st = bp_cmd_flag(&led_setup_def, 'd', &temp);
+    if (st == BP_CMD_INVALID) return 0;
+    bool interactive = (st == BP_CMD_MISSING);
 
-    ui_prompt_uint32(&result, &leds_menu[0], &hwled_mode_config.device);
-    if (result.exit) {
-        return 0;
-    }
-    hwled_mode_config.device--;
-    /*if (hwled_mode_config.device == 2) {
-        hwled_mode_config.num_leds = RGB_LEN;
-    } else {
-        ui_prompt_uint32(&result, &leds_menu[1], &hwled_mode_config.num_leds);
-        if (result.exit) {
-            return 0;
+    if (interactive) {
+        prompt_result result;
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            hwled_settings();
+            bool user_value;
+            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
+                return 0;
+            }
+            if (user_value) {
+                return 1; // user said yes, use the saved settings
+            }
         }
-    }*/
+
+        if (bp_cmd_prompt(&led_device_choice, &temp) != BP_CMD_OK) return 0;
+        hwled_mode_config.device = temp;
+    } else {
+        hwled_mode_config.device = temp;
+    }
 
     storage_save_mode(config_file, config_t, count_of(config_t));
 
-    //}
     return 1;
 }
 
@@ -344,7 +335,7 @@ void hwled_cleanup(void) {
 }
 
 void hwled_settings(void) {
-    ui_prompt_mode_settings_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(leds_type_menu[hwled_mode_config.device].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(led_device_choices[hwled_mode_config.device].label), 0x00);
     //ui_prompt_mode_settings_int(GET_T(T_HWLED_NUM_LEDS_MENU), hwled_mode_config.num_leds, 0x00);
 }
 

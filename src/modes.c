@@ -291,6 +291,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwhduart_commands_count, // mode specific commands count
         .protocol_get_speed = hwhduart_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwhduart_preflight_sanity_check, // sanity check before executing syntax
+        .setup_def = &hduart_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HWI2C
@@ -321,6 +322,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwi2c_commands_count, // mode specific commands count
         .protocol_get_speed = hwi2c_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwi2c_preflight_sanity_check, // sanity check before executing syntax
+        .setup_def = &i2c_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HWSPI
@@ -351,6 +353,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwspi_commands_count, // mode specific commands count
         .protocol_get_speed = spi_get_speed,          // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = spi_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &spi_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HW2WIRE
@@ -381,9 +384,8 @@ struct _mode modes[] = {
         .mode_commands_count = &hw2wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw2wire_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw2wire_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &hw2wire_setup_def,        // command def for mode setup flags
     },
-#endif
-#ifdef BP_USE_HW3WIRE
     [HW3WIRE] = {
         .protocol_name = "3WIRE",                        // friendly name (promptname)
         .protocol_start = hw3wire_start,                 // start
@@ -411,6 +413,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hw3wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw3wire_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw3wire_preflight_sanity_check,      // sanity check before executing syntax 
+        .setup_def = &hw3wire_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_DIO
@@ -474,6 +477,7 @@ struct _mode modes[] = {
         .protocol_command = NULL,                     // per mode command parser - ignored if 0
         .protocol_wait_done = hwled_wait_idle,        // wait for the protocol to finish
         .protocol_preflight_sanity_check = hwled_preflight_sanity_check,      // sanity check before executing syntax      
+        .setup_def = &led_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_INFRARED
@@ -505,6 +509,7 @@ struct _mode modes[] = {
         .protocol_wait_done = infrared_wait_idle,        // wait for the protocol to finish
         .protocol_get_speed = infrared_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = infrared_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &infrared_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_JTAG
@@ -564,9 +569,8 @@ struct _mode modes[] = {
         .mode_commands = i2s_commands,              // mode specific commands
         .mode_commands_count = &i2s_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+        .setup_def = &i2s_setup_def,        // command def for mode setup flags
     },
-#endif
-#ifdef BP_USE_LCDI2C
     [LCDI2C] = {
         .protocol_name = "LCDI2C",                       // friendly name (promptname)
         .protocol_start = nullfunc1,                     // start
@@ -680,10 +684,8 @@ struct _mode modes[] = {
         .mode_commands = dummy1_commands,              // mode specific commands
         .mode_commands_count = &dummy1_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+        .setup_def = &dummy1_setup_def,        // command def for mode setup flags
     },
-#endif
-};
-/* For Emacs:
  * Local Variables:
  * mode:c
  * indent-tabs-mode:t

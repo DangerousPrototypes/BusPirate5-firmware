@@ -37,3 +37,4 @@ void dummy1_help(void);
 
 extern const struct _mode_command_struct dummy1_commands[];
 extern const uint32_t dummy1_commands_count;
+extern const struct bp_command_def dummy1_setup_def;

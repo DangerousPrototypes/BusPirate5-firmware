@@ -206,50 +206,49 @@ static const char pin_labels[][5]={
 
 static const uint8_t ir_rx_pins[] = {BIO3, BIO5, BIO7};
 
-static const struct prompt_item infrared_rx_sensor_menu[] = { //{ T_IR_RX_SENSOR_MENU_LEARNER },
-                                                        { T_IR_RX_SENSOR_MENU_BARRIER },
-                                                        { T_IR_RX_SENSOR_MENU_38K_DEMOD },
-                                                        {T_IR_RX_SENSOR_MENU_56K_DEMOD} };
-static const struct prompt_item infrared_protocol_menu[] = { {T_IR_PROTOCOL_MENU_RAW}, 
-                                                            { T_IR_PROTOCOL_MENU_NEC },
-                                                            { T_IR_PROTOCOL_MENU_RC5 } };   
+// Protocol — flag -p / --protocol
+static const bp_val_choice_t infrared_protocol_choices[] = {
+    { "raw", NULL, T_IR_PROTOCOL_MENU_RAW, 0 },
+    { "nec", NULL, T_IR_PROTOCOL_MENU_NEC, 1 },
+    { "rc5", NULL, T_IR_PROTOCOL_MENU_RC5, 2 },
+};
+static const bp_val_constraint_t infrared_protocol_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = infrared_protocol_choices, .count = 3, .def = 0 },
+    .prompt = T_IR_PROTOCOL_MENU,
+};
 
-static const struct prompt_item infrared_tx_speed_menu[] = { { T_IR_TX_SPEED_MENU_1 } };
+// TX frequency — flag -f / --freq (kHz; stored as Hz)
+static const bp_val_constraint_t infrared_freq_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 20, .max = 60, .def = 38 },
+    .prompt = T_IR_TX_SPEED_MENU,
+    .hint = T_IR_TX_SPEED_MENU_1,
+};
 
-static const struct ui_prompt infrared_menu[] = {
-    {
-        .description = T_IR_PROTOCOL_MENU,
-        .menu_items = infrared_protocol_menu,
-        .menu_items_count = count_of(infrared_protocol_menu),
-        .prompt_text = T_IR_PROTOCOL_MENU,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 1,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    },       
-    {
-        .description = T_IR_RX_SENSOR_MENU,
-        .menu_items = infrared_rx_sensor_menu,
-        .menu_items_count = count_of(infrared_rx_sensor_menu),
-        .prompt_text = T_IR_RX_SENSOR_MENU,
-        .minval = 0,
-        .maxval = 0,
-        .defval = 2,
-        .menu_action = 0,
-        .config = &prompt_list_cfg
-    },
-    {   .description = T_IR_TX_SPEED_MENU,
-        .menu_items = infrared_tx_speed_menu,
-        .menu_items_count = count_of(infrared_tx_speed_menu),
-        .prompt_text = T_IR_TX_SPEED_PROMPT,
-        .minval = 20,
-        .maxval = 60,
-        .defval = 38,
-        .menu_action = 0,
-        .config = &prompt_int_cfg 
-    },    
-     
+// RX sensor — flag -r / --rxsensor
+static const bp_val_choice_t infrared_rxsensor_choices[] = {
+    { "barrier",   NULL, T_IR_RX_SENSOR_MENU_BARRIER,    0 },
+    { "38k_demod", NULL, T_IR_RX_SENSOR_MENU_38K_DEMOD,  1 },
+    { "56k_demod", NULL, T_IR_RX_SENSOR_MENU_56K_DEMOD,  2 },
+};
+static const bp_val_constraint_t infrared_rxsensor_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = infrared_rxsensor_choices, .count = 3, .def = 1 },
+    .prompt = T_IR_RX_SENSOR_MENU,
+};
+
+static const bp_command_opt_t infrared_setup_opts[] = {
+    { "protocol", 'p', BP_ARG_REQUIRED, "raw/nec/rc5",             0, &infrared_protocol_choice },
+    { "freq",     'f', BP_ARG_REQUIRED, "20-60",                   0, &infrared_freq_range },
+    { "rxsensor", 'r', BP_ARG_REQUIRED, "barrier/38k_demod/56k_demod", 0, &infrared_rxsensor_choice },
+    { 0 },
+};
+
+const bp_command_def_t infrared_setup_def = {
+    .name = "infrared",
+    .description = 0,
+    .opts = infrared_setup_opts,
 };
 
 static struct _infrared_mode_config mode_config;
@@ -259,7 +258,7 @@ static struct _infrared_mode_config mode_config;
 // the user may cancel out of the menu and return to the previous mode.
 // Don't touch hardware yet, save the settings in variables for later.
 uint32_t infrared_setup(void) {
-    prompt_result result;
+    uint32_t temp;
 
     const char config_file[] = "bpirrxtx.bp";
     const mode_config_t config_t[] = {
@@ -270,43 +269,53 @@ uint32_t infrared_setup(void) {
         // clang-format on
     };
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+    // Detect interactive vs CLI mode by checking the primary flag
+    bp_cmd_status_t st = bp_cmd_flag(&infrared_setup_def, 'p', &temp);
+    if (st == BP_CMD_INVALID) return 0;
+    bool interactive = (st == BP_CMD_MISSING);
 
-        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        infrared_settings();
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0;
+    if (interactive) {
+        prompt_result result;
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            infrared_settings();
+            bool user_value;
+            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
+                return 0;
+            }
+            if (user_value) {
+                return 1; // user said yes, use the saved settings
+            }
         }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
+
+        if (bp_cmd_prompt(&infrared_protocol_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.protocol = temp;
+
+        if (ir_protocol[mode_config.protocol].mod_freq) {
+            mode_config.tx_freq = ir_protocol[mode_config.protocol].mod_freq;
+            printf("\r\n\r\n%s%s TX modulation%s: %ukHz\r\n", ui_term_color_info(), ir_protocol[mode_config.protocol].display_name, ui_term_color_reset(), mode_config.tx_freq / 1000);
+        } else {
+            if (bp_cmd_prompt(&infrared_freq_range, &temp) != BP_CMD_OK) return 0;
+            mode_config.tx_freq = temp * 1000;
         }
+
+        if (bp_cmd_prompt(&infrared_rxsensor_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.rx_sensor = temp;
+    } else {
+        mode_config.protocol = temp;
+
+        if (ir_protocol[mode_config.protocol].mod_freq) {
+            mode_config.tx_freq = ir_protocol[mode_config.protocol].mod_freq;
+        } else {
+            st = bp_cmd_flag(&infrared_setup_def, 'f', &temp);
+            if (st == BP_CMD_INVALID) return 0;
+            mode_config.tx_freq = temp * 1000;
+        }
+
+        st = bp_cmd_flag(&infrared_setup_def, 'r', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.rx_sensor = temp;
     }
-
-    ui_prompt_uint32(&result, &infrared_menu[0], &mode_config.protocol);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.protocol--;  
-
-    if(ir_protocol[mode_config.protocol].mod_freq){
-        mode_config.tx_freq = ir_protocol[mode_config.protocol].mod_freq;
-        printf("\r\n\r\n%s%s TX modulation%s: %ukHz\r\n", ui_term_color_info(), ir_protocol[mode_config.protocol].display_name, ui_term_color_reset(), mode_config.tx_freq/1000);
-    }else{
-        ui_prompt_uint32(&result, &infrared_menu[2], &mode_config.tx_freq);
-        if (result.exit) {
-            return 0;
-        }
-        mode_config.tx_freq*=1000;     
-    }    
-    
-    ui_prompt_uint32(&result, &infrared_menu[1], &mode_config.rx_sensor);
-    if (result.exit) {
-        return 0;
-    }    
-    mode_config.rx_sensor--;
-
-
 
     storage_save_mode(config_file, config_t, count_of(config_t));
 
@@ -439,7 +448,7 @@ uint32_t infrared_get_speed(void) {
 }
 
 void infrared_settings(void) {
-    ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_menu[mode_config.protocol].description), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rx_sensor_menu[mode_config.rx_sensor].description), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_choices[mode_config.protocol].label), 0x00);
+    ui_prompt_mode_settings_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rxsensor_choices[mode_config.rx_sensor].label), 0x00);
     ui_prompt_mode_settings_int(GET_T(T_IR_TX_SPEED_MENU), mode_config.tx_freq/1000, GET_T(T_KHZ));
 }

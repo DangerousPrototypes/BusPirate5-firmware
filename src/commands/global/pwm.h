@@ -29,3 +29,6 @@ void pwm_configure_disable(struct command_result* res);
  */
 uint8_t pwm_freq_find(
     float* freq_hz_value, float* pwm_hz_actual, float* pwm_ns_actual, uint32_t* pwm_divider, uint32_t* pwm_top);
+
+extern const struct bp_command_def pwm_enable_def;
+extern const struct bp_command_def pwm_disable_def;

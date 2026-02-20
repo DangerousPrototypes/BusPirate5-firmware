@@ -29,6 +29,7 @@ void infrared_cleanup_temp(void);
 
 extern const struct _mode_command_struct infrared_commands[];
 extern const uint32_t infrared_commands_count;
+extern const struct bp_command_def infrared_setup_def;
 
 typedef struct _infrared_mode_config {
     uint32_t rx_sensor;

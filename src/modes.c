@@ -509,6 +509,7 @@ struct _mode modes[] = {
         .protocol_wait_done = infrared_wait_idle,        // wait for the protocol to finish
         .protocol_get_speed = infrared_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = infrared_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &infrared_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_JTAG

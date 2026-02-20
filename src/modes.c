@@ -686,6 +686,9 @@ struct _mode modes[] = {
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
         .setup_def = &dummy1_setup_def,        // command def for mode setup flags
     },
+#endif
+};
+/* For Emacs:
  * Local Variables:
  * mode:c
  * indent-tabs-mode:t

@@ -132,7 +132,7 @@ int ff_req_grant (	/* 1:Got a grant to access the volume, 0:Could not get a gran
 )
 {
 	/* PICO SDK */
-	return mutex_enter_timeout_ms(sobj, FR_TIMEOUT);
+	return mutex_enter_timeout_ms(sobj, FF_FS_TIMEOUT);
 	
 	/* Win32 */
 //	return (int)(WaitForSingleObject(sobj, FF_FS_TIMEOUT) == WAIT_OBJECT_0);

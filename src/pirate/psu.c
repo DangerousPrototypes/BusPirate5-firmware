@@ -153,8 +153,8 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
         } 
         //current dac
         const uint8_t i_dac_address = 0xc0;
-        dac[0] == (i_dac >> 8) & 0xF;
-        dac[1] == i_dac & 0xFF;
+        dac[0] = (i_dac >> 8) & 0xF;
+        dac[1] = i_dac & 0xFF;
         if(i2c_write_blocking(BP_I2C_PORT, i_dac_address, dac, 2, false) == PICO_ERROR_GENERIC){
             printf("I2C write error\n");
         }

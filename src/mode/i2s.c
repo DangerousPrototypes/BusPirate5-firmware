@@ -212,6 +212,8 @@ uint32_t i2s_setup_exc(void) {
 
 // Cleanup any configuration on exit.
 void i2s_cleanup(void) {
+    pio_sm_set_enabled(i2s_pio_config_out.pio, i2s_pio_config_out.sm, false);
+    pio_sm_set_enabled(i2s_pio_config_in.pio, i2s_pio_config_in.sm, false);
     pio_remove_program(i2s_pio_config_out.pio, i2s_pio_config_out.program, i2s_pio_config_out.offset);
     pio_remove_program(i2s_pio_config_in.pio, i2s_pio_config_in.program, i2s_pio_config_in.offset);
     // 1. Disable any hardware you used
@@ -221,6 +223,9 @@ void i2s_cleanup(void) {
     system_bio_update_purpose_and_label(false, BIO0, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, BIO1, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, BIO2, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO5, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO6, BP_PIN_MODE, 0);
+    system_bio_update_purpose_and_label(false, BIO7, BP_PIN_MODE, 0);
     //printf("-i2s- cleanup()\r\n");
 }
 

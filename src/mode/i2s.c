@@ -27,7 +27,8 @@
 #include "hardware/pio.h"
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
-#include "commands/i2s/sine.h" // sine wave generation functions
+#include "commands/i2s/sine.h"
+#include "commands/i2s/wav.h"
 #include "pirate/storage.h"
 #include "fatfs/ff.h"       // File system related
 #include "lib/bp_args/bp_cmd.h"
@@ -40,6 +41,10 @@ struct _i2s_mode_config i2s_mode_config;
 const struct _mode_command_struct i2s_commands[] = { 
     {   .func=&sine_handler,
         .def=&sine_def,
+        .supress_fala_capture=false
+    },
+    {   .func=&wav_handler,
+        .def=&wav_def,
         .supress_fala_capture=false
     },
  };

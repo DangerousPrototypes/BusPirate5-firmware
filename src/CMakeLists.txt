@@ -551,6 +551,8 @@ set(buspirate_common
         mode/i2s.h
         commands/i2s/sine.h 
         commands/i2s/sine.c
+        commands/i2s/wav.h
+        commands/i2s/wav.c
 )
 set(buspirate_nandflash
         #nand flash management and dhara

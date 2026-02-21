@@ -4,6 +4,8 @@
  * @details Provides I2S mode for digital audio communication.
  */
 
+struct _bytecode;
+
 void i2s_write(struct _bytecode* result, struct _bytecode* next);
 void i2s_read(struct _bytecode* result, struct _bytecode* next);
 void i2s_start(struct _bytecode* result, struct _bytecode* next);

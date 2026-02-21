@@ -19,6 +19,9 @@
 #include "lib/jep106/jep106.h"
 #include "ui/ui_hex.h"
 
+// Forward declaration — defined at bottom of file
+extern const bp_command_def_t ddr5_def;
+
 // DDR5 SPD Volatile Memory structure
 typedef struct __attribute__((packed)) {
     // Register MR0 and MR1: Device Type
@@ -571,7 +574,7 @@ void ddr5_search_upa(uint8_t *data, uint32_t start, uint32_t end) {
                 // align the start address to 16 bytes, and calculate the end address
                 struct hex_config_t hex_config;
                 //ui_hex_init_config(&hex_config);
-                ui_hex_get_args_config(&hex_config); //get the quiet flag, everything else is overridden
+                ui_hex_get_args_config(&ddr5_def, &hex_config); //get the quiet flag, everything else is overridden
                 hex_config.max_size_bytes= DDR5_SPD_SIZE; // maximum size of the device in bytes
                 //ui_hex_get_args_config(&hex_config);
                 hex_config.start_address=start_address; //set the start address
@@ -642,7 +645,7 @@ bool ddr5_dump(uint8_t *buffer) {
     // align the start address to 16 bytes, and calculate the end address
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= DDR5_SPD_SIZE; // maximum size of the device in bytes
-    ui_hex_get_args_config(&hex_config);
+    ui_hex_get_args_config(&ddr5_def, &hex_config);
     ui_hex_align_config(&hex_config);
     ui_hex_header_config(&hex_config);
     //read 1024 bytes from the DDR5 SPD NVM

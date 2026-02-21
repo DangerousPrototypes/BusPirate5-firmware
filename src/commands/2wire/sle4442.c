@@ -390,7 +390,7 @@ void sle4442(struct command_result* res) {
 #endif        
         struct hex_config_t hex_config;
         hex_config.max_size_bytes= 256; // maximum size of the device in bytes
-        ui_hex_get_args_config(&hex_config);
+        ui_hex_get_args_config(&sle4442_def, &hex_config);
         ui_hex_align_config(&hex_config);
         ui_hex_header_config(&hex_config);
 

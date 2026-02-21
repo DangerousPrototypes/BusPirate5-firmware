@@ -155,7 +155,7 @@ void flash(struct command_result* res) {
     }
 
     if(flash_action == FLASH_DUMP){
-        spiflash_show_hex(sizeof(data), data, &flash_info);
+        spiflash_show_hex(&flash_def, sizeof(data), data, &flash_info);
         goto flash_cleanup; // no need to continue
     }
 

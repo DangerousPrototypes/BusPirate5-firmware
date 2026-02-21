@@ -49,6 +49,9 @@ Some functions adapted from C++ for the Bus Pirate project by Ian Lesnet Septemb
 #include "lib/jep106/jep106.h"
 #include "ui/ui_hex.h"
 
+// Forward declaration — defined at bottom of file
+extern const bp_command_def_t ddr4_def;
+
 #define DDR4_SPD_SIGNITURE 0x12
 #define DDR4_SPD_I2C_ADDR_7BIT 0x50
 #define DDR4_SPD_SIZE 512 // Size of DDR4 SPD data in bytes
@@ -472,7 +475,7 @@ bool ddr4_dump(uint8_t *buffer) {
     // align the start address to 16 bytes, and calculate the end address
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= DDR4_SPD_SIZE; // maximum size of the device in bytes
-    ui_hex_get_args_config(&hex_config);
+    ui_hex_get_args_config(&ddr4_def, &hex_config);
     ui_hex_align_config(&hex_config);
     ui_hex_header_config(&hex_config);
     //read SPD

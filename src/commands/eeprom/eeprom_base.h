@@ -89,7 +89,8 @@ bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uint8_t *b
  * @param buf_size  Buffer size in bytes
  * @return          true on success
  */
-bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size);
+struct bp_command_def;
+bool eeprom_dump(const struct bp_command_def *def, struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size);
 
 /**
  * @brief Write data to EEPROM.

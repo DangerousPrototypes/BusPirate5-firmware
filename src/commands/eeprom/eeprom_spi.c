@@ -590,7 +590,7 @@ void spi_eeprom_handler(struct command_result* res) {
 
     if(eeprom.action == EEPROM_DUMP) {
         //dump the EEPROM contents
-        eeprom_dump(&eeprom, buf, sizeof(buf));
+        eeprom_dump(&eeprom_spi_def, &eeprom, buf, sizeof(buf));
         goto spi_eeprom_cleanup; // no need to continue
     }
  

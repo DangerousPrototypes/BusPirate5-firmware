@@ -38,10 +38,7 @@ static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <b
                                          "press 'x' to quit pager" };
 
 static const bp_command_opt_t hex_opts[] = {
-    { "start",   's', BP_ARG_REQUIRED, "addr",  UI_HEX_HELP_START },
-    { "bytes",   'b', BP_ARG_REQUIRED, "count", UI_HEX_HELP_BYTES },
-    { "quiet",   'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
-    { "nopager", 'c', BP_ARG_NONE,     NULL,      T_HELP_DISK_HEX_PAGER_OFF },
+    UI_HEX_OPTS
     { 0 }
 };
 
@@ -87,7 +84,7 @@ void hex_handler(struct command_result* res) {
     }
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= file_size(&fil); // maximum size of the device in bytes
-    if(ui_hex_get_args_config(&hex_config)) goto hex_cleanup; // parse the command line arguments
+    if(ui_hex_get_args_config(&hex_def, &hex_config)) goto hex_cleanup; // parse the command line arguments
     ui_hex_align_config(&hex_config);
     
     //advance to the start address

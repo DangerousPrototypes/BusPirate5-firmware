@@ -315,7 +315,7 @@ void i2c_eeprom_handler(struct command_result* res) {
 
     if(eeprom.action == EEPROM_DUMP) {
         //dump the EEPROM contents
-        eeprom_dump(&eeprom, buf, sizeof(buf));
+        eeprom_dump(&eeprom_i2c_def, &eeprom, buf, sizeof(buf));
         goto i2c_eeprom_cleanup; // no need to continue
     }
  

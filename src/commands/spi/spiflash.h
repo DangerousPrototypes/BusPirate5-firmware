@@ -128,6 +128,8 @@ bool spiflash_force_dump(uint32_t start_address,
                          uint8_t* buf,
                          sfud_flash* flash_info,
                          const char* file_name);
-bool spiflash_show_hex(uint32_t buf_size,
+struct bp_command_def;
+bool spiflash_show_hex(const struct bp_command_def *def,
+                      uint32_t buf_size,
                       uint8_t* buf,
                       sfud_flash* flash_info); 

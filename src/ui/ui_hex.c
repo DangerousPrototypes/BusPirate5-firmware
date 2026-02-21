@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "ui/ui_term.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_hex.h"
 #include "system_config.h"
 
@@ -22,34 +22,31 @@ void ui_hex_init_config(struct hex_config_t *config) {
     config->rows_printed = 0; // number of rows printed
 }
 
-bool ui_hex_get_args_config(struct hex_config_t *config){
+bool ui_hex_get_args_config(const bp_command_def_t *def, struct hex_config_t *config){
 
     config->header_verbose = false; // do not show the header by default
 
-    command_var_t arg;
     // start address
-    if (cmdln_args_find_flag_uint32('s' | 0x20, &arg, &config->start_address)) {
+    if (bp_cmd_get_uint32(def, 's', &config->start_address)) {
         if (config->start_address >= config->max_size_bytes) {
             printf("Start address out of range: %d\r\n", config->start_address);
             return true; // error
         }
-        //config->header_verbose = true; // show the header with start and end address
     } else {
         config->start_address = 0; // default to 0
     }
 
     // end address: user provides number of bytes to read/write, we calculate the end address
-    if (cmdln_args_find_flag_uint32('b' | 0x20, &arg, &config->requested_bytes)) {
+    if (bp_cmd_get_uint32(def, 'b', &config->requested_bytes)) {
         if(config->requested_bytes == 0) {
            config->requested_bytes = 1;
         }
-        //config->header_verbose = true; // show the header with start and end address
     }else{
        config->requested_bytes=config->max_size_bytes;
     }
     // disable address column and ascii dump
-    config->quiet = cmdln_args_find_flag('q' | 0x20);
-    config->pager_off = cmdln_args_find_flag('c' | 0x20); // disable paging
+    config->quiet = bp_cmd_find_flag(def, 'q');
+    config->pager_off = bp_cmd_find_flag(def, 'c'); // disable paging
     config->rows_terminal = system_config.terminal_ansi_rows; // number of rows in the terminal
     config->rows_printed = 0; // reset the number of rows printed
     return false; // no error

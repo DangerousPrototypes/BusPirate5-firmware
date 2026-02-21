@@ -119,7 +119,7 @@ bool i2c_dump(struct i2c_dump_t *eeprom){
     // align the start address to 16 bytes, and calculate the end address
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= 0xffffffff; // maximum size of the device in bytes
-    ui_hex_get_args_config(&hex_config);
+    ui_hex_get_args_config(&i2c_dump_def, &hex_config);
     hex_config.requested_bytes = eeprom->data_size_bytes; // user requested number of bytes to read
     hex_config.start_address = eeprom->register_address; // start address for the hex dump
     ui_hex_align_config(&hex_config);

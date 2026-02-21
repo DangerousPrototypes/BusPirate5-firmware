@@ -10,6 +10,7 @@
 #include "ui/ui_prompt.h"
 //#include "binmode/fala.h"
 #include "fatfs/ff.h"       // File system related
+#include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_hex.h" // Hex display related
 #include "ui/ui_progress_indicator.h" // Progress indicator related
 //#include "commands/i2c/eeprom.h"
@@ -98,11 +99,11 @@ bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uint8_t *b
 //-----------------Universal Functions-------------------------//
 
 //function to display hex editor like dump of the EEPROM contents
-bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size){
+bool eeprom_dump(const bp_command_def_t *def, struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size){
     // align the start address to 16 bytes, and calculate the end address
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= eeprom->device->size_bytes; // maximum size of the device in bytes
-    ui_hex_get_args_config(&hex_config);
+    ui_hex_get_args_config(def, &hex_config);
     ui_hex_align_config(&hex_config);
     ui_hex_header_config(&hex_config);
 

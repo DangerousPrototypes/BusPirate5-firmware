@@ -35,25 +35,6 @@ typedef struct command_var_struct {
 } command_var_t;
 
 /**
- * @brief Action verb descriptor for command dispatch.
- * @details Used for finding subcommands/actions in command strings
- *          (e.g., "config", "show", "read", "write").
- */
-struct cmdln_action_t {
-    uint32_t action;  ///< Action identifier
-    const char verb[9]; ///< Action verb string
-};
-
-/**
- * @brief Find action verb in command and return action ID.
- * @param action_list          Array of action descriptors
- * @param count_of_action_list Number of actions in list
- * @param[out] action          Matched action ID
- * @return false if action found, true if no match or error
- */
-bool cmdln_args_get_action(const struct cmdln_action_t* action_list, size_t count_of_action_list, uint32_t *action);
-
-/**
  * @brief Check if flag exists in command arguments.
  * @param flag  Flag character (e.g., 'v' for -v)
  * @return true if flag exists
@@ -68,24 +49,6 @@ bool cmdln_args_find_flag(char flag);
  * @return true on success
  */
 bool cmdln_args_find_flag_uint32(char flag, command_var_t* arg, uint32_t* value);
-
-/**
- * @brief Get string value from flag argument.
- * @param flag       Flag character
- * @param[out] arg   Argument information
- * @param max_len    Maximum string length
- * @param[out] str   Output string buffer
- * @return true on success
- */
-bool cmdln_args_find_flag_string(char flag, command_var_t* arg, uint32_t max_len, char* str);
-
-/**
- * @brief Get float argument by position.
- * @param pos         Argument position (0-based)
- * @param[out] value  Parsed float value
- * @return true on success
- */
-bool cmdln_args_float_by_position(uint32_t pos, float* value);
 
 /**
  * @brief Get uint32 argument by position.
@@ -103,16 +66,6 @@ bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t* value);
  * @return true on success
  */
 bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char* str);
-
-/**
- * @brief Get pointer to raw text after command name.
- * @details Returns a direct pointer into the line buffer, past the command
- *          word and leading whitespace. No copy is made.
- * @param[out] out  Pointer to remaining text
- * @param[out] len  Length of remaining text
- * @return true if text exists after command, false if empty
- */
-bool cmdln_args_remainder(const char **out, size_t *len);
 
 /**
  * @brief Find next command in buffer.

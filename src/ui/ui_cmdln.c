@@ -10,7 +10,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
 #include "pirate.h"
@@ -223,26 +222,6 @@ bool cmdln_args_find_flag_uint32(char flag, command_var_t* arg, uint32_t* value)
     return true;
 }
 
-// check if a flag is present and get the integer value
-//  returns true if flag is present AND has a integer value
-//  use cmdln_args_find_flag to see if a flag was present with no integer value
-bool cmdln_args_find_flag_string(char flag, command_var_t* arg, uint32_t max_len, char* str) {
-    if (!cmdln_args_find_flag_internal(flag, arg)) {
-        return false;
-    }
-
-    if (!arg->has_value) {
-        return false;
-    }
-
-    if (!cmdln_args_get_string(arg->value_pos, max_len, str)) {
-        arg->error = true;
-        return false;
-    }
-
-    return true;
-}
-
 // check if a -f(lag) is present. Value is don't care.
 // returns true if flag is present
 bool cmdln_args_find_flag(char flag) {
@@ -317,86 +296,6 @@ bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t* value) {
     return false;
 }
 
-bool cmdln_args_float_by_position(uint32_t pos, float* value) {
-    char c;
-    uint32_t rptr = 0;
-    uint32_t ipart = 0, dpart = 0;
-// start at beginning of command range
-#ifdef UI_CMDLN_ARGS_DEBUG
-    printf("Looking for uint in pos %d\r\n", pos);
-#endif
-    for (uint32_t i = 0; i < pos + 1; i++) {
-        // consume white space
-        if (!cmdln_consume_white_space(&rptr, false)) {
-            return false;
-        }
-        // consume non-white space
-        if (i != pos) {
-            if (!cmdln_consume_white_space(&rptr, true)) { // consume non-white space
-                return false;
-            }
-        } else {
-            // before decimal
-            if (!cmdln_try_peek(rptr, &c)) {
-                return false;
-            }
-            if( c=='-') {
-                //encountered flag, end of positional arguments
-                return false;
-            }
-            if ((c >= '0') && (c <= '9')) // first part of decimal
-            {
-                struct prompt_result result;
-                if (!cmdln_args_get_int(&rptr, &result, &ipart)) {
-                    return false;
-                }
-                // printf("ipart: %d\r\n", ipart);
-            }
-
-            uint32_t dpart_len = 0;
-            if (cmdln_try_peek(rptr, &c)) {
-                if (c == '.' || c == ',') { // second part of decimal
-                    rptr++;                 // discard
-                    dpart_len = rptr;       // track digits
-                    struct prompt_result result;
-                    if (!cmdln_args_get_int(&rptr, &result, &dpart)) {
-                        // printf("No decimal part found\r\n");
-                    }
-                    dpart_len = rptr - dpart_len;
-                    // printf("dpart: %d, dpart_len: %d\r\n", dpart, dpart_len);
-                }
-            }
-            (*value) = (float)ipart;
-            (*value) += ((float)dpart / (float)pow(10, dpart_len));
-            // printf("value: %f\r\n", *value);
-            return true;
-        }
-    }
-    return false;
-}
-
-// Get a direct pointer to everything after the command name (position 0).
-// Skips the command word and leading whitespace, returns pointer into ln_cmdln.buf.
-bool cmdln_args_remainder(const char **out, size_t *len) {
-    uint32_t rptr = 0;
-
-    // Skip command word (position 0 non-whitespace)
-    if (!cmdln_consume_white_space(&rptr, false)) return false;  // skip leading ws
-    if (!cmdln_consume_white_space(&rptr, true))  return false;  // skip command word
-    if (!cmdln_consume_white_space(&rptr, false)) {
-        // No trailing content after command
-        return false;
-    }
-
-    uint32_t start = command_info.startptr + rptr;
-    uint32_t end   = command_info.endptr + 1;  // endptr is inclusive
-    if (start >= end) return false;
-
-    *out = ln_cmdln.buf + start;
-    *len = end - start;
-    return true;
-}
-
 // finds the next command in user input
 // could be a single command ending in 0x00
 // could be multiple commands chained with ; || &&
@@ -462,29 +361,3 @@ cmdln_find_next_command_success:
     return true;
 }
 
-//get first argument following command, search in a list of actions, error if not found
-// returns false if action is found, true if no action is found or error
-bool cmdln_args_get_action(const struct cmdln_action_t* action_list, size_t count_of_action_list, uint32_t *action) {
-    command_var_t arg;
-    char arg_str[9];
-    bool action_found = false; // invalid by default
-
-    // action is the first argument (read/write/probe/erase/etc)
-    if(!cmdln_args_string_by_position(1, sizeof(arg_str), arg_str)) return true; // no action found, return true to indicate no error
-
-    // get action from struct
-    for (uint8_t i = 0; i < count_of_action_list; i++) {
-        if (strcmp(arg_str, action_list[i].verb) == 0) {
-            (*action) = action_list[i].action;
-            action_found = true; // found the action
-            break;
-        }
-    }
-
-    if (!action_found) {
-        if(strlen(arg_str) > 0) printf("\r\nInvalid action: %s\r\n\r\n", arg_str);
-        return true; // invalid action
-    }
-
-    return false;
-}

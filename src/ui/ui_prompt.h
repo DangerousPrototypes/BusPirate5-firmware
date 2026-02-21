@@ -77,13 +77,6 @@ bool ui_prompt_validate_ordered_list(const struct ui_prompt* menu, uint32_t* val
 bool ui_prompt_validate_int(const struct ui_prompt* menu, uint32_t* value);
 /** @} */
 
-bool ui_prompt_float(struct prompt_result* result,
-                     float minval,
-                     float maxval,
-                     float defval,
-                     bool allow_exit,
-                     float* user_value,
-                     bool none);
 bool ui_prompt_float_units(struct prompt_result* result, const char* menu, float* user_value, uint8_t* user_units);
 bool ui_prompt_any_key_continue(struct prompt_result* result,
                                 uint32_t delay,

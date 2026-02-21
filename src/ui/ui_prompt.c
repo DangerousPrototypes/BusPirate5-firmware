@@ -159,45 +159,6 @@ bool ui_prompt_uint32(prompt_result* result, const struct ui_prompt* menu, uint3
     }
 }
 
-// keep the user asking the menu until it falls between minval and maxval, enter returns the default value, x optionally
-// exits
-bool ui_prompt_float(
-    prompt_result* result, float minval, float maxval, float defval, bool allow_exit, float* user_value, bool none) {
-    while (true) {
-        printf("\r\n%s%s ", ui_term_color_prompt(), (allow_exit ? "x to exit" : ""));
-        if (!none) {
-            printf("(%1.2f)", defval);
-        } else {
-            printf("(none)");
-        }
-        printf(" >%s \x03", ui_term_color_reset());
-
-        if (!ui_prompt_user_input()) {
-            result->exit = true; // a little hackish, but we do want to exit right?
-            return false;
-        }
-
-        ui_parse_get_float(result, user_value);
-
-        printf("\r\n");
-
-        if (allow_exit && result->exit) {
-            return false;
-        }
-
-        if (result->no_value) // assume user pressed enter
-        {
-            (*user_value) = defval;
-            result->default_value = true;
-            return true;
-        } else if (result->success && ((*user_value) >= minval) && ((*user_value) <= maxval)) {
-            return true;
-        } else {
-            ui_prompt_invalid_option();
-        }
-    }
-}
-
 // returns float value in user_units
 bool ui_prompt_float_units(prompt_result* result, const char* menu, float* user_value, uint8_t* user_units) {
     while (1) {

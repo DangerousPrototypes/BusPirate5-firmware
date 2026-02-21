@@ -371,23 +371,6 @@ static bool eeprom_get_args(struct eeprom_info *args) {
     // verify_flag
     args->verify_flag = bp_cmd_find_flag(&eeprom_1wire_def, 'v');
 
-    // test block protect bits
-    //args->protect_test_flag = cmdln_args_find_flag('t' | 0x20);
-    // program block protect bits
-    #if 0
-    args->protect_flag=cmdln_args_find_flag_uint32('p' | 0x20, &arg, &args->protect_bits);
-    if(arg.error){
-        printf("Specify block protect bits (0-3, 0b00-0b11)\r\n");
-        return true;
-    }
-    if(args->protect_flag){
-        if (args->protect_bits>=4) {
-            printf("Block write protect bits out of range (0-3, 0b00-0b11 valid): %d\r\n", args->protect_bits);
-            return true; // error
-        }
-    }
-    #endif
-
     // file to read/write/verify
     if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action==EEPROM_VERIFY)) {
         if(!bp_file_get_name_flag(&eeprom_1wire_def, 'f', args->file_name, sizeof(args->file_name))) return true;

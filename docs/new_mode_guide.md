@@ -58,8 +58,7 @@ Start with the required headers and a file-static configuration struct.
 #include "bytecode.h"           // Bytecode structure for data IO
 #include "pirate/bio.h"         // Buffered pin IO functions
 #include "pirate/storage.h"     // storage_load_mode / storage_save_mode
-#include "ui/ui_help.h"         // ui_help_mode_commands
-#include "ui/ui_prompt.h"       // ui_prompt_bool, ui_prompt_mode_settings_*
+#include "ui/ui_help.h"         // ui_help_mode_commands, ui_help_setting_int/string
 #include "ui/ui_term.h"         // ui_term_color_info, ui_term_color_reset
 #include "dummy1.h"
 #include "lib/bp_args/bp_cmd.h" // Constraint-based setup: flags, prompts, help, hints
@@ -253,23 +252,19 @@ if (interactive) {
                GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
         dummy1_settings(); // Display the loaded values
 
-        prompt_result result;
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0; // User pressed 'x' to exit
-        }
-        if (user_value) {
-            return 1; // User accepted saved settings — skip wizard
-        }
+        bp_yn_result_t r = bp_cmd_yes_no_exit("");
+        if (r == BP_YN_EXIT) return 0; // user cancelled
+        if (r == BP_YN_YES)  return 1; // accepted saved settings
     }
 ```
 
 The flow is:
 1. `storage_load_mode()` reads the config file and populates `mode_config.*`
 2. Display the loaded values so the user can review them
-3. `ui_prompt_bool()` asks "use previous settings? (y/n)"
-4. If yes → return immediately, skip the wizard
-5. If no → fall through to the interactive wizard
+3. `bp_cmd_yes_no_exit()` asks "y/n, x to exit (Y) >"
+4. `BP_YN_YES` → return immediately, skip the wizard
+5. `BP_YN_NO` → fall through to the interactive wizard
+6. `BP_YN_EXIT` → abort setup entirely
 
 ### 4d: Interactive Path — Prompt Wizard
 
@@ -359,7 +354,7 @@ Shown by the `i` (info) command. Use the standardized display functions so outpu
 ```c
 void dummy1_settings(void) {
     // Numeric setting: label, value, units string (0 for no units)
-    ui_prompt_mode_settings_int(
+    ui_help_setting_int(
         "Speed",                    // label — use GET_T(T_xxx) for translation
         mode_config.speed,          // current value
         0                           // units string (e.g. GET_T(T_KHZ)) or 0
@@ -372,7 +367,7 @@ void dummy1_settings(void) {
             break;
         }
     }
-    ui_prompt_mode_settings_string(
+    ui_help_setting_string(
         "Output type",              // label
         output_name,                // current choice name
         0                           // units
@@ -382,8 +377,8 @@ void dummy1_settings(void) {
 
 | Function | When to use |
 |----------|-------------|
-| `ui_prompt_mode_settings_int()` | Numeric values (baud rate, speed, data bits) |
-| `ui_prompt_mode_settings_string()` | Choice/enum values (parity, output type, flow control) |
+| `ui_help_setting_int()` | Numeric values (baud rate, speed, data bits) |
+| `ui_help_setting_string()` | Choice/enum values (parity, output type, flow control) |
 
 ---
 
@@ -692,7 +687,7 @@ Wire every function pointer in the `modes[]` array:
 - [ ] Add saved settings: `storage_load_mode()` / `storage_save_mode()`
 - [ ] Implement `setup_exc()` — hardware init and pin claiming
 - [ ] Implement `cleanup()` — hardware deinit and pin release
-- [ ] Implement `settings()` — `ui_prompt_mode_settings_int/string()`
+- [ ] Implement `settings()` — `ui_help_setting_int/string()`
 - [ ] Implement syntax handlers: write, read, start, stop
 - [ ] Implement macro handler (at minimum macro `(0)` menu)
 - [ ] Create `src/mode/mymode.h` with all declarations and `extern` for def

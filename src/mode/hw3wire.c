@@ -9,7 +9,6 @@
 #include "bytecode.h"
 #include "mode/hw3wire.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_cmdln.h"
 #include "hw2wire.pio.h"
 #include "pirate/hw3wire_pio.h"
@@ -80,17 +79,12 @@ uint32_t hw3wire_setup(void) {
     bool interactive = (st == BP_CMD_MISSING);
 
     if (interactive) {
-        prompt_result result;
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             hw3wire_settings();
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         if (bp_cmd_prompt(&hw3wire_speed_range, &temp) != BP_CMD_OK) return 0;
@@ -249,8 +243,8 @@ void hw3wire_macro(uint32_t macro) {
 }
 
 void hw3wire_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_SPEED), mode_config.baudrate/1000, GET_T(T_KHZ));
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(hw3wire_csidle_choices[mode_config.cs_idle].label), 0x00);
+    ui_help_setting_int(GET_T(T_SPEED), mode_config.baudrate/1000, GET_T(T_KHZ));
+    ui_help_setting_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(hw3wire_csidle_choices[mode_config.cs_idle].label), 0x00);
 }
 
 void hw3wire_help(void) {

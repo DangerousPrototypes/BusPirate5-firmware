@@ -228,3 +228,11 @@ bool ui_help_sanity_check(bool vout, uint8_t pullup_mask) {
 void ui_help_error(uint32_t error) {
     printf("\x07\r\n%sError:%s %s\r\n", ui_term_color_error(), ui_term_color_reset(), GET_T(error));
 }
+
+void ui_help_setting_int(const char* label, uint32_t value, const char* units) {
+    printf(" %s%s%s: %d %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), value, units);
+}
+
+void ui_help_setting_string(const char* label, const char* string, const char* units) {
+    printf(" %s%s%s: %s %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), string, units);
+}

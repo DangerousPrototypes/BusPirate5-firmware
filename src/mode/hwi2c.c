@@ -25,7 +25,6 @@
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_cmdln.h"
 #include "hwi2c.pio.h"
 #include "pirate/hwi2c_pio.h"
@@ -177,14 +176,9 @@ uint32_t hwi2c_setup(void) {
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             hwi2c_settings();
-            prompt_result result;
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         if (bp_cmd_prompt(&i2c_speed_range, &i2c_mode_config.baudrate) != BP_CMD_OK) return 0;
@@ -300,11 +294,11 @@ void hwi2c_cleanup(void) {
 
 void hwi2c_settings(void) {
     //printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), i2c_mode_config.baudrate);
-    ui_prompt_mode_settings_int(GET_T(T_HWI2C_SPEED_MENU), i2c_mode_config.baudrate, GET_T(T_KHZ));
+    ui_help_setting_int(GET_T(T_HWI2C_SPEED_MENU), i2c_mode_config.baudrate, GET_T(T_KHZ));
     // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[i2c_mode_config.data_bits].description));
     //printf(" %s: %s\r\n", GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
     //        (i2c_mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
-    ui_prompt_mode_settings_string(GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
+    ui_help_setting_string(GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
             (i2c_mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)), 0x00);
 }
 

@@ -51,7 +51,6 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "lib/bp_args/bp_cmd.h"
-#include "ui/ui_prompt.h"
 #include "bytecode.h"
 #include "pirate/button.h"
 
@@ -201,14 +200,14 @@ static struct _pio_config glitch_pio;
  ************************************************/
 
 void glitch_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_TRG_MENU), uart_glitch_config.glitch_trg, "(ASCII)");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_DLY_MENU), uart_glitch_config.glitch_delay, "ns*10");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_VRY_MENU), uart_glitch_config.glitch_wander, "ns*10");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_LNG_MENU), uart_glitch_config.glitch_time, "ns*10");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_CYC_MENU), uart_glitch_config.glitch_recycle, "ms");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_FAIL_MENU), uart_glitch_config.fail_resp, "(ASCII)");
-    ui_prompt_mode_settings_int(GET_T(T_UART_GLITCH_CNT_MENU), uart_glitch_config.retry_count, 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_UART_GLITCH_NORDY_MENU),
+    ui_help_setting_int(GET_T(T_UART_GLITCH_TRG_MENU), uart_glitch_config.glitch_trg, "(ASCII)");
+    ui_help_setting_int(GET_T(T_UART_GLITCH_DLY_MENU), uart_glitch_config.glitch_delay, "ns*10");
+    ui_help_setting_int(GET_T(T_UART_GLITCH_VRY_MENU), uart_glitch_config.glitch_wander, "ns*10");
+    ui_help_setting_int(GET_T(T_UART_GLITCH_LNG_MENU), uart_glitch_config.glitch_time, "ns*10");
+    ui_help_setting_int(GET_T(T_UART_GLITCH_CYC_MENU), uart_glitch_config.glitch_recycle, "ms");
+    ui_help_setting_int(GET_T(T_UART_GLITCH_FAIL_MENU), uart_glitch_config.fail_resp, "(ASCII)");
+    ui_help_setting_int(GET_T(T_UART_GLITCH_CNT_MENU), uart_glitch_config.retry_count, 0x00);
+    ui_help_setting_string(GET_T(T_UART_GLITCH_NORDY_MENU),
             uart_glitch_config.disable_ready ?
                 GET_T(T_UART_GLITCH_NORDY_ENABLED) :
                 GET_T(T_UART_GLITCH_NORDY_DISABLED), 0x00);
@@ -219,7 +218,6 @@ void glitch_settings(void) {
  * enter config stuff, accept, or get out
  *****************************************************/
 uint32_t uart_glitch_setup(void) {
-    prompt_result result;
 
     const char config_file[] = "uglitch.bp";
     const mode_config_t config_t[] = {
@@ -285,13 +283,9 @@ uint32_t uart_glitch_setup(void) {
 
         glitch_settings();
 
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return (0);
-        }
-        if (user_value) {
-            return (1); // user said yes, use the saved settings
-        }
+        int r = bp_cmd_yes_no_exit("");
+        if (r == BP_YN_EXIT) return 0; // exit
+        if (r == BP_YN_YES)  return 1; // use saved settings
     }
 
     if (bp_cmd_prompt(&glitch_trg_range, &temp) != BP_CMD_OK) return 0;

@@ -25,7 +25,6 @@
 #include "pio_config.h"
 #include "hardware/clocks.h"
 #include "hardware/pio.h"
-#include "ui/ui_prompt.h"
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "commands/i2s/sine.h" // sine wave generation functions
@@ -79,8 +78,8 @@ const bp_command_def_t i2s_setup_def = {
 };
 
 void i2s_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_I2S_SPEED_MENU), i2s_mode_config.freq, GET_T(T_HZ));
-    ui_prompt_mode_settings_int(GET_T(T_I2S_DATA_BITS_MENU), i2s_mode_config.bits, GET_T(T_UART_STOP_BITS_PROMPT));
+    ui_help_setting_int(GET_T(T_I2S_SPEED_MENU), i2s_mode_config.freq, GET_T(T_HZ));
+    ui_help_setting_int(GET_T(T_I2S_DATA_BITS_MENU), i2s_mode_config.bits, GET_T(T_UART_STOP_BITS_PROMPT));
 }
 
 static bool update_pio_frequency(uint32_t sample_freq, bool enable) {
@@ -115,17 +114,12 @@ uint32_t i2s_setup(void) {
     bool interactive = (st == BP_CMD_MISSING);
 
     if (interactive) {
-        prompt_result result;
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             i2s_settings();
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         // Prompt for frequency, loop until PIO can support the selected rate

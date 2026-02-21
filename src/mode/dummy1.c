@@ -47,7 +47,7 @@
 #include "pirate/bio.h"         // Buffered pin IO functions
 #include "pirate/storage.h"     // storage_load_mode / storage_save_mode
 #include "ui/ui_help.h"         // ui_help_mode_commands
-#include "ui/ui_prompt.h"       // ui_prompt_bool, ui_prompt_mode_settings_*
+#include "ui/ui_prompt.h"       // ui_prompt_mode_settings_*
 #include "ui/ui_term.h"         // ui_term_color_info, ui_term_color_reset
 #include "dummy1.h"
 #include "lib/bp_args/bp_cmd.h" // Constraint-based setup: flags, prompts, help, hints
@@ -206,14 +206,14 @@ uint32_t dummy1_setup(void) {
                    GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             dummy1_settings(); // Display the loaded values
 
-            prompt_result result;
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0; // User pressed 'x' to exit
-            }
-            if (user_value) {
-                return 1; // User accepted saved settings — skip wizard
-            }
+            // bp_cmd_yes_no_exit() is a self-contained y/n prompt with
+            // default-yes and 'x' to exit. Returns:
+            //   BP_YN_YES  ( 1) — user accepted saved settings
+            //   BP_YN_NO   ( 0) — user declined, fall through to wizard
+            //   BP_YN_EXIT (-1) — user cancelled setup entirely
+            bp_yn_result_t r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0;
+            if (r == BP_YN_YES)  return 1;
             // User said no — fall through to the full wizard below.
         }
 
@@ -290,12 +290,12 @@ void dummy1_cleanup(void) {
 // ============================================================================
 // SETTINGS DISPLAY — shown by the 'i' (info) command
 // ============================================================================
-// Use ui_prompt_mode_settings_int() for numeric values and
-// ui_prompt_mode_settings_string() for choice/enum values.
+// Use ui_help_setting_int() for numeric values and
+// ui_help_setting_string() for choice/enum values.
 // These print in a standardised format that matches all other modes.
 void dummy1_settings(void) {
     // Numeric setting: label, value, units string (0 for no units)
-    ui_prompt_mode_settings_int(
+    ui_help_setting_int(
         "Speed",                    // label — use GET_T(T_xxx) for translation
         mode_config.speed,          // current value
         0                           // units string (e.g. GET_T(T_KHZ)) or 0
@@ -309,7 +309,7 @@ void dummy1_settings(void) {
             break;
         }
     }
-    ui_prompt_mode_settings_string(
+    ui_help_setting_string(
         "Output type",              // label
         output_name,                // current choice name
         0                           // units

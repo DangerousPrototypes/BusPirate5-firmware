@@ -986,6 +986,34 @@ bool bp_cmd_confirm(const bp_command_def_t *def, const char *message) {
     }
 }
 
+bp_yn_result_t bp_cmd_yes_no_exit(const char *message) {
+    prompt_result result;
+    bool value;
+    printf("%s", message);
+    while (true) {
+        printf("\r\n%sy/n, x to exit (Y) >%s \x03",
+               ui_term_color_prompt(), ui_term_color_reset());
+
+        if (!ui_prompt_user_input()) {
+            return BP_YN_EXIT;
+        }
+
+        ui_parse_get_bool(&result, &value);
+        printf("\r\n");
+
+        if (result.exit) {
+            return BP_YN_EXIT;
+        }
+        if (result.no_value) {
+            return BP_YN_YES; // enter = default yes
+        }
+        if (result.success) {
+            return value ? BP_YN_YES : BP_YN_NO;
+        }
+        // Invalid input — loop
+    }
+}
+
 /*
  * =============================================================================
  * Help display

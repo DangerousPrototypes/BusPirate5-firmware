@@ -9,7 +9,6 @@
 #include "bytecode.h"
 #include "mode/hw2wire.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_cmdln.h"
 #include "hw2wire.pio.h"
 #include "pirate/hw2wire_pio.h"
@@ -74,17 +73,12 @@ uint32_t hw2wire_setup(void) {
     bool interactive = (st == BP_CMD_MISSING);
 
     if (interactive) {
-        prompt_result result;
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             hw2wire_settings();
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         if (bp_cmd_prompt(&hw2wire_speed_range, &hw2wire_mode_config.baudrate) != BP_CMD_OK) return 0;
@@ -204,7 +198,7 @@ void hw2wire_cleanup(void) {
 }*/
 
 void hw2wire_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate, GET_T(T_KHZ));
+    ui_help_setting_int(GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate, GET_T(T_KHZ));
 }
 
 void hw2wire_printI2Cflags(void) {

@@ -32,7 +32,6 @@
 #include "bytecode.h"
 #include "mode/hwuart.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "ui/ui_format.h"
 #include "pirate/storage.h"
@@ -88,11 +87,6 @@ const struct _mode_command_struct hwuart_commands[] = {
 const uint32_t hwuart_commands_count = count_of(hwuart_commands);
 
 static const char pin_labels[][5] = { "TX->", "RX<-", "RTS", "CTS" };
-
-// Keep prompt_item arrays used by hwuart_settings() for display
-static const struct prompt_item uart_parity_menu[] = { { T_UART_PARITY_MENU_1 },
-                                                       { T_UART_PARITY_MENU_2 },
-                                                       { T_UART_PARITY_MENU_3 } };
 
 /*
  * =============================================================================
@@ -220,14 +214,9 @@ uint32_t hwuart_setup(void) {
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             hwuart_settings();
-            prompt_result result;
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         // ── Full interactive wizard ──
@@ -434,13 +423,13 @@ void hwuart_cleanup(void) {
 }
 
 void hwuart_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
-    ui_prompt_mode_settings_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description), 0x00);
-    ui_prompt_mode_settings_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_UART_FLOW_CONTROL_MENU),
+    ui_help_setting_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
+    ui_help_setting_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
+    ui_help_setting_string(GET_T(T_UART_PARITY_MENU), GET_T(parity_choices[mode_config.parity].label), 0x00);
+    ui_help_setting_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
+    ui_help_setting_string(GET_T(T_UART_FLOW_CONTROL_MENU),
             !mode_config.flow_control ? GET_T(T_UART_FLOW_CONTROL_MENU_1) : GET_T(T_UART_FLOW_CONTROL_MENU_2), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_UART_INVERT_MENU),
+    ui_help_setting_string(GET_T(T_UART_INVERT_MENU),
             !mode_config.invert ? GET_T(T_UART_INVERT_MENU_1) : GET_T(T_UART_INVERT_MENU_2), 0x00);
 }
 

@@ -98,3 +98,23 @@ void ui_help_pager_reset(void);
  * @details Sets pager to never pause, useful for scripts or redirected output.
  */
 void ui_help_pager_disable(void);
+
+/**
+ * @brief Display a numeric mode setting.
+ * @details Prints a coloured "label: value units" line for use in
+ *          settings display and saved-session summaries.
+ * @param label  Setting name (use GET_T for translation)
+ * @param value  Current numeric value
+ * @param units  Units string (e.g. GET_T(T_KHZ)), or 0 for none
+ */
+void ui_help_setting_int(const char* label, uint32_t value, const char* units);
+
+/**
+ * @brief Display a string/choice mode setting.
+ * @details Prints a coloured "label: string units" line for use in
+ *          settings display and saved-session summaries.
+ * @param label   Setting name (use GET_T for translation)
+ * @param string  Current choice/value string
+ * @param units   Units string, or 0 for none
+ */
+void ui_help_setting_string(const char* label, const char* string, const char* units);

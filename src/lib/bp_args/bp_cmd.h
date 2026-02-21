@@ -465,6 +465,27 @@ bp_cmd_status_t bp_cmd_prompt(const bp_val_constraint_t *con, void *out);
  */
 bool bp_cmd_confirm(const bp_command_def_t *def, const char *message);
 
+/**
+ * @brief Return type for bp_cmd_yes_no_exit().
+ */
+typedef enum {
+    BP_YN_EXIT = -1,  ///< User pressed 'x' or input was cancelled
+    BP_YN_NO   =  0,  ///< User said no  (falsy)
+    BP_YN_YES  =  1,  ///< User said yes (truthy), or pressed enter for default
+} bp_yn_result_t;
+
+/**
+ * @brief Interactive y/n prompt with default-yes and exit support.
+ * @details Self-contained y/n loop. Shows "y/n, x to exit (Y) >" prompt.
+ *          Pressing enter accepts the default (yes). 'x' exits.
+ *
+ *          Typical use: "Use previous settings?" in mode setup wizards.
+ *
+ * @param message  Message printed before the y/n prompt (pass "" if already printed)
+ * @return BP_YN_YES (1), BP_YN_NO (0), or BP_YN_EXIT (-1)
+ */
+bp_yn_result_t bp_cmd_yes_no_exit(const char *message);
+
 /*
  * =============================================================================
  * Help display

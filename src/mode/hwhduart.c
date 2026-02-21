@@ -8,7 +8,6 @@
 #include "bytecode.h"
 #include "mode/hwuart.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "ui/ui_format.h"
 #include "pirate/storage.h"
@@ -127,17 +126,12 @@ uint32_t hwhduart_setup(void) {
     bool interactive = (st == BP_CMD_MISSING);
 
     if (interactive) {
-        prompt_result result;
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             hwhduart_settings();
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         if (bp_cmd_prompt(&hduart_baud_range, &mode_config.baudrate) != BP_CMD_OK) return 0;
@@ -273,12 +267,12 @@ void hwhduart_cleanup(void) {
 
 void hwhduart_settings(void) {
     //printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD) );
-    ui_prompt_mode_settings_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
+    ui_help_setting_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
     //printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
-    ui_prompt_mode_settings_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_UART_PARITY_MENU), GET_T(hduart_parity_choices[mode_config.parity].label), 0x00);
+    ui_help_setting_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
+    ui_help_setting_string(GET_T(T_UART_PARITY_MENU), GET_T(hduart_parity_choices[mode_config.parity].label), 0x00);
     //printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
-    ui_prompt_mode_settings_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
+    ui_help_setting_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
 
 }
 

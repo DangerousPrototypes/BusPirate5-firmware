@@ -92,67 +92,6 @@ void ui_display_enable_args(struct command_result* res) {
            displays[system_config.display].display_name);
 }
 
-extern bool int_display_menu(const struct ui_prompt* menu);
-
-// set display mode  (hex, bin, octa, dec)
-void ui_display_int_display_format(struct command_result* res) {
-    uint32_t display;
-    bool error;
-
-    prompt_result result;
-    ui_parse_get_attributes(&result, &display, 1);
-    printf("result.error=%d result.no_value=%d result.exit=%d display=%d\n",
-           result.error,
-           result.no_value,
-           result.exit,
-           display);
-
-    if (result.error || result.no_value || result.exit || ((display) > count_of(ui_const_display_formats)) ||
-        ((display) == 0)) {
-        if (result.success && (display) > count_of(ui_const_display_formats)) {
-            ui_prompt_invalid_option();
-        }
-        error = 1;
-    } else {
-        (display)--; // adjust down one from user choice
-        error = 0;
-    }
-
-    if (error) // no integer found
-    {
-        static const struct ui_prompt_config cfg = {
-            true,                            // bool allow_prompt_text;
-            false,                           // bool allow_prompt_defval;
-            false,                           // bool allow_defval;
-            true,                            // bool allow_exit;
-            &int_display_menu,               // bool (*menu_print)(const struct ui_prompt* menu);
-            &ui_prompt_prompt_ordered_list,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-            &ui_prompt_validate_ordered_list // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-        };
-
-        static const struct ui_prompt display_menu = {
-            T_MODE_NUMBER_DISPLAY_FORMAT, 0, count_of(ui_const_display_formats), T_MODE_DISPLAY, 0, 0, 0, 0, &cfg
-        };
-
-        prompt_result result;
-        ui_prompt_uint32(&result, &display_menu, &display);
-        if (result.exit) // user bailed
-        {
-            (*res).error = true;
-            return;
-        }
-        display--;
-    }
-
-    system_config.display_format = (uint8_t)display;
-
-    printf("\r\n%s%s:%s %s",
-           ui_term_color_info(),
-           GET_T(T_MODE_DISPLAY),
-           ui_term_color_reset(),
-           ui_const_display_formats[system_config.display_format]);
-}
-
 /* For Emacs:
  * Local Variables:
  * mode:c

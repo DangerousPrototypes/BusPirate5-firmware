@@ -145,41 +145,6 @@ bool ui_prompt_vt100_mode_feed(uint32_t *value) {
     return false; // still editing
 }
 
-// a glorious yes or no prompt, with xit and enter for default
-bool ui_prompt_bool(prompt_result* result, bool defval_show, bool defval, bool allow_exit, bool* user_value) {
-    while (true) {
-        printf("\r\n%sy/n%s ", ui_term_color_prompt(), (allow_exit ? ", x to exit" : ""));
-        if (defval_show) {
-            printf("(%c)", defval ? 'Y' : 'N');
-        }
-        printf(" >%s \x03", ui_term_color_reset());
-
-        if (!ui_prompt_user_input()) {
-            result->exit = true; // a little hackish, but we do want to exit right?
-            return false;
-        }
-
-        ui_parse_get_bool(result, user_value);
-
-        printf("\r\n");
-
-        if (allow_exit && result->exit) {
-            return false;
-        }
-
-        if (result->no_value && defval_show) // assume user pressed enter
-        {
-            (*user_value) = defval;
-            result->default_value = true;
-            return true;
-        } else if (result->success) {
-            return true;
-        } else {
-            ui_prompt_invalid_option();
-        }
-    }
-}
-
 // ask user for integer until it falls between minval and maxval, enter returns the default value, x exits
 bool ui_prompt_uint32(prompt_result* result, const struct ui_prompt* menu, uint32_t* value) {
     printf("\r\n");
@@ -322,10 +287,4 @@ bool ui_prompt_any_key_continue(prompt_result* result,
     return true;
 }
 
-void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units) {
-    printf(" %s%s%s: %d %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), value, units);
-}
 
-void ui_prompt_mode_settings_string(const char* label, const char* string, const char* units) {
-    printf(" %s%s%s: %s %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), string, units);
-}

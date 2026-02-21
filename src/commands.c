@@ -65,7 +65,7 @@ const struct _global_command_struct commands[] = {
 // Configure: terminal, display, mode config
 { .command="c",         .allow_hiz=true,  .func=&ui_config_main_menu,                .description_text=T_CMDLN_CONFIG_MENU,  .category=CMD_CAT_CONFIGURE },
 { .command="d",         .allow_hiz=true,  .func=&ui_display_enable_args,             .description_text=T_CMDLN_DISPLAY,      .category=CMD_CAT_CONFIGURE },
-{ .command="o",         .allow_hiz=true,  .func=&ui_mode_int_display_format,         .description_text=T_CMDLN_DISPLAY_FORMAT, .category=CMD_CAT_CONFIGURE },
+{ .command="o",         .allow_hiz=true,  .func=&ui_mode_int_display_format,         .def=&display_format_def, .description_text=T_CMDLN_DISPLAY_FORMAT, .category=CMD_CAT_CONFIGURE },
 { .command="l",         .allow_hiz=true,  .func=&bitorder_msb_handler,               .def=&bitorder_msb_def, .description_text=T_CMDLN_BITORDER_MSB, .category=CMD_CAT_CONFIGURE },
 { .command="L",         .allow_hiz=true,  .func=&bitorder_lsb_handler,               .def=&bitorder_lsb_def, .description_text=T_CMDLN_BITORDER_LSB, .category=CMD_CAT_CONFIGURE },
 { .command="cls",       .allow_hiz=true,  .func=&ui_display_clear,                   .def=&cls_def, .description_text=T_HELP_CMD_CLS,       .category=CMD_CAT_CONFIGURE },

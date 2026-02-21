@@ -178,62 +178,81 @@ void ui_mode_enable_args(struct command_result* res) {
     fala_mode_change_hook();                        // notify follow along logic analyzer
 }
 
-bool int_display_menu(const struct ui_prompt* menu) {
-    printf(" %sCurrent setting: %s%s\r\n",
-           ui_term_color_info(),
-           ui_const_display_formats[system_config.display_format],
-           ui_term_color_reset());
-    for (uint i = 0; i < (*menu).menu_items_count; i++) {
-        printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), ui_const_display_formats[i], ui_term_color_reset());
-    }
-}
+/*
+ * =============================================================================
+ * Display format command ("o")
+ * =============================================================================
+ */
+
+static const bp_val_choice_t display_format_choices[] = {
+    { "auto",  NULL, 0, df_auto  },
+    { "hex",   NULL, 0, df_hex   },
+    { "dec",   NULL, 0, df_dec   },
+    { "bin",   NULL, 0, df_bin   },
+    { "ascii", NULL, 0, df_ascii },
+};
+
+static const bp_val_constraint_t display_format_constraint = {
+    .type = BP_VAL_CHOICE,
+    .choice = {
+        .choices = display_format_choices,
+        .count   = count_of(display_format_choices),
+        .def     = df_auto,
+    },
+    .prompt = T_MODE_NUMBER_DISPLAY_FORMAT,
+};
+
+static const bp_command_positional_t display_format_positionals[] = {
+    { "format", "auto/hex/dec/bin/ascii", T_MODE_NUMBER_DISPLAY_FORMAT, false, &display_format_constraint },
+    { 0 },
+};
+
+static const char * const display_format_usage[] = {
+    "o [-h] [format]",
+    "Interactive menu:%s o",
+    "Set hex:%s o hex",
+    "Set decimal by number:%s o 3",
+};
+
+const bp_command_def_t display_format_def = {
+    .name        = "o",
+    .description = T_CMDLN_DISPLAY_FORMAT,
+    .positionals = display_format_positionals,
+    .positional_count = 1,
+    .usage       = display_format_usage,
+    .usage_count = 4,
+};
 
 // set display mode  (hex, bin, octa, dec)
 void ui_mode_int_display_format(struct command_result* res) {
-    uint32_t mode;
-    bool error;
-
-    prompt_result result;
-    ui_parse_get_attributes(&result, &mode, 1);
-
-    if (result.error || result.no_value || result.exit || ((mode) > count_of(ui_const_display_formats)) ||
-        ((mode) == 0)) {
-        if (result.success && (mode) > count_of(ui_const_display_formats)) {
-            ui_prompt_invalid_option();
-        }
-        error = 1;
-    } else {
-        (mode)--; // adjust down one from user choice
-        error = 0;
+    if (res->help_flag) {
+        bp_cmd_help_show(&display_format_def);
+        return;
     }
 
-    if (error) // no integer found
-    {
-        static const struct ui_prompt_config cfg = {
-            true,                            // bool allow_prompt_text;
-            false,                           // bool allow_prompt_defval;
-            false,                           // bool allow_defval;
-            true,                            // bool allow_exit;
-            &int_display_menu,               // bool (*menu_print)(const struct ui_prompt* menu);
-            &ui_prompt_prompt_ordered_list,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-            &ui_prompt_validate_ordered_list // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-        };
+    uint32_t fmt;
+    bp_cmd_status_t s = bp_cmd_positional(&display_format_def, 1, &fmt);
 
-        static const struct ui_prompt mode_menu = {
-            T_MODE_NUMBER_DISPLAY_FORMAT, 0, count_of(ui_const_display_formats), T_MODE_MODE, 0, 0, 0, 0, &cfg
-        };
+    if (s == BP_CMD_INVALID) {
+        res->error = true;
+        return;
+    }
 
-        prompt_result result;
-        ui_prompt_uint32(&result, &mode_menu, &mode);
-        if (result.exit) // user bailed
-        {
-            (*res).error = true;
+    if (s == BP_CMD_MISSING) {
+        // Show current setting before the interactive menu
+        printf("\r\n %sCurrent setting: %s%s",
+               ui_term_color_info(),
+               ui_const_display_formats[system_config.display_format],
+               ui_term_color_reset());
+
+        s = bp_cmd_prompt(&display_format_constraint, &fmt);
+        if (s == BP_CMD_EXIT) {
+            res->error = true;
             return;
         }
-        mode--;
     }
 
-    system_config.display_format = (uint8_t)mode;
+    system_config.display_format = (uint8_t)fmt;
 
     printf("\r\n%s%s:%s %s",
            ui_term_color_info(),

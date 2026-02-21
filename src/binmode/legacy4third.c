@@ -38,8 +38,9 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include "binio_helpers.h"
 #include "tusb.h"
 #include "system_config.h"
-#include "ui/ui_prompt.h"
+#include "ui/ui_prompt.h"       // ui_prompt_float
 #include "ui/ui_term.h"
+#include "lib/bp_args/bp_cmd.h" // bp_cmd_yes_no_exit
 #include "pirate/hwspi.h"
 #include "pirate/mem.h"
 #include "pirate/bio.h"
@@ -781,23 +782,26 @@ void legacy4third_mode(void) {
         set_aux_pins = true;
         mode_active++;
 
-        prompt_result result = { 0 };
+        bp_yn_result_t r;
 
-        printf("\r\nSet OUTPUT HOLD(IO2) & WP(IO3) pins? (no=INPUT)");
-        if (!ui_prompt_bool(&result, true, true, true, &set_aux_pins))
-            goto finish_legacy;
+        r = bp_cmd_yes_no_exit("\r\nSet OUTPUT HOLD(IO2) & WP(IO3) pins? (no=INPUT)");
+        if (r == BP_YN_EXIT) goto finish_legacy;
+        set_aux_pins = (r == BP_YN_YES);
+
         if (set_aux_pins) {
-            printf("\r\nSet HOLD HIGH? (no=LOW)");
-            if (!ui_prompt_bool(&result, true, true, true, &hold_value))
-                goto finish_legacy;
-            printf("\r\nSet WP HIGH? (no=LOW)");
-            if (!ui_prompt_bool(&result, true, true, true, &wp_value))
-                goto finish_legacy;
+            r = bp_cmd_yes_no_exit("\r\nSet HOLD HIGH? (no=LOW)");
+            if (r == BP_YN_EXIT) goto finish_legacy;
+            hold_value = (r == BP_YN_YES);
+
+            r = bp_cmd_yes_no_exit("\r\nSet WP HIGH? (no=LOW)");
+            if (r == BP_YN_EXIT) goto finish_legacy;
+            wp_value = (r == BP_YN_YES);
         }
         if (set_aux_pins) {
             set_planks_auxpins(true);
         }
 
+        prompt_result result = { 0 };
         printf("\r\n%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());
 
         if (!ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &psu_voltage, false)) 

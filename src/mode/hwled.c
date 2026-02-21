@@ -9,7 +9,6 @@
 #include "bytecode.h"
 #include "mode/hwled.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "hardware/pio.h"
 #include "ws2812.pio.h"
 #include "apa102.pio.h"
@@ -245,17 +244,12 @@ uint32_t hwled_setup(void) {
     bool interactive = (st == BP_CMD_MISSING);
 
     if (interactive) {
-        prompt_result result;
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             hwled_settings();
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         if (bp_cmd_prompt(&led_device_choice, &temp) != BP_CMD_OK) return 0;
@@ -335,8 +329,8 @@ void hwled_cleanup(void) {
 }
 
 void hwled_settings(void) {
-    ui_prompt_mode_settings_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(led_device_choices[hwled_mode_config.device].label), 0x00);
-    //ui_prompt_mode_settings_int(GET_T(T_HWLED_NUM_LEDS_MENU), hwled_mode_config.num_leds, 0x00);
+    ui_help_setting_string(GET_T(T_HWLED_DEVICE_MENU), GET_T(led_device_choices[hwled_mode_config.device].label), 0x00);
+    //ui_help_setting_int(GET_T(T_HWLED_NUM_LEDS_MENU), hwled_mode_config.num_leds, 0x00);
 }
 
 void hwled_help(void) {

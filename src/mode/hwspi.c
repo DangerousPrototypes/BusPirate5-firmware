@@ -28,7 +28,6 @@
 #include "bytecode.h"
 #include "mode/hwspi.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "pirate/storage.h"
 #include "lib/sfud/inc/sfud.h"
@@ -150,17 +149,12 @@ uint32_t spi_setup(void) {
     bool interactive = (st == BP_CMD_MISSING);
 
     if (interactive) {
-        prompt_result result;
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             spi_settings();
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         if (bp_cmd_prompt(&spi_speed_range, &temp) != BP_CMD_OK) return 0;
@@ -314,11 +308,11 @@ void spi_pins(void)
 */
 
 void spi_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_HWSPI_SPEED_MENU), mode_config.baudrate / 1000, GET_T(T_KHZ));
-    ui_prompt_mode_settings_int(GET_T(T_HWSPI_BITS_MENU), mode_config.data_bits, 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_POLARITY_MENU), GET_T(polarity_choices[mode_config.clock_polarity].label), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_PHASE_MENU), GET_T(phase_choices[mode_config.clock_phase].label), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(csidle_choices[mode_config.cs_idle].label), 0x00);
+    ui_help_setting_int(GET_T(T_HWSPI_SPEED_MENU), mode_config.baudrate / 1000, GET_T(T_KHZ));
+    ui_help_setting_int(GET_T(T_HWSPI_BITS_MENU), mode_config.data_bits, 0x00);
+    ui_help_setting_string(GET_T(T_HWSPI_CLOCK_POLARITY_MENU), GET_T(polarity_choices[mode_config.clock_polarity].label), 0x00);
+    ui_help_setting_string(GET_T(T_HWSPI_CLOCK_PHASE_MENU), GET_T(phase_choices[mode_config.clock_phase].label), 0x00);
+    ui_help_setting_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(csidle_choices[mode_config.cs_idle].label), 0x00);
 }
 
 void spi_printSPIflags(void) {

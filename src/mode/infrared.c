@@ -22,7 +22,6 @@
 #include "lib/pico_ir_nec/nec_transmit.h"
 #include "lib/pico_ir_nec/nec_receive.h"
 #include "mode/infrared.h"
-#include "ui/ui_prompt.h"
 #include "pirate/storage.h"
 #include "ui/ui_term.h"
 #include "pirate/rc5_pio.h"
@@ -275,17 +274,12 @@ uint32_t infrared_setup(void) {
     bool interactive = (st == BP_CMD_MISSING);
 
     if (interactive) {
-        prompt_result result;
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             infrared_settings();
-            bool user_value;
-            if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-                return 0;
-            }
-            if (user_value) {
-                return 1; // user said yes, use the saved settings
-            }
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
         if (bp_cmd_prompt(&infrared_protocol_choice, &temp) != BP_CMD_OK) return 0;
@@ -448,7 +442,7 @@ uint32_t infrared_get_speed(void) {
 }
 
 void infrared_settings(void) {
-    ui_prompt_mode_settings_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_choices[mode_config.protocol].label), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rxsensor_choices[mode_config.rx_sensor].label), 0x00);
-    ui_prompt_mode_settings_int(GET_T(T_IR_TX_SPEED_MENU), mode_config.tx_freq/1000, GET_T(T_KHZ));
+    ui_help_setting_string(GET_T(T_IR_PROTOCOL_MENU), GET_T(infrared_protocol_choices[mode_config.protocol].label), 0x00);
+    ui_help_setting_string(GET_T(T_IR_RX_SENSOR_MENU), GET_T(infrared_rxsensor_choices[mode_config.rx_sensor].label), 0x00);
+    ui_help_setting_int(GET_T(T_IR_TX_SPEED_MENU), mode_config.tx_freq/1000, GET_T(T_KHZ));
 }

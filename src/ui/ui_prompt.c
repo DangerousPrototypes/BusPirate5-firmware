@@ -72,36 +72,6 @@ bool ui_prompt_validate_ordered_list(const struct ui_prompt* menu, uint32_t* val
     return (((*value) >= 1) && ((*value) <= (*menu).menu_items_count)); // menu style //TODO: minus one, user min/max?
 }
 
-// BIO PINS
-bool ui_prompt_menu_bio_pin(const struct ui_prompt* menu) {
-    int8_t defval = -1;
-    uint32_t i;
-
-    for (i = 0; i < count_of(bio2bufiopin); i++) {
-        if ((*menu).config->menu_validate(menu, &i)) {
-            printf(" %d. IO%s%d%s\r\n", i, ui_term_color_num_float(), i, ui_term_color_reset());
-            if (defval == -1) // first available pin is default pin
-            {
-                defval = i;
-            }
-        }
-    }
-
-    if (defval < 0) // we have at least one pin
-    {
-        printf("\x07%sError:%s%s\r\n", ui_term_color_error(), ui_term_color_reset(), GET_T(T_MODE_ALL_PINS_IN_USE));
-        return false;
-    }
-
-    return true;
-}
-
-bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu) {
-    // printf("%s(%d) >%s", ui_term_color_prompt(), (*menu).defval, ui_term_color_reset());
-    printf("%s >%s \x03", ui_term_color_prompt(), ui_term_color_reset());
-    return true;
-}
-
 // used internally in ui_prompt
 // gets user input until <enter> or return false if system error
 bool ui_prompt_user_input(void) {

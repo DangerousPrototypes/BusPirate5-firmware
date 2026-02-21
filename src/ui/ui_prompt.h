@@ -77,13 +77,6 @@ bool ui_prompt_validate_ordered_list(const struct ui_prompt* menu, uint32_t* val
 bool ui_prompt_validate_int(const struct ui_prompt* menu, uint32_t* value);
 /** @} */
 
-/**
- * @name I/O pin selection menu helpers
- * @{
- */
-bool ui_prompt_menu_bio_pin(const struct ui_prompt* menu);
-bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu);
-
 bool ui_prompt_float(struct prompt_result* result,
                      float minval,
                      float maxval,

@@ -4,8 +4,6 @@
 #include "system_config.h"
 #include "command_struct.h"
 #include "ui/ui_term.h"
-#include "ui/ui_prompt.h"
-#include "ui/ui_parse.h"
 #include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_help.h"
 #include "pico/multicore.h"
@@ -36,13 +34,8 @@ bool selftest_rp2350_e9_fix(void){
 }
 
 bool selftest_format_nand(void) {
-    struct prompt_result presult;
-    bool confirm;
     if (!system_config.storage_available) {
-        printf("No file system!\r\nFormat the Bus Pirate NAND flash?\r\nALL DATA WILL BE DESTROYED.");
-        ui_prompt_bool(&presult, false, false, false, &confirm);
-        printf("\r\n");
-        if (confirm) {
+        if (bp_cmd_confirm(NULL, "No file system!\r\nFormat the Bus Pirate NAND flash?\r\nALL DATA WILL BE DESTROYED.")) {
             uint8_t fr = storage_format();
             if (fr) {
                 storage_file_error(fr);

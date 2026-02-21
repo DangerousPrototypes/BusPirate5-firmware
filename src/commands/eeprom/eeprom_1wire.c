@@ -417,7 +417,7 @@ void onewire_eeprom_handler(struct command_result* res) {
 
     //confirm destruction actions
     if(eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_WRITE || eeprom.action == EEPROM_TEST|| eeprom.action == EEPROM_PROTECT){
-        if(!eeprom_confirm_action()) return; // if user does not confirm, exit
+        if(!eeprom_confirm_action(&eeprom_1wire_def)) return; // if user does not confirm, exit
     }
 
     //we manually control any FALA capture

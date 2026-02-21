@@ -14,7 +14,6 @@
 #include "spiflash.h"
 #include "pirate/file.h"
 #include "ui/ui_help.h"
-#include "ui/ui_prompt.h"
 #include "system_config.h"
 #include "pirate/amux.h"
 #include "binmode/fala.h"
@@ -111,15 +110,10 @@ void flash(struct command_result* res) {
     }
 
     // prompt yes/no for destructive action: erase, write, test (override with -y)
-    if((flash_action == FLASH_ERASE || flash_action == FLASH_WRITE || flash_action == FLASH_TEST) && 
-        (!bp_cmd_find_flag(&flash_def, 'y'))){
-            printf("This action may modify the SPI flash contents. Do you want to continue?");
-            prompt_result confirm_result;
-            bool confirm;
-            if (!ui_prompt_bool(&confirm_result, false, false, false, &confirm) || !confirm) {
-                printf("Aborted by user\r\n");
-                return;
-            }
+    if((flash_action == FLASH_ERASE || flash_action == FLASH_WRITE || flash_action == FLASH_TEST)) {
+        if(!bp_cmd_confirm(&flash_def, "This action may modify the SPI flash contents. Do you want to continue?")) {
+            return;
+        }
     }
 
     bool override_flag = bp_cmd_find_flag(&flash_def, 'o');

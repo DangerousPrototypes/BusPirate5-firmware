@@ -952,6 +952,42 @@ bp_cmd_status_t bp_cmd_prompt(const bp_val_constraint_t *con, void *out) {
 
 /*
  * =============================================================================
+ * Destructive-action confirmation
+ * =============================================================================
+ */
+
+bool bp_cmd_confirm(const bp_command_def_t *def, const char *message) {
+    // Skip prompt if -y flag is present
+    if (def && bp_cmd_find_flag(def, 'y')) {
+        return true;
+    }
+
+    // Self-contained y/n prompt loop (no ui_prompt_bool dependency)
+    prompt_result result;
+    bool value;
+    printf("%s", message);
+    while (true) {
+        printf("\r\n%sy/n >%s \x03", ui_term_color_prompt(), ui_term_color_reset());
+
+        if (!ui_prompt_user_input()) {
+            return false;
+        }
+
+        ui_parse_get_bool(&result, &value);
+        printf("\r\n");
+
+        if (result.exit) {
+            return false;
+        }
+        if (result.success) {
+            return value;
+        }
+        // Invalid input — loop
+    }
+}
+
+/*
+ * =============================================================================
  * Help display
  * =============================================================================
  */

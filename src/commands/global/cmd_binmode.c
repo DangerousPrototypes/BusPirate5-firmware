@@ -6,7 +6,6 @@
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
 #include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
-// #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
 #include "system_config.h" // Stores current Bus Pirate system configuration
@@ -14,7 +13,6 @@
 #include "pirate/button.h" // Button press functions
 #include "msc_disk.h"
 #include "binmode/binmodes.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 
 // This array of strings is used to display help USAGE examples for the dummy command
@@ -85,11 +83,7 @@ void cmd_binmode_handler(struct command_result* res) {
     // only modes that have been verified can be saved
     // outputting text before the terminal is open will cause crash on startup
     if(binmodes[system_config.binmode_select].can_save_config) {
-        printf("\r\n%sSave setting?%s", ui_term_color_info(), ui_term_color_reset());
-        prompt_result result;
-        bool user_value;
-        ui_prompt_bool(&result, true, true, false, &user_value);
-        if (user_value) {
+        if (bp_cmd_confirm(NULL, "Save setting?")) {
             binmode_load_save_config(true); //save config
         }
     }

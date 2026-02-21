@@ -448,6 +448,25 @@ bp_cmd_status_t bp_cmd_prompt(const bp_val_constraint_t *con, void *out);
 
 /*
  * =============================================================================
+ * Destructive-action confirmation
+ * =============================================================================
+ */
+
+/**
+ * @brief Prompt user for y/n confirmation before a destructive action.
+ * @details Self-contained y/n loop — no ui_prompt_bool dependency.
+ *          If @p def is non-NULL and the command line contains a `-y` flag,
+ *          the prompt is skipped and the function returns true immediately.
+ *          Pass NULL for @p def when there is no `-y` bypass.
+ *
+ * @param def      Command definition (used to check `-y`), or NULL
+ * @param message  Message printed before the y/n prompt
+ * @return true if user confirmed (or `-y` present), false if declined/cancelled
+ */
+bool bp_cmd_confirm(const bp_command_def_t *def, const char *message);
+
+/*
+ * =============================================================================
  * Help display
  * =============================================================================
  */

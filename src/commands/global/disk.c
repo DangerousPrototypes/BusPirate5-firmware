@@ -16,8 +16,6 @@
 #include "system_config.h"
 #include "command_struct.h"
 #include "fatfs/ff.h"
-#include "ui/ui_prompt.h"
-#include "ui/ui_parse.h"
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "pirate/storage.h"
@@ -273,8 +271,14 @@ uint8_t disk_format(void) {
 }
 
 static const char* const format_usage[] = {
-    "format",
+    "format [-y]",
     "Format storage:%s format",
+    "Format without confirmation:%s format -y",
+};
+
+static const bp_command_opt_t disk_format_opts[] = {
+    { "yes", 'y', BP_ARG_NONE, NULL, T_HELP_FLASH_YES_OVERRIDE },
+    { 0 }
 };
 
 const bp_command_def_t disk_format_def = {
@@ -282,7 +286,7 @@ const bp_command_def_t disk_format_def = {
     .description  = T_HELP_DISK_FORMAT,
     .actions      = NULL,
     .action_count = 0,
-    .opts         = NULL,
+    .opts         = disk_format_opts,
     .usage        = format_usage,
     .usage_count  = count_of(format_usage),
 };
@@ -293,18 +297,11 @@ void disk_format_handler(struct command_result* res) {
         return;
     }
 
-    prompt_result presult;
-    bool confirm;
-
-    printf("Erase the internal storage?");
-    ui_prompt_bool(&presult, false, false, false, &confirm);
-    if (!confirm) {
+    if (!bp_cmd_confirm(&disk_format_def, "Erase the internal storage?")) {
         return;
     }
 
-    printf("Are you sure?");
-    ui_prompt_bool(&presult, false, false, false, &confirm);
-    if (!confirm) {
+    if (!bp_cmd_confirm(&disk_format_def, "Are you sure? ALL DATA WILL BE ERASED.")) {
         return;
     }
     printf("\r\n\r\nFormatting...\r\n");

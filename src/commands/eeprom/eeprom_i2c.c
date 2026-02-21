@@ -300,7 +300,7 @@ void i2c_eeprom_handler(struct command_result* res) {
 
     // Confirm destructive actions
     if ((eeprom.action == EEPROM_ERASE || eeprom.action == EEPROM_WRITE || eeprom.action == EEPROM_TEST)) {
-        if (!eeprom_confirm_action()) return;
+        if (!eeprom_confirm_action(&eeprom_i2c_def)) return;
     }
 
     //we manually control any FALA capture

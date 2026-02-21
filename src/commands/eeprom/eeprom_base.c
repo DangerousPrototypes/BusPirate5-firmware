@@ -6,8 +6,6 @@
 //#include "ui/ui_term.h"
 #include "command_struct.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h" //for cmdln_action_t
-#include "ui/ui_prompt.h"
 //#include "binmode/fala.h"
 #include "fatfs/ff.h"       // File system related
 #include "lib/bp_args/bp_cmd.h"
@@ -18,18 +16,8 @@
 //#include "pirate/hwspi.h" // SPI related functions
 #include "eeprom_base.h"
 
-bool eeprom_confirm_action(void){
-    if(cmdln_args_find_flag('y')) {
-        return true; // override with -y
-    }
-    printf("This action may modify the EEPROM contents. Do you want to continue?");
-    prompt_result result;
-    bool confirm;
-    if (!ui_prompt_bool(&result, false, false, false, &confirm) || !confirm) {
-        printf("Aborted by user\r\n");
-        return false;
-    }
-    return true;
+bool eeprom_confirm_action(const bp_command_def_t *def){
+    return bp_cmd_confirm(def, "This action may modify the EEPROM contents. Do you want to continue?");
 }
 
 void eeprom_display_devices(const struct eeprom_device_t *eeprom_devices, uint8_t count) {

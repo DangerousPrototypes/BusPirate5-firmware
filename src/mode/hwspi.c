@@ -116,9 +116,9 @@ static const bp_val_constraint_t spi_csidle_choice = {
 static const bp_command_opt_t spi_setup_opts[] = {
     { "speed",    's', BP_ARG_REQUIRED, "1-625000",              0, &spi_speed_range },
     { "databits", 'd', BP_ARG_REQUIRED, "4-8",                   0, &spi_databits_range },
-    { "polarity", 'o', BP_ARG_REQUIRED, "idle_low/idle_high",    0, &spi_polarity_choice },
-    { "phase",    'a', BP_ARG_REQUIRED, "leading/trailing",      0, &spi_phase_choice },
-    { "csidle",   'c', BP_ARG_REQUIRED, "low/high",              0, &spi_csidle_choice },
+    { "polarity", 'o', BP_ARG_REQUIRED, "idle_low|idle_high",    0, &spi_polarity_choice },
+    { "phase",    'a', BP_ARG_REQUIRED, "leading|trailing",      0, &spi_phase_choice },
+    { "csidle",   'c', BP_ARG_REQUIRED, "low|high",              0, &spi_csidle_choice },
     { 0 },
 };
 

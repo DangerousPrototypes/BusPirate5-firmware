@@ -48,7 +48,7 @@ static const bp_val_constraint_t hw3wire_csidle_choice = {
 
 static const bp_command_opt_t hw3wire_setup_opts[] = {
     { "speed",  's', BP_ARG_REQUIRED, "1-3900",   0, &hw3wire_speed_range },
-    { "csidle", 'c', BP_ARG_REQUIRED, "low/high", 0, &hw3wire_csidle_choice },
+    { "csidle", 'c', BP_ARG_REQUIRED, "low|high", 0, &hw3wire_csidle_choice },
     { 0 },
 };
 

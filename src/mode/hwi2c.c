@@ -144,7 +144,7 @@ static const bp_val_constraint_t i2c_clockstretch_choice = {
 
 static const bp_command_opt_t i2c_setup_opts[] = {
     { "speed",        's', BP_ARG_REQUIRED, "1-1000", 0, &i2c_speed_range },
-    { "clockstretch", 'c', BP_ARG_REQUIRED, "off/on", 0, &i2c_clockstretch_choice },
+    { "clockstretch", 'c', BP_ARG_REQUIRED, "off|on", 0, &i2c_clockstretch_choice },
     { 0 },
 };
 

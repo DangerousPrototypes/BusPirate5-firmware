@@ -165,10 +165,10 @@ static const bp_val_constraint_t uart_invert_choice = {
 static const bp_command_opt_t uart_setup_opts[] = {
     { "baud",     'b', BP_ARG_REQUIRED, "1-7372800",     0, &uart_baud_range },
     { "databits", 'd', BP_ARG_REQUIRED, "5-8",           0, &uart_databits_range },
-    { "parity",   'p', BP_ARG_REQUIRED, "none/even/odd", 0, &uart_parity_choice },
-    { "stopbits", 's', BP_ARG_REQUIRED, "1/2",           0, &uart_stopbits_choice },
-    { "flow",     'f', BP_ARG_REQUIRED, "off/rts",       0, &uart_flow_choice },
-    { "invert",   'i', BP_ARG_REQUIRED, "normal/invert", 0, &uart_invert_choice },
+    { "parity",   'p', BP_ARG_REQUIRED, "none|even|odd", 0, &uart_parity_choice },
+    { "stopbits", 's', BP_ARG_REQUIRED, "1|2",           0, &uart_stopbits_choice },
+    { "flow",     'f', BP_ARG_REQUIRED, "off|rts",       0, &uart_flow_choice },
+    { "invert",   'i', BP_ARG_REQUIRED, "normal|invert", 0, &uart_invert_choice },
     { 0 },
 };
 

@@ -132,7 +132,7 @@ static const bp_val_constraint_t dummy1_output_choice = {
 // The array MUST end with a sentinel { 0 } entry.
 static const bp_command_opt_t dummy1_setup_opts[] = {
     { "speed",  's', BP_ARG_REQUIRED, "1-1000",               0, &dummy1_speed_range },
-    { "output", 'o', BP_ARG_REQUIRED, "push-pull/open-drain", 0, &dummy1_output_choice },
+    { "output", 'o', BP_ARG_REQUIRED, "push-pull|open-drain", 0, &dummy1_output_choice },
     { 0 }, // ← sentinel — always required
 };
 

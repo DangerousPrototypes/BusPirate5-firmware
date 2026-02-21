@@ -203,7 +203,7 @@ static const bp_val_constraint_t display_format_constraint = {
 };
 
 static const bp_command_positional_t display_format_positionals[] = {
-    { "format", "auto/hex/dec/bin/ascii", T_MODE_NUMBER_DISPLAY_FORMAT, false, &display_format_constraint },
+    { "format", "auto|hex|dec|bin|ascii", T_MODE_NUMBER_DISPLAY_FORMAT, false, &display_format_constraint },
     { 0 },
 };
 

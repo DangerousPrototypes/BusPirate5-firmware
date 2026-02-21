@@ -86,8 +86,8 @@ static const bp_val_constraint_t hduart_stopbits_choice = {
 static const bp_command_opt_t hduart_setup_opts[] = {
     { "baud",     'b', BP_ARG_REQUIRED, "1-1000000",     0, &hduart_baud_range },
     { "databits", 'd', BP_ARG_REQUIRED, "5-8",           0, &hduart_databits_range },
-    { "parity",   'p', BP_ARG_REQUIRED, "none/even/odd", 0, &hduart_parity_choice },
-    { "stopbits", 's', BP_ARG_REQUIRED, "1/2",           0, &hduart_stopbits_choice },
+    { "parity",   'p', BP_ARG_REQUIRED, "none|even|odd", 0, &hduart_parity_choice },
+    { "stopbits", 's', BP_ARG_REQUIRED, "1|2",           0, &hduart_stopbits_choice },
     { 0 },
 };
 

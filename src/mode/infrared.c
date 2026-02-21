@@ -238,9 +238,9 @@ static const bp_val_constraint_t infrared_rxsensor_choice = {
 };
 
 static const bp_command_opt_t infrared_setup_opts[] = {
-    { "protocol", 'p', BP_ARG_REQUIRED, "raw/nec/rc5",             0, &infrared_protocol_choice },
+    { "protocol", 'p', BP_ARG_REQUIRED, "raw|nec|rc5",             0, &infrared_protocol_choice },
     { "freq",     'f', BP_ARG_REQUIRED, "20-60",                   0, &infrared_freq_range },
-    { "rxsensor", 'r', BP_ARG_REQUIRED, "barrier/38k_demod/56k_demod", 0, &infrared_rxsensor_choice },
+    { "rxsensor", 'r', BP_ARG_REQUIRED, "barrier|38k_demod|56k_demod", 0, &infrared_rxsensor_choice },
     { 0 },
 };
 

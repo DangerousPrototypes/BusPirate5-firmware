@@ -217,7 +217,7 @@ static const bp_val_constraint_t led_device_choice = {
 };
 
 static const bp_command_opt_t led_setup_opts[] = {
-    { "device", 'd', BP_ARG_REQUIRED, "ws2812/apa102/onboard", 0, &led_device_choice },
+    { "device", 'd', BP_ARG_REQUIRED, "ws2812|apa102|onboard", 0, &led_device_choice },
     { 0 },
 };
 

@@ -172,45 +172,6 @@ bool cmdln_args_get_int(uint32_t* rptr, struct prompt_result* result, uint32_t* 
     return result->success;
 }
 
-static bool cmdln_args_find_flag_internal(char flag, command_var_t* arg) {
-    uint32_t rptr = 0;
-    char flag_c;
-    char dash_c;
-    arg->error = false;
-    arg->has_arg = false;
-    while (command_info.endptr >= (command_info.startptr + rptr + 1) && cmdln_try_peek(rptr, &dash_c) &&
-           cmdln_try_peek(rptr + 1, &flag_c)) {
-        if (dash_c == '-' && flag_c == flag) {
-            arg->has_arg = true;
-            if ((!cmdln_consume_white_space(&rptr, true))     // move past the flag characters
-                || (!cmdln_consume_white_space(&rptr, false)) // move past spaces. @end of buffer, next flag, or value
-                || (cmdln_try_peek(rptr, &dash_c) && dash_c == '-')) // next argument, no value
-            {
-                // printf("No value for flag %c\r\n", flag);
-                arg->has_value = false;
-                return true;
-            }
-            // printf("Value for flag %c\r\n", flag);
-            arg->has_value = true;
-            arg->value_pos = rptr;
-            return true;
-        }
-        rptr++;
-    }
-    // printf("Flag %c not found\r\n", flag);
-    return false;
-}
-
-// check if a -f(lag) is present. Value is don't care.
-// returns true if flag is present
-bool cmdln_args_find_flag(char flag) {
-    command_var_t arg;
-    if (!cmdln_args_find_flag_internal(flag, &arg)) {
-        return false;
-    }
-    return true;
-}
-
 bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char* str) {
     char c;
     uint32_t rptr = 0;

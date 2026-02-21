@@ -24,24 +24,6 @@ struct _command_info_t {
 extern struct _command_info_t command_info;
 
 /**
- * @brief Parsed command argument information.
- */
-typedef struct command_var_struct {
-    bool has_arg;          ///< Argument exists
-    bool has_value;        ///< Argument has value
-    uint32_t value_pos;    ///< Position of value in buffer
-    bool error;            ///< Parse error occurred
-    uint8_t number_format; ///< Number format (hex/dec/bin)
-} command_var_t;
-
-/**
- * @brief Check if flag exists in command arguments.
- * @param flag  Flag character (e.g., 'v' for -v)
- * @return true if flag exists
- */
-bool cmdln_args_find_flag(char flag);
-
-/**
  * @brief Get string argument by position.
  * @param pos      Argument position (0-based)
  * @param max_len  Maximum string length

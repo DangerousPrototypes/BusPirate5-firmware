@@ -273,6 +273,16 @@ bool bp_cmd_get_action(const bp_command_def_t *def, uint32_t *action);
 bool bp_cmd_find_flag(const bp_command_def_t *def, char flag);
 
 /**
+ * @brief Check if -h or --help is present on the command line.
+ * @details Lightweight scanner that does not require a command definition.
+ *          Matches standalone "-h" token or "--help" anywhere in the
+ *          current command buffer.  Intended for use by the command
+ *          dispatcher (ui_process) before the per-command handler runs.
+ * @return true if -h or --help found
+ */
+bool bp_cmd_has_help_flag(void);
+
+/**
  * @brief Get uint32 value for a flag.
  * @param def         Command definition
  * @param flag        Short flag character

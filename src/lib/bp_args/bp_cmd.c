@@ -332,6 +332,34 @@ bool bp_cmd_find_flag(const bp_command_def_t *def, char flag) {
     return cmd_scan_flag(def, flag, &val, &val_len);
 }
 
+bool bp_cmd_has_help_flag(void) {
+    const char *p = ln_cmdln_current();
+    const char *end = p + ln_cmdln_remaining();
+
+    // Skip command name (first token)
+    p = skip_ws(p, end);
+    p = skip_tok(p, end);
+
+    while (p < end) {
+        p = skip_ws(p, end);
+        if (p >= end || *p == '\0') break;
+
+        if (*p == '-') {
+            size_t tl = tok_len(p, end);
+            // Match "-h" (exactly 2 chars)
+            if (tl == 2 && (p[1] | 0x20) == 'h') {
+                return true;
+            }
+            // Match "--help" (exactly 6 chars)
+            if (tl == 6 && memcmp(p, "--help", 6) == 0) {
+                return true;
+            }
+        }
+        p = skip_tok(p, end);
+    }
+    return false;
+}
+
 bool bp_cmd_get_uint32(const bp_command_def_t *def, char flag, uint32_t *value) {
     const char *val;
     size_t val_len;
@@ -1122,45 +1150,59 @@ void bp_cmd_help_show(const bp_command_def_t *def) {
     }
 
     // Flags
-    if (def->opts) {
-        printf("\r\noptions:\r\n");
-        for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
-            const bp_command_opt_t *o = &def->opts[i];
-            char flag_str[48];
-            int pos = 0;
+    {
+        bool header_printed = false;
+        if (def->opts) {
+            printf("\r\noptions:\r\n");
+            header_printed = true;
+            for (int i = 0; def->opts[i].long_name || def->opts[i].short_name; i++) {
+                const bp_command_opt_t *o = &def->opts[i];
+                char flag_str[48];
+                int pos = 0;
 
-            // Build flag display: "-f, --file <file>"
-            if (o->short_name) {
-                pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, "-%c", o->short_name);
-            }
-            if (o->long_name) {
-                if (pos > 0) pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, ", ");
-                pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, "--%s", o->long_name);
-            }
-            if (o->arg_hint) {
-                if (o->arg_type == BP_ARG_REQUIRED) {
-                    pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, " <%s>", o->arg_hint);
-                } else {
-                    pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, " [%s]", o->arg_hint);
+                // Build flag display: "-f, --file <file>"
+                if (o->short_name) {
+                    pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, "-%c", o->short_name);
                 }
-            }
+                if (o->long_name) {
+                    if (pos > 0) pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, ", ");
+                    pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, "--%s", o->long_name);
+                }
+                if (o->arg_hint) {
+                    if (o->arg_type == BP_ARG_REQUIRED) {
+                        pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, " <%s>", o->arg_hint);
+                    } else {
+                        pos += snprintf(flag_str + pos, sizeof(flag_str) - pos, " [%s]", o->arg_hint);
+                    }
+                }
 
-            printf("%s%s%s%s",
-                   HELP_INDENT,
-                   ui_term_color_prompt(),
-                   flag_str,
-                   ui_term_color_reset());
-            // Pad or space
-            if (pos < HELP_COL_WIDTH) {
-                printf("%*s", HELP_COL_WIDTH - pos, "");
-            } else {
-                printf(" ");
+                printf("%s%s%s%s",
+                       HELP_INDENT,
+                       ui_term_color_prompt(),
+                       flag_str,
+                       ui_term_color_reset());
+                // Pad or space
+                if (pos < HELP_COL_WIDTH) {
+                    printf("%*s", HELP_COL_WIDTH - pos, "");
+                } else {
+                    printf(" ");
+                }
+                printf("%s%s%s\r\n",
+                       ui_term_color_info(),
+                       o->description ? GET_T(o->description) : "",
+                       ui_term_color_reset());
             }
-            printf("%s%s%s\r\n",
-                   ui_term_color_info(),
-                   o->description ? GET_T(o->description) : "",
-                   ui_term_color_reset());
         }
+        // Always show the universal -h/--help flag
+        if (!header_printed) printf("\r\noptions:\r\n");
+        printf("%s%s-h, --help      %s%*s%s%s%s\r\n",
+               HELP_INDENT,
+               ui_term_color_prompt(),
+               ui_term_color_reset(),
+               0, "",
+               ui_term_color_info(),
+               GET_T(T_HELP_FLAG),
+               ui_term_color_reset());
     }
 
     // Examples (usage[] lines 1+)
@@ -1287,59 +1329,76 @@ const char *bp_cmd_hint(const char *buf, size_t len,
         }
     }
 
-    // If last token is "-", suggest first available flag
-    if (last_tok && *last_tok == '-' && tok_len(last_tok, end) == 1 && eff_def->opts) {
-        for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
-            if (eff_def->opts[i].short_name) {
-                if (eff_def->opts[i].arg_hint) {
-                    snprintf(hint_buf, sizeof(hint_buf), "%c <%s>",
-                             eff_def->opts[i].short_name, eff_def->opts[i].arg_hint);
-                } else {
-                    snprintf(hint_buf, sizeof(hint_buf), "%c", eff_def->opts[i].short_name);
+    // If last token is "-", suggest first available flag (fall back to -h)
+    if (last_tok && *last_tok == '-' && tok_len(last_tok, end) == 1) {
+        if (eff_def->opts) {
+            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                if (eff_def->opts[i].short_name) {
+                    if (eff_def->opts[i].arg_hint) {
+                        snprintf(hint_buf, sizeof(hint_buf), "%c <%s>",
+                                 eff_def->opts[i].short_name, eff_def->opts[i].arg_hint);
+                    } else {
+                        snprintf(hint_buf, sizeof(hint_buf), "%c", eff_def->opts[i].short_name);
+                    }
+                    return hint_buf;
                 }
-                return hint_buf;
             }
         }
+        // Universal help flag fallback
+        snprintf(hint_buf, sizeof(hint_buf), "h");
+        return hint_buf;
     }
 
-    // If last token is "--", suggest first available long flag
+    // If last token is "--" or "--h...", suggest long flags (fall back to --help)
     if (last_tok && last_tok[0] == '-' && tok_len(last_tok, end) >= 2 &&
-        last_tok[1] == '-' && eff_def->opts) {
+        last_tok[1] == '-') {
         size_t tl = tok_len(last_tok, end);
         const char *typed_name = last_tok + 2;
         size_t typed_len = tl - 2;
 
         if (typed_len == 0) {
-            // Bare "--": suggest first long flag name
-            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
-                if (eff_def->opts[i].long_name) {
-                    if (eff_def->opts[i].arg_hint) {
-                        snprintf(hint_buf, sizeof(hint_buf), "%s <%s>",
-                                 eff_def->opts[i].long_name, eff_def->opts[i].arg_hint);
-                    } else {
-                        snprintf(hint_buf, sizeof(hint_buf), "%s",
-                                 eff_def->opts[i].long_name);
-                    }
-                    return hint_buf;
-                }
-            }
-        } else {
-            // Partial long flag: suggest matching completion
-            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
-                if (eff_def->opts[i].long_name) {
-                    size_t ln_len = strlen(eff_def->opts[i].long_name);
-                    if (typed_len < ln_len &&
-                        memcmp(typed_name, eff_def->opts[i].long_name, typed_len) == 0) {
-                        const char *rest = eff_def->opts[i].long_name + typed_len;
+            // Bare "--": suggest first long flag name, fall back to --help
+            if (eff_def->opts) {
+                for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                    if (eff_def->opts[i].long_name) {
                         if (eff_def->opts[i].arg_hint) {
                             snprintf(hint_buf, sizeof(hint_buf), "%s <%s>",
-                                     rest, eff_def->opts[i].arg_hint);
+                                     eff_def->opts[i].long_name, eff_def->opts[i].arg_hint);
                         } else {
-                            snprintf(hint_buf, sizeof(hint_buf), "%s", rest);
+                            snprintf(hint_buf, sizeof(hint_buf), "%s",
+                                     eff_def->opts[i].long_name);
                         }
                         return hint_buf;
                     }
                 }
+            }
+            // No long opts defined — suggest --help
+            snprintf(hint_buf, sizeof(hint_buf), "help");
+            return hint_buf;
+        } else {
+            // Partial long flag: suggest matching completion from opts
+            if (eff_def->opts) {
+                for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                    if (eff_def->opts[i].long_name) {
+                        size_t ln_len = strlen(eff_def->opts[i].long_name);
+                        if (typed_len < ln_len &&
+                            memcmp(typed_name, eff_def->opts[i].long_name, typed_len) == 0) {
+                            const char *rest = eff_def->opts[i].long_name + typed_len;
+                            if (eff_def->opts[i].arg_hint) {
+                                snprintf(hint_buf, sizeof(hint_buf), "%s <%s>",
+                                         rest, eff_def->opts[i].arg_hint);
+                            } else {
+                                snprintf(hint_buf, sizeof(hint_buf), "%s", rest);
+                            }
+                            return hint_buf;
+                        }
+                    }
+                }
+            }
+            // Partial match against "help" (universal)
+            if (typed_len < 4 && memcmp(typed_name, "help", typed_len) == 0) {
+                snprintf(hint_buf, sizeof(hint_buf), "%s", "help" + typed_len);
+                return hint_buf;
             }
         }
     }
@@ -1614,41 +1673,65 @@ void bp_cmd_completion(const char *buf, size_t len,
     }
 
     // Complete flag names
-    if (last_is_flag && eff_def->opts) {
+    if (last_is_flag) {
         if (tl >= 2 && last_tok[1] == '-') {
             // Long flag completion: --name
             const char *typed_name = last_tok + 2;
             size_t typed_len = tl - 2;
-            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
-                if (eff_def->opts[i].long_name &&
-                    typed_len <= strlen(eff_def->opts[i].long_name) &&
-                    memcmp(typed_name, eff_def->opts[i].long_name, typed_len) == 0) {
-                    size_t prefix_len = last_tok - buf;
-                    size_t long_len = strlen(eff_def->opts[i].long_name);
-                    char *cb = COMP_BUF();
-                    if (cb && prefix_len + 2 + long_len < COMP_BUF_SZ) {
-                        memcpy(cb, buf, prefix_len);
-                        cb[prefix_len] = '-';
-                        cb[prefix_len + 1] = '-';
-                        strcpy(cb + prefix_len + 2, eff_def->opts[i].long_name);
-                        add_completion(cb, userdata);
+            if (eff_def->opts) {
+                for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                    if (eff_def->opts[i].long_name &&
+                        typed_len <= strlen(eff_def->opts[i].long_name) &&
+                        memcmp(typed_name, eff_def->opts[i].long_name, typed_len) == 0) {
+                        size_t prefix_len = last_tok - buf;
+                        size_t long_len = strlen(eff_def->opts[i].long_name);
+                        char *cb = COMP_BUF();
+                        if (cb && prefix_len + 2 + long_len < COMP_BUF_SZ) {
+                            memcpy(cb, buf, prefix_len);
+                            cb[prefix_len] = '-';
+                            cb[prefix_len + 1] = '-';
+                            strcpy(cb + prefix_len + 2, eff_def->opts[i].long_name);
+                            add_completion(cb, userdata);
+                        }
                     }
+                }
+            }
+            // Universal --help completion
+            if (typed_len <= 4 && memcmp(typed_name, "help", typed_len) == 0) {
+                size_t prefix_len = last_tok - buf;
+                char *cb = COMP_BUF();
+                if (cb && prefix_len + 6 < COMP_BUF_SZ) {
+                    memcpy(cb, buf, prefix_len);
+                    memcpy(cb + prefix_len, "--help", 7);
+                    add_completion(cb, userdata);
                 }
             }
         } else if (tl <= 2) {
             // Short flag completion: -x
-            for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
-                if (eff_def->opts[i].short_name) {
-                    char flag_str[4] = { '-', eff_def->opts[i].short_name, '\0' };
-                    if (tl == 1 || (tl == 2 && last_tok[1] == eff_def->opts[i].short_name)) {
-                        size_t prefix_len = last_tok - buf;
-                        char *cb = COMP_BUF();
-                        if (cb && prefix_len + 2 < COMP_BUF_SZ) {
-                            memcpy(cb, buf, prefix_len);
-                            strcpy(cb + prefix_len, flag_str);
-                            add_completion(cb, userdata);
+            if (eff_def->opts) {
+                for (int i = 0; eff_def->opts[i].long_name || eff_def->opts[i].short_name; i++) {
+                    if (eff_def->opts[i].short_name) {
+                        char flag_str[4] = { '-', eff_def->opts[i].short_name, '\0' };
+                        if (tl == 1 || (tl == 2 && last_tok[1] == eff_def->opts[i].short_name)) {
+                            size_t prefix_len = last_tok - buf;
+                            char *cb = COMP_BUF();
+                            if (cb && prefix_len + 2 < COMP_BUF_SZ) {
+                                memcpy(cb, buf, prefix_len);
+                                strcpy(cb + prefix_len, flag_str);
+                                add_completion(cb, userdata);
+                            }
                         }
                     }
+                }
+            }
+            // Universal -h completion
+            if (tl == 1 || (tl == 2 && (last_tok[1] | 0x20) == 'h')) {
+                size_t prefix_len = last_tok - buf;
+                char *cb = COMP_BUF();
+                if (cb && prefix_len + 2 < COMP_BUF_SZ) {
+                    memcpy(cb, buf, prefix_len);
+                    memcpy(cb + prefix_len, "-h", 3);
+                    add_completion(cb, userdata);
                 }
             }
         }

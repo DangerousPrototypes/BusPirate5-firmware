@@ -132,7 +132,7 @@ bool ui_process_commands(void) {
                 user_cmd_id = i;
                 command_type = GLOBAL;
                 // global help handler (optional, set config in commands.c)
-                if (cmdln_args_find_flag('h')) {
+                if (bp_cmd_has_help_flag()) {
                     if (commands[user_cmd_id].description_text != 0x00 && !commands[user_cmd_id].def) {
                         // Legacy one-liner help for unmigrated commands
                         printf("%s%s%s\r\n",
@@ -164,7 +164,7 @@ bool ui_process_commands(void) {
                         user_cmd_id = i;
                         command_type = MODE;
                         // mode help handler
-                        if (cmdln_args_find_flag('h')) {
+                        if (bp_cmd_has_help_flag()) {
                             // mode commands must supply their own help text
                             result.help_flag = true;
                         }

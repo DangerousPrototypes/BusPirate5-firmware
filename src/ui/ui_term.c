@@ -148,7 +148,7 @@ void ui_term_init(void) {
         // reset all styling
         printf("\033[0m");
         // set cursor type
-        // printf("\e[3 q");
+        // printf("\033[3 q");
         // clear screen
         printf("\033[2J");
     }
@@ -258,129 +258,84 @@ uint32_t ui_term_color_text_background_buf(char* buf, size_t buffLen, uint32_t r
 #define UI_TERM_256_COLOR_CONCAT_TEXT(color) ("\033[38;5;" color "m")
 #define UI_TERM_256_COLOR_CONCAT_BACKGROUND(color) ("\033[48;5;" color "m")
 
-char* ui_term_color_reset(void) {
+// Lookup tables for predefined color escape sequences (stored in flash as const).
+static const char* const ui_term_color_full_table[UI_COLOR_COUNT] = {
+    [UI_COLOR_RESET]     = "\033[0m",
+    [UI_COLOR_PROMPT]    = UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_PROMPT_TEXT),
+    [UI_COLOR_INFO]      = UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_INFO_TEXT),
+    [UI_COLOR_NOTICE]    = UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_NOTICE_TEXT),
+    [UI_COLOR_WARNING]   = UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_WARNING_TEXT),
+    [UI_COLOR_ERROR]     = UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_ERROR_TEXT),
+    [UI_COLOR_NUM_FLOAT] = UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_NUM_FLOAT_TEXT),
+    [UI_COLOR_GREY]      = UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_GREY_TEXT),
+    [UI_COLOR_PACMAN]    = UI_TERM_FULL_COLOR_CONCAT_TEXT("255;238;00"),
+};
+
+#ifdef ANSI_COLOR_256
+static const char* const ui_term_color_256_table[UI_COLOR_COUNT] = {
+    [UI_COLOR_RESET]     = "\033[0m",
+    [UI_COLOR_PROMPT]    = UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_PROMPT_TEXT),
+    [UI_COLOR_INFO]      = UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_INFO_TEXT),
+    [UI_COLOR_NOTICE]    = UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_NOTICE_TEXT),
+    [UI_COLOR_WARNING]   = UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_WARNING_TEXT),
+    [UI_COLOR_ERROR]     = UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_ERROR_TEXT),
+    [UI_COLOR_NUM_FLOAT] = UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_NUM_FLOAT_TEXT),
+    [UI_COLOR_GREY]      = UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_GREY_TEXT),
+    [UI_COLOR_PACMAN]    = UI_TERM_256_COLOR_CONCAT_TEXT("3"),
+};
+#endif
+
+char* ui_term_color(ui_color_id_t id) {
+    if (id >= UI_COLOR_COUNT) {
+        return "";
+    }
     switch (system_config.terminal_ansi_color) {
 #ifdef ANSI_COLOR_256
         case UI_TERM_256:
+            return (char*)ui_term_color_256_table[id];
 #endif
         case UI_TERM_FULL_COLOR:
-            return "\033[0m";
+            return (char*)ui_term_color_full_table[id];
         case UI_TERM_NO_COLOR:
         default:
             return "";
     }
+}
+
+char* ui_term_color_reset(void) {
+    return ui_term_color(UI_COLOR_RESET);
 }
 
 char* ui_term_color_prompt(void) {
-    switch (system_config.terminal_ansi_color) {
-#ifdef ANSI_COLOR_256
-        case UI_TERM_256:
-            return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_PROMPT_TEXT);
-#endif
-        case UI_TERM_FULL_COLOR:
-            return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_PROMPT_TEXT);
-        case UI_TERM_NO_COLOR:
-        default:
-            return "";
-    }
+    return ui_term_color(UI_COLOR_PROMPT);
 }
 
 char* ui_term_color_info(void) {
-    switch (system_config.terminal_ansi_color) {
-#ifdef ANSI_COLOR_256
-        case UI_TERM_256:
-            return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_INFO_TEXT);
-#endif
-        case UI_TERM_FULL_COLOR:
-            return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_INFO_TEXT);
-        case UI_TERM_NO_COLOR:
-        default:
-            return "";
-    }
+    return ui_term_color(UI_COLOR_INFO);
 }
 
 char* ui_term_color_notice(void) {
-    switch (system_config.terminal_ansi_color) {
-#ifdef ANSI_COLOR_256
-        case UI_TERM_256:
-            return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_NOTICE_TEXT);
-#endif
-        case UI_TERM_FULL_COLOR:
-            return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_NOTICE_TEXT);
-        case UI_TERM_NO_COLOR:
-        default:
-            return "";
-    }
+    return ui_term_color(UI_COLOR_NOTICE);
 }
 
 char* ui_term_color_warning(void) {
-    switch (system_config.terminal_ansi_color) {
-#ifdef ANSI_COLOR_256
-        case UI_TERM_256:
-            return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_WARNING_TEXT);
-#endif
-        case UI_TERM_FULL_COLOR:
-            return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_WARNING_TEXT);
-        case UI_TERM_NO_COLOR:
-        default:
-            return "";
-    }
+    return ui_term_color(UI_COLOR_WARNING);
 }
 
 char* ui_term_color_error(void) {
-    switch (system_config.terminal_ansi_color) {
-#ifdef ANSI_COLOR_256
-        case UI_TERM_256:
-            return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_ERROR_TEXT);
-#endif
-        case UI_TERM_FULL_COLOR:
-            return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_ERROR_TEXT);
-        case UI_TERM_NO_COLOR:
-        default:
-            return "";
-    }
+    return ui_term_color(UI_COLOR_ERROR);
 }
 
 char* ui_term_color_num_float(void) {
-    switch (system_config.terminal_ansi_color) {
-#ifdef ANSI_COLOR_256
-        case UI_TERM_256:
-            return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_NUM_FLOAT_TEXT);
-#endif
-        case UI_TERM_FULL_COLOR:
-            return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_NUM_FLOAT_TEXT);
-        case UI_TERM_NO_COLOR:
-        default:
-            return "";
-    }
+    return ui_term_color(UI_COLOR_NUM_FLOAT);
 }
 
 char* ui_term_color_grey(void) {
-    switch (system_config.terminal_ansi_color) {
-#ifdef ANSI_COLOR_256
-        case UI_TERM_256:
-            return UI_TERM_256_COLOR_CONCAT_TEXT(BP_COLOR_256_GREY_TEXT);
-#endif
-        case UI_TERM_FULL_COLOR:
-            return UI_TERM_FULL_COLOR_CONCAT_TEXT(BP_COLOR_GREY_TEXT);
-        case UI_TERM_NO_COLOR:
-        default:
-            return "";
-    }
+    return ui_term_color(UI_COLOR_GREY);
 }
 
 char* ui_term_color_pacman(void) {
-    switch (system_config.terminal_ansi_color) {
-#ifdef ANSI_COLOR_256
-        case UI_TERM_256:
-            return UI_TERM_256_COLOR_CONCAT_TEXT("3");
-#endif
-        case UI_TERM_FULL_COLOR:
-            return UI_TERM_FULL_COLOR_CONCAT_TEXT("255;238;00");
-        case UI_TERM_NO_COLOR:
-        default:
-            return "";
-    }
+    return ui_term_color(UI_COLOR_PACMAN);
 }
 
 char* ui_term_cursor_hide(void) {
@@ -388,6 +343,66 @@ char* ui_term_cursor_hide(void) {
 }
 char* ui_term_cursor_show(void) {
     return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color ? "\033[?25h" : "";
+}
+
+void ui_term_erase_line_printf(void) {
+    if (system_config.terminal_ansi_color) {
+        printf("\033[K");
+    }
+}
+
+void ui_term_screen_flash_printf(bool on) {
+    if (system_config.terminal_ansi_color) {
+        printf(on ? "\033[?5h" : "\033[?5l");
+    }
+}
+
+void ui_term_cursor_position_printf(uint16_t row, uint16_t col) {
+    if (system_config.terminal_ansi_color) {
+        printf("\033[%d;%dH", row, col);
+    }
+}
+
+void ui_term_cursor_save_printf(void) {
+    if (system_config.terminal_ansi_color) {
+        printf("\0337");
+    }
+}
+
+void ui_term_cursor_restore_printf(void) {
+    if (system_config.terminal_ansi_color) {
+        printf("\0338");
+    }
+}
+
+void ui_term_scroll_region_printf(uint16_t top, uint16_t bottom) {
+    if (system_config.terminal_ansi_color) {
+        printf("\033[%d;%dr", top, bottom);
+    }
+}
+
+void ui_term_line_wrap_disable_printf(void) {
+    if (system_config.terminal_ansi_color) {
+        printf("\033[7l");
+    }
+}
+
+void ui_term_cursor_move_down_printf(uint16_t n) {
+    if (system_config.terminal_ansi_color) {
+        printf("\033[%dB", n);
+    }
+}
+
+void ui_term_cursor_move_right_printf(uint16_t n) {
+    if (system_config.terminal_ansi_color) {
+        printf("\033[%dC", n);
+    }
+}
+
+void ui_term_cursor_move_left_printf(uint16_t n) {
+    if (system_config.terminal_ansi_color) {
+        printf("\033[%dD", n);
+    }
 }
 
 void ui_term_progress_bar_draw(ui_term_progress_bar_t* pb) {

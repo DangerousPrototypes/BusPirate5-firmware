@@ -299,7 +299,8 @@ bool psucmd_init(void) {
 void psucmd_show_clear_error(void) {
     if (psu_status.error_pending && (psu_status.error_overcurrent || psu_status.error_undervoltage)){
         psu_clear_error_flag();
-        printf("\033[?5h\r\n");
+        ui_term_screen_flash_printf(true);
+        printf("\r\n");
         if(psu_status.error_overcurrent) {
             ui_help_error(T_PSU_CURRENT_LIMIT_ERROR);
         }
@@ -307,6 +308,6 @@ void psucmd_show_clear_error(void) {
             ui_help_error(T_PSU_SHORT_ERROR);
         }
         busy_wait_ms(500);
-        printf("\033[?5l");
+        ui_term_screen_flash_printf(false);
     }
 }

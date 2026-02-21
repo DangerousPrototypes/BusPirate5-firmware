@@ -14,6 +14,7 @@
 //#include "commands/i2c/eeprom.h"
 #include "pirate/hwspi.h" // SPI related functions
 #include "eeprom_base.h"
+#include "pirate/file.h"
 #include "pirate/bio.h" // Bio related functions
 
 #define SPI_EEPROM_READ_CMD 0x03 // Read command for EEPROM
@@ -508,8 +509,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
     // file to read/write/verify
     if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action==EEPROM_VERIFY)) {
-        if(!bp_cmd_get_string(&eeprom_spi_def, 'f', args->file_name, sizeof(args->file_name))){
-            printf("Missing file name: -f <file name>\r\n");
+        if(!bp_file_get_name_flag(&eeprom_spi_def, 'f', args->file_name, sizeof(args->file_name))){
             return true;
         }
     }

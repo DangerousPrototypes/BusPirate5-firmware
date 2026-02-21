@@ -3,20 +3,29 @@
 #include <stdint.h>
 #include "pirate.h"
 #include "ui/ui_term.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "fatfs/ff.h"       // File system related
 
-//file anme aparsing
-bool file_get_args(char *file, size_t size_of_file) {
-    command_var_t arg;
-    bool file_flag = cmdln_args_find_flag_string('f'|0x20, &arg, size_of_file, file);
-    //detect flag with no argument, report error
-    if(!file_flag) {
-        printf("Missing file name: -f <file name>\r\n");
-        return true; // return true for error
+// Get file name from a flag argument (e.g. 'f').
+// Returns true on success, false on failure (prints error).
+bool bp_file_get_name_flag(const bp_command_def_t *def, char flag, char *buf, size_t maxlen) {
+    if (bp_cmd_get_string(def, flag, buf, maxlen)) {
+        return true;
     }
-    return false; // return false for success
+    printf("Missing file name (-%c)\r\n", flag);
+    return false;
 }
+
+// Get file name from a positional argument.
+// Returns true on success, false on failure (prints error).
+bool bp_file_get_name_positional(const bp_command_def_t *def, uint8_t position, char *buf, size_t maxlen) {
+    if (bp_cmd_get_positional_string(def, position, buf, maxlen)) {
+        return true;
+    }
+    printf("Missing file name\r\n");
+    return false;
+}
+
 
 
 bool file_close(FIL *file_handle) {

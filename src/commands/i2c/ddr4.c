@@ -895,7 +895,7 @@ void ddr4_handler(struct command_result* res) {
     FIL file_handle;                                                  // file handle
     if ((action == DDR4_WRITE || action == DDR4_READ || action== DDR4_VERIFY || action == DDR4_CRC || action == DDR4_PATCH)) {
         
-        if(file_get_args(file, sizeof(file))){; // get the file name from the command line arguments
+        if(!bp_file_get_name_flag(&ddr4_def, 'f', file, sizeof(file))) {
             return;
         }
 

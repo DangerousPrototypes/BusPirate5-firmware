@@ -7,6 +7,7 @@
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
 #include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
+#include "pirate/file.h"
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -62,8 +63,7 @@ void dump_handler(struct command_result* res) {
 
     // get filename argument
     char filename[13];
-    if (!bp_cmd_get_positional_string(&dump_def, 2, filename, sizeof(filename))) {
-        printf("Error: No filename specified\r\n\r\n");
+    if (!bp_file_get_name_positional(&dump_def, 2, filename, sizeof(filename))) {
         goto display_help;
     }
 

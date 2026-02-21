@@ -105,7 +105,7 @@ static bool i2c_get_args(struct i2c_dump_t *args) {
 
     // file to read/write/verify
     if ((args->action == I2CDUMP_READ)) {
-        if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
+        if(!bp_file_get_name_flag(&i2c_dump_def, 'f', args->file_name, sizeof(args->file_name))) return true;
         if(args->data_size_bytes > I2C_DUMP_MAX_BUFFER_SIZE){
             printf("Error: Data size exceeds maximum buffer size (%d bytes)\r\n", I2C_DUMP_MAX_BUFFER_SIZE);
             return true;

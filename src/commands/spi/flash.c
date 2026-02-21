@@ -12,7 +12,7 @@
 #include "lib/sfud/inc/sfud.h"
 #include "lib/sfud/inc/sfud_def.h"
 #include "spiflash.h"
-#include "ui/ui_cmdln.h"
+#include "pirate/file.h"
 #include "ui/ui_help.h"
 #include "ui/ui_prompt.h"
 #include "system_config.h"
@@ -77,7 +77,7 @@ const bp_command_def_t flash_def = {
 };
 
 void flash(struct command_result* res) {
-    char file[13];
+
 
     if (bp_cmd_help_check(&flash_def, res->help_flag)) {
         return;
@@ -97,10 +97,11 @@ void flash(struct command_result* res) {
     // verify_flag
     bool verify_flag = bp_cmd_find_flag(&flash_def, 'v');
     // file to read/write/verify
-    bool file_flag = bp_cmd_get_string(&flash_def, 'f', file, sizeof(file));
-    if((flash_action == FLASH_WRITE || flash_action == FLASH_READ || flash_action == FLASH_VERIFY) && !file_flag) {
-        printf("Missing file name (-f)\r\n");
-        return;
+    char file[13];
+    if((flash_action == FLASH_WRITE || flash_action == FLASH_READ || flash_action == FLASH_VERIFY)) {
+        if(!bp_file_get_name_flag(&flash_def, 'f', file, sizeof(file))) {
+            return;
+        }
     }
 
     // error if read/verify and erase flag is set, doesn't make sense to erase if just reading or verifying

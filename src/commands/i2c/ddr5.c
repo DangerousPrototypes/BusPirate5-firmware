@@ -967,7 +967,7 @@ void ddr5_handler(struct command_result* res) {
     FIL file_handle;                                                  // file handle
     if ((action == DDR5_WRITE || action == DDR5_READ || action== DDR5_VERIFY || action == DDR5_CRC || action == DDR5_PATCH)) {
         
-        if(file_get_args(file, sizeof(file))){; // get the file name from the command line arguments
+        if(!bp_file_get_name_flag(&ddr5_def, 'f', file, sizeof(file))) {
             return;
         }
 

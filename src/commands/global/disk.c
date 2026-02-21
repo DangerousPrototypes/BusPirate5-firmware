@@ -23,7 +23,7 @@
 #include "pirate/storage.h"
 #include "pirate/mem.h"
 #include "lib/bp_args/bp_cmd.h"
-#include "pirate/storage.h"
+#include "pirate/file.h"
 
 static const char* const cat_usage[] = {
     "cat <file>",
@@ -57,7 +57,10 @@ void disk_cat_handler(struct command_result* res) {
     FRESULT fr; /* FatFs return code */
     char file[512];
     char location[32];
-    bp_cmd_get_positional_string(&disk_cat_def, 1, location, sizeof(location));
+    if(!bp_file_get_name_positional(&disk_cat_def, 1, location, sizeof(location))){
+        res->error = true;
+        return;
+    }
     fr = f_open(&fil, location, FA_READ);
     if (fr != FR_OK) {
         storage_file_error(fr);
@@ -104,7 +107,10 @@ void disk_mkdir_handler(struct command_result* res) {
 
     FRESULT fr;
     char location[32];
-    bp_cmd_get_positional_string(&disk_mkdir_def, 1, location, sizeof(location));
+    if(!bp_file_get_name_positional(&disk_mkdir_def, 1, location, sizeof(location))){
+        res->error = true;
+        return;
+    }
     fr = f_mkdir(location);
     if (fr != FR_OK) {
         storage_file_error(fr);
@@ -142,7 +148,10 @@ void disk_cd_handler(struct command_result* res) {
 
     FRESULT fr;
     char location[32];
-    bp_cmd_get_positional_string(&disk_cd_def, 1, location, sizeof(location));
+    if(!bp_file_get_name_positional(&disk_cd_def, 1, location, sizeof(location))){
+        res->error = true;
+        return;
+    }
     fr = f_chdir(location);
     if (fr != FR_OK) {
         storage_file_error(fr);
@@ -186,7 +195,10 @@ void disk_rm_handler(struct command_result* res) {
 
     FRESULT fr;
     char location[32];
-    bp_cmd_get_positional_string(&disk_rm_def, 1, location, sizeof(location));
+    if(!bp_file_get_name_positional(&disk_rm_def, 1, location, sizeof(location))){
+        res->error = true;
+        return;
+    }
     fr = f_unlink(location);
     if (fr != FR_OK) {
         storage_file_error(fr);

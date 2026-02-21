@@ -266,7 +266,7 @@ static bool eeprom_get_args(struct eeprom_info *args) {
 
     // file to read/write/verify
     if ((args->action == EEPROM_READ || args->action == EEPROM_WRITE || args->action == EEPROM_VERIFY)) {
-        if(file_get_args(args->file_name, sizeof(args->file_name))) return true;
+        if(!bp_file_get_name_flag(&eeprom_i2c_def, 'f', args->file_name, sizeof(args->file_name))) return true;
     }
 
     // let hex editor parse its own arguments (future)

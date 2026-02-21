@@ -4,13 +4,28 @@
  * @details Provides wrapper functions for FAT filesystem operations.
  */
 
+struct bp_command_def;
+
 /**
- * @brief Get filename argument from user.
- * @param file       Buffer for filename
- * @param file_size  Buffer size
- * @return           true on success
+ * @brief Get filename from a flag argument.
+ * @param def     Command definition for argument lookup
+ * @param flag    Flag character (e.g. 'f')
+ * @param buf     Buffer for filename
+ * @param maxlen  Buffer size
+ * @return        true on success, false on failure (prints error)
  */
-bool file_get_args(char *file, size_t file_size);
+bool bp_file_get_name_flag(const struct bp_command_def *def, char flag, char *buf, size_t maxlen);
+
+/**
+ * @brief Get filename from a positional argument.
+ * @param def      Command definition for argument lookup
+ * @param position Positional index (1-based)
+ * @param buf      Buffer for filename
+ * @param maxlen   Buffer size
+ * @return         true on success, false on failure (prints error)
+ */
+bool bp_file_get_name_positional(const struct bp_command_def *def, uint8_t position, char *buf, size_t maxlen);
+
 
 /**
  * @brief Close file handle.

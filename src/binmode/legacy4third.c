@@ -38,7 +38,6 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include "binio_helpers.h"
 #include "tusb.h"
 #include "system_config.h"
-#include "ui/ui_prompt.h"       // ui_prompt_float
 #include "ui/ui_term.h"
 #include "lib/bp_args/bp_cmd.h" // bp_cmd_yes_no_exit
 #include "pirate/hwspi.h"
@@ -801,19 +800,25 @@ void legacy4third_mode(void) {
             set_planks_auxpins(true);
         }
 
-        prompt_result result = { 0 };
-        printf("\r\n%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());
+        static const bp_val_constraint_t psu_voltage_constraint = {
+            .type = BP_VAL_FLOAT,
+            .f = { .min = 0.8f, .max = 5.0f, .def = 3.3f },
+        };
+        static const bp_val_constraint_t psu_current_constraint = {
+            .type = BP_VAL_FLOAT,
+            .f = { .min = 0.0f, .max = 500.0f, .def = 200.0f },
+        };
 
-        if (!ui_prompt_float(&result, 0.8f, 5.0f, 3.3f, true, &psu_voltage, false)) 
+        printf("\r\n%sPower supply\r\nVolts (0.80V-5.00V)%s", ui_term_color_info(), ui_term_color_reset());
+        if (bp_cmd_prompt(&psu_voltage_constraint, &psu_voltage) == BP_CMD_EXIT)
             goto finish_legacy;
 
         if (binmode_debug) {
             printf("\r\nVolts: %2.2f\n", psu_voltage);
         }
 
-        float current = 0.0f;
         printf("\r\n%sMaximum current (0mA-500mA)%s", ui_term_color_info(), ui_term_color_reset());
-        if (!ui_prompt_float(&result, 0.0f, 500.0f, 200.0f, true, &psu_current_limit, false))
+        if (bp_cmd_prompt(&psu_current_constraint, &psu_current_limit) == BP_CMD_EXIT)
             goto finish_legacy;
 
         if (binmode_debug) {

@@ -10,35 +10,44 @@
 #include <math.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
-#include "command_struct.h"       // File system related
-#include "fatfs/ff.h"       // File system related
-#include "pirate/storage.h" // File system related
-#include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
-// #include "ui/ui_prompt.h" // User prompts and menu system
-// #include "ui/ui_const.h"  // Constants and strings
-#include "ui/ui_help.h"    // Functions to display help in a standardized way
-#include "system_config.h" // Stores current Bus Pirate system configuration
-#include "pirate/amux.h"   // Analog voltage measurement functions
-#include "pirate/button.h" // Button press functions
+#include "command_struct.h"
+#include "fatfs/ff.h"
+#include "pirate/storage.h"
+#include "lib/bp_args/bp_cmd.h"
+#include "ui/ui_help.h"
+#include "system_config.h"
+#include "pirate/amux.h"
+#include "pirate/button.h"
 #include "msc_disk.h"
 #include "hardware/pio.h"
-#include "bytecode.h"   // Bytecode structure for data IO
+#include "bytecode.h"
 #include "pio_config.h"
 #include "mode/i2s.h"
 // This array of strings is used to display help USAGE examples for the dummy command
-static const char* const usage[] = { "sine [Hz]",
+static const char* const usage[] = { "sine [Hz] [-s seconds] [-f file]",
                                      "Generate a sine wave at the default frequency (1000Hz):%s sine",                                 
                                      "Generate 2000Hz sine wave:%s sine 2000",
-                                     "Generate 1000Hz sine wave for 5 seconds:%s sine 1000 -s 5" };
+                                     "Generate 1000Hz sine wave for 5 seconds:%s sine 1000 -s 5",
+                                     "Read WAV file header:%s sine -f test.wav" };
 
+static const bp_command_opt_t sine_opts[] = {
+    { "seconds",  's', BP_ARG_REQUIRED, NULL, T_HELP_DUMMY_COMMANDS },
+    { "file",     'f', BP_ARG_REQUIRED, NULL, T_HELP_DUMMY_COMMANDS },
+    { 0 }
+};
+
+static const bp_command_positional_t sine_positionals[] = {
+    { "Hz", NULL, T_HELP_DUMMY_COMMANDS, false },
+    { 0 }
+};
 
 // Command definition (not static - will be extern'd)
 const bp_command_def_t sine_def = {
     .name         = "sine",
     .description  = T_HELP_DUMMY_COMMANDS,
-    .actions      = NULL,
-    .action_count = 0,
-    .opts         = NULL,
+    .opts         = sine_opts,
+    .positionals      = sine_positionals,
+    .positional_count = 1,
     .usage        = usage,
     .usage_count  = count_of(usage),
 };
@@ -177,12 +186,14 @@ void sine_handler(struct command_result* res) {
     uint32_t duration_seconds = 2; // Duration of the sine wave output in seconds
     
     uint32_t temp;
-    if(cmdln_args_uint32_by_position(1, &temp)){
+    if(bp_cmd_get_positional_uint32(&sine_def, 1, &temp)){
         sine_frequency_hz = temp; // Get the sine frequency from the command line argument
     }
 
-    command_var_t arg;
-    cmdln_args_find_flag_uint32('s', &arg, &duration_seconds);
+    uint32_t dur;
+    if (bp_cmd_get_uint32(&sine_def, 's', &dur)) {
+        duration_seconds = dur;
+    }
     printf("Sine Wave: %dHz @ %dHz sample rate, %d seconds\r\n", sine_frequency_hz, sample_frequency_hz, duration_seconds);    
 
     //determine if the sample/sine has a remainder

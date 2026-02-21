@@ -201,27 +201,6 @@ static bool cmdln_args_find_flag_internal(char flag, command_var_t* arg) {
     return false;
 }
 
-// check if a flag is present and get the integer value
-//  returns true if flag is present AND has a string value
-//  use cmdln_args_find_flag to see if a flag was present with no string value
-bool cmdln_args_find_flag_uint32(char flag, command_var_t* arg, uint32_t* value) {
-    if (!cmdln_args_find_flag_internal(flag, arg)) {
-        return false;
-    }
-
-    if (!arg->has_value) {
-        return false;
-    }
-
-    struct prompt_result result;
-    if (!cmdln_args_get_int(&arg->value_pos, &result, value)) {
-        arg->error = true;
-        return false;
-    }
-
-    return true;
-}
-
 // check if a -f(lag) is present. Value is don't care.
 // returns true if flag is present
 bool cmdln_args_find_flag(char flag) {
@@ -258,35 +237,6 @@ bool cmdln_args_string_by_position(uint32_t pos, uint32_t max_len, char* str) {
             }
             struct prompt_result result;
             if (cmdln_args_get_string(rptr, max_len, str)) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-    return false;
-}
-
-bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t* value) {
-    char c;
-    uint32_t rptr = 0;
-// start at beginning of command range
-#ifdef UI_CMDLN_ARGS_DEBUG
-    printf("Looking for uint in pos %d\r\n", pos);
-#endif
-    for (uint32_t i = 0; i < pos + 1; i++) {
-        // consume white space
-        if (!cmdln_consume_white_space(&rptr, false)) {
-            return false;
-        }
-        // consume non-white space
-        if (i != pos) {
-            if (!cmdln_consume_white_space(&rptr, true)) { // consume non-white space
-                return false;
-            }
-        } else {
-            struct prompt_result result;
-            if (cmdln_args_get_int(&rptr, &result, value)) {
                 return true;
             } else {
                 return false;

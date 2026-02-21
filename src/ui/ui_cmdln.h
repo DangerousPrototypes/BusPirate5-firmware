@@ -42,23 +42,6 @@ typedef struct command_var_struct {
 bool cmdln_args_find_flag(char flag);
 
 /**
- * @brief Get uint32 value from flag argument.
- * @param flag       Flag character
- * @param[out] arg   Argument information
- * @param[out] value Parsed value
- * @return true on success
- */
-bool cmdln_args_find_flag_uint32(char flag, command_var_t* arg, uint32_t* value);
-
-/**
- * @brief Get uint32 argument by position.
- * @param pos         Argument position (0-based)
- * @param[out] value  Parsed uint32 value
- * @return true on success
- */
-bool cmdln_args_uint32_by_position(uint32_t pos, uint32_t* value);
-
-/**
  * @brief Get string argument by position.
  * @param pos      Argument position (0-based)
  * @param max_len  Maximum string length

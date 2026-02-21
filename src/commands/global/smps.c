@@ -19,11 +19,10 @@
 #include "pirate/amux.h"
 #include "hardware/pwm.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 
 static const char* const usage[] = {
     "smps\t[volts] [-s]",
-    "Set SMPS to volts: %s smps 12.3",
+    "Set SMPS to volts:%s smps 12.3",
     "Show SMPS ADC setpoints (diagnostic):%s smps -s",
 };
 
@@ -32,8 +31,14 @@ static const bp_command_opt_t smps_opts[] = {
     { 0 }
 };
 
+static const bp_val_constraint_t smps_voltage_constraint = {
+    .type = BP_VAL_FLOAT,
+    .f = { .min = 5.1f, .max = 16.0f, .def = 13.0f },
+    .prompt = T_HELP_GCMD_SMPS_VOLTAGE,
+};
+
 static const bp_command_positional_t smps_positionals[] = {
-    { "volts", NULL, T_HELP_GCMD_SMPS_VOLTAGE, false },
+    { "volts", "5.1-16.0", T_HELP_GCMD_SMPS_VOLTAGE, false, &smps_voltage_constraint },
     { 0 }
 };
 
@@ -73,7 +78,6 @@ void smps_handler(struct command_result* res) {
 #define SMPS_ADC_SET(X) (uint32_t)(((float)((float)X * (float)100.0f) * (float)((float)16516.0f)) / (float)10000.0f)
 
     float volts;
-    bool has_volts = bp_cmd_get_positional_float(&smps_def, 1, &volts);
     bool has_setpoints = bp_cmd_find_flag(&smps_def, 's');
 
     if (has_setpoints) {
@@ -83,19 +87,19 @@ void smps_handler(struct command_result* res) {
         }
     }
 
-    if (((!has_volts) && (!has_setpoints)) || volts < 5.1f || volts > 16.0f) {
-
-        if (volts < 5.1f || volts > 16.0f) {
-            printf("Invalid voltage: %1.2f\r\n", volts);
-        }
-
-        prompt_result result;
-        printf("%sSMPS\r\nVolts (5.1V-16.0V)%s", ui_term_color_info(), ui_term_color_reset());
-        ui_prompt_float(&result, 5.1f, 16.0f, 13.0f, true, &volts, false);
-        if (result.exit) {
+    bp_cmd_status_t s = bp_cmd_positional(&smps_def, 1, &volts);
+    if (s == BP_CMD_INVALID) {
+        res->error = true;
+        return;
+    }
+    if (s == BP_CMD_MISSING && !has_setpoints) {
+        s = bp_cmd_prompt(&smps_voltage_constraint, &volts);
+        if (s == BP_CMD_EXIT) {
             res->error = true;
             return;
         }
+    } else if (s == BP_CMD_MISSING) {
+        return; // only -s flag, no voltage needed
     }
 
     uint32_t adc_set = SMPS_ADC_SET(volts);

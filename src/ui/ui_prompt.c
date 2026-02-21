@@ -37,23 +37,6 @@ void ui_prompt_invalid_option(void) {
 }
 
 // INTEGER
-bool ui_prompt_menu_int(const struct ui_prompt* menu) {
-    // print menu_options without ordered list
-    for (uint i = 0; i < (*menu).menu_items_count; i++) {
-        printf(" %s\r\n", GET_T((*menu).menu_items[i].description));
-    }
-    return true;
-}
-
-bool ui_prompt_prompt_int(const struct ui_prompt* menu) {
-    // prompt
-    printf(ui_term_color_prompt());
-    printf(GET_T((*menu).prompt_text), ui_term_color_reset(), (*menu).defval, ui_term_color_prompt());
-    printf(" >%s \x03", ui_term_color_reset());
-
-    return true;
-}
-
 bool ui_prompt_validate_int(const struct ui_prompt* menu, uint32_t* value) {
     return (((*value) >= (*menu).minval) && ((*value) <= (*menu).maxval));
 }
@@ -338,25 +321,6 @@ bool ui_prompt_any_key_continue(prompt_result* result,
     result->success = 1;
     return true;
 }
-
-const struct ui_prompt_config prompt_int_cfg = {
-    true,                   // bool allow_prompt_text;
-    true,                   // bool allow_prompt_defval;
-    true,                   // bool allow_defval;
-    true,                   // bool allow_exit;
-    &ui_prompt_menu_int,    // bool (*menu_print)(const struct ui_prompt* menu);
-    &ui_prompt_prompt_int,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-    &ui_prompt_validate_int // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-};
-const struct ui_prompt_config prompt_list_cfg = {
-    true,                            // bool allow_prompt_text;
-    true,                            // bool allow_prompt_defval;
-    true,                            // bool allow_defval;
-    true,                            // bool allow_exit;
-    &ui_prompt_menu_ordered_list,    // bool (*menu_print)(const struct ui_prompt* menu);
-    &ui_prompt_prompt_ordered_list,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-    &ui_prompt_validate_ordered_list // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-};
 
 void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units) {
     printf(" %s%s%s: %d %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), value, units);

@@ -32,8 +32,6 @@ set(buspirate_common
         system_monitor.c
 
         #flatcc test
-        commands/global/flat.h 
-        commands/global/flat.c 
         bpio_builder.h
         bpio_reader.h
         bpio_verifier.h
@@ -522,7 +520,6 @@ set(buspirate_common
         font/hunter-23pt-24h24w.h
         display/background.h
         display/background_image_v4.h
-        display/robot16.h
         
         # USB - SPSC queues for inter-core communication
         spsc_queue.h

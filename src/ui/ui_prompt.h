@@ -74,8 +74,6 @@ bool ui_prompt_validate_ordered_list(const struct ui_prompt* menu, uint32_t* val
  * @name Integer input menu helpers
  * @{
  */
-bool ui_prompt_menu_int(const struct ui_prompt* menu);
-bool ui_prompt_prompt_int(const struct ui_prompt* menu);
 bool ui_prompt_validate_int(const struct ui_prompt* menu, uint32_t* value);
 /** @} */
 
@@ -108,8 +106,5 @@ bool ui_prompt_vt100_mode_feed(uint32_t *value);
 void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units);
 void ui_prompt_mode_settings_string(const char* label, const char* string, const char* units);
 
-// default prompt configurations for general purpose mode setup
-extern const struct ui_prompt_config prompt_int_cfg;
-extern const struct ui_prompt_config prompt_list_cfg;
 
 /** @} */

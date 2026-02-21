@@ -26,7 +26,7 @@ static const struct prompt_result empty_result;
 
 // consume white space (0x20, space)
 //  non_white_space = true, consume non-white space characters (not space)
-bool cmdln_consume_white_space(uint32_t* rptr, bool non_white_space) {
+static bool cmdln_consume_white_space(uint32_t* rptr, bool non_white_space) {
     // consume white space
     while (true) {
         char c;
@@ -48,7 +48,7 @@ bool cmdln_consume_white_space(uint32_t* rptr, bool non_white_space) {
 
 // internal function to take copy string from start position to next space or end of buffer
 // notice, we do not pass rptr by reference, so it is not updated
-bool cmdln_args_get_string(uint32_t rptr, uint32_t max_len, char* string) {
+static bool cmdln_args_get_string(uint32_t rptr, uint32_t max_len, char* string) {
     char c;
     for (uint32_t i = 0; i < max_len; i++) {
         // no more characters
@@ -69,7 +69,7 @@ bool cmdln_args_get_string(uint32_t rptr, uint32_t max_len, char* string) {
 
 // parse a hex value from the first digit
 // notice, we do not pass rptr by reference, so it is not updated
-bool cmdln_args_get_hex(uint32_t* rptr, struct prompt_result* result, uint32_t* value) {
+static bool cmdln_args_get_hex(uint32_t* rptr, struct prompt_result* result, uint32_t* value) {
     char c;
 
     //*result=empty_result;
@@ -97,7 +97,7 @@ bool cmdln_args_get_hex(uint32_t* rptr, struct prompt_result* result, uint32_t* 
 
 // parse a bin value from the first digit
 // notice, we do not pass rptr by reference, so it is not updated
-bool cmdln_args_get_bin(uint32_t* rptr, struct prompt_result* result, uint32_t* value) {
+static bool cmdln_args_get_bin(uint32_t* rptr, struct prompt_result* result, uint32_t* value) {
     char c;
     //*result=empty_result;
     result->no_value = true;
@@ -120,7 +120,7 @@ bool cmdln_args_get_bin(uint32_t* rptr, struct prompt_result* result, uint32_t* 
 
 // parse a decimal value from the first digit
 // notice, we do not pass rptr by reference, so it is not updated
-bool cmdln_args_get_dec(uint32_t* rptr, struct prompt_result* result, uint32_t* value) {
+static bool cmdln_args_get_dec(uint32_t* rptr, struct prompt_result* result, uint32_t* value) {
     char c;
     //*result=empty_result;
     result->no_value = true;
@@ -173,7 +173,7 @@ bool cmdln_args_get_int(uint32_t* rptr, struct prompt_result* result, uint32_t* 
     return result->success;
 }
 
-bool cmdln_args_find_flag_internal(char flag, command_var_t* arg) {
+static bool cmdln_args_find_flag_internal(char flag, command_var_t* arg) {
     uint32_t rptr = 0;
     char flag_c;
     char dash_c;

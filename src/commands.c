@@ -43,7 +43,6 @@
 #include "commands/global/otpdump.h"
 #endif
 #include "commands/global/ovrclk.h"
-#include "commands/global/flat.h"
 
 // command configuration
 const struct _global_command_struct commands[] = {
@@ -110,7 +109,6 @@ const struct _global_command_struct commands[] = {
 { .command="h",         .allow_hiz=true,  .func=&help_handler,                       .def=&help_def, .description_text=0x00,                 .category=CMD_CAT_HIDDEN },
 { .command="help",      .allow_hiz=true,  .func=&help_handler,                       .def=&help_def, .description_text=T_CMDLN_HELP,         .category=CMD_CAT_HIDDEN },
 { .command="dummy",     .allow_hiz=true,  .func=&dummy_handler,                      .def=&dummy_def, .description_text=0x00,                 .category=CMD_CAT_HIDDEN },
-{ .command="flat",      .allow_hiz=true,  .func=&flat_handler,                       .def=&flat_def, .description_text=0x00,                 .category=CMD_CAT_HIDDEN },
 // clang-format on
 };
 

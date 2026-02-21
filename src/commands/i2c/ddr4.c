@@ -403,12 +403,6 @@ bool ddr4_lock_block(uint8_t block_number) {
     if(ddr4_get_lock_status(block_number, &lock_status)) {
         return true; // I2C error
     }
-    #if 0
-    if(ddr4_poll_idle(0x6D)){
-        printf("Error: Timeout waiting for lock operation to complete\r\n");
-        return true; // timeout
-    }
-    #endif
     busy_wait_ms(100); //wait 100ms for the lock to take effect, datasheet suggests 4ms max
     if(!lock_status) {
         printf("Error: Verification failed, block %d is not locked\r\n", block_number);
@@ -426,12 +420,6 @@ bool ddr4_unlock_blocks(void){
         printf("Error: Unlock blocks command failed\r\n");
         return true; // failed to unlock
     }
-    #if 0
-    if(ddr4_poll_idle(0x6D)){
-        printf("Error: Timeout waiting for unlock operation to complete\r\n");
-        return true; // timeout
-    }
-    #endif
     busy_wait_ms(100); //wait 100ms for the unlock to take effect, datasheet suggests 4ms max
     //verify all blocks unlocked
     for(uint8_t block=0; block<4; block++){
@@ -770,16 +758,6 @@ void ddr4_spd_print_manufacturing_info(const ddr4_spd_manufacturing_info_t* mfg)
     printf("DRAM Stepping: 0x%02X\r\n", mfg->dram_stepping);
     
     // Manufacturer Specific Data (show first few bytes)
-    #if 0
-    printf("Manufacturer Specific Data: ");
-    for (int i = 0; i < 8 && i < 29; i++) {
-        printf("0x%02X ", mfg->manufacturer_specific_data[i]);
-    }
-    if (29 > 8) {
-        printf("... (%d more bytes)", 29 - 8);
-    }
-    printf("\r\n");
-    #endif
     
     // Check reserved bytes
     if (mfg->reserved[0] != 0x00 || mfg->reserved[1] != 0x00) {
@@ -830,29 +808,6 @@ bool ddr4_probe(uint8_t *buffer) {
 
     // Print manufacturing information
     ddr4_decode_manufacturing_info(buffer);    
-#if 0
-    // read 128 bytes from the DDR5 SPD Volatile Memory
-    // cast it to the ddr5_spd_volatile_t structure
-    //detect if spd present
-    if(ddr5_detect_spd_quick()) return true; //check if the device is DDR5 SPD
-
-    if(ddr5_read_pages_128bytes(false, 0, 1, buffer)) return true; //read volatile memory, start at 0x00
-    
-    ddr5_decode_volatile_memory(buffer); //decode the volatile memory
-
-    //read 1024 bytes from the DDR5 SPD NVM
-    if(ddr5_read_pages_128bytes(true, 0, 8, buffer)) return true; //read EEPROM page 0-7, start at 0x00
-
-    printf("\r\nSPD EEPROM JEDEC Data blocks 0-7:\r\n");
-    //if(ddr5_read_pages_128bytes(true, 0, 4, buffer)) return true; //read EEPROM page 0-4, start at 0x00
-    if(ddr5_nvm_jedec_crc(buffer)) return true; //check CRC of the first 512 bytes
-    if(ddr5_nvm_jedec_decode_data(buffer)) return true; //decode the first 512 bytes of the EEPROM
-
-    printf("\r\nSPD EEPROM JEDEC Manufacturing Information blocks 8-9:\r\n");
-    //if(ddr5_read_pages_128bytes(true, 0b100, 4, buffer)) return true; //read EEPROM page 5-8, start at 0x00
-    if(ddr5_nvm_jedec_decode_manuf(&buffer[0x200])) return true; //decode the manufacturing information
-    if(ddr5_nvm_search(buffer)) return true; //search for the end user programmable area
-#endif
     return false;
 }
 

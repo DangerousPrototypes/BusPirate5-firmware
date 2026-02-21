@@ -66,12 +66,6 @@ bool bio_get(uint8_t bio);
  */
 void bio_set_function(uint8_t bio, uint8_t function);
 
-/**
- * @brief Test buffer functionality
- * @param bufio Buffer I/O pin
- * @param bufdir Buffer direction pin
- */
-void bio_buf_test(uint8_t bufio, uint8_t bufdir);
 
 /** Buffer direction: input (high-Z) */
 #define BUFDIR_INPUT 0

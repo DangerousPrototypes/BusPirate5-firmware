@@ -168,23 +168,3 @@ bool bio_get(uint8_t bio) {
 void bio_set_function(uint8_t bio, uint8_t function) {
     gpio_set_function(bio2bufiopin[bio], function);
 }
-
-/**
- * @brief Test buffer functionality
- * 
- * Performs a simple test of a buffer by toggling output for 2 seconds.
- * 
- * @param bufio Buffer I/O pin
- * @param bufdir Buffer direction pin
- * 
- * @note This is a blocking function (2 second delay)
- */
-void bio_buf_test(uint8_t bufio, uint8_t bufdir) {
-    gpio_put(bufdir, BUFDIR_OUTPUT);
-    gpio_set_dir(bufio, GPIO_OUT);
-    gpio_put(bufio, 1);
-    busy_wait_ms(2000);
-    gpio_put(bufio, 0);
-    gpio_set_dir(bufio, GPIO_IN);
-    gpio_put(bufdir, BUFDIR_INPUT);
-}

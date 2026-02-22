@@ -1,0 +1,110 @@
+/**
+ * @file ui_toolbar.h
+ * @brief Central toolbar registry and layout manager.
+ * @details Provides a registry for bottom-of-screen toolbars that stack above
+ *          the command scroll area.  Each toolbar registers its height and draw
+ *          callbacks; the registry owns the scroll-region calculation so every
+ *          toolbar always lands in the correct screen position.
+ *
+ *          Layout (bottom of terminal):
+ *          @code
+ *          ┌─────────────────────┐ ← row 1
+ *          │ scrollable area     │
+ *          ├─────────────────────┤ ← scroll_bottom = rows - total_height
+ *          │ [toolbar 0]         │  e.g. logic_analyzer (10 lines)
+ *          │ [toolbar 1]         │  e.g. statusbar      (4 lines)
+ *          └─────────────────────┘ ← row = terminal_ansi_rows
+ *          @endcode
+ *
+ *          The statusbar is always registered last (bottommost).
+ *          New toolbars stack above it in registration order.
+ */
+
+#pragma once
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#define TOOLBAR_MAX_COUNT 4 ///< Maximum number of simultaneously registered toolbars
+
+/**
+ * @brief Toolbar descriptor.
+ * @details Filled in by the toolbar owner and passed to toolbar_register().
+ */
+typedef struct toolbar_t {
+    const char* name;     ///< Unique name string (e.g. "statusbar", "logic_analyzer")
+    uint16_t height;      ///< Number of terminal lines this toolbar occupies
+    bool enabled;         ///< Currently active / visible
+    void* owner_data;     ///< Opaque pointer for the toolbar owner's private state
+
+    /**
+     * @brief Full redraw of this toolbar.
+     * @param start_row  First row this toolbar occupies (1-based).
+     * @param width      Terminal column width.
+     */
+    void (*draw)(struct toolbar_t* tb, uint16_t start_row, uint16_t width);
+
+    /**
+     * @brief Partial update of this toolbar.
+     * @param start_row   First row this toolbar occupies (1-based).
+     * @param width       Terminal column width.
+     * @param update_flags Bitmask of sections that changed (toolbar-specific meaning).
+     */
+    void (*update)(struct toolbar_t* tb, uint16_t start_row, uint16_t width, uint32_t update_flags);
+
+    /**
+     * @brief Called when the toolbar is unregistered; release any resources.
+     */
+    void (*destroy)(struct toolbar_t* tb);
+} toolbar_t;
+
+/**
+ * @brief Register a toolbar in the registry.
+ * @param tb  Pointer to caller-owned toolbar_t (must remain valid until unregistered).
+ * @return true on success, false if the registry is full.
+ */
+bool toolbar_register(toolbar_t* tb);
+
+/**
+ * @brief Unregister a toolbar and recalculate layout.
+ * @param tb  Toolbar to remove.
+ */
+void toolbar_unregister(toolbar_t* tb);
+
+/**
+ * @brief Sum of all enabled toolbar heights (lines reserved at the bottom).
+ * @return Total lines reserved.
+ */
+uint16_t toolbar_total_height(void);
+
+/**
+ * @brief First row of the scrollable command area (always 1).
+ * @return 1
+ */
+uint16_t toolbar_scroll_top(void);
+
+/**
+ * @brief Last row of the scrollable command area.
+ * @return terminal_ansi_rows - toolbar_total_height()
+ */
+uint16_t toolbar_scroll_bottom(void);
+
+/**
+ * @brief First terminal row used by a specific toolbar.
+ * @param tb  Toolbar to query.
+ * @return 1-based start row, or 0 if not registered / disabled.
+ */
+uint16_t toolbar_get_start_row(const toolbar_t* tb);
+
+/**
+ * @brief Apply the current scroll region to the terminal.
+ * @details Emits \033[1;bottomr so the command area scrolls correctly.
+ *          No-op when VT100 or statusbar is disabled.
+ */
+void toolbar_apply_scroll_region(void);
+
+/**
+ * @brief Redraw all enabled toolbars (full repaint).
+ */
+void toolbar_redraw_all(void);

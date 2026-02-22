@@ -23,6 +23,7 @@
 #include "pirate/intercore_helpers.h"
 #include "binmode/logicanalyzer.h"
 #include "binmode/fala.h"
+#include "ui/ui_toolbar.h"
 
 // 80 characters wide box outline
 // box top and corners
@@ -35,6 +36,17 @@ uint32_t la_freq = 1000, la_samples = 1000;
 uint32_t la_trigger_pin = 0, la_trigger_level = 0;
 char logic_graph_low_character = '_';
 char logic_graph_high_character = '#';
+
+/* Toolbar descriptor — registered when the logic bar is started. */
+static toolbar_t logic_bar_toolbar = {
+    .name    = "logic_analyzer",
+    .height  = LOGIC_BAR_HEIGHT,
+    .enabled = false,
+    .owner_data = NULL,
+    .draw    = NULL,
+    .update  = NULL,
+    .destroy = NULL,
+};
 
 void logic_bar_config(char low, char high) {
     if (low != 0) {
@@ -61,7 +73,12 @@ void draw_release(void) {
 
 // TODO: move to a central dispatch
 uint16_t draw_get_position_index(uint16_t height) {
-    // height of the logic bar, plus height of the status bar if active
+    /* Use the toolbar registry so position is consistent with all enabled bars. */
+    uint16_t start_row = toolbar_get_start_row(&logic_bar_toolbar);
+    if (start_row > 0) {
+        return start_row - 1; /* convert to 0-based for legacy callers */
+    }
+    /* Fallback: compute manually if not registered yet */
     return system_config.terminal_ansi_rows - ((height) + (system_config.terminal_ansi_statusbar * 4));
 }
 
@@ -194,7 +211,7 @@ void frame_vertical_labels(uint16_t position) {
 
 void logic_bar_draw_frame(void) {
     // height of the logic bar, plus height of the status bar if active
-    // todo: allocate position index from central toolbar logic
+    // Position comes from the toolbar registry via draw_get_position_index()
     uint16_t toolbar_position_index = draw_get_position_index(LOGIC_BAR_HEIGHT);
 
     // freeze terminal updates
@@ -203,8 +220,9 @@ void logic_bar_draw_frame(void) {
     // blank space
     frame_blank(LOGIC_BAR_HEIGHT);
 
-    // set scroll region, disable line wrap
-    printf("\033[%d;%dr\033[7l", 1, toolbar_position_index);
+    // set scroll region, disable line wrap — scroll bottom comes from registry
+    uint16_t scroll_bottom = toolbar_scroll_bottom();
+    printf("\033[%d;%dr\033[7l", 1, scroll_bottom);
 
     // draw box top
     frame_top(toolbar_position_index + 1, LOGIC_BAR_WIDTH);
@@ -229,10 +247,10 @@ void logic_bar_detach(void) {
     // save cursor
     // printf("\0337");
 
-    uint16_t position = draw_get_position_index(LOGIC_BAR_HEIGHT);
-
-    // set scroll region, disable line wrap
-    printf("\033[%d;%dr\033[7l\r\n\r\n", 1, position + LOGIC_BAR_HEIGHT);
+    // set scroll region to restored state (without this toolbar)
+    // After unregister, scroll_bottom will exclude logic bar height
+    uint16_t restore_bottom = toolbar_scroll_bottom() + LOGIC_BAR_HEIGHT;
+    printf("\033[%d;%dr\033[7l\r\n\r\n", 1, restore_bottom);
 
     frame_blank(LOGIC_BAR_HEIGHT);
 
@@ -259,6 +277,10 @@ bool logic_bar_start(void) {
     if (!fala_notify_register(&logic_bar_update)) {
         return false;
     }
+    logic_bar_toolbar.enabled = true;
+    toolbar_register(&logic_bar_toolbar);
+    /* Reapply the scroll region to account for the newly added toolbar. */
+    toolbar_apply_scroll_region();
     logic_bar_draw_frame();
     logic_bar_visible = true;
     return true;
@@ -268,6 +290,10 @@ void logic_bar_stop(void) {
     // this should stop and cleanup fala if not already...
     fala_notify_unregister(&logic_bar_update);
     logic_bar_detach();
+    toolbar_unregister(&logic_bar_toolbar);
+    logic_bar_toolbar.enabled = false;
+    /* Restore the scroll region now that the toolbar is gone. */
+    toolbar_apply_scroll_region();
     logic_bar_visible = false;
 }
 

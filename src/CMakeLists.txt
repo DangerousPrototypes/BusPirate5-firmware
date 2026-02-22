@@ -401,6 +401,10 @@ set(buspirate_common
         ui/ui_term_linenoise.h
         ui/ui_statusbar.c
         ui/ui_statusbar.h
+        ui/ui_toolbar.c
+        ui/ui_toolbar.h
+        ui/ui_pin_render.c
+        ui/ui_pin_render.h
         ui/ui_hex.c
         ui/ui_hex.h
         ui/ui_progress_indicator.h

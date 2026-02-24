@@ -677,6 +677,8 @@ static void read23eprom(uint32_t ictype, uint8_t mode)
   if((ictype==UP_EPROM_2332HL)||(ictype==UP_EPROM_2332HH)) csactive|=UP_23XX_CS2;
   
   up_pins(csdeactive);
+  
+  busy_wait_us(5000);
  
   // TODO: check Vpp, Vdd
   

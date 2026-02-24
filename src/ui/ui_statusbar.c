@@ -8,13 +8,13 @@
 #include "ui/ui_term.h"
 #include "usb_tx.h"
 #include "ui/ui_flags.h"
-#include "system_monitor.h"
 #include "display/scope.h"
 #include "pirate/intercore_helpers.h"
 #include "tusb.h"
 #include "pirate/psu.h"
 #include "ui/ui_toolbar.h"
 #include "ui/ui_pin_render.h"
+#include "system_monitor.h"
 
 /* Height of the status bar in terminal lines */
 #define STATUSBAR_HEIGHT 4
@@ -134,6 +134,9 @@ void ui_statusbar_update_from_core1(uint32_t update_flags) {
         return;
     }
 
+    /* Statusbar flags: change-track + clear cells, no newlines (cursor positioned externally). */
+    pin_render_flags_t sb_flags = PIN_RENDER_CHANGE_TRACK | PIN_RENDER_CLEAR_CELLS;
+
     // save cursor, hide cursor
     len += snprintf(&tx_sb_buf[len], buffLen - len, "\0337\033[?25l");
 
@@ -146,31 +149,23 @@ void ui_statusbar_update_from_core1(uint32_t update_flags) {
 
     if (update_flags & UI_UPDATE_NAMES) {
         len += snprintf(&tx_sb_buf[len], buffLen - len, "\033[%d;0H", start_row + 1);
-        len += ui_pin_render_names(&tx_sb_buf[len], buffLen - len);
+        len += ui_pin_render_names(&tx_sb_buf[len], buffLen - len, sb_flags);
     }
 
-    if ((update_flags & UI_UPDATE_CURRENT) && !(update_flags & UI_UPDATE_LABELS)) // show current under Vout
-    {
-        char* c;
-        if (monitor_get_current_ptr(&c)) {
-            len += snprintf(&tx_sb_buf[len],
-                            buffLen - len,
-                            "\033[%d;0H%s%s%smA",
-                            start_row + 2,
-                            ui_term_color_num_float(),
-                            c,
-                            ui_term_color_reset());
-        }
+    if ((update_flags & UI_UPDATE_CURRENT) && !(update_flags & UI_UPDATE_LABELS)) {
+        /* Current-only update — the labels row builder handles this. */
+        len += snprintf(&tx_sb_buf[len], buffLen - len, "\033[%d;0H", start_row + 2);
+        len += ui_pin_render_labels(&tx_sb_buf[len], buffLen - len, sb_flags);
     }
 
     if (update_flags & UI_UPDATE_LABELS) {
         len += snprintf(&tx_sb_buf[len], buffLen - len, "\033[%d;0H", start_row + 2);
-        len += ui_pin_render_labels(&tx_sb_buf[len], buffLen - len);
+        len += ui_pin_render_labels(&tx_sb_buf[len], buffLen - len, sb_flags);
     }
 
     if (update_flags & UI_UPDATE_VOLTAGES) {
         len += snprintf(&tx_sb_buf[len], buffLen - len, "\033[%d;0H", start_row + 3);
-        len += ui_pin_render_values(&tx_sb_buf[len], buffLen - len, false);
+        len += ui_pin_render_values(&tx_sb_buf[len], buffLen - len, sb_flags);
     }
 
     // restore cursor, show cursor

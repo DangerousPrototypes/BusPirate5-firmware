@@ -1,24 +1,33 @@
 /**
  * @file ui_pin_render.h
  * @brief Unified pin name / label / voltage rendering.
- * @details Provides a single implementation of the three pin-info rows that
- *          is shared between the `v`/`V` command (direct printf) and the status
- *          bar (snprintf to buffer).  Eliminates the previously duplicate
- *          implementations in ui_info.c and ui_statusbar.c.
+ * @details All rendering always writes into a caller-provided buffer via
+ *          snprintf — never calls printf directly.  Behaviour is customised
+ *          through @ref pin_render_flags_t flags.
  *
- *          Usage – printf mode (pass NULL buf):
+ *          Core0 callers (v/V command) pass a stack-local buffer, then push
+ *          it through tx_fifo_write().  Core1 callers (statusbar) pass a
+ *          slice of tx_sb_buf and commit via tx_sb_start().
+ *
+ *          Usage – v command (Core0):
  *          @code
- *          ui_pin_render_names(NULL, 0, NULL);
- *          ui_pin_render_labels(NULL, 0, NULL);
- *          ui_pin_render_values(NULL, 0, NULL, false);
+ *          char tmp[512];
+ *          uint32_t len;
+ *          pin_render_flags_t f = PIN_RENDER_NEWLINE | PIN_RENDER_CLEAR_CELLS;
+ *          len  = ui_pin_render_names(tmp, sizeof(tmp), f);
+ *          tx_fifo_write(tmp, len);
+ *          len  = ui_pin_render_labels(tmp, sizeof(tmp), f);
+ *          tx_fifo_write(tmp, len);
+ *          len  = ui_pin_render_values(tmp, sizeof(tmp), f);
+ *          tx_fifo_write(tmp, len);
  *          @endcode
  *
- *          Usage – buffer mode (status bar):
+ *          Usage – statusbar (Core1):
  *          @code
- *          uint32_t len = 0;
- *          len += ui_pin_render_names(buf + len, bufsize - len, NULL);
- *          len += ui_pin_render_labels(buf + len, bufsize - len, NULL);
- *          len += ui_pin_render_values(buf + len, bufsize - len, NULL, false);
+ *          pin_render_flags_t sf = PIN_RENDER_CHANGE_TRACK | PIN_RENDER_CLEAR_CELLS;
+ *          len += ui_pin_render_names(&tx_sb_buf[len], rem, sf);
+ *          len += ui_pin_render_labels(&tx_sb_buf[len], rem, sf);
+ *          len += ui_pin_render_values(&tx_sb_buf[len], rem, sf);
  *          @endcode
  */
 
@@ -29,27 +38,41 @@
 #include <stdbool.h>
 
 /**
+ * @brief Flags controlling per-use rendering behaviour.
+ *
+ * Callers combine these to get the exact output they need.
+ * - Core0 (v command): PIN_RENDER_NEWLINE | PIN_RENDER_CLEAR_CELLS
+ * - Core1 (statusbar): PIN_RENDER_CHANGE_TRACK | PIN_RENDER_CLEAR_CELLS
+ */
+typedef enum {
+    PIN_RENDER_CHANGE_TRACK  = (1u << 0),  /**< Skip unchanged cells (emit bare \\t). Core1 only. */
+    PIN_RENDER_NEWLINE       = (1u << 1),  /**< Append \\r\\n at end of row. */
+    PIN_RENDER_CLEAR_CELLS   = (1u << 2),  /**< Prepend \\033[8X (erase 8 cols) before each cell. */
+} pin_render_flags_t;
+
+/**
  * @brief Render the pin-name row ("1.IO0  2.IO1  ...").
- * @param buf      Output buffer, or NULL to printf directly.
- * @param buf_len  Buffer capacity (ignored when buf is NULL).
- * @return Bytes written to buf (0 when buf is NULL).
+ * @param buf      Output buffer (must not be NULL).
+ * @param buf_len  Buffer capacity.
+ * @param flags    Rendering flags.
+ * @return Bytes written to buf.
  */
-uint32_t ui_pin_render_names(char* buf, size_t buf_len);
+uint32_t ui_pin_render_names(char* buf, size_t buf_len, pin_render_flags_t flags);
 
 /**
- * @brief Render the pin-label row (mode-assigned labels, current, etc.).
- * @param buf      Output buffer, or NULL to printf directly.
- * @param buf_len  Buffer capacity (ignored when buf is NULL).
- * @return Bytes written to buf (0 when buf is NULL).
+ * @brief Render the pin-label row (mode-assigned labels, current mA, etc.).
+ * @param buf      Output buffer (must not be NULL).
+ * @param buf_len  Buffer capacity.
+ * @param flags    Rendering flags.
+ * @return Bytes written to buf.
  */
-uint32_t ui_pin_render_labels(char* buf, size_t buf_len);
+uint32_t ui_pin_render_labels(char* buf, size_t buf_len, pin_render_flags_t flags);
 
 /**
- * @brief Render the pin-voltage row (V, mA, Hz, etc.).
- * @param buf      Output buffer, or NULL to printf directly.
- * @param buf_len  Buffer capacity (ignored when buf is NULL).
- * @param refresh  When true and buf is NULL, omit the trailing newline
- *                 (used for in-place refresh in continuous freq display).
- * @return Bytes written to buf (0 when buf is NULL / no update needed).
+ * @brief Render the pin-voltage row (V, mA, Hz, GND, etc.).
+ * @param buf      Output buffer (must not be NULL).
+ * @param buf_len  Buffer capacity.
+ * @param flags    Rendering flags.
+ * @return Bytes written to buf (0 when CHANGE_TRACK set and nothing changed).
  */
-uint32_t ui_pin_render_values(char* buf, size_t buf_len, bool refresh);
+uint32_t ui_pin_render_values(char* buf, size_t buf_len, pin_render_flags_t flags);

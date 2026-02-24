@@ -1,18 +1,23 @@
 /**
  * @file ui_pin_render.c
- * @brief Unified pin name / label / voltage rendering.
- * @details Single implementation shared by the `v`/`V` command (printf mode,
- *          buf == NULL) and the status bar (buffer mode, buf != NULL).
- *          This eliminates the duplicate implementations that previously lived
- *          in ui_info.c and ui_statusbar.c.
+ * @brief Unified buffer-only pin name / label / voltage rendering.
+ * @details Always writes into a caller-provided buffer via snprintf — no
+ *          printf path.  Behaviour is controlled through pin_render_flags_t.
  *
- *          In printf mode the caller is responsible for calling amux_sweep()
- *          before ui_pin_render_values() to get fresh ADC readings.
- *          In buffer mode the system monitor provides the voltage strings.
+ *          Core0 (v/V command) and Core1 (statusbar) each pass their own
+ *          buffer.  Core0 pushes the result through tx_fifo_write(); Core1
+ *          commits via tx_sb_start().
+ *
+ *          The builder reads raw data directly:
+ *           - Voltages:  *hw_pin_voltage_ordered[i]  (millivolts)
+ *           - Current:   hw_adc_raw[HW_ADC_CURRENT_SENSE]
+ *           - Freq/PWM:  freq_display_hz()
+ *
+ *          Change tracking (PIN_RENDER_CHANGE_TRACK) uses a static shadow
+ *          buffer.  Only Core1 (statusbar) sets this flag — no lock needed.
  */
 
 #include <stdio.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -23,63 +28,45 @@
 #include "ui/ui_term.h"
 #include "ui/ui_const.h"
 #include "commands/global/freq.h"
-#include "system_monitor.h"
 #include "pirate/psu.h"
 #include "pirate/amux.h"
 #include "ui/ui_pin_render.h"
 
 /* -------------------------------------------------------------------------
- * Output helpers: write to buffer or stdout depending on buf argument.
+ * Shadow buffers for change-tracking (PIN_RENDER_CHANGE_TRACK).
+ * Only Core1 (statusbar) uses CHANGE_TRACK, so these are single-writer.
  * ------------------------------------------------------------------------- */
+static uint16_t shadow_voltage_mv[HW_PINS];
+static uint32_t shadow_current_raw;
 
-static uint32_t out_str(char* buf, size_t buf_len, const char* s) {
-    if (buf) {
-        return (uint32_t)snprintf(buf, buf_len, "%s", s);
-    }
-    printf("%s", s);
-    return 0;
-}
-
-static uint32_t out_fmt(char* buf, size_t buf_len, const char* fmt, ...)
-    __attribute__((format(printf, 3, 4)));
-static uint32_t out_fmt(char* buf, size_t buf_len, const char* fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    uint32_t n = 0;
-    if (buf) {
-        n = (uint32_t)vsnprintf(buf, buf_len, fmt, ap);
-    } else {
-        vprintf(fmt, ap);
-    }
-    va_end(ap);
-    return n;
-}
+/* -------------------------------------------------------------------------
+ * Remaining-space helper — guards against snprintf overflow.
+ * ------------------------------------------------------------------------- */
+#define REM(len, total) ((len) < (total) ? (total) - (len) : 0u)
 
 /* -------------------------------------------------------------------------
  * Names row:  "1.IO0  2.IO1  ..."
- * Identical layout for both printf and buffer paths.
  * ------------------------------------------------------------------------- */
-uint32_t ui_pin_render_names(char* buf, size_t buf_len) {
+uint32_t ui_pin_render_names(char* buf, size_t buf_len, pin_render_flags_t flags) {
     uint32_t len = 0;
 
     for (int i = 0; i < HW_PINS; i++) {
-        if (buf) {
-            len += (uint32_t)ui_term_color_text_background_buf(
-                buf + len, buf_len - len,
-                hw_pin_label_ordered_color[i][0],
-                hw_pin_label_ordered_color[i][1]);
-        } else {
-            ui_term_color_text_background(hw_pin_label_ordered_color[i][0],
-                                          hw_pin_label_ordered_color[i][1]);
+        len += (uint32_t)ui_term_color_text_background_buf(
+            buf + len, REM(len, buf_len),
+            hw_pin_label_ordered_color[i][0],
+            hw_pin_label_ordered_color[i][1]);
+
+        if (flags & PIN_RENDER_CLEAR_CELLS) {
+            len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
         }
-        len += out_fmt(buf ? buf + len : NULL, buf ? buf_len - len : 0,
-                       "\033[8X%d.%s\t", i + 1, hw_pin_label_ordered[i]);
+        len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
+                                  "%d.%s\t", i + 1, hw_pin_label_ordered[i]);
     }
 
-    if (buf) {
-        len += out_str(buf + len, buf_len - len, ui_term_color_reset());
-    } else {
-        printf("%s\r\n", ui_term_color_reset());
+    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "%s", ui_term_color_reset());
+
+    if (flags & PIN_RENDER_NEWLINE) {
+        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\r\n");
     }
 
     return len;
@@ -87,13 +74,10 @@ uint32_t ui_pin_render_names(char* buf, size_t buf_len) {
 
 /* -------------------------------------------------------------------------
  * Labels row: current mA for Vout, mode labels for other pins.
- *
- * Buffer mode (statusbar): only writes a cell when the pin has changed,
- *   otherwise outputs a bare tab so the existing on-screen value stays.
- * Printf mode (v command): always writes all cells; no change-tracking needed.
  * ------------------------------------------------------------------------- */
-uint32_t ui_pin_render_labels(char* buf, size_t buf_len) {
+uint32_t ui_pin_render_labels(char* buf, size_t buf_len, pin_render_flags_t flags) {
     uint32_t len = 0;
+    bool track = (flags & PIN_RENDER_CHANGE_TRACK) != 0;
 
     for (uint i = 0; i < HW_PINS; i++) {
         bool changed = (system_config.pin_changed & (0x01 << (uint8_t)i)) != 0;
@@ -101,28 +85,38 @@ uint32_t ui_pin_render_labels(char* buf, size_t buf_len) {
         switch (system_config.pin_func[i]) {
 
             case BP_PIN_VOUT: {
-                if (buf) {
-                    /* Buffer mode (statusbar): use monitor's pre-formatted current string. */
-                    char* c;
-                    bool have_current = monitor_get_current_ptr(&c);
-                    if (have_current || changed) {
-                        len += out_fmt(buf + len, buf_len - len,
-                                       "\033[8X%s%s%smA\t",
-                                       ui_term_color_num_float(), c, ui_term_color_reset());
-                    } else {
-                        len += out_str(buf + len, buf_len - len, "\t");
+                if (psu_status.enabled) {
+                    uint32_t raw = hw_adc_raw[HW_ADC_CURRENT_SENSE];
+                    bool current_changed = (raw != shadow_current_raw);
+
+                    if (track && !changed && !current_changed) {
+                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
+                        break;
                     }
+
+                    if (track) {
+                        shadow_current_raw = raw;
+                    }
+
+                    uint32_t isense = ((raw >> 1) * ((500 * 1000) / 2048));
+
+                    if (flags & PIN_RENDER_CLEAR_CELLS) {
+                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                    }
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
+                                              "%s%03u.%01u%smA\t",
+                                              ui_term_color_num_float(),
+                                              (isense / 1000),
+                                              ((isense % 1000) / 100),
+                                              ui_term_color_reset());
                 } else {
-                    /* Printf mode (v command): compute current directly from ADC. */
-                    if (psu_status.enabled) {
-                        uint32_t isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE] >> 1) * ((500 * 1000) / 2048));
-                        printf("\033[8X%s%03u.%01u%smA\t",
-                               ui_term_color_num_float(),
-                               (isense / 1000),
-                               ((isense % 1000) / 100),
-                               ui_term_color_reset());
+                    if (track && !changed) {
+                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
                     } else {
-                        printf("-\t");
+                        if (flags & PIN_RENDER_CLEAR_CELLS) {
+                            len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                        }
+                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "-\t");
                     }
                 }
                 break;
@@ -132,125 +126,129 @@ uint32_t ui_pin_render_labels(char* buf, size_t buf_len) {
                 const char* lbl = system_config.pin_labels[i] == 0
                                        ? "-"
                                        : (const char*)system_config.pin_labels[i];
-                if (buf) {
-                    if (changed) {
-                        len += out_fmt(buf + len, buf_len - len, "\033[8X%s\t", lbl);
-                    } else {
-                        len += out_str(buf + len, buf_len - len, "\t");
-                    }
+                if (track && !changed) {
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
                 } else {
-                    printf("%s\t", lbl);
+                    if (flags & PIN_RENDER_CLEAR_CELLS) {
+                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                    }
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "%s\t", lbl);
                 }
                 break;
             }
         }
     }
 
-    if (!buf) {
-        printf("\r\n");
+    if (flags & PIN_RENDER_NEWLINE) {
+        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\r\n");
     }
 
     return len;
 }
 
 /* -------------------------------------------------------------------------
- * Values row: voltage (V), current (mA), frequency (Hz), or GND label.
+ * Values row: voltage (V), frequency (Hz), PWM, GND, or current (mA).
  *
- * The caller must call amux_sweep() before this function in printf mode
- * to ensure fresh ADC readings are available in hw_pin_voltage_ordered[].
+ * The caller must call amux_sweep() before this function to ensure fresh
+ * ADC readings are available in hw_pin_voltage_ordered[].
  *
- * Returns 0 in buffer mode when no pin has changed (skip the TX update).
+ * Returns 0 when CHANGE_TRACK is set and nothing changed — caller can
+ * skip the TX.
  * ------------------------------------------------------------------------- */
-uint32_t ui_pin_render_values(char* buf, size_t buf_len, bool refresh) {
+uint32_t ui_pin_render_values(char* buf, size_t buf_len, pin_render_flags_t flags) {
     uint32_t len = 0;
+    bool track = (flags & PIN_RENDER_CHANGE_TRACK) != 0;
     bool any_update = false;
 
     for (uint i = 0; i < HW_PINS; i++) {
         bool changed = (system_config.pin_changed & (0x01 << (uint8_t)i)) != 0;
 
-        if (buf && changed) {
-            len += out_fmt(buf + len, buf_len - len, "\033[8X");
-        }
-
         switch (system_config.pin_func[i]) {
 
             case BP_PIN_FREQ: {
-                /* Freq measurement: always show (it ticks continuously).
-                 * Always erase cell first — value width can change (e.g. 10.0k → 0.0H). */
+                /* Freq measurement: always show (it ticks continuously). */
                 float freq_val;
                 uint8_t freq_units;
                 freq_display_hz(&system_config.freq_config[i - 1].period, &freq_val, &freq_units);
-                len += out_fmt(buf ? buf + len : NULL, buf ? buf_len - len : 0,
-                               "\033[8X%s%3.1f%s%c\t",
-                               ui_term_color_num_float(), freq_val,
-                               ui_term_color_reset(),
-                               *ui_const_freq_labels_short[freq_units]);
+
+                if (flags & PIN_RENDER_CLEAR_CELLS) {
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                }
+                len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
+                                          "%s%3.1f%s%c\t",
+                                          ui_term_color_num_float(), freq_val,
+                                          ui_term_color_reset(),
+                                          *ui_const_freq_labels_short[freq_units]);
                 any_update = true;
                 break;
             }
 
             case BP_PIN_PWM: {
-                /* PWM: show frequency. In buffer mode, only redraw when pin config
-                 * changed (PWM freq is static until reconfigured). */
-                if (buf && !changed) {
-                    len += out_str(buf + len, buf_len - len, "\t");
+                /* PWM: static until reconfigured. With change-tracking, skip if unchanged. */
+                if (track && !changed) {
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
                     break;
                 }
                 float freq_val;
                 uint8_t freq_units;
                 freq_display_hz(&system_config.freq_config[i - 1].period, &freq_val, &freq_units);
-                len += out_fmt(buf ? buf + len : NULL, buf ? buf_len - len : 0,
-                               "\033[8X%s%3.1f%s%c\t",
-                               ui_term_color_num_float(), freq_val,
-                               ui_term_color_reset(),
-                               *ui_const_freq_labels_short[freq_units]);
+
+                if (flags & PIN_RENDER_CLEAR_CELLS) {
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                }
+                len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
+                                          "%s%3.1f%s%c\t",
+                                          ui_term_color_num_float(), freq_val,
+                                          ui_term_color_reset(),
+                                          *ui_const_freq_labels_short[freq_units]);
                 any_update = true;
                 break;
             }
 
             case BP_PIN_GROUND: {
-                if (buf) {
-                    if (changed) {
-                        len += out_str(buf + len, buf_len - len, GET_T(T_GND));
-                        any_update = true;
-                    } else {
-                        len += out_str(buf + len, buf_len - len, "\t");
-                    }
+                if (track && !changed) {
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
                 } else {
-                    printf("%s\r%s", GET_T(T_GND), refresh ? "" : "\n");
+                    if (flags & PIN_RENDER_CLEAR_CELLS) {
+                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                    }
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "%s", GET_T(T_GND));
                     any_update = true;
                 }
                 break;
             }
 
             default: {
-                if (buf) {
-                    /* Buffer mode (statusbar): use monitor's pre-formatted ASCII
-                     * strings and only update when a change is detected. */
-                    char* c;
-                    if (monitor_get_voltage_ptr(i, &c)) {
-                        len += out_fmt(buf + len, buf_len - len,
-                                       "%s%s%sV\t",
-                                       ui_term_color_num_float(), c, ui_term_color_reset());
-                        any_update = true;
-                    } else {
-                        len += out_str(buf + len, buf_len - len, "\t");
+                /* Voltage — read raw millivolts from hw_pin_voltage_ordered[]. */
+                uint16_t mv = (uint16_t)(*hw_pin_voltage_ordered[i]);
+
+                if (track) {
+                    if (mv == shadow_voltage_mv[i] && !changed) {
+                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
+                        break;
                     }
-                } else {
-                    /* Printf mode (v command): use hw_pin_voltage_ordered[]
-                     * directly — always fresh from the caller's amux_sweep(). */
-                    printf("\033[8X%s%d.%d%sV\t",
-                           ui_term_color_num_float(),
-                           (*hw_pin_voltage_ordered[i]) / 1000,
-                           ((*hw_pin_voltage_ordered[i]) % 1000) / 100,
-                           ui_term_color_reset());
-                    any_update = true;
+                    shadow_voltage_mv[i] = mv;
                 }
+
+                if (flags & PIN_RENDER_CLEAR_CELLS) {
+                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                }
+                len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
+                                          "%s%d.%d%sV\t",
+                                          ui_term_color_num_float(),
+                                          mv / 1000,
+                                          (mv % 1000) / 100,
+                                          ui_term_color_reset());
+                any_update = true;
                 break;
             }
         }
     }
 
-    /* In buffer mode return 0 if nothing changed — caller can skip the TX. */
-    return (buf && !any_update) ? 0 : len;
+    if ((flags & PIN_RENDER_NEWLINE) && any_update) {
+        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\r\n");
+    }
+
+    /* With CHANGE_TRACK, return 0 if nothing changed — caller can skip TX. */
+    return (track && !any_update) ? 0 : len;
 }

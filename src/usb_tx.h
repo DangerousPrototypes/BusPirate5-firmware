@@ -27,6 +27,14 @@ void tx_fifo_put(char* c);
 void tx_fifo_try_put(char* c);
 
 /**
+ * @brief Write a pre-built buffer into the transmit FIFO.
+ * @param buf  Buffer to send (must not be NULL).
+ * @param len  Number of bytes to send.
+ * @pre Must be called from Core0.
+ */
+void tx_fifo_write(const char* buf, uint32_t len);
+
+/**
  * @brief Start status bar transmission.
  * @param valid_characters_in_status_bar  Number of valid characters
  */

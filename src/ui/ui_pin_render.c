@@ -57,7 +57,7 @@ uint32_t ui_pin_render_names(char* buf, size_t buf_len, pin_render_flags_t flags
             hw_pin_label_ordered_color[i][1]);
 
         if (flags & PIN_RENDER_CLEAR_CELLS) {
-            len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+            len += ui_term_erase_chars_buf(buf + len, REM(len, buf_len), 8);
         }
         len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
                                   "%d.%s\t", i + 1, hw_pin_label_ordered[i]);
@@ -101,7 +101,7 @@ uint32_t ui_pin_render_labels(char* buf, size_t buf_len, pin_render_flags_t flag
                     uint32_t isense = ((raw >> 1) * ((500 * 1000) / 2048));
 
                     if (flags & PIN_RENDER_CLEAR_CELLS) {
-                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                        len += ui_term_erase_chars_buf(buf + len, REM(len, buf_len), 8);
                     }
                     len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
                                               "%s%03u.%01u%smA\t",
@@ -130,7 +130,7 @@ uint32_t ui_pin_render_labels(char* buf, size_t buf_len, pin_render_flags_t flag
                     len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
                 } else {
                     if (flags & PIN_RENDER_CLEAR_CELLS) {
-                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                        len += ui_term_erase_chars_buf(buf + len, REM(len, buf_len), 8);
                     }
                     len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "%s\t", lbl);
                 }
@@ -172,7 +172,7 @@ uint32_t ui_pin_render_values(char* buf, size_t buf_len, pin_render_flags_t flag
                 freq_display_hz(&system_config.freq_config[i - 1].period, &freq_val, &freq_units);
 
                 if (flags & PIN_RENDER_CLEAR_CELLS) {
-                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                    len += ui_term_erase_chars_buf(buf + len, REM(len, buf_len), 8);
                 }
                 len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
                                           "%s%3.1f%s%c\t",
@@ -194,7 +194,7 @@ uint32_t ui_pin_render_values(char* buf, size_t buf_len, pin_render_flags_t flag
                 freq_display_hz(&system_config.freq_config[i - 1].period, &freq_val, &freq_units);
 
                 if (flags & PIN_RENDER_CLEAR_CELLS) {
-                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                    len += ui_term_erase_chars_buf(buf + len, REM(len, buf_len), 8);
                 }
                 len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
                                           "%s%3.1f%s%c\t",
@@ -210,7 +210,7 @@ uint32_t ui_pin_render_values(char* buf, size_t buf_len, pin_render_flags_t flag
                     len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
                 } else {
                     if (flags & PIN_RENDER_CLEAR_CELLS) {
-                        len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                        len += ui_term_erase_chars_buf(buf + len, REM(len, buf_len), 8);
                     }
                     len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "%s", GET_T(T_GND));
                     any_update = true;
@@ -231,7 +231,7 @@ uint32_t ui_pin_render_values(char* buf, size_t buf_len, pin_render_flags_t flag
                 }
 
                 if (flags & PIN_RENDER_CLEAR_CELLS) {
-                    len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                    len += ui_term_erase_chars_buf(buf + len, REM(len, buf_len), 8);
                 }
                 len += (uint32_t)snprintf(buf + len, REM(len, buf_len),
                                           "%s%d.%d%sV\t",

@@ -345,64 +345,102 @@ char* ui_term_cursor_show(void) {
     return !system_config.terminal_hide_cursor && system_config.terminal_ansi_color ? "\033[?25h" : "";
 }
 
-void ui_term_erase_line_printf(void) {
+void ui_term_erase_line(void) {
     if (system_config.terminal_ansi_color) {
         printf("\033[K");
     }
 }
 
-void ui_term_screen_flash_printf(bool on) {
+void ui_term_screen_flash(bool on) {
     if (system_config.terminal_ansi_color) {
         printf(on ? "\033[?5h" : "\033[?5l");
     }
 }
 
-void ui_term_cursor_position_printf(uint16_t row, uint16_t col) {
+void ui_term_cursor_position(uint16_t row, uint16_t col) {
     if (system_config.terminal_ansi_color) {
         printf("\033[%d;%dH", row, col);
     }
 }
 
-void ui_term_cursor_save_printf(void) {
+void ui_term_cursor_save(void) {
     if (system_config.terminal_ansi_color) {
         printf("\0337");
     }
 }
 
-void ui_term_cursor_restore_printf(void) {
+void ui_term_cursor_restore(void) {
     if (system_config.terminal_ansi_color) {
         printf("\0338");
     }
 }
 
-void ui_term_scroll_region_printf(uint16_t top, uint16_t bottom) {
+void ui_term_scroll_region(uint16_t top, uint16_t bottom) {
     if (system_config.terminal_ansi_color) {
         printf("\033[%d;%dr", top, bottom);
     }
 }
 
-void ui_term_line_wrap_disable_printf(void) {
+void ui_term_line_wrap_disable(void) {
     if (system_config.terminal_ansi_color) {
         printf("\033[7l");
     }
 }
 
-void ui_term_cursor_move_down_printf(uint16_t n) {
+void ui_term_cursor_move_down(uint16_t n) {
     if (system_config.terminal_ansi_color) {
         printf("\033[%dB", n);
     }
 }
 
-void ui_term_cursor_move_right_printf(uint16_t n) {
+void ui_term_cursor_move_right(uint16_t n) {
     if (system_config.terminal_ansi_color) {
         printf("\033[%dC", n);
     }
 }
 
-void ui_term_cursor_move_left_printf(uint16_t n) {
+void ui_term_cursor_move_left(uint16_t n) {
     if (system_config.terminal_ansi_color) {
         printf("\033[%dD", n);
     }
+}
+
+/* -------------------------------------------------------------------------
+ * VT100 _buf variants — write into a caller-provided buffer.
+ * Each returns the number of bytes written (excluding NUL).
+ * No terminal_ansi_color guard — caller is responsible for gating.
+ * ------------------------------------------------------------------------- */
+
+uint32_t ui_term_cursor_position_buf(char* buf, size_t len, uint16_t row, uint16_t col) {
+    return (uint32_t)snprintf(buf, len, "\033[%d;%dH", row, col);
+}
+
+uint32_t ui_term_cursor_save_buf(char* buf, size_t len) {
+    return (uint32_t)snprintf(buf, len, "\0337");
+}
+
+uint32_t ui_term_cursor_restore_buf(char* buf, size_t len) {
+    return (uint32_t)snprintf(buf, len, "\0338");
+}
+
+uint32_t ui_term_cursor_hide_buf(char* buf, size_t len) {
+    return (uint32_t)snprintf(buf, len, "\033[?25l");
+}
+
+uint32_t ui_term_cursor_show_buf(char* buf, size_t len) {
+    return (uint32_t)snprintf(buf, len, "\033[?25h");
+}
+
+uint32_t ui_term_erase_line_buf(char* buf, size_t len) {
+    return (uint32_t)snprintf(buf, len, "\033[K");
+}
+
+uint32_t ui_term_erase_chars_buf(char* buf, size_t len, uint16_t n) {
+    return (uint32_t)snprintf(buf, len, "\033[%dX", n);
+}
+
+uint32_t ui_term_scroll_region_buf(char* buf, size_t len, uint16_t top, uint16_t bottom) {
+    return (uint32_t)snprintf(buf, len, "\033[%d;%dr", top, bottom);
 }
 
 void ui_term_progress_bar_draw(ui_term_progress_bar_t* pb) {

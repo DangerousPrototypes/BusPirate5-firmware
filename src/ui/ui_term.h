@@ -111,69 +111,105 @@ char* ui_term_cursor_hide(void);
 /** @} */
 
 /**
- * @name VT100 primitive helpers (printf variants)
+ * @name VT100 primitive helpers
  * @details Each function emits a VT100 escape sequence directly via printf.
  *          All functions are no-ops when color/VT100 support is disabled.
+ *          The `_buf()` variants write into a caller-provided buffer and return
+ *          the number of bytes written.
  * @{
  */
 
 /**
  * @brief Erase from cursor to end of line (\033[K).
  */
-void ui_term_erase_line_printf(void);
+void ui_term_erase_line(void);
 
 /**
  * @brief Enable or disable reverse-video screen flash (\033[?5h / \033[?5l).
  * @param on  true to enable flash, false to disable.
  */
-void ui_term_screen_flash_printf(bool on);
+void ui_term_screen_flash(bool on);
 
 /**
  * @brief Move cursor to an absolute row/column position (\033[row;colH).
  * @param row  1-based row number.
  * @param col  1-based column number.
  */
-void ui_term_cursor_position_printf(uint16_t row, uint16_t col);
+void ui_term_cursor_position(uint16_t row, uint16_t col);
 
 /**
  * @brief Save cursor position (\0337).
  */
-void ui_term_cursor_save_printf(void);
+void ui_term_cursor_save(void);
 
 /**
  * @brief Restore previously saved cursor position (\0338).
  */
-void ui_term_cursor_restore_printf(void);
+void ui_term_cursor_restore(void);
 
 /**
  * @brief Set the scrollable region (\033[top;bottomr).
  * @param top     First line of the scroll region (1-based).
  * @param bottom  Last line of the scroll region (1-based).
  */
-void ui_term_scroll_region_printf(uint16_t top, uint16_t bottom);
+void ui_term_scroll_region(uint16_t top, uint16_t bottom);
 
 /**
  * @brief Disable automatic line wrap (\033[7l).
  */
-void ui_term_line_wrap_disable_printf(void);
+void ui_term_line_wrap_disable(void);
 
 /**
  * @brief Move cursor down N lines (\033[nB).
  * @param n  Number of lines to move down.
  */
-void ui_term_cursor_move_down_printf(uint16_t n);
+void ui_term_cursor_move_down(uint16_t n);
 
 /**
  * @brief Move cursor right N columns (\033[nC).
  * @param n  Number of columns to move right.
  */
-void ui_term_cursor_move_right_printf(uint16_t n);
+void ui_term_cursor_move_right(uint16_t n);
 
 /**
  * @brief Move cursor left N columns (\033[nD).
  * @param n  Number of columns to move left.
  */
-void ui_term_cursor_move_left_printf(uint16_t n);
+void ui_term_cursor_move_left(uint16_t n);
+
+/** @} */
+
+/**
+ * @name VT100 buffer helpers (_buf variants)
+ * @details Each function writes a VT100 escape sequence into a caller-provided
+ *          buffer via snprintf and returns the number of bytes written.
+ *          No terminal color check — the caller is responsible for gating.
+ * @{
+ */
+
+/** @brief Cursor position into buffer (\033[row;colH). */
+uint32_t ui_term_cursor_position_buf(char* buf, size_t len, uint16_t row, uint16_t col);
+
+/** @brief Save cursor position into buffer (\0337). */
+uint32_t ui_term_cursor_save_buf(char* buf, size_t len);
+
+/** @brief Restore cursor position into buffer (\0338). */
+uint32_t ui_term_cursor_restore_buf(char* buf, size_t len);
+
+/** @brief Hide cursor into buffer (\033[?25l). */
+uint32_t ui_term_cursor_hide_buf(char* buf, size_t len);
+
+/** @brief Show cursor into buffer (\033[?25h). */
+uint32_t ui_term_cursor_show_buf(char* buf, size_t len);
+
+/** @brief Erase from cursor to end of line into buffer (\033[K). */
+uint32_t ui_term_erase_line_buf(char* buf, size_t len);
+
+/** @brief Erase N characters at cursor into buffer (\033[nX). */
+uint32_t ui_term_erase_chars_buf(char* buf, size_t len, uint16_t n);
+
+/** @brief Set scrollable region into buffer (\033[top;botr). */
+uint32_t ui_term_scroll_region_buf(char* buf, size_t len, uint16_t top, uint16_t bottom);
 
 /** @} */
 

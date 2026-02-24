@@ -83,7 +83,7 @@ void toolbar_apply_scroll_region(void) {
         return;
     }
     uint16_t bottom = toolbar_scroll_bottom();
-    ui_term_scroll_region_printf(1, bottom);
+    ui_term_scroll_region(1, bottom);
 }
 
 void toolbar_redraw_all(void) {

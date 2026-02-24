@@ -102,7 +102,7 @@ void graph_logic_lines_1(uint16_t position, uint32_t sample_ptr) {
         sample = logic_analyzer_read_ptr(sample_ptr);
         sample_ptr++;
         sample_ptr &= 0x1ffff;
-        ui_term_cursor_position_printf(position, i + 3); // line graph top, current position
+        ui_term_cursor_position(position, i + 3); // line graph top, current position
         printf("%s", ui_term_color_error());
         for (int pins = 0; pins < 8; pins++) {
             if (sample & (0b1 << pins)) {
@@ -122,7 +122,7 @@ void graph_logic_lines_2(uint16_t position, uint32_t sample_ptr) {
     // draw the logic bars
     uint8_t sample;
     for (int pins = 0; pins < 8; pins++) {
-        ui_term_cursor_position_printf(position + pins, LOGIC_BAR_VERTICAL_LABELS + 1); // line graph top, current position
+        ui_term_cursor_position(position + pins, LOGIC_BAR_VERTICAL_LABELS + 1); // line graph top, current position
         uint32_t sample_ptr_temp = sample_ptr;
         for (int i = 0; i < LOGIC_BAR_GRAPH_WIDTH; i++) {
             sample = logic_analyzer_read_ptr(sample_ptr_temp);
@@ -160,7 +160,7 @@ void logic_bar_redraw(uint32_t start_pos, uint32_t total_samples) {
     draw_prepare();
 
     // save cursor
-    ui_term_cursor_save_printf();
+    ui_term_cursor_save();
 
     // draw timing marks
     uint16_t position = draw_get_position_index(LOGIC_BAR_HEIGHT);
@@ -171,7 +171,7 @@ void logic_bar_redraw(uint32_t start_pos, uint32_t total_samples) {
     graph_logic_lines_2(position + 3, sample_ptr);
 
     // restore cursor
-    ui_term_cursor_restore_printf();
+    ui_term_cursor_restore();
 
     draw_release();
 }

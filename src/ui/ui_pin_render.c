@@ -25,6 +25,7 @@
 #include "commands/global/freq.h"
 #include "system_monitor.h"
 #include "pirate/psu.h"
+#include "pirate/amux.h"
 #include "ui/ui_pin_render.h"
 
 /* -------------------------------------------------------------------------
@@ -100,9 +101,10 @@ uint32_t ui_pin_render_labels(char* buf, size_t buf_len) {
         switch (system_config.pin_func[i]) {
 
             case BP_PIN_VOUT: {
-                char* c;
-                bool have_current = monitor_get_current_ptr(&c);
                 if (buf) {
+                    /* Buffer mode (statusbar): use monitor's pre-formatted current string. */
+                    char* c;
+                    bool have_current = monitor_get_current_ptr(&c);
                     if (have_current || changed) {
                         len += out_fmt(buf + len, buf_len - len,
                                        "\033[8X%s%s%smA\t",
@@ -111,9 +113,14 @@ uint32_t ui_pin_render_labels(char* buf, size_t buf_len) {
                         len += out_str(buf + len, buf_len - len, "\t");
                     }
                 } else {
-                    /* printf mode: show current if PSU on, else dash */
-                    if (have_current) {
-                        printf("%s%s%smA\t", ui_term_color_num_float(), c, ui_term_color_reset());
+                    /* Printf mode (v command): compute current directly from ADC. */
+                    if (psu_status.enabled) {
+                        uint32_t isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE] >> 1) * ((500 * 1000) / 2048));
+                        printf("\033[8X%s%03u.%01u%smA\t",
+                               ui_term_color_num_float(),
+                               (isense / 1000),
+                               ((isense % 1000) / 100),
+                               ui_term_color_reset());
                     } else {
                         printf("-\t");
                     }
@@ -168,12 +175,13 @@ uint32_t ui_pin_render_values(char* buf, size_t buf_len, bool refresh) {
         switch (system_config.pin_func[i]) {
 
             case BP_PIN_FREQ: {
-                /* Freq measurement: always show (it ticks continuously). */
+                /* Freq measurement: always show (it ticks continuously).
+                 * Always erase cell first — value width can change (e.g. 10.0k → 0.0H). */
                 float freq_val;
                 uint8_t freq_units;
                 freq_display_hz(&system_config.freq_config[i - 1].period, &freq_val, &freq_units);
                 len += out_fmt(buf ? buf + len : NULL, buf ? buf_len - len : 0,
-                               "%s%3.1f%s%c\t",
+                               "\033[8X%s%3.1f%s%c\t",
                                ui_term_color_num_float(), freq_val,
                                ui_term_color_reset(),
                                *ui_const_freq_labels_short[freq_units]);
@@ -182,9 +190,10 @@ uint32_t ui_pin_render_values(char* buf, size_t buf_len, bool refresh) {
             }
 
             case BP_PIN_PWM: {
-                /* PWM: show frequency only when config changed. */
-                if (!changed) {
-                    len += out_str(buf ? buf + len : NULL, buf ? buf_len - len : 0, "\t");
+                /* PWM: show frequency. In buffer mode, only redraw when pin config
+                 * changed (PWM freq is static until reconfigured). */
+                if (buf && !changed) {
+                    len += out_str(buf + len, buf_len - len, "\t");
                     break;
                 }
                 float freq_val;
@@ -215,15 +224,27 @@ uint32_t ui_pin_render_values(char* buf, size_t buf_len, bool refresh) {
             }
 
             default: {
-                /* Voltage reading from the system monitor. */
-                char* c;
-                if (monitor_get_voltage_ptr(i, &c)) {
-                    len += out_fmt(buf ? buf + len : NULL, buf ? buf_len - len : 0,
-                                   "%s%s%sV\t",
-                                   ui_term_color_num_float(), c, ui_term_color_reset());
-                    any_update = true;
+                if (buf) {
+                    /* Buffer mode (statusbar): use monitor's pre-formatted ASCII
+                     * strings and only update when a change is detected. */
+                    char* c;
+                    if (monitor_get_voltage_ptr(i, &c)) {
+                        len += out_fmt(buf + len, buf_len - len,
+                                       "%s%s%sV\t",
+                                       ui_term_color_num_float(), c, ui_term_color_reset());
+                        any_update = true;
+                    } else {
+                        len += out_str(buf + len, buf_len - len, "\t");
+                    }
                 } else {
-                    len += out_str(buf ? buf + len : NULL, buf ? buf_len - len : 0, "\t");
+                    /* Printf mode (v command): use hw_pin_voltage_ordered[]
+                     * directly — always fresh from the caller's amux_sweep(). */
+                    printf("\033[8X%s%d.%d%sV\t",
+                           ui_term_color_num_float(),
+                           (*hw_pin_voltage_ordered[i]) / 1000,
+                           ((*hw_pin_voltage_ordered[i]) % 1000) / 100,
+                           ui_term_color_reset());
+                    any_update = true;
                 }
                 break;
             }

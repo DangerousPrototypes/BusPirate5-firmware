@@ -146,6 +146,10 @@ void adc_measure(struct command_result* res, bool refresh) {
         if (refresh) {
             char c;
             do {
+                /* Move cursor up to the labels row, reprint labels (updates
+                 * current mA), then print the voltage row in-place. */
+                printf("\033[A\r");  // up one line, carriage return
+                ui_info_print_pin_labels();
                 ui_info_print_pin_voltage(true);
                 busy_wait_ms(250);
             } while (!rx_fifo_try_get(&c));

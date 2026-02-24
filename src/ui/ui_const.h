@@ -36,7 +36,7 @@ static const char ui_const_freq_labels[][4] = { "ns", "us", "ms", "Hz", "kHz", "
 /**
  * @brief Short frequency labels (for constrained spaces like toolbar).
  */
-static const char ui_const_freq_labels_short[][2] = { "n", "u", "m", "H", "K", "M", "%" };
+static const char ui_const_freq_labels_short[][2] = { "n", "u", "m", "H", "k", "M", "%" };
 
 /**
  * @brief Bit order options.

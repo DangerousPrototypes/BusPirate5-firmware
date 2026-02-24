@@ -811,7 +811,7 @@ static void core1_infinite_loop(void) {
                 update_flags |= UI_UPDATE_FORCE | UI_UPDATE_ALL;
             }
             if (system_config.pin_changed) {
-                update_flags |= UI_UPDATE_LABELS; // pin labels
+                update_flags |= UI_UPDATE_LABELS | UI_UPDATE_VOLTAGES; // pin labels + values (type may have changed)
             }
             if (monitor_voltage_changed()) {
                 update_flags |= UI_UPDATE_VOLTAGES; // pin voltages

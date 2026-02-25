@@ -3,6 +3,7 @@
  * @brief Central toolbar registry and layout manager implementation.
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -39,6 +40,30 @@ void toolbar_unregister(toolbar_t* tb) {
     }
 }
 
+bool toolbar_activate(toolbar_t* tb) {
+    tb->enabled = true;
+    if (!toolbar_register(tb)) {
+        tb->enabled = false;
+        return false;
+    }
+    toolbar_apply_scroll_region();
+    return true;
+}
+
+void toolbar_teardown(toolbar_t* tb) {
+    if (!tb->enabled) {
+        return;
+    }
+    toolbar_draw_prepare();
+    ui_term_cursor_save();
+    toolbar_erase(tb);
+    toolbar_unregister(tb);
+    tb->enabled = false;
+    toolbar_apply_scroll_region();
+    ui_term_cursor_restore();
+    toolbar_draw_release();
+}
+
 uint16_t toolbar_total_height(void) {
     uint16_t total = 0;
     for (uint8_t i = 0; i < toolbar_count; i++) {
@@ -47,10 +72,6 @@ uint16_t toolbar_total_height(void) {
         }
     }
     return total;
-}
-
-uint16_t toolbar_scroll_top(void) {
-    return 1;
 }
 
 uint16_t toolbar_scroll_bottom(void) {
@@ -65,8 +86,8 @@ uint16_t toolbar_scroll_bottom(void) {
 uint16_t toolbar_get_start_row(const toolbar_t* tb) {
     uint16_t row = system_config.terminal_ansi_rows;
 
-    // Walk the registry from the bottom (last registered = bottommost)
-    for (int8_t i = (int8_t)toolbar_count - 1; i >= 0; i--) {
+    // Walk forward — first registered = bottommost (statusbar stays at bottom)
+    for (uint8_t i = 0; i < toolbar_count; i++) {
         if (!toolbar_registry[i]->enabled) {
             continue;
         }
@@ -110,5 +131,46 @@ void toolbar_redraw_all(void) {
             uint16_t start_row = toolbar_get_start_row(tb);
             tb->draw(tb, start_row, width);
         }
+    }
+}
+
+void toolbar_draw_prepare(void) {
+    system_config.terminal_toolbar_pause = true;
+    busy_wait_ms(1);
+    system_config.terminal_hide_cursor = true;
+    printf("%s", ui_term_cursor_hide());
+}
+
+void toolbar_draw_release(void) {
+    system_config.terminal_hide_cursor = false;
+    printf("%s", ui_term_cursor_show());
+    system_config.terminal_toolbar_pause = false;
+}
+
+void toolbar_pause_updates(void) {
+    system_config.terminal_toolbar_pause = true;
+}
+
+void toolbar_resume_updates(void) {
+    system_config.terminal_toolbar_pause = false;
+}
+
+void toolbar_print_registry(void) {
+    printf("Toolbar registry: %u / %u slots used\r\n", toolbar_count, TOOLBAR_MAX_COUNT);
+    printf("Terminal: %u rows x %u cols, scroll 1..%u\r\n",
+           system_config.terminal_ansi_rows,
+           system_config.terminal_ansi_columns,
+           toolbar_scroll_bottom());
+    if (toolbar_count == 0) {
+        printf("  (empty)\r\n");
+        return;
+    }
+    for (uint8_t i = 0; i < toolbar_count; i++) {
+        toolbar_t* tb = toolbar_registry[i];
+        uint16_t start = toolbar_get_start_row(tb);
+        printf("  [%u] \"%s\"  height=%u  enabled=%u  row=%u..%u  draw=%s\r\n",
+               i, tb->name, tb->height, tb->enabled,
+               start, start + tb->height - 1,
+               tb->draw ? "yes" : "no");
     }
 }

@@ -73,16 +73,27 @@ bool toolbar_register(toolbar_t* tb);
 void toolbar_unregister(toolbar_t* tb);
 
 /**
+ * @brief Enable, register, and apply scroll region in one call.
+ * @param tb  Toolbar to activate.
+ * @return true on success, false if the registry is full.
+ */
+bool toolbar_activate(toolbar_t* tb);
+
+/**
+ * @brief Erase, unregister, disable, and restore scroll region.
+ * @details Calls toolbar_draw_prepare(), toolbar_erase(), toolbar_unregister(),
+ *          sets tb->enabled = false, toolbar_apply_scroll_region(), and
+ *          toolbar_draw_release().  Safe to call even if the toolbar is not
+ *          currently registered (no-op in that case).
+ * @param tb  Toolbar to tear down.
+ */
+void toolbar_teardown(toolbar_t* tb);
+
+/**
  * @brief Sum of all enabled toolbar heights (lines reserved at the bottom).
  * @return Total lines reserved.
  */
 uint16_t toolbar_total_height(void);
-
-/**
- * @brief First row of the scrollable command area (always 1).
- * @return 1
- */
-uint16_t toolbar_scroll_top(void);
 
 /**
  * @brief Last row of the scrollable command area.
@@ -116,3 +127,36 @@ void toolbar_erase(const toolbar_t* tb);
  * @brief Redraw all enabled toolbars (full repaint).
  */
 void toolbar_redraw_all(void);
+
+/**
+ * @brief Pause Core1 toolbar updates and hide the cursor.
+ * @details Pauses the statusbar update loop, waits 1 ms for any in-flight
+ *          render to drain, then hides the cursor.  Pairs with
+ *          toolbar_draw_release().  Used by any Core0 code that needs to
+ *          draw directly in toolbar screen rows (e.g. logic bar frame).
+ */
+void toolbar_draw_prepare(void);
+
+/**
+ * @brief Resume Core1 toolbar updates and restore the cursor.
+ * @details Undoes toolbar_draw_prepare().
+ */
+void toolbar_draw_release(void);
+
+/**
+ * @brief Pause Core1 toolbar updates (no cursor change).
+ * @details Used by subsystems (bridges, monitors, progress bars) that stream
+ *          raw data and need to prevent VT100 escape interleaving.
+ */
+void toolbar_pause_updates(void);
+
+/**
+ * @brief Resume Core1 toolbar updates (no cursor change).
+ * @details Undoes toolbar_pause_updates().
+ */
+void toolbar_resume_updates(void);
+
+/**
+ * @brief Print the toolbar registry contents to the terminal (debug/dev).
+ */
+void toolbar_print_registry(void);

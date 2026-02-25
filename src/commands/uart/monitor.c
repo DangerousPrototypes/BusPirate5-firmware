@@ -16,6 +16,7 @@
 // #include "usb_tx.h"
 #include "pirate/bio.h"
 #include "lib/bp_args/bp_cmd.h"
+#include "ui/ui_toolbar.h"
 
 static const char pin_labels[][5] = { "TX->", "RX<-", "CTS", "RTS"
 
@@ -59,10 +60,11 @@ void uart_monitor_handler(struct command_result* res) {
         return;
     }
 
-    bool toolbar_state = system_config.terminal_ansi_statusbar_pause;
+    bool toolbar_paused = false;
     bool pause_toolbar = bp_cmd_find_flag(&uart_monitor_def, 't');
     if (pause_toolbar) {
-        system_config.terminal_ansi_statusbar_pause = true;
+        toolbar_pause_updates();
+        toolbar_paused = true;
     }
     uint speed = 115200;
     uint data_bits = 8;
@@ -124,8 +126,8 @@ void uart_monitor_handler(struct command_result* res) {
 
     // cancel_repeating_timer(&uart_timer);
 
-    if (pause_toolbar) {
-        system_config.terminal_ansi_statusbar_pause = toolbar_state;
+    if (toolbar_paused) {
+        toolbar_resume_updates();
     }
 }
 

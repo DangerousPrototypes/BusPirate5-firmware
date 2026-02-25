@@ -19,13 +19,26 @@
 /* Height of the status bar in terminal lines */
 #define STATUSBAR_HEIGHT 4
 
+/* Forward declaration — defined below, needed by .draw callback. */
+void ui_statusbar_update_blocking(void);
+
+/**
+ * @brief .draw callback — triggers a blocking full repaint via Core1.
+ * @details Called from toolbar_redraw_all() on Core0.  Sends an ICM message
+ *          to Core1 which renders into tx_sb_buf and drains to USB.
+ */
+static void statusbar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
+    (void)tb; (void)start_row; (void)width;
+    ui_statusbar_update_blocking();
+}
+
 /* Toolbar descriptor for this statusbar — registered in ui_statusbar_init(). */
 static toolbar_t statusbar_toolbar = {
     .name    = "statusbar",
     .height  = STATUSBAR_HEIGHT,
     .enabled = false,
     .owner_data = NULL,
-    .draw    = NULL, /* draw handled by ui_statusbar_update_from_core1 */
+    .draw    = statusbar_draw_cb,
     .update  = NULL,
     .destroy = NULL,
 };
@@ -181,9 +194,7 @@ void ui_statusbar_update_from_core1(uint32_t update_flags) {
 
 void ui_statusbar_init(void) {
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
-        statusbar_toolbar.enabled = true;
-        toolbar_register(&statusbar_toolbar);
-        toolbar_apply_scroll_region();
+        toolbar_activate(&statusbar_toolbar);
     }
 }
 
@@ -192,11 +203,6 @@ void ui_statusbar_deinit(void) {
         system_config.terminal_ansi_statusbar = 0;
         system_config.terminal_ansi_statusbar_update = false;
         busy_wait_ms(100); // wait for the last statusbar update to finish
-
-        // Erase while still registered, then unregister and restore scroll
-        toolbar_erase(&statusbar_toolbar);
-        toolbar_unregister(&statusbar_toolbar);
-        statusbar_toolbar.enabled = false;
-        toolbar_apply_scroll_region();
+        toolbar_teardown(&statusbar_toolbar);
     }
 }

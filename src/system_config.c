@@ -73,7 +73,7 @@ void system_init(void) {
     system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
     system_config.terminal_update = 0;
     system_config.terminal_hide_cursor = false;
-    system_config.terminal_ansi_statusbar_pause = false;
+    system_config.terminal_toolbar_pause = false;
 
     system_config.storage_available = 0;
     system_config.storage_mount_error = 3;

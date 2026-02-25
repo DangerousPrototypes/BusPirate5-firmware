@@ -16,6 +16,7 @@
 #include "pirate/bio.h"
 #include "pirate/hwuart_pio.h"
 #include "lib/bp_args/bp_cmd.h"
+#include "ui/ui_toolbar.h"
 
 static const char* const usage[] = { "bridge\t[-h(elp)]",
                                      "Transparent UART bridge:%s bridge",
@@ -49,10 +50,11 @@ void hduart_bridge_handler(struct command_result* res) {
     }
     static const char label[] = "RTS";
 
-    bool toolbar_state = system_config.terminal_ansi_statusbar_pause;
+    bool toolbar_paused = false;
     bool pause_toolbar = !bp_cmd_find_flag(&hduart_bridge_def, 't');
     if (pause_toolbar) {
-        system_config.terminal_ansi_statusbar_pause = true;
+        toolbar_pause_updates();
+        toolbar_paused = true;
     }
 
     bool suppress_local_echo = bp_cmd_find_flag(&hduart_bridge_def, 's');
@@ -84,7 +86,7 @@ void hduart_bridge_handler(struct command_result* res) {
     bio_input(BIO2);
     system_bio_update_purpose_and_label(false, BIO2, BP_PIN_MODE, 0);
 
-    if (pause_toolbar) {
-        system_config.terminal_ansi_statusbar_pause = toolbar_state;
+    if (toolbar_paused) {
+        toolbar_resume_updates();
     }
 }

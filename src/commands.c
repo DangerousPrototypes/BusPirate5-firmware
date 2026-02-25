@@ -33,6 +33,7 @@
 #include "commands/global/smps.h"
 #include "commands/global/cls.h"
 #include "commands/global/logic.h"
+#include "commands/global/cmd_toolbar.h"
 #include "commands/global/cmd_binmode.h"
 #include "commands/global/bug.h"
 #include "commands/global/image.h"
@@ -96,6 +97,7 @@ const struct _global_command_struct commands[] = {
 { .command="pause",     .allow_hiz=true,  .func=&pause_handler,     .def=&pause_def,     .category=CMD_CAT_SCRIPT },
 // Tools: utilities and converters
 { .command="logic",     .allow_hiz=true,  .func=&logic_handler,                      .def=&logic_def, .category=CMD_CAT_TOOLS },
+{ .command="toolbar",   .allow_hiz=true,  .func=&toolbar_cmd_handler,                .def=&toolbar_cmd_def, .category=CMD_CAT_TOOLS },
 { .command="smps",      .allow_hiz=true,  .func=&smps_handler,      .def=&smps_def,      .category=CMD_CAT_SYSTEM },
 { .command="=",         .allow_hiz=true,  .func=&cmd_convert_base_handler,           .def=&convert_base_def, .category=CMD_CAT_TOOLS },
 { .command="|",         .allow_hiz=true,  .func=&cmd_convert_inverse_handler,        .def=&convert_inverse_def, .category=CMD_CAT_TOOLS },

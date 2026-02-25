@@ -836,7 +836,7 @@ static void core1_infinite_loop(void) {
             if (system_config.terminal_ansi_color &&
                 system_config.terminal_ansi_statusbar &&
                 system_config.terminal_ansi_statusbar_update &&
-                !system_config.terminal_ansi_statusbar_pause) {
+                !system_config.terminal_toolbar_pause) {
                 ui_statusbar_update_from_core1(update_flags);
             }
 

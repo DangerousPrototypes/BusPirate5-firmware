@@ -24,6 +24,7 @@
 #include "usb_rx.h"
 #include "ui/ui_cmdln.h"
 #include "ui/ui_statusbar.h"
+#include "ui/ui_toolbar.h"
 #ifdef ANSI_COLOR_256
 #include "ansi_colours.h"
 /**
@@ -464,7 +465,7 @@ void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progr
     uint32_t pct = ((current) * 20) / (total);
     uint32_t previous_pct = pct - pb->previous_pct;
 
-    system_config.terminal_ansi_statusbar_pause = true;
+    toolbar_pause_updates();
     if ((previous_pct) > 0) {
         for (uint32_t i = 0; i < (previous_pct); i++) // advance this many positions
         {
@@ -481,7 +482,7 @@ void ui_term_progress_bar_update(uint32_t current, uint32_t total, ui_term_progr
         pb->indicator_state = !pb->indicator_state;
         pb->previous_pct = pct;
     }
-    system_config.terminal_ansi_statusbar_pause = false;
+    toolbar_resume_updates();
     pb->progress_cnt++;
 }
 

@@ -5,6 +5,7 @@
 #include "command_struct.h"
 #include "ui/ui_term.h"
 #include "ui/ui_statusbar.h"
+#include "ui/ui_toolbar.h"
 #include "ui/ui_help.h"
 #include "ui/ui_flags.h"
 #include "lib/bp_args/bp_cmd.h"
@@ -38,8 +39,6 @@ void ui_display_clear(struct command_result* res) {
 
     ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
     ui_term_init();   // Initialize VT100 if ANSI terminal
-    if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
-        ui_statusbar_init();
-        ui_statusbar_update_blocking();
-    }
+    toolbar_apply_scroll_region();
+    toolbar_redraw_all();
 }

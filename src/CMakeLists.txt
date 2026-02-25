@@ -505,6 +505,8 @@ set(buspirate_common
         #toolbars
         toolbars/logic_bar.c
         toolbars/logic_bar.h
+        commands/global/cmd_toolbar.c
+        commands/global/cmd_toolbar.h
 
         # displays
         displays.c

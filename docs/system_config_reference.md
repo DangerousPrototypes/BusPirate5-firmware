@@ -76,7 +76,7 @@ Set `system_config.error = true` in error paths to signal the command dispatcher
 | `terminal_ansi_color` | `uint32_t` | `UI_TERM_NO_COLOR` | ANSI color scheme |
 | `terminal_ansi_statusbar` | `uint32_t` | `0` | Status bar display mode |
 | `terminal_ansi_statusbar_update` | `bool` | `false` | Status bar needs update |
-| `terminal_ansi_statusbar_pause` | `bool` | `false` | Status bar updates paused |
+| `terminal_toolbar_pause` | `bool` | `false` | Toolbar updates paused |
 | `terminal_hide_cursor` | `bool` | `false` | Hide terminal cursor |
 | `terminal_update` | `uint8_t` | `0` | Terminal update flags |
 

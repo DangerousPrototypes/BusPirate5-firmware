@@ -15,6 +15,7 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "lib/bp_args/bp_cmd.h"
+#include "ui/ui_toolbar.h"
 
 static const char* const usage[] = { "bridge\t[-h(elp)] [-t(oolbar)]",
                                      "Transparent UART bridge:%s bridge",
@@ -43,10 +44,11 @@ void uart_bridge_handler(struct command_result* res) {
         return;
     }
 
-    bool toolbar_state = system_config.terminal_ansi_statusbar_pause;
+    bool toolbar_paused = false;
     bool pause_toolbar = !bp_cmd_find_flag(&uart_bridge_def, 't');
     if (pause_toolbar) {
-        system_config.terminal_ansi_statusbar_pause = true;
+        toolbar_pause_updates();
+        toolbar_paused = true;
     }
 
     printf("%s%s%s\r\n", ui_term_color_notice(), GET_T(T_HELP_UART_BRIDGE_EXIT), ui_term_color_reset());
@@ -67,7 +69,7 @@ void uart_bridge_handler(struct command_result* res) {
     }
     bio_put(M_UART_RTS, 1);
 
-    if (pause_toolbar) {
-        system_config.terminal_ansi_statusbar_pause = toolbar_state;
+    if (toolbar_paused) {
+        toolbar_resume_updates();
     }
 }

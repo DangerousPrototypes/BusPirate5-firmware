@@ -40,8 +40,10 @@ Most new toolbars should use the **Core1 path** — it avoids interleaving with 
 
 1. Something triggers a redraw (activate, teardown, screen clear)
 2. `toolbar_redraw_all()` iterates toolbars and calls each `.draw` callback
-3. Your `.draw` callback uses `printf()` / `ui_term_*()` directly
-4. The prepare/release envelope handles cursor save/hide/restore/show
+3. For Core1 toolbars (`.draw == NULL, .update_core1 != NULL`), the framework sets an internal flag instead
+4. After the loop, `toolbar_draw_release()` lifts the pause, then a single `toolbar_update_blocking()` kicks Core1
+5. Your `.draw` callback (if Core0-only) uses `printf()` / `ui_term_*()` directly
+6. The prepare/release envelope handles cursor save/hide/restore/show
 
 ---
 
@@ -127,18 +129,11 @@ The registry uses this to calculate `toolbar_scroll_bottom()` and `toolbar_get_s
 
 ## Step 3: The .draw Callback
 
-The `.draw` callback is called from Core0 during `toolbar_redraw_all()` (triggered by activate, teardown, or screen clear).
+The `.draw` callback is called from Core0 during `toolbar_redraw_all()` and `toolbar_teardown()`. It paints the toolbar's content using `printf()` / `ui_term_*()` directly.
 
-**For Core1 toolbars** (periodic live data), `.draw` is a one-liner trampoline:
+**For Core1 toolbars** (periodic live data), set `.draw = NULL`.
 
-```c
-static void my_toolbar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
-    (void)tb; (void)start_row; (void)width;
-    toolbar_update_blocking();  // signals Core1 to call .update_core1 with UI_UPDATE_ALL
-}
-```
-
-This works because `toolbar_update_blocking()` sends an intercore message that bypasses `terminal_toolbar_pause`, so it functions correctly even inside the `toolbar_draw_prepare()` envelope.
+The framework auto-detects `.update_core1 != NULL` and sets an internal flag. After the Core0 draw loop finishes and `toolbar_draw_release()` lifts the pause, a single `toolbar_update_blocking()` call kicks Core1 to render **all** Core1 toolbars in one cycle. This avoids a deadlock that would occur if `toolbar_update_blocking()` were called per-toolbar while the pause is held.
 
 **For Core0-only toolbars** (event-driven), `.draw` contains the actual rendering:
 
@@ -235,37 +230,59 @@ static uint32_t my_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_len,
 
 ---
 
-## Step 5: The toolbar_t Struct
+## Step 5: The toolbar_def_t + toolbar_t Structs
 
-The toolbar descriptor is the single source of truth for how your toolbar integrates with the registry:
+The toolbar is described by **two** structs — an immutable descriptor in FLASH and a mutable runtime state in RAM.
+
+### toolbar_def_t (const, FLASH)
+
+Contains all fields that never change after initialization. Declared `static const` so the compiler places it in `.rodata` (FLASH), saving precious RAM on the RP2040.
 
 ```c
-static toolbar_t my_toolbar = {
+static const toolbar_def_t my_toolbar_def = {
     .name         = "my_toolbar",        // shown by `toolbar list`
-    .height       = MY_TOOLBAR_HEIGHT,   // terminal rows to reserve
-    .enabled      = false,               // managed by activate/teardown — don't set manually
+    .height       = MY_TOOLBAR_HEIGHT,   // default terminal rows to reserve
     .anchor_bottom = false,              // true = always bottommost (statusbar only)
-    .owner_data   = NULL,                // opaque pointer for your private state
-    .draw         = my_toolbar_draw_cb,  // Core0 full-paint callback
-    .update       = NULL,                // reserved for future use
+    .draw         = NULL,                // NULL for Core1 toolbars (auto-delegated)
     .update_core1 = my_update_core1_cb,  // Core1 periodic callback (NULL for Core0-only)
     .destroy      = NULL,                // cleanup on unregister (NULL if not needed)
 };
 ```
 
+### toolbar_t (mutable, RAM)
+
+Contains only the fields that change at runtime. Points to the const def for everything else.
+
+```c
+static toolbar_t my_toolbar = {
+    .def        = &my_toolbar_def,       // pointer to FLASH descriptor
+    .height     = MY_TOOLBAR_HEIGHT,     // runtime height (can override before activate)
+    .enabled    = false,                 // managed by activate/teardown — init to false
+    .owner_data = NULL,                  // opaque pointer for private state
+};
+```
+
 ### Field Reference
+
+#### toolbar_def_t (immutable)
 
 | Field | Required | Notes |
 |-------|----------|-------|
 | `.name` | Yes | Human-readable, used by `toolbar list` debug command |
-| `.height` | Yes | Must match your rendering. Cannot change while registered. |
-| `.enabled` | — | Set by `toolbar_activate()` / `toolbar_teardown()`. Initialize to `false`. |
+| `.height` | Yes | Default height. Copied to `toolbar_t.height`. |
 | `.anchor_bottom` | — | Only `true` for the statusbar. Leave `false` for normal toolbars. |
-| `.owner_data` | — | Use if you need shared state between callbacks without file-scope globals. |
-| `.draw` | Yes | Core0 painter. For Core1 toolbars: one-liner calling `toolbar_update_blocking()`. |
-| `.update` | — | Reserved. Set to `NULL`. |
-| `.update_core1` | — | Core1 renderer. `NULL` for Core0-only toolbars (test_toolbar, logic_bar). |
+| `.draw` | — | Core0 painter. `NULL` for Core1 toolbars (auto-delegated). |
+| `.update_core1` | — | Core1 renderer. `NULL` for Core0-only toolbars. |
 | `.destroy` | — | Called on `toolbar_unregister()`. Free resources, stop timers. `NULL` if not needed. |
+
+#### toolbar_t (mutable)
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `.def` | Yes | Pointer to the const `toolbar_def_t`. |
+| `.height` | Yes | Runtime height. Normally matches `def->height`. Can be overridden before `toolbar_activate()` (e.g. test_toolbar sets dynamic height). |
+| `.enabled` | — | Set by `toolbar_activate()` / `toolbar_teardown()`. Initialize to `false`. |
+| `.owner_data` | — | Use if you need shared state between callbacks without file-scope globals. |
 
 ---
 
@@ -280,29 +297,16 @@ bool my_toolbar_start(void) {
     if (my_toolbar.enabled) {
         return true;   // already active — idempotent
     }
-
-    // 1. Push blank lines to scroll existing content up
-    //    Without this, text would be hidden behind the toolbar
-    for (uint16_t i = 0; i < MY_TOOLBAR_HEIGHT; i++) {
-        printf("\r\n");
-    }
-
-    // 2. Register, set scroll region, redraw all
-    if (!toolbar_activate(&my_toolbar)) {
-        return false;  // registry full (max 4 toolbars)
-    }
-
-    // 3. Cursor is now outside the scroll region — move it back in
-    ui_term_cursor_position(toolbar_scroll_bottom(), 0);
-    return true;
+    return toolbar_activate(&my_toolbar);
 }
 ```
 
-The three steps in `start()` are critical:
-
-1. **Push lines** — `printf("\r\n")` × height makes visual room before the scroll region shrinks
-2. **Activate** — `toolbar_activate()` handles register → scroll region → `toolbar_redraw_all()`
-3. **Reposition** — the cursor ends up below the new scroll bottom; move it back up
+`toolbar_activate()` handles everything in one call:
+1. **Push lines** — `printf("\r\n")` × height scrolls existing content up to make room
+2. **Register** — adds the toolbar to the registry
+3. **Scroll region** — recalculates and applies `\033[1;Nr`
+4. **Redraw all** — paints all toolbars, auto-delegates Core1 toolbars
+5. **Reposition cursor** — moves cursor to `toolbar_scroll_bottom()` so the user can keep typing
 
 ### Stop
 
@@ -540,7 +544,6 @@ The simplest periodic toolbar. One row, always renders (uptime changes every tic
 ```c
 #define HEIGHT 1
 
-// .update_core1 ignores update_flags — always renders
 static uint32_t cb(toolbar_t* tb, char* buf, size_t buf_len,
                    uint16_t start_row, uint16_t width, uint32_t update_flags) {
     (void)tb; (void)update_flags;
@@ -549,6 +552,14 @@ static uint32_t cb(toolbar_t* tb, char* buf, size_t buf_len,
     // ... render one row, pad to width ...
     return len;
 }
+
+static const toolbar_def_t my_def = {
+    .name = "my_stats", .height = HEIGHT,
+    .draw = NULL, .update_core1 = cb, .destroy = NULL,
+};
+static toolbar_t my_toolbar = {
+    .def = &my_def, .height = HEIGHT, .enabled = false,
+};
 ```
 
 See: `src/toolbars/sys_stats.c`
@@ -573,6 +584,14 @@ static uint32_t cb(toolbar_t* tb, char* buf, size_t buf_len,
     // Row 2: live data — always when care_mask matches
     return len;
 }
+
+static const toolbar_def_t my_def = {
+    .name = "my_toolbar", .height = HEIGHT,
+    .draw = NULL, .update_core1 = cb, .destroy = NULL,
+};
+static toolbar_t my_toolbar = {
+    .def = &my_def, .height = HEIGHT, .enabled = false,
+};
 ```
 
 See: `src/toolbars/pin_watcher.c`
@@ -582,12 +601,6 @@ See: `src/toolbars/pin_watcher.c`
 For event-driven toolbars that don't need periodic updates. No `.update_core1` — the `.draw` callback uses printf directly:
 
 ```c
-static toolbar_t my_toolbar = {
-    // ...
-    .draw         = my_draw_cb,      // uses printf()
-    .update_core1 = NULL,            // no Core1 rendering
-};
-
 static void my_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
     for (uint16_t i = 0; i < tb->height; i++) {
         ui_term_cursor_position(start_row + i, 0);
@@ -595,6 +608,14 @@ static void my_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
         printf("Row %u content", i + 1);
     }
 }
+
+static const toolbar_def_t my_def = {
+    .name = "my_toolbar", .height = 2,
+    .draw = my_draw_cb, .update_core1 = NULL, .destroy = NULL,
+};
+static toolbar_t my_toolbar = {
+    .def = &my_def, .height = 2, .enabled = false,
+};
 ```
 
 Trigger redraws manually: `toolbar_redraw_all()` or wrap your draw call in `toolbar_draw_prepare()`/`toolbar_draw_release()`.
@@ -606,9 +627,12 @@ See: `src/commands/global/cmd_toolbar.c` (test_toolbar)
 Force a toolbar to always be the bottommost on screen, regardless of registration order:
 
 ```c
-static toolbar_t my_toolbar = {
+static const toolbar_def_t my_def = {
     // ...
     .anchor_bottom = true,   // inserted at index 0 in the registry
+};
+static toolbar_t my_toolbar = {
+    .def = &my_def, // ...
 };
 ```
 
@@ -620,13 +644,13 @@ See: `src/ui/ui_statusbar.c`
 
 ## Checklist
 
-- [ ] Create `src/toolbars/mytoolbar.c` with toolbar struct and callbacks
+- [ ] Create `src/toolbars/mytoolbar.c` with `toolbar_def_t` + `toolbar_t` structs and callbacks
 - [ ] Define height constant
-- [ ] Implement `.draw` callback (one-liner for Core1, or printf for Core0)
-- [ ] Implement `.update_core1` callback (if periodic — with `update_flags` gating)
-- [ ] Initialize `toolbar_t` struct with all fields
-- [ ] Implement `start()` — guard, push lines, `toolbar_activate()`, reposition cursor
-- [ ] Implement `stop()` — guard, `toolbar_teardown()`
+- [ ] For Core1 toolbars: set `.draw = NULL`, implement `.update_core1` callback with `update_flags` gating
+- [ ] For Core0 toolbars: implement `.draw` callback with printf, set `.update_core1 = NULL`
+- [ ] Declare `static const toolbar_def_t` (FLASH) and `static toolbar_t` (RAM) with `.def = &the_def`
+- [ ] Implement `start()` — guard on `.enabled`, call `toolbar_activate()`
+- [ ] Implement `stop()` — guard on `.enabled`, call `toolbar_teardown()`
 - [ ] Implement `is_active()` — return `.enabled`
 - [ ] Optionally implement `update()` — guard, `toolbar_update_blocking()`
 - [ ] Create `src/toolbars/mytoolbar.h` with public API declarations

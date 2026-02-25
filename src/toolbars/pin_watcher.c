@@ -28,14 +28,14 @@
  *       variants. Core1 sends it atomically over USB, avoiding interleaving
  *       with printf output.
  *
- *  This file uses the Core1 path. The .draw callback is a one-liner that
- *  delegates to toolbar_update_blocking(), which signals Core1 to call our
- *  .update_core1 callback. This gives us a single rendering function that
- *  handles both the initial paint and periodic refresh.
+ *  This file uses the Core1 path. The .draw field is set to NULL.
+ *  toolbar_redraw_all() auto-detects this and kicks a single Core1 render
+ *  cycle after releasing the pause — the .update_core1 callback handles
+ *  both the initial paint and periodic refresh.
  *
  *  ## Lifecycle
  *
- *  1. pin_watcher_start()  — push lines, toolbar_activate(), reposition cursor
+ *  1. pin_watcher_start()  — toolbar_activate() handles everything
  *  2. Core1 periodic ticks — calls .update_core1 every ~100ms with update_flags
  *  3. pin_watcher_stop()   — toolbar_teardown() erases & unregisters
  *
@@ -94,46 +94,62 @@ static uint32_t pin_watcher_update_core1_cb(toolbar_t* tb, char* buf, size_t buf
 /* ── Step 3: The .draw Callback ──────────────────────────────────────────────
  *
  * .draw is called from Core0 during toolbar_redraw_all() and toolbar_teardown().
- * It is responsible for painting the toolbar's content.
+ * It is responsible for painting the toolbar's content using printf.
  *
- * For Core1-rendered toolbars (like this one), set .draw = NULL.  The framework
- * auto-detects .update_core1 and calls toolbar_update_blocking() on your behalf.
+ * For Core1-rendered toolbars (like this one), set .draw = NULL.
+ * The framework auto-detects .update_core1 != NULL and sets a flag.  After
+ * the Core0 draw loop finishes and toolbar_draw_release() lifts the pause,
+ * a single toolbar_update_blocking() call kicks Core1 to render ALL Core1
+ * toolbars in one cycle.  This avoids the deadlock that would occur if
+ * toolbar_update_blocking() were called per-toolbar inside the pause envelope.
  *
- * For Core0-only toolbars (like test_toolbar or logic_bar), .draw should contain
- * the actual printf rendering code.
+ * For Core0-only toolbars (like test_toolbar or logic_bar), .draw should
+ * contain the actual printf rendering code.
  *
  * IMPORTANT: .draw is called inside a prepare/release envelope — cursor is
  * already saved and hidden, toolbar_pause is set.  Do NOT call
  * toolbar_draw_prepare()/toolbar_draw_release() from here.
  *
- * ── Step 4: The toolbar_t Struct ────────────────────────────────────────────
+ * ── Step 4: The toolbar_def_t + toolbar_t Split ────────────────────────────
  *
- * This is the toolbar descriptor — the single source of truth for how this
- * toolbar integrates with the registry.  It is file-static and owned by this
- * module.  The pointer must remain valid for the entire time the toolbar is
- * registered.
+ * The toolbar is described by TWO structs:
  *
- * Field reference:
+ *   toolbar_def_t (const, lives in FLASH)
+ *     Contains all immutable fields — name, default height, anchor flag,
+ *     and all callback function pointers.  Declared `static const` so the
+ *     compiler places it in .rodata (FLASH), saving RAM on the RP2040.
+ *
+ *   toolbar_t (mutable, lives in RAM)
+ *     Contains only the fields that change at runtime: a pointer to the
+ *     const def, the runtime height (can be overridden — see test_toolbar),
+ *     the enabled flag, and the owner_data pointer.
+ *
+ * Both are file-static and owned by this module.  The toolbar_t pointer
+ * must remain valid for the entire time the toolbar is registered.
+ *
+ * toolbar_def_t field reference:
  *   .name          — Human-readable identifier, shown by `toolbar list`
- *   .height        — Number of terminal rows (must match your rendering)
- *   .enabled       — Managed by toolbar_activate()/toolbar_teardown(), do not set manually
- *   .anchor_bottom — If true, this toolbar is inserted at index 0 (bottommost on screen).
- *                    Used by the statusbar to always stay at the very bottom.
- *                    Most toolbars should leave this false.
- *   .owner_data    — Opaque pointer for toolbar-private state.  Useful if you
- *                    need to share state between callbacks without file-scope globals.
- *                    NULL if not needed (like this toolbar).
+ *   .height        — Default number of terminal rows (copied to toolbar_t.height)
+ *   .anchor_bottom — If true, inserted at index 0 (bottommost on screen).
+ *                    Used by the statusbar.  Most toolbars: false.
  *   .draw          — Core0 full-paint callback (see Step 3 above).
- *                    For Core1-rendered toolbars, set to NULL — the framework
- *                    auto-detects .update_core1 and delegates via
- *                    toolbar_update_blocking().
- *                    For Core0-only toolbars (test_toolbar, logic_bar), provide
- *                    a function that paints using printf.
+ *                    For Core1-rendered toolbars: NULL (auto-delegated).
+ *                    For Core0-only toolbars: a function that paints using printf.
  *   .update_core1  — Core1 periodic rendering callback (see Step 7 below).
  *                    Must use only _buf() variants and snprintf — no printf.
- *                    Set to NULL for Core0-only toolbars.
+ *                    NULL for Core0-only toolbars.
  *   .destroy       — Called on unregister.  Free resources, stop timers, etc.
  *                    NULL if no cleanup is needed.
+ *
+ * toolbar_t field reference:
+ *   .def           — Pointer to the const toolbar_def_t (FLASH descriptor)
+ *   .height        — Runtime height.  Normally copied from def->height.
+ *                    Can be overridden before toolbar_activate() (test_toolbar).
+ *   .enabled       — Managed by toolbar_activate()/toolbar_teardown().
+ *                    Initialize to false.  Do not set manually.
+ *   .owner_data    — Opaque pointer for toolbar-private state.  Useful if you
+ *                    need shared state between callbacks without file-scope
+ *                    globals.  NULL if not needed (like this toolbar).
  */
 static const toolbar_def_t pin_watcher_toolbar_def = {
     .name         = "pin_watcher",

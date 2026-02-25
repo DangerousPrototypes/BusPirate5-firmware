@@ -41,12 +41,11 @@ static toolbar_t statusbar_toolbar = {
     .anchor_bottom = true,
     .owner_data = NULL,
     .draw    = statusbar_draw_cb,
-    .update  = NULL,
     .update_core1 = statusbar_update_core1_cb,
     .destroy = NULL,
 };
 
-uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
+static uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
     uint32_t len = 0;
     uint32_t temp = 0;
     uint32_t cnt = 0;

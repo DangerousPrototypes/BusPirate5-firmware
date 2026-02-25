@@ -35,7 +35,7 @@ static uint8_t  tb_c1_state        = TB_C1_IDLE;
 static uint8_t  tb_c1_index        = 0;
 static uint32_t tb_c1_update_flags = 0;
 
-bool toolbar_register(toolbar_t* tb) {
+static bool toolbar_register(toolbar_t* tb) {
     if (toolbar_count >= TOOLBAR_MAX_COUNT) {
         return false;
     }
@@ -52,7 +52,7 @@ bool toolbar_register(toolbar_t* tb) {
     return true;
 }
 
-void toolbar_unregister(toolbar_t* tb) {
+static void toolbar_unregister(toolbar_t* tb) {
     for (uint8_t i = 0; i < toolbar_count; i++) {
         if (toolbar_registry[i] == tb) {
             if (tb->destroy) {

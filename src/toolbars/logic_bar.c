@@ -49,7 +49,6 @@ static toolbar_t logic_bar_toolbar = {
     .enabled = false,
     .owner_data = NULL,
     .draw    = logic_bar_draw_cb,
-    .update  = NULL,
     .destroy = NULL,
 };
 
@@ -233,11 +232,6 @@ static void logic_bar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width)
     }
 }
 
-// detach/release/stop/end the logic bar frame
-void logic_bar_detach(void) {
-    toolbar_teardown(&logic_bar_toolbar);
-}
-
 void logic_bar_update(void) {
     if (!logic_bar_visible) {
         return;
@@ -266,7 +260,7 @@ bool logic_bar_start(void) {
 
 void logic_bar_stop(void) {
     fala_notify_unregister(&logic_bar_update);
-    logic_bar_detach();
+    toolbar_teardown(&logic_bar_toolbar);
     logic_bar_visible = false;
 }
 

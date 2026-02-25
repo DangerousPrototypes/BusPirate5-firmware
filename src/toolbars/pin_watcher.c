@@ -131,8 +131,6 @@ static void pin_watcher_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t widt
  *                    need to share state between callbacks without file-scope globals.
  *                    NULL if not needed (like this toolbar).
  *   .draw          — Core0 full-paint callback (see Step 3 above)
- *   .update        — Core0 partial-update callback.  Not used in the current API;
- *                    reserved for future use.  Set to NULL.
  *   .update_core1  — Core1 periodic rendering callback (see Step 5 below).
  *                    Set to NULL for Core0-only toolbars (test_toolbar, logic_bar).
  *   .destroy       — Called on unregister.  Free resources, stop timers, etc.
@@ -145,7 +143,6 @@ static toolbar_t pin_watcher_toolbar = {
     .anchor_bottom = false,      // stacks above statusbar in registration order
     .owner_data   = NULL,
     .draw         = pin_watcher_draw_cb,
-    .update       = NULL,        // reserved for future use
     .update_core1 = pin_watcher_update_core1_cb,
     .destroy      = NULL,        // no cleanup needed
 };

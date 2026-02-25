@@ -47,14 +47,6 @@ typedef struct toolbar_t {
     void (*draw)(struct toolbar_t* tb, uint16_t start_row, uint16_t width);
 
     /**
-     * @brief Partial update of this toolbar.
-     * @param start_row   First row this toolbar occupies (1-based).
-     * @param width       Terminal column width.
-     * @param update_flags Bitmask of sections that changed (toolbar-specific meaning).
-     */
-    void (*update)(struct toolbar_t* tb, uint16_t start_row, uint16_t width, uint32_t update_flags);
-
-    /**
      * @brief Core1 periodic update — render into a buffer (no printf!).
      * @details Called from the Core1 toolbar state machine.  Must use only
      *          `_buf()` variants and snprintf.  Cursor save/hide and
@@ -75,19 +67,6 @@ typedef struct toolbar_t {
      */
     void (*destroy)(struct toolbar_t* tb);
 } toolbar_t;
-
-/**
- * @brief Register a toolbar in the registry.
- * @param tb  Pointer to caller-owned toolbar_t (must remain valid until unregistered).
- * @return true on success, false if the registry is full.
- */
-bool toolbar_register(toolbar_t* tb);
-
-/**
- * @brief Unregister a toolbar and recalculate layout.
- * @param tb  Toolbar to remove.
- */
-void toolbar_unregister(toolbar_t* tb);
 
 /**
  * @brief Enable, register, apply scroll region, and redraw all toolbars.

@@ -38,7 +38,6 @@ static toolbar_t sys_stats_toolbar = {
     .enabled    = false,
     .owner_data = NULL,
     .draw       = sys_stats_draw_cb,
-    .update     = NULL,
     .update_core1 = sys_stats_update_core1_cb,
     .destroy    = NULL,
 };

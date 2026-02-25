@@ -92,7 +92,6 @@ static toolbar_t test_toolbar = {
     .enabled    = false,
     .owner_data = NULL,
     .draw       = test_toolbar_draw_cb,
-    .update     = NULL,
     .destroy    = NULL,
 };
 

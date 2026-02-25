@@ -19,6 +19,9 @@
 
 /* Forward declarations */
 static void pin_watcher_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width);
+static uint32_t pin_watcher_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_len,
+                                            uint16_t start_row, uint16_t width,
+                                            uint32_t update_flags);
 
 static toolbar_t pin_watcher_toolbar = {
     .name       = "pin_watcher",
@@ -27,6 +30,7 @@ static toolbar_t pin_watcher_toolbar = {
     .owner_data = NULL,
     .draw       = pin_watcher_draw_cb,
     .update     = NULL,
+    .update_core1 = pin_watcher_update_core1_cb,
     .destroy    = NULL,
 };
 
@@ -117,5 +121,34 @@ void pin_watcher_update(void) {
     pin_watcher_draw_states(start_row + 1);
     ui_term_cursor_restore();
     toolbar_draw_release();
+}
+
+/**
+ * @brief Core1 periodic update callback — refreshes pin states (row 2 only).
+ * @details Labels on row 1 don't change, so we only redraw the states row.
+ *          Uses only snprintf + _buf() variants.  Cursor envelope is handled
+ *          by the state machine in ui_toolbar.c.
+ */
+static uint32_t pin_watcher_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_len,
+                                            uint16_t start_row, uint16_t width,
+                                            uint32_t update_flags) {
+    (void)tb; (void)width; (void)update_flags;
+    uint32_t len = 0;
+
+    /* Row 2 (start_row + 1): live pin states */
+    len += ui_term_cursor_position_buf(&buf[len], buf_len - len, start_row + 1, 0);
+    len += ui_term_erase_line_buf(&buf[len], buf_len - len);
+
+    for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
+        bool high = bio_get(i);
+        uint32_t fg = BP_COLOR_WHITE;
+        uint32_t bg = high ? BP_COLOR_RED : BP_COLOR_FULLBLACK;
+        len += ui_term_color_text_background_buf(&buf[len], buf_len - len, fg, bg);
+        len += snprintf(&buf[len], buf_len - len, " %-4s", high ? "HIGH" : "LOW");
+    }
+
+    len += snprintf(&buf[len], buf_len - len, "%s", ui_term_color_reset());
+
+    return len;
 }
 

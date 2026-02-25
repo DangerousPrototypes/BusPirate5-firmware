@@ -39,6 +39,7 @@
 #include "displays.h"
 #include "system_monitor.h"
 #include "ui/ui_statusbar.h"
+#include "ui/ui_toolbar.h"
 #include "tusb.h"
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
@@ -791,6 +792,8 @@ static void core1_infinite_loop(void) {
 
         // service the terminal TX queue
         tx_fifo_service();
+        // service one step of the toolbar Core1 state machine
+        toolbar_core1_service();
         // optionally service the binmode TX queue if requested
         if (system_config.binmode_usb_tx_queue_enable) {
             bin_tx_fifo_service();
@@ -837,7 +840,7 @@ static void core1_infinite_loop(void) {
                 system_config.terminal_ansi_statusbar &&
                 system_config.terminal_ansi_statusbar_update &&
                 !system_config.terminal_toolbar_pause) {
-                ui_statusbar_update_from_core1(update_flags);
+                toolbar_core1_begin_update(update_flags);
             }
 
             #ifdef BP_HW_STORAGE_TFCARD

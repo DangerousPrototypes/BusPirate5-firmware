@@ -12,6 +12,7 @@
 #include "system_config.h"
 #include "ui/ui_term.h"
 #include "ui/ui_toolbar.h"
+#include "usb_tx.h"
 
 static toolbar_t* toolbar_registry[TOOLBAR_MAX_COUNT];
 static uint8_t toolbar_count = 0;
@@ -172,9 +173,98 @@ void toolbar_print_registry(void) {
     for (uint8_t i = 0; i < toolbar_count; i++) {
         toolbar_t* tb = toolbar_registry[i];
         uint16_t start = toolbar_get_start_row(tb);
-        printf("  [%u] \"%s\"  height=%u  enabled=%u  row=%u..%u  draw=%s\r\n",
+        printf("  [%u] \"%s\"  height=%u  enabled=%u  row=%u..%u  draw=%s  core1=%s\r\n",
                i, tb->name, tb->height, tb->enabled,
                start, start + tb->height - 1,
-               tb->draw ? "yes" : "no");
+               tb->draw ? "yes" : "no",
+               tb->update_core1 ? "yes" : "no");
     }
+}
+
+/* ── Core1 cooperative state machine ──────────────────────────────────── */
+
+/**
+ * @brief Core1 toolbar-update states.
+ * @details IDLE → RENDERING → DRAINING → RENDERING → … → IDLE
+ */
+enum {
+    TB_C1_IDLE,       ///< No update in progress
+    TB_C1_RENDERING,  ///< Finding and rendering the next toolbar
+    TB_C1_DRAINING,   ///< Waiting for tx_sb_buf to drain to USB
+};
+
+static uint8_t  tb_c1_state        = TB_C1_IDLE;
+static uint8_t  tb_c1_index        = 0;
+static uint32_t tb_c1_update_flags = 0;
+
+void toolbar_core1_begin_update(uint32_t update_flags) {
+    if (tb_c1_state != TB_C1_IDLE) {
+        return; /* previous cycle still running — skip this tick */
+    }
+    tb_c1_update_flags = update_flags;
+    tb_c1_index = 0;
+    tb_c1_state = TB_C1_RENDERING;
+}
+
+void toolbar_core1_service(void) {
+    if (tb_c1_state == TB_C1_IDLE) {
+        return;
+    }
+
+    /* DRAINING: wait for tx_fifo_service() to finish sending the buffer. */
+    if (tb_c1_state == TB_C1_DRAINING) {
+        if (tx_sb_buf_ready) {
+            return; /* still draining — come back next loop iteration */
+        }
+        tb_c1_index++;
+        tb_c1_state = TB_C1_RENDERING;
+        /* fall through to RENDERING */
+    }
+
+    /* RENDERING: find the next toolbar with a Core1 callback and render it. */
+    while (tb_c1_index < toolbar_count) {
+        toolbar_t* tb = toolbar_registry[tb_c1_index];
+
+        if (tb->enabled && tb->update_core1) {
+            uint16_t start_row = toolbar_get_start_row(tb);
+            if (start_row == 0) {
+                tb_c1_index++;
+                continue;
+            }
+
+            uint16_t width   = system_config.terminal_ansi_columns;
+            size_t   buf_len = sizeof(tx_sb_buf);
+            uint32_t len     = 0;
+
+            /* Cursor envelope: save + hide */
+            len += ui_term_cursor_save_buf(&tx_sb_buf[len], buf_len - len);
+            len += ui_term_cursor_hide_buf(&tx_sb_buf[len], buf_len - len);
+
+            /* Let the toolbar render its content */
+            uint32_t content = tb->update_core1(
+                tb, &tx_sb_buf[len], buf_len - len,
+                start_row, width, tb_c1_update_flags);
+
+            if (content == 0) {
+                /* Callback chose not to render — skip to next toolbar */
+                tb_c1_index++;
+                continue;
+            }
+            len += content;
+
+            /* Cursor envelope: restore + show */
+            len += ui_term_cursor_restore_buf(&tx_sb_buf[len], buf_len - len);
+            if (!system_config.terminal_hide_cursor) {
+                len += ui_term_cursor_show_buf(&tx_sb_buf[len], buf_len - len);
+            }
+
+            tx_sb_start(len);
+            tb_c1_state = TB_C1_DRAINING;
+            return;
+        }
+        tb_c1_index++;
+    }
+
+    /* All toolbars processed — cycle complete. */
+    tb_c1_state = TB_C1_IDLE;
 }

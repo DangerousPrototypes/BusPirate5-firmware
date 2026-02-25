@@ -65,3 +65,4 @@ bool bin_tx_not_empty(void);
 bool bin_tx_fifo_try_get(char* c);
 
 extern char tx_sb_buf[1024];
+extern bool tx_sb_buf_ready;

@@ -54,6 +54,22 @@ typedef struct toolbar_t {
     void (*update)(struct toolbar_t* tb, uint16_t start_row, uint16_t width, uint32_t update_flags);
 
     /**
+     * @brief Core1 periodic update — render into a buffer (no printf!).
+     * @details Called from the Core1 toolbar state machine.  Must use only
+     *          `_buf()` variants and snprintf.  Cursor save/hide and
+     *          restore/show are handled by the caller.
+     * @param tb           This toolbar.
+     * @param buf          Buffer to write VT100 content into.
+     * @param buf_len      Available bytes in @p buf.
+     * @param start_row    First row (1-based).
+     * @param width        Terminal width in columns.
+     * @param update_flags UI_UPDATE_* bitmask from the monitor subsystem.
+     * @return Number of bytes written, or 0 to skip this cycle.
+     */
+    uint32_t (*update_core1)(struct toolbar_t* tb, char* buf, size_t buf_len,
+                             uint16_t start_row, uint16_t width, uint32_t update_flags);
+
+    /**
      * @brief Called when the toolbar is unregistered; release any resources.
      */
     void (*destroy)(struct toolbar_t* tb);
@@ -166,3 +182,21 @@ void toolbar_resume_updates(void);
  * @brief Print the toolbar registry contents to the terminal (debug/dev).
  */
 void toolbar_print_registry(void);
+
+/**
+ * @brief Begin a Core1 toolbar update cycle.
+ * @details Called from the Core1 main loop when lcd_update_request fires.
+ *          Starts the cooperative state machine that renders each toolbar
+ *          with a `.update_core1` callback, one per service call.
+ * @param update_flags  UI_UPDATE_* bitmask from the monitor subsystem.
+ */
+void toolbar_core1_begin_update(uint32_t update_flags);
+
+/**
+ * @brief Service one step of the Core1 toolbar state machine.
+ * @details Call every iteration of the Core1 main loop (after tx_fifo_service).
+ *          - IDLE: returns immediately.
+ *          - RENDERING: renders the next toolbar into tx_sb_buf, starts drain.
+ *          - DRAINING: checks if drain is complete, advances to next toolbar.
+ */
+void toolbar_core1_service(void);

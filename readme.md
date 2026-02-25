@@ -125,12 +125,32 @@ cp docker/debug.env .env
 # run the debug version of the services
 docker compose run dev-debug
 ```
+### build using nix
 
-### Building without LGPL3 protected component
-**NOTE** by doing the following you may not need to distribute the binaries under LGPL3 license terms. 
+Either build using nix directly
 
-To compile the firmware without LGPL3 components, simply add the following flags to the configuration step above:  
-`-DUSE_LGPL3=NO -DLEGACY_ANSI_COLOURS_ENABLED=NO`
+```shell
+$ nix build
+$ file result/bus_pirate5_rev10.uf2
+result/bus_pirate5_rev10.uf2: UF2 firmware image, family Raspberry Pi RP2040, address 0x10000000, 3572 total blocks
+```
+
+or using nix to get a development shell, which is more convenient for incremental builds:
+
+```shell
+$ nix develop
+$ cmake -S . -B build_rp2040
+-- Build files have been written to: /home/zoid/clone/BusPirate5-firmware/build_rp2040
+$ cmake --build build_rp2040 --parallel --target bus_pirate5_rev10
+Memory region         Used Size  Region Size  %age Used
+           FLASH:     1169872 B        16 MB      6.97%
+             RAM:      224840 B       256 KB     85.77%
+       SCRATCH_X:          4 KB         4 KB    100.00%
+       SCRATCH_Y:          4 KB         4 KB    100.00%
+[100%] Built target bus_pirate5_rev10
+$ file ./build_rp2040/src/bus_pirate5_rev10.uf2
+./build_rp2040/src/bus_pirate5_rev10.uf2: UF2 firmware image, family Raspberry Pi RP2040, address 0x10000000, 3572 total blocks
+```
 
 ## Other open source licenses
 

@@ -1,0 +1,65 @@
+{
+  "nodes": {
+    "ansi-colours": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1689380286,
+        "narHash": "sha256-35QJIHShtwuL9SmI2fOHjAG6knediD2JZKV/QNmjrPk=",
+        "owner": "mina86",
+        "repo": "ansi_colours",
+        "rev": "84c64b3d560b51a15a9889f30ebb977815d3945e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mina86",
+        "ref": "v1.2.2",
+        "repo": "ansi_colours",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1771848320,
+        "narHash": "sha256-0MAd+0mun3K/Ns8JATeHT1sX28faLII5hVLq0L3BdZU=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "2fc6539b481e1d2569f25f8799236694180c0993",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "pico-sdk": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1753763866,
+        "narHash": "sha256-8ubZW6yQnUTYxQqYI6hi7s3kFVQhe5EaxVvHmo93vgk=",
+        "ref": "refs/tags/2.2.0",
+        "rev": "a1438dff1d38bd9c65dbd693f0e5db4b9ae91779",
+        "revCount": 1208,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/raspberrypi/pico-sdk"
+      },
+      "original": {
+        "ref": "refs/tags/2.2.0",
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/raspberrypi/pico-sdk"
+      }
+    },
+    "root": {
+      "inputs": {
+        "ansi-colours": "ansi-colours",
+        "nixpkgs": "nixpkgs",
+        "pico-sdk": "pico-sdk"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

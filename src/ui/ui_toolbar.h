@@ -36,6 +36,7 @@ typedef struct toolbar_t {
     const char* name;     ///< Unique name string (e.g. "statusbar", "logic_analyzer")
     uint16_t height;      ///< Number of terminal lines this toolbar occupies
     bool enabled;         ///< Currently active / visible
+    bool anchor_bottom;   ///< Always insert at bottom of stack (index 0)
     void* owner_data;     ///< Opaque pointer for the toolbar owner's private state
 
     /**
@@ -89,21 +90,34 @@ bool toolbar_register(toolbar_t* tb);
 void toolbar_unregister(toolbar_t* tb);
 
 /**
- * @brief Enable, register, and apply scroll region in one call.
+ * @brief Enable, register, apply scroll region, and redraw all toolbars.
+ * @details After registering the toolbar and applying the new scroll region,
+ *          calls toolbar_redraw_all() so every toolbar (including the new one)
+ *          is painted at its correct position.  Callers only need to push
+ *          blank lines beforehand and reposition the cursor afterward.
  * @param tb  Toolbar to activate.
  * @return true on success, false if the registry is full.
  */
 bool toolbar_activate(toolbar_t* tb);
 
 /**
- * @brief Erase, unregister, disable, and restore scroll region.
- * @details Calls toolbar_draw_prepare(), toolbar_erase(), toolbar_unregister(),
- *          sets tb->enabled = false, toolbar_apply_scroll_region(), and
- *          toolbar_draw_release().  Safe to call even if the toolbar is not
- *          currently registered (no-op in that case).
+ * @brief Erase all toolbar rows, unregister, restore scroll region, and redraw remaining.
+ * @details Erases the entire toolbar area, unregisters @p tb, sets
+ *          tb->enabled = false, applies the new scroll region, then redraws
+ *          all remaining toolbars at their updated positions.  This ensures
+ *          mid-stack removal never leaves stale rows.
+ *          Safe to call even if the toolbar is not currently registered (no-op).
  * @param tb  Toolbar to tear down.
  */
 void toolbar_teardown(toolbar_t* tb);
+
+/**
+ * @brief Tear down all registered toolbars and restore full-screen scroll.
+ * @details Erases the entire toolbar area, tears down every toolbar in the
+ *          registry (calling .destroy if set), resets the scroll region to
+ *          full screen.  Used before reboot / bootloader jump.
+ */
+void toolbar_teardown_all(void);
 
 /**
  * @brief Sum of all enabled toolbar heights (lines reserved at the bottom).
@@ -138,15 +152,9 @@ uint16_t toolbar_get_start_row(const toolbar_t* tb);
 void toolbar_apply_scroll_region(void);
 
 /**
- * @brief Erase a toolbar's screen area (save/restore cursor, clear each row).
- * @details Must be called while the toolbar is still registered so
- *          toolbar_get_start_row() can locate it.  Uses printf path (Core0 only).
- * @param tb  Toolbar whose rows should be erased.
- */
-void toolbar_erase(const toolbar_t* tb);
-
-/**
  * @brief Redraw all enabled toolbars (full repaint).
+ * @details Wraps the batch in toolbar_draw_prepare/release and cursor
+ *          save/restore.  Individual .draw callbacks are pure painters.
  */
 void toolbar_redraw_all(void);
 

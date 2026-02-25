@@ -5,7 +5,7 @@
 #include "system_config.h"
 #include "command_struct.h"
 #include "msc_disk.h"
-#include "ui/ui_statusbar.h"
+#include "ui/ui_toolbar.h"
 #include "lib/bp_args/bp_cmd.h"
 
 static const char* const reboot_usage[] = {
@@ -46,7 +46,7 @@ void cmd_mcu_reboot_handler(struct command_result* res) {
     if (bp_cmd_help_check(&reboot_def, res->help_flag)) {
         return;
     }
-    ui_statusbar_deinit();
+    toolbar_teardown_all();
     busy_wait_ms(100);
     cmd_mcu_reset();
 }
@@ -85,7 +85,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result* res) {
         return;
     }
     printf("See you on the other side!");
-    ui_statusbar_deinit();
+    toolbar_teardown_all();
     eject_usbmsdrive();
     busy_wait_ms(200);
     cmd_mcu_jump_to_bootloader();

@@ -169,8 +169,6 @@ void tx_fifo_service(void) {
                 if (tx_tb_buf_index >= tx_tb_buf_cnt) {
                     tx_tb_buf_ready = false;
                     tx_state = IDLE; // done, next cycle go to idle
-                    system_config.terminal_ansi_statusbar_update =
-                        true; // after first draw of status bar, then allow updates by core1 service loop
                     break;
                 }
                 if (i >= 64) {

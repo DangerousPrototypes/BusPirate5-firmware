@@ -7,6 +7,7 @@
  *            toolbar remove            — remove the test toolbar
  *            toolbar stats             — toggle 1-line sys_stats toolbar
  *            toolbar pins              — toggle 2-line pin_watcher toolbar
+ *            toolbar statusbar         — toggle the 4-line status bar
  *
  * The test toolbar is a simple block of coloured rows showing its name and
  * row numbers, useful for verifying scroll-region math, stacking order,
@@ -24,6 +25,7 @@
 #include "ui/ui_toolbar.h"
 #include "toolbars/sys_stats.h"
 #include "toolbars/pin_watcher.h"
+#include "ui/ui_statusbar.h"
 #include "lib/bp_args/bp_cmd.h"
 
 /* ── action verbs ────────────────────────────────────────────────────────── */
@@ -34,14 +36,16 @@ enum toolbar_actions {
     TOOLBAR_REMOVE,
     TOOLBAR_STATS,
     TOOLBAR_PINS,
+    TOOLBAR_STATUSBAR,
 };
 
 static const bp_command_action_t toolbar_action_defs[] = {
-    { TOOLBAR_LIST,   "list",   0x00 },
-    { TOOLBAR_TEST,   "test",   0x00 },
-    { TOOLBAR_REMOVE, "remove", 0x00 },
-    { TOOLBAR_STATS,  "stats",  0x00 },
-    { TOOLBAR_PINS,   "pins",   0x00 },
+    { TOOLBAR_LIST,      "list",      0x00 },
+    { TOOLBAR_TEST,      "test",      0x00 },
+    { TOOLBAR_REMOVE,    "remove",    0x00 },
+    { TOOLBAR_STATS,     "stats",     0x00 },
+    { TOOLBAR_PINS,      "pins",      0x00 },
+    { TOOLBAR_STATUSBAR, "statusbar", 0x00 },
 };
 
 /* ── options ─────────────────────────────────────────────────────────────── */
@@ -53,12 +57,13 @@ static const bp_command_opt_t toolbar_opts[] = {
 /* ── usage ───────────────────────────────────────────────────────────────── */
 
 static const char* const usage[] = {
-    "toolbar [list|test|remove|stats|pins]",
+    "toolbar [list|test|remove|stats|pins|statusbar]",
     "List registered toolbars:%s toolbar list",
     "Create a test toolbar (1-8 lines):%s toolbar test 3",
     "Remove test toolbar:%s toolbar remove",
     "Toggle system stats toolbar:%s toolbar stats",
     "Toggle pin watcher toolbar:%s toolbar pins",
+    "Toggle status bar:%s toolbar statusbar",
 };
 
 /* ── command definition ──────────────────────────────────────────────────── */
@@ -93,11 +98,10 @@ static toolbar_t test_toolbar = {
 
 /**
  * @brief .draw callback — paints coloured rows showing toolbar metadata.
+ * @details Pure painter — caller handles prepare/release and cursor save/restore.
  */
 static void test_toolbar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
     (void)width;
-    toolbar_draw_prepare();
-    ui_term_cursor_save();
 
     for (uint16_t i = 0; i < tb->height; i++) {
         ui_term_cursor_position(start_row + i, 0);
@@ -112,9 +116,6 @@ static void test_toolbar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t wid
         printf(" TEST toolbar  row %u/%u  (start_row=%u) %s",
                i + 1, tb->height, start_row, ui_term_color_reset());
     }
-
-    ui_term_cursor_restore();
-    toolbar_draw_release();
 }
 
 /* ── command handler ─────────────────────────────────────────────────────── */
@@ -131,7 +132,7 @@ void toolbar_cmd_handler(struct command_result* res) {
 
     uint32_t action = 0;
     if (!bp_cmd_get_action(&toolbar_cmd_def, &action)) {
-        printf("Usage: toolbar [list|test <height>|remove|stats|pins]\r\n");
+        printf("Usage: toolbar [list|test <height>|remove|stats|pins|statusbar]\r\n");
         return;
     }
 
@@ -168,9 +169,6 @@ void toolbar_cmd_handler(struct command_result* res) {
             }
             // Cursor is outside the new scroll region — move it back in
             ui_term_cursor_position(toolbar_scroll_bottom(), 0);
-            test_toolbar_draw_cb(&test_toolbar,
-                                 toolbar_get_start_row(&test_toolbar),
-                                 system_config.terminal_ansi_columns);
             test_toolbar_active = true;
             printf("Test toolbar created (%u lines)\r\n", (unsigned)height);
             break;
@@ -214,6 +212,19 @@ void toolbar_cmd_handler(struct command_result* res) {
                 } else {
                     printf("Registry full — cannot add pin watcher\r\n");
                 }
+            }
+            break;
+        }
+
+        /* ── statusbar ────────────────────────────────────────────────── */
+        case TOOLBAR_STATUSBAR: {
+            if (system_config.terminal_ansi_statusbar) {
+                ui_statusbar_deinit();
+                printf("Status bar disabled\r\n");
+            } else {
+                system_config.terminal_ansi_statusbar = 1;
+                ui_statusbar_init();
+                printf("Status bar enabled\r\n");
             }
             break;
         }

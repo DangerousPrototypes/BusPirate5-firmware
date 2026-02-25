@@ -213,14 +213,23 @@ void logic_bar_draw_frame(void) {
 
 /**
  * @brief .draw callback — full repaint of the logic bar frame + data.
- * @details Called from toolbar_redraw_all() on Core0.
+ * @details Pure painter — caller handles prepare/release and cursor save/restore.
+ *          Called from toolbar_redraw_all() on Core0.
  */
 static void logic_bar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
-    (void)tb; (void)start_row; (void)width;
-    logic_bar_draw_frame();
+    (void)tb; (void)width;
+    /* Paint frame */
+    frame_top(start_row, LOGIC_BAR_WIDTH);
+    frame_sample_numbers(start_row + 1);
+    frame_vertical_labels(start_row + 2);
+    /* Overlay data if available */
     if (logic_bar_visible) {
         uint32_t total_samples = logic_analyzer_get_end_ptr();
-        logic_bar_redraw(0, total_samples);
+        if (total_samples > 0) {
+            uint32_t sample_ptr = logic_analyzer_get_start_ptr(total_samples);
+            graph_timeline(start_row + 1, 0);
+            graph_logic_lines_2(start_row + 2, sample_ptr);
+        }
     }
 }
 
@@ -244,14 +253,14 @@ bool logic_bar_start(void) {
     }
     // Push command text up BEFORE shrinking the scroll region
     frame_blank(LOGIC_BAR_HEIGHT);
+    logic_bar_visible = true;
     if (!toolbar_activate(&logic_bar_toolbar)) {
         fala_notify_unregister(&logic_bar_update);
+        logic_bar_visible = false;
         return false;
     }
     // Cursor is now outside the scroll region — move it back in
     ui_term_cursor_position(toolbar_scroll_bottom(), 0);
-    logic_bar_draw_frame();
-    logic_bar_visible = true;
     return true;
 }
 
@@ -269,12 +278,13 @@ void logic_bar_hide(void) {
 void logic_bar_show(void) {
     // Push command text up BEFORE shrinking the scroll region
     frame_blank(LOGIC_BAR_HEIGHT);
-    toolbar_activate(&logic_bar_toolbar);
+    logic_bar_visible = true;
+    if (!toolbar_activate(&logic_bar_toolbar)) {
+        logic_bar_visible = false;
+        return;
+    }
     // Cursor is now outside the scroll region — move it back in
     ui_term_cursor_position(toolbar_scroll_bottom(), 0);
-    logic_bar_draw_frame();
-    logic_bar_update();
-    logic_bar_visible = true;
 }
 
 uint32_t sample_position = 0;

@@ -837,8 +837,7 @@ static void core1_infinite_loop(void) {
             }
 
             if (system_config.terminal_ansi_color &&
-                system_config.terminal_ansi_statusbar &&
-                system_config.terminal_ansi_statusbar_update &&
+                toolbar_count_registered() &&
                 !system_config.terminal_toolbar_pause) {
                 toolbar_core1_begin_update(update_flags);
             }

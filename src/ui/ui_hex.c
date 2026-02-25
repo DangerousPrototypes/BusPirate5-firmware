@@ -5,6 +5,7 @@
 #include "ui/ui_term.h"
 #include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_hex.h"
+#include "ui/ui_toolbar.h"
 #include "system_config.h"
 
 //a function to initialize the hex config structure
@@ -182,7 +183,7 @@ bool ui_hex_row_config(struct hex_config_t *config, uint32_t address, uint8_t *b
 
     if(!config->pager_off){
         config->rows_printed++; // increment the row counter
-        if(config->rows_printed >= (config->rows_terminal-3)-(system_config.terminal_ansi_statusbar ? 4 : 0)) {
+        if(config->rows_printed >= (config->rows_terminal-3)-toolbar_total_height()) {
             printf("x to exit, any other key to continue...");
             // if we reached the end of the page, wait for user input
             // pager is on, wait for user input

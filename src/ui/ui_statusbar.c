@@ -38,6 +38,7 @@ static toolbar_t statusbar_toolbar = {
     .name    = "statusbar",
     .height  = STATUSBAR_HEIGHT,
     .enabled = false,
+    .anchor_bottom = true,
     .owner_data = NULL,
     .draw    = statusbar_draw_cb,
     .update  = NULL,
@@ -170,14 +171,19 @@ static uint32_t statusbar_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
 
 void ui_statusbar_init(void) {
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
+        /* Push content up to make room (harmless on fresh-screen init) */
+        for (uint16_t i = 0; i < STATUSBAR_HEIGHT; i++) {
+            printf("\r\n");
+        }
         toolbar_activate(&statusbar_toolbar);
+        /* Reposition cursor within the new scroll region */
+        ui_term_cursor_position(toolbar_scroll_bottom(), 0);
     }
 }
 
 void ui_statusbar_deinit(void) {
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
         system_config.terminal_ansi_statusbar = 0;
-        system_config.terminal_ansi_statusbar_update = false;
         busy_wait_ms(100); // wait for the last statusbar update to finish
         toolbar_teardown(&statusbar_toolbar);
     }

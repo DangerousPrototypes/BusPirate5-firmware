@@ -69,7 +69,6 @@ void system_init(void) {
     system_config.terminal_ansi_rows = 24;
     system_config.terminal_ansi_columns = 80;
     system_config.terminal_ansi_statusbar = 0;
-    system_config.terminal_ansi_statusbar_update = false;
     system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
     system_config.terminal_update = 0;
     system_config.terminal_hide_cursor = false;

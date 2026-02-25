@@ -79,7 +79,6 @@ typedef struct _system_config {
     uint8_t terminal_ansi_columns;               /**< Terminal columns for ANSI display */
     uint32_t terminal_ansi_color;                /**< ANSI color scheme */
     uint32_t terminal_ansi_statusbar;            /**< Status bar display mode */
-    bool terminal_ansi_statusbar_update;         /**< Status bar needs update */
     bool terminal_hide_cursor;                   /**< Hide terminal cursor */
     bool terminal_toolbar_pause;                 /**< Toolbar updates paused */
     uint8_t terminal_update;                     /**< Terminal update flags */

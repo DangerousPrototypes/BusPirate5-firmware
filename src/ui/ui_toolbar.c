@@ -23,7 +23,16 @@ bool toolbar_register(toolbar_t* tb) {
     if (toolbar_count >= TOOLBAR_MAX_COUNT) {
         return false;
     }
-    toolbar_registry[toolbar_count++] = tb;
+    if (tb->anchor_bottom) {
+        /* Insert at index 0 — bottommost position on screen */
+        for (uint8_t i = toolbar_count; i > 0; i--) {
+            toolbar_registry[i] = toolbar_registry[i - 1];
+        }
+        toolbar_registry[0] = tb;
+    } else {
+        toolbar_registry[toolbar_count] = tb;
+    }
+    toolbar_count++;
     return true;
 }
 
@@ -50,6 +59,7 @@ bool toolbar_activate(toolbar_t* tb) {
         return false;
     }
     toolbar_apply_scroll_region();
+    toolbar_redraw_all();
     return true;
 }
 
@@ -59,10 +69,61 @@ void toolbar_teardown(toolbar_t* tb) {
     }
     toolbar_draw_prepare();
     ui_term_cursor_save();
-    toolbar_erase(tb);
+
+    /* Erase the entire toolbar area (old layout, before unregister) */
+    uint16_t rows = system_config.terminal_ansi_rows;
+    uint16_t old_top = toolbar_scroll_bottom() + 1;
+    for (uint16_t r = old_top; r <= rows; r++) {
+        ui_term_cursor_position(r, 0);
+        ui_term_erase_line();
+    }
+
     toolbar_unregister(tb);
     tb->enabled = false;
     toolbar_apply_scroll_region();
+
+    /* Redraw all remaining toolbars at their new positions */
+    uint16_t width = system_config.terminal_ansi_columns;
+    for (uint8_t i = 0; i < toolbar_count; i++) {
+        toolbar_t* t = toolbar_registry[i];
+        if (t->enabled && t->draw) {
+            uint16_t start_row = toolbar_get_start_row(t);
+            t->draw(t, start_row, width);
+        }
+    }
+
+    ui_term_cursor_restore();
+    toolbar_draw_release();
+}
+
+void toolbar_teardown_all(void) {
+    if (toolbar_count == 0) {
+        return;
+    }
+    toolbar_draw_prepare();
+    ui_term_cursor_save();
+
+    /* Erase the entire toolbar area */
+    uint16_t rows = system_config.terminal_ansi_rows;
+    uint16_t old_top = toolbar_scroll_bottom() + 1;
+    for (uint16_t r = old_top; r <= rows; r++) {
+        ui_term_cursor_position(r, 0);
+        ui_term_erase_line();
+    }
+
+    /* Tear down each toolbar (reverse order so indices stay valid) */
+    while (toolbar_count > 0) {
+        toolbar_t* tb = toolbar_registry[toolbar_count - 1];
+        if (tb->destroy) {
+            tb->destroy(tb);
+        }
+        tb->enabled = false;
+        toolbar_registry[--toolbar_count] = NULL;
+    }
+
+    /* Restore full-screen scroll region */
+    toolbar_apply_scroll_region();
+
     ui_term_cursor_restore();
     toolbar_draw_release();
 }
@@ -114,23 +175,9 @@ void toolbar_apply_scroll_region(void) {
     ui_term_scroll_region(1, bottom);
 }
 
-void toolbar_erase(const toolbar_t* tb) {
-    if (!system_config.terminal_ansi_color) {
-        return;
-    }
-    uint16_t row = toolbar_get_start_row(tb);
-    if (row == 0) {
-        return; // not registered or disabled
-    }
-    ui_term_cursor_save();
-    for (uint16_t i = 0; i < tb->height; i++) {
-        ui_term_cursor_position(row + i, 0);
-        ui_term_erase_line();
-    }
-    ui_term_cursor_restore();
-}
-
 void toolbar_redraw_all(void) {
+    toolbar_draw_prepare();
+    ui_term_cursor_save();
     uint16_t width = system_config.terminal_ansi_columns;
     for (uint8_t i = 0; i < toolbar_count; i++) {
         toolbar_t* tb = toolbar_registry[i];
@@ -139,6 +186,8 @@ void toolbar_redraw_all(void) {
             tb->draw(tb, start_row, width);
         }
     }
+    ui_term_cursor_restore();
+    toolbar_draw_release();
 }
 
 void toolbar_draw_prepare(void) {
@@ -187,7 +236,6 @@ void toolbar_print_registry(void) {
 void toolbar_update_blocking(void) {
     BP_ASSERT_CORE0();
     if (!tud_cdc_n_connected(0)) return;
-    system_config.terminal_ansi_statusbar_update = true;
     icm_core0_send_message_synchronous(BP_ICM_UPDATE_TOOLBARS);
 }
 /* ── Core1 cooperative state machine ──────────────────────────────────── */

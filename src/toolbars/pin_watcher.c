@@ -3,6 +3,8 @@
  * @brief 2-line GPIO pin state watcher toolbar implementation.
  * @details Line 1: colored pin labels (IO0..IO7).
  *          Line 2: live HIGH/LOW indicators with matching colors.
+ *          All rendering goes through the Core1 _buf() path — the .draw callback
+ *          simply triggers a blocking Core1 update via toolbar_update_blocking().
  */
 
 #include <stdio.h>
@@ -14,14 +16,22 @@
 #include "pirate/bio.h"
 #include "ui/ui_term.h"
 #include "ui/ui_toolbar.h"
+#include "ui/ui_flags.h"
 
 #define PIN_WATCHER_HEIGHT 2
 
 /* Forward declarations */
-static void pin_watcher_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width);
 static uint32_t pin_watcher_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_len,
                                             uint16_t start_row, uint16_t width,
                                             uint32_t update_flags);
+
+/**
+ * @brief .draw callback — delegates to Core1 via toolbar_update_blocking().
+ */
+static void pin_watcher_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
+    (void)tb; (void)start_row; (void)width;
+    toolbar_update_blocking();
+}
 
 static toolbar_t pin_watcher_toolbar = {
     .name       = "pin_watcher",
@@ -33,50 +43,6 @@ static toolbar_t pin_watcher_toolbar = {
     .update_core1 = pin_watcher_update_core1_cb,
     .destroy    = NULL,
 };
-
-/**
- * @brief Draw a single pin state row (line 2) at the given terminal row.
- */
-static void pin_watcher_draw_states(uint16_t row) {
-    ui_term_cursor_position(row, 0);
-    ui_term_erase_line();
-
-    for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
-        bool high = bio_get(i);
-        uint32_t fg = BP_COLOR_WHITE; //hw_pin_label_ordered_color[i + 1][0];
-        uint32_t bg = high ? BP_COLOR_RED : BP_COLOR_FULLBLACK;
-        ui_term_color_text_background(fg, bg);
-        printf(" %-4s", high ? "HIGH" : "LOW");
-    }
-    printf("%s", ui_term_color_reset());
-}
-
-/**
- * @brief .draw callback — paints pin labels (row 1) and states (row 2).
- */
-static void pin_watcher_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
-    (void)tb; (void)width;
-
-    toolbar_draw_prepare();
-    ui_term_cursor_save();
-
-    /* Row 1: pin labels with their assigned colors */
-    ui_term_cursor_position(start_row, 0);
-    ui_term_erase_line();
-    for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
-        ui_term_color_text_background(
-            hw_pin_label_ordered_color[i + 1][0],
-            hw_pin_label_ordered_color[i + 1][1]);
-        printf(" %-4s", hw_pin_label_ordered[i + 1]);
-    }
-    printf("%s", ui_term_color_reset());
-
-    /* Row 2: live pin states */
-    pin_watcher_draw_states(start_row + 1);
-
-    ui_term_cursor_restore();
-    toolbar_draw_release();
-}
 
 bool pin_watcher_start(void) {
     if (pin_watcher_toolbar.enabled) {
@@ -91,9 +57,6 @@ bool pin_watcher_start(void) {
     }
     /* Reposition cursor within the new scroll region */
     ui_term_cursor_position(toolbar_scroll_bottom(), 0);
-    pin_watcher_draw_cb(&pin_watcher_toolbar,
-                        toolbar_get_start_row(&pin_watcher_toolbar),
-                        system_config.terminal_ansi_columns);
     return true;
 }
 
@@ -112,39 +75,69 @@ void pin_watcher_update(void) {
     if (!pin_watcher_toolbar.enabled) {
         return;
     }
-    uint16_t start_row = toolbar_get_start_row(&pin_watcher_toolbar);
-    if (start_row == 0) {
-        return;
-    }
-    toolbar_draw_prepare();
-    ui_term_cursor_save();
-    pin_watcher_draw_states(start_row + 1);
-    ui_term_cursor_restore();
-    toolbar_draw_release();
+    toolbar_update_blocking();
 }
 
 /**
- * @brief Core1 periodic update callback — refreshes pin states (row 2 only).
- * @details Labels on row 1 don't change, so we only redraw the states row.
+ * @brief Core1 update callback — renders pin labels and states into buffer.
+ * @details Single rendering path for both initial paint and periodic refresh.
+ *          - Row 1 (labels): only on UI_UPDATE_ALL / UI_UPDATE_FORCE (labels don't change)
+ *          - Row 2 (states): on UI_UPDATE_VOLTAGES / UI_UPDATE_LABELS / UI_UPDATE_FORCE
+ *          Skips entirely when no relevant flags are set.
  *          Uses only snprintf + _buf() variants.  Cursor envelope is handled
  *          by the state machine in ui_toolbar.c.
  */
 static uint32_t pin_watcher_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_len,
                                             uint16_t start_row, uint16_t width,
                                             uint32_t update_flags) {
-    (void)tb; (void)width; (void)update_flags;
+    (void)tb;
     uint32_t len = 0;
 
-    /* Row 2 (start_row + 1): live pin states */
-    len += ui_term_cursor_position_buf(&buf[len], buf_len - len, start_row + 1, 0);
-    len += ui_term_erase_line_buf(&buf[len], buf_len - len);
+    /* Skip if nothing relevant changed */
+    const uint32_t care_mask = UI_UPDATE_VOLTAGES | UI_UPDATE_LABELS | UI_UPDATE_FORCE;
+    if (!(update_flags & care_mask)) {
+        return 0;
+    }
 
+    bool full_paint = (update_flags & (UI_UPDATE_LABELS | UI_UPDATE_FORCE)) != 0;
+
+    /* Row 1: pin labels (only on full paint — labels are static) */
+    if (full_paint) {
+        len += ui_term_cursor_position_buf(&buf[len], buf_len - len, start_row, 0);
+        uint32_t cols = 0;
+        for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
+            len += ui_term_color_text_background_buf(&buf[len], buf_len - len,
+                        hw_pin_label_ordered_color[i + 1][0],
+                        hw_pin_label_ordered_color[i + 1][1]);
+            int n = snprintf(&buf[len], buf_len - len, " %-4s",
+                             hw_pin_label_ordered[i + 1]);
+            len += n; cols += n;
+        }
+        /* Pad remaining columns */
+        for (uint16_t c = cols; c < width; c++) {
+            if (len < buf_len - 1) buf[len++] = ' ';
+        }
+        len += snprintf(&buf[len], buf_len - len, "%s", ui_term_color_reset());
+    }
+
+    /* Row 2: live pin states */
+    len += ui_term_cursor_position_buf(&buf[len], buf_len - len, start_row + 1, 0);
+
+    uint32_t cols = 0;
     for (uint8_t i = 0; i < BIO_MAX_PINS; i++) {
         bool high = bio_get(i);
         uint32_t fg = BP_COLOR_WHITE;
         uint32_t bg = high ? BP_COLOR_RED : BP_COLOR_FULLBLACK;
         len += ui_term_color_text_background_buf(&buf[len], buf_len - len, fg, bg);
-        len += snprintf(&buf[len], buf_len - len, " %-4s", high ? "HIGH" : "LOW");
+        int n = snprintf(&buf[len], buf_len - len, " %-4s", high ? "HIGH" : "LOW");
+        len += n; cols += n;
+    }
+
+    /* Pad remaining columns to overwrite stale content without erase */
+    len += ui_term_color_text_background_buf(&buf[len], buf_len - len,
+                                             BP_COLOR_WHITE, BP_COLOR_FULLBLACK);
+    for (uint16_t c = cols; c < width; c++) {
+        if (len < buf_len - 1) buf[len++] = ' ';
     }
 
     len += snprintf(&buf[len], buf_len - len, "%s", ui_term_color_reset());

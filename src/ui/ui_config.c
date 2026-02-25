@@ -158,10 +158,12 @@ static const struct prompt_item menu_items_ansi_color[] = {
 };
 uint32_t ui_config_action_ansi_color(uint32_t a, uint32_t b) {
     if (b < count_of(menu_items_ansi_color)) {
-        system_config.terminal_ansi_color = b;
         if (!b) {
-            system_config.terminal_ansi_statusbar = 0; // disable the toolbar if ansi is disabled....
-        } else {
+            toolbar_teardown_all(); // tear down ALL toolbars before leaving VT100 mode
+            system_config.terminal_ansi_statusbar = 0;
+        }
+        system_config.terminal_ansi_color = b;
+        if (b) {
             ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
         }
     }

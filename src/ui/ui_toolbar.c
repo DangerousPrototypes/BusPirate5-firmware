@@ -112,8 +112,10 @@ void toolbar_teardown(toolbar_t* tb) {
     toolbar_apply_scroll_region();
 
     /* Redraw all remaining toolbars at their new positions.
-     * We can't call toolbar_redraw_all() because we're already inside
-     * a prepare/release envelope, so inline the redraw loop. */
+     * We're inside a prepare/release envelope (pause=true), so only
+     * paint Core0 toolbars here.  Core1 toolbars are kicked after
+     * draw_release() lifts the pause. */
+    bool need_core1_update = false;
     uint16_t width = system_config.terminal_ansi_columns;
     for (uint8_t i = 0; i < toolbar_count; i++) {
         toolbar_t* t = toolbar_registry[i];
@@ -122,12 +124,16 @@ void toolbar_teardown(toolbar_t* tb) {
             uint16_t start_row = toolbar_get_start_row(t);
             t->def->draw(t, start_row, width);
         } else if (t->def->update_core1) {
-            toolbar_update_blocking();
+            need_core1_update = true;
         }
     }
 
     ui_term_cursor_restore();
     toolbar_draw_release();
+
+    if (need_core1_update) {
+        toolbar_update_blocking();
+    }
 }
 
 void toolbar_teardown_all(void) {
@@ -206,6 +212,8 @@ void toolbar_apply_scroll_region(void) {
 void toolbar_redraw_all(void) {
     toolbar_draw_prepare();
     ui_term_cursor_save();
+
+    bool need_core1_update = false;
     uint16_t width = system_config.terminal_ansi_columns;
     for (uint8_t i = 0; i < toolbar_count; i++) {
         toolbar_t* tb = toolbar_registry[i];
@@ -214,12 +222,24 @@ void toolbar_redraw_all(void) {
             uint16_t start_row = toolbar_get_start_row(tb);
             tb->def->draw(tb, start_row, width);
         } else if (tb->def->update_core1) {
-            /* Core1-rendered toolbar with no .draw — delegate automatically */
-            toolbar_update_blocking();
+            /* Note: don't call toolbar_update_blocking() per-toolbar here.
+             * We're inside a prepare/release envelope (pause=true), so the
+             * periodic path won't fire.  A single blocking call after the
+             * loop handles all Core1 toolbars in one cycle. */
+            need_core1_update = true;
         }
     }
+
     ui_term_cursor_restore();
-    toolbar_draw_release();
+    toolbar_draw_release();     /* clears pause — Core1 can run again */
+
+    /* Now that pause is lifted, kick one full Core1 render cycle.
+     * toolbar_update_blocking() sends BP_ICM_UPDATE_TOOLBARS to Core1,
+     * which calls toolbar_core1_begin_update(UI_UPDATE_ALL).  The state
+     * machine iterates all Core1 toolbars in subsequent service() calls. */
+    if (need_core1_update) {
+        toolbar_update_blocking();
+    }
 }
 
 void toolbar_draw_prepare(void) {

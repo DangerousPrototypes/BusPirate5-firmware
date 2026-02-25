@@ -184,7 +184,6 @@ void ui_statusbar_init(void) {
 void ui_statusbar_deinit(void) {
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
         system_config.terminal_ansi_statusbar = 0;
-        busy_wait_ms(100); // wait for the last statusbar update to finish
         toolbar_teardown(&statusbar_toolbar);
     }
 }

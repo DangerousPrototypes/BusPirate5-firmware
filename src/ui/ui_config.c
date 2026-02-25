@@ -170,18 +170,18 @@ uint32_t ui_config_action_ansi_color(uint32_t a, uint32_t b) {
 uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b) {
     BP_ASSERT_CORE0();
 
-    // NOTE: `b` is treated as a boolean value
     b = !!b;
 
-    system_config.terminal_ansi_statusbar = b;
     if (b) {
         if (!system_config.terminal_ansi_color) {
-            // enable ANSI color mode
             system_config.terminal_ansi_color = UI_TERM_FULL_COLOR;
         }
-        ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
-        ui_term_init();   // Initialize VT100 if ANSI terminal
-        toolbar_update_blocking();
+        system_config.terminal_ansi_statusbar = b;
+        ui_term_detect();
+        ui_term_init();
+        ui_statusbar_init(); // register + draw the statusbar toolbar
+    } else {
+        ui_statusbar_deinit(); // tear down + unregister (also clears the flag)
     }
 }
 

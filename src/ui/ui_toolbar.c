@@ -19,6 +19,22 @@
 static toolbar_t* toolbar_registry[TOOLBAR_MAX_COUNT];
 static uint8_t toolbar_count = 0;
 
+/* ── Core1 state (declared early so toolbar_draw_prepare can reference) ───── */
+
+/**
+ * @brief Core1 toolbar-update states.
+ * @details IDLE → RENDERING → DRAINING → RENDERING → … → IDLE
+ */
+enum {
+    TB_C1_IDLE,       ///< No update in progress
+    TB_C1_RENDERING,  ///< Finding and rendering the next toolbar
+    TB_C1_DRAINING,   ///< Waiting for tx_tb_buf to drain to USB
+};
+
+static uint8_t  tb_c1_state        = TB_C1_IDLE;
+static uint8_t  tb_c1_index        = 0;
+static uint32_t tb_c1_update_flags = 0;
+
 bool toolbar_register(toolbar_t* tb) {
     if (toolbar_count >= TOOLBAR_MAX_COUNT) {
         return false;
@@ -192,7 +208,12 @@ void toolbar_redraw_all(void) {
 
 void toolbar_draw_prepare(void) {
     system_config.terminal_toolbar_pause = true;
-    busy_wait_ms(1);
+    /* Spin until Core1 finishes any in-progress render cycle.
+     * Setting toolbar_pause above prevents new cycles from starting;
+     * we just need to wait for a running one to reach TB_C1_IDLE. */
+    while (tb_c1_state != TB_C1_IDLE) {
+        tight_loop_contents();
+    }
     system_config.terminal_hide_cursor = true;
     printf("%s", ui_term_cursor_hide());
 }
@@ -239,20 +260,6 @@ void toolbar_update_blocking(void) {
     icm_core0_send_message_synchronous(BP_ICM_UPDATE_TOOLBARS);
 }
 /* ── Core1 cooperative state machine ──────────────────────────────────── */
-
-/**
- * @brief Core1 toolbar-update states.
- * @details IDLE → RENDERING → DRAINING → RENDERING → … → IDLE
- */
-enum {
-    TB_C1_IDLE,       ///< No update in progress
-    TB_C1_RENDERING,  ///< Finding and rendering the next toolbar
-    TB_C1_DRAINING,   ///< Waiting for tx_tb_buf to drain to USB
-};
-
-static uint8_t  tb_c1_state        = TB_C1_IDLE;
-static uint8_t  tb_c1_index        = 0;
-static uint32_t tb_c1_update_flags = 0;
 
 void toolbar_core1_begin_update(uint32_t update_flags) {
     if (tb_c1_state != TB_C1_IDLE) {

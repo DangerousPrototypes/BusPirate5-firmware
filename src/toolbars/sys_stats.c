@@ -24,20 +24,12 @@ static uint32_t sys_stats_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
                                           uint16_t start_row, uint16_t width,
                                           uint32_t update_flags);
 
-/**
- * @brief .draw callback — delegates to Core1 via toolbar_update_blocking().
- */
-static void sys_stats_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
-    (void)tb; (void)start_row; (void)width;
-    toolbar_update_blocking();
-}
-
 static toolbar_t sys_stats_toolbar = {
     .name       = "sys_stats",
     .height     = SYS_STATS_HEIGHT,
     .enabled    = false,
     .owner_data = NULL,
-    .draw       = sys_stats_draw_cb,
+    .draw       = NULL, /* Core1-rendered: toolbar_redraw_all() auto-delegates */
     .update_core1 = sys_stats_update_core1_cb,
     .destroy    = NULL,
 };
@@ -108,16 +100,7 @@ bool sys_stats_start(void) {
     if (sys_stats_toolbar.enabled) {
         return true; /* already active */
     }
-    /* Push content up before shrinking scroll region */
-    for (uint16_t i = 0; i < SYS_STATS_HEIGHT; i++) {
-        printf("\r\n");
-    }
-    if (!toolbar_activate(&sys_stats_toolbar)) {
-        return false;
-    }
-    /* Reposition cursor within the new scroll region */
-    ui_term_cursor_position(toolbar_scroll_bottom(), 0);
-    return true;
+    return toolbar_activate(&sys_stats_toolbar);
 }
 
 void sys_stats_stop(void) {

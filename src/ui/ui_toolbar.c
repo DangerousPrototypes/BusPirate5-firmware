@@ -69,6 +69,10 @@ static void toolbar_unregister(toolbar_t* tb) {
 }
 
 bool toolbar_activate(toolbar_t* tb) {
+    /* Push content up to make room before the scroll region shrinks */
+    for (uint16_t i = 0; i < tb->height; i++) {
+        printf("\r\n");
+    }
     tb->enabled = true;
     if (!toolbar_register(tb)) {
         tb->enabled = false;
@@ -76,7 +80,22 @@ bool toolbar_activate(toolbar_t* tb) {
     }
     toolbar_apply_scroll_region();
     toolbar_redraw_all();
+    /* Reposition cursor within the new (smaller) scroll region */
+    ui_term_cursor_position(toolbar_scroll_bottom(), 0);
     return true;
+}
+
+/**
+ * @brief Erase all rows currently occupied by toolbars.
+ * @details Must be called while layout is still intact (before unregister).
+ */
+static void toolbar_erase_area(void) {
+    uint16_t rows = system_config.terminal_ansi_rows;
+    uint16_t top  = toolbar_scroll_bottom() + 1;
+    for (uint16_t r = top; r <= rows; r++) {
+        ui_term_cursor_position(r, 0);
+        ui_term_erase_line();
+    }
 }
 
 void toolbar_teardown(toolbar_t* tb) {
@@ -86,25 +105,24 @@ void toolbar_teardown(toolbar_t* tb) {
     toolbar_draw_prepare();
     ui_term_cursor_save();
 
-    /* Erase the entire toolbar area (old layout, before unregister) */
-    uint16_t rows = system_config.terminal_ansi_rows;
-    uint16_t old_top = toolbar_scroll_bottom() + 1;
-    for (uint16_t r = old_top; r <= rows; r++) {
-        ui_term_cursor_position(r, 0);
-        ui_term_erase_line();
-    }
+    toolbar_erase_area();
 
     toolbar_unregister(tb);
     tb->enabled = false;
     toolbar_apply_scroll_region();
 
-    /* Redraw all remaining toolbars at their new positions */
+    /* Redraw all remaining toolbars at their new positions.
+     * We can't call toolbar_redraw_all() because we're already inside
+     * a prepare/release envelope, so inline the redraw loop. */
     uint16_t width = system_config.terminal_ansi_columns;
     for (uint8_t i = 0; i < toolbar_count; i++) {
         toolbar_t* t = toolbar_registry[i];
-        if (t->enabled && t->draw) {
+        if (!t->enabled) continue;
+        if (t->draw) {
             uint16_t start_row = toolbar_get_start_row(t);
             t->draw(t, start_row, width);
+        } else if (t->update_core1) {
+            toolbar_update_blocking();
         }
     }
 
@@ -119,13 +137,7 @@ void toolbar_teardown_all(void) {
     toolbar_draw_prepare();
     ui_term_cursor_save();
 
-    /* Erase the entire toolbar area */
-    uint16_t rows = system_config.terminal_ansi_rows;
-    uint16_t old_top = toolbar_scroll_bottom() + 1;
-    for (uint16_t r = old_top; r <= rows; r++) {
-        ui_term_cursor_position(r, 0);
-        ui_term_erase_line();
-    }
+    toolbar_erase_area();
 
     /* Tear down each toolbar (reverse order so indices stay valid) */
     while (toolbar_count > 0) {
@@ -197,9 +209,13 @@ void toolbar_redraw_all(void) {
     uint16_t width = system_config.terminal_ansi_columns;
     for (uint8_t i = 0; i < toolbar_count; i++) {
         toolbar_t* tb = toolbar_registry[i];
-        if (tb->enabled && tb->draw) {
+        if (!tb->enabled) continue;
+        if (tb->draw) {
             uint16_t start_row = toolbar_get_start_row(tb);
             tb->draw(tb, start_row, width);
+        } else if (tb->update_core1) {
+            /* Core1-rendered toolbar with no .draw — delegate automatically */
+            toolbar_update_blocking();
         }
     }
     ui_term_cursor_restore();

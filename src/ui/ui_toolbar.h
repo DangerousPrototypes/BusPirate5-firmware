@@ -69,11 +69,11 @@ typedef struct toolbar_t {
 } toolbar_t;
 
 /**
- * @brief Enable, register, apply scroll region, and redraw all toolbars.
- * @details After registering the toolbar and applying the new scroll region,
- *          calls toolbar_redraw_all() so every toolbar (including the new one)
- *          is painted at its correct position.  Callers only need to push
- *          blank lines beforehand and reposition the cursor afterward.
+ * @brief Push blank lines, register, apply scroll region, redraw, and reposition cursor.
+ * @details Pushes \\r\\n × height to scroll existing content up, registers the toolbar,
+ *          applies the new scroll region, redraws all toolbars, and repositions the
+ *          cursor at the bottom of the new scroll area.  After this returns true,
+ *          the toolbar is fully visible and the cursor is in the correct position.
  * @param tb  Toolbar to activate.
  * @return true on success, false if the registry is full.
  */

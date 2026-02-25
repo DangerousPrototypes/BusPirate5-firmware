@@ -245,16 +245,12 @@ bool logic_bar_start(void) {
     if (!fala_notify_register(&logic_bar_update)) {
         return false;
     }
-    // Push command text up BEFORE shrinking the scroll region
-    frame_blank(LOGIC_BAR_HEIGHT);
     logic_bar_visible = true;
     if (!toolbar_activate(&logic_bar_toolbar)) {
         fala_notify_unregister(&logic_bar_update);
         logic_bar_visible = false;
         return false;
     }
-    // Cursor is now outside the scroll region — move it back in
-    ui_term_cursor_position(toolbar_scroll_bottom(), 0);
     return true;
 }
 
@@ -270,15 +266,11 @@ void logic_bar_hide(void) {
 }
 
 void logic_bar_show(void) {
-    // Push command text up BEFORE shrinking the scroll region
-    frame_blank(LOGIC_BAR_HEIGHT);
     logic_bar_visible = true;
     if (!toolbar_activate(&logic_bar_toolbar)) {
         logic_bar_visible = false;
         return;
     }
-    // Cursor is now outside the scroll region — move it back in
-    ui_term_cursor_position(toolbar_scroll_bottom(), 0);
 }
 
 uint32_t sample_position = 0;

@@ -158,16 +158,10 @@ void toolbar_cmd_handler(struct command_result* res) {
                 height = TEST_TOOLBAR_MAX_HEIGHT;
             }
             test_toolbar.height = (uint16_t)height;
-            // Push content up before shrinking the scroll region
-            for (uint16_t i = 0; i < height; i++) {
-                printf("\r\n");
-            }
             if (!toolbar_activate(&test_toolbar)) {
                 printf("Registry full — cannot add test toolbar\r\n");
                 return;
             }
-            // Cursor is outside the new scroll region — move it back in
-            ui_term_cursor_position(toolbar_scroll_bottom(), 0);
             test_toolbar_active = true;
             printf("Test toolbar created (%u lines)\r\n", (unsigned)height);
             break;

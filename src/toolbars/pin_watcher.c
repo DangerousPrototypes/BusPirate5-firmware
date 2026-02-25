@@ -96,24 +96,17 @@ static uint32_t pin_watcher_update_core1_cb(toolbar_t* tb, char* buf, size_t buf
  * .draw is called from Core0 during toolbar_redraw_all() and toolbar_teardown().
  * It is responsible for painting the toolbar's content.
  *
- * For toolbars that use the Core1 rendering path (like this one), .draw is
- * a one-liner that delegates to toolbar_update_blocking().  This sends a
- * message to Core1, which calls our .update_core1 callback with UI_UPDATE_ALL
- * flags, producing a full paint.
+ * For Core1-rendered toolbars (like this one), set .draw = NULL.  The framework
+ * auto-detects .update_core1 and calls toolbar_update_blocking() on your behalf.
  *
- * For toolbars that use the Core0 printf path (like test_toolbar or logic_bar),
- * .draw would contain the actual printf rendering code directly.
+ * For Core0-only toolbars (like test_toolbar or logic_bar), .draw should contain
+ * the actual printf rendering code.
  *
  * IMPORTANT: .draw is called inside a prepare/release envelope — cursor is
  * already saved and hidden, toolbar_pause is set.  Do NOT call
  * toolbar_draw_prepare()/toolbar_draw_release() from here.
- */
-static void pin_watcher_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
-    (void)tb; (void)start_row; (void)width;
-    toolbar_update_blocking();
-}
-
-/* ── Step 4: The toolbar_t Struct ────────────────────────────────────────────
+ *
+ * ── Step 4: The toolbar_t Struct ────────────────────────────────────────────
  *
  * This is the toolbar descriptor — the single source of truth for how this
  * toolbar integrates with the registry.  It is file-static and owned by this
@@ -130,9 +123,15 @@ static void pin_watcher_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t widt
  *   .owner_data    — Opaque pointer for toolbar-private state.  Useful if you
  *                    need to share state between callbacks without file-scope globals.
  *                    NULL if not needed (like this toolbar).
- *   .draw          — Core0 full-paint callback (see Step 3 above)
- *   .update_core1  — Core1 periodic rendering callback (see Step 5 below).
- *                    Set to NULL for Core0-only toolbars (test_toolbar, logic_bar).
+ *   .draw          — Core0 full-paint callback (see Step 3 above).
+ *                    For Core1-rendered toolbars, set to NULL — the framework
+ *                    auto-detects .update_core1 and delegates via
+ *                    toolbar_update_blocking().
+ *                    For Core0-only toolbars (test_toolbar, logic_bar), provide
+ *                    a function that paints using printf.
+ *   .update_core1  — Core1 periodic rendering callback (see Step 7 below).
+ *                    Must use only _buf() variants and snprintf — no printf.
+ *                    Set to NULL for Core0-only toolbars.
  *   .destroy       — Called on unregister.  Free resources, stop timers, etc.
  *                    NULL if no cleanup is needed.
  */
@@ -142,7 +141,7 @@ static toolbar_t pin_watcher_toolbar = {
     .enabled      = false,
     .anchor_bottom = false,      // stacks above statusbar in registration order
     .owner_data   = NULL,
-    .draw         = pin_watcher_draw_cb,
+    .draw         = NULL, /* Core1-rendered: toolbar_redraw_all() auto-delegates */
     .update_core1 = pin_watcher_update_core1_cb,
     .destroy      = NULL,        // no cleanup needed
 };
@@ -155,13 +154,12 @@ static toolbar_t pin_watcher_toolbar = {
  * ### Start Pattern
  *
  *   1. Guard: if already enabled, return early
- *   2. Push blank lines: printf("\r\n") × height.  This scrolls existing
- *      content up to make visual room BEFORE the scroll region shrinks.
- *      Without this, existing text would be hidden behind the toolbar.
- *   3. Call toolbar_activate() — this registers the toolbar, recalculates
- *      the scroll region, and calls toolbar_redraw_all() to paint everything.
- *   4. Reposition cursor: after toolbar_activate() the cursor may be outside
- *      the new (smaller) scroll region.  Move it to toolbar_scroll_bottom().
+ *   2. Call toolbar_activate() — this handles everything:
+ *      - Pushes \r\n × height to scroll content up and make room
+ *      - Registers the toolbar in the registry
+ *      - Recalculates the scroll region
+ *      - Calls toolbar_redraw_all() to paint all toolbars
+ *      - Repositions the cursor at toolbar_scroll_bottom()
  *
  * ### Stop Pattern
  *
@@ -174,16 +172,7 @@ bool pin_watcher_start(void) {
     if (pin_watcher_toolbar.enabled) {
         return true; /* already active */
     }
-    /* Push content up before shrinking scroll region */
-    for (uint16_t i = 0; i < PIN_WATCHER_HEIGHT; i++) {
-        printf("\r\n");
-    }
-    if (!toolbar_activate(&pin_watcher_toolbar)) {
-        return false;
-    }
-    /* Reposition cursor within the new scroll region */
-    ui_term_cursor_position(toolbar_scroll_bottom(), 0);
-    return true;
+    return toolbar_activate(&pin_watcher_toolbar);
 }
 
 void pin_watcher_stop(void) {

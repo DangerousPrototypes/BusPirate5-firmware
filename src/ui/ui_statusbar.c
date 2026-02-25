@@ -23,16 +23,6 @@ static uint32_t statusbar_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
                                           uint16_t start_row, uint16_t width,
                                           uint32_t update_flags);
 
-/**
- * @brief .draw callback — triggers a blocking full repaint via Core1.
- * @details Called from toolbar_redraw_all() on Core0.  Sends an ICM message
- *          to Core1 which renders into tx_tb_buf and drains to USB.
- */
-static void statusbar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
-    (void)tb; (void)start_row; (void)width;
-    toolbar_update_blocking();
-}
-
 /* Toolbar descriptor for this statusbar — registered in ui_statusbar_init(). */
 static toolbar_t statusbar_toolbar = {
     .name    = "statusbar",
@@ -40,7 +30,7 @@ static toolbar_t statusbar_toolbar = {
     .enabled = false,
     .anchor_bottom = true,
     .owner_data = NULL,
-    .draw    = statusbar_draw_cb,
+    .draw    = NULL, /* Core1-rendered: toolbar_redraw_all() auto-delegates */
     .update_core1 = statusbar_update_core1_cb,
     .destroy = NULL,
 };
@@ -170,13 +160,7 @@ static uint32_t statusbar_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
 
 void ui_statusbar_init(void) {
     if (system_config.terminal_ansi_color && system_config.terminal_ansi_statusbar) {
-        /* Push content up to make room (harmless on fresh-screen init) */
-        for (uint16_t i = 0; i < STATUSBAR_HEIGHT; i++) {
-            printf("\r\n");
-        }
         toolbar_activate(&statusbar_toolbar);
-        /* Reposition cursor within the new scroll region */
-        ui_term_cursor_position(toolbar_scroll_bottom(), 0);
     }
 }
 

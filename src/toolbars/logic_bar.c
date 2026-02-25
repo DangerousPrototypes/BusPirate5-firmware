@@ -43,13 +43,20 @@ static void logic_bar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width)
 bool logic_bar_visible = false;
 
 /* Toolbar descriptor — registered when the logic bar is started. */
-static toolbar_t logic_bar_toolbar = {
+static const toolbar_def_t logic_bar_toolbar_def = {
     .name    = "logic_analyzer",
     .height  = LOGIC_BAR_HEIGHT,
-    .enabled = false,
-    .owner_data = NULL,
+    .anchor_bottom = false,
     .draw    = logic_bar_draw_cb,
+    .update_core1 = NULL,
     .destroy = NULL,
+};
+
+static toolbar_t logic_bar_toolbar = {
+    .def        = &logic_bar_toolbar_def,
+    .height     = LOGIC_BAR_HEIGHT,
+    .enabled    = false,
+    .owner_data = NULL,
 };
 
 void logic_bar_config(char low, char high) {

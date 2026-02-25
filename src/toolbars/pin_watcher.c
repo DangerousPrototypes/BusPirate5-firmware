@@ -135,15 +135,20 @@ static uint32_t pin_watcher_update_core1_cb(toolbar_t* tb, char* buf, size_t buf
  *   .destroy       — Called on unregister.  Free resources, stop timers, etc.
  *                    NULL if no cleanup is needed.
  */
-static toolbar_t pin_watcher_toolbar = {
+static const toolbar_def_t pin_watcher_toolbar_def = {
     .name         = "pin_watcher",
     .height       = PIN_WATCHER_HEIGHT,
-    .enabled      = false,
     .anchor_bottom = false,      // stacks above statusbar in registration order
-    .owner_data   = NULL,
     .draw         = NULL, /* Core1-rendered: toolbar_redraw_all() auto-delegates */
     .update_core1 = pin_watcher_update_core1_cb,
     .destroy      = NULL,        // no cleanup needed
+};
+
+static toolbar_t pin_watcher_toolbar = {
+    .def        = &pin_watcher_toolbar_def,
+    .height     = PIN_WATCHER_HEIGHT,
+    .enabled    = false,
+    .owner_data = NULL,
 };
 
 /* ── Step 5: Start / Stop / Is_Active Lifecycle ──────────────────────────────

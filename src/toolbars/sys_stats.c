@@ -24,14 +24,20 @@ static uint32_t sys_stats_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
                                           uint16_t start_row, uint16_t width,
                                           uint32_t update_flags);
 
+static const toolbar_def_t sys_stats_toolbar_def = {
+    .name         = "sys_stats",
+    .height       = SYS_STATS_HEIGHT,
+    .anchor_bottom = false,
+    .draw         = NULL, /* Core1-rendered: toolbar_redraw_all() auto-delegates */
+    .update_core1 = sys_stats_update_core1_cb,
+    .destroy      = NULL,
+};
+
 static toolbar_t sys_stats_toolbar = {
-    .name       = "sys_stats",
+    .def        = &sys_stats_toolbar_def,
     .height     = SYS_STATS_HEIGHT,
     .enabled    = false,
     .owner_data = NULL,
-    .draw       = NULL, /* Core1-rendered: toolbar_redraw_all() auto-delegates */
-    .update_core1 = sys_stats_update_core1_cb,
-    .destroy    = NULL,
 };
 
 /**

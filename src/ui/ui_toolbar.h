@@ -28,23 +28,27 @@
 
 #define TOOLBAR_MAX_COUNT 4 ///< Maximum number of simultaneously registered toolbars
 
+/* Forward declaration — toolbar_t is defined after toolbar_def_t */
+typedef struct toolbar_t toolbar_t;
+
 /**
- * @brief Toolbar descriptor.
- * @details Filled in by the toolbar owner and passed to toolbar_register().
+ * @brief Immutable toolbar definition — lives in FLASH.
+ * @details Contains all fields that never change after initialisation:
+ *          name, default height, anchor flag, and all callback pointers.
+ *          Each toolbar module declares one `static const toolbar_def_t`
+ *          and points its mutable `toolbar_t.def` at it.
  */
-typedef struct toolbar_t {
+typedef struct toolbar_def {
     const char* name;     ///< Unique name string (e.g. "statusbar", "logic_analyzer")
-    uint16_t height;      ///< Number of terminal lines this toolbar occupies
-    bool enabled;         ///< Currently active / visible
+    uint16_t height;      ///< Default number of terminal lines this toolbar occupies
     bool anchor_bottom;   ///< Always insert at bottom of stack (index 0)
-    void* owner_data;     ///< Opaque pointer for the toolbar owner's private state
 
     /**
      * @brief Full redraw of this toolbar.
      * @param start_row  First row this toolbar occupies (1-based).
      * @param width      Terminal column width.
      */
-    void (*draw)(struct toolbar_t* tb, uint16_t start_row, uint16_t width);
+    void (*draw)(toolbar_t* tb, uint16_t start_row, uint16_t width);
 
     /**
      * @brief Core1 periodic update — render into a buffer (no printf!).
@@ -59,14 +63,26 @@ typedef struct toolbar_t {
      * @param update_flags UI_UPDATE_* bitmask from the monitor subsystem.
      * @return Number of bytes written, or 0 to skip this cycle.
      */
-    uint32_t (*update_core1)(struct toolbar_t* tb, char* buf, size_t buf_len,
+    uint32_t (*update_core1)(toolbar_t* tb, char* buf, size_t buf_len,
                              uint16_t start_row, uint16_t width, uint32_t update_flags);
 
     /**
      * @brief Called when the toolbar is unregistered; release any resources.
      */
-    void (*destroy)(struct toolbar_t* tb);
-} toolbar_t;
+    void (*destroy)(toolbar_t* tb);
+} toolbar_def_t;
+
+/**
+ * @brief Mutable toolbar runtime state — lives in RAM.
+ * @details Only the fields that actually change at runtime are kept here.
+ *          The immutable descriptor lives in FLASH via the `def` pointer.
+ */
+struct toolbar_t {
+    const toolbar_def_t* def;  ///< Pointer to immutable FLASH descriptor
+    uint16_t height;           ///< Runtime height (copied from def, can be overridden)
+    bool enabled;              ///< Currently active / visible
+    void* owner_data;          ///< Opaque pointer for the toolbar owner's private state
+};
 
 /**
  * @brief Push blank lines, register, apply scroll region, redraw, and reposition cursor.

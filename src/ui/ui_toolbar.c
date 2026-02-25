@@ -39,7 +39,7 @@ static bool toolbar_register(toolbar_t* tb) {
     if (toolbar_count >= TOOLBAR_MAX_COUNT) {
         return false;
     }
-    if (tb->anchor_bottom) {
+    if (tb->def->anchor_bottom) {
         /* Insert at index 0 — bottommost position on screen */
         for (uint8_t i = toolbar_count; i > 0; i--) {
             toolbar_registry[i] = toolbar_registry[i - 1];
@@ -55,8 +55,8 @@ static bool toolbar_register(toolbar_t* tb) {
 static void toolbar_unregister(toolbar_t* tb) {
     for (uint8_t i = 0; i < toolbar_count; i++) {
         if (toolbar_registry[i] == tb) {
-            if (tb->destroy) {
-                tb->destroy(tb);
+            if (tb->def->destroy) {
+                tb->def->destroy(tb);
             }
             // Shift remaining entries down
             for (uint8_t j = i; j < toolbar_count - 1; j++) {
@@ -118,10 +118,10 @@ void toolbar_teardown(toolbar_t* tb) {
     for (uint8_t i = 0; i < toolbar_count; i++) {
         toolbar_t* t = toolbar_registry[i];
         if (!t->enabled) continue;
-        if (t->draw) {
+        if (t->def->draw) {
             uint16_t start_row = toolbar_get_start_row(t);
-            t->draw(t, start_row, width);
-        } else if (t->update_core1) {
+            t->def->draw(t, start_row, width);
+        } else if (t->def->update_core1) {
             toolbar_update_blocking();
         }
     }
@@ -142,8 +142,8 @@ void toolbar_teardown_all(void) {
     /* Tear down each toolbar (reverse order so indices stay valid) */
     while (toolbar_count > 0) {
         toolbar_t* tb = toolbar_registry[toolbar_count - 1];
-        if (tb->destroy) {
-            tb->destroy(tb);
+        if (tb->def->destroy) {
+            tb->def->destroy(tb);
         }
         tb->enabled = false;
         toolbar_registry[--toolbar_count] = NULL;
@@ -210,10 +210,10 @@ void toolbar_redraw_all(void) {
     for (uint8_t i = 0; i < toolbar_count; i++) {
         toolbar_t* tb = toolbar_registry[i];
         if (!tb->enabled) continue;
-        if (tb->draw) {
+        if (tb->def->draw) {
             uint16_t start_row = toolbar_get_start_row(tb);
-            tb->draw(tb, start_row, width);
-        } else if (tb->update_core1) {
+            tb->def->draw(tb, start_row, width);
+        } else if (tb->def->update_core1) {
             /* Core1-rendered toolbar with no .draw — delegate automatically */
             toolbar_update_blocking();
         }
@@ -262,10 +262,10 @@ void toolbar_print_registry(void) {
         toolbar_t* tb = toolbar_registry[i];
         uint16_t start = toolbar_get_start_row(tb);
         printf("  [%u] \"%s\"  height=%u  enabled=%u  row=%u..%u  draw=%s  core1=%s\r\n",
-               i, tb->name, tb->height, tb->enabled,
+               i, tb->def->name, tb->height, tb->enabled,
                start, start + tb->height - 1,
-               tb->draw ? "yes" : "no",
-               tb->update_core1 ? "yes" : "no");
+               tb->def->draw ? "yes" : "no",
+               tb->def->update_core1 ? "yes" : "no");
     }
 }
 /* ── Core0 blocking update request ──────────────────────────────────────────── */
@@ -310,7 +310,7 @@ void toolbar_core1_service(void) {
     while (tb_c1_index < toolbar_count) {
         toolbar_t* tb = toolbar_registry[tb_c1_index];
 
-        if (tb->enabled && tb->update_core1) {
+        if (tb->enabled && tb->def->update_core1) {
             uint16_t start_row = toolbar_get_start_row(tb);
             if (start_row == 0) {
                 tb_c1_index++;
@@ -326,7 +326,7 @@ void toolbar_core1_service(void) {
             len += ui_term_cursor_hide_buf(&tx_tb_buf[len], buf_len - len);
 
             /* Let the toolbar render its content */
-            uint32_t content = tb->update_core1(
+            uint32_t content = tb->def->update_core1(
                 tb, &tx_tb_buf[len], buf_len - len,
                 start_row, width, tb_c1_update_flags);
 

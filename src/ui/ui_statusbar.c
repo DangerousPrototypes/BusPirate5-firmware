@@ -24,15 +24,20 @@ static uint32_t statusbar_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
                                           uint32_t update_flags);
 
 /* Toolbar descriptor for this statusbar — registered in ui_statusbar_init(). */
-static toolbar_t statusbar_toolbar = {
-    .name    = "statusbar",
-    .height  = STATUSBAR_HEIGHT,
-    .enabled = false,
+static const toolbar_def_t statusbar_toolbar_def = {
+    .name          = "statusbar",
+    .height        = STATUSBAR_HEIGHT,
     .anchor_bottom = true,
+    .draw          = NULL, /* Core1-rendered: toolbar_redraw_all() auto-delegates */
+    .update_core1  = statusbar_update_core1_cb,
+    .destroy       = NULL,
+};
+
+static toolbar_t statusbar_toolbar = {
+    .def        = &statusbar_toolbar_def,
+    .height     = STATUSBAR_HEIGHT,
+    .enabled    = false,
     .owner_data = NULL,
-    .draw    = NULL, /* Core1-rendered: toolbar_redraw_all() auto-delegates */
-    .update_core1 = statusbar_update_core1_cb,
-    .destroy = NULL,
 };
 
 static uint32_t ui_statusbar_info(char* buf, size_t buffLen) {

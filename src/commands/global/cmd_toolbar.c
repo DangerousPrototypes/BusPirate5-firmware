@@ -86,13 +86,20 @@ static bool test_toolbar_active = false;
 
 static void test_toolbar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width);
 
+static const toolbar_def_t test_toolbar_def = {
+    .name         = "test",
+    .height       = 0,            /* default; overridden at runtime in toolbar_t */
+    .anchor_bottom = false,
+    .draw         = test_toolbar_draw_cb,
+    .update_core1 = NULL,
+    .destroy      = NULL,
+};
+
 static toolbar_t test_toolbar = {
-    .name       = "test",
-    .height     = 0,            /* set dynamically */
+    .def        = &test_toolbar_def,
+    .height     = 0,            /* set dynamically before toolbar_activate() */
     .enabled    = false,
     .owner_data = NULL,
-    .draw       = test_toolbar_draw_cb,
-    .destroy    = NULL,
 };
 
 /**

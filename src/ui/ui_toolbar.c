@@ -86,6 +86,22 @@ void toolbar_apply_scroll_region(void) {
     ui_term_scroll_region(1, bottom);
 }
 
+void toolbar_erase(const toolbar_t* tb) {
+    if (!system_config.terminal_ansi_color) {
+        return;
+    }
+    uint16_t row = toolbar_get_start_row(tb);
+    if (row == 0) {
+        return; // not registered or disabled
+    }
+    ui_term_cursor_save();
+    for (uint16_t i = 0; i < tb->height; i++) {
+        ui_term_cursor_position(row + i, 0);
+        ui_term_erase_line();
+    }
+    ui_term_cursor_restore();
+}
+
 void toolbar_redraw_all(void) {
     uint16_t width = system_config.terminal_ansi_columns;
     for (uint8_t i = 0; i < toolbar_count; i++) {

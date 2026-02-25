@@ -76,9 +76,13 @@ static const char * const mode_usage[] = {
     "m [-h] [mode] [-h] [mode_flags]",
     "Change mode with menu:%s m",
     "Change mode to UART:%s m uart",
-    "Change mode to UART with baud 9600:%s m uart -b 9600",
+    "Change mode to UART 9600 baud + defaults:%s m uart -b 9600",
+    "Change to UART with parity:%s m uart -b 115200 -p even",
+    "Change mode to SPI 100kHz + defaults:%s m spi -s 100",
     "m command help:%s m -h",
-    "m uart mode help:%s m uart -h",
+    "m mode help:%s m uart -h",
+    "",
+    "*If speed flag is provided, other values will use defaults."
 };
 
 const bp_command_def_t mode_def = {

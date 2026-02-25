@@ -114,7 +114,7 @@ uint32_t ui_pin_render_labels(char* buf, size_t buf_len, pin_render_flags_t flag
                         len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\t");
                     } else {
                         if (flags & PIN_RENDER_CLEAR_CELLS) {
-                            len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "\033[8X");
+                            len += ui_term_erase_chars_buf(buf + len, REM(len, buf_len), 8);
                         }
                         len += (uint32_t)snprintf(buf + len, REM(len, buf_len), "-\t");
                     }

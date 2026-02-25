@@ -105,6 +105,14 @@ uint16_t toolbar_get_start_row(const toolbar_t* tb);
 void toolbar_apply_scroll_region(void);
 
 /**
+ * @brief Erase a toolbar's screen area (save/restore cursor, clear each row).
+ * @details Must be called while the toolbar is still registered so
+ *          toolbar_get_start_row() can locate it.  Uses printf path (Core0 only).
+ * @param tb  Toolbar whose rows should be erased.
+ */
+void toolbar_erase(const toolbar_t* tb);
+
+/**
  * @brief Redraw all enabled toolbars (full repaint).
  */
 void toolbar_redraw_all(void);

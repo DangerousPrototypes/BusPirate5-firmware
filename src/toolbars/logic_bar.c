@@ -71,22 +71,11 @@ void draw_release(void) {
     system_config.terminal_ansi_statusbar_pause = false;
 }
 
-// TODO: move to a central dispatch
-uint16_t draw_get_position_index(uint16_t height) {
-    /* Use the toolbar registry so position is consistent with all enabled bars. */
-    uint16_t start_row = toolbar_get_start_row(&logic_bar_toolbar);
-    if (start_row > 0) {
-        return start_row - 1; /* convert to 0-based for legacy callers */
-    }
-    /* Fallback: compute manually if not registered yet */
-    return system_config.terminal_ansi_rows - ((height) + (system_config.terminal_ansi_statusbar * 4));
-}
-
 void graph_timeline(uint16_t position, uint32_t start_pos) {
     // draw timing marks
-    printf("%s\033[%d;0H\033[K   \t%d\t\t%d\t\t%d\t\t%d\t\t%d",
-           ui_term_color_reset(),
-           position,
+    ui_term_cursor_position(position, 0);
+    ui_term_erase_line();
+    printf("   \t%d\t\t%d\t\t%d\t\t%d\t\t%d",
            start_pos + 6,
            start_pos + 6 + (16 * 1),
            start_pos + 6 + (16 * 2),
@@ -110,7 +99,8 @@ void graph_logic_lines_1(uint16_t position, uint32_t sample_ptr) {
             } else {
                 printf("_");
             }
-            printf("\033[1B\033[1D"); // move one line down, one position left
+            ui_term_cursor_move_down(1);
+            ui_term_cursor_move_left(1);
         }
     }
 }
@@ -134,8 +124,6 @@ void graph_logic_lines_2(uint16_t position, uint32_t sample_ptr) {
             } else {
                 printf("%c", logic_graph_low_character);
             }
-
-            // printf("\033[1B\033[1D"); // move one line down, one position left
         }
     }
 }
@@ -163,12 +151,12 @@ void logic_bar_redraw(uint32_t start_pos, uint32_t total_samples) {
     ui_term_cursor_save();
 
     // draw timing marks
-    uint16_t position = draw_get_position_index(LOGIC_BAR_HEIGHT);
-    graph_timeline(position + 2, start_pos);
+    uint16_t start_row = toolbar_get_start_row(&logic_bar_toolbar);
+    graph_timeline(start_row + 1, start_pos);
 
     // draw the logic bars
-    // graph_logic_lines_1(position+3, sample_ptr);
-    graph_logic_lines_2(position + 3, sample_ptr);
+    // graph_logic_lines_1(start_row+2, sample_ptr);
+    graph_logic_lines_2(start_row + 2, sample_ptr);
 
     // restore cursor
     ui_term_cursor_restore();
@@ -187,7 +175,9 @@ void frame_blank(uint16_t height) {
 // a little header thing
 // +------------------+
 void frame_top(uint16_t position, uint16_t width) {
-    printf("\033[%d;0H\033[K\u253C", position); // row 10 of LA
+    ui_term_cursor_position(position, 0);
+    ui_term_erase_line();
+    printf("\u253C");
     for (int i = 0; i < width - 2; i++) {
         printf("\u2500");
     }
@@ -196,23 +186,26 @@ void frame_top(uint16_t position, uint16_t width) {
 
 // todo: pass actual sample numbers
 void frame_sample_numbers(uint16_t position) {
-    printf("\033[%d;0H\033[K   \t0000\t\t1000\t\t2000\t\t4000\t\t5000", position);
+    ui_term_cursor_position(position, 0);
+    ui_term_erase_line();
+    printf("   \t0000\t\t1000\t\t2000\t\t4000\t\t5000");
 }
 
 void frame_vertical_labels(uint16_t position) {
     for (int i = 0; i < 8; i++) { // row 8 to 1 of LA
-        printf("\033[%d;0H\033[K", position + i);
+        ui_term_cursor_position(position + i, 0);
+        ui_term_erase_line();
         ui_term_color_text_background(hw_pin_label_ordered_color[i + 1][0], hw_pin_label_ordered_color[i + 1][1]);
-        printf(" %d%s\033[76C", i, ui_term_color_reset());
+        printf(" %d%s", i, ui_term_color_reset());
+        ui_term_cursor_move_right(76);
         ui_term_color_text_background(hw_pin_label_ordered_color[i + 1][0], hw_pin_label_ordered_color[i + 1][1]);
         printf("%d %s", i, ui_term_color_reset());
     }
 }
 
 void logic_bar_draw_frame(void) {
-    // height of the logic bar, plus height of the status bar if active
-    // Position comes from the toolbar registry via draw_get_position_index()
-    uint16_t toolbar_position_index = draw_get_position_index(LOGIC_BAR_HEIGHT);
+    // Get position from the toolbar registry
+    uint16_t start_row = toolbar_get_start_row(&logic_bar_toolbar);
 
     // freeze terminal updates
     draw_prepare();
@@ -222,20 +215,22 @@ void logic_bar_draw_frame(void) {
 
     // set scroll region, disable line wrap — scroll bottom comes from registry
     uint16_t scroll_bottom = toolbar_scroll_bottom();
-    printf("\033[%d;%dr\033[7l", 1, scroll_bottom);
+    ui_term_scroll_region(1, scroll_bottom);
+    ui_term_line_wrap_disable();
 
     // draw box top
-    frame_top(toolbar_position_index + 1, LOGIC_BAR_WIDTH);
+    frame_top(start_row, LOGIC_BAR_WIDTH);
 
     // sample numbers, row 9 of LA
-    frame_sample_numbers(toolbar_position_index + 2);
+    frame_sample_numbers(start_row + 1);
 
     // box left and right
-    // 8 bars start at monitor area (+3)
-    frame_vertical_labels(toolbar_position_index + 3);
+    // 8 bars start at monitor area (+2)
+    frame_vertical_labels(start_row + 2);
 
     // return to non-scroll area
-    printf("\033[%d;0H\033[K", toolbar_position_index); // return to non-scroll area
+    ui_term_cursor_position(start_row - 1, 0);
+    ui_term_erase_line();
     draw_release();
 }
 
@@ -244,22 +239,17 @@ void logic_bar_detach(void) {
     //  freeze terminal updates
     draw_prepare();
 
-    // save cursor
-    // printf("\0337");
+    // Erase the toolbar area while still registered (so start_row is known)
+    toolbar_erase(&logic_bar_toolbar);
 
-    // set scroll region to restored state (without this toolbar)
-    // After unregister, scroll_bottom will exclude logic bar height
-    uint16_t restore_bottom = toolbar_scroll_bottom() + LOGIC_BAR_HEIGHT;
-    printf("\033[%d;%dr\033[7l\r\n\r\n", 1, restore_bottom);
+    // Unregister so scroll math is correct
+    toolbar_unregister(&logic_bar_toolbar);
+    logic_bar_toolbar.enabled = false;
 
-    frame_blank(LOGIC_BAR_HEIGHT);
-
-    // restore cursor
-    // printf("\0338");
+    // Restore scroll region
+    toolbar_apply_scroll_region();
 
     draw_release();
-
-    printf("\033[?25h\033[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); // back to bottom
 }
 
 bool logic_bar_visible = false;
@@ -290,19 +280,33 @@ void logic_bar_stop(void) {
     // this should stop and cleanup fala if not already...
     fala_notify_unregister(&logic_bar_update);
     logic_bar_detach();
-    toolbar_unregister(&logic_bar_toolbar);
-    logic_bar_toolbar.enabled = false;
+    /* detach already called toolbar_unregister and cleared enabled */
     /* Restore the scroll region now that the toolbar is gone. */
     toolbar_apply_scroll_region();
     logic_bar_visible = false;
 }
 
 void logic_bar_hide(void) {
-    logic_bar_detach();
+    //  freeze terminal updates
+    draw_prepare();
+
+    // Erase while still registered
+    toolbar_erase(&logic_bar_toolbar);
+
+    // Unregister so the scroll region is restored
+    toolbar_unregister(&logic_bar_toolbar);
+    logic_bar_toolbar.enabled = false;
+
+    toolbar_apply_scroll_region();
+
+    draw_release();
     logic_bar_visible = false;
 }
 
 void logic_bar_show(void) {
+    logic_bar_toolbar.enabled = true;
+    toolbar_register(&logic_bar_toolbar);
+    toolbar_apply_scroll_region();
     logic_bar_draw_frame();
     logic_bar_update();
     logic_bar_visible = true;
@@ -355,7 +359,9 @@ void logic_bar_navigate(void) {
             case 'x':
             la_x:
                 // system_config.terminal_hide_cursor = false;
-                printf("\033[?25h\033[9B%s%s", ui_term_color_reset(), ui_term_cursor_show()); // back to bottom
+                printf("%s", ui_term_color_reset());
+                ui_term_cursor_move_down(9);
+                printf("%s", ui_term_cursor_show());
                 return;
                 break;
             case '\033': // escape commands

@@ -193,19 +193,10 @@ void ui_statusbar_deinit(void) {
         system_config.terminal_ansi_statusbar_update = false;
         busy_wait_ms(100); // wait for the last statusbar update to finish
 
-        uint16_t start_row = toolbar_get_start_row(&statusbar_toolbar);
-        ui_term_cursor_save();
-        ui_term_scroll_region(1, system_config.terminal_ansi_rows); // disable region block
-
-        if (start_row > 0) {
-            for (uint8_t i = 0; i < STATUSBAR_HEIGHT; i++) {
-                ui_term_cursor_position(start_row + i, 0);
-                ui_term_erase_line();
-            }
-        }
-
-        ui_term_cursor_restore();
+        // Erase while still registered, then unregister and restore scroll
+        toolbar_erase(&statusbar_toolbar);
         toolbar_unregister(&statusbar_toolbar);
         statusbar_toolbar.enabled = false;
+        toolbar_apply_scroll_region();
     }
 }

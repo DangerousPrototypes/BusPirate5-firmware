@@ -108,8 +108,11 @@ static uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
         len += temp;
         cnt += temp;
     }
-    // fill in blank space
-    len += ui_term_erase_chars_buf(&buf[len], buffLen - len, system_config.terminal_ansi_columns - cnt);
+    // Pad remaining columns with background color to avoid erase flicker
+    uint16_t width = system_config.terminal_ansi_columns;
+    for (uint16_t c = cnt; c < width; c++) {
+        if (len < buffLen - 1) buf[len++] = ' ';
+    }
     len += snprintf(&buf[len], buffLen - len, "%s", ui_term_color_reset()); // snprintf to buffer
     return len;
 }

@@ -158,24 +158,35 @@ void tx_fifo_service(void) {
             return; // return for next cycle
 
             break;
-        case TOOLBAR_TX:
-            // read out 64 bytes into data at a time until complete
-            // TODO: pass a pointer to the array cause this is inefficient
-            i = 0;
-            while (tx_tb_buf_index < tx_tb_buf_cnt) {
-                data[i] = tx_tb_buf[tx_tb_buf_index];
-                tx_tb_buf_index++;
-                i++;
-                if (tx_tb_buf_index >= tx_tb_buf_cnt) {
-                    tx_tb_buf_ready = false;
-                    tx_state = IDLE; // done, next cycle go to idle
-                    break;
-                }
-                if (i >= 64) {
-                    break;
+        case TOOLBAR_TX: {
+            // Send up to 64 bytes directly from tx_tb_buf (no intermediate copy)
+            uint16_t remaining = tx_tb_buf_cnt - tx_tb_buf_index;
+            uint8_t chunk = (remaining > 64) ? 64 : (uint8_t)remaining;
+
+            // write to terminal usb
+            if (system_config.terminal_usb_enable) {
+                tud_cdc_n_write(0, &tx_tb_buf[tx_tb_buf_index], chunk);
+                tud_cdc_n_write_flush(0);
+                if (system_config.terminal_uart_enable) {
+                    tud_task();
                 }
             }
-            break;
+
+            // write to terminal debug uart
+            if (system_config.terminal_uart_enable) {
+                for (uint8_t j = 0; j < chunk; j++) {
+                    uart_putc(debug_uart[system_config.terminal_uart_number].uart,
+                              tx_tb_buf[tx_tb_buf_index + j]);
+                }
+            }
+
+            tx_tb_buf_index += chunk;
+            if (tx_tb_buf_index >= tx_tb_buf_cnt) {
+                tx_tb_buf_ready = false;
+                tx_state = IDLE;
+            }
+            return; // already sent — skip the common write path below
+        }
         default:
             tx_state = IDLE;
             break;

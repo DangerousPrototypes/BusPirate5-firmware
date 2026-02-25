@@ -35,10 +35,10 @@ void tx_fifo_try_put(char* c);
 void tx_fifo_write(const char* buf, uint32_t len);
 
 /**
- * @brief Start status bar transmission.
- * @param valid_characters_in_status_bar  Number of valid characters
+ * @brief Start toolbar buffer transmission.
+ * @param len  Number of valid characters in toolbar buffer
  */
-void tx_sb_start(uint32_t valid_characters_in_status_bar);
+void tx_tb_start(uint32_t len);
 
 /**
  * @brief Put character in binary transmit FIFO.
@@ -64,5 +64,5 @@ bool bin_tx_not_empty(void);
  */
 bool bin_tx_fifo_try_get(char* c);
 
-extern char tx_sb_buf[1024];
-extern bool tx_sb_buf_ready;
+extern char tx_tb_buf[1024];
+extern bool tx_tb_buf_ready;

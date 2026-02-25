@@ -9,7 +9,6 @@
 #include "usb_tx.h"
 #include "ui/ui_flags.h"
 #include "display/scope.h"
-#include "pirate/intercore_helpers.h"
 #include "tusb.h"
 #include "pirate/psu.h"
 #include "ui/ui_toolbar.h"
@@ -19,9 +18,6 @@
 /* Height of the status bar in terminal lines */
 #define STATUSBAR_HEIGHT 4
 
-/* Forward declaration — defined below, needed by .draw callback. */
-void ui_statusbar_update_blocking(void);
-
 /* Forward declaration — Core1 content callback, defined below. */
 static uint32_t statusbar_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_len,
                                           uint16_t start_row, uint16_t width,
@@ -30,11 +26,11 @@ static uint32_t statusbar_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
 /**
  * @brief .draw callback — triggers a blocking full repaint via Core1.
  * @details Called from toolbar_redraw_all() on Core0.  Sends an ICM message
- *          to Core1 which renders into tx_sb_buf and drains to USB.
+ *          to Core1 which renders into tx_tb_buf and drains to USB.
  */
 static void statusbar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
     (void)tb; (void)start_row; (void)width;
-    ui_statusbar_update_blocking();
+    toolbar_update_blocking();
 }
 
 /* Toolbar descriptor for this statusbar — registered in ui_statusbar_init(). */
@@ -128,52 +124,15 @@ uint32_t ui_statusbar_info(char* buf, size_t buffLen) {
     return len;
 }
 
-void ui_statusbar_update_blocking() {
-    BP_ASSERT_CORE0(); // if called from core1, this will deadlock
-    if(!tud_cdc_n_connected(0)) return;
-    system_config.terminal_ansi_statusbar_update = true;
-    icm_core0_send_message_synchronous(BP_ICM_UPDATE_STATUS_BAR);
-}
-
-void ui_statusbar_update_from_core1(uint32_t update_flags) {
-    BP_ASSERT_CORE1();
-    uint32_t len = 0;
-    size_t buffLen = sizeof(tx_sb_buf);
-
-    uint16_t start_row = toolbar_get_start_row(&statusbar_toolbar);
-
-    // cursor envelope
-    len += ui_term_cursor_save_buf(&tx_sb_buf[len], buffLen - len);
-    len += ui_term_cursor_hide_buf(&tx_sb_buf[len], buffLen - len);
-
-    uint32_t content = statusbar_update_core1_cb(
-        &statusbar_toolbar, &tx_sb_buf[len], buffLen - len,
-        start_row, system_config.terminal_ansi_columns, update_flags);
-
-    if (content == 0) {
-        return;
-    }
-    len += content;
-
-    len += ui_term_cursor_restore_buf(&tx_sb_buf[len], buffLen - len);
-    if (!system_config.terminal_hide_cursor) {
-        len += ui_term_cursor_show_buf(&tx_sb_buf[len], buffLen - len);
-    }
-
-    tx_sb_start(len);
-}
-
 /**
  * @brief Core1 content callback — renders statusbar rows into caller buffer.
- * @details Cursor save/hide/restore/show are handled by the caller
- *          (either the state machine or ui_statusbar_update_from_core1).
+ * @details Cursor save/hide/restore/show are handled by the state machine.
  */
 static uint32_t statusbar_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_len,
                                           uint16_t start_row, uint16_t width,
                                           uint32_t update_flags) {
     (void)tb; (void)width;
 
-    if (!tud_cdc_n_connected(0)) return 0;
     if (!update_flags) return 0;
     if (start_row == 0) return 0;
 

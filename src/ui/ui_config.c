@@ -14,6 +14,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_statusbar.h"
+#include "ui/ui_toolbar.h"
 #include "ui/ui_flags.h"
 #include "pirate/rgb.h" // for LED effect enum
 #include "ui/ui_help.h"
@@ -180,7 +181,7 @@ uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b) {
         }
         ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
         ui_term_init();   // Initialize VT100 if ANSI terminal
-        ui_statusbar_update_blocking();
+        toolbar_update_blocking();
     }
 }
 

@@ -13,6 +13,8 @@
 #include "ui/ui_term.h"
 #include "ui/ui_toolbar.h"
 #include "usb_tx.h"
+#include "tusb.h"
+#include "pirate/intercore_helpers.h"
 
 static toolbar_t* toolbar_registry[TOOLBAR_MAX_COUNT];
 static uint8_t toolbar_count = 0;
@@ -180,7 +182,14 @@ void toolbar_print_registry(void) {
                tb->update_core1 ? "yes" : "no");
     }
 }
+/* ── Core0 blocking update request ──────────────────────────────────────────── */
 
+void toolbar_update_blocking(void) {
+    BP_ASSERT_CORE0();
+    if (!tud_cdc_n_connected(0)) return;
+    system_config.terminal_ansi_statusbar_update = true;
+    icm_core0_send_message_synchronous(BP_ICM_UPDATE_TOOLBARS);
+}
 /* ── Core1 cooperative state machine ──────────────────────────────────── */
 
 /**
@@ -190,7 +199,7 @@ void toolbar_print_registry(void) {
 enum {
     TB_C1_IDLE,       ///< No update in progress
     TB_C1_RENDERING,  ///< Finding and rendering the next toolbar
-    TB_C1_DRAINING,   ///< Waiting for tx_sb_buf to drain to USB
+    TB_C1_DRAINING,   ///< Waiting for tx_tb_buf to drain to USB
 };
 
 static uint8_t  tb_c1_state        = TB_C1_IDLE;
@@ -213,7 +222,7 @@ void toolbar_core1_service(void) {
 
     /* DRAINING: wait for tx_fifo_service() to finish sending the buffer. */
     if (tb_c1_state == TB_C1_DRAINING) {
-        if (tx_sb_buf_ready) {
+        if (tx_tb_buf_ready) {
             return; /* still draining — come back next loop iteration */
         }
         tb_c1_index++;
@@ -222,6 +231,11 @@ void toolbar_core1_service(void) {
     }
 
     /* RENDERING: find the next toolbar with a Core1 callback and render it. */
+    if (!tud_cdc_n_connected(0)) {
+        tb_c1_state = TB_C1_IDLE;
+        return; /* no USB connection — abort cycle */
+    }
+
     while (tb_c1_index < toolbar_count) {
         toolbar_t* tb = toolbar_registry[tb_c1_index];
 
@@ -233,16 +247,16 @@ void toolbar_core1_service(void) {
             }
 
             uint16_t width   = system_config.terminal_ansi_columns;
-            size_t   buf_len = sizeof(tx_sb_buf);
+            size_t   buf_len = sizeof(tx_tb_buf);
             uint32_t len     = 0;
 
             /* Cursor envelope: save + hide */
-            len += ui_term_cursor_save_buf(&tx_sb_buf[len], buf_len - len);
-            len += ui_term_cursor_hide_buf(&tx_sb_buf[len], buf_len - len);
+            len += ui_term_cursor_save_buf(&tx_tb_buf[len], buf_len - len);
+            len += ui_term_cursor_hide_buf(&tx_tb_buf[len], buf_len - len);
 
             /* Let the toolbar render its content */
             uint32_t content = tb->update_core1(
-                tb, &tx_sb_buf[len], buf_len - len,
+                tb, &tx_tb_buf[len], buf_len - len,
                 start_row, width, tb_c1_update_flags);
 
             if (content == 0) {
@@ -253,12 +267,17 @@ void toolbar_core1_service(void) {
             len += content;
 
             /* Cursor envelope: restore + show */
-            len += ui_term_cursor_restore_buf(&tx_sb_buf[len], buf_len - len);
+            len += ui_term_cursor_restore_buf(&tx_tb_buf[len], buf_len - len);
             if (!system_config.terminal_hide_cursor) {
-                len += ui_term_cursor_show_buf(&tx_sb_buf[len], buf_len - len);
+                len += ui_term_cursor_show_buf(&tx_tb_buf[len], buf_len - len);
             }
 
-            tx_sb_start(len);
+            // additional check in case USB was disconnected while we were rendering
+            if (!tud_cdc_n_connected(0)) {
+                tb_c1_state = TB_C1_IDLE;
+                return; /* no USB connection — abort cycle */
+            }
+            tx_tb_start(len);
             tb_c1_state = TB_C1_DRAINING;
             return;
         }

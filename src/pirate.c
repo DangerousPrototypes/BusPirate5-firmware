@@ -553,7 +553,7 @@ static void core0_infinite_loop(void) {
                     // and does the initial painting of the full statusbar
                     if (system_config.terminal_ansi_statusbar) {
                         ui_statusbar_init();
-                        ui_statusbar_update_blocking();
+                        toolbar_update_blocking();
                     }
                 }else{ 
                     // if value is not y/n, then we got enter with no parameters
@@ -858,10 +858,8 @@ static void core1_infinite_loop(void) {
         while (multicore_fifo_rvalid()) {
             bp_icm_raw_message_t raw_message = icm_core1_get_raw_message();
             switch (get_embedded_message(raw_message)) {
-                case BP_ICM_UPDATE_STATUS_BAR:
-                    //lcd_update_request = true;
-                    //core0_requested_update_flags |= UI_UPDATE_ALL;
-                    ui_statusbar_update_from_core1(UI_UPDATE_ALL);
+                case BP_ICM_UPDATE_TOOLBARS:
+                    toolbar_core1_begin_update(UI_UPDATE_ALL);
                     break;
                 case BP_ICM_DISABLE_LCD_UPDATES:
                     lcd_irq_disable();

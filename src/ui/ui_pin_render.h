@@ -7,7 +7,7 @@
  *
  *          Core0 callers (v/V command) pass a stack-local buffer, then push
  *          it through tx_fifo_write().  Core1 callers (statusbar) pass a
- *          slice of tx_sb_buf and commit via tx_sb_start().
+ *          slice of tx_tb_buf and commit via tx_tb_start().
  *
  *          Usage – v command (Core0):
  *          @code
@@ -25,9 +25,9 @@
  *          Usage – statusbar (Core1):
  *          @code
  *          pin_render_flags_t sf = PIN_RENDER_CHANGE_TRACK | PIN_RENDER_CLEAR_CELLS;
- *          len += ui_pin_render_names(&tx_sb_buf[len], rem, sf);
- *          len += ui_pin_render_labels(&tx_sb_buf[len], rem, sf);
- *          len += ui_pin_render_values(&tx_sb_buf[len], rem, sf);
+ *          len += ui_pin_render_names(&tx_tb_buf[len], rem, sf);
+ *          len += ui_pin_render_labels(&tx_tb_buf[len], rem, sf);
+ *          len += ui_pin_render_values(&tx_tb_buf[len], rem, sf);
  *          @endcode
  */
 

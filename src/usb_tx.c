@@ -3,11 +3,11 @@
  * @brief USB and UART transmit buffer management
  * 
  * This file implements the transmit side of the user interface buffering system.
- * It handles both USB CDC and UART debug output, with support for VT100 status bar
+ * It handles both USB CDC and UART debug output, with support for VT100 toolbar
  * updates and DMA transfers.
  * 
- * The TX system uses lock-free SPSC ring buffers for regular output and status bar output,
- * with a state machine to manage status bar refresh without corrupting output.
+ * The TX system uses lock-free SPSC ring buffers for regular output and toolbar output,
+ * with a state machine to manage toolbar refresh without corrupting output.
  * 
  * Thread safety: Uses lock-free SPSC queues
  * - Producer: Core0 (printf output, command output)
@@ -47,12 +47,12 @@ spsc_queue_t bin_tx_fifo;          /**< Binary mode transmit FIFO */
 uint8_t tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));     /**< TX buffer storage */
 uint8_t bin_tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048))); /**< Binary TX buffer storage */
 
-/** Maximum size of status bar buffer */
-#define MAXIMUM_STATUS_BAR_BUFFER_BYTES 1024
-char tx_sb_buf[MAXIMUM_STATUS_BAR_BUFFER_BYTES]; /**< Status bar buffer */
-uint16_t tx_sb_buf_cnt = 0;                      /**< Number of valid characters in status bar */
-uint16_t tx_sb_buf_index = 0;                    /**< Current position in status bar buffer */
-bool tx_sb_buf_ready = false;                    /**< Status bar ready to transmit */
+/** Maximum size of toolbar render buffer */
+#define MAXIMUM_TOOLBAR_BUFFER_BYTES 1024
+char tx_tb_buf[MAXIMUM_TOOLBAR_BUFFER_BYTES]; /**< Toolbar render buffer */
+uint16_t tx_tb_buf_cnt = 0;                      /**< Number of valid characters in toolbar buffer */
+uint16_t tx_tb_buf_index = 0;                    /**< Current position in toolbar buffer */
+bool tx_tb_buf_ready = false;                    /**< Toolbar buffer ready to transmit */
 
 /** @} */ // end of tx_buffers
 
@@ -73,19 +73,19 @@ void tx_fifo_init(void) {
 /**
  * @brief Mark status bar buffer as ready for transmission
  * 
- * @param valid_characters_in_status_bar Number of valid characters in status bar buffer
+ * @param len Number of valid characters in toolbar buffer
  * 
  * @pre Must be called from Core1
- * @pre valid_characters_in_status_bar <= MAXIMUM_STATUS_BAR_BUFFER_BYTES
+ * @pre len <= MAXIMUM_TOOLBAR_BUFFER_BYTES
  * 
  * @warning This function asserts if not called from Core1
  */
-void tx_sb_start(uint32_t valid_characters_in_status_bar) {
+void tx_tb_start(uint32_t len) {
 
     BP_ASSERT_CORE1();
-    BP_ASSERT(valid_characters_in_status_bar <= MAXIMUM_STATUS_BAR_BUFFER_BYTES);
-    tx_sb_buf_cnt = valid_characters_in_status_bar;
-    tx_sb_buf_ready = true;
+    BP_ASSERT(len <= MAXIMUM_TOOLBAR_BUFFER_BYTES);
+    tx_tb_buf_cnt = len;
+    tx_tb_buf_ready = true;
 }
 
 /**
@@ -93,13 +93,13 @@ void tx_sb_start(uint32_t valid_characters_in_status_bar) {
  * 
  * This function implements a state machine that:
  * - Drains regular output from tx_fifo to USB/UART
- * - Manages status bar refresh timing
- * - Ensures status bar doesn't corrupt regular output
+ * - Manages toolbar buffer refresh timing
+ * - Ensures toolbar output doesn't corrupt regular output
  * 
  * State machine:
- * - IDLE: Send regular output or prepare status bar
- * - STATUSBAR_DELAY: Wait for TX FIFO to drain before status bar
- * - STATUSBAR_TX: Transmit status bar buffer
+ * - IDLE: Send regular output or prepare toolbar buffer
+ * - TOOLBAR_DELAY: Wait for TX FIFO to drain before toolbar
+ * - TOOLBAR_TX: Transmit toolbar buffer
  * 
  * @pre Must be called from Core1 only
  * @note Status bar updates are delayed until TX FIFO is empty to prevent VT100 corruption
@@ -110,8 +110,8 @@ void tx_fifo_service(void) {
 /** @name TX State Machine States */
 /**@{*/
 #define IDLE 0             /**< Idle state - send regular output */
-#define STATUSBAR_DELAY 1  /**< Waiting for TX FIFO to drain */
-#define STATUSBAR_TX 2     /**< Transmitting status bar */
+#define TOOLBAR_DELAY 1    /**< Waiting for TX FIFO to drain */
+#define TOOLBAR_TX 2       /**< Transmitting toolbar buffer */
 /**@}*/
     static uint8_t tx_state = IDLE;
 
@@ -139,35 +139,35 @@ void tx_fifo_service(void) {
                 break; // break out of switch and continue below
             }
 
-            // status bar update is ready
-            if (tx_sb_buf_ready) {
-                tx_state = STATUSBAR_DELAY;
-                tx_sb_buf_index = 0;
+            // toolbar buffer update is ready
+            if (tx_tb_buf_ready) {
+                tx_state = TOOLBAR_DELAY;
+                tx_tb_buf_index = 0;
                 return; // return for next state
             }
 
             return; // nothing, just return
 
             break;
-        case STATUSBAR_DELAY:
+        case TOOLBAR_DELAY:
             // test: check that no bytes in tx_fifo minimum 2 cycles in a row
-            // prevent the status bar from being wiped out by the VT100 setup commands
+            // prevent the toolbar buffer from being wiped out by VT100 commands
             // that might be pending in the TX FIFO
             bytes_available = spsc_queue_level(&tx_fifo);
-            tx_state = (bytes_available ? IDLE : STATUSBAR_TX);
+            tx_state = (bytes_available ? IDLE : TOOLBAR_TX);
             return; // return for next cycle
 
             break;
-        case STATUSBAR_TX:
+        case TOOLBAR_TX:
             // read out 64 bytes into data at a time until complete
             // TODO: pass a pointer to the array cause this is inefficient
             i = 0;
-            while (tx_sb_buf_index < tx_sb_buf_cnt) {
-                data[i] = tx_sb_buf[tx_sb_buf_index];
-                tx_sb_buf_index++;
+            while (tx_tb_buf_index < tx_tb_buf_cnt) {
+                data[i] = tx_tb_buf[tx_tb_buf_index];
+                tx_tb_buf_index++;
                 i++;
-                if (tx_sb_buf_index >= tx_sb_buf_cnt) {
-                    tx_sb_buf_ready = false;
+                if (tx_tb_buf_index >= tx_tb_buf_cnt) {
+                    tx_tb_buf_ready = false;
                     tx_state = IDLE; // done, next cycle go to idle
                     system_config.terminal_ansi_statusbar_update =
                         true; // after first draw of status bar, then allow updates by core1 service loop

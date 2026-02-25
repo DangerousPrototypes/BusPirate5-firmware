@@ -184,6 +184,14 @@ void toolbar_resume_updates(void);
 void toolbar_print_registry(void);
 
 /**
+ * @brief Request a full toolbar update from Core0 (blocking).
+ * @details Sends BP_ICM_UPDATE_TOOLBARS to Core1 which kicks the
+ *          cooperative state machine with UI_UPDATE_ALL.  Core0 blocks
+ *          until Core1 acknowledges receipt (not until rendering completes).
+ */
+void toolbar_update_blocking(void);
+
+/**
  * @brief Begin a Core1 toolbar update cycle.
  * @details Called from the Core1 main loop when lcd_update_request fires.
  *          Starts the cooperative state machine that renders each toolbar
@@ -196,7 +204,7 @@ void toolbar_core1_begin_update(uint32_t update_flags);
  * @brief Service one step of the Core1 toolbar state machine.
  * @details Call every iteration of the Core1 main loop (after tx_fifo_service).
  *          - IDLE: returns immediately.
- *          - RENDERING: renders the next toolbar into tx_sb_buf, starts drain.
+ *          - RENDERING: renders the next toolbar into tx_tb_buf, starts drain.
  *          - DRAINING: checks if drain is complete, advances to next toolbar.
  */
 void toolbar_core1_service(void);

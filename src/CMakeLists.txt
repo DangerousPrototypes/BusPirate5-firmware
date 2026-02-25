@@ -505,6 +505,10 @@ set(buspirate_common
         #toolbars
         toolbars/logic_bar.c
         toolbars/logic_bar.h
+        toolbars/sys_stats.c
+        toolbars/sys_stats.h
+        toolbars/pin_watcher.c
+        toolbars/pin_watcher.h
         commands/global/cmd_toolbar.c
         commands/global/cmd_toolbar.h
 

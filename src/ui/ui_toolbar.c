@@ -74,6 +74,10 @@ uint16_t toolbar_total_height(void) {
     return total;
 }
 
+uint8_t toolbar_count_registered(void) {
+    return toolbar_count;
+}
+
 uint16_t toolbar_scroll_bottom(void) {
     uint16_t rows = system_config.terminal_ansi_rows;
     uint16_t total = toolbar_total_height();

@@ -96,6 +96,12 @@ void toolbar_teardown(toolbar_t* tb);
 uint16_t toolbar_total_height(void);
 
 /**
+ * @brief Number of currently registered toolbars.
+ * @return Count of registered toolbar slots in use.
+ */
+uint8_t toolbar_count_registered(void);
+
+/**
  * @brief Last row of the scrollable command area.
  * @return terminal_ansi_rows - toolbar_total_height()
  */

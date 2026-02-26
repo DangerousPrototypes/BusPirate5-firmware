@@ -29,6 +29,7 @@
 #include "pirate/amux.h"
 #include "pirate/pullup.h"
 #include "lib/bp_args/bp_cmd.h"
+#include "system_monitor.h"
 
 #if BP_HW_PULLX
 const char* const p_usage[] = {
@@ -162,7 +163,7 @@ const bp_command_def_t pullups_disable_def = {
 
 void pullups_enable(void) {
     system_config.pullup_enabled = 1;
-    system_config.info_bar_changed = true;
+    monitor_mark_info_changed();
     pullup_enable();
 }
 
@@ -237,7 +238,7 @@ void pullups_enable_handler(struct command_result* res) {
 
 void pullups_disable(void) {   
     system_config.pullup_enabled = 0;
-    system_config.info_bar_changed = true;
+    monitor_mark_info_changed();
     #if BP_HW_PULLX
         //1M pull-down when disabled
         pullx_set_all_update(PULLX_1M, false);

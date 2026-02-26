@@ -13,7 +13,6 @@
 #include "pirate/psu.h"
 #include "ui/ui_toolbar.h"
 #include "ui/ui_pin_render.h"
-#include "system_monitor.h"
 
 /* Height of the status bar in terminal lines */
 #define STATUSBAR_HEIGHT 4
@@ -138,7 +137,7 @@ static uint32_t statusbar_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
     pin_render_flags_t sb_flags = PIN_RENDER_CHANGE_TRACK | PIN_RENDER_CLEAR_CELLS;
 
     if (update_flags & UI_UPDATE_INFOBAR) {
-        monitor_force_update();
+        ui_pin_render_reset_shadows();
         len += ui_term_cursor_position_buf(&buf[len], buf_len - len, start_row, 0);
         len += ui_statusbar_info(&buf[len], buf_len - len);
     }

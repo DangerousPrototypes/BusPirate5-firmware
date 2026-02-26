@@ -24,6 +24,7 @@
 #include "pirate/mem.h" //defines for buffer owner
 #include "ui/ui_term.h"
 #include "pirate/rgb.h"
+#include "system_monitor.h"
 
 struct _system_config system_config; /**< Global system configuration instance */
 
@@ -99,8 +100,8 @@ void system_init(void) {
         system_config.pin_func[i] = BP_PIN_IO;
     }
 
-    system_config.pin_changed = 0xffffffff;
-    system_config.info_bar_changed = 0;
+    // pin_changed and info_bar_changed are now managed by system_monitor dirty flags
+    // monitor_init() handles initial dirty state
 
     system_config.num_bits = 8;
     system_config.bit_order = 0;
@@ -155,7 +156,7 @@ void system_pin_update_purpose_and_label(bool enable, uint8_t pin, enum bp_pin_f
     }
 
     // Mark the need to update the UI (labels) for this pin.
-    system_config.pin_changed |= (0x01 << ((uint8_t)pin));
+    monitor_mark_pin_changed((uint8_t)pin);
     return;
 }
 

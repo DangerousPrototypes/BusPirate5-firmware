@@ -96,14 +96,14 @@ const bp_command_def_t psucmd_disable_def = {
 void psucmd_irq_callback(void) {
     //psu_disable(); // also sets system_config.psu=
     system_config.error = true;
-    system_config.info_bar_changed = true;
+    monitor_mark_info_changed();
     system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[5]);
 }
 
 // zero return code = success
 uint32_t psucmd_enable(float volts, float current, bool current_limit_override, uint8_t undervoltage_percent) {
     system_config.pin_labels[0] = 0;
-    system_config.pin_changed = 0xff;
+    monitor_mark_all_pins_changed();
     system_pin_update_purpose_and_label(false, BP_VOUT, 0, 0);
 
     uint32_t psu_result = psu_enable(volts, current, current_limit_override, undervoltage_percent);
@@ -114,9 +114,8 @@ uint32_t psucmd_enable(float volts, float current, bool current_limit_override, 
         return psu_result;
     }
 
-    system_config.info_bar_changed = true;
+    monitor_mark_info_changed();
     system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VOUT, ui_const_pin_states[1]);
-    monitor_clear_current(); // reset current so the LCD gets all characters
 
     return psu_result; // should be PSU OK
 }
@@ -273,8 +272,7 @@ void psucmd_disable(void) {
     //this causes a spurious short circuit warning because the ADC reads 0V on VOUT during the disable process
     psu_disable();
     system_pin_update_purpose_and_label(true, BP_VOUT, BP_PIN_VREF, ui_const_pin_states[0]); // change back to vref type pin
-    monitor_clear_current(); // reset current so the LCD gets all characters next time
-    system_config.info_bar_changed = true;
+    monitor_mark_info_changed();
 }
 
 void psucmd_disable_handler(struct command_result* res) {

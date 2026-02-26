@@ -30,6 +30,7 @@
 #include "commands/global/macro.h"
 #include "commands/global/script.h"
 #include "commands/global/edit.h"
+#include "commands/global/hexedit.h"
 #include "commands/global/button_scr.h"
 #include "commands/global/smps.h"
 #include "commands/global/cls.h"
@@ -97,6 +98,7 @@ const struct _global_command_struct commands[] = {
 { .command="macro",     .allow_hiz=true,  .func=&macro_handler,     .def=&macro_def,     .category=CMD_CAT_SCRIPT },
 { .command="pause",     .allow_hiz=true,  .func=&pause_handler,     .def=&pause_def,     .category=CMD_CAT_SCRIPT },
 { .command="edit",      .allow_hiz=true,  .func=&edit_handler,      .def=&edit_def,      .category=CMD_CAT_SCRIPT },
+{ .command="hexedit",   .allow_hiz=true,  .func=&hexedit_handler,   .def=&hexedit_def,   .category=CMD_CAT_SCRIPT },
 // Tools: utilities and converters
 { .command="logic",     .allow_hiz=true,  .func=&logic_handler,                      .def=&logic_def, .category=CMD_CAT_TOOLS },
 { .command="toolbar",   .allow_hiz=true,  .func=&toolbar_cmd_handler,                .def=&toolbar_cmd_def, .category=CMD_CAT_TOOLS },

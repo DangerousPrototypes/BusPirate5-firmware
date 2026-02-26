@@ -636,5 +636,7 @@ static char const * const it_it[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_GLOBAL_JEP106_LOOKUP      ] = NULL,
     [ T_HELP_CMD_EDIT                  ] = NULL,
     [ T_HELP_CMD_EDIT_FILE             ] = NULL,
+    [ T_HELP_CMD_HEXEDIT               ] = NULL,
+    [ T_HELP_CMD_HEXEDIT_FILE          ] = NULL,
 
 };

@@ -188,6 +188,10 @@ set(buspirate_common
         lib/kilo/kilo_build.c
         lib/kilo/kilo_compat.c
         lib/kilo/kilo_compat.h
+        commands/global/hexedit.c
+        commands/global/hexedit.h
+        lib/hx/hx_build.c
+        lib/hx/hx_compat.h
         commands/global/button_scr.c
         commands/global/button_scr.h
         commands/global/smps.c

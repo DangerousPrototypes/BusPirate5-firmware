@@ -652,6 +652,8 @@ enum T_translations{
     T_HELP_GLOBAL_JEP106_LOOKUP,
     T_HELP_CMD_EDIT,
     T_HELP_CMD_EDIT_FILE,
+    T_HELP_CMD_HEXEDIT,
+    T_HELP_CMD_HEXEDIT_FILE,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

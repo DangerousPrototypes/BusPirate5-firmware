@@ -654,6 +654,8 @@ static char const * const en_us[]={
 	[T_HELP_GLOBAL_JEP106_LOOKUP]="lookup vendor name from 2 byte JEDEC JEP106 ID code",
 	[T_HELP_CMD_EDIT]="edit or create files on the storage",
 	[T_HELP_CMD_EDIT_FILE]="File to edit or create",
+	[T_HELP_CMD_HEXEDIT]="hex editor for binary files on the storage",
+	[T_HELP_CMD_HEXEDIT_FILE]="File to hex edit or create",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

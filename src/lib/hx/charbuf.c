@@ -25,6 +25,9 @@ struct charbuf* charbuf_create() {
 		b->contents = NULL;
 		b->len = 0;
 		b->cap = 0;
+#ifdef BUSPIRATE
+		b->fmt_buf = malloc(CHARBUF_APPENDF_SIZE);
+#endif
 		return b;
 	} else {
 		perror("Unable to allocate size for struct charbuf");
@@ -37,6 +40,9 @@ struct charbuf* charbuf_create() {
  */
 void charbuf_free(struct charbuf* buf) {
 	free(buf->contents);
+#ifdef BUSPIRATE
+	free(buf->fmt_buf);
+#endif
 	free(buf);
 }
 
@@ -68,13 +74,21 @@ void charbuf_append(struct charbuf* buf, const char* what, size_t len) {
 
 int charbuf_appendf(struct charbuf* buf, const char* fmt, ...) {
 	assert(strlen(fmt) < CHARBUF_APPENDF_SIZE);
-	// We use a fixed size buffer. We don't need to fmt a lot
-	// of characters anyway.
+#ifdef BUSPIRATE
+	// Use the arena-allocated scratch buffer (big_buf) — no stack pressure.
+	char *buffer = buf->fmt_buf;
+#else
 	char buffer[CHARBUF_APPENDF_SIZE];
+#endif
 	va_list ap;
 	va_start(ap, fmt);
-	int len = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+	int len = vsnprintf(buffer, CHARBUF_APPENDF_SIZE, fmt, ap);
 	va_end(ap);
+
+	// Cap len to prevent over-read if formatted output was truncated.
+	if (len >= (int)CHARBUF_APPENDF_SIZE) {
+		len = (int)CHARBUF_APPENDF_SIZE - 1;
+	}
 
 	charbuf_append(buf, buffer, len);
 	return len;

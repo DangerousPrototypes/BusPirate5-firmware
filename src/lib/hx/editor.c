@@ -403,11 +403,13 @@ void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset
 		if (rownum == e->cursor_y && cc == e->cursor_x) {
 			charbuf_append(b, "\x1b[7m", 4);
 		} else {
-			charbuf_appendf(b, "\x1b[0m", 4);
+			charbuf_append(b, "\x1b[0m", 4);
 		}
 
 		if (isprint(c)) {
-			charbuf_appendf(b, "\x1b[33m%c", c);
+			char cbuf[7];
+			int clen = snprintf(cbuf, sizeof(cbuf), "\x1b[33m%c", c);
+			charbuf_append(b, cbuf, clen);
 		} else {
 			charbuf_append(b, "\x1b[36m.", 6);
 		}
@@ -418,13 +420,12 @@ void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset
 void editor_render_contents(struct editor* e, struct charbuf* b) {
 	if (e->content_length <= 0) {
 		charbuf_append(b, "\x1b[2J", 4);
-		charbuf_appendf(b, "File is empty. Use 'i' to insert a hexadecimal value.");
+		charbuf_append(b, "File is empty. Use 'i' to insert a hexadecimal value.", 53);
 		return;
 	}
 
 	char hex[ 32 + 1];
 	int  hexlen = 0;
-	char asc[256 + 1];
 
 	int row_char_count = 0;
 
@@ -449,7 +450,6 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 
 		if (offset % e->octets_per_line == 0) {
 			charbuf_appendf(b, "\x1b[1;35m%09x\x1b[0m:", offset);
-			memset(asc, '\0', sizeof(asc));
 			row_char_count = 0;
 			col = 0;
 			row++;
@@ -460,12 +460,6 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 			hexlen = snprintf(hex, sizeof(hex), "\x1b[1;34m%02x", curr_byte);
 		} else {
 			hexlen = snprintf(hex, sizeof(hex), "%02x", curr_byte);
-		}
-
-		if (isprint(curr_byte)) {
-			asc[offset % e->octets_per_line] = curr_byte;
-		} else {
-			asc[offset % e->octets_per_line] = '.';
 		}
 
 		if (offset % e->grouping == 0) {
@@ -525,45 +519,50 @@ void editor_render_help(struct editor* e) {
 	clear_screen();
 	charbuf_append(b, "\x1b[?25l", 6); // hide cursor
 	charbuf_appendf(b, "This is hx, version %s\r\n\n", HX_VERSION);
-	charbuf_appendf(b,
-		"Available commands:\r\n"
-		"\r\n"
-		"CTRL+Q  : Quit immediately without saving.\r\n"
-		"CTRL+S  : Save (in place).\r\n"
-		"hjkl    : Vim like cursor movement.\r\n"
-		"Arrows  : Also moves the cursor around.\r\n"
-		"CTRL+F  : Scroll one screen forward.\r\n"
-		"CTRL+B  : Scroll one screen backward.\r\n"
-		"PgDn    : Same as CTRL+F\r\n"
-		"PgUp    : Same as CTRL+B\r\n"
-		"w       : Skip one group of bytes to the right.\r\n"
-		"b       : Skip one group of bytes to the left.\r\n"
-		"gg      : Move to start of file.\r\n"
-		"G       : Move to end of file.\r\n"
-		"x / DEL : Delete byte at cursor position.\r\n"
-		"/       : Start search input.\r\n"
-		"n       : Search for next occurrence.\r\n"
-		"N       : Search for previous occurrence.\r\n"
-		"u       : Undo the last action.\r\n"
-		"CTRL+R  : Redo the last undone action.\r\n"
-		"\r\n");
-	charbuf_appendf(b,
-		"a       : Append mode. Appends a byte after the current cursor position.\r\n"
-		"A       : Append mode. Appends the literal typed keys (except ESC).\r\n"
-		"i       : Insert mode. Inserts a byte at the current cursor position.\r\n"
-		"I       : Insert mode. Inserts the literal typed keys (except ESC).\r\n"
-		"r       : Replace mode. Replaces the byte at the current cursor position.\r\n"
-		"R       : Replace mode. Replaces the literal typed keys (except ESC).\r\n"
-		":       : Command mode. Commands can be typed and executed.\r\n"
-		"ESC     : Return to normal mode.\r\n"
-		"]       : Increment byte at cursor position with 1.\r\n"
-		"[       : Decrement byte at cursor position with 1.\r\n"
-		"End     : Move cursor to end of the offset line.\r\n"
-		"Home    : Move cursor to the beginning of the offset line.\r\n"
-		"\r\n"
-	);
-	charbuf_appendf(b,
-		"Press any key to exit help.\r\n");
+	{
+		const char help1[] =
+			"Available commands:\r\n"
+			"\r\n"
+			"CTRL+Q  : Quit immediately without saving.\r\n"
+			"CTRL+S  : Save (in place).\r\n"
+			"hjkl    : Vim like cursor movement.\r\n"
+			"Arrows  : Also moves the cursor around.\r\n"
+			"CTRL+F  : Scroll one screen forward.\r\n"
+			"CTRL+B  : Scroll one screen backward.\r\n"
+			"PgDn    : Same as CTRL+F\r\n"
+			"PgUp    : Same as CTRL+B\r\n"
+			"w       : Skip one group of bytes to the right.\r\n"
+			"b       : Skip one group of bytes to the left.\r\n"
+			"gg      : Move to start of file.\r\n"
+			"G       : Move to end of file.\r\n"
+			"x / DEL : Delete byte at cursor position.\r\n"
+			"/       : Start search input.\r\n"
+			"n       : Search for next occurrence.\r\n"
+			"N       : Search for previous occurrence.\r\n"
+			"u       : Undo the last action.\r\n"
+			"CTRL+R  : Redo the last undone action.\r\n"
+			"\r\n";
+		charbuf_append(b, help1, sizeof(help1) - 1);
+	}
+	{
+		const char help2[] =
+			"a       : Append mode. Appends a byte after the current cursor position.\r\n"
+			"A       : Append mode. Appends the literal typed keys (except ESC).\r\n"
+			"i       : Insert mode. Inserts a byte at the current cursor position.\r\n"
+			"I       : Insert mode. Inserts the literal typed keys (except ESC).\r\n"
+			"r       : Replace mode. Replaces the byte at the current cursor position.\r\n"
+			"R       : Replace mode. Replaces the literal typed keys (except ESC).\r\n"
+			":       : Command mode. Commands can be typed and executed.\r\n"
+			"ESC     : Return to normal mode.\r\n"
+			"]       : Increment byte at cursor position with 1.\r\n"
+			"[       : Decrement byte at cursor position with 1.\r\n"
+			"End     : Move cursor to end of the offset line.\r\n"
+			"Home    : Move cursor to the beginning of the offset line.\r\n"
+			"\r\n";
+		charbuf_append(b, help2, sizeof(help2) - 1);
+	}
+	charbuf_append(b,
+		"Press any key to exit help.\r\n", 28);
 
 	charbuf_draw(b);
 	charbuf_free(b);
@@ -1272,8 +1271,29 @@ int hx_run(const char* filename) {
 	clear_screen();
 
 	while (1) {
+		/* Wait for the previous render to fully drain from the TX FIFO
+		 * before starting a new one.  The TX FIFO is only 1024 bytes but
+		 * a full screen render is ~7 KB, so it takes many Core1 drain
+		 * cycles to transmit.  Without this wait, the tail of render N
+		 * and the head of render N+1 concatenate in the FIFO, and VT100
+		 * escape sequences that straddle the boundary get split across
+		 * USB bulk packets — the terminal parser consumes an entire
+		 * display line as CSI parameters, producing the "missing row"
+		 * artifact. */
+		tx_fifo_wait_drain();
 		editor_refresh_screen(g_hx_editor);
-		editor_process_keypress(g_hx_editor);
+		/* Process at least one keypress, then batch any queued repeats.
+		 * During key-repeat the terminal sends escape sequences faster
+		 * than we can push a full-screen redraw (~7 KB) through the
+		 * 1024-byte TX FIFO.  Without batching, each queued key triggers
+		 * a separate render, flooding the terminal with back-to-back VT100
+		 * redraws that can split escape sequences across USB packets and
+		 * cause brief display artifacts (e.g. a literal 'm' from \x1b[0m).
+		 * By consuming all pending keys before the next render, we draw
+		 * the final state once instead of every intermediate position. */
+		do {
+			editor_process_keypress(g_hx_editor);
+		} while (spsc_queue_level(&rx_fifo) > 0);
 	}
 	/* Never reached — exit() is longjmp */
 	return 0;

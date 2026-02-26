@@ -283,12 +283,71 @@ bool storage_ls(const char* location, const char* ext, const uint8_t flags) {
     }
 
     nfile = ndir = 0;
+
+    /* ── Pass 1: directories (listed first, like ls --group-directories-first) ── */
     for (;;) {
-        fr = f_readdir(&dir, &fno); /* Read a directory item */
+        fr = f_readdir(&dir, &fno);
         if (fr != FR_OK || fno.fname[0] == 0) {
-            break; /* Error or end of dir */
+            break;
         }
-        strlwr(fno.fname); // FAT16 is only UPPERCASE, make it lower to be easy on the eyes...
+        if (!(fno.fattrib & AM_DIR)) {
+            continue; /* skip files on this pass */
+        }
+        /* skip hidden/system unless LS_HIDDEN */
+        if (!(flags & LS_HIDDEN) && (fno.fattrib & (AM_HID | AM_SYS))) {
+            continue;
+        }
+        strlwr(fno.fname);
+        if (!(flags & LS_DIRS)) {
+            ndir++;
+            continue;
+        }
+        if (flags & LS_LONG) {
+            /* long format: size  date  time  name/ */
+            int year  = ((fno.fdate >> 9) & 0x7F) + 1980;
+            int month = (fno.fdate >> 5) & 0x0F;
+            int day   = fno.fdate & 0x1F;
+            int hour  = (fno.ftime >> 11) & 0x1F;
+            int min   = (fno.ftime >> 5) & 0x3F;
+            printf("%s       -  %s%4d-%02d-%02d %02d:%02d  %s%s/%s\r\n",
+                   ui_term_color_prompt(),
+                   ui_term_color_grey(),
+                   year, month, day, hour, min,
+                   ui_term_color_info(),
+                   fno.fname,
+                   ui_term_color_reset());
+        } else if (flags & LS_SIZE) {
+            /* legacy size mode (backward compat) */
+            printf("%s       -  %s%s/%s\r\n",
+                   ui_term_color_prompt(),
+                   ui_term_color_info(),
+                   fno.fname,
+                   ui_term_color_reset());
+        } else {
+            /* short format: name/ */
+            printf("%s%s/%s\r\n",
+                   ui_term_color_info(),
+                   fno.fname,
+                   ui_term_color_reset());
+        }
+        ndir++;
+    }
+
+    /* ── Pass 2: files ── */
+    f_rewinddir(&dir);
+    for (;;) {
+        fr = f_readdir(&dir, &fno);
+        if (fr != FR_OK || fno.fname[0] == 0) {
+            break;
+        }
+        if (fno.fattrib & AM_DIR) {
+            continue; /* skip dirs on this pass */
+        }
+        /* skip hidden/system unless LS_HIDDEN */
+        if (!(flags & LS_HIDDEN) && (fno.fattrib & (AM_HID | AM_SYS))) {
+            continue;
+        }
+        strlwr(fno.fname);
         if (ext) {
             int fname_len = strlen(fno.fname);
             int ext_len = strlen(ext);
@@ -298,24 +357,38 @@ bool storage_ls(const char* location, const char* ext, const uint8_t flags) {
                 }
             }
         }
-        if (fno.fattrib & AM_DIR) { /* Directory */
-            if (flags & LS_DIRS) {
-                printf("%s   <DIR>   %s%s%s\r\n",
-                       ui_term_color_prompt(),
-                       ui_term_color_info(),
-                       fno.fname,
-                       ui_term_color_reset());
-            }
-            ndir++;
-        } else { /* File */
-            if (flags & LS_FILES) {
-                if (flags & LS_SIZE) {
-                    printf("%s%10u ", ui_term_color_prompt(), fno.fsize);
-                }
-            }
-            printf("%s%s%s\r\n", ui_term_color_info(), fno.fname, ui_term_color_reset());
+        if (!(flags & LS_FILES)) {
             nfile++;
+            continue;
         }
+        if (flags & LS_LONG) {
+            /* long format: size  date  time  name */
+            int year  = ((fno.fdate >> 9) & 0x7F) + 1980;
+            int month = (fno.fdate >> 5) & 0x0F;
+            int day   = fno.fdate & 0x1F;
+            int hour  = (fno.ftime >> 11) & 0x1F;
+            int min   = (fno.ftime >> 5) & 0x3F;
+            printf("%s%8u  %s%4d-%02d-%02d %02d:%02d  %s%s%s\r\n",
+                   ui_term_color_prompt(),
+                   (unsigned)fno.fsize,
+                   ui_term_color_grey(),
+                   year, month, day, hour, min,
+                   ui_term_color_reset(),
+                   fno.fname,
+                   ui_term_color_reset());
+        } else if (flags & LS_SIZE) {
+            /* legacy size mode (backward compat) */
+            printf("%s%8u  %s%s%s\r\n",
+                   ui_term_color_prompt(),
+                   (unsigned)fno.fsize,
+                   ui_term_color_reset(),
+                   fno.fname,
+                   ui_term_color_reset());
+        } else {
+            /* short format: name only */
+            printf("%s%s\r\n", fno.fname, ui_term_color_reset());
+        }
+        nfile++;
     }
     f_closedir(&dir);
     if (flags & LS_SUMM) {

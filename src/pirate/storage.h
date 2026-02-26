@@ -127,10 +127,12 @@ extern const char storage_fat_type_labels[5][8];
  * @name Directory listing flags
  * @{
  */
-#define LS_FILES 0x01  ///< List files
-#define LS_DIRS 0x02   ///< List directories
-#define LS_SIZE 0x04   ///< Show file sizes
-#define LS_SUMM 0x08   ///< Show summary statistics
+#define LS_FILES  0x01  ///< List files
+#define LS_DIRS   0x02  ///< List directories
+#define LS_SIZE   0x04  ///< Show file sizes
+#define LS_SUMM   0x08  ///< Show summary statistics
+#define LS_LONG   0x10  ///< Long listing: show date/time alongside size
+#define LS_HIDDEN 0x20  ///< Include hidden/system files
 #define LS_ALL (LS_FILES | LS_DIRS | LS_SIZE | LS_SUMM) ///< All flags enabled
 /** @} */
 

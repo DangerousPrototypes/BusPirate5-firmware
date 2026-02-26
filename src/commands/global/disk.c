@@ -205,9 +205,18 @@ void disk_rm_handler(struct command_result* res) {
 }
 
 static const char* const ls_usage[] = {
-    "ls [dir]",
-    "Show current directory contents:%s ls",
-    "Show directory contents:%s ls /dir",
+    "ls [-la] [dir]",
+    "List current directory:%s ls",
+    "Long listing with dates:%s ls -l",
+    "Show hidden/system files:%s ls -a",
+    "Long listing of a directory:%s ls -l /dir",
+    "Combine flags:%s ls -la",
+};
+
+static const bp_command_opt_t disk_ls_opts[] = {
+    { "long", 'l', BP_ARG_NONE, NULL, T_HELP_DISK_LS_LONG },
+    { "all",  'a', BP_ARG_NONE, NULL, T_HELP_DISK_LS_ALL },
+    { 0 }
 };
 
 static const bp_command_positional_t disk_ls_positionals[] = {
@@ -220,7 +229,7 @@ const bp_command_def_t disk_ls_def = {
     .description  = T_HELP_DISK_LS,
     .actions      = NULL,
     .action_count = 0,
-    .opts         = NULL,
+    .opts         = disk_ls_opts,
     .positionals      = disk_ls_positionals,
     .positional_count = 1,
     .usage        = ls_usage,
@@ -237,7 +246,17 @@ void disk_ls_handler(struct command_result* res) {
     char location[32];
     bp_cmd_get_positional_string(&disk_ls_def, 1, location, sizeof(location));
 
-    if (!storage_ls(location, NULL, LS_ALL)) {
+    // build flags from options
+    uint8_t flags = LS_FILES | LS_DIRS | LS_SUMM;
+
+    if (bp_cmd_find_flag(&disk_ls_def, 'l')) {
+        flags |= LS_LONG | LS_SIZE;
+    }
+    if (bp_cmd_find_flag(&disk_ls_def, 'a')) {
+        flags |= LS_HIDDEN;
+    }
+
+    if (!storage_ls(location, NULL, flags)) {
         res->error = true;
         return;
     }

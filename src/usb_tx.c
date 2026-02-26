@@ -230,6 +230,13 @@ void tx_fifo_write(const char* buf, uint32_t len) {
     }
 }
 
+void tx_fifo_wait_drain(void) {
+    BP_ASSERT_CORE0();
+    while (!spsc_queue_is_empty(&tx_fifo)) {
+        tight_loop_contents();
+    }
+}
+
 void bin_tx_fifo_put(const char c) {
     BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
     spsc_queue_add_blocking(&bin_tx_fifo, (uint8_t)c);

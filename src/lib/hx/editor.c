@@ -21,6 +21,13 @@
 #include <unistd.h>
 #endif
 
+/* Number of fixed header rows (column labels + separator) */
+#ifdef BUSPIRATE
+#define HX_HEADER_ROWS 2
+#else
+#define HX_HEADER_ROWS 0
+#endif
+
 /*
  * This function looks convoluted as hell, but it works...
  */
@@ -62,8 +69,8 @@ void editor_move_cursor(struct editor* e, int dir, int amount) {
 	}
 
 	// Move the cursor over the y axis
-	if (e->cursor_y > e->screen_rows - 1) {
-		e->cursor_y = e->screen_rows - 1;
+	if (e->cursor_y > e->screen_rows - HX_HEADER_ROWS - 1) {
+		e->cursor_y = e->screen_rows - HX_HEADER_ROWS - 1;
 		editor_scroll(e, 1);
 	} else if (e->cursor_y < 1 && e->line > 0) {
 		e->cursor_y = 1;
@@ -319,7 +326,7 @@ inline int editor_offset_at_cursor(struct editor* e) {
 void editor_scroll(struct editor* e, int units) {
 	e->line += units;
 
-	int upper_limit = e->content_length / e->octets_per_line - (e->screen_rows - 2);
+	int upper_limit = e->content_length / e->octets_per_line - (e->screen_rows - HX_HEADER_ROWS - 2);
 	if (e->line >= upper_limit) {
 		e->line = upper_limit;
 	}
@@ -336,16 +343,16 @@ void editor_scroll_to_offset(struct editor* e, unsigned int offset) {
 	}
 
 	unsigned int offset_min = e->line * e->octets_per_line;
-	unsigned int offset_max = offset_min + (e->screen_rows * e->octets_per_line);
+	unsigned int offset_max = offset_min + ((e->screen_rows - HX_HEADER_ROWS) * e->octets_per_line);
 
 	if (offset >= offset_min && offset <= offset_max) {
 		editor_cursor_at_offset(e, offset, &(e->cursor_x), &(e->cursor_y));
 		return;
 	}
 
-	e->line = offset / e->octets_per_line - (e->screen_rows / 2);
+	e->line = offset / e->octets_per_line - ((e->screen_rows - HX_HEADER_ROWS) / 2);
 
-	int upper_limit = e->content_length / e->octets_per_line - (e->screen_rows - 2);
+	int upper_limit = e->content_length / e->octets_per_line - (e->screen_rows - HX_HEADER_ROWS - 2);
 	if (e->line >= upper_limit) {
 		e->line = upper_limit;
 	}
@@ -434,7 +441,7 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 		start_offset = e->content_length - e->octets_per_line;
 	}
 
-	int bytes_per_screen = e->screen_rows * e->octets_per_line;
+	int bytes_per_screen = (e->screen_rows - HX_HEADER_ROWS) * e->octets_per_line;
 	unsigned int end_offset = bytes_per_screen + start_offset - e->octets_per_line;
 	if (end_offset > e->content_length) {
 		end_offset = e->content_length;
@@ -621,6 +628,53 @@ void editor_render_status(struct editor* e, struct charbuf* b) {
 }
 
 
+void editor_render_header(struct editor* e, struct charbuf* b) {
+	/* Offset gutter — same width as the "%09x:" in content rows */
+	charbuf_append(b, "\x1b[0;37m", 7);
+	charbuf_append(b, "         |", 10);
+
+	/* Hex column headers: single hex digit per byte, spaced to align
+	 * with the grouped hex pairs in content rows.
+	 * Content row pattern (grouping=2): " XXYY" per pair
+	 * Header pattern:                   " X Y " per pair */
+	for (int i = 0; i < e->octets_per_line; i++) {
+		if (i % e->grouping == 0) {
+			charbuf_append(b, " ", 1);
+		}
+		char hdr[3];
+		int hlen = snprintf(hdr, sizeof(hdr), "%X", i & 0xF);
+		charbuf_append(b, hdr, hlen);
+		/* After each byte's single hex digit, pad with a space
+		 * to fill the second character of its "xx" column */
+		charbuf_append(b, " ", 1);
+	}
+
+	/* Gap + ASCII column header */
+	charbuf_append(b, " |", 2);
+	for (int i = 0; i < e->octets_per_line; i++) {
+		char hdr[2];
+		int hlen = snprintf(hdr, sizeof(hdr), "%X", i & 0xF);
+		charbuf_append(b, hdr, hlen);
+	}
+
+	charbuf_append(b, "\x1b[0m\x1b[K\r\n", 10);
+
+	/* Separator line */
+	charbuf_append(b, "---------+", 10);
+	for (int i = 0; i < e->octets_per_line; i++) {
+		if (i % e->grouping == 0) {
+			charbuf_append(b, "-", 1);
+		}
+		charbuf_append(b, "--", 2);
+	}
+	charbuf_append(b, "-+", 2);
+	for (int i = 0; i < e->octets_per_line; i++) {
+		charbuf_append(b, "-", 1);
+	}
+	charbuf_append(b, "\x1b[K\r\n", 5);
+}
+
+
 void editor_refresh_screen(struct editor* e) {
 	struct charbuf* b = charbuf_create();
 
@@ -636,6 +690,7 @@ void editor_refresh_screen(struct editor* e) {
 			 MODE_INSERT |
 			 MODE_INSERT_ASCII)) {
 
+		editor_render_header(e, b);
 		editor_render_contents(e, b);
 		editor_render_status(e, b);
 		editor_render_ruler(e, b);
@@ -1117,10 +1172,10 @@ void editor_process_keypress(struct editor* e) {
 		case KEY_END:  editor_move_cursor(e, KEY_RIGHT, e->octets_per_line - e->cursor_x); return;
 
 		case KEY_CTRL_U:
-		case KEY_PAGEUP:   editor_scroll(e, -(e->screen_rows) + 2); return;
+		case KEY_PAGEUP:   editor_scroll(e, -(e->screen_rows - HX_HEADER_ROWS) + 2); return;
 
 		case KEY_CTRL_D:
-		case KEY_PAGEDOWN: editor_scroll(e, e->screen_rows - 2); return;
+		case KEY_PAGEDOWN: editor_scroll(e, e->screen_rows - HX_HEADER_ROWS - 2); return;
 		}
 	}
 }
@@ -1270,30 +1325,46 @@ int hx_run(const char* filename) {
 	editor_openfile(g_hx_editor, filename);
 	clear_screen();
 
+	/* Snapshot fields used to detect "nothing changed" after key processing.
+	 * When the cursor is clamped at the top or bottom of the file,
+	 * repeated arrow keys don't alter any visible state — skipping the
+	 * redraw in that case avoids the VT100 corruption that appears
+	 * during fast auto-repeat. */
+	int prev_cx = 0, prev_cy = 0, prev_line = 0;
+	unsigned int prev_len = 0;
+	bool prev_dirty = false;
+	enum editor_mode prev_mode = MODE_NORMAL;
+
 	while (1) {
-		/* Wait for the previous render to fully drain from the TX FIFO
-		 * before starting a new one.  The TX FIFO is only 1024 bytes but
-		 * a full screen render is ~7 KB, so it takes many Core1 drain
-		 * cycles to transmit.  Without this wait, the tail of render N
-		 * and the head of render N+1 concatenate in the FIFO, and VT100
-		 * escape sequences that straddle the boundary get split across
-		 * USB bulk packets — the terminal parser consumes an entire
-		 * display line as CSI parameters, producing the "missing row"
-		 * artifact. */
 		tx_fifo_wait_drain();
 		editor_refresh_screen(g_hx_editor);
-		/* Process at least one keypress, then batch any queued repeats.
-		 * During key-repeat the terminal sends escape sequences faster
-		 * than we can push a full-screen redraw (~7 KB) through the
-		 * 1024-byte TX FIFO.  Without batching, each queued key triggers
-		 * a separate render, flooding the terminal with back-to-back VT100
-		 * redraws that can split escape sequences across USB packets and
-		 * cause brief display artifacts (e.g. a literal 'm' from \x1b[0m).
-		 * By consuming all pending keys before the next render, we draw
-		 * the final state once instead of every intermediate position. */
+
+		/* Save state before processing keys */
+		prev_cx    = g_hx_editor->cursor_x;
+		prev_cy    = g_hx_editor->cursor_y;
+		prev_line  = g_hx_editor->line;
+		prev_len   = g_hx_editor->content_length;
+		prev_dirty = g_hx_editor->dirty;
+		prev_mode  = g_hx_editor->mode;
+
 		do {
 			editor_process_keypress(g_hx_editor);
 		} while (spsc_queue_level(&rx_fifo) > 0);
+
+		/* If nothing visually changed, skip the next redraw and
+		 * just wait for a key that actually moves something. */
+		while (g_hx_editor->cursor_x      == prev_cx   &&
+		       g_hx_editor->cursor_y      == prev_cy   &&
+		       g_hx_editor->line          == prev_line  &&
+		       g_hx_editor->content_length == prev_len  &&
+		       g_hx_editor->dirty         == prev_dirty &&
+		       g_hx_editor->mode          == prev_mode) {
+			editor_process_keypress(g_hx_editor);
+			/* Batch any further repeats that also land on the boundary */
+			while (spsc_queue_level(&rx_fifo) > 0) {
+				editor_process_keypress(g_hx_editor);
+			}
+		}
 	}
 	/* Never reached — exit() is longjmp */
 	return 0;

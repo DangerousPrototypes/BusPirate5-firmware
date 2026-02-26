@@ -35,6 +35,12 @@ void tx_fifo_try_put(char* c);
 void tx_fifo_write(const char* buf, uint32_t len);
 
 /**
+ * @brief Wait until transmit FIFO is fully drained.
+ * @pre Must be called from Core0.
+ */
+void tx_fifo_wait_drain(void);
+
+/**
  * @brief Start toolbar buffer transmission.
  * @param len  Number of valid characters in toolbar buffer
  */

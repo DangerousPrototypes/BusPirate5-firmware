@@ -811,7 +811,8 @@ static void core1_infinite_loop(void) {
             uint32_t update_flags = 0;
 
             // Bridge consumed dirty pin_config to system_config.pin_changed
-            // so consumers (ui_lcd, ui_pin_render) can read per-pin granularity
+            // so consumers (ui_lcd, ui_pin_render) can read per-pin granularity.
+            // TODO: migrate consumers to receive pin_config directly, then remove this field.
             system_config.pin_changed = cfg.pin_config;
 
             if (lcd_update_force) {

@@ -7,6 +7,15 @@
 #include "system_monitor.h"
 
 static monitor_snapshot_t snapshot;
+/*
+ * Dirty flag synchronisation note:
+ * Core0 only sets bits (|=) in dirty.pin_config and sets dirty.info_bar to true.
+ * Core1 only clears (= 0 / false) via monitor_consume_dirty().
+ * Single-word reads/writes are naturally atomic on Cortex-M0+.
+ * The |= read-modify-write is NOT atomic, so in theory a clear by core1 could
+ * be overwritten.  This matches the previous system_config.pin_changed pattern
+ * and is acceptable: the worst case is an extra UI update cycle.
+ */
 static volatile monitor_dirty_t dirty;
 
 void monitor_init(void) {

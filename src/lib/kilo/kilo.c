@@ -126,6 +126,7 @@ enum KEY_ACTION{
         ENTER = 13,         /* Enter */
         CTRL_Q = 17,        /* Ctrl-q */
         CTRL_S = 19,        /* Ctrl-s */
+        CTRL_T = 20,        /* Ctrl-t */
         CTRL_U = 21,        /* Ctrl-u */
         ESC = 27,           /* Escape */
         BACKSPACE =  127,   /* Backspace */
@@ -187,6 +188,12 @@ char *C_HL_keywords[] = {
         "void|","short|","auto|","const|","bool|",NULL
 };
 
+/* JSON / Bus Pirate config */
+char *JSON_HL_extensions[] = {".json",".bp",".js",NULL};
+char *JSON_HL_keywords[] = {
+        "true","false","null",NULL
+};
+
 /* Here we define an array of syntax highlights by extensions, keywords,
  * comments delimiters and flags. */
 struct editorSyntax HLDB[] = {
@@ -195,6 +202,13 @@ struct editorSyntax HLDB[] = {
         C_HL_extensions,
         C_HL_keywords,
         "//","/*","*/",
+        HL_HIGHLIGHT_STRINGS | HL_HIGHLIGHT_NUMBERS
+    },
+    {
+        /* JSON / Bus Pirate config */
+        JSON_HL_extensions,
+        JSON_HL_keywords,
+        "//","","",
         HL_HIGHLIGHT_STRINGS | HL_HIGHLIGHT_NUMBERS
     }
 };
@@ -1279,6 +1293,21 @@ void editorProcessKeypress(int fd) {
     case CTRL_L: /* ctrl+l, clear screen */
         /* Just refresht the line as side effect. */
         break;
+    case CTRL_T: /* ctrl+t, toggle syntax highlighting */
+        if (E.syntax) {
+            E.syntax = NULL;
+        } else {
+            if (E.filename)
+                editorSelectSyntaxHighlight(E.filename);
+        }
+        {
+            int j;
+            for (j = 0; j < E.numrows; j++)
+                editorUpdateSyntax(&E.row[j]);
+        }
+        editorSetStatusMessage("Syntax highlighting: %s",
+            E.syntax ? "ON" : "OFF");
+        break;
     case ESC:
         /* Nothing to do for ESC in this mode. */
         break;
@@ -1347,7 +1376,7 @@ int kilo_run(const char *filename) {
     }
     enableRawMode(STDIN_FILENO);
     editorSetStatusMessage(
-        "Ctrl-S save | Ctrl-Q quit | Ctrl-F find");
+        "Ctrl-S save | Ctrl-Q quit | Ctrl-F find | Ctrl-T highlight");
     while(1) {
         editorRefreshScreen();
         editorProcessKeypress(STDIN_FILENO);

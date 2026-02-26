@@ -183,6 +183,11 @@ set(buspirate_common
         commands/global/macro.h
         commands/global/script.c
         commands/global/script.h
+        commands/global/edit.c
+        commands/global/edit.h
+        lib/kilo/kilo_build.c
+        lib/kilo/kilo_compat.c
+        lib/kilo/kilo_compat.h
         commands/global/button_scr.c
         commands/global/button_scr.h
         commands/global/smps.c

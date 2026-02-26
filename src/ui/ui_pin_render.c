@@ -18,6 +18,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -251,4 +252,9 @@ uint32_t ui_pin_render_values(char* buf, size_t buf_len, pin_render_flags_t flag
 
     /* With CHANGE_TRACK, return 0 if nothing changed — caller can skip TX. */
     return (track && !any_update) ? 0 : len;
+}
+
+void ui_pin_render_reset_shadows(void) {
+    memset(shadow_voltage_mv, 0xFF, sizeof(shadow_voltage_mv));
+    shadow_current_raw = UINT32_MAX;
 }

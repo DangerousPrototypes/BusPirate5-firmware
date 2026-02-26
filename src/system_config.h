@@ -107,7 +107,6 @@ typedef struct _system_config {
     const char* pin_labels[HW_PINS]; // pointer to labels for each pin on the bus pirate header
     enum bp_pin_func pin_func[HW_PINS];
     uint32_t pin_changed;
-    bool info_bar_changed;
 
     uint8_t mode_active;
     uint8_t pwm_active;                    // pwm active, one bit per PWN channel/pin

@@ -50,6 +50,7 @@ extern const FONT_INFO hunter_12ptFontInfo;
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
 #include "pirate/amux.h"
+#include "system_monitor.h"
 
 static int convert_trigger_position(int pos);
 
@@ -372,7 +373,7 @@ static void scope_stop(void) {
         }
     }
     amux_sweep();
-    system_config.info_bar_changed = 1;
+    monitor_mark_info_changed();
 }
 
 static void scope_shutdown(int now) {
@@ -496,7 +497,7 @@ static void scope_start(int pin) {
     scope_running = 1;
     busy_wait_ms(1);
     adc_run(true);
-    system_config.info_bar_changed = 1;
+    monitor_mark_info_changed();
 }
 
 static uint8_t interactive;
@@ -721,7 +722,7 @@ uint32_t scope_commands(struct command_result* result) {
                     scope_stopped = 1;
                     scope_shutdown(1);
                     no_switch = 1;
-                    system_config.info_bar_changed = 1;
+                    monitor_mark_info_changed();
                     ;
                     break;
                 case 'r':
@@ -837,7 +838,7 @@ uint32_t scope_commands(struct command_result* result) {
                     scope_stopped = 1;
                     scope_shutdown(1);
                     no_switch = 1;
-                    system_config.info_bar_changed = 1;
+                    monitor_mark_info_changed();
                     ;
                     break;
                 case 'r':
@@ -1120,7 +1121,7 @@ uint32_t scope_commands(struct command_result* result) {
                     scope_stopped = 1;
                     scope_shutdown(1);
                     no_switch = 1;
-                    system_config.info_bar_changed = 1;
+                    monitor_mark_info_changed();
                     ;
                     break;
                 case 'r':
@@ -1289,7 +1290,7 @@ uint32_t scope_commands(struct command_result* result) {
         scope_stopped = 1;
         scope_shutdown(1);
         no_switch = 1;
-        system_config.info_bar_changed = 1;
+        monitor_mark_info_changed();
     } else {
         return 0;
     }

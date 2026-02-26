@@ -431,7 +431,7 @@ static void main_system_initialization(void) {
     lcd_backlight_enable(false);
 #endif
 
-    monitor();
+    monitor_update();
     if (displays[system_config.display].display_lcd_update) {
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL);
     }
@@ -806,24 +806,26 @@ static void core1_infinite_loop(void) {
         }
 
         if (lcd_update_request) {
-            monitor(); // TODO: fix monitor to return bool up_volts and up_current
-            uint32_t update_flags = 0;//core0_requested_update_flags;
-            //core0_requested_update_flags = 0;
+            bool adc_changed = monitor_update();
+            monitor_dirty_t cfg = monitor_consume_dirty();
+            uint32_t update_flags = 0;
+
+            // Bridge consumed dirty pin_config to system_config.pin_changed
+            // so consumers (ui_lcd, ui_pin_render) can read per-pin granularity
+            system_config.pin_changed = cfg.pin_config;
+
             if (lcd_update_force) {
                 lcd_update_force = false;
                 update_flags |= UI_UPDATE_FORCE | UI_UPDATE_ALL;
             }
-            if (system_config.pin_changed) {
-                update_flags |= UI_UPDATE_LABELS | UI_UPDATE_VOLTAGES; // pin labels + values (type may have changed)
+            if (cfg.pin_config) {
+                update_flags |= UI_UPDATE_LABELS | UI_UPDATE_VOLTAGES;
             }
-            if (monitor_voltage_changed()) {
-                update_flags |= UI_UPDATE_VOLTAGES; // pin voltages
+            if (adc_changed) {
+                update_flags |= UI_UPDATE_VOLTAGES | UI_UPDATE_CURRENT;
             }
-            if (psu_status.enabled && monitor_current_changed()) {
-                update_flags |= UI_UPDATE_CURRENT; // psu current sense
-            }
-            if (system_config.info_bar_changed) {
-                update_flags |= UI_UPDATE_INFOBAR; // info bar
+            if (cfg.info_bar) {
+                update_flags |= UI_UPDATE_INFOBAR;
             }
 
             if (!system_config.lcd_screensaver_active) {
@@ -849,7 +851,7 @@ static void core1_infinite_loop(void) {
             #endif
 
             freq_measure_period_irq(); // update frequency periodically
-            monitor_reset();
+            system_config.pin_changed = 0;
             lcd_update_request = false;
         }
 

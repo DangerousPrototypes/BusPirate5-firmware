@@ -20,6 +20,13 @@
 #include "displays.h"
 #include "pirate/lcd.h"
 
+/* -------------------------------------------------------------------------
+ * LCD-local shadow buffers for consumer-side change tracking.
+ * Only core1 writes these — no lock needed.
+ * ------------------------------------------------------------------------- */
+static uint16_t lcd_shadow_voltage_mv[HW_PINS];
+static uint32_t lcd_shadow_current_raw;
+
 static inline void lcd_write_start(void) {
     spi_busy_wait(true);
     gpio_put(DISPLAY_DP, 1);
@@ -267,23 +274,38 @@ void ui_lcd_update(uint32_t update_flags) {
         uint16_t left_margin = lcd_get_col(&layout, layout.font_default, 3); // put us in the third column
         uint8_t font_width = layout.font_default->lookup[0].width + layout.font_default->right_padding;
         uint16_t left_margin_skip_two_chars = (font_width * 2) + left_margin;
-        char c[] = "0";
+        char c[2] = "0";
+
+        const monitor_snapshot_t* snap = monitor_get_snapshot();
 
         // IO pin voltage loop
         uint16_t top_margin = layout.vout_top_pad;
         for (int i = 0; i < HW_PINS - 1; i++) {
-            if (monitor_get_voltage_char(i, 0, c) || update_flags & UI_UPDATE_FORCE) {
-                lcd_write_labels(
-                    left_margin, top_margin, layout.font_default, colors_pallet[layout.io_value_color], c, 0);
-            }
+            uint16_t mv = snap->voltage_mv[i];
+            uint16_t old = lcd_shadow_voltage_mv[i];
 
-            if (monitor_get_voltage_char(i, 2, c) || update_flags & UI_UPDATE_FORCE) {
-                lcd_write_labels(left_margin_skip_two_chars,
-                                 top_margin,
-                                 layout.font_default,
-                                 colors_pallet[layout.io_value_color],
-                                 c,
-                                 0);
+            if (mv != old || (update_flags & UI_UPDATE_FORCE)) {
+                uint8_t new_ones = (mv / 1000);
+                uint8_t old_ones = (old / 1000);
+                if (new_ones != old_ones || (update_flags & UI_UPDATE_FORCE)) {
+                    c[0] = new_ones + '0';
+                    lcd_write_labels(
+                        left_margin, top_margin, layout.font_default, colors_pallet[layout.io_value_color], c, 0);
+                }
+
+                uint8_t new_tenth = (mv % 1000) / 100;
+                uint8_t old_tenth = (old % 1000) / 100;
+                if (new_tenth != old_tenth || (update_flags & UI_UPDATE_FORCE)) {
+                    c[0] = new_tenth + '0';
+                    lcd_write_labels(left_margin_skip_two_chars,
+                                     top_margin,
+                                     layout.font_default,
+                                     colors_pallet[layout.io_value_color],
+                                     c,
+                                     0);
+                }
+
+                lcd_shadow_voltage_mv[i] = mv;
             }
 
             // Vout gets to set own position, the next pins go in even rows
@@ -301,27 +323,59 @@ void ui_lcd_update(uint32_t update_flags) {
                          colors_pallet[layout.current_color],
                          current_string,
                          0);
+        lcd_shadow_current_raw = 0;
     } else if (update_flags & UI_UPDATE_CURRENT || update_flags & UI_UPDATE_FORCE) {
-        // this is a bit of a hack, the big font is variable width, and the first char (.) is smaller than a number
-        // so we go for 3, but thats not really the best way to deal
-        uint8_t font_width = layout.font_big->lookup[3].width + layout.font_big->right_padding;
-        uint16_t left_margin = layout.current_left_pad;
-        char c[] = "0";
+        const monitor_snapshot_t* snap = monitor_get_snapshot();
+        uint32_t raw = snap->current_raw;
 
-        // integers
-        for (int i = 0; i < 3; i++) {
-            if (monitor_get_current_char(i, c) || update_flags & UI_UPDATE_FORCE) {
+        if (raw != lcd_shadow_current_raw || (update_flags & UI_UPDATE_FORCE)) {
+            uint32_t ua = snap->current_ua;
+            uint32_t ma_int = ua / 1000;        // integer mA (0-500)
+            uint8_t ma_tenth = (ua % 1000) / 100; // tenths digit
+
+            // Decompose integer part into per-digit values
+            uint8_t new_digits[3] = {
+                (ma_int / 100) % 10,  // hundreds
+                (ma_int / 10) % 10,   // tens
+                ma_int % 10           // ones
+            };
+
+            // Old digit values for per-digit diffing
+            uint32_t old_ua = ((lcd_shadow_current_raw >> 1) * ((500 * 1000) / 2048));
+            uint32_t old_ma_int = old_ua / 1000;
+            uint8_t old_digits[3] = {
+                (old_ma_int / 100) % 10,
+                (old_ma_int / 10) % 10,
+                old_ma_int % 10
+            };
+
+            // this is a bit of a hack, the big font is variable width, and the first char (.) is smaller than a number
+            // so we go for 3, but thats not really the best way to deal
+            uint8_t font_width = layout.font_big->lookup[3].width + layout.font_big->right_padding;
+            uint16_t left_margin = layout.current_left_pad;
+            char c[2] = "0";
+
+            // integers
+            for (int i = 0; i < 3; i++) {
+                if (new_digits[i] != old_digits[i] || (update_flags & UI_UPDATE_FORCE)) {
+                    c[0] = new_digits[i] + '0';
+                    lcd_write_labels(
+                        left_margin, layout.current_top_pad, layout.font_big, colors_pallet[layout.current_color], c, 0);
+                }
+                left_margin += font_width;
+            }
+
+            // decimal
+            uint8_t old_tenth = (old_ua % 1000) / 100;
+            if (ma_tenth != old_tenth || (update_flags & UI_UPDATE_FORCE)) {
+                // variable width font, decimal point (0) is smaller
+                left_margin += (layout.font_big->lookup[0].width + layout.font_big->right_padding);
+                c[0] = ma_tenth + '0';
                 lcd_write_labels(
                     left_margin, layout.current_top_pad, layout.font_big, colors_pallet[layout.current_color], c, 0);
             }
-            left_margin += font_width;
-        }
-        // decimal
-        if (monitor_get_current_char(4, c) || update_flags & UI_UPDATE_FORCE) {
-            // variable width font, decimal point (0) is smaller
-            left_margin += (layout.font_big->lookup[0].width + layout.font_big->right_padding);
-            lcd_write_labels(
-                left_margin, layout.current_top_pad, layout.font_big, colors_pallet[layout.current_color], c, 0);
+
+            lcd_shadow_current_raw = raw;
         }
     }
 }
@@ -404,7 +458,7 @@ void lcd_screensaver_enable(void) {
 }
 
 void lcd_screensaver_disable(void) {
-    monitor();
+    monitor_update();
     if (displays[system_config.display].display_lcd_update) {
         displays[system_config.display].display_lcd_update(UI_UPDATE_ALL|UI_UPDATE_FORCE);
     }

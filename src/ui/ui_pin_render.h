@@ -76,3 +76,12 @@ uint32_t ui_pin_render_labels(char* buf, size_t buf_len, pin_render_flags_t flag
  * @return Bytes written to buf (0 when CHANGE_TRACK set and nothing changed).
  */
 uint32_t ui_pin_render_values(char* buf, size_t buf_len, pin_render_flags_t flags);
+
+/**
+ * @brief Force a full repaint on next CHANGE_TRACK render by invalidating shadows.
+ *
+ * Call this when an external event (e.g. info-bar change) means every cell
+ * must be re-emitted regardless of whether the underlying value changed.
+ * Only meaningful for Core1 (statusbar) which uses PIN_RENDER_CHANGE_TRACK.
+ */
+void ui_pin_render_reset_shadows(void);

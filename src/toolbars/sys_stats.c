@@ -1,9 +1,9 @@
 /**
  * @file sys_stats.c
  * @brief 1-line system statistics toolbar implementation.
- * @details Displays uptime, PSU on/off, USB state, and registered toolbar count.
- *          All rendering goes through the Core1 _buf() path — the .draw callback
- *          simply triggers a blocking Core1 update via toolbar_update_blocking().
+ * @details Displays PSU, pull-up, binmode status indicators on the left,
+ *          and uptime right-justified.  All rendering goes through the
+ *          Core1 _buf() path.
  */
 
 #include <stdio.h>
@@ -16,6 +16,7 @@
 #include "ui/ui_toolbar.h"
 #include "pirate/psu.h"
 #include "tusb.h"
+#include "binmode/binmodes.h"
 
 #define SYS_STATS_HEIGHT 1
 
@@ -42,19 +43,86 @@ static toolbar_t sys_stats_toolbar = {
 
 /**
  * @brief Core1 update callback — renders stats into buffer.
- * @details Single rendering path for both initial paint and periodic refresh.
- *          Uses only snprintf + _buf() variants.  Cursor envelope is handled
- *          by the state machine in ui_toolbar.c.
+ * @details Layout (left → right):
+ *          [PSU 8ch] [PULLUP 8ch] [BINMODE: name 16+ch] ... gap ... [Up H:MM:SS]
+ *          Each indicator: white text on grey-blue (on) or grey (off).
+ *          Gap & uptime: light-grey text on dark background.
  */
 static uint32_t sys_stats_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_len,
                                           uint16_t start_row, uint16_t width,
                                           uint32_t update_flags) {
     (void)tb; (void)update_flags;
     uint32_t len = 0;
+    int n;
 
     len += ui_term_cursor_position_buf(&buf[len], buf_len - len, start_row, 0);
 
-    /* Uptime */
+    /* ---- Indicator colours ---- */
+    const uint32_t fg_ind   = 0xFFFFFF;  /* white text on indicators  */
+    const uint32_t bg_on    = 0x004466;  /* grey-blue when active     */
+    const uint32_t bg_off   = 0x333333;  /* grey when inactive        */
+    const uint32_t fg_dark  = 0xCCCCCC;  /* light grey for gap/uptime */
+    const uint32_t bg_dark  = 0x222222;  /* dark background           */
+
+    /* Track visible columns for gap calculation */
+    uint32_t cols = 0;
+
+    /* ---- PSU indicator (1 column = 8 chars) ---- */
+    len += ui_term_color_text_background_buf(&buf[len], buf_len - len,
+                                             fg_ind, psu_status.enabled ? bg_on : bg_off);
+    n = snprintf(&buf[len], buf_len - len, " %-7s", "PSU");
+    len += (uint32_t)n;
+    cols += (uint32_t)n;
+
+    /* ---- FUSE indicator (1 column = 8 chars) ---- */
+    /* Red when overcurrent or undervoltage fault, green when PSU on + OK, grey when PSU off */
+    const uint32_t bg_fuse_err = 0x660000;  /* red background on fault */
+    const uint32_t bg_fuse_ok  = 0x006600;  /* green background, fuse OK */
+    bool fuse_fault = psu_status.error_overcurrent || psu_status.error_undervoltage;
+    uint32_t fuse_bg = fuse_fault ? bg_fuse_err
+                     : psu_status.enabled ? bg_fuse_ok
+                     : bg_off;
+    const char* fuse_str = psu_status.error_overcurrent ? "OC"
+                         : psu_status.error_undervoltage ? "UV"
+                         : "OK";
+    len += ui_term_color_text_background_buf(&buf[len], buf_len - len, fg_ind, fuse_bg);
+    n = snprintf(&buf[len], buf_len - len, " FUSE:%-2s", fuse_str);
+    len += (uint32_t)n;
+    cols += (uint32_t)n;
+
+    /* ---- PULLUP indicator (1 column = 8 chars) ---- */
+    len += ui_term_color_text_background_buf(&buf[len], buf_len - len,
+                                             fg_ind, system_config.pullup_enabled ? bg_on : bg_off);
+    n = snprintf(&buf[len], buf_len - len, " %-7s", "PULLUP");
+    len += (uint32_t)n;
+    cols += (uint32_t)n;
+
+    /* ---- BINMODE indicator: colored label + dark-bg name ---- */
+    uint8_t bm_idx = system_config.binmode_select;
+    if (bm_idx >= BINMODE_MAXPROTO) { bm_idx = 0; }
+    const char* bm_name = binmodes[bm_idx].binmode_name;
+    bool bm_active = tud_cdc_n_connected(1);
+
+    /* Colored "BINMODE:" label (10 chars: space + BINMODE: + space) */
+    len += ui_term_color_text_background_buf(&buf[len], buf_len - len,
+                                             fg_ind, bm_active ? bg_on : bg_off);
+    n = snprintf(&buf[len], buf_len - len, " BINMODE: ");
+    len += (uint32_t)n;
+    cols += (uint32_t)n;
+
+    /* Binmode name on dark background, padded to next 8-char boundary */
+    len += ui_term_color_text_background_buf(&buf[len], buf_len - len, fg_dark, bg_dark);
+    char bm_name_buf[40];
+    int bm_name_len = snprintf(bm_name_buf, sizeof(bm_name_buf), "%s ", bm_name);
+    int bm_total = 10 + bm_name_len;  /* label + name */
+    int bm_col = ((bm_total + 7) / 8) * 8;
+    if (bm_col < 16) { bm_col = 16; }
+    int bm_pad = bm_col - 10;  /* remaining chars for name field */
+    n = snprintf(&buf[len], buf_len - len, "%-*s", bm_pad, bm_name_buf);
+    len += (uint32_t)n;
+    cols += (uint32_t)n;
+
+    /* ---- Uptime string (pre-format so we know its width) ---- */
     uint32_t ms   = to_ms_since_boot(get_absolute_time());
     uint32_t secs = ms / 1000;
     uint32_t mins = secs / 60;
@@ -62,40 +130,23 @@ static uint32_t sys_stats_update_core1_cb(toolbar_t* tb, char* buf, size_t buf_l
     secs %= 60;
     mins %= 60;
 
-    /* PSU state */
-    const char* psu_str = psu_status.enabled ? "ON" : "OFF";
-    uint32_t psu_bg = psu_status.enabled ? 0x006600 : 0x333333;
+    char uptime[24];
+    int uptime_len = snprintf(uptime, sizeof(uptime), " Up %lu:%02lu:%02lu ",
+                              (unsigned long)hrs, (unsigned long)mins, (unsigned long)secs);
 
-    /* USB state */
-    bool usb_ok = tud_cdc_n_connected(0);
-    const char* usb_str = usb_ok ? "USB" : "---";
-    uint32_t usb_bg = usb_ok ? 0x004466 : 0x333333;
-
-    /* Track visible columns written so we can pad the tail */
-    uint32_t cols = 0;
-
-    len += ui_term_color_text_background_buf(&buf[len], buf_len - len, 0xCCCCCC, 0x222222);
-    int n = snprintf(&buf[len], buf_len - len, " Up %lu:%02lu:%02lu ",
-                     (unsigned long)hrs, (unsigned long)mins, (unsigned long)secs);
-    len += n; cols += n;
-
-    len += ui_term_color_text_background_buf(&buf[len], buf_len - len, 0xFFFFFF, psu_bg);
-    n = snprintf(&buf[len], buf_len - len, " PSU:%s ", psu_str);
-    len += n; cols += n;
-
-    len += ui_term_color_text_background_buf(&buf[len], buf_len - len, 0xFFFFFF, usb_bg);
-    n = snprintf(&buf[len], buf_len - len, " %s ", usb_str);
-    len += n; cols += n;
-
-    len += ui_term_color_text_background_buf(&buf[len], buf_len - len, 0xCCCCCC, 0x222222);
-    n = snprintf(&buf[len], buf_len - len, " Bars:%u/%u ",
-                 toolbar_count_registered(), TOOLBAR_MAX_COUNT);
-    len += n; cols += n;
-
-    /* Pad remaining columns with background to avoid erase flicker */
-    for (uint16_t c = cols; c < width; c++) {
-        if (len < buf_len - 1) buf[len++] = ' ';
+    /* ---- Dark gap (fills space between indicators and uptime) ---- */
+    uint32_t right_cols = cols + (uint32_t)uptime_len;
+    len += ui_term_color_text_background_buf(&buf[len], buf_len - len, fg_dark, bg_dark);
+    if (right_cols < width) {
+        uint32_t gap = width - right_cols;
+        for (uint32_t i = 0; i < gap; i++) {
+            if (len < buf_len - 1) { buf[len++] = ' '; }
+        }
     }
+
+    /* ---- Uptime (right-justified, dark background) ---- */
+    n = snprintf(&buf[len], buf_len - len, "%s", uptime);
+    len += (uint32_t)n;
 
     len += snprintf(&buf[len], buf_len - len, "%s", ui_term_color_reset());
 

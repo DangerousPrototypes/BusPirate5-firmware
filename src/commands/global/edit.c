@@ -20,6 +20,7 @@
 #include "fatfs/ff.h"
 #include "pirate/file.h"
 #include "pirate/mem.h"
+#include "pirate/storage.h"
 #include "lib/kilo/kilo_compat.h"
 #include "lib/bp_args/bp_cmd.h"
 
@@ -70,6 +71,25 @@ void edit_handler(struct command_result *res) {
     char filename[64];
     if (!bp_file_get_name_positional(&edit_def, 1, filename, sizeof(filename))) {
         printf("Usage: edit <filename>\r\n");
+        res->error = true;
+        return;
+    }
+
+    /* Check file size before committing memory.
+     * The arena has overhead (8-byte header per allocation + per-line
+     * structures), so a file near BIG_BUFFER_SIZE will OOM. Use 90%
+     * as a practical limit.  Non-existent files (FR_NO_FILE) are fine
+     * — the editor will create them on save. */
+    FILINFO finfo;
+    FRESULT fr = f_stat(filename, &finfo);
+    if (fr == FR_OK && finfo.fsize > (BIG_BUFFER_SIZE * 9 / 10)) {
+        printf("Error: file too large (%lu bytes, %d KB limit)\r\n",
+               (unsigned long)finfo.fsize, BIG_BUFFER_SIZE / 1024);
+        res->error = true;
+        return;
+    }
+    if (fr != FR_OK && fr != FR_NO_FILE) {
+        storage_file_error(fr);
         res->error = true;
         return;
     }

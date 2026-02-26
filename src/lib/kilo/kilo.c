@@ -274,7 +274,9 @@ int editorReadKey(int fd) {
                     if (read(fd,seq+2,1) == 0) return ESC;
                     if (seq[2] == '~') {
                         switch(seq[1]) {
+                        case '1': return HOME_KEY;
                         case '3': return DEL_KEY;
+                        case '4': return END_KEY;
                         case '5': return PAGE_UP;
                         case '6': return PAGE_DOWN;
                         }
@@ -981,8 +983,19 @@ void editorRefreshScreen(void) {
     /* Second row depends on E.statusmsg and the status message update time. */
     abAppend(&ab,"\x1b[0K",4);
     int msglen = strlen(E.statusmsg);
-    if (msglen && time(NULL)-E.statusmsg_time < 5)
-        abAppend(&ab,E.statusmsg,msglen <= E.screencols ? msglen : E.screencols);
+    if (msglen && time(NULL)-E.statusmsg_time < 5) {
+        if (msglen > E.screencols) msglen = E.screencols;
+        abAppend(&ab,E.statusmsg,msglen);
+        char sizeinfo[16];
+        int sizelen = snprintf(sizeinfo, sizeof(sizeinfo), "[%dx%d]",
+            E.screencols, E.screenrows + 2);
+        while (msglen < E.screencols - sizelen) {
+            abAppend(&ab," ",1);
+            msglen++;
+        }
+        if (msglen + sizelen <= E.screencols)
+            abAppend(&ab,sizeinfo,sizelen);
+    }
 
     /* Put cursor at its current position. Note that the horizontal position
      * at which the cursor is displayed may be different compared to 'E.cx'
@@ -1247,6 +1260,22 @@ void editorProcessKeypress(int fd) {
     case ARROW_RIGHT:
         editorMoveCursor(c);
         break;
+    case HOME_KEY:
+        E.cx = 0;
+        E.coloff = 0;
+        break;
+    case END_KEY:
+        if (E.rowoff+E.cy < E.numrows) {
+            int rowlen = E.row[E.rowoff+E.cy].size;
+            if (rowlen > E.screencols-1) {
+                E.coloff = rowlen-E.screencols+1;
+                E.cx = E.screencols-1;
+            } else {
+                E.coloff = 0;
+                E.cx = rowlen;
+            }
+        }
+        break;
     case CTRL_L: /* ctrl+l, clear screen */
         /* Just refresht the line as side effect. */
         break;
@@ -1318,8 +1347,7 @@ int kilo_run(const char *filename) {
     }
     enableRawMode(STDIN_FILENO);
     editorSetStatusMessage(
-        "Ctrl-S save | Ctrl-Q quit | Ctrl-F find [%dx%d]",
-        E.screencols, E.screenrows + 2);
+        "Ctrl-S save | Ctrl-Q quit | Ctrl-F find");
     while(1) {
         editorRefreshScreen();
         editorProcessKeypress(STDIN_FILENO);

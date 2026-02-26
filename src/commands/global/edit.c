@@ -60,6 +60,12 @@ const bp_command_def_t edit_def = {
 /* ---- Command handler ---- */
 
 void edit_handler(struct command_result *res) {
+
+    //check help flag
+    if (bp_cmd_help_check(&edit_def, res->help_flag)) {
+        return;
+    }
+
     /* Parse filename from command line */
     char filename[64];
     if (!bp_file_get_name_positional(&edit_def, 1, filename, sizeof(filename))) {

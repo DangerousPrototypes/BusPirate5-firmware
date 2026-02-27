@@ -654,6 +654,10 @@ enum T_translations{
     T_HELP_CMD_EDIT_FILE,
     T_HELP_CMD_HEXEDIT,
     T_HELP_CMD_HEXEDIT_FILE,
+    T_HELP_TXTEST,
+    T_HELP_TXTEST_LAYER,
+    T_HELP_TXTEST_NBYTES,
+    T_HELP_TXTEST_PATTERN,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

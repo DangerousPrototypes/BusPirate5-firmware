@@ -656,6 +656,11 @@ static char const * const en_us[]={
 	[T_HELP_CMD_EDIT_FILE]="File to edit or create",
 	[T_HELP_CMD_HEXEDIT]="hex editor for binary files on the storage",
 	[T_HELP_CMD_HEXEDIT_FILE]="File to hex edit or create",
+	//TXTEST debug command
+	[T_HELP_TXTEST]="TX pipeline saturation test (debug)",
+	[T_HELP_TXTEST_LAYER]="Test layer: 1=printf, 2=tx_fifo, 3=chunked tx_fifo",
+	[T_HELP_TXTEST_NBYTES]="Number of bytes to send (64-65535)",
+	[T_HELP_TXTEST_PATTERN]="Pattern: 0=counter, 1=VT100 reset, 2=VT100 mixed",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

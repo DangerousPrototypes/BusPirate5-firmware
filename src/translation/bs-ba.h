@@ -638,5 +638,9 @@ static char const * const bs_ba[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_CMD_EDIT_FILE             ] = NULL,
     [ T_HELP_CMD_HEXEDIT               ] = NULL,
     [ T_HELP_CMD_HEXEDIT_FILE          ] = NULL,
+    [ T_HELP_TXTEST                    ] = NULL,
+    [ T_HELP_TXTEST_LAYER              ] = NULL,
+    [ T_HELP_TXTEST_NBYTES             ] = NULL,
+    [ T_HELP_TXTEST_PATTERN            ] = NULL,
 
 };

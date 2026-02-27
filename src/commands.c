@@ -25,6 +25,7 @@
 #include "commands/global/h_help.h"
 #include "commands/global/cmd_selftest.h"
 #include "commands/global/dummy.h"
+#include "commands/global/menu_demo.h"
 #include "commands/global/txtest.h"
 #include "commands/global/disk.h"
 #include "commands/global/i_info.h"
@@ -115,6 +116,7 @@ const struct _global_command_struct commands[] = {
 { .command="h",         .allow_hiz=true,  .func=&help_handler,                       .def=&help_def, .category=CMD_CAT_HIDDEN },
 { .command="help",      .allow_hiz=true,  .func=&help_handler,                       .def=&help_def, .category=CMD_CAT_HIDDEN },
 { .command="dummy",     .allow_hiz=true,  .func=&dummy_handler,                      .def=&dummy_def, .category=CMD_CAT_HIDDEN },
+{ .command="menu_demo", .allow_hiz=true,  .func=&menu_demo_handler,                  .def=&menu_demo_def, .category=CMD_CAT_HIDDEN },
 { .command="txtest",    .allow_hiz=true,  .func=&txtest_handler,                     .def=&txtest_def, .category=CMD_CAT_HIDDEN },
 // clang-format on
 };

@@ -169,6 +169,8 @@ set(buspirate_common
         commands/global/a_auxio.c
         commands/global/dummy.c
         commands/global/dummy.h
+        commands/global/txtest.c
+        commands/global/txtest.h
         commands/global/disk.c
         commands/global/disk.h
         commands/global/v_adc.c

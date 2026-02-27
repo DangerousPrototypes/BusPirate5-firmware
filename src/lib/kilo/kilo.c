@@ -115,6 +115,10 @@ struct editorConfig {
 
 static struct editorConfig E;
 
+#ifdef BUSPIRATE
+static int kilo_menu_pending;  /* Forward declaration — set by F10 key handler */
+#endif
+
 enum KEY_ACTION{
         KEY_NULL = 0,       /* NULL */
         CTRL_C = 3,         /* Ctrl-c */
@@ -140,7 +144,8 @@ enum KEY_ACTION{
         HOME_KEY,
         END_KEY,
         PAGE_UP,
-        PAGE_DOWN
+        PAGE_DOWN,
+        F10_KEY
 };
 
 void editorSetStatusMessage(const char *fmt, ...);
@@ -268,7 +273,20 @@ fatal:
 
 /* Read a key from the terminal put in raw mode, trying to handle
  * escape sequences. */
+static int editorReadKey_pushback = -1;
+
+static void editorReadKey_unget(int key) {
+    editorReadKey_pushback = key;
+}
+
 int editorReadKey(int fd) {
+    /* Return pushed-back key if present (used for menu passthrough) */
+    if (editorReadKey_pushback >= 0) {
+        int k = editorReadKey_pushback;
+        editorReadKey_pushback = -1;
+        return k;
+    }
+
     int nread;
     char c, seq[3];
     while ((nread = read(fd,&c,1)) == 0);
@@ -287,12 +305,23 @@ int editorReadKey(int fd) {
                     /* Extended escape, read additional byte. */
                     if (read(fd,seq+2,1) == 0) return ESC;
                     if (seq[2] == '~') {
+                        /* Single-digit CSI: ESC [ N ~ */
                         switch(seq[1]) {
                         case '1': return HOME_KEY;
                         case '3': return DEL_KEY;
                         case '4': return END_KEY;
                         case '5': return PAGE_UP;
                         case '6': return PAGE_DOWN;
+                        }
+                    } else if (seq[2] >= '0' && seq[2] <= '9') {
+                        /* Two-digit CSI: ESC [ N N ~ (e.g. F10 = ESC[21~) */
+                        char seq3;
+                        if (read(fd, &seq3, 1) == 0) return ESC;
+                        if (seq3 == '~') {
+                            int code = (seq[1] - '0') * 10 + (seq[2] - '0');
+                            switch (code) {
+                            case 21: return F10_KEY;
+                            }
                         }
                     }
                 } else {
@@ -906,7 +935,11 @@ void editorRefreshScreen(void) {
     struct abuf ab = ABUF_INIT;
 
     abAppend(&ab,"\x1b[?25l",6); /* Hide cursor. */
+#ifdef BUSPIRATE
+    abAppend(&ab,"\x1b[2;1H",6); /* Row 1 is menu bar; start at row 2. */
+#else
     abAppend(&ab,"\x1b[H",3); /* Go home. */
+#endif
     for (y = 0; y < E.screenrows; y++) {
         int filerow = E.rowoff+y;
 
@@ -1024,7 +1057,11 @@ void editorRefreshScreen(void) {
             cx++;
         }
     }
+#ifdef BUSPIRATE
+    snprintf(buf,sizeof(buf),"\x1b[%d;%dH",E.cy+2,cx); /* +2: row 1 is menu bar */
+#else
     snprintf(buf,sizeof(buf),"\x1b[%d;%dH",E.cy+1,cx);
+#endif
     abAppend(&ab,buf,strlen(buf));
     abAppend(&ab,"\x1b[?25h",6); /* Show cursor. */
     write(STDOUT_FILENO,ab.b,ab.len);
@@ -1311,6 +1348,11 @@ void editorProcessKeypress(int fd) {
     case ESC:
         /* Nothing to do for ESC in this mode. */
         break;
+#ifdef BUSPIRATE
+    case F10_KEY:
+        kilo_menu_pending = 1;
+        break;
+#endif
     default:
         editorInsertChar(c);
         break;
@@ -1354,6 +1396,96 @@ void initEditor(void) {
 }
 
 #ifdef BUSPIRATE
+
+#include "lib/vt100_menu/vt100_menu.h"
+
+/* ── Menu definitions for the text editor ────────────────────────────── */
+
+enum {
+    KILO_ACT_SAVE       = 1,
+    KILO_ACT_QUIT       = 2,
+    KILO_ACT_QUIT_FORCE = 3,
+    KILO_ACT_FIND       = 10,
+    KILO_ACT_HIGHLIGHT  = 11,
+    KILO_ACT_HELP       = 20,
+};
+
+static const vt100_menu_item_t kilo_file_items[] = {
+    { "Save",           "^S",  KILO_ACT_SAVE,       0 },
+    { NULL,              NULL,   0,                    MENU_ITEM_SEPARATOR },
+    { "Quit",           "^Q",  KILO_ACT_QUIT,       0 },
+    { "Quit (no save)",  NULL,   KILO_ACT_QUIT_FORCE, 0 },
+    { NULL, NULL, 0, 0 }
+};
+
+static const vt100_menu_item_t kilo_edit_items[] = {
+    { "Find",           "^F",  KILO_ACT_FIND,       0 },
+    { "Toggle syntax",  "^T",  KILO_ACT_HIGHLIGHT,  0 },
+    { NULL, NULL, 0, 0 }
+};
+
+static const vt100_menu_item_t kilo_help_items[] = {
+    { "About Kilo",      NULL,   KILO_ACT_HELP,       0 },
+    { NULL, NULL, 0, 0 }
+};
+
+static const vt100_menu_def_t kilo_menus[] = {
+    { "File",   kilo_file_items,  4 },
+    { "Edit",   kilo_edit_items,  2 },
+    { "Help",   kilo_help_items,  1 },
+};
+#define KILO_MENU_COUNT 3
+
+static int kilo_menu_read_key_wrapper(void) {
+    return editorReadKey(STDIN_FILENO);
+}
+
+static int kilo_menu_write_wrapper(int fd, const void* buf, int count) {
+    (void)fd;
+    return (int)write(STDOUT_FILENO, buf, (size_t)count);
+}
+
+static void kilo_menu_dispatch(int action) {
+    switch (action) {
+    case KILO_ACT_SAVE:
+        editorSave();
+        break;
+    case KILO_ACT_QUIT:
+        if (E.dirty) {
+            editorSetStatusMessage(
+                "WARNING! Unsaved changes. Use File > Quit (no save) to discard.");
+        } else {
+            exit(0);
+        }
+        break;
+    case KILO_ACT_QUIT_FORCE:
+        exit(0);
+        break;
+    case KILO_ACT_FIND:
+        editorFind(STDIN_FILENO);
+        break;
+    case KILO_ACT_HIGHLIGHT:
+        if (E.syntax) {
+            E.syntax = NULL;
+        } else {
+            if (E.filename)
+                editorSelectSyntaxHighlight(E.filename);
+        }
+        {
+            int j;
+            for (j = 0; j < E.numrows; j++)
+                editorUpdateSyntax(&E.row[j]);
+        }
+        editorSetStatusMessage("Syntax highlighting: %s",
+            E.syntax ? "ON" : "OFF");
+        break;
+    case KILO_ACT_HELP:
+        editorSetStatusMessage(
+            "Ctrl-S save | Ctrl-Q quit | Ctrl-F find | Ctrl-T highlight");
+        break;
+    }
+}
+
 /* BP5FW: Free all editor memory (called after longjmp exit) */
 void kilo_cleanup(void) {
     int i;
@@ -1376,10 +1508,46 @@ int kilo_run(const char *filename) {
     }
     enableRawMode(STDIN_FILENO);
     editorSetStatusMessage(
-        "Ctrl-S save | Ctrl-Q quit | Ctrl-F find | Ctrl-T highlight");
+        "F10=Menu | Ctrl-S save | Ctrl-Q quit | Ctrl-F find");
+
+    /* Initialise the menu system */
+    vt100_menu_state_t menu_state;
+    vt100_menu_init(&menu_state, kilo_menus, KILO_MENU_COUNT,
+        1, /* bar_row: top of screen */
+        (uint8_t)E.screencols,
+        (uint8_t)(E.screenrows + 2),
+        kilo_menu_read_key_wrapper,
+        kilo_menu_write_wrapper);
+    /* Override key codes for kilo's enum values (different from hx!) */
+    menu_state.key_up    = ARROW_UP;
+    menu_state.key_down  = ARROW_DOWN;
+    menu_state.key_left  = ARROW_LEFT;
+    menu_state.key_right = ARROW_RIGHT;
+    menu_state.key_enter = ENTER;
+    menu_state.key_esc   = ESC;
+    menu_state.key_f10   = F10_KEY;
+    menu_state.repaint   = editorRefreshScreen;
+
+    /* Reserve row 1 for menu bar — shrink content area by 1 */
+    E.screenrows -= 1;
+
     while(1) {
         editorRefreshScreen();
+        vt100_menu_draw_bar(&menu_state);
         editorProcessKeypress(STDIN_FILENO);
+
+        /* Check if F10 was pressed */
+        if (kilo_menu_pending) {
+            kilo_menu_pending = 0;
+            int action = vt100_menu_run(&menu_state);
+            if (action > 0) {
+                kilo_menu_dispatch(action);
+            } else if (action == MENU_RESULT_PASSTHROUGH && menu_state.unhandled_key) {
+                editorReadKey_unget(menu_state.unhandled_key);
+            }
+            /* Force full redraw after menu closes */
+            write(STDOUT_FILENO, "\x1b[2J", 4);
+        }
     }
     return 0;
 }

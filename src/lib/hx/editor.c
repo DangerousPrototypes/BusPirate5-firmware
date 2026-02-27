@@ -8,6 +8,10 @@
 #include "util.h"
 #include "undo.h"
 
+#ifdef BUSPIRATE
+#include "lib/vt100_menu/vt100_menu.h"
+#endif
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -21,9 +25,9 @@
 #include <unistd.h>
 #endif
 
-/* Number of fixed header rows (column labels + separator) */
+/* Number of fixed header rows (menu bar + column labels + separator) */
 #ifdef BUSPIRATE
-#define HX_HEADER_ROWS 2
+#define HX_HEADER_ROWS 3
 #else
 #define HX_HEADER_ROWS 0
 #endif
@@ -732,7 +736,12 @@ void editor_refresh_screen(struct editor* e) {
 	struct charbuf* b = charbuf_create();
 
 	charbuf_append(b, "\x1b[?25l", 6);
+#ifdef BUSPIRATE
+	/* Row 1 is reserved for the menu bar; start content at row 2 */
+	charbuf_append(b, "\x1b[2;1H", 6);
+#else
 	charbuf_append(b, "\x1b[H", 3);
+#endif
 
 	if (e->mode &
 			(MODE_REPLACE |
@@ -1173,7 +1182,7 @@ void editor_process_keypress(struct editor* e) {
 	}
 
 	switch (c) {
-	case KEY_ESC:    editor_setmode(e, MODE_NORMAL); return;
+	case KEY_ESC:    if (!(e->mode & MODE_NORMAL)) editor_setmode(e, MODE_NORMAL); return;
 	case KEY_CTRL_Q: exit(0); return;
 	case KEY_CTRL_S: editor_writefile(e); return;
 	}
@@ -1231,6 +1240,10 @@ void editor_process_keypress(struct editor* e) {
 
 		case KEY_CTRL_D:
 		case KEY_PAGEDOWN: editor_scroll(e, e->screen_rows - HX_HEADER_ROWS - 2); return;
+
+#ifdef BUSPIRATE
+		case KEY_F10: e->menu_pending = true; return;
+#endif
 		}
 	}
 }
@@ -1366,6 +1379,7 @@ struct editor* editor_init() {
 
 #ifdef BUSPIRATE
 	e->undo_list = NULL;  /* undo disabled — zero-alloc debug build */
+	e->menu_pending = false;
 #else
 	e->undo_list = action_list_init();
 #endif
@@ -1387,10 +1401,161 @@ void editor_free(struct editor* e) {
 
 static struct editor* g_hx_editor = NULL;
 
+/* ── Menu definitions for the hex editor ──────────────────────────── */
+
+/* Action IDs — returned by vt100_menu_run() */
+enum {
+	HX_ACT_SAVE      = 1,
+	HX_ACT_QUIT      = 2,
+	HX_ACT_QUIT_NOSAVE = 3,
+	HX_ACT_UNDO      = 10,
+	HX_ACT_REDO      = 11,
+	HX_ACT_DEL       = 12,
+	HX_ACT_INC       = 13,
+	HX_ACT_DEC       = 14,
+	HX_ACT_MODE_INS  = 20,
+	HX_ACT_MODE_APP  = 21,
+	HX_ACT_MODE_REP  = 22,
+	HX_ACT_MODE_INSA = 23,
+	HX_ACT_MODE_APPA = 24,
+	HX_ACT_MODE_REPA = 25,
+	HX_ACT_SEARCH    = 30,
+	HX_ACT_NEXT      = 31,
+	HX_ACT_PREV      = 32,
+	HX_ACT_GOTO      = 33,
+	HX_ACT_GOTO_TOP  = 34,
+	HX_ACT_GOTO_END  = 35,
+	HX_ACT_HELP      = 40,
+};
+
+static const vt100_menu_item_t hx_file_items[] = {
+	{ "Save",          "^S",  HX_ACT_SAVE,       0 },
+	{ NULL,             NULL,   0,                  MENU_ITEM_SEPARATOR },
+	{ "Quit",          "^Q",  HX_ACT_QUIT,       0 },
+	{ "Quit (no save)", NULL,  HX_ACT_QUIT_NOSAVE,0 },
+	{ NULL, NULL, 0, 0 }  /* sentinel */
+};
+
+static const vt100_menu_item_t hx_edit_items[] = {
+	{ "Undo",          "u",   HX_ACT_UNDO,       0 },
+	{ "Redo",          "^R",  HX_ACT_REDO,       0 },
+	{ NULL,             NULL,   0,                  MENU_ITEM_SEPARATOR },
+	{ "Delete byte",   "x",   HX_ACT_DEL,        0 },
+	{ "Increment",     "]",   HX_ACT_INC,        0 },
+	{ "Decrement",     "[",   HX_ACT_DEC,        0 },
+	{ NULL,             NULL,   0,                  MENU_ITEM_SEPARATOR },
+	{ "Insert hex",    "i",   HX_ACT_MODE_INS,   0 },
+	{ "Append hex",    "a",   HX_ACT_MODE_APP,   0 },
+	{ "Replace hex",   "r",   HX_ACT_MODE_REP,   0 },
+	{ "Insert ASCII",  "I",   HX_ACT_MODE_INSA,  0 },
+	{ "Append ASCII",  "A",   HX_ACT_MODE_APPA,  0 },
+	{ "Replace ASCII", "R",   HX_ACT_MODE_REPA,  0 },
+	{ NULL, NULL, 0, 0 }
+};
+
+static const vt100_menu_item_t hx_search_items[] = {
+	{ "Search",        "/",   HX_ACT_SEARCH,     0 },
+	{ "Next match",    "n",   HX_ACT_NEXT,       0 },
+	{ "Prev match",    "N",   HX_ACT_PREV,       0 },
+	{ NULL,             NULL,   0,                  MENU_ITEM_SEPARATOR },
+	{ "Go to offset",  ":",   HX_ACT_GOTO,       0 },
+	{ "Go to start",   "gg",  HX_ACT_GOTO_TOP,   0 },
+	{ "Go to end",     "G",   HX_ACT_GOTO_END,   0 },
+	{ NULL, NULL, 0, 0 }
+};
+
+static const vt100_menu_item_t hx_help_items[] = {
+	{ "Help",          ":help", HX_ACT_HELP,     0 },
+	{ NULL, NULL, 0, 0 }
+};
+
+static const vt100_menu_def_t hx_menus[] = {
+	{ "File",   hx_file_items,   4 },
+	{ "Edit",   hx_edit_items,   12 },
+	{ "Search", hx_search_items, 7 },
+	{ "Help",   hx_help_items,   1 },
+};
+#define HX_MENU_COUNT 4
+
+/* I/O callbacks for the menu framework — delegate to hx_compat shims */
+static int hx_menu_read_key(void) {
+	return read_key();
+}
+
+static int hx_menu_write(int fd, const void* buf, int count) {
+	(void)fd;
+	return (int)hx_io_write(1, buf, (size_t)count);
+}
+
+static void hx_menu_repaint(void) {
+	editor_refresh_screen(g_hx_editor);
+}
+
+/**
+ * Process a menu action returned by vt100_menu_run().
+ * Dispatches to the same editor functions as the keyboard shortcuts.
+ */
+static void hx_menu_dispatch(struct editor* e, int action) {
+	switch (action) {
+	case HX_ACT_SAVE:       editor_writefile(e); break;
+	case HX_ACT_QUIT:
+		if (e->dirty) {
+			editor_statusmessage(e, STATUS_ERROR,
+				"Unsaved changes! Use File > Quit (no save) to discard");
+		} else {
+			exit(0);
+		}
+		break;
+	case HX_ACT_QUIT_NOSAVE: exit(0); break;
+	case HX_ACT_UNDO:        editor_undo(e); break;
+	case HX_ACT_REDO:        editor_redo(e); break;
+	case HX_ACT_DEL:         editor_delete_char_at_cursor(e); break;
+	case HX_ACT_INC:         editor_increment_byte(e, 1); break;
+	case HX_ACT_DEC:         editor_increment_byte(e, -1); break;
+	case HX_ACT_MODE_INS:    editor_setmode(e, MODE_INSERT); break;
+	case HX_ACT_MODE_APP:    editor_setmode(e, MODE_APPEND); break;
+	case HX_ACT_MODE_REP:    editor_setmode(e, MODE_REPLACE); break;
+	case HX_ACT_MODE_INSA:   editor_setmode(e, MODE_INSERT_ASCII); break;
+	case HX_ACT_MODE_APPA:   editor_setmode(e, MODE_APPEND_ASCII); break;
+	case HX_ACT_MODE_REPA:   editor_setmode(e, MODE_REPLACE_ASCII); break;
+	case HX_ACT_SEARCH:      editor_setmode(e, MODE_SEARCH); break;
+	case HX_ACT_NEXT:        editor_process_search(e, e->searchstr, SEARCH_FORWARD); break;
+	case HX_ACT_PREV:        editor_process_search(e, e->searchstr, SEARCH_BACKWARD); break;
+	case HX_ACT_GOTO:        editor_setmode(e, MODE_COMMAND); break;
+	case HX_ACT_GOTO_TOP:
+		e->line = 0;
+		editor_cursor_at_offset(e, 0, &e->cursor_x, &e->cursor_y);
+		break;
+	case HX_ACT_GOTO_END:
+		editor_scroll(e, e->content_length);
+		editor_cursor_at_offset(e, e->content_length - 1, &e->cursor_x, &e->cursor_y);
+		break;
+	case HX_ACT_HELP:        editor_render_help(e); break;
+	}
+}
+
 int hx_run(const char* filename) {
 	g_hx_editor = editor_init();
 	editor_openfile(g_hx_editor, filename);
 	clear_screen();
+
+	/* Initialise the menu system */
+	vt100_menu_state_t menu_state;
+	vt100_menu_init(&menu_state, hx_menus, HX_MENU_COUNT,
+		1, /* bar_row: top of screen */
+		(uint8_t)g_hx_editor->screen_cols,
+		(uint8_t)g_hx_editor->screen_rows,
+		hx_menu_read_key,
+		hx_menu_write);
+	/* Override key codes for hx's enum values */
+	menu_state.key_up    = KEY_UP;
+	menu_state.key_down  = KEY_DOWN;
+	menu_state.key_left  = KEY_LEFT;
+	menu_state.key_right = KEY_RIGHT;
+	menu_state.key_enter = KEY_ENTER;
+	menu_state.key_esc   = KEY_ESC;
+	menu_state.key_f10   = KEY_F10;
+	menu_state.repaint   = hx_menu_repaint;
 
 	/* Snapshot fields used to detect "nothing changed" after key processing.
 	 * When the cursor is clamped at the top or bottom of the file,
@@ -1406,6 +1571,14 @@ int hx_run(const char* filename) {
 		tx_fifo_wait_drain();
 		editor_refresh_screen(g_hx_editor);
 
+		/* Draw the passive menu bar hint ("F10=Menu") */
+		vt100_menu_draw_bar(&menu_state);
+
+		/* hx uses reverse-video for its byte cursor, not a terminal
+		 * cursor.  draw_bar restores + shows the cursor, so hide it
+		 * again to avoid a stray blink near the status ruler. */
+		hx_io_write(1, "\x1b[?25l", 6);
+
 		/* Save state before processing keys */
 		prev_cx    = g_hx_editor->cursor_x;
 		prev_cy    = g_hx_editor->cursor_y;
@@ -1416,6 +1589,20 @@ int hx_run(const char* filename) {
 
 		do {
 			editor_process_keypress(g_hx_editor);
+
+			/* Check if F10 was pressed (flagged in keypress handler) */
+			if (g_hx_editor->menu_pending) {
+				g_hx_editor->menu_pending = false;
+				int action = vt100_menu_run(&menu_state);
+				if (action > 0) {
+					hx_menu_dispatch(g_hx_editor, action);
+				} else if (action == MENU_RESULT_PASSTHROUGH && menu_state.unhandled_key) {
+					read_key_unget(menu_state.unhandled_key);
+				}
+				clear_screen();
+				prev_line = -1;  /* invalidate so skip-redraw loop is bypassed */
+				break;  /* force full redraw */
+			}
 		} while (spsc_queue_level(&rx_fifo) > 0);
 
 		/* If nothing visually changed, skip the next redraw and
@@ -1427,6 +1614,19 @@ int hx_run(const char* filename) {
 		       g_hx_editor->dirty         == prev_dirty &&
 		       g_hx_editor->mode          == prev_mode) {
 			editor_process_keypress(g_hx_editor);
+
+			if (g_hx_editor->menu_pending) {
+				g_hx_editor->menu_pending = false;
+				int action = vt100_menu_run(&menu_state);
+				if (action > 0) {
+					hx_menu_dispatch(g_hx_editor, action);
+				} else if (action == MENU_RESULT_PASSTHROUGH && menu_state.unhandled_key) {
+					read_key_unget(menu_state.unhandled_key);
+				}
+				clear_screen();
+				break;  /* force full redraw */
+			}
+
 			/* Batch any further repeats that also land on the boundary */
 			while (spsc_queue_level(&rx_fifo) > 0) {
 				editor_process_keypress(g_hx_editor);

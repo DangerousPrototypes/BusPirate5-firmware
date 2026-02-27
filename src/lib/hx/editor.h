@@ -75,6 +75,10 @@ struct editor {
 	char searchstr[INPUT_BUF_SIZE]; // the current search string or NULL if none.
 
 	struct action_list* undo_list; // tail of the list
+
+#ifdef BUSPIRATE
+	bool menu_pending;  // F10 was pressed, main loop should open menu
+#endif
 };
 
 /*

@@ -101,7 +101,20 @@ int str2int(const char* s, int min, int max, int def) {
  *
  * read_key() will only return the correct key code, or -1 when anything fails.
  */
+static int read_key_pushback = -1;
+
+void read_key_unget(int key) {
+	read_key_pushback = key;
+}
+
 int read_key() {
+	/* Return pushed-back key if present (used for menu passthrough) */
+	if (read_key_pushback >= 0) {
+		int k = read_key_pushback;
+		read_key_pushback = -1;
+		return k;
+	}
+
 	char c;
 	ssize_t nread;
 	// check == 0 to see if EOF.
@@ -161,7 +174,8 @@ int read_key() {
 #endif
 					return KEY_ESC;
 				}
-				if (seq[2] == '~') {
+					if (seq[2] == '~') {
+					/* Single-digit CSI: ESC [ N ~ */
 					switch (seq[1]) {
 					case '1': return KEY_HOME;
 					case '3': return KEY_DEL;
@@ -173,6 +187,20 @@ int read_key() {
 					// currently mitigate it like this.
 					case '7': return KEY_HOME;
 					case '8': return KEY_END;
+					}
+				} else if (seq[2] >= '0' && seq[2] <= '9') {
+					/* Two-digit CSI: ESC [ N N ~ (e.g. F10 = ESC[21~) */
+					char seq3;
+#ifdef BUSPIRATE
+					if (hx_io_read(0, &seq3, 1) == 0) return KEY_ESC;
+#else
+					if (read(STDIN_FILENO, &seq3, 1) == 0) return KEY_ESC;
+#endif
+					if (seq3 == '~') {
+						int code = (seq[1] - '0') * 10 + (seq[2] - '0');
+						switch (code) {
+						case 21: return KEY_F10;
+						}
 					}
 				}
 			}

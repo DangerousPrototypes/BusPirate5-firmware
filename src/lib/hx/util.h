@@ -38,6 +38,7 @@ enum key_codes {
 	KEY_END,            // [F
 	KEY_PAGEUP,         // ??
 	KEY_PAGEDOWN,       // ??
+	KEY_F10,            // ESC[21~
 };
 
 // Errors which may be returned by parse_search_string.
@@ -64,6 +65,7 @@ void enable_raw_mode();
 void disable_raw_mode();
 void clear_screen();
 int  read_key();
+void read_key_unget(int key);
 int  hex2bin(const char* s);
 bool get_window_size(int* rows, int* cols);
 

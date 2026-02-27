@@ -40,20 +40,10 @@ typedef struct {
 static uint8_t *arena_base;
 static size_t   arena_total;
 
-/* Static render buffer — no dynamic allocation during rendering */
-#define HX_RENDER_BUF_SIZE (16 * 1024)
-uint8_t *hx_render_buf;
-size_t   hx_render_buf_size;
-
 void hx_arena_init(uint8_t *buf, size_t size) {
-    /* Carve static render buffer from the front of bigbuf */
-    hx_render_buf = buf;
-    hx_render_buf_size = HX_RENDER_BUF_SIZE;
-
-    /* Arena gets the remainder */
-    arena_base  = buf + HX_RENDER_BUF_SIZE;
-    arena_total = size - HX_RENDER_BUF_SIZE;
-    memset(arena_base, 0, arena_total);
+    arena_base  = buf;
+    arena_total = size;
+    memset(buf, 0, size);
 }
 
 void *hx_arena_malloc(size_t size) {

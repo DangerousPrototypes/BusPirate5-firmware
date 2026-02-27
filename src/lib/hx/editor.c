@@ -28,16 +28,6 @@
 #define HX_HEADER_ROWS 0
 #endif
 
-/* Hex column attribute states (state-tracked to minimise VT100 output) */
-#define HX_ATTR_NONE   0  /* default / after \x1b[0m */
-#define HX_ATTR_PRINT  1  /* \x1b[1;34m  — printable byte (bold blue) */
-#define HX_ATTR_CURSOR 2  /* \x1b[7m     — cursor (reverse video) */
-
-/* ASCII column attribute states */
-#define HX_ATTR_A_PRINT    1  /* \x1b[33m — yellow (printable) */
-#define HX_ATTR_A_NONPRINT 2  /* \x1b[36m — cyan   (non-printable) */
-#define HX_ATTR_A_CURSOR   3  /* \x1b[7m  — reverse video (cursor) */
-
 /*
  * This function looks convoluted as hell, but it works...
  */
@@ -302,7 +292,7 @@ void editor_delete_char_at_cursor(struct editor* e) {
 	if (offset >= old_length - 1) {
 		editor_move_cursor(e, KEY_LEFT, 1);
 	}
-	if (e->undo_list) action_list_add(e->undo_list, ACTION_DELETE, offset, charat);
+	action_list_add(e->undo_list, ACTION_DELETE, offset, charat);
 }
 
 void editor_delete_char_at_offset(struct editor* e, unsigned int offset) {
@@ -317,7 +307,7 @@ void editor_increment_byte(struct editor* e, int amount) {
 	unsigned char prev = e->contents[offset];
 	e->contents[offset] += amount;
 
-	if (e->undo_list) action_list_add(e->undo_list, ACTION_REPLACE, offset, prev);
+	action_list_add(e->undo_list, ACTION_REPLACE, offset, prev);
 }
 
 
@@ -406,40 +396,29 @@ int editor_statusmessage(struct editor* e, enum status_severity sev, const char*
 }
 
 void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset, struct charbuf* b) {
-	int cc = 0;
-	int attr = HX_ATTR_NONE;
+	int cc = 0; // cursor counter
 
 	for (unsigned int offset = start_offset; offset < start_offset + e->octets_per_line; offset++) {
 		if (offset >= e->content_length) {
-			break;
+			return;
 		}
+
 		cc++;
 
-		char c = e->contents[offset];
-		int desired;
-		if (rownum == e->cursor_y && cc == e->cursor_x) {
-			desired = HX_ATTR_A_CURSOR;
-		} else if (isprint(c)) {
-			desired = HX_ATTR_A_PRINT;
-		} else {
-			desired = HX_ATTR_A_NONPRINT;
-		}
+		char c =  e->contents[offset];
 
-		/* Emit escape only on attribute transition */
-		if (desired != attr) {
-			if (attr != HX_ATTR_NONE) charbuf_append(b, "\x1b[0m", 4);
-			switch (desired) {
-			case HX_ATTR_A_PRINT:    charbuf_append(b, "\x1b[33m", 5); break;
-			case HX_ATTR_A_NONPRINT: charbuf_append(b, "\x1b[36m", 5); break;
-			case HX_ATTR_A_CURSOR:   charbuf_append(b, "\x1b[7m", 4);  break;
-			}
-			attr = desired;
+		if (rownum == e->cursor_y && cc == e->cursor_x) {
+			charbuf_append(b, "\x1b[7m", 4);
+		} else {
+			charbuf_append(b, "\x1b[0m", 4);
 		}
 
 		if (isprint(c)) {
-			charbuf_append(b, &c, 1);
+			char cbuf[7];
+			int clen = snprintf(cbuf, sizeof(cbuf), "\x1b[33m%c", c);
+			charbuf_append(b, cbuf, clen);
 		} else {
-			charbuf_append(b, ".", 1);
+			charbuf_append(b, "\x1b[36m.", 6);
 		}
 	}
 	charbuf_append(b, "\x1b[0m\x1b[K", 7);
@@ -472,7 +451,6 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 
 	int row = 0;
 	int col = 0;
-	int hex_attr = HX_ATTR_NONE;
 
 	for (offset = start_offset; offset < end_offset; offset++) {
 		unsigned char curr_byte = e->contents[offset];
@@ -482,45 +460,31 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 			row_char_count = 0;
 			col = 0;
 			row++;
-			hex_attr = HX_ATTR_NONE;
 		}
 		col++;
+
+		if (isprint(curr_byte)) {
+			hexlen = snprintf(hex, sizeof(hex), "\x1b[1;34m%02x", curr_byte);
+		} else {
+			hexlen = snprintf(hex, sizeof(hex), "%02x", curr_byte);
+		}
 
 		if (offset % e->grouping == 0) {
 			charbuf_append(b, " ", 1);
 			row_char_count++;
 		}
 
-		/* Determine desired attribute for this hex byte */
-		int desired;
-		if (e->cursor_y == row && e->cursor_x == col) {
-			desired = HX_ATTR_CURSOR;
-		} else if (isprint(curr_byte)) {
-			desired = HX_ATTR_PRINT;
-		} else {
-			desired = HX_ATTR_NONE;
-		}
-
-		/* Emit escape only on attribute transition */
-		if (desired != hex_attr) {
-			if (hex_attr != HX_ATTR_NONE) charbuf_append(b, "\x1b[0m", 4);
-			switch (desired) {
-			case HX_ATTR_PRINT:  charbuf_append(b, "\x1b[1;34m", 7); break;
-			case HX_ATTR_CURSOR: charbuf_append(b, "\x1b[7m", 4);    break;
+		if (e->cursor_y == row) {
+			if (e->cursor_x == col) {
+				charbuf_append(b, "\x1b[7m", 4);
 			}
-			hex_attr = desired;
 		}
-
-		hexlen = snprintf(hex, sizeof(hex), "%02x", curr_byte);
 		charbuf_append(b, hex, hexlen);
+		charbuf_append(b, "\x1b[0m", 4);
 
 		row_char_count += 2;
 
 		if ((offset+1) % e->octets_per_line == 0) {
-			if (hex_attr != HX_ATTR_NONE) {
-				charbuf_append(b, "\x1b[0m", 4);
-				hex_attr = HX_ATTR_NONE;
-			}
 			charbuf_append(b, "  ", 2);
 			int the_offset = offset + 1 - e->octets_per_line;
 			editor_render_ascii(e, row, the_offset, b);
@@ -530,18 +494,17 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 
 	unsigned int leftover = offset % e->octets_per_line;
 	if (leftover > 0) {
-		if (hex_attr != HX_ATTR_NONE) {
-			charbuf_append(b, "\x1b[0m", 4);
-			hex_attr = HX_ATTR_NONE;
-		}
 		int padding_size = (e->octets_per_line * 2) + (e->octets_per_line / e->grouping) - row_char_count;
-		/* Stack buffer for padding — max 160 bytes (octets_per_line ≤ 64) */
-		char pad[160];
-		if (padding_size > (int)sizeof(pad)) padding_size = (int)sizeof(pad);
-		memset(pad, ' ', padding_size);
-		charbuf_append(b, pad, padding_size);
-		charbuf_append(b, "  ", 2);
+		char* padding = malloc(padding_size * sizeof(char));
+		if (padding == NULL) {
+			perror("Could not allocate memory for padding");
+			abort();
+		}
+		memset(padding, ' ', padding_size);
+		charbuf_append(b, padding, padding_size);
+		charbuf_append(b, "\x1b[0m  ", 6);
 		editor_render_ascii(e, row, offset - leftover, b);
+		free(padding);
 	}
 
 	charbuf_append(b, "\x1b[0K", 4);
@@ -758,12 +721,10 @@ void editor_insert_byte(struct editor* e, char x, bool after) {
 	int offset = editor_offset_at_cursor(e);
 	editor_insert_byte_at_offset(e, offset, x, after);
 
-	if (e->undo_list) {
-		if (after) {
-			action_list_add(e->undo_list, ACTION_APPEND, offset, x);
-		} else {
-			action_list_add(e->undo_list, ACTION_INSERT, offset, x);
-		}
+	if (after) {
+		action_list_add(e->undo_list, ACTION_APPEND, offset, x);
+	} else {
+		action_list_add(e->undo_list, ACTION_INSERT, offset, x);
 	}
 }
 
@@ -789,7 +750,7 @@ void editor_replace_byte(struct editor* e, char x) {
 	editor_statusmessage(e, STATUS_INFO, "Replaced byte at offset %09x with %02x", offset, (unsigned char) x);
 	e->dirty = true;
 
-	if (e->undo_list) action_list_add(e->undo_list, ACTION_REPLACE, offset, prev);
+	action_list_add(e->undo_list, ACTION_REPLACE, offset, prev);
 }
 
 void editor_process_command(struct editor* e, const char* cmd) {
@@ -1220,10 +1181,6 @@ void editor_process_keypress(struct editor* e) {
 }
 
 void editor_undo(struct editor* e) {
-	if (!e->undo_list) {
-		editor_statusmessage(e, STATUS_INFO, "Undo disabled");
-		return;
-	}
 	struct action* last_action = e->undo_list->curr;
 
 	if (e->undo_list->curr_status == AFTER_TAIL) {
@@ -1264,10 +1221,6 @@ void editor_undo(struct editor* e) {
 }
 
 void editor_redo(struct editor* e) {
-	if (!e->undo_list) {
-		editor_statusmessage(e, STATUS_INFO, "Redo disabled");
-		return;
-	}
 	if (e->undo_list->curr_status == AFTER_TAIL
 	    || e->undo_list->curr_status == NOTHING) {
 		editor_statusmessage(e, STATUS_INFO, "No action to redo");
@@ -1348,17 +1301,13 @@ struct editor* editor_init() {
 
 	get_window_size(&(e->screen_rows), &(e->screen_cols));
 
-#ifdef BUSPIRATE
-	e->undo_list = NULL;  /* undo disabled — zero-alloc debug build */
-#else
 	e->undo_list = action_list_init();
-#endif
 
 	return e;
 }
 
 void editor_free(struct editor* e) {
-	if (e->undo_list) action_list_free(e->undo_list);
+	action_list_free(e->undo_list);
 	free(e->filename);
 	free(e->contents);
 	free(e);

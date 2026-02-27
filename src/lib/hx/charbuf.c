@@ -16,58 +16,6 @@
 #endif
 
 
-#ifdef BUSPIRATE
-/* ======================================================================
- * Bus Pirate: zero-allocation static render buffer
- *
- * A 16 KB region is carved from the front of bigbuf by hx_arena_init().
- * All charbuf operations write directly into that region — no malloc,
- * realloc, or free happens during rendering.
- * ====================================================================== */
-
-static struct charbuf g_charbuf;
-
-struct charbuf* charbuf_create() {
-	g_charbuf.contents = (char *)hx_render_buf;
-	g_charbuf.cap = (int)hx_render_buf_size;
-	g_charbuf.len = 0;
-	return &g_charbuf;
-}
-
-void charbuf_free(struct charbuf* buf) {
-	buf->len = 0;  /* static buffer — nothing to free */
-}
-
-void charbuf_append(struct charbuf* buf, const char* what, size_t len) {
-	assert(what != NULL);
-	int remaining = buf->cap - buf->len;
-	if ((int)len > remaining) {
-		len = (remaining > 0) ? (size_t)remaining : 0;
-	}
-	if (len == 0) return;
-	memcpy(buf->contents + buf->len, what, len);
-	buf->len += len;
-}
-
-int charbuf_appendf(struct charbuf* buf, const char* fmt, ...) {
-	int remaining = buf->cap - buf->len;
-	if (remaining <= 1) return 0;
-	va_list ap;
-	va_start(ap, fmt);
-	int len = vsnprintf(buf->contents + buf->len, remaining, fmt, ap);
-	va_end(ap);
-	if (len < 0) len = 0;
-	if (len >= remaining) len = remaining - 1;
-	buf->len += len;
-	return len;
-}
-
-void charbuf_draw(struct charbuf* buf) {
-	hx_io_write(1, buf->contents, buf->len);
-}
-
-#else /* !BUSPIRATE — Desktop: original dynamic implementation */
-
 /*
  * Create a charbuf on the heap and return it.
  */
@@ -77,6 +25,9 @@ struct charbuf* charbuf_create() {
 		b->contents = NULL;
 		b->len = 0;
 		b->cap = 0;
+#ifdef BUSPIRATE
+		b->fmt_buf = malloc(CHARBUF_APPENDF_SIZE);
+#endif
 		return b;
 	} else {
 		perror("Unable to allocate size for struct charbuf");
@@ -89,6 +40,9 @@ struct charbuf* charbuf_create() {
  */
 void charbuf_free(struct charbuf* buf) {
 	free(buf->contents);
+#ifdef BUSPIRATE
+	free(buf->fmt_buf);
+#endif
 	free(buf);
 }
 
@@ -120,7 +74,12 @@ void charbuf_append(struct charbuf* buf, const char* what, size_t len) {
 
 int charbuf_appendf(struct charbuf* buf, const char* fmt, ...) {
 	assert(strlen(fmt) < CHARBUF_APPENDF_SIZE);
+#ifdef BUSPIRATE
+	// Use the arena-allocated scratch buffer (big_buf) — no stack pressure.
+	char *buffer = buf->fmt_buf;
+#else
 	char buffer[CHARBUF_APPENDF_SIZE];
+#endif
 	va_list ap;
 	va_start(ap, fmt);
 	int len = vsnprintf(buffer, CHARBUF_APPENDF_SIZE, fmt, ap);
@@ -139,10 +98,12 @@ int charbuf_appendf(struct charbuf* buf, const char* fmt, ...) {
  * Draws (writes) the charbuf to the screen.
  */
 void charbuf_draw(struct charbuf* buf) {
+#ifdef BUSPIRATE
+	hx_io_write(1, buf->contents, buf->len);
+#else
 	if (write(STDOUT_FILENO, buf->contents, buf->len) == -1) {
 		perror("Can't write charbuf");
 		exit(1);
 	}
+#endif
 }
-
-#endif /* BUSPIRATE */

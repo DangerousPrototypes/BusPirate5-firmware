@@ -35,6 +35,10 @@ bool monitor_get_current_ptr(char** c) {
 
 // check if each digit of the voltage value (in ASCII) changed. digits numbered as 2.0
 bool monitor_get_voltage_char(uint8_t pin, uint8_t digit, char* c) {
+    if (pin >= count_of(voltages_value) || digit >= 4) {
+        *c = '?';
+        return false;
+    }
     *c = voltages_value[pin][digit];
     if (voltages_update_mask[digit] & (1u << pin)) {
         return true;
@@ -44,6 +48,10 @@ bool monitor_get_voltage_char(uint8_t pin, uint8_t digit, char* c) {
 }
 
 bool monitor_get_voltage_ptr(uint8_t pin, char** c) {
+    if (pin >= count_of(voltages_value)) {
+        *c = NULL;
+        return false;
+    }
     *c = voltages_value[pin];
     if (voltages_update_mask[0] || voltages_update_mask[2]) {
         return true;

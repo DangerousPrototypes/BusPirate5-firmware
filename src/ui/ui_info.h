@@ -6,11 +6,6 @@
  */
 
 /**
- * @brief Print toolbar with current mode and settings.
- */
-void ui_info_print_toolbar(void);
-
-/**
  * @brief Print I/O pin names (IO0-IO7).
  */
 void ui_info_print_pin_names(void);

@@ -36,7 +36,8 @@
 /* ASCII column attribute states */
 #define HX_ATTR_A_PRINT    1  /* \x1b[33m — yellow (printable) */
 #define HX_ATTR_A_NONPRINT 2  /* \x1b[36m — cyan   (non-printable) */
-#define HX_ATTR_A_CURSOR   3  /* \x1b[7m  — reverse video (cursor) */
+#define HX_ATTR_A_CURSOR   3  /* \x1b[7;36m — reverse + cyan (cursor, non-printable) */
+#define HX_ATTR_A_CURSOR_P 4  /* \x1b[7;33m — reverse + yellow (cursor, printable) */
 
 /*
  * This function looks convoluted as hell, but it works...
@@ -418,7 +419,7 @@ void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset
 		char c = e->contents[offset];
 		int desired;
 		if (rownum == e->cursor_y && cc == e->cursor_x) {
-			desired = HX_ATTR_A_CURSOR;
+			desired = isprint(c) ? HX_ATTR_A_CURSOR_P : HX_ATTR_A_CURSOR;
 		} else if (isprint(c)) {
 			desired = HX_ATTR_A_PRINT;
 		} else {
@@ -431,7 +432,8 @@ void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset
 			switch (desired) {
 			case HX_ATTR_A_PRINT:    charbuf_append(b, "\x1b[33m", 5); break;
 			case HX_ATTR_A_NONPRINT: charbuf_append(b, "\x1b[36m", 5); break;
-			case HX_ATTR_A_CURSOR:   charbuf_append(b, "\x1b[7m", 4);  break;
+			case HX_ATTR_A_CURSOR:   charbuf_append(b, "\x1b[7;36m", 7); break;
+			case HX_ATTR_A_CURSOR_P: charbuf_append(b, "\x1b[7;33m", 7); break;
 			}
 			attr = desired;
 		}

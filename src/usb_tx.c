@@ -114,6 +114,7 @@ void tx_fifo_service(void) {
 #define TOOLBAR_TX 2       /**< Transmitting toolbar buffer */
 /**@}*/
     static uint8_t tx_state = IDLE;
+    static uint8_t delay_count = 0;
 
     uint32_t bytes_available;
     char data[64];
@@ -150,11 +151,21 @@ void tx_fifo_service(void) {
 
             break;
         case TOOLBAR_DELAY:
-            // test: check that no bytes in tx_fifo minimum 2 cycles in a row
-            // prevent the toolbar buffer from being wiped out by VT100 commands
-            // that might be pending in the TX FIFO
+            // Multi-cycle drain: require 3 consecutive empty checks before
+            // committing to toolbar TX. This ensures any in-flight bytes from
+            // Core0 have time to arrive in the FIFO before we start sending
+            // toolbar VT100 sequences that would corrupt interleaved output.
             bytes_available = spsc_queue_level(&tx_fifo);
-            tx_state = (bytes_available ? IDLE : TOOLBAR_TX);
+            if (bytes_available) {
+                delay_count = 0;
+                tx_state = IDLE; // bytes arrived, go drain them first
+            } else {
+                delay_count++;
+                if (delay_count >= 3) {
+                    delay_count = 0;
+                    tx_state = TOOLBAR_TX;
+                }
+            }
             return; // return for next cycle
 
             break;
@@ -214,7 +225,7 @@ void tx_fifo_service(void) {
 }
 
 void tx_fifo_put(char* c) {
-    BP_ASSERT_CORE0(); // tx fifo shoudl only be added to from core 0 (deadlock risk)
+    BP_ASSERT_CORE0(); // tx fifo should only be added to from core 0 (deadlock risk)
     spsc_queue_add_blocking(&tx_fifo, (uint8_t)*c);
 }
 

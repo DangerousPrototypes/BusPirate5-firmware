@@ -51,6 +51,11 @@ int ui_term_get_vt100_query(const char* query, char end_of_line, char* result, u
     // Send query
     printf("%s", query);
 
+    // Ensure the query has actually left the USB endpoint before
+    // we start the response timeout.  Without this, the 1-second
+    // window includes tx_fifo → Core1 → TinyUSB pipeline lag.
+    tx_fifo_wait_drain();
+
     // Receive response
     while (timeout > 0) {
         busy_wait_us(100);
@@ -72,52 +77,40 @@ int ui_term_get_vt100_query(const char* query, char end_of_line, char* result, u
 
 bool ui_term_detect_vt100(uint32_t* row, uint32_t* col) {
     uint8_t cp[20];
-    int p;
-    uint32_t r = 0;
-    uint32_t c = 0;
-    uint8_t stage = 0;
 
-    // Position cursor at extreme corner and get the actual postion
-    p = ui_term_get_vt100_query("\0337\033[999;999H\033[6n\0338", 'R', (char*)cp, 20);
+    // Position cursor at extreme corner and get the actual position
+    int p = ui_term_get_vt100_query("\0337\033[999;999H\033[6n\0338", 'R', (char*)cp, 20);
 
     // no reply, no terminal connected or doesn't support VT100
     if (p < 0) {
         return false;
     }
-    // Extract cursor position from response
-    for (int i = 0; i < p; i++) {
-        switch (stage) {
-            case 0:
-                if (cp[i] == '[') {
-                    stage = 1;
-                }
-                break;
-            case 1: // Rows
-                if (cp[i] == ';') {
-                    stage = 2;
-                    break;
-                }
-                r *= 10;
-                r += cp[i] - 0x30;
-                break;
-            case 2: // Columns
-                if (cp[i] == 'R') {
-                    stage = 3;
-                    break;
-                }
-                c *= 10;
-                c += cp[i] - 0x30;
-                break;
-            default:
-                break;
-        }
-    }
 
-    // printf("Terminal: %d rows, %d cols\r\n", r, c);
-    if (r == 0 || c == 0) {
-        // non-detection fallback
+    // Parse response: ESC [ rows ; cols R
+    int i = 0;
+    while (i < p && cp[i] != '[') i++;
+    i++; // skip '['
+
+    uint32_t r = 0;
+    while (i < p && cp[i] >= '0' && cp[i] <= '9') { r = r * 10 + (cp[i] - '0'); i++; }
+    if (cp[i] != ';') return false;
+    i++; // skip ';'
+
+    uint32_t c = 0;
+    while (i < p && cp[i] >= '0' && cp[i] <= '9') { c = c * 10 + (cp[i] - '0'); i++; }
+    if (cp[i] != 'R') return false;
+
+    // Drain any leftover bytes the terminal may have sent
+    char drain;
+    while (rx_fifo_try_get(&drain))
+        ;
+
+    // Sanity-check: reject obviously bogus values.
+    // No real terminal is smaller than 10x20 or larger than 500x500.
+    if (r < 10 || r > 500 || c < 20 || c > 500) {
         return false;
     }
+
     *row = r;
     *col = c;
     return true;

@@ -104,6 +104,10 @@ void *hx_arena_malloc(size_t size);
 void *hx_arena_realloc(void *ptr, size_t new_size);
 void  hx_arena_free(void *ptr);
 
+/* Static render buffer — carved from bigbuf by hx_arena_init() */
+extern uint8_t *hx_render_buf;
+extern size_t   hx_render_buf_size;
+
 /* Redirect all of hx's dynamic allocation into the arena */
 #define malloc  hx_arena_malloc
 #define realloc hx_arena_realloc

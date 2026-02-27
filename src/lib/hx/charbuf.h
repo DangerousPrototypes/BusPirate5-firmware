@@ -21,9 +21,6 @@ struct charbuf {
 	char* contents;
 	int len;        // actual length of what's in the buffer
 	int cap;        // capacity
-#ifdef BUSPIRATE
-	char* fmt_buf;  // arena-allocated scratch for charbuf_appendf
-#endif
 };
 
 /*

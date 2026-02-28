@@ -82,6 +82,61 @@ static int try_read(vt100_key_state_t* s, char* c) {
     return (s->read_blocking(c) == 1) ? 1 : 0;
 }
 
+/* ── Stateless sequence decoder (shared by vt100_key_read and linenoise) ── */
+
+int vt100_key_decode_csi(const char* seq, int len) {
+    if (len < 2) {
+        return VT100_KEY_ESC;
+    }
+
+    /* ESC [ — CSI sequences */
+    if (seq[0] == '[') {
+        /* ESC [ letter — simple cursor keys */
+        if (seq[1] >= 'A' && seq[1] <= 'Z') {
+            switch (seq[1]) {
+                case 'A': return VT100_KEY_UP;
+                case 'B': return VT100_KEY_DOWN;
+                case 'C': return VT100_KEY_RIGHT;
+                case 'D': return VT100_KEY_LEFT;
+                case 'H': return VT100_KEY_HOME;
+                case 'F': return VT100_KEY_END;
+                default: return VT100_KEY_ESC;
+            }
+        }
+
+        /* ESC [ digit ... — numeric CSI */
+        if (seq[1] >= '0' && seq[1] <= '9') {
+            if (len >= 3 && seq[2] == '~') {
+                /* Single-digit: ESC [ N ~ */
+                return decode_csi_tilde_1(seq[1] - '0');
+            }
+            if (len >= 4 && seq[2] >= '0' && seq[2] <= '9' && seq[3] == '~') {
+                /* Two-digit: ESC [ NN ~ */
+                int code = (seq[1] - '0') * 10 + (seq[2] - '0');
+                return decode_csi_tilde_2(code);
+            }
+        }
+    }
+
+    /* ESC O — SS3 sequences (some terminals use these for Home/End/F1-F4) */
+    if (seq[0] == 'O') {
+        switch (seq[1]) {
+            case 'H': return VT100_KEY_HOME;
+            case 'F': return VT100_KEY_END;
+            case 'P': return VT100_KEY_F1;
+            case 'Q': return VT100_KEY_F2;
+            case 'R': return VT100_KEY_F3;
+            case 'S': return VT100_KEY_F4;
+            default: return VT100_KEY_ESC;
+        }
+    }
+
+    /* Unrecognised sequence */
+    return VT100_KEY_ESC;
+}
+
+/* ── Full I/O-integrated key reader ──────────────────────────────── */
+
 int vt100_key_read(vt100_key_state_t* s) {
     /* Return pushed-back key first */
     if (s->pushback >= 0) {
@@ -102,70 +157,28 @@ int vt100_key_read(vt100_key_state_t* s) {
 
     /* ESC was read — try to get the next byte.
      * If nothing follows, it's a bare ESC keypress. */
-    char seq[2];
+    char seq[4];
+    int seqlen = 0;
     if (!try_read(s, &seq[0])) {
         return VT100_KEY_ESC; /* bare ESC */
     }
+    seqlen = 1;
     if (!try_read(s, &seq[1])) {
         return VT100_KEY_ESC; /* incomplete sequence */
     }
+    seqlen = 2;
 
-    /* ESC [ — CSI sequences */
-    if (seq[0] == '[') {
-        /* ESC [ letter — simple cursor keys */
-        if (seq[1] >= 'A' && seq[1] <= 'Z') {
-            switch (seq[1]) {
-                case 'A': return VT100_KEY_UP;
-                case 'B': return VT100_KEY_DOWN;
-                case 'C': return VT100_KEY_RIGHT;
-                case 'D': return VT100_KEY_LEFT;
-                case 'H': return VT100_KEY_HOME;
-                case 'F': return VT100_KEY_END;
-                default: return VT100_KEY_ESC;
-            }
-        }
-
-        /* ESC [ digit ... — numeric CSI */
-        if (seq[1] >= '0' && seq[1] <= '9') {
-            char seq2;
-            if (!try_read(s, &seq2)) {
-                return VT100_KEY_ESC;
-            }
-
-            if (seq2 == '~') {
-                /* Single-digit: ESC [ N ~ */
-                return decode_csi_tilde_1(seq[1] - '0');
-            }
-
-            if (seq2 >= '0' && seq2 <= '9') {
-                /* Two-digit: ESC [ N N ~ */
-                char seq3;
-                if (!try_read(s, &seq3)) {
-                    return VT100_KEY_ESC;
+    /* Numeric CSI: may need a 3rd or 4th byte */
+    if (seq[0] == '[' && seq[1] >= '0' && seq[1] <= '9') {
+        if (try_read(s, &seq[2])) {
+            seqlen = 3;
+            if (seq[2] >= '0' && seq[2] <= '9') {
+                if (try_read(s, &seq[3])) {
+                    seqlen = 4;
                 }
-                if (seq3 == '~') {
-                    int code = (seq[1] - '0') * 10 + (seq2 - '0');
-                    return decode_csi_tilde_2(code);
-                }
-                /* Consume any remaining bytes of an unknown sequence
-                 * (e.g. ESC [ 1 ; 2 A for Shift+Up) */
             }
         }
     }
 
-    /* ESC O — SS3 sequences (some terminals use these for Home/End/F1-F4) */
-    if (seq[0] == 'O') {
-        switch (seq[1]) {
-            case 'H': return VT100_KEY_HOME;
-            case 'F': return VT100_KEY_END;
-            case 'P': return VT100_KEY_F1;
-            case 'Q': return VT100_KEY_F2;
-            case 'R': return VT100_KEY_F3;
-            case 'S': return VT100_KEY_F4;
-            default: return VT100_KEY_ESC;
-        }
-    }
-
-    /* Unrecognised escape sequence — return ESC */
-    return VT100_KEY_ESC;
+    return vt100_key_decode_csi(seq, seqlen);
 }

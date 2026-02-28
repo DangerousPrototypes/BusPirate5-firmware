@@ -117,6 +117,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include "linenoise.h"
+#include "lib/vt100_keys/vt100_keys.h"
 
 #ifndef BP_EMBEDDED
 #define LINENOISE_DEFAULT_HISTORY_MAX_LEN 100
@@ -1450,7 +1451,7 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
 
     char c;
     int nread;
-    char seq[3];
+    char seq[4];
 
     nread = lnRead(l,&c,1);
     if (nread < 0) {
@@ -1583,96 +1584,31 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
         linenoiseEditHistoryNext(l, LINENOISE_HISTORY_NEXT);
         break;
     case ESC:    /* escape sequence */
-        /* Read the next two bytes representing the escape sequence.
-         * Use two calls to handle slow terminals returning the two
-         * chars at different times. */
+        /* Read the bytes following ESC. Two blocking reads for the
+         * initial pair, plus up to two more if it's a numeric CSI. */
         if (lnReadBlocking(l,seq,1) == -1) break;
         if (lnReadBlocking(l,seq+1,1) == -1) break;
-
-        /* ESC [ sequences. */
-        if (seq[0] == '[') {
-            if (seq[1] >= '0' && seq[1] <= '9') {
-                /* Extended escape, read additional byte. */
+        {
+            int seqlen = 2;
+            if (seq[0] == '[' && seq[1] >= '0' && seq[1] <= '9') {
                 if (lnReadBlocking(l,seq+2,1) == -1) break;
-                if (seq[2] == '~') {
-                    switch(seq[1]) {
-                    case '1': /* Home (some terminals). */
-#ifdef BP_EMBEDDED
-                        if (!l->simple_mode)
-#endif
-                        linenoiseEditMoveHome(l);
-                        break;
-                    case '3': /* Delete key. */
-#ifdef BP_EMBEDDED
-                        if (!l->simple_mode)
-#endif
-                        linenoiseEditDelete(l);
-                        break;
-                    case '4': /* End (some terminals). */
-#ifdef BP_EMBEDDED
-                        if (!l->simple_mode)
-#endif
-                        linenoiseEditMoveEnd(l);
-                        break;
-                    }
-                }
-            } else {
-                switch(seq[1]) {
-                case 'A': /* Up */
-#ifdef BP_EMBEDDED
-                    if (!l->simple_mode)
-#endif
-                    linenoiseEditHistoryNext(l, LINENOISE_HISTORY_PREV);
-                    break;
-                case 'B': /* Down */
-#ifdef BP_EMBEDDED
-                    if (!l->simple_mode)
-#endif
-                    linenoiseEditHistoryNext(l, LINENOISE_HISTORY_NEXT);
-                    break;
-                case 'C': /* Right */
-#ifdef BP_EMBEDDED
-                    if (!l->simple_mode)
-#endif
-                    linenoiseEditMoveRight(l);
-                    break;
-                case 'D': /* Left */
-#ifdef BP_EMBEDDED
-                    if (!l->simple_mode)
-#endif
-                    linenoiseEditMoveLeft(l);
-                    break;
-                case 'H': /* Home */
-#ifdef BP_EMBEDDED
-                    if (!l->simple_mode)
-#endif
-                    linenoiseEditMoveHome(l);
-                    break;
-                case 'F': /* End*/
-#ifdef BP_EMBEDDED
-                    if (!l->simple_mode)
-#endif
-                    linenoiseEditMoveEnd(l);
-                    break;
+                seqlen = 3;
+                if (seq[2] >= '0' && seq[2] <= '9') {
+                    if (lnReadBlocking(l,seq+3,1) == -1) break;
+                    seqlen = 4;
                 }
             }
-        }
-
-        /* ESC O sequences. */
-        else if (seq[0] == 'O') {
-            switch(seq[1]) {
-            case 'H': /* Home */
 #ifdef BP_EMBEDDED
-                if (!l->simple_mode)
+            if (l->simple_mode) break; /* consume the sequence, ignore action */
 #endif
-                linenoiseEditMoveHome(l);
-                break;
-            case 'F': /* End*/
-#ifdef BP_EMBEDDED
-                if (!l->simple_mode)
-#endif
-                linenoiseEditMoveEnd(l);
-                break;
+            switch (vt100_key_decode_csi(seq, seqlen)) {
+                case VT100_KEY_UP:     linenoiseEditHistoryNext(l, LINENOISE_HISTORY_PREV); break;
+                case VT100_KEY_DOWN:   linenoiseEditHistoryNext(l, LINENOISE_HISTORY_NEXT); break;
+                case VT100_KEY_RIGHT:  linenoiseEditMoveRight(l); break;
+                case VT100_KEY_LEFT:   linenoiseEditMoveLeft(l); break;
+                case VT100_KEY_HOME:   linenoiseEditMoveHome(l); break;
+                case VT100_KEY_END:    linenoiseEditMoveEnd(l); break;
+                case VT100_KEY_DELETE: linenoiseEditDelete(l); break;
             }
         }
         break;

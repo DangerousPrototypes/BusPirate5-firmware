@@ -120,4 +120,19 @@ int vt100_key_read(vt100_key_state_t* s);
  */
 void vt100_key_unget(vt100_key_state_t* s, int key);
 
+/**
+ * Decode a CSI/SS3 escape sequence from pre-read bytes.
+ *
+ * @param seq   Bytes after ESC (caller already consumed the ESC).
+ *              seq[0] is '[' or 'O', seq[1..] are the payload.
+ * @param len   Number of valid bytes in seq (typically 2–4).
+ * @return      VT100_KEY_* code, or VT100_KEY_ESC if unrecognised.
+ *
+ * This is a pure function with no side effects — no I/O, no state.
+ * It exists so callers that manage their own byte reads (e.g. linenoise)
+ * can share the sequence-to-keycode lookup tables without adopting the
+ * full vt100_key_read() I/O model.
+ */
+int vt100_key_decode_csi(const char* seq, int len);
+
 #endif /* VT100_KEYS_H */

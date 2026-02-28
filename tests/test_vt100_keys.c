@@ -169,6 +169,54 @@ static void test_escape_then_normal(void) {
     CHECK(vt100_key_read(&state) == 'z', "esc+normal: z after");
 }
 
+/* ── Tests for vt100_key_decode_csi (stateless decoder) ──────────── */
+
+static void test_decode_csi_arrows(void) {
+    CHECK(vt100_key_decode_csi("[A", 2) == VT100_KEY_UP,    "decode_csi: Up");
+    CHECK(vt100_key_decode_csi("[B", 2) == VT100_KEY_DOWN,  "decode_csi: Down");
+    CHECK(vt100_key_decode_csi("[C", 2) == VT100_KEY_RIGHT, "decode_csi: Right");
+    CHECK(vt100_key_decode_csi("[D", 2) == VT100_KEY_LEFT,  "decode_csi: Left");
+    CHECK(vt100_key_decode_csi("[H", 2) == VT100_KEY_HOME,  "decode_csi: Home");
+    CHECK(vt100_key_decode_csi("[F", 2) == VT100_KEY_END,   "decode_csi: End");
+}
+
+static void test_decode_csi_tilde(void) {
+    CHECK(vt100_key_decode_csi("[1~", 3) == VT100_KEY_HOME,     "decode_csi: Home ~");
+    CHECK(vt100_key_decode_csi("[2~", 3) == VT100_KEY_INSERT,   "decode_csi: Insert ~");
+    CHECK(vt100_key_decode_csi("[3~", 3) == VT100_KEY_DELETE,   "decode_csi: Delete ~");
+    CHECK(vt100_key_decode_csi("[4~", 3) == VT100_KEY_END,      "decode_csi: End ~");
+    CHECK(vt100_key_decode_csi("[5~", 3) == VT100_KEY_PAGEUP,   "decode_csi: PageUp ~");
+    CHECK(vt100_key_decode_csi("[6~", 3) == VT100_KEY_PAGEDOWN, "decode_csi: PageDown ~");
+    CHECK(vt100_key_decode_csi("[7~", 3) == VT100_KEY_HOME,     "decode_csi: Home rxvt ~");
+    CHECK(vt100_key_decode_csi("[8~", 3) == VT100_KEY_END,      "decode_csi: End rxvt ~");
+}
+
+static void test_decode_csi_fkeys(void) {
+    CHECK(vt100_key_decode_csi("[11~", 4) == VT100_KEY_F1,  "decode_csi: F1");
+    CHECK(vt100_key_decode_csi("[12~", 4) == VT100_KEY_F2,  "decode_csi: F2");
+    CHECK(vt100_key_decode_csi("[15~", 4) == VT100_KEY_F5,  "decode_csi: F5");
+    CHECK(vt100_key_decode_csi("[17~", 4) == VT100_KEY_F6,  "decode_csi: F6");
+    CHECK(vt100_key_decode_csi("[21~", 4) == VT100_KEY_F10, "decode_csi: F10");
+    CHECK(vt100_key_decode_csi("[24~", 4) == VT100_KEY_F12, "decode_csi: F12");
+}
+
+static void test_decode_csi_ss3(void) {
+    CHECK(vt100_key_decode_csi("OH", 2) == VT100_KEY_HOME, "decode_csi: Home SS3");
+    CHECK(vt100_key_decode_csi("OF", 2) == VT100_KEY_END,  "decode_csi: End SS3");
+    CHECK(vt100_key_decode_csi("OP", 2) == VT100_KEY_F1,   "decode_csi: F1 SS3");
+    CHECK(vt100_key_decode_csi("OQ", 2) == VT100_KEY_F2,   "decode_csi: F2 SS3");
+    CHECK(vt100_key_decode_csi("OR", 2) == VT100_KEY_F3,   "decode_csi: F3 SS3");
+    CHECK(vt100_key_decode_csi("OS", 2) == VT100_KEY_F4,   "decode_csi: F4 SS3");
+}
+
+static void test_decode_csi_edge_cases(void) {
+    CHECK(vt100_key_decode_csi("[", 1)  == VT100_KEY_ESC, "decode_csi: too short");
+    CHECK(vt100_key_decode_csi("[Z", 2) == VT100_KEY_ESC, "decode_csi: unknown letter");
+    CHECK(vt100_key_decode_csi("[9~", 3) == VT100_KEY_ESC, "decode_csi: unknown digit ~");
+    CHECK(vt100_key_decode_csi("[99~", 4) == VT100_KEY_ESC, "decode_csi: unknown 2-digit ~");
+    CHECK(vt100_key_decode_csi("OX", 2) == VT100_KEY_ESC, "decode_csi: unknown SS3");
+}
+
 int main(void) {
     test_printable();
     test_ctrl_keys();
@@ -181,6 +229,11 @@ int main(void) {
     test_pushback();
     test_sequential_keys();
     test_escape_then_normal();
+    test_decode_csi_arrows();
+    test_decode_csi_tilde();
+    test_decode_csi_fkeys();
+    test_decode_csi_ss3();
+    test_decode_csi_edge_cases();
 
     printf("\n%d/%d tests passed\n", tests_pass, tests_run);
     return (tests_pass == tests_run) ? 0 : 1;

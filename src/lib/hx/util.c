@@ -104,10 +104,25 @@ int str2int(const char* s, int min, int max, int def) {
 static int read_key_pushback = -1;
 
 void read_key_unget(int key) {
+#ifdef BUSPIRATE
+	vt100_key_unget(&hx_key_state, key);
+#else
 	read_key_pushback = key;
+#endif
 }
 
 int read_key() {
+#ifdef BUSPIRATE
+	/* Use the shared vt100_keys decoder.
+	 * Apply hx's app-level Ctrl remaps on top. */
+	int k = vt100_key_read(&hx_key_state);
+	switch (k) {
+	case KEY_CTRL_H:  return KEY_BACKSPACE;
+	case KEY_CTRL_B:  return KEY_PAGEUP;
+	case KEY_CTRL_F:  return KEY_PAGEDOWN;
+	default:          return k;
+	}
+#else
 	/* Return pushed-back key if present (used for menu passthrough) */
 	if (read_key_pushback >= 0) {
 		int k = read_key_pushback;
@@ -223,6 +238,7 @@ int read_key() {
 	}
 
 	return c;
+#endif /* !BUSPIRATE */
 }
 
 bool get_window_size(int* rows, int* cols) {

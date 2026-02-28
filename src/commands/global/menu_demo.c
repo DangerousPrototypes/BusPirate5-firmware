@@ -44,6 +44,7 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "lib/vt100_menu/vt100_menu.h"
+#include "lib/vt100_keys/vt100_keys.h"
 #include "lib/bp_args/bp_cmd.h"
 #include "menu_demo.h"
 
@@ -157,89 +158,21 @@ static void demo_write_buf(const void* buf, int len) {
 }
 
 // ============================================================================
-// STEP 6: Key decoder with F10 support and pushback
+// STEP 6: Key decoder — uses shared vt100_keys library
 // ============================================================================
-// Your fullscreen app needs a key decoder that:
-//   a) Reads raw bytes from the terminal
-//   b) Decodes VT100 escape sequences into virtual key codes
-//   c) Supports one-key pushback for menu passthrough
-//
-// This is a minimal implementation.  Real apps (hx, kilo) have more
-// complete decoders with support for Home, End, PageUp, etc.
+// The vt100_keys library handles all escape sequence decoding and pushback.
+// We just provide thin I/O callbacks that route to the USB FIFO.
 
-enum demo_keys {
-    DEMO_KEY_ENTER     = 0x0d,
-    DEMO_KEY_ESC       = 0x1b,
-    DEMO_KEY_CTRL_Q    = 0x11,
-    DEMO_KEY_UP        = 1000,
-    DEMO_KEY_DOWN      = 1001,
-    DEMO_KEY_RIGHT     = 1002,
-    DEMO_KEY_LEFT      = 1003,
-    DEMO_KEY_F10       = 1010,
-};
-
-/* One-key pushback buffer for menu passthrough.
- * When the menu gets a key it doesn't consume (e.g. Ctrl-Q), it stores
- * it in menu_state.unhandled_key. The caller pushes it here so the
- * next demo_read_key() call returns it without blocking. */
-static int demo_key_pushback = -1;
-
-static void demo_read_key_unget(int key) {
-    demo_key_pushback = key;
+static int demo_read_blocking(char* c) {
+    rx_fifo_get_blocking(c);
+    return 1;
 }
 
-static int demo_read_key(void) {
-    /* Return pushed-back key first */
-    if (demo_key_pushback >= 0) {
-        int k = demo_key_pushback;
-        demo_key_pushback = -1;
-        return k;
-    }
-
-    char c;
-    rx_fifo_get_blocking(&c);
-
-    if (c != DEMO_KEY_ESC) {
-        return (unsigned char)c;
-    }
-
-    /* ESC was pressed — try to read escape sequence */
-    char seq[3];
-    if (!rx_fifo_try_get(&seq[0])) return DEMO_KEY_ESC;  /* bare ESC */
-    if (!rx_fifo_try_get(&seq[1])) return DEMO_KEY_ESC;
-
-    if (seq[0] == '[') {
-        /* CSI sequence: ESC [ ... */
-        switch (seq[1]) {
-        case 'A': return DEMO_KEY_UP;
-        case 'B': return DEMO_KEY_DOWN;
-        case 'C': return DEMO_KEY_RIGHT;
-        case 'D': return DEMO_KEY_LEFT;
-        }
-
-        /* Numeric CSI: ESC [ digit ... */
-        if (seq[1] >= '0' && seq[1] <= '9') {
-            char seq2;
-            if (!rx_fifo_try_get(&seq2)) return DEMO_KEY_ESC;
-            if (seq2 == '~') {
-                /* Single-digit: ESC [ N ~ */
-                /* (Home, Delete, End, PgUp, PgDn would go here) */
-            } else if (seq2 >= '0' && seq2 <= '9') {
-                /* Two-digit CSI: ESC [ N N ~ (e.g. F10 = ESC[21~) */
-                char seq3;
-                if (!rx_fifo_try_get(&seq3)) return DEMO_KEY_ESC;
-                if (seq3 == '~') {
-                    int code = (seq[1] - '0') * 10 + (seq2 - '0');
-                    switch (code) {
-                    case 21: return DEMO_KEY_F10;
-                    /* F5=15, F6=17, F7=18, F8=19, F9=20, F11=23, F12=24 */
-                    }
-                }
-            }
-        }
-    }
-    return DEMO_KEY_ESC;
+static int demo_read_try(char* c) {
+    return rx_fifo_try_get(c) ? 1 : 0;
 }
+
+static vt100_key_state_t demo_keys;
 
 // ============================================================================
 // STEP 7: Menu I/O callbacks
@@ -248,7 +181,7 @@ static int demo_read_key(void) {
 // function-pointer signatures.
 
 static int demo_menu_read_key(void) {
-    return demo_read_key();
+    return vt100_key_read(&demo_keys);
 }
 
 static int demo_menu_write(int fd, const void* buf, int count) {
@@ -372,10 +305,10 @@ static void demo_dispatch(int action) {
 
 static void demo_process_key(int key) {
     switch (key) {
-    case DEMO_KEY_CTRL_Q:
+    case VT100_KEY_CTRL_Q:
         demo.running = false;
         break;
-    case DEMO_KEY_F10:
+    case VT100_KEY_F10:
         demo.menu_pending = true;
         break;
     default:
@@ -423,7 +356,7 @@ void menu_demo_handler(struct command_result* res) {
     demo.menu_pending = false;
     demo.color_esc    = "\x1b[1;37;46m";  /* cyan background */
     demo.message      = "F10=Menu | Ctrl-Q=Quit";
-    demo_key_pushback = -1;
+    vt100_key_init(&demo_keys, demo_read_blocking, demo_read_try);
 
     /* ----------------------------------------------------------------
      * Initialise the menu system
@@ -436,16 +369,8 @@ void menu_demo_handler(struct command_result* res) {
         demo_menu_read_key,
         demo_menu_write);
 
-    /* Override key codes to match our app's enum values.
-     * This is REQUIRED — the defaults in vt100_menu.h match the hx editor's
-     * enum, which may not match yours.  Always set these explicitly. */
-    menu_state.key_up    = DEMO_KEY_UP;
-    menu_state.key_down  = DEMO_KEY_DOWN;
-    menu_state.key_left  = DEMO_KEY_LEFT;
-    menu_state.key_right = DEMO_KEY_RIGHT;
-    menu_state.key_enter = DEMO_KEY_ENTER;
-    menu_state.key_esc   = DEMO_KEY_ESC;
-    menu_state.key_f10   = DEMO_KEY_F10;
+    /* Key codes: both menu defaults and our key decoder now use VT100_KEY_*
+     * values from vt100_keys.h, so no overrides are needed. */
 
     /* Set repaint callback — eliminates Tetris blanking when switching menus */
     menu_state.repaint   = demo_menu_repaint;
@@ -468,7 +393,7 @@ void menu_demo_handler(struct command_result* res) {
         vt100_menu_draw_bar(&menu_state);
 
         /* Process one keypress */
-        int key = demo_read_key();
+        int key = vt100_key_read(&demo_keys);
         demo_process_key(key);
 
         /* Check if menu was requested */
@@ -485,7 +410,7 @@ void menu_demo_handler(struct command_result* res) {
                 /* Key the menu didn't consume — push it back so the
                  * next demo_read_key() returns it immediately.
                  * This is how Ctrl-Q works while the menu is open. */
-                demo_read_key_unget(menu_state.unhandled_key);
+                vt100_key_unget(&demo_keys, menu_state.unhandled_key);
             }
             /* else: MENU_RESULT_CANCEL or MENU_RESULT_REDRAW — just redraw */
 

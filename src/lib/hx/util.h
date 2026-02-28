@@ -13,6 +13,33 @@
 #endif
 
 // Key enumeration, returned by read_key().
+#ifdef BUSPIRATE
+#include "lib/vt100_keys/vt100_keys.h"
+enum key_codes {
+	KEY_NULL      = 0,
+	KEY_CTRL_B    = VT100_KEY_CTRL_B,
+	KEY_CTRL_D    = VT100_KEY_CTRL_D,
+	KEY_CTRL_F    = VT100_KEY_CTRL_F,
+	KEY_CTRL_H    = VT100_KEY_CTRL_H,
+	KEY_CTRL_Q    = VT100_KEY_CTRL_Q,
+	KEY_CTRL_R    = VT100_KEY_CTRL_R,
+	KEY_CTRL_S    = VT100_KEY_CTRL_S,
+	KEY_CTRL_U    = VT100_KEY_CTRL_U,
+	KEY_ESC       = VT100_KEY_ESC,
+	KEY_ENTER     = VT100_KEY_ENTER,
+	KEY_BACKSPACE = VT100_KEY_BACKSPACE,
+	KEY_UP        = VT100_KEY_UP,
+	KEY_DOWN      = VT100_KEY_DOWN,
+	KEY_RIGHT     = VT100_KEY_RIGHT,
+	KEY_LEFT      = VT100_KEY_LEFT,
+	KEY_DEL       = VT100_KEY_DELETE,
+	KEY_HOME      = VT100_KEY_HOME,
+	KEY_END       = VT100_KEY_END,
+	KEY_PAGEUP    = VT100_KEY_PAGEUP,
+	KEY_PAGEDOWN  = VT100_KEY_PAGEDOWN,
+	KEY_F10       = VT100_KEY_F10,
+};
+#else
 enum key_codes {
 	KEY_NULL      = 0,
 	KEY_CTRL_B    = 0x02,
@@ -40,6 +67,7 @@ enum key_codes {
 	KEY_PAGEDOWN,       // ??
 	KEY_F10,            // ESC[21~
 };
+#endif
 
 // Errors which may be returned by parse_search_string.
 enum parse_errors {

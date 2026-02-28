@@ -1535,6 +1535,7 @@ static void hx_menu_dispatch(struct editor* e, int action) {
 }
 
 int hx_run(const char* filename) {
+	hx_vt100_keys_init();
 	g_hx_editor = editor_init();
 	editor_openfile(g_hx_editor, filename);
 	clear_screen();
@@ -1547,14 +1548,9 @@ int hx_run(const char* filename) {
 		(uint8_t)g_hx_editor->screen_rows,
 		hx_menu_read_key,
 		hx_menu_write);
-	/* Override key codes for hx's enum values */
-	menu_state.key_up    = KEY_UP;
-	menu_state.key_down  = KEY_DOWN;
-	menu_state.key_left  = KEY_LEFT;
-	menu_state.key_right = KEY_RIGHT;
-	menu_state.key_enter = KEY_ENTER;
-	menu_state.key_esc   = KEY_ESC;
-	menu_state.key_f10   = KEY_F10;
+	/* Key codes: hx's enum values now match vt100_keys.h via the
+	 * #ifdef BUSPIRATE redefinition in util.h, so the menu defaults
+	 * are correct and no overrides are needed. */
 	menu_state.repaint   = hx_menu_repaint;
 
 	/* Snapshot fields used to detect "nothing changed" after key processing.

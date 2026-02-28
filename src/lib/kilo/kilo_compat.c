@@ -175,6 +175,26 @@ size_t kilo_arena_total_size(void) {
  * Terminal I/O — read from USB rx FIFO, write to USB tx FIFO
  * ====================================================================== */
 
+/* ---- vt100_keys shared decoder state ---- */
+#include "lib/vt100_keys/vt100_keys.h"
+
+vt100_key_state_t kilo_key_state;
+
+static int kilo_vt100_read_blocking(char *c) {
+    while (!rx_fifo_try_get(c)) {
+        tight_loop_contents();
+    }
+    return 1;
+}
+
+static int kilo_vt100_read_try(char *c) {
+    return rx_fifo_try_get(c) ? 1 : 0;
+}
+
+void kilo_vt100_keys_init(void) {
+    vt100_key_init(&kilo_key_state, kilo_vt100_read_blocking, kilo_vt100_read_try);
+}
+
 /* Sentinel fd returned by kilo_posix_open for file writes */
 #define KILO_FILE_FD  42
 

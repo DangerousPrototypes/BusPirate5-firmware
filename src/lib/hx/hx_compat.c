@@ -157,6 +157,26 @@ void *hx_arena_realloc(void *ptr, size_t new_size) {
  * Terminal I/O — read from USB rx FIFO, write to USB tx FIFO
  * ====================================================================== */
 
+/* ---- vt100_keys shared decoder state ---- */
+#include "lib/vt100_keys/vt100_keys.h"
+
+vt100_key_state_t hx_key_state;
+
+static int hx_vt100_read_blocking(char *c) {
+    while (!rx_fifo_try_get(c)) {
+        tight_loop_contents();
+    }
+    return 1;
+}
+
+static int hx_vt100_read_try(char *c) {
+    return rx_fifo_try_get(c) ? 1 : 0;
+}
+
+void hx_vt100_keys_init(void) {
+    vt100_key_init(&hx_key_state, hx_vt100_read_blocking, hx_vt100_read_try);
+}
+
 ssize_t hx_io_read(int fd, void *buf, size_t count) {
     (void)fd;
     char *p = (char *)buf;

@@ -119,6 +119,35 @@ static struct editorConfig E;
 static int kilo_menu_pending;  /* Forward declaration — set by F10 key handler */
 #endif
 
+#ifdef BUSPIRATE
+#include "lib/vt100_keys/vt100_keys.h"
+enum KEY_ACTION{
+        KEY_NULL = 0,       /* NULL */
+        CTRL_C = VT100_KEY_CTRL_C,
+        CTRL_D = VT100_KEY_CTRL_D,
+        CTRL_F = VT100_KEY_CTRL_F,
+        CTRL_H = VT100_KEY_CTRL_H,
+        TAB = VT100_KEY_TAB,
+        CTRL_L = VT100_KEY_CTRL_L,
+        ENTER = VT100_KEY_ENTER,
+        CTRL_Q = VT100_KEY_CTRL_Q,
+        CTRL_S = VT100_KEY_CTRL_S,
+        CTRL_T = VT100_KEY_CTRL_T,
+        CTRL_U = VT100_KEY_CTRL_U,
+        ESC = VT100_KEY_ESC,
+        BACKSPACE = VT100_KEY_BACKSPACE,
+        ARROW_LEFT  = VT100_KEY_LEFT,
+        ARROW_RIGHT = VT100_KEY_RIGHT,
+        ARROW_UP    = VT100_KEY_UP,
+        ARROW_DOWN  = VT100_KEY_DOWN,
+        DEL_KEY     = VT100_KEY_DELETE,
+        HOME_KEY    = VT100_KEY_HOME,
+        END_KEY     = VT100_KEY_END,
+        PAGE_UP     = VT100_KEY_PAGEUP,
+        PAGE_DOWN   = VT100_KEY_PAGEDOWN,
+        F10_KEY     = VT100_KEY_F10,
+};
+#else
 enum KEY_ACTION{
         KEY_NULL = 0,       /* NULL */
         CTRL_C = 3,         /* Ctrl-c */
@@ -147,6 +176,7 @@ enum KEY_ACTION{
         PAGE_DOWN,
         F10_KEY
 };
+#endif
 
 void editorSetStatusMessage(const char *fmt, ...);
 
@@ -276,10 +306,18 @@ fatal:
 static int editorReadKey_pushback = -1;
 
 static void editorReadKey_unget(int key) {
+#ifdef BUSPIRATE
+    vt100_key_unget(&kilo_key_state, key);
+#else
     editorReadKey_pushback = key;
+#endif
 }
 
 int editorReadKey(int fd) {
+#ifdef BUSPIRATE
+    (void)fd;
+    return vt100_key_read(&kilo_key_state);
+#else
     /* Return pushed-back key if present (used for menu passthrough) */
     if (editorReadKey_pushback >= 0) {
         int k = editorReadKey_pushback;
@@ -348,6 +386,7 @@ int editorReadKey(int fd) {
             return c;
         }
     }
+#endif /* !BUSPIRATE */
 }
 
 /* Use the ESC [6n escape sequence to query the horizontal cursor position
@@ -1501,6 +1540,7 @@ void kilo_cleanup(void) {
 
 /* BP5FW: Entry point called from edit command handler */
 int kilo_run(const char *filename) {
+    kilo_vt100_keys_init();
     initEditor();
     if (filename) {
         editorSelectSyntaxHighlight((char *)filename);
@@ -1518,14 +1558,9 @@ int kilo_run(const char *filename) {
         (uint8_t)(E.screenrows + 2),
         kilo_menu_read_key_wrapper,
         kilo_menu_write_wrapper);
-    /* Override key codes for kilo's enum values (different from hx!) */
-    menu_state.key_up    = ARROW_UP;
-    menu_state.key_down  = ARROW_DOWN;
-    menu_state.key_left  = ARROW_LEFT;
-    menu_state.key_right = ARROW_RIGHT;
-    menu_state.key_enter = ENTER;
-    menu_state.key_esc   = ESC;
-    menu_state.key_f10   = F10_KEY;
+    /* Key codes: kilo's enum values now match vt100_keys.h via the
+     * #ifdef BUSPIRATE redefinition above, so the menu defaults
+     * are correct and no overrides are needed. */
     menu_state.repaint   = editorRefreshScreen;
 
     /* Reserve row 1 for menu bar — shrink content area by 1 */

@@ -225,29 +225,31 @@ uint8_t vt100_menu_reserved_rows(const vt100_menu_state_t* state);
 /* ── Key constants (must match the host editor's key enum) ──────────── */
 /*
  * The menu framework needs to recognise arrow keys, Enter, and Escape.
- * These values match the hx/kilo key enums.  If your editor uses
- * different values, #define VT100_MENU_KEY_* before including this header.
+ * These defaults use vt100_keys.h virtual key codes.  If your editor uses
+ * different values, #define VT100_MENU_KEY_* before including this header,
+ * or override the key_* fields on the state struct after vt100_menu_init().
  */
+#include "lib/vt100_keys/vt100_keys.h"
 #ifndef VT100_MENU_KEY_UP
-#define VT100_MENU_KEY_UP      1000
+#define VT100_MENU_KEY_UP      VT100_KEY_UP
 #endif
 #ifndef VT100_MENU_KEY_DOWN
-#define VT100_MENU_KEY_DOWN    1001
+#define VT100_MENU_KEY_DOWN    VT100_KEY_DOWN
 #endif
 #ifndef VT100_MENU_KEY_RIGHT
-#define VT100_MENU_KEY_RIGHT   1002
+#define VT100_MENU_KEY_RIGHT   VT100_KEY_RIGHT
 #endif
 #ifndef VT100_MENU_KEY_LEFT
-#define VT100_MENU_KEY_LEFT    1003
+#define VT100_MENU_KEY_LEFT    VT100_KEY_LEFT
 #endif
 #ifndef VT100_MENU_KEY_ENTER
-#define VT100_MENU_KEY_ENTER   0x0d
+#define VT100_MENU_KEY_ENTER   VT100_KEY_ENTER
 #endif
 #ifndef VT100_MENU_KEY_ESC
-#define VT100_MENU_KEY_ESC     0x1b
+#define VT100_MENU_KEY_ESC     VT100_KEY_ESC
 #endif
 #ifndef VT100_MENU_KEY_F10
-#define VT100_MENU_KEY_F10     1020
+#define VT100_MENU_KEY_F10     VT100_KEY_F10
 #endif
 
 #endif /* VT100_MENU_H */

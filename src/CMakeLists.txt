@@ -196,6 +196,8 @@ set(buspirate_common
         commands/global/hexedit.h
         lib/hx/hx_build.c
         lib/hx/hx_compat.h
+        lib/vt100_keys/vt100_keys.c
+        lib/vt100_keys/vt100_keys.h
         lib/vt100_menu/vt100_menu.c
         lib/vt100_menu/vt100_menu.h
         commands/global/button_scr.c

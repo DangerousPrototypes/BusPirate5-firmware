@@ -52,6 +52,11 @@
 ssize_t hx_io_read(int fd, void *buf, size_t count);
 ssize_t hx_io_write(int fd, const void *buf, size_t count);
 
+/* ---- vt100_keys shared decoder ---- */
+#include "lib/vt100_keys/vt100_keys.h"
+extern vt100_key_state_t hx_key_state;
+void hx_vt100_keys_init(void);
+
 /* ======================================================================
  * Terminal size — from system_config (probed at boot via ESC[6n)
  * ====================================================================== */

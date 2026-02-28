@@ -141,6 +141,11 @@ ssize_t kilo_io_write(int fd, const void *buf, size_t count);
 #define read  kilo_io_read
 #define write kilo_io_write
 
+/* ---- vt100_keys shared decoder ---- */
+#include "lib/vt100_keys/vt100_keys.h"
+extern vt100_key_state_t kilo_key_state;
+void kilo_vt100_keys_init(void);
+
 /* File descriptor I/O (for editorSave: open/ftruncate/write/close) */
 int kilo_posix_open(const char *path, int flags, ...);
 int kilo_posix_close(int fd);

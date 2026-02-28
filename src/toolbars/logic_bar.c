@@ -24,6 +24,7 @@
 #include "binmode/logicanalyzer.h"
 #include "binmode/fala.h"
 #include "ui/ui_toolbar.h"
+#include "lib/vt100_keys/vt100_keys.h"
 
 // 80 characters wide box outline
 // box top and corners
@@ -281,6 +282,17 @@ void logic_bar_show(void) {
 }
 
 uint32_t sample_position = 0;
+
+/* vt100_keys I/O callbacks for logic_bar_navigate */
+static int logic_bar_read_blocking(char* c) {
+    rx_fifo_get_blocking(c);
+    return 1;
+}
+
+static int logic_bar_read_try(char* c) {
+    return rx_fifo_try_get(c) ? 1 : 0;
+}
+
 void logic_bar_navigate(void) {
     printf("\r\n%sCommands: <- and -> to scroll, x or q to exit%s\r\n",
            ui_term_color_info(),
@@ -295,72 +307,50 @@ void logic_bar_navigate(void) {
         logic_bar_redraw(0, total_samples);
     }
 
+    vt100_key_state_t keys;
+    vt100_key_init(&keys, logic_bar_read_blocking, logic_bar_read_try);
+
     while (true) {
-        char c;
+        int key = vt100_key_read(&keys);
 
-        if (!rx_fifo_try_get(&c)) {
-            continue;
-        }
-
-        switch (c) {
+        switch (key) {
             case 's': // TODO: need to handle wrap...
                 // storage_save_binary_blob_rollover();
                 // storage_save_binary_blob_rollover(la_buf, (la_ptr - la_samples) & 0x1ffff, la_samples, 0x1ffff);
                 break;
             case 'r':
-            la_sample:
                 // logic_analyzer_arm((float)(la_freq * 1000), la_samples, la_trigger_pin, la_trigger_level, false);
                 // sample_position = 0;
-                /*while (!logic_analyzer_is_done()) {
-                    char c;
-                    if (rx_fifo_try_get(&c)) {
-                        if (c == 'x') {
-                            printf("Canceled!\r\n");
-                            goto la_x;
-                        }
-                    }
-                }*/
                 // logic_bar_redraw(sample_position, total_samples);
                 //  logicanalyzer_reset_led();
                 break;
             case 'q':
             case 'x':
-            la_x:
                 // system_config.terminal_hide_cursor = false;
                 printf("%s", ui_term_color_reset());
                 ui_term_cursor_move_down(9);
                 printf("%s", ui_term_cursor_show());
                 return;
-                break;
-            case '\033': // escape commands
-                rx_fifo_get_blocking(&c);
-                switch (c) {
-                    case '[': // arrow keys
-                        rx_fifo_get_blocking(&c);
-                        switch (c) {
-                            case 'D': // left
-                                if (sample_position < 64) {
-                                    sample_position = 0;
-                                } else {
-                                    sample_position -= 64;
-                                }
-                                logic_bar_redraw(sample_position, total_samples);
-                                break;
-                            case 'C':                     // right
-                                if (total_samples < 76) { // not enough samples to scroll
-                                    sample_position = 0;
-                                } else if (sample_position > (total_samples - 63)) { // samples - columns
-                                    sample_position = total_samples - 63;
-                                } else {
-                                    sample_position += 64;
-                                }
-                                logic_bar_redraw(sample_position, total_samples);
-                                break;
-                        }
-                        break;
+            case VT100_KEY_LEFT:
+                if (sample_position < 64) {
+                    sample_position = 0;
+                } else {
+                    sample_position -= 64;
                 }
+                logic_bar_redraw(sample_position, total_samples);
+                break;
+            case VT100_KEY_RIGHT:
+                if (total_samples < 76) { // not enough samples to scroll
+                    sample_position = 0;
+                } else if (sample_position > (total_samples - 63)) { // samples - columns
+                    sample_position = total_samples - 63;
+                } else {
+                    sample_position += 64;
+                }
+                logic_bar_redraw(sample_position, total_samples);
+                break;
+            default:
                 break;
         }
     }
 }
-

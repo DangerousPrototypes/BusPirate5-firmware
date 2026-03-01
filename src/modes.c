@@ -71,6 +71,9 @@
 #ifdef BP_USE_I2S
 #include "mode/i2s.h"
 #endif
+#ifdef BP_USE_ARDUBOY
+#include "mode/arduboy/arduboy.h"
+#endif
 
 /**
  * @defgroup null_funcs Null Function Handlers
@@ -685,6 +688,35 @@ struct _mode modes[] = {
         .mode_commands_count = &dummy1_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
         .setup_def = &dummy1_setup_def,        // command def for mode setup flags
+    },
+#endif
+#ifdef BP_USE_ARDUBOY
+    [ARDUBOY] = {
+        .protocol_name = "ARDUBOY",
+        .protocol_start = nullfunc1_temp,
+        .protocol_start_alt = nullfunc1_temp,
+        .protocol_stop = nullfunc1_temp,
+        .protocol_stop_alt = nullfunc1_temp,
+        .protocol_write = nullfunc1_temp,
+        .protocol_read = nullfunc1_temp,
+        .protocol_clkh = nullfunc1_temp,
+        .protocol_clkl = nullfunc1_temp,
+        .protocol_dath = nullfunc1_temp,
+        .protocol_datl = nullfunc1_temp,
+        .protocol_dats = nullfunc1_temp,
+        .protocol_tick_clock = nullfunc1_temp,
+        .protocol_bitr = nullfunc1_temp,
+        .protocol_periodic = noperiodic,
+        .protocol_macro = nullfunc4,
+        .protocol_setup = arduboy_setup,
+        .protocol_setup_exc = arduboy_setup_exec,
+        .protocol_cleanup = arduboy_cleanup,
+        .protocol_help = arduboy_help,
+        .mode_commands = arduboy_commands,
+        .mode_commands_count = &arduboy_commands_count,
+        .protocol_get_speed = nullfunc7_no_error,
+        .protocol_command = NULL,
+        .protocol_preflight_sanity_check = NULL,
     },
 #endif
 };

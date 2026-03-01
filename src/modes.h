@@ -69,6 +69,9 @@ enum {
 #ifdef BP_USE_DUMMY1
     DUMMY1,   /**< Dummy/test mode */
 #endif
+#ifdef BP_USE_ARDUBOY
+    ARDUBOY,  /**< Arduboy emulator mode */
+#endif
     MAXPROTO  /**< Total number of protocol modes */
 };
 

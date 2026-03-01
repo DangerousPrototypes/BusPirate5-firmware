@@ -377,6 +377,16 @@ set(buspirate_common
         lib/bluetag/src/blueTag.h
         lib/bluetag/src/jep106.inc
 
+        # ARDUBOY EMULATOR
+        mode/arduboy/avr_cpu.c
+        mode/arduboy/avr_cpu.h
+        mode/arduboy/arduboy_periph.c
+        mode/arduboy/arduboy_periph.h
+        mode/arduboy/arduboy_term.c
+        mode/arduboy/arduboy_term.h
+        mode/arduboy/arduboy.c
+        mode/arduboy/arduboy.h
+
         # DUMMY MODE
         mode/dummy1.c
         mode/dummy1.h 

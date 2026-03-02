@@ -182,3 +182,39 @@ int vt100_key_read(vt100_key_state_t* s) {
 
     return vt100_key_decode_csi(seq, seqlen);
 }
+
+/* ── rx_fifo-based key reader (for toolbar focus) ────────────────── */
+
+#ifdef BP_EMBEDDED
+#include "usb_rx.h"
+
+int vt100_key_read_rx_fifo(char first_byte) {
+    if ((unsigned char)first_byte != 0x1b) {
+        return (unsigned char)first_byte;
+    }
+
+    /* ESC byte — read remaining CSI sequence bytes from rx_fifo */
+    char seq[4];
+    int seqlen = 0;
+    char c;
+    if (rx_fifo_try_get(&c)) {
+        seq[seqlen++] = c;
+        if (rx_fifo_try_get(&c)) {
+            seq[seqlen++] = c;
+            /* Numeric CSI may need 3rd/4th byte */
+            if (seq[0] == '[' && seq[1] >= '0' && seq[1] <= '9') {
+                if (rx_fifo_try_get(&c)) {
+                    seq[seqlen++] = c;
+                    if (c >= '0' && c <= '9') {
+                        if (rx_fifo_try_get(&c)) {
+                            seq[seqlen++] = c;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return (seqlen >= 2) ? vt100_key_decode_csi(seq, seqlen)
+                         : VT100_KEY_ESC;
+}
+#endif /* BP_EMBEDDED */

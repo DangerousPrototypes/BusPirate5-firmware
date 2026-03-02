@@ -230,3 +230,32 @@ void toolbar_core1_service(void);
  * @return Next focusable toolbar, or NULL if none found.
  */
 toolbar_t* toolbar_next_focusable(toolbar_t* current);
+
+/* ── Focus state machine (called from Core0 main loop) ────────────── */
+
+/**
+ * @brief Result codes from toolbar_focus_handle_key().
+ */
+typedef enum {
+    TB_FOCUS_CONTINUE,  ///< Key consumed (or ignored), stay in focus mode
+    TB_FOCUS_EXIT,      ///< Focus ended — caller should return to prompt
+} toolbar_focus_result_t;
+
+/**
+ * @brief Enter focus mode on the first focusable toolbar.
+ * @details Finds the first focusable toolbar, sets its `.focused` flag,
+ *          redraws all toolbars (cursor stays hidden via draw_release
+ *          focus-awareness).
+ * @return true if a focusable toolbar was found and focused.
+ *         false if no focusable toolbar exists (caller should not enter focus state).
+ */
+bool toolbar_focus_enter(void);
+
+/**
+ * @brief Process one key while in focus mode.
+ * @details Handles ESC/Ctrl+C (exit), TAB (cycle), and routes all other
+ *          keys to the focused toolbar's `.handle_key` callback.
+ * @param key  VT100_KEY_* code from vt100_key_read_rx_fifo().
+ * @return TB_FOCUS_CONTINUE to stay in focus, TB_FOCUS_EXIT to return to prompt.
+ */
+toolbar_focus_result_t toolbar_focus_handle_key(int key);

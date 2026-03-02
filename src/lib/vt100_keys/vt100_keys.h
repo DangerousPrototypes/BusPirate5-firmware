@@ -135,4 +135,18 @@ void vt100_key_unget(vt100_key_state_t* s, int key);
  */
 int vt100_key_decode_csi(const char* seq, int len);
 
+/**
+ * Decode a key from a first byte + rx_fifo.
+ *
+ * @param first_byte  The byte already consumed from the input FIFO.
+ *                    If ESC (0x1b), remaining CSI bytes are read from
+ *                    rx_fifo_try_get().
+ * @return            VT100_KEY_* code, or raw ASCII byte.
+ *
+ * This is designed for the toolbar focus state machine in pirate.c where
+ * the first byte is already consumed via rx_fifo_try_get() before key
+ * decoding begins.  Uses only non-blocking reads so it never stalls.
+ */
+int vt100_key_read_rx_fifo(char first_byte);
+
 #endif /* VT100_KEYS_H */

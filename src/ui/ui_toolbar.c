@@ -15,6 +15,7 @@
 #include "usb_tx.h"
 #include "tusb.h"
 #include "pirate/intercore_helpers.h"
+#include "lib/vt100_keys/vt100_keys.h"
 
 static toolbar_t* toolbar_registry[TOOLBAR_MAX_COUNT];
 static uint8_t toolbar_count = 0;
@@ -419,4 +420,55 @@ void toolbar_core1_service(void) {
 
     /* All toolbars processed — cycle complete. */
     tb_c1_state = TB_C1_IDLE;
+}
+
+/* ── Focus state machine (Core0) ─────────────────────────────────── */
+
+static toolbar_t* focused_toolbar = NULL;
+
+bool toolbar_focus_enter(void) {
+    toolbar_t* tb = toolbar_next_focusable(NULL);
+    if (!tb) {
+        return false;
+    }
+    focused_toolbar = tb;
+    focused_toolbar->focused = true;
+    toolbar_redraw_all();
+    return true;
+}
+
+toolbar_focus_result_t toolbar_focus_handle_key(int key) {
+    /* Ctrl+C or ESC: exit focus, return to prompt.
+     * toolbar_draw_release() inside redraw_all detects no focused
+     * toolbar and shows the cursor for us. */
+    if (key == VT100_KEY_CTRL_C || key == VT100_KEY_ESC) {
+        focused_toolbar->focused = false;
+        focused_toolbar = NULL;
+        toolbar_redraw_all();
+        return TB_FOCUS_EXIT;
+    }
+
+    /* TAB: cycle to next focusable toolbar */
+    if (key == VT100_KEY_TAB) {
+        toolbar_t* next = toolbar_next_focusable(focused_toolbar);
+        if (next && next != focused_toolbar) {
+            focused_toolbar->focused = false;
+            next->focused = true;
+            focused_toolbar = next;
+            toolbar_redraw_all();
+        } else {
+            /* No other focusable toolbar — return to prompt */
+            focused_toolbar->focused = false;
+            focused_toolbar = NULL;
+            toolbar_redraw_all();
+            return TB_FOCUS_EXIT;
+        }
+        return TB_FOCUS_CONTINUE;
+    }
+
+    /* All other keys → route to the focused toolbar's handler */
+    if (focused_toolbar && focused_toolbar->def->handle_key) {
+        focused_toolbar->def->handle_key(focused_toolbar, key);
+    }
+    return TB_FOCUS_CONTINUE;
 }

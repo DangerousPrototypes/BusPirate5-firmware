@@ -482,9 +482,6 @@ static void core0_infinite_loop(void) {
 
     uint8_t bp_state = 0;
 
-    /* Toolbar focus state */
-    static toolbar_t* focused_toolbar = NULL;
-    
     struct prompt_result result;
     //alarm_id_t screensaver;
     bool has_been_connected = false;
@@ -600,11 +597,7 @@ static void core0_infinite_loop(void) {
                 }
 
                 if (ln_result == 0xfb) {  // TAB on empty line - toolbar focus request
-                    toolbar_t* tb = toolbar_next_focusable(NULL);
-                    if (tb) {
-                        focused_toolbar = tb;
-                        focused_toolbar->focused = true;
-                        toolbar_redraw_all();
+                    if (toolbar_focus_enter()) {
                         bp_state = BP_SM_TOOLBAR_FOCUS;
                     }
                     break;
@@ -656,73 +649,9 @@ static void core0_infinite_loop(void) {
 
                 lcd_screensaver_alarm_reset();
 
-                /* Decode key using stateless CSI decoder.
-                 * We already consumed the first byte from the FIFO.
-                 * For escape sequences (arrow keys etc.), the terminal
-                 * sends all bytes in one USB packet so they are already
-                 * buffered in the FIFO. */
-                int key;
-                if ((unsigned char)peek == 0x1b) {
-                    /* ESC byte — read remaining CSI sequence bytes */
-                    char seq[4];
-                    int seqlen = 0;
-                    char c;
-                    if (rx_fifo_try_get(&c)) {
-                        seq[seqlen++] = c;
-                        if (rx_fifo_try_get(&c)) {
-                            seq[seqlen++] = c;
-                            /* Numeric CSI may need 3rd/4th byte */
-                            if (seq[0] == '[' && seq[1] >= '0' && seq[1] <= '9') {
-                                if (rx_fifo_try_get(&c)) {
-                                    seq[seqlen++] = c;
-                                    if (c >= '0' && c <= '9') {
-                                        if (rx_fifo_try_get(&c)) {
-                                            seq[seqlen++] = c;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    key = (seqlen >= 2) ? vt100_key_decode_csi(seq, seqlen)
-                                        : VT100_KEY_ESC;
-                } else {
-                    key = (unsigned char)peek;
-                }
-
-                /* Ctrl+C or ESC: exit focus, return to prompt.
-                 * toolbar_draw_release() inside redraw_all shows cursor
-                 * and clears terminal_hide_cursor for us. */
-                if (key == VT100_KEY_CTRL_C || key == VT100_KEY_ESC) {
-                    focused_toolbar->focused = false;
-                    focused_toolbar = NULL;
-                    toolbar_redraw_all();
+                int key = vt100_key_read_rx_fifo(peek);
+                if (toolbar_focus_handle_key(key) == TB_FOCUS_EXIT) {
                     bp_state = BP_SM_GET_INPUT;
-                    break;
-                }
-
-                /* TAB: cycle to next focusable toolbar */
-                if (key == VT100_KEY_TAB) {
-                    toolbar_t* next = toolbar_next_focusable(focused_toolbar);
-                    if (next && next != focused_toolbar) {
-                        focused_toolbar->focused = false;
-                        next->focused = true;
-                        focused_toolbar = next;
-                        toolbar_redraw_all();
-                    } else {
-                        /* No other focusable toolbar — return to prompt */
-                        focused_toolbar->focused = false;
-                        focused_toolbar = NULL;
-                        toolbar_redraw_all();
-                        bp_state = BP_SM_GET_INPUT;
-                    }
-                    break;
-                }
-
-                /* All other keys (arrows, letters, F-keys, etc.)
-                 * → route to the focused toolbar's handler */
-                if (focused_toolbar->def->handle_key) {
-                    focused_toolbar->def->handle_key(focused_toolbar, key);
                 }
                 break;
             }

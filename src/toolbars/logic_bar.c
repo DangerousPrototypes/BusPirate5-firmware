@@ -33,15 +33,14 @@
 #define LOGIC_BAR_VERTICAL_LABELS 2 // width of each vertical label
 #define LOGIC_BAR_GRAPH_WIDTH LOGIC_BAR_WIDTH - (LOGIC_BAR_VERTICAL_LABELS * 2)
 
-uint32_t la_freq = 1000, la_samples = 1000;
-uint32_t la_trigger_pin = 0, la_trigger_level = 0;
-char logic_graph_low_character = '_';
-char logic_graph_high_character = '#';
+static char logic_graph_low_character = '_';
+static char logic_graph_high_character = '#';
 
 /* Forward declarations for callbacks */
 static void logic_bar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width);
+static bool logic_bar_handle_key(toolbar_t* tb, int key);
 
-bool logic_bar_visible = false;
+static bool logic_bar_visible = false;
 
 /* Toolbar descriptor — registered when the logic bar is started. */
 static const toolbar_def_t logic_bar_toolbar_def = {
@@ -51,6 +50,8 @@ static const toolbar_def_t logic_bar_toolbar_def = {
     .draw    = logic_bar_draw_cb,
     .update_core1 = NULL,
     .destroy = NULL,
+    .focusable  = true,
+    .handle_key = logic_bar_handle_key,
 };
 
 static toolbar_t logic_bar_toolbar = {
@@ -224,9 +225,14 @@ void logic_bar_draw_frame(void) {
  *          Called from toolbar_redraw_all() on Core0.
  */
 static void logic_bar_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
-    (void)tb; (void)width;
+    (void)width;
     /* Paint frame */
     frame_top(start_row, LOGIC_BAR_WIDTH);
+    /* Focus indicator: highlight the top border when focused */
+    if (tb->focused) {
+        ui_term_cursor_position(start_row, 0);
+        printf("%s\u25b8 FOCUS \u25c2%s", ui_term_color_info(), ui_term_color_reset());
+    }
     frame_sample_numbers(start_row + 1);
     frame_vertical_labels(start_row + 2);
     /* Overlay data if available */
@@ -281,7 +287,7 @@ void logic_bar_show(void) {
     }
 }
 
-uint32_t sample_position = 0;
+static uint32_t sample_position = 0;
 
 /* vt100_keys I/O callbacks for logic_bar_navigate */
 static int logic_bar_read_blocking(char* c) {
@@ -291,6 +297,47 @@ static int logic_bar_read_blocking(char* c) {
 
 static int logic_bar_read_try(char* c) {
     return rx_fifo_try_get(c) ? 1 : 0;
+}
+
+/**
+ * @brief Scroll sample_position by one step and redraw.
+ * @param direction  Negative = left, positive = right.
+ * @param total_samples  Total available samples.
+ */
+static void logic_bar_scroll(int direction, uint32_t total_samples) {
+    if (direction < 0) {
+        sample_position = (sample_position < 64) ? 0 : sample_position - 64;
+    } else {
+        if (total_samples < 76) {
+            sample_position = 0;
+        } else if (sample_position > (total_samples - 63)) {
+            sample_position = total_samples - 63;
+        } else {
+            sample_position += 64;
+        }
+    }
+    logic_bar_redraw(sample_position, total_samples);
+}
+
+/**
+ * @brief Handle a key while the logic bar has TAB focus.
+ * @param tb   This toolbar (unused).
+ * @param key  VT100_KEY_* code from the focus state machine.
+ * @return true if the key was consumed.
+ */
+static bool logic_bar_handle_key(toolbar_t* tb, int key) {
+    uint32_t total_samples = logic_analyzer_get_end_ptr();
+
+    switch (key) {
+        case VT100_KEY_LEFT:
+            logic_bar_scroll(-1, total_samples);
+            return true;
+        case VT100_KEY_RIGHT:
+            logic_bar_scroll(+1, total_samples);
+            return true;
+        default:
+            return false;
+    }
 }
 
 void logic_bar_navigate(void) {
@@ -332,22 +379,10 @@ void logic_bar_navigate(void) {
                 printf("%s", ui_term_cursor_show());
                 return;
             case VT100_KEY_LEFT:
-                if (sample_position < 64) {
-                    sample_position = 0;
-                } else {
-                    sample_position -= 64;
-                }
-                logic_bar_redraw(sample_position, total_samples);
+                logic_bar_scroll(-1, total_samples);
                 break;
             case VT100_KEY_RIGHT:
-                if (total_samples < 76) { // not enough samples to scroll
-                    sample_position = 0;
-                } else if (sample_position > (total_samples - 63)) { // samples - columns
-                    sample_position = total_samples - 63;
-                } else {
-                    sample_position += 64;
-                }
-                logic_bar_redraw(sample_position, total_samples);
+                logic_bar_scroll(+1, total_samples);
                 break;
             default:
                 break;

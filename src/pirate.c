@@ -40,6 +40,9 @@
 #include "system_monitor.h"
 #include "ui/ui_statusbar.h"
 #include "ui/ui_toolbar.h"
+#include "lib/vt100_keys/vt100_keys.h"
+
+
 #include "tusb.h"
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
@@ -64,7 +67,7 @@
 
 static mutex_t spi_mutex;
 
-uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = { 0 };
+//uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = { 0 };
 
 void core1_entry(void);
 /*
@@ -147,9 +150,9 @@ static void main_system_initialization(void) {
             );
     #endif
 
-    reserve_for_future_mode_specific_allocations[1] = 99;
-    reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
-    reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
+    //reserve_for_future_mode_specific_allocations[1] = 99;
+    //reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
+    //reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
 
     // init buffered IO pins
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
@@ -473,10 +476,14 @@ static void core0_infinite_loop(void) {
         BP_SM_DISPLAY_MODE_WAIT,
         BP_SM_GET_INPUT,
         BP_SM_PROCESS_COMMAND,
-        BP_SM_COMMAND_PROMPT
+        BP_SM_COMMAND_PROMPT,
+        BP_SM_TOOLBAR_FOCUS
     };
 
     uint8_t bp_state = 0;
+
+    /* Toolbar focus state */
+    static toolbar_t* focused_toolbar = NULL;
     
     struct prompt_result result;
     //alarm_id_t screensaver;
@@ -592,6 +599,17 @@ static void core0_infinite_loop(void) {
                     break;
                 }
 
+                if (ln_result == 0xfb) {  // TAB on empty line - toolbar focus request
+                    toolbar_t* tb = toolbar_next_focusable(NULL);
+                    if (tb) {
+                        focused_toolbar = tb;
+                        focused_toolbar->focused = true;
+                        toolbar_redraw_all();
+                        bp_state = BP_SM_TOOLBAR_FOCUS;
+                    }
+                    break;
+                }
+
                 enum button_codes press_code = button_check_press(0);
                 if (press_code != BP_BUTT_NO_PRESS) {
                     button_irq_disable(0);
@@ -627,6 +645,87 @@ static void core0_infinite_loop(void) {
                 bp_state = BP_SM_GET_INPUT;
                 button_irq_enable(0, &button_irq_callback);
                 break;
+
+            case BP_SM_TOOLBAR_FOCUS: {
+                displays[system_config.display].display_periodic();
+                modes[system_config.mode].protocol_periodic();
+
+                /* Non-blocking peek: if no input, keep looping */
+                char peek;
+                if (!rx_fifo_try_get(&peek)) break;
+
+                lcd_screensaver_alarm_reset();
+
+                /* Decode key using stateless CSI decoder.
+                 * We already consumed the first byte from the FIFO.
+                 * For escape sequences (arrow keys etc.), the terminal
+                 * sends all bytes in one USB packet so they are already
+                 * buffered in the FIFO. */
+                int key;
+                if ((unsigned char)peek == 0x1b) {
+                    /* ESC byte — read remaining CSI sequence bytes */
+                    char seq[4];
+                    int seqlen = 0;
+                    char c;
+                    if (rx_fifo_try_get(&c)) {
+                        seq[seqlen++] = c;
+                        if (rx_fifo_try_get(&c)) {
+                            seq[seqlen++] = c;
+                            /* Numeric CSI may need 3rd/4th byte */
+                            if (seq[0] == '[' && seq[1] >= '0' && seq[1] <= '9') {
+                                if (rx_fifo_try_get(&c)) {
+                                    seq[seqlen++] = c;
+                                    if (c >= '0' && c <= '9') {
+                                        if (rx_fifo_try_get(&c)) {
+                                            seq[seqlen++] = c;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    key = (seqlen >= 2) ? vt100_key_decode_csi(seq, seqlen)
+                                        : VT100_KEY_ESC;
+                } else {
+                    key = (unsigned char)peek;
+                }
+
+                /* Ctrl+C or ESC: exit focus, return to prompt.
+                 * toolbar_draw_release() inside redraw_all shows cursor
+                 * and clears terminal_hide_cursor for us. */
+                if (key == VT100_KEY_CTRL_C || key == VT100_KEY_ESC) {
+                    focused_toolbar->focused = false;
+                    focused_toolbar = NULL;
+                    toolbar_redraw_all();
+                    bp_state = BP_SM_GET_INPUT;
+                    break;
+                }
+
+                /* TAB: cycle to next focusable toolbar */
+                if (key == VT100_KEY_TAB) {
+                    toolbar_t* next = toolbar_next_focusable(focused_toolbar);
+                    if (next && next != focused_toolbar) {
+                        focused_toolbar->focused = false;
+                        next->focused = true;
+                        focused_toolbar = next;
+                        toolbar_redraw_all();
+                    } else {
+                        /* No other focusable toolbar — return to prompt */
+                        focused_toolbar->focused = false;
+                        focused_toolbar = NULL;
+                        toolbar_redraw_all();
+                        bp_state = BP_SM_GET_INPUT;
+                    }
+                    break;
+                }
+
+                /* All other keys (arrows, letters, F-keys, etc.)
+                 * → route to the focused toolbar's handler */
+                if (focused_toolbar->def->handle_key) {
+                    focused_toolbar->def->handle_key(focused_toolbar, key);
+                }
+                break;
+            }
 
             default:
                 bp_state = BP_SM_COMMAND_PROMPT;

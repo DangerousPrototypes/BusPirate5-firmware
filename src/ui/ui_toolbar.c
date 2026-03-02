@@ -176,6 +176,31 @@ uint8_t toolbar_count_registered(void) {
     return toolbar_count;
 }
 
+toolbar_t* toolbar_next_focusable(toolbar_t* current) {
+    if (toolbar_count == 0) return NULL;
+
+    /* Find starting index: after current, or 0 if NULL */
+    uint8_t start = 0;
+    if (current) {
+        for (uint8_t i = 0; i < toolbar_count; i++) {
+            if (toolbar_registry[i] == current) {
+                start = i + 1;
+                break;
+            }
+        }
+    }
+
+    /* Scan once around the registry */
+    for (uint8_t i = 0; i < toolbar_count; i++) {
+        uint8_t idx = (start + i) % toolbar_count;
+        toolbar_t* tb = toolbar_registry[idx];
+        if (tb->enabled && tb->def->focusable) {
+            return tb;
+        }
+    }
+    return NULL;
+}
+
 uint16_t toolbar_scroll_bottom(void) {
     uint16_t rows = system_config.terminal_ansi_rows;
     uint16_t total = toolbar_total_height();
@@ -246,8 +271,14 @@ void toolbar_draw_prepare(void) {
     system_config.terminal_toolbar_pause = true;
     /* Spin until Core1 finishes any in-progress render cycle.
      * Setting toolbar_pause above prevents new cycles from starting;
-     * we just need to wait for a running one to reach TB_C1_IDLE. */
+     * we just need to wait for a running one to reach TB_C1_IDLE.
+     * Timeout after ~50 ms to avoid freezing Core0 if USB CDC has
+     * backpressure and Core1 is stuck draining tx_tb_buf. */
+    absolute_time_t deadline = make_timeout_time_ms(50);
     while (tb_c1_state != TB_C1_IDLE) {
+        if (absolute_time_diff_us(get_absolute_time(), deadline) <= 0) {
+            break; /* timed out — proceed anyway, Core1 will catch up */
+        }
         tight_loop_contents();
     }
     system_config.terminal_hide_cursor = true;
@@ -255,8 +286,19 @@ void toolbar_draw_prepare(void) {
 }
 
 void toolbar_draw_release(void) {
-    system_config.terminal_hide_cursor = false;
-    printf("%s", ui_term_cursor_show());
+    /* If any toolbar has TAB focus, keep cursor hidden so the
+     * focus state machine retains control of cursor visibility. */
+    bool any_focused = false;
+    for (uint8_t i = 0; i < toolbar_count; i++) {
+        if (toolbar_registry[i]->focused) {
+            any_focused = true;
+            break;
+        }
+    }
+    if (!any_focused) {
+        system_config.terminal_hide_cursor = false;
+        printf("%s", ui_term_cursor_show());
+    }
     system_config.terminal_toolbar_pause = false;
 }
 

@@ -1464,6 +1464,14 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
 #endif
     }
 
+    /* TAB on empty line → toolbar focus request.
+     * Must be checked BEFORE the completion intercept below, otherwise
+     * completeLine() consumes the TAB and our case TAB: never fires. */
+    if (c == 9 && l->len == 0 && !l->in_completion) {
+        l->tab_empty = 1;
+        return linenoiseEditMore;
+    }
+
     /* Only autocomplete when the callback is set. It returns < 0 when
      * there was an error reading from fd. Otherwise it will return the
      * character that should be handled next. */
@@ -2066,7 +2074,13 @@ void linenoiseStartEdit(struct linenoiseState *l, const char *prompt) {
 
 linenoiseResult linenoiseEditFeedResult(struct linenoiseState *l) {
     char *res = linenoiseEditFeed(l);
-    if (res == linenoiseEditMore) return LN_CONTINUE;
+    if (res == linenoiseEditMore) {
+        if (l->tab_empty) {
+            l->tab_empty = 0;
+            return LN_TAB_EMPTY;
+        }
+        return LN_CONTINUE;
+    }
     if (res == NULL) {
         if (errno == EAGAIN) return LN_CTRL_C;
         if (errno == 0) return LN_REFRESH;

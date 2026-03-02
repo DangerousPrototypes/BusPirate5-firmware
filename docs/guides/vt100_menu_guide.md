@@ -33,7 +33,7 @@ The **vt100_menu** framework provides a classic TUI menu bar with dropdown selec
 | **Keyboard navigation** | Arrow keys, Enter, Escape, F10 toggle |
 | **Accelerator keys** | First-letter matching (press `S` to select "Save") |
 | **Key passthrough** | Unrecognised keys close the menu and are returned to the app |
-| **Repaint callback** | Editor redraws content when switching dropdowns (no Tetris blanking) |
+| **Repaint callback** | Editor redraws content when switching dropdowns (no cascade blanking) |
 | **Cursor management** | Hides cursor during menu interaction, restores on exit |
 | **Checked/disabled items** | Flags for toggles and greyed-out items |
 | **Zero allocation** | No malloc — state struct lives on the stack or in arena |
@@ -205,7 +205,7 @@ static int my_menu_write(int fd, const void* buf, int count) {
 
 ## Step 5: Repaint Callback (Optional but Recommended)
 
-When the user switches between menus with left/right arrows, the old dropdown's screen area needs restoration. Without a repaint callback, the framework blanks the area with spaces (functional but ugly — the "Tetris" effect). With a repaint callback, your editor redraws its content cleanly:
+When the user switches between menus with left/right arrows, the old dropdown's screen area needs restoration. Without a repaint callback, the framework blanks the area with spaces (functional but ugly — the "cascade" effect). With a repaint callback, your editor redraws its content cleanly:
 
 ```c
 static void my_menu_repaint(void) {
@@ -590,7 +590,7 @@ The menu framework can be added to any Bus Pirate fullscreen app that currently 
 | Pitfall | Symptom | Fix |
 |---------|---------|-----|
 | Key codes not overridden after init | Arrow keys swapped between editors | Set `state->key_*` fields explicitly |
-| No `repaint` callback | Tetris-like blanks when switching menus | Set `state->repaint = your_refresh_fn` |
+| No `repaint` callback | Cascade-like blanks when switching menus | Set `state->repaint = your_refresh_fn` |
 | Missing skip-redraw invalidation | Blank screen after menu closes | Set sentinel value (e.g. `prev_line = -1`) after `clear_screen()` |
 | ESC in NORMAL mode blanks status | File name disappears after ESC + arrow | Guard: `if (!(mode & MODE_NORMAL)) setmode(NORMAL)` |
 | Cursor visible during menu | Blinking cursor in status area | Add `\x1b[?25l` after `draw_bar()` for reverse-video editors |

@@ -117,7 +117,12 @@ uint32_t ui_term_linenoise_feed(void) {
         case LN_REFRESH:
             // Ctrl+B - screen refresh requested
             return 0xfd;
-            
+
+        case LN_TAB_EMPTY:
+            // TAB on empty line - toolbar focus request
+            // Do NOT call linenoiseEditStop — session stays alive
+            return 0xfb;
+
         default:
             return 1;  // Key was pressed (for screensaver)
     }

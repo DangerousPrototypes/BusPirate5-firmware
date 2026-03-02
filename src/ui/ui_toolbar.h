@@ -70,6 +70,17 @@ typedef struct toolbar_def {
      * @brief Called when the toolbar is unregistered; release any resources.
      */
     void (*destroy)(toolbar_t* tb);
+
+    bool focusable;   ///< Supports TAB focus (false by default via zero-init)
+
+    /**
+     * @brief Handle a key while this toolbar has focus.
+     * @param tb   This toolbar.
+     * @param key  VT100_KEY_* code (arrow keys, page up/down, etc.).
+     * @return true if the key was consumed, false to ignore.
+     * @note Only called when focusable is true and tb->focused is set.
+     */
+    bool (*handle_key)(toolbar_t* tb, int key);
 } toolbar_def_t;
 
 /**
@@ -81,6 +92,7 @@ struct toolbar_t {
     const toolbar_def_t* def;  ///< Pointer to immutable FLASH descriptor
     uint16_t height;           ///< Runtime height (copied from def, can be overridden)
     bool enabled;              ///< Currently active / visible
+    bool focused;              ///< Currently has TAB input focus
     void* owner_data;          ///< Opaque pointer for the toolbar owner's private state
 };
 
@@ -211,3 +223,10 @@ void toolbar_core1_begin_update(uint32_t update_flags);
  *          - DRAINING: checks if drain is complete, advances to next toolbar.
  */
 void toolbar_core1_service(void);
+
+/**
+ * @brief Find the next focusable toolbar in the registry.
+ * @param current  Current focused toolbar (NULL to find the first).
+ * @return Next focusable toolbar, or NULL if none found.
+ */
+toolbar_t* toolbar_next_focusable(toolbar_t* current);

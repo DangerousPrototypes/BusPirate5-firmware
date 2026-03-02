@@ -246,6 +246,8 @@ static const toolbar_def_t my_toolbar_def = {
     .draw         = NULL,                // NULL for Core1 toolbars (auto-delegated)
     .update_core1 = my_update_core1_cb,  // Core1 periodic callback (NULL for Core0-only)
     .destroy      = NULL,                // cleanup on unregister (NULL if not needed)
+    .focusable    = false,               // true = TAB focus support (see Focusable recipe)
+    .handle_key   = NULL,                // key handler when focused (NULL if not focusable)
 };
 ```
 
@@ -274,6 +276,8 @@ static toolbar_t my_toolbar = {
 | `.draw` | — | Core0 painter. `NULL` for Core1 toolbars (auto-delegated). |
 | `.update_core1` | — | Core1 renderer. `NULL` for Core0-only toolbars. |
 | `.destroy` | — | Called on `toolbar_unregister()`. Free resources, stop timers. `NULL` if not needed. |
+| `.focusable` | — | `true` to enable TAB focus cycling. Leave `false` for non-interactive toolbars. |
+| `.handle_key` | — | Key handler called when focused. Receives `VT100_KEY_*` codes. `NULL` if not focusable. |
 
 #### toolbar_t (mutable)
 
@@ -282,6 +286,7 @@ static toolbar_t my_toolbar = {
 | `.def` | Yes | Pointer to the const `toolbar_def_t`. |
 | `.height` | Yes | Runtime height. Normally matches `def->height`. Can be overridden before `toolbar_activate()` (e.g. test_toolbar sets dynamic height). |
 | `.enabled` | — | Set by `toolbar_activate()` / `toolbar_teardown()`. Initialize to `false`. |
+| `.focused` | — | Set by the focus state machine when this toolbar has TAB focus. Read-only for callbacks. |
 | `.owner_data` | — | Use if you need shared state between callbacks without file-scope globals. |
 
 ---
@@ -515,8 +520,9 @@ toolbars/my_toolbar.c
 |----------|------|---------|
 | `toolbar_redraw_all()` | Core0 | Redraw all toolbars (wraps in prepare/release) |
 | `toolbar_draw_prepare()` | Core0 | Pause toolbar updates, hide cursor |
-| `toolbar_draw_release()` | Core0 | Show cursor, resume updates |
+| `toolbar_draw_release()` | Core0 | Resume updates; show cursor unless a toolbar has focus |
 | `toolbar_update_blocking()` | Core0 | Signal Core1 to render, block until done |
+| `toolbar_next_focusable(current)` | Core0 | Find the next focusable toolbar after `current` (NULL = first) |
 | `toolbar_pause_updates()` | Either | Set `terminal_toolbar_pause = true` |
 | `toolbar_resume_updates()` | Either | Set `terminal_toolbar_pause = false` |
 
@@ -556,6 +562,7 @@ static uint32_t cb(toolbar_t* tb, char* buf, size_t buf_len,
 static const toolbar_def_t my_def = {
     .name = "my_stats", .height = HEIGHT,
     .draw = NULL, .update_core1 = cb, .destroy = NULL,
+    .focusable = false, .handle_key = NULL,
 };
 static toolbar_t my_toolbar = {
     .def = &my_def, .height = HEIGHT, .enabled = false,
@@ -588,6 +595,7 @@ static uint32_t cb(toolbar_t* tb, char* buf, size_t buf_len,
 static const toolbar_def_t my_def = {
     .name = "my_toolbar", .height = HEIGHT,
     .draw = NULL, .update_core1 = cb, .destroy = NULL,
+    .focusable = false, .handle_key = NULL,
 };
 static toolbar_t my_toolbar = {
     .def = &my_def, .height = HEIGHT, .enabled = false,
@@ -612,6 +620,7 @@ static void my_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
 static const toolbar_def_t my_def = {
     .name = "my_toolbar", .height = 2,
     .draw = my_draw_cb, .update_core1 = NULL, .destroy = NULL,
+    .focusable = false, .handle_key = NULL,
 };
 static toolbar_t my_toolbar = {
     .def = &my_def, .height = 2, .enabled = false,
@@ -621,6 +630,99 @@ static toolbar_t my_toolbar = {
 Trigger redraws manually: `toolbar_redraw_all()` or wrap your draw call in `toolbar_draw_prepare()`/`toolbar_draw_release()`.
 
 See: `src/commands/global/cmd_toolbar.c` (test_toolbar)
+
+### Focusable Toolbar (key capture pattern)
+
+Toolbars can opt into **TAB focus** — the user presses TAB on an empty command line to cycle focus between focusable toolbars, then uses arrow keys (or any key) to interact. ESC or Ctrl+C exits focus and returns to the command prompt.
+
+This is ideal for toolbars that display scrollable data (logic analyzer waveforms, hex dumps, log viewers) where the user needs to navigate without typing commands.
+
+#### Opting In
+
+Set `.focusable = true` and provide a `.handle_key` callback in the `toolbar_def_t`:
+
+```c
+static bool my_handle_key(toolbar_t* tb, int key);
+
+static const toolbar_def_t my_def = {
+    .name       = "my_viewer",
+    .height     = 8,
+    .draw       = my_draw_cb,
+    .update_core1 = NULL,
+    .destroy    = NULL,
+    .focusable  = true,              // ← enables TAB focus
+    .handle_key = my_handle_key,     // ← receives keys while focused
+};
+```
+
+#### The handle_key Callback
+
+```c
+/**
+ * @brief Handle a key while this toolbar has TAB focus.
+ * @param tb   This toolbar.
+ * @param key  VT100_KEY_* code (arrows, letters, F-keys, etc.).
+ * @return true if the key was consumed, false to ignore.
+ */
+static bool my_handle_key(toolbar_t* tb, int key) {
+    switch (key) {
+        case VT100_KEY_LEFT:
+            scroll_left();
+            return true;
+        case VT100_KEY_RIGHT:
+            scroll_right();
+            return true;
+        case VT100_KEY_UP:
+        case VT100_KEY_DOWN:
+            // not handled — return false
+            return false;
+        default:
+            return false;
+    }
+}
+```
+
+**Contract:**
+- Return `true` if the key was consumed (the focus state machine takes no further action)
+- Return `false` if the key is unrecognized (currently ignored — reserved for future chaining)
+- You do NOT need to handle TAB, ESC, or Ctrl+C — those are intercepted by the focus state machine before reaching your callback
+- Include `#include "lib/vt100_keys/vt100_keys.h"` for `VT100_KEY_*` constants
+
+#### Focus Indicator
+
+The `.draw` callback receives `tb->focused` so you can render a visual indicator when focused:
+
+```c
+static void my_draw_cb(toolbar_t* tb, uint16_t start_row, uint16_t width) {
+    // Normal rendering...
+    frame_draw(start_row, width);
+
+    // Overlay a focus indicator when focused
+    if (tb->focused) {
+        ui_term_cursor_position(start_row, 0);
+        printf("%s▸ FOCUS ◂%s", ui_term_color_info(), ui_term_color_reset());
+    }
+}
+```
+
+#### Cursor Visibility
+
+`toolbar_draw_release()` automatically keeps the cursor hidden while any toolbar has focus. You do **not** need to manually hide the cursor after redraws — the framework handles it.
+
+If your `handle_key` callback triggers a redraw (e.g. `logic_bar_redraw()`), just call `toolbar_draw_prepare()` / `toolbar_draw_release()` as normal — the cursor stays hidden.
+
+#### Focus Lifecycle
+
+1. User presses **TAB** on an empty command line
+2. Framework finds the first focusable toolbar via `toolbar_next_focusable(NULL)`
+3. Sets `tb->focused = true`, calls `toolbar_redraw_all()` (your `.draw` sees the flag)
+4. All subsequent keys route to your `.handle_key` callback
+5. **TAB** again: cycles to next focusable toolbar (or exits if only one)
+6. **ESC** or **Ctrl+C**: clears focus, redraws, returns to command prompt
+
+See: `src/toolbars/logic_bar.c` — full focusable implementation with arrow-key scrolling
+
+---
 
 ### Anchor Bottom (statusbar pattern)
 
@@ -653,6 +755,8 @@ See: `src/ui/ui_statusbar.c`
 - [ ] Implement `stop()` — guard on `.enabled`, call `toolbar_teardown()`
 - [ ] Implement `is_active()` — return `.enabled`
 - [ ] Optionally implement `update()` — guard, `toolbar_update_blocking()`
+- [ ] If focusable: set `.focusable = true`, implement `.handle_key` callback
+- [ ] If focusable: add focus indicator in `.draw` using `tb->focused`
 - [ ] Create `src/toolbars/mytoolbar.h` with public API declarations
 - [ ] Add toggle action in `src/commands/global/cmd_toolbar.c`
 - [ ] Add `.c` file to `src/CMakeLists.txt`

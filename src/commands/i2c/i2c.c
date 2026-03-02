@@ -13,6 +13,7 @@
 #include "ui/ui_progress_indicator.h" // Progress indicator related
 #include "pirate/file.h" // File handling related
 #include "pirate/hwi2c_pio.h"
+#include "ui/ui_cmd_menu.h"
 
 #define I2C_DUMP_MAX_BUFFER_SIZE 1024
 
@@ -68,8 +69,69 @@ static bool i2c_get_args(struct i2c_dump_t *args) {
     
     // common function to parse the command line verb or action
     if(!bp_cmd_get_action(&i2c_dump_def, &args->action)){
-        bp_cmd_help_show(&i2c_dump_def);
-        return true;
+        /* No CLI action — launch interactive wizard */
+        ui_cmd_menu_open("I2C");
+
+        if (!ui_cmd_menu_pick_action(&i2c_dump_def, &args->action)) {
+            ui_cmd_menu_close();
+            return true;
+        }
+        ui_cmd_menu_status("Action", i2c_dump_action_defs[args->action].verb);
+
+        /* I2C address */
+        uint32_t addr_val;
+        if (!ui_cmd_menu_pick_number("I2C address (7-bit)", 0x50, &addr_val)) {
+            ui_cmd_menu_close();
+            return true;
+        }
+        args->i2c_address_7bit = (uint8_t)addr_val;
+        char astr[8];
+        snprintf(astr, sizeof(astr), "0x%02X", args->i2c_address_7bit);
+        ui_cmd_menu_status("Address", astr);
+
+        /* Register width */
+        uint32_t rw;
+        if (!ui_cmd_menu_pick_number("Register width (bytes)", 1, &rw)) {
+            ui_cmd_menu_close();
+            return true;
+        }
+        args->register_address_width = rw;
+
+        /* Register address */
+        uint32_t ra;
+        if (!ui_cmd_menu_pick_number("Register address", 0, &ra)) {
+            ui_cmd_menu_close();
+            return true;
+        }
+        args->register_address = ra;
+
+        /* Byte count */
+        uint32_t bc;
+        if (!ui_cmd_menu_pick_number("Bytes to read", 16, &bc)) {
+            ui_cmd_menu_close();
+            return true;
+        }
+        args->data_size_bytes = bc;
+        char bstr[12];
+        snprintf(bstr, sizeof(bstr), "%d", (int)bc);
+        ui_cmd_menu_status("Bytes", bstr);
+
+        /* File picker for read */
+        if (args->action == I2CDUMP_READ) {
+            if (!ui_cmd_menu_pick_file("bin", (char*)args->file_name, sizeof(args->file_name))) {
+                ui_cmd_menu_close();
+                return true;
+            }
+            ui_cmd_menu_status("File", (const char*)args->file_name);
+            if (args->data_size_bytes > I2C_DUMP_MAX_BUFFER_SIZE) {
+                ui_cmd_menu_close();
+                printf("Error: Data size exceeds maximum buffer size (%d bytes)\r\n", I2C_DUMP_MAX_BUFFER_SIZE);
+                return true;
+            }
+        }
+
+        ui_cmd_menu_close();
+        return false;
     }
     
     uint32_t i2c_address;

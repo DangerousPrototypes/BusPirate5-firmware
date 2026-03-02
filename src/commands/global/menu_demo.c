@@ -195,7 +195,7 @@ static int demo_menu_write(int fd, const void* buf, int count) {
 // ============================================================================
 // Called by the menu framework when switching between dropdowns (left/right)
 // so the area under the old dropdown is restored with actual content instead
-// of blank spaces.  Without this, you get the "Tetris blanking" effect.
+// of blank spaces.  Without this, you get the "cascade blanking" effect.
 
 static void demo_refresh_screen(void);  /* forward declaration */
 
@@ -372,7 +372,7 @@ void menu_demo_handler(struct command_result* res) {
     /* Key codes: both menu defaults and our key decoder now use VT100_KEY_*
      * values from vt100_keys.h, so no overrides are needed. */
 
-    /* Set repaint callback — eliminates Tetris blanking when switching menus */
+    /* Set repaint callback — eliminates cascade blanking when switching menus */
     menu_state.repaint   = demo_menu_repaint;
 
     /* ----------------------------------------------------------------

@@ -202,6 +202,8 @@ set(buspirate_common
         lib/vt100_menu/vt100_menu.h
         ui/ui_cmd_menu.c
         ui/ui_cmd_menu.h
+        ui/ui_file_picker.c
+        ui/ui_file_picker.h
         commands/global/button_scr.c
         commands/global/button_scr.h
         commands/global/smps.c
@@ -333,6 +335,8 @@ set(buspirate_common
         commands/i2c/ddr4.h        
         commands/eeprom/eeprom_i2c.c 
         commands/eeprom/eeprom_i2c.h
+        commands/eeprom/eeprom_i2c_gui.c
+        commands/eeprom/eeprom_i2c_gui.h
         commands/i2c/i2c.c
         commands/i2c/i2c.h
         commands/i2c/usbpdo.c 

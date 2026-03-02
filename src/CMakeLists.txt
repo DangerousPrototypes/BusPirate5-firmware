@@ -200,6 +200,8 @@ set(buspirate_common
         lib/vt100_keys/vt100_keys.h
         lib/vt100_menu/vt100_menu.c
         lib/vt100_menu/vt100_menu.h
+        ui/ui_cmd_menu.c
+        ui/ui_cmd_menu.h
         commands/global/button_scr.c
         commands/global/button_scr.h
         commands/global/smps.c
@@ -220,6 +222,46 @@ set(buspirate_common
         commands/global/ovrclk.h   
         commands/global/hex.c     
         commands/global/hex.h
+        commands/global/game_engine.c
+        commands/global/game_engine.h
+        commands/global/life.c
+        commands/global/life.h
+        commands/global/snake.c
+        commands/global/snake.h
+        commands/global/game2048.c
+        commands/global/game2048.h
+        commands/global/tictactoe.c
+        commands/global/tictactoe.h
+        commands/global/hangman.c
+        commands/global/hangman.h
+        commands/global/mines.c
+        commands/global/mines.h
+        commands/global/bricks.c
+        commands/global/bricks.h
+        commands/global/drop4.c
+        commands/global/drop4.h
+        commands/global/fleet.c
+        commands/global/fleet.h
+        commands/global/worm.c
+        commands/global/worm.h
+        commands/global/pcbrun.c
+        commands/global/pcbrun.h
+        commands/global/invaders.c
+        commands/global/invaders.h
+        commands/global/sigride.c
+        commands/global/sigride.h
+        commands/global/stkover.c
+        commands/global/stkover.h
+        commands/global/crossflash.c
+        commands/global/crossflash.h
+        commands/global/cryptocrack.c
+        commands/global/cryptocrack.h
+        commands/global/wiretrace.c
+        commands/global/wiretrace.h
+        commands/global/logicgates.c
+        commands/global/logicgates.h
+        commands/global/rogueprobe.c
+        commands/global/rogueprobe.h
         commands/eeprom/eeprom_base.h
         commands/eeprom/eeprom_base.c
         

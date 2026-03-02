@@ -44,6 +44,25 @@
 #include "commands/global/dump.h"
 #include "commands/global/hex.h"
 #include "commands/global/jep106_lookup.h"
+#include "commands/global/life.h"
+#include "commands/global/snake.h"
+#include "commands/global/game2048.h"
+#include "commands/global/tictactoe.h"
+#include "commands/global/hangman.h"
+#include "commands/global/mines.h"
+#include "commands/global/bricks.h"
+#include "commands/global/drop4.h"
+#include "commands/global/fleet.h"
+#include "commands/global/worm.h"
+#include "commands/global/pcbrun.h"
+#include "commands/global/invaders.h"
+#include "commands/global/sigride.h"
+#include "commands/global/stkover.h"
+#include "commands/global/cryptocrack.h"
+#include "commands/global/wiretrace.h"
+#include "commands/global/logicgates.h"
+#include "commands/global/rogueprobe.h"
+#include "commands/global/crossflash.h"
 #if RPI_PLATFORM == RP2350
 #include "commands/global/otpdump.h"
 #endif
@@ -104,6 +123,25 @@ const struct _global_command_struct commands[] = {
 // Tools: utilities and converters
 { .command="logic",     .allow_hiz=true,  .func=&logic_handler,                      .def=&logic_def, .category=CMD_CAT_TOOLS },
 { .command="toolbar",   .allow_hiz=true,  .func=&toolbar_cmd_handler,                .def=&toolbar_cmd_def, .category=CMD_CAT_TOOLS },
+{ .command="life",      .allow_hiz=true,  .func=&life_handler,      .def=&life_def,      .category=CMD_CAT_TOOLS },
+{ .command="snake",     .allow_hiz=true,  .func=&snake_handler,     .def=&snake_def,     .category=CMD_CAT_TOOLS },
+{ .command="2048",      .allow_hiz=true,  .func=&game2048_handler,  .def=&game2048_def,  .category=CMD_CAT_TOOLS },
+{ .command="ttt",       .allow_hiz=true,  .func=&tictactoe_handler, .def=&tictactoe_def, .category=CMD_CAT_TOOLS },
+{ .command="hangman",   .allow_hiz=true,  .func=&hangman_handler,   .def=&hangman_def,   .category=CMD_CAT_TOOLS },
+{ .command="mines",     .allow_hiz=true,  .func=&mines_handler,     .def=&mines_def,     .category=CMD_CAT_TOOLS },
+{ .command="bricks",    .allow_hiz=true,  .func=&bricks_handler,    .def=&bricks_def,    .category=CMD_CAT_TOOLS },
+{ .command="drop4",     .allow_hiz=true,  .func=&drop4_handler,     .def=&drop4_def,     .category=CMD_CAT_TOOLS },
+{ .command="fleet",     .allow_hiz=true,  .func=&fleet_handler,     .def=&fleet_def,     .category=CMD_CAT_TOOLS },
+{ .command="worm",      .allow_hiz=true,  .func=&worm_handler,      .def=&worm_def,      .category=CMD_CAT_TOOLS },
+{ .command="pcbrun",    .allow_hiz=true,  .func=&pcbrun_handler,    .def=&pcbrun_def,    .category=CMD_CAT_TOOLS },
+{ .command="invaders",  .allow_hiz=true,  .func=&invaders_handler,  .def=&invaders_def,  .category=CMD_CAT_TOOLS },
+{ .command="sigride",   .allow_hiz=true,  .func=&sigride_handler,   .def=&sigride_def,   .category=CMD_CAT_TOOLS },
+{ .command="stkover",   .allow_hiz=true,  .func=&stkover_handler,   .def=&stkover_def,   .category=CMD_CAT_TOOLS },
+{ .command="xflash",   .allow_hiz=true,  .func=&crossflash_handler,.def=&crossflash_def,.category=CMD_CAT_TOOLS },
+{ .command="crack",    .allow_hiz=true,  .func=&cryptocrack_handler,.def=&cryptocrack_def,.category=CMD_CAT_TOOLS },
+{ .command="trace",    .allow_hiz=true,  .func=&wiretrace_handler, .def=&wiretrace_def, .category=CMD_CAT_TOOLS },
+{ .command="gates",    .allow_hiz=true,  .func=&logicgates_handler,.def=&logicgates_def,.category=CMD_CAT_TOOLS },
+{ .command="rogue",   .allow_hiz=true,  .func=&rogueprobe_handler,.def=&rogueprobe_def,.category=CMD_CAT_TOOLS },
 { .command="smps",      .allow_hiz=true,  .func=&smps_handler,      .def=&smps_def,      .category=CMD_CAT_SYSTEM },
 { .command="=",         .allow_hiz=true,  .func=&cmd_convert_base_handler,           .def=&convert_base_def, .category=CMD_CAT_TOOLS },
 { .command="|",         .allow_hiz=true,  .func=&cmd_convert_inverse_handler,        .def=&convert_inverse_def, .category=CMD_CAT_TOOLS },

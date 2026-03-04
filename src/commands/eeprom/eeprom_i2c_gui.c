@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <setjmp.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
@@ -20,8 +21,11 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "fatfs/ff.h"
+#include "pirate/mem.h"
 #include "lib/vt100_menu/vt100_menu.h"
 #include "lib/vt100_keys/vt100_keys.h"
+#include "lib/hx/hx_compat.h"
+#include "lib/hx/editor.h"
 #include "ui/ui_file_picker.h"
 #include "ui/ui_hex.h"
 #include "ui/ui_progress_indicator.h"
@@ -71,7 +75,8 @@ enum {
     FOCUS_ADDR    = 3,
     FOCUS_VERIFY  = 4,
     FOCUS_EXECUTE = 5,
-    FOCUS_COUNT   = 6,
+    FOCUS_HEX     = 6,
+    FOCUS_COUNT   = 7,
 };
 
 typedef struct {
@@ -102,6 +107,10 @@ typedef struct {
     /* Output area */
     const char* status_msg;  /* one-line status at bottom */
     const char* result_msg;  /* result after execution */
+
+    /* Embedded hex editor */
+    struct editor* hex_ed;   /* editor instance (lives in arena) */
+    uint8_t*       arena;    /* BIG_BUFFER arena for hx allocations */
 } eeprom_gui_t;
 
 static eeprom_gui_t gui;
@@ -272,53 +281,68 @@ static void gui_refresh_screen(void) {
         gui_write_str(focused ? "]\x1b[0m" : "]\x1b[0m");
     }
 
-    /* Row 3: separator */
+    /* Row 3: separator with context hints */
     gui_write_str("\x1b[3;1H\x1b[0;2m");
-    for (int i = 0; i < gui.cols; i++) gui_write_str("-");
+    {
+        char sep[120];
+        const char* hint;
+        if (gui.focused_field == FOCUS_HEX) {
+            hint = "Tab=Config  F10=Menu  :q=Quit editor";
+        } else if (gui.status_msg) {
+            hint = gui.status_msg;
+        } else {
+            hint = "Tab=Next  Up/Dn=Change  Enter=Select  F10=Menu";
+        }
+        int hlen = (int)strlen(hint);
+        int pad = gui.cols - hlen - 4;
+        if (pad < 2) pad = 2;
+        n = snprintf(sep, sizeof(sep), "--");
+        gui_write_buf(sep, n);
+        for (int i = 0; i < pad / 2; i++) gui_write_str("-");
+        gui_write_str(" ");
+        gui_write_str(hint);
+        gui_write_str(" ");
+        int drawn = 2 + pad / 2 + 1 + hlen + 1;
+        for (int i = drawn; i < gui.cols; i++) gui_write_str("-");
+    }
     gui_write_str("\x1b[0m");
 
-    /* Rows 4..(rows-1): content area — clear ALL rows first to avoid
-     * repaint artifacts when switching between menus with left/right. */
-    for (int r = 4; r < gui.rows; r++) {
-        n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[K", r);
-        gui_write_buf(buf, n);
-    }
-
-    /* Draw content into the cleared area */
-    if (gui.result_msg) {
-        n = snprintf(buf, sizeof(buf), "\x1b[5;3H\x1b[0;32m%s\x1b[0m", gui.result_msg);
-        gui_write_buf(buf, n);
-    } else if (!config_ready()) {
-        /* Show hints */
-        gui_write_str("\x1b[5;3H\x1b[0;2mUse Tab to move between fields, Up/Down to change values\x1b[0m");
-        if (gui.action < 0) {
-            gui_write_str("\x1b[6;3H\x1b[0;33m-> Select an action (Up/Down on Action field)\x1b[0m");
-        } else if (gui.device_idx < 0) {
-            gui_write_str("\x1b[6;3H\x1b[0;33m-> Select a device (Up/Down on Device field)\x1b[0m");
-        } else if (action_needs_file(gui.action) && gui.file_name[0] == 0) {
-            gui_write_str("\x1b[6;3H\x1b[0;33m-> Select a file (Enter on File field)\x1b[0m");
+    /* Rows 4+: when hex editor is active, it owns the content area.
+     * Only draw fallback content if hex editor is not initialized. */
+    if (!gui.hex_ed) {
+        for (int r = 4; r < gui.rows; r++) {
+            n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[K", r);
+            gui_write_buf(buf, n);
         }
-    } else {
-        /* Ready to execute */
-        gui_write_str("\x1b[5;3H\x1b[0;1;32mReady! \x1b[0mTab to [Execute] and press Enter.");
-    }
-
-    /* Status bar on last row */
-    {
-        const char* hint = gui.status_msg ? gui.status_msg
-                         : "Tab=Next  Up/Dn=Change  Enter=Select  F10=Menu  Esc=Quit";
-        n = snprintf(buf, sizeof(buf),
-                     "\x1b[%d;1H\x1b[0;30;47m %-*s\x1b[0m",
-                     gui.rows, gui.cols - 1, hint);
-        gui_write_buf(buf, n);
+        /* Show setup hints when no file is loaded */
+        if (!config_ready()) {
+            if (gui.action < 0) {
+                gui_write_str("\x1b[5;3H\x1b[0;33m-> Select an action (Up/Down on Action field)\x1b[0m");
+            } else if (gui.device_idx < 0) {
+                gui_write_str("\x1b[5;3H\x1b[0;33m-> Select a device (Up/Down on Device field)\x1b[0m");
+            } else if (action_needs_file(gui.action) && gui.file_name[0] == 0) {
+                gui_write_str("\x1b[5;3H\x1b[0;33m-> Select a file (Enter on File field)\x1b[0m");
+            }
+        } else {
+            gui_write_str("\x1b[5;3H\x1b[0;1;32mReady! \x1b[0mTab to [Execute] and press Enter.");
+        }
+        if (gui.result_msg) {
+            n = snprintf(buf, sizeof(buf), "\x1b[7;3H\x1b[0;32m%s\x1b[0m", gui.result_msg);
+            gui_write_buf(buf, n);
+        }
     }
 
     gui_write_str("\x1b[?25h");  /* show cursor */
 }
 
-/* Repaint callback for the menu framework */
+/* Repaint callback for the menu framework — called when switching between
+ * dropdown menus so the background content is restored before the next
+ * dropdown is drawn over it. Must redraw hex editor, not just GUI chrome. */
 static void gui_repaint_cb(void) {
     gui_refresh_screen();
+    if (gui.hex_ed) {
+        editor_refresh_screen(gui.hex_ed);
+    }
 }
 
 /* ── Menu definitions ───────────────────────────────────────────────── */
@@ -461,7 +485,12 @@ static bool gui_pick_file(void) {
         .cols      = gui.cols,
         .rows      = gui.rows,
     };
-    return ui_file_pick(NULL, gui.file_name, sizeof(gui.file_name), &io);
+    bool ok = ui_file_pick(NULL, gui.file_name, sizeof(gui.file_name), &io);
+    /* Load selected file into the embedded hex editor */
+    if (ok && gui.file_name[0] && gui.hex_ed) {
+        hx_embed_load(gui.file_name);
+    }
+    return ok;
 }
 
 /* ── Styled popup for I2C address input ─────────────────────────────── */
@@ -659,6 +688,11 @@ static void gui_execute_operation(void) {
 
     bool success = false;
 
+    /* Dump-to-hex-editor state: survives across flip-out */
+    char *dump_buf = NULL;     /* arena-allocated direct buffer (small) */
+    uint32_t dump_len = 0;
+    bool dump_to_file = false; /* large dump went to temp file */
+
     if (confirmed) {
         char buf[EEPROM_ADDRESS_PAGE_SIZE];
         uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE];
@@ -666,23 +700,50 @@ static void gui_execute_operation(void) {
         fala_start_hook();
 
         switch (gui.action) {
-        case 0: /* dump */
+        case 0: /* dump → hex editor */
         {
-            struct hex_config_t hex_config;
-            ui_hex_init_config(&hex_config);
-            hex_config.max_size_bytes = eeprom.device->size_bytes;
-            hex_config.start_address = 0;
-            hex_config.requested_bytes = eeprom.device->size_bytes;
-            hex_config.pager_off = false;
-            ui_hex_align_config(&hex_config);
-            ui_hex_header_config(&hex_config);
-            for (uint32_t i = hex_config._aligned_start;
-                 i < (hex_config._aligned_end + 1); i += 16) {
-                eeprom.device->hal->read(&eeprom, i, 16, (uint8_t*)buf);
-                if (ui_hex_row_config(&hex_config, i, (uint8_t*)buf, 16))
-                    break;
+            uint32_t eep_size = eeprom.device->size_bytes;
+            uint32_t blocks = eeprom_get_address_blocks_total(&eeprom);
+            uint32_t block_size = eeprom_get_address_block_size(&eeprom);
+
+            if (eep_size <= HX_PAGED_THRESHOLD) {
+                /* Small: read EEPROM directly into arena buffer */
+                dump_buf = hx_arena_malloc(eep_size);
+                if (!dump_buf) {
+                    printf("Error: not enough memory for %lu byte dump\r\n",
+                           (unsigned long)eep_size);
+                } else {
+                    bool read_err = false;
+                    for (uint32_t i = 0; i < blocks; i++) {
+                        print_progress(i, blocks);
+                        if (eeprom.device->hal->read(&eeprom, i * 256,
+                                block_size, (uint8_t*)&dump_buf[i * 256])) {
+                            printf("\r\nError reading EEPROM at %lu\r\n",
+                                   (unsigned long)(i * 256));
+                            hx_arena_free(dump_buf);
+                            dump_buf = NULL;
+                            read_err = true;
+                            break;
+                        }
+                    }
+                    if (!read_err) {
+                        print_progress(blocks, blocks);
+                        dump_len = eep_size;
+                        success = true;
+                    }
+                }
+            } else {
+                /* Large: read EEPROM to temp file for paged viewing */
+                static const char dump_tmp[] = "~dump.bin";
+                strncpy(eeprom.file_name, dump_tmp, sizeof(eeprom.file_name) - 1);
+                eeprom.file_name[sizeof(eeprom.file_name) - 1] = '\0';
+                if (!eeprom_read(&eeprom, buf, sizeof(buf),
+                        (char*)verify_buf, sizeof(verify_buf),
+                        EEPROM_READ_TO_FILE)) {
+                    dump_to_file = true;
+                    success = true;
+                }
             }
-            success = true;  /* dump always "succeeds" */
             break;
         }
         case 1: /* erase */
@@ -740,11 +801,25 @@ static void gui_execute_operation(void) {
     /* Drain stale rx */
     { char d; while (rx_fifo_try_get(&d)) {} }
 
-    /* Set result message for the GUI content area */
+    /* Set result message and load result file into hex editor */
     if (!confirmed) {
         gui.result_msg = "Aborted by user.";
     } else if (success) {
         gui.result_msg = "Last operation: Success :)";
+        if (gui.hex_ed) {
+            if (gui.action == 0) {
+                /* Dump: load into hex editor (buffer or paged file) */
+                if (dump_to_file) {
+                    hx_embed_load("~dump.bin");
+                } else if (dump_buf) {
+                    hx_embed_load_buffer(dump_buf, dump_len,
+                                         eeprom.device->name);
+                }
+            } else if (gui.action == 3 && gui.file_name[0]) {
+                /* Read: load the saved file */
+                hx_embed_load(gui.file_name);
+            }
+        }
     } else {
         gui.result_msg = "Last operation: FAILED";
     }
@@ -797,15 +872,40 @@ static void gui_dispatch(int action_id) {
 /* ── Key handler (non-menu mode) ────────────────────────────────────── */
 
 static void gui_process_key(int key) {
+    /* ── Global keys: always handled by GUI regardless of focus ── */
+    if (key == VT100_KEY_CTRL_Q) {
+        gui.running = false;
+        return;
+    }
+    if (key == VT100_KEY_F10) {
+        gui.menu_pending = true;
+        return;
+    }
+    if (key == VT100_KEY_TAB) {
+        gui.focused_field = focus_next(gui.focused_field);
+        gui.status_msg = NULL;
+        return;
+    }
+
+    /* ── Hex editor focus: forward all other keys to hx ── */
+    if (gui.focused_field == FOCUS_HEX) {
+        if (gui.hex_ed && gui.hex_ed->contents) {
+            read_key_unget(key);
+            editor_process_keypress(gui.hex_ed);
+            /* :q or Ctrl+Q inside hx → return focus to config bar */
+            if (gui.hex_ed->quit_requested) {
+                gui.hex_ed->quit_requested = false;
+                gui.focused_field = FOCUS_ACTION;
+            }
+        }
+        return;
+    }
+
+    /* ── Config field keys ── */
     switch (key) {
-    case VT100_KEY_CTRL_Q:
     case VT100_KEY_ESC:
         gui.running = false;
         break;
-    case VT100_KEY_F10:
-        gui.menu_pending = true;
-        break;
-    case VT100_KEY_TAB:
     case VT100_KEY_RIGHT:
         gui.focused_field = focus_next(gui.focused_field);
         gui.status_msg = NULL;
@@ -919,6 +1019,8 @@ bool eeprom_i2c_gui(const struct eeprom_device_t* devices,
     gui.device_count = device_count;
     gui.status_msg   = NULL;  /* use default hint from gui_refresh_screen */
     gui.result_msg   = NULL;
+    gui.hex_ed       = NULL;
+    gui.arena        = NULL;
 
     /* ── Pause toolbar, enter alt-screen ── */
     toolbar_draw_prepare();
@@ -932,6 +1034,24 @@ bool eeprom_i2c_gui(const struct eeprom_device_t* devices,
 
     /* Init key decoder */
     vt100_key_init(&gui.keys, gui_read_blocking, gui_read_try);
+
+    /* ── Allocate arena and init embedded hex editor ── */
+    gui.arena = mem_alloc(BIG_BUFFER_SIZE, BP_BIG_BUFFER_EDITOR);
+    if (gui.arena) {
+        hx_arena_init(gui.arena, BIG_BUFFER_SIZE);
+        /* Catch fatal exit() from hx internals (OOM, etc.) */
+        int hx_exit = setjmp(hx_exit_jmpbuf);
+        if (hx_exit != 0) {
+            /* hx hit a fatal error — arena may be corrupt, just discard */
+            gui.hex_ed = NULL;
+            hx_cleanup();  /* nulls g_hx_editor */
+            gui.status_msg = "Hex editor error (out of memory?)";
+            /* Arena stays allocated; freed at GUI exit */
+        } else {
+            /* 5 = 3 GUI chrome rows + 2 hx column header rows */
+            gui.hex_ed = hx_embed_init(5);
+        }
+    }
 
     /* ── Main loop ── */
     while (gui.running) {
@@ -952,9 +1072,21 @@ bool eeprom_i2c_gui(const struct eeprom_device_t* devices,
                         gui_menu_read_key, gui_menu_write);
         menu_state.repaint = gui_repaint_cb;
 
-        /* Refresh screen + draw passive menu bar */
+        /* Refresh GUI chrome (config bar, separator, hints) */
         tx_fifo_wait_drain();
         gui_refresh_screen();
+
+        /* Render hex editor content area (rows 4+) */
+        if (gui.hex_ed) {
+            editor_refresh_screen(gui.hex_ed);
+        }
+
+        /* Hide cursor when focus is on config bar (not hex editor) */
+        if (gui.focused_field != FOCUS_HEX) {
+            gui_write_str("\x1b[?25l");
+        }
+
+        /* Draw passive menu bar on row 1 */
         vt100_menu_draw_bar(&menu_state);
 
         /* Read one key */
@@ -973,11 +1105,23 @@ bool eeprom_i2c_gui(const struct eeprom_device_t* devices,
                 vt100_key_unget(&gui.keys, menu_state.unhandled_key);
             }
 
-            /* Repaint screen — gui_refresh_screen() clears all content
-             * rows, so no need for a heavy full-screen clear. */
+            /* Repaint screen after menu closes */
             gui_write_str("\x1b[0m");
             gui_refresh_screen();
+            if (gui.hex_ed) {
+                editor_refresh_screen(gui.hex_ed);
+            }
         }
+    }
+
+    /* ── Cleanup hex editor ── */
+    if (gui.hex_ed) {
+        hx_cleanup();
+        gui.hex_ed = NULL;
+    }
+    if (gui.arena) {
+        mem_free(gui.arena);
+        gui.arena = NULL;
     }
 
     /* ── Restore terminal ── */

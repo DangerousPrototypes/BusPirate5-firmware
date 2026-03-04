@@ -89,6 +89,11 @@ void hx_file_close_read(void);
  * Returns 0 on success, -1 on error. */
 int hx_file_write_all(const char *path, const void *buf, size_t count);
 
+/* Read up to `count` bytes from `path` starting at file offset `offset`.
+ * Opens, seeks, reads, closes in one shot (no state kept).
+ * Returns bytes read (>=0) on success, -1 on error, -2 if file not found. */
+int hx_file_read_at(const char *path, unsigned int offset, void *buf, size_t count);
+
 /* ======================================================================
  * exit() → longjmp back to hexedit command handler
  * ====================================================================== */
@@ -103,6 +108,12 @@ extern jmp_buf hx_exit_jmpbuf;
  * Arena allocator — all hx allocations go to BIG_BUFFER (128KB)
  * No system heap usage.  Freed in bulk when the editor exits.
  * ====================================================================== */
+
+/* ── Paged mode constants ──
+ * Files larger than HX_PAGED_THRESHOLD open in read-only paged mode,
+ * loading HX_PAGE_SIZE bytes at a time from storage. */
+#define HX_PAGE_SIZE         (64 * 1024)
+#define HX_PAGED_THRESHOLD   (BIG_BUFFER_SIZE * 9 / 10)
 
 void  hx_arena_init(uint8_t *buf, size_t size);
 void *hx_arena_malloc(size_t size);
@@ -127,5 +138,27 @@ void  hx_arena_free(void *ptr);
 
 int  hx_run(const char *filename);
 void hx_cleanup(void);
+
+/* Embedded editor (no menu bar) — for use inside other fullscreen apps.
+ * ext_header_rows = number of rows the caller owns at the top of the screen.
+ * Returns HX_EMBED_QUIT or HX_EMBED_F10 to indicate why the editor exited. */
+enum {
+	HX_EMBED_QUIT = 0,  /* user quit (:q, Ctrl-Q) */
+	HX_EMBED_F10  = 1,  /* user pressed F10 — caller should open its menu */
+};
+int hx_run_embedded(const char *filename, int ext_header_rows);
+
+/* Granular embedded API — for callers that run their own render/key loop.
+ * hx_embed_init:   create editor with given header_rows, empty buffer.
+ * hx_embed_load:   free old contents, open a new file.
+ * hx_embed_editor: return the current editor pointer (or NULL).
+ * Then call editor_refresh_screen / editor_process_keypress directly.
+ * Use read_key_unget() to feed a decoded key before process_keypress. */
+struct editor;
+struct editor* hx_embed_init(int header_rows);
+void           hx_embed_load(const char *filename);
+void           hx_embed_load_buffer(void *buf, unsigned int len, const char *label);
+struct editor* hx_embed_editor(void);
+void           read_key_unget(int key);
 
 #endif /* HX_COMPAT_H */

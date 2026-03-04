@@ -79,16 +79,12 @@ void hexedit_handler(struct command_result *res) {
     /* Check file size before committing memory.
      * The arena has overhead (8-byte header per allocation + editor
      * structures), so a file near BIG_BUFFER_SIZE will OOM. Use 90%
-     * as a practical limit.  Non-existent files (FR_NO_FILE) are fine
-     * — the editor will create them on save. */
+     * as a practical limit for full editing.  Larger files open in
+     * read-only paged mode (handled inside editor_openfile).
+     * Non-existent files (FR_NO_FILE) are fine — the editor will
+     * create them on save. */
     FILINFO finfo;
     FRESULT fr = f_stat(filename, &finfo);
-    if (fr == FR_OK && finfo.fsize > (BIG_BUFFER_SIZE * 9 / 10)) {
-        printf("Error: file too large (%lu bytes, %d KB limit)\r\n",
-               (unsigned long)finfo.fsize, BIG_BUFFER_SIZE / 1024);
-        res->error = true;
-        return;
-    }
     if (fr != FR_OK && fr != FR_NO_FILE) {
         storage_file_error(fr);
         res->error = true;

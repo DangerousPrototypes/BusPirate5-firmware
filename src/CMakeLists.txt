@@ -202,8 +202,6 @@ set(buspirate_common
         lib/vt100_menu/vt100_menu.h
         ui/ui_cmd_menu.c
         ui/ui_cmd_menu.h
-        ui/ui_file_picker.c
-        ui/ui_file_picker.h
         commands/global/button_scr.c
         commands/global/button_scr.h
         commands/global/smps.c
@@ -470,6 +468,8 @@ set(buspirate_common
         ui/ui_pin_render.h
         ui/ui_hex.c
         ui/ui_hex.h
+        ui/ui_file_picker.c
+        ui/ui_file_picker.h
         ui/ui_progress_indicator.h
         ui/ui_progress_indicator.c
 

@@ -57,6 +57,7 @@ struct editor {
 	int cursor_y;    // Cursor y pos on the current screen
 	int screen_rows; // amount of screen rows after init
 	int screen_cols; // amount of screen columns after init
+	int header_rows; // rows reserved at top of screen (menu, column headers, etc.)
 
 	enum editor_mode mode; // mode the editor is in
 
@@ -76,8 +77,16 @@ struct editor {
 
 	struct action_list* undo_list; // tail of the list
 
+	bool quit_requested; // clean exit requested (set by :q, Ctrl+Q, menu Quit)
 #ifdef BUSPIRATE
 	bool menu_pending;  // F10 was pressed, main loop should open menu
+
+	/* ── Paged mode (read-only view for files > arena capacity) ── */
+	bool         paged;       // true = read-only paged view (file too large for arena)
+	unsigned int file_size;   // total file size on disk (only meaningful when paged)
+	unsigned int page_offset; // file offset of first byte in contents[]
+	unsigned int page_size;   // max bytes per page load
+	char*        paged_path;  // path for re-reading pages (strdup'd)
 #endif
 };
 
@@ -118,5 +127,13 @@ int editor_statusmessage(struct editor* e, enum status_severity s, const char* f
 void editor_undo(struct editor* e);
 void editor_redo(struct editor* e);
 void editor_writefile(struct editor* e);
+
+#ifdef BUSPIRATE
+/* Paged mode helpers — big-file read-only viewing */
+static inline unsigned int editor_file_length(const struct editor* e) {
+	return e->paged ? e->file_size : e->content_length;
+}
+void editor_load_page(struct editor* e, unsigned int target_offset);
+#endif
 
 #endif // _HX_EDITOR_H

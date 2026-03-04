@@ -25,11 +25,16 @@
 #include <unistd.h>
 #endif
 
-/* Number of fixed header rows (menu bar + column labels + separator) */
+/* ── Paged-mode convenience macros ──
+ * E_FILE_LEN: total file size (= content_length when not paged)
+ * E_PAGE_OFF: file offset of first byte in contents[]
+ * These compile down to direct field accesses with no overhead. */
 #ifdef BUSPIRATE
-#define HX_HEADER_ROWS 3
+#define E_FILE_LEN(e)  ((e)->paged ? (e)->file_size : (e)->content_length)
+#define E_PAGE_OFF(e)  ((e)->page_offset)
 #else
-#define HX_HEADER_ROWS 0
+#define E_FILE_LEN(e)  ((e)->content_length)
+#define E_PAGE_OFF(e)  (0u)
 #endif
 
 /* Hex column attribute states (state-tracked to minimise VT100 output) */
@@ -84,8 +89,8 @@ void editor_move_cursor(struct editor* e, int dir, int amount) {
 	}
 
 	// Move the cursor over the y axis
-	if (e->cursor_y > e->screen_rows - HX_HEADER_ROWS - 1) {
-		e->cursor_y = e->screen_rows - HX_HEADER_ROWS - 1;
+	if (e->cursor_y > e->screen_rows - e->header_rows - 1) {
+		e->cursor_y = e->screen_rows - e->header_rows - 1;
 		editor_scroll(e, 1);
 	} else if (e->cursor_y < 1 && e->line > 0) {
 		e->cursor_y = 1;
@@ -95,7 +100,8 @@ void editor_move_cursor(struct editor* e, int dir, int amount) {
 	// Did we hit the end of the file somehow? Set the cursor position
 	// to the maximum cursor position possible.
 	unsigned int offset = editor_offset_at_cursor(e);
-	if (offset >= e->content_length - 1) {
+	unsigned int file_len = E_FILE_LEN(e);
+	if (file_len > 0 && offset >= file_len - 1) {
 		editor_cursor_at_offset(e, offset, &e->cursor_x, &e->cursor_y);
 		return;
 	}
@@ -127,6 +133,44 @@ void editor_openfile(struct editor* e, const char* filename) {
 		return;
 	}
 
+	/* Store the filename regardless of mode */
+	e->filename = malloc(strlen(filename) + 1);
+	if (e->filename == NULL) {
+		perror("Could not allocate memory for the filename");
+		hx_file_close_read();
+		abort();
+	}
+	strncpy(e->filename, filename, strlen(filename) + 1);
+
+	/* ── Paged mode for large files ── */
+	if ((unsigned int)fsize > HX_PAGED_THRESHOLD) {
+		hx_file_close_read();  /* close; page loads use hx_file_read_at */
+		e->paged = true;
+		e->file_size = (unsigned int)fsize;
+		e->page_size = HX_PAGE_SIZE;
+		e->page_offset = 0;
+
+		/* Keep a copy of the path for page reloads */
+		e->paged_path = malloc(strlen(filename) + 1);
+		if (e->paged_path) strncpy(e->paged_path, filename, strlen(filename) + 1);
+
+		/* Allocate fixed page buffer */
+		e->contents = malloc(e->page_size);
+		if (e->contents == NULL) {
+			perror("Could not allocate paged buffer");
+			abort();
+		}
+
+		/* Load first page */
+		int bytes_read = hx_file_read_at(filename, 0, e->contents, e->page_size);
+		e->content_length = (bytes_read > 0) ? (unsigned int)bytes_read : 0;
+
+		editor_statusmessage(e, STATUS_WARNING,
+			"\"%s\" (%u bytes) [READ-ONLY, PAGE 0]", e->filename, e->file_size);
+		return;
+	}
+
+	/* ── Normal (full-load) mode ── */
 	char* contents = NULL;
 	unsigned int content_length = 0;
 
@@ -151,12 +195,6 @@ void editor_openfile(struct editor* e, const char* filename) {
 	}
 	hx_file_close_read();
 
-	e->filename = malloc(strlen(filename) + 1);
-	if (e->filename == NULL) {
-		perror("Could not allocate memory for the filename");
-		abort();
-	}
-	strncpy(e->filename, filename, strlen(filename) + 1);
 	e->contents = contents;
 	e->content_length = content_length;
 
@@ -248,6 +286,44 @@ void editor_openfile(struct editor* e, const char* filename) {
 #endif /* BUSPIRATE */
 }
 
+/* ── Paged-mode page loader ──
+ * Re-reads a chunk of the file centred around `target_offset`.
+ * Re-uses the existing e->contents buffer (fixed size = e->page_size). */
+#ifdef BUSPIRATE
+void editor_load_page(struct editor* e, unsigned int target_offset) {
+	if (!e->paged || !e->paged_path) return;
+
+	/* Centre the page around the target, clamped to file boundaries */
+	unsigned int half = e->page_size / 2;
+	unsigned int new_offset = (target_offset > half) ? (target_offset - half) : 0;
+	/* Align to octets_per_line so address gutters are tidy */
+	if (e->octets_per_line > 0)
+		new_offset -= new_offset % (unsigned int)e->octets_per_line;
+	if (new_offset + e->page_size > e->file_size && e->file_size > e->page_size)
+		new_offset = e->file_size - e->page_size;
+
+	int bytes_read = hx_file_read_at(e->paged_path, new_offset,
+					 e->contents, e->page_size);
+	if (bytes_read < 0) {
+		editor_statusmessage(e, STATUS_ERROR, "Page read error at 0x%x", new_offset);
+		return;
+	}
+	e->page_offset = new_offset;
+	e->content_length = (unsigned int)bytes_read;
+}
+
+/* Ensure the visible range [file_offset .. file_offset+need) is within the
+ * currently loaded page.  If not, reload. */
+static void editor_ensure_page(struct editor* e, unsigned int file_offset, unsigned int need) {
+	if (!e->paged) return;
+	if (file_offset >= e->page_offset &&
+	    file_offset + need <= e->page_offset + e->content_length) {
+		return;  /* already loaded */
+	}
+	editor_load_page(e, file_offset);
+}
+#endif /* BUSPIRATE */
+
 void editor_writefile(struct editor* e) {
 	assert(e->filename != NULL);
 
@@ -327,12 +403,13 @@ void editor_increment_byte(struct editor* e, int amount) {
 
 
 inline int editor_offset_at_cursor(struct editor* e) {
+	unsigned int file_len = E_FILE_LEN(e);
 	unsigned int offset = (e->cursor_y - 1 + e->line) * e->octets_per_line + (e->cursor_x - 1);
 	if (offset <= 0) {
 		return 0;
 	}
-	if (offset >= e->content_length) {
-		return e->content_length - 1;
+	if (offset >= file_len) {
+		return file_len - 1;
 	}
 	return offset;
 }
@@ -341,7 +418,8 @@ inline int editor_offset_at_cursor(struct editor* e) {
 void editor_scroll(struct editor* e, int units) {
 	e->line += units;
 
-	int upper_limit = e->content_length / e->octets_per_line - (e->screen_rows - HX_HEADER_ROWS - 2);
+	unsigned int file_len = E_FILE_LEN(e);
+	int upper_limit = file_len / e->octets_per_line - (e->screen_rows - e->header_rows - 2);
 	if (e->line >= upper_limit) {
 		e->line = upper_limit;
 	}
@@ -352,22 +430,23 @@ void editor_scroll(struct editor* e, int units) {
 }
 
 void editor_scroll_to_offset(struct editor* e, unsigned int offset) {
-	if (offset > e->content_length) {
+	unsigned int file_len = E_FILE_LEN(e);
+	if (offset > file_len) {
 		editor_statusmessage(e, STATUS_ERROR, "Out of range: 0x%09x (%u)", offset, offset);
 		return;
 	}
 
 	unsigned int offset_min = e->line * e->octets_per_line;
-	unsigned int offset_max = offset_min + ((e->screen_rows - HX_HEADER_ROWS) * e->octets_per_line);
+	unsigned int offset_max = offset_min + ((e->screen_rows - e->header_rows) * e->octets_per_line);
 
 	if (offset >= offset_min && offset <= offset_max) {
 		editor_cursor_at_offset(e, offset, &(e->cursor_x), &(e->cursor_y));
 		return;
 	}
 
-	e->line = offset / e->octets_per_line - ((e->screen_rows - HX_HEADER_ROWS) / 2);
+	e->line = offset / e->octets_per_line - ((e->screen_rows - e->header_rows) / 2);
 
-	int upper_limit = e->content_length / e->octets_per_line - (e->screen_rows - HX_HEADER_ROWS - 2);
+	int upper_limit = file_len / e->octets_per_line - (e->screen_rows - e->header_rows - 2);
 	if (e->line >= upper_limit) {
 		e->line = upper_limit;
 	}
@@ -413,14 +492,16 @@ int editor_statusmessage(struct editor* e, enum status_severity sev, const char*
 void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset, struct charbuf* b) {
 	int cc = 0;
 	int attr = HX_ATTR_NONE;
+	unsigned int file_len = E_FILE_LEN(e);
+	unsigned int pg = E_PAGE_OFF(e);
 
 	for (unsigned int offset = start_offset; offset < start_offset + e->octets_per_line; offset++) {
-		if (offset >= e->content_length) {
+		if (offset >= file_len) {
 			break;
 		}
 		cc++;
 
-		char c = e->contents[offset];
+		char c = e->contents[offset - pg];
 		int desired;
 		if (rownum == e->cursor_y && cc == e->cursor_x) {
 			desired = isprint(c) ? HX_ATTR_A_CURSOR_P : HX_ATTR_A_CURSOR;
@@ -452,9 +533,16 @@ void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset
 }
 
 void editor_render_contents(struct editor* e, struct charbuf* b) {
-	if (e->content_length <= 0) {
-		charbuf_append(b, "\x1b[2J", 4);
-		charbuf_append(b, "File is empty. Use 'i' to insert a hexadecimal value.", 53);
+	unsigned int file_len = E_FILE_LEN(e);
+
+	if (file_len <= 0) {
+		/* Fill all data rows with dim sequential addresses + clear-to-EOL */
+		int data_rows_avail = e->screen_rows - e->header_rows - 1;
+		unsigned int addr = 0;
+		for (int r = 1; r <= data_rows_avail; r++) {
+			charbuf_appendf(b, "\x1b[2;35m%09x\x1b[0m:\x1b[0K\r\n", addr);
+			addr += e->octets_per_line;
+		}
 		return;
 	}
 
@@ -464,15 +552,21 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 	int row_char_count = 0;
 
 	unsigned int start_offset = e->line * e->octets_per_line;
-	if (start_offset >= e->content_length) {
-		start_offset = e->content_length - e->octets_per_line;
+	if (start_offset >= file_len) {
+		start_offset = file_len - e->octets_per_line;
 	}
 
-	int bytes_per_screen = (e->screen_rows - HX_HEADER_ROWS) * e->octets_per_line;
+	int bytes_per_screen = (e->screen_rows - e->header_rows) * e->octets_per_line;
 	unsigned int end_offset = bytes_per_screen + start_offset - e->octets_per_line;
-	if (end_offset > e->content_length) {
-		end_offset = e->content_length;
+	if (end_offset > file_len) {
+		end_offset = file_len;
 	}
+
+#ifdef BUSPIRATE
+	/* Ensure the page covers the visible range */
+	editor_ensure_page(e, start_offset, end_offset - start_offset);
+#endif
+	unsigned int pg = E_PAGE_OFF(e);
 
 	unsigned int offset;
 
@@ -481,7 +575,7 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 	int hex_attr = HX_ATTR_NONE;
 
 	for (offset = start_offset; offset < end_offset; offset++) {
-		unsigned char curr_byte = e->contents[offset];
+		unsigned char curr_byte = e->contents[offset - pg];
 
 		if (offset % e->octets_per_line == 0) {
 			charbuf_appendf(b, "\x1b[1;35m%09x\x1b[0m:", offset);
@@ -566,6 +660,22 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 
 	charbuf_append(b, "\x1b[0K", 4);
 
+	/* ── Pad remaining rows to screen bottom with dim addresses ──
+	 * Continue the address sequence past end-of-data so the gutter
+	 * extends all the way down.  Uses dim magenta (\x1b[2;35m) to
+	 * visually distinguish from real data rows (bold magenta). */
+	{
+		int data_rows_avail = e->screen_rows - e->header_rows - 1; /* -1 for status */
+		unsigned int pad_addr = end_offset;
+		/* Round up to next line boundary if data ended mid-row */
+		if (pad_addr % e->octets_per_line != 0)
+			pad_addr += e->octets_per_line - (pad_addr % e->octets_per_line);
+		for (int r = row + 1; r <= data_rows_avail; r++) {
+			charbuf_appendf(b, "\r\n\x1b[2;35m%09x\x1b[0m:\x1b[0K", pad_addr);
+			pad_addr += e->octets_per_line;
+		}
+	}
+
 #ifndef NDEBUG
 #ifndef BUSPIRATE
 	charbuf_appendf(b, "\x1b[0m\x1b[1;35m\x1b[1;80HRows: %d", e->screen_rows);
@@ -637,7 +747,8 @@ void editor_render_help(struct editor* e) {
 
 
 void editor_render_ruler(struct editor* e, struct charbuf* b) {
-	if (e->content_length <= 0) {
+	unsigned int file_len = E_FILE_LEN(e);
+	if (file_len <= 0) {
 		return;
 	}
 
@@ -645,12 +756,17 @@ void editor_render_ruler(struct editor* e, struct charbuf* b) {
 	char buf[20];
 
 	unsigned int offset_at_cursor = editor_offset_at_cursor(e);
-	unsigned char val = e->contents[offset_at_cursor];
-	int percentage = (float)(offset_at_cursor + 1) / (float)e->content_length * 100;
+	unsigned int pg = E_PAGE_OFF(e);
+	unsigned char val = 0;
+	/* Read byte under cursor — make sure it's within the loaded page */
+	if (offset_at_cursor >= pg && offset_at_cursor < pg + e->content_length) {
+		val = e->contents[offset_at_cursor - pg];
+	}
+	int percentage = (float)(offset_at_cursor + 1) / (float)file_len * 100;
 
 	int rmbw = snprintf(rulermsg, sizeof(rulermsg),
-			"0x%09x,%d (%02x)  %d%%",
-			offset_at_cursor, offset_at_cursor, val, percentage);
+		"0x%09x,%d (%02x)  %d%%",
+		offset_at_cursor, offset_at_cursor, val, percentage);
 	if (rmbw < 0) {
 		fprintf(stderr, "Could not create ruler string!");
 		return;
@@ -676,11 +792,20 @@ void editor_render_status(struct editor* e, struct charbuf* b) {
 	case STATUS_ERROR:   charbuf_append(b, "\x1b[1;37;41m", 10); break;
 	}
 
-	int maxchars = strlen(e->status_message);
-	if (e->screen_cols <= maxchars) {
-		maxchars = e->screen_cols;
+#ifdef BUSPIRATE
+	if (e->paged) {
+		unsigned int cur_page = e->page_offset / e->page_size;
+		charbuf_appendf(b, "\"%s\" (%u bytes) [READ-ONLY, PAGE %u]",
+			e->filename, e->file_size, cur_page);
+	} else
+#endif
+	{
+		int maxchars = strlen(e->status_message);
+		if (e->screen_cols <= maxchars) {
+			maxchars = e->screen_cols;
+		}
+		charbuf_append(b, e->status_message, maxchars);
 	}
-	charbuf_append(b, e->status_message, maxchars);
 	charbuf_append(b, "\x1b[0m\x1b[0K", 8);
 }
 
@@ -736,12 +861,13 @@ void editor_refresh_screen(struct editor* e) {
 	struct charbuf* b = charbuf_create();
 
 	charbuf_append(b, "\x1b[?25l", 6);
-#ifdef BUSPIRATE
-	/* Row 1 is reserved for the menu bar; start content at row 2 */
-	charbuf_append(b, "\x1b[2;1H", 6);
-#else
-	charbuf_append(b, "\x1b[H", 3);
-#endif
+	if (e->header_rows > 0) {
+		/* Position after externally-owned rows (menu bar, config bar, etc.);
+		 * the editor draws its own column headers + separator from here. */
+		charbuf_appendf(b, "\x1b[%d;1H", e->header_rows - 1);
+	} else {
+		charbuf_append(b, "\x1b[H", 3);
+	}
 
 	if (e->mode &
 			(MODE_REPLACE |
@@ -818,10 +944,12 @@ void editor_replace_byte(struct editor* e, char x) {
 }
 
 void editor_process_command(struct editor* e, const char* cmd) {
+	unsigned int file_len = E_FILE_LEN(e);
+
 	// Command: go to base 10 offset
 	bool b = is_pos_num(cmd);
 	if (b) {
-		int offset = str2int(cmd, 0, e->content_length, e->content_length - 1);
+		int offset = str2int(cmd, 0, file_len, file_len - 1);
 		editor_scroll_to_offset(e, offset);
 		editor_statusmessage(e, STATUS_INFO, "Positioned to offset 0x%09x (%d)", offset, offset);
 		return;
@@ -842,6 +970,12 @@ void editor_process_command(struct editor* e, const char* cmd) {
 	}
 
 	if (strncmp(cmd, "w", INPUT_BUF_SIZE) == 0) {
+#ifdef BUSPIRATE
+		if (e->paged) {
+			editor_statusmessage(e, STATUS_WARNING, "Read-only paged view — cannot save");
+			return;
+		}
+#endif
 		editor_writefile(e);
 		return;
 	}
@@ -851,17 +985,19 @@ void editor_process_command(struct editor* e, const char* cmd) {
 			editor_statusmessage(e, STATUS_ERROR, "No write since last change (add ! to override)", cmd);
 			return;
 		} else {
-			exit(0);
+			e->quit_requested = true;
+			return;
 		}
 	}
 
 	if (strncmp(cmd, "wq", INPUT_BUF_SIZE) == 0 || strncmp(cmd, "wq!", INPUT_BUF_SIZE) == 0) {
 		editor_writefile(e);
-		exit(0);
+		e->quit_requested = true;
+		return;
 	}
 
 	if (strncmp(cmd, "q!", INPUT_BUF_SIZE) == 0) {
-		exit(0);
+		e->quit_requested = true;
 		return;
 	}
 
@@ -1183,11 +1319,36 @@ void editor_process_keypress(struct editor* e) {
 
 	switch (c) {
 	case KEY_ESC:    if (!(e->mode & MODE_NORMAL)) editor_setmode(e, MODE_NORMAL); return;
-	case KEY_CTRL_Q: exit(0); return;
-	case KEY_CTRL_S: editor_writefile(e); return;
+	case KEY_CTRL_Q: e->quit_requested = true; return;
+	case KEY_CTRL_S:
+#ifdef BUSPIRATE
+		if (e->paged) {
+			editor_statusmessage(e, STATUS_WARNING, "Read-only paged view");
+			return;
+		}
+#endif
+		editor_writefile(e); return;
 	}
 
 	if (e->mode & MODE_NORMAL) {
+#ifdef BUSPIRATE
+		/* ── Paged mode: block all editing keys ── */
+		if (e->paged) {
+			switch (c) {
+			case ']': case '[':
+			case KEY_DEL: case 'x':
+			case 'a': case 'A':
+			case 'i': case 'I':
+			case 'r': case 'R':
+			case 'u': case KEY_CTRL_R:
+			case '/': case 'n': case 'N':
+				editor_statusmessage(e, STATUS_WARNING, "Read-only paged view");
+				return;
+			}
+		}
+#endif
+		unsigned int file_len = E_FILE_LEN(e);
+
 		switch (c) {
 		case KEY_UP:
 		case KEY_DOWN:
@@ -1221,8 +1382,9 @@ void editor_process_keypress(struct editor* e) {
 		case 'b': editor_move_cursor(e, KEY_LEFT, e->grouping); break;
 		case 'w': editor_move_cursor(e, KEY_RIGHT, e->grouping); break;
 		case 'G':
-			editor_scroll(e, e->content_length);
-			editor_cursor_at_offset(e, e->content_length-1, &e->cursor_x, &e->cursor_y);
+			editor_scroll(e, file_len);
+			if (file_len > 0)
+				editor_cursor_at_offset(e, file_len - 1, &e->cursor_x, &e->cursor_y);
 			break;
 		case 'g':
 			c = read_key();
@@ -1236,10 +1398,10 @@ void editor_process_keypress(struct editor* e) {
 		case KEY_END:  editor_move_cursor(e, KEY_RIGHT, e->octets_per_line - e->cursor_x); return;
 
 		case KEY_CTRL_U:
-		case KEY_PAGEUP:   editor_scroll(e, -(e->screen_rows - HX_HEADER_ROWS) + 2); return;
+		case KEY_PAGEUP:   editor_scroll(e, -(e->screen_rows - e->header_rows) + 2); return;
 
 		case KEY_CTRL_D:
-		case KEY_PAGEDOWN: editor_scroll(e, e->screen_rows - HX_HEADER_ROWS - 2); return;
+		case KEY_PAGEDOWN: editor_scroll(e, e->screen_rows - e->header_rows - 2); return;
 
 #ifdef BUSPIRATE
 		case KEY_F10: e->menu_pending = true; return;
@@ -1376,10 +1538,18 @@ struct editor* editor_init() {
 	memset(e->searchstr, '\0', sizeof(e->searchstr));
 
 	get_window_size(&(e->screen_rows), &(e->screen_cols));
+	e->header_rows = 0;
+
+	e->quit_requested = false;
 
 #ifdef BUSPIRATE
 	e->undo_list = NULL;  /* undo disabled — zero-alloc debug build */
 	e->menu_pending = false;
+	e->paged = false;
+	e->file_size = 0;
+	e->page_offset = 0;
+	e->page_size = HX_PAGE_SIZE;
+	e->paged_path = NULL;
 #else
 	e->undo_list = action_list_init();
 #endif
@@ -1389,6 +1559,9 @@ struct editor* editor_init() {
 
 void editor_free(struct editor* e) {
 	if (e->undo_list) action_list_free(e->undo_list);
+#ifdef BUSPIRATE
+	if (e->paged_path) free(e->paged_path);
+#endif
 	free(e->filename);
 	free(e->contents);
 	free(e);
@@ -1496,6 +1669,20 @@ static void hx_menu_repaint(void) {
  * Dispatches to the same editor functions as the keyboard shortcuts.
  */
 static void hx_menu_dispatch(struct editor* e, int action) {
+	/* Block editing/search actions in paged mode */
+	if (e->paged) {
+		switch (action) {
+		case HX_ACT_SAVE:
+		case HX_ACT_UNDO: case HX_ACT_REDO:
+		case HX_ACT_DEL: case HX_ACT_INC: case HX_ACT_DEC:
+		case HX_ACT_MODE_INS: case HX_ACT_MODE_APP: case HX_ACT_MODE_REP:
+		case HX_ACT_MODE_INSA: case HX_ACT_MODE_APPA: case HX_ACT_MODE_REPA:
+		case HX_ACT_SEARCH: case HX_ACT_NEXT: case HX_ACT_PREV:
+			editor_statusmessage(e, STATUS_WARNING, "Read-only paged view");
+			return;
+		}
+	}
+
 	switch (action) {
 	case HX_ACT_SAVE:       editor_writefile(e); break;
 	case HX_ACT_QUIT:
@@ -1503,10 +1690,10 @@ static void hx_menu_dispatch(struct editor* e, int action) {
 			editor_statusmessage(e, STATUS_ERROR,
 				"Unsaved changes! Use File > Quit (no save) to discard");
 		} else {
-			exit(0);
+			e->quit_requested = true;
 		}
 		break;
-	case HX_ACT_QUIT_NOSAVE: exit(0); break;
+	case HX_ACT_QUIT_NOSAVE: e->quit_requested = true; break;
 	case HX_ACT_UNDO:        editor_undo(e); break;
 	case HX_ACT_REDO:        editor_redo(e); break;
 	case HX_ACT_DEL:         editor_delete_char_at_cursor(e); break;
@@ -1526,10 +1713,13 @@ static void hx_menu_dispatch(struct editor* e, int action) {
 		e->line = 0;
 		editor_cursor_at_offset(e, 0, &e->cursor_x, &e->cursor_y);
 		break;
-	case HX_ACT_GOTO_END:
-		editor_scroll(e, e->content_length);
-		editor_cursor_at_offset(e, e->content_length - 1, &e->cursor_x, &e->cursor_y);
+	case HX_ACT_GOTO_END: {
+		unsigned int fl = E_FILE_LEN(e);
+		editor_scroll(e, fl);
+		if (fl > 0)
+			editor_cursor_at_offset(e, fl - 1, &e->cursor_x, &e->cursor_y);
 		break;
+	}
 	case HX_ACT_HELP:        editor_render_help(e); break;
 	}
 }
@@ -1537,6 +1727,7 @@ static void hx_menu_dispatch(struct editor* e, int action) {
 int hx_run(const char* filename) {
 	hx_vt100_keys_init();
 	g_hx_editor = editor_init();
+	g_hx_editor->header_rows = 3; /* menu bar + column headers + separator */
 	editor_openfile(g_hx_editor, filename);
 	clear_screen();
 
@@ -1585,6 +1776,7 @@ int hx_run(const char* filename) {
 
 		do {
 			editor_process_keypress(g_hx_editor);
+			if (g_hx_editor->quit_requested) break;
 
 			/* Check if F10 was pressed (flagged in keypress handler) */
 			if (g_hx_editor->menu_pending) {
@@ -1600,6 +1792,7 @@ int hx_run(const char* filename) {
 				break;  /* force full redraw */
 			}
 		} while (spsc_queue_level(&rx_fifo) > 0);
+		if (g_hx_editor->quit_requested) break;
 
 		/* If nothing visually changed, skip the next redraw and
 		 * just wait for a key that actually moves something. */
@@ -1610,6 +1803,7 @@ int hx_run(const char* filename) {
 		       g_hx_editor->dirty         == prev_dirty &&
 		       g_hx_editor->mode          == prev_mode) {
 			editor_process_keypress(g_hx_editor);
+			if (g_hx_editor->quit_requested) break;
 
 			if (g_hx_editor->menu_pending) {
 				g_hx_editor->menu_pending = false;
@@ -1629,8 +1823,150 @@ int hx_run(const char* filename) {
 			}
 		}
 	}
-	/* Never reached — exit() is longjmp */
 	return 0;
+}
+
+/* ── Embedded editor (no menu bar) ─────────────────────────────────
+ * Called by EEPROM GUI (or other fullscreen apps) to run the hex
+ * editor inside an existing alt-screen.  The caller owns rows
+ * 1..ext_header_rows (menu bar, config bar, separator).  hx draws
+ * its column headers + hex content from ext_header_rows+1 onwards.
+ *
+ * Returns: HX_EMBED_QUIT  — user quit (:q, Ctrl-Q)
+ *          HX_EMBED_F10   — user pressed F10 (wants parent menu)
+ * ----------------------------------------------------------------- */
+int hx_run_embedded(const char *filename, int ext_header_rows) {
+	hx_vt100_keys_init();
+	g_hx_editor = editor_init();
+	/* ext_header_rows = rows owned by caller;
+	 * hx draws 2 more (column headers + separator) */
+	g_hx_editor->header_rows = ext_header_rows + 2;
+	editor_openfile(g_hx_editor, filename);
+
+	/* Skip-redraw snapshot (same optimisation as hx_run) */
+	int prev_cx = 0, prev_cy = 0, prev_line = 0;
+	unsigned int prev_len = 0;
+	bool prev_dirty = false;
+	enum editor_mode prev_mode = MODE_NORMAL;
+	int result = HX_EMBED_QUIT;
+
+	while (1) {
+		tx_fifo_wait_drain();
+		editor_refresh_screen(g_hx_editor);
+		hx_io_write(1, "\x1b[?25l", 6);
+
+		prev_cx    = g_hx_editor->cursor_x;
+		prev_cy    = g_hx_editor->cursor_y;
+		prev_line  = g_hx_editor->line;
+		prev_len   = g_hx_editor->content_length;
+		prev_dirty = g_hx_editor->dirty;
+		prev_mode  = g_hx_editor->mode;
+
+		do {
+			editor_process_keypress(g_hx_editor);
+			if (g_hx_editor->quit_requested) break;
+			if (g_hx_editor->menu_pending) {
+				g_hx_editor->menu_pending = false;
+				result = HX_EMBED_F10;
+				goto done;
+			}
+		} while (spsc_queue_level(&rx_fifo) > 0);
+		if (g_hx_editor->quit_requested) break;
+
+		/* Skip-redraw loop */
+		while (g_hx_editor->cursor_x      == prev_cx   &&
+		       g_hx_editor->cursor_y      == prev_cy   &&
+		       g_hx_editor->line          == prev_line  &&
+		       g_hx_editor->content_length == prev_len  &&
+		       g_hx_editor->dirty         == prev_dirty &&
+		       g_hx_editor->mode          == prev_mode) {
+			editor_process_keypress(g_hx_editor);
+			if (g_hx_editor->quit_requested) break;
+			if (g_hx_editor->menu_pending) {
+				g_hx_editor->menu_pending = false;
+				result = HX_EMBED_F10;
+				goto done;
+			}
+			while (spsc_queue_level(&rx_fifo) > 0) {
+				editor_process_keypress(g_hx_editor);
+			}
+		}
+	}
+done:
+	result = g_hx_editor->quit_requested ? HX_EMBED_QUIT : result;
+	return result;
+}
+
+/* ── Granular embedded editor API ───────────────────────────────
+ * Unlike hx_run_embedded(), these give the caller full control over
+ * the render/keypress loop so the hex editor can coexist with other
+ * UI elements (config bar, menus, etc.).
+ * ----------------------------------------------------------------- */
+
+struct editor* hx_embed_init(int header_rows) {
+	hx_vt100_keys_init();
+	g_hx_editor = editor_init();
+	g_hx_editor->header_rows = header_rows;
+	/* Allocate a 1-byte empty buffer so rendering never hits NULL */
+	g_hx_editor->contents = malloc(1);
+	g_hx_editor->contents[0] = '\0';
+	g_hx_editor->content_length = 0;
+	return g_hx_editor;
+}
+
+void hx_embed_load(const char* filename) {
+	if (!g_hx_editor) return;
+	/* Free previous contents */
+	if (g_hx_editor->filename) { free(g_hx_editor->filename); g_hx_editor->filename = NULL; }
+	if (g_hx_editor->contents) { free(g_hx_editor->contents); g_hx_editor->contents = NULL; }
+	if (g_hx_editor->paged_path) { free(g_hx_editor->paged_path); g_hx_editor->paged_path = NULL; }
+	g_hx_editor->content_length = 0;
+	g_hx_editor->line = 0;
+	g_hx_editor->cursor_x = 1;
+	g_hx_editor->cursor_y = 1;
+	g_hx_editor->dirty = false;
+	g_hx_editor->quit_requested = false;
+	g_hx_editor->paged = false;
+	g_hx_editor->file_size = 0;
+	g_hx_editor->page_offset = 0;
+	editor_setmode(g_hx_editor, MODE_NORMAL);
+	editor_openfile(g_hx_editor, filename);
+}
+
+void hx_embed_load_buffer(void *buf, unsigned int len, const char *label) {
+	if (!g_hx_editor) return;
+	/* Free previous contents */
+	if (g_hx_editor->filename) { free(g_hx_editor->filename); g_hx_editor->filename = NULL; }
+	if (g_hx_editor->contents) { free(g_hx_editor->contents); g_hx_editor->contents = NULL; }
+	if (g_hx_editor->paged_path) { free(g_hx_editor->paged_path); g_hx_editor->paged_path = NULL; }
+	g_hx_editor->content_length = 0;
+	g_hx_editor->line = 0;
+	g_hx_editor->cursor_x = 1;
+	g_hx_editor->cursor_y = 1;
+	g_hx_editor->dirty = false;
+	g_hx_editor->quit_requested = false;
+	g_hx_editor->paged = false;
+	g_hx_editor->file_size = 0;
+	g_hx_editor->page_offset = 0;
+	editor_setmode(g_hx_editor, MODE_NORMAL);
+
+	/* Take ownership of the caller-provided arena buffer */
+	g_hx_editor->contents = (char*)buf;
+	g_hx_editor->content_length = len;
+
+	/* Set display label as filename */
+	if (label) {
+		g_hx_editor->filename = malloc(strlen(label) + 1);
+		if (g_hx_editor->filename)
+			strncpy(g_hx_editor->filename, label, strlen(label) + 1);
+	}
+
+	editor_statusmessage(g_hx_editor, STATUS_INFO,
+		"\"%s\" (%u bytes)", label ? label : "buffer", len);
+}
+
+struct editor* hx_embed_editor(void) {
+	return g_hx_editor;
 }
 
 void hx_cleanup(void) {

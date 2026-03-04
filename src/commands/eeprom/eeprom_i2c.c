@@ -14,6 +14,7 @@
 #include "pirate/file.h" // File handling related
 #include "pirate/hwi2c_pio.h"
 #include "eeprom_base.h"
+#include "eeprom_i2c_gui.h"
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 
@@ -215,9 +216,9 @@ static const struct eeprom_device_t eeprom_devices[] = {
 };
 
 static bool eeprom_get_args(struct eeprom_info *args) {
-    // Parse action
+    // Parse action — if no action given, launch interactive GUI
     if (!bp_cmd_get_action(&eeprom_i2c_def, &args->action)) {
-        bp_cmd_help_show(&eeprom_i2c_def);
+        eeprom_i2c_gui(eeprom_devices, count_of(eeprom_devices), args);
         return true;
     }
 

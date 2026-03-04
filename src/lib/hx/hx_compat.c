@@ -263,3 +263,21 @@ int hx_file_write_all(const char *path, const void *buf, size_t count) {
     }
     return 0;
 }
+
+int hx_file_read_at(const char *path, unsigned int offset, void *buf, size_t count) {
+    FIL fil;
+    FRESULT res = f_open(&fil, path, FA_READ);
+    if (res == FR_NO_FILE || res == FR_NO_PATH) return -2;
+    if (res != FR_OK) return -1;
+
+    if (offset > 0) {
+        res = f_lseek(&fil, (FSIZE_t)offset);
+        if (res != FR_OK) { f_close(&fil); return -1; }
+    }
+
+    UINT br;
+    res = f_read(&fil, buf, count, &br);
+    f_close(&fil);
+    if (res != FR_OK) return -1;
+    return (int)br;
+}

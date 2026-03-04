@@ -144,6 +144,137 @@ static int gui_menu_write(int fd, const void* buf, int count) {
     return count;
 }
 
+/* ── GUI UI ops for in-alt-screen EEPROM operations ─────────────────── */
+/* These render progress/messages into fixed rows of the content area
+ * so that eeprom_action_*() can run without leaving the alt-screen. */
+
+/* Layout: row 4 = chip info / phase message
+ *         row 5 = progress bar
+ *         row 6 = warning (yellow)
+ *         row 7 = error (red) or result */
+#define GUI_OP_ROW_MSG   4
+#define GUI_OP_ROW_PROG  5
+#define GUI_OP_ROW_WARN  6
+#define GUI_OP_ROW_ERR   7
+
+static void gui_op_clear_content(void) {
+    char buf[32];
+    for (int r = GUI_OP_ROW_MSG; r <= GUI_OP_ROW_ERR + 1; r++) {
+        int n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[K", r);
+        gui_write_buf(buf, n);
+    }
+}
+
+static void gui_op_progress(uint32_t cur, uint32_t total, void *ctx) {
+    (void)ctx;
+    char buf[120];
+    int bar_width = (gui.cols > 30) ? gui.cols - 30 : 20;
+    float pct = (total > 0) ? (float)cur / (float)total : 0.0f;
+    int filled = (int)(pct * bar_width);
+
+    int n = snprintf(buf, sizeof(buf), "\x1b[%d;3H\x1b[0;36mProgress: [", GUI_OP_ROW_PROG);
+    gui_write_buf(buf, n);
+    for (int i = 0; i < bar_width; i++) {
+        gui_write_str(i < filled ? "#" : " ");
+    }
+    n = snprintf(buf, sizeof(buf), "] %3d%%\x1b[0m", (int)(pct * 100));
+    gui_write_buf(buf, n);
+}
+
+static void gui_op_message(const char *msg, void *ctx) {
+    (void)ctx;
+    char buf[32];
+    /* Overwrite the message row */
+    int n = snprintf(buf, sizeof(buf), "\x1b[%d;3H\x1b[K\x1b[0;1m", GUI_OP_ROW_MSG);
+    gui_write_buf(buf, n);
+    /* Strip leading \r\n for cleaner display */
+    while (*msg == '\r' || *msg == '\n') msg++;
+    gui_write_str(msg);
+    gui_write_str("\x1b[0m");
+}
+
+static void gui_op_error(const char *msg, void *ctx) {
+    (void)ctx;
+    char buf[32];
+    int n = snprintf(buf, sizeof(buf), "\x1b[%d;3H\x1b[K\x1b[0;1;31m", GUI_OP_ROW_ERR);
+    gui_write_buf(buf, n);
+    while (*msg == '\r' || *msg == '\n') msg++;
+    gui_write_str(msg);
+    gui_write_str("\x1b[0m");
+}
+
+static void gui_op_warning(const char *msg, void *ctx) {
+    (void)ctx;
+    char buf[32];
+    int n = snprintf(buf, sizeof(buf), "\x1b[%d;3H\x1b[K\x1b[0;33m", GUI_OP_ROW_WARN);
+    gui_write_buf(buf, n);
+    while (*msg == '\r' || *msg == '\n') msg++;
+    gui_write_str(msg);
+    gui_write_str("\x1b[0m");
+}
+
+static eeprom_ui_ops_t gui_ui_ops = {
+    .progress = gui_op_progress,
+    .message  = gui_op_message,
+    .error    = gui_op_error,
+    .warning  = gui_op_warning,
+    .ctx      = NULL,  /* set to &gui at runtime */
+};
+
+/* ── In-GUI confirm popup for destructive actions ───────────────────── */
+
+static bool gui_confirm_destructive(void) {
+    char buf[120];
+    int n;
+    int popup_w = 50;
+    int popup_left = (gui.cols - popup_w) / 2 + 1;
+    int popup_top = (gui.rows - 4) / 2;
+    if (popup_left < 1) popup_left = 1;
+    if (popup_top < 2) popup_top = 2;
+
+    #define CONFIRM_BD "\x1b[1;37;41m"
+    #define CONFIRM_BG "\x1b[0;37;41m"
+
+    gui_write_str("\x1b[?25l");
+
+    /* Top border */
+    n = snprintf(buf, sizeof(buf), "\x1b[%d;%dH" CONFIRM_BD "+", popup_top, popup_left);
+    gui_write_buf(buf, n);
+    for (int i = 0; i < popup_w - 2; i++) gui_write_str("-");
+    gui_write_str("+");
+
+    /* Message row */
+    n = snprintf(buf, sizeof(buf), "\x1b[%d;%dH" CONFIRM_BD "|" CONFIRM_BG, popup_top + 1, popup_left);
+    gui_write_buf(buf, n);
+    const char *msg = " This may modify EEPROM contents!";
+    gui_write_str(msg);
+    for (int i = (int)strlen(msg); i < popup_w - 2; i++) gui_write_str(" ");
+    gui_write_str(CONFIRM_BD "|");
+
+    /* Prompt row */
+    n = snprintf(buf, sizeof(buf), "\x1b[%d;%dH" CONFIRM_BD "|" CONFIRM_BG, popup_top + 2, popup_left);
+    gui_write_buf(buf, n);
+    const char *prompt = " Continue? (y/n) ";
+    gui_write_str(prompt);
+    for (int i = (int)strlen(prompt); i < popup_w - 2; i++) gui_write_str(" ");
+    gui_write_str(CONFIRM_BD "|");
+
+    /* Bottom border */
+    n = snprintf(buf, sizeof(buf), "\x1b[%d;%dH" CONFIRM_BD "+", popup_top + 3, popup_left);
+    gui_write_buf(buf, n);
+    for (int i = 0; i < popup_w - 2; i++) gui_write_str("-");
+    gui_write_str("+");
+
+    gui_write_str("\x1b[0m\x1b[?25h");
+
+    #undef CONFIRM_BD
+    #undef CONFIRM_BG
+
+    char c;
+    rx_fifo_get_blocking(&c);
+    return (c == 'y' || c == 'Y');
+}
+
 /* ── Size formatting helper ─────────────────────────────────────────── */
 
 static void format_size(uint32_t bytes, char* buf, uint8_t buf_size) {
@@ -636,11 +767,12 @@ static bool gui_input_i2c_addr(void) {
     }
 }
 
-/* ── Flip-out execution ──────────────────────────────────────────────── */
+/* ── In-GUI execution (no flip-out) ──────────────────────────────────── */
 
 /**
- * Leave alt-screen, run the EEPROM operation with normal printf output,
- * wait for a keypress, then re-enter alt-screen and set result_msg.
+ * Run the EEPROM operation entirely within the alt-screen.
+ * Progress, messages, and errors render into rows 4-7 of the content area
+ * via the eeprom_ui_ops callbacks.
  */
 static void gui_execute_operation(void) {
     if (!config_ready()) {
@@ -648,7 +780,7 @@ static void gui_execute_operation(void) {
         return;
     }
 
-    /* Check clock stretching before leaving alt-screen */
+    /* Check clock stretching */
     if (i2c_mode_config.clock_stretch) {
         gui.status_msg = "Error: I2C clock stretching enabled";
         gui.result_msg = "Re-enter I2C mode with clock stretching DISABLED.";
@@ -663,35 +795,34 @@ static void gui_execute_operation(void) {
     eeprom.action         = (uint32_t)gui.action;
     eeprom.verify_flag    = gui.verify_flag;
     strncpy(eeprom.file_name, gui.file_name, sizeof(eeprom.file_name) - 1);
+    gui_ui_ops.ctx = &gui;
+    eeprom.ui = &gui_ui_ops;
 
-    /* ── Leave alt-screen ── */
-    printf("\x1b[?1049l");  /* leave alt screen */
-    toolbar_draw_release();
-    toolbar_apply_scroll_region();
-    ui_term_cursor_position(toolbar_scroll_bottom(), 0);
+    /* Clear content area for operation output */
+    gui_op_clear_content();
 
-    /* Print chip info */
-    printf("%s: %d bytes, %d byte pages, addr %d bytes\r\n\r\n",
-           eeprom.device->name, eeprom.device->size_bytes,
-           eeprom.device->page_bytes, eeprom.device->address_bytes);
+    /* Show chip info on message row */
+    { char info[80];
+      snprintf(info, sizeof(info), "%s: %d bytes, %d byte pages, addr %d bytes",
+               eeprom.device->name, eeprom.device->size_bytes,
+               eeprom.device->page_bytes, eeprom.device->address_bytes);
+      gui_op_message(info, NULL); }
 
-    /* Confirm destructive actions */
+    /* Confirm destructive actions with in-GUI popup */
     bool confirmed = true;
     if (gui.action == 1 || gui.action == 2 || gui.action == 5) {
         /* erase=1, write=2, test=5 (0-based) */
-        printf("This action may modify the EEPROM contents. Continue? (y/n) ");
-        char c;
-        rx_fifo_get_blocking(&c);
-        printf("%c\r\n", c);
-        confirmed = (c == 'y' || c == 'Y');
+        confirmed = gui_confirm_destructive();
+        /* Redraw chrome after popup */
+        gui_op_clear_content();
     }
 
     bool success = false;
 
-    /* Dump-to-hex-editor state: survives across flip-out */
-    char *dump_buf = NULL;     /* arena-allocated direct buffer (small) */
+    /* Dump-to-hex-editor state */
+    char *dump_buf = NULL;
     uint32_t dump_len = 0;
-    bool dump_to_file = false; /* large dump went to temp file */
+    bool dump_to_file = false;
 
     if (confirmed) {
         char buf[EEPROM_ADDRESS_PAGE_SIZE];
@@ -710,16 +841,17 @@ static void gui_execute_operation(void) {
                 /* Small: read EEPROM directly into arena buffer */
                 dump_buf = hx_arena_malloc(eep_size);
                 if (!dump_buf) {
-                    printf("Error: not enough memory for %lu byte dump\r\n",
-                           (unsigned long)eep_size);
+                    gui_op_error("Not enough memory for dump", NULL);
                 } else {
                     bool read_err = false;
                     for (uint32_t i = 0; i < blocks; i++) {
-                        print_progress(i, blocks);
+                        gui_op_progress(i, blocks, NULL);
                         if (eeprom.device->hal->read(&eeprom, i * 256,
                                 block_size, (uint8_t*)&dump_buf[i * 256])) {
-                            printf("\r\nError reading EEPROM at %lu\r\n",
-                                   (unsigned long)(i * 256));
+                            char _msg[60];
+                            snprintf(_msg, sizeof(_msg), "Error reading EEPROM at %lu",
+                                     (unsigned long)(i * 256));
+                            gui_op_error(_msg, NULL);
                             hx_arena_free(dump_buf);
                             dump_buf = NULL;
                             read_err = true;
@@ -727,7 +859,7 @@ static void gui_execute_operation(void) {
                         }
                     }
                     if (!read_err) {
-                        print_progress(blocks, blocks);
+                        gui_op_progress(blocks, blocks, NULL);
                         dump_len = eep_size;
                         success = true;
                     }
@@ -737,6 +869,7 @@ static void gui_execute_operation(void) {
                 static const char dump_tmp[] = "~dump.bin";
                 strncpy(eeprom.file_name, dump_tmp, sizeof(eeprom.file_name) - 1);
                 eeprom.file_name[sizeof(eeprom.file_name) - 1] = '\0';
+                gui_op_message("Reading EEPROM to temp file...", NULL);
                 if (!eeprom_read(&eeprom, buf, sizeof(buf),
                         (char*)verify_buf, sizeof(verify_buf),
                         EEPROM_READ_TO_FILE)) {
@@ -780,28 +913,7 @@ static void gui_execute_operation(void) {
         fala_notify_hook();
     }
 
-    /* Show result and wait for keypress */
-    if (!confirmed) {
-        printf("\r\nAborted.\r\n");
-    } else if (success) {
-        printf("\r\nSuccess :)\r\n");
-    } else {
-        printf("\r\nOperation failed.\r\n");
-    }
-    printf("\r\nPress any key to return to GUI...\r\n");
-    { char c; rx_fifo_get_blocking(&c); }
-
-    /* ── Re-enter alt-screen ── */
-    toolbar_draw_prepare();
-    printf("\x1b[?1049h");  /* enter alt screen */
-    printf("\x1b[r");       /* reset scroll region */
-    printf("\x1b[2J");      /* clear screen */
-    printf("\x1b[H");       /* cursor home */
-
-    /* Drain stale rx */
-    { char d; while (rx_fifo_try_get(&d)) {} }
-
-    /* Set result message and load result file into hex editor */
+    /* Set result message */
     if (!confirmed) {
         gui.result_msg = "Aborted by user.";
     } else if (success) {
@@ -824,6 +936,7 @@ static void gui_execute_operation(void) {
         gui.result_msg = "Last operation: FAILED";
     }
     gui.status_msg = NULL;
+    gui.executed = true;
 }
 
 /* ── Action dispatch ────────────────────────────────────────────────── */

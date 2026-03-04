@@ -12,6 +12,19 @@ typedef struct bp_command_def bp_command_def_t;
 
 struct eeprom_hal_t;
 
+/**
+ * @brief Callback interface for UI-agnostic output from EEPROM operations.
+ * @details When eeprom_info.ui is NULL, functions fall back to printf/print_progress.
+ *          GUI front-ends provide implementations that render into the alt-screen.
+ */
+typedef struct eeprom_ui_ops {
+    void (*progress)(uint32_t current, uint32_t total, void *ctx);
+    void (*message)(const char *msg, void *ctx);
+    void (*error)(const char *msg, void *ctx);
+    void (*warning)(const char *msg, void *ctx);
+    void *ctx;  /**< opaque pointer passed to every callback (e.g. GUI state) */
+} eeprom_ui_ops_t;
+
 struct eeprom_device_t {
     char name[9];
     uint32_t size_bytes;
@@ -38,6 +51,7 @@ struct eeprom_info{
     bool protect_blocks_flag;
     bool protect_test_flag;
     bool protect_wpen_flag;
+    const eeprom_ui_ops_t *ui; /**< UI callbacks, NULL = default printf */
 };
 
 struct eeprom_hal_t {

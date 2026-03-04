@@ -20,6 +20,19 @@
 
 #define I2C_EEPROM_DEFAULT_ADDRESS 0x50 // Default I2C address for EEPROMs
 
+/* CLI UI ops: explicit printf/print_progress for command-line path */
+static void cli_progress(uint32_t cur, uint32_t total, void *ctx) { (void)ctx; print_progress(cur, total); }
+static void cli_message(const char *msg, void *ctx)  { (void)ctx; printf("%s", msg); }
+static void cli_error(const char *msg, void *ctx)    { (void)ctx; printf("%s", msg); }
+static void cli_warning(const char *msg, void *ctx)  { (void)ctx; printf("%s", msg); }
+static const eeprom_ui_ops_t eeprom_cli_ops = {
+    .progress = cli_progress,
+    .message  = cli_message,
+    .error    = cli_error,
+    .warning  = cli_warning,
+    .ctx      = NULL,
+};
+
 enum eeprom_actions_enum {
     EEPROM_DUMP=0,
     EEPROM_ERASE,
@@ -286,6 +299,7 @@ void i2c_eeprom_handler(struct command_result* res) {
     if (eeprom_get_args(&eeprom)) {
         return;
     }
+    eeprom.ui = &eeprom_cli_ops;
 
     if (i2c_mode_config.clock_stretch) {
         printf("Error: I2C Clock stretching is enabled.\r\nEnter I2C mode again and select clock stretching DISABLED.\r\n");

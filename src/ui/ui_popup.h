@@ -1,0 +1,116 @@
+/**
+ * @file ui_popup.h
+ * @brief Reusable VT100 popup dialogs — confirm, text input, number input.
+ *
+ * Each popup draws a centered box overlay on the current screen, collects
+ * input, and returns the result.  The caller's screen is NOT restored;
+ * call your repaint function after the popup returns.
+ *
+ * I/O is routed through the caller's write callback so these work inside
+ * any fullscreen app (embedded mode).
+ *
+ * Copyright (c) 2026 Bus Pirate project. MIT License.
+ */
+
+#ifndef UI_POPUP_H
+#define UI_POPUP_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+/* ── Style constants ────────────────────────────────────────────────── */
+
+/** Popup visual style — determines the border/background color palette. */
+typedef enum {
+    UI_POPUP_INFO   = 0, /**< White on blue  (neutral/input) */
+    UI_POPUP_WARN   = 1, /**< White on yellow (warning) */
+    UI_POPUP_DANGER = 2, /**< White on red    (destructive confirm) */
+} ui_popup_style_t;
+
+/** Input character filter flags (bitwise OR). */
+typedef enum {
+    UI_INPUT_HEX   = 0x01, /**< 0-9 a-f A-F x X */
+    UI_INPUT_DEC   = 0x02, /**< 0-9 */
+    UI_INPUT_ALPHA = 0x04, /**< a-z A-Z */
+    UI_INPUT_DOT   = 0x08, /**< . (for filenames) */
+    UI_INPUT_PRINT = 0x10, /**< all printable ASCII 0x20-0x7E */
+    UI_INPUT_ALNUM = 0x07, /**< HEX | DEC | ALPHA */
+    UI_INPUT_FNAME = 0x0F, /**< ALNUM | DOT */
+} ui_input_flags_t;
+
+/* ── I/O context ────────────────────────────────────────────────────── */
+
+/**
+ * @brief I/O context for popup rendering and input.
+ *
+ * The popup uses write_out to draw and rx_blocking to read single chars.
+ */
+typedef struct {
+    int (*write_out)(int fd, const void *buf, int count); /**< Terminal write */
+    uint8_t cols;  /**< Terminal width */
+    uint8_t rows;  /**< Terminal height */
+} ui_popup_io_t;
+
+/* ── Popup functions ────────────────────────────────────────────────── */
+
+/**
+ * @brief Centered yes/no confirmation dialog.
+ *
+ * Draws a styled popup box with a title, message, and "Continue? (y/n)"
+ * prompt.  Blocks until the user presses y/Y (returns true) or any other
+ * key (returns false).
+ *
+ * @param io       I/O context
+ * @param title    Title shown in the popup (may be NULL for no title)
+ * @param message  Body message text
+ * @param style    Visual style (UI_POPUP_INFO, _WARN, or _DANGER)
+ * @return true if user confirmed (y/Y), false otherwise
+ */
+bool ui_popup_confirm(const ui_popup_io_t *io,
+                      const char *title,
+                      const char *message,
+                      ui_popup_style_t style);
+
+/**
+ * @brief Centered text input popup.
+ *
+ * Draws a styled popup with a title, prompt, and editable text field.
+ * Supports backspace, Enter (submit), and Escape (cancel).
+ *
+ * @param io          I/O context
+ * @param title       Title shown in the popup
+ * @param prompt      Inline prompt text (e.g. "Filename:")
+ * @param buf         Output buffer for the entered text
+ * @param buf_size    Size of buf (max characters = buf_size - 1)
+ * @param flags       Character filter (UI_INPUT_HEX, etc.)
+ * @return true if user submitted (Enter), false if cancelled (Esc)
+ */
+bool ui_popup_text_input(const ui_popup_io_t *io,
+                         const char *title,
+                         const char *prompt,
+                         char *buf,
+                         uint8_t buf_size,
+                         uint8_t flags);
+
+/**
+ * @brief Centered number input popup with hex/decimal parsing.
+ *
+ * Wraps ui_popup_text_input with automatic strtoul parsing.
+ * Accepts "0x" prefix for hex or plain decimal.
+ *
+ * @param io          I/O context
+ * @param title       Title shown in the popup
+ * @param default_val Default value displayed in the prompt
+ * @param min_val     Minimum accepted value
+ * @param max_val     Maximum accepted value
+ * @param result      Output: parsed numeric value
+ * @return true if user submitted a valid number, false if cancelled/invalid
+ */
+bool ui_popup_number(const ui_popup_io_t *io,
+                     const char *title,
+                     uint32_t default_val,
+                     uint32_t min_val,
+                     uint32_t max_val,
+                     uint32_t *result);
+
+#endif /* UI_POPUP_H */

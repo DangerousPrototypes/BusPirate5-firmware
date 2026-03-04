@@ -18,9 +18,9 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
-#include "ui/ui_term.h"
-#include "ui/ui_toolbar.h"
 #include "ui/ui_file_picker.h"
+#include "ui/ui_popup.h"
+#include "ui/ui_app.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "fatfs/ff.h"
@@ -120,9 +120,6 @@ static void fp_write_buf(const char* buf, int len) {
 #define FP_ATTR_SIZE_SEL "\x1b[0;33;44m"   /* yellow on blue (size in selected row) */
 #define FP_ATTR_HINT     "\x1b[0;2m"       /* dim (hints/empty) */
 #define FP_ATTR_STATUS   "\x1b[0;30;47m"   /* black on white (status bar) */
-#define FP_ATTR_POPUP_BG "\x1b[0;37;44m"   /* white on blue (popup background) */
-#define FP_ATTR_POPUP_BD "\x1b[1;37;44m"   /* bold white on blue (popup border) */
-#define FP_ATTR_INPUT    "\x1b[0;1;37;40m" /* bold white on black (input field) */
 #define FP_ATTR_NEW_FILE "\x1b[0;32m"      /* green (new file entry) */
 #define FP_ATTR_NEW_SEL  "\x1b[0;32;44m"   /* green on blue (new file selected) */
 
@@ -278,167 +275,25 @@ static void fp_draw_screen(file_entry_t* entries, uint8_t file_count,
     fp_write_str(FP_ATTR_NORMAL);
 }
 
-/* ── Styled popup for filename input ────────────────────────────────── */
+/* ── Styled popup for filename input (delegates to ui_popup) ────────── */
 
-/**
- * Draw a centered popup box and prompt for a filename.
- * Returns true if user entered a name, false on Esc/empty.
- */
 static bool fp_popup_filename(char* file_buf, uint8_t buf_size) {
-    char input[13] = {0};
-    uint8_t pos = 0;
-
-    /* Popup dimensions */
-    int popup_w = 36;
-    int popup_h = 5;
-    int popup_left = (fp_cols - popup_w) / 2 + 1;
-    int popup_top  = (fp_rows - popup_h) / 2;
-    if (popup_left < 1) popup_left = 1;
-    if (popup_top < 2) popup_top = 2;
-
-    /* Input field geometry inside popup */
-    int field_row = popup_top + 3;
-    int field_col = popup_left + 3;
-    int field_width = popup_w - 6;
-    if (field_width > 12) field_width = 12;
-
-    /* Draw popup box */
-    /* Top border */
-    fp_goto(popup_top, popup_left);
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("+");
-    for (int i = 0; i < popup_w - 2; i++) fp_write_str("-");
-    fp_write_str("+");
-
-    /* Title row */
-    fp_goto(popup_top + 1, popup_left);
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("|");
-    fp_write_str(FP_ATTR_POPUP_BG);
-    const char* title = "  Enter filename (8.3)";
-    int title_len = (int)strlen(title);
-    fp_write_str(title);
-    for (int i = title_len; i < popup_w - 2; i++) fp_write_str(" ");
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("|");
-
-    /* Blank row */
-    fp_goto(popup_top + 2, popup_left);
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("|");
-    fp_write_str(FP_ATTR_POPUP_BG);
-    for (int i = 0; i < popup_w - 2; i++) fp_write_str(" ");
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("|");
-
-    /* Input field row */
-    fp_goto(popup_top + 3, popup_left);
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("|");
-    fp_write_str(FP_ATTR_POPUP_BG);
-    fp_write_str("  ");
-    fp_write_str(FP_ATTR_INPUT);
-    /* Draw input field background */
-    for (int i = 0; i < field_width; i++) fp_write_str(" ");
-    fp_write_str(FP_ATTR_POPUP_BG);
-    /* Pad rest */
-    for (int i = field_width + 2; i < popup_w - 2; i++) fp_write_str(" ");
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("|");
-
-    /* Hint row */
-    fp_goto(popup_top + 4, popup_left);
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("|");
-    fp_write_str(FP_ATTR_POPUP_BG "\x1b[2m");
-    const char* hint = "  Enter=OK  Esc=Cancel";
-    int hint_len = (int)strlen(hint);
-    fp_write_str(hint);
-    for (int i = hint_len; i < popup_w - 2; i++) fp_write_str(" ");
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("|");
-
-    /* Bottom border */
-    fp_goto(popup_top + 5, popup_left);
-    fp_write_str(FP_ATTR_POPUP_BD);
-    fp_write_str("+");
-    for (int i = 0; i < popup_w - 2; i++) fp_write_str("-");
-    fp_write_str("+");
-
-    /* Position cursor in input field */
-    fp_goto(field_row, field_col);
-    fp_write_str(FP_ATTR_INPUT);
-    fp_write_str("\x1b[?25h");  /* show cursor */
-
-    /* Input loop — raw byte read for character input */
-    for (;;) {
-        char c;
-        rx_fifo_get_blocking(&c);
-
-        if (c == '\r' || c == '\n') {
-            if (pos == 0) {
-                fp_write_str(FP_ATTR_NORMAL);
-                fp_write_str("\x1b[?25l");
-                return false;
-            }
-            input[pos] = 0;
-            strncpy(file_buf, input, buf_size - 1);
-            file_buf[buf_size - 1] = 0;
-            fp_write_str(FP_ATTR_NORMAL);
-            fp_write_str("\x1b[?25l");
-            return true;
-        }
-
-        if (c == 0x1b) {
-            fp_write_str(FP_ATTR_NORMAL);
-            fp_write_str("\x1b[?25l");
-            return false;
-        }
-
-        if (c == 0x7f || c == '\b') {
-            if (pos > 0) {
-                pos--;
-                /* Redraw field from current pos */
-                fp_goto(field_row, field_col);
-                fp_write_str(FP_ATTR_INPUT);
-                fp_write_buf(input, pos);
-                fp_write_str(" ");  /* erase last char */
-                /* Re-fill remaining */
-                for (int i = pos + 1; i < field_width; i++) fp_write_str(" ");
-                fp_goto(field_row, field_col + pos);
-            }
-            continue;
-        }
-
-        /* Accept printable ASCII for filenames */
-        if (pos < 12 && pos < buf_size - 1 && c >= 0x20 && c <= 0x7e) {
-            input[pos++] = c;
-            fp_write_buf(&c, 1);
-        }
-    }
+    ui_popup_io_t pio = {
+        .write_out = fp_write_fn,
+        .cols = fp_cols,
+        .rows = fp_rows,
+    };
+    return ui_popup_text_input(&pio, "Enter filename (8.3)", NULL,
+                               file_buf, buf_size > 13 ? 13 : buf_size,
+                               UI_INPUT_PRINT);
 }
 
-/* ── Standalone I/O wrappers ────────────────────────────────────────── */
+/* ── Standalone app scaffold ────────────────────────────────────────── */
 
-static vt100_key_state_t fp_standalone_keys;
-
-static int fp_standalone_read_blocking(char* c) {
-    rx_fifo_get_blocking(c);
-    return 1;
-}
-
-static int fp_standalone_read_try(char* c) {
-    return rx_fifo_try_get(c) ? 1 : 0;
-}
+static ui_app_t fp_standalone_app;
 
 static int fp_standalone_read_key(void) {
-    return vt100_key_read(&fp_standalone_keys);
-}
-
-static int fp_standalone_write(int fd, const void* buf, int count) {
-    (void)fd;
-    tx_fifo_write((const char*)buf, (uint32_t)count);
-    return count;
+    return ui_app_read_key(&fp_standalone_app);
 }
 
 /* ── Public API ─────────────────────────────────────────────────────── */
@@ -455,18 +310,11 @@ bool ui_file_pick(const char* ext,
     bool standalone = (io == NULL);
 
     if (standalone) {
-        fp_cols = (uint8_t)system_config.terminal_ansi_columns;
-        fp_rows = (uint8_t)system_config.terminal_ansi_rows;
-
-        toolbar_draw_prepare();
-        printf("\x1b[?1049h\x1b[r\x1b[2J\x1b[H");
-        { char d; while (rx_fifo_try_get(&d)) {} }
-
-        vt100_key_init(&fp_standalone_keys,
-                       fp_standalone_read_blocking,
-                       fp_standalone_read_try);
+        ui_app_open(&fp_standalone_app);
+        fp_cols        = fp_standalone_app.cols;
+        fp_rows        = fp_standalone_app.rows;
         fp_read_key_fn = fp_standalone_read_key;
-        fp_write_fn    = fp_standalone_write;
+        fp_write_fn    = ui_app_write_out_cb;
         fp_repaint_fn  = NULL;
     } else {
         fp_cols        = io->cols;
@@ -571,11 +419,7 @@ bool ui_file_pick(const char* ext,
 
     /* Cleanup standalone mode */
     if (standalone) {
-        { char d; while (rx_fifo_try_get(&d)) {} }
-        printf("\x1b[?1049l");
-        toolbar_apply_scroll_region();
-        ui_term_cursor_position(toolbar_scroll_bottom(), 0);
-        toolbar_draw_release();
+        ui_app_close(&fp_standalone_app);
     }
 
     return selected;

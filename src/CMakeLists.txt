@@ -472,6 +472,14 @@ set(buspirate_common
         ui/ui_file_picker.h
         ui/ui_progress_indicator.h
         ui/ui_progress_indicator.c
+        ui/ui_app.h
+        ui/ui_app.c
+        ui/ui_popup.h
+        ui/ui_popup.c
+        ui/ui_config_bar.h
+        ui/ui_config_bar.c
+        ui/ui_mem_gui.h
+        ui/ui_mem_gui.c
 
 
         # Debug

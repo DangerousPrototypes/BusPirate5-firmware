@@ -294,7 +294,7 @@ Several large mutable buffers are global (not `static`):
 | `src/usb_tx.c` | `bin_tx_buf[1024]` | 1,024 B + 1,024 alignment | Same |
 | `src/usb_tx.c` | `tx_tb_buf[1024]` | 1,024 B | Toolbar render buffer |
 | `src/usb_rx.c` | `rx_buf[128]`, `bin_rx_buf[128]` | 256 B | RX ring buffers |
-| `src/nand/spi_nand.c` | `page_main_and_oob[2176]` | 2,176 B | See §3.1 |
+| `src/nand/spi_nand.c` | `page_main_and_largest_oob_buffer[2176]` | 2,176 B | See §3.1 |
 | `src/pirate/storage.c` | `buf32[512]` | 512 B | Storage scratch buffer |
 | `src/platform/*.c` | `hw_adc_*[13]` × 3 | 130 B | ADC sample arrays |
 

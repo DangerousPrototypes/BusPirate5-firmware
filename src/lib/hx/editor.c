@@ -1576,30 +1576,7 @@ static struct editor* g_hx_editor = NULL;
 
 /* ── Menu definitions for the hex editor ──────────────────────────── */
 
-/* Action IDs — returned by vt100_menu_run() */
-enum {
-	HX_ACT_SAVE      = 1,
-	HX_ACT_QUIT      = 2,
-	HX_ACT_QUIT_NOSAVE = 3,
-	HX_ACT_UNDO      = 10,
-	HX_ACT_REDO      = 11,
-	HX_ACT_DEL       = 12,
-	HX_ACT_INC       = 13,
-	HX_ACT_DEC       = 14,
-	HX_ACT_MODE_INS  = 20,
-	HX_ACT_MODE_APP  = 21,
-	HX_ACT_MODE_REP  = 22,
-	HX_ACT_MODE_INSA = 23,
-	HX_ACT_MODE_APPA = 24,
-	HX_ACT_MODE_REPA = 25,
-	HX_ACT_SEARCH    = 30,
-	HX_ACT_NEXT      = 31,
-	HX_ACT_PREV      = 32,
-	HX_ACT_GOTO      = 33,
-	HX_ACT_GOTO_TOP  = 34,
-	HX_ACT_GOTO_END  = 35,
-	HX_ACT_HELP      = 40,
-};
+/* Action IDs — defined in editor.h, used by vt100_menu_run() */
 
 static const vt100_menu_item_t hx_file_items[] = {
 	{ "Save",          "^S",  HX_ACT_SAVE,       0 },
@@ -1668,7 +1645,7 @@ static void hx_menu_repaint(void) {
  * Process a menu action returned by vt100_menu_run().
  * Dispatches to the same editor functions as the keyboard shortcuts.
  */
-static void hx_menu_dispatch(struct editor* e, int action) {
+void hx_menu_dispatch(struct editor* e, int action) {
 	/* Block editing/search actions in paged mode */
 	if (e->paged) {
 		switch (action) {

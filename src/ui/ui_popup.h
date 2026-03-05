@@ -113,4 +113,71 @@ bool ui_popup_number(const ui_popup_io_t *io,
                      uint32_t max_val,
                      uint32_t *result);
 
+/* ── Progress / operation popup ─────────────────────────────────────── */
+
+/**
+ * @brief Live state for a persistent operation-progress popup.
+ *
+ * Allocated on-stack by the caller.  The popup draws a bordered box with:
+ *   Row 0: title (what operation is running)
+ *   Row 1: progress bar  [####          ] 34%
+ *   Row 2: message text (latest op_message)
+ *   Row 3: warning text (yellow, sticky)
+ *   Row 4: error text (red, sticky)
+ *   Row 5: result text (shown after finish, green/red)
+ *   Row 6: "Press any key..." hint
+ *
+ * All rows update in-place via the update functions below.
+ */
+typedef struct {
+    const ui_popup_io_t *io;
+    int left, top, width, height;
+    /* Row indices (terminal rows, 1-based) */
+    int row_title, row_progress, row_message, row_warning, row_error, row_result, row_hint;
+    uint32_t prog_cur, prog_total;
+    bool msg_set;    /**< true after first message drawn (locks the row) */
+    bool finished;   /**< true after _finish() is called */
+    bool success;
+} ui_popup_progress_t;
+
+/**
+ * @brief Open a progress popup.
+ *
+ * Draws the initial bordered box.  The caller then drives updates
+ * via the _set_* functions during the operation.
+ */
+void ui_popup_progress_open(ui_popup_progress_t *pp,
+                            const ui_popup_io_t *io,
+                            const char *title);
+
+/** Update the progress bar (0..total). */
+void ui_popup_progress_set_progress(ui_popup_progress_t *pp,
+                                    uint32_t current, uint32_t total);
+
+/** Update the message row (latest status text). */
+void ui_popup_progress_set_message(ui_popup_progress_t *pp, const char *msg);
+
+/** Set warning text (sticky — persists until replaced). */
+void ui_popup_progress_set_warning(ui_popup_progress_t *pp, const char *msg);
+
+/** Set error text (sticky). */
+void ui_popup_progress_set_error(ui_popup_progress_t *pp, const char *msg);
+
+/**
+ * @brief Mark the operation as finished and show a result line.
+ *
+ * Changes the popup border to green (success) or red (failure) and
+ * adds "Press any key..." at the bottom.
+ */
+void ui_popup_progress_finish(ui_popup_progress_t *pp,
+                              bool success, const char *result_msg);
+
+/**
+ * @brief Block until the user presses a key, then return.
+ *
+ * Call after _finish().  Returns true if the user pressed Escape
+ * ("cancel"), false for any other key ("ok / acknowledge").
+ */
+bool ui_popup_progress_wait(ui_popup_progress_t *pp);
+
 #endif /* UI_POPUP_H */

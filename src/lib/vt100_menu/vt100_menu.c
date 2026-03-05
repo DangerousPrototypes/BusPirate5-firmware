@@ -391,7 +391,7 @@ void vt100_menu_draw_bar(const vt100_menu_state_t* state) {
     menu_cursor_hide(state);
     draw_bar(state);
     menu_cursor_restore(state);
-    menu_cursor_show(state);
+    /* Do NOT re-show cursor — caller manages visibility */
 }
 
 void vt100_menu_erase(const vt100_menu_state_t* state) {

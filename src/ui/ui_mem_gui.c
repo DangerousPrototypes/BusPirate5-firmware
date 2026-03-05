@@ -64,6 +64,9 @@ typedef struct {
     const char *status_msg;
     const char *result_msg;
 
+    /* Progress popup (used during execute) */
+    ui_popup_progress_t progress_popup;
+
     /* Hex editor */
     struct editor *hex_ed;
     uint8_t       *arena;
@@ -74,66 +77,24 @@ static mem_gui_state_t gui;
 /** Button-triggered execute request (set via ui_mem_gui_request_execute). */
 static bool exec_requested;
 
-/* ── Operation-area rendering (rows 4–7) ────────────────────────────── */
+/* ── Operation callbacks (route into progress popup) ────────────────── */
 
-#define OP_ROW_MSG  4
-#define OP_ROW_PROG 5
-#define OP_ROW_WARN 6
-#define OP_ROW_ERR  7
-
-static void op_clear(void *ctx) {
-    (void)ctx;
-    char buf[16];
-    for (int r = OP_ROW_MSG; r <= OP_ROW_ERR + 1; r++) {
-        int n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[K", r);
-        ui_app_write_buf(buf, n);
-    }
-}
-
+static void op_clear(void *ctx)                              { (void)ctx; }
 static void op_progress(uint32_t cur, uint32_t total, void *ctx) {
     (void)ctx;
-    char buf[120];
-    int bar_w = (gui.app.cols > 30) ? gui.app.cols - 30 : 20;
-    float pct = (total > 0) ? (float)cur / (float)total : 0.0f;
-    int filled = (int)(pct * bar_w);
-
-    int n = snprintf(buf, sizeof(buf), "\x1b[%d;3H\x1b[0;36mProgress: [", OP_ROW_PROG);
-    ui_app_write_buf(buf, n);
-    for (int i = 0; i < bar_w; i++) {
-        ui_app_write_str(i < filled ? "#" : " ");
-    }
-    n = snprintf(buf, sizeof(buf), "] %3d%%\x1b[0m", (int)(pct * 100));
-    ui_app_write_buf(buf, n);
+    ui_popup_progress_set_progress(&gui.progress_popup, cur, total);
 }
-
 static void op_message(const char *msg, void *ctx) {
     (void)ctx;
-    char buf[16];
-    int n = snprintf(buf, sizeof(buf), "\x1b[%d;3H\x1b[K\x1b[0;1m", OP_ROW_MSG);
-    ui_app_write_buf(buf, n);
-    while (*msg == '\r' || *msg == '\n') msg++;
-    ui_app_write_str(msg);
-    ui_app_write_str("\x1b[0m");
+    ui_popup_progress_set_message(&gui.progress_popup, msg);
 }
-
 static void op_error(const char *msg, void *ctx) {
     (void)ctx;
-    char buf[16];
-    int n = snprintf(buf, sizeof(buf), "\x1b[%d;3H\x1b[K\x1b[0;1;31m", OP_ROW_ERR);
-    ui_app_write_buf(buf, n);
-    while (*msg == '\r' || *msg == '\n') msg++;
-    ui_app_write_str(msg);
-    ui_app_write_str("\x1b[0m");
+    ui_popup_progress_set_error(&gui.progress_popup, msg);
 }
-
 static void op_warning(const char *msg, void *ctx) {
     (void)ctx;
-    char buf[16];
-    int n = snprintf(buf, sizeof(buf), "\x1b[%d;3H\x1b[K\x1b[0;33m", OP_ROW_WARN);
-    ui_app_write_buf(buf, n);
-    while (*msg == '\r' || *msg == '\n') msg++;
-    ui_app_write_str(msg);
-    ui_app_write_str("\x1b[0m");
+    ui_popup_progress_set_warning(&gui.progress_popup, msg);
 }
 
 static const ui_mem_gui_ops_t gui_ops = {
@@ -161,11 +122,11 @@ static void gui_refresh_screen(void) {
     {
         const char *hint;
         if (gui.focus == FOCUS_HEX) {
-            hint = "Tab=Config  F10=Menu  :q=Quit editor";
+            hint = "Tab=Config  :help=Help  :q=Quit editor";
         } else if (gui.status_msg) {
             hint = gui.status_msg;
         } else {
-            hint = "Tab=Next  Up/Dn=Change  Enter=Select  F10=Menu";
+            hint = "L/R=Next  Up/Dn=Change  Enter=Select  Tab=Editor";
         }
         int hlen = (int)strlen(hint);
         int pad = gui.app.cols - hlen - 4;
@@ -202,7 +163,7 @@ static void gui_refresh_screen(void) {
         }
     }
 
-    ui_app_write_str("\x1b[?25h"); /* show cursor */
+    /* Cursor stays hidden — caller manages visibility */
 }
 
 static void gui_repaint_cb(void) {
@@ -217,12 +178,31 @@ static void gui_repaint_cb(void) {
 enum {
     ACT_OPT_EXECUTE = 210,
     ACT_OPT_QUIT    = 211,
+
+    /* Framework-level editor actions */
+    ACT_HX_FOCUS    = 250,
+
+    /* Hex editor actions — offset to avoid app action ID conflicts */
+    ACT_HX_BASE     = 300,
 };
 
-static vt100_menu_item_t opt_items[4];
+static vt100_menu_item_t opt_items[8];
 
 static vt100_menu_def_t build_options_menu(void) {
     uint8_t idx = 0;
+
+    /* Prepend application-specific option items (e.g. "I2C Address") */
+    if (gui.config->option_items && gui.config->option_item_count > 0) {
+        for (uint8_t i = 0; i < gui.config->option_item_count && idx < 5; i++) {
+            opt_items[idx++] = gui.config->option_items[i];
+        }
+        /* Separator between app items and framework items */
+        opt_items[idx].label     = NULL;
+        opt_items[idx].shortcut  = NULL;
+        opt_items[idx].action_id = 0;
+        opt_items[idx].flags     = MENU_ITEM_SEPARATOR;
+        idx++;
+    }
 
     bool ready = gui.config->config_ready
                ? gui.config->config_ready(gui.config->ctx)
@@ -248,6 +228,40 @@ static vt100_menu_def_t build_options_menu(void) {
     idx++;
 
     return (vt100_menu_def_t){ "Options", opt_items, idx };
+}
+
+/* ── Editor menu builder (hex commands, always visible) ─────────────── */
+
+static vt100_menu_item_t editor_items[18];
+
+/**
+ * Build the "Editor" dropdown.  Items are always present but disabled
+ * when the hex editor has no content loaded.
+ */
+static vt100_menu_def_t build_editor_menu(void) {
+    bool has_content = gui.hex_ed && gui.hex_ed->contents;
+    bool focused     = has_content && gui.focus == FOCUS_HEX;
+    uint8_t dc = has_content ? 0 : MENU_ITEM_DISABLED; /* content gate */
+    uint8_t df = focused     ? 0 : MENU_ITEM_DISABLED; /* focus gate  */
+    uint8_t idx = 0;
+
+    editor_items[idx++] = (vt100_menu_item_t){ "Focus editor",  "Tab",  ACT_HX_FOCUS,                   dc };
+    editor_items[idx++] = (vt100_menu_item_t){ NULL, NULL, 0, MENU_ITEM_SEPARATOR };
+    editor_items[idx++] = (vt100_menu_item_t){ "Undo",          "u",    ACT_HX_BASE + HX_ACT_UNDO,     df };
+    editor_items[idx++] = (vt100_menu_item_t){ "Redo",          "^R",   ACT_HX_BASE + HX_ACT_REDO,     df };
+    editor_items[idx++] = (vt100_menu_item_t){ NULL, NULL, 0, MENU_ITEM_SEPARATOR };
+    editor_items[idx++] = (vt100_menu_item_t){ "Insert hex",    "i",    ACT_HX_BASE + HX_ACT_MODE_INS, df };
+    editor_items[idx++] = (vt100_menu_item_t){ "Replace hex",   "r",    ACT_HX_BASE + HX_ACT_MODE_REP, df };
+    editor_items[idx++] = (vt100_menu_item_t){ "Insert ASCII",  "I",    ACT_HX_BASE + HX_ACT_MODE_INSA,df };
+    editor_items[idx++] = (vt100_menu_item_t){ "Replace ASCII", "R",    ACT_HX_BASE + HX_ACT_MODE_REPA,df };
+    editor_items[idx++] = (vt100_menu_item_t){ NULL, NULL, 0, MENU_ITEM_SEPARATOR };
+    editor_items[idx++] = (vt100_menu_item_t){ "Search",        "/",    ACT_HX_BASE + HX_ACT_SEARCH,   df };
+    editor_items[idx++] = (vt100_menu_item_t){ "Next match",    "n",    ACT_HX_BASE + HX_ACT_NEXT,     df };
+    editor_items[idx++] = (vt100_menu_item_t){ "Go to offset",  ":",    ACT_HX_BASE + HX_ACT_GOTO,     df };
+    editor_items[idx++] = (vt100_menu_item_t){ NULL, NULL, 0, MENU_ITEM_SEPARATOR };
+    editor_items[idx++] = (vt100_menu_item_t){ "Help",          ":help",ACT_HX_BASE + HX_ACT_HELP,     dc };
+
+    return (vt100_menu_def_t){ "Editor", editor_items, idx };
 }
 
 /* ── Execute operation ──────────────────────────────────────────────── */
@@ -288,14 +302,18 @@ static void gui_execute(void) {
         }
     }
 
-    /* Clear content area */
-    op_clear(NULL);
+    /* Open a progress popup that persists for the entire operation */
+    ui_popup_io_t pio = {
+        .write_out = ui_app_write_out_cb,
+        .cols = gui.app.cols,
+        .rows = gui.app.rows,
+    };
+    ui_popup_progress_open(&gui.progress_popup, &pio, cfg->title);
 
     /* Run the operation */
     fala_start_hook();
 
     const char *result = NULL;
-    /* Cast away const for the mutable ops.ctx field */
     ui_mem_gui_ops_t ops = gui_ops;
     ops.ctx = cfg->ctx;
 
@@ -312,13 +330,23 @@ static void gui_execute(void) {
     gui.result_msg = result ? result : (ok ? "Success :)" : "Operation FAILED");
     gui.status_msg = NULL;
     gui.executed = true;
+
+    /* Show result in the popup and wait for user dismissal */
+    ui_popup_progress_finish(&gui.progress_popup, ok, gui.result_msg);
+    ui_popup_progress_wait(&gui.progress_popup);
+
+    /* Repaint full screen after popup closes */
+    gui_refresh_screen();
+    if (gui.hex_ed) editor_refresh_screen(gui.hex_ed);
 }
 
 /* ── Key handler ────────────────────────────────────────────────────── */
 
 static void gui_process_key(int key) {
-    /* Global keys */
-    if (key == VT100_KEY_CTRL_Q || key == VT100_KEY_ESC) {
+    /* Global keys — Ctrl-Q quits; ESC is intentionally ignored here
+     * because it is also the prefix/cancel key for popups and the menu
+     * bar, so a stray press would discard the user's work. */
+    if (key == VT100_KEY_CTRL_Q) {
         gui.running = false;
         return;
     }
@@ -407,15 +435,18 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
         /* Build menus */
         vt100_menu_def_t options_menu = build_options_menu();
 
-        /* Assemble menu array: extras + Options */
+        /* Assemble menu array: extras + Editor + Options */
         uint8_t menu_count = 0;
-        vt100_menu_def_t menus[UI_MEM_GUI_MAX_EXTRA_MENUS + 1];
+        vt100_menu_def_t menus[UI_MEM_GUI_MAX_EXTRA_MENUS + 2];
 
         if (config->extra_menus && config->extra_menu_count > 0) {
             for (uint8_t i = 0; i < config->extra_menu_count &&
                      i < UI_MEM_GUI_MAX_EXTRA_MENUS; i++) {
                 menus[menu_count++] = config->extra_menus[i];
             }
+        }
+        if (config->enable_hex_editor) {
+            menus[menu_count++] = build_editor_menu();
         }
         menus[menu_count++] = options_menu;
 
@@ -435,10 +466,10 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
             editor_refresh_screen(gui.hex_ed);
         }
 
-        /* Hide cursor when on config bar */
-        if (gui.focus != FOCUS_HEX) {
-            ui_app_write_str("\x1b[?25l");
-        }
+        /* Cursor is always hidden — hex editor uses reverse-video
+         * to highlight the active byte; command/search modes in the
+         * hex editor show cursor themselves via their charbuf. */
+        ui_app_write_str("\x1b[?25l");
 
         /* Draw passive menu bar */
         vt100_menu_draw_bar(&menu_state);
@@ -462,16 +493,23 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
                 gui_execute();
             } else if (action_id == ACT_OPT_QUIT) {
                 gui.running = false;
+            } else if (action_id == ACT_HX_FOCUS && gui.hex_ed && gui.hex_ed->contents) {
+                gui.focus = FOCUS_HEX;
+            } else if (action_id >= ACT_HX_BASE && gui.hex_ed) {
+                /* Hex editor menu action — strip offset, dispatch */
+                hx_menu_dispatch(gui.hex_ed, action_id - ACT_HX_BASE);
+                if (gui.hex_ed->quit_requested) {
+                    gui.hex_ed->quit_requested = false;
+                    gui.focus = FOCUS_BAR;
+                }
             } else if (action_id > 0 && gui.config->menu_dispatch) {
                 gui.config->menu_dispatch(gui.config->ctx, action_id);
             } else if (action_id == MENU_RESULT_PASSTHROUGH && menu_state.unhandled_key) {
                 ui_app_unget_key(&gui.app, menu_state.unhandled_key);
             }
-            /* Forward extra menu action IDs to application dispatch?
-             * Not needed — extra menus can trigger field changes via
-             * the action IDs which the app processes in field callbacks. */
 
             ui_app_write_str("\x1b[0m");
+            ui_app_write_str("\x1b[?25l"); /* hide cursor before redraw */
             gui_refresh_screen();
             if (gui.hex_ed) {
                 editor_refresh_screen(gui.hex_ed);
@@ -498,6 +536,33 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
 
 void ui_mem_gui_request_execute(void) {
     exec_requested = true;
+}
+
+/* ── Public helpers for app callbacks ────────────────────────────────── */
+
+bool ui_mem_gui_browse_file(char *buf, uint8_t buf_size) {
+    ui_file_picker_io_t fpio = {
+        .read_key  = ui_app_read_key_static,
+        .write_out = ui_app_write_out_cb,
+        .repaint   = gui_repaint_cb,
+        .cols      = gui.app.cols,
+        .rows      = gui.app.rows,
+    };
+    bool ok = ui_file_pick(NULL, buf, buf_size, &fpio);
+    gui_repaint_cb();
+    return ok;
+}
+
+bool ui_mem_gui_popup_number(const char *title, uint32_t current,
+                             uint32_t min, uint32_t max, uint32_t *result) {
+    ui_popup_io_t pio = {
+        .write_out = ui_app_write_out_cb,
+        .cols = gui.app.cols,
+        .rows = gui.app.rows,
+    };
+    bool ok = ui_popup_number(&pio, title, current, min, max, result);
+    gui_repaint_cb();
+    return ok;
 }
 
 /* ── Static read_key adapter ────────────────────────────────────────── */

@@ -37,6 +37,9 @@ enum {
 
     /* File menu */
     ACT_FILE_BROWSE = 100,
+
+    /* Options menu (app-injected) */
+    ACT_I2C_ADDR = 200,
 };
 
 /* ── App context ────────────────────────────────────────────────────── */
@@ -90,6 +93,13 @@ static void set_file(void *c, const char *s) {
     ((i2c_ctx_t *)c)->file_name[12] = '\0';
 }
 
+static void on_file_change(void *c) {
+    i2c_ctx_t *x = (i2c_ctx_t *)c;
+    if (x->file_name[0]) {
+        hx_embed_load(x->file_name);
+    }
+}
+
 /* File field is only visible when action needs a file (write/read/verify). */
 static bool file_visible(void *c) {
     int a = ((i2c_ctx_t *)c)->action;
@@ -135,6 +145,7 @@ static const ui_field_def_t i2c_fields[FLD_COUNT] = {
         .get_str = get_file,
         .set_str = set_file,
         .visible = file_visible,
+        .on_change = on_file_change,
     },
     [FLD_ADDR] = {
         .type = UI_FIELD_NUMBER,
@@ -213,6 +224,10 @@ static vt100_menu_item_t file_menu_items[] = {
     { "Browse storage...", NULL, ACT_FILE_BROWSE, 0 },
 };
 
+static const vt100_menu_item_t i2c_option_items[] = {
+    { "I2C Address", NULL, ACT_I2C_ADDR, 0 },
+};
+
 /* ── Menu dispatch ──────────────────────────────────────────────────── */
 
 static void menu_dispatch(void *c, int action_id) {
@@ -231,11 +246,24 @@ static void menu_dispatch(void *c, int action_id) {
         return;
     }
 
-    /* File browse — the file picker is already handled by the config bar's
-     * FILE field.  This menu item just focuses the file field so the picker
-     * opens.  We set file_name to "" to trigger a re-pick. */
+    /* File browse — open the file picker and load result into hex editor */
     if (action_id == ACT_FILE_BROWSE) {
-        x->file_name[0] = '\0';
+        char file_buf[13] = {0};
+        if (ui_mem_gui_browse_file(file_buf, sizeof(file_buf))) {
+            strncpy(x->file_name, file_buf, 12);
+            x->file_name[12] = '\0';
+            hx_embed_load(x->file_name);
+        }
+        return;
+    }
+
+    /* I2C Address — open number popup */
+    if (action_id == ACT_I2C_ADDR) {
+        uint32_t result;
+        if (ui_mem_gui_popup_number("I2C Address (7-bit)",
+                                    x->i2c_addr, 0, 0x7F, &result)) {
+            x->i2c_addr = (uint8_t)result;
+        }
         return;
     }
 }
@@ -429,6 +457,8 @@ bool eeprom_i2c_gui(const struct eeprom_device_t *devices,
         .config_ready      = cfg_ready,
         .post_execute_load = post_exec_load,
         .menu_dispatch     = menu_dispatch,
+        .option_items      = i2c_option_items,
+        .option_item_count = 1,
         .enable_hex_editor = true,
         .ctx               = &ctx,
     };

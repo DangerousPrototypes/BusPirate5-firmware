@@ -154,15 +154,18 @@ void ui_config_bar_draw(ui_config_bar_t *bar) {
         bar->focused = find_next_visible(bar, bar->focused, +1);
     }
 
-    /* Position cursor at bar row, clear line */
-    n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[0m\x1b[K", bar->bar_row);
+    /* Position cursor at bar row, reset attributes (no clear — avoids flicker) */
+    n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[0m", bar->bar_row);
     bar_write_buf(bar, buf, n);
 
-    /* Draw each visible field */
+    /* Draw each visible field (overwrites old content in place) */
     for (uint8_t i = 0; i < bar->field_count; i++) {
         if (!field_visible(bar, i)) continue;
         draw_field(bar, &bar->fields[i], i == bar->focused);
     }
+
+    /* Erase any trailing remnant from a previous wider draw */
+    bar_write(bar, "\x1b[K");
 }
 
 /* ── Key handling ───────────────────────────────────────────────────── */
@@ -231,6 +234,7 @@ static void field_activate(ui_config_bar_t *bar, const ui_field_def_t *f) {
                             f->number.popup_title ? f->number.popup_title : "Enter value",
                             val, f->number.min, f->number.max, &result)) {
             if (f->set_int) f->set_int(bar->ctx, (int)result);
+            if (f->on_change) f->on_change(bar->ctx);
         }
         if (bar->repaint) bar->repaint();
         break;
@@ -249,6 +253,7 @@ static void field_activate(ui_config_bar_t *bar, const ui_field_def_t *f) {
             char file_buf[13] = {0};
             if (ui_file_pick(f->file.ext_filter, file_buf, sizeof(file_buf), &fpio)) {
                 if (f->set_str) f->set_str(bar->ctx, file_buf);
+                if (f->on_change) f->on_change(bar->ctx);
             }
             if (bar->repaint) bar->repaint();
         }

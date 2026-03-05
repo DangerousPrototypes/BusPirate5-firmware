@@ -38,7 +38,7 @@
 /* ── Result message helpers ─────────────────────────────────────────── */
 
 /** Maximum number of extra menus the application can provide. */
-#define UI_MEM_GUI_MAX_EXTRA_MENUS 4
+#define UI_MEM_GUI_MAX_EXTRA_MENUS 5
 
 /* ── Operation status feedback ──────────────────────────────────────── */
 
@@ -140,6 +140,12 @@ typedef struct {
      */
     void (*menu_dispatch)(void *ctx, int action_id);
 
+    /** Optional: extra items to prepend in the Options menu.
+     *  Useful for per-application config actions (e.g. "I2C Address").
+     *  Set to NULL if not needed. */
+    const vt100_menu_item_t *option_items;
+    uint8_t                  option_item_count;
+
     /** Enable embedded hex editor (content rows 4+ when no operation running). */
     bool enable_hex_editor;
 
@@ -167,5 +173,30 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config);
  * main-loop iteration.
  */
 void ui_mem_gui_request_execute(void);
+
+/**
+ * @brief Open a file picker within the framework's I/O context.
+ *
+ * Callable from menu_dispatch or other app callbacks while the
+ * framework is running.
+ *
+ * @param buf       Output buffer for the selected filename.
+ * @param buf_size  Size of buf (at least 13 for 8.3 names).
+ * @return true if a file was selected.
+ */
+bool ui_mem_gui_browse_file(char *buf, uint8_t buf_size);
+
+/**
+ * @brief Open a number input popup within the framework's I/O context.
+ *
+ * @param title   Popup title.
+ * @param current Current value (pre-filled).
+ * @param min     Minimum allowed value.
+ * @param max     Maximum allowed value.
+ * @param result  Output: the entered value.
+ * @return true if the user confirmed a value.
+ */
+bool ui_mem_gui_popup_number(const char *title, uint32_t current,
+                             uint32_t min, uint32_t max, uint32_t *result);
 
 #endif /* UI_MEM_GUI_H */

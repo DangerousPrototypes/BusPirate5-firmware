@@ -87,6 +87,10 @@ typedef struct ui_field_def {
     /** Visibility predicate. NULL = always visible.
      *  When false, the field is hidden and skipped during focus navigation. */
     bool (*visible)(void *ctx);
+
+    /** Optional change callback — called after a value is committed
+     *  (e.g. file selected, number entered via popup, spinner/checkbox toggled). */
+    void (*on_change)(void *ctx);
 } ui_field_def_t;
 
 /* ── Config bar state ───────────────────────────────────────────────── */

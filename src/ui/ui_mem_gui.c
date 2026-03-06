@@ -114,36 +114,13 @@ static void gui_refresh_screen(void) {
 
     ui_app_write_str("\x1b[?25l"); /* hide cursor */
 
-    /* Row 2: config bar */
+    /* Row 2: config bar (blue toolbar) */
+    gui.bar.active = (gui.focus == FOCUS_BAR);
     ui_config_bar_draw(&gui.bar);
 
-    /* Row 3: separator with context hints */
-    ui_app_write_str("\x1b[3;1H\x1b[0;2m");
-    {
-        const char *hint;
-        if (gui.focus == FOCUS_HEX) {
-            hint = "Tab=Config  :help=Help  :q=Quit editor";
-        } else if (gui.status_msg) {
-            hint = gui.status_msg;
-        } else {
-            hint = "L/R=Next  Up/Dn=Change  Enter=Select  Tab=Editor";
-        }
-        int hlen = (int)strlen(hint);
-        int pad = gui.app.cols - hlen - 4;
-        if (pad < 2) pad = 2;
-        ui_app_write_str("--");
-        for (int i = 0; i < pad / 2; i++) ui_app_write_str("-");
-        ui_app_write_str(" ");
-        ui_app_write_str(hint);
-        ui_app_write_str(" ");
-        int drawn = 2 + pad / 2 + 1 + hlen + 1;
-        for (int i = drawn; i < gui.app.cols; i++) ui_app_write_str("-");
-    }
-    ui_app_write_str("\x1b[0m");
-
-    /* Content area (rows 4+) — only draw fallback when hex editor is not active */
+    /* Content area (rows 3+) — only draw fallback when hex editor is not active */
     if (!gui.hex_ed) {
-        for (int r = 4; r < gui.app.rows; r++) {
+        for (int r = 3; r < gui.app.rows; r++) {
             n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[K", r);
             ui_app_write_buf(buf, n);
         }
@@ -152,13 +129,13 @@ static void gui_refresh_screen(void) {
                    ? gui.config->config_ready(gui.config->ctx)
                    : true;
         if (!ready) {
-            ui_app_write_str("\x1b[5;3H\x1b[0;33m-> Configure all fields, then Execute\x1b[0m");
+            ui_app_write_str("\x1b[4;3H\x1b[0;33m-> Configure all fields, then Execute\x1b[0m");
         } else {
-            ui_app_write_str("\x1b[5;3H\x1b[0;1;32mReady! "
+            ui_app_write_str("\x1b[4;3H\x1b[0;1;32mReady! "
                              "\x1b[0mTab to [Execute] and press Enter.");
         }
         if (gui.result_msg) {
-            n = snprintf(buf, sizeof(buf), "\x1b[7;3H\x1b[0;32m%s\x1b[0m", gui.result_msg);
+            n = snprintf(buf, sizeof(buf), "\x1b[6;3H\x1b[0;32m%s\x1b[0m", gui.result_msg);
             ui_app_write_buf(buf, n);
         }
     }
@@ -166,11 +143,33 @@ static void gui_refresh_screen(void) {
     /* Cursor stays hidden — caller manages visibility */
 }
 
+/** Draw hint bar on the bottom row of the terminal. */
+static void draw_hint_bar(void) {
+    char buf[32];
+    int n;
+    const char *hint;
+
+    if (gui.focus == FOCUS_HEX) {
+        hint = "Tab=Config  :help=Help  :q=Quit editor";
+    } else if (gui.status_msg) {
+        hint = gui.status_msg;
+    } else {
+        hint = "L/R=Next  Up/Dn=Change  Enter=Select  Tab=Editor";
+    }
+
+    n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[0;37;44m", gui.app.rows);
+    ui_app_write_buf(buf, n);
+    ui_app_write_str(hint);
+    ui_app_write_str("\x1b[K\x1b[0m");
+}
+
 static void gui_repaint_cb(void) {
     gui_refresh_screen();
     if (gui.hex_ed) {
+        gui.hex_ed->cursor_hidden = (gui.focus != FOCUS_HEX);
         editor_refresh_screen(gui.hex_ed);
     }
+    draw_hint_bar();
 }
 
 /* ── Options menu builder ───────────────────────────────────────────── */
@@ -296,8 +295,7 @@ static void gui_execute(void) {
                               UI_POPUP_DANGER)) {
             gui.result_msg = "Aborted by user.";
             gui.status_msg = NULL;
-            gui_refresh_screen();
-            if (gui.hex_ed) editor_refresh_screen(gui.hex_ed);
+            gui_repaint_cb();
             return;
         }
     }
@@ -336,8 +334,7 @@ static void gui_execute(void) {
     ui_popup_progress_wait(&gui.progress_popup);
 
     /* Repaint full screen after popup closes */
-    gui_refresh_screen();
-    if (gui.hex_ed) editor_refresh_screen(gui.hex_ed);
+    gui_repaint_cb();
 }
 
 /* ── Key handler ────────────────────────────────────────────────────── */
@@ -416,16 +413,26 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
 
     /* Allocate arena and init hex editor */
     if (config->enable_hex_editor) {
-        gui.arena = mem_alloc(BIG_BUFFER_SIZE, BP_BIG_BUFFER_EDITOR);
+        if (config->arena_buf) {
+            /* App pre-allocated the big buffer and carved out scratch */
+            gui.arena = config->arena_buf;
+            hx_arena_init(gui.arena, config->arena_size);
+        } else {
+            gui.arena = mem_alloc(BIG_BUFFER_SIZE, BP_BIG_BUFFER_EDITOR);
+            if (gui.arena)
+                hx_arena_init(gui.arena, BIG_BUFFER_SIZE);
+        }
         if (gui.arena) {
-            hx_arena_init(gui.arena, BIG_BUFFER_SIZE);
             int hx_exit = setjmp(hx_exit_jmpbuf);
             if (hx_exit != 0) {
                 gui.hex_ed = NULL;
                 hx_cleanup();
                 gui.status_msg = "Hex editor error (out of memory?)";
             } else {
-                gui.hex_ed = hx_embed_init(5); /* 3 chrome rows + 2 hx header rows */
+                gui.hex_ed = hx_embed_init(4); /* 2 chrome rows + 2 hx header rows */
+                /* Reserve the last terminal row for the hint bar so it
+                 * doesn't overwrite the hex editor's status/command line. */
+                gui.hex_ed->screen_rows -= 1;
             }
         }
     }
@@ -463,8 +470,10 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
 
         /* Render hex editor content area */
         if (gui.hex_ed) {
+            gui.hex_ed->cursor_hidden = (gui.focus != FOCUS_HEX);
             editor_refresh_screen(gui.hex_ed);
         }
+        draw_hint_bar();
 
         /* Cursor is always hidden — hex editor uses reverse-video
          * to highlight the active byte; command/search modes in the
@@ -510,10 +519,7 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
 
             ui_app_write_str("\x1b[0m");
             ui_app_write_str("\x1b[?25l"); /* hide cursor before redraw */
-            gui_refresh_screen();
-            if (gui.hex_ed) {
-                editor_refresh_screen(gui.hex_ed);
-            }
+            gui_repaint_cb();
         }
     }
 
@@ -522,7 +528,7 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
         hx_cleanup();
         gui.hex_ed = NULL;
     }
-    if (gui.arena) {
+    if (gui.arena && !config->arena_buf) {
         mem_free(gui.arena);
         gui.arena = NULL;
     }

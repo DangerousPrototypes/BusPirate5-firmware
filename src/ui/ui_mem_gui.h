@@ -151,6 +151,16 @@ typedef struct {
 
     /** Application context passed to all callbacks and field accessors. */
     void *ctx;
+
+    /** Optional: pre-allocated arena buffer.
+     *  If non-NULL, the framework uses this memory for the hex editor
+     *  arena instead of calling mem_alloc().  The app is responsible
+     *  for calling mem_alloc()/mem_free() around ui_mem_gui_run().
+     *  This lets the app carve scratch space (ctx, menus, etc.) from
+     *  the start of the big buffer while the hex editor gets the rest.
+     *  Set arena_buf=NULL to let the framework allocate automatically. */
+    uint8_t *arena_buf;
+    size_t   arena_size;
 } ui_mem_gui_config_t;
 
 /* ── Public API ─────────────────────────────────────────────────────── */

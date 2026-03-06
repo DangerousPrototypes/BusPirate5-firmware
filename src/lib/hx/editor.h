@@ -78,6 +78,7 @@ struct editor {
 	struct action_list* undo_list; // tail of the list
 
 	bool quit_requested; // clean exit requested (set by :q, Ctrl+Q, menu Quit)
+	bool cursor_hidden;  // when true, suppress reverse-video cursor highlight
 #ifdef BUSPIRATE
 	bool menu_pending;  // F10 was pressed, main loop should open menu
 

@@ -138,6 +138,7 @@ set(buspirate_common
         pirate/amux.c
         pirate/rgb.h
         pirate/rgb.c
+        pirate/hardfault.c
         pirate/intercore_helpers.c
         pirate/file.h 
         pirate/file.c

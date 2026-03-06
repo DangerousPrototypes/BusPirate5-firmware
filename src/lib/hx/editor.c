@@ -37,6 +37,18 @@
 #define E_PAGE_OFF(e)  (0u)
 #endif
 
+/* Color pallet definition */
+#define HEXEDIT_ADDRESS_BOLD "\x1b[1;0m"
+#define HEXEDIT_ADDRESS_PADDING "\x1b[2;0m"
+#define HEXEDIT_BYTES_PRINTABLE  "\x1b[38;2;" BP_COLOR_NUM_FLOAT_TEXT "m" //"\x1b[38;5;32m" //"\x1b[1;34m"
+#define HEXEDIT_BYTES_NONPRINTABLE "\x1b[0m"
+#define HEXEDIT_BYTES_CURSOR_PRINTABLE   "\x1b[7;1;38;2;" BP_COLOR_NUM_FLOAT_TEXT "m"
+#define HEXEDIT_BYTES_CURSOR_NONPRINTABLE "\x1b[7;1;97m"
+#define HEXEDIT_ASCII_PRINTABLE "\x1b[38;2;" BP_COLOR_INFO_TEXT "m" //"\x1b[33m"
+#define HEXEDIT_ASCII_NONPRINTABLE "\x1b[1;0m" //"\x1b[36m"
+#define HEXEDIT_ASCII_CURSOR_PRINTABLE "\x1b[7;1;38;2;" BP_COLOR_INFO_TEXT "m" 
+#define HEXEDIT_ASCII_CURSOR_NONPRINTABLE "\x1b[7;1;97m"
+
 /* Hex column attribute states (state-tracked to minimise VT100 output) */
 #define HX_ATTR_NONE   0  /* default / after \x1b[0m */
 #define HX_ATTR_PRINT  1  /* \x1b[1;34m  — printable byte (bold blue) */
@@ -143,11 +155,13 @@ void editor_openfile(struct editor* e, const char* filename) {
 	strncpy(e->filename, filename, strlen(filename) + 1);
 
 	/* ── Paged mode for large files ── */
-	if ((unsigned int)fsize > HX_PAGED_THRESHOLD) {
+	size_t arena_cap = hx_arena_capacity();
+	size_t paged_threshold = arena_cap * 9 / 10;
+	if ((unsigned int)fsize > paged_threshold) {
 		hx_file_close_read();  /* close; page loads use hx_file_read_at */
 		e->paged = true;
 		e->file_size = (unsigned int)fsize;
-		e->page_size = HX_PAGE_SIZE;
+		e->page_size = (arena_cap / 2 > HX_PAGE_SIZE) ? HX_PAGE_SIZE : arena_cap / 2;
 		e->page_offset = 0;
 
 		/* Keep a copy of the path for page reloads */
@@ -503,7 +517,7 @@ void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset
 
 		char c = e->contents[offset - pg];
 		int desired;
-		if (rownum == e->cursor_y && cc == e->cursor_x) {
+		if (!e->cursor_hidden && rownum == e->cursor_y && cc == e->cursor_x) {
 			desired = isprint(c) ? HX_ATTR_A_CURSOR_P : HX_ATTR_A_CURSOR;
 		} else if (isprint(c)) {
 			desired = HX_ATTR_A_PRINT;
@@ -515,10 +529,25 @@ void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset
 		if (desired != attr) {
 			if (attr != HX_ATTR_NONE) charbuf_append(b, "\x1b[0m", 4);
 			switch (desired) {
-			case HX_ATTR_A_PRINT:    charbuf_append(b, "\x1b[33m", 5); break;
-			case HX_ATTR_A_NONPRINT: charbuf_append(b, "\x1b[36m", 5); break;
-			case HX_ATTR_A_CURSOR:   charbuf_append(b, "\x1b[7;36m", 7); break;
-			case HX_ATTR_A_CURSOR_P: charbuf_append(b, "\x1b[7;33m", 7); break;
+			case HX_ATTR_A_PRINT:    
+				//charbuf_append(b, "\x1b[33m", 5); break;
+				 charbuf_append(b, HEXEDIT_ASCII_PRINTABLE, sizeof(HEXEDIT_ASCII_PRINTABLE) - 1); 
+				 break;
+			case HX_ATTR_A_NONPRINT: 
+				//charbuf_append(b, "\x1b[36m", 5); break;
+				 charbuf_append(b, HEXEDIT_ASCII_NONPRINTABLE, sizeof(HEXEDIT_ASCII_NONPRINTABLE) - 1); 
+				 break;
+			case HX_ATTR_A_CURSOR:   
+				//charbuf_append(b, "\x1b[7;36m", 7); break;
+				//charbuf_append(b, HEXEDIT_ASCII_CURSOR_PRINTABLE, sizeof(HEXEDIT_ASCII_CURSOR_PRINTABLE) - 1); // reverse video for non-printable cursor'
+				//charbuf_append(b, "\x1b[7;1m", 4); 
+				charbuf_append(b, HEXEDIT_ASCII_CURSOR_NONPRINTABLE, sizeof(HEXEDIT_ASCII_CURSOR_NONPRINTABLE) - 1);
+				break;
+			case HX_ATTR_A_CURSOR_P: 
+				//charbuf_append(b, "\x1b[7;33m", 7); break;
+				//charbuf_append(b, "\x1b[7m", 4); // reverse video for printable cursor
+				charbuf_append(b, HEXEDIT_ASCII_CURSOR_PRINTABLE, sizeof(HEXEDIT_ASCII_CURSOR_PRINTABLE) - 1); // reverse video for non-printable cursor'
+				break;
 			}
 			attr = desired;
 		}
@@ -532,6 +561,7 @@ void editor_render_ascii(struct editor* e, int rownum, unsigned int start_offset
 	charbuf_append(b, "\x1b[0m\x1b[K", 7);
 }
 
+
 void editor_render_contents(struct editor* e, struct charbuf* b) {
 	unsigned int file_len = E_FILE_LEN(e);
 
@@ -540,7 +570,8 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 		int data_rows_avail = e->screen_rows - e->header_rows - 1;
 		unsigned int addr = 0;
 		for (int r = 1; r <= data_rows_avail; r++) {
-			charbuf_appendf(b, "\x1b[2;35m%09x\x1b[0m:\x1b[0K\r\n", addr);
+			//charbuf_appendf(b, "\x1b[2;35m%09x\x1b[0m:\x1b[0K\r\n", addr);
+			charbuf_appendf(b, HEXEDIT_ADDRESS_BOLD "%09x\x1b[0m:\x1b[0K\r\n", addr);
 			addr += e->octets_per_line;
 		}
 		return;
@@ -578,7 +609,8 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 		unsigned char curr_byte = e->contents[offset - pg];
 
 		if (offset % e->octets_per_line == 0) {
-			charbuf_appendf(b, "\x1b[1;35m%09x\x1b[0m:", offset);
+			//charbuf_appendf(b, "\x1b[1;35m%09x\x1b[0m:", offset);
+			charbuf_appendf(b, HEXEDIT_ADDRESS_BOLD "%09x\x1b[0m:", offset);
 			row_char_count = 0;
 			col = 0;
 			row++;
@@ -593,7 +625,7 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 
 		/* Determine desired attribute for this hex byte */
 		int desired;
-		if (e->cursor_y == row && e->cursor_x == col) {
+		if (!e->cursor_hidden && e->cursor_y == row && e->cursor_x == col) {
 			desired = HX_ATTR_CURSOR;
 		} else if (isprint(curr_byte)) {
 			desired = HX_ATTR_PRINT;
@@ -603,16 +635,21 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 
 		/* Emit escape only on attribute transition */
 		if (desired != hex_attr) {
-			if (hex_attr != HX_ATTR_NONE) charbuf_append(b, "\x1b[0m", 4);
+			if (hex_attr != HX_ATTR_NONE) charbuf_append(b, HEXEDIT_BYTES_NONPRINTABLE, sizeof(HEXEDIT_BYTES_NONPRINTABLE)-1);  //charbuf_append(b, "\x1b[0m", 4);
 			switch (desired) {
-			case HX_ATTR_PRINT:  charbuf_append(b, "\x1b[1;34m", 7);    break;
+			case HX_ATTR_PRINT:  
+				//charbuf_append(b, "\x1b[1;34m", 7);    break;
+				 charbuf_append(b, HEXEDIT_BYTES_PRINTABLE, sizeof(HEXEDIT_BYTES_PRINTABLE) - 1); 
+				 break;
 			case HX_ATTR_CURSOR:
 				/* Reverse video — reflect the byte's natural colour:
 				 * printable → blue bg (reverse bold blue), else → white bg */
 				if (isprint(curr_byte))
-					charbuf_append(b, "\x1b[7;1;34m", 9);
+					//charbuf_append(b, "\x1b[7;1;34m", 9);
+					charbuf_append(b, HEXEDIT_BYTES_CURSOR_PRINTABLE, sizeof(HEXEDIT_BYTES_CURSOR_PRINTABLE) - 1);
 				else
-					charbuf_append(b, "\x1b[7m", 4);
+					//charbuf_append(b, "\x1b[7;1m", 4);
+					charbuf_append(b, HEXEDIT_BYTES_CURSOR_NONPRINTABLE, sizeof(HEXEDIT_BYTES_CURSOR_NONPRINTABLE) - 1);
 				break;
 			}
 			hex_attr = desired;
@@ -671,7 +708,8 @@ void editor_render_contents(struct editor* e, struct charbuf* b) {
 		if (pad_addr % e->octets_per_line != 0)
 			pad_addr += e->octets_per_line - (pad_addr % e->octets_per_line);
 		for (int r = row + 1; r <= data_rows_avail; r++) {
-			charbuf_appendf(b, "\r\n\x1b[2;35m%09x\x1b[0m:\x1b[0K", pad_addr);
+			//charbuf_appendf(b, "\r\n\x1b[2;35m%09x\x1b[0m:\x1b[0K", pad_addr);
+			charbuf_appendf(b, "\r\n" HEXEDIT_ADDRESS_PADDING "%09x\x1b[0m:\x1b[0K", pad_addr);
 			pad_addr += e->octets_per_line;
 		}
 	}
@@ -694,7 +732,7 @@ void editor_render_help(struct editor* e) {
 	charbuf_append(b, "\x1b[?25l", 6); // hide cursor
 	charbuf_appendf(b, "This is hx, version %s\r\n\n", HX_VERSION);
 	{
-		const char help1[] =
+		static const char help1[] =
 			"Available commands:\r\n"
 			"\r\n"
 			"CTRL+Q  : Quit immediately without saving.\r\n"
@@ -719,7 +757,7 @@ void editor_render_help(struct editor* e) {
 		charbuf_append(b, help1, sizeof(help1) - 1);
 	}
 	{
-		const char help2[] =
+		static const char help2[] =
 			"a       : Append mode. Appends a byte after the current cursor position.\r\n"
 			"A       : Append mode. Appends the literal typed keys (except ESC).\r\n"
 			"i       : Insert mode. Inserts a byte at the current cursor position.\r\n"

@@ -16,6 +16,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_toolbar.h"
 #include "ui/ui_cmd_menu.h"
+#include "ui/ui_popup.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "fatfs/ff.h"
@@ -88,7 +89,7 @@ static void wiz_draw_background(void) {
 
     /* Footer / status bar */
     n = snprintf(buf, sizeof(buf),
-                 "\x1b[%d;1H\x1b[0;30;47m Arrow keys=Navigate  Enter=Select  Esc=Cancel \x1b[0m\x1b[K",
+                 "\x1b[%d;1H\x1b[0;30;47m " UI_HINT_ARROWS_SELECT_CANCEL " \x1b[0m\x1b[K",
                  wiz.rows);
     wiz_write_str(buf);
 

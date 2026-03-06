@@ -44,8 +44,8 @@ spsc_queue_t bin_tx_fifo;          /**< Binary mode transmit FIFO */
 /** TX FIFO size in bytes */
 #define TX_FIFO_LENGTH_IN_BYTES (0x0001 << TX_FIFO_LENGTH_IN_BITS)
 
-uint8_t tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048)));     /**< TX buffer storage */
-uint8_t bin_tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(2048))); /**< Binary TX buffer storage */
+uint8_t tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(4)));     /**< TX buffer storage */
+uint8_t bin_tx_buf[TX_FIFO_LENGTH_IN_BYTES] __attribute__((aligned(4))); /**< Binary TX buffer storage */
 
 /** Maximum size of toolbar render buffer */
 #define MAXIMUM_TOOLBAR_BUFFER_BYTES 1024

@@ -40,6 +40,7 @@ typedef enum {
 typedef struct ui_field_def {
     ui_field_type_t type;   /**< Widget type */
     uint8_t         width;  /**< Display width in columns (content, not including brackets) */
+    const char     *label;  /**< Placeholder text shown when no value is set (spinners/files) */
 
     /* Type-specific configuration — use the member matching .type */
     union {
@@ -99,6 +100,7 @@ typedef struct {
     const ui_field_def_t *fields;     /**< Field definition array */
     uint8_t               field_count;/**< Number of fields */
     uint8_t               focused;    /**< Currently focused field index */
+    bool                  active;     /**< True when the bar owns input focus */
     void                 *ctx;        /**< App context passed to all callbacks */
     uint8_t               bar_row;    /**< Terminal row to draw on (1-based) */
     uint8_t               cols;       /**< Terminal width */

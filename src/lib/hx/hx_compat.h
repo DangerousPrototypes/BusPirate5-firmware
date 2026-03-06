@@ -115,8 +115,9 @@ extern jmp_buf hx_exit_jmpbuf;
 #define HX_PAGE_SIZE         (64 * 1024)
 #define HX_PAGED_THRESHOLD   (BIG_BUFFER_SIZE * 9 / 10)
 
-void  hx_arena_init(uint8_t *buf, size_t size);
-void *hx_arena_malloc(size_t size);
+void   hx_arena_init(uint8_t *buf, size_t size);
+size_t hx_arena_capacity(void);
+void  *hx_arena_malloc(size_t size);
 void *hx_arena_realloc(void *ptr, size_t new_size);
 void  hx_arena_free(void *ptr);
 

@@ -134,13 +134,21 @@ static void refreshLineWithCompletion(struct linenoiseState *ls, linenoiseComple
 static void refreshLineWithFlags(struct linenoiseState *l, int flags);
 
 #ifdef BP_EMBEDDED
-/* Static history storage for embedded targets (no malloc). */
-static char history_storage[BP_LINENOISE_HISTORY_MAX][BP_LINENOISE_MAX_LINE + 1];
-static char *history_ptrs[BP_LINENOISE_HISTORY_MAX];
+/* Circular history buffer: variable-length entries packed in a flat buffer.
+ * Entries are indexed via a ring of (offset, length) metadata.  No memmove
+ * of pointer arrays is needed — only a compact when the buffer fills. */
+static char history_buf[BP_LINENOISE_HISTORY_BUF_SIZE];
+static int buf_used = 0;
+
+typedef struct {
+    uint16_t offset; /* byte offset into history_buf */
+    uint16_t len;    /* string length, excluding '\0' */
+} hist_entry_t;
+
+static hist_entry_t history_ring[BP_LINENOISE_HISTORY_MAX];
+static int ring_head = 0;
 static int history_max_len = BP_LINENOISE_HISTORY_MAX;
 static int history_len = 0;
-static char **history = history_ptrs;
-static int history_inited = 0;
 static int maskmode = 0;
 static int mlmode = 0;
 #else
@@ -1484,7 +1492,15 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
     switch(c) {
     case ENTER:    /* enter */
         history_len--;
-#ifndef BP_EMBEDDED
+#ifdef BP_EMBEDDED
+        /* Reclaim buffer space from the removed placeholder entry. */
+        if (history_len > 0) {
+            int ri = (ring_head + history_len - 1) % BP_LINENOISE_HISTORY_MAX;
+            buf_used = history_ring[ri].offset + history_ring[ri].len + 1;
+        } else {
+            buf_used = 0;
+        }
+#else
         free(history[history_len]);
 #endif
         if (mlmode) linenoiseEditMoveEnd(l);
@@ -1531,7 +1547,15 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
             linenoiseEditDelete(l);
         } else {
             history_len--;
-#ifndef BP_EMBEDDED
+#ifdef BP_EMBEDDED
+            /* Reclaim buffer space from the removed placeholder entry. */
+            if (history_len > 0) {
+                int ri = (ring_head + history_len - 1) % BP_LINENOISE_HISTORY_MAX;
+                buf_used = history_ring[ri].offset + history_ring[ri].len + 1;
+            } else {
+                buf_used = 0;
+            }
+#else
             free(history[history_len]);
 #endif
             errno = ENOENT;
@@ -1836,6 +1860,8 @@ void linenoiseFree(void *ptr) {
 static void freeHistory(void) {
 #ifdef BP_EMBEDDED
     history_len = 0;
+    ring_head = 0;
+    buf_used = 0;
 #else
     if (history) {
         int j;
@@ -1856,37 +1882,73 @@ static void linenoiseAtExit(void) {
 #endif
 
 /* This is the API call to add a new entry in the linenoise history.
- * It uses a fixed array of char pointers that are shifted (memmoved)
- * when the history max length is reached in order to remove the older
- * entry and make room for the new one, so it is not exactly suitable for huge
- * histories, but will work well for a few hundred of entries.
- *
- * Using a circular buffer is smarter, but a bit more complex to handle. */
+ * Uses a circular ring buffer with variable-length entries for the
+ * embedded target, and a shifted pointer array for other targets. */
 int linenoiseHistoryAdd(const char *line) {
 #ifdef BP_EMBEDDED
     if (history_max_len == 0) return 0;
 
-    /* One-time init: point history_ptrs at static storage. */
-    if (!history_inited) {
-        int j;
-        for (j = 0; j < BP_LINENOISE_HISTORY_MAX; j++)
-            history_ptrs[j] = history_storage[j];
-        history_inited = 1;
-    }
+    int slen = strlen(line);
+    if (slen > BP_LINENOISE_MAX_LINE) slen = BP_LINENOISE_MAX_LINE;
+    int needed = slen + 1; /* +1 for null terminator */
 
     /* Don't add duplicated lines. */
-    if (history_len && !strcmp(history[history_len-1], line)) return 0;
+    if (history_len > 0) {
+        hist_entry_t *newest = &history_ring[(ring_head + history_len - 1) % BP_LINENOISE_HISTORY_MAX];
+        if (newest->len == (uint16_t)slen &&
+            memcmp(&history_buf[newest->offset], line, slen) == 0)
+            return 0;
+    }
 
-    /* If we reached the max length, shift entries down (discard oldest). */
-    if (history_len == history_max_len) {
-        /* Rotate pointers: save ptr to slot 0, shift rest down, reuse. */
-        char *oldest = history[0];
-        memmove(history, history+1, sizeof(char*)*(history_max_len-1));
-        history[history_max_len-1] = oldest;
+    /* Evict oldest entry if at max entry count. */
+    if (history_len >= history_max_len) {
+        ring_head = (ring_head + 1) % BP_LINENOISE_HISTORY_MAX;
         history_len--;
     }
-    strncpy(history[history_len], line, BP_LINENOISE_MAX_LINE);
-    history[history_len][BP_LINENOISE_MAX_LINE] = '\0';
+
+    /* Compact dead space at the front, then evict more if still needed. */
+    if (buf_used + needed > BP_LINENOISE_HISTORY_BUF_SIZE) {
+        /* Compact: move live data to front of history_buf. */
+        if (history_len > 0) {
+            int first_off = history_ring[ring_head].offset;
+            if (first_off > 0) {
+                int data_len = buf_used - first_off;
+                memmove(history_buf, &history_buf[first_off], data_len);
+                for (int i = 0; i < history_len; i++) {
+                    int ri = (ring_head + i) % BP_LINENOISE_HISTORY_MAX;
+                    history_ring[ri].offset -= first_off;
+                }
+                buf_used = data_len;
+            }
+        } else {
+            buf_used = 0;
+        }
+        /* Evict oldest entries until the new entry fits. */
+        while (history_len > 0 && buf_used + needed > BP_LINENOISE_HISTORY_BUF_SIZE) {
+            ring_head = (ring_head + 1) % BP_LINENOISE_HISTORY_MAX;
+            history_len--;
+            if (history_len > 0) {
+                int first_off = history_ring[ring_head].offset;
+                int data_len = buf_used - first_off;
+                memmove(history_buf, &history_buf[first_off], data_len);
+                for (int i = 0; i < history_len; i++) {
+                    int ri = (ring_head + i) % BP_LINENOISE_HISTORY_MAX;
+                    history_ring[ri].offset -= first_off;
+                }
+                buf_used = data_len;
+            } else {
+                buf_used = 0;
+            }
+        }
+    }
+
+    /* Write the entry at the end of the buffer. */
+    int idx = (ring_head + history_len) % BP_LINENOISE_HISTORY_MAX;
+    history_ring[idx].offset = buf_used;
+    history_ring[idx].len = slen;
+    memcpy(&history_buf[buf_used], line, slen);
+    history_buf[buf_used + slen] = '\0';
+    buf_used += needed;
     history_len++;
     return 1;
 #else
@@ -2008,8 +2070,20 @@ void linenoiseEditHistoryNext(struct linenoiseState *l, int dir) {
         /* Update the current history entry before to
          * overwrite it with the next one. */
 #ifdef BP_EMBEDDED
-        strncpy(history[history_len - 1 - l->history_index], l->buf, BP_LINENOISE_MAX_LINE);
-        history[history_len - 1 - l->history_index][BP_LINENOISE_MAX_LINE] = '\0';
+        /* Save l->buf back to the newest (current-input) slot only.
+         * Edits to older entries while browsing are not persisted. */
+        if (l->history_index == 0) {
+            hist_entry_t *newest = &history_ring[(ring_head + history_len - 1) % BP_LINENOISE_HISTORY_MAX];
+            int slen = strlen(l->buf);
+            if (slen > BP_LINENOISE_MAX_LINE) slen = BP_LINENOISE_MAX_LINE;
+            int new_end = newest->offset + slen + 1;
+            if (new_end <= BP_LINENOISE_HISTORY_BUF_SIZE) {
+                memcpy(&history_buf[newest->offset], l->buf, slen);
+                history_buf[newest->offset + slen] = '\0';
+                newest->len = slen;
+                buf_used = new_end;
+            }
+        }
 #else
         free(history[history_len - 1 - l->history_index]);
         history[history_len - 1 - l->history_index] = strdup(l->buf);
@@ -2023,7 +2097,15 @@ void linenoiseEditHistoryNext(struct linenoiseState *l, int dir) {
             l->history_index = history_len-1;
             return;
         }
+#ifdef BP_EMBEDDED
+        {
+            int logical_idx = history_len - 1 - l->history_index;
+            int ri = (ring_head + logical_idx) % BP_LINENOISE_HISTORY_MAX;
+            strncpy(l->buf, &history_buf[history_ring[ri].offset], l->buflen);
+        }
+#else
         strncpy(l->buf,history[history_len - 1 - l->history_index],l->buflen);
+#endif
         l->buf[l->buflen-1] = '\0';
         l->len = l->pos = strlen(l->buf);
         refreshLine(l);

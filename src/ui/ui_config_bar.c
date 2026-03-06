@@ -39,6 +39,24 @@ static uint8_t find_next_visible(ui_config_bar_t *bar, uint8_t current, int dir)
     return bar->focused; /* no visible field — stay put */
 }
 
+/** Get the rendered content width (inside brackets) for a field. */
+static int field_content_cols(const ui_field_def_t *f) {
+    switch (f->type) {
+    case UI_FIELD_SPINNER:
+        return f->width > 2 ? f->width : 6;
+    case UI_FIELD_CHECKBOX:
+        return 1 + (int)strlen(f->checkbox.text ? f->checkbox.text : "");
+    case UI_FIELD_NUMBER:
+        return f->width ? f->width : 5;
+    case UI_FIELD_FILE:
+        return f->width ? f->width : 12;
+    case UI_FIELD_BUTTON:
+        return (int)strlen(f->button.text ? f->button.text : "Go");
+    default:
+        return f->width ? f->width : 8;
+    }
+}
+
 /* ── Init ───────────────────────────────────────────────────────────── */
 
 void ui_config_bar_init(ui_config_bar_t *bar,
@@ -51,6 +69,7 @@ void ui_config_bar_init(ui_config_bar_t *bar,
     bar->fields      = fields;
     bar->field_count = count;
     bar->focused     = 0;
+    bar->active      = true;
     bar->ctx         = ctx;
     bar->bar_row     = row;
     bar->cols        = cols;
@@ -67,34 +86,37 @@ void ui_config_bar_init(ui_config_bar_t *bar,
 
 /* ── Rendering ──────────────────────────────────────────────────────── */
 
+/* Blue toolbar background — matches vt100_menu bar */
+#define BAR_BG "\x1b[0;37;44m"
+
 /**
- * Draw a single field as a bracketed widget.
+ * Draw a single field as a bracketed widget on the blue toolbar.
  *
- * Spinner:  [value  v]     Checkbox:  [xVfy]     Number:   [0x50]
- * File:     [FILENAME.BIN] Button:    [Execute]
- *
- * Focused fields use reverse video. Buttons use green when ready.
+ * Focused fields use cyan background (matching active menu tab).
+ * Ready buttons use green. Unfocused fields are white-on-blue.
  */
 static void draw_field(ui_config_bar_t *bar, const ui_field_def_t *f, bool focused) {
     char buf[40];
     int n;
 
-    /* Determine bracket style */
+    /* Only show focus highlight when bar is active */
+    bool highlight = focused && bar->active;
+
+    /* Bracket styles — close returns to blue row background */
     const char *open_style;
-    const char *close_style = "]\x1b[0m";
 
     switch (f->type) {
     case UI_FIELD_BUTTON: {
         bool ready = !f->button.ready || f->button.ready(bar->ctx);
-        if (focused) {
-            open_style = ready ? "\x1b[1;37;42m[" : "\x1b[7m[";
+        if (highlight) {
+            open_style = ready ? "\x1b[1;37;42m[" : "\x1b[1;37;46m[";
         } else {
-            open_style = ready ? "\x1b[1;32m[" : "\x1b[2m[";
+            open_style = ready ? "\x1b[1;32;44m[" : "\x1b[2;37;44m[";
         }
         break;
     }
     default:
-        open_style = focused ? "\x1b[7m[" : "\x1b[36m[";
+        open_style = highlight ? "\x1b[1;37;46m[" : BAR_BG "[";
         break;
     }
 
@@ -105,12 +127,13 @@ static void draw_field(ui_config_bar_t *bar, const ui_field_def_t *f, bool focus
     switch (f->type) {
     case UI_FIELD_SPINNER: {
         int idx = f->get_int ? f->get_int(bar->ctx) : -1;
-        const char *val = "------";
-        if (idx >= 0 && idx < f->spinner.count && f->spinner.options) {
-            val = f->spinner.options[idx];
-        }
+        bool has_val = (idx >= 0 && idx < f->spinner.count && f->spinner.options);
+        const char *val = has_val ? f->spinner.options[idx]
+                                  : (f->label ? f->label : "------");
+        if (!has_val && !highlight) bar_write(bar, "\x1b[2m"); /* dim placeholder */
         n = snprintf(buf, sizeof(buf), "%-*s v", f->width > 2 ? f->width - 2 : 4, val);
         bar_write_buf(bar, buf, n);
+        if (!has_val && !highlight) bar_write(bar, BAR_BG);      /* restore */
         break;
     }
     case UI_FIELD_CHECKBOX: {
@@ -122,17 +145,23 @@ static void draw_field(ui_config_bar_t *bar, const ui_field_def_t *f, bool focus
         break;
     }
     case UI_FIELD_NUMBER: {
+        char tmp[20];
         int val = f->get_int ? f->get_int(bar->ctx) : 0;
         const char *fmt = f->number.fmt ? f->number.fmt : "%d";
-        n = snprintf(buf, sizeof(buf), fmt, (unsigned)val);
+        int tlen = snprintf(tmp, sizeof(tmp), fmt, (unsigned)val);
+        int w = f->width ? f->width : tlen;
+        n = snprintf(buf, sizeof(buf), "%-*s", w, tmp);
         bar_write_buf(bar, buf, n);
         break;
     }
     case UI_FIELD_FILE: {
         const char *val = f->get_str ? f->get_str(bar->ctx) : NULL;
-        if (!val || val[0] == '\0') val = "............";
+        bool has_val = (val && val[0] != '\0');
+        if (!has_val) val = f->label ? f->label : "............";
+        if (!has_val && !highlight) bar_write(bar, "\x1b[2m");
         n = snprintf(buf, sizeof(buf), "%-*s", f->width ? f->width : 12, val);
         bar_write_buf(bar, buf, n);
+        if (!has_val && !highlight) bar_write(bar, BAR_BG);
         break;
     }
     case UI_FIELD_BUTTON: {
@@ -142,11 +171,11 @@ static void draw_field(ui_config_bar_t *bar, const ui_field_def_t *f, bool focus
     }
     }
 
-    bar_write(bar, close_style);
+    bar_write(bar, "]" BAR_BG);
 }
 
 void ui_config_bar_draw(ui_config_bar_t *bar) {
-    char buf[16];
+    char buf[40];
     int n;
 
     /* Ensure focused field is visible */
@@ -154,18 +183,16 @@ void ui_config_bar_draw(ui_config_bar_t *bar) {
         bar->focused = find_next_visible(bar, bar->focused, +1);
     }
 
-    /* Position cursor at bar row, reset attributes (no clear — avoids flicker) */
-    n = snprintf(buf, sizeof(buf), "\x1b[%d;1H\x1b[0m", bar->bar_row);
+    /* ── Field row (bar_row): blue toolbar ── */
+    n = snprintf(buf, sizeof(buf), "\x1b[%d;1H" BAR_BG, bar->bar_row);
     bar_write_buf(bar, buf, n);
-
-    /* Draw each visible field (overwrites old content in place) */
     for (uint8_t i = 0; i < bar->field_count; i++) {
         if (!field_visible(bar, i)) continue;
         draw_field(bar, &bar->fields[i], i == bar->focused);
     }
 
-    /* Erase any trailing remnant from a previous wider draw */
-    bar_write(bar, "\x1b[K");
+    /* Fill rest of row with blue, then reset */
+    bar_write(bar, "\x1b[K\x1b[0m");
 }
 
 /* ── Key handling ───────────────────────────────────────────────────── */

@@ -1357,7 +1357,7 @@ static const char *find_last_tok(const char *p, const char *end) {
  * ring re-used each time the completion callback is invoked (linenoise
  * rebuilds the table from scratch on every key).
  */
-#define COMP_SLOTS  16
+#define COMP_SLOTS  8
 #define COMP_BUF_SZ 64
 static char comp_pool[COMP_SLOTS][COMP_BUF_SZ];
 static int  comp_next;

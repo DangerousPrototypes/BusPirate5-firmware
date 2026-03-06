@@ -66,7 +66,11 @@ extern char *linenoiseEditMore;
 #endif
 
 #ifndef BP_LINENOISE_COMPLETIONS_MAX
-#define BP_LINENOISE_COMPLETIONS_MAX 16
+#define BP_LINENOISE_COMPLETIONS_MAX 8
+#endif
+
+#ifndef BP_LINENOISE_HISTORY_BUF_SIZE
+#define BP_LINENOISE_HISTORY_BUF_SIZE 1024
 #endif
 
 /* Override the upstream LINENOISE_MAX_LINE with the embedded value. */

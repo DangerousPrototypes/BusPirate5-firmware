@@ -46,6 +46,10 @@ void hx_arena_init(uint8_t *buf, size_t size) {
     memset(buf, 0, size);
 }
 
+size_t hx_arena_capacity(void) {
+    return arena_total;
+}
+
 void *hx_arena_malloc(size_t size) {
     if (size == 0) size = 1;
     size = ARENA_ALIGN_UP(size);

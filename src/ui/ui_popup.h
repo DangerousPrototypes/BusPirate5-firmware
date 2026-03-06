@@ -27,6 +27,22 @@ typedef enum {
     UI_POPUP_DANGER = 2, /**< White on red    (destructive confirm) */
 } ui_popup_style_t;
 
+/* ── Key hint strings ───────────────────────────────────────────────
+ * Atomic tokens — combine these to build status-bar hint strings.
+ * Changing a token here updates every dialogue that uses it. */
+#define UI_HINT_ENTER_OK              "Enter=OK"
+#define UI_HINT_ENTER_SELECT          "Enter=Select"
+#define UI_HINT_ESC_CANCEL            "Esc=Cancel"
+#define UI_HINT_ARROWS_NAV            "Arrow keys=Navigate"
+#define UI_HINT_UPDOWN_NAV            "Up/Down=Navigate"
+#define UI_HINT_PGSCROLL              "PgUp/PgDn=Scroll"
+
+/** Composed hint strings — use in status bars and popup hint rows. */
+#define UI_HINT_OK_CANCEL             UI_HINT_ENTER_OK     "  " UI_HINT_ESC_CANCEL
+#define UI_HINT_SELECT_CANCEL         UI_HINT_ENTER_SELECT "  " UI_HINT_ESC_CANCEL
+#define UI_HINT_ARROWS_SELECT_CANCEL  UI_HINT_ARROWS_NAV   "  " UI_HINT_SELECT_CANCEL
+#define UI_HINT_UPDOWN_SELECT_CANCEL  UI_HINT_UPDOWN_NAV   "  " UI_HINT_SELECT_CANCEL
+
 /** Input character filter flags (bitwise OR). */
 typedef enum {
     UI_INPUT_HEX   = 0x01, /**< 0-9 a-f A-F x X */

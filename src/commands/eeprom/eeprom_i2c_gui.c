@@ -63,8 +63,6 @@ typedef struct {
     const char *dev_names[16];
 } i2c_ctx_t;
 
-static i2c_ctx_t ctx;
-
 /* ── Field indices ──────────────────────────────────────────────────── */
 
 enum {
@@ -127,6 +125,7 @@ static const ui_field_def_t i2c_fields[FLD_COUNT] = {
     [FLD_ACTION] = {
         .type = UI_FIELD_SPINNER,
         .width = 9,
+        .label = "Action",
         .spinner = { .options = action_names, .count = ACTION_COUNT, .wrap = true },
         .get_int = get_action,
         .set_int = set_action,
@@ -134,6 +133,7 @@ static const ui_field_def_t i2c_fields[FLD_COUNT] = {
     [FLD_DEVICE] = {
         .type = UI_FIELD_SPINNER,
         .width = 11,
+        .label = "Device",
         .spinner = { .options = NULL, .count = 0, .wrap = true }, /* patched at init */
         .get_int = get_device,
         .set_int = set_device,
@@ -141,6 +141,7 @@ static const ui_field_def_t i2c_fields[FLD_COUNT] = {
     [FLD_FILE] = {
         .type = UI_FIELD_FILE,
         .width = 12,
+        .label = "File",
         .file = { .ext_filter = NULL },
         .get_str = get_file,
         .set_str = set_file,
@@ -150,6 +151,7 @@ static const ui_field_def_t i2c_fields[FLD_COUNT] = {
     [FLD_ADDR] = {
         .type = UI_FIELD_NUMBER,
         .width = 5,
+        .label = "Address",
         .number = { .min = 0, .max = 0x7F, .fmt = "0x%02X",
                      .popup_title = "I2C Address (7-bit)" },
         .get_int = get_addr,
@@ -157,14 +159,12 @@ static const ui_field_def_t i2c_fields[FLD_COUNT] = {
     },
     [FLD_VERIFY] = {
         .type = UI_FIELD_CHECKBOX,
-        .width = 4,
-        .checkbox = { .text = "Vfy" },
+        .checkbox = { .text = "Verify" },
         .get_int = get_verify,
         .set_int = set_verify,
     },
     [FLD_EXECUTE] = {
         .type = UI_FIELD_BUTTON,
-        .width = 8,
         .button = { .text = "Execute", .ready = exec_ready },
         .on_activate = on_execute,
     },
@@ -182,8 +182,6 @@ static const vt100_menu_item_t action_menu_items[] = {
 };
 
 /* Device menu — built dynamically for category separators + size hints. */
-static vt100_menu_item_t dev_menu_items[18];
-static char dev_size_hints[16][8];
 
 static void format_size(uint32_t bytes, char *buf, uint8_t buf_size) {
     if (bytes < 1024)
@@ -194,15 +192,17 @@ static void format_size(uint32_t bytes, char *buf, uint8_t buf_size) {
         snprintf(buf, buf_size, "%luM", (unsigned long)(bytes / (1024 * 1024)));
 }
 
-static uint8_t build_device_menu_items(void) {
-    uint8_t n = ctx.device_count;
+static uint8_t build_device_menu_items(i2c_ctx_t *ctx,
+                                       vt100_menu_item_t *dev_menu_items,
+                                       char dev_size_hints[][8]) {
+    uint8_t n = ctx->device_count;
     if (n > 16) n = 16;
     uint8_t idx = 0;
     uint8_t prev_cat = 0;
 
     for (uint8_t i = 0; i < n; i++) {
-        uint8_t cat = (ctx.devices[i].size_bytes <= 2048) ? 1
-                    : (ctx.devices[i].size_bytes <= 65536) ? 2 : 3;
+        uint8_t cat = (ctx->devices[i].size_bytes <= 2048) ? 1
+                    : (ctx->devices[i].size_bytes <= 65536) ? 2 : 3;
         if (prev_cat && cat != prev_cat) {
             dev_menu_items[idx] = (vt100_menu_item_t){
                 NULL, NULL, 0, MENU_ITEM_SEPARATOR };
@@ -210,10 +210,10 @@ static uint8_t build_device_menu_items(void) {
         }
         prev_cat = cat;
 
-        format_size(ctx.devices[i].size_bytes, dev_size_hints[i],
+        format_size(ctx->devices[i].size_bytes, dev_size_hints[i],
                      sizeof(dev_size_hints[i]));
         dev_menu_items[idx] = (vt100_menu_item_t){
-            ctx.devices[i].name, dev_size_hints[i],
+            ctx->devices[i].name, dev_size_hints[i],
             ACT_DEV_BASE + i, 0 };
         idx++;
     }
@@ -293,6 +293,11 @@ static bool needs_confirm(void *c) {
 static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result) {
     i2c_ctx_t *x = (i2c_ctx_t *)c;
 
+    /* Static work buffers — only one execute runs at a time.
+     * Keeps 512+ bytes off the 4 KB stack. */
+    static char buf[EEPROM_ADDRESS_PAGE_SIZE];
+    static uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE];
+
     /* Build eeprom_info with current configuration */
     struct eeprom_info eeprom;
     memset(&eeprom, 0, sizeof(eeprom));
@@ -314,24 +319,23 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
 
     /* Show chip info */
     {
-        char info[80];
-        snprintf(info, sizeof(info), "%s: %d bytes, %d byte pages, addr %d bytes",
+        char info[60];
+        snprintf(info, sizeof(info), "%s: %dB, %dB pages, addr %dB",
                  eeprom.device->name, eeprom.device->size_bytes,
                  eeprom.device->page_bytes, eeprom.device->address_bytes);
         ops->message(info, ops->ctx);
     }
 
     bool success = false;
-    char buf[EEPROM_ADDRESS_PAGE_SIZE];
-    uint8_t verify_buf[EEPROM_ADDRESS_PAGE_SIZE];
 
     switch (x->action) {
     case 0: { /* dump → hex editor */
         uint32_t eep_size = eeprom.device->size_bytes;
         uint32_t blocks   = eeprom_get_address_blocks_total(&eeprom);
         uint32_t bsz      = eeprom_get_address_block_size(&eeprom);
+        size_t arena_cap  = hx_arena_capacity();
 
-        if (eep_size <= HX_PAGED_THRESHOLD) {
+        if (eep_size <= arena_cap * 9 / 10) {
             char *dump_buf = hx_arena_malloc(eep_size);
             if (!dump_buf) {
                 ops->error("Not enough memory for dump", ops->ctx);
@@ -413,30 +417,55 @@ bool eeprom_i2c_gui(const struct eeprom_device_t *devices,
                      struct eeprom_info *args) {
     (void)args;
 
+    /* ── Allocate the big buffer and carve app scratch from the front.
+     *    The remainder goes to the framework for the hex editor arena.
+     *    This keeps ~900 bytes off the 4 KB stack with zero permanent
+     *    static cost. ─────────────────────────────────────────────── */
+#define ALIGN4(x) (((x) + 3u) & ~3u)
+
+    uint8_t *buf = mem_alloc(BIG_BUFFER_SIZE, BP_BIG_BUFFER_EDITOR);
+    if (!buf) return false;
+
+    size_t off = 0;
+
+    i2c_ctx_t *ctx = (i2c_ctx_t *)(buf + off);
+    off += ALIGN4(sizeof(i2c_ctx_t));
+
+    vt100_menu_item_t *dev_menu_items = (vt100_menu_item_t *)(buf + off);
+    off += ALIGN4(sizeof(vt100_menu_item_t) * 18);
+
+    char (*dev_size_hints)[8] = (void *)(buf + off);
+    off += ALIGN4(16 * 8);
+
+    ui_field_def_t *fields = (ui_field_def_t *)(buf + off);
+    off += ALIGN4(sizeof(ui_field_def_t) * FLD_COUNT);
+
+#undef ALIGN4
+
     /* Init context */
-    memset(&ctx, 0, sizeof(ctx));
-    ctx.action       = -1;
-    ctx.device_idx   = -1;
-    ctx.i2c_addr     = 0x50;
-    ctx.devices      = devices;
-    ctx.device_count = device_count;
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->action       = -1;
+    ctx->device_idx   = -1;
+    ctx->i2c_addr     = 0x50;
+    ctx->devices      = devices;
+    ctx->device_count = device_count;
 
     /* Build device name pointer table for the spinner */
     uint8_t n = device_count;
     if (n > 16) n = 16;
     for (uint8_t i = 0; i < n; i++) {
-        ctx.dev_names[i] = devices[i].name;
+        ctx->dev_names[i] = devices[i].name;
     }
 
     /* Patch the device spinner with the actual device list.
-     * Field defs are const, so we need a mutable copy. */
-    ui_field_def_t fields[FLD_COUNT];
-    memcpy(fields, i2c_fields, sizeof(fields));
-    fields[FLD_DEVICE].spinner.options = ctx.dev_names;
+     * i2c_fields is const — copy to mutable fields, then patch. */
+    memcpy(fields, i2c_fields, sizeof(ui_field_def_t) * FLD_COUNT);
+    fields[FLD_DEVICE].spinner.options = ctx->dev_names;
     fields[FLD_DEVICE].spinner.count   = n;
 
     /* Build device menu items */
-    uint8_t dev_item_count = build_device_menu_items();
+    uint8_t dev_item_count = build_device_menu_items(ctx, dev_menu_items,
+                                                     dev_size_hints);
 
     /* Extra menus: Action, Device, File */
     vt100_menu_def_t extra_menus[3] = {
@@ -460,9 +489,13 @@ bool eeprom_i2c_gui(const struct eeprom_device_t *devices,
         .option_items      = i2c_option_items,
         .option_item_count = 1,
         .enable_hex_editor = true,
-        .ctx               = &ctx,
+        .ctx               = ctx,
+        .arena_buf         = buf + off,
+        .arena_size        = BIG_BUFFER_SIZE - off,
     };
 
-    return ui_mem_gui_run(&config);
+    bool result = ui_mem_gui_run(&config);
+    mem_free(buf);
+    return result;
 }
 

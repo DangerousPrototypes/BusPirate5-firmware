@@ -158,7 +158,7 @@ bool ui_popup_text_input(const ui_popup_io_t *io,
     int input_row_width = prompt_len + 2 + field_width; /* "prompt: [field]" */
     int content_max = title_len;
     if (input_row_width > content_max) content_max = input_row_width;
-    int hint_len = 22; /* "Enter=OK  Esc=Cancel" */
+    int hint_len = (int)(sizeof(UI_HINT_OK_CANCEL) - 1);
     if (hint_len > content_max) content_max = hint_len;
     int popup_w = content_max + 6;
     if (popup_w < 30) popup_w = 30;
@@ -204,7 +204,7 @@ bool ui_popup_text_input(const ui_popup_io_t *io,
     }
 
     /* Hint row */
-    popup_text_row(io, pal, r++, left, popup_w, "Enter=OK  Esc=Cancel");
+    popup_text_row(io, pal, r++, left, popup_w, UI_HINT_OK_CANCEL);
     popup_hline(io, pal, r, left, popup_w);
 
     popup_write(io, "\x1b[0m");

@@ -14,10 +14,8 @@
 
 /* ── Internal helpers ───────────────────────────────────────────────── */
 
-/* Small output buffer for building escape sequences.
- * 256 bytes is enough for any single escape + short text. */
+/* Size for temporary escape-sequence scratch buffers (stack-allocated). */
 #define OUT_BUF_SIZE 256
-static char out_buf[OUT_BUF_SIZE];
 
 /**
  * Write a formatted string to the terminal via the state's write callback.
@@ -36,7 +34,8 @@ static void menu_writes(const vt100_menu_state_t* s, const char* str) {
  * Move cursor to (row, col) — 1-based.
  */
 static void menu_goto(const vt100_menu_state_t* s, int row, int col) {
-    int n = snprintf(out_buf, OUT_BUF_SIZE, "\x1b[%d;%dH", row, col);
+    char out_buf[32];
+    int n = snprintf(out_buf, sizeof(out_buf), "\x1b[%d;%dH", row, col);
     menu_write(s, out_buf, n);
 }
 
@@ -187,6 +186,7 @@ static int8_t next_selectable(const vt100_menu_def_t* menu, int8_t from, int dir
  * Draw the menu bar across the full width of the terminal.
  */
 static void draw_bar(const vt100_menu_state_t* s) {
+    char out_buf[OUT_BUF_SIZE];
     menu_goto(s, s->bar_row, 1);
     menu_attr_bar(s);
 
@@ -245,7 +245,8 @@ static void draw_dropdown(const vt100_menu_state_t* s) {
     menu_goto(s, top_row, left_col);
     menu_attr_dropdown(s);
     {
-        int n = snprintf(out_buf, OUT_BUF_SIZE, "+");
+        char out_buf[4];
+        int n = snprintf(out_buf, sizeof(out_buf), "+");
         menu_write(s, out_buf, n);
         for (int j = 0; j < width; j++) menu_writes(s, "-");
         menu_writes(s, "+");
@@ -346,9 +347,10 @@ static void erase_dropdown(const vt100_menu_state_t* s) {
 
     menu_attr_reset(s);
     for (int r = 0; r < total_rows; r++) {
+        char out_buf[16];
         menu_goto(s, top_row + r, left_col);
         /* Erase to end of that region with spaces */
-        int n = snprintf(out_buf, OUT_BUF_SIZE, "\x1b[%dX", width);
+        int n = snprintf(out_buf, sizeof(out_buf), "\x1b[%dX", width);
         menu_write(s, out_buf, n);
     }
 }
@@ -395,9 +397,10 @@ void vt100_menu_draw_bar(const vt100_menu_state_t* state) {
 }
 
 void vt100_menu_erase(const vt100_menu_state_t* state) {
+    char out_buf[8];
     menu_goto(state, state->bar_row, 1);
     menu_attr_reset(state);
-    int n = snprintf(out_buf, OUT_BUF_SIZE, "\x1b[2K");  /* erase entire line */
+    int n = snprintf(out_buf, sizeof(out_buf), "\x1b[2K");  /* erase entire line */
     menu_write(state, out_buf, n);
 }
 

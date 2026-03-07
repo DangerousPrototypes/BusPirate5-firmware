@@ -228,11 +228,8 @@ static FIL hx_read_fil;   /* static FIL for read operations */
 
 int hx_file_open_read(const char *path, FSIZE_t *out_size) {
     FRESULT res = f_open(&hx_read_fil, path, FA_READ);
-    if (res == FR_NO_FILE || res == FR_NO_PATH) {
-        return -2;  /* file does not exist */
-    }
     if (res != FR_OK) {
-        return -1;  /* other error */
+        return -(int)res;  /* negative FRESULT code */
     }
     *out_size = f_size(&hx_read_fil);
     return 0;

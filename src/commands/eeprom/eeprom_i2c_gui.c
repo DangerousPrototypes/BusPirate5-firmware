@@ -52,7 +52,7 @@ static const char *const action_names[] = {
 typedef struct {
     int      action;         /* -1 = not set, else 0..5 */
     int      device_idx;     /* -1 = not set */
-    char     file_name[13];
+    char     file_name[32];
     uint8_t  i2c_addr;       /* 7-bit, default 0x50 */
     bool     verify_flag;
 
@@ -87,8 +87,8 @@ static int  get_verify(void *c)          { return ((i2c_ctx_t *)c)->verify_flag 
 static void set_verify(void *c, int v)   { ((i2c_ctx_t *)c)->verify_flag = !!v; }
 static const char *get_file(void *c)     { return ((i2c_ctx_t *)c)->file_name; }
 static void set_file(void *c, const char *s) {
-    strncpy(((i2c_ctx_t *)c)->file_name, s, 12);
-    ((i2c_ctx_t *)c)->file_name[12] = '\0';
+    strncpy(((i2c_ctx_t *)c)->file_name, s, sizeof(((i2c_ctx_t *)c)->file_name) - 1);
+    ((i2c_ctx_t *)c)->file_name[sizeof(((i2c_ctx_t *)c)->file_name) - 1] = '\0';
 }
 
 static void on_file_change(void *c) {
@@ -248,10 +248,10 @@ static void menu_dispatch(void *c, int action_id) {
 
     /* File browse — open the file picker and load result into hex editor */
     if (action_id == ACT_FILE_BROWSE) {
-        char file_buf[13] = {0};
+        char file_buf[64] = {0};
         if (ui_mem_gui_browse_file(file_buf, sizeof(file_buf))) {
-            strncpy(x->file_name, file_buf, 12);
-            x->file_name[12] = '\0';
+            strncpy(x->file_name, file_buf, sizeof(x->file_name) - 1);
+            x->file_name[sizeof(x->file_name) - 1] = '\0';
             hx_embed_load(x->file_name);
         }
         return;

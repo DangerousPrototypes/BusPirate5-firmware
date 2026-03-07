@@ -74,8 +74,8 @@ int hx_get_window_size(int *rows, int *cols);
  * can use them under #ifdef BUSPIRATE without touching the POSIX paths.
  * ====================================================================== */
 
-/* Open file for reading. Returns 0 on success, -1 on error, -2 if not found.
- * On success, *out_size is set to the file size. */
+/* Open file for reading. Returns 0 on success, or -(FRESULT) on error.
+ * Common: -4 = FR_NO_FILE, -5 = FR_NO_PATH.  On success, *out_size is set. */
 int hx_file_open_read(const char *path, FSIZE_t *out_size);
 
 /* Read up to `count` bytes from the currently open read file.

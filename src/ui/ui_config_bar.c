@@ -277,7 +277,7 @@ static void field_activate(ui_config_bar_t *bar, const ui_field_def_t *f) {
                 .cols      = bar->cols,
                 .rows      = bar->rows,
             };
-            char file_buf[13] = {0};
+            char file_buf[64] = {0};
             if (ui_file_pick(f->file.ext_filter, file_buf, sizeof(file_buf), &fpio)) {
                 if (f->set_str) f->set_str(bar->ctx, file_buf);
                 if (f->on_change) f->on_change(bar->ctx);

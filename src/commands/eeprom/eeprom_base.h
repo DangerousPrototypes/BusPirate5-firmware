@@ -46,7 +46,7 @@ struct eeprom_info{
     uint32_t protect_bits;
     uint32_t protect_wpen_bit;
     FIL file_handle;     // file handle
-    char file_name[13]; // file to read/write/verify
+    char file_name[32]; // file to read/write/verify (absolute path)
     bool verify_flag; // verify flag
     bool protect_blocks_flag;
     bool protect_test_flag;

@@ -136,12 +136,15 @@ void editor_openfile(struct editor* e, const char* filename) {
 	FSIZE_t fsize = 0;
 	int open_result = hx_file_open_read(filename, &fsize);
 	if (open_result < 0) {
-		if (open_result == -2) {
-			/* file does not exist, open as new file */
+		int fr = -open_result;
+		if (fr == 4 || fr == 5) {  /* FR_NO_FILE or FR_NO_PATH */
 			editor_newfile(e, filename);
+			editor_statusmessage(e, STATUS_WARNING,
+				"'%s' not found (FR=%d)", filename, fr);
 			return;
 		}
-		editor_statusmessage(e, STATUS_ERROR, "Unable to open '%s'", filename);
+		editor_statusmessage(e, STATUS_ERROR,
+			"Cannot open '%s' (FR=%d)", filename, fr);
 		return;
 	}
 

@@ -85,6 +85,11 @@ void ui_term_linenoise_start(const char *prompt) {
  *         0xff = Enter pressed, line complete
  *         0xfe = Ctrl+C pressed
  *         0xfd = screen refresh requested (Ctrl+B)
+ *         0xf1 = F1 function key pressed
+ *         0xf2 = F2 function key pressed
+ *         0xf3 = F3 function key pressed
+ *         0xf4 = F4 function key pressed
+ *         0xf5 = F5 function key pressed
  */
 uint32_t ui_term_linenoise_feed(void) {
     linenoiseResult result = linenoiseEditFeedResult(&ln_state);
@@ -117,7 +122,18 @@ uint32_t ui_term_linenoise_feed(void) {
         case LN_REFRESH:
             // Ctrl+B - screen refresh requested
             return 0xfd;
-            
+
+        case LN_F1:
+            return 0xf1;
+        case LN_F2:
+            return 0xf2;
+        case LN_F3:
+            return 0xf3;
+        case LN_F4:
+            return 0xf4;
+        case LN_F5:
+            return 0xf5;
+
         default:
             return 1;  // Key was pressed (for screensaver)
     }

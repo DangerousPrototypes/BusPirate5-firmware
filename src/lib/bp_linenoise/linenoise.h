@@ -85,6 +85,11 @@ typedef enum {
     LN_CTRL_C,          /* User pressed Ctrl+C */
     LN_CTRL_D,          /* User pressed Ctrl+D (EOF on empty line) */
     LN_REFRESH,         /* Screen refresh requested (Ctrl+B on Bus Pirate) */
+    LN_F1,              /* F1 function key pressed */
+    LN_F2,              /* F2 function key pressed */
+    LN_F3,              /* F3 function key pressed */
+    LN_F4,              /* F4 function key pressed */
+    LN_F5,              /* F5 function key pressed */
 } linenoiseResult;
 
 #endif /* BP_EMBEDDED */
@@ -104,6 +109,7 @@ struct linenoiseState {
     linenoiseReadBlockingFn read_blocking; /* Blocking char read callback. */
     linenoiseWriteFn write_fn;           /* Write callback. */
     int simple_mode;    /* Simple mode: no history, no full-line refresh. */
+    int pending_fkey;   /* Pending function key number (1-5), 0 = none. */
 #else
     int ifd;            /* Terminal stdin file descriptor. */
     int ofd;            /* Terminal stdout file descriptor. */

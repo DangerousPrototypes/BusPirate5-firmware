@@ -1593,8 +1593,9 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
         if (seq[0] == '[') {
             if (seq[1] >= '0' && seq[1] <= '9') {
                 /* Extended escape, read additional byte. */
-                if (lnReadBlocking(l,seq+2,1) == -1) break;
-                if (seq[2] == '~') {
+                char seq2[2];
+                if (lnReadBlocking(l,seq2,1) == -1) break;
+                if (seq2[0] == '~') {
                     switch(seq[1]) {
                     case '1': /* Home (some terminals). */
 #ifdef BP_EMBEDDED
@@ -1614,6 +1615,29 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
 #endif
                         linenoiseEditMoveEnd(l);
                         break;
+                    }
+                } else if (seq2[0] >= '0' && seq2[0] <= '9') {
+                    /* Two-digit escape sequence (e.g., ESC [15~) - read the '~'. */
+                    char tilde;
+                    if (lnReadBlocking(l,&tilde,1) == -1) break;
+                    if (tilde == '~') {
+#ifdef BP_EMBEDDED
+                        /* Decode two-digit xterm function key sequences. */
+                        int code = (seq[1] - '0') * 10 + (seq2[0] - '0');
+                        int fkey = 0;
+                        switch (code) {
+                        case 11: fkey = 1; break; /* F1 */
+                        case 12: fkey = 2; break; /* F2 */
+                        case 13: fkey = 3; break; /* F3 */
+                        case 14: fkey = 4; break; /* F4 */
+                        case 15: fkey = 5; break; /* F5 */
+                        }
+                        if (fkey > 0) {
+                            l->pending_fkey = fkey;
+                            errno = ENOBUFS;
+                            return NULL;
+                        }
+#endif
                     }
                 }
             } else {
@@ -1673,6 +1697,25 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
 #endif
                 linenoiseEditMoveEnd(l);
                 break;
+#ifdef BP_EMBEDDED
+            /* VT100-style function keys: ESC O P/Q/R/S = F1/F2/F3/F4 */
+            case 'P': /* F1 */
+                l->pending_fkey = 1;
+                errno = ENOBUFS;
+                return NULL;
+            case 'Q': /* F2 */
+                l->pending_fkey = 2;
+                errno = ENOBUFS;
+                return NULL;
+            case 'R': /* F3 */
+                l->pending_fkey = 3;
+                errno = ENOBUFS;
+                return NULL;
+            case 'S': /* F4 */
+                l->pending_fkey = 4;
+                errno = ENOBUFS;
+                return NULL;
+#endif
             }
         }
         break;
@@ -2134,6 +2177,20 @@ linenoiseResult linenoiseEditFeedResult(struct linenoiseState *l) {
     if (res == NULL) {
         if (errno == EAGAIN) return LN_CTRL_C;
         if (errno == 0) return LN_REFRESH;
+#ifdef BP_EMBEDDED
+        if (errno == ENOBUFS) {
+            /* Function key event: decode from pending_fkey. */
+            int fkey = l->pending_fkey;
+            l->pending_fkey = 0;
+            switch (fkey) {
+            case 1: return LN_F1;
+            case 2: return LN_F2;
+            case 3: return LN_F3;
+            case 4: return LN_F4;
+            case 5: return LN_F5;
+            }
+        }
+#endif
         return LN_CTRL_D;
     }
     /* res is l->buf (static), line is complete. */

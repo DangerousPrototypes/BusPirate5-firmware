@@ -30,11 +30,16 @@ void ui_term_linenoise_start(const char *prompt);
 /**
  * @brief Feed input to linenoise (non-blocking).
  * @return Result code:
- *         0 = still editing (no complete line)
- *         1 = key pressed (for screensaver reset)  
+ *         0    = still editing (no complete line)
+ *         1    = key pressed (for screensaver reset)
  *         0xff = Enter pressed, line complete
  *         0xfe = Ctrl+C pressed
  *         0xfd = screen refresh requested (Ctrl+B)
+ *         0xf1 = F1 function key pressed
+ *         0xf2 = F2 function key pressed
+ *         0xf3 = F3 function key pressed
+ *         0xf4 = F4 function key pressed
+ *         0xf5 = F5 function key pressed
  */
 uint32_t ui_term_linenoise_feed(void);
 

@@ -591,6 +591,11 @@ static void core0_infinite_loop(void) {
                     break;
                 }
 
+                /* F1-F5 function keys (0xf1-0xf5) — no global menu is
+                 * registered at the main prompt; continue editing so the
+                 * user can keep typing.  Command GUIs that need a menu bar
+                 * use vt100_menu_run() directly in their own input loops. */
+
                 enum button_codes press_code = button_check_press(0);
                 if (press_code != BP_BUTT_NO_PRESS) {
                     button_irq_disable(0);

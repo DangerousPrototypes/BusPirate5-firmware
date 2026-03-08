@@ -534,6 +534,10 @@ set(buspirate_common
         lib/bp_linenoise/ln_cmdreader.h
         lib/bp_linenoise/ln_cmdreader.c
 
+        # VT100 dropdown menu library
+        lib/vt100_menu/vt100_menu.h
+        lib/vt100_menu/vt100_menu.c
+
         # Expression evaluator library
         lib/bp_expr/bp_expr.h
         lib/bp_expr/bp_expr.c        

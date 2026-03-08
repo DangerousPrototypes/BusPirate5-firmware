@@ -15,6 +15,7 @@
 #include "pirate/hwi2c_pio.h"
 #include "eeprom_base.h"
 #include "eeprom_i2c_gui.h"
+#include "ui/ui_mem_gui.h"
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 
@@ -227,6 +228,170 @@ static const struct eeprom_device_t eeprom_devices[] = {
     { "24XM01",  131072, 2, 1, 0, 256, 400, &i2c_eeprom_hal },    
     { "24XM02",  262144, 2, 2, 0, 256, 400, &i2c_eeprom_hal }
 };
+
+/* probe devices: size_bytes = 0xFFFFFFFF disables bounds check in get_address,
+ * allowing reads at any address without triggering the out-of-range error. */
+static const struct eeprom_device_t detect_probe1 = {
+    "probe", 0xFFFFFFFFu, 1, 0, 0, 8, 400, &i2c_eeprom_hal
+};
+static const struct eeprom_device_t detect_probe2 = {
+    "probe", 0xFFFFFFFFu, 2, 0, 0, 8, 400, &i2c_eeprom_hal
+};
+
+/* send START + 8-bit address + STOP (no data). returns true if device ACKed. */
+static bool i2c_probe_ack(uint8_t addr_7bit) {
+    return !pio_i2c_write_array_timeout(addr_7bit << 1, NULL, 0, 0xfffffu);
+}
+
+/* read len bytes at address from i2c_addr using probe device. */
+static bool detect_read(uint8_t i2c_addr, const struct eeprom_device_t *probe,
+                         uint32_t address, uint8_t *buf, uint32_t len) {
+    struct eeprom_info ei;
+    memset(&ei, 0, sizeof(ei));
+    ei.device_address = i2c_addr;
+    ei.device = probe;
+    ei.ui = NULL;
+    return probe->hal->read(&ei, address, len, buf);
+}
+
+/* return the first device table index matching size_bytes.
+ * if bso >= 0, also requires block_select_offset == bso. */
+static int find_device(const struct eeprom_device_t *devices, uint8_t count,
+                        uint32_t size_bytes, int bso) {
+    for (uint8_t i = 0; i < count; i++) {
+        if (devices[i].size_bytes != size_bytes) continue;
+        if (bso >= 0 && devices[i].block_select_offset != (uint8_t)bso) continue;
+        return (int)i;
+    }
+    return -2;
+}
+
+/* sequential wrap test: reads 8 bytes starting at address 252 from i2c_addr
+ * using 1-byte addressing. for a chip with exactly 256B accessible at this
+ * I2C address, the read wraps at byte 255 and bytes[4..7] equal the chip's
+ * bytes at addresses 0..3. for a 2-byte address chip (64KB+), the 1-byte
+ * probe mis-points the internal address counter, and no wrap is seen.
+ * returns true if the block is 256B (wrap detected). */
+static bool block_wraps_256(uint8_t i2c_addr) {
+    uint8_t s[8], w[8];
+    if (detect_read(i2c_addr, &detect_probe1, 0, s, 8)) return false;
+    if (detect_read(i2c_addr, &detect_probe1, 252, w, 8)) return false;
+    return (memcmp(&w[4], s, 4) == 0);
+}
+
+/* scan 0x08-0x77 and warn if devices outside the EEPROM address range respond.
+ * block-select EEPROMs occupy base..base+8; anything else is unexpected and
+ * could cause false ACK hits during the consecutive-address scan. */
+static void i2c_bus_scan_warn(uint8_t eeprom_base, const ui_mem_gui_ops_t *ops) {
+    if (!ops) return;
+
+    char buf[96];
+    int  pos = 0;
+    bool any = false;
+
+    for (uint8_t addr = 0x08; addr <= 0x77; addr++) {
+        /* skip the EEPROM's own address block */
+        if (addr >= eeprom_base && addr <= eeprom_base + 8) continue;
+        if (!i2c_probe_ack(addr)) continue;
+
+        if (!any) {
+            pos = snprintf(buf, sizeof(buf), "Other I2C devices at 0x%02X", addr);
+            any = true;
+        } else if (pos + 6 < (int)sizeof(buf) - 32) {
+            /* leave room for the suffix */
+            pos += snprintf(buf + pos, sizeof(buf) - pos, ", 0x%02X", addr);
+        }
+    }
+
+    if (any) {
+        snprintf(buf + pos, sizeof(buf) - pos, " - ACK scan may be unreliable");
+        ops->warning(buf, ops->ctx);
+    }
+}
+
+int eeprom_i2c_detect_size(uint8_t i2c_addr,
+                            const struct eeprom_device_t *devices,
+                            uint8_t count,
+                            const ui_mem_gui_ops_t *ops) {
+    uint8_t sig[8], cmp[8];
+
+    /* read 8-byte signature at address 0 - bail early if I2C is dead */
+    if (detect_read(i2c_addr, &detect_probe1, 0, sig, 8))
+        return -3;
+
+    /* bus pre-scan: warn if other devices sit in the ACK scan range */
+    i2c_bus_scan_warn(i2c_addr, ops);
+
+    /* uniform data: no boundary signal to track */
+    bool uniform = true;
+    for (uint8_t i = 1; i < 8; i++) {
+        if (sig[i] != sig[0]) { uniform = false; break; }
+    }
+    if (uniform) return -1;
+
+    /* phase 1: 24X01 (128B) - 1-byte mirror at address 128 */
+    if (!detect_read(i2c_addr, &detect_probe1, 128, cmp, 8) &&
+        memcmp(sig, cmp, 8) == 0)
+        return find_device(devices, count, 128, -1);
+
+    /* phase 2: 2-byte mirror probes for 24X32 through 24X256 -
+     * for chips with 2-byte addressing, no block select, and size < 64KB,
+     * reading at address size_bytes should return the same data as address 0. */
+    for (uint8_t i = 0; i < count; i++) {
+        if (devices[i].address_bytes != 2) continue;
+        if (devices[i].block_select_bits > 0) continue;
+        if (devices[i].size_bytes >= 65536u) continue;
+        if (detect_read(i2c_addr, &detect_probe2, devices[i].size_bytes, cmp, 8)) continue;
+        if (memcmp(sig, cmp, 8) == 0) return (int)i;
+    }
+
+    /* phase 3: I2C ACK scan for multi-address chips -
+     * scan consecutive addresses from base+1 to base+7.
+     * block-select chips occupy 2, 4, or 8 consecutive I2C addresses. */
+    uint8_t ack_count = 0;
+    for (uint8_t n = 1; n <= 7; n++) {
+        if (i2c_probe_ack(i2c_addr + n)) ack_count++;
+        else break;
+    }
+
+    if (ack_count == 0) {
+        /* only responds at base: 24X02 (256B, 1-byte addr) or 24X512 (64KB, 2-byte addr).
+         * use sequential wrap test to distinguish: 24X02 wraps at 256, 24X512 does not. */
+        uint8_t wrap[8];
+        if (!detect_read(i2c_addr, &detect_probe1, 252, wrap, 8) &&
+            memcmp(&wrap[4], sig, 4) == 0)
+            return find_device(devices, count, 256, -1);      /* 24X02 */
+
+        /* no wrap found: could be 24X512 or 24X1025 (block select offset=3 at base+8).
+         * 24X1025 does not appear at base+1 through base+7. probe base+8 directly. */
+        if (i2c_probe_ack(i2c_addr + 8))
+            return find_device(devices, count, 131072, 3);     /* 24X1025 */
+
+        return find_device(devices, count, 65536, -1);         /* 24X512 */
+    }
+
+    /* for chips with multiple I2C addresses, apply the wrap test to block 1
+     * to distinguish small (256B blocks, 1-byte addr) from large (64KB blocks,
+     * 2-byte addr) chips that share the same consecutive address count. */
+    bool b1_small = block_wraps_256(i2c_addr + 1);
+
+    if (ack_count == 1) {
+        /* base+1 ACKs only: 24X04 (512B, small block) vs 24X1026/24XM01 (128KB, large block) */
+        if (b1_small) return find_device(devices, count, 512,    -1); /* 24X04 */
+        else          return find_device(devices, count, 131072,  0); /* 24X1026 (first 128KB with offset=0) */
+    }
+
+    if (ack_count == 3) {
+        /* base+1..+3 ACK: 24X08 (1KB, small blocks) vs 24XM02 (256KB, large blocks) */
+        if (b1_small) return find_device(devices, count, 1024,   -1); /* 24X08 */
+        else          return find_device(devices, count, 262144, -1); /* 24XM02 */
+    }
+
+    if (ack_count >= 7)
+        return find_device(devices, count, 2048, -1);          /* 24X16 */
+
+    return -2; /* unexpected ACK pattern - ambiguous */
+}
 
 static bool eeprom_get_args(struct eeprom_info *args) {
     // Parse action — if no action given, launch interactive GUI

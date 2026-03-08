@@ -14,8 +14,9 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "ui/ui_mem_gui.h"
 
-/* Forward declarations — avoid pulling in full eeprom_base.h */
+/* forward declarations - avoid pulling in full eeprom_base.h */
 struct eeprom_device_t;
 struct eeprom_info;
 
@@ -36,5 +37,31 @@ struct eeprom_info;
 bool eeprom_i2c_gui(const struct eeprom_device_t* devices,
                      uint8_t device_count,
                      struct eeprom_info* args);
+
+/**
+ * @brief Read-only I2C EEPROM size detection.
+ *
+ * Uses address mirroring, I2C ACK scanning, and sequential wrap tests
+ * to identify the chip without any writes.  Covers all 14 chips in the
+ * standard 24X device table.
+ *
+ * Before probing, performs a full bus scan (0x08-0x77) and warns via
+ * ops->warning() if devices outside the EEPROM's own address range
+ * (base..base+8) are found, since those may cause false ACK hits.
+ * Pass ops=NULL to suppress the bus scan warning.
+ *
+ * @param i2c_addr  7-bit I2C base address (typically 0x50)
+ * @param devices   device table to search
+ * @param count     number of entries in device table
+ * @param ops       UI ops for warning output (NULL = silent)
+ * @return          index into devices[] on success, or:
+ *                   -1  uniform data at address 0, cannot detect read-only
+ *                   -2  no match found / ambiguous ACK pattern
+ *                   -3  I2C read error
+ */
+int eeprom_i2c_detect_size(uint8_t i2c_addr,
+                            const struct eeprom_device_t *devices,
+                            uint8_t count,
+                            const ui_mem_gui_ops_t *ops);
 
 #endif /* EEPROM_I2C_GUI_H */

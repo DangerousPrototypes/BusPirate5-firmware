@@ -35,6 +35,9 @@ enum {
     /* Device menu (10 + device index) */
     ACT_DEV_BASE = 10,
 
+    /* Auto-detect size */
+    ACT_DETECT = 50,
+
     /* File menu */
     ACT_FILE_BROWSE = 100,
 
@@ -59,8 +62,12 @@ typedef struct {
     const struct eeprom_device_t *devices;
     uint8_t device_count;
 
-    /* Device name pointers for the spinner (built at init) */
-    const char *dev_names[16];
+    /* Device name pointers for the spinner (built at init).
+     * +1 for the "Auto-Detect" sentinel appended at the end. */
+    const char *dev_names[17];
+
+    bool auto_detected;   /* true when execute resolved device via auto-detect */
+    char result_buf[64];  /* formatted result string for auto-detect success */
 } i2c_ctx_t;
 
 static i2c_ctx_t ctx;
@@ -110,6 +117,8 @@ static bool file_visible(void *c) {
 static bool exec_ready(void *c) {
     i2c_ctx_t *x = (i2c_ctx_t *)c;
     if (x->action < 0 || x->device_idx < 0) return false;
+    /* auto-detect sentinel is valid only for dump (action 0) */
+    if (x->device_idx == x->device_count) return (x->action == 0);
     if (file_visible(c) && x->file_name[0] == '\0') return false;
     return true;
 }
@@ -181,8 +190,9 @@ static const vt100_menu_item_t action_menu_items[] = {
     { "Test",   NULL, ACT_TEST,   0 },
 };
 
-/* Device menu — built dynamically for category separators + size hints. */
-static vt100_menu_item_t dev_menu_items[18];
+/* Device menu — built dynamically for category separators + size hints.
+ * +2 for the auto-detect entry and its leading separator. */
+static vt100_menu_item_t dev_menu_items[20];
 static char dev_size_hints[16][8];
 
 static void format_size(uint32_t bytes, char *buf, uint8_t buf_size) {
@@ -217,6 +227,10 @@ static uint8_t build_device_menu_items(void) {
             ACT_DEV_BASE + i, 0 };
         idx++;
     }
+
+    /* auto-detect entry at the bottom, separated from the device list */
+    dev_menu_items[idx++] = (vt100_menu_item_t){ NULL, NULL, 0, MENU_ITEM_SEPARATOR };
+    dev_menu_items[idx++] = (vt100_menu_item_t){ "Auto-Detect", NULL, ACT_DETECT, 0 };
     return idx;
 }
 
@@ -243,6 +257,12 @@ static void menu_dispatch(void *c, int action_id) {
     if (action_id >= ACT_DEV_BASE &&
         action_id < ACT_DEV_BASE + x->device_count) {
         x->device_idx = action_id - ACT_DEV_BASE;
+        return;
+    }
+
+    /* Auto-detect — set spinner to sentinel, detection runs in execute_cb */
+    if (action_id == ACT_DETECT) {
+        x->device_idx = x->device_count;
         return;
     }
 
@@ -292,6 +312,41 @@ static bool needs_confirm(void *c) {
 /* Bridge: translate ui_mem_gui_ops_t → eeprom_ui_ops_t for the action fns. */
 static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result) {
     i2c_ctx_t *x = (i2c_ctx_t *)c;
+
+    /* auto-detect: probe chip size read-only via address mirroring.
+     * on success, device_idx is resolved to a real entry and we fall
+     * through to the normal execute path. */
+    if (x->device_idx == x->device_count) {
+        ops->message("Probing chip size (read-only)...", ops->ctx);
+        int detected = eeprom_i2c_detect_size(x->i2c_addr,
+                                              x->devices,
+                                              x->device_count,
+                                              ops);
+        if (detected == -3) {
+            ops->error("Auto-detect failed: I2C error - check wiring and mode", ops->ctx);
+            *result = "Auto-detect: I2C error";
+            return false;
+        }
+        if (detected == -1) {
+            ops->error("Auto-detect failed: uniform data at address 0 - "
+                       "chip may be blank, select device manually", ops->ctx);
+            *result = "Auto-detect: uniform data";
+            return false;
+        }
+        if (detected == -2) {
+            ops->error("Auto-detect failed: ambiguous result - select device manually", ops->ctx);
+            *result = "Auto-detect: ambiguous";
+            return false;
+        }
+        /* resolved - update spinner and fall through */
+        x->device_idx = detected;
+        x->auto_detected = true;
+        char msg[64];
+        snprintf(msg, sizeof(msg), "Detected: %s (%lu bytes)",
+                 x->devices[detected].name,
+                 (unsigned long)x->devices[detected].size_bytes);
+        ops->message(msg, ops->ctx);
+    }
 
     /* Build eeprom_info with current configuration */
     struct eeprom_info eeprom;
@@ -392,8 +447,15 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
         break;
     }
 
-    *result = success ? "Last operation: Success :)"
-                      : "Last operation: FAILED";
+    if (success && x->auto_detected) {
+        snprintf(x->result_buf, sizeof(x->result_buf),
+                 "Success! - Detected %s",
+                 x->devices[x->device_idx].name);
+        *result = x->result_buf;
+    } else {
+        *result = success ? "Last operation: Success :)"
+                          : "Last operation: FAILED";
+    }
     return success;
 }
 
@@ -415,25 +477,28 @@ bool eeprom_i2c_gui(const struct eeprom_device_t *devices,
 
     /* Init context */
     memset(&ctx, 0, sizeof(ctx));
-    ctx.action       = -1;
-    ctx.device_idx   = -1;
-    ctx.i2c_addr     = 0x50;
-    ctx.devices      = devices;
-    ctx.device_count = device_count;
+    ctx.action        = -1;
+    ctx.i2c_addr      = 0x50;
+    ctx.devices       = devices;
+    ctx.device_count  = device_count;
+    ctx.device_idx    = device_count; /* default to auto-detect sentinel */
+    ctx.auto_detected = false;
 
-    /* Build device name pointer table for the spinner */
+    /* Build device name pointer table for the spinner.
+     * Last slot is the "Auto-detect" sentinel entry. */
     uint8_t n = device_count;
     if (n > 16) n = 16;
     for (uint8_t i = 0; i < n; i++) {
         ctx.dev_names[i] = devices[i].name;
     }
+    ctx.dev_names[n] = "Auto";
 
     /* Patch the device spinner with the actual device list.
      * Field defs are const, so we need a mutable copy. */
     ui_field_def_t fields[FLD_COUNT];
     memcpy(fields, i2c_fields, sizeof(fields));
     fields[FLD_DEVICE].spinner.options = ctx.dev_names;
-    fields[FLD_DEVICE].spinner.count   = n;
+    fields[FLD_DEVICE].spinner.count   = n + 1; /* +1 for Auto-detect */
 
     /* Build device menu items */
     uint8_t dev_item_count = build_device_menu_items();

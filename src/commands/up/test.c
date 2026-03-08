@@ -85,7 +85,7 @@ void up_test_handler(struct command_result* res)
         up_test();
         break;
       case UP_TEST_VOLT:
-        up_test();
+        up_vtest();
         break;
       default: //should never get here, should throw help
         printf("No action defined (test, vtest, dram, logic, buffer, eprom)\r\n");
@@ -120,13 +120,18 @@ void up_vtest(void)
     return;
   }
   
+  up_setvpp(2);
+  up_setvcc(2);
+  printf("Voltage present on Vcc and Vpp terminals!\r\n");
   printf("Tweak Vdd and Vpp to desired value. Press any key to continue\r\n");
   
-  // TODO: show measured voltages
+  
   while(!rx_fifo_try_get(&c))
   {
     printf("Vcc=%d.%03d  ", (5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VCC + 1]) / 1000), ((5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VCC + 1])) % 1000));
     printf("Vpp=%d.%03d \r", (5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VPP + 1]) / 1000), ((5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VPP + 1])) % 1000));
+    
+    busy_wait_us(1000);
   }
 
   printf("\r\n");

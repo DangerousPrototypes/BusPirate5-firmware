@@ -6,8 +6,11 @@ parse_infoic2csv.py     parses infoic.xml to a csv
 parse_infoic.py         parses infoic.xml to up_eproms.h
 parse_logicic.py        parses logic.xml to up_logicic.h
 
+makelut_23xx.c          generates the lookuptable for 23xx eproms
 makelut_27xx.c          generates the lookuptable for 27xx eproms
+makelut_62xx.c          generates the lookuptable for 27xx eproms
 makelut_dram41xx.c      generates the lookuptable for 41xx dram chips
+makelut_dl1414.c        generates the lookuptable for the dl1414 display
 
 infoic.xml and logic.xml from https://gitlab.com/DavidGriffith/minipro
 

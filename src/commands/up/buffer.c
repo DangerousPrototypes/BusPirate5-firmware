@@ -39,7 +39,7 @@ static void clearbuffer(uint32_t start, uint32_t len, uint8_t fillbyte);
 static void readbuffer(uint32_t start, uint32_t fstart, uint32_t len, char *fname);
 static void hexreadbuffer(char *fname);
 static void writebuffer(uint32_t start, uint32_t len, char *fname);
-
+static void testfillbuffer(uint32_t start, uint32_t len);
 
 enum uptest_actions_enum {
     UP_BUFFER_READ,
@@ -48,7 +48,7 @@ enum uptest_actions_enum {
     UP_BUFFER_CLEAR,
     UP_BUFFER_SHOW,
     UP_BUFFER_HEXREAD,
-
+    UP_BUFFER_TESTFILL,
 };
 
 static const struct cmdln_action_t uptest_actions[] = {
@@ -58,6 +58,7 @@ static const struct cmdln_action_t uptest_actions[] = {
     {UP_BUFFER_CLEAR, "clear"},
     {UP_BUFFER_SHOW, "show"},
     {UP_BUFFER_HEXREAD, "hexread"},
+    {UP_BUFFER_TESTFILL, "testfill"},
 };    
 
 static const char* const usage[] = { "up [test|vtest|dram|logic|buffer|eprom|spirom|display|ram]\r\n\t[-t <device>]",
@@ -155,6 +156,9 @@ void up_buffer_handler(struct command_result* res)
       case UP_BUFFER_CLEAR:
         clearbuffer(boffset, length, clearbyte); 
         break;
+      case UP_BUFFER_TESTFILL:
+        testfillbuffer(boffset, length); 
+        break;
       case UP_BUFFER_HEXREAD:
         hexreadbuffer(fname);
         break;
@@ -213,6 +217,17 @@ static void clearbuffer(uint32_t start, uint32_t len, uint8_t fillbyte)
   int i;
   
   for(i=start; i<start+len; i++) up_buffer[i]=fillbyte;
+}
+
+static void testfillbuffer(uint32_t start, uint32_t len)
+{
+  int i;
+  
+  for(i=start; i<start+len; i+=2)
+  {
+    up_buffer[i  ]=(i>>9);
+    up_buffer[i+1]=((i/2)&0x0FF);
+  }
 }
 
 static void readbuffer(uint32_t start, uint32_t fstart, uint32_t len, char *fname)

@@ -118,7 +118,11 @@ void up_eprom_handler(struct command_result* res)
       pulse=value;    // pulse for write
       pins=value;     // pins for readid
     }
-    else page=0;
+    else
+    {
+      page=0;
+      pulse=100;
+    }
 
     switch(action)
     {
@@ -439,7 +443,7 @@ static void write27eprom(uint32_t ictype, uint32_t page, int pulse)
   }
   
   printf("Current Vdd=%d.%03d", (5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VCC + 1]) / 1000), (5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VCC + 1]) % 1000));
-  printf(", Vpp=%d.%03d", (5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VPP + 1]) / 1000), (5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VPP + 1]) % 1000));
+  printf(", Vpp=%d.%03d ", (5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VPP + 1]) / 1000), (5*(*hw_pin_voltage_ordered[M_UP_VSENSE_VPP + 1]) % 1000));
   printf("and pulse=%d\r\n", pulse);
   printf("Is this correct? y to continue\r\n");
   while(!rx_fifo_try_get(&c));
@@ -457,7 +461,7 @@ static void write27eprom(uint32_t ictype, uint32_t page, int pulse)
   // setup for eprom 
   up_setpullups(UP_27XX_PU);
   up_setdirection(UP_27XX_DIR);
-  up_pins(UP_27XX_OE|UP_27XX_CE);
+  up_pins(UP_27XX_OE|UP_27XX_CE|pgm);
   
   // apply Vcchi Vpp
   up_setvpp(2);
@@ -471,40 +475,60 @@ static void write27eprom(uint32_t ictype, uint32_t page, int pulse)
     {
       epromaddress=j*128+i;
 
-      dutin=lut_27xx_lo[(epromaddress&0x0FF)];
+      dutin =lut_27xx_lo[(epromaddress&0x0FF)];
       dutin|=lut_27xx_mi[((epromaddress>>8)&0x0FF)];
       dutin|=lut_27xx_hi[((epromaddress>>16)&0x0FF)];    
       
       dutin|=lut_27xx_dat[up_buffer[(epromaddress&0x1FFFF)]];
       
-      //for(retry=device.retries; retry>0; retry--)
-      for(retry=10; retry>0; retry--)
+      // no /PGM pin
+      if(ictype==UP_EPROM_27256)
       {
-        up_pins(dutin|UP_27XX_CE|UP_27XX_OE);      // inhibit
-        up_setdirection(0);                        // datapins to output
-        up_pins(dutin|UP_27XX_OE);                 // program
-        busy_wait_us(pulse);                    // pulse
-        up_pins(dutin|UP_27XX_CE|UP_27XX_OE|pgm);  // inhibit
-        up_setdirection(UP_27XX_DIR);              // datapins to input
-        dutout=up_pins(dutin|UP_27XX_CE);          // read
-        
-        if(dutout==(dutin|UP_27XX_CE)) break;
+        for(retry=UP_EPROM_RETRIES; retry>0; retry--)
+        {
+          up_pins(dutin|UP_27XX_CE|UP_27XX_OE|pgm);     // inhibit
+          up_setdirection(0);                           // datapins to output
+          up_pins(dutin           |UP_27XX_OE    );     // program
+          busy_wait_us(pulse);                          //         pulse
+          up_pins(dutin|UP_27XX_CE|UP_27XX_OE|pgm);     // inhibit
+          up_setdirection(UP_27XX_DIR);                 // datapins to input
+   dutout=up_pins(dutin|UP_27XX_CE           |pgm);     // read
+          
+          if(dutout==(dutin|UP_27XX_CE       |pgm)) break;
+        }
       }
       
+      // /PGM pin
+      if(ictype==UP_EPROM_27128)
+      {
+        for(retry=UP_EPROM_RETRIES; retry>0; retry--)
+        {
+          up_pins(dutin           |UP_27XX_OE|pgm);     // inhibit
+          up_setdirection(0);                           // datapins to output
+          up_pins(dutin           |UP_27XX_OE    );     // program
+          busy_wait_us(pulse);                          //         pulse
+          up_pins(dutin           |UP_27XX_OE|pgm);     // inhibit
+          up_setdirection(UP_27XX_DIR);                 // datapins to input
+   dutout=up_pins(dutin                      |pgm);     // read
+          
+          if(dutout==(dutin                  |pgm)) break;
+        }
+      }
+        
       if(retry==0)
       {
         printf("\r\nVerify error. device is broken\r\n");
         up_setdirection(UP_27XX_DIR);
-        up_pins(dutin|UP_27XX_CE|UP_27XX_OE);
+        up_pins(dutin|UP_27XX_CE|UP_27XX_OE|pgm);
         break;
       }
     }
     if(retry==0)  break;
   }
   
-  printf("\r\nDone. disconnect Vpp\r\n");
+  printf("\r\nDone.\r\n");
   up_setdirection(UP_27XX_DIR);
-  up_pins(dutin|UP_27XX_CE|UP_27XX_OE);
+  up_pins(dutin|UP_27XX_CE|UP_27XX_OE|pgm);
   up_setvpp(0);
   up_setvcc(0);
 }
@@ -561,7 +585,9 @@ static void read27eprom(uint32_t ictype, uint32_t page, uint8_t mode)
   up_setdirection(UP_27XX_DIR);
   up_pins(UP_27XX_OE|UP_27XX_CE);
 
- 
+  // wait for power to stabilize
+  busy_wait_us(10000);
+
   // TODO: check Vpp, Vdd
   
   // benchmark it!
@@ -678,7 +704,8 @@ static void read23eprom(uint32_t ictype, uint8_t mode)
   
   up_pins(csdeactive);
   
-  busy_wait_us(5000);
+  // wait for power to stabilize
+  busy_wait_us(10000);
  
   // TODO: check Vpp, Vdd
   

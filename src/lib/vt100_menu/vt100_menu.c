@@ -75,17 +75,17 @@ static void menu_attr_reset(const vt100_menu_state_t* s) {
 }
 
 /**
- * Menu bar normal style: white text on dark blue background.
+ * Menu bar normal style: black text on grey-248 background — DOS/Word5.5 look.
  */
 static void menu_attr_bar(const vt100_menu_state_t* s) {
-    menu_writes(s, "\x1b[0;37;44m");
+    menu_writes(s, "\x1b[0;30;48;5;248m");
 }
 
 /**
- * Menu bar highlighted tab style: bold white on cyan.
+ * Menu bar highlighted tab style: bold white on black.
  */
 static void menu_attr_bar_selected(const vt100_menu_state_t* s) {
-    menu_writes(s, "\x1b[1;37;46m");
+    menu_writes(s, "\x1b[0;1;37;40m");
 }
 
 /**

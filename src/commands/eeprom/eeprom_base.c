@@ -425,4 +425,106 @@ bool eeprom_action_verify(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf
         return true; // error during read
     }
     eeprom_ui_message(eeprom, "\r\nVerify complete\r\n");
-} 
+}
+
+bool eeprom_write_from_buffer(struct eeprom_info *eeprom, const uint8_t *src, uint32_t src_size,
+                              uint8_t *work_buf, uint32_t work_buf_size) {
+    uint32_t address_blocks_total = eeprom_get_address_blocks_total(eeprom);
+    uint32_t write_size = eeprom_get_address_block_size(eeprom);
+    uint32_t write_pages = write_size / eeprom->device->page_bytes;
+    uint32_t eep_size = eeprom->device->size_bytes;
+    uint32_t total_bytes = (src_size < eep_size) ? src_size : eep_size;
+
+    if (src_size < eep_size) {
+        char _msg[EEPROM_MSG_BUF_SIZE];
+        snprintf(_msg, sizeof(_msg), "Warning: Buffer smaller than EEPROM: writing %lu bytes\r\n", (unsigned long)src_size);
+        eeprom_ui_warning(eeprom, _msg);
+    } else if (src_size > eep_size) {
+        char _msg[EEPROM_MSG_BUF_SIZE];
+        snprintf(_msg, sizeof(_msg), "Warning: Buffer larger than EEPROM: writing %lu bytes\r\n", (unsigned long)eep_size);
+        eeprom_ui_warning(eeprom, _msg);
+    }
+
+    { char _msg[EEPROM_MSG_BUF_SIZE];
+      snprintf(_msg, sizeof(_msg), "Writing %lu bytes from buffer...\r\n", (unsigned long)total_bytes);
+      eeprom_ui_message(eeprom, _msg); }
+
+    uint32_t src_offset = 0;
+    for (uint32_t i = 0; i < address_blocks_total; i++) {
+        if (src_offset >= total_bytes) break;
+
+        eeprom_ui_progress(eeprom, i, address_blocks_total);
+
+        uint32_t block_remaining = total_bytes - src_offset;
+        uint32_t block_bytes = (block_remaining < write_size) ? block_remaining : write_size;
+        memcpy(work_buf, &src[src_offset], block_bytes);
+
+        for (uint32_t j = 0; j < write_pages; j++) {
+            uint32_t page_off = j * eeprom->device->page_bytes;
+            if (page_off >= block_bytes) break;
+
+            uint32_t page_remaining = block_bytes - page_off;
+            uint32_t page_write_size = (page_remaining < eeprom->device->page_bytes)
+                                     ? page_remaining : eeprom->device->page_bytes;
+
+            if (eeprom->device->hal->write_page(eeprom,
+                    (i * 256) + page_off, &work_buf[page_off], page_write_size)) {
+                char _msg[EEPROM_MSG_BUF_SIZE];
+                snprintf(_msg, sizeof(_msg), "Error writing EEPROM at 0x%08lX\r\n",
+                         (unsigned long)((i * 256) + page_off));
+                eeprom_ui_error(eeprom, _msg);
+                return true;
+            }
+        }
+        src_offset += block_bytes;
+    }
+
+    eeprom_ui_progress(eeprom, address_blocks_total, address_blocks_total);
+    eeprom_ui_message(eeprom, "\r\nWrite complete\r\n");
+    return false;
+}
+
+bool eeprom_verify_against_buffer(struct eeprom_info *eeprom, const uint8_t *ref, uint32_t ref_size,
+                                  uint8_t *work_buf, uint32_t work_buf_size) {
+    uint32_t address_blocks_total = eeprom_get_address_blocks_total(eeprom);
+    uint32_t read_size = eeprom_get_address_block_size(eeprom);
+    uint32_t eep_size = eeprom->device->size_bytes;
+    uint32_t total_bytes = (ref_size < eep_size) ? ref_size : eep_size;
+
+    { char _msg[EEPROM_MSG_BUF_SIZE];
+      snprintf(_msg, sizeof(_msg), "Verifying %lu bytes against buffer...\r\n", (unsigned long)total_bytes);
+      eeprom_ui_message(eeprom, _msg); }
+
+    uint32_t ref_offset = 0;
+    for (uint32_t i = 0; i < address_blocks_total; i++) {
+        if (ref_offset >= total_bytes) break;
+
+        eeprom_ui_progress(eeprom, i, address_blocks_total);
+
+        uint32_t block_remaining = total_bytes - ref_offset;
+        uint32_t block_bytes = (block_remaining < read_size) ? block_remaining : read_size;
+
+        if (eeprom->device->hal->read(eeprom, i * 256, block_bytes, work_buf)) {
+            char _msg[EEPROM_MSG_BUF_SIZE];
+            snprintf(_msg, sizeof(_msg), "Error reading EEPROM at 0x%08lX\r\n",
+                     (unsigned long)(i * 256));
+            eeprom_ui_error(eeprom, _msg);
+            return true;
+        }
+
+        for (uint32_t j = 0; j < block_bytes; j++) {
+            if (work_buf[j] != ref[ref_offset + j]) {
+                char _msg[EEPROM_MSG_BUF_SIZE];
+                snprintf(_msg, sizeof(_msg), "\r\nMismatch at 0x%08lX: expected 0x%02X, read 0x%02X\r\n",
+                         (unsigned long)(ref_offset + j), ref[ref_offset + j], work_buf[j]);
+                eeprom_ui_error(eeprom, _msg);
+                return true;
+            }
+        }
+        ref_offset += block_bytes;
+    }
+
+    eeprom_ui_progress(eeprom, address_blocks_total, address_blocks_total);
+    eeprom_ui_message(eeprom, "\r\nVerify complete\r\n");
+    return false;
+}

@@ -190,6 +190,32 @@ bool eeprom_action_read(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_s
 bool eeprom_action_verify(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size);
 
 /**
+ * @brief Write data from a large source buffer to EEPROM.
+ * @details Unlike eeprom_write(write_from_buf=true) which repeats the same
+ *          block for every address, this reads sequential chunks from src.
+ * @param eeprom      EEPROM information structure
+ * @param src         Source data buffer (may be larger than work_buf)
+ * @param src_size    Source data size in bytes
+ * @param work_buf    Working buffer (>= EEPROM_ADDRESS_PAGE_SIZE)
+ * @param work_buf_size Working buffer size
+ * @return            false on success, true on error
+ */
+bool eeprom_write_from_buffer(struct eeprom_info *eeprom, const uint8_t *src, uint32_t src_size,
+                              uint8_t *work_buf, uint32_t work_buf_size);
+
+/**
+ * @brief Verify EEPROM contents against a large reference buffer.
+ * @param eeprom        EEPROM information structure
+ * @param ref           Reference data buffer
+ * @param ref_size      Reference data size in bytes
+ * @param work_buf      Working buffer (>= EEPROM_ADDRESS_PAGE_SIZE)
+ * @param work_buf_size Working buffer size
+ * @return              false on success, true on error (mismatch)
+ */
+bool eeprom_verify_against_buffer(struct eeprom_info *eeprom, const uint8_t *ref, uint32_t ref_size,
+                                  uint8_t *work_buf, uint32_t work_buf_size);
+
+/**
  * @brief Confirm destructive action with user.
  * @details Checks for -y flag on the command line via the command definition.
  * @param def  Command definition (used to check -y flag)

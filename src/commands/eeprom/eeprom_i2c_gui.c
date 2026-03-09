@@ -29,14 +29,19 @@
 /* ── Action IDs for extra menus ─────────────────────────────────────── */
 
 enum {
-    /* Action menu (1-6) */
-    ACT_DUMP  = 1, ACT_ERASE, ACT_WRITE, ACT_READ, ACT_VERIFY, ACT_TEST,
+    /* Action menu (1-5): Read, Write, Erase, Verify, Test */
+    ACT_READ = 1, ACT_WRITE, ACT_ERASE, ACT_VERIFY, ACT_TEST,
 
     /* Device menu (10 + device index) */
     ACT_DEV_BASE = 10,
 
     /* File menu */
     ACT_FILE_BROWSE = 100,
+    ACT_FILE_SAVE_AS = 101,
+
+    /* Chip menu — mirrors Action spinner, sets + triggers execute */
+    ACT_CHIP_READ  = 110, ACT_CHIP_WRITE, ACT_CHIP_ERASE,
+    ACT_CHIP_VERIFY, ACT_CHIP_TEST,
 
     /* Options menu (app-injected) */
     ACT_I2C_ADDR = 200,
@@ -45,9 +50,9 @@ enum {
 /* ── App context ────────────────────────────────────────────────────── */
 
 static const char *const action_names[] = {
-    "dump", "erase", "write", "read", "verify", "test",
+    "read", "write", "erase", "verify", "test",
 };
-#define ACTION_COUNT 6
+#define ACTION_COUNT 5
 
 typedef struct {
     int      action;         /* -1 = not set, else 0..5 */
@@ -98,17 +103,18 @@ static void on_file_change(void *c) {
     }
 }
 
-/* File field is only visible when action needs a file (write/read/verify). */
-static bool file_visible(void *c) {
-    int a = ((i2c_ctx_t *)c)->action;
-    return (a == 2 || a == 3 || a == 4);
-}
-
-/* Execute button ready when key fields are set. */
+/* Execute button ready when key fields are set.
+ * Read/Erase/Test: just need a device.
+ * Write/Verify: also need editor content or a file. */
 static bool exec_ready(void *c) {
     i2c_ctx_t *x = (i2c_ctx_t *)c;
     if (x->action < 0 || x->device_idx < 0) return false;
-    if (file_visible(c) && x->file_name[0] == '\0') return false;
+    if (x->action == 1 || x->action == 3) { /* write or verify */
+        struct editor *ed = hx_embed_editor();
+        bool has_content = (ed && ed->contents && ed->content_length > 0)
+                        || x->file_name[0] != '\0';
+        if (!has_content) return false;
+    }
     return true;
 }
 
@@ -145,7 +151,6 @@ static const ui_field_def_t i2c_fields[FLD_COUNT] = {
         .file = { .ext_filter = NULL },
         .get_str = get_file,
         .set_str = set_file,
-        .visible = file_visible,
         .on_change = on_file_change,
     },
     [FLD_ADDR] = {
@@ -173,10 +178,9 @@ static const ui_field_def_t i2c_fields[FLD_COUNT] = {
 /* ── Extra menus: Action, Device, File ──────────────────────────────── */
 
 static const vt100_menu_item_t action_menu_items[] = {
-    { "Dump",   NULL, ACT_DUMP,   0 },
-    { "Erase",  NULL, ACT_ERASE,  0 },
-    { "Write",  NULL, ACT_WRITE,  0 },
     { "Read",   NULL, ACT_READ,   0 },
+    { "Write",  NULL, ACT_WRITE,  0 },
+    { "Erase",  NULL, ACT_ERASE,  0 },
     { "Verify", NULL, ACT_VERIFY, 0 },
     { "Test",   NULL, ACT_TEST,   0 },
 };
@@ -221,7 +225,16 @@ static uint8_t build_device_menu_items(i2c_ctx_t *ctx,
 }
 
 static vt100_menu_item_t file_menu_items[] = {
-    { "Browse storage...", NULL, ACT_FILE_BROWSE, 0 },
+    { "Open...",    NULL, ACT_FILE_BROWSE,  0 },
+    { "Save As...", NULL, ACT_FILE_SAVE_AS, 0 },
+};
+
+static const vt100_menu_item_t chip_menu_items[] = {
+    { "Read",   NULL, ACT_CHIP_READ,   0 },
+    { "Write",  NULL, ACT_CHIP_WRITE,  0 },
+    { "Erase",  NULL, ACT_CHIP_ERASE,  0 },
+    { "Verify", NULL, ACT_CHIP_VERIFY, 0 },
+    { "Test",   NULL, ACT_CHIP_TEST,   0 },
 };
 
 static const vt100_menu_item_t i2c_option_items[] = {
@@ -233,9 +246,18 @@ static const vt100_menu_item_t i2c_option_items[] = {
 static void menu_dispatch(void *c, int action_id) {
     i2c_ctx_t *x = (i2c_ctx_t *)c;
 
-    /* Action menu */
-    if (action_id >= ACT_DUMP && action_id <= ACT_TEST) {
-        x->action = action_id - ACT_DUMP;
+    /* Action menu — just set the spinner value */
+    if (action_id >= ACT_READ && action_id <= ACT_TEST) {
+        x->action = action_id - ACT_READ;
+        return;
+    }
+
+    /* Chip menu — set action AND trigger execute */
+    if (action_id >= ACT_CHIP_READ && action_id <= ACT_CHIP_TEST) {
+        x->action = action_id - ACT_CHIP_READ;
+        if (exec_ready(c)) {
+            ui_mem_gui_request_execute();
+        }
         return;
     }
 
@@ -246,13 +268,28 @@ static void menu_dispatch(void *c, int action_id) {
         return;
     }
 
-    /* File browse — open the file picker and load result into hex editor */
+    /* File → Open — open the file picker and load result into hex editor */
     if (action_id == ACT_FILE_BROWSE) {
         char file_buf[64] = {0};
         if (ui_mem_gui_browse_file(file_buf, sizeof(file_buf))) {
             strncpy(x->file_name, file_buf, sizeof(x->file_name) - 1);
             x->file_name[sizeof(x->file_name) - 1] = '\0';
             hx_embed_load(x->file_name);
+        }
+        return;
+    }
+
+    /* File → Save As — save editor buffer to a new file */
+    if (action_id == ACT_FILE_SAVE_AS) {
+        struct editor *ed = hx_embed_editor();
+        if (!ed || !ed->contents || ed->content_length == 0) return;
+        char file_buf[64] = {0};
+        if (ui_mem_gui_browse_file(file_buf, sizeof(file_buf))) {
+            if (hx_file_write_all(file_buf, ed->contents, ed->content_length) == 0) {
+                strncpy(x->file_name, file_buf, sizeof(x->file_name) - 1);
+                x->file_name[sizeof(x->file_name) - 1] = '\0';
+                ed->dirty = false;
+            }
         }
         return;
     }
@@ -285,8 +322,8 @@ static bool pre_check(void *c, const char **err) {
 
 static bool needs_confirm(void *c) {
     int a = ((i2c_ctx_t *)c)->action;
-    /* erase=1, write=2, test=5 are destructive */
-    return (a == 1 || a == 2 || a == 5);
+    /* write=1, erase=2, test=4 are destructive */
+    return (a == 1 || a == 2 || a == 4);
 }
 
 /* Bridge: translate ui_mem_gui_ops_t → eeprom_ui_ops_t for the action fns. */
@@ -320,8 +357,8 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
     /* Show chip info */
     {
         char info[60];
-        snprintf(info, sizeof(info), "%s: %dB, %dB pages, addr %dB",
-                 eeprom.device->name, eeprom.device->size_bytes,
+        snprintf(info, sizeof(info), "%s: %luB, %uB pages, addr %uB",
+                 eeprom.device->name, (unsigned long)eeprom.device->size_bytes,
                  eeprom.device->page_bytes, eeprom.device->address_bytes);
         ops->message(info, ops->ctx);
     }
@@ -329,7 +366,7 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
     bool success = false;
 
     switch (x->action) {
-    case 0: { /* dump → hex editor */
+    case 0: { /* read → chip to buffer (or temp file for large chips) */
         uint32_t eep_size = eeprom.device->size_bytes;
         uint32_t blocks   = eeprom_get_address_blocks_total(&eeprom);
         uint32_t bsz      = eeprom_get_address_block_size(&eeprom);
@@ -338,7 +375,7 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
         if (eep_size <= arena_cap * 9 / 10) {
             char *dump_buf = hx_arena_malloc(eep_size);
             if (!dump_buf) {
-                ops->error("Not enough memory for dump", ops->ctx);
+                ops->error("Not enough memory for read", ops->ctx);
             } else {
                 bool err = false;
                 for (uint32_t i = 0; i < blocks; i++) {
@@ -358,39 +395,75 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
                     ops->progress(blocks, blocks, ops->ctx);
                     hx_embed_load_buffer(dump_buf, eep_size,
                                          eeprom.device->name);
+                    strncpy(x->file_name, "[buffer]",
+                            sizeof(x->file_name) - 1);
                     success = true;
                 }
             }
         } else {
             strncpy(eeprom.file_name, "~dump.bin",
                     sizeof(eeprom.file_name) - 1);
-            ops->message("Reading EEPROM to temp file...", ops->ctx);
+            ops->message("Chip too large for buffer, reading to ~dump.bin...",
+                         ops->ctx);
             if (!eeprom_read(&eeprom, buf, sizeof(buf),
                     (char *)verify_buf, sizeof(verify_buf),
                     EEPROM_READ_TO_FILE)) {
                 hx_embed_load("~dump.bin");
+                strncpy(x->file_name, "~dump.bin",
+                        sizeof(x->file_name) - 1);
                 success = true;
             }
         }
         break;
     }
-    case 1: /* erase */
+    case 1: { /* write → smart: buffer-to-chip or file-to-chip */
+        struct editor *ed = hx_embed_editor();
+        if (ed && !ed->paged && ed->contents && ed->content_length > 0) {
+            /* In-memory buffer → chip */
+            ops->message("Writing buffer to chip...", ops->ctx);
+            if (!eeprom_write_from_buffer(&eeprom,
+                    (const uint8_t *)ed->contents, ed->content_length,
+                    (uint8_t *)buf, sizeof(buf))) {
+                success = true;
+                if (x->verify_flag) {
+                    ops->message("Write verify...", ops->ctx);
+                    if (eeprom_verify_against_buffer(&eeprom,
+                            (const uint8_t *)ed->contents, ed->content_length,
+                            (uint8_t *)buf, sizeof(buf))) {
+                        success = false;
+                    }
+                }
+            }
+        } else if (x->file_name[0] && x->file_name[0] != '[') {
+            /* File → chip (existing path) */
+            success = !eeprom_action_write(&eeprom, (uint8_t *)buf, sizeof(buf),
+                          verify_buf, sizeof(verify_buf), x->verify_flag);
+        } else {
+            ops->error("Load data first (Read chip or Open file)", ops->ctx);
+        }
+        break;
+    }
+    case 2: /* erase */
         success = !eeprom_action_erase(&eeprom, (uint8_t *)buf, sizeof(buf),
                       verify_buf, sizeof(verify_buf), x->verify_flag);
         break;
-    case 2: /* write */
-        success = !eeprom_action_write(&eeprom, (uint8_t *)buf, sizeof(buf),
-                      verify_buf, sizeof(verify_buf), x->verify_flag);
+    case 3: { /* verify → smart: buffer-vs-chip or file-vs-chip */
+        struct editor *ed = hx_embed_editor();
+        if (ed && !ed->paged && ed->contents && ed->content_length > 0) {
+            /* In-memory buffer vs chip */
+            success = !eeprom_verify_against_buffer(&eeprom,
+                          (const uint8_t *)ed->contents, ed->content_length,
+                          (uint8_t *)buf, sizeof(buf));
+        } else if (x->file_name[0] && x->file_name[0] != '[') {
+            /* File vs chip (existing path) */
+            success = !eeprom_action_verify(&eeprom, (uint8_t *)buf, sizeof(buf),
+                          verify_buf, sizeof(verify_buf));
+        } else {
+            ops->error("Load data first (Read chip or Open file)", ops->ctx);
+        }
         break;
-    case 3: /* read */
-        success = !eeprom_action_read(&eeprom, (uint8_t *)buf, sizeof(buf),
-                      verify_buf, sizeof(verify_buf), x->verify_flag);
-        break;
-    case 4: /* verify */
-        success = !eeprom_action_verify(&eeprom, (uint8_t *)buf, sizeof(buf),
-                      verify_buf, sizeof(verify_buf));
-        break;
-    case 5: /* test */
+    }
+    case 4: /* test */
         success = !eeprom_action_test(&eeprom, (uint8_t *)buf, sizeof(buf),
                       verify_buf, sizeof(verify_buf));
         break;
@@ -402,12 +475,9 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
 }
 
 static void post_exec_load(void *c) {
-    i2c_ctx_t *x = (i2c_ctx_t *)c;
-    /* After read action, load the output file into hex viewer */
-    if (x->action == 3 && x->file_name[0]) {
-        hx_embed_load(x->file_name);
-    }
-    /* Dump loads are handled inline in execute_cb */
+    (void)c;
+    /* Read loads are handled inline in execute_cb (buffer or paged).
+     * No post-execute file load needed. */
 }
 
 /* ── Public entry point ─────────────────────────────────────────────── */
@@ -467,11 +537,11 @@ bool eeprom_i2c_gui(const struct eeprom_device_t *devices,
     uint8_t dev_item_count = build_device_menu_items(ctx, dev_menu_items,
                                                      dev_size_hints);
 
-    /* Extra menus: Action, Device, File */
+    /* Extra menus: File, Chip, Device */
     vt100_menu_def_t extra_menus[3] = {
-        { "Action", (vt100_menu_item_t *)action_menu_items, ACTION_COUNT },
+        { "File",   file_menu_items, 2 },
+        { "Chip",   (vt100_menu_item_t *)chip_menu_items, 5 },
         { "Device", dev_menu_items, dev_item_count },
-        { "File",   file_menu_items, 1 },
     };
 
     ui_mem_gui_config_t config = {

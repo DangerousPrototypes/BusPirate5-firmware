@@ -9,9 +9,9 @@
 //   1. Menu item and menu bar definition
 //   2. I/O callback wrappers (read_key, write, repaint)
 //   3. Key pushback for passthrough keys (e.g. Ctrl-Q while menu is open)
-//   4. F10 key decoding (ESC[21~ two-digit CSI sequence)
+//   4. Direct menu activation via vt100_menu_check_trigger()
 //   5. Menu bar drawing in the main loop
-//   6. Menu activation via pending flag
+//   6. Menu activation via check_trigger in the main loop
 //   7. Action dispatch from menu selection
 //   8. Alt-screen buffer lifecycle (enter, clear, restore)
 //   9. Toolbar pause/resume to prevent VT100 interleaving
@@ -137,7 +137,6 @@ static struct {
     int  screen_rows;
     int  screen_cols;
     bool running;
-    bool menu_pending;
     const char* color_esc;   /* current text colour SGR sequence */
     const char* message;     /* status line text */
 } demo;
@@ -301,15 +300,11 @@ static void demo_dispatch(int action) {
 // STEP 11: Keypress handler
 // ============================================================================
 // Process a single keypress in the app's normal (non-menu) mode.
-// The menu_pending flag is set here; the main loop acts on it.
 
 static void demo_process_key(int key) {
     switch (key) {
     case VT100_KEY_CTRL_Q:
         demo.running = false;
-        break;
-    case VT100_KEY_F10:
-        demo.menu_pending = true;
         break;
     default:
         /* Ignore unrecognised keys in this simple demo */
@@ -353,7 +348,6 @@ void menu_demo_handler(struct command_result* res) {
     demo.screen_rows  = system_config.terminal_ansi_rows;
     demo.screen_cols  = system_config.terminal_ansi_columns;
     demo.running      = true;
-    demo.menu_pending = false;
     demo.color_esc    = "\x1b[1;37;46m";  /* cyan background */
     demo.message      = "F10=Menu | Ctrl-Q=Quit";
     vt100_key_init(&demo_keys, demo_read_blocking, demo_read_try);
@@ -382,8 +376,9 @@ void menu_demo_handler(struct command_result* res) {
      *   1. Wait for tx to drain (avoids VT100 interleaving)
      *   2. Refresh screen content
      *   3. Draw passive menu bar ("F10=Menu" hint)
-     *   4. Read + process one keypress
-     *   5. If F10 was pressed, run the menu and dispatch result
+     *   4. Read one keypress
+     *   5. If F-key trigger, run the menu and dispatch result
+     *   6. Otherwise, process keypress normally
      * ---------------------------------------------------------------- */
     while (demo.running) {
         tx_fifo_wait_drain();
@@ -394,12 +389,8 @@ void menu_demo_handler(struct command_result* res) {
 
         /* Process one keypress */
         int key = vt100_key_read(&demo_keys);
-        demo_process_key(key);
 
-        /* Check if menu was requested */
-        if (demo.menu_pending) {
-            demo.menu_pending = false;
-
+        if (vt100_menu_check_trigger(&menu_state, key)) {
             /* Run the blocking menu interaction loop */
             int action = vt100_menu_run(&menu_state);
 
@@ -416,6 +407,8 @@ void menu_demo_handler(struct command_result* res) {
 
             /* Clear screen to force full repaint on next iteration */
             demo_write_str("\x1b[0m\x1b[H\x1b[2J");
+        } else {
+            demo_process_key(key);
         }
     }
 

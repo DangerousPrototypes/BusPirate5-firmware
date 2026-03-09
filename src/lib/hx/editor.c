@@ -65,10 +65,10 @@
  */
 void editor_move_cursor(struct editor* e, int dir, int amount) {
 	switch (dir) {
-	case KEY_UP:    e->cursor_y-=amount; break;
-	case KEY_DOWN:  e->cursor_y+=amount; break;
-	case KEY_LEFT:  e->cursor_x-=amount; break;
-	case KEY_RIGHT: e->cursor_x+=amount; break;
+	case VT100_KEY_UP:    e->cursor_y-=amount; break;
+	case VT100_KEY_DOWN:  e->cursor_y+=amount; break;
+	case VT100_KEY_LEFT:  e->cursor_x-=amount; break;
+	case VT100_KEY_RIGHT: e->cursor_x+=amount; break;
 	}
 	// Did we hit the start of the file? If so, stop moving and place
 	// the cursor on the top-left of the hex display.
@@ -398,7 +398,7 @@ void editor_delete_char_at_cursor(struct editor* e) {
 	// if the deleted offset was the maximum offset, move the cursor to
 	// the left.
 	if (offset >= old_length - 1) {
-		editor_move_cursor(e, KEY_LEFT, 1);
+		editor_move_cursor(e, VT100_KEY_LEFT, 1);
 	}
 	if (e->undo_list) action_list_add(e->undo_list, ACTION_DELETE, offset, charat);
 }
@@ -977,7 +977,7 @@ void editor_replace_byte(struct editor* e, char x) {
 	unsigned int offset = editor_offset_at_cursor(e);
 	unsigned char prev = e->contents[offset];
 	e->contents[offset] = x;
-	editor_move_cursor(e, KEY_RIGHT, 1);
+	editor_move_cursor(e, VT100_KEY_RIGHT, 1);
 	editor_statusmessage(e, STATUS_INFO, "Replaced byte at offset %09x with %02x", offset, (unsigned char) x);
 	e->dirty = true;
 
@@ -1223,7 +1223,7 @@ int editor_read_hex_input(struct editor* e, char* out) {
 
 	int next = read_key();
 
-	if (next == KEY_ESC) {
+	if (next == VT100_KEY_ESC) {
 		editor_setmode(e, MODE_NORMAL);
 		memset(hexstr, '\0', 3);
 		hexstr_idx = 0;
@@ -1254,7 +1254,7 @@ int editor_read_hex_input(struct editor* e, char* out) {
 
 int editor_read_string(struct editor* e, char* dst, int len) {
 	int c = read_key();
-	if (c == KEY_ENTER || c == KEY_ESC) {
+	if (c == VT100_KEY_ENTER || c == VT100_KEY_ESC) {
 		editor_setmode(e, MODE_NORMAL);
 		strncpy(dst, e->inputbuffer, len);
 		e->inputbuffer_index = 0;
@@ -1262,7 +1262,7 @@ int editor_read_string(struct editor* e, char* dst, int len) {
 		return c;
 	}
 
-	if (c == KEY_BACKSPACE && e->inputbuffer_index > 0) {
+	if (c == VT100_KEY_BACKSPACE && e->inputbuffer_index > 0) {
 		e->inputbuffer_index--;
 		e->inputbuffer[e->inputbuffer_index] = '\0';
 		return c;
@@ -1272,7 +1272,7 @@ int editor_read_string(struct editor* e, char* dst, int len) {
 		return c;
 	}
 
-	if (c == KEY_BACKSPACE && e->inputbuffer_index == 0) {
+	if (c == VT100_KEY_BACKSPACE && e->inputbuffer_index == 0) {
 		editor_setmode(e, MODE_NORMAL);
 		return c;
 	}
@@ -1291,25 +1291,25 @@ void editor_process_keypress(struct editor* e) {
 		char out = 0;
 		if (editor_read_hex_input(e, &out) != -1) {
 			editor_insert_byte(e, out, e->mode & MODE_APPEND);
-			editor_move_cursor(e, KEY_RIGHT, 1);
+			editor_move_cursor(e, VT100_KEY_RIGHT, 1);
 		}
 		return;
 	}
 
 	if (e->mode & (MODE_INSERT_ASCII | MODE_APPEND_ASCII)) {
 		char c = read_key();
-		if (c == KEY_ESC) {
+		if (c == VT100_KEY_ESC) {
 			editor_setmode(e, MODE_NORMAL);
 			return;
 		}
 		editor_insert_byte(e, c, e->mode & MODE_APPEND_ASCII);
-		editor_move_cursor(e, KEY_RIGHT, 1);
+		editor_move_cursor(e, VT100_KEY_RIGHT, 1);
 		return;
 	}
 
 	if (e->mode & MODE_REPLACE_ASCII) {
 		char c = read_key();
-		if (c == KEY_ESC) {
+		if (c == VT100_KEY_ESC) {
 			editor_setmode(e, MODE_NORMAL);
 			return;
 		}
@@ -1337,7 +1337,7 @@ void editor_process_keypress(struct editor* e) {
 	if (e->mode & MODE_COMMAND) {
 		char cmd[INPUT_BUF_SIZE];
 		int c = editor_read_string(e, cmd, INPUT_BUF_SIZE);
-		if (c == KEY_ENTER && strlen(cmd) > 0) {
+		if (c == VT100_KEY_ENTER && strlen(cmd) > 0) {
 			editor_process_command(e, cmd);
 		}
 		return;
@@ -1346,7 +1346,7 @@ void editor_process_keypress(struct editor* e) {
 	if (e->mode & MODE_SEARCH) {
 		char search[INPUT_BUF_SIZE];
 		int c = editor_read_string(e, search, INPUT_BUF_SIZE);
-		if (c == KEY_ENTER && strlen(search) > 0) {
+		if (c == VT100_KEY_ENTER && strlen(search) > 0) {
 			editor_process_search(e, search, SEARCH_FORWARD);
 		}
 		return;
@@ -1359,9 +1359,9 @@ void editor_process_keypress(struct editor* e) {
 	}
 
 	switch (c) {
-	case KEY_ESC:    if (!(e->mode & MODE_NORMAL)) editor_setmode(e, MODE_NORMAL); return;
-	case KEY_CTRL_Q: e->quit_requested = true; return;
-	case KEY_CTRL_S:
+	case VT100_KEY_ESC:    if (!(e->mode & MODE_NORMAL)) editor_setmode(e, MODE_NORMAL); return;
+	case VT100_KEY_CTRL_Q: e->quit_requested = true; return;
+	case VT100_KEY_CTRL_S:
 #ifdef BUSPIRATE
 		if (e->paged) {
 			editor_statusmessage(e, STATUS_WARNING, "Read-only paged view");
@@ -1377,11 +1377,11 @@ void editor_process_keypress(struct editor* e) {
 		if (e->paged) {
 			switch (c) {
 			case ']': case '[':
-			case KEY_DEL: case 'x':
+			case VT100_KEY_DELETE: case 'x':
 			case 'a': case 'A':
 			case 'i': case 'I':
 			case 'r': case 'R':
-			case 'u': case KEY_CTRL_R:
+			case 'u': case VT100_KEY_CTRL_R:
 			case '/': case 'n': case 'N':
 				editor_statusmessage(e, STATUS_WARNING, "Read-only paged view");
 				return;
@@ -1391,19 +1391,19 @@ void editor_process_keypress(struct editor* e) {
 		unsigned int file_len = E_FILE_LEN(e);
 
 		switch (c) {
-		case KEY_UP:
-		case KEY_DOWN:
-		case KEY_RIGHT:
-		case KEY_LEFT:
+		case VT100_KEY_UP:
+		case VT100_KEY_DOWN:
+		case VT100_KEY_RIGHT:
+		case VT100_KEY_LEFT:
 			editor_move_cursor(e, c, 1); break;
 
-		case 'h': editor_move_cursor(e, KEY_LEFT,  1); break;
-		case 'j': editor_move_cursor(e, KEY_DOWN,  1); break;
-		case 'k': editor_move_cursor(e, KEY_UP,    1); break;
-		case 'l': editor_move_cursor(e, KEY_RIGHT, 1); break;
+		case 'h': editor_move_cursor(e, VT100_KEY_LEFT,  1); break;
+		case 'j': editor_move_cursor(e, VT100_KEY_DOWN,  1); break;
+		case 'k': editor_move_cursor(e, VT100_KEY_UP,    1); break;
+		case 'l': editor_move_cursor(e, VT100_KEY_RIGHT, 1); break;
 		case ']': editor_increment_byte(e, 1); break;
 		case '[': editor_increment_byte(e, -1); break;
-		case KEY_DEL:
+		case VT100_KEY_DELETE:
 		case 'x': editor_delete_char_at_cursor(e); break;
 		case 'n': editor_process_search(e, e->searchstr, SEARCH_FORWARD); break;
 		case 'N': editor_process_search(e, e->searchstr, SEARCH_BACKWARD); break;
@@ -1418,10 +1418,10 @@ void editor_process_keypress(struct editor* e) {
 		case '/': editor_setmode(e, MODE_SEARCH);       return;
 
 		case 'u':          editor_undo(e); return;
-		case KEY_CTRL_R :  editor_redo(e); return;
+		case VT100_KEY_CTRL_R :  editor_redo(e); return;
 
-		case 'b': editor_move_cursor(e, KEY_LEFT, e->grouping); break;
-		case 'w': editor_move_cursor(e, KEY_RIGHT, e->grouping); break;
+		case 'b': editor_move_cursor(e, VT100_KEY_LEFT, e->grouping); break;
+		case 'w': editor_move_cursor(e, VT100_KEY_RIGHT, e->grouping); break;
 		case 'G':
 			editor_scroll(e, file_len);
 			if (file_len > 0)
@@ -1435,18 +1435,15 @@ void editor_process_keypress(struct editor* e) {
 			}
 			break;
 
-		case KEY_HOME: e->cursor_x = 1; return;
-		case KEY_END:  editor_move_cursor(e, KEY_RIGHT, e->octets_per_line - e->cursor_x); return;
+		case VT100_KEY_HOME: e->cursor_x = 1; return;
+		case VT100_KEY_END:  editor_move_cursor(e, VT100_KEY_RIGHT, e->octets_per_line - e->cursor_x); return;
 
-		case KEY_CTRL_U:
-		case KEY_PAGEUP:   editor_scroll(e, -(e->screen_rows - e->header_rows) + 2); return;
+		case VT100_KEY_CTRL_U:
+		case VT100_KEY_PAGEUP:   editor_scroll(e, -(e->screen_rows - e->header_rows) + 2); return;
 
-		case KEY_CTRL_D:
-		case KEY_PAGEDOWN: editor_scroll(e, e->screen_rows - e->header_rows - 2); return;
+		case VT100_KEY_CTRL_D:
+		case VT100_KEY_PAGEDOWN: editor_scroll(e, e->screen_rows - e->header_rows - 2); return;
 
-#ifdef BUSPIRATE
-		case KEY_F10: e->menu_pending = true; return;
-#endif
 		}
 	}
 }
@@ -1585,7 +1582,6 @@ struct editor* editor_init() {
 
 #ifdef BUSPIRATE
 	e->undo_list = NULL;  /* undo disabled — zero-alloc debug build */
-	e->menu_pending = false;
 	e->paged = false;
 	e->file_size = 0;
 	e->page_offset = 0;
@@ -1793,12 +1789,8 @@ int hx_run(const char* filename) {
 		prev_mode  = g_hx_editor->mode;
 
 		do {
-			editor_process_keypress(g_hx_editor);
-			if (g_hx_editor->quit_requested) break;
-
-			/* Check if F10 was pressed (flagged in keypress handler) */
-			if (g_hx_editor->menu_pending) {
-				g_hx_editor->menu_pending = false;
+			int c = read_key();
+			if (vt100_menu_check_trigger(&menu_state, c)) {
 				int action = vt100_menu_run(&menu_state);
 				if (action > 0) {
 					hx_menu_dispatch(g_hx_editor, action);
@@ -1809,6 +1801,9 @@ int hx_run(const char* filename) {
 				prev_line = -1;  /* invalidate so skip-redraw loop is bypassed */
 				break;  /* force full redraw */
 			}
+			read_key_unget(c);
+			editor_process_keypress(g_hx_editor);
+			if (g_hx_editor->quit_requested) break;
 		} while (spsc_queue_level(&rx_fifo) > 0);
 		if (g_hx_editor->quit_requested) break;
 
@@ -1820,11 +1815,8 @@ int hx_run(const char* filename) {
 		       g_hx_editor->content_length == prev_len  &&
 		       g_hx_editor->dirty         == prev_dirty &&
 		       g_hx_editor->mode          == prev_mode) {
-			editor_process_keypress(g_hx_editor);
-			if (g_hx_editor->quit_requested) break;
-
-			if (g_hx_editor->menu_pending) {
-				g_hx_editor->menu_pending = false;
+			int c = read_key();
+			if (vt100_menu_check_trigger(&menu_state, c)) {
 				int action = vt100_menu_run(&menu_state);
 				if (action > 0) {
 					hx_menu_dispatch(g_hx_editor, action);
@@ -1834,6 +1826,9 @@ int hx_run(const char* filename) {
 				clear_screen();
 				break;  /* force full redraw */
 			}
+			read_key_unget(c);
+			editor_process_keypress(g_hx_editor);
+			if (g_hx_editor->quit_requested) break;
 
 			/* Batch any further repeats that also land on the boundary */
 			while (spsc_queue_level(&rx_fifo) > 0) {
@@ -1881,13 +1876,16 @@ int hx_run_embedded(const char *filename, int ext_header_rows) {
 		prev_mode  = g_hx_editor->mode;
 
 		do {
-			editor_process_keypress(g_hx_editor);
-			if (g_hx_editor->quit_requested) break;
-			if (g_hx_editor->menu_pending) {
-				g_hx_editor->menu_pending = false;
+			int c = read_key();
+			if (c == VT100_KEY_F10 ||
+			    (c >= VT100_KEY_F1 && c <= VT100_KEY_F8)) {
+				read_key_unget(c);
 				result = HX_EMBED_F10;
 				goto done;
 			}
+			read_key_unget(c);
+			editor_process_keypress(g_hx_editor);
+			if (g_hx_editor->quit_requested) break;
 		} while (spsc_queue_level(&rx_fifo) > 0);
 		if (g_hx_editor->quit_requested) break;
 
@@ -1898,13 +1896,16 @@ int hx_run_embedded(const char *filename, int ext_header_rows) {
 		       g_hx_editor->content_length == prev_len  &&
 		       g_hx_editor->dirty         == prev_dirty &&
 		       g_hx_editor->mode          == prev_mode) {
-			editor_process_keypress(g_hx_editor);
-			if (g_hx_editor->quit_requested) break;
-			if (g_hx_editor->menu_pending) {
-				g_hx_editor->menu_pending = false;
+			int c = read_key();
+			if (c == VT100_KEY_F10 ||
+			    (c >= VT100_KEY_F1 && c <= VT100_KEY_F8)) {
+				read_key_unget(c);
 				result = HX_EMBED_F10;
 				goto done;
 			}
+			read_key_unget(c);
+			editor_process_keypress(g_hx_editor);
+			if (g_hx_editor->quit_requested) break;
 			while (spsc_queue_level(&rx_fifo) > 0) {
 				editor_process_keypress(g_hx_editor);
 			}

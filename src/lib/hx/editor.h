@@ -79,9 +79,7 @@ struct editor {
 
 	bool quit_requested; // clean exit requested (set by :q, Ctrl+Q, menu Quit)
 	bool cursor_hidden;  // when true, suppress reverse-video cursor highlight
-#ifdef BUSPIRATE
-	bool menu_pending;  // F10 was pressed, main loop should open menu
-
+#if defined(BUSPIRATE) || defined(BP_EMBEDDED)
 	/* ── Paged mode (read-only view for files > arena capacity) ── */
 	bool         paged;       // true = read-only paged view (file too large for arena)
 	unsigned int file_size;   // total file size on disk (only meaningful when paged)

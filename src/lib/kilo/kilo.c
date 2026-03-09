@@ -34,29 +34,7 @@
 
 #define KILO_VERSION "0.0.1"
 
-#ifdef BUSPIRATE
 #include "kilo_compat.h"
-#else
-#ifdef __linux__
-#define _POSIX_C_SOURCE 200809L
-#endif
-
-#include <termios.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <errno.h>
-#include <string.h>
-#include <ctype.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <stdarg.h>
-#include <fcntl.h>
-#include <signal.h>
-#endif /* BUSPIRATE */
 
 /* Syntax highlight types */
 #define HL_NORMAL 0
@@ -115,68 +93,7 @@ struct editorConfig {
 
 static struct editorConfig E;
 
-#ifdef BUSPIRATE
-static int kilo_menu_pending;  /* Forward declaration — set by F10 key handler */
-#endif
-
-#ifdef BUSPIRATE
 #include "lib/vt100_keys/vt100_keys.h"
-enum KEY_ACTION{
-        KEY_NULL = 0,       /* NULL */
-        CTRL_C = VT100_KEY_CTRL_C,
-        CTRL_D = VT100_KEY_CTRL_D,
-        CTRL_F = VT100_KEY_CTRL_F,
-        CTRL_H = VT100_KEY_CTRL_H,
-        TAB = VT100_KEY_TAB,
-        CTRL_L = VT100_KEY_CTRL_L,
-        ENTER = VT100_KEY_ENTER,
-        CTRL_Q = VT100_KEY_CTRL_Q,
-        CTRL_S = VT100_KEY_CTRL_S,
-        CTRL_T = VT100_KEY_CTRL_T,
-        CTRL_U = VT100_KEY_CTRL_U,
-        ESC = VT100_KEY_ESC,
-        BACKSPACE = VT100_KEY_BACKSPACE,
-        ARROW_LEFT  = VT100_KEY_LEFT,
-        ARROW_RIGHT = VT100_KEY_RIGHT,
-        ARROW_UP    = VT100_KEY_UP,
-        ARROW_DOWN  = VT100_KEY_DOWN,
-        DEL_KEY     = VT100_KEY_DELETE,
-        HOME_KEY    = VT100_KEY_HOME,
-        END_KEY     = VT100_KEY_END,
-        PAGE_UP     = VT100_KEY_PAGEUP,
-        PAGE_DOWN   = VT100_KEY_PAGEDOWN,
-        F10_KEY     = VT100_KEY_F10,
-};
-#else
-enum KEY_ACTION{
-        KEY_NULL = 0,       /* NULL */
-        CTRL_C = 3,         /* Ctrl-c */
-        CTRL_D = 4,         /* Ctrl-d */
-        CTRL_F = 6,         /* Ctrl-f */
-        CTRL_H = 8,         /* Ctrl-h */
-        TAB = 9,            /* Tab */
-        CTRL_L = 12,        /* Ctrl+l */
-        ENTER = 13,         /* Enter */
-        CTRL_Q = 17,        /* Ctrl-q */
-        CTRL_S = 19,        /* Ctrl-s */
-        CTRL_T = 20,        /* Ctrl-t */
-        CTRL_U = 21,        /* Ctrl-u */
-        ESC = 27,           /* Escape */
-        BACKSPACE =  127,   /* Backspace */
-        /* The following are just soft codes, not really reported by the
-         * terminal directly. */
-        ARROW_LEFT = 1000,
-        ARROW_RIGHT,
-        ARROW_UP,
-        ARROW_DOWN,
-        DEL_KEY,
-        HOME_KEY,
-        END_KEY,
-        PAGE_UP,
-        PAGE_DOWN,
-        F10_KEY
-};
-#endif
 
 void editorSetStatusMessage(const char *fmt, ...);
 
@@ -303,90 +220,13 @@ fatal:
 
 /* Read a key from the terminal put in raw mode, trying to handle
  * escape sequences. */
-static int editorReadKey_pushback = -1;
-
 static void editorReadKey_unget(int key) {
-#ifdef BUSPIRATE
     vt100_key_unget(&kilo_key_state, key);
-#else
-    editorReadKey_pushback = key;
-#endif
 }
 
 int editorReadKey(int fd) {
-#ifdef BUSPIRATE
     (void)fd;
     return vt100_key_read(&kilo_key_state);
-#else
-    /* Return pushed-back key if present (used for menu passthrough) */
-    if (editorReadKey_pushback >= 0) {
-        int k = editorReadKey_pushback;
-        editorReadKey_pushback = -1;
-        return k;
-    }
-
-    int nread;
-    char c, seq[3];
-    while ((nread = read(fd,&c,1)) == 0);
-    if (nread == -1) exit(1);
-
-    while(1) {
-        switch(c) {
-        case ESC:    /* escape sequence */
-            /* If this is just an ESC, we'll timeout here. */
-            if (read(fd,seq,1) == 0) return ESC;
-            if (read(fd,seq+1,1) == 0) return ESC;
-
-            /* ESC [ sequences. */
-            if (seq[0] == '[') {
-                if (seq[1] >= '0' && seq[1] <= '9') {
-                    /* Extended escape, read additional byte. */
-                    if (read(fd,seq+2,1) == 0) return ESC;
-                    if (seq[2] == '~') {
-                        /* Single-digit CSI: ESC [ N ~ */
-                        switch(seq[1]) {
-                        case '1': return HOME_KEY;
-                        case '3': return DEL_KEY;
-                        case '4': return END_KEY;
-                        case '5': return PAGE_UP;
-                        case '6': return PAGE_DOWN;
-                        }
-                    } else if (seq[2] >= '0' && seq[2] <= '9') {
-                        /* Two-digit CSI: ESC [ N N ~ (e.g. F10 = ESC[21~) */
-                        char seq3;
-                        if (read(fd, &seq3, 1) == 0) return ESC;
-                        if (seq3 == '~') {
-                            int code = (seq[1] - '0') * 10 + (seq[2] - '0');
-                            switch (code) {
-                            case 21: return F10_KEY;
-                            }
-                        }
-                    }
-                } else {
-                    switch(seq[1]) {
-                    case 'A': return ARROW_UP;
-                    case 'B': return ARROW_DOWN;
-                    case 'C': return ARROW_RIGHT;
-                    case 'D': return ARROW_LEFT;
-                    case 'H': return HOME_KEY;
-                    case 'F': return END_KEY;
-                    }
-                }
-            }
-
-            /* ESC O sequences. */
-            else if (seq[0] == 'O') {
-                switch(seq[1]) {
-                case 'H': return HOME_KEY;
-                case 'F': return END_KEY;
-                }
-            }
-            break;
-        default:
-            return c;
-        }
-    }
-#endif /* !BUSPIRATE */
 }
 
 /* Use the ESC [6n escape sequence to query the horizontal cursor position
@@ -408,7 +248,7 @@ int getCursorPosition(int ifd, int ofd, int *rows, int *cols) {
     buf[i] = '\0';
 
     /* Parse it. */
-    if (buf[0] != ESC || buf[1] != '[') return -1;
+    if (buf[0] != '\x1b' || buf[1] != '[') return -1;
     if (sscanf(buf+2,"%d;%d",rows,cols) != 2) return -1;
     return 0;
 }
@@ -649,7 +489,7 @@ void editorUpdateRow(erow *row) {
      * respecting tabs, substituting non printable characters with '?'. */
     free(row->render);
     for (j = 0; j < row->size; j++)
-        if (row->chars[j] == TAB) tabs++;
+        if (row->chars[j] == '\t') tabs++;;
 
     unsigned long long allocsize =
         (unsigned long long) row->size + tabs*8 + nonprint*9 + 1;
@@ -661,7 +501,7 @@ void editorUpdateRow(erow *row) {
     row->render = malloc(row->size + tabs*8 + nonprint*9 + 1);
     idx = 0;
     for (j = 0; j < row->size; j++) {
-        if (row->chars[j] == TAB) {
+        if (row->chars[j] == '\t') {
             row->render[idx++] = ' ';
             while((idx+1) % 8 != 0) row->render[idx++] = ' ';
         } else {
@@ -974,11 +814,7 @@ void editorRefreshScreen(void) {
     struct abuf ab = ABUF_INIT;
 
     abAppend(&ab,"\x1b[?25l",6); /* Hide cursor. */
-#ifdef BUSPIRATE
     abAppend(&ab,"\x1b[2;1H",6); /* Row 1 is menu bar; start at row 2. */
-#else
-    abAppend(&ab,"\x1b[H",3); /* Go home. */
-#endif
     for (y = 0; y < E.screenrows; y++) {
         int filerow = E.rowoff+y;
 
@@ -1092,15 +928,11 @@ void editorRefreshScreen(void) {
     erow *row = (filerow >= E.numrows) ? NULL : &E.row[filerow];
     if (row) {
         for (j = E.coloff; j < (E.cx+E.coloff); j++) {
-            if (j < row->size && row->chars[j] == TAB) cx += 7-((cx)%8);
+            if (j < row->size && row->chars[j] == '\t') cx += 7-((cx)%8);
             cx++;
         }
     }
-#ifdef BUSPIRATE
     snprintf(buf,sizeof(buf),"\x1b[%d;%dH",E.cy+2,cx); /* +2: row 1 is menu bar */
-#else
-    snprintf(buf,sizeof(buf),"\x1b[%d;%dH",E.cy+1,cx);
-#endif
     abAppend(&ab,buf,strlen(buf));
     abAppend(&ab,"\x1b[?25h",6); /* Show cursor. */
     write(STDOUT_FILENO,ab.b,ab.len);
@@ -1147,20 +979,20 @@ void editorFind(int fd) {
         editorRefreshScreen();
 
         int c = editorReadKey(fd);
-        if (c == DEL_KEY || c == CTRL_H || c == BACKSPACE) {
+        if (c == VT100_KEY_DELETE || c == VT100_KEY_CTRL_H || c == VT100_KEY_BACKSPACE) {
             if (qlen != 0) query[--qlen] = '\0';
             last_match = -1;
-        } else if (c == ESC || c == ENTER) {
-            if (c == ESC) {
+        } else if (c == VT100_KEY_ESC || c == VT100_KEY_ENTER) {
+            if (c == VT100_KEY_ESC) {
                 E.cx = saved_cx; E.cy = saved_cy;
                 E.coloff = saved_coloff; E.rowoff = saved_rowoff;
             }
             FIND_RESTORE_HL;
             editorSetStatusMessage("");
             return;
-        } else if (c == ARROW_RIGHT || c == ARROW_DOWN) {
+        } else if (c == VT100_KEY_RIGHT || c == VT100_KEY_DOWN) {
             find_next = 1;
-        } else if (c == ARROW_LEFT || c == ARROW_UP) {
+        } else if (c == VT100_KEY_LEFT || c == VT100_KEY_UP) {
             find_next = -1;
         } else if (isprint(c)) {
             if (qlen < KILO_QUERY_LEN) {
@@ -1226,7 +1058,7 @@ void editorMoveCursor(int key) {
     erow *row = (filerow >= E.numrows) ? NULL : &E.row[filerow];
 
     switch(key) {
-    case ARROW_LEFT:
+    case VT100_KEY_LEFT:
         if (E.cx == 0) {
             if (E.coloff) {
                 E.coloff--;
@@ -1244,7 +1076,7 @@ void editorMoveCursor(int key) {
             E.cx -= 1;
         }
         break;
-    case ARROW_RIGHT:
+    case VT100_KEY_RIGHT:
         if (row && filecol < row->size) {
             if (E.cx == E.screencols-1) {
                 E.coloff++;
@@ -1261,14 +1093,14 @@ void editorMoveCursor(int key) {
             }
         }
         break;
-    case ARROW_UP:
+    case VT100_KEY_UP:
         if (E.cy == 0) {
             if (E.rowoff) E.rowoff--;
         } else {
             E.cy -= 1;
         }
         break;
-    case ARROW_DOWN:
+    case VT100_KEY_DOWN:
         if (filerow < E.numrows) {
             if (E.cy == E.screenrows-1) {
                 E.rowoff++;
@@ -1302,14 +1134,14 @@ void editorProcessKeypress(int fd) {
 
     int c = editorReadKey(fd);
     switch(c) {
-    case ENTER:         /* Enter */
+    case VT100_KEY_ENTER:         /* Enter */
         editorInsertNewline();
         break;
-    case CTRL_C:        /* Ctrl-c */
+    case VT100_KEY_CTRL_C:        /* Ctrl-c */
         /* We ignore ctrl-c, it can't be so simple to lose the changes
          * to the edited file. */
         break;
-    case CTRL_Q:        /* Ctrl-q */
+    case VT100_KEY_CTRL_Q:        /* Ctrl-q */
         /* Quit if the file was already saved. */
         if (E.dirty && quit_times) {
             editorSetStatusMessage("WARNING!!! File has unsaved changes. "
@@ -1319,42 +1151,42 @@ void editorProcessKeypress(int fd) {
         }
         exit(0);
         break;
-    case CTRL_S:        /* Ctrl-s */
+    case VT100_KEY_CTRL_S:        /* Ctrl-s */
         editorSave();
         break;
-    case CTRL_F:
+    case VT100_KEY_CTRL_F:
         editorFind(fd);
         break;
-    case BACKSPACE:     /* Backspace */
-    case CTRL_H:        /* Ctrl-h */
-    case DEL_KEY:
+    case VT100_KEY_BACKSPACE:     /* Backspace */
+    case VT100_KEY_CTRL_H:        /* Ctrl-h */
+    case VT100_KEY_DELETE:
         editorDelChar();
         break;
-    case PAGE_UP:
-    case PAGE_DOWN:
-        if (c == PAGE_UP && E.cy != 0)
+    case VT100_KEY_PAGEUP:
+    case VT100_KEY_PAGEDOWN:
+        if (c == VT100_KEY_PAGEUP && E.cy != 0)
             E.cy = 0;
-        else if (c == PAGE_DOWN && E.cy != E.screenrows-1)
+        else if (c == VT100_KEY_PAGEDOWN && E.cy != E.screenrows-1)
             E.cy = E.screenrows-1;
         {
         int times = E.screenrows;
         while(times--)
-            editorMoveCursor(c == PAGE_UP ? ARROW_UP:
-                                            ARROW_DOWN);
+            editorMoveCursor(c == VT100_KEY_PAGEUP ? VT100_KEY_UP:
+                                            VT100_KEY_DOWN);
         }
         break;
 
-    case ARROW_UP:
-    case ARROW_DOWN:
-    case ARROW_LEFT:
-    case ARROW_RIGHT:
+    case VT100_KEY_UP:
+    case VT100_KEY_DOWN:
+    case VT100_KEY_LEFT:
+    case VT100_KEY_RIGHT:
         editorMoveCursor(c);
         break;
-    case HOME_KEY:
+    case VT100_KEY_HOME:
         E.cx = 0;
         E.coloff = 0;
         break;
-    case END_KEY:
+    case VT100_KEY_END:
         if (E.rowoff+E.cy < E.numrows) {
             int rowlen = E.row[E.rowoff+E.cy].size;
             if (rowlen > E.screencols-1) {
@@ -1366,10 +1198,10 @@ void editorProcessKeypress(int fd) {
             }
         }
         break;
-    case CTRL_L: /* ctrl+l, clear screen */
+    case VT100_KEY_CTRL_L: /* ctrl+l, clear screen */
         /* Just refresht the line as side effect. */
         break;
-    case CTRL_T: /* ctrl+t, toggle syntax highlighting */
+    case VT100_KEY_CTRL_T: /* ctrl+t, toggle syntax highlighting */
         if (E.syntax) {
             E.syntax = NULL;
         } else {
@@ -1384,14 +1216,9 @@ void editorProcessKeypress(int fd) {
         editorSetStatusMessage("Syntax highlighting: %s",
             E.syntax ? "ON" : "OFF");
         break;
-    case ESC:
+    case VT100_KEY_ESC:
         /* Nothing to do for ESC in this mode. */
         break;
-#ifdef BUSPIRATE
-    case F10_KEY:
-        kilo_menu_pending = 1;
-        break;
-#endif
     default:
         editorInsertChar(c);
         break;
@@ -1433,8 +1260,6 @@ void initEditor(void) {
     updateWindowSize();
     signal(SIGWINCH, handleSigWinCh);
 }
-
-#ifdef BUSPIRATE
 
 #include "lib/vt100_menu/vt100_menu.h"
 
@@ -1558,9 +1383,8 @@ int kilo_run(const char *filename) {
         (uint8_t)(E.screenrows + 2),
         kilo_menu_read_key_wrapper,
         kilo_menu_write_wrapper);
-    /* Key codes: kilo's enum values now match vt100_keys.h via the
-     * #ifdef BUSPIRATE redefinition above, so the menu defaults
-     * are correct and no overrides are needed. */
+    /* Key codes: kilo's enum values match vt100_keys.h, so the menu
+     * defaults are correct and no overrides are needed. */
     menu_state.repaint   = editorRefreshScreen;
 
     /* Reserve row 1 for menu bar — shrink content area by 1 */
@@ -1569,11 +1393,10 @@ int kilo_run(const char *filename) {
     while(1) {
         editorRefreshScreen();
         vt100_menu_draw_bar(&menu_state);
-        editorProcessKeypress(STDIN_FILENO);
+        write(STDOUT_FILENO, "\x1b[?25h", 6); /* restore cursor hidden by draw_bar */
 
-        /* Check if F10 was pressed */
-        if (kilo_menu_pending) {
-            kilo_menu_pending = 0;
+        int c = editorReadKey(STDIN_FILENO);
+        if (vt100_menu_check_trigger(&menu_state, c)) {
             int action = vt100_menu_run(&menu_state);
             if (action > 0) {
                 kilo_menu_dispatch(action);
@@ -1582,27 +1405,10 @@ int kilo_run(const char *filename) {
             }
             /* Force full redraw after menu closes */
             write(STDOUT_FILENO, "\x1b[2J", 4);
+        } else {
+            editorReadKey_unget(c);
+            editorProcessKeypress(STDIN_FILENO);
         }
     }
     return 0;
 }
-#else
-int main(int argc, char **argv) {
-    if (argc != 2) {
-        fprintf(stderr,"Usage: kilo <filename>\n");
-        exit(1);
-    }
-
-    initEditor();
-    editorSelectSyntaxHighlight(argv[1]);
-    editorOpen(argv[1]);
-    enableRawMode(STDIN_FILENO);
-    editorSetStatusMessage(
-        "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
-    while(1) {
-        editorRefreshScreen();
-        editorProcessKeypress(STDIN_FILENO);
-    }
-    return 0;
-}
-#endif /* BUSPIRATE */

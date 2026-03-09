@@ -55,6 +55,9 @@
 #define MENU_RESULT_REDRAW    -2   /**< Menu closed, caller should redraw screen */
 #define MENU_RESULT_PASSTHROUGH -3 /**< Menu closed, unhandled key in state->unhandled_key */
 
+/** Maximum number of top-level menus that get F-key shortcuts (F1–F8). */
+#define VT100_MENU_MAX_FKEYS  8
+
 /* ── Data structures ────────────────────────────────────────────────── */
 
 /**
@@ -124,6 +127,10 @@ typedef struct {
     int key_enter;
     int key_esc;
     int key_f10;
+
+    /* Per-menu F-key shortcuts (F1–F8), auto-populated by init.
+     * fkeys[i] == 0 means no shortcut for that menu index. */
+    int fkeys[VT100_MENU_MAX_FKEYS];
 
     /* After vt100_menu_run() returns MENU_RESULT_PASSTHROUGH, this holds
      * the key code that the menu did not consume.  The caller should
@@ -221,6 +228,19 @@ void vt100_menu_erase(const vt100_menu_state_t* state);
  * @return Number of reserved rows (0 or 1).
  */
 uint8_t vt100_menu_reserved_rows(const vt100_menu_state_t* state);
+
+/**
+ * @brief Check if a key is a menu trigger (F1–Fn or F10).
+ *
+ * If the key matches an F-key shortcut for a menu tab (F1–F8) or
+ * the F10 activation key, sets selected_menu accordingly and returns
+ * true.  The caller should then call vt100_menu_run().
+ *
+ * @param state  Menu state.
+ * @param key    Key code from the editor's read_key().
+ * @return true if the key is a menu trigger, false otherwise.
+ */
+bool vt100_menu_check_trigger(vt100_menu_state_t* state, int key);
 
 /* ── Key constants (must match the host editor's key enum) ──────────── */
 /*

@@ -13,17 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef BUSPIRATE
-#include <sys/ioctl.h>
-#include <termios.h>
-#include <unistd.h>
-#endif
-
-#ifndef BUSPIRATE
-// Terminal IO settings. Used to reset it when exiting to prevent terminal
-// data garbling. See enable/disable_raw_mode().
-static struct termios orig_termios;
-#endif
 
 int hex2bin(const char* s) {
 	int ret=0;
@@ -101,230 +90,45 @@ int str2int(const char* s, int min, int max, int def) {
  *
  * read_key() will only return the correct key code, or -1 when anything fails.
  */
-static int read_key_pushback = -1;
-
 void read_key_unget(int key) {
-#ifdef BUSPIRATE
 	vt100_key_unget(&hx_key_state, key);
-#else
-	read_key_pushback = key;
-#endif
 }
 
 int read_key() {
-#ifdef BUSPIRATE
 	/* Use the shared vt100_keys decoder.
 	 * Apply hx's app-level Ctrl remaps on top. */
 	int k = vt100_key_read(&hx_key_state);
 	switch (k) {
-	case KEY_CTRL_H:  return KEY_BACKSPACE;
-	case KEY_CTRL_B:  return KEY_PAGEUP;
-	case KEY_CTRL_F:  return KEY_PAGEDOWN;
-	default:          return k;
+	case VT100_KEY_CTRL_H:  return VT100_KEY_BACKSPACE;
+	case VT100_KEY_CTRL_B:  return VT100_KEY_PAGEUP;
+	case VT100_KEY_CTRL_F:  return VT100_KEY_PAGEDOWN;
+	default:                return k;
 	}
-#else
-	/* Return pushed-back key if present (used for menu passthrough) */
-	if (read_key_pushback >= 0) {
-		int k = read_key_pushback;
-		read_key_pushback = -1;
-		return k;
-	}
-
-	char c;
-	ssize_t nread;
-	// check == 0 to see if EOF.
-#ifdef BUSPIRATE
-	while ((nread = hx_io_read(0, &c, 1)) == 0);
-#else
-	while ((nread = read(STDIN_FILENO, &c, 1)) == 0);
-#endif
-	if (nread == -1) {
-		// When the read call is interrupted by a signal (such as SIGWINCH), the
-		// nread will be -1. In that case, just return -1 prematurely and continue
-		// the main loop.
-		return -1;
-	}
-
-	char seq[4]; // escape sequence buffer.
-
-	switch (c) {
-	case KEY_BACKSPACE:
-	case KEY_CTRL_H:
-		return KEY_BACKSPACE;
-	case KEY_CTRL_B:
-		return KEY_PAGEUP;
-	case KEY_CTRL_F:
-		return KEY_PAGEDOWN;
-	case KEY_ESC:
-		// Escape key was pressed, OR things like delete, arrow keys, ...
-		// So we will try to read ahead a few bytes, and see if there's more.
-		// For instance, a single Escape key only produces a single 0x1b char.
-		// A delete key produces 0x1b 0x5b 0x33 0x7e.
-#ifdef BUSPIRATE
-		if (hx_io_read(0, seq, 1) == 0) {
-#else
-		if (read(STDIN_FILENO, seq, 1) == 0) {
-#endif
-			return KEY_ESC;
-		}
-#ifdef BUSPIRATE
-		if (hx_io_read(0, seq + 1, 1) == 0) {
-#else
-		if (read(STDIN_FILENO, seq + 1, 1) == 0) {
-#endif
-			return KEY_ESC;
-		}
-
-		// home = 0x1b, [ = 0x5b, 1 = 0x31, ~ = 0x7e,
-		// end  = 0x1b, [ = 0x5b, 4 = 0x34, ~ = 0x7e,
-		// pageup   1b, [=5b, 5=35, ~=7e,
-		// pagedown 1b, [=5b, 6=36, ~=7e,
-
-		if (seq[0] == '[') {
-			if (seq[1] >= '0' && seq[1] <= '9') {
-#ifdef BUSPIRATE
-				if (hx_io_read(0, seq + 2, 1) == 0) {
-#else
-				if (read(STDIN_FILENO, seq + 2, 1) == 0) {
-#endif
-					return KEY_ESC;
-				}
-					if (seq[2] == '~') {
-					/* Single-digit CSI: ESC [ N ~ */
-					switch (seq[1]) {
-					case '1': return KEY_HOME;
-					case '3': return KEY_DEL;
-					case '4': return KEY_END;
-					case '5': return KEY_PAGEUP;
-					case '6': return KEY_PAGEDOWN;
-					// TODO: with rxvt-unicode, ^[[7~ and ^[[8~ seem to be
-					// emitted when the home/end key are pressed. We can
-					// currently mitigate it like this.
-					case '7': return KEY_HOME;
-					case '8': return KEY_END;
-					}
-				} else if (seq[2] >= '0' && seq[2] <= '9') {
-					/* Two-digit CSI: ESC [ N N ~ (e.g. F10 = ESC[21~) */
-					char seq3;
-#ifdef BUSPIRATE
-					if (hx_io_read(0, &seq3, 1) == 0) return KEY_ESC;
-#else
-					if (read(STDIN_FILENO, &seq3, 1) == 0) return KEY_ESC;
-#endif
-					if (seq3 == '~') {
-						int code = (seq[1] - '0') * 10 + (seq[2] - '0');
-						switch (code) {
-						case 21: return KEY_F10;
-						}
-					}
-				}
-			}
-			switch (seq[1]) {
-			case 'A': return KEY_UP;
-			case 'B': return KEY_DOWN;
-			case 'C': return KEY_RIGHT;
-			case 'D': return KEY_LEFT;
-			case 'H': return KEY_HOME; // does not work with me?
-			case 'F': return KEY_END;  // ... same?
-			}
-		} else if (seq[0] == 'O') {
-			// Some terminal emulators emit ^[[O sequences for HOME/END,
-			// such as xfce4-terminal.
-			switch (seq[1]) {
-			case 'H': return KEY_HOME;
-			case 'F': return KEY_END;
-			}
-		}
-	}
-
-	return c;
-#endif /* !BUSPIRATE */
 }
 
 bool get_window_size(int* rows, int* cols) {
-#ifdef BUSPIRATE
 	return hx_get_window_size(rows, cols);
-#else
-	struct winsize ws;
-	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != 0) {
-		perror("Failed to query terminal size");
-		exit(1);
-	}
-
-	*rows = ws.ws_row;
-	*cols = ws.ws_col;
-	return true;
-#endif
 }
 
 void term_state_save() {
-#ifndef BUSPIRATE
-	// Write a sequence to save the current terminal state.
-	(void) (write(STDOUT_FILENO, "\x1b[?1049h", 8) + 1);
-#endif
+	/* No-op on embedded — terminal is already in alt-screen */
 }
 
 void term_state_restore() {
-#ifndef BUSPIRATE
-	(void) (write(STDOUT_FILENO, "\x1b[?1049l", 8) + 1);
-#endif
+	/* No-op on embedded */
 }
 
 void enable_raw_mode() {
-#ifndef BUSPIRATE
-	// only enable raw mode when stdin is a tty.
-	if (!isatty(STDIN_FILENO)) {
-		perror("Input is not a TTY");
-		exit(1);
-	}
-
-	tcgetattr(STDIN_FILENO, &orig_termios);
-
-	struct termios raw = orig_termios;
-	// input modes: no break, no CR to NL, no parity check, no strip char,
-	// no start/stop output control.
-	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-	// output modes - disable post processing
-	raw.c_oflag &= ~(OPOST);
-	// control modes - set 8 bit chars
-	raw.c_cflag |= (CS8);
-	// local modes - echoing off, canonical off, no extended functions,
-	// no signal chars (^Z,^C)
-	raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-	// control chars - set return condition: min number of bytes and timer.
-	// Return each byte, or zero for timeout.
-	raw.c_cc[VMIN] = 0;
-	// 100 ms timeout (unit is tens of second). Do not set this to 0 for
-	// whatever reason, because this will skyrocket the cpu usage to 100%!
-	raw.c_cc[VTIME] = 1;
-
-	// put terminal in raw mode after flushing
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) != 0) {
-		perror("Unable to set terminal to raw mode");
-		exit(1);
-	}
-#endif
+	/* No-op on embedded — terminal is always raw */
 }
 
 void disable_raw_mode() {
-#ifndef BUSPIRATE
-	// Reset the terminal settings to the state before hx was started.
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
-	// Also, emit a ^[?25h sequence to show the cursor again.
-	(void) (write(STDOUT_FILENO, "\x1b[?25h", 6) + 1);
-#endif
+	/* No-op on embedded */
 }
-
 
 void clear_screen() {
 	// clear the colors, move the cursor up-left, clear the screen.
 	char stuff[80];
 	int bw = snprintf(stuff, 80, "\x1b[0m\x1b[H\x1b[2J");
-#ifdef BUSPIRATE
 	hx_io_write(1, stuff, bw);
-#else
-	if (write(STDOUT_FILENO, stuff, bw) == -1) {
-		perror("Unable to clear screen");
-	}
-#endif
 }

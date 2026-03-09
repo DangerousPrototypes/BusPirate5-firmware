@@ -129,15 +129,20 @@ static void menu_attr_shortcut_selected(const vt100_menu_state_t* s) {
 
 /* ── Geometry helpers ───────────────────────────────────────────────── */
 
+/** Width of the F-key prefix for menu index i (e.g. "F1-" = 3, or 0 if none). */
+static int fkey_prefix_len(const vt100_menu_state_t* s, int i) {
+    return (i < VT100_MENU_MAX_FKEYS && s->fkeys[i]) ? 3 : 0;
+}
+
 /**
  * Calculate the column where a top-level menu label starts.
- * Menus are laid out as: " File  Edit  Search  Help "
+ * Menus are laid out as: " F1-File  F2-Edit  F3-Search  F4-Help "
  * with 2 spaces between each.
  */
 static int menu_bar_col(const vt100_menu_state_t* s, int menu_idx) {
     int col = 2;  /* 1-based + 1 leading space */
     for (int i = 0; i < menu_idx && i < s->menu_count; i++) {
-        col += (int)strlen(s->menus[i].label) + 2;  /* label + 2 padding */
+        col += fkey_prefix_len(s, i) + (int)strlen(s->menus[i].label) + 2;
     }
     return col;
 }
@@ -194,7 +199,7 @@ static void draw_bar(const vt100_menu_state_t* s) {
     memset(out_buf, ' ', s->screen_cols < OUT_BUF_SIZE ? s->screen_cols : OUT_BUF_SIZE - 1);
     menu_write(s, out_buf, s->screen_cols < OUT_BUF_SIZE ? s->screen_cols : OUT_BUF_SIZE - 1);
 
-    /* Draw each menu label */
+    /* Draw each menu label (with F-key prefix when assigned) */
     int col = 2;
     for (int i = 0; i < s->menu_count; i++) {
         menu_goto(s, s->bar_row, col);
@@ -203,9 +208,15 @@ static void draw_bar(const vt100_menu_state_t* s) {
         } else {
             menu_attr_bar(s);
         }
-        int n = snprintf(out_buf, OUT_BUF_SIZE, " %s ", s->menus[i].label);
+        int pfx = fkey_prefix_len(s, i);
+        int n;
+        if (pfx) {
+            n = snprintf(out_buf, OUT_BUF_SIZE, " F%d-%s ", i + 1, s->menus[i].label);
+        } else {
+            n = snprintf(out_buf, OUT_BUF_SIZE, " %s ", s->menus[i].label);
+        }
         menu_write(s, out_buf, n);
-        col += (int)strlen(s->menus[i].label) + 2;
+        col += pfx + (int)strlen(s->menus[i].label) + 2;
     }
 
     /* Right-aligned hint when bar is not in interactive mode */
@@ -386,6 +397,11 @@ void vt100_menu_init(vt100_menu_state_t* state,
     state->key_enter = VT100_MENU_KEY_ENTER;
     state->key_esc   = VT100_MENU_KEY_ESC;
     state->key_f10   = VT100_MENU_KEY_F10;
+
+    /* Auto-assign F1–F8 shortcuts to the first N menus */
+    for (int i = 0; i < VT100_MENU_MAX_FKEYS; i++) {
+        state->fkeys[i] = (i < menu_count) ? (VT100_KEY_F1 + i) : 0;
+    }
 }
 
 void vt100_menu_draw_bar(const vt100_menu_state_t* state) {
@@ -407,6 +423,20 @@ void vt100_menu_erase(const vt100_menu_state_t* state) {
 uint8_t vt100_menu_reserved_rows(const vt100_menu_state_t* state) {
     /* We always reserve row 1 for the menu bar when the system is in use */
     return (state->menus != NULL) ? 1 : 0;
+}
+
+/**
+ * Check if key matches an F-key tab shortcut (F1–F8) and switch to it.
+ * Returns true if the key was consumed (selected_menu updated).
+ */
+static bool vt100_menu_check_fkey_switch(vt100_menu_state_t* state, int key) {
+    for (int i = 0; i < VT100_MENU_MAX_FKEYS && i < state->menu_count; i++) {
+        if (state->fkeys[i] && key == state->fkeys[i]) {
+            state->selected_menu = (uint8_t)i;
+            return true;
+        }
+    }
+    return false;
 }
 
 int vt100_menu_run(vt100_menu_state_t* state) {
@@ -439,6 +469,19 @@ int vt100_menu_run(vt100_menu_state_t* state) {
         if (key == state->key_esc || key == state->key_f10) {
             /* Close menu */
             result = MENU_RESULT_CANCEL;
+
+        } else if (vt100_menu_check_fkey_switch(state, key)) {
+            /* F-key jumped to a different tab — redraw */
+            cur_menu = &state->menus[state->selected_menu];
+            state->selected_item = next_selectable(cur_menu, -1, 1);
+            if (state->repaint) {
+                state->repaint();
+                menu_cursor_hide(state);
+            } else {
+                erase_dropdown(state);
+            }
+            draw_bar(state);
+            draw_dropdown(state);
 
         } else if (key == state->key_left) {
             /* Move to previous top-level menu */
@@ -540,4 +583,14 @@ int vt100_menu_run(vt100_menu_state_t* state) {
 
     if (result == MENU_RESULT_PASSTHROUGH) return MENU_RESULT_PASSTHROUGH;
     return (result > 0) ? result : MENU_RESULT_REDRAW;
+}
+
+bool vt100_menu_check_trigger(vt100_menu_state_t* state, int key) {
+    /* F10 always opens at menu[0] */
+    if (key == state->key_f10) {
+        state->selected_menu = 0;
+        return true;
+    }
+    /* F1–F8 open at the corresponding tab */
+    return vt100_menu_check_fkey_switch(state, key);
 }

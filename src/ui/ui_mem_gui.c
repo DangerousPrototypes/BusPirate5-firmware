@@ -51,7 +51,6 @@ typedef struct {
 
     /* Run state */
     bool running;
-    bool menu_pending;
     bool executed;         /* true after any operation has run */
 
     /* Focus: bar vs hex editor */
@@ -347,10 +346,6 @@ static void gui_process_key(int key) {
         gui.running = false;
         return;
     }
-    if (key == VT100_KEY_F10) {
-        gui.menu_pending = true;
-        return;
-    }
 
     /* Tab switches between config bar and hex editor */
     if (key == VT100_KEY_TAB) {
@@ -392,7 +387,6 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
     memset(&gui, 0, sizeof(gui));
     gui.config       = config;
     gui.running      = true;
-    gui.menu_pending = false;
     gui.executed     = false;
     gui.focus        = FOCUS_BAR;
     gui.status_msg   = NULL;
@@ -485,17 +479,8 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
 
         /* Read and process one key */
         int key = ui_app_read_key(&gui.app);
-        gui_process_key(key);
 
-        /* Check for button-triggered execute request */
-        if (exec_requested) {
-            exec_requested = false;
-            gui_execute();
-        }
-
-        /* Handle pending menu interaction */
-        if (gui.menu_pending) {
-            gui.menu_pending = false;
+        if (vt100_menu_check_trigger(&menu_state, key)) {
             int action_id = vt100_menu_run(&menu_state);
 
             if (action_id == ACT_OPT_EXECUTE) {
@@ -520,6 +505,14 @@ bool ui_mem_gui_run(const ui_mem_gui_config_t *config) {
             ui_app_write_str("\x1b[0m");
             ui_app_write_str("\x1b[?25l"); /* hide cursor before redraw */
             gui_repaint_cb();
+        } else {
+            gui_process_key(key);
+
+            /* Check for button-triggered execute request */
+            if (exec_requested) {
+                exec_requested = false;
+                gui_execute();
+            }
         }
     }
 

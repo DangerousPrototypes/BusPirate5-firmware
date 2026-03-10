@@ -35,6 +35,7 @@
 uint8_t *up_buffer=NULL;
 bool up_verbose=true;
 bool up_debug=false;      // print the bits on the ZIF socket
+//bool up_debug=true;
 const char rotate[] = "|/-\\|/-\\";
 
 
@@ -104,17 +105,18 @@ uint32_t up_setup_exc(void) {
     // setup spi
     spi_init(M_SPI_PORT, UP_SPISPEED);
     hwspi_init(UP_NBITS, UP_CPOL, UP_CPHA);
+    hwspi_deselect();
     
     // setup BP pins
     system_bio_update_purpose_and_label(true, M_UP_VSENSE_VCC, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_UP_VSENSE_VPP, BP_PIN_MODE, pin_labels[1]);
     system_bio_update_purpose_and_label(true, M_UP_VCCH, BP_PIN_MODE, pin_labels[2]);
     system_bio_update_purpose_and_label(true, M_UP_VPPH, BP_PIN_MODE, pin_labels[3]);
-    system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[4]);
+    
     system_bio_update_purpose_and_label(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[5]);
-    system_bio_update_purpose_and_label(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[6]);
     system_bio_update_purpose_and_label(true, M_SPI_CS, BP_PIN_MODE, pin_labels[7]);
-    hwspi_deselect();
+    system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[4]);
+    system_bio_update_purpose_and_label(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[6]);
     
     bio_input(M_UP_VSENSE_VCC);
     system_set_active(true, M_UP_VSENSE_VCC, &system_config.aux_active);
@@ -151,7 +153,7 @@ uint32_t up_setup_exc(void) {
 
     if(psu_result==PSU_OK)
     {
-      printf ("Warning PSU is on!!\r\n");
+      printf ("\r\nWarning PSU is on!!\r\n");
     }
     else
     {
@@ -160,7 +162,6 @@ uint32_t up_setup_exc(void) {
     }
 
     // allocate 128k buffer 
-    printf("trying to allocate big buffer\r\n"); 
     up_buffer=mem_alloc(128*1024, BP_BIG_BUFFER_UP);
     if(!up_buffer)
     {
@@ -411,7 +412,9 @@ uint32_t up_pins(uint32_t pinout)
   
   if(up_debug)
   {
-    printf(" pins() ");
+    printf(" pins()>");
+    up_printbin(pinout);
+    printf("\r\n pins()<");
     up_printbin(pinin);
     printf("\r\n");
   }

@@ -95,6 +95,11 @@ void up_eprom_handler(struct command_result* res)
         return;
     }
 
+    if(cmdln_args_find_flag('q')) up_verbose=false;
+      else up_verbose=true;
+    if(cmdln_args_find_flag('Q')) up_debug=true;
+      else up_debug=false;
+
     if(action!=UP_EPROM_READID && !cmdln_args_find_flag_string('t', &arg, 10, type))
     {
       printf("Use -t to specify EPROM type\r\n");
@@ -112,16 +117,23 @@ void up_eprom_handler(struct command_result* res)
       return;
     }
         
+    if(cmdln_args_find_flag_uint32('P', &arg, &value))
+    {
+      pulse=value;    // writepulse in us
+    }
+    else
+    {
+      pulse=100;
+    }
+    
     if(cmdln_args_find_flag_uint32('p', &arg, &value))
     {
       page=value;     // page to read, page=128k for read
-      pulse=value;    // pulse for write
       pins=value;     // pins for readid
     }
     else
     {
       page=0;
-      pulse=100;
     }
 
     switch(action)
@@ -349,20 +361,20 @@ struct epromconfig
 };
 
 static const struct epromconfig upeeprom[]={
-  {UP_EPROM_2764,    64,    0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
-  {UP_EPROM_27128,  128,    0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},
-  {UP_EPROM_27256,  256,    0, 0            , 0                          , 28, 28, 14, 1},
-  {UP_EPROM_27512,  512,    0, 0            , 0                          , 28, 28, 14, 1},
-  {UP_EPROM_27010, 1024,    0, UP_27XX_PGM32, UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
-  {UP_EPROM_27020, 2048, 1024, UP_27XX_PGM32, UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},
-  {UP_EPROM_27040, 4096, 1024, 0            , 0                          , 32, 32, 16, 1},
-  {UP_EPROM_27080, 8192, 1024, 0            , 0                          , 32, 32, 16, 1},
-  {UP_EPROM_2332LL,  32,    0, 0            , 0                          , 24, 24, 12, 1},
-  {UP_EPROM_2332LH,  32,    0, 0            , 0                          , 24, 24, 12, 1},
-  {UP_EPROM_2332HL,  32,    0, 0            , 0                          , 24, 24, 12, 1},
-  {UP_EPROM_2332HH,  32,    0, 0            , 0                          , 24, 24, 12, 1},
-  {UP_EPROM_2364L,   64,    0, 0            , 0                          , 24, 24, 12, 1},
-  {UP_EPROM_2364H,   64,    0, 0            , 0                          , 24, 24, 12, 1},
+  {UP_EPROM_2764,    64,    0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},    // tested SGS thomson M2764AF1
+  {UP_EPROM_27128,  128,    0, UP_27XX_PGM28, UP_27XX_PGM28|UP_27XX_VPP28, 28, 28, 14, 1},    // tested National NMC27C128BQ-200
+  {UP_EPROM_27256,  256,    0, 0            , 0                          , 28, 28, 14, 1},    // tested National NMC27C256Q-200
+  {UP_EPROM_27512,  512,    0, 0            , 0                          , 28, 28, 14, 22},   // tested AMD AM27512-200DC
+  {UP_EPROM_27010, 1024,    0, UP_27XX_PGM32, UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},    // tested TI TMS 27C010A-10 
+  {UP_EPROM_27020, 2048, 1024, UP_27XX_PGM32, UP_27XX_PGM32|UP_27XX_VPP32, 32, 32, 16, 1},    // tested AMD AM27C020-90DC
+  {UP_EPROM_27040, 4096, 1024, 0            , 0                          , 32, 32, 16, 1},    // not tested/in partsbin
+  {UP_EPROM_27080, 8192, 1024, 0            , 0                          , 32, 32, 16, 1},    // not tested/in partsbin
+  {UP_EPROM_2332LL,  32,    0, 0            , 0                          , 24, 24, 12, 1},    // tested commodore 901227-01
+  {UP_EPROM_2332LH,  32,    0, 0            , 0                          , 24, 24, 12, 1},    // tested onerom
+  {UP_EPROM_2332HL,  32,    0, 0            , 0                          , 24, 24, 12, 1},    // tested onerom
+  {UP_EPROM_2332HH,  32,    0, 0            , 0                          , 24, 24, 12, 1},    // tested onerom
+  {UP_EPROM_2364L,   64,    0, 0            , 0                          , 24, 24, 12, 1},    // tested commodore 901225-01
+  {UP_EPROM_2364H,   64,    0, 0            , 0                          , 24, 24, 12, 1},    // tested onerom
 
 };
 
@@ -481,6 +493,26 @@ static void write27eprom(uint32_t ictype, uint32_t page, int pulse)
       
       dutin|=lut_27xx_dat[up_buffer[(epromaddress&0x1FFFF)]];
       
+      // no /PGM pin, no Vpp
+      if(ictype==UP_EPROM_27512)
+      {
+        for(retry=UP_EPROM_RETRIES; retry>0; retry--)
+        {
+          up_pins(dutin|UP_27XX_CE               );     // inhibit
+          up_setdirection(0);                           // datapins to output
+          up_pins(dutin                          );     // program
+          up_setvpp(2);                               // Vpp on /OE
+          busy_wait_us(pulse);                          //         pulse
+          up_pins(dutin|UP_27XX_CE               );     // inhibit
+          up_setvpp(0);
+        busy_wait_us(10);
+          up_setdirection(UP_27XX_DIR);                 // datapins to input
+   dutout=up_pins(dutin                          );     // read
+          
+          if(dutout==(dutin                      )) break;
+        }
+      }
+
       // no /PGM pin
       if(ictype==UP_EPROM_27256)
       {
@@ -499,7 +531,7 @@ static void write27eprom(uint32_t ictype, uint32_t page, int pulse)
       }
       
       // /PGM pin
-      if(ictype==UP_EPROM_27128)
+      if((ictype==UP_EPROM_27128)||(ictype==UP_EPROM_27010)||(ictype==UP_EPROM_27020))
       {
         for(retry=UP_EPROM_RETRIES; retry>0; retry--)
         {
@@ -512,6 +544,31 @@ static void write27eprom(uint32_t ictype, uint32_t page, int pulse)
    dutout=up_pins(dutin                      |pgm);     // read
           
           if(dutout==(dutin                  |pgm)) break;
+        }
+      }
+      
+      // 2364 is a whole differentstory
+      if(ictype==UP_EPROM_2764)
+      {
+        for(retry=UP_EPROM_RETRIES; retry>0; retry--)
+        {
+          up_pins(dutin           |UP_27XX_OE|pgm);     // inhibit
+          up_setdirection(0);                           // datapins to output
+          up_pins(dutin           |UP_27XX_OE    );     // program
+          busy_wait_us(pulse);                          //         pulse
+          up_pins(dutin           |UP_27XX_OE|pgm);     // inhibit
+          up_setdirection(UP_27XX_DIR);                 // datapins to input
+   dutout=up_pins(dutin                      |pgm);     // read
+          
+          if(dutout==(dutin                  |pgm))
+          {
+            up_pins(dutin           |UP_27XX_OE|pgm);     // inhibit
+            up_setdirection(0);                           // datapins to output
+            up_pins(dutin           |UP_27XX_OE    );     // program
+            busy_wait_us(pulse*3*(UP_EPROM_RETRIES-retry)); //       pulse=3xretries
+            up_pins(dutin           |UP_27XX_OE|pgm);     // inhibit
+            break;
+          }
         }
       }
         

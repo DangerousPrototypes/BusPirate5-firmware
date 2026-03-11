@@ -316,81 +316,140 @@ int eeprom_i2c_detect_size(uint8_t i2c_addr,
     uint8_t sig[8], cmp[8];
 
     /* read 8-byte signature at address 0 - bail early if I2C is dead */
-    if (detect_read(i2c_addr, &detect_probe1, 0, sig, 8))
+    if (detect_read(i2c_addr, &detect_probe1, 0, sig, 8)) {
+        PRINT_DEBUG("eeprom detect: read sig failed (I2C error)\n");
         return -3;
+    }
+
+    PRINT_DEBUG("eeprom detect: sig = %02X %02X %02X %02X %02X %02X %02X %02X\n",
+                sig[0], sig[1], sig[2], sig[3], sig[4], sig[5], sig[6], sig[7]);
 
     /* bus pre-scan: warn if other devices sit in the ACK scan range */
     i2c_bus_scan_warn(i2c_addr, ops);
 
-    /* uniform data: no boundary signal to track */
+    /* check for uniform data - set flag but don't bail yet.
+     * mirror and wrap probes trivially match on uniform data,
+     * but the ACK scan is data-independent and can still identify
+     * block-select chips (24X16, 24X1025) even when blank. */
     bool uniform = true;
     for (uint8_t i = 1; i < 8; i++) {
         if (sig[i] != sig[0]) { uniform = false; break; }
     }
-    if (uniform) return -1;
+    PRINT_DEBUG("eeprom detect: uniform = %s\n", uniform ? "yes" : "no");
 
-    /* phase 1: 24X01 (128B) - 1-byte mirror at address 128 */
-    if (!detect_read(i2c_addr, &detect_probe1, 128, cmp, 8) &&
-        memcmp(sig, cmp, 8) == 0)
-        return find_device(devices, count, 128, -1);
-
-    /* phase 2: 2-byte mirror probes for 24X32 through 24X256 -
-     * for chips with 2-byte addressing, no block select, and size < 64KB,
-     * reading at address size_bytes should return the same data as address 0. */
-    for (uint8_t i = 0; i < count; i++) {
-        if (devices[i].address_bytes != 2) continue;
-        if (devices[i].block_select_bits > 0) continue;
-        if (devices[i].size_bytes >= 65536u) continue;
-        if (detect_read(i2c_addr, &detect_probe2, devices[i].size_bytes, cmp, 8)) continue;
-        if (memcmp(sig, cmp, 8) == 0) return (int)i;
+    /* phase 1: 24X01 (128B) - 1-byte mirror at address 128.
+     * skip if uniform: mirror compare would trivially match any chip. */
+    if (!uniform) {
+        if (!detect_read(i2c_addr, &detect_probe1, 128, cmp, 8) &&
+            memcmp(sig, cmp, 8) == 0) {
+            PRINT_DEBUG("eeprom detect: 24X01 mirror@128 = match\n");
+            return find_device(devices, count, 128, -1);
+        }
+        PRINT_DEBUG("eeprom detect: 24X01 mirror@128 = no match\n");
     }
 
-    /* phase 3: I2C ACK scan for multi-address chips -
+    /* phase 2: 2-byte mirror probes for 24X32 through 24X256.
+     * skip if uniform: same reason as phase 1. */
+    if (!uniform) {
+        for (uint8_t i = 0; i < count; i++) {
+            if (devices[i].address_bytes != 2) continue;
+            if (devices[i].block_select_bits > 0) continue;
+            if (devices[i].size_bytes >= 65536u) continue;
+            if (detect_read(i2c_addr, &detect_probe2, devices[i].size_bytes, cmp, 8)) {
+                PRINT_DEBUG("eeprom detect: %s mirror@%lu = read error\n",
+                            devices[i].name, (unsigned long)devices[i].size_bytes);
+                continue;
+            }
+            if (memcmp(sig, cmp, 8) == 0) {
+                PRINT_DEBUG("eeprom detect: %s mirror@%lu = match\n",
+                            devices[i].name, (unsigned long)devices[i].size_bytes);
+                return (int)i;
+            }
+            PRINT_DEBUG("eeprom detect: %s mirror@%lu = no match\n",
+                        devices[i].name, (unsigned long)devices[i].size_bytes);
+        }
+    }
+
+    /* phase 3: I2C ACK scan for multi-address chips.
      * scan consecutive addresses from base+1 to base+7.
-     * block-select chips occupy 2, 4, or 8 consecutive I2C addresses. */
+     * block-select chips occupy 2, 4, or 8 consecutive I2C addresses.
+     * this is data-independent and works on blank chips. */
     uint8_t ack_count = 0;
     for (uint8_t n = 1; n <= 7; n++) {
         if (i2c_probe_ack(i2c_addr + n)) ack_count++;
         else break;
     }
+    PRINT_DEBUG("eeprom detect: ack scan = %d consecutive\n", ack_count);
 
-    if (ack_count == 0) {
-        /* only responds at base: 24X02 (256B, 1-byte addr) or 24X512 (64KB, 2-byte addr).
-         * use sequential wrap test to distinguish: 24X02 wraps at 256, 24X512 does not. */
-        uint8_t wrap[8];
-        if (!detect_read(i2c_addr, &detect_probe1, 252, wrap, 8) &&
-            memcmp(&wrap[4], sig, 4) == 0)
-            return find_device(devices, count, 256, -1);      /* 24X02 */
-
-        /* no wrap found: could be 24X512 or 24X1025 (block select offset=3 at base+8).
-         * 24X1025 does not appear at base+1 through base+7. probe base+8 directly. */
-        if (i2c_probe_ack(i2c_addr + 8))
-            return find_device(devices, count, 131072, 3);     /* 24X1025 */
-
-        return find_device(devices, count, 65536, -1);         /* 24X512 */
+    /* phase 4: 24X16 - 8 consecutive addresses, data-independent */
+    if (ack_count >= 7) {
+        PRINT_DEBUG("eeprom detect: result = 24X16 (ack_count >= 7)\n");
+        return find_device(devices, count, 2048, -1);
     }
 
-    /* for chips with multiple I2C addresses, apply the wrap test to block 1
-     * to distinguish small (256B blocks, 1-byte addr) from large (64KB blocks,
-     * 2-byte addr) chips that share the same consecutive address count. */
+    if (ack_count == 0) {
+        /* only responds at base: candidates are 24X02, 24X512, 24X1025.
+         * wrap test and base+8 probe are used to distinguish. */
+
+        if (!uniform) {
+            /* sequential wrap test: 24X02 wraps at 256, 24X512 does not. */
+            uint8_t wrap[8];
+            if (!detect_read(i2c_addr, &detect_probe1, 252, wrap, 8) &&
+                memcmp(&wrap[4], sig, 4) == 0) {
+                PRINT_DEBUG("eeprom detect: wrap@252 = match -> 24X02\n");
+                return find_device(devices, count, 256, -1);
+            }
+            PRINT_DEBUG("eeprom detect: wrap@252 = no match\n");
+        }
+
+        /* 24X1025: block select offset=3, upper bank at base+8.
+         * ACK probe is data-independent, works on blank chips. */
+        if (i2c_probe_ack(i2c_addr + 8)) {
+            PRINT_DEBUG("eeprom detect: ACK at base+8 = yes -> 24X1025\n");
+            return find_device(devices, count, 131072, 3);
+        }
+        PRINT_DEBUG("eeprom detect: ACK at base+8 = no\n");
+
+        if (uniform) {
+            PRINT_DEBUG("eeprom detect: uniform + ack_count=0 + no base+8 -> cannot detect\n");
+            return -1;
+        }
+
+        PRINT_DEBUG("eeprom detect: result = 24X512 (elimination)\n");
+        return find_device(devices, count, 65536, -1);
+    }
+
+    /* ack_count 1 or 3: need block-1 wrap test to distinguish small
+     * (24X04/24X08) from large (24X1026/24XM02) chips.
+     * wrap test is unreliable on uniform data. */
+    if (uniform) {
+        PRINT_DEBUG("eeprom detect: uniform + ack_count=%d -> cannot detect (wrap unreliable)\n", ack_count);
+        return -1;
+    }
+
     bool b1_small = block_wraps_256(i2c_addr + 1);
+    PRINT_DEBUG("eeprom detect: block-1 wrap = %s\n", b1_small ? "256B (small)" : "large");
 
     if (ack_count == 1) {
-        /* base+1 ACKs only: 24X04 (512B, small block) vs 24X1026/24XM01 (128KB, large block) */
-        if (b1_small) return find_device(devices, count, 512,    -1); /* 24X04 */
-        else          return find_device(devices, count, 131072,  0); /* 24X1026 (first 128KB with offset=0) */
+        if (b1_small) {
+            PRINT_DEBUG("eeprom detect: result = 24X04 (ack=1, small block)\n");
+            return find_device(devices, count, 512, -1);
+        }
+        PRINT_DEBUG("eeprom detect: result = 24X1026 (ack=1, large block)\n");
+        return find_device(devices, count, 131072, 0);
     }
 
     if (ack_count == 3) {
-        /* base+1..+3 ACK: 24X08 (1KB, small blocks) vs 24XM02 (256KB, large blocks) */
-        if (b1_small) return find_device(devices, count, 1024,   -1); /* 24X08 */
-        else          return find_device(devices, count, 262144, -1); /* 24XM02 */
+        if (b1_small) {
+            PRINT_DEBUG("eeprom detect: result = 24X08 (ack=3, small blocks)\n");
+            return find_device(devices, count, 1024, -1);
+        }
+        PRINT_DEBUG("eeprom detect: result = 24XM02 (ack=3, large blocks)\n");
+        return find_device(devices, count, 262144, -1);
     }
 
-    if (ack_count >= 7)
-        return find_device(devices, count, 2048, -1);          /* 24X16 */
-
-    return -2; /* unexpected ACK pattern - ambiguous */
+    PRINT_DEBUG("eeprom detect: ack_count=%d -> ambiguous\n", ack_count);
+    return -2; /* unexpected ACK pattern */
 }
 
 static bool eeprom_get_args(struct eeprom_info *args) {

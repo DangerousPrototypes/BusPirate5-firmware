@@ -81,6 +81,11 @@ void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint3
     uart_tx_program_init(
         pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, bio2bufiopin[M_UART_RXTX], bits, baud);
 
+    // uart_tx_program_init sets gpio_set_outover(INVERT) on the shared RXTX pin.
+    // Clear it — output inversion shouldn't affect PIO input, but on a shared
+    // half-duplex pin it's safer to remove it when we're not actively transmitting.
+    gpio_set_outover(bio2bufiopin[M_UART_RXTX], GPIO_OVERRIDE_NORMAL);
+
     if (listen) {
         // Listen mode: release the data pin so RX can read incoming data.
         // PIO pin directions are OR'd across all SMs, so TX setting it as output
@@ -108,11 +113,18 @@ bool hwuart_pio_read(uint32_t* raw, uint8_t* cooked) {
     if (pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
         return false;
     }
-    // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
+    // Data is right-shifted into ISR, so bits occupy [31 : 32-total_bits].
+    // Compute total bits sampled (data + optional parity + optional extra stop).
     (*raw) = pio_config_rx.pio->rxf[pio_config_rx.sm];
-    // TODO: change this based on UART settings
-    // Detect parity error?
-    (*cooked) = (uint8_t)((*raw) >> 22); // MSB is the parity bit...
+    uint8_t total_bits = hwuart_data_bits;
+    if (hwuart_parity != UART_PARITY_NONE) {
+        total_bits++;
+    }
+    if (hwuart_stop_bits == 2) {
+        total_bits++;
+    }
+    // Shift data to low bits; uint8_t cast strips parity/extra stop if present
+    (*cooked) = (uint8_t)((*raw) >> (32 - total_bits));
     return true;
 }
 
@@ -161,10 +173,14 @@ void hwuart_pio_write(uint32_t data) {
         pio_sm_set_consecutive_pindirs(pio_config_tx.pio, pio_config_tx.sm, bio2bufiopin[M_UART_RXTX], 1, true);
     }
 
+    // Restore output inversion for TX (the TX PIO program relies on it)
+    gpio_set_outover(bio2bufiopin[M_UART_RXTX], GPIO_OVERRIDE_INVERT);
     pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, true);
     pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, data);
     pio_hwuart_wait_idle(pio_config_tx.pio, pio_config_tx.sm);
     pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
+    // Clear output inversion so it doesn't interfere with RX on the shared pin
+    gpio_set_outover(bio2bufiopin[M_UART_RXTX], GPIO_OVERRIDE_NORMAL);
 
     if (hwuart_listen) {
         // Listen mode: release pin direction and buffer back to input

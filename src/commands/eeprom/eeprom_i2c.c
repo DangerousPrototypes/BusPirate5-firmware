@@ -1,3 +1,4 @@
+#define BP_DEBUG_OVERRIDE_DEFAULT_CATEGORY BP_DEBUG_CAT_EEPROM
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>

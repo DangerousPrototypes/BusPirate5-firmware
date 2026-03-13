@@ -632,5 +632,8 @@ static char const * const pl_pl[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_I2C_USBPD_CURRENT         ] = NULL,
     [ T_HELP_I2C_MPU6050               ] = NULL,
     [ T_HELP_GLOBAL_JEP106_LOOKUP      ] = NULL,
+    [ T_HDUART_LISTEN_MENU             ] = NULL,
+    [ T_HDUART_LISTEN_MENU_1           ] = NULL,
+    [ T_HDUART_LISTEN_MENU_2           ] = NULL,
 
 };

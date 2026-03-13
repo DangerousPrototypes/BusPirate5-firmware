@@ -650,6 +650,9 @@ static char const * const en_us[]={
 	[T_HELP_I2C_USBPD_CURRENT]="Current in mA for PDO request (optional, default max)",
 	[T_HELP_I2C_MPU6050]="interface with MPU-6050 6-axis IMU sensor",
 	[T_HELP_GLOBAL_JEP106_LOOKUP]="lookup vendor name from 2 byte JEDEC JEP106 ID code",
+	[T_HDUART_LISTEN_MENU]="Bus mode",
+	[T_HDUART_LISTEN_MENU_1]="Master (drive line)",
+	[T_HDUART_LISTEN_MENU_2]="Listen (passive, open drain)",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

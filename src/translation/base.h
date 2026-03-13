@@ -648,6 +648,9 @@ enum T_translations{
     T_HELP_I2C_USBPD_CURRENT,
     T_HELP_I2C_MPU6050,
     T_HELP_GLOBAL_JEP106_LOOKUP,
+    T_HDUART_LISTEN_MENU,
+    T_HDUART_LISTEN_MENU_1,
+    T_HDUART_LISTEN_MENU_2,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

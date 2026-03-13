@@ -11,8 +11,9 @@
  * @param parity     Parity mode (UART_PARITY_NONE, EVEN, or ODD)
  * @param stop_bits  Stop bits (1 or 2)
  * @param baud       Baud rate in bits per second
+ * @param listen     true=passive listen mode (pin released), false=master (drives line)
  */
-void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint32_t baud);
+void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint32_t baud, bool listen);
 
 /**
  * @brief Deinitialize and remove UART PIO programs.

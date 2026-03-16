@@ -1,0 +1,4 @@
+pyserial>=3.5
+pytest>=7.0
+cobs>=1.2.0
+flatbuffers>=24.0

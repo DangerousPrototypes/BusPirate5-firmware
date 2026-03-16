@@ -83,11 +83,23 @@ static const bp_val_constraint_t hduart_stopbits_choice = {
     .prompt = T_UART_STOP_BITS_MENU,
 };
 
+// Bus mode — flag -l / --listen
+static const bp_val_choice_t hduart_listen_choices[] = {
+    { "master", NULL, T_HDUART_LISTEN_MENU_1, 0 },
+    { "listen", NULL, T_HDUART_LISTEN_MENU_2, 1 },
+};
+static const bp_val_constraint_t hduart_listen_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = hduart_listen_choices, .count = 2, .def = 0 },
+    .prompt = T_HDUART_LISTEN_MENU,
+};
+
 static const bp_command_opt_t hduart_setup_opts[] = {
-    { "baud",     'b', BP_ARG_REQUIRED, "1-1000000",     0, &hduart_baud_range },
-    { "databits", 'd', BP_ARG_REQUIRED, "5-8",           0, &hduart_databits_range },
-    { "parity",   'p', BP_ARG_REQUIRED, "none|even|odd", 0, &hduart_parity_choice },
-    { "stopbits", 's', BP_ARG_REQUIRED, "1|2",           0, &hduart_stopbits_choice },
+    { "baud",     'b', BP_ARG_REQUIRED, "1-1000000",       0, &hduart_baud_range },
+    { "databits", 'd', BP_ARG_REQUIRED, "5-8",             0, &hduart_databits_range },
+    { "parity",   'p', BP_ARG_REQUIRED, "none|even|odd",   0, &hduart_parity_choice },
+    { "stopbits", 's', BP_ARG_REQUIRED, "1|2",             0, &hduart_stopbits_choice },
+    { "listen",   'l', BP_ARG_REQUIRED, "master|listen",   0, &hduart_listen_choice },
     { 0 },
 };
 
@@ -117,6 +129,7 @@ uint32_t hwhduart_setup(void) {
         { "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.stop_bits", &mode_config.stop_bits, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.parity", &mode_config.parity, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.listen", &mode_config.listen, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };
 
@@ -144,6 +157,9 @@ uint32_t hwhduart_setup(void) {
 
         if (bp_cmd_prompt(&hduart_stopbits_choice, &temp) != BP_CMD_OK) return 0;
         mode_config.stop_bits = (uint8_t)temp;
+
+        if (bp_cmd_prompt(&hduart_listen_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.listen = temp;
     } else {
         st = bp_cmd_flag(&hduart_setup_def, 'd', &temp);
         if (st == BP_CMD_INVALID) return 0;
@@ -156,6 +172,10 @@ uint32_t hwhduart_setup(void) {
         st = bp_cmd_flag(&hduart_setup_def, 's', &temp);
         if (st == BP_CMD_INVALID) return 0;
         mode_config.stop_bits = (uint8_t)temp;
+
+        st = bp_cmd_flag(&hduart_setup_def, 'l', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.listen = temp;
     }
 
     storage_save_mode(config_file, config_t, count_of(config_t));
@@ -168,8 +188,13 @@ uint32_t hwhduart_setup(void) {
 uint32_t hwhduart_setup_exc(void) {
     // setup peripheral
     // half duplex
-    hwuart_pio_init(mode_config.data_bits, mode_config.parity, mode_config.stop_bits, mode_config.baudrate);
+    hwuart_pio_init(
+        mode_config.data_bits, mode_config.parity, mode_config.stop_bits, mode_config.baudrate, mode_config.listen);
     system_bio_update_purpose_and_label(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
+    if (!mode_config.listen) {
+        // Master mode: set buffer to output so TX can drive the line
+        bio_buf_output(M_UART_RXTX);
+    }
     return 1;
 }
 
@@ -266,14 +291,12 @@ void hwhduart_cleanup(void) {
 }
 
 void hwhduart_settings(void) {
-    //printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD) );
     ui_help_setting_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
-    //printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
     ui_help_setting_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
     ui_help_setting_string(GET_T(T_UART_PARITY_MENU), GET_T(hduart_parity_choices[mode_config.parity].label), 0x00);
-    //printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
     ui_help_setting_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
-
+    ui_help_setting_string(
+        GET_T(T_HDUART_LISTEN_MENU), GET_T(hduart_listen_choices[mode_config.listen].label), 0x00);
 }
 
 void hwhduart_printerror(void) {

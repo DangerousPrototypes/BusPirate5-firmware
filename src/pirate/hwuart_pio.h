@@ -5,15 +5,13 @@
  *          Uses separate state machines for TX and RX for full-duplex operation.
  */
 
+struct hduart_mode_config;
+
 /**
  * @brief Initialize UART PIO state machines.
- * @param data_bits  Data width (5-8 bits)
- * @param parity     Parity mode (UART_PARITY_NONE, EVEN, or ODD)
- * @param stop_bits  Stop bits (1 or 2)
- * @param baud       Baud rate in bits per second
- * @param listen     true=passive listen mode (pin released), false=master (drives line)
+ * @param cfg  Pointer to half-duplex UART mode configuration
  */
-void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint32_t baud, bool listen);
+void hwuart_pio_init(const struct hduart_mode_config *cfg);
 
 /**
  * @brief Deinitialize and remove UART PIO programs.

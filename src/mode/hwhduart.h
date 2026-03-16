@@ -23,17 +23,16 @@ void hwhduart_periodic(void);
 uint32_t hwhduart_get_speed(void);
 bool hwhduart_preflight_sanity_check(void);
 
-/*
-typedef struct _uart_mode_config{
+typedef struct hduart_mode_config {
     uint32_t baudrate;
-    uint32_t baudrate_actual;
     uint32_t data_bits;
     uint32_t stop_bits;
     uint32_t parity;
     uint32_t blocking;
+    uint32_t listen;
     bool async_print;
-}_uart_mode_config;
-*/
+} hduart_mode_config;
+
 extern const struct _mode_command_struct hwhduart_commands[];
 extern const uint32_t hwhduart_commands_count;
 extern const struct bp_command_def hduart_setup_def;

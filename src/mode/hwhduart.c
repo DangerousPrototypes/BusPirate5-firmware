@@ -6,7 +6,6 @@
 #include "system_config.h"
 #include "command_struct.h"
 #include "bytecode.h"
-#include "mode/hwuart.h"
 #include "pirate/bio.h"
 #include "ui/ui_term.h"
 #include "ui/ui_format.h"
@@ -21,7 +20,7 @@
 #include "commands/hdplxuart/bridge.h"
 #include "mode/hwhduart.h"
 #include "lib/bp_args/bp_cmd.h"
-static struct _uart_mode_config mode_config;
+static hduart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
 
 // command configuration
@@ -188,8 +187,7 @@ uint32_t hwhduart_setup(void) {
 uint32_t hwhduart_setup_exc(void) {
     // setup peripheral
     // half duplex
-    hwuart_pio_init(
-        mode_config.data_bits, mode_config.parity, mode_config.stop_bits, mode_config.baudrate, mode_config.listen);
+    hwuart_pio_init(&mode_config);
     system_bio_update_purpose_and_label(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
     if (!mode_config.listen) {
         // Master mode: set buffer to output so TX can drive the line

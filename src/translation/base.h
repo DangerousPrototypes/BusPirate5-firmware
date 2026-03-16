@@ -677,6 +677,9 @@ enum T_translations{
     T_HELP_WIRETRACE,
     T_HELP_LOGICGATES,
     T_HELP_ROGUEPROBE,
+    T_HDUART_LISTEN_MENU,
+    T_HDUART_LISTEN_MENU_1,
+    T_HDUART_LISTEN_MENU_2,
 
 	T_LAST_ITEM_ALWAYS_AT_THE_END //LEAVE THIS ITEM AT THE END!!! It helps the compiler report errors if there are missing translations
 };

@@ -20,6 +20,7 @@ typedef struct _uart_mode_config {
     bool async_print;          ///< Enable automatic printing of received data
     uint32_t flow_control;     ///< Hardware flow control (0=disabled, 1=RTS/CTS)
     uint32_t invert;           ///< Signal inversion (0=normal, 1=inverted)
+    uint32_t listen;           ///< Listen mode (0=master/drive line, 1=listen/passive)
 } _uart_mode_config;
 
 /**

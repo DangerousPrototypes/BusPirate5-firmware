@@ -661,5 +661,8 @@ static char const * const zh_cn[T_LAST_ITEM_ALWAYS_AT_THE_END]={
     [ T_HELP_WIRETRACE                 ] = NULL,
     [ T_HELP_LOGICGATES                ] = NULL,
     [ T_HELP_ROGUEPROBE                ] = NULL,
+    [ T_HDUART_LISTEN_MENU             ] = NULL,
+    [ T_HDUART_LISTEN_MENU_1           ] = NULL,
+    [ T_HDUART_LISTEN_MENU_2           ] = NULL,
 
 };

@@ -680,6 +680,9 @@ static char const * const en_us[]={
 	[T_HELP_WIRETRACE]="Wire Trace PCB maze navigation game",
 	[T_HELP_LOGICGATES]="Logic Gates circuit puzzle game",
 	[T_HELP_ROGUEPROBE]="Rogue Probe chip die roguelike exploration game",
+	[T_HDUART_LISTEN_MENU]="Bus mode",
+	[T_HDUART_LISTEN_MENU_1]="Master (drive line)",
+	[T_HDUART_LISTEN_MENU_2]="Listen (passive, open drain)",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

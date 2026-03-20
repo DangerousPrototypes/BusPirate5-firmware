@@ -1,8 +1,8 @@
-# Bus Pirate 5
+# Bus Pirate
 
 ![](./img/bp5rev10-cover-angle.jpg)
 
-Bus Pirate 5 is the latest edition of the universal serial interface trusted by hackers since 2008.
+Bus Pirate™ 5 & 6 are the latest editions of the universal serial interface trusted by hackers since 2008.
 
 Can't get a chip to work? Is it the circuit, code, bad part or a burned out pin? The Bus Pirate sends commands over common serial protocols (1-Wire, I2C, SPI, UART, MIDI, serial LEDs, etc) so you can get to know a chip before prototyping. Updated with tons of new features, talking to chips and probing interfaces is more fun than ever!
 
@@ -142,5 +142,9 @@ More information on the licenses and components being used can be found [here](d
 
 ## Contributing
 Please see [contributing.md](docs/contributing.md)
+
+## Trademarks
+
+Bus Pirate™ is a trademark of Where Labs, LLC. All rights reserved.
 
 

@@ -342,9 +342,13 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
         x->device_idx = detected;
         x->auto_detected = true;
         char msg[64];
-        snprintf(msg, sizeof(msg), "Detected: %s (%lu bytes)",
-                 x->devices[detected].name,
-                 (unsigned long)x->devices[detected].size_bytes);
+        uint32_t sz = x->devices[detected].size_bytes;
+        if (sz >= 1024)
+            snprintf(msg, sizeof(msg), "Detected: %s (%luKB)",
+                     x->devices[detected].name, (unsigned long)(sz / 1024));
+        else
+            snprintf(msg, sizeof(msg), "Detected: %s (%luB)",
+                     x->devices[detected].name, (unsigned long)sz);
         ops->message(msg, ops->ctx);
     }
 
@@ -448,9 +452,17 @@ static bool execute_cb(void *c, const ui_mem_gui_ops_t *ops, const char **result
     }
 
     if (success && x->auto_detected) {
-        snprintf(x->result_buf, sizeof(x->result_buf),
-                 "Success! - Detected %s",
-                 x->devices[x->device_idx].name);
+        uint32_t sz = x->devices[x->device_idx].size_bytes;
+        if (sz >= 1024)
+            snprintf(x->result_buf, sizeof(x->result_buf),
+                     "Success! - Detected %s (%luKB)",
+                     x->devices[x->device_idx].name,
+                     (unsigned long)(sz / 1024));
+        else
+            snprintf(x->result_buf, sizeof(x->result_buf),
+                     "Success! - Detected %s (%luB)",
+                     x->devices[x->device_idx].name,
+                     (unsigned long)sz);
         *result = x->result_buf;
     } else {
         *result = success ? "Last operation: Success :)"

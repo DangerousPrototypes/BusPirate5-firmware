@@ -53,11 +53,13 @@ bool eeprom_i2c_gui(const struct eeprom_device_t* devices,
  * @param i2c_addr  7-bit I2C base address (typically 0x50)
  * @param devices   device table to search
  * @param count     number of entries in device table
- * @param ops       UI ops for warning output (NULL = silent)
+ * @param ops       UI ops for warning/message output (NULL = silent)
  * @return          index into devices[] on success, or:
  *                   -1  uniform data at address 0, cannot detect read-only
  *                   -2  no match found / ambiguous ACK pattern
  *                   -3  I2C read error
+ *
+ * Debug: detection steps are logged via PRINT_DEBUG (SEGGER RTT).
  */
 int eeprom_i2c_detect_size(uint8_t i2c_addr,
                             const struct eeprom_device_t *devices,

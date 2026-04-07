@@ -43,9 +43,21 @@
 #include "commands/uart/monitor.h"
 #include "commands/uart/glitch.h"
 #include "lib/bp_args/bp_cmd.h"
+#include "pirate/hwuart_pio.h"
 
 static struct _uart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
+
+// Backend actually brought up by hwuart_setup_exc(). Kept separate from
+// mode_config.use_pio because the mode system calls the new mode's setup()
+// (which rewrites mode_config) before the old mode's cleanup().
+static bool pio_active = false;
+static uint8_t pio_active_tx_pin = 0;
+static uint8_t pio_active_rx_pin = 0;
+
+bool hwuart_is_pio_mode(void) {
+    return pio_active;
+}
 
 bool bpio_hwuart_configure(bpio_mode_configuration_t *bpio_mode_config){
     if(bpio_mode_config->debug) printf("[UART] Configuring - Speed %d baud, %d%c%d\r\n", 
@@ -62,8 +74,34 @@ bool bpio_hwuart_configure(bpio_mode_configuration_t *bpio_mode_config){
     mode_config.invert = bpio_mode_config->signal_inversion ? 1 : 0;
     mode_config.async_print = false; // Disabled by default, async data handled via BPIO packets
     mode_config.blocking = 0; // Non-blocking
-    
-    return true;  
+    // Default to the hardware UART. Set before validation so a rejected request
+    // never leaves a stale PIO configuration behind for setup_exc().
+    mode_config.use_pio = false;
+
+    if (bpio_mode_config->pin_tx != 255 && bpio_mode_config->pin_rx != 255) {
+        if (bpio_mode_config->pin_tx > 7 || bpio_mode_config->pin_rx > 7) {
+            if (bpio_mode_config->debug) printf("[UART] Invalid pin number (must be 0-7)\r\n");
+            return false;
+        }
+        if (bpio_mode_config->pin_tx == bpio_mode_config->pin_rx) {
+            if (bpio_mode_config->debug) printf("[UART] TX and RX pins must be different\r\n");
+            return false;
+        }
+        if (bpio_mode_config->flow_control) {
+            if (bpio_mode_config->debug) printf("[UART] Flow control not supported with PIO pins\r\n");
+            return false;
+        }
+        mode_config.use_pio = true;
+        mode_config.pio_tx_pin = bpio_mode_config->pin_tx;
+        mode_config.pio_rx_pin = bpio_mode_config->pin_rx;
+        if (bpio_mode_config->debug) printf("[UART] Using PIO on TX=BIO%d, RX=BIO%d\r\n",
+            mode_config.pio_tx_pin, mode_config.pio_rx_pin);
+    } else if (bpio_mode_config->pin_tx != 255 || bpio_mode_config->pin_rx != 255) {
+        if (bpio_mode_config->debug) printf("[UART] Both pin_tx and pin_rx must be specified\r\n");
+        return false;
+    }
+
+    return true;
 }
 
 // command configuration
@@ -162,6 +200,18 @@ static const bp_val_constraint_t uart_invert_choice = {
     .prompt = T_UART_INVERT_MENU,
 };
 
+// TX pin — flag --tx (PIO mode, 0-7; 255 = default hardware pin)
+static const bp_val_constraint_t uart_tx_pin_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 7, .def = 255 },
+};
+
+// RX pin — flag --rx (PIO mode, 0-7; 255 = default hardware pin)
+static const bp_val_constraint_t uart_rx_pin_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 7, .def = 255 },
+};
+
 static const bp_command_opt_t uart_setup_opts[] = {
     { "baud",     'b', BP_ARG_REQUIRED, "1-7372800",     0, &uart_baud_range },
     { "databits", 'd', BP_ARG_REQUIRED, "5-8",           0, &uart_databits_range },
@@ -169,6 +219,8 @@ static const bp_command_opt_t uart_setup_opts[] = {
     { "stopbits", 's', BP_ARG_REQUIRED, "1|2",           0, &uart_stopbits_choice },
     { "flow",     'f', BP_ARG_REQUIRED, "off|rts",       0, &uart_flow_choice },
     { "invert",   'i', BP_ARG_REQUIRED, "normal|invert", 0, &uart_invert_choice },
+    { "tx",       't', BP_ARG_REQUIRED, "0-7",           0, &uart_tx_pin_range },
+    { "rx",       'r', BP_ARG_REQUIRED, "0-7",           0, &uart_rx_pin_range },
     { 0 },
 };
 
@@ -202,11 +254,34 @@ uint32_t hwuart_setup(void) {
         // clang-format off
     };
 
+    // PIO pins are never saved/restored: they must be requested explicitly via --tx/--rx.
+    // Parse them first so they apply on every path below, including saved settings.
+    mode_config.use_pio = false;
+    uint32_t tx_pin = 255, rx_pin = 255;
+    bp_cmd_status_t st = bp_cmd_flag(&uart_setup_def, 't', &tx_pin);
+    if (st == BP_CMD_INVALID) return 0;
+    st = bp_cmd_flag(&uart_setup_def, 'r', &rx_pin);
+    if (st == BP_CMD_INVALID) return 0;
+
+    if (tx_pin != 255 && rx_pin != 255) {
+        if (tx_pin == rx_pin) {
+            printf("Error: TX and RX pins must be different\r\n");
+            return 0;
+        }
+        mode_config.use_pio = true;
+        mode_config.pio_tx_pin = (uint8_t)tx_pin;
+        mode_config.pio_rx_pin = (uint8_t)rx_pin;
+    } else if (tx_pin != 255 || rx_pin != 255) {
+        printf("Error: Both --tx and --rx must be specified\r\n");
+        return 0;
+    }
+
     // Check if any flag is present — if so, command-line mode; otherwise wizard
-    bp_cmd_status_t st = bp_cmd_flag(&uart_setup_def, 'b', &mode_config.baudrate);
+    st = bp_cmd_flag(&uart_setup_def, 'b', &mode_config.baudrate);
     if (st == BP_CMD_INVALID) return 0;
 
     bool interactive = (st == BP_CMD_MISSING);
+    bool use_saved = false;
 
     if (interactive) {
 
@@ -216,26 +291,32 @@ uint32_t hwuart_setup(void) {
             hwuart_settings();
             int r = bp_cmd_yes_no_exit("");
             if (r == BP_YN_EXIT) return 0; // exit
-            if (r == BP_YN_YES)  return 1; // use saved settings
+            if (r == BP_YN_YES)  use_saved = true; // use saved settings (PIO pins from --tx/--rx still apply)
         }
 
-        // ── Full interactive wizard ──
-        if (bp_cmd_prompt(&uart_baud_range, &mode_config.baudrate) != BP_CMD_OK) return 0;
+        if (!use_saved) {
+            // ── Full interactive wizard ──
+            if (bp_cmd_prompt(&uart_baud_range, &mode_config.baudrate) != BP_CMD_OK) return 0;
 
-        if (bp_cmd_prompt(&uart_databits_range, &temp) != BP_CMD_OK) return 0;
-        mode_config.data_bits = (uint8_t)temp;
+            if (bp_cmd_prompt(&uart_databits_range, &temp) != BP_CMD_OK) return 0;
+            mode_config.data_bits = (uint8_t)temp;
 
-        if (bp_cmd_prompt(&uart_parity_choice, &temp) != BP_CMD_OK) return 0;
-        mode_config.parity = (uint8_t)temp;
+            if (bp_cmd_prompt(&uart_parity_choice, &temp) != BP_CMD_OK) return 0;
+            mode_config.parity = (uint8_t)temp;
 
-        if (bp_cmd_prompt(&uart_stopbits_choice, &temp) != BP_CMD_OK) return 0;
-        mode_config.stop_bits = (uint8_t)temp;
+            if (bp_cmd_prompt(&uart_stopbits_choice, &temp) != BP_CMD_OK) return 0;
+            mode_config.stop_bits = (uint8_t)temp;
 
-        if (bp_cmd_prompt(&uart_flow_choice, &temp) != BP_CMD_OK) return 0;
-        mode_config.flow_control = temp;
+            if (mode_config.use_pio) {
+                mode_config.flow_control = 0; // not supported on PIO pins, don't ask
+            } else {
+                if (bp_cmd_prompt(&uart_flow_choice, &temp) != BP_CMD_OK) return 0;
+                mode_config.flow_control = temp;
+            }
 
-        if (bp_cmd_prompt(&uart_invert_choice, &temp) != BP_CMD_OK) return 0;
-        mode_config.invert = temp;
+            if (bp_cmd_prompt(&uart_invert_choice, &temp) != BP_CMD_OK) return 0;
+            mode_config.invert = temp;
+        }
     } else {
         // ── Command-line mode ──
         // Baud already parsed. Remaining flags use defaults if absent.
@@ -261,12 +342,27 @@ uint32_t hwuart_setup(void) {
         mode_config.invert = temp;
     }
 
+    // Flow control (from flags or saved settings) needs the hardware UART pins
+    if (mode_config.use_pio && mode_config.flow_control) {
+        printf("Error: Flow control not supported with PIO pins\r\n");
+        return 0;
+    }
+
+    if (use_saved) {
+        return 1;
+    }
+
     storage_save_mode(config_file, config_t, count_of(config_t));
 
     mode_config.async_print = false;
 
-    mode_config.baudrate_actual = uart_init(M_UART_PORT, mode_config.baudrate);
-    
+    if (mode_config.use_pio) {
+        // PIO clock divider has a fractional part, the actual rate is within a fraction of a percent
+        mode_config.baudrate_actual = mode_config.baudrate;
+    } else {
+        mode_config.baudrate_actual = uart_init(M_UART_PORT, mode_config.baudrate);
+    }
+
     hwuart_settings();
 
     printf("\r\n%s%s: %u %s%s",
@@ -274,12 +370,36 @@ uint32_t hwuart_setup(void) {
            GET_T(T_UART_ACTUAL_SPEED_BAUD),
            mode_config.baudrate_actual,
            GET_T(T_UART_BAUD),
-           ui_term_color_reset());    
+           ui_term_color_reset());
 
     return 1;
 }
 
 uint32_t hwuart_setup_exc(void) {
+    if (mode_config.use_pio) {
+        // PIO path: arbitrary pins
+        hwuart_pio_fullduplex_init(
+            mode_config.pio_tx_pin, mode_config.pio_rx_pin,
+            mode_config.data_bits, mode_config.stop_bits,
+            mode_config.parity, mode_config.baudrate);
+        mode_config.baudrate_actual = mode_config.baudrate;
+        pio_active = true;
+        pio_active_tx_pin = mode_config.pio_tx_pin;
+        pio_active_rx_pin = mode_config.pio_rx_pin;
+        bio_buf_output(mode_config.pio_tx_pin);
+        bio_buf_input(mode_config.pio_rx_pin);
+        system_bio_update_purpose_and_label(true, mode_config.pio_tx_pin, BP_PIN_MODE, pin_labels[0]);
+        system_bio_update_purpose_and_label(true, mode_config.pio_rx_pin, BP_PIN_MODE, pin_labels[1]);
+        gpio_set_outover(bio2bufiopin[mode_config.pio_tx_pin],
+                         mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
+        gpio_set_inover(bio2bufiopin[mode_config.pio_rx_pin],
+                        mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
+        // drain any glitch bytes from setup
+        hwuart_pio_fullduplex_flush_rx();
+        return 1;
+    }
+
+    // Hardware UART path
     mode_config.baudrate_actual = uart_init(M_UART_PORT, mode_config.baudrate);
     // setup peripheral
     uart_set_format(M_UART_PORT, mode_config.data_bits, mode_config.stop_bits, mode_config.parity);
@@ -309,12 +429,12 @@ uint32_t hwuart_setup_exc(void) {
         gpio_set_outover(bio2bufiopin[M_UART_RTS], mode_config.invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
         // 0: ready to receive
         // 1: not ready to receive
-        bio_put(M_UART_RTS, 1);   
+        bio_put(M_UART_RTS, 1);
         // only enable CTS, as we are toggling RTS manually
         //
         // hw_flow RTS doesn't work with inverted signals, i.e. doesn't set RTS high
         // when we can read the data. So we're setting RTS manually.
-        uart_set_hw_flow(M_UART_PORT, mode_config.flow_control, false);             
+        uart_set_hw_flow(M_UART_PORT, mode_config.flow_control, false);
     }
 
     // drain the buffer of any glitch bytes from setup
@@ -330,6 +450,17 @@ bool hwuart_preflight_sanity_check(void){
 }
 
 void hwuart_periodic(void) {
+    if (pio_active) {
+        if (mode_config.async_print) {
+            uint32_t raw;
+            uint8_t cooked;
+            if (hwuart_pio_fullduplex_read(&raw, &cooked)) {
+                uint32_t val = (uint32_t)cooked;
+                ui_format_print_number_2(&periodic_attributes, &val);
+            }
+        }
+        return;
+    }
     if (mode_config.async_print && uart_is_readable(M_UART_PORT)) {
         // printf("ASYNC: %d\r\n", uart_getc(M_UART_PORT));
         if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
@@ -339,13 +470,17 @@ void hwuart_periodic(void) {
     }
 }
 
-void hwuart_open(struct _bytecode* result, struct _bytecode* next) {    
-    // clear FIFO and enable UART
-    if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
-    while (uart_is_readable(M_UART_PORT)) {
-        uart_getc(M_UART_PORT);
+void hwuart_open(struct _bytecode* result, struct _bytecode* next) {
+    if (pio_active) {
+        hwuart_pio_fullduplex_flush_rx();
+    } else {
+        // clear FIFO and enable UART
+        if(mode_config.flow_control) bio_put(M_UART_RTS, 0);
+        while (uart_is_readable(M_UART_PORT)) {
+            uart_getc(M_UART_PORT);
+        }
+        if(mode_config.flow_control) bio_put(M_UART_RTS, 1);
     }
-    if(mode_config.flow_control) bio_put(M_UART_RTS, 1);
 
     mode_config.async_print = false;
     result->data_message = GET_T(T_UART_OPEN);
@@ -361,7 +496,11 @@ void hwuart_close(struct _bytecode* result, struct _bytecode* next) {
     result->data_message = GET_T(T_UART_CLOSE);
 }
 
-void hwuart_write(struct _bytecode* result, struct _bytecode* next) {       
+void hwuart_write(struct _bytecode* result, struct _bytecode* next) {
+    if (pio_active) {
+        hwuart_pio_fullduplex_write(result->out_data);
+        return;
+    }
     if (mode_config.blocking) {
         uart_putc_raw(M_UART_PORT, result->out_data);
     } else {
@@ -370,6 +509,22 @@ void hwuart_write(struct _bytecode* result, struct _bytecode* next) {
 }
 
 void hwuart_read(struct _bytecode* result, struct _bytecode* next) {
+    if (pio_active) {
+        uint32_t timeout = 0xfff;
+        uint32_t raw;
+        uint8_t cooked;
+        while (!hwuart_pio_fullduplex_read(&raw, &cooked)) {
+            timeout--;
+            if (!timeout) {
+                result->error = SERR_ERROR;
+                result->error_message = GET_T(T_UART_NO_DATA_READ);
+                return;
+            }
+        }
+        result->in_data = cooked;
+        return;
+    }
+
     uint32_t timeout = 0xfff;
 
     while (!uart_is_readable(M_UART_PORT)) {
@@ -407,17 +562,27 @@ void hwuart_macro(uint32_t macro) {
 }
 
 void hwuart_cleanup(void) {
+    if (pio_active) {
+        hwuart_pio_deinit();
+        system_bio_update_purpose_and_label(false, pio_active_tx_pin, BP_PIN_MODE, 0);
+        system_bio_update_purpose_and_label(false, pio_active_rx_pin, BP_PIN_MODE, 0);
+        gpio_set_outover(bio2bufiopin[pio_active_tx_pin], GPIO_OVERRIDE_NORMAL);
+        gpio_set_inover(bio2bufiopin[pio_active_rx_pin], GPIO_OVERRIDE_NORMAL);
+        pio_active = false;
+        bio_init();
+        return;
+    }
     // disable peripheral
     uart_deinit(M_UART_PORT);
     system_bio_update_purpose_and_label(false, M_UART_TX, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_UART_RX, BP_PIN_MODE, 0);
     system_bio_update_purpose_and_label(false, M_UART_RTS, BP_PIN_MODE, 0);
-    system_bio_update_purpose_and_label(false, M_UART_CTS, BP_PIN_MODE, 0);    
+    system_bio_update_purpose_and_label(false, M_UART_CTS, BP_PIN_MODE, 0);
     gpio_set_outover(bio2bufiopin[M_UART_TX], GPIO_OVERRIDE_NORMAL);
     gpio_set_inover(bio2bufiopin[M_UART_RX], GPIO_OVERRIDE_NORMAL);
     gpio_set_inover(bio2bufiopin[M_UART_CTS], GPIO_OVERRIDE_NORMAL);
     gpio_set_outover(bio2bufiopin[M_UART_RTS], GPIO_OVERRIDE_NORMAL);
-    uart_set_hw_flow(M_UART_PORT, false, false);  
+    uart_set_hw_flow(M_UART_PORT, false, false);
     // reset all pins to safe mode (done before mode change, but we do it here to be safe)
     bio_init();
 }
@@ -431,6 +596,10 @@ void hwuart_settings(void) {
             !mode_config.flow_control ? GET_T(T_UART_FLOW_CONTROL_MENU_1) : GET_T(T_UART_FLOW_CONTROL_MENU_2), 0x00);
     ui_help_setting_string(GET_T(T_UART_INVERT_MENU),
             !mode_config.invert ? GET_T(T_UART_INVERT_MENU_1) : GET_T(T_UART_INVERT_MENU_2), 0x00);
+    if (mode_config.use_pio) {
+        ui_help_setting_int("PIO TX pin", mode_config.pio_tx_pin, 0x00);
+        ui_help_setting_int("PIO RX pin", mode_config.pio_rx_pin, 0x00);
+    }
 }
 
 void hwuart_printerror(void) {
@@ -466,6 +635,9 @@ void hwuart_help(void) {
 }
 
 void hwuart_wait_done(void) {
+    if (pio_active) {
+        return; // PIO writes block until the frame has been sent
+    }
     uart_tx_wait_blocking(M_UART_PORT);
 }
 

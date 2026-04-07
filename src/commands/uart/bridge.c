@@ -4,6 +4,7 @@
 #include "hardware/uart.h"
 #include "pirate.h"
 #include "pirate/bio.h"
+#include "pirate/hwuart_pio.h"
 #include "system_config.h"
 #include "command_struct.h"
 #include "ui/ui_term.h"
@@ -52,22 +53,40 @@ void uart_bridge_handler(struct command_result* res) {
     }
 
     printf("%s%s%s\r\n", ui_term_color_notice(), GET_T(T_HELP_UART_BRIDGE_EXIT), ui_term_color_reset());
-    bio_put(M_UART_RTS, 0);
-    while (true) {
-        char c;
-        if (rx_fifo_try_get(&c)) {
-            uart_putc_raw(M_UART_PORT, c);
+
+    if (hwuart_is_pio_mode()) {
+        while (true) {
+            char c;
+            if (rx_fifo_try_get(&c)) {
+                hwuart_pio_fullduplex_write((uint32_t)(uint8_t)c);
+            }
+            uint32_t raw;
+            uint8_t cooked;
+            if (hwuart_pio_fullduplex_read(&raw, &cooked)) {
+                c = (char)cooked;
+                tx_fifo_put(&c);
+            }
+            if (button_get(0)) {
+                break;
+            }
         }
-        if (uart_is_readable(M_UART_PORT)) {
-            c = uart_getc(M_UART_PORT);
-            tx_fifo_put(&c);
+    } else {
+        bio_put(M_UART_RTS, 0);
+        while (true) {
+            char c;
+            if (rx_fifo_try_get(&c)) {
+                uart_putc_raw(M_UART_PORT, c);
+            }
+            if (uart_is_readable(M_UART_PORT)) {
+                c = uart_getc(M_UART_PORT);
+                tx_fifo_put(&c);
+            }
+            if (button_get(0)) {
+                break;
+            }
         }
-        // exit when button pressed.
-        if (button_get(0)) {
-            break;
-        }
+        bio_put(M_UART_RTS, 1);
     }
-    bio_put(M_UART_RTS, 1);
 
     if (toolbar_paused) {
         toolbar_resume_updates();

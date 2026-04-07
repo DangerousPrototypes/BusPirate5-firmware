@@ -34,6 +34,10 @@ void nmea_decode_handler(struct command_result* res) {
     if (!ui_help_check_vout_vref()) {
         return;
     }
+    if (hwuart_is_pio_mode()) {
+        printf("Error: not available with UART on PIO pins (--tx/--rx)\r\n");
+        return;
+    }
 
     printf("%s%s%s\r\n%s",
            ui_term_color_notice(),

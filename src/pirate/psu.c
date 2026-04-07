@@ -160,6 +160,9 @@ void psu_disable(void) {
     #endif 
     #endif
     
+    #ifdef VOUT_ACTIVATE_VOUT
+        gpio_put(VOUT_ACTIVATE_VOUT, 1); // Q6 ON -> force FET gates LOW -> isolate VOUT
+    #endif
     psu_vreg_enable(false);
     psu_dac_set(PWM_TOP, 0);
     psu_current_limit_override(false);
@@ -190,6 +193,9 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override) {
     psu_dac_set(psu_status.voltage_dac_value, PWM_TOP);
     psu_fuse_reset();
     psu_vreg_enable(true);
+    #ifdef VOUT_ACTIVATE_VOUT
+        gpio_put(VOUT_ACTIVATE_VOUT, 0); // Q6 OFF -> R42 pullup + comparator control FET gates -> pass-through
+    #endif
     busy_wait_ms(10);
     
     #if 0

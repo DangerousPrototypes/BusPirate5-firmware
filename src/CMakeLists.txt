@@ -209,6 +209,8 @@ set(buspirate_common
         commands/global/smps.h
         commands/global/cls.h
         commands/global/cls.c  
+        commands/global/comment.h
+        commands/global/comment.c
         commands/global/cmd_binmode.h
         commands/global/cmd_binmode.c
         commands/global/logic.h

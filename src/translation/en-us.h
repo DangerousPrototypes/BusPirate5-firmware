@@ -683,6 +683,7 @@ static char const * const en_us[]={
 	[T_HDUART_LISTEN_MENU]="Bus mode",
 	[T_HDUART_LISTEN_MENU_1]="Master (drive line)",
 	[T_HDUART_LISTEN_MENU_2]="Listen (passive, open drain)",
+	[T_HELP_CMD_COMMENT]="Comment line, # is ignored",
 };
 
 // Since en-us is the base language, the following static assert at least verifies the table size

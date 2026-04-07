@@ -4,3 +4,4 @@ build_*/**
 .env
 
 src/translation/history/new__en-us.json
+tests/test_spsc_queue

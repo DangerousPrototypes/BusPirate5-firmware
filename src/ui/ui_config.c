@@ -180,7 +180,6 @@ uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b) {
         }
         system_config.terminal_ansi_statusbar = b;
         ui_term_detect();
-        ui_term_init();
         ui_statusbar_init(); // register + draw the statusbar toolbar
     } else {
         ui_statusbar_deinit(); // tear down + unregister (also clears the flag)

@@ -137,14 +137,14 @@ bool ui_term_detect(void) {
 
 void ui_term_init(void) {
     if (system_config.terminal_ansi_color) {
-        printf("\033[?3l"); // 80 columns
+        // Set window title
         printf("\033]0;%s\033\\", BP_HARDWARE_VERSION);
         // reset all styling
         printf("\033[0m");
         // set cursor type
         // printf("\033[3 q");
-        // clear screen
-        printf("\033[2J");
+        // clear screen and home cursor
+        printf("\033[2J\033[H");
     }
 }
 

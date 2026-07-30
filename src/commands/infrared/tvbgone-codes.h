@@ -28,6 +28,7 @@ Distributed under Creative Commons 2.5 -- Attib & Share Alike
 Ported to PIC (18F2550) by Ian Lesnet 2009
 */
 //#include "HardwareProfile.h"
+#include <stdint.h>
 
 //Codes captured from Generation 3 TV-B-Gone by Limor Fried & Mitch Altman
 // table of POWER codes
@@ -37,8 +38,6 @@ Ported to PIC (18F2550) by Ian Lesnet 2009
 //#define EU_CODES //Incomplete EU power code files to generate EU power codes for PIC
 					// see: http://forums.adafruit.com/viewtopic.php?f=23&t=12883&sid=e48df75eefc5975f4e2d7ce3d63e007a
 
-#define uint8_t unsigned char
-#define uint16_t unsigned int
 //#define freq_to_timerval(x) ((3000000/(unsigned int)x)-1) //this calculates the PR2 PWM value for a 48MHZ pic with 4x prescaler
 #define freq_to_timerval(x) (x)
 

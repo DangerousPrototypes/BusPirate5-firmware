@@ -54,6 +54,12 @@ enum {
 #ifdef BP_USE_JTAG
     JTAG,     /**< JTAG protocol */
 #endif
+#ifdef BP_USE_PS2
+    PS2,      /**< PS/2 keyboard/mouse sniffer */
+#endif
+#ifdef BP_USE_USB
+    USB,      /**< USB low/full-speed sniffer */
+#endif
 #ifdef BP_USE_I2S
     I2S,      /**< I2S audio */
 #endif

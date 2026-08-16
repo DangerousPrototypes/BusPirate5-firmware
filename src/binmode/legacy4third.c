@@ -14,14 +14,9 @@
  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+// Authors: Dreg, mbrugman, Ian 
+
 /* Legacy Binary Mode for third parties */
-
-/* ************************
-WARNING: It's very easy to break this code if you don't know what you're doing.
-There are things that might seem unnecessary, but they're not! Be very careful!
-************************ */
-
-// VERY EXPERIMENTAL & BETA
 
 // #include <stdio.h>
 #include <string.h>
@@ -48,29 +43,53 @@ There are things that might seem unnecessary, but they're not! Be very careful!
 #include "commands/global/p_pullups.h"
 #include "binmode/bpio.h"
 #include "commands/global/cmd_mcu.h"
+#include "hardware/spi.h"
+#include "hardware/sync.h"
+#include "pirate/psu.h"
 
-const char legacy4third_mode_name[] = "Legacy Binary Mode for Flashrom and AVRdude (EXPERIMENTAL)";
+const char legacy4third_mode_name[] = "Legacy Binary Mode for Flashrom and AVRdude";
 
 #define TMPBUFF_SIZE 0x4000
 #define CDCBUFF_SIZE 0x4000
-// WARNING: decrease DEFAULT_MAX_TRIES value can cause problems
-#if BP_VER == 5
-#define DEFAULT_MAX_TRIES 100000
-#else
-#define DEFAULT_MAX_TRIES 200000
-#endif
-#define CDC_SEND_STR(cdc_n, str)                                                                                       \
-    tud_cdc_n_write(cdc_n, (uint8_t*)str, sizeof(str) - 1);                                                            \
-    tud_cdc_n_write_flush(1);
+
+#define CDC_SEND_STR(cdc_n, str) cdc_write_all(cdc_n, (const uint8_t*)(str), sizeof(str) - 1)
+
+// Indexed by the low nibble of the 0x60 opcode. These are the rates flashrom
+// documents for its spispeed= parameter, and we honour them literally: asking
+// for 1M really clocks the bus at 1MHz. The original Bus Pirate v3 mapped the
+// same indices onto unrelated PIC24 dividers (its "8M" was 2.6MHz and its "2M"
+// was 50kHz), which is a quirk worth not reproducing. avrdude uses the same
+// eight rates, so indices above 7 are rejected.
+static const uint32_t legacy_spi_speeds[] = {
+    30000,
+    125000,
+    250000,
+    1000000,
+    2000000,
+    2600000,
+    4000000,
+    8000000,
+};
+
+#define LEGACY_SPI_SPEED_COUNT (sizeof(legacy_spi_speeds) / sizeof(legacy_spi_speeds[0]))
+#define LEGACY_SPI_DEFAULT_SPEED 1000000
+#define LEGACY_SPI_ENTRY_SPEED 125000
+#define LEGACY_IDLE_RESYNC_US 100000
+#define LEGACY_PAYLOAD_TIMEOUT_MS 3000
 
 static float psu_voltage = 0.0f; // PSU voltage in volts
 static float psu_current_limit = 0.0f; // PSU current limit in amps
 static uint8_t* tmpbuf;
 static uint8_t* cdc_buff;
-static uint32_t remain_bytes;
 static bool set_aux_pins = true;
 static bool hold_value = true;
 static bool wp_value = true;
+static bool spi_configured = false;
+static bool spi_mode_active = false;
+static bool legacy_abort = false;
+static const char* legacy_exit_reason = "not set";
+static bool psu_started = false;
+static uint32_t psu_last_error = 0;
 
 // For Atmel parts which have a flash size > 64Kbytes, an additional
 // command is needed - the "Extended High Byte" address write.  This
@@ -129,63 +148,172 @@ void setup_spi_legacy(uint32_t spi_speed, uint8_t data_bits, uint8_t cpol, uint8
         .chip_select_idle = cs,
     };
 
-    mode_change_new((uint8_t*)"SPI", &mode_config);
-    system_config.binmode_usb_rx_queue_enable = false;
-    system_config.binmode_usb_tx_queue_enable = false;
+    spi_configured = (mode_change_new((uint8_t*)"SPI", &mode_config) == false);
+    if (set_aux_pins) {
+        set_planks_auxpins(true);
+    }
+    system_config.binmode_usb_rx_queue_enable = true;
+    system_config.binmode_usb_tx_queue_enable = true;
 }
 
 void enable_debug_legacy(void) {
     binmode_debug = 1;
 }
 
-uint32_t read_buff(uint8_t* buf, uint32_t len, uint32_t max_tries) {
-    uint32_t pending_data = 0;
-    uint32_t bytes_readed = 0;
-    uint32_t total_bytes_readed = 0;
+void legacy_print(const char* text) {
+    while (*text) {
+        tx_fifo_try_put((char*)text);
+        text++;
+    }
+}
 
-    if (remain_bytes > 0) {
-        bytes_readed = remain_bytes >= len ? len : remain_bytes;
-        memcpy(buf, cdc_buff, bytes_readed);
-        remain_bytes -= bytes_readed;
+bool legacy_exit_requested(void) {
+    char c;
 
-        if (remain_bytes > 0) {
-            memmove(cdc_buff, cdc_buff + bytes_readed, remain_bytes);
-        }
-
-        total_bytes_readed = bytes_readed;
+    if (legacy_abort) {
+        return true;
+    }
+    if (button_get(0)) {
+        legacy_exit_reason = "button pressed";
+        legacy_abort = true;
+        return true;
+    }
+    if (!rx_fifo_try_get(&c)) {
+        return false;
+    }
+    if (c != 'q' && c != 'Q') {
+        return false;
     }
 
-    while (total_bytes_readed < len && max_tries--) {
+    legacy_print("\r\nExit legacy binary mode and reset the Bus Pirate? (y/n) ");
+    absolute_time_t answer_deadline = make_timeout_time_ms(15000);
+    while (!time_reached(answer_deadline)) {
         if (button_get(0)) {
-            return 0; 
+            legacy_print("\r\n");
+            legacy_exit_reason = "button pressed at the confirmation prompt";
+            legacy_abort = true;
+            return true;
         }
-        pending_data = tud_cdc_n_available(1);
-        if (pending_data > 0) {
-            bytes_readed = tud_cdc_n_read(1, cdc_buff + remain_bytes, pending_data);
-            tud_task();
-            remain_bytes += bytes_readed;
-            uint32_t bytes_to_copy = len - total_bytes_readed;
-            if (remain_bytes < bytes_to_copy) {
-                bytes_to_copy = remain_bytes;
+        if (rx_fifo_try_get(&c)) {
+            if (c == 'y' || c == 'Y') {
+                legacy_print("y\r\n");
+                legacy_exit_reason = "'q' then 'y' on the terminal";
+                legacy_abort = true;
+                return true;
             }
-
-            memcpy(buf + total_bytes_readed, cdc_buff, bytes_to_copy);
-            total_bytes_readed += bytes_to_copy;
-            remain_bytes -= bytes_to_copy;
-
-            if (remain_bytes > 0) {
-                memmove(cdc_buff, cdc_buff + bytes_to_copy, remain_bytes);
+            if (c == 'n' || c == 'N') {
+                legacy_print("n\r\n");
+                return false;
             }
         }
     }
 
-    return total_bytes_readed;
+    legacy_print("\r\nNo answer, staying in legacy binary mode.\r\n");
+    return false;
+}
+
+void cdc_write_all(uint32_t cdc_id, const uint8_t* buf, uint32_t len) {
+    (void)cdc_id;
+
+    for (uint32_t i = 0; i < len; i++) {
+        while (!bin_tx_fifo_try_put((char)buf[i])) {
+            if (legacy_exit_requested()) {
+                return;
+            }
+        }
+    }
+}
+
+bool read_buff(uint8_t* buf, uint32_t len) {
+    uint32_t total = 0;
+    char c;
+
+    while (total < len) {
+        if (bin_rx_fifo_try_get(&c)) {
+            buf[total] = (uint8_t)c;
+            total++;
+            continue;
+        }
+        if (legacy_exit_requested()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool read_payload(uint8_t* buf, uint32_t len) {
+    uint32_t total = 0;
+    char c;
+    absolute_time_t deadline = make_timeout_time_ms(LEGACY_PAYLOAD_TIMEOUT_MS);
+
+    while (total < len) {
+        if (bin_rx_fifo_try_get(&c)) {
+            buf[total] = (uint8_t)c;
+            total++;
+            deadline = make_timeout_time_ms(LEGACY_PAYLOAD_TIMEOUT_MS);
+            continue;
+        }
+        if (legacy_exit_requested()) {
+            return false;
+        }
+        if (time_reached(deadline)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool discard_buff(uint32_t len) {
+    uint8_t scratch[64];
+
+    while (len) {
+        uint32_t count = len > sizeof(scratch) ? sizeof(scratch) : len;
+        if (!read_payload(scratch, count)) {
+            return false;
+        }
+        len -= count;
+    }
+
+    return true;
+}
+
+void send_nak_padded(uint32_t pad_len) {
+    uint8_t chunk[64];
+
+    CDC_SEND_STR(1, "\x00");
+    memset(chunk, 0xFF, sizeof(chunk));
+    while (pad_len && !legacy_abort) {
+        uint32_t count = pad_len > sizeof(chunk) ? sizeof(chunk) : pad_len;
+        cdc_write_all(1, chunk, count);
+        pad_len -= count;
+    }
 }
 
 void cdc_full_flush(uint32_t cdc_id) {
-    tud_cdc_n_read_flush(cdc_id);
-    tud_cdc_n_write_flush(cdc_id);
-    remain_bytes = 0;
+    (void)cdc_id;
+    char c;
+    absolute_time_t hard_stop = make_timeout_time_ms(250);
+    absolute_time_t quiet_until = make_timeout_time_ms(20);
+
+    while (!time_reached(quiet_until) && !time_reached(hard_stop)) {
+        if (button_get(0)) {
+            legacy_exit_reason = "button pressed during the entry flush";
+            legacy_abort = true;
+            return;
+        }
+        if (bin_rx_fifo_try_get(&c)) {
+            quiet_until = make_timeout_time_ms(20);
+        }
+    }
+}
+
+void spi_bus_sync(void) {
+    while (spi_is_readable(M_SPI_PORT)) {
+        (void)spi_get_hw(M_SPI_PORT)->dr;
+    }
+    spi_get_hw(M_SPI_PORT)->icr = SPI_SSPICR_RORIC_BITS;
 }
 
 void set_pins_ui(void) {
@@ -198,12 +326,14 @@ void set_pins_ui(void) {
 }
 
 void reset_legacy(void) {
-    hwspi_deinit();
-    set_planks_auxpins(false);
+    spi_configured = false;
+    spi_mode_active = false;
+    psu_started = false;
     disable_psu_legacy();
     pullups_disable();
-    bpio_mode_configuration_t mode_config;
+    bpio_mode_configuration_t mode_config = {0};
     mode_change_new((uint8_t*)"HIZ", &mode_config);
+    set_planks_auxpins(false);
     set_pins_ui();
 }
 
@@ -213,21 +343,79 @@ void legacy_protocol(void) {
     uint8_t count_zero = 0;
     uint32_t spi_speed = 0;
     uint8_t cs_init = 0x01;
+    absolute_time_t last_op_time;
 
+    legacy_abort = false;
+    legacy_exit_reason = "read_buff returned without an abort flag";
+    psu_started = false;
+    spi_mode_active = false;
+    /* =========================================================================
+     * DO NOT REMOVE THE ASSIGNMENT BELOW. IT IS NOT COSMETIC.
+     *
+     * monitor() on core1 calls amux_sweep(), which walks the analog mux across
+     * every ADC channel to read pin voltages for the display. Four of those
+     * channels are BPIO4..BPIO7, which in SPI mode are MISO, CS, CLK and MOSI,
+     * and each one is wired to the ADC for 60us at a time. On boards where the
+     * mux is driven through the 595 shift register, every channel change is a
+     * shift plus latch plus wait, so one sweep loads the live bus for
+     * milliseconds and corrupts whatever transfer is in flight.
+     *
+     * Measured on a Bus Pirate 5 rev8, reading the same flash address over and
+     * over, before this flag existed:
+     *
+     *      3 byte reads at 125kHz    0.19 ms     0.00% bad
+     *     64 byte reads at 125kHz    4.1  ms     0.75% bad
+     *    256 byte reads at 125kHz   16.4  ms     5.03% bad
+     *   2048 byte reads at   1MHz   16.4  ms     5.08% bad
+     *   2048 byte reads at 125kHz  131    ms    33.90% bad
+     *   2048 byte reads at   8MHz    2    ms     0.00% bad
+     *
+     * Look at the two 16.4 ms rows: different size, different clock, identical
+     * error rate. The failure tracks how long a transfer lasts, not how fast it
+     * clocks, and going faster makes it better. That is the opposite of a signal
+     * integrity problem and is what rules out the wiring. With this flag set,
+     * every row above measures 0.00%.
+     *
+     * The Bus Pirate 6 and newer drive the mux from dedicated MCU pins, so a
+     * channel change is four gpio_put calls and the sweep is short enough that
+     * the same test measures 0.00% without this flag. The flag is set on every
+     * board anyway so behaviour does not depend on which one you plugged in.
+     *
+     * The same glitch has been reported on the I2C lines, so it is not specific
+     * to this mode. Only the pin voltage sweep is suppressed here. The PSU over
+     * current check keeps running, because it selects the current sense channel
+     * and never touches an IO pin.
+     * https://forum.buspirate.com/t/periodic-glitch-on-both-sda-and-scl-lines-for-i2c-mode/94
+     * ========================================================================= */
+    system_config.binmode_suppress_monitor = true;
     cdc_full_flush(1);
+    last_op_time = get_absolute_time();
 
     while (1) {
-        if (button_get(0)) {
+        if (legacy_exit_requested()) {
             return;
         }
         op_byte = 0;
         extended_info = 0;
-        tud_task();
-        while (!read_buff(&op_byte, 1, DEFAULT_MAX_TRIES)) {
-            if (button_get(0)) {
-                return;
-            }
+        if (!read_buff(&op_byte, 1)) {
+            return;
         }
+
+        absolute_time_t now = get_absolute_time();
+        if (absolute_time_diff_us(last_op_time, now) > LEGACY_IDLE_RESYNC_US) {
+            count_zero = 0;
+        }
+        last_op_time = now;
+
+        if (psu_started && !psu_status.enabled) {
+            psu_started = false;
+            spi_configured = false;
+            if (!psu_last_error) {
+                psu_last_error = PSU_ERROR_FUSE_TRIPPED;
+            }
+            legacy_print("\r\nPSU FAULT: target power was cut, aborting SPI operations.\r\n");
+        }
+
         if (binmode_debug) {
             printf("\r\n-\r\nop_byte=0x%02X", op_byte);
             printf(", extended_info=0x%02X", extended_info);
@@ -238,14 +426,14 @@ void legacy_protocol(void) {
             if (op_byte >= 0x10 && op_byte <= 0x1F) {
                 extended_info = op_byte;
                 op_byte = 0x10;
-            } else if (op_byte >= 0x60 && op_byte <= 0x67) // this must be the first
+            } else if (op_byte >= 0x60 && op_byte <= 0x6F) // this must be the first
             {
                 extended_info = op_byte;
                 op_byte = 0x60;
-            } else if (op_byte & 0x80) {
+            } else if (op_byte >= 0x80 && op_byte <= 0x8F) {
                 extended_info = op_byte;
                 op_byte = 0x80;
-            } else if (op_byte & 0x40) {
+            } else if (op_byte >= 0x40 && op_byte <= 0x4F) {
                 extended_info = op_byte;
                 op_byte = 0x40;
             }
@@ -264,12 +452,10 @@ void legacy_protocol(void) {
                     CDC_SEND_STR(1, "BBIO1");
                     spi_speed = 0;
                     reset_legacy();
-                    system_config.binmode_usb_rx_queue_enable = false;
-                    system_config.binmode_usb_tx_queue_enable = false;
-                } else if (count_zero > 15) {
-                    count_zero = 0;
                 }
-                count_zero++;
+                if (count_zero < 0xFF) {
+                    count_zero++;
+                }
             } break;
 
             case 0x0F: {
@@ -284,6 +470,9 @@ void legacy_protocol(void) {
                 if (binmode_debug) {
                     printf("\r\nSPI1->");
                 }
+                spi_speed = LEGACY_SPI_ENTRY_SPEED;
+                setup_spi_legacy(spi_speed, 8, 0, 0, cs_init);
+                spi_mode_active = true;
                 CDC_SEND_STR(1, "SPI1");
             } break;
 
@@ -293,15 +482,21 @@ void legacy_protocol(void) {
                 }
 
                 // PSU
+                if (set_aux_pins) {
+                    set_planks_auxpins(true);
+                }
+
                 if ((extended_info & 0b00001000) == 0) {
+                    psu_started = false;
                     disable_psu_legacy();
                 } else {
                     uint32_t result = psucmd_enable(psu_voltage, psu_current_limit, false, 100);
                     if (result) {
-                        if (binmode_debug) {
-                            printf("\r\nPSU ERROR CODE %d", result);
-                        }
+                        psu_started = false;
+                        psu_last_error = result;
+                        legacy_print("\r\nPSU ERROR: target is NOT powered by the Bus Pirate.\r\n");
                     } else {
+                        psu_started = true;
                         if (binmode_debug) {
                             printf("\r\nPSU Enabled");
                         }
@@ -352,43 +547,15 @@ void legacy_protocol(void) {
                 if (binmode_debug) {
                     printf("\r\nspi_speed");
                 }
-                switch (extended_info & 0x9F) {
-                    case 0b00: // 30kHz
-                        spi_speed = 30000;
-                        break;
-
-                    case 0b01: // 125kHz
-                        spi_speed = 125000;
-                        break;
-
-                    case 0b10: // 250kHz
-                        spi_speed = 250000;
-                        break;
-
-                    case 0b11: // 1MHz
-                        spi_speed = 1000000;
-                        break;
-
-                    case 0b100: // 2MHz
-                        spi_speed = 2000000;
-                        break;
-
-                    case 0b101: // 2.6MHz
-                        spi_speed = 2600000;
-                        break;
-
-                    case 0b110: // 4MHz
-                        spi_speed = 4000000;
-                        break;
-
-                    case 0b111: // 8MHz
-                        spi_speed = 8000000;
-                        break;
-
-                    default:
-                        spi_speed = 0;
-                        break;
+                uint8_t speed_index = extended_info & 0x0F;
+                if (speed_index >= LEGACY_SPI_SPEED_COUNT) {
+                    if (binmode_debug) {
+                        printf("\r\ninvalid speed index %d", speed_index);
+                    }
+                    CDC_SEND_STR(1, "\x00");
+                    break;
                 }
+                spi_speed = legacy_spi_speeds[speed_index];
                 if (binmode_debug) {
                     printf("\r\nspi_speed: %d", spi_speed);
                 }
@@ -444,10 +611,12 @@ void legacy_protocol(void) {
                     }
                 }
 
-                setup_spi_legacy(spi_speed, 8, 0, 0, cs_init);
-                if (set_aux_pins) {
-                    set_planks_auxpins(true);
+                if (spi_speed == 0) {
+                    spi_speed = LEGACY_SPI_DEFAULT_SPEED;
                 }
+                uint8_t cpol = (extended_info & 0x4) ? 1 : 0;
+                uint8_t cpha = (extended_info & 0x2) ? 0 : 1;
+                setup_spi_legacy(spi_speed, 8, cpol, cpha, cs_init);
                 hwspi_select();
                 CDC_SEND_STR(1, "\x01");
             } break;
@@ -472,18 +641,22 @@ void legacy_protocol(void) {
                 if (binmode_debug) {
                     printf("\r\nBulk SPI transfer");
                 }
-                memset(tmpbuf, 0, TMPBUFF_SIZE);
                 uint32_t bytes2read = (extended_info & 0x0F) + 1;
                 if (binmode_debug) {
                     printf("\r\nbytes_to_read: %d", bytes2read);
                 }
+                if (!spi_mode_active || !spi_configured) {
+                    CDC_SEND_STR(1, "\x00");
+                    break;
+                }
                 CDC_SEND_STR(1, "\x01");
-                while (!read_buff(tmpbuf, bytes2read, DEFAULT_MAX_TRIES))
-                {
-                    if (button_get(0)) {
+                if (!read_payload(tmpbuf, bytes2read)) {
+                    if (legacy_abort) {
                         return;
                     }
+                    break;
                 }
+                spi_bus_sync();
                 if (binmode_debug) {
                     printf("\r\n>> ");
                 }
@@ -556,8 +729,7 @@ void legacy_protocol(void) {
                 if (binmode_debug) {
                     printf("\r\n");
                 }
-                tud_cdc_n_write(1, tmpbuf, bytes2read);
-                tud_cdc_n_write_flush(1);
+                cdc_write_all(1, tmpbuf, bytes2read);
             } break;
 
             // SPI b00000100 (0x04) - Write then read & b00000101 (0x05) - Write then read, no CS
@@ -566,13 +738,16 @@ void legacy_protocol(void) {
                 uint16_t bytes_to_read = 0;
                 uint16_t bytes_to_write = 0;
 
-                memset(tmpbuf, 0, TMPBUFF_SIZE);
+                if (!spi_mode_active) {
+                    CDC_SEND_STR(1, "\x00");
+                    break;
+                }
 
-                while (!read_buff(tmpbuf, 4, DEFAULT_MAX_TRIES))
-                {
-                    if (button_get(0)) {
+                if (!read_payload(tmpbuf, 4)) {
+                    if (legacy_abort) {
                         return;
                     }
+                    break;
                 }
                 if (binmode_debug) {
                     printf("\r\nbytes_to_write H: 0x%02X", tmpbuf[0]);
@@ -593,14 +768,35 @@ void legacy_protocol(void) {
                     break;
                 }
 
-                if (bytes_to_write) {
-                    while (!read_buff(tmpbuf, bytes_to_write, DEFAULT_MAX_TRIES))
-                    {
-                        if (button_get(0)) {
+                if (((uint32_t)bytes_to_write + (uint32_t)bytes_to_read) > TMPBUFF_SIZE) {
+                    if (binmode_debug) {
+                        printf("\r\nlength out of range");
+                    }
+                    if (!discard_buff(bytes_to_write)) {
+                        if (legacy_abort) {
                             return;
                         }
+                        break;
+                    }
+                    send_nak_padded(bytes_to_read);
+                    break;
+                }
+
+                if (bytes_to_write) {
+                    if (!read_payload(tmpbuf, bytes_to_write)) {
+                        if (legacy_abort) {
+                            return;
+                        }
+                        break;
                     }
                 }
+
+                if (!spi_configured) {
+                    send_nak_padded(bytes_to_read);
+                    break;
+                }
+
+                spi_bus_sync();
 
                 if (0x04 == op_byte) {
                     hwspi_select();
@@ -608,69 +804,47 @@ void legacy_protocol(void) {
                 if (binmode_debug) {
                     printf("\r\n>> ");
                 }
-                int j = 0;
-                uint32_t total_bytes_spi = bytes_to_write + bytes_to_read;
-                while (j < total_bytes_spi) {
+                uint32_t total_bytes_spi = (uint32_t)bytes_to_write + (uint32_t)bytes_to_read;
+                for (uint32_t j = 0; j < total_bytes_spi; j++) {
                     if (button_get(0)) {
+                        hwspi_deselect();
                         return;
                     }
                     if (binmode_debug) {
                         printf("\r\n[%d] 0x%02X -> | ", j, tmpbuf[j]);
                     }
-                    tmpbuf[j] = hwspi_write_read(j >= bytes_to_write ? 0x00 : tmpbuf[j]);
+                    tmpbuf[j] = hwspi_write_read(j >= bytes_to_write ? 0xFF : tmpbuf[j]);
                     if (binmode_debug) {
                         printf("<- 0x%02X", tmpbuf[j]);
                     }
-                    j++;
                 }
                 if (0x04 == op_byte) {
                     hwspi_deselect();
                 }
 
-                int bytes_sent = 0;
-                int chunk_size = 32;
-                int total_bytes = bytes_to_read + 1;
-                int total_cdc_bytes_sended = 0;
-                uint32_t delta = bytes_to_write ? bytes_to_write - 1 : 0;
                 if (bytes_to_write) {
-                    tmpbuf[delta] = '\x01';
+                    uint32_t delta = bytes_to_write - 1;
+                    tmpbuf[delta] = 0x01;
+                    cdc_write_all(1, tmpbuf + delta, (uint32_t)bytes_to_read + 1);
                 } else {
                     CDC_SEND_STR(1, "\x01");
-                    total_bytes--;
-                }
-                tud_cdc_n_read_flush(1);
-                remain_bytes = 0;
-                while (bytes_sent < total_bytes) {
-                    if (button_get(0)) {
-                        return;
+                    if (bytes_to_read) {
+                        cdc_write_all(1, tmpbuf, bytes_to_read);
                     }
-                    int bytes_left = total_bytes - bytes_sent;
-                    int current_chunk_size = (bytes_left < chunk_size) ? bytes_left : chunk_size;
-                    while (tud_cdc_n_write_available(1) < current_chunk_size) {
-                        if (button_get(0)) {
-                            return;
-                        }
-                        tud_task();
-                        tud_cdc_n_write_flush(1);
-                    }
-                    total_cdc_bytes_sended += tud_cdc_n_write(1, tmpbuf + delta + bytes_sent, current_chunk_size);
-                    tud_cdc_n_write_flush(1);
-                    bytes_sent += current_chunk_size;
                 }
                 if (binmode_debug) {
-                    printf("\r\ntotal_cdc_bytes_sended: %d", total_cdc_bytes_sended);
+                    printf("\r\nsent %d bytes", bytes_to_read + 1);
                 }
-                tud_task();
             } break;
 
             case 0x06: // AVR EXTENDED COMMAND
             {
                 CDC_SEND_STR(1, "\x01");
-                while (!read_buff(&op_byte, 1, DEFAULT_MAX_TRIES))
-                {
-                    if (button_get(0)) {
+                if (!read_payload(&op_byte, 1)) {
+                    if (legacy_abort) {
                         return;
                     }
+                    break;
                 }
                 if (binmode_debug) {
                     printf("\r\n-\r\nAVR op_byte=0x%02X", op_byte);
@@ -695,13 +869,11 @@ void legacy_protocol(void) {
                             printf("\r\nAVR BULK READ");
                         }
 
-                        memset(tmpbuf, 0, TMPBUFF_SIZE);
-
-                        while (!read_buff(tmpbuf, 8, DEFAULT_MAX_TRIES))
-                        {
-                            if (button_get(0)) {
+                        if (!read_payload(tmpbuf, 8)) {
+                            if (legacy_abort) {
                                 return;
                             }
+                            break;
                         }
 
                         uint32_t addr = (tmpbuf[0] << 24) | (tmpbuf[1] << 16) | (tmpbuf[2] << 8) | tmpbuf[3];
@@ -714,11 +886,30 @@ void legacy_protocol(void) {
                             }
                         }
 
+                        if (!spi_mode_active || !spi_configured) {
+                            CDC_SEND_STR(1, "\x00");
+                            break;
+                        }
+
+                        // addr counts words, len counts bytes. Without the extended
+                        // high byte command we can only reach 64K words; with it the
+                        // two extra address bits reach 256K words.
+                        uint32_t addr_limit = req_EHB_write ? 0x40000 : 0x10000;
+                        uint32_t words = (len + 1) / 2;
+                        if (addr >= addr_limit || words > addr_limit || (addr + words) > addr_limit) {
+                            if (binmode_debug) {
+                                printf("\r\nAVR bulk read out of range");
+                            }
+                            CDC_SEND_STR(1, "\x00");
+                            break;
+                        }
+
                         CDC_SEND_STR(1, "\x01");
 
                         if (binmode_debug) {
                             printf("\r\n>> ");
                         }
+                        spi_bus_sync();
                         while (len > 0) {
                             if (button_get(0)) {
                                 return;
@@ -736,8 +927,7 @@ void legacy_protocol(void) {
                             if (binmode_debug) {
                                 printf("\r\n0x%02X", byte_flash);
                             }
-                            tud_cdc_n_write_char(1, byte_flash); // Send the readed byte
-                            tud_cdc_n_write_flush(1);
+                            cdc_write_all(1, &byte_flash, 1); // Send the readed byte
                             len--;
                             if (len > 0) {
                                 hwspi_write_read(0x28); // AVR_FETCH_HIGH_BYTE_COMMAND
@@ -747,8 +937,7 @@ void legacy_protocol(void) {
                                 if (binmode_debug) {
                                     printf("\r\n0x%02X", byte_flash);
                                 }
-                                tud_cdc_n_write_char(1, byte_flash); // Send the readed byte
-                                tud_cdc_n_write_flush(1);
+                                cdc_write_all(1, &byte_flash, 1); // Send the readed byte
                                 len--;
                             }
                             addr++;
@@ -764,6 +953,13 @@ void legacy_protocol(void) {
                         break;
                 }
             } break;
+
+            default: {
+                if (binmode_debug) {
+                    printf("\r\nunsupported op 0x%02X", op_byte);
+                }
+                CDC_SEND_STR(1, "\x00");
+            } break;
         }
     }
 }
@@ -774,8 +970,8 @@ void legacy4third_mode(void) {
     if (mode_active == 0) {
         mode_active++;
         // enable_debug_legacy();
-        system_config.binmode_usb_rx_queue_enable = false;
-        system_config.binmode_usb_tx_queue_enable = false;
+        system_config.binmode_usb_rx_queue_enable = true;
+        system_config.binmode_usb_tx_queue_enable = true;
         set_pins_ui();
     } else if (mode_active == 1) {
         set_aux_pins = true;
@@ -836,16 +1032,32 @@ void legacy4third_mode(void) {
             printf("\r\nError: Not enough memory for cdc_buff!\r\n");
             goto finish_legacy;
         }
+        printf("\r\nSPI speed follows what the host asks for: 30k, 125k, 250k, 1M, 2M,\r\n"
+               "2.6M, 4M, 8M. Long wires are the usual cause of bad reads. Use\r\n"
+               "cables of 10cm or shorter, and spispeed=125k is the recommended\r\n"
+               "setting.\r\n");
+        printf("\r\nPin voltage readings are paused while this mode runs and resume on\r\n"
+               "exit. The analog mux that measures them touches the SPI pins and\r\n"
+               "corrupts transfers on older Bus Pirate 5 hardware. Newer boards are\r\n"
+               "not affected, but readings pause on all of them so behaviour matches.\r\n");
         printf("\r\nDone! Just execute flashrom or avrdude using the binary com port\r\n"
-               "Keep Pressing button to exit legacy binary mode.\r\n");
-               
+               "To exit: press the button, or type 'q' here and confirm with 'y'.\r\n"
+               "Either way the Bus Pirate resets on exit.\r\n");
+
         tmpbuf = cdc_buff + CDCBUFF_SIZE;
         memset(cdc_buff, 0, CDCBUFF_SIZE);
         memset(tmpbuf, 0, TMPBUFF_SIZE);
-        remain_bytes = 0;
-        cdc_full_flush(1);
+        psu_last_error = 0;
+        system_config.binmode_usb_rx_queue_enable = true;
+        system_config.binmode_usb_tx_queue_enable = true;
         legacy_protocol();
+        printf("\r\nExit reason: %s\r\n", legacy_exit_reason);
         finish_legacy:
+        system_config.binmode_suppress_monitor = false;
+        if (psu_last_error) {
+            printf("\r\nWARNING: the power supply reported error %d during this session.\r\n"
+                   "The target was not powered by the Bus Pirate.\r\n", psu_last_error);
+        }
         printf("\r\nExiting Legacy Binary Mode...\r\n");
         printf("Resetting Bus Pirate...\r\n");
         printf("After reconnect press enter to use Bus Pirate in other modes.\r\n");

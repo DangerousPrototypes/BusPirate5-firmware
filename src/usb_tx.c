@@ -258,6 +258,11 @@ void bin_tx_fifo_put(const char c) {
     spsc_queue_add_blocking(&bin_tx_fifo, (uint8_t)c);
 }
 
+bool bin_tx_fifo_try_put(const char c) {
+    BP_ASSERT_CORE0(); // tx fifo should only be added to from core 0 (deadlock risk)
+    return spsc_queue_try_add(&bin_tx_fifo, (uint8_t)c);
+}
+
 bool bin_tx_fifo_try_get(char* c) {
     BP_ASSERT_CORE1(); // tx fifo is drained from core1 only
     return spsc_queue_try_remove(&bin_tx_fifo, (uint8_t*)c);

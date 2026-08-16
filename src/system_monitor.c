@@ -121,6 +121,13 @@ bool monitor(void) {
         return 0;
     }
 
+    // The sweep walks the analog mux across every IO pin. On boards where the
+    // mux is driven through the 595 shift register each channel change is slow,
+    // so an active bus can be loaded for milliseconds at a time.
+    if (system_config.binmode_suppress_monitor) {
+        return 0;
+    }
+
     amux_sweep();
 
     for (uint8_t i = 0; i < count_of(voltages_value); i++) {

@@ -53,6 +53,13 @@ void tx_tb_start(uint32_t len);
 void bin_tx_fifo_put(const char c);
 
 /**
+ * @brief Try to put character in binary transmit FIFO without blocking.
+ * @param c  Character to transmit
+ * @return   true if the character was queued, false if the FIFO is full
+ */
+bool bin_tx_fifo_try_put(const char c);
+
+/**
  * @brief Service binary transmit FIFO.
  */
 void bin_tx_fifo_service(void);

@@ -176,6 +176,13 @@ void transparent_uart_setup(void) {
         return;
     }
 
+    if (system_config.mode != DIO) {
+        ui_help_error(T_MODE_ERROR_NO_EFFECT);
+        printf("%s%s\r\n%s> m DIO%s\r\n",
+            ui_term_color_info(), GET_T(T_CMDLN_MODE), ui_term_color_prompt(), ui_term_color_reset());
+        return;
+    }
+
     cdc_line_coding_t coding;
     tud_cdc_n_get_line_coding(TRANSPARENT_UART_CDC_ITF, &coding);
     transparent_uart_line_coding_changed(TRANSPARENT_UART_CDC_ITF,
@@ -189,13 +196,6 @@ void transparent_uart_setup(void) {
         ui_help_error(T_MODE_INVALID_OPTION);
         return;
     }
-
-    /* Relinquish pins owned by the current CLI bus mode, then use DIO as the
-     * base mode so DTR and RTS remain available as driven BIO pins. */
-    modes[system_config.mode].protocol_cleanup();
-    system_config.mode = DIO;
-    modes[system_config.mode].protocol_setup_exc();
-    printf("%s%s:%s DIO\r\n", ui_term_color_info(), GET_T(T_MODE_MODE), ui_term_color_reset());
 
     setup_uart_pins();
     apply_line_coding(&config);

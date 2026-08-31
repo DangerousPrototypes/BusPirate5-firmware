@@ -137,6 +137,7 @@ typedef struct _system_config {
                                       // functions
     uint8_t binmode_select;           // index of currently active binary mode
     bool binmode_lock_terminal;       // disable terminal while in binmode
+    bool binmode_suppress_monitor;    // stop the pin voltage sweep, it loads the IO pins through the analog mux
     uint32_t bpio_debug_enable;           // enable debug output for BPIO
 
 } _system_config;

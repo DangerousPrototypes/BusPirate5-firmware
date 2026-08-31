@@ -15,6 +15,7 @@
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "lib/bp_args/bp_cmd.h"
+#include "ui/ui_format.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -123,7 +124,9 @@ void hw2w_sniff(struct command_result* res){
             // significant bits correspond to bit 0, and the value 8 bits
             // where (B0 = Bit0 and B7 = Bit7).
             uint32_t ev_code = (val >> 10) & 0x03;
-            uint8_t  data = ((val) & 0xFF);
+            uint32_t  data = ((val) & 0xFF);
+            ui_format_bitorder_manual(&data, 8, system_config.bit_order);
+            
             //printf("val: %x, ev_code: %x, data:%x\r\n", val, ev_code, data);
             if (ev_code == EV_START) {
                 printf("[");

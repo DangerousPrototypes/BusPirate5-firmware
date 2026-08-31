@@ -185,7 +185,8 @@ void pio_hw2wire_clock_tick(void) {
 
 void pio_hw2wire_start(void) {
     const uint16_t start[] = {
-        1u << PIO_HW2WIRE_ICOUNT_LSB,                  // Escape code for 2 instruction sequence
+        2u << PIO_HW2WIRE_ICOUNT_LSB,                  // Escape code for 2 instruction sequence
+        set_scl_sda_program_instructions[I2C_SC1_SD1], // reset to high to release
         set_scl_sda_program_instructions[I2C_SC1_SD0], // We are already in idle state, just pull SDA low
         set_scl_sda_program_instructions[I2C_SC0_SD0]  // Also pull clock low so we can present data
     };

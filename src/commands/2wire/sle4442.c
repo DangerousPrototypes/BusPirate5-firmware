@@ -67,16 +67,19 @@ void sle4442_write(uint32_t command, uint32_t address, uint32_t data) {
     pio_hw2wire_put16((ui_format_lsb(address, 8)));
     pio_hw2wire_put16((ui_format_lsb(data, 8)));
     pio_hw2wire_stop();
+    //busy_wait_us(50);
 }
 
 // ISO7816-3 Answer To Reset
 bool sle4442_reset(uint8_t* atr) {
+    pio_hw2wire_set_mask(0b11, 0b01); // set SDA high, SCL low
     bio_output(2); // IO2/RST low
     busy_wait_ms(1);
     bio_input(2); // IO2 high
     pio_hw2wire_clock_tick();
     busy_wait_us(50);
     bio_output(2);
+    //busy_wait_us(5);
     // read 4 bytes (32 bits)
     for (uint i = 0; i < 4; i++) {
         pio_hw2wire_get16(&atr[i]);
@@ -291,13 +294,16 @@ void sle4442(struct command_result* res) {
         return;
     }
 
-    if (hw2wire_mode_config.baudrate > (51)) {
+    if (hw2wire_mode_config.baudrate > (50)) {
         printf("Whoa there! %dkHz is probably too fast. Try 50kHz\r\n", hw2wire_mode_config.baudrate);
         return;
     }
 
     //we manually control any FALA capture
     fala_start_hook();
+
+    //ensure good start state each time
+    //pio_hw2wire_set_mask(0b11, 0b11); // set both SCL and SDA high
 
     uint8_t data[4];
     if (!sle4442_reset(data)) {

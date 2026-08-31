@@ -42,7 +42,7 @@ Ported to PIC (18F2550) by Ian Lesnet 2009
 #define freq_to_timerval(x) (x)
 
 struct IrCode {
-  uint16_t timer_val;
+  uint32_t timer_val;
   uint8_t numpairs;
   uint8_t bitcompression;
   uint16_t const *times;

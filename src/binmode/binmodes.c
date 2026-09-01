@@ -15,6 +15,7 @@
  * 
  * @author Bus Pirate Project
  * @date 2024-2026
+ * Modified by DereIBims: added Transparent UART binary mode registration.
  */
 
 #include <string.h>
@@ -33,6 +34,7 @@
 #include "binmode/falaio.h"
 #include "binmode/irtoy-irman.h"
 #include "binmode/irtoy-air.h"
+#include "binmode/transparent_uart.h"
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 #include "pirate/storage.h" // File system related
 #include "usb_rx.h"
@@ -176,6 +178,19 @@ const binmode_t binmodes[] = {
         .binmode_setup = irtoy_air_setup,
         .binmode_cleanup = irtoy_air_cleanup,
         .binmode_service = irtoy_air_service,
+    },
+    {
+        .lock_terminal = false,
+        .can_save_config = false,
+        .reset_to_hiz = false,
+        .pullup_enabled = false,
+        .psu_en_voltage = 0,
+        .psu_en_current = 0,
+        .button_to_exit = false,
+        .binmode_name = transparent_uart_name,
+        .binmode_setup = transparent_uart_setup,
+        .binmode_cleanup = transparent_uart_cleanup,
+        .binmode_service = transparent_uart_service,
     },
 };
 

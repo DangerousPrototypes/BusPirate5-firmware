@@ -583,6 +583,9 @@ set(buspirate_common
         pirate/irio_pio.c
         binmode/irtoy-irman.h
         binmode/irtoy-irman.c
+        # Modified by DereIBims: add Transparent UART binary mode sources.
+        binmode/transparent_uart.h
+        binmode/transparent_uart.c
 
         #toolbars
         toolbars/logic_bar.c

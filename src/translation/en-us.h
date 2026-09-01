@@ -229,6 +229,10 @@ static char const * const en_us[]={
 	[T_JTAG_BLUETAG_VERSION]="Show version",
 	[T_JTAG_BLUETAG_DISABLE]="Disable pin pulsing (JTAG mode)",
 	[T_JTAG_BLUETAG_DESCRIPTION]="Find JTAG and SWD pinouts",
+	//PS2
+	[T_PS2_DESCRIPTION]="sniff PS2 protocol",
+	//USB
+	[T_USB_DESCRIPTION]="sniff USB protocol",
 	//I2S
 	[T_I2S_SPEED_MENU]="Sample frequency",
 	[T_I2S_SPEED_MENU_1]="4000, 8000, 16000, 44100, 48000, 96000 etc",

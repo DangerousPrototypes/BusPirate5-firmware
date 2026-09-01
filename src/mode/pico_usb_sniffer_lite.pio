@@ -1,0 +1,97 @@
+; pico usb sniffer lite is the Dreg's fork from:
+;
+;https://github.com/ataradov/usb-sniffer-lite
+;
+; SPDX-License-Identifier: BSD-3-Clause
+; Copyright (c) 2022, Alex Taradov <alex@taradov.com>. All rights reserved.
+;
+; https://github.com/therealdreg/pico-usb-sniffer-lite
+;
+; Copyright (c) [2025] by David Reguera Garcia aka Dreg
+; https://www.rootkit.es
+; X @therealdreg
+; dreg@rootkit.es
+; ---------------------------------------------------------------------------
+; WARNING: DREG'S BULLSHIT CODE X-)
+; ---------------------------------------------------------------------------
+
+.program usb_low_speed_template
+    wait 1 PIN 1
+    wait 0 PIN 1
+
+.program usb_full_speed_template
+    wait 1 PIN 0
+    wait 0 PIN 0
+
+.program tar_pio0
+
+.wrap_target
+idle:
+    mov X, !NULL
+    nop
+    nop
+start0:
+    nop [1]
+read0:
+    jmp X-- pio0_label_4
+pio0_label_4:
+    in PINS, 1
+    mov OSR, ::PINS
+    out Y, 2
+    jmp !Y eop
+    nop [3]
+    jmp PIN read0
+read1:
+    jmp X-- pio0_label_6
+pio0_label_6:
+    in PINS, 1
+    mov OSR, ::PINS
+    out Y, 2
+    jmp !Y eop
+    jmp PIN start0
+    jmp PIN start0
+    jmp PIN start0
+    jmp PIN start0
+    jmp read1
+eop:
+    push noblock
+    mov ISR, X
+    push noblock
+poll_reset:
+    set X, 31
+poll_loop:
+    mov OSR, ::PINS
+    out Y, 2
+    jmp Y-- idle
+    jmp X-- poll_loop
+    mov ISR, !NULL
+    push noblock
+.wrap
+    wait 1 PIN 2
+
+.program tar_pio1
+
+    set pindirs, 1
+    set pins, 0
+.wrap_target
+    nop [31]
+    nop [31]
+    nop [31]
+    nop [31]
+wait_se0:
+    mov OSR, ::PINS
+    out Y, 2
+    jmp Y-- wait_se0
+    mov OSR, ::PINS
+    out Y, 2
+    jmp Y-- wait_se0
+    mov OSR, ::PINS
+    out Y, 2
+    jmp Y-- wait_se0
+    mov OSR, ::PINS
+    out Y, 2
+    jmp Y-- wait_se0
+    set PINS, 1
+infinite_loop:
+    jmp infinite_loop
+.wrap

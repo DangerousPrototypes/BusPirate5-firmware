@@ -80,7 +80,7 @@ printf("Unable to find modulation frequency (:) in AIR packet\r\n");
 static bool air_decode_transmit(char* air_buffer, uint32_t air_len, uint32_t *data, uint32_t data_len){
 	//parse the csv formatted values into 16 bit value pairs
 	uint16_t data_cnt=0;
-	uint8_t mod_freq;
+	uint8_t mod_freq=0;
 	uint16_t air_cnt=0;
 
     //search start of frame

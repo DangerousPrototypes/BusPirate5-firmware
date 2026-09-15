@@ -17,6 +17,7 @@
  * 
  * @author Bus Pirate Project
  * @date 2024-2026
+ * Modified by DereIBims: forward CDC line-state and line-coding events to Transparent UART.
  */
 
 #include <stdio.h>
@@ -32,6 +33,7 @@
 #include "pirate/bio.h"
 #include "system_config.h"
 #include "debug_uart.h"
+#include "binmode/transparent_uart.h"
 
 void rx_uart_irq_handler(void);
 
@@ -164,7 +166,19 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts) {
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_TEMP,
         "--> tud_cdc_line_state_cb(%d, %d, %d)\n", itf, dtr, rts
         );
-    system_config.rts = rts;
+    if (itf == 0) {
+        system_config.rts = rts;
+    }
+    transparent_uart_line_state_changed(itf, dtr, rts);
+}
+
+// Invoked when the host changes baud rate, framing, parity or data bits.
+void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* line_coding) {
+    transparent_uart_line_coding_changed(itf,
+        line_coding->bit_rate,
+        line_coding->stop_bits,
+        line_coding->parity,
+        line_coding->data_bits);
 }
 
 // insert a byte into the queue

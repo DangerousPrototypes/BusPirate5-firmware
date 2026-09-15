@@ -29,6 +29,7 @@
 #include "mode/hwspi.h"
 #include "pirate/bio.h"
 #include "ui/ui_term.h"
+#include "ui/ui_format.h"
 #include "pirate/storage.h"
 #include "lib/sfud/inc/sfud.h"
 #include "lib/sfud/inc/sfud_def.h"
@@ -276,13 +277,24 @@ void spi_stopr(struct _bytecode* result, struct _bytecode* next) {
 }
 
 void spi_write(struct _bytecode* result, struct _bytecode* next) {
-    // hwspi_write((uint32_t)result->out_data);
-    result->in_data = hwspi_write_read((uint8_t)result->out_data);
+    //lsb set, reverse order, retain packing for 8-4 bits
+    //spi is a fast bus and we want to make sure we skip the byte shuffle if at all possible
+    if(system_config.bit_order){
+        uint32_t temp = ui_format_lsb(result->out_data, result->bits);
+        result->in_data = hwspi_write_read((uint8_t)temp);
+    } else {
+        result->in_data = hwspi_write_read((uint8_t)result->out_data);
+    }
     result->read_with_write = mode_config.read_with_write;
 }
 
 void spi_read(struct _bytecode* result, struct _bytecode* next) {
-    result->in_data = (uint8_t)hwspi_read();
+    //reads honor the current bit order setting
+    if(system_config.bit_order){
+        result->in_data = ui_format_lsb(hwspi_read(), result->bits);
+    }else{
+        result->in_data = (uint8_t)hwspi_read();
+    }
 }
 
 void spi_macro(uint32_t macro) {

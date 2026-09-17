@@ -39,6 +39,7 @@ static const char led_device_type[][7] = {
 led_mode_config_t hwled_mode_config;
 
 static uint8_t device_cleanup;
+static uint8_t ws2812_num_bits;
 
 // Forward declarations for device-specific functions
 static uint32_t ws2812_setup_exc(void);
@@ -46,6 +47,7 @@ static void ws2812_cleanup(void);
 static void ws2812_start(void);
 static void ws2812_stop(void);
 static void ws2812_write(uint32_t pixel_data);
+static void ws2812_set_num_bits(uint8_t num_bits);
 static uint32_t apa102_setup_exc(void);
 static void apa102_cleanup(void);
 static void apa102_start(void);
@@ -106,6 +108,7 @@ static uint32_t ws2812_setup_exc(void) {
                         bio2bufiopin[M_LED_SDO],
                         (float)hwled_mode_config.baudrate,
                         false);
+    ws2812_num_bits = 24;
     system_config.num_bits = 24;
     return 1;
 }
@@ -124,8 +127,28 @@ static void ws2812_stop(void) {
     busy_wait_us(65); // >50us delay to reset
 }
 
+static void ws2812_set_num_bits(uint8_t num_bits) {
+    if (num_bits == ws2812_num_bits) {
+        return;
+    }
+
+    // The autopull threshold is part of the PIO state machine configuration.
+    // Wait for the current pixel to finish before reinitializing it for RGB/RGBW.
+    hwled_wait_idle();
+    pio_sm_set_enabled(pio_config.pio, pio_config.sm, false);
+    ws2812_program_init(pio_config.pio,
+                        pio_config.sm,
+                        pio_config.offset,
+                        bio2bufiopin[M_LED_SDO],
+                        (float)hwled_mode_config.baudrate,
+                        num_bits == 32);
+    ws2812_num_bits = num_bits;
+}
+
 static void ws2812_write(uint32_t pixel_data) {
-    pio_sm_put_blocking(pio_config.pio, pio_config.sm, (pixel_data << 8u));
+    pio_sm_put_blocking(pio_config.pio,
+                        pio_config.sm,
+                        ws2812_num_bits == 32 ? pixel_data : (pixel_data << 8u));
 }
 
 // APA102 device functions
@@ -292,19 +315,19 @@ void hwled_stop(struct _bytecode* result, struct _bytecode* next) {
 void hwled_write(struct _bytecode* result, struct _bytecode* next) {
     // Protocol-specific:
     // * parameter `next` is unused
-    // * parameter `result->out_data` contains a 24-bit RGB value to send
-    //   NOTE: for WS2812, the top 8 bits are cleared to zero.
+    // * parameter `result->out_data` contains an RGB or RGBW value to send
+    //   NOTE: WS2812 uses 24-bit RGB by default and 32-bit RGBW for explicit .32.
     //   NOTE: for APA102, the top 8 bits are forced to 0xFF (full brightness).
     // UNDOCUMENTED: 
     //   Order in which the bytes are sent is NOT documented here.
     //   Caller must test to determin the proper RGB value order for their hardware.
-    // TODO: add support for RGBW   (RGB + white)?
+    // Explicit .32 selects RGBW for external WS2812-compatible LEDs. The
+    // default and explicit .24 forms retain the existing RGB behavior.
     // TODO: add support for RGBWW  (RGB + cool white + warm white)?
     // TODO: add support for RGBWWA (RGB + cool white + warm white + amber)?
-    // NOTE: Only supporting 24-bit RGB values for now.
-    //       As a hack, callers can likely use RGBW by packing
-    //       three pixels' data into four 24-bit values:
-    //       0x00R1G1B1 0x00W1R2G2 0x00B2W2R3 0x00G3B3W3
+    if (hwled_mode_config.device == M_LED_WS2812) {
+        ws2812_set_num_bits(result->has_bits && result->bits == 32 ? 32 : 24);
+    }
     led_devices[hwled_mode_config.device].write(result->out_data);
 }
 

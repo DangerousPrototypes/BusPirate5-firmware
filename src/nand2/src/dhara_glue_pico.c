@@ -156,6 +156,65 @@ esp_err_t nand_unregister_dev(spi_nand_flash_device_t *handle)
     return ESP_OK;
 }
 
+esp_err_t spi_nand_flash_gc(spi_nand_flash_device_t *handle, uint32_t *steps_out)
+{
+    if (handle == NULL || handle->ops_priv_data == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    spi_nand_flash_dhara_priv_data_t *dhara_priv_data =
+        (spi_nand_flash_dhara_priv_data_t *)handle->ops_priv_data;
+    struct dhara_map *map = &dhara_priv_data->dhara_map;
+    dhara_error_t err = 0;
+    uint32_t steps = 0;
+    // hard upper bound so a misbehaving chip can never spin forever
+    const uint32_t max_steps = (handle->chip.num_blocks << handle->chip.log2_ppb) + 1;
+    uint32_t prev_size = 0xFFFFFFFF;
+
+    while (steps < max_steps) {
+        uint32_t size = dhara_journal_size(&map->journal);
+        // stop once garbage collection stops reclaiming pages
+        if (size == 0 || size >= prev_size) {
+            break;
+        }
+        prev_size = size;
+        if (dhara_map_gc(map, &err) < 0) {
+            return ESP_ERR_FLASH_BASE + err;
+        }
+        steps++;
+    }
+
+    if (dhara_map_sync(map, &err) < 0) {
+        return ESP_ERR_FLASH_BASE + err;
+    }
+
+    if (steps_out) {
+        *steps_out = steps;
+    }
+    return ESP_OK;
+}
+
+esp_err_t spi_nand_flash_get_stats(spi_nand_flash_device_t *handle, uint32_t *used_sectors,
+                                   uint32_t *total_sectors, uint32_t *journal_size)
+{
+    if (handle == NULL || handle->ops_priv_data == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    spi_nand_flash_dhara_priv_data_t *dhara_priv_data =
+        (spi_nand_flash_dhara_priv_data_t *)handle->ops_priv_data;
+    struct dhara_map *map = &dhara_priv_data->dhara_map;
+
+    if (used_sectors) {
+        *used_sectors = dhara_map_size(map);
+    }
+    if (total_sectors) {
+        *total_sectors = dhara_map_capacity(map);
+    }
+    if (journal_size) {
+        *journal_size = dhara_journal_size(&map->journal);
+    }
+    return ESP_OK;
+}
+
 /*------------------------------------------------------------------------------------------------------*/
 
 // The following APIs are implementations required by the Dhara library.

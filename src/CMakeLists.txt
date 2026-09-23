@@ -201,10 +201,12 @@ set(buspirate_common
         commands/global/image.h
         commands/global/dump.c
         commands/global/dump.h
-        commands/global/ovrclk.c 
-        commands/global/ovrclk.h   
-        commands/global/hex.c     
+        commands/global/ovrclk.c
+        commands/global/ovrclk.h
+        commands/global/hex.c
         commands/global/hex.h
+        commands/global/nand.c
+        commands/global/nand.h
         commands/eeprom/eeprom_base.h
         commands/eeprom/eeprom_base.c
         

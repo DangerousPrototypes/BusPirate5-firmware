@@ -171,6 +171,34 @@ void spi_nand_flash_print_info(void);
  */
 const char *spi_nand_flash_print_manufacturer(void);
 
+/** @brief Get the internal static device handle.
+ *
+ * @return Pointer to the initialized device handle, or NULL if no device has been initialized.
+ */
+spi_nand_flash_device_t *spi_nand_flash_get_handle(void);
+
+/** @brief Force a full garbage collection pass on the FTL.
+ *
+ * Runs garbage collection steps until no further progress is made, then
+ * synchronizes the map so the result is durable.
+ *
+ * @param handle The handle to the SPI nand flash chip.
+ * @param[out] steps_out Optional, receives the number of GC steps performed. May be NULL.
+ * @return ESP_OK on success, or a flash error code if the operation failed.
+ */
+esp_err_t spi_nand_flash_gc(spi_nand_flash_device_t *handle, uint32_t *steps_out);
+
+/** @brief Retrieve FTL usage statistics.
+ *
+ * @param handle The handle to the SPI nand flash chip.
+ * @param[out] used_sectors Optional, receives the number of mapped sectors. May be NULL.
+ * @param[out] total_sectors Optional, receives the usable sector capacity. May be NULL.
+ * @param[out] journal_size Optional, receives the current journal size in pages. May be NULL.
+ * @return ESP_OK on success, or a flash error code if the operation failed.
+ */
+esp_err_t spi_nand_flash_get_stats(spi_nand_flash_device_t *handle, uint32_t *used_sectors,
+                                   uint32_t *total_sectors, uint32_t *journal_size);
+
 #ifdef __cplusplus
 }
 #endif

@@ -259,6 +259,15 @@ const char *spi_nand_flash_print_manufacturer(void)
     return handle->manufacturer_name;
 }
 
+spi_nand_flash_device_t *spi_nand_flash_get_handle(void)
+{
+    // manufacturer_name is only set once a chip has been detected and initialized
+    if (static_device_handle.manufacturer_name == NULL) {
+        return NULL;
+    }
+    return &static_device_handle;
+}
+
 void spi_nand_flash_print_info(void)
 {
     spi_nand_flash_device_t *handle = &static_device_handle;

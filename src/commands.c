@@ -44,6 +44,7 @@
 #endif
 #include "commands/global/ovrclk.h"
 #include "commands/global/flat.h"
+#include "commands/global/nand.h"
 
 // command configuration
 const struct _global_command_struct commands[] = {
@@ -101,6 +102,7 @@ const struct _global_command_struct commands[] = {
 #endif
 { .command="ovrclk",    .allow_hiz=true,  .func=&ovrclk_handler,                     .help_text=0x00 },
 { .command="flat",      .allow_hiz=true,  .func=&flat_handler,                       .help_text=0x00 }, // flatbuffers test command
+{ .command="nand",      .allow_hiz=true,  .func=&nand_handler,                       .help_text=0x00 }, // NAND FTL GC and stress test
     // clang-format on
 };
 

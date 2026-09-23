@@ -515,6 +515,25 @@ static void core0_infinite_loop(void) {
                 // sync with the host
                 storage_mount();
                 insert_usbmsdrive();
+////temp
+#if 0
+                if(system_config.terminal_ansi_color && bp_state <= BP_SM_DISPLAY_MODE_WAIT){
+
+                    if (!ui_term_detect()) { // Do we detect a VT100 ANSI terminal? what is the size?
+                        system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
+                        system_config.terminal_ansi_statusbar = false;                        
+                        break;
+                    }
+                    // if something goes wrong with detection, the next function will skip internally
+                    ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
+                    // this sets the scroll region for the status bar (if enabled)
+                    // and does the initial painting of the full statusbar
+                    if (system_config.terminal_ansi_statusbar) {
+                        ui_statusbar_init();
+                        toolbar_update_blocking();
+                    }  
+                }    
+#endif          
             }
         } else {
             if (has_been_connected) {

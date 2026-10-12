@@ -356,6 +356,6 @@ void hwi2c_set_databits(uint32_t bits) {
 bool bpio_hwi2c_configure(bpio_mode_configuration_t *bpio_mode_config){
     if(bpio_mode_config->debug) printf("[I2C] Speed %d Hz\r\n", bpio_mode_config->speed);
     i2c_mode_config.baudrate=bpio_mode_config->speed/1000; // convert to kHz
-    i2c_mode_config.clock_stretch=false;  
+    i2c_mode_config.clock_stretch=bpio_mode_config->clock_stretch;  
     return true;  
 }

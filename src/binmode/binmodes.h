@@ -1,3 +1,5 @@
+// Modified by DereIBims: added Transparent UART binary mode registration.
+
 void binmode_setup(void);
 void binmode_service(void);
 void binmode_cleanup(void);
@@ -11,6 +13,7 @@ enum {
     BINMODE_USE_FALA,
     BINMODE_USE_IRTOY_IRMAN,
     BINMODE_USE_IRTOY_AIR,
+    BINMODE_USE_TRANSPARENT_UART,
     BINMODE_MAXPROTO
 };
 

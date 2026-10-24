@@ -48,6 +48,7 @@
 #include "pico/lock_core.h"
 // #include "helpers.h"
 #include "binmode/binmodes.h"
+#include "binmode/cmsis_dap.h"
 #include "commands/global/p_pullups.h"
 #include "pirate/psu.h"
 #include "commands/global/w_psu.h"
@@ -869,6 +870,7 @@ static void core1_infinite_loop(void) {
             tud_task(); // tinyusb device task
             tud_cdc_rx_task();
             msc_disk_core1_service(); // pending USB re-enumeration, if any
+            cmsis_dap_usb_task();
         }
 
         // service the terminal TX queue

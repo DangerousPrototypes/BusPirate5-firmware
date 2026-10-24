@@ -32,6 +32,7 @@ All the people listed below hold copyrights to code in this project:
 * Copyright (c) 2018-2020 Cesanta Software Limited
 * Copyright (c) 2021 Jaroslav Kysela <perex@perex.cz>
 * Copyright (c) 2014-2019 Marco Paland (info@paland.com), PALANDesign Hannover, Germany
+* Copyright (c) 2013-2017 ARM Limited. All rights reserved.
 * Copyright (c) 2017,2019 Two Blue Cubes Ltd. All rights reserved.
 
 
@@ -80,6 +81,22 @@ This license is completely compatible with our MIT license. So BSD components ha
     - `hwuart.pio`
     - `ws2812.pio`
 
+## Apache 2.0
+Apache 2.0 components have been directly incorporated into this project. Their files keep the original license header,
+and modifications are marked in the file header.
 
-
-
+### Used libraries
+#### [CMSIS-DAP](https://github.com/ARM-software/CMSIS_5/tree/develop/CMSIS/DAP/Firmware)
+Taken from the copy in [debugprobe](https://github.com/raspberrypi/debugprobe).
+##### Files that are being used from the project
+- `lib/cmsis-dap/`
+    - `DAP.c`
+    - `DAP.h`
+    - `DAP_config.h` (modified: Bus Pirate pin mapping)
+    - `DAP_vendor.c`
+    - `JTAG_DP.c`
+    - `SW_DP.c`
+##### Source Files that use this library
+- `binmode/cmsis_dap.c`
+##### copyright notice
+Copyright (c) 2013-2017 ARM Limited. All rights reserved.

@@ -590,6 +590,14 @@ set(buspirate_common
         pirate/irio_pio.c
         binmode/irtoy-irman.h
         binmode/irtoy-irman.c
+        binmode/cmsis_dap.c
+        binmode/cmsis_dap.h
+        lib/cmsis-dap/DAP.c
+        lib/cmsis-dap/DAP.h
+        lib/cmsis-dap/DAP_config.h
+        lib/cmsis-dap/DAP_vendor.c
+        lib/cmsis-dap/JTAG_DP.c
+        lib/cmsis-dap/SW_DP.c
 
         #toolbars
         toolbars/logic_bar.c
@@ -848,6 +856,7 @@ set(stdlibs
         tinyusb_device
         tinyusb_board
         hardware_structs
+        cmsis_core_headers
         )        
 
 

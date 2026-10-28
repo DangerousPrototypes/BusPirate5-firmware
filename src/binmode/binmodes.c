@@ -10,6 +10,7 @@
  * - FALAIO (logic analyzer)
  * - IRtoy modes (IRMAN, AIR)
  * - BPIO (Binary Protocol IO)
+ * - Bus Pirate v3 unbrick (writes its bootloader v4.5 over ICSP)
  * 
  * Each mode can configure terminal locking, power supply, pullups, and cleanup behavior.
  * 
@@ -33,6 +34,7 @@
 #include "binmode/falaio.h"
 #include "binmode/irtoy-irman.h"
 #include "binmode/irtoy-air.h"
+#include "binmode/bp3unbrick.h"
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 #include "pirate/storage.h" // File system related
 #include "usb_rx.h"
@@ -176,6 +178,21 @@ const binmode_t binmodes[] = {
         .binmode_setup = irtoy_air_setup,
         .binmode_cleanup = irtoy_air_cleanup,
         .binmode_service = irtoy_air_service,
+    },
+    {
+        // runs once from the binmode command (setup message), then the default binmode comes back
+        .lock_terminal = false,
+        .can_save_config = false,
+        .reset_to_hiz = true,
+        .pullup_enabled = false,
+        .psu_en_voltage = 0,
+        .psu_en_current = 0,
+        .button_to_exit = false,
+        .binmode_name = bp3unbrick_name,
+        .binmode_setup = bp3unbrick_setup,
+        .binmode_setup_message = bp3unbrick_run,
+        .binmode_service = binmode_null_func_void,
+        .binmode_cleanup = bp3unbrick_cleanup,
     },
 };
 

@@ -33,6 +33,7 @@ All the people listed below hold copyrights to code in this project:
 * Copyright (c) 2021 Jaroslav Kysela <perex@perex.cz>
 * Copyright (c) 2014-2019 Marco Paland (info@paland.com), PALANDesign Hannover, Germany
 * Copyright (c) 2017,2019 Two Blue Cubes Ltd. All rights reserved.
+* Copyright (c) 2009 Mikael Gustafsson (ds30 Loader, see the GPL section)
 
 
 ## LGPL3
@@ -55,6 +56,23 @@ Therefore, we comply with all the terms of the LGPL3 license, including section 
 
 In conclusion, these are the reasons that we comply with LGPL3 and we can distribute binaries under LGPL3 terms.  
 For further information, please see the discussion at [github](https://github.com/DangerousPrototypes/BusPirate5-firmware/pull/34).
+
+## GPL
+### Used programs
+#### [ds30 Loader](http://mrmackey.no-ip.org/elektronik/ds30loader/), the Bus Pirate v3 bootloader v4.5
+##### Files that are being used from the project
+* `lib/ds30loader/`: the source of the bootloader (`ds30loader.s`, `settings.inc`, `devices.inc`)
+* `binmode/bp3unbrick_bootloader.h`: the machine code of the bootloader, as data
+##### Source Files that use this program
+* `binmode/bp3unbrick.c`
+##### copyright notice
+Copyright (c) 2009 Mikael Gustafsson, modified for the Bus Pirate v2go and v3.
+ds30 Loader is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation.
+
+### License Compliance explained
+The bootloader is a separate program for another processor, the PIC24FJ64GA002 of a Bus Pirate v3. This firmware stores its machine code as data and writes it to that PIC over ICSP. The two are not linked and the bootloader never runs on the Bus Pirate 5/6/7, so they form an aggregate, and the GPL covers the bootloader only.
+
+Its source code is in `lib/ds30loader/`, and the license text is in `docs/third_party_licenses/gpl-3.0.txt`. The source does not name a GPL version, which allows any version.
 
 ## BSD 3 Clause
 This license is completely compatible with our MIT license. So BSD components have been directly incorporated into this project.

@@ -566,6 +566,11 @@ set(buspirate_common
         binmode/bpio_infrared.h
         binmode/legacy4third.c
         binmode/legacy4third.h
+        binmode/bp3unbrick.c
+        binmode/bp3unbrick.h
+        binmode/bp3unbrick_bootloader.h
+        pirate/pic24_icsp.c
+        pirate/pic24_icsp.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c
         lib/arduino-ch32v003-swio/arduino_ch32v003.h
         lib/arduino-ch32v003-swio/swio.h

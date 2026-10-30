@@ -7,7 +7,7 @@
 /**
  * @brief Initialize IR receiver PIO.
  * @param pin_demod  Demodulator input pin
- * @return           PIO offset or error code
+ * @return           1, or a negative error code if the programs don't fit
  */
 int irio_pio_rx_init(uint pin_demod);
 
@@ -71,13 +71,14 @@ void irio_pio_tx_frame_write(float mod_freq, uint16_t pairs, uint32_t *buffer);
 
 /**
  * @brief Receive IR frame into buffer.
- * @param mod_freq  Output modulation frequency
- * @param us        Output microseconds
+ * @param mod_freq  Output modulation frequency, 0 if not measured
+ * @param us        Output carrier period in 200ns samples, 0 if not measured
  * @param pairs     Output number of pairs
  * @param buffer    Frame data buffer
+ * @param max_pairs Size of buffer in pairs, longer signals are cut
  * @return          true on success
  */
-bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint32_t *buffer);
+bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint32_t *buffer, uint16_t max_pairs);
 
 /**
  * @brief Reset receiver modulation frequency detection.

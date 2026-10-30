@@ -32,7 +32,7 @@ Before implementing any library, we must account for these unique aspects:
 │           ▼                           ▼                      │
 │  Starts with {[]} or >        Otherwise (command)            │
 │  ─────────────────────        ───────────────────            │
-│  [0x55 r:5]                   m 1                            │
+│  [0x55 r:5]                   m hiz                          │
 │  {0xA0 0x00 r:2]              W 3.3                          │
 │  >0x55.8:10                   i2c scan                       │
 │           │                           │                      │

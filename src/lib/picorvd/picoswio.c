@@ -27,9 +27,13 @@ static const int WCH_DM_PART     = 0x7F; // not in doc but appears to be part in
 const char* ch32swio_addr_to_regname(uint8_t addr);
 
 //------------------------------------------------------------------------------
+static bool swio_loaded = false; //the SWIO program is in PIO memory
+
 void ch32vswio_cleanup(void){
+  if(!swio_loaded) return; //nothing loaded if no host ever reset the target
   pio_remove_program_and_unclaim_sm(&singlewire_program, pio_config.pio, pio_config.sm, pio_config.offset);
   pio_config.offset=0;
+  swio_loaded = false;
 }
 
 void ch32vswio_reset(int pin, int dirpin) {
@@ -44,10 +48,11 @@ void ch32vswio_reset(int pin, int dirpin) {
   gpio_set_slew_rate     (dirpin, GPIO_SLEW_RATE_SLOW);
   gpio_set_function      (dirpin, GPIO_FUNC_PIO0);
 
-  if(pio_config.offset) ch32vswio_cleanup(); //TODO: fix this hack...
+  ch32vswio_cleanup(); //free the program of a previous reset
 
   bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&singlewire_program, &pio_config.pio, &pio_config.sm, &pio_config.offset, dirpin, 9, true);
   hard_assert(success);
+  swio_loaded = true;
   printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config.pio), pio_config.sm, pio_config.offset);
 
   // Reset PIO module

@@ -74,6 +74,10 @@ int nec_tx_init(uint pin_num, uint32_t mod_freq) {
 }
 
 void nec_tx_deinit(uint pin_num) {
+    //stop the state machines before their programs are freed, and leave the IR LED pin low
+    pio_sm_set_enabled(pio_config_burst.pio, pio_config_burst.sm, false);
+    pio_sm_set_enabled(pio_config_control.pio, pio_config_control.sm, false);
+    pio_sm_exec(pio_config_burst.pio, pio_config_burst.sm, pio_encode_set(pio_pins, 0));
     //pio_remove_program_and_unclaim_sm(&nec_carrier_burst_program, pio_config_burst.pio, pio_config_burst.sm, pio_config_burst.offset);
     //pio_remove_program_and_unclaim_sm(&nec_carrier_control_program, pio_config_control.pio, pio_config_control.sm, pio_config_control.offset);
     pio_remove_program(pio_config_burst.pio, pio_config_burst.program, pio_config_burst.offset);

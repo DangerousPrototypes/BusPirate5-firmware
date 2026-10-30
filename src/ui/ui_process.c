@@ -85,7 +85,7 @@ bool ui_process_macro(void) {
 #endif 
 
 //returns error = true or false
-bool ui_process_commands(void) {
+static bool process_commands(void) {
     printf("\r\n");  // End the input line — dispatch owns pre/post framing
     struct _command_info_t cp;
     cp.nextptr = 0;
@@ -109,6 +109,9 @@ bool ui_process_commands(void) {
                 break;
             #endif
         }
+        // bp_cmd reads this command only, not the rest of a chained line
+        ln_cmdln_set_command(cp.startptr, cp.endptr + 1);
+
         // process as a command
         char command_string[MAX_COMMAND_LENGTH];
         struct command_result result = result_blank;
@@ -231,4 +234,11 @@ bool ui_process_commands(void) {
         }
     }
     return false;
+}
+
+//returns error = true or false
+bool ui_process_commands(void) {
+    bool error = process_commands();
+    ln_cmdln_clear_command(); //the whole line again, for the hints
+    return error;
 }

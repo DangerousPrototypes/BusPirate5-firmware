@@ -189,8 +189,8 @@ inline void binmode_setup(void) {
     // optional reset to HiZ
     if(binmodes[system_config.binmode_select].reset_to_hiz) {
         modes[system_config.mode].protocol_cleanup();
-        system_config.mode = 0;
-        modes[system_config.mode].protocol_setup();
+        system_config.mode = HIZ;
+        modes[HIZ].protocol_setup_exc(); // disables power supply, pull-ups etc.
     }
 
     //voltage and current 
@@ -221,8 +221,8 @@ inline void binmode_service(void) {
             binmode_cleanup();
             system_config.binmode_select = 0;
             binmode_setup();
-            system_config.mode = 0;
-            modes[system_config.mode].protocol_setup();
+            system_config.mode = HIZ;
+            modes[HIZ].protocol_setup_exc();
             return;
         }
     }

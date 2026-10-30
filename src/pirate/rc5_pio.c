@@ -74,6 +74,10 @@ void rc5_rx_deinit(uint pin_num) {
 }
 
 void rc5_tx_deinit(uint pin_num) {
+    //stop the state machines before their programs are freed, and leave the IR LED pin low
+    pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
+    pio_sm_set_enabled(pio_config_rc5_carrier.pio, pio_config_rc5_carrier.sm, false);
+    pio_sm_exec(pio_config_rc5_carrier.pio, pio_config_rc5_carrier.sm, pio_encode_set(pio_pins, 0));
     //pio_remove_program_and_unclaim_sm(pio_config_tx.program, pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset);
     pio_remove_program(pio_config_tx.pio, pio_config_tx.program, pio_config_tx.offset);
     pio_remove_program(pio_config_rc5_carrier.pio, pio_config_rc5_carrier.program, pio_config_rc5_carrier.offset);

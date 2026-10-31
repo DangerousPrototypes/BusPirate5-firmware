@@ -278,8 +278,12 @@ fail:
     return ret;
 }
 
-#define PACK_2BITS_STATUS(status, bit1, bit0)         ((((status) & (bit1)) << 1) | ((status) & (bit0)))
-#define PACK_3BITS_STATUS(status, bit2, bit1, bit0)   ((((status) & (bit2)) << 2) | (((status) & (bit1)) << 1) | ((status) & (bit0)))
+// Normalize the ECC status field (bits start at bit0's position) down to a 0-based value.
+//#define PACK_2BITS_STATUS(status, bit1, bit0)         ((((status) & (bit1)) << 1) | ((status) & (bit0)))
+//#define PACK_3BITS_STATUS(status, bit2, bit1, bit0)   ((((status) & (bit2)) << 2) | (((status) & (bit1)) << 1) | ((status) & (bit0)))
+/*****LLM correction, needs to be manually verified********/
+#define PACK_2BITS_STATUS(status, bit1, bit0)         (((status) & ((bit1) | (bit0))) / (bit0))
+#define PACK_3BITS_STATUS(status, bit2, bit1, bit0)   (((status) & ((bit2) | (bit1) | (bit0))) / (bit0))
 
 static bool is_ecc_error(spi_nand_flash_device_t *dev, uint8_t status)
 {

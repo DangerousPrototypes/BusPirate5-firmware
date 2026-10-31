@@ -1,3 +1,19 @@
+/**
+ * @file ui_prompt.c
+ * @brief User interface prompt and menu system implementation.
+ * @details Implements interactive menu system with multiple input types:
+ *          - Ordered lists (numbered menu items)
+ *          - Integer input with min/max validation
+ *          - I/O pin selection with availability checking
+ *          
+ *          Features:
+ *          - Default value support
+ *          - Input validation
+ *          - Multiple number formats (hex, decimal, binary)
+ *          - Custom validators and formatters
+ *          - Exit/cancel support
+ */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
@@ -8,6 +24,7 @@
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
 #include "ui/ui_term.h"
+#include "ui/ui_term_linenoise.h"
 #include "ui/ui_info.h"
 #include "ui/ui_cmdln.h"
 #include "usb_rx.h"
@@ -20,23 +37,6 @@ void ui_prompt_invalid_option(void) {
 }
 
 // INTEGER
-bool ui_prompt_menu_int(const struct ui_prompt* menu) {
-    // print menu_options without ordered list
-    for (uint i = 0; i < (*menu).menu_items_count; i++) {
-        printf(" %s\r\n", GET_T((*menu).menu_items[i].description));
-    }
-    return true;
-}
-
-bool ui_prompt_prompt_int(const struct ui_prompt* menu) {
-    // prompt
-    printf(ui_term_color_prompt());
-    printf(GET_T((*menu).prompt_text), ui_term_color_reset(), (*menu).defval, ui_term_color_prompt());
-    printf(" >%s \x03", ui_term_color_reset());
-
-    return true;
-}
-
 bool ui_prompt_validate_int(const struct ui_prompt* menu, uint32_t* value) {
     return (((*value) >= (*menu).minval) && ((*value) <= (*menu).maxval));
 }
@@ -72,82 +72,47 @@ bool ui_prompt_validate_ordered_list(const struct ui_prompt* menu, uint32_t* val
     return (((*value) >= 1) && ((*value) <= (*menu).menu_items_count)); // menu style //TODO: minus one, user min/max?
 }
 
-// BIO PINS
-bool ui_prompt_menu_bio_pin(const struct ui_prompt* menu) {
-    int8_t defval = -1;
-    uint32_t i;
-
-    for (i = 0; i < count_of(bio2bufiopin); i++) {
-        if ((*menu).config->menu_validate(menu, &i)) {
-            printf(" %d. IO%s%d%s\r\n", i, ui_term_color_num_float(), i, ui_term_color_reset());
-            if (defval == -1) // first available pin is default pin
-            {
-                defval = i;
-            }
-        }
-    }
-
-    if (defval < 0) // we have at least one pin
-    {
-        printf("\x07%sError:%s%s\r\n", ui_term_color_error(), ui_term_color_reset(), GET_T(T_MODE_ALL_PINS_IN_USE));
-        return false;
-    }
-
-    return true;
-}
-
-bool ui_prompt_prompt_bio_pin(const struct ui_prompt* menu) {
-    // printf("%s(%d) >%s", ui_term_color_prompt(), (*menu).defval, ui_term_color_reset());
-    printf("%s >%s \x03", ui_term_color_prompt(), ui_term_color_reset());
-    return true;
-}
-
 // used internally in ui_prompt
 // gets user input until <enter> or return false if system error
 bool ui_prompt_user_input(void) {
-    cmdln_next_buf_pos(); // flush all input
-    do {
-        if (system_config.error) {
-            return false;
-        }
-    } while (ui_term_get_user_input() != 0xff);
+    // Use linenoise for input (empty prompt - caller already printed it)
+    if (!ui_prompt_linenoise_input("")) {
+        return false;  // Cancelled or error
+    }
     ui_parse_consume_whitespace();
     return true;
 }
 
-// a glorious yes or no prompt, with xit and enter for default
-bool ui_prompt_bool(prompt_result* result, bool defval_show, bool defval, bool allow_exit, bool* user_value) {
-    while (true) {
-        printf("\r\n%sy/n%s ", ui_term_color_prompt(), (allow_exit ? ", x to exit" : ""));
-        if (defval_show) {
-            printf("(%c)", defval ? 'Y' : 'N');
+/**
+ * @brief Start non-blocking VT100 y/n prompt.
+ * @param prompt  Prompt string to display
+ */
+void ui_prompt_vt100_mode_start(const char *prompt) {
+    ui_prompt_linenoise_start(prompt);
+}
+
+/**
+ * @brief Poll non-blocking VT100 y/n prompt.
+ * @param[out] value  Receives 'y' or 'n' when complete
+ * @return true when user has answered, false while still editing
+ *
+ * Only 'y' and 'n' are accepted;
+ */
+bool ui_prompt_vt100_mode_feed(uint32_t *value) {
+    uint32_t ln_res = ui_prompt_linenoise_feed();
+    if (ln_res == 0xff) {
+        *value = 0x00; //invalid input
+        // Enter pressed — read first char
+        char ch;
+        if (cmdln_try_remove(&ch)) {
+            ch |= 0x20; // lowercase
+            if(ch == 'y' || ch == 'n') {
+                *value = ch;
+            }
         }
-        printf(" >%s \x03", ui_term_color_reset());
-
-        if (!ui_prompt_user_input()) {
-            result->exit = true; // a little hackish, but we do want to exit right?
-            return false;
-        }
-
-        ui_parse_get_bool(result, user_value);
-
-        printf("\r\n");
-
-        if (allow_exit && result->exit) {
-            return false;
-        }
-
-        if (result->no_value && defval_show) // assume user pressed enter
-        {
-            (*user_value) = defval;
-            result->default_value = true;
-            return true;
-        } else if (result->success) {
-            return true;
-        } else {
-            ui_prompt_invalid_option();
-        }
+        return true;
     }
+    return false; // still editing
 }
 
 // ask user for integer until it falls between minval and maxval, enter returns the default value, x exits
@@ -187,45 +152,6 @@ bool ui_prompt_uint32(prompt_result* result, const struct ui_prompt* menu, uint3
             result->default_value = true;
             return true;
         } else if (result->success && ((*menu).config->menu_validate(menu, value))) {
-            return true;
-        } else {
-            ui_prompt_invalid_option();
-        }
-    }
-}
-
-// keep the user asking the menu until it falls between minval and maxval, enter returns the default value, x optionally
-// exits
-bool ui_prompt_float(
-    prompt_result* result, float minval, float maxval, float defval, bool allow_exit, float* user_value, bool none) {
-    while (true) {
-        printf("\r\n%s%s ", ui_term_color_prompt(), (allow_exit ? "x to exit" : ""));
-        if (!none) {
-            printf("(%1.2f)", defval);
-        } else {
-            printf("(none)");
-        }
-        printf(" >%s \x03", ui_term_color_reset());
-
-        if (!ui_prompt_user_input()) {
-            result->exit = true; // a little hackish, but we do want to exit right?
-            return false;
-        }
-
-        ui_parse_get_float(result, user_value);
-
-        printf("\r\n");
-
-        if (allow_exit && result->exit) {
-            return false;
-        }
-
-        if (result->no_value) // assume user pressed enter
-        {
-            (*user_value) = defval;
-            result->default_value = true;
-            return true;
-        } else if (result->success && ((*user_value) >= minval) && ((*user_value) <= maxval)) {
             return true;
         } else {
             ui_prompt_invalid_option();
@@ -292,87 +218,4 @@ bool ui_prompt_any_key_continue(prompt_result* result,
     return true;
 }
 
-const struct ui_prompt_config prompt_int_cfg = {
-    true,                   // bool allow_prompt_text;
-    true,                   // bool allow_prompt_defval;
-    true,                   // bool allow_defval;
-    true,                   // bool allow_exit;
-    &ui_prompt_menu_int,    // bool (*menu_print)(const struct ui_prompt* menu);
-    &ui_prompt_prompt_int,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-    &ui_prompt_validate_int // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-};
-const struct ui_prompt_config prompt_list_cfg = {
-    true,                            // bool allow_prompt_text;
-    true,                            // bool allow_prompt_defval;
-    true,                            // bool allow_defval;
-    true,                            // bool allow_exit;
-    &ui_prompt_menu_ordered_list,    // bool (*menu_print)(const struct ui_prompt* menu);
-    &ui_prompt_prompt_ordered_list,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-    &ui_prompt_validate_ordered_list // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-};
 
-// this is state machine friendly
-bool ui_prompt_vt100_mode(prompt_result* result, uint32_t* value) {
-    *result = empty_result;
-    char c;
-
-    if (ui_term_get_user_input() != 0xff) {
-        return false;
-    }
-
-    if (!cmdln_try_remove(&c)) {
-        return false;
-    }
-
-    c |= 0x20; // to lowercase
-
-    switch (c) {
-        case 'y':
-        case 'n':
-            *value = (uint32_t)c;
-            result->success = true;
-            break;
-        default:
-            result->error = true; // flag that enter was pressed but nothing was entered correctly
-            break;
-    }
-
-    cmdln_next_buf_pos();
-
-    return true;
-}
-
-uint32_t ui_prompt_yes_no(void) {
-    char c;
-
-    if (ui_term_get_user_input() != 0xff) {
-        return 2;
-    }
-
-    if (!cmdln_try_remove(&c)) {
-        return 2;
-    }
-
-    cmdln_next_buf_pos();
-
-    c |= 0x20; // to lowercase
-
-    switch (c) {
-        case 'y':
-            return 1;
-        case 'n':
-            return 0;
-        default:
-            return 3;
-    }
-
-    return 3;
-}
-
-void ui_prompt_mode_settings_int(const char* label, uint32_t value, const char* units) {
-    printf(" %s%s%s: %d %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), value, units);
-}
-
-void ui_prompt_mode_settings_string(const char* label, const char* string, const char* units) {
-    printf(" %s%s%s: %s %s\r\n", ui_term_color_info(), label, ui_term_color_reset(), string, units);
-}

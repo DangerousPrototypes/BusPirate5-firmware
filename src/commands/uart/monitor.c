@@ -14,8 +14,9 @@
 #include "pirate/button.h"
 // #include "usb_rx.h"
 // #include "usb_tx.h"
-#include "ui/ui_cmdln.h"
 #include "pirate/bio.h"
+#include "lib/bp_args/bp_cmd.h"
+#include "ui/ui_toolbar.h"
 
 static const char pin_labels[][5] = { "TX->", "RX<-", "CTS", "RTS"
 
@@ -24,9 +25,17 @@ static const char pin_labels[][5] = { "TX->", "RX<-", "CTS", "RTS"
 static const char* const usage[] = { "test\t[-h(elp)] [-t(oolbar)]",
                                      "Test Dual RS232 plank:%s test"};
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_UART_CMD_TEST }, // command help
-    { 0, "-h", T_HELP_FLAG }, // help
+static const bp_command_opt_t monitor_opts[] = {
+    { "toolbar", 't', BP_ARG_NONE, NULL, 0, NULL },
+    { 0 }
+};
+
+const bp_command_def_t uart_monitor_def = {
+    .name = "monitor",
+    .description = T_UART_CMD_TEST,
+    .opts = monitor_opts,
+    .usage = usage,
+    .usage_count = count_of(usage),
 };
 
 bool uart_timer_callback(struct repeating_timer* t) {
@@ -44,17 +53,18 @@ bool uart_timer_callback(struct repeating_timer* t) {
 }
 void monitor_plank_test(void);
 void uart_monitor_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&uart_monitor_def, res->help_flag)) {
         return;
     }
     if (!ui_help_check_vout_vref()) {
         return;
     }
 
-    bool toolbar_state = system_config.terminal_ansi_statusbar_pause;
-    bool pause_toolbar = cmdln_args_find_flag('t' | 0x20);
+    bool toolbar_paused = false;
+    bool pause_toolbar = bp_cmd_find_flag(&uart_monitor_def, 't');
     if (pause_toolbar) {
-        system_config.terminal_ansi_statusbar_pause = true;
+        toolbar_pause_updates();
+        toolbar_paused = true;
     }
     uint speed = 115200;
     uint data_bits = 8;
@@ -116,8 +126,8 @@ void uart_monitor_handler(struct command_result* res) {
 
     // cancel_repeating_timer(&uart_timer);
 
-    if (pause_toolbar) {
-        system_config.terminal_ansi_statusbar_pause = toolbar_state;
+    if (toolbar_paused) {
+        toolbar_resume_updates();
     }
 }
 

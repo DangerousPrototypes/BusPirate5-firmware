@@ -15,6 +15,7 @@ You may not need to distribute some of the licenses and claims, if you select to
 
 ### Copyright notices
 All the people listed below hold copyrights to code in this project:  
+* Copyright (c) 2026 Dawid Konrad Kohnke <dawid.kohnke.cad@gmail.com>
 * Copyright (c) 2023-2024 Ian Lesnet, Where Labs LLC 
 * Copyright (c) 2024 Lior Shalmay <liorshalmay1@gmail.com>
 * Copyright (c) 2019 Ha Thach (tinyusb.org)

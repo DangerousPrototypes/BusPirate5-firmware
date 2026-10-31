@@ -1,3 +1,22 @@
+/**
+ * @file hwspi.c
+ * @brief Hardware SPI mode implementation.
+ * @details Implements SPI master protocol using RP2040/RP2350 hardware SPI peripheral.
+ *          Features:
+ *          - Speed: 1kHz to 62.5MHz
+ *          - Data bits: 4-8 bits
+ *          - Clock polarity and phase control
+ *          - Configurable CS idle state
+ *          - Flash programming support (via SFUD library)
+ *          - SPI EEPROM support
+ *          
+ *          Pin mapping:
+ *          - CLK:  Clock output
+ *          - MOSI: Master out, slave in
+ *          - MISO: Master in, slave out
+ *          - CS:   Chip select (active low by default)
+ */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
@@ -9,38 +28,36 @@
 #include "bytecode.h"
 #include "mode/hwspi.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
+#include "ui/ui_format.h"
 #include "pirate/storage.h"
 #include "lib/sfud/inc/sfud.h"
 #include "lib/sfud/inc/sfud_def.h"
 #include "commands/spi/flash.h"
 #include "ui/ui_help.h"
 #include "pirate/hwspi.h"
-#include "commands/spi/sniff.h"
+//#include "commands/spi/sniff.h"
 #include "usb_rx.h"
 #include "commands/eeprom/eeprom_spi.h"
+#include "lib/bp_args/bp_cmd.h"
 
 // command configuration
 const struct _mode_command_struct hwspi_commands[] = {
-    {   .command="flash", 
+    {   .def=&flash_def,
         .func=&flash, 
-        .description_text=T_HELP_CMD_FLASH, 
         .supress_fala_capture=true
     },
-    {   .command="eeprom", 
+    {   .def=&eeprom_spi_def,
         .func=&spi_eeprom_handler, 
-        .description_text=T_HELP_SPI_EEPROM, 
         .supress_fala_capture=true
 
     },
-    
-/*    {   .command="sniff", 
-        .func=&sniff_handler, 
-        .description_text=T_SPI_CMD_SNIFF, 
+#if 0
+    {   .func=&sniff_handler,
+        .def=&sniff_def,
         .supress_fala_capture=true
-    },    
-    */
+    },
+#endif
 };
 const uint32_t hwspi_commands_count = count_of(hwspi_commands);
 
@@ -48,62 +65,72 @@ static const char pin_labels[][5] = { "CLK", "MOSI", "MISO", "CS" };
 
 static struct _spi_mode_config mode_config;
 
-static const struct prompt_item spi_speed_menu[] = { { T_HWSPI_SPEED_MENU_1 } };
-static const struct prompt_item spi_bits_menu[] = { { T_HWSPI_BITS_MENU_1 } };
-static const struct prompt_item spi_polarity_menu[] = { { T_HWSPI_CLOCK_POLARITY_MENU_1 },
-                                                        { T_HWSPI_CLOCK_POLARITY_MENU_2 } };
-static const struct prompt_item spi_phase_menu[] = { { T_HWSPI_CLOCK_PHASE_MENU_1 }, { T_HWSPI_CLOCK_PHASE_MENU_2 } };
-static const struct prompt_item spi_idle_menu[] = { { T_HWSPI_CS_IDLE_MENU_1 }, { T_HWSPI_CS_IDLE_MENU_2 } };
+// Speed — flag -s / --speed (kHz; stored as Hz)
+static const bp_val_constraint_t spi_speed_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 625000, .def = 100 },
+    .prompt = T_HWSPI_SPEED_MENU,
+    .hint = T_HWSPI_SPEED_MENU_1,
+};
+
+// Data bits — flag -d / --databits
+static const bp_val_constraint_t spi_databits_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 4, .max = 8, .def = 8 },
+    .prompt = T_HWSPI_BITS_MENU,
+    .hint = T_HWSPI_BITS_MENU_1,
+};
+
+// Clock polarity — flag -o / --polarity
+static const bp_val_choice_t polarity_choices[] = {
+    { "idle_low",  NULL, T_HWSPI_CLOCK_POLARITY_MENU_1, 0 },
+    { "idle_high", NULL, T_HWSPI_CLOCK_POLARITY_MENU_2, 1 },
+};
+static const bp_val_constraint_t spi_polarity_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = polarity_choices, .count = 2, .def = 0 },
+    .prompt = T_HWSPI_CLOCK_POLARITY_MENU,
+};
+
+// Clock phase — flag -a / --phase
+static const bp_val_choice_t phase_choices[] = {
+    { "leading",  NULL, T_HWSPI_CLOCK_PHASE_MENU_1, 0 },
+    { "trailing", NULL, T_HWSPI_CLOCK_PHASE_MENU_2, 1 },
+};
+static const bp_val_constraint_t spi_phase_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = phase_choices, .count = 2, .def = 0 },
+    .prompt = T_HWSPI_CLOCK_PHASE_MENU,
+};
+
+// CS idle — flag -c / --csidle
+static const bp_val_choice_t csidle_choices[] = {
+    { "low",  NULL, T_HWSPI_CS_IDLE_MENU_1, 0 },
+    { "high", NULL, T_HWSPI_CS_IDLE_MENU_2, 1 },
+};
+static const bp_val_constraint_t spi_csidle_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = csidle_choices, .count = 2, .def = 1 },
+    .prompt = T_HWSPI_CS_IDLE_MENU,
+};
+
+static const bp_command_opt_t spi_setup_opts[] = {
+    { "speed",    's', BP_ARG_REQUIRED, "1-625000",              0, &spi_speed_range },
+    { "databits", 'd', BP_ARG_REQUIRED, "4-8",                   0, &spi_databits_range },
+    { "polarity", 'o', BP_ARG_REQUIRED, "idle_low|idle_high",    0, &spi_polarity_choice },
+    { "phase",    'a', BP_ARG_REQUIRED, "leading|trailing",      0, &spi_phase_choice },
+    { "csidle",   'c', BP_ARG_REQUIRED, "low|high",              0, &spi_csidle_choice },
+    { 0 },
+};
+
+const bp_command_def_t spi_setup_def = {
+    .name = "spi",
+    .description = 0,
+    .opts = spi_setup_opts,
+};
 
 uint32_t spi_setup(void) {
     uint32_t temp;
-
-    static const struct ui_prompt spi_menu[] = { { .description = T_HWSPI_SPEED_MENU,
-                                                   .menu_items = spi_speed_menu,
-                                                   .menu_items_count = count_of(spi_speed_menu),
-                                                   .prompt_text = T_HWSPI_SPEED_PROMPT,
-                                                   .minval = 1,
-                                                   .maxval = 625000,
-                                                   .defval = 100,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_int_cfg },
-                                                 { .description = T_HWSPI_BITS_MENU,
-                                                   .menu_items = spi_bits_menu,
-                                                   .menu_items_count = count_of(spi_bits_menu),
-                                                   .prompt_text = T_HWSPI_BITS_PROMPT,
-                                                   .minval = 4,
-                                                   .maxval = 8,
-                                                   .defval = 8,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_int_cfg },
-                                                 { .description = T_HWSPI_CLOCK_POLARITY_MENU,
-                                                   .menu_items = spi_polarity_menu,
-                                                   .menu_items_count = count_of(spi_polarity_menu),
-                                                   .prompt_text = T_HWSPI_CLOCK_POLARITY_PROMPT,
-                                                   .minval = 0,
-                                                   .maxval = 0,
-                                                   .defval = 1,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_list_cfg },
-                                                 { .description = T_HWSPI_CLOCK_PHASE_MENU,
-                                                   .menu_items = spi_phase_menu,
-                                                   .menu_items_count = count_of(spi_phase_menu),
-                                                   .prompt_text = T_HWSPI_CLOCK_PHASE_PROMPT,
-                                                   .minval = 0,
-                                                   .maxval = 0,
-                                                   .defval = 1,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_list_cfg },
-                                                 { .description = T_HWSPI_CS_IDLE_MENU,
-                                                   .menu_items = spi_idle_menu,
-                                                   .menu_items_count = count_of(spi_idle_menu),
-                                                   .prompt_text = T_HWSPI_CS_IDLE_PROMPT,
-                                                   .minval = 0,
-                                                   .maxval = 0,
-                                                   .defval = 2,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_list_cfg } };
-    prompt_result result;
 
     const char config_file[] = "bpspi.bp";
 
@@ -117,53 +144,60 @@ uint32_t spi_setup(void) {
         // clang-format on
     };
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        spi_settings();
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0;
+    // Detect interactive vs CLI mode by checking the primary flag
+    bp_cmd_status_t st = bp_cmd_flag(&spi_setup_def, 's', &temp);
+    if (st == BP_CMD_INVALID) return 0;
+    bool interactive = (st == BP_CMD_MISSING);
+
+    if (interactive) {
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            spi_settings();
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
-        }
-    }
 
-    ui_prompt_uint32(&result, &spi_menu[0], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.baudrate = temp * 1000;
+        if (bp_cmd_prompt(&spi_speed_range, &temp) != BP_CMD_OK) return 0;
+        mode_config.baudrate = temp * 1000;
 
-    ui_prompt_uint32(&result, &spi_menu[1], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.data_bits = (uint8_t)temp;
-    system_config.num_bits = (uint8_t)temp;
+        if (bp_cmd_prompt(&spi_databits_range, &temp) != BP_CMD_OK) return 0;
+        mode_config.data_bits = (uint8_t)temp;
+        system_config.num_bits = (uint8_t)temp;
 
-    ui_prompt_uint32(&result, &spi_menu[2], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.clock_polarity = (uint8_t)((temp - 1));
+        if (bp_cmd_prompt(&spi_polarity_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.clock_polarity = (uint8_t)temp;
 
-    ui_prompt_uint32(&result, &spi_menu[3], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.clock_phase = (uint8_t)(temp - 1);
+        if (bp_cmd_prompt(&spi_phase_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.clock_phase = (uint8_t)temp;
 
-    ui_prompt_uint32(&result, &spi_menu[4], &temp);
-    if (result.exit) {
-        return 0;
+        if (bp_cmd_prompt(&spi_csidle_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.cs_idle = (uint8_t)temp;
+    } else {
+        // Speed already parsed above — multiply by 1000 to convert kHz → Hz
+        mode_config.baudrate = temp * 1000;
+
+        st = bp_cmd_flag(&spi_setup_def, 'd', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.data_bits = (uint8_t)temp;
+        system_config.num_bits = (uint8_t)temp;
+
+        st = bp_cmd_flag(&spi_setup_def, 'o', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.clock_polarity = (uint8_t)temp;
+
+        st = bp_cmd_flag(&spi_setup_def, 'a', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.clock_phase = (uint8_t)temp;
+
+        st = bp_cmd_flag(&spi_setup_def, 'c', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.cs_idle = (uint8_t)temp;
     }
-    mode_config.cs_idle = (uint8_t)(temp - 1);
 
     mode_config.binmode = false;
 
     storage_save_mode(config_file, config_t, count_of(config_t));
-    //}
 
     mode_config.baudrate_actual = spi_init(M_SPI_PORT, mode_config.baudrate);
     printf("\r\n%s%s:%s %ukHz",
@@ -243,13 +277,24 @@ void spi_stopr(struct _bytecode* result, struct _bytecode* next) {
 }
 
 void spi_write(struct _bytecode* result, struct _bytecode* next) {
-    // hwspi_write((uint32_t)result->out_data);
-    result->in_data = hwspi_write_read((uint8_t)result->out_data);
+    //lsb set, reverse order, retain packing for 8-4 bits
+    //spi is a fast bus and we want to make sure we skip the byte shuffle if at all possible
+    if(system_config.bit_order){
+        uint32_t temp = ui_format_lsb(result->out_data, result->bits);
+        result->in_data = hwspi_write_read((uint8_t)temp);
+    } else {
+        result->in_data = hwspi_write_read((uint8_t)result->out_data);
+    }
     result->read_with_write = mode_config.read_with_write;
 }
 
 void spi_read(struct _bytecode* result, struct _bytecode* next) {
-    result->in_data = (uint8_t)hwspi_read();
+    //reads honor the current bit order setting
+    if(system_config.bit_order){
+        result->in_data = ui_format_lsb(hwspi_read(), result->bits);
+    }else{
+        result->in_data = (uint8_t)hwspi_read();
+    }
 }
 
 void spi_macro(uint32_t macro) {
@@ -275,11 +320,11 @@ void spi_pins(void)
 */
 
 void spi_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_HWSPI_SPEED_MENU), mode_config.baudrate / 1000, GET_T(T_KHZ));
-    ui_prompt_mode_settings_int(GET_T(T_HWSPI_BITS_MENU), mode_config.data_bits, 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_POLARITY_MENU),GET_T(spi_polarity_menu[mode_config.clock_polarity].description), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CLOCK_PHASE_MENU), GET_T(spi_phase_menu[mode_config.clock_phase].description), 0x00);
-    ui_prompt_mode_settings_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(spi_idle_menu[mode_config.cs_idle].description), 0x00);
+    ui_help_setting_int(GET_T(T_HWSPI_SPEED_MENU), mode_config.baudrate / 1000, GET_T(T_KHZ));
+    ui_help_setting_int(GET_T(T_HWSPI_BITS_MENU), mode_config.data_bits, 0x00);
+    ui_help_setting_string(GET_T(T_HWSPI_CLOCK_POLARITY_MENU), GET_T(polarity_choices[mode_config.clock_polarity].label), 0x00);
+    ui_help_setting_string(GET_T(T_HWSPI_CLOCK_PHASE_MENU), GET_T(phase_choices[mode_config.clock_phase].label), 0x00);
+    ui_help_setting_string(GET_T(T_HWSPI_CS_IDLE_MENU), GET_T(csidle_choices[mode_config.cs_idle].label), 0x00);
 }
 
 void spi_printSPIflags(void) {

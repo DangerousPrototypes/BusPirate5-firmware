@@ -1,0 +1,138 @@
+# Global Commands: Power, Pins, Input, Output, Measurement
+m hiz
+rm bpuart.bp
+rm bphduart.bp
+rm bpi2c.bp
+rm bpspi.bp
+rm bp2wire.bp
+rm bp3wire.bp
+rm bpled.bp
+rm bpirrxtx.bp
+W -h
+w -h
+P -h
+p -h
+a -h
+A -h
+@ -h
+f -h
+F -h
+G -h
+g -h
+v -h
+V -h
+# Global Commands: Configure Terminal, LEDs, Display and Mode
+c -h
+d -h
+o -h
+l -h
+L -h
+cls -h
+# Global Commands: Restart, Firmware Updates and Diagnostic
+i -h
+reboot -h
+$ -h
+~ -h
+bug -h
+ovrclk -h
+smps -h
+jep106 -h
+# Global Commands: Files and Storage
+ls -h
+cd -h
+mkdir -h
+rm -h
+cat -h
+hex -h
+format -h
+label -h
+image -h
+dump -h
+otpdump -h
+# Global Commands: Scripts, Macros and Button
+script -h
+button -h
+macro -h
+pause -h
+# Global Commands: Tools and Utilities
+logic -h
+= -h
+| -h
+# Global Commands: Mode Selection
+m -h
+binmode -h
+# 1-WIRE Mode Commands
+m 1wire
+scan -h
+eeprom -h
+ds18b20 -h
+m hiz
+# UART Mode Commands
+m uart
+ 
+ 
+ 
+ 
+ 
+ 
+gps -h
+bridge -h
+glitch -h
+m hiz
+# Half-Duplex UART Mode Commands
+m hduart
+ 
+ 
+ 
+ 
+bridge -h
+m hiz
+# I2C Mode Commands
+m i2c
+ 
+ 
+scan -h
+sniff -h
+eeprom -h
+ddr5 -h
+ddr4 -h
+sht3x -h
+sht4x -h
+si7021 -h
+ms5611 -h
+tsl2561 -h
+tcs3472 -h
+fusb302 -h
+i2c -h
+usbpd -h
+mpu6050 -h
+m hiz
+# SPI Mode Commands
+m spi
+ 
+ 
+ 
+ 
+ 
+eeprom -h
+m hiz
+# 2-WIRE Mode Commands
+m 2wire
+ 
+sle4442 -h
+sniff -h
+m hiz
+# INFRARED Mode Commands
+m infrared
+ 
+ 
+ 
+tvbgone -h
+irtx -h
+irrx -h
+m hiz
+# JTAG Mode Commands
+m jtag
+bluetag -h
+m hiz
+# done

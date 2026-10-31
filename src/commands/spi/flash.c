@@ -12,12 +12,13 @@
 #include "lib/sfud/inc/sfud.h"
 #include "lib/sfud/inc/sfud_def.h"
 #include "spiflash.h"
-#include "ui/ui_cmdln.h"
+#include "pirate/file.h"
 #include "ui/ui_help.h"
 #include "system_config.h"
 #include "pirate/amux.h"
 #include "binmode/fala.h"
 #include "ui/ui_hex.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static const char* const usage[] = {
     "flash [probe|dump|erase|write|read|verify|test]\r\n\t[-f <file>] [-e(rase)] [-v(verify)] [-h(elp)]",
@@ -31,25 +32,6 @@ static const char* const usage[] = {
     "Force dump:%s flash read -o -b <bytes> -f <file>"
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_FLASH },               // flash command help
-    //{ 0, "init", T_HELP_FLASH_INIT },      // init
-    { 0, "probe", T_HELP_FLASH_PROBE },    // probe
-    { 0, "dump", T_HELP_EEPROM_DUMP }, // dump
-    { 0, "erase", T_HELP_FLASH_ERASE },    // erase
-    { 0, "write", T_HELP_FLASH_WRITE },    // write
-    { 0, "read", T_HELP_FLASH_READ },      // read
-    { 0, "verify", T_HELP_FLASH_VERIFY },  // verify
-    { 0, "test", T_HELP_FLASH_TEST },      // test
-    { 0, "-f", T_HELP_FLASH_FILE_FLAG },   // file to read/write/verify
-    { 0, "-e", T_HELP_FLASH_ERASE_FLAG },  // with erase (before write)
-    { 0, "-v", T_HELP_FLASH_VERIFY_FLAG }, // with verify (after write)
-    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
-    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-    { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF },
-};
-
 enum flash_actions {
     FLASH_PROBE = 0,
     FLASH_DUMP,
@@ -60,20 +42,43 @@ enum flash_actions {
     FLASH_TEST
 };
 
-const struct cmdln_action_t flash_actions[] = {
-    { FLASH_PROBE, "probe" },
-    { FLASH_DUMP, "dump" },
-    { FLASH_ERASE, "erase" },
-    { FLASH_WRITE, "write" },
-    { FLASH_READ, "read" },
-    { FLASH_VERIFY, "verify" },
-    { FLASH_TEST, "test" }
+static const bp_command_action_t flash_action_defs[] = {
+    { FLASH_PROBE,  "probe",  T_HELP_FLASH_PROBE },
+    { FLASH_DUMP,   "dump",   T_HELP_EEPROM_DUMP },
+    { FLASH_ERASE,  "erase",  T_HELP_FLASH_ERASE },
+    { FLASH_WRITE,  "write",  T_HELP_FLASH_WRITE },
+    { FLASH_READ,   "read",   T_HELP_FLASH_READ },
+    { FLASH_VERIFY, "verify", T_HELP_FLASH_VERIFY },
+    { FLASH_TEST,   "test",   T_HELP_FLASH_TEST },
+};
+
+static const bp_command_opt_t flash_opts[] = {
+    { "file",     'f', BP_ARG_REQUIRED, "file",    T_HELP_FLASH_FILE_FLAG },
+    { "erase",    'e', BP_ARG_NONE,     NULL,        T_HELP_FLASH_ERASE_FLAG },
+    { "verify",   'v', BP_ARG_NONE,     NULL,        T_HELP_FLASH_VERIFY_FLAG },
+    { "start",    's', BP_ARG_REQUIRED, "addr",    UI_HEX_HELP_START },
+    { "bytes",    'b', BP_ARG_REQUIRED, "count",   UI_HEX_HELP_BYTES },
+    { "quiet",    'q', BP_ARG_NONE,     NULL,        UI_HEX_HELP_QUIET },
+    { "nopager",  'c', BP_ARG_NONE,     NULL,        T_HELP_DISK_HEX_PAGER_OFF },
+    { "override", 'o', BP_ARG_NONE,     NULL,        T_HELP_FLASH_OVERRIDE },
+    { "yes",      'y', BP_ARG_NONE,     NULL,        T_HELP_FLASH_YES_OVERRIDE },
+    { 0 }
+};
+
+const bp_command_def_t flash_def = {
+    .name         = "flash",
+    .description  = T_HELP_FLASH,
+    .actions      = flash_action_defs,
+    .action_count = count_of(flash_action_defs),
+    .opts         = flash_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void flash(struct command_result* res) {
-    char file[13];
 
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+
+    if (bp_cmd_help_check(&flash_def, res->help_flag)) {
         return;
     }
     if (!ui_help_check_vout_vref()) {
@@ -81,24 +86,37 @@ void flash(struct command_result* res) {
     }
 
     uint32_t flash_action = 0;
-    // common function to parse the command line verb or action
-    if(cmdln_args_get_action(flash_actions, count_of(flash_actions), &flash_action)){
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options)); // show help if requested
+    if (!bp_cmd_get_action(&flash_def, &flash_action)) {
+        bp_cmd_help_show(&flash_def);
         return;
     }
 
     // erase_flag
-    bool erase_flag = cmdln_args_find_flag('e' | 0x20);
+    bool erase_flag = bp_cmd_find_flag(&flash_def, 'e');
     // verify_flag
-    bool verify_flag = cmdln_args_find_flag('v' | 0x20);
+    bool verify_flag = bp_cmd_find_flag(&flash_def, 'v');
     // file to read/write/verify
-    command_var_t arg;
-    bool file_flag = cmdln_args_find_flag_string('f' | 0x20, &arg, sizeof(file), file);
-    if((flash_action == FLASH_WRITE || flash_action == FLASH_READ || flash_action == FLASH_VERIFY) && !file_flag) {
-        printf("Missing file name (-f)\r\n");
+    char file[13];
+    if((flash_action == FLASH_WRITE || flash_action == FLASH_READ || flash_action == FLASH_VERIFY)) {
+        if(!bp_file_get_name_flag(&flash_def, 'f', file, sizeof(file))) {
+            return;
+        }
+    }
+
+    // error if read/verify and erase flag is set, doesn't make sense to erase if just reading or verifying
+    if((flash_action == FLASH_READ || flash_action == FLASH_VERIFY) && erase_flag) {
+        printf("Erase flag (-e) cannot be used with read or verify actions\r\n");
         return;
     }
-    bool override_flag = cmdln_args_find_flag('o' | 0x20);
+
+    // prompt yes/no for destructive action: erase, write, test (override with -y)
+    if((flash_action == FLASH_ERASE || flash_action == FLASH_WRITE || flash_action == FLASH_TEST)) {
+        if(!bp_cmd_confirm(&flash_def, "This action may modify the SPI flash contents. Do you want to continue?")) {
+            return;
+        }
+    }
+
+    bool override_flag = bp_cmd_find_flag(&flash_def, 'o');
 
     // start and end rage? bytes to write/dump???
     sfud_flash flash_info = { .name = "SPI_FLASH", .spi.name = "SPI1" };
@@ -114,8 +132,7 @@ void flash(struct command_result* res) {
     if (spiflash_init(&flash_info) && !override_flag) {
         end_address = flash_info.chip.capacity;
     } else if (flash_action == FLASH_READ && override_flag) {
-        command_var_t arg;
-        if (!cmdln_args_find_flag_uint32('b', &arg, &end_address)) {
+        if (!bp_cmd_get_uint32(&flash_def, 'b', &end_address)) {
             printf("Specify read length with the -b flag (-b 0x00ffff)\r\n");
             goto flash_cleanup;
         }
@@ -133,11 +150,11 @@ void flash(struct command_result* res) {
     }
 
     if(flash_action == FLASH_DUMP){
-        spiflash_show_hex(sizeof(data), data, &flash_info);
+        spiflash_show_hex(&flash_def, sizeof(data), data, &flash_info);
         goto flash_cleanup; // no need to continue
     }
 
-    if (flash_action == FLASH_ERASE || erase_flag || flash_action == FLASH_TEST) {
+    if (flash_action == FLASH_ERASE || (erase_flag && FLASH_WRITE) || flash_action == FLASH_TEST) {
         if (!spiflash_erase(&flash_info)) {
             goto flash_cleanup;
         }

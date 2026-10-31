@@ -78,6 +78,7 @@ DRESULT diskio_read(BYTE drv, BYTE* buff, LBA_t sector, UINT count) {
         int ret = dhara_map_read(&map, sector, buff, &err);
         if (ret) {
             // printf("dhara read failed: %d, error: %d", ret, err);
+            mutex_exit(&diskio_mutex);
             return RES_ERROR;
         }
         buff += SPI_NAND_PAGE_SIZE; // sector size == page size
@@ -99,6 +100,7 @@ DRESULT diskio_write(BYTE drv, const BYTE* buff, LBA_t sector, UINT count) {
         int ret = dhara_map_write(&map, sector, buff, &err);
         if (ret) {
             // printf("dhara write failed: %d, error: %d", ret, err);
+            mutex_exit(&diskio_mutex);
             return RES_ERROR;
         }
         buff += SPI_NAND_PAGE_SIZE; // sector size == page size
@@ -149,6 +151,7 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void* buff) {
                 int ret = dhara_map_trim(&map, start, &err);
                 if (ret) {
                     // printf("dhara trim failed: %d, error: %d", ret, err);
+                    mutex_exit(&diskio_mutex);
                     return RES_ERROR;
                 }
                 start++;

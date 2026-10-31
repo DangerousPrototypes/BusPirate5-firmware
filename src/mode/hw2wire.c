@@ -9,7 +9,6 @@
 #include "bytecode.h"
 #include "mode/hw2wire.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_cmdln.h"
 #include "hw2wire.pio.h"
 #include "pirate/hw2wire_pio.h"
@@ -19,6 +18,7 @@
 #include "ui/ui_help.h"
 #include "commands/2wire/sle4442.h"
 #include "commands/2wire/hw2w_sniff.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static const char pin_labels[][5] = { "SDA", "SCL", "RST" };
 struct _hw2wire_mode_config hw2wire_mode_config;
@@ -26,43 +26,37 @@ static uint8_t checkshort(void);
 
 // command configuration
 const struct _mode_command_struct hw2wire_commands[] = {
-    {   .command="sle4442", 
-        .func=&sle4442, 
-        .description_text=T_HELP_SLE4442, 
+    {   .func=&sle4442,
+        .def=&sle4442_def,
         .supress_fala_capture=true
     },
-    {   .command="sniff",
-        .func=&hw2w_sniff,
-        .description_text=T_HW2WIRE_SNIFF,
+    {   .func=&hw2w_sniff,
+        .def=&hw2w_sniff_def,
         .supress_fala_capture=false
     }
 };
 const uint32_t hw2wire_commands_count = count_of(hw2wire_commands);
 
-uint32_t hw2wire_setup(void) {
-    // menu items options
-    static const struct prompt_item i2c_data_bits_menu[] = { { T_HWI2C_DATA_BITS_MENU_1 },
-                                                             { T_HWI2C_DATA_BITS_MENU_2 } };
-    static const struct prompt_item i2c_speed_menu[] = { { T_HWI2C_SPEED_MENU_1 } };
+// Speed — flag -s / --speed (kHz)
+static const bp_val_constraint_t hw2wire_speed_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 1000, .def = 400 },
+    .prompt = T_HW2WIRE_SPEED_MENU,
+    .hint = T_HWI2C_SPEED_MENU_1,
+};
 
-    static const struct ui_prompt i2c_menu[] = { { .description = T_HW2WIRE_SPEED_MENU,
-                                                   .menu_items = i2c_speed_menu,
-                                                   .menu_items_count = count_of(i2c_speed_menu),
-                                                   .prompt_text = T_HWI2C_SPEED_PROMPT,
-                                                   .minval = 1,
-                                                   .maxval = 1000,
-                                                   .defval = 400,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_int_cfg },
-                                                 { .description = T_HWI2C_DATA_BITS_MENU,
-                                                   .menu_items = i2c_data_bits_menu,
-                                                   .menu_items_count = count_of(i2c_data_bits_menu),
-                                                   .prompt_text = T_HWI2C_DATA_BITS_PROMPT,
-                                                   .minval = 0,
-                                                   .maxval = 0,
-                                                   .defval = 1,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_list_cfg } };
+static const bp_command_opt_t hw2wire_setup_opts[] = {
+    { "speed", 's', BP_ARG_REQUIRED, "1-1000", 0, &hw2wire_speed_range },
+    { 0 },
+};
+
+const bp_command_def_t hw2wire_setup_def = {
+    .name = "2wire",
+    .description = 0,
+    .opts = hw2wire_setup_opts,
+};
+
+uint32_t hw2wire_setup(void) {
 
     const char config_file[] = "bp2wire.bp";
 
@@ -72,29 +66,23 @@ uint32_t hw2wire_setup(void) {
         { "$.data_bits", &hw2wire_mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };
-    prompt_result result;
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        printf("\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU),
-        // GET_T(i2c_data_bits_menu[hw2wire_mode_config.data_bits].description));
-        hw2wire_settings();
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0;
+    // Detect interactive vs CLI mode by checking the primary flag
+    bp_cmd_status_t st = bp_cmd_flag(&hw2wire_setup_def, 's', &hw2wire_mode_config.baudrate);
+    if (st == BP_CMD_INVALID) return 0;
+    bool interactive = (st == BP_CMD_MISSING);
+
+    if (interactive) {
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            hw2wire_settings();
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
-        }
+
+        if (bp_cmd_prompt(&hw2wire_speed_range, &hw2wire_mode_config.baudrate) != BP_CMD_OK) return 0;
     }
-    ui_prompt_uint32(&result, &i2c_menu[0], &hw2wire_mode_config.baudrate);
-    if (result.exit) {
-        return 0;
-    }
-    // printf("Result: %d\r\n", hw2wire_mode_config.baudrate);
-    // ui_prompt_uint32(&result, &i2c_menu[1], &temp);
-    // if(result.exit) return 0;
-    // hw2wire_mode_config.data_bits=(uint8_t)temp-1;
 
     storage_save_mode(config_file, config_t, count_of(config_t));
 
@@ -210,7 +198,7 @@ void hw2wire_cleanup(void) {
 }*/
 
 void hw2wire_settings(void) {
-    ui_prompt_mode_settings_int(GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate, GET_T(T_KHZ));
+    ui_help_setting_int(GET_T(T_HW2WIRE_SPEED_MENU), hw2wire_mode_config.baudrate, GET_T(T_KHZ));
 }
 
 void hw2wire_printI2Cflags(void) {
@@ -268,4 +256,20 @@ static uint8_t checkshort(void) {
 
 uint32_t hw2wire_get_speed(void) {
     return hw2wire_mode_config.baudrate * 1000;
+}
+
+//-----------------------------------------
+// Flatbuffer/binary access functions
+//-----------------------------------------
+bool bpio_hw2wire_configure(bpio_mode_configuration_t *bpio_mode_config){
+    //set defaults, check range
+    hw2wire_mode_config.baudrate = 400; // default speed in kHz
+    if(hw2wire_mode_config.baudrate < 1 || hw2wire_mode_config.baudrate > 1000){
+        if(bpio_mode_config->debug) printf("[2WIRE] Invalid speed %d kHz\r\n", hw2wire_mode_config.baudrate);
+        return false;
+    }
+        
+    if(bpio_mode_config->debug) printf("[2WIRE] Speed %d Hz\r\n", bpio_mode_config->speed);
+    hw2wire_mode_config.baudrate=bpio_mode_config->speed/1000; // convert to kHz
+    return true;  
 }

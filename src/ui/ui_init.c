@@ -8,9 +8,7 @@
 #include "command_struct.h"
 #include "modes.h"
 #include "ui/ui_const.h"
-#include "ui_cmdln.h"
 
 // initializes the ui variables
 void ui_init(void) {
-    cmdln_init();
 }

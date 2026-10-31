@@ -1,3 +1,17 @@
+/**
+ * @file a_auxio.c
+ * @brief Auxiliary I/O control commands implementation.
+ * @details Implements direct pin control commands:
+ *          - a <pin>: Set pin as output low
+ *          - A <pin>: Set pin as output high
+ *          - @ <pin>: Set pin as input and read current value
+ *          
+ *          Features:
+ *          - Validates pin availability (not in use by mode)
+ *          - Updates pin labels to show aux status
+ *          - Preserves aux pins across mode changes
+ */
+
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -5,7 +19,7 @@
 #include "pirate/bio.h"
 #include "system_config.h"
 #include "ui/ui_term.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_help.h"
 
 static const char labels[][5] = { "AUXL", "AUXH" };
@@ -17,21 +31,49 @@ static const char* const usage[] = {
     "Pin 5 input, read value:%s @ 5",
 };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_AUXIO }, // command help
-    { 0, "a", T_HELP_AUXIO_LOW },   { 0, "A", T_HELP_AUXIO_HIGH },
-    { 0, "@", T_HELP_AUXIO_INPUT }, { 0, "<io>", T_HELP_AUXIO_IO },
+static const bp_command_positional_t auxio_positionals[] = {
+    { "io", "pin", T_HELP_GCMD_AUXIO_PIN, true },
+    { 0 }
+};
+
+const bp_command_def_t auxio_low_def = {
+    .name = "a",
+    .description = T_CMDLN_AUX_LOW,
+    .positionals      = auxio_positionals,
+    .positional_count = 1,
+    .usage = usage,
+    .usage_count = count_of(usage)
+};
+
+const bp_command_def_t auxio_high_def = {
+    .name = "A",
+    .description = T_CMDLN_AUX_HIGH,
+    .positionals      = auxio_positionals,
+    .positional_count = 1,
+    .usage = usage,
+    .usage_count = count_of(usage)
+};
+
+const bp_command_def_t auxio_input_def = {
+    .name = "@",
+    .description = T_CMDLN_AUX_IN,
+    .positionals      = auxio_positionals,
+    .positional_count = 1,
+    .usage = usage,
+    .usage_count = count_of(usage)
 };
 
 // TODO: binary format puts to all available pins
 void auxio(struct command_result* res, bool output, bool level) {
+    const bp_command_def_t *def = output ? (level ? &auxio_high_def : &auxio_low_def) : &auxio_input_def;
+    
     // check help
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(def, res->help_flag)) {
         return;
     }
 
     uint32_t pin;
-    bool has_value = cmdln_args_uint32_by_position(1, &pin);
+    bool has_value = bp_cmd_get_positional_uint32(def, 1, &pin);
     if (!has_value) {
         printf("%sError:%s specify an IO pin (a 1, A 5, @ 0)", ui_term_color_error(), ui_term_color_reset());
         res->error = true;

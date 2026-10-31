@@ -1,13 +1,81 @@
+/**
+ * @file usb_tx.h
+ * @brief USB transmit queue management.
+ * @details Provides USB output queue handling for normal and binary modes.
+ */
+
+/**
+ * @brief Initialize transmit FIFO.
+ */
 void tx_fifo_init(void);
+
+/**
+ * @brief Service transmit FIFO.
+ */
 void tx_fifo_service(void);
+
+/**
+ * @brief Put character in transmit FIFO.
+ * @param c  Character to transmit
+ */
 void tx_fifo_put(char* c);
+
+/**
+ * @brief Try to put character in transmit FIFO.
+ * @param c  Character to transmit
+ */
 void tx_fifo_try_put(char* c);
-void tx_sb_start(uint32_t valid_characters_in_status_bar);
+
+/**
+ * @brief Write a pre-built buffer into the transmit FIFO.
+ * @param buf  Buffer to send (must not be NULL).
+ * @param len  Number of bytes to send.
+ * @pre Must be called from Core0.
+ */
+void tx_fifo_write(const char* buf, uint32_t len);
+
+/**
+ * @brief Wait until transmit FIFO is fully drained.
+ * @pre Must be called from Core0.
+ */
+void tx_fifo_wait_drain(void);
+
+/**
+ * @brief Start toolbar buffer transmission.
+ * @param len  Number of valid characters in toolbar buffer
+ */
+void tx_tb_start(uint32_t len);
+
+/**
+ * @brief Put character in binary transmit FIFO.
+ * @param c  Character to transmit
+ */
 void bin_tx_fifo_put(const char c);
+
+/**
+ * @brief Try to put character in binary transmit FIFO without blocking.
+ * @param c  Character to transmit
+ * @return   true if the character was queued, false if the FIFO is full
+ */
+bool bin_tx_fifo_try_put(const char c);
+
+/**
+ * @brief Service binary transmit FIFO.
+ */
 void bin_tx_fifo_service(void);
+
+/**
+ * @brief Check if binary TX FIFO not empty.
+ * @return  true if data pending
+ */
 bool bin_tx_not_empty(void);
+
+/**
+ * @brief Try to get character from binary TX FIFO.
+ * @param c  Output character
+ * @return   true if character available
+ */
 bool bin_tx_fifo_try_get(char* c);
 
-extern char tx_sb_buf[1024];
-
-// extern queue_t sample_fifo;
+extern char tx_tb_buf[1024];
+extern bool tx_tb_buf_ready;

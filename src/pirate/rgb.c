@@ -1,3 +1,16 @@
+/**
+ * @file rgb.c
+ * @brief RGB LED (WS2812) control and animation implementation.
+ * @details Controls 16-18 WS2812 RGB LEDs arranged around the PCB using a PIO state machine.
+ *          LEDs are positioned in specific polar coordinates extracted from PCB layout:
+ *          - Each LED has (x,y) coordinates in 256x256 grid
+ *          - Each LED has angular position in 1/256th circle units
+ *          - Animations utilize geometric position for visual effects
+ *          Hardware differences:
+ *          - BP5 Rev8/Rev9: 16 LEDs (missing bottom center and bottom left positions)
+ *          - BP5 Rev10+:    18 LEDs (all positions populated)
+ */
+
 #define BP_DEBUG_OVERRIDE_DEFAULT_CATEGORY BP_DEBUG_CAT_ONBOARD_PIXELS
 
 #include <stdio.h>

@@ -390,6 +390,7 @@ static int bpio_DataResponse_verify_table(flatcc_table_verifier_descriptor_t *td
     int ret;
     if ((ret = flatcc_verify_string_field(td, 0, 0) /* error */)) return ret;
     if ((ret = flatcc_verify_vector_field(td, 1, 0, 1, 1, INT64_C(4294967295)) /* data_read */)) return ret;
+    if ((ret = flatcc_verify_field(td, 2, 1, 1) /* is_async */)) return ret;
     return flatcc_verify_ok;
 }
 

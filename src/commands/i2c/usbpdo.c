@@ -29,7 +29,7 @@
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "binmode/fala.h"
 #include "commands/i2c/usbpdo.h"
 #include "usb_rx.h"
@@ -614,24 +614,31 @@ static const char* const usage[] = {
     "scan and select PDO profiles:%s fusb302 scan"
 };
 
-static const struct ui_help_options options[] = {
-        {1,"", T_HELP_I2C_FUSB302},
-        {0,"status", T_HELP_I2C_FUSB302_STATUS},
-        {0,"scan", T_HELP_I2C_FUSB302_SCAN},
-};
-
 enum fusb_actions_enum {
     FUSB302_STATUS=0,
     FUSB302_SCAN,
 };
 
-static const struct cmdln_action_t fusb_actions[] = {{ FUSB302_STATUS, "status" },{ FUSB302_SCAN, "scan" }};
+static const bp_command_action_t fusb_action_defs[] = {
+    { FUSB302_STATUS, "status", T_HELP_I2C_FUSB302_STATUS },
+    { FUSB302_SCAN,   "scan",   T_HELP_I2C_FUSB302_SCAN },
+};
+
+const bp_command_def_t fusb302_def = {
+    .name         = "fusb302",
+    .description  = T_HELP_I2C_FUSB302,
+    .actions      = fusb_action_defs,
+    .action_count = count_of(fusb_action_defs),
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 void fusb302_handler(struct command_result* res) {
     static pdo_info_t available_pdos[7];
     static uint8_t num_available_pdos = 0;
 
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&fusb302_def, res->help_flag)) {
         return;
     }
     if (!ui_help_sanity_check(true, 0x00)) {
@@ -639,8 +646,8 @@ void fusb302_handler(struct command_result* res) {
     }
 
     uint32_t action;
-    if (cmdln_args_get_action(fusb_actions, count_of(fusb_actions), &action)) {
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+    if (!bp_cmd_get_action(&fusb302_def, &action)) {
+        bp_cmd_help_show(&fusb302_def);
         return;
     }
 

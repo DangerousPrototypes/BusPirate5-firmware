@@ -32,8 +32,6 @@ set(buspirate_common
         system_monitor.c
 
         #flatcc test
-        commands/global/flat.h 
-        commands/global/flat.c 
         bpio_builder.h
         bpio_reader.h
         bpio_verifier.h
@@ -140,6 +138,7 @@ set(buspirate_common
         pirate/amux.c
         pirate/rgb.h
         pirate/rgb.c
+        pirate/hardfault.c
         pirate/intercore_helpers.c
         pirate/file.h 
         pirate/file.c
@@ -171,6 +170,12 @@ set(buspirate_common
         commands/global/a_auxio.c
         commands/global/dummy.c
         commands/global/dummy.h
+        commands/global/hash.c
+        commands/global/hash.h
+        commands/global/menu_demo.c
+        commands/global/menu_demo.h
+        commands/global/txtest.c
+        commands/global/txtest.h
         commands/global/disk.c
         commands/global/disk.h
         commands/global/v_adc.c
@@ -185,6 +190,21 @@ set(buspirate_common
         commands/global/macro.h
         commands/global/script.c
         commands/global/script.h
+        commands/global/edit.c
+        commands/global/edit.h
+        lib/kilo/kilo_build.c
+        lib/kilo/kilo_compat.c
+        lib/kilo/kilo_compat.h
+        commands/global/hexedit.c
+        commands/global/hexedit.h
+        lib/hx/hx_build.c
+        lib/hx/hx_compat.h
+        lib/vt100_keys/vt100_keys.c
+        lib/vt100_keys/vt100_keys.h
+        lib/vt100_menu/vt100_menu.c
+        lib/vt100_menu/vt100_menu.h
+        ui/ui_cmd_menu.c
+        ui/ui_cmd_menu.h
         commands/global/button_scr.c
         commands/global/button_scr.h
         commands/global/smps.c
@@ -207,6 +227,46 @@ set(buspirate_common
         commands/global/hex.h
         commands/global/nand.c
         commands/global/nand.h
+        commands/global/game_engine.c
+        commands/global/game_engine.h
+        commands/global/life.c
+        commands/global/life.h
+        commands/global/snake.c
+        commands/global/snake.h
+        commands/global/game2048.c
+        commands/global/game2048.h
+        commands/global/tictactoe.c
+        commands/global/tictactoe.h
+        commands/global/hangman.c
+        commands/global/hangman.h
+        commands/global/mines.c
+        commands/global/mines.h
+        commands/global/bricks.c
+        commands/global/bricks.h
+        commands/global/drop4.c
+        commands/global/drop4.h
+        commands/global/fleet.c
+        commands/global/fleet.h
+        commands/global/worm.c
+        commands/global/worm.h
+        commands/global/pcbrun.c
+        commands/global/pcbrun.h
+        commands/global/invaders.c
+        commands/global/invaders.h
+        commands/global/sigride.c
+        commands/global/sigride.h
+        commands/global/stkover.c
+        commands/global/stkover.h
+        commands/global/crossflash.c
+        commands/global/crossflash.h
+        commands/global/cryptocrack.c
+        commands/global/cryptocrack.h
+        commands/global/wiretrace.c
+        commands/global/wiretrace.h
+        commands/global/logicgates.c
+        commands/global/logicgates.h
+        commands/global/rogueprobe.c
+        commands/global/rogueprobe.h
         commands/eeprom/eeprom_base.h
         commands/eeprom/eeprom_base.c
         
@@ -227,6 +287,8 @@ set(buspirate_common
         pirate/onewire_library.c
         commands/eeprom/eeprom_1wire.h
         commands/eeprom/eeprom_1wire.c
+        commands/global/jep106_lookup.c
+        commands/global/jep106_lookup.h
 
         # UART
         mode/hwuart.h
@@ -276,6 +338,8 @@ set(buspirate_common
         commands/i2c/ddr4.h        
         commands/eeprom/eeprom_i2c.c 
         commands/eeprom/eeprom_i2c.h
+        commands/eeprom/eeprom_i2c_gui.c
+        commands/eeprom/eeprom_i2c_gui.h
         commands/i2c/i2c.c
         commands/i2c/i2c.h
         commands/i2c/usbpdo.c 
@@ -298,8 +362,8 @@ set(buspirate_common
         commands/spi/flash.h
         commands/spi/spiflash.h
         commands/spi/spiflash.c
-        commands/spi/sniff.c
-        commands/spi/sniff.h
+        #commands/spi/sniff.c
+        #commands/spi/sniff.h
         lib/sfud/inc/sfud.h
         lib/sfud/inc/sfud.c
         lib/sfud/inc/sfud_cfg.h
@@ -362,6 +426,14 @@ set(buspirate_common
         lib/bluetag/src/blueTag.h
         lib/bluetag/src/jep106.inc
 
+        # PS2
+        mode/ps2.h
+        mode/ps2.c
+
+        # USB
+        mode/usb.h
+        mode/usb.c
+
         # DUMMY MODE
         mode/dummy1.c
         mode/dummy1.h 
@@ -374,6 +446,12 @@ set(buspirate_common
         ui/ui_flags.h
         ui/ui_parse.c
         ui/ui_parse.h
+        lib/bp_number/bp_number.c
+        lib/bp_number/bp_number.h
+        lib/bp_args/bp_cmd.c
+        lib/bp_args/bp_cmd.h
+        lib/bp_args/bp_cmd_linenoise.c
+        lib/bp_args/bp_cmd_linenoise.h
         ui/ui_prompt.h
         ui/ui_prompt.c
         ui/ui_mode.c
@@ -382,7 +460,6 @@ set(buspirate_common
         ui/ui_display.h
         ui/ui_info.h
         ui/ui_info.c
-        ui/ui_format.c
         ui/ui_format.c
         ui/ui_init.c
         ui/ui_init.h
@@ -394,12 +471,28 @@ set(buspirate_common
         ui/ui_help.h
         ui/ui_term.c
         ui/ui_term.h
+        ui/ui_term_linenoise.c
+        ui/ui_term_linenoise.h
         ui/ui_statusbar.c
         ui/ui_statusbar.h
+        ui/ui_toolbar.c
+        ui/ui_toolbar.h
+        ui/ui_pin_render.c
+        ui/ui_pin_render.h
         ui/ui_hex.c
         ui/ui_hex.h
+        ui/ui_file_picker.c
+        ui/ui_file_picker.h
         ui/ui_progress_indicator.h
         ui/ui_progress_indicator.c
+        ui/ui_app.h
+        ui/ui_app.c
+        ui/ui_popup.h
+        ui/ui_popup.c
+        ui/ui_config_bar.h
+        ui/ui_config_bar.c
+        ui/ui_mem_gui.h
+        ui/ui_mem_gui.c
 
 
         # Debug
@@ -414,7 +507,10 @@ set(buspirate_common
 
         # syntax and commands
         syntax.h
-        syntax.c
+        syntax_internal.h
+        syntax_compile.c
+        syntax_run.c
+        syntax_post.c
         syntax_struct.h
         command_struct.h
         bytecode.h
@@ -450,7 +546,26 @@ set(buspirate_common
         binmode/bpio.c
         binmode/bpio.h
         binmode/bpio_transactions.h
-        binmode/bpio_transactions.c
+        binmode/bpio_1wire.c
+        binmode/bpio_1wire.h
+        binmode/bpio_i2c.c
+        binmode/bpio_i2c.h
+        binmode/bpio_spi.c
+        binmode/bpio_spi.h
+        binmode/bpio_2wire.c
+        binmode/bpio_2wire.h
+        binmode/bpio_3wire.c
+        binmode/bpio_3wire.h
+        binmode/bpio_uart.c
+        binmode/bpio_uart.h
+        binmode/bpio_hiz.c
+        binmode/bpio_hiz.h
+        binmode/bpio_dio.c
+        binmode/bpio_dio.h
+        binmode/bpio_led.c
+        binmode/bpio_led.h
+        binmode/bpio_infrared.c
+        binmode/bpio_infrared.h
         binmode/legacy4third.c
         binmode/legacy4third.h
         lib/arduino-ch32v003-swio/arduino_ch32v003.c
@@ -474,6 +589,12 @@ set(buspirate_common
         #toolbars
         toolbars/logic_bar.c
         toolbars/logic_bar.h
+        toolbars/sys_stats.c
+        toolbars/sys_stats.h
+        toolbars/pin_watcher.c
+        toolbars/pin_watcher.h
+        commands/global/cmd_toolbar.c
+        commands/global/cmd_toolbar.h
 
         # displays
         displays.c
@@ -493,28 +614,39 @@ set(buspirate_common
         font/hunter-23pt-24h24w.h
         display/background.h
         display/background_image_v4.h
-        display/robot16.h
         
-        # USB
-        queue.c
-        queue.h
+        # USB - SPSC queues for inter-core communication
+        spsc_queue.h
         usb_tx.c
         usb_tx.h
         usb_rx.c
         usb_rx.h
+
+        # Line editing library (linenoise with BP_EMBEDDED support)
+        lib/bp_linenoise/linenoise.h
+        lib/bp_linenoise/linenoise.c
+        lib/bp_linenoise/ln_cmdreader.h
+        lib/bp_linenoise/ln_cmdreader.c
+
+        # Expression evaluator library
+        lib/bp_expr/bp_expr.h
+        lib/bp_expr/bp_expr.c        
+
         msc_disk.c
         msc_disk.h
         usb_descriptors.c
 
 	# USBPD 
-        mode/usbpd.c            
-        mode/usbpd.h
+        #mode/usbpd.c            
+        #mode/usbpd.h
 
         # I2S
         mode/i2s.c
         mode/i2s.h
         commands/i2s/sine.h 
         commands/i2s/sine.c
+        commands/i2s/wav.h
+        commands/i2s/wav.c
 )
 
 
@@ -715,6 +847,8 @@ set(stdlibs
 # Compile the various PIO programs to generate the header files
 foreach(revision ${revisions})
         ADD_DEPENDENCIES (${revision} timestamp)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/pico_ps2_sniffer.pio)
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/mode/pico_usb_sniffer_lite.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw2wire.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw3wire.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwi2c.pio)
@@ -756,6 +890,7 @@ foreach(revision ${revisions})
         target_compile_definitions(${revision} PUBLIC PICO_USE_STACK_GUARDS=1)
         target_compile_definitions(${revision} PUBLIC PICO_STACK_SIZE=4096)        
         target_compile_definitions(${revision} PRIVATE PICO_MALLOC_PANIC=0)
+        target_compile_definitions(${revision} PUBLIC BP_EMBEDDED=1)
 
         # Add to your foreach(revision ${revisions}) loop after target_link_libraries
         target_link_options(${revision} PRIVATE 

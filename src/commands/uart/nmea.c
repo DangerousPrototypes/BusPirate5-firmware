@@ -9,6 +9,7 @@
 #include "lib/minmea/gps.h"
 #include "lib/minmea/minmea.h"
 #include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "bytecode.h"
 #include "mode/hwuart.h"
 #include "usb_rx.h"
@@ -16,13 +17,18 @@
 
 static const char* const usage[] = { "gps\t[-h(elp)]", "Decode GPS NMEA packets:%s gps", "Exit:%s press any key" };
 
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_UART_NMEA }, // command help
-    { 0, "-h", T_HELP_FLAG },    // help
+const bp_command_def_t nmea_decode_def = {
+    .name = "gps",
+    .description = T_HELP_UART_NMEA,
+    .actions = NULL,
+    .action_count = 0,
+    .opts = NULL,
+    .usage = usage,
+    .usage_count = count_of(usage),
 };
 
 void nmea_decode_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&nmea_decode_def, res->help_flag)) {
         return;
     }
     if (!ui_help_check_vout_vref()) {

@@ -1,3 +1,20 @@
+/**
+ * @file displays.c
+ * @brief Display mode management and dispatch table
+ * 
+ * This file implements the display system for Bus Pirate, managing different
+ * LCD display modes including:
+ * - Default mode: Shows pin voltages and labels
+ * - Scope mode: Real-time oscilloscope display
+ * - Disabled mode: Screen off for power saving
+ * 
+ * Each display mode provides setup, cleanup, settings, and update callbacks
+ * for managing the 240x320 IPS LCD.
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -12,6 +29,22 @@
 #ifdef BP_USE_SCOPE
 #include "display/scope.h"
 #endif
+
+/**
+ * @brief Display mode dispatch table
+ * 
+ * This table defines all available LCD display modes and their callbacks.
+ * Each entry specifies:
+ * - Periodic service function (for polling/updates)
+ * - Setup and cleanup functions
+ * - Settings display function
+ * - Help text function
+ * - Friendly name for UI
+ * - Mode-specific commands
+ * - LCD update function
+ * 
+ * @note MAXDISPLAY is defined in displays.h
+ */
 
 struct _display displays[MAXDISPLAY] = {
     {

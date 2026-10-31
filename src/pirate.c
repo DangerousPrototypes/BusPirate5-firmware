@@ -29,7 +29,7 @@
 #include "ui/ui_flags.h"
 #include "commands/global/button_scr.h"
 #include "commands/global/freq.h"
-#include "queue.h"
+#include "spsc_queue.h"
 #include "usb_tx.h"
 #include "usb_rx.h"
 #include "debug_uart.h"
@@ -39,6 +39,10 @@
 #include "displays.h"
 #include "system_monitor.h"
 #include "ui/ui_statusbar.h"
+#include "ui/ui_toolbar.h"
+#include "lib/vt100_keys/vt100_keys.h"
+
+
 #include "tusb.h"
 #include "hardware/sync.h"
 #include "pico/lock_core.h"
@@ -51,6 +55,7 @@
 // #include "mode/logicanalyzer.h"
 #include "msc_disk.h"
 #include "pirate/intercore_helpers.h"
+#include "ui/ui_term_linenoise.h"
 // #include "display/robot16.h"
 #ifdef BP_SPLASH_ENABLED
     #include BP_SPLASH_FILE
@@ -62,7 +67,7 @@
 
 static mutex_t spi_mutex;
 
-uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = { 0 };
+//uint8_t reserve_for_future_mode_specific_allocations[10 * 1024] = { 0 };
 
 void core1_entry(void);
 /*
@@ -91,20 +96,18 @@ static bool should_disable_unique_usb_serial_number(void) {
             "Init: system_config.disable_unique_usb_serial_number is TRUE\n"
             );
         result = true;
-    } else
-    if (system_config.storage_fat_type == 0) {
+    } else if (system_config.storage_fat_type == 0) {
         BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
             "Init: Storage unformatted ... disabling unique USB serial number\n"
             );
         result = true;
-    } else
-    // if (!system_config.config_loaded_from_file) {
-    //     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
-    //         "Init: no configuration ... disabling unique USB serial number\n"
-    //         );
-    //     result = true;
-    // } else
-    if (storage_file_exists("FACTORY.USB")) {
+    } else if (storage_file_exists("FACTORY.USB")) {
+        // if (!system_config.config_loaded_from_file) {
+        //     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
+        //         "Init: no configuration ... disabling unique USB serial number\n"
+        //         );
+        //     result = true;
+        // } else
         BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
             "Init: `\\FACTORY.USB` file exists ... disabling unique USB serial number\n"
             );
@@ -147,9 +150,9 @@ static void main_system_initialization(void) {
             );
     #endif
 
-    reserve_for_future_mode_specific_allocations[1] = 99;
-    reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
-    reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
+    //reserve_for_future_mode_specific_allocations[1] = 99;
+    //reserve_for_future_mode_specific_allocations[2] = reserve_for_future_mode_specific_allocations[1];
+    //reserve_for_future_mode_specific_allocations[1] = reserve_for_future_mode_specific_allocations[2];
 
     // init buffered IO pins
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
@@ -472,18 +475,22 @@ static void core0_infinite_loop(void) {
 
     enum bp_statemachine {
         BP_SM_DISPLAY_MODE,
+        BP_SM_DISPLAY_MODE_WAIT,
         BP_SM_GET_INPUT,
         BP_SM_PROCESS_COMMAND,
-        BP_SM_COMMAND_PROMPT
+        BP_SM_COMMAND_PROMPT,
+        BP_SM_TOOLBAR_FOCUS
     };
 
     uint8_t bp_state = 0;
-    uint32_t value;
+
     struct prompt_result result;
     //alarm_id_t screensaver;
     bool has_been_connected = false;
 
     lcd_screensaver_alarm_reset(); //setup the screensaver timer (if configured)
+
+    button_irq_enable(0, &button_irq_callback);
 
     while (1) {
 
@@ -492,11 +499,14 @@ static void core0_infinite_loop(void) {
         // but the terminal will not be responsive if the service is blocking
         binmode_service();
 
-        enum button_codes press_code = button_check_press(0);
-        if (press_code != BP_BUTT_NO_PRESS) {
-            button_irq_disable(0);
-            button_exec(press_code);         // execute script based on the button press type
-            //bp_state = BP_SM_COMMAND_PROMPT; // return to command prompt
+        //if not connected to a terminal, then check for button presses to allow user to execute button scripts without a terminal connected
+        if (!tud_cdc_n_connected(0)|| bp_state <= BP_SM_DISPLAY_MODE_WAIT){
+            enum button_codes press_code = button_check_press(0);
+            if (press_code != BP_BUTT_NO_PRESS) {
+                button_irq_disable(0);
+                button_exec(press_code);         // execute script based on the button press type
+                button_irq_enable(0, &button_irq_callback);
+            }
         }
 
         if (tud_cdc_n_connected(0)) {
@@ -507,6 +517,25 @@ static void core0_infinite_loop(void) {
                 // sync with the host
                 storage_mount();
                 insert_usbmsdrive();
+////temp
+#if 0
+                if(system_config.terminal_ansi_color && bp_state <= BP_SM_DISPLAY_MODE_WAIT){
+
+                    if (!ui_term_detect()) { // Do we detect a VT100 ANSI terminal? what is the size?
+                        system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
+                        system_config.terminal_ansi_statusbar = false;                        
+                        break;
+                    }
+                    // if something goes wrong with detection, the next function will skip internally
+                    ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
+                    // this sets the scroll region for the status bar (if enabled)
+                    // and does the initial painting of the full statusbar
+                    if (system_config.terminal_ansi_statusbar) {
+                        ui_statusbar_init();
+                        toolbar_update_blocking();
+                    }  
+                }    
+#endif          
             }
         } else {
             if (has_been_connected) {
@@ -518,61 +547,62 @@ static void core0_infinite_loop(void) {
 
         switch (bp_state) {
             case BP_SM_DISPLAY_MODE:
+                // start linenoise prompt, 
+                // don't show any prompt text yet, just wait for user input
+                ui_prompt_vt100_mode_start("");
+                bp_state = BP_SM_DISPLAY_MODE_WAIT;
+                break;
+
+            case BP_SM_DISPLAY_MODE_WAIT:
+                uint32_t value;
+                if (!ui_prompt_vt100_mode_feed(&value)) {
+                    break; // still editing, return to main loop
+                }
+                // user hit enter, now used any saved config or prompt the user to select a display mode
+                lcd_screensaver_alarm_reset();
                 // config file option loaded, wait for any key
                 // for ASCII mode terminal_ansi_color is always false
                 // this has the side effect of always prompting if the saved mode is ASCII
                 // this is a feature, not a bug -
-                // it lets new users escape from ASCII mode without learning of the config menus
+                // it lets new users escape from ASCII mode without learning of the config menus                
                 if (system_config.terminal_ansi_color) {
-                    char c;
-                    result.error = false;
-                    result.success = false;
-
-                    if (rx_fifo_try_get(&c)) {
-                        value = 's';
-                        result.success = true;
-                    }
-                } else {
-                    // PRINT_VERBOSE("Prompting to allow VT100 mode.\n"); // prints repeatedly ... much too verbose
-                    ui_prompt_vt100_mode(&result, &value);
-                }
-
-                if (result.success) {
-                    lcd_screensaver_alarm_reset();
-                    switch (value) {
-                        case 'n': // user requested ASCII mode
-                            system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
-                            system_config.terminal_ansi_statusbar = false;
-                            printf("\r\n"); // make pretty
-                            break;
-                        case 'y': // user requested VT100 mode
-                            // no configuration exists, default to status bar enabled
-                            system_config.terminal_ansi_color = UI_TERM_FULL_COLOR;
-                            system_config.terminal_ansi_statusbar = true;
-                        case 's':                    // case were configuration already exists
-                            if (!ui_term_detect()) { // Do we detect a VT100 ANSI terminal? what is the size?
-                                break;
-                            }
-                            // if something goes wrong with detection, the next function will skip internally
-                            ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
-                            // this sets the scroll region for the status bar (if enabled)
-                            // and does the initial painting of the full statusbar
-                            if (system_config.terminal_ansi_statusbar) {
-                                ui_statusbar_init();
-                                ui_statusbar_update_blocking();
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-
-                    bp_state = BP_SM_COMMAND_PROMPT;
-
-                } else if (result.error) { // user hit enter but not a valid option
-                    PRINT_VERBOSE("Repeating prompt to allow VT100 mode.\n");
-                    printf("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
-                }
+                    goto display_mode_done_saved;
+                }          
                 
+                if(value == 'n'){
+                    // user requested ASCII mode
+                    system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
+                    system_config.terminal_ansi_statusbar = false;
+                    printf("\r\n"); // make pretty
+                }else if(value == 'y') {
+                    // user requested VT100 mode
+                    // no configuration exists, default to status bar enabled
+                    system_config.terminal_ansi_color = UI_TERM_FULL_COLOR;
+                    system_config.terminal_ansi_statusbar = true;
+
+                display_mode_done_saved:// case were configuration already exists
+                    if (!ui_term_detect()) { // Do we detect a VT100 ANSI terminal? what is the size?
+                        system_config.terminal_ansi_color = UI_TERM_NO_COLOR;
+                        system_config.terminal_ansi_statusbar = false;                        
+                        bp_state = BP_SM_COMMAND_PROMPT;
+                        break;
+                    }
+                    // if something goes wrong with detection, the next function will skip internally
+                    ui_term_init(); // Initialize VT100 if ANSI terminal (or not if detect failed)
+                    // this sets the scroll region for the status bar (if enabled)
+                    // and does the initial painting of the full statusbar
+                    if (system_config.terminal_ansi_statusbar) {
+                        ui_statusbar_init();
+                        toolbar_update_blocking();
+                    }
+                }else{ 
+                    // if value is not y/n, then we got enter with no parameters
+                    // show the user the prompt               
+                    ui_prompt_vt100_mode_start("\r\n\r\nVT100 compatible color mode? (Y/n)> ");
+                    break;
+                }    
+
+                bp_state = BP_SM_COMMAND_PROMPT;
                 break;
             case BP_SM_GET_INPUT:
                 // it seems like we need an array where we can add our function for periodic service?
@@ -583,20 +613,32 @@ static void core0_infinite_loop(void) {
                     break;
                 }
                 
-                uint8_t key_pressed = (uint8_t)ui_term_get_user_input();
+                uint32_t ln_result = ui_term_linenoise_feed();
                 
-                //all keys deal with screensaver
-                if(key_pressed) { //0x01 is a key press, 0xff is enter
+                // All keys deal with screensaver
+                if (ln_result) {  // Any non-zero = key activity
                     lcd_screensaver_alarm_reset();
                 }
 
-                if (key_pressed==0xff) { //enter
-                    printf("\r\n");
+                if (ln_result == 0xff) {  // Enter - line complete
                     bp_state = BP_SM_PROCESS_COMMAND;
                     button_irq_disable(0); 
                     break;
                 }
-                #if 0
+                
+                if (ln_result == 0xfe) {  // Ctrl+C - cancel
+                    printf("^C\r\n");
+                    bp_state = BP_SM_COMMAND_PROMPT;
+                    break;
+                }
+
+                if (ln_result == 0xfb) {  // TAB on empty line - toolbar focus request
+                    if (toolbar_focus_enter()) {
+                        bp_state = BP_SM_TOOLBAR_FOCUS;
+                    }
+                    break;
+                }
+
                 enum button_codes press_code = button_check_press(0);
                 if (press_code != BP_BUTT_NO_PRESS) {
                     button_irq_disable(0);
@@ -610,22 +652,46 @@ static void core0_infinite_loop(void) {
                 bp_state = BP_SM_COMMAND_PROMPT;
                 break;
             case BP_SM_COMMAND_PROMPT:
-                if (system_config.subprotocol_name) {
-                    printf("%s%s-(%s)>%s \x03",
-                           ui_term_color_prompt(),
-                           modes[system_config.mode].protocol_name,
-                           system_config.subprotocol_name,
-                           ui_term_color_reset());
-                } else {
-                    printf("%s%s>%s \x03",
-                           ui_term_color_prompt(),
-                           modes[system_config.mode].protocol_name,
-                           ui_term_color_reset());
+                {
+                    // Build prompt string for linenoise
+                    static char prompt_buf[128];
+                    if (system_config.subprotocol_name) {
+                        snprintf(prompt_buf, sizeof(prompt_buf), "%s%s-(%s)>%s ",
+                                 ui_term_color_prompt(),
+                                 modes[system_config.mode].protocol_name,
+                                 system_config.subprotocol_name,
+                                 ui_term_color_reset());
+                    } else {
+                        snprintf(prompt_buf, sizeof(prompt_buf), "%s%s>%s ",
+                                 ui_term_color_prompt(),
+                                 modes[system_config.mode].protocol_name,
+                                 ui_term_color_reset());
+                    }
+                    // Start linenoise editing session (outputs prompt)
+                    ui_term_linenoise_start(prompt_buf);
+                    // Output end-of-prompt marker for test tools (invisible)
+                    printf("\x03");
                 }
-                cmdln_next_buf_pos();
                 bp_state = BP_SM_GET_INPUT;
                 button_irq_enable(0, &button_irq_callback);
                 break;
+
+            case BP_SM_TOOLBAR_FOCUS: {
+                displays[system_config.display].display_periodic();
+                modes[system_config.mode].protocol_periodic();
+
+                /* Non-blocking peek: if no input, keep looping */
+                char peek;
+                if (!rx_fifo_try_get(&peek)) break;
+
+                lcd_screensaver_alarm_reset();
+
+                int key = vt100_key_read_rx_fifo(peek);
+                if (toolbar_focus_handle_key(key) == TB_FOCUS_EXIT) {
+                    bp_state = BP_SM_GET_INPUT;
+                }
+                break;
+            }
 
             default:
                 bp_state = BP_SM_COMMAND_PROMPT;
@@ -753,25 +819,23 @@ static void assert_error()
     BP_ASSERT(false);
 }
 
-static queue_t* queues[2] = { &rx_fifo, &bin_rx_fifo };
+static spsc_queue_t* queues[2] = { &rx_fifo, &bin_rx_fifo };
 
 static void tud_cdc_rx_task() {
 
     BP_ASSERT_CORE1(); // RX FIFO (whether from UART, CDC, RTT, ...) should only be added to from core1 (deadlock risk)
 
-    char buf[64];
+    uint8_t buf[64];
     bool enabled[2] = { system_config.terminal_usb_enable, system_config.binmode_usb_rx_queue_enable };
     uint32_t available = 0;
     for (uint8_t itf = 0; itf < 2; itf++) {
         if (enabled[itf] && (available = tud_cdc_n_available(itf))) {
-            uint16_t used_space = 0;
-            queue_available_bytes_unsafe(queues[itf], &used_space);
-            uint32_t free_space = rx_fifo.element_count - used_space - 1;
+            uint32_t free_space = spsc_queue_free(queues[itf]);
             if (free_space) {
                 uint32_t count = tud_cdc_n_read(itf, buf, MIN(available, free_space));
                 // while bytes available shove them in the buffer
                 for (uint32_t i = 0; i < count; i++) {
-                    bool success = queue2_try_add(queues[itf], &buf[i]);
+                    bool success = spsc_queue_try_add(queues[itf], buf[i]);
                     if (!success)
                         assert_error();
                 }
@@ -793,6 +857,8 @@ static void core1_infinite_loop(void) {
 
         // service the terminal TX queue
         tx_fifo_service();
+        // service one step of the toolbar Core1 state machine
+        toolbar_core1_service();
         // optionally service the binmode TX queue if requested
         if (system_config.binmode_usb_tx_queue_enable) {
             bin_tx_fifo_service();
@@ -813,7 +879,7 @@ static void core1_infinite_loop(void) {
                 update_flags |= UI_UPDATE_FORCE | UI_UPDATE_ALL;
             }
             if (system_config.pin_changed) {
-                update_flags |= UI_UPDATE_LABELS; // pin labels
+                update_flags |= UI_UPDATE_LABELS | UI_UPDATE_VOLTAGES; // pin labels + values (type may have changed)
             }
             if (monitor_voltage_changed()) {
                 update_flags |= UI_UPDATE_VOLTAGES; // pin voltages
@@ -836,10 +902,9 @@ static void core1_infinite_loop(void) {
             }
 
             if (system_config.terminal_ansi_color &&
-                system_config.terminal_ansi_statusbar &&
-                system_config.terminal_ansi_statusbar_update &&
-                !system_config.terminal_ansi_statusbar_pause) {
-                ui_statusbar_update_from_core1(update_flags);
+                toolbar_count_registered() &&
+                !system_config.terminal_toolbar_pause) {
+                toolbar_core1_begin_update(update_flags);
             }
 
             #ifdef BP_HW_STORAGE_TFCARD
@@ -857,10 +922,8 @@ static void core1_infinite_loop(void) {
         while (multicore_fifo_rvalid()) {
             bp_icm_raw_message_t raw_message = icm_core1_get_raw_message();
             switch (get_embedded_message(raw_message)) {
-                case BP_ICM_UPDATE_STATUS_BAR:
-                    //lcd_update_request = true;
-                    //core0_requested_update_flags |= UI_UPDATE_ALL;
-                    ui_statusbar_update_from_core1(UI_UPDATE_ALL);
+                case BP_ICM_UPDATE_TOOLBARS:
+                    toolbar_core1_begin_update(UI_UPDATE_ALL);
                     break;
                 case BP_ICM_DISABLE_LCD_UPDATES:
                     lcd_irq_disable();

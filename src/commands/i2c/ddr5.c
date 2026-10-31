@@ -9,7 +9,7 @@
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "lib/ms5611/ms5611.h"
 #include "lib/tsl2561/driver_tsl2561.h"
 #include "binmode/fala.h"
@@ -18,6 +18,9 @@
 //#include "pirate/storage.h" // File system related
 #include "lib/jep106/jep106.h"
 #include "ui/ui_hex.h"
+
+// Forward declaration — defined at bottom of file
+extern const bp_command_def_t ddr5_def;
 
 // DDR5 SPD Volatile Memory structure
 typedef struct __attribute__((packed)) {
@@ -571,7 +574,7 @@ void ddr5_search_upa(uint8_t *data, uint32_t start, uint32_t end) {
                 // align the start address to 16 bytes, and calculate the end address
                 struct hex_config_t hex_config;
                 //ui_hex_init_config(&hex_config);
-                ui_hex_get_args_config(&hex_config); //get the quiet flag, everything else is overridden
+                ui_hex_get_args_config(&ddr5_def, &hex_config); //get the quiet flag, everything else is overridden
                 hex_config.max_size_bytes= DDR5_SPD_SIZE; // maximum size of the device in bytes
                 //ui_hex_get_args_config(&hex_config);
                 hex_config.start_address=start_address; //set the start address
@@ -642,7 +645,7 @@ bool ddr5_dump(uint8_t *buffer) {
     // align the start address to 16 bytes, and calculate the end address
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= DDR5_SPD_SIZE; // maximum size of the device in bytes
-    ui_hex_get_args_config(&hex_config);
+    ui_hex_get_args_config(&ddr5_def, &hex_config);
     ui_hex_align_config(&hex_config);
     ui_hex_header_config(&hex_config);
     //read 1024 bytes from the DDR5 SPD NVM
@@ -881,7 +884,7 @@ bool ddr5_lock(uint8_t block, bool lock, bool update) {
 }
 
 static const char* const usage[] = {
-    "ddr5 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-b <block number>|<bytes>] [-s <start address>] [-h(elp)]",
+    "ddr5 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-B <block>] [-b <bytes>] [-s <start>] [-h(elp)]",
     "Probe DDR5 SPD:%s ddr5 probe",
     "Show DDR5 SPD NVM contents:%s ddr5 dump",
     "Show 32 bytes starting at address 0x50:%s ddr5 dump -s 0x50 -b 32",
@@ -889,30 +892,11 @@ static const char* const usage[] = {
     "Read SPD NVM to file, verify:%s ddr5 read -f example.bin",
     "Verify against file:%s ddr5 verify -f example.bin",
     "Show NVM block lock status:%s ddr5 lock -or- ddr5 unlock",
-    "Lock a NVM block 0-15:%s ddr5 lock -b 0",
-    "Unlock a NVM block 0-15:%s ddr5 unlock -b 0",
+    "Lock a NVM block 0-15:%s ddr5 lock -B 0",
+    "Unlock a NVM block 0-15:%s ddr5 unlock -B 0",
     "Check/generate CRC for JEDEC blocks 0-7:%s ddr5 crc -f example.bin",
     "Patch/update CRC in file:%s ddr5 patch -f example.bin",
     "DDR5 write file **MUST** be exactly 1024 bytes long"
-};
-
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_DDR5 },               // flash command help  
-    { 0, "probe", T_HELP_DDR5_PROBE },    // probe
-    { 0, "dump", T_HELP_DDR5_DUMP },      // dump
-    { 0, "write", T_HELP_DDR5_WRITE },    // write
-    { 0, "read", T_HELP_DDR5_READ },      // read
-    { 0, "verify", T_HELP_DDR5_VERIFY },  // verify
-    { 0, "lock", T_HELP_DDR5_LOCK },      // lock
-    { 0, "unlock", T_HELP_DDR5_UNLOCK },  // unlock
-    { 0, "crc", T_HELP_DDR5_CRC },        // crc
-    { 0, "patch", T_HELP_DDR5_PATCH },    // patch
-    { 0, "-f", T_HELP_DDR5_FILE_FLAG },   // file to read/write/verify
-    { 0, "-b", T_HELP_DDR5_BLOCK_FLAG },  
-    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
-    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-    { 0, "-h", T_HELP_HELP }               // help flag
 };
 
 enum ddr5_actions_enum {
@@ -927,20 +911,46 @@ enum ddr5_actions_enum {
     DDR5_PATCH
 };
 
-static const struct cmdln_action_t ddr5_actions[] = {
-    { DDR5_PROBE, "probe" },
-    { DDR5_DUMP, "dump" },
-    { DDR5_READ, "read" },
-    { DDR5_WRITE, "write" },
-    { DDR5_VERIFY, "verify" },
-    { DDR5_LOCK, "lock" },
-    { DDR5_UNLOCK, "unlock" },
-    { DDR5_CRC, "crc" },
-    { DDR5_PATCH, "patch" }
+static const bp_command_action_t ddr5_action_defs[] = {
+    { DDR5_PROBE,  "probe",  T_HELP_DDR5_PROBE },
+    { DDR5_DUMP,   "dump",   T_HELP_DDR5_DUMP },
+    { DDR5_READ,   "read",   T_HELP_DDR5_READ },
+    { DDR5_WRITE,  "write",  T_HELP_DDR5_WRITE },
+    { DDR5_VERIFY, "verify", T_HELP_DDR5_VERIFY },
+    { DDR5_LOCK,   "lock",   T_HELP_DDR5_LOCK },
+    { DDR5_UNLOCK, "unlock", T_HELP_DDR5_UNLOCK },
+    { DDR5_CRC,    "crc",    T_HELP_DDR5_CRC },
+    { DDR5_PATCH,  "patch",  T_HELP_DDR5_PATCH },
+};
+
+// Constraint for -b block flag: DDR5 has blocks 0-15
+static const bp_val_constraint_t ddr5_block_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 15, .def = 0 },
+    .prompt = 0,
+};
+
+static const bp_command_opt_t ddr5_opts[] = {
+    { "file",  'f', BP_ARG_REQUIRED, "file",  T_HELP_DDR5_FILE_FLAG },
+    { "block", 'B', BP_ARG_REQUIRED, "block", T_HELP_DDR5_BLOCK_FLAG, &ddr5_block_range },
+    { "start", 's', BP_ARG_REQUIRED, "addr",  UI_HEX_HELP_START },
+    { "bytes", 'b', BP_ARG_REQUIRED, "count", UI_HEX_HELP_BYTES },
+    { "quiet", 'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
+    { 0 }
+};
+
+const bp_command_def_t ddr5_def = {
+    .name         = "ddr5",
+    .description  = T_HELP_DDR5,
+    .actions      = ddr5_action_defs,
+    .action_count = count_of(ddr5_action_defs),
+    .opts         = ddr5_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void ddr5_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&ddr5_def, res->help_flag)) {
         return;
     }
     if (!ui_help_sanity_check(true,0x00)) {
@@ -948,8 +958,8 @@ void ddr5_handler(struct command_result* res) {
     }
 
     uint32_t action;
-    if(cmdln_args_get_action(ddr5_actions, count_of(ddr5_actions), &action)){
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+    if(!bp_cmd_get_action(&ddr5_def, &action)){
+        bp_cmd_help_show(&ddr5_def);
         return;        
     }
 
@@ -957,7 +967,7 @@ void ddr5_handler(struct command_result* res) {
     FIL file_handle;                                                  // file handle
     if ((action == DDR5_WRITE || action == DDR5_READ || action== DDR5_VERIFY || action == DDR5_CRC || action == DDR5_PATCH)) {
         
-        if(file_get_args(file, sizeof(file))){; // get the file name from the command line arguments
+        if(!bp_file_get_name_flag(&ddr5_def, 'f', file, sizeof(file))) {
             return;
         }
 
@@ -970,23 +980,14 @@ void ddr5_handler(struct command_result* res) {
         if(file_open(&file_handle, file, file_status)) return; // create the file, overwrite if it exists
     }
     
-    command_var_t arg;
     uint32_t block_flag;
     bool lock_update=false;
     if(action == DDR5_LOCK || action == DDR5_UNLOCK) {
-        if(!cmdln_args_find_flag_uint32('b', &arg, &block_flag)){ // block to lock/unlock
-            if(arg.has_arg){
-                printf("Missing block number: -b <block number>\r\n");
-                return;
-            }else{ //no block, just show current status
-                lock_update = false; //we will not update the lock bits, just read them
-            }
-        }else if(block_flag > 15) {
-            printf("Block number must be between 0 and 15\r\n");
-            return;
-        }else{
-            lock_update = true; //we will update the lock bits
+        bp_cmd_status_t bs = bp_cmd_flag(&ddr5_def, 'B', &block_flag);
+        if(bs == BP_CMD_INVALID) {
+            return; // range error already printed by constraint
         }
+        lock_update = (bs == BP_CMD_OK); // only update if user explicitly specified a block
     }
 
     fala_start_hook();  

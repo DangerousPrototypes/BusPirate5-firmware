@@ -13,96 +13,153 @@
 #include "ui/ui_cmdln.h"
 #include "binmode/binmodes.h"
 #include "binmode/fala.h"
-#include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
 
-bool ui_mode_list(const struct ui_prompt* menu) {
-    for (uint i = 0; i < (*menu).menu_items_count; i++) {
-        printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), modes[i].protocol_name, ui_term_color_reset());
+/*
+ * =============================================================================
+ * Action delegate — queries modes[] directly, no parallel array
+ * =============================================================================
+ */
+
+/**
+ * @brief Return the protocol_name at index, or NULL if past end.
+ */
+static const char *mode_verb_at(uint32_t index) {
+    return (index < MAXPROTO) ? modes[index].protocol_name : NULL;
+}
+
+/**
+ * @brief Case-insensitive match of a user token against modes[].protocol_name.
+ * @details Writes the mode index into *action_out on match.
+ */
+static bool mode_match(const char *tok, size_t len, uint32_t *action_out) {
+    for (uint32_t i = 0; i < MAXPROTO; i++) {
+        size_t nlen = strlen(modes[i].protocol_name);
+        if (nlen != len) continue;
+        bool match = true;
+        for (size_t j = 0; j < len; j++) {
+            if ((tok[j] | 0x20) != (modes[i].protocol_name[j] | 0x20)) {
+                match = false;
+                break;
+            }
+        }
+        if (match) {
+            *action_out = i;
+            return true;
+        }
     }
+    return false;
+}
+
+/**
+ * @brief Return the setup_def for a resolved mode action, or NULL if none.
+ * @details Used by linenoise hint/completion to switch to the mode's
+ *          flag definitions after the verb is resolved.
+ */
+static const bp_command_def_t *mode_def_for_verb(uint32_t action) {
+    return (action < MAXPROTO) ? (const bp_command_def_t *)modes[action].setup_def : NULL;
+}
+
+static const bp_action_delegate_t mode_delegate = {
+    .verb_at      = mode_verb_at,
+    .match        = mode_match,
+    .def_for_verb = mode_def_for_verb,
+};
+
+/*
+ * =============================================================================
+ * Command definition
+ * =============================================================================
+ */
+
+static const char * const mode_usage[] = {
+    "m [-h] [mode] [-h] [mode_flags]",
+    "Change mode with menu:%s m",
+    "Change mode to UART:%s m uart",
+    "Change mode to UART 9600 baud + defaults:%s m uart -b 9600",
+    "Change to UART with parity:%s m uart -b 115200 -p even",
+    "Change mode to SPI 100kHz + defaults:%s m spi -s 100",
+    "m command help:%s m -h",
+    "m mode help:%s m uart -h",
+    "",
+    "*If speed flag is provided, other values will use defaults."
+};
+
+const bp_command_def_t mode_def = {
+    .name        = "m",
+    .description = T_CMDLN_MODE,
+    .action_delegate = &mode_delegate,
+    .usage       = mode_usage,
+    .usage_count = 3,
+};
+
+/*
+ * =============================================================================
+ * Interactive mode selection prompt
+ * =============================================================================
+ */
+
+/**
+ * @brief Print mode list and prompt user to pick one.
+ * @param[out] mode  Selected mode index (0-based)
+ * @return true if user picked a mode, false if exited
+ */
+static bool mode_interactive_prompt(uint32_t *mode) {
+    printf("%s%s%s\r\n", ui_term_color_info(),
+           GET_T(T_MODE_MODE_SELECTION), ui_term_color_reset());
+
+    for (uint32_t i = 0; i < MAXPROTO; i++) {
+        printf(" %lu. %s%s%s\r\n",
+               (unsigned long)(i + 1),
+               ui_term_color_info(),
+               modes[i].protocol_name,
+               ui_term_color_reset());
+    }
+
+    printf("\r\n%sx to exit ", ui_term_color_prompt());
+    printf(">%s \x03", ui_term_color_reset());
+
+    if (!ui_prompt_user_input()) return false;
+
+    prompt_result result;
+    uint32_t pick;
+    ui_parse_get_uint32(&result, &pick);
+
+    if (result.exit) return false;
+    if (!result.success || pick == 0 || pick > MAXPROTO) {
+        ui_prompt_invalid_option();
+        return false;
+    }
+
+    *mode = pick - 1;
     return true;
 }
 
-static const char* const usage[] = {
-    "m [mode name|mode number] [-h]",
-    "Change mode with menu:%s m",
-    "Change mode to I2C:%s m i2c",
-    "Change mode to menu option 5:%s m 5",
-};
-
-static const struct ui_help_options options[] = {  };
+/*
+ * =============================================================================
+ * Mode change command handler
+ * =============================================================================
+ */
 
 void ui_mode_enable_args(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
-        return;
-    }    
-    uint32_t mode;
-    bool error=true;
-
-    //bool has_value = cmdln_args_uint32_by_position(1, &mode);
-
-    char action_str[32];
-    bool has_string = cmdln_args_string_by_position(1, sizeof(action_str), action_str);
-
-    if(has_string){
-        uint32_t action_len = strlen(action_str);
-        if(action_len>2){ //parse text
-            strupr(action_str);
-            for(uint8_t i=0; i<count_of(modes); i++) {
-                //create a strupr version of the protocol name
-                char protocol_name_upper[32];
-                strcpy(protocol_name_upper, modes[i].protocol_name);
-                strupr(protocol_name_upper);
-                if (strcmp(action_str, protocol_name_upper) == 0) {
-                    mode = i;
-                    error = false;
-                    goto mode_configure;
-                }
-            }
-            ui_prompt_invalid_option();            
-        }else{ //try to parse number
-            for(uint8_t i=0; i<action_len; i++) {
-                if(action_str[i] < '0' || action_str[i] > '9') {
-                    ui_prompt_invalid_option();
-                    error = true;
-                    goto mode_configure;
-                }
-            }
-            mode = atoi(action_str);
-            if(mode > MAXPROTO || mode == 0){
-                ui_prompt_invalid_option();
-                error = true;
-            }else{
-                mode--;
-                error = false;
-            }
+    // Contextual help: "m uart -h" shows UART flags, "m -h" shows mode list
+    if (res->help_flag) {
+        uint32_t help_mode;
+        if (bp_cmd_get_action(&mode_def, &help_mode) &&
+            modes[help_mode].setup_def) {
+            bp_cmd_help_show((const bp_command_def_t *)modes[help_mode].setup_def);
+        } else {
+            bp_cmd_help_show(&mode_def);
         }
+        return;
     }
 
-mode_configure:
+    uint32_t mode;
 
-    if (error) { // no integer found
-
-        static const struct ui_prompt_config cfg = {
-            true,                            // bool allow_prompt_text;
-            false,                           // bool allow_prompt_defval;
-            false,                           // bool allow_defval;
-            true,                            // bool allow_exit;
-            &ui_mode_list,                   // bool (*menu_print)(const struct ui_prompt* menu);
-            &ui_prompt_prompt_ordered_list,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-            &ui_prompt_validate_ordered_list // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-        };
-
-        static const struct ui_prompt mode_menu = {
-            T_MODE_MODE_SELECTION, 0, count_of(modes), T_MODE_MODE, 0, 0, 0, 0, &cfg
-        };
-
-        prompt_result result;
-        ui_prompt_uint32(&result, &mode_menu, &mode);
-        if (result.exit) { // user bailed, stay in current mode
-            //(*response).error=true;
-            return;
-        }
-        mode--;
+    // Try to get mode name from command line via delegate
+    if (!bp_cmd_get_action(&mode_def, &mode)) {
+        // No mode on command line — interactive prompt
+        if (!mode_interactive_prompt(&mode)) return;
     }
 
     printf("\r\n%s%s:%s %s",
@@ -111,173 +168,97 @@ mode_configure:
         ui_term_color_reset(),
         modes[mode].protocol_name);
 
-    // ok, start setup dialog
-    if (!modes[mode].protocol_setup()) { // user bailed on setup steps
-        //(*response).error=true;
-        return;
-    }
+    // Run mode setup dialog (may prompt for params)
+    if (!modes[mode].protocol_setup()) return;
 
     modes[system_config.mode].protocol_cleanup();   // switch to HiZ
-    modes[0].protocol_setup_exc();                  // disables power suppy etc.
+    modes[HIZ].protocol_setup_exc();                  // disables power supply etc.
     system_config.mode = mode;                      // setup the new mode
-    if(!modes[system_config.mode].protocol_setup_exc()){ // execute the mode setup
+    if (!modes[system_config.mode].protocol_setup_exc()) {
         printf("\r\nFailed to setup mode %s", modes[system_config.mode].protocol_name);
-        //something went wrong
-        modes[0].protocol_setup_exc();
+        modes[HIZ].protocol_setup_exc();
         system_config.mode = 0;
     }
-    fala_mode_change_hook();                        // notify follow along logic analyzer of new frequency
-
-    if (system_config.mode == 0) { // TODO: do something to show the mode (LED? LCD?)
-        // gpio_clear(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
-    } else {
-        // gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
-    }
+    fala_mode_change_hook();                        // notify follow along logic analyzer
 }
 
 /*
+ * =============================================================================
+ * Display format command ("o")
+ * =============================================================================
+ */
 
+static const bp_val_choice_t display_format_choices[] = {
+    { "auto",  NULL, 0, df_auto  },
+    { "hex",   NULL, 0, df_hex   },
+    { "dec",   NULL, 0, df_dec   },
+    { "bin",   NULL, 0, df_bin   },
+    { "ascii", NULL, 0, df_ascii },
+};
 
+static const bp_val_constraint_t display_format_constraint = {
+    .type = BP_VAL_CHOICE,
+    .choice = {
+        .choices = display_format_choices,
+        .count   = count_of(display_format_choices),
+        .def     = df_auto,
+    },
+    .prompt = T_MODE_NUMBER_DISPLAY_FORMAT,
+};
 
+static const bp_command_positional_t display_format_positionals[] = {
+    { "format", "auto|hex|dec|bin|ascii", T_MODE_NUMBER_DISPLAY_FORMAT, false, &display_format_constraint },
+    { 0 },
+};
 
-void ui_mode_enable(struct command_attributes *attributes, struct command_response *response)
-{
-    uint32_t mode;
-    bool error;
+static const char * const display_format_usage[] = {
+    "o [-h] [format]",
+    "Interactive menu:%s o",
+    "Set hex:%s o hex",
+    "Set decimal by number:%s o 3",
+};
 
-    prompt_result result;
-    ui_parse_get_attributes(&result, &mode, 1);
-
-    if( result.error || result.no_value || result.exit || ((mode)>MAXPROTO) || ((mode)==0) )
-    {
-        if( result.success && (mode)>MAXPROTO )
-        {
-            ui_prompt_invalid_option();
-        }
-        error=true;
-    }
-    else
-    {
-        (mode)--; //adjust down one from user choice
-        error=false;
-    }
-
-    if(error)			// no integer found
-    {
-        static const struct ui_prompt_config cfg={
-            true, //bool allow_prompt_text;
-            false, //bool allow_prompt_defval;
-            false, //bool allow_defval;
-            true, //bool allow_exit;
-            &ui_mode_list, //bool (*menu_print)(const struct ui_prompt* menu);
-            &ui_prompt_prompt_ordered_list,     //bool (*menu_prompt)(const struct ui_prompt* menu);
-            &ui_prompt_validate_ordered_list //bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-        };
-
-        static const struct ui_prompt mode_menu={
-            T_MODE_MODE_SELECTION,
-            0,
-            MAXPROTO,
-            T_MODE_MODE,
-            0,0,0,
-            0,
-            &cfg
-        };
-
-        prompt_result result;
-        ui_prompt_uint32(&result, &mode_menu, &mode);
-        if(result.exit) //user bailed, stay in current mode
-        {
-            (*response).error=true;
-            return;
-        }
-        mode--;
-    }
-
-    //ok, start setup dialog
-    if(!modes[mode].protocol_setup()) //user bailed on setup steps
-    {
-        (*response).error=true;
-        return;
-    }
-
-    modes[system_config.mode].protocol_cleanup();   // switch to HiZ
-    modes[0].protocol_setup_exc();			        // disables power suppy etc.
-    system_config.mode=mode;                        // setup the new mode
-    modes[system_config.mode].protocol_setup_exc(); // execute the mode setup
-
-    if(system_config.mode==0) //TODO: do something to show the mode (LED? LCD?)
-    {
-        //gpio_clear(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
-    }
-    else
-    {
-        //gpio_set(BP_MODE_LED_PORT, BP_MODE_LED_PIN);
-    }
-
-    printf("\r\n%s%s:%s %s", ui_term_color_info(), GET_T(T_MODE_MODE), ui_term_color_reset(),
-modes[system_config.mode].protocol_name);
-
-}*/
-
-bool int_display_menu(const struct ui_prompt* menu) {
-    printf(" %sCurrent setting: %s%s\r\n",
-           ui_term_color_info(),
-           ui_const_display_formats[system_config.display_format],
-           ui_term_color_reset());
-    for (uint i = 0; i < (*menu).menu_items_count; i++) {
-        printf(" %d. %s%s%s\r\n", i + 1, ui_term_color_info(), ui_const_display_formats[i], ui_term_color_reset());
-    }
-}
+const bp_command_def_t display_format_def = {
+    .name        = "o",
+    .description = T_CMDLN_DISPLAY_FORMAT,
+    .positionals = display_format_positionals,
+    .positional_count = 1,
+    .usage       = display_format_usage,
+    .usage_count = 4,
+};
 
 // set display mode  (hex, bin, octa, dec)
 void ui_mode_int_display_format(struct command_result* res) {
-    uint32_t mode;
-    bool error;
-
-    prompt_result result;
-    ui_parse_get_attributes(&result, &mode, 1);
-
-    if (result.error || result.no_value || result.exit || ((mode) > count_of(ui_const_display_formats)) ||
-        ((mode) == 0)) {
-        if (result.success && (mode) > count_of(ui_const_display_formats)) {
-            ui_prompt_invalid_option();
-        }
-        error = 1;
-    } else {
-        (mode)--; // adjust down one from user choice
-        error = 0;
+    if (res->help_flag) {
+        bp_cmd_help_show(&display_format_def);
+        return;
     }
 
-    if (error) // no integer found
-    {
-        static const struct ui_prompt_config cfg = {
-            true,                            // bool allow_prompt_text;
-            false,                           // bool allow_prompt_defval;
-            false,                           // bool allow_defval;
-            true,                            // bool allow_exit;
-            &int_display_menu,               // bool (*menu_print)(const struct ui_prompt* menu);
-            &ui_prompt_prompt_ordered_list,  // bool (*menu_prompt)(const struct ui_prompt* menu);
-            &ui_prompt_validate_ordered_list // bool (*menu_validate)(const struct ui_prompt* menu, uint32_t* value);
-        };
+    uint32_t fmt;
+    bp_cmd_status_t s = bp_cmd_positional(&display_format_def, 1, &fmt);
 
-        static const struct ui_prompt mode_menu = {
-            T_MODE_NUMBER_DISPLAY_FORMAT, 0, count_of(ui_const_display_formats), T_MODE_MODE, 0, 0, 0, 0, &cfg
-        };
+    if (s == BP_CMD_INVALID) {
+        res->error = true;
+        return;
+    }
 
-        prompt_result result;
-        ui_prompt_uint32(&result, &mode_menu, &mode);
-        if (result.exit) // user bailed
-        {
-            (*res).error = true;
+    if (s == BP_CMD_MISSING) {
+        // Show current setting before the interactive menu
+        printf("%sCurrent setting: %s%s\r\n",
+               ui_term_color_info(),
+               ui_const_display_formats[system_config.display_format],
+               ui_term_color_reset());
+
+        s = bp_cmd_prompt(&display_format_constraint, &fmt);
+        if (s == BP_CMD_EXIT) {
+            res->error = true;
             return;
         }
-        mode--;
     }
 
-    system_config.display_format = (uint8_t)mode;
+    system_config.display_format = (uint8_t)fmt;
 
-    printf("\r\n%s%s:%s %s",
+    printf("%s%s:%s %s",
            ui_term_color_info(),
            GET_T(T_MODE_MODE),
            ui_term_color_reset(),

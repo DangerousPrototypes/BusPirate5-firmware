@@ -1,3 +1,25 @@
+/**
+ * @file freq.c
+ * @brief Frequency measurement command implementation.
+ * @details Implements the f/F commands for measuring signal frequency and duty cycle:
+ *          - f: Single measurement
+ *          - F: Continuous measurement with real-time updates
+ *          
+ *          Command syntax:
+ *          - f [pin]: Single measurement on pin (or menu if no pin)
+ *          - F [pin]: Continuous measurement on pin (or menu if no pin)
+ *          
+ *          Measurement method:
+ *          - Uses RP2040 PWM hardware in counter mode
+ *          - Can measure period and duty cycle simultaneously
+ *          - Supports frequencies from ~1Hz to several MHz
+ *          - Only available on pins with PWM channel B
+ *          
+ *          Limitations:
+ *          - Cannot share PWM slice with active PWM output
+ *          - Cannot measure on pins 0-1 if PSU uses PWM (hardware conflict)
+ */
+
 #include <stdio.h>
 #include <math.h>
 #include "pico/stdlib.h"
@@ -11,14 +33,67 @@
 #include "ui/ui_const.h"
 #include "ui/ui_term.h"
 #include "ui/ui_info.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 
 #include "commands/global/freq.h"
 
+static const char* const freq_single_usage[] = {
+    "f [pin]",
+    "Measure frequency once:%s f",
+    "Measure frequency on pin 2:%s f 2",
+};
+
+static const char* const freq_cont_usage[] = {
+    "F [pin]",
+    "Continuous frequency measurement:%s F",
+    "Continuous frequency on pin 2:%s F 2",
+};
+
+static const bp_val_constraint_t freq_pin_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 7, .def = 1 },
+    .prompt = T_MODE_CHOOSE_AVAILABLE_PIN,
+};
+
+static const bp_command_positional_t freq_positionals[] = {
+    { "pin", NULL, T_HELP_GCMD_FREQ_PIN, false, &freq_pin_range },
+    { 0 }
+};
+
+const bp_command_def_t freq_single_def = {
+    .name         = "f",
+    .description  = T_CMDLN_FREQ_ONE,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .positionals      = freq_positionals,
+    .positional_count = 1,
+    .usage        = freq_single_usage,
+    .usage_count  = count_of(freq_single_usage),
+};
+
+const bp_command_def_t freq_cont_def = {
+    .name         = "F",
+    .description  = T_CMDLN_FREQ_CONT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .positionals      = freq_positionals,
+    .positional_count = 1,
+    .usage        = freq_cont_usage,
+    .usage_count  = count_of(freq_cont_usage),
+};
+
 void freq_single(struct command_result* res) {
+    if (bp_cmd_help_check(&freq_single_def, res->help_flag)) {
+        return;
+    }
     uint32_t temp;
-    bool has_value = cmdln_args_uint32_by_position(1, &temp);
-    if (!has_value) // show config menu
+    bp_cmd_status_t s = bp_cmd_positional(&freq_single_def, 1, &temp);
+    if (s == BP_CMD_INVALID) {
+        res->error = 1;
+        return;
+    } else if (s == BP_CMD_MISSING) // show config menu
     {
         if (!freq_configure_disable()) {
             res->error = 1;
@@ -32,9 +107,15 @@ void freq_single(struct command_result* res) {
 }
 
 void freq_cont(struct command_result* res) {
+    if (bp_cmd_help_check(&freq_cont_def, res->help_flag)) {
+        return;
+    }
     uint32_t temp;
-    bool has_value = cmdln_args_uint32_by_position(1, &temp);
-    if (!has_value) // show config menu
+    bp_cmd_status_t s = bp_cmd_positional(&freq_cont_def, 1, &temp);
+    if (s == BP_CMD_INVALID) {
+        res->error = 1;
+        return;
+    } else if (s == BP_CMD_MISSING) // show config menu
     {
         if (!freq_configure_enable()) {
             res->error = 1;
@@ -47,29 +128,29 @@ void freq_cont(struct command_result* res) {
     }
 }
 
-bool freq_check_pin_is_available(const struct ui_prompt* menu, uint32_t* i) {
+bool freq_check_pin_is_available(uint32_t i) {
     // 1=channel b can measure frequency
     // label should be 0, not in use
     // PWM on the A channel should not be in use!
 
     // bounds check
-    if ((*i) >= count_of(bio2bufiopin)) {
+    if (i >= count_of(bio2bufiopin)) {
         return 0;
     }
 
     // temp fix for power supply PWM sharing
     #ifdef BP_HW_PSU_PWM_IO_BUG
-        if ((*i) == 0 || (*i) == 1) {
+        if (i == 0 || i == 1) {
             return 0;
         }
     #endif
 
-    return (pwm_gpio_to_channel(bio2bufiopin[(*i)]) == PWM_CHAN_B && system_config.pin_labels[(*i) + 1] == 0 &&
-            !(system_config.pwm_active & (0b11 << ((uint8_t)((*i) % 2 ? (*i) - 1 : (*i))))));
+    return (pwm_gpio_to_channel(bio2bufiopin[i]) == PWM_CHAN_B && system_config.pin_labels[i + 1] == 0 &&
+            !(system_config.pwm_active & (0b11 << ((uint8_t)(i % 2 ? i - 1 : i)))));
 }
 
-bool freq_check_pin_is_active(const struct ui_prompt* menu, uint32_t* i) {
-    return (system_config.freq_active & (0x01 << ((uint8_t)(*i))));
+bool freq_check_pin_is_active(uint32_t i) {
+    return (system_config.freq_active & (0x01 << ((uint8_t)i)));
 }
 
 // TODO: use PIO to do measurements/PWM on all A channels, making it fully flexible
@@ -92,7 +173,8 @@ uint32_t freq_print(uint8_t pin, bool refresh) {
 
     freq_display_ns(&freq_ns_value, &ns_friendly_value, &ns_friendly_units);
 
-    printf("\e[0K%s%s%s IO%s%d%s: %s%.2f%s%s %s%.2f%s%s (%s%.0f%sHz), %s%s:%s %s%.1f%s%%\r%s",
+    ui_term_erase_line();
+    printf("%s%s%s IO%s%d%s: %s%.2f%s%s %s%.2f%s%s (%s%.0f%sHz), %s%s:%s %s%.1f%s%%\r%s",
            ui_term_color_info(),
            GET_T(T_MODE_FREQ_FREQUENCY),
            ui_term_color_reset(),
@@ -125,27 +207,30 @@ uint32_t freq_print(uint8_t pin, bool refresh) {
 uint32_t freq_configure_enable(void) {
     uint32_t pin;
 
-    printf("%s%s%s", ui_term_color_info(), GET_T(T_MODE_FREQ_MEASURE_FREQUENCY), ui_term_color_reset());
+    printf("%s%s%s\r\n", ui_term_color_info(), GET_T(T_MODE_FREQ_MEASURE_FREQUENCY), ui_term_color_reset());
 
-    static const struct ui_prompt_config freq_menu_enable_config = {
-        false, false, false, true, &ui_prompt_menu_bio_pin, &ui_prompt_prompt_ordered_list, &freq_check_pin_is_available
-    };
+    // print available pins
+    bool any_available = false;
+    for (uint32_t i = 0; i < count_of(bio2bufiopin); i++) {
+        if (freq_check_pin_is_available(i)) {
+            printf(" %d. IO%d\r\n", i, i);
+            any_available = true;
+        }
+    }
 
-    static const struct ui_prompt freq_menu_enable = { T_MODE_CHOOSE_AVAILABLE_PIN, 0, 0, 0, 0, 0, 0, 0,
-                                                       &freq_menu_enable_config };
-
-    prompt_result result;
-    ui_prompt_uint32(&result, &freq_menu_enable, &pin);
-
-    if (result.exit) {
+    if (!any_available) {
+        // no pins available, show user current pinout
+        ui_info_print_pin_names();
+        ui_info_print_pin_labels();
         return 0;
     }
 
-    if (result.error) {
-        // no pins available, show user current pinout
-        // TODO: instead show channel/slice representation and explain assigned function
-        ui_info_print_pin_names();
-        ui_info_print_pin_labels();
+    if (bp_cmd_prompt(&freq_pin_range, &pin) != BP_CMD_OK) {
+        return 0;
+    }
+
+    if (!freq_check_pin_is_available(pin)) {
+        printf("IO%d is not available for frequency measurement\r\n", (uint8_t)pin);
         return 0;
     }
 
@@ -181,23 +266,21 @@ uint32_t freq_configure_disable(void) {
         pin = log2(system_config.freq_active);
     } else // multiple freqs active, show menu for user to choose which to disable
     {
-        printf("%s%s%s", ui_term_color_info(), "Disable frequency measurement", ui_term_color_reset());
+        printf("%s%s%s\r\n", ui_term_color_info(), "Disable frequency measurement", ui_term_color_reset());
 
-        static const struct ui_prompt_config freq_menu_disable_config = { false,
-                                                                          false,
-                                                                          false,
-                                                                          true,
-                                                                          &ui_prompt_menu_bio_pin,
-                                                                          &ui_prompt_prompt_ordered_list,
-                                                                          &freq_check_pin_is_active };
+        // print active pins
+        for (uint32_t i = 0; i < count_of(bio2bufiopin); i++) {
+            if (freq_check_pin_is_active(i)) {
+                printf(" %d. IO%d\r\n", i, i);
+            }
+        }
 
-        static const struct ui_prompt freq_menu_disable = { T_MODE_CHOOSE_AVAILABLE_PIN, 0, 0, 0, 0, 0, 0, 0,
-                                                            &freq_menu_disable_config };
+        if (bp_cmd_prompt(&freq_pin_range, &pin) != BP_CMD_OK) {
+            return 0;
+        }
 
-        prompt_result result;
-        ui_prompt_uint32(&result, &freq_menu_disable, &pin);
-
-        if (result.exit) {
+        if (!freq_check_pin_is_active(pin)) {
+            printf("IO%d does not have an active frequency measurement\r\n", (uint8_t)pin);
             return 0;
         }
     }
@@ -240,7 +323,7 @@ uint32_t freq_measure(int32_t pin, int refresh) {
     }
     // this pin or adjacent pin is PWM
     if (system_config.pwm_active & (0b11 << ((uint8_t)(pin % 2 ? pin - 1 : pin)))) {
-        printf("IO%d is unavailable beacuse IO%d or IO%d is in use as a frequency generator (PWM)!\r\nIn the future we "
+        printf("IO%d is unavailable because IO%d or IO%d is in use as a frequency generator (PWM)!\r\nIn the future we "
                "will fix this using the RP2040 PIO\r\n",
                pin,
                pin - 1,

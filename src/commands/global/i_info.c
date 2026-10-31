@@ -1,3 +1,17 @@
+/**
+ * @file i_info.c
+ * @brief System information display command implementation.
+ * @details Implements the 'i' command to display comprehensive system information:
+ *          - Hardware version and FCC compliance notice
+ *          - Firmware version, hash, and build timestamp
+ *          - MCU type, RAM size, flash size, unique ID
+ *          - Storage information (TF card size, free space)
+ *          - Current mode and pin configuration
+ *          - Pin voltages and VOUT/VREG status
+ *          - Frequency measurement if active
+ *          - Binary mode status
+ */
+
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -7,6 +21,22 @@
 #include "ui/ui_term.h"
 #include "ui/ui_cmdln.h"
 #include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
+
+static const char* const usage[] = {
+    "i",
+    "Display system information:%s i",
+};
+
+const bp_command_def_t i_info_def = {
+    .name         = "i",
+    .description  = T_CMDLN_INFO,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 #include "pirate/amux.h"
 #include "pirate/mcu.h"
 #include "pirate/storage.h"
@@ -41,12 +71,14 @@ static const struct ui_help_options options[]={
 // display ui_info_print_info about the buspirate
 // when not in HiZ mode it dumps info about the pins/voltags etc.
 void i_info_handler(struct command_result* res) {
-    // if(ui_help_show(res->help_flag,usage,count_of(usage), &options[0],count_of(options) )) return;
+    if (bp_cmd_help_check(&i_info_def, res->help_flag)) {
+        return;
+    }
     int i;
     amux_sweep();
 
     // Hardware information
-    printf("\r\n%sThis device complies with part 15 of the FCC Rules. Operation is subject to the following two "
+    printf("%sThis device complies with part 15 of the FCC Rules. Operation is subject to the following two "
            "conditions:\r\n(1) this device may not cause harmful interference, and \r\n(2) this device must accept any "
            "interference received, including interference that may cause undesired operation.%s\r\n",
            ui_term_color_info(),
@@ -103,11 +135,20 @@ void i_info_handler(struct command_result* res) {
     }
     
 
+    if(system_config.terminal_ansi_color){
+        //show terminal size if detected
+        printf("Terminal: %s%u%sx%s%u%s\r\n",
+               ui_term_color_num_float(),
+               system_config.terminal_ansi_columns,
+               ui_term_color_reset(),
+               ui_term_color_num_float(),
+               system_config.terminal_ansi_rows,
+               ui_term_color_reset());
+    }
+
     // config file loaded
-    do {
-        const char* string = system_config.config_loaded_from_file ? GET_T(T_LOADED) : GET_T(T_NOT_DETECTED);
-        printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_CONFIG_FILE), ui_term_color_reset(), string);
-    } while (0);
+    const char* string = system_config.config_loaded_from_file ? GET_T(T_LOADED) : GET_T(T_NOT_DETECTED);
+    printf("\r\n%s%s:%s %s\r\n", ui_term_color_info(), GET_T(T_CONFIG_FILE), ui_term_color_reset(), string);
 
     // Current binmode 
     printf("%sActive binmode:%s %s\r\n", ui_term_color_info(), ui_term_color_reset(), binmodes[system_config.binmode_select].binmode_name);

@@ -344,6 +344,7 @@ __flatbuffers_table_as_root(bpio_DataResponse)
 
 __flatbuffers_define_string_field(0, bpio_DataResponse, error, 0)
 __flatbuffers_define_vector_field(1, bpio_DataResponse, data_read, flatbuffers_uint8_vec_t, 0)
+__flatbuffers_define_scalar_field(2, bpio_DataResponse, is_async, flatbuffers_bool, flatbuffers_bool_t, UINT8_C(0))
 typedef uint8_t bpio_RequestPacketContents_union_type_t;
 __flatbuffers_define_integer_type(bpio_RequestPacketContents, bpio_RequestPacketContents_union_type_t, 8)
 __flatbuffers_define_union(flatbuffers_, bpio_RequestPacketContents)

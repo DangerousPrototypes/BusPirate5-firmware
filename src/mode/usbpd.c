@@ -27,7 +27,6 @@ const struct _mode_command_struct usbpd_commands[] = {
   {
     .command="sniff",
     .func=&usbpd_sniff,
-    .description_text=T_I2C_SNIFF,
     .supress_fala_capture=true
   },    
 };
@@ -75,7 +74,7 @@ void usbpd_cleanup(void) {
 void usbpd_help(void) {
   printf("USBPD Plank\r\n");
 
-  ui_help_mode_commands(usbpd_commands, usbpd_commands_count);
+  //ui_help_mode_commands(usbpd_commands, usbpd_commands_count);
 }
 
 void usbpd_settings(void) {

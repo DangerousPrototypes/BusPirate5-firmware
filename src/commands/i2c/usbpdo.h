@@ -1,4 +1,8 @@
-/*
+/**
+ * @file usbpdo.h
+ * @brief FUSB302 USB-PD controller command interface.
+ * @details Provides command to read USB Power Delivery data from FUSB302 chip.
+ *          
  * Portions of this code are adapted from:
  * https://github.com/Ralim/usb-pd
  * 
@@ -18,7 +22,12 @@
  * limitations under the License.
  */
 
+/**
+ * @brief Handler for FUSB302 USB-PD controller.
+ * @param res  Command result structure
+ */
 void fusb302_handler(struct command_result* res);
+extern const struct bp_command_def fusb302_def;
 
 #ifndef FUSB302_DEFINES
 #define FUSB302_DEFINES

@@ -1,3 +1,17 @@
+/**
+ * @file hwspi.c
+ * @brief Hardware SPI peripheral implementation.
+ * @details Uses RP2040/RP2350 PL022 SPI peripheral for high-speed SPI communication.
+ *          Provides buffered I/O integration and multiple frame format support.
+ *          
+ *          Features:
+ *          - Data width: 4-16 bits
+ *          - Clock polarity and phase control
+ *          - Motorola, TI, and Microwire frame formats
+ *          - Full-duplex operation
+ *          - Integrated with bio (buffered I/O) system
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>

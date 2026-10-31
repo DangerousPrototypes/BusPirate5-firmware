@@ -20,6 +20,7 @@
 #include "pirate/hwspi.h"
 #include "fatfs/ff.h"
 #include "ui/ui_hex.h"
+#include "lib/bp_args/bp_cmd.h"
 
 void flash_not_found() {
     printf("not found\r\n");
@@ -218,7 +219,8 @@ bool spiflash_force_dump(uint32_t start_address,
     return true;
 }
 
-bool spiflash_show_hex(uint32_t buf_size,
+bool spiflash_show_hex(const bp_command_def_t *def,
+                      uint32_t buf_size,
                       uint8_t* buf,
                       sfud_flash* flash_info) {
     
@@ -230,7 +232,7 @@ bool spiflash_show_hex(uint32_t buf_size,
         // default to 128mbit if flash is not initialized
         hex_config.max_size_bytes = 16 * 1024 * 1024; // 16 MB
     }
-    ui_hex_get_args_config(&hex_config);
+    ui_hex_get_args_config(def, &hex_config);
     ui_hex_align_config(&hex_config);
     ui_hex_header_config(&hex_config);
 

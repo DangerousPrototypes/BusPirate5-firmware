@@ -1,3 +1,9 @@
+/**
+ * @file jtag.h
+ * @brief JTAG mode interface.
+ * @details Provides JTAG protocol mode for debugging and programming.
+ */
+
 uint32_t jtag_setup(void);
 uint32_t jtag_setup_exc(void);
 void jtag_cleanup(void);

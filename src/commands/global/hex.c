@@ -24,29 +24,44 @@
 #include "ui/ui_help.h"
 #include "pirate/storage.h"
 #include "pirate/mem.h"
-#include "ui/ui_cmdln.h"
-//#include "pirate/storage.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "ui/ui_hex.h"
 
 
 //#define DEF_ROW_SIZE 16
 //#define PRINTABLE(_c) (_c > 0x1f && _c < 0x7f ? _c : '.')
 
-static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <bytes>] [-p (disable pager)] [-a (disable address column)]",
+static const char* const hex_usage[] = { "hex <file> [-s <start address>] [-b <bytes>] [-c (disable pager)] [-q (disable address column)]",
                                          "Print file contents in HEX:%s hex example.bin",
                                          "Print 32 bytes starting at address 0x50:%s hex example.bin -s 0x50 -b 32",
                                          "Disable address and ASCII columns:%s hex example.bin -q",
                                          "press 'x' to quit pager" };
-static const struct ui_help_options hex_options[] = { { 1, "", T_HELP_DISK_HEX }, // section heading
-                                                      { 0, "<file>", T_HELP_DISK_HEX_FILE },
-                                                        { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-                                                        { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
-                                                        { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-                                                        { 0, "-c", T_HELP_DISK_HEX_PAGER_OFF }};
+
+static const bp_command_opt_t hex_opts[] = {
+    UI_HEX_OPTS
+    { 0 }
+};
+
+static const bp_command_positional_t hex_positionals[] = {
+    { "file", "file", T_HELP_GCMD_HEX_FILE, true },
+    { 0 }
+};
+
+const bp_command_def_t hex_def = {
+    .name         = "hex",
+    .description  = T_HELP_DISK_HEX,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = hex_opts,
+    .positionals      = hex_positionals,
+    .positional_count = 1,
+    .usage        = hex_usage,
+    .usage_count  = count_of(hex_usage),
+};
 
 void hex_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, hex_usage, count_of(hex_usage), &hex_options[0], count_of(hex_options))) {
+    if (bp_cmd_help_check(&hex_def, res->help_flag)) {
         return;
     }
 
@@ -55,9 +70,9 @@ void hex_handler(struct command_result* res) {
     char location[32];
 
     //file name
-    if(!cmdln_args_string_by_position(1, sizeof(location), location)){
+    if(!bp_cmd_get_positional_string(&hex_def, 1, location, sizeof(location))){
         //printf("Missing <file name>\r\n\r\n");
-        ui_help_show(true, hex_usage, count_of(hex_usage), &hex_options[0], count_of(hex_options));
+        bp_cmd_help_show(&hex_def);
         res->error = true;
         return;
     }
@@ -69,7 +84,7 @@ void hex_handler(struct command_result* res) {
     }
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= file_size(&fil); // maximum size of the device in bytes
-    if(ui_hex_get_args_config(&hex_config)) goto hex_cleanup; // parse the command line arguments
+    if(ui_hex_get_args_config(&hex_def, &hex_config)) goto hex_cleanup; // parse the command line arguments
     ui_hex_align_config(&hex_config);
     
     //advance to the start address

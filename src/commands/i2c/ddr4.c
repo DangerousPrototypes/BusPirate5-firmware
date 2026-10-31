@@ -39,7 +39,7 @@ Some functions adapted from C++ for the Bus Pirate project by Ian Lesnet Septemb
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "ui/ui_help.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "lib/ms5611/ms5611.h"
 #include "lib/tsl2561/driver_tsl2561.h"
 #include "binmode/fala.h"
@@ -48,6 +48,9 @@ Some functions adapted from C++ for the Bus Pirate project by Ian Lesnet Septemb
 //#include "pirate/storage.h" // File system related
 #include "lib/jep106/jep106.h"
 #include "ui/ui_hex.h"
+
+// Forward declaration — defined at bottom of file
+extern const bp_command_def_t ddr4_def;
 
 #define DDR4_SPD_SIGNITURE 0x12
 #define DDR4_SPD_I2C_ADDR_7BIT 0x50
@@ -400,12 +403,6 @@ bool ddr4_lock_block(uint8_t block_number) {
     if(ddr4_get_lock_status(block_number, &lock_status)) {
         return true; // I2C error
     }
-    #if 0
-    if(ddr4_poll_idle(0x6D)){
-        printf("Error: Timeout waiting for lock operation to complete\r\n");
-        return true; // timeout
-    }
-    #endif
     busy_wait_ms(100); //wait 100ms for the lock to take effect, datasheet suggests 4ms max
     if(!lock_status) {
         printf("Error: Verification failed, block %d is not locked\r\n", block_number);
@@ -423,12 +420,6 @@ bool ddr4_unlock_blocks(void){
         printf("Error: Unlock blocks command failed\r\n");
         return true; // failed to unlock
     }
-    #if 0
-    if(ddr4_poll_idle(0x6D)){
-        printf("Error: Timeout waiting for unlock operation to complete\r\n");
-        return true; // timeout
-    }
-    #endif
     busy_wait_ms(100); //wait 100ms for the unlock to take effect, datasheet suggests 4ms max
     //verify all blocks unlocked
     for(uint8_t block=0; block<4; block++){
@@ -472,7 +463,7 @@ bool ddr4_dump(uint8_t *buffer) {
     // align the start address to 16 bytes, and calculate the end address
     struct hex_config_t hex_config;
     hex_config.max_size_bytes= DDR4_SPD_SIZE; // maximum size of the device in bytes
-    ui_hex_get_args_config(&hex_config);
+    ui_hex_get_args_config(&ddr4_def, &hex_config);
     ui_hex_align_config(&hex_config);
     ui_hex_header_config(&hex_config);
     //read SPD
@@ -767,16 +758,6 @@ void ddr4_spd_print_manufacturing_info(const ddr4_spd_manufacturing_info_t* mfg)
     printf("DRAM Stepping: 0x%02X\r\n", mfg->dram_stepping);
     
     // Manufacturer Specific Data (show first few bytes)
-    #if 0
-    printf("Manufacturer Specific Data: ");
-    for (int i = 0; i < 8 && i < 29; i++) {
-        printf("0x%02X ", mfg->manufacturer_specific_data[i]);
-    }
-    if (29 > 8) {
-        printf("... (%d more bytes)", 29 - 8);
-    }
-    printf("\r\n");
-    #endif
     
     // Check reserved bytes
     if (mfg->reserved[0] != 0x00 || mfg->reserved[1] != 0x00) {
@@ -827,65 +808,23 @@ bool ddr4_probe(uint8_t *buffer) {
 
     // Print manufacturing information
     ddr4_decode_manufacturing_info(buffer);    
-#if 0
-    // read 128 bytes from the DDR5 SPD Volatile Memory
-    // cast it to the ddr5_spd_volatile_t structure
-    //detect if spd present
-    if(ddr5_detect_spd_quick()) return true; //check if the device is DDR5 SPD
-
-    if(ddr5_read_pages_128bytes(false, 0, 1, buffer)) return true; //read volatile memory, start at 0x00
-    
-    ddr5_decode_volatile_memory(buffer); //decode the volatile memory
-
-    //read 1024 bytes from the DDR5 SPD NVM
-    if(ddr5_read_pages_128bytes(true, 0, 8, buffer)) return true; //read EEPROM page 0-7, start at 0x00
-
-    printf("\r\nSPD EEPROM JEDEC Data blocks 0-7:\r\n");
-    //if(ddr5_read_pages_128bytes(true, 0, 4, buffer)) return true; //read EEPROM page 0-4, start at 0x00
-    if(ddr5_nvm_jedec_crc(buffer)) return true; //check CRC of the first 512 bytes
-    if(ddr5_nvm_jedec_decode_data(buffer)) return true; //decode the first 512 bytes of the EEPROM
-
-    printf("\r\nSPD EEPROM JEDEC Manufacturing Information blocks 8-9:\r\n");
-    //if(ddr5_read_pages_128bytes(true, 0b100, 4, buffer)) return true; //read EEPROM page 5-8, start at 0x00
-    if(ddr5_nvm_jedec_decode_manuf(&buffer[0x200])) return true; //decode the manufacturing information
-    if(ddr5_nvm_search(buffer)) return true; //search for the end user programmable area
-#endif
     return false;
 }
 
 static const char* const usage[] = {
-    "ddr4 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-b <block number>|<bytes>] [-s <start address>] [-h(elp)]",
+    "ddr4 [probe|dump|write|read|verify|lock|unlock|crc]\r\n\t[-f <file>] [-B <block>] [-b <bytes>] [-s <start>] [-h(elp)]",
     "Probe DDR4 SPD:%s ddr4 probe",
     "Show DDR4 SPD contents:%s ddr4 dump",
     "Show 32 bytes starting at address 0x50:%s ddr4 dump -s 0x50 -b 32",
     "Write SPD from file, verify:%s ddr4 write -f example.bin",
     "Read SPD to file, verify:%s ddr4 read -f example.bin",
     "Verify against file:%s ddr4 verify -f example.bin",
-    "Show block lock status:%s ddr4 lock -or- ddr4 unlock",
-    "Lock a block 0-3:%s ddr4 lock -b 0",
+    "Show block lock status:%s ddr4 lock",
+    "Lock a block 0-3:%s ddr4 lock -B 0",
     "Unlock all blocks 0-3:%s ddr4 unlock",
     "Check/generate CRC for JEDEC bytes 0-125:%s ddr4 crc -f example.bin",
     "Patch/update CRC in file:%s ddr4 patch -f example.bin",
     "DDR4 write file **MUST** be exactly 512 bytes long"
-};
-
-static const struct ui_help_options options[] = {
-    { 1, "", T_HELP_DDR4 },               // flash command help  
-    { 0, "probe", T_HELP_DDR4_PROBE },    // probe
-    { 0, "dump", T_HELP_DDR4_DUMP },      // dump
-    { 0, "write", T_HELP_DDR4_WRITE },    // write
-    { 0, "read", T_HELP_DDR4_READ },      // read
-    { 0, "verify", T_HELP_DDR4_VERIFY },  // verify
-    { 0, "lock", T_HELP_DDR4_LOCK },      // lock
-    { 0, "unlock", T_HELP_DDR4_UNLOCK },  // unlock
-    { 0, "crc", T_HELP_DDR4_CRC },        // crc
-    { 0, "patch", T_HELP_DDR4_PATCH },    // patch
-    { 0, "-f", T_HELP_DDR4_FILE_FLAG },   // file to read/write/verify
-    { 0, "-b", T_HELP_DDR4_BLOCK_FLAG },  
-    { 0, "-s", UI_HEX_HELP_START }, // start address for dump
-    { 0, "-b", UI_HEX_HELP_BYTES }, // bytes to dump
-    { 0, "-q", UI_HEX_HELP_QUIET}, // quiet mode, disable address and ASCII columns
-    { 0, "-h", T_HELP_HELP }               // help flag
 };
 
 enum ddr4_actions_enum {
@@ -900,20 +839,46 @@ enum ddr4_actions_enum {
     DDR4_PATCH
 };
 
-static const struct cmdln_action_t ddr4_actions[] = {
-    { DDR4_PROBE, "probe" },
-    { DDR4_DUMP, "dump" },
-    { DDR4_READ, "read" },
-    { DDR4_WRITE, "write" },
-    { DDR4_VERIFY, "verify" },
-    { DDR4_LOCK, "lock" },
-    { DDR4_UNLOCK, "unlock" },
-    { DDR4_CRC, "crc" },
-    { DDR4_PATCH, "patch" }
+static const bp_command_action_t ddr4_action_defs[] = {
+    { DDR4_PROBE,  "probe",  T_HELP_DDR4_PROBE },
+    { DDR4_DUMP,   "dump",   T_HELP_DDR4_DUMP },
+    { DDR4_READ,   "read",   T_HELP_DDR4_READ },
+    { DDR4_WRITE,  "write",  T_HELP_DDR4_WRITE },
+    { DDR4_VERIFY, "verify", T_HELP_DDR4_VERIFY },
+    { DDR4_LOCK,   "lock",   T_HELP_DDR4_LOCK },
+    { DDR4_UNLOCK, "unlock", T_HELP_DDR4_UNLOCK },
+    { DDR4_CRC,    "crc",    T_HELP_DDR4_CRC },
+    { DDR4_PATCH,  "patch",  T_HELP_DDR4_PATCH },
+};
+
+// Constraint for -b block flag: DDR4 has blocks 0-3
+static const bp_val_constraint_t ddr4_block_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 0, .max = 3, .def = 0 },
+    .prompt = 0,
+};
+
+static const bp_command_opt_t ddr4_opts[] = {
+    { "file",  'f', BP_ARG_REQUIRED, "file",  T_HELP_DDR4_FILE_FLAG },
+    { "block", 'B', BP_ARG_REQUIRED, "block", T_HELP_DDR4_BLOCK_FLAG, &ddr4_block_range },
+    { "start", 's', BP_ARG_REQUIRED, "addr",  UI_HEX_HELP_START },
+    { "bytes", 'b', BP_ARG_REQUIRED, "count", UI_HEX_HELP_BYTES },
+    { "quiet", 'q', BP_ARG_NONE,     NULL,      UI_HEX_HELP_QUIET },
+    { 0 }
+};
+
+const bp_command_def_t ddr4_def = {
+    .name         = "ddr4",
+    .description  = T_HELP_DDR4,
+    .actions      = ddr4_action_defs,
+    .action_count = count_of(ddr4_action_defs),
+    .opts         = ddr4_opts,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
 };
 
 void ddr4_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&ddr4_def, res->help_flag)) {
         return;
     }
     if (!ui_help_sanity_check(true,0x00)) {
@@ -921,8 +886,8 @@ void ddr4_handler(struct command_result* res) {
     }
 
     uint32_t action;
-    if(cmdln_args_get_action(ddr4_actions, count_of(ddr4_actions), &action)){
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+    if(!bp_cmd_get_action(&ddr4_def, &action)){
+        bp_cmd_help_show(&ddr4_def);
         return;        
     }
 
@@ -930,7 +895,7 @@ void ddr4_handler(struct command_result* res) {
     FIL file_handle;                                                  // file handle
     if ((action == DDR4_WRITE || action == DDR4_READ || action== DDR4_VERIFY || action == DDR4_CRC || action == DDR4_PATCH)) {
         
-        if(file_get_args(file, sizeof(file))){; // get the file name from the command line arguments
+        if(!bp_file_get_name_flag(&ddr4_def, 'f', file, sizeof(file))) {
             return;
         }
 
@@ -943,23 +908,14 @@ void ddr4_handler(struct command_result* res) {
         if(file_open(&file_handle, file, file_status)) return; // create the file, overwrite if it exists
     }
     
-    command_var_t arg;
     uint32_t block_flag;
     bool lock_update=false;
     if(action == DDR4_LOCK || action == DDR4_UNLOCK) {
-        if(!cmdln_args_find_flag_uint32('b', &arg, &block_flag)){ // block to lock/unlock
-            if(arg.has_arg){
-                printf("Missing block number: -b <block number>\r\n");
-                return;
-            }else{ //no block, just show current status
-                lock_update = false; //we will not update the lock bits, just read them
-            }
-        }else if(block_flag > 3) {
-            printf("Block number must be between 0 and 3\r\n");
-            return;
-        }else{
-            lock_update = true; //we will update the lock bits
+        bp_cmd_status_t bs = bp_cmd_flag(&ddr4_def, 'B', &block_flag);
+        if(bs == BP_CMD_INVALID) {
+            return; // range error already printed by constraint
         }
+        lock_update = (bs == BP_CMD_OK); // only update if user explicitly specified a block
     }
 
     fala_start_hook();  

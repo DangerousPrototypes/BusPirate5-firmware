@@ -5,14 +5,48 @@
 #include "system_config.h"
 #include "command_struct.h"
 #include "msc_disk.h"
-#include "ui/ui_statusbar.h"
+#include "ui/ui_toolbar.h"
+#include "lib/bp_args/bp_cmd.h"
+
+static const char* const reboot_usage[] = {
+    "reboot",
+    "Reboot the Bus Pirate:%s reboot",
+};
+
+static const char* const bootloader_usage[] = {
+    "$",
+    "Jump to bootloader for firmware updates:%s $",
+};
+
+const bp_command_def_t reboot_def = {
+    .name         = "reboot",
+    .description  = T_CMDLN_REBOOT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = reboot_usage,
+    .usage_count  = count_of(reboot_usage),
+};
+
+const bp_command_def_t bootloader_def = {
+    .name         = "$",
+    .description  = T_CMDLN_BOOTLOAD,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = bootloader_usage,
+    .usage_count  = count_of(bootloader_usage),
+};
 
 void cmd_mcu_reset(void) {
     mcu_reset();
 }
 
 void cmd_mcu_reboot_handler(struct command_result* res) {
-    ui_statusbar_deinit();
+    if (bp_cmd_help_check(&reboot_def, res->help_flag)) {
+        return;
+    }
+    toolbar_teardown_all();
     busy_wait_ms(100);
     cmd_mcu_reset();
 }
@@ -22,6 +56,9 @@ void cmd_mcu_jump_to_bootloader(void) {
 }
 
 void cmd_mcu_jump_to_bootloader_handler(struct command_result* res) {
+    if (bp_cmd_help_check(&bootloader_def, res->help_flag)) {
+        return;
+    }
 
     printf("Jump to bootloader for firmware upgrades\r\n\r\n%s\r\n", BP_HARDWARE_VERSION);
     printf("Firmware download:\r\nhttps://forum.buspirate.com/t/bus-pirate-5-auto-build-main-branch/20/999999\r\n");
@@ -48,7 +85,7 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result* res) {
         return;
     }
     printf("See you on the other side!");
-    ui_statusbar_deinit();
+    toolbar_teardown_all();
     eject_usbmsdrive();
     busy_wait_ms(200);
     cmd_mcu_jump_to_bootloader();

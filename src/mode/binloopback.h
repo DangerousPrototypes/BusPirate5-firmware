@@ -1,6 +1,12 @@
-void binloopback_open(struct _bytecode* result, struct _bytecode* next);      // start
-void binloopback_open_read(struct _bytecode* result, struct _bytecode* next); // start with read
-void binloopback_close(struct _bytecode* result, struct _bytecode* next);     // stop
+/**
+ * @file binloopback.h
+ * @brief Binary mode loopback test mode interface.
+ * @details Provides loopback mode for testing binary protocol.
+ */
+
+void binloopback_open(struct _bytecode* result, struct _bytecode* next);
+void binloopback_open_read(struct _bytecode* result, struct _bytecode* next);
+void binloopback_close(struct _bytecode* result, struct _bytecode* next);
 void binloopback_write(struct _bytecode* result, struct _bytecode* next);
 void binloopback_read(struct _bytecode* result, struct _bytecode* next);
 void binloopback_macro(uint32_t macro);

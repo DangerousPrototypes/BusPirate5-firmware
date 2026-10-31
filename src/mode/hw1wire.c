@@ -1,3 +1,23 @@
+/**
+ * @file hw1wire.c
+ * @brief Hardware 1-Wire mode implementation.
+ * @details Implements 1-Wire (Dallas/Maxim) protocol using PIO-based timing control.
+ *          Features:
+ *          - Standard speed (15.4kHz) and overdrive (125kHz) support
+ *          - ROM search algorithm for device enumeration
+ *          - DS18B20 temperature sensor support
+ *          - 1-Wire EEPROM support
+ *          - Automatic device discovery
+ *          
+ *          Pin mapping:
+ *          - OWD: One-wire data (bidirectional, open-drain)
+ *          
+ *          Protocol features:
+ *          - Reset/presence detection
+ *          - ROM commands (Search, Read, Match, Skip)
+ *          - CRC8 verification
+ */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
@@ -29,19 +49,16 @@
 
 // command configuration
 const struct _mode_command_struct hw1wire_commands[] = {
-    {   .command="scan", 
-        .func=&onewire_test_romsearch, 
-        .description_text=T_HELP_1WIRE_SCAN, 
+    {   .func=&onewire_test_romsearch,
+        .def=&scan_1wire_def,
         .supress_fala_capture=true
     },
-    {   .command="eeprom", 
-        .func=&onewire_eeprom_handler, 
-        .description_text=T_HELP_1WIRE_EEPROM,
+    {   .func=&onewire_eeprom_handler,
+        .def=&eeprom_1wire_def,
         .supress_fala_capture=true
     },
-    {   .command="ds18b20", 
-        .func=&onewire_test_ds18b20_conversion, 
-        .description_text=T_HELP_1WIRE_DS18B20,
+    {   .func=&onewire_test_ds18b20_conversion,
+        .def=&ds18b20_def,
         .supress_fala_capture=true
     },  
 };

@@ -1,11 +1,21 @@
+/**
+ * @file button.c
+ * @brief Hardware button (EXT1) implementation with press detection.
+ * @details Implements GPIO interrupt-based button handling with timing-based
+ *          press type detection (short vs long). Handles platform differences
+ *          between RP2040 and RP2350 pull resistor configurations.
+ *          
+ *          Timing thresholds:
+ *          - Short press: <550ms
+ *          - Long press: ≥550ms
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "system_config.h"
 #include "pirate/button.h"
-// #include "hardware/gpio.h"
-// #include "hardware/sync.h"
 #include "hardware/structs/iobank0.h"
 
 #define BP_BUTTON_SHORT_PRESS_MS 550

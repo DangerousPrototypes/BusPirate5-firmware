@@ -1,3 +1,20 @@
+/**
+ * @file hwuart_pio.c
+ * @brief UART protocol PIO implementation.
+ * @details Implements full-duplex UART using two PIO state machines:
+ *          - SM0: RX (receive)
+ *          - SM1: TX (transmit)
+ *          
+ *          Supports:
+ *          - Data bits: 5-8
+ *          - Parity: none, even, odd
+ *          - Stop bits: 1 or 2
+ *          - Configurable baud rates
+ *          
+ *          The PIO programs handle framing automatically, with parity
+ *          and extra stop bits calculated and programmed at init time.
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -8,7 +25,7 @@
 #include "ui/ui_term.h"
 #include "ui/ui_help.h"
 #include "bytecode.h"
-#include "mode/hwuart.h"
+#include "mode/hwhduart.h"
 #include "pirate/button.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
@@ -18,22 +35,17 @@
 
 static struct _pio_config pio_config_rx;
 static struct _pio_config pio_config_tx;
+static const hduart_mode_config *cfg;
 
-uint8_t hwuart_data_bits;
-uint8_t hwuart_parity;
-uint8_t hwuart_stop_bits;
-
-void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint32_t baud) {
-    hwuart_data_bits = data_bits;
-    hwuart_parity = parity;
-    hwuart_stop_bits = stop_bits;
+void hwuart_pio_init(const hduart_mode_config *mode_cfg) {
+    cfg = mode_cfg;
 
     // calculate the number of bits to send, minus the final stop bit which is handled in hardware
-    uint8_t bits = data_bits;
-    if (hwuart_parity != UART_PARITY_NONE) {
+    uint8_t bits = cfg->data_bits;
+    if (cfg->parity != UART_PARITY_NONE) {
         bits++;
     }
-    if (hwuart_stop_bits == 2) {
+    if (cfg->stop_bits == 2) {
         bits++;
     }
     bits--;
@@ -48,7 +60,7 @@ void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint3
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_rx.pio), pio_config_rx.sm, pio_config_rx.offset);
 #endif
     uart_rx_program_init(
-        pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, bio2bufiopin[M_UART_RXTX], bits, baud);
+        pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset, bio2bufiopin[M_UART_RXTX], bits, cfg->baudrate);
 
     // success = pio_claim_free_sm_and_add_program_for_gpio_range(&uart_tx_program, &pio_config_tx.pio,
     // &pio_config_tx.sm, &pio_config_tx.offset, bio2bufiopin[M_UART_RXTX], 1, true); hard_assert(success);
@@ -60,12 +72,32 @@ void hwuart_pio_init(uint8_t data_bits, uint8_t parity, uint8_t stop_bits, uint3
     printf("PIO: pio=%d, sm=%d, offset=%d\r\n", PIO_NUM(pio_config_tx.pio), pio_config_tx.sm, pio_config_tx.offset);
 #endif
     uart_tx_program_init(
-        pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, bio2bufdirpin[M_UART_RXTX], bits, baud);
+        pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, bio2bufiopin[M_UART_RXTX], bits, cfg->baudrate);
+
+    // uart_tx_program_init sets gpio_set_outover(INVERT) on the shared RXTX pin.
+    // Clear it — output inversion shouldn't affect PIO input, but on a shared
+    // half-duplex pin it's safer to remove it when we're not actively transmitting.
+    gpio_set_outover(bio2bufiopin[M_UART_RXTX], GPIO_OVERRIDE_NORMAL);
+
+    if (cfg->listen) {
+        // Listen mode: release the data pin so RX can read incoming data.
+        // PIO pin directions are OR'd across all SMs, so TX setting it as output
+        // would block RX. Set TX SM's pindir to input; we'll reclaim it during writes.
+        pio_sm_set_consecutive_pindirs(pio_config_tx.pio, pio_config_tx.sm, bio2bufiopin[M_UART_RXTX], 1, false);
+        pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
+        // Buffer stays in default input mode (set by bio_init)
+    } else {
+        // Master mode: TX SM drives the pin idle-high, disable TX SM until we need to send.
+        // Buffer will be set to output by the caller (hwhduart_setup_exc).
+        pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
+    }
 }
 
 void hwuart_pio_deinit(void) {
     // pio_remove_program_and_unclaim_sm(&uart_rx_program, pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset);
     // pio_remove_program_and_unclaim_sm(&uart_tx_program, pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset);
+    pio_sm_set_enabled(pio_config_rx.pio, pio_config_rx.sm, false);
+    pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
     pio_remove_program(pio_config_rx.pio, pio_config_rx.program, pio_config_rx.offset);
     pio_remove_program(pio_config_tx.pio, pio_config_tx.program, pio_config_tx.offset);
 }
@@ -74,11 +106,18 @@ bool hwuart_pio_read(uint32_t* raw, uint8_t* cooked) {
     if (pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
         return false;
     }
-    // 8-bit read from the uppermost byte of the FIFO, as data is left-justified
+    // Data is right-shifted into ISR, so bits occupy [31 : 32-total_bits].
+    // Compute total bits sampled (data + optional parity + optional extra stop).
     (*raw) = pio_config_rx.pio->rxf[pio_config_rx.sm];
-    // TODO: change this based on UART settings
-    // Detect parity error?
-    (*cooked) = (uint8_t)((*raw) >> 22); // MSB is the parity bit...
+    uint8_t total_bits = cfg->data_bits;
+    if (cfg->parity != UART_PARITY_NONE) {
+        total_bits++;
+    }
+    if (cfg->stop_bits == 2) {
+        total_bits++;
+    }
+    // Shift data to low bits; uint8_t cast strips parity/extra stop if present
+    (*cooked) = (uint8_t)((*raw) >> (32 - total_bits));
     return true;
 }
 
@@ -102,28 +141,45 @@ void hwuart_pio_write(uint32_t data) {
     //  PIO shifts data to right (LSB of value first)
     //  in the FIFO the data should be stopbit2|parity bit|data bits
     //  one stop bit is handled in the state machine
-    uint8_t bits = hwuart_data_bits;
-    if (hwuart_parity == UART_PARITY_ODD) { // add a parity bit
+    uint8_t bits = cfg->data_bits;
+    if (cfg->parity == UART_PARITY_ODD) { // add a parity bit
         if (!getParity(data)) {
             data |= (0b1 << bits);
         }
         bits++;
-        // printf("even ");
-    } else if (hwuart_parity == UART_PARITY_EVEN) {
+    } else if (cfg->parity == UART_PARITY_EVEN) {
         if (getParity(data)) {
             data |= (0b1 << bits);
         }
         bits++;
-        // printf("odd ");
     }
-    if (hwuart_stop_bits == 2) {
+    if (cfg->stop_bits == 2) {
         data |= (0b1 << bits); // add a stop bit in the case of 2 stop bits
-        // printf("2 stop ");
     }
-    // printf("stop bit: %d parity bit: %d data bits: %d\n", hwuart_stop_bits, hwuart_parity, hwuart_data_bits);
-    pio_sm_set_enabled(
-        pio_config_rx.pio, pio_config_rx.sm, false); // pause the RX state machine? maybe just discard the byte?
+
+    // Half-duplex: switch pin to output for TX, then back for RX
+    pio_sm_set_enabled(pio_config_rx.pio, pio_config_rx.sm, false);
+
+    if (cfg->listen) {
+        // Listen mode: need to claim the pin and buffer for TX
+        bio_buf_output(M_UART_RXTX);
+        pio_sm_set_consecutive_pindirs(pio_config_tx.pio, pio_config_tx.sm, bio2bufiopin[M_UART_RXTX], 1, true);
+    }
+
+    // Restore output inversion for TX (the TX PIO program relies on it)
+    gpio_set_outover(bio2bufiopin[M_UART_RXTX], GPIO_OVERRIDE_INVERT);
+    pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, true);
     pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, data);
-    pio_hwuart_wait_idle(pio_config_tx.pio, pio_config_tx.sm);     // wait for the TX state machine to finish
-    pio_sm_set_enabled(pio_config_rx.pio, pio_config_rx.sm, true); // enable the RX state machine again
+    pio_hwuart_wait_idle(pio_config_tx.pio, pio_config_tx.sm);
+    pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
+    // Clear output inversion so it doesn't interfere with RX on the shared pin
+    gpio_set_outover(bio2bufiopin[M_UART_RXTX], GPIO_OVERRIDE_NORMAL);
+
+    if (cfg->listen) {
+        // Listen mode: release pin direction and buffer back to input
+        pio_sm_set_consecutive_pindirs(pio_config_tx.pio, pio_config_tx.sm, bio2bufiopin[M_UART_RXTX], 1, false);
+        bio_buf_input(M_UART_RXTX);
+    }
+
+    pio_sm_set_enabled(pio_config_rx.pio, pio_config_rx.sm, true);
 }

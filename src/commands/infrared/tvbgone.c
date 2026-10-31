@@ -44,6 +44,7 @@ Ported to RP2040 by Ian Lesnet 2024 (see you in another 15 years?)
 #include "hardware/clocks.h"
 #include "pirate/bio.h"
 #include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
 
 
 const unsigned char num_NAcodes = NUM_NA_CODES; //NUM_ELEM(NApowerCodes);
@@ -118,13 +119,18 @@ static const char* const usage[] = {
 	"Based on TV B Gone by Mitch Altman and a 2009 kit version by Limor Fried",
 };
 
-static const struct ui_help_options options[] = {
-	{ 1, "", T_IR_CMD_TV_BGONE },    //Transmit IR signals (aIR format)
-    { 0, "-h", T_HELP_FLAG },			//Show help
+const bp_command_def_t tvbgone_def = {
+	.name         = "tvbgone",
+	.description  = T_IR_CMD_TV_BGONE,
+	.actions      = NULL,
+	.action_count = 0,
+	.opts         = NULL,
+	.usage        = usage,
+	.usage_count  = count_of(usage),
 };
 
 void tvbgone_player(struct command_result *res){
-	if (ui_help_show(res->help_flag, usage, count_of(usage), options, count_of(options))) {
+	if (bp_cmd_help_check(&tvbgone_def, res->help_flag)) {
         return;
     }
 

@@ -15,6 +15,7 @@
 #include "ui/ui_parse.h"
 #include "ui/ui_term.h"
 #include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 #include "string.h"
 #include "syntax.h"
 #include "pirate/intercore_helpers.h"
@@ -66,6 +67,8 @@ SYNTAX_STATUS ui_process_syntax(void) {
     return result;
 }
 
+// macros are deprecated
+#if 0
 bool ui_process_macro(void) {
     uint32_t temp;
     prompt_result result;
@@ -79,9 +82,11 @@ bool ui_process_macro(void) {
     }
     return false;
 }
+#endif 
 
 //returns error = true or false
 bool ui_process_commands(void) {
+    printf("\r\n");  // End the input line — dispatch owns pre/post framing
     struct _command_info_t cp;
     cp.nextptr = 0;
 
@@ -98,9 +103,11 @@ bool ui_process_commands(void) {
             case '}':
                 return (ui_process_syntax()==SSTATUS_ERROR)?true:false; // first character is { [ or >, process as syntax
                 break;
+            #if 0 // macros are deprecated
             case '(':
                 return ui_process_macro(); // first character is (, mode macro
                 break;
+            #endif
         }
         // process as a command
         char command_string[MAX_COMMAND_LENGTH];
@@ -126,16 +133,8 @@ bool ui_process_commands(void) {
                 user_cmd_id = i;
                 command_type = GLOBAL;
                 // global help handler (optional, set config in commands.c)
-                if (cmdln_args_find_flag('h')) {
-                    if (commands[user_cmd_id].help_text != 0x00) {
-                        printf("%s%s%s\r\n",
-                               ui_term_color_info(),
-                               GET_T(commands[user_cmd_id].help_text),
-                               ui_term_color_reset());
-                        return false;
-                    } else { // let app know we requested help
-                        result.help_flag = true;
-                    }
+                if (bp_cmd_has_help_flag()) {
+                    result.help_flag = true;
                 }
 
                 if (command_type == GLOBAL && system_config.mode == HIZ && !commands[user_cmd_id].allow_hiz &&
@@ -152,11 +151,12 @@ bool ui_process_commands(void) {
         if (!command_type) {
             if (modes[system_config.mode].mode_commands_count) {
                 for (int i = 0; i < *modes[system_config.mode].mode_commands_count; i++) {
-                    if (strcmp(command_string, modes[system_config.mode].mode_commands[i].command) == 0) {
+                    if (modes[system_config.mode].mode_commands[i].def && 
+                        strcmp(command_string, modes[system_config.mode].mode_commands[i].def->name) == 0) {
                         user_cmd_id = i;
                         command_type = MODE;
                         // mode help handler
-                        if (cmdln_args_find_flag('h')) {
+                        if (bp_cmd_has_help_flag()) {
                             // mode commands must supply their own help text
                             result.help_flag = true;
                         }
@@ -194,6 +194,8 @@ bool ui_process_commands(void) {
                     goto cmd_ok;
                 }
             }
+
+            //nothing in this branch actually uses this
             if (modes[system_config.mode].protocol_command) {
                 if (modes[system_config.mode].protocol_command(&result)) {
                     goto cmd_ok;

@@ -1,4 +1,19 @@
 /**
+ * @file hw3wire_pio.c
+ * @brief 3-Wire (SPI) protocol PIO implementation.
+ * @details PIO-based SPI master with configurable clock frequency and phase.
+ *          Provides full-duplex SPI communication with manual clock control
+ *          for debugging and custom protocols.
+ *          
+ *          Features:
+ *          - Configurable frequency
+ *          - Full-duplex transfer
+ *          - Manual clock ticking
+ *          - Direct pin manipulation
+ * @copyright Copyright (c) 2021 Raspberry Pi (Trading) Ltd. (BSD-3-Clause)
+ */
+
+/**
  * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
  *
  * SPDX-License-Identifier: BSD-3-Clause

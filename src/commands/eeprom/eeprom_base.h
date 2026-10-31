@@ -1,7 +1,29 @@
+/**
+ * @file eeprom_base.h
+ * @brief EEPROM base definitions and utilities.
+ * @details Provides common EEPROM device definitions, HAL abstraction, and utility functions.
+ */
+
 #define EEPROM_DEBUG 0
 #define EEPROM_ADDRESS_PAGE_SIZE 256 // size of the EEPROM address page in bytes
 
+struct bp_command_def;
+typedef struct bp_command_def bp_command_def_t;
+
 struct eeprom_hal_t;
+
+/**
+ * @brief Callback interface for UI-agnostic output from EEPROM operations.
+ * @details When eeprom_info.ui is NULL, functions fall back to printf/print_progress.
+ *          GUI front-ends provide implementations that render into the alt-screen.
+ */
+typedef struct eeprom_ui_ops {
+    void (*progress)(uint32_t current, uint32_t total, void *ctx);
+    void (*message)(const char *msg, void *ctx);
+    void (*error)(const char *msg, void *ctx);
+    void (*warning)(const char *msg, void *ctx);
+    void *ctx;  /**< opaque pointer passed to every callback (e.g. GUI state) */
+} eeprom_ui_ops_t;
 
 struct eeprom_device_t {
     char name[9];
@@ -24,11 +46,12 @@ struct eeprom_info{
     uint32_t protect_bits;
     uint32_t protect_wpen_bit;
     FIL file_handle;     // file handle
-    char file_name[13]; // file to read/write/verify
+    char file_name[32]; // file to read/write/verify (absolute path)
     bool verify_flag; // verify flag
     bool protect_blocks_flag;
     bool protect_test_flag;
     bool protect_wpen_flag;
+    const eeprom_ui_ops_t *ui; /**< UI callbacks, NULL = default printf */
 };
 
 struct eeprom_hal_t {
@@ -45,17 +68,157 @@ enum eeprom_read_action{
     EEPROM_VERIFY_BUFFER
 };
 
+/**
+ * @brief Display list of supported EEPROM devices.
+ * @param eeprom_devices  Array of EEPROM device definitions
+ * @param count           Number of devices in array
+ */
 void eeprom_display_devices(const struct eeprom_device_t *eeprom_devices, uint8_t count);
+
+/**
+ * @brief Get total number of address blocks in EEPROM.
+ * @param eeprom  EEPROM information structure
+ * @return        Total number of blocks
+ */
 uint32_t eeprom_get_address_blocks_total(struct eeprom_info *eeprom);
+
+/**
+ * @brief Get size of address block in EEPROM.
+ * @param eeprom  EEPROM information structure
+ * @return        Block size in bytes
+ */
 uint32_t eeprom_get_address_block_size(struct eeprom_info *eeprom);
+
+/**
+ * @brief Get block select bits and address array for EEPROM address.
+ * @param eeprom             EEPROM information structure
+ * @param address            Target address
+ * @param block_select_bits  Output block select bits
+ * @param address_array      Output address byte array
+ * @return                   true on success
+ */
 bool eeprom_get_address(struct eeprom_info *eeprom, uint32_t address, uint8_t *block_select_bits, uint8_t *address_array);
-bool eeprom_dump(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size);
+
+/**
+ * @brief Dump EEPROM contents to buffer.
+ * @param eeprom    EEPROM information structure
+ * @param buf       Output buffer
+ * @param buf_size  Buffer size in bytes
+ * @return          true on success
+ */
+struct bp_command_def;
+bool eeprom_dump(const struct bp_command_def *def, struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size);
+
+/**
+ * @brief Write data to EEPROM.
+ * @param eeprom          EEPROM information structure
+ * @param buf             Data buffer
+ * @param buf_size        Buffer size in bytes
+ * @param write_from_buf  true to write from buffer, false from file
+ * @return                true on success
+ */
 bool eeprom_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, bool write_from_buf);
+
+/**
+ * @brief Read data from EEPROM.
+ * @param eeprom           EEPROM information structure
+ * @param buf              Data buffer
+ * @param buf_size         Buffer size in bytes
+ * @param verify_buf       Verify buffer
+ * @param verify_buf_size  Verify buffer size
+ * @param action           Read action (file/verify/buffer)
+ * @return                 true on success
+ */
 bool eeprom_read(struct eeprom_info *eeprom, char *buf, uint32_t buf_size, char *verify_buf, uint32_t verify_buf_size, enum eeprom_read_action action);
 
-// action functions, high level
+/**
+ * @brief Erase EEPROM (write all 0xFF).
+ * @param eeprom           EEPROM information structure
+ * @param buf              Working buffer
+ * @param buf_size         Buffer size
+ * @param verify_buf       Verify buffer
+ * @param verify_buf_size  Verify buffer size
+ * @param verify           true to verify erase
+ * @return                 true on success
+ */
 bool eeprom_action_erase(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size, bool verify);
+
+/**
+ * @brief Test EEPROM read/write functionality.
+ * @param eeprom           EEPROM information structure
+ * @param buf              Working buffer
+ * @param buf_size         Buffer size
+ * @param verify_buf       Verify buffer
+ * @param verify_buf_size  Verify buffer size
+ * @return                 true on success
+ */
 bool eeprom_action_test(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size);
+
+/**
+ * @brief Write file to EEPROM.
+ * @param eeprom           EEPROM information structure
+ * @param buf              Working buffer
+ * @param buf_size         Buffer size
+ * @param verify_buf       Verify buffer
+ * @param verify_buf_size  Verify buffer size
+ * @param verify           true to verify write
+ * @return                 true on success
+ */
 bool eeprom_action_write(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size, bool verify);
+
+/**
+ * @brief Read EEPROM to file.
+ * @param eeprom           EEPROM information structure
+ * @param buf              Working buffer
+ * @param buf_size         Buffer size
+ * @param verify_buf       Verify buffer
+ * @param verify_buf_size  Verify buffer size
+ * @param verify           true to verify read
+ * @return                 true on success
+ */
 bool eeprom_action_read(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size, bool verify);
+
+/**
+ * @brief Verify EEPROM contents against file.
+ * @param eeprom           EEPROM information structure
+ * @param buf              Working buffer
+ * @param buf_size         Buffer size
+ * @param verify_buf       Verify buffer
+ * @param verify_buf_size  Verify buffer size
+ * @return                 true on success
+ */
 bool eeprom_action_verify(struct eeprom_info *eeprom, uint8_t *buf, uint32_t buf_size, uint8_t *verify_buf, uint32_t verify_buf_size);
+
+/**
+ * @brief Write data from a large source buffer to EEPROM.
+ * @details Unlike eeprom_write(write_from_buf=true) which repeats the same
+ *          block for every address, this reads sequential chunks from src.
+ * @param eeprom      EEPROM information structure
+ * @param src         Source data buffer (may be larger than work_buf)
+ * @param src_size    Source data size in bytes
+ * @param work_buf    Working buffer (>= EEPROM_ADDRESS_PAGE_SIZE)
+ * @param work_buf_size Working buffer size
+ * @return            false on success, true on error
+ */
+bool eeprom_write_from_buffer(struct eeprom_info *eeprom, const uint8_t *src, uint32_t src_size,
+                              uint8_t *work_buf, uint32_t work_buf_size);
+
+/**
+ * @brief Verify EEPROM contents against a large reference buffer.
+ * @param eeprom        EEPROM information structure
+ * @param ref           Reference data buffer
+ * @param ref_size      Reference data size in bytes
+ * @param work_buf      Working buffer (>= EEPROM_ADDRESS_PAGE_SIZE)
+ * @param work_buf_size Working buffer size
+ * @return              false on success, true on error (mismatch)
+ */
+bool eeprom_verify_against_buffer(struct eeprom_info *eeprom, const uint8_t *ref, uint32_t ref_size,
+                                  uint8_t *work_buf, uint32_t work_buf_size);
+
+/**
+ * @brief Confirm destructive action with user.
+ * @details Checks for -y flag on the command line via the command definition.
+ * @param def  Command definition (used to check -y flag)
+ * @return true if user confirms (or -y present), false if aborted
+ */
+bool eeprom_confirm_action(const bp_command_def_t *def);

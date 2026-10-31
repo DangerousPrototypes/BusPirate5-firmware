@@ -1,0 +1,147 @@
+namespace bpio;
+
+enum StatusRequestTypes:byte{All, Version, Mode, Pullup, PSU, ADC, IO, Disk, LED}
+
+table StatusRequest{
+  query:[StatusRequestTypes]; // List of status queries to perform.
+}
+
+// returns the status queries requested in StatusRequest
+// if query is empty, then all queries are performed
+table StatusResponse {
+  error:string; // Error message if any.
+  version_flatbuffers_major:uint8; // Flatbuffers version major.
+  version_flatbuffers_minor:uint16; // Flatbuffers version minor.
+  version_hardware_major:uint8; //HW version
+  version_hardware_minor:uint8; //HW revision
+  version_firmware_major:uint8;//FW version
+  version_firmware_minor:uint8; //FW revision
+  version_firmware_git_hash:string; //Git hash of the firmware.
+  version_firmware_date:string; //Date of the firmware build.
+  modes_available:[string]; // List of modes available on the device.
+  mode_current:string; // Current mode name.
+  mode_pin_labels:[string]; // Labels for the pins in the current mode.
+  mode_bitorder_msb:bool; // Bit order for the current mode (true for MSB first, false for LSB first).
+  mode_max_packet_size:uint32; // Maximum flat buffer packet size for the current mode.
+  mode_max_write:uint32; // Maximum data write size for the current mode.
+  mode_max_read:uint32; // Maximum data read size for the current mode.
+  psu_enabled:bool; // Power supply enabled.
+  psu_set_mv:uint32; // Power supply set voltage in millivolts.
+  psu_set_ma:uint32; // Power supply set current in milliamps.
+  psu_measured_mv:uint32; // Measured power supply voltage in millivolts.
+  psu_measured_ma:uint32; // measured power supply current in milliamps.
+  psu_current_error:bool; // Power supply fuse error.
+  pullup_enabled:bool; // Pull-up resistors enabled.
+  adc_mv:[uint32]; // IO pin ADC values in millivolts.
+  io_direction:uint8; // IO pin directions (true for output, false for input).
+  io_value:uint8; // IO pin values (true for high, false for low).
+  disk_size_mb:float; // Size of the disk in megabytes.
+  disk_used_mb:float; // Used space on the disk in megabytes.
+  led_count:uint8; // Number of LEDs.
+}
+
+table ModeConfiguration {
+  //1wire : no config
+  //uart: speed, data bits, parity, stop bits, flow control, signal inversion
+  //hduart: speed, data bits, parity, stop bits
+  //i2c: speed, clock stretch
+  //spi: speed, data bits, clock polarity, clock phase, chip select
+  //2wire: speed
+  //3wire: speed, chip select
+  //dio: none
+  //LED: submode, 
+  //INFRARED: submode, TX modulation, RX sensor
+  //jtag: none
+  speed:uint32=20000; // Speed in Hz or baud for the mode.
+  data_bits:uint8=8; // Data bits for the mode (e.g., 8 for UART).
+  parity:bool=false; // Parity for the mode (true for even parity, false for no parity).
+  stop_bits:uint8=1; // Stop bits for the mode (1 or 2).
+  flow_control:bool=false; // Flow control for the mode (true for enabled, false for disabled).
+  signal_inversion:bool=false; // Signal inversion for the mode (true for inverted, false for normal).
+  clock_stretch:bool=false; // Clock stretching for I2C mode (true for enabled,  false for disabled).
+  clock_polarity:bool=false; // Clock idle polarity for SPI mode (true for high, false for low).
+  clock_phase:bool=false; // Clock phase for SPI mode (false for leading edge, true for trailing edge).
+  chip_select_idle:bool=true; // Chip select idle (0=idle low, 1=idle high) for SPI and 3-wire modes.
+  submode:uint8; // Submode for LED and INFRARED modes (e.g., "RGB", "IR TX", "IR RX").
+  tx_modulation:uint32; // TX modulation for INFRARED mode 
+  rx_sensor:uint8; // RX sensor for INFRARED mode 
+}
+
+table ConfigurationRequest {
+  mode:string; // Name of the mode to configure.
+  mode_configuration:ModeConfiguration; // Configuration for the mode.
+  mode_bitorder_msb:bool; // Bit order MSB.
+  mode_bitorder_lsb:bool; // Bit order LSB.
+  psu_disable:bool; // Disable power supply.
+  psu_enable:bool; // Enable power supply.
+  psu_set_mv:uint32; // Set voltage in millivolts (psu_enable must = true).
+  psu_set_ma:uint16=300; // Set current in milliamps, 0 for unlimited (psu_enable must = true).
+  pullup_disable:bool; // Disable pull-up resistors.
+  pullup_enable:bool; // Enable pull-up resistors.
+  io_direction_mask:uint8; // Bitmask for IO pin directions (1=modify this pin).
+  io_direction:uint8; // IO pin directions in 8 bit byte (1 output, 0 input).
+  io_value_mask:uint8; // Bitmask for IO pin values (1=modify this pin).
+  io_value:uint8; // IO pin values in 8 bit byte (1 high, 0 low).
+  led_resume:bool; // Resume LED effect after configuration.
+  led_color:[uint32]; // LED colors in RGB format (0xRRGGBB).
+  print_string:string; // string to print on terminal 
+  hardware_bootloader:bool; // Enter bootloader mode.
+  hardware_reset:bool; // Hardware reset the device.
+  hardware_selftest:bool; // Perform a self-test on the device.
+}
+
+table ConfigurationResponse{
+  error:string; // Error message if any.
+}
+
+// Bitwise pin control operations for 2wire and 3wire modes
+// Values can be combined using bitwise OR for atomic operations
+/*
+enum BitwiseOps:ubyte {
+  NONE = 0,
+  
+  // Data pin operations (bits 0-1)
+  DATA_LOW = 1,        // 0x01 = 0b00000001 - Set data pin low
+  DATA_HIGH = 2,       // 0x02 = 0b00000010 - Set data pin high
+  
+  // Clock pin operations (bits 2-3)
+  CLOCK_LOW = 4,       // 0x04 = 0b00000100 - Set clock pin low
+  CLOCK_HIGH = 8,      // 0x08 = 0b00001000 - Set clock pin high
+  CLOCK_PULSE = 12,    // 0x0C = 0b00001100 - Generate clock pulse (high then low)
+  
+  // Read operation (bit 4)
+  READ = 16            // 0x10 = 0b00010000 - Read data input pin
+}
+*/
+table DataRequest {
+  start_main:bool; // Start condition.
+  start_alt:bool; // Alternate start condition.
+  data_write:[ubyte]; // Data to write
+  bytes_read:uint16; // Number of bytes to read.
+  stop_main:bool; // Stop condition.
+  stop_alt:bool; // Alternate stop condition.
+  //bitwise_ops:[ubyte]; // NEW in 2.2: Bitwise pin operations (2wire/3wire only) - array of BitwiseOps values
+}
+
+table DataResponse {
+  error:string; // Error message if any.
+  data_read:[ubyte]; // Data read from device
+  is_async:bool = false; // NEW in 2.2: True if this is unsolicited async data
+}
+
+union RequestPacketContents {StatusRequest, ConfigurationRequest, DataRequest}
+
+table RequestPacket {
+  version_major:uint8;
+  minimum_version_minor:uint16; // Minimum version minor for compatibility.
+  contents:RequestPacketContents;
+}
+
+union ResponsePacketContents {StatusResponse, ConfigurationResponse, DataResponse}
+
+table ResponsePacket{
+  error:string; // Error message if any.
+  contents:ResponsePacketContents;
+}
+
+root_type ResponsePacket;

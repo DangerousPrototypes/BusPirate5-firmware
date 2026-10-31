@@ -1,3 +1,21 @@
+/**
+ * @file hwi2c.c
+ * @brief Hardware I2C mode implementation.
+ * @details Implements I2C master protocol using PIO-based bit-banging.
+ *          Features:
+ *          - Speed: 5kHz to 1MHz
+ *          - Optional clock stretching support
+ *          - Device scanning (scan command)
+ *          - Sensor demos (SHT3x, SHT4x, SI7021, MS5611, TSL2561, TCS3472, MPU6050)
+ *          - EEPROM support
+ *          - DDR4/DDR5 SPD reading
+ *          - USB PD source capability reading
+ *          
+ *          Pin mapping:
+ *          - SDA: Data line (bidirectional, open-drain)
+ *          - SCL: Clock line (bidirectional, open-drain)
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <stdint.h>
@@ -7,7 +25,6 @@
 #include "bytecode.h"
 #include "mode/hwi2c.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_cmdln.h"
 #include "hwi2c.pio.h"
 #include "pirate/hwi2c_pio.h"
@@ -24,6 +41,7 @@
 #include "commands/i2c/usbpdo.h"
 #include "commands/i2c/usbpd.h" 
 #include "commands/i2c/mpu6050.h"
+#include "lib/bp_args/bp_cmd.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -34,129 +52,110 @@ struct _i2c_mode_config i2c_mode_config;
 
 // command configuration
 const struct _mode_command_struct hwi2c_commands[] = {
-    {   .command="scan", 
-        .func=&i2c_search_addr, 
-        .description_text=T_HELP_I2C_SCAN, 
+    {   .func=&i2c_search_addr, 
+        .def=&scan_i2c_def,
         .supress_fala_capture=true
     },
     {
-        .command="sniff",
         .func=&i2c_sniff,
-        .description_text=T_I2C_SNIFF,
+        .def=&sniff_i2c_def,
         .supress_fala_capture=true
     },
     {
-        .command="eeprom",
         .func=&i2c_eeprom_handler,
-        .description_text=T_HELP_I2C_EEPROM,
+        .def=&eeprom_i2c_def,
         .supress_fala_capture=true
-    }, 
-    {   .command="ddr5", 
-        .func=&ddr5_handler, 
-        .description_text=T_HELP_DDR5, 
+    },    
+    {   .func=&ddr5_handler, 
+        .def=&ddr5_def,
         .supress_fala_capture=true
     },   
-    {   .command="ddr4", 
-        .func=&ddr4_handler, 
-        .description_text=T_HELP_DDR4, 
+    {   .func=&ddr4_handler, 
+        .def=&ddr4_def,
         .supress_fala_capture=true
     },          
     {
-        .command="sht3x", 
         .func=&demo_sht3x, 
-        .description_text=T_HELP_I2C_SHT3X, 
+        .def=&sht3x_def,
         .supress_fala_capture=true
     },    
-    {   .command="sht4x", 
-        .func=&demo_sht4x, 
-        .description_text=T_HELP_I2C_SHT4X, 
+    {   .func=&demo_sht4x, 
+        .def=&sht4x_def,
         .supress_fala_capture=true
     },    
-    {   .command="si7021", 
-        .func=&demo_si7021, 
-        .description_text=T_HELP_I2C_SI7021, 
+    {   .func=&demo_si7021, 
+        .def=&si7021_def,
         .supress_fala_capture=true
     },
-    {   .command="ms5611", 
-        .func=&demo_ms5611, 
-        .description_text=T_HELP_I2C_MS5611, 
+    {   .func=&demo_ms5611, 
+        .def=&ms5611_def,
         .supress_fala_capture=true
     },
-    {   .command="tsl2561", 
-        .func=&demo_tsl2561, 
-        .description_text=T_HELP_I2C_TSL2561, 
+    {   .func=&demo_tsl2561, 
+        .def=&tsl2561_def,
         .supress_fala_capture=true
     },
     {
-        .command="tcs3472",
         .func=&demo_tcs34725,
-        .description_text=T_HELP_I2C_TCS34725,
+        .def=&tcs34725_def,
         .supress_fala_capture=true
     },
     {
-        .command="fusb302",
         .func=&fusb302_handler,
-        .description_text=T_HELP_I2C_FUSB302,
+        .def=&fusb302_def,
         .supress_fala_capture=true
     }, 
     {
-        .command="i2c",
         .func=&i2c_dump_handler,
-        .description_text=T_HELP_I2C_I2CDUMP,
+        .def=&i2c_dump_def,
         .supress_fala_capture=true
     },     
     {
-        .command="usbpd",
         .func=&usbpd_handler,
-        .description_text=T_HELP_I2C_USBPD,
+        .def=&usbpd_def,
         .supress_fala_capture=true
     },  
     {
-        .command="mpu6050",
         .func=&mpu6050_handler,
-        .description_text=T_HELP_I2C_MPU6050,
+        .def=&mpu6050_def,
         .supress_fala_capture=true
     },    
 };
 const uint32_t hwi2c_commands_count = count_of(hwi2c_commands);
 
+// Speed — flag -s / --speed (kHz)
+static const bp_val_constraint_t i2c_speed_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 1000, .def = 400 },
+    .prompt = T_HWI2C_SPEED_MENU,
+    .hint = T_HWI2C_SPEED_MENU_1,
+};
+
+// Clock stretch — flag -c / --clockstretch
+static const bp_val_choice_t clockstretch_choices[] = {
+    { "off", NULL, T_OFF, 0 },
+    { "on",  NULL, T_ON,  1 },
+};
+static const bp_val_constraint_t i2c_clockstretch_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = clockstretch_choices, .count = 2, .def = 0 },
+    .prompt = T_HWI2C_CLOCK_STRETCH_MENU,
+};
+
+static const bp_command_opt_t i2c_setup_opts[] = {
+    { "speed",        's', BP_ARG_REQUIRED, "1-1000", 0, &i2c_speed_range },
+    { "clockstretch", 'c', BP_ARG_REQUIRED, "off|on", 0, &i2c_clockstretch_choice },
+    { 0 },
+};
+
+const bp_command_def_t i2c_setup_def = {
+    .name = "i2c",
+    .description = 0,
+    .opts = i2c_setup_opts,
+};
+
 uint32_t hwi2c_setup(void) {
     uint32_t temp;
-
-    // menu items options
-    static const struct prompt_item i2c_clock_stretch_menu[] = { { T_OFF }, {T_ON} };
-    static const struct prompt_item i2c_data_bits_menu[] = { { T_HWI2C_DATA_BITS_MENU_1 },
-                                                             { T_HWI2C_DATA_BITS_MENU_2 } };
-    static const struct prompt_item i2c_speed_menu[] = { { T_HWI2C_SPEED_MENU_1 } };
-
-    static const struct ui_prompt i2c_menu[] = { { .description = T_HWI2C_SPEED_MENU,
-                                                   .menu_items = i2c_speed_menu,
-                                                   .menu_items_count = count_of(i2c_speed_menu),
-                                                   .prompt_text = T_HWI2C_SPEED_PROMPT,
-                                                   .minval = 1,
-                                                   .maxval = 1000,
-                                                   .defval = 400,
-                                                   .menu_action = 0,
-                                                   .config = &prompt_int_cfg },
-                                                    { .description = T_HWI2C_DATA_BITS_MENU,
-                                                    .menu_items = i2c_data_bits_menu,
-                                                    .menu_items_count = count_of(i2c_data_bits_menu),
-                                                    .prompt_text = T_HWI2C_DATA_BITS_PROMPT,
-                                                    .minval = 0,
-                                                    .maxval = 1,
-                                                    .defval = 0,
-                                                    .menu_action = 0,
-                                                    .config = &prompt_list_cfg },
-                                                    { .description = T_HWI2C_CLOCK_STRETCH_MENU,
-                                                    .menu_items = i2c_clock_stretch_menu,
-                                                    .menu_items_count = count_of(i2c_clock_stretch_menu),
-                                                    .prompt_text = T_OFF,
-                                                    .minval = 0,
-                                                    .maxval = 1,
-                                                    .defval = 1,
-                                                    .menu_action = 0,
-                                                    .config = &prompt_list_cfg }
-                                                  };
 
     const char config_file[] = "bpi2c.bp";
 
@@ -167,38 +166,31 @@ uint32_t hwi2c_setup(void) {
         { "$.clock_stretch", (uint32_t*)&i2c_mode_config.clock_stretch, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };
-    prompt_result result;
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        hwi2c_settings();
+    // Detect interactive vs CLI mode by checking the primary flag
+    bp_cmd_status_t st = bp_cmd_flag(&i2c_setup_def, 's', &i2c_mode_config.baudrate);
+    if (st == BP_CMD_INVALID) return 0;
+    bool interactive = (st == BP_CMD_MISSING);
 
-        //check for -y flag
-        if (cmdln_args_find_flag('y')) {
-            return 1; // skip prompts, use previous settings
+    if (interactive) {
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            hwi2c_settings();
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
 
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0;
-        }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
-        }
+        if (bp_cmd_prompt(&i2c_speed_range, &i2c_mode_config.baudrate) != BP_CMD_OK) return 0;
+
+        if (bp_cmd_prompt(&i2c_clockstretch_choice, &temp) != BP_CMD_OK) return 0;
+        i2c_mode_config.clock_stretch = (bool)temp;
+    } else {
+        st = bp_cmd_flag(&i2c_setup_def, 'c', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        i2c_mode_config.clock_stretch = (bool)temp;
     }
-    ui_prompt_uint32(&result, &i2c_menu[0], &i2c_mode_config.baudrate);
-    if (result.exit) {
-        return 0;
-    }
-    ui_prompt_uint32(&result, &i2c_menu[2], &temp);
-    if (result.exit) {
-        return 0;
-    }    
-    i2c_mode_config.clock_stretch = (bool)(temp-1);
-    // printf("Result: %d\r\n", i2c_mode_config.baudrate);
-    // ui_prompt_uint32(&result, &i2c_menu[1], &temp);
-    // if(result.exit) return 0;
-    // i2c_mode_config.data_bits=(uint8_t)temp-1;
+
     storage_save_mode(config_file, config_t, count_of(config_t));
     return 1;
 }
@@ -302,11 +294,11 @@ void hwi2c_cleanup(void) {
 
 void hwi2c_settings(void) {
     //printf(" %s: %dkHz\r\n", GET_T(T_HWI2C_SPEED_MENU), i2c_mode_config.baudrate);
-    ui_prompt_mode_settings_int(GET_T(T_HWI2C_SPEED_MENU), i2c_mode_config.baudrate, GET_T(T_KHZ));
+    ui_help_setting_int(GET_T(T_HWI2C_SPEED_MENU), i2c_mode_config.baudrate, GET_T(T_KHZ));
     // printf(" %s: %s\r\n", GET_T(T_HWI2C_DATA_BITS_MENU), GET_T(i2c_data_bits_menu[i2c_mode_config.data_bits].description));
     //printf(" %s: %s\r\n", GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
     //        (i2c_mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)));
-    ui_prompt_mode_settings_string(GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
+    ui_help_setting_string(GET_T(T_HWI2C_CLOCK_STRETCH_MENU),
             (i2c_mode_config.clock_stretch ? GET_T(T_ON) : GET_T(T_OFF)), 0x00);
 }
 

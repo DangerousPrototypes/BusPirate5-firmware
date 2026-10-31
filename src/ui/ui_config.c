@@ -14,8 +14,23 @@
 #include "ui/ui_term.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_statusbar.h"
+#include "ui/ui_toolbar.h"
 #include "ui/ui_flags.h"
 #include "pirate/rgb.h" // for LED effect enum
+#include "ui/ui_help.h"
+#include "lib/bp_args/bp_cmd.h"
+
+static const char* const config_usage[] = {
+    "c",
+    "Open interactive configuration menu:%s c",
+};
+
+const bp_command_def_t ui_config_def = {
+    .name         = "c",
+    .description  = T_CMDLN_CONFIG_MENU,
+    .usage        = config_usage,
+    .usage_count  = count_of(config_usage),
+};
 
 bool ui_config_menu(const struct ui_prompt* menu);
 
@@ -143,10 +158,12 @@ static const struct prompt_item menu_items_ansi_color[] = {
 };
 uint32_t ui_config_action_ansi_color(uint32_t a, uint32_t b) {
     if (b < count_of(menu_items_ansi_color)) {
-        system_config.terminal_ansi_color = b;
         if (!b) {
-            system_config.terminal_ansi_statusbar = 0; // disable the toolbar if ansi is disabled....
-        } else {
+            toolbar_teardown_all(); // tear down ALL toolbars before leaving VT100 mode
+            system_config.terminal_ansi_statusbar = 0;
+        }
+        system_config.terminal_ansi_color = b;
+        if (b) {
             ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
         }
     }
@@ -155,18 +172,18 @@ uint32_t ui_config_action_ansi_color(uint32_t a, uint32_t b) {
 uint32_t ui_config_action_ansi_toolbar(uint32_t a, uint32_t b) {
     BP_ASSERT_CORE0();
 
-    // NOTE: `b` is treated as a boolean value
     b = !!b;
 
-    system_config.terminal_ansi_statusbar = b;
     if (b) {
         if (!system_config.terminal_ansi_color) {
-            // enable ANSI color mode
             system_config.terminal_ansi_color = UI_TERM_FULL_COLOR;
         }
-        ui_term_detect(); // Do we detect a VT100 ANSI terminal? what is the size?
-        ui_term_init();   // Initialize VT100 if ANSI terminal
-        ui_statusbar_update_blocking();
+        system_config.terminal_ansi_statusbar = b;
+        ui_term_detect();
+        ui_term_init();
+        ui_statusbar_init(); // register + draw the statusbar toolbar
+    } else {
+        ui_statusbar_deinit(); // tear down + unregister (also clears the flag)
     }
 }
 
@@ -244,6 +261,9 @@ bool ui_config_menu(const struct ui_prompt* menu) {
 }
 
 void ui_config_main_menu(struct command_result* res) {
+    if (bp_cmd_help_check(&ui_config_def, res->help_flag)) {
+        return;
+    }
     while (1) {
         uint32_t temp;
         prompt_result result;
@@ -272,7 +292,7 @@ void ui_config_main_menu(struct command_result* res) {
     // if TF flash card is present, saves configuration settings
     // TODO: present as an option to save or not
     if (storage_save_config()) {
-        printf("\r\n\r\n%s%s:%s %s\r\n",
+        printf("\r\n%s%s:%s %s\r\n",
                ui_term_color_info(),
                GET_T(T_CONFIG_FILE),
                ui_term_color_reset(),

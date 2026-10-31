@@ -6,7 +6,7 @@
 #include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
 // #include "ui/ui_prompt.h" // User prompts and menu system
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
@@ -14,6 +14,7 @@
 #include "pirate/amux.h"   // Analog voltage measurement functions
 #include "pirate/button.h" // Button press functions
 #include "ui/ui_term.h"    // Terminal functions
+#include "ui/ui_term_linenoise.h"
 #include "ui/ui_process.h"
 #include "usb_rx.h"
 #include "usb_tx.h"
@@ -22,7 +23,7 @@
 #include "commands/global/script.h"
 
 static const char* const usage[] = {
-    "script <file> [-p(ause for <enter>)] [-d (hiDe comments)] [-e(xit on error)] [-h(elp)]",
+    "script <file> [-p(ause for <enter>)] [-d (hiDe comments)] [-a(bort on error)] [-h(elp)]",
     "Run script:%s script example.scr",
     "",
     "Script files:",
@@ -31,27 +32,49 @@ static const char* const usage[] = {
     "Other lines are inserted into the command prompt",
     "Exit with 'x' during execution",
     "Example:",
-    "# This is my example script file",
-    "# The 'pause' command waits for any key press",
-    "pause",
-    "# Did it pause?",
+    "%s# This is my example script file",
+    "%s# The 'pause' command waits for any key press",
+    "%spause",
+    "%s# Did it pause?",
 };
 
-static const struct ui_help_options options[] = { 0 };
+static const bp_command_opt_t script_opts[] = {
+    { "pause",      'p', BP_ARG_NONE, NULL, T_HELP_CMD_SCRIPT_PAUSE },
+    { "hide",'d', BP_ARG_NONE, NULL, T_HELP_CMD_SCRIPT_HIDE_COMMENTS },
+    { "abort", 'a', BP_ARG_NONE, NULL, T_HELP_CMD_SCRIPT_ERROR_EXIT },
+    { 0 }
+};
+
+static const bp_command_positional_t script_positionals[] = {
+    { "file", NULL, T_HELP_GCMD_SCRIPT_FILE, true },
+    { 0 }
+};
+
+const bp_command_def_t script_def = {
+    .name         = "script",
+    .description  = T_HELP_CMD_SCRIPT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = script_opts,
+    .positionals      = script_positionals,
+    .positional_count = 1,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 void script_handler(struct command_result* res) {
     // check help
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&script_def, res->help_flag)) {
         return;
     }
 
-    bool pause_for_input = cmdln_args_find_flag('p' | 0x20);
-    bool show_comments = !cmdln_args_find_flag('d' | 0x20);
-    bool exit_on_error = cmdln_args_find_flag('e' | 0x20);
+    bool pause_for_input = bp_cmd_find_flag(&script_def, 'p');
+    bool show_comments = !bp_cmd_find_flag(&script_def, 'd');
+    bool exit_on_error = bp_cmd_find_flag(&script_def, 'a');
     char location[32];
-    if(!cmdln_args_string_by_position(1, sizeof(location), location)){
+    if(!bp_cmd_get_positional_string(&script_def, 1, location, sizeof(location))){
         printf("Specify a script file to run\r\n");
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+        bp_cmd_help_show(&script_def);
         res->error = true;
         return;
     }
@@ -84,7 +107,6 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
                 printf("%sTip: <enter> to continue%s\r\n", ui_term_color_prompt(), ui_term_color_reset());
                 show_tip = false;
             }
-            cmdln_next_buf_pos();
             if (system_config.subprotocol_name) {
                 printf("%s%s-(%s)>%s ",
                        ui_term_color_prompt(),
@@ -95,17 +117,20 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
                 printf(
                     "%s%s>%s ", ui_term_color_prompt(), modes[system_config.mode].protocol_name, ui_term_color_reset());
             }
-            for (uint32_t i = 0; i < sizeof(file); i++) {
-                if (file[i] == '\r' || file[i] == '\n' || file[i] == '\0') {
-                    break;
+            // Strip trailing \r\n and inject into linenoise buffer
+            {
+                size_t slen = 0;
+                for (size_t i = 0; i < sizeof(file); i++) {
+                    if (file[i] == '\r' || file[i] == '\n' || file[i] == '\0') {
+                        break;
+                    }
+                    slen++;
                 }
-                ui_term_cmdln_char_insert(&file[i]);
+                file[slen] = '\0';
             }
-            //mark end of command
-            cmdln_try_add(0x00);
+            ui_term_linenoise_inject_string(file);
 
             if (pause_for_input) {
-                //while (ui_term_get_user_input() != 0xff)
                 char c;
                 while(!rx_fifo_try_get(&c)); // user hit enter
                 if(c|0x20 == 'x') {
@@ -115,7 +140,6 @@ bool script_exec(char* location, bool pause_for_input, bool show_comments, bool 
                 }
             }
 
-            printf("\r\n");
             bool error = ui_process_commands();
             if (error && exit_on_error) {
                 return true;

@@ -12,7 +12,7 @@
 #include "lib/sfud/inc/sfud.h"
 #include "lib/sfud/inc/sfud_def.h"
 #include "spiflash.h"
-#include "ui/ui_cmdln.h"
+#include "lib/bp_args/bp_cmd.h"
 // #include "ui/ui_prompt.h"
 // #include "ui/ui_const.h"
 #include "ui/ui_help.h"
@@ -37,7 +37,15 @@ static const char* const usage[] = {
         "Force dump: flash read -o -b <bytes> -f <file>"*/
 };
 
-static const struct ui_help_options options[] = { 0 };
+const bp_command_def_t sniff_def = {
+    .name         = "sniff",
+    .description  = T_HELP_SPI_SNIFF,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 bool pio_read(uint32_t* raw) {
     if (pio_sm_is_rx_fifo_empty(pio_config.pio, pio_config.sm)) {
@@ -63,7 +71,7 @@ bool pio_read_d1(uint32_t* raw) {
 
 void sniff_handler(struct command_result* res) {
     uint32_t value;
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&sniff_def, res->help_flag)) {
         return;
     }
 

@@ -1,0 +1,117 @@
+; MIT License - okhi - Open Keylogger Hardware Implant
+; ---------------------------------------------------------------------------
+; Copyright (c) [2024] by David Reguera Garcia aka Dreg
+; https://github.com/therealdreg/pico-ps2-sniffer
+; https://www.rootkit.es
+; X @therealdreg
+; dreg@rootkit.es
+; ---------------------------------------------------------------------------
+; Permission is hereby granted, free of charge, to any person obtaining a copy
+; of this software and associated documentation files (the "Software"), to deal
+; in the Software without restriction, including without limitation the rights
+; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+; copies of the Software, and to permit persons to whom the Software is
+; furnished to do so, subject to the following conditions:
+;
+; The above copyright notice and this permission notice shall be included in all
+; copies or substantial portions of the Software.
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+; SOFTWARE.
+; ---------------------------------------------------------------------------
+; WARNING: BULLSHIT CODE X-)
+; ---------------------------------------------------------------------------
+
+.program inhibited_signal
+
+.wrap_target
+restart:
+    mov isr, null
+wait_for_inhibited:
+    set x, 30
+check_inhibited:
+    jmp pin wait_for_inhibited
+    jmp pin wait_for_inhibited
+    jmp x-- check_inhibited
+    irq nowait 0
+    wait 1 pin 1
+    in pins, 1
+    mov y, isr
+    jmp !y, restart
+    irq nowait 1
+.wrap
+
+.program device_to_host
+
+.wrap_target
+wait_for_start_signal:
+    jmp pin wait_for_start_signal
+    mov isr, null
+skip_start_bit:
+    wait 0 pin 1
+    wait 1 pin 1
+proceed_to_capture:
+    set x, 7
+capture_8_bits_loop:
+    wait 0 pin 1 [1]
+    in pins, 1
+    wait 1 pin 1 [1]
+    jmp x-- capture_8_bits_loop
+skip_parity_and_stop_bits:
+    wait 0 pin 1 [1]
+    jmp pin wait_for_start_signal [1]
+    push noblock
+    wait 1 pin 1
+    wait 0 pin 1 [1]
+    wait 1 pin 1
+.wrap
+
+.program host_to_device
+
+.wrap_target
+    mov isr, null
+wait_for_inhibition:
+    set x, 5
+check_inhibition_loop:
+    jmp pin wait_for_inhibition
+    jmp x--, check_inhibition_loop
+skip_start_bit:
+    wait 1 pin 1
+    wait 0 pin 1
+proceed_to_capture:
+    set x, 7
+capture_8_bits_loop:
+    wait 1 pin 1 [1]
+    in pins, 1
+    wait 0 pin 1 [1]
+    jmp x-- capture_8_bits_loop
+skip_parity_and_stop_bits:
+    wait 1 pin 1 [1]
+    push noblock
+    wait 0 pin 1
+    wait 1 pin 1 [1]
+skip_ack_bit:
+    wait 0 pin 1 [1]
+.wrap
+
+.program idle_signal
+
+.wrap_target
+wait_for_idle:
+    set x, 30
+check_idle_loop:
+    mov osr, !pins
+    out y, 2
+    jmp !y, next_idle_check
+not_idle_detected:
+    jmp wait_for_idle
+next_idle_check:
+    jmp x--, check_idle_loop
+idle_detected:
+    irq nowait 0
+.wrap

@@ -61,7 +61,7 @@ __flatbuffers_build_table(flatbuffers_, bpio_DataRequest, 6)
 static const flatbuffers_voffset_t __bpio_DataResponse_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_DataResponse_ref_t;
 static bpio_DataResponse_ref_t bpio_DataResponse_clone(flatbuffers_builder_t *B, bpio_DataResponse_table_t t);
-__flatbuffers_build_table(flatbuffers_, bpio_DataResponse, 2)
+__flatbuffers_build_table(flatbuffers_, bpio_DataResponse, 3)
 
 static const flatbuffers_voffset_t __bpio_RequestPacket_required[] = { 0 };
 typedef flatbuffers_ref_t bpio_RequestPacket_ref_t;
@@ -135,8 +135,8 @@ __flatbuffers_build_table_prolog(flatbuffers_, bpio_ConfigurationResponse, bpio_
 static inline bpio_DataRequest_ref_t bpio_DataRequest_create(flatbuffers_builder_t *B __bpio_DataRequest_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_DataRequest, bpio_DataRequest_file_identifier, bpio_DataRequest_type_identifier)
 
-#define __bpio_DataResponse_formal_args , flatbuffers_string_ref_t v0, flatbuffers_uint8_vec_ref_t v1
-#define __bpio_DataResponse_call_args , v0, v1
+#define __bpio_DataResponse_formal_args , flatbuffers_string_ref_t v0, flatbuffers_uint8_vec_ref_t v1, flatbuffers_bool_t v2
+#define __bpio_DataResponse_call_args , v0, v1, v2
 static inline bpio_DataResponse_ref_t bpio_DataResponse_create(flatbuffers_builder_t *B __bpio_DataResponse_formal_args);
 __flatbuffers_build_table_prolog(flatbuffers_, bpio_DataResponse, bpio_DataResponse_file_identifier, bpio_DataResponse_type_identifier)
 
@@ -510,12 +510,14 @@ static bpio_DataRequest_ref_t bpio_DataRequest_clone(flatbuffers_builder_t *B, b
 
 __flatbuffers_build_string_field(0, flatbuffers_, bpio_DataResponse_error, bpio_DataResponse)
 __flatbuffers_build_vector_field(1, flatbuffers_, bpio_DataResponse_data_read, flatbuffers_uint8, uint8_t, bpio_DataResponse)
+__flatbuffers_build_scalar_field(2, flatbuffers_, bpio_DataResponse_is_async, flatbuffers_bool, flatbuffers_bool_t, 1, 1, UINT8_C(0), bpio_DataResponse)
 
 static inline bpio_DataResponse_ref_t bpio_DataResponse_create(flatbuffers_builder_t *B __bpio_DataResponse_formal_args)
 {
     if (bpio_DataResponse_start(B)
         || bpio_DataResponse_error_add(B, v0)
-        || bpio_DataResponse_data_read_add(B, v1)) {
+        || bpio_DataResponse_data_read_add(B, v1)
+        || bpio_DataResponse_is_async_add(B, v2)) {
         return 0;
     }
     return bpio_DataResponse_end(B);
@@ -526,7 +528,8 @@ static bpio_DataResponse_ref_t bpio_DataResponse_clone(flatbuffers_builder_t *B,
     __flatbuffers_memoize_begin(B, t);
     if (bpio_DataResponse_start(B)
         || bpio_DataResponse_error_pick(B, t)
-        || bpio_DataResponse_data_read_pick(B, t)) {
+        || bpio_DataResponse_data_read_pick(B, t)
+        || bpio_DataResponse_is_async_pick(B, t)) {
         return 0;
     }
     __flatbuffers_memoize_end(B, t, bpio_DataResponse_end(B));

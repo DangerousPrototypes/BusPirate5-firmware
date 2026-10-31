@@ -1,3 +1,15 @@
+/**
+ * @file modes.c
+ * @brief Protocol mode management and function dispatch
+ * 
+ * This file implements the protocol mode system for Bus Pirate, including
+ * mode registration, null function handlers, and the main mode dispatch table.
+ * Modes include 1-Wire, I2C, SPI, UART, and many others.
+ * 
+ * @author Bus Pirate Project
+ * @date 2024-2026
+ */
+
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "pirate.h"
@@ -59,14 +71,37 @@
 #ifdef BP_USE_I2S
 #include "mode/i2s.h"
 #endif
+#ifdef BP_USE_PS2
+#include "mode/ps2.h"
+#endif
+#ifdef BP_USE_USB
+#include "mode/usb.h"
+#endif
 
-// nulfuncs
-// these are the dummy functions when something ain't used
+/**
+ * @defgroup null_funcs Null Function Handlers
+ * @brief Dummy functions for unimplemented mode operations
+ * 
+ * These functions are used as placeholders in the mode dispatch table
+ * when a particular operation is not supported by a mode.
+ * @{
+ */
+
+/**
+ * @brief Null function handler (void -> void)
+ * @note Prints error message and sets error flag
+ */
 void nullfunc1(void) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
 }
 
+/**
+ * @brief Null function handler (uint32_t -> uint32_t)
+ * @param c Input parameter (ignored)
+ * @return Always returns 0x0000
+ * @note Prints error message and sets error flag
+ */
 uint32_t nullfunc2(uint32_t c) {
     (void)c;
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
@@ -74,29 +109,52 @@ uint32_t nullfunc2(uint32_t c) {
     return 0x0000;
 }
 
+/**
+ * @brief Null function handler (void -> uint32_t)
+ * @return Always returns 0x0000
+ * @note Prints error message and sets error flag
+ */
 uint32_t nullfunc3(void) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return 0x0000;
 }
 
+/**
+ * @brief Null function handler (uint32_t -> void)
+ * @param c Input parameter (ignored)
+ * @note Prints error message and sets error flag
+ */
 void nullfunc4(uint32_t c) {
     (void)c;
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
 }
 
+/**
+ * @brief Null function handler (void -> const char*)
+ * @return Always returns empty string
+ * @note Prints error message and sets error flag
+ */
 const char* nullfunc5(void) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return "";    
 }
 
+/**
+ * @brief Null function handler (uint8_t -> uint32_t)
+ * @param next_command Next command byte (ignored)
+ * @return Always returns 0x0000
+ * @note Prints error message and sets error flag
+ */
 uint32_t nullfunc6(uint8_t next_command) {
     printf("%s\r\n", GET_T(T_MODE_ERROR_NO_EFFECT));
     system_config.error = 1;
     return 0x0000;
 }
+
+/** @} */ // end of null_funcs group
 
 uint32_t nullfunc7_no_error(void) {
     return 0;
@@ -208,6 +266,7 @@ struct _mode modes[] = {
         .protocol_get_speed = hwuart_get_speed,        // get the current speed setting of the protocol
         .protocol_wait_done = hwuart_wait_done,        // wait for the protocol to finish
         .protocol_preflight_sanity_check=hwuart_preflight_sanity_check, // sanity check before executing syntax
+        .setup_def = &uart_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HWHDUART
@@ -238,6 +297,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwhduart_commands_count, // mode specific commands count
         .protocol_get_speed = hwhduart_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwhduart_preflight_sanity_check, // sanity check before executing syntax
+        .setup_def = &hduart_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HWI2C
@@ -268,6 +328,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwi2c_commands_count, // mode specific commands count
         .protocol_get_speed = hwi2c_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hwi2c_preflight_sanity_check, // sanity check before executing syntax
+        .setup_def = &i2c_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HWSPI
@@ -298,6 +359,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hwspi_commands_count, // mode specific commands count
         .protocol_get_speed = spi_get_speed,          // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = spi_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &spi_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_HW2WIRE
@@ -328,9 +390,8 @@ struct _mode modes[] = {
         .mode_commands_count = &hw2wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw2wire_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw2wire_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &hw2wire_setup_def,        // command def for mode setup flags
     },
-#endif
-#ifdef BP_USE_HW3WIRE
     [HW3WIRE] = {
         .protocol_name = "3WIRE",                        // friendly name (promptname)
         .protocol_start = hw3wire_start,                 // start
@@ -358,6 +419,7 @@ struct _mode modes[] = {
         .mode_commands_count = &hw3wire_commands_count, // mode specific commands count
         .protocol_get_speed = hw3wire_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = hw3wire_preflight_sanity_check,      // sanity check before executing syntax 
+        .setup_def = &hw3wire_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_DIO
@@ -421,6 +483,7 @@ struct _mode modes[] = {
         .protocol_command = NULL,                     // per mode command parser - ignored if 0
         .protocol_wait_done = hwled_wait_idle,        // wait for the protocol to finish
         .protocol_preflight_sanity_check = hwled_preflight_sanity_check,      // sanity check before executing syntax      
+        .setup_def = &led_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_INFRARED
@@ -452,6 +515,7 @@ struct _mode modes[] = {
         .protocol_wait_done = infrared_wait_idle,        // wait for the protocol to finish
         .protocol_get_speed = infrared_get_speed,        // get the current speed setting of the protocol
         .protocol_preflight_sanity_check = infrared_preflight_sanity_check,      // sanity check before executing syntax
+        .setup_def = &infrared_setup_def,        // command def for mode setup flags
     },
 #endif
 #ifdef BP_USE_JTAG
@@ -484,6 +548,66 @@ struct _mode modes[] = {
         .protocol_preflight_sanity_check = jtag_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
+#ifdef BP_USE_PS2
+    [PS2] = {
+        .protocol_name = "PS2",                          // friendly name (promptname)
+        .protocol_start = nullfunc1_temp,                // start
+        .protocol_start_alt = nullfunc1_temp,            // start with read
+        .protocol_stop = nullfunc1_temp,                 // stop
+        .protocol_stop_alt = nullfunc1_temp,             // stop with read
+        .protocol_write = nullfunc1_temp,                     // send(/read) max 32 bit
+        .protocol_read = nullfunc1_temp,                       // read max 32 bit
+        .protocol_clkh = nullfunc1_temp,                 // set clk high
+        .protocol_clkl = nullfunc1_temp,                 // set clk low
+        .protocol_dath = nullfunc1_temp,                 // set dat hi
+        .protocol_datl = nullfunc1_temp,                 // set dat lo
+        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
+        .protocol_tick_clock = nullfunc1_temp,           // tick clk
+        .protocol_bitr = nullfunc1_temp,                 // read dat
+        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
+        .protocol_macro = nullfunc4,                     // macro
+        .protocol_setup = ps2_setup,                     // setup UI
+        .protocol_setup_exc = ps2_setup_exc,             // real setup
+        .protocol_cleanup = ps2_cleanup,                 // cleanup for HiZ
+        //.protocol_pins=dio_pins,				// display pin config
+        .protocol_settings = ps2_settings,          // display settings
+        .protocol_help = ps2_help,                  // display small help about the protocol
+        .mode_commands = ps2_commands,              // mode specific commands
+        .mode_commands_count = &ps2_commands_count, // mode specific commands count
+        .protocol_get_speed = ps2_get_speed,        // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = ps2_preflight_sanity_check,      // sanity check before executing syntax
+    },
+#endif
+#ifdef BP_USE_USB
+    [USB] = {
+        .protocol_name = "USB",                          // friendly name (promptname)
+        .protocol_start = nullfunc1_temp,                // start
+        .protocol_start_alt = nullfunc1_temp,            // start with read
+        .protocol_stop = nullfunc1_temp,                 // stop
+        .protocol_stop_alt = nullfunc1_temp,             // stop with read
+        .protocol_write = nullfunc1_temp,                     // send(/read) max 32 bit
+        .protocol_read = nullfunc1_temp,                       // read max 32 bit
+        .protocol_clkh = nullfunc1_temp,                 // set clk high
+        .protocol_clkl = nullfunc1_temp,                 // set clk low
+        .protocol_dath = nullfunc1_temp,                 // set dat hi
+        .protocol_datl = nullfunc1_temp,                 // set dat lo
+        .protocol_dats = nullfunc1_temp,                 // toggle dat (remove?)
+        .protocol_tick_clock = nullfunc1_temp,           // tick clk
+        .protocol_bitr = nullfunc1_temp,                 // read dat
+        .protocol_periodic = noperiodic,                 // service to regular poll whether a byte ahs arrived
+        .protocol_macro = nullfunc4,                     // macro
+        .protocol_setup = usb_setup,                     // setup UI
+        .protocol_setup_exc = usb_setup_exc,             // real setup
+        .protocol_cleanup = usb_cleanup,                 // cleanup for HiZ
+        //.protocol_pins=dio_pins,				// display pin config
+        .protocol_settings = usb_settings,          // display settings
+        .protocol_help = usb_help,                  // display small help about the protocol
+        .mode_commands = usb_commands,              // mode specific commands
+        .mode_commands_count = &usb_commands_count, // mode specific commands count
+        .protocol_get_speed = usb_get_speed,        // get the current speed setting of the protocol
+        .protocol_preflight_sanity_check = usb_preflight_sanity_check,      // sanity check before executing syntax
+    },
+#endif
 #ifdef BP_USE_I2S
     [I2S] = {
         .protocol_name = "I2S",                       // friendly name (promptname)
@@ -511,9 +635,8 @@ struct _mode modes[] = {
         .mode_commands = i2s_commands,              // mode specific commands
         .mode_commands_count = &i2s_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+        .setup_def = &i2s_setup_def,        // command def for mode setup flags
     },
-#endif
-#ifdef BP_USE_LCDI2C
     [LCDI2C] = {
         .protocol_name = "LCDI2C",                       // friendly name (promptname)
         .protocol_start = nullfunc1,                     // start
@@ -627,6 +750,7 @@ struct _mode modes[] = {
         .mode_commands = dummy1_commands,              // mode specific commands
         .mode_commands_count = &dummy1_commands_count, // mode specific commands count
         .protocol_get_speed = nullfunc7_no_error,      // get the current speed setting of the protocol
+        .setup_def = &dummy1_setup_def,        // command def for mode setup flags
     },
 #endif
 };

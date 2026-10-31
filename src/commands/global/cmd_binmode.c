@@ -5,8 +5,7 @@
 #include "command_struct.h"       // File system related
 #include "fatfs/ff.h"       // File system related
 #include "pirate/storage.h" // File system related
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
-// #include "ui/ui_prompt.h" // User prompts and menu system
+#include "lib/bp_args/bp_cmd.h"    // This file is needed for the command line parsing functions
 // #include "ui/ui_const.h"  // Constants and strings
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
 #include "system_config.h" // Stores current Bus Pirate system configuration
@@ -14,52 +13,61 @@
 #include "pirate/button.h" // Button press functions
 #include "msc_disk.h"
 #include "binmode/binmodes.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 
 // This array of strings is used to display help USAGE examples for the dummy command
 static const char* const usage[] = {
-    "binmode",
+    "binmode [number]",
     "Configure the active binary mode:%s binmode",
+    "Select binmode 2:%s binmode 2",
 };
 
-static const struct ui_help_options options[] = { 0};
+static const bp_val_constraint_t binmode_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = BINMODE_MAXPROTO, .def = 1 },
+    .prompt = T_CONFIG_BINMODE_SELECT,
+};
 
-bool binmode_prompt_menu(const struct ui_prompt* menu) {
-    for (uint8_t i = 0; i < count_of(binmodes); i++) {
-        printf(" %d. %s\r\n", i + 1, binmodes[i].binmode_name);
-    }
-    return true;
-}
+static const bp_command_positional_t binmode_positionals[] = {
+    { "number", NULL, T_CONFIG_BINMODE_SELECT, false, &binmode_range },
+    { 0 }
+};
 
-bool binmode_check_range(const struct ui_prompt* menu, uint32_t* value) {
-    if ((*value > 0) && (*value < (count_of(binmodes) + 1))) {
-        return true;
-    }
-    return false;
-}
+const bp_command_def_t cmd_binmode_def = {
+    .name         = "binmode",
+    .description  = T_CONFIG_BINMODE_SELECT,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .positionals      = binmode_positionals,
+    .positional_count = 1,
+    .usage        = usage,
+    .usage_count  = count_of(usage),
+};
 
 void cmd_binmode_handler(struct command_result* res) {
     // we can use the ui_help_show function to display the help text we configured above
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&cmd_binmode_def, res->help_flag)) {
         // Current binmode 
         printf("%sActive binmode:%s %s\r\n", ui_term_color_info(), ui_term_color_reset(), binmodes[system_config.binmode_select].binmode_name);
         return;
     }
 
-    static const struct ui_prompt_config binmode_menu_config = {
-        false, false, false, true, &binmode_prompt_menu, &ui_prompt_prompt_ordered_list, &binmode_check_range
-    };
-
-    static const struct ui_prompt binmode_menu = { T_CONFIG_BINMODE_SELECT, 0, 0, 0, 0, 0, 0, 0, &binmode_menu_config };
-
-    prompt_result result;
     uint32_t binmode_number;
-    ui_prompt_uint32(&result, &binmode_menu, &binmode_number);
-
-    if (result.exit) {
-        (*res).error = true;
+    bp_cmd_status_t s = bp_cmd_positional(&cmd_binmode_def, 1, &binmode_number);
+    if (s == BP_CMD_INVALID) {
+        res->error = true;
         return;
+    }
+    if (s == BP_CMD_MISSING) {
+        // print the dynamic binmode menu, then prompt for a number
+        for (uint8_t i = 0; i < count_of(binmodes); i++) {
+            printf(" %d. %s\r\n", i + 1, binmodes[i].binmode_name);
+        }
+        if (bp_cmd_prompt(&binmode_range, &binmode_number) != BP_CMD_OK) {
+            res->error = true;
+            return;
+        }
     }
 
     binmode_number--;
@@ -75,10 +83,7 @@ void cmd_binmode_handler(struct command_result* res) {
     // only modes that have been verified can be saved
     // outputting text before the terminal is open will cause crash on startup
     if(binmodes[system_config.binmode_select].can_save_config) {
-        printf("\r\n%sSave setting?%s", ui_term_color_info(), ui_term_color_reset());
-        bool user_value;
-        ui_prompt_bool(&result, true, true, false, &user_value);
-        if (user_value) {
+        if (bp_cmd_confirm(NULL, "Save setting?")) {
             binmode_load_save_config(true); //save config
         }
     }

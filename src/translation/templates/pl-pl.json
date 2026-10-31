@@ -11,8 +11,20 @@
         "Comments": null,
         "DataTypes": []
     },
-    "T_EXIT": {
+    "T_GND": {
+        "Localized": "Masa",
+        "EN_US": "GND"
+    },
+    "T_INPUT": {
+        "Localized": "Wejście",
+        "EN_US": "INPUT"
+    },
+    "T_OUTPUT": {
         "Localized": "Wyjście",
+        "EN_US": "OUTPUT"
+    },
+    "T_EXIT": {
+        "Localized": "Zakończ",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
@@ -29,6 +41,14 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_SPEED": {
+        "Localized": "Prędkość",
+        "EN_US": "Speed"
+    },
+    "T_WARN_VOUT_VREF_LOW": {
+        "Localized": "Piny VOUT/VREF nie są obecnie zasilane. Wprowadź `W` żeby zasilić, albo użyj zewnętrznego zasilacza",
+        "EN_US": "VOUT/VREF pin is not powered. Use W to enable power, or attach an external supply"
+    },
     "T_USE_PREVIOUS_SETTINGS": {
         "Localized": "Użyć poprzednich ustawień?",
         "EN_US": null,
@@ -42,8 +62,8 @@
         "DataTypes": []
     },
     "T_MODE_ERROR_NO_EFFECT_HIZ": {
-        "Localized": "Polecenienie ma efektu w trybie HiZ, naciśnij 'm' aby wybrać tryb",
-        "EN_US": null,
+        "Localized": "Polecenie nie ma efektu w trybie HiZ, naciśnij 'm' aby wybrać tryb",
+        "EN_US": "Command has no effect in HiZ mode, press 'm' to choose a mode",
         "Comments": null,
         "DataTypes": []
     },
@@ -54,10 +74,22 @@
         "DataTypes": []
     },
     "T_PRESS_ANY_KEY_TO_EXIT": {
-        "Localized": "Naciśnij jakiś klawisz aby wyjść",
-        "EN_US": null,
+        "Localized": "Naciśnij dowolny klawisz, aby wyjść",
+        "EN_US": "Press any key to exit",
         "Comments": null,
         "DataTypes": []
+    },
+    "T_PRESS_ANY_KEY": {
+        "Localized": "Naciśnij dowolny klawisz",
+        "EN_US": "Press any key"
+    },
+    "T_PRESS_BUTTON": {
+        "Localized": "Naciśnij przycisk",
+        "EN_US": "Press button"
+    },
+    "T_PRESS_X_TO_EXIT": {
+        "Localized": "Naciśnij 'x' by wyjść",
+        "EN_US": "Press 'x' to exit"
     },
     "T_MODE_MODE_SELECTION": {
         "Localized": "Wybór trybu",
@@ -72,7 +104,7 @@
         "DataTypes": []
     },
     "T_MODE_NUMBER_DISPLAY_FORMAT": {
-        "Localized": "Numeryczny format wyśwetlania",
+        "Localized": "Numeryczny format wyświetlania",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
@@ -113,6 +145,14 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_MODE_DISPLAY": {
+        "Localized": "Wyświetl",
+        "EN_US": "Display"
+    },
+    "T_MODE_DISPLAY_SELECTION": {
+        "Localized": "Wyświetl wybrane",
+        "EN_US": "Display selection"
+    },
     "T_MODE_ENABLED": {
         "Localized": "Włączone",
         "EN_US": null,
@@ -131,6 +171,10 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_MODE_ADC_VOLTAGE": {
+        "Localized": "Napięcie włączone",
+        "EN_US": "Volts on"
+    },
     "T_MODE_ERROR_PARSING_MACRO": {
         "Localized": "Błąd parsowania makra",
         "EN_US": null,
@@ -148,6 +192,38 @@
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_MODE_TICK_CLOCK": {
+        "Localized": "Takt zegara",
+        "EN_US": "Tick clock"
+    },
+    "T_MODE_SET_CLK": {
+        "Localized": "Ustaw zegar",
+        "EN_US": "Set clock"
+    },
+    "T_MODE_SET_DAT": {
+        "Localized": "Ustaw dane",
+        "EN_US": "Set data"
+    },
+    "T_MODE_READ_DAT": {
+        "Localized": "Czytaj dane",
+        "EN_US": "Read data"
+    },
+    "T_MODE_NO_VOUT_VREF_ERROR": {
+        "Localized": "Nie wykryto napięcia na pinie VOUT/VREF",
+        "EN_US": "No voltage detected on VOUT/VREF pin"
+    },
+    "T_MODE_NO_VOUT_VREF_HINT": {
+        "Localized": "Wskazówka: użyj „W”, aby włączyć zasilanie, albo podłącz zewnętrzny zasilacz",
+        "EN_US": "Hint: Use W to enable power, or attach an external supply"
+    },
+    "T_MODE_NO_PULLUP_ERROR": {
+        "Localized": "Pull-up nie został wykryty na pinie wyjścia/wejścia",
+        "EN_US": "Pull-up not detected on IO pin"
+    },
+    "T_MODE_NO_PULLUP_HINT": {
+        "Localized": "Wskazówka: użyj „P”, aby włączyć rezystory pull-up, albo użyj zewnętrznych rezystorów pull-up",
+        "EN_US": "Hint: Use P to enable pull-up resistors, or use external pull-up"
     },
     "T_MODE_PWM_GENERATE_FREQUENCY": {
         "Localized": "Wygeneruj częstotliwość",
@@ -168,7 +244,7 @@
         "DataTypes": []
     },
     "T_MODE_FREQ_DUTY_CYCLE": {
-        "Localized": "Cykl pracy częstotliwości",
+        "Localized": "Współczynnik wypełnienia",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
@@ -245,6 +321,14 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_HWSPI_CLOCK_POLARITY_MENU_1": {
+        "Localized": "Stan spoczynkowy niski",
+        "EN_US": "Idle LOW"
+    },
+    "T_HWSPI_CLOCK_POLARITY_MENU_2": {
+        "Localized": "Stan spoczynkowy wysoki",
+        "EN_US": "Idle HIGH"
+    },
     "T_HWSPI_CLOCK_POLARITY_PROMPT": {
         "Localized": "Polaryzacja",
         "EN_US": null,
@@ -257,11 +341,31 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_HWSPI_CLOCK_PHASE_MENU_1": {
+        "Localized": "zbocze NARASTAJĄCE",
+        "EN_US": "LEADING edge"
+    },
+    "T_HWSPI_CLOCK_PHASE_MENU_2": {
+        "Localized": "zbocze OPADAJĄCE",
+        "EN_US": "TRAILING edge"
+    },
     "T_HWSPI_CLOCK_PHASE_PROMPT": {
         "Localized": "Faza",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HWSPI_CS_IDLE_MENU": {
+        "Localized": "Wybór chip'u",
+        "EN_US": "Chip select"
+    },
+    "T_HWSPI_CS_IDLE_MENU_1": {
+        "Localized": "Aktywny stan wysoki (CS)",
+        "EN_US": "Active HIGH (CS)"
+    },
+    "T_HWSPI_CS_IDLE_MENU_2": {
+        "Localized": "Aktywny stan niski (/CS)",
+        "EN_US": "Active LOW (/CS)"
     },
     "T_HWSPI_ACTUAL_SPEED_KHZ": {
         "Localized": "Faktyczna prędkość",
@@ -294,7 +398,7 @@
         "DataTypes": []
     },
     "T_UART_SPEED_PROMPT": {
-        "Localized": "Szerokość transmisji (%s%d*%s)",
+        "Localized": "Prędkość transmisji (%s%d*%s)",
         "EN_US": null,
         "Comments": null,
         "DataTypes": [
@@ -391,14 +495,138 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_UART_FLOW_CONTROL_MENU": {
+        "Localized": "Sprzętowe sterowanie przepływem",
+        "EN_US": "Hardware flow control"
+    },
+    "T_UART_FLOW_CONTROL_MENU_1": {
+        "Localized": "Brak",
+        "EN_US": "None"
+    },
+    "T_UART_FLOW_CONTROL_PROMPT": {
+        "Localized": "Sterowanie przepływem",
+        "EN_US": "Flow control"
+    },
+    "T_UART_INVERT_MENU": {
+        "Localized": "Inwersja sygnału",
+        "EN_US": "Signal inversion"
+    },
+    "T_UART_INVERT_MENU_1": {
+        "Localized": "Bez inwersji (standard)",
+        "EN_US": "Non-inverted (Standard)"
+    },
+    "T_UART_INVERT_MENU_2": {
+        "Localized": "Odwrócony",
+        "EN_US": "Inverted"
+    },
+    "T_UART_INVERT_PROMPT": {
+        "Localized": "Odwróć sygnały",
+        "EN_US": "Invert signals"
+    },
+    "T_UART_GLITCH_TRG_MENU": {
+        "Localized": "Znak wyzwalający glitch",
+        "EN_US": "Glitch trigger character"
+    },
+    "T_UART_GLITCH_TRG_PROMPT": {
+        "Localized": "Wartość ASCII znaku wyzwalającego (13)",
+        "EN_US": "ASCII value of trigger character (13)"
+    },
+    "T_UART_GLITCH_DLY_MENU": {
+        "Localized": "Opóźnienie wyzwolenia glitch'a",
+        "EN_US": "Glitch trigger delay"
+    },
+    "T_UART_GLITCH_DLY_PROMPT": {
+        "Localized": "Opóźnienie wyzwolenia w ns * 10 (1)",
+        "EN_US": "Glitch trigger delay in ns * 10 (1)"
+    },
+    "T_UART_GLITCH_VRY_MENU": {
+        "Localized": "Zmienność czasu glitch'a",
+        "EN_US": "Glitch vary time"
+    },
+    "T_UART_GLITCH_VRY_PROMPT": {
+        "Localized": "Zmienność czasu glitch'a w ns * 10 (3)",
+        "EN_US": "Glitch vary time in ns * 10 (3)"
+    },
+    "T_UART_GLITCH_LNG_MENU": {
+        "Localized": "Czas trwania glitch (ON)",
+        "EN_US": "Glitch output on time"
+    },
+    "T_UART_GLITCH_LNG_PROMPT": {
+        "Localized": "Czas ON w ns * 10",
+        "EN_US": "Glitch on time in ns * 10 (1)"
+    },
+    "T_UART_GLITCH_CYC_MENU": {
+        "Localized": "Przerwa między cyklami glitch",
+        "EN_US": "Glitch cycle delay"
+    },
+    "T_UART_GLITCH_CYC_PROMPT": {
+        "Localized": "Minimalny czas między cyklami w ms (10)",
+        "EN_US": "Minimum time between glitch cycles in ms (10)"
+    },
+    "T_UART_GLITCH_FAIL_MENU": {
+        "Localized": "Znak normalnej odpowiedzi",
+        "EN_US": "Normal response character"
+    },
+    "T_UART_GLITCH_FAIL_PROMPT": {
+        "Localized": "Wartość ASCII znanego znaku odpowiedzi (35 - '#')",
+        "EN_US": "ASCII value of a known char of normal response (35 - '#')"
+    },
+    "T_UART_GLITCH_CNT_MENU": {
+        "Localized": "Liczba prób glitch'y",
+        "EN_US": "Number of glitch attempts"
+    },
+    "T_UART_GLITCH_CNT_PROMPT": {
+        "Localized": "Liczba prób przed zakończeniem (100)",
+        "EN_US": "Number of glitch attempts before quitting (100)"
+    },
+    "T_UART_GLITCH_NORDY_MENU": {
+        "Localized": "Pomiń sprawdzanie wejścia „READY”",
+        "EN_US": "Bypass 'READY' input checking"
+    },
+    "T_UART_GLITCH_NORDY_PROMPT": {
+        "Localized": "0 aby wyłączyć, 1 aby włączyć (1 = bez sprawdzania wejścia)",
+        "EN_US": "0 to disable, 1 to enable (1, do not check input)"
+    },
+    "T_UART_GLITCH_NORDY_DISABLED": {
+        "Localized": "Pomijanie wyłączone (sprawdzanie „READY” aktywne)",
+        "EN_US": "Bypass disabled ('READY' check enforced)"
+    },
+    "T_UART_GLITCH_NORDY_ENABLED": {
+        "Localized": "Pomijanie włączone (sprawdzanie „READY” wyłączone)",
+        "EN_US": "Bypass enabled ('READY' check disabled)"
+    },
+    "T_UART_GLITCH_GLITCHED": {
+        "Localized": "Sukces glitch'owania celu!",
+        "EN_US": "Target glitch success!"
+    },
+    "T_UART_GLITCH_CANCELLED": {
+        "Localized": "Glitch'owanie przerwane przyciskiem",
+        "EN_US": "Target glitch cancelled by button"
+    },
+    "T_UART_GLITCH_DONE": {
+        "Localized": "Przekroczono limit prób, brak glitch'y :/",
+        "EN_US": "Target glitch count exceeded, no glitch :/"
+    },
+    "T_UART_TOOL_TIMEOUT": {
+        "Localized": "Timeout oczekiwania na sprzęt glitch'y :/",
+        "EN_US": "Timout waiting for glitch hardware :/"
+    },
+    "T_UART_GLITCH_UNKNOWN": {
+        "Localized": "Glitch'owanie zatrzymane z nieznanego powodu",
+        "EN_US": "Target glitching stopped for unknown reason"
+    },
+    "T_UART_GLITCH_SETUP_ERR": {
+        "Localized": "Błąd konfiguracji glitch'era - sprawdź plik uglitch.bp",
+        "EN_US": "Error setting up glitcher - check uglitch.bp file"
+    },
     "T_UART_ACTUAL_SPEED_BAUD": {
-        "Localized": "Faktyczna szerokość transmisji",
+        "Localized": "Faktyczna prędkość transmisji",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
     },
     "T_UART_BAUD": {
-        "Localized": "szerokość transmisji",
+        "Localized": "prędkość transmisji",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
@@ -457,11 +685,23 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_HWI2C_CLOCK_STRETCH_MENU": {
+        "Localized": "Rozciąganie zegara",
+        "EN_US": "Clock stretching"
+    },
+    "T_HWI2C_CLOCK_STRETCH_PROMPT": {
+        "Localized": "(WYŁ.)",
+        "EN_US": "(OFF)"
+    },
     "T_HWI2C_NO_PULLUP_DETECTED": {
         "Localized": "Nie wykryto rezystorów pull-up. Użyj P aby je włączyć",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HWI2C_NO_VOUT_DETECTED": {
+        "Localized": "Nie wykryto napięcia zasilania",
+        "EN_US": "no power detected"
     },
     "T_HWI2C_TIMEOUT": {
         "Localized": "Przekroczenie limitu czasu I2C",
@@ -475,11 +715,43 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_HELP_I2C_TCS34725": {
+        "Localized": "Odczytaj dane czujnika koloru TCS3472x",
+        "EN_US": "read color sensor data from TCS3472x sensor"
+    },
+    "T_HW2WIRE_SPEED_MENU": {
+        "Localized": "Prędkość 2WIRE",
+        "EN_US": "2WIRE speed"
+    },
+    "T_HW2WIRE_RST_LOW": {
+        "Localized": "RST NISKI",
+        "EN_US": "RST LOW"
+    },
+    "T_HW2WIRE_RST_HIGH": {
+        "Localized": "RST WYSOKI",
+        "EN_US": "RST HIGH"
+    },
+    "T_HW2WIRE_SNIFF": {
+        "Localized": "Podsłuch 8-bitowych danych z bitami START/STOP (SLE4442, TM1640)",
+        "EN_US": "Sniff 8 bit data with start and stop bits (SLE4442, TM1640)"
+    },
+    "T_HW3WIRE_SPEED_MENU_1": {
+        "Localized": "1 do 3900kHz",
+        "EN_US": "1 to 3900kHz"
+    },
     "T_HWLED_DEVICE_MENU": {
         "Localized": "Rodzaj LED",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HWLED_DEVICE_MENU_1": {
+        "Localized": "WS2812/SK6812/„NeoPixel” (interfejs jednoprzewodowy)",
+        "EN_US": "WS2812/SK6812/'NeoPixel' (single wire interface)"
+    },
+    "T_HWLED_DEVICE_MENU_2": {
+        "Localized": "APA102/SK9822 (interfejs zegar + dane)",
+        "EN_US": "APA102/SK9822 (clock and data interface)"
     },
     "T_HWLED_DEVICE_MENU_3": {
         "Localized": "LEDy na płytce (18 SK6812s)",
@@ -539,9 +811,109 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_IR_RX_SENSOR_MENU": {
+        "Localized": "Czujnik RX",
+        "EN_US": "RX sensor"
+    },
+    "T_IR_RX_SENSOR_MENU_BARRIER": {
+        "Localized": "Bariera 38kHz",
+        "EN_US": "38kHz barrier"
+    },
+    "T_IR_TX_SPEED_MENU": {
+        "Localized": "Modulacja TX",
+        "EN_US": "TX modulation"
+    },
+    "T_IR_TX_SPEED_MENU_1": {
+        "Localized": "20kHz do 60kHz",
+        "EN_US": "20kHz to 60kHz"
+    },
+    "T_IR_PROTOCOL_MENU": {
+        "Localized": "Protokół",
+        "EN_US": "Protocol"
+    },
+    "T_IR_PROTOCOL_MENU_RAW": {
+        "Localized": "RAW (format aIR)",
+        "EN_US": "RAW (aIR format)"
+    },
+    "T_IR_CMD_TV_BGONE": {
+        "Localized": "TV-B-Gone, wyłączanie wielu marek telewizorów",
+        "EN_US": "TV-B-Gone, turn off many brands of TV"
+    },
+    "T_IR_CMD_IRRX": {
+        "Localized": "Odbiór, nagrywanie i retransmisja sygnałów IR (format aIR)",
+        "EN_US": "Receive, record, retransmit IR signals (aIR format)"
+    },
+    "T_IR_CMD_IRTX": {
+        "Localized": "Nadawanie sygnałów IR (format aIR)",
+        "EN_US": "Transmit IR signals (aIR format)"
+    },
+    "T_HELP_IRTX_FILE_FLAG": {
+        "Localized": "Wyślij jeden lub więcej pakietów aIR z pliku",
+        "EN_US": "Transmit one or more aIR packets from a file"
+    },
+    "T_HELP_IRRX_FILE_FLAG": {
+        "Localized": "Podaj nazwę pliku do zapisu sygnałów",
+        "EN_US": "Specify filename for saved signals"
+    },
+    "T_HELP_IRRX_SENSOR_FLAG": {
+        "Localized": "Wybierz czujnik do odbioru (38B/38D/56D)",
+        "EN_US": "Specify sensor for received signals (38B/38D/56D)irtx -h"
+    },
+    "T_JTAG_BLUETAG_OPTIONS": {
+        "Localized": "Opcje blueTAG",
+        "EN_US": "blueTAG options"
+    },
+    "T_JTAG_BLUETAG_JTAG": {
+        "Localized": "Skanuj piny JTAG",
+        "EN_US": "Scan for JTAG pins"
+    },
+    "T_JTAG_BLUETAG_SWD": {
+        "Localized": "Skanuj piny SWD",
+        "EN_US": "Scan for SWD pins"
+    },
+    "T_JTAG_BLUETAG_FLAGS": {
+        "Localized": "Flagi",
+        "EN_US": "Flags"
+    },
+    "T_JTAG_BLUETAG_CHANNELS": {
+        "Localized": "Liczba kanałów do skanowania (od IO0)",
+        "EN_US": "Number of channels to scan (starting from IO0)"
+    },
+    "T_JTAG_BLUETAG_VERSION": {
+        "Localized": "Pokaż wersję",
+        "EN_US": "Show version"
+    },
+    "T_JTAG_BLUETAG_DISABLE": {
+        "Localized": "Wyłącz impulsowanie pinów (tryb JTAG)",
+        "EN_US": "Disable pin pulsing (JTAG mode)"
+    },
+    "T_JTAG_BLUETAG_DESCRIPTION": {
+        "Localized": "Wykryj wyprowadzenia JTAG i SWD",
+        "EN_US": "Find JTAG and SWD pinouts"
+    },
+    "T_I2S_SPEED_MENU": {
+        "Localized": "Częstotliwość próbkowania",
+        "EN_US": "Sample frequency"
+    },
+    "T_I2S_SPEED_MENU_1": {
+        "Localized": "4000, 8000, 16000, 44100, 48000, 96000 itd",
+        "EN_US": "4000, 8000, 16000, 44100, 48000, 96000 etc"
+    },
+    "T_I2S_DATA_BITS_MENU": {
+        "Localized": "Bity danych",
+        "EN_US": "Data bits"
+    },
+    "T_I2S_DATA_BITS_MENU_1": {
+        "Localized": "16 bitów",
+        "EN_US": "16 bits"
+    },
+    "T_I2S_DATA_BITS_PROMPT": {
+        "Localized": "Bity (%s%d*%s)",
+        "EN_US": "Bits (%s%d*%s)"
+    },
     "T_CMDLN_INVALID_COMMAND": {
-        "Localized": "Niepoprawne polecenie: %s. Użyj ? aby użyskać pomoc.",
-        "EN_US": null,
+        "Localized": "Niepoprawne polecenie: %s. Użyj „?”, aby uzyskać pomoc.",
+        "EN_US": "Invalid command: %s. Type ? for help.",
         "Comments": null,
         "DataTypes": [
             "s"
@@ -595,6 +967,10 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_CMDLN_REBOOT": {
+        "Localized": "reboot - uruchom ponownie Bus Pirate",
+        "EN_US": "reboot - reboot and restart the Bus Pirate."
+    },
     "T_CMDLN_BOOTLOAD": {
         "Localized": "$ - resetuje i wchodzi w tryb bootloadera do aktualizacji.",
         "EN_US": null,
@@ -608,7 +984,7 @@
         "DataTypes": []
     },
     "T_CMDLN_INT_INVERSE": {
-        "Localized": "| {wartość} - inwertuje bity {wartośći}.",
+        "Localized": "| {wartości} - inwertuje bity {wartośći}.",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
@@ -620,8 +996,8 @@
         "DataTypes": []
     },
     "T_CMDLN_CONFIG_MENU": {
-        "Localized": "c - otwieramenu konfiguacji Bus Pirate'a.",
-        "EN_US": null,
+        "Localized": "c - otwiera menu konfiguracji Bus Pirate’a",
+        "EN_US": "c - open Bus Pirate configuration menu.",
         "Comments": null,
         "DataTypes": []
     },
@@ -654,6 +1030,10 @@
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_CMDLN_HELP_DISPLAY": {
+        "Localized": "hd - pokaż pomoc specyficzną dla trybu wyświetlania",
+        "EN_US": "hd - show display mode specific help screen."
     },
     "T_CMDLN_INFO": {
         "Localized": "i - pokazuje informację o Bus Pirate'cie i ekran statusu.",
@@ -698,13 +1078,13 @@
         "DataTypes": []
     },
     "T_CMDLN_ADC_CONT": {
-        "Localized": "V {IOx} - mierzy napięcie na pinie {IOx} w sposób ciągły. Pomiń numer pinu aby mierzyć na wszystkich pinach.",
-        "EN_US": null,
+        "Localized": "V {IOx} - ciągle mierzy napięcie na pinie {IOx}. Pomiń numer pinu, aby zmierzyć jednorazowo na wszystkich pinach.",
+        "EN_US": "V <IOx> - continuous voltage measurement on pin <IOx>. Omit the pin number to measure voltage on all pins.",
         "Comments": null,
         "DataTypes": []
     },
     "T_CMDLN_ADC_ONE": {
-        "Localized": "v {IOx} - jednorazowo mierzy napięciena pinie {IOx}. Pomiń numer pinu aby zmierzyć jednorazowo na wszystkich pinach.",
+        "Localized": "v {IOx} - jednorazowo mierzy na pięciena pinie {IOx}. Pomiń numer pinu aby zmierzyć jednorazowo na wszystkich pinach.",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
@@ -734,8 +1114,8 @@
         "DataTypes": []
     },
     "T_CMDLN_DUMP": {
-        "Localized": "dump {plik} {urządzenie} - zrzuca zawarość pamięci flash {urządzenia} do {pliku}. Uwaga: aktualnie eksperymentalna funkcja, która działa tylko z 25LC020 w trybie SPI.",
-        "EN_US": null,
+        "Localized": "dump {plik} {urządzenie} - zrzuca zawartość pamięci flash {urządzenia} do {pliku}. Uwaga: aktualnie eksperymentalna funkcja, działa tylko z 25LC020 w trybie SPI.",
+        "EN_US": "dump <file> <device> - dump contents of flash <device> to <file>. Warning: currently a prototype that only works with 25LC020 in SPI mode.",
         "Comments": null,
         "DataTypes": []
     },
@@ -744,6 +1124,54 @@
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_CMDLN_DISPLAY": {
+        "Localized": "d - zmień tryb wyświetlania, pokaż menu wyboru",
+        "EN_US": "d - change display mode, show selection menu."
+    },
+    "T_CMDLN_LOGIC": {
+        "Localized": "logic <częstotliwość w kHz> <próbki> <pin wyzwalania> <poziom wyzwalania> - analizator logiczny. <częstotliwość> 1 kHz-62 500 kHz, <pin wyzwalania> 0-7, <poziom wyzwalania> 0-1",
+        "EN_US": "logic <frequency in kHz> <samples> <trigger pin> <trigger level> - logic analyzer. <frequency> 1kHz-62500kHz, <trigger pin> 0:7, <trigger level> 0:1."
+    },
+    "T_CMDLN_HEX": {
+        "Localized": "hex <plik> - wyświetl zawartość <pliku> w formacie HEX",
+        "EN_US": "hex <file> - print contents of <file> in HEX"
+    },
+    "T_HELP_SECTION_IO": {
+        "Localized": "praca z pinami, pomiar wejść/wyjść",
+        "EN_US": "work with pins, input, output measurement"
+    },
+    "T_HELP_SECTION_CAPTURE": {
+        "Localized": "pomiary sygnałów analogowych i cyfrowych",
+        "EN_US": "measure analog and digital signals"
+    },
+    "T_HELP_SECTION_CONFIGURE": {
+        "Localized": "konfiguracja terminala, LED, wyświetlacza i trybu",
+        "EN_US": "configure the terminal, LEDs, display and mode"
+    },
+    "T_HELP_SECTION_SYSTEM": {
+        "Localized": "restart, aktualizacje firmware i diagnostyka",
+        "EN_US": "restart, firmware updates and diagnostic"
+    },
+    "T_HELP_SECTION_FILES": {
+        "Localized": "pliki i nawigacja po pamięci",
+        "EN_US": "list files and navigate the storage"
+    },
+    "T_HELP_SECTION_PROGRAMS": {
+        "Localized": "przydatne polecenia i mini-programy",
+        "EN_US": "useful commands and mini-programs"
+    },
+    "T_HELP_SECTION_MODE": {
+        "Localized": "wpisz tryb używania protokołu",
+        "EN_US": "enter a mode to use protocols"
+    },
+    "T_HELP_SECTION_SYNTAX": {
+        "Localized": "wysyłanie/odbiór danych w trybach (Bus Syntax)",
+        "EN_US": "send and receive data in modes using bus syntax"
+    },
+    "T_HELP_SECTION_HELP": {
+        "Localized": "więcej pomocy",
+        "EN_US": "get more help"
     },
     "T_HELP_GREATER_THAN": {
         "Localized": "Uruchom Składnię Magistrali (patrz Bus Syntax)",
@@ -781,11 +1209,47 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_HELP_CMD_PAUSE": {
+        "Localized": "Pauza na wejście użytkownika, opcjonalne wyjście",
+        "EN_US": "Pause for user input, optional exit"
+    },
+    "T_HELP_CMD_FORMAT": {
+        "Localized": "Formatuj dysk pamięci (FAT16)",
+        "EN_US": "Format storage disk (FAT16)"
+    },
     "T_HELP_CMD_CAT": {
         "Localized": "Pokaż zawartość pliku",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HELP_CMD_HEX": {
+        "Localized": "Wyświetl zawartość pliku w HEX",
+        "EN_US": "Print file contents in HEX"
+    },
+    "T_HELP_CAPTURE_SCOPE": {
+        "Localized": "Interfejs oscyloskopu",
+        "EN_US": "Oscilloscope interface"
+    },
+    "T_HELP_CAPTURE_LA": {
+        "Localized": "Interfejs analizatora logicznego",
+        "EN_US": "Logic analyzer interface"
+    },
+    "T_HELP_CMD_FLASH": {
+        "Localized": "Kasowanie, zapis, odczyt i weryfikacja układów SPI flash",
+        "EN_US": "Erase, write, read and verify SPI flash chips"
+    },
+    "T_HELP_CMD_LABEL": {
+        "Localized": "Pobierz lub ustaw etykietę dysku",
+        "EN_US": "Get or set the disk label"
+    },
+    "T_HELP_CMD_IMAGE": {
+        "Localized": "Zapisz obraz bitmapy na LCD",
+        "EN_US": "Write a bitmap image on the LCD"
+    },
+    "T_HELP_CMD_DUMP": {
+        "Localized": "Powtórz odczyt i zapisz wynik do pamięci",
+        "EN_US": "Repeat read command, save ouput to storage"
     },
     "T_HELP_1_2": {
         "Localized": "Konwertuje x/odwraca x\\t",
@@ -798,6 +1262,10 @@
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HELP_SYSTEM_REBOOT": {
+        "Localized": "Zresetuj Bus Pirat'a",
+        "EN_US": "Reboot the Bus Pirate"
     },
     "T_HELP_1_5": {
         "Localized": "Przejdź do bootloadera\\t",
@@ -822,6 +1290,10 @@
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HELP_COMMAND_DISPLAY": {
+        "Localized": "Zmień tryb wyświetlania",
+        "EN_US": "Change screen display mode"
     },
     "T_HELP_1_9": {
         "Localized": "Menu konfiguracyjne\\t",
@@ -858,6 +1330,18 @@
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HELP_HELP_GENERAL": {
+        "Localized": "Globalna pomoc dla poleceń, trybów i wyświetlania. Spróbuj '?', '? mode' oraz '? display'",
+        "EN_US": "Global, mode and display help. Try '?', '? mode' and '? display'"
+    },
+    "T_HELP_HELP_DISPLAY": {
+        "Localized": "Pomoc dla trybu wyświetlania (np. oscyloskop)",
+        "EN_US": "Help with a display mode such as the scope"
+    },
+    "T_HELP_HELP_COMMAND": {
+        "Localized": "Dodaj -h, aby zobaczyć pomoc polecenia, np.: ls -h",
+        "EN_US": "Add -h for command help: ls -h"
     },
     "T_HELP_1_14": {
         "Localized": "Wersja/Status\\t",
@@ -908,8 +1392,8 @@
         "DataTypes": []
     },
     "T_HELP_2_1": {
-        "Localized": "Mode macro x/list all\\t",
-        "EN_US": null,
+        "Localized": "Makro trybu: x /wyświetl wszystkie\\t",
+        "EN_US": "Mode macro x/list all",
         "Comments": null,
         "DataTypes": []
     },
@@ -931,9 +1415,17 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_HELP_2_8": {
+        "Localized": "Zapisz wartość (dziesiętnie)",
+        "EN_US": "Write value (decimal)"
+    },
+    "T_HELP_2_9": {
+        "Localized": "Zapisz wartość (szesnastkowo)",
+        "EN_US": "Write value (hex)"
+    },
     "T_HELP_2_10": {
-        "Localized": "Wyślij wartość",
-        "EN_US": null,
+        "Localized": "Zapisz wartość (binarnie)",
+        "EN_US": "Write value (binary)",
         "Comments": null,
         "DataTypes": []
     },
@@ -942,6 +1434,30 @@
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HELP_SYN_CLOCK_HIGH": {
+        "Localized": "Zegar wysoki",
+        "EN_US": "Clock high"
+    },
+    "T_HELP_SYN_CLOCK_LOW": {
+        "Localized": "Zegar niski",
+        "EN_US": "Clock low"
+    },
+    "T_HELP_SYN_CLOCK_TICK": {
+        "Localized": "Takt zegara",
+        "EN_US": "Clock tick"
+    },
+    "T_HELP_SYN_DATA_HIGH": {
+        "Localized": "Dane wysokie",
+        "EN_US": "Data high"
+    },
+    "T_HELP_SYN_DATA_LOW": {
+        "Localized": "Dane niskie",
+        "EN_US": "Data low"
+    },
+    "T_HELP_SYN_DATA_READ": {
+        "Localized": "Odczytaj stan pinu danych",
+        "EN_US": "Read data pin state"
     },
     "T_HELP_2_18": {
         "Localized": "Bit przeczytany",
@@ -974,10 +1490,134 @@
         "DataTypes": []
     },
     "T_HELP_HINT": {
-        "Localized": "Multiplikuj polecenia przy użyciu ; || &&.\\r\\n\\r\\nPatrz -h dla pomocy polecenia: ls -h",
-        "EN_US": null,
+        "Localized": "Łącz polecenia przy użyciu ; || &&.\\\\r\\\\n\\\\r\\\\nUżyj -h, aby zobaczyć pomoc polecenia, np.: ls -h",
+        "EN_US": "Chain multiple commands with ; || &&.",
         "Comments": null,
         "DataTypes": []
+    },
+    "T_HELP_FLASH": {
+        "Localized": "odczyt, zapis i kasowanie układów flash (z SFDP, jeśli dostępne)",
+        "EN_US": "read, write and erase flash chips using SFDP info if available"
+    },
+    "T_HELP_FLASH_ERASE": {
+        "Localized": "Skasuj układ flash",
+        "EN_US": "Erase flash chip"
+    },
+    "T_HELP_FLASH_WRITE": {
+        "Localized": "Zapisz plik do układu flash",
+        "EN_US": "Write file to flash chip"
+    },
+    "T_HELP_FLASH_READ": {
+        "Localized": "Odczytaj układ flash do pliku",
+        "EN_US": "Read flash chip to file"
+    },
+    "T_HELP_FLASH_VERIFY": {
+        "Localized": "Zweryfikuj układ flash z plikiem",
+        "EN_US": "Verify flash chip against file"
+    },
+    "T_HELP_FLASH_TEST": {
+        "Localized": "Skasuj i zapisz cały układ danymi testowymi, zweryfikuj",
+        "EN_US": "Erase and write full chip with dummy data, verify"
+    },
+    "T_HELP_FLASH_PROBE": {
+        "Localized": "Sprawdź ID układu i informacje SFDP",
+        "EN_US": "Probe flash chip for ID and SFDP info"
+    },
+    "T_HELP_FLASH_INIT": {
+        "Localized": "Reset i inicjalizacja układu flash (domyślnie)",
+        "EN_US": "Reset and initialize flash chip. Default if no options given"
+    },
+    "T_HELP_FLASH_FILE_FLAG": {
+        "Localized": "Flaga pliku: plik do zapisu/odczytu/weryfikacji",
+        "EN_US": "File flag. File to write, read or verify"
+    },
+    "T_HELP_FLASH_ERASE_FLAG": {
+        "Localized": "Flaga kasowania: dodaj kasowanie przed zapisem",
+        "EN_US": "Erase flag. Add erase before write"
+    },
+    "T_HELP_FLASH_VERIFY_FLAG": {
+        "Localized": "Flaga weryfikacji: dodaj weryfikację po zapisie lub kasowaniu",
+        "EN_US": "Verify flag. Add verify after write or erase"
+    },
+    "T_HELP_I2C_EEPROM": {
+        "Localized": "odczyt, zapis i kasowanie pamięci I2C EEPROM serii 24XX",
+        "EN_US": "read, write and erase 24XX series I2C EEPROM chips"
+    },
+    "T_HELP_SPI_EEPROM": {
+        "Localized": "odczyt, zapis i kasowanie pamięci SPI EEPROM serii 25XX",
+        "EN_US": "read, write and erase 25XX series SPI EEPROM chips"
+    },
+    "T_HELP_1WIRE_EEPROM": {
+        "Localized": "odczyt, zapis i kasowanie pamięci 1-Wire EEPROM serii 243X",
+        "EN_US": "read, write and erase 243X series 1-Wire EEPROM chips"
+    },
+    "T_HELP_EEPROM_DUMP": {
+        "Localized": "Pokaż zawartość. Spacja - dalej, x - wyjście",
+        "EN_US": "Show contents. Space to continue, x to exit"
+    },
+    "T_HELP_EEPROM_ERASE": {
+        "Localized": "Wymaż pamięć chip'u",
+        "EN_US": "Erase chip"
+    },
+    "T_HELP_EEPROM_WRITE": {
+        "Localized": "Zapisz plik do chip'u",
+        "EN_US": "Write file to chip"
+    },
+    "T_HELP_EEPROM_READ": {
+        "Localized": "Odczytaj plik z chip'u",
+        "EN_US": "Read chip to file"
+    },
+    "T_HELP_EEPROM_VERIFY": {
+        "Localized": "Zweryfikuj chip z plikiem",
+        "EN_US": "Verify chip against file"
+    },
+    "T_HELP_EEPROM_TEST": {
+        "Localized": "Skasuj i zapisz chip danymi testowymi, zweryfikuj",
+        "EN_US": "Erase and write chip with dummy data, verify"
+    },
+    "T_HELP_EEPROM_LIST": {
+        "Localized": "Lista obsługiwanych chip'ów EEPROM",
+        "EN_US": "List supported EEPROM devices"
+    },
+    "T_HELP_EEPROM_DEVICE_FLAG": {
+        "Localized": "Wybierz chip EEPROM",
+        "EN_US": "Specify the EEPROM device"
+    },
+    "T_HELP_EEPROM_FILE_FLAG": {
+        "Localized": "Plik do zapisu/odczytu/weryfikacji",
+        "EN_US": "File to write, read or verify"
+    },
+    "T_HELP_EEPROM_VERIFY_FLAG": {
+        "Localized": "Weryfikuj po zapisie/odczycie/kasowaniu",
+        "EN_US": "Verify after write, read or erase"
+    },
+    "T_HELP_EEPROM_START_FLAG": {
+        "Localized": "Zrzut: adres startowy",
+        "EN_US": "Dump: start address"
+    },
+    "T_HELP_EEPROM_BYTES_FLAG": {
+        "Localized": "Zrzut: liczba bajtów",
+        "EN_US": "Dump: number of bytes"
+    },
+    "T_HELP_EEPROM_ADDRESS_FLAG": {
+        "Localized": "Adres I2C (domyślnie 0x50)",
+        "EN_US": "I2C address (0x50 default)"
+    },
+    "T_HELP_EEPROM_PROTECT": {
+        "Localized": "Pokaż status ochrony zapisu",
+        "EN_US": "Show chip write protect status"
+    },
+    "T_HELP_EEPROM_PROTECT_FLAG": {
+        "Localized": "Ustaw bity ochrony bloku (0b00-0b11, 0-3)",
+        "EN_US": "Set Block Protection bits (0b00-0b11, 0-3)"
+    },
+    "T_HELP_EEPROM_SPI_WPEN_FLAG": {
+        "Localized": "Ustaw pin WPEN (0/1)",
+        "EN_US": "Set Write Protect ENable pin off/on (0/1)"
+    },
+    "T_HELP_EEPROM_SPI_TEST_FLAG": {
+        "Localized": "Test funkcji ochrony zapisu",
+        "EN_US": "Test for write protection features"
     },
     "T_INFO_WITH": {
         "Localized": "z",
@@ -1081,6 +1721,14 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_CONFIG_ANSI_COLOR_FULLCOLOR": {
+        "Localized": "ANSI Full-Color (16 mln kolorów)",
+        "EN_US": "ANSI Full-Color (16M colors)"
+    },
+    "T_CONFIG_ANSI_COLOR_256": {
+        "Localized": "ANSI-256 kolory",
+        "EN_US": "ANSI-256 color"
+    },
     "T_CONFIG_ANSI_TOOLBAR_MODE": {
         "Localized": "Tryb ANSI toolbar",
         "EN_US": null,
@@ -1135,11 +1783,35 @@
         "Comments": null,
         "DataTypes": []
     },
+    "T_CONFIG_LEDS_EFFECT_ANGLEWIPE": {
+        "Localized": "Przejście pod kątem",
+        "EN_US": "Angle wipe"
+    },
+    "T_CONFIG_LEDS_EFFECT_CENTERWIPE": {
+        "Localized": "Przejście od środka",
+        "EN_US": "Center wipe"
+    },
+    "T_CONFIG_LEDS_EFFECT_CLOCKWISEWIPE": {
+        "Localized": "Przejście zgodnie z ruchem wskazówek zegara",
+        "EN_US": "Clockwise wipe"
+    },
+    "T_CONFIG_LEDS_EFFECT_TOPDOWNWIPE": {
+        "Localized": "Przejście od góry",
+        "EN_US": "Top side wipe"
+    },
     "T_CONFIG_LEDS_EFFECT_SCANNER": {
         "Localized": "Skaner",
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_CONFIG_LEDS_EFFECT_GENTLE_GLOW": {
+        "Localized": "Delikatny blask",
+        "EN_US": "Gentle glow"
+    },
+    "T_CONFIG_LEDS_EFFECT_CYCLE": {
+        "Localized": "Tryb imprezowy",
+        "EN_US": "Party mode"
     },
     "T_CONFIG_LEDS_COLOR": {
         "Localized": "Kolor LED",
@@ -1206,5 +1878,545 @@
         "EN_US": null,
         "Comments": null,
         "DataTypes": []
+    },
+    "T_CONFIG_BINMODE_SELECT": {
+        "Localized": "Wybierz tryb binarny",
+        "EN_US": "Select binary mode"
+    },
+    "T_HELP_DUMMY_COMMANDS": {
+        "Localized": "Atrapowe polecenia poprawne w pozycji 1",
+        "EN_US": "Dummy commands valid in position 1"
+    },
+    "T_HELP_DUMMY_INIT": {
+        "Localized": "Atrapowe polecenie inicjalizacji",
+        "EN_US": "Dummy init command"
+    },
+    "T_HELP_DUMMY_TEST": {
+        "Localized": "Atrapowe polecenie testu",
+        "EN_US": "Dummy test command"
+    },
+    "T_HELP_DUMMY_FLAGS": {
+        "Localized": "Flagi atrapowe",
+        "EN_US": "Dummy flags"
+    },
+    "T_HELP_DUMMY_B_FLAG": {
+        "Localized": "-b wymagane naciśnięcie przycisku Bus Pirate",
+        "EN_US": "-b require Bus Pirate button to be pushed. Takes no parameters"
+    },
+    "T_HELP_DUMMY_I_FLAG": {
+        "Localized": "-i <liczba>. Wymaga parametru liczbowego (integer)",
+        "EN_US": "-i <integer>. Requires integer number parameter"
+    },
+    "T_HELP_DUMMY_FILE_FLAG": {
+        "Localized": "-f <plik>. Utwórz/zapisz/odczytaj <plik>. Wymaga nazwy pliku",
+        "EN_US": "-f <file>. Create/write/read <file>. Requires file string parameter"
+    },
+    "T_HELP_SLE4442": {
+        "Localized": "Interfejs kart inteligentnych SLE4442",
+        "EN_US": "SLE4442 smart card interface"
+    },
+    "T_HELP_SLE4442_INIT": {
+        "Localized": "Zainicjalizuj kartę z ATR ISO7816-3 (akcja domyślna)",
+        "EN_US": "Initialize card with ISO7816-3 ATR. Default action"
+    },
+    "T_HELP_SLE4442_DUMP": {
+        "Localized": "Wyświetl pamięć główną, zabezpieczeń i ochrony",
+        "EN_US": "Display main, security and protect memory"
+    },
+    "T_HELP_SLE4442_UNLOCK": {
+        "Localized": "Odblokuj kartę za pomocą Programowalnego Kodu Bezpieczeństwa (PSC)",
+        "EN_US": "Unlock card with Programmable Security Code (PSC)"
+    },
+    "T_HELP_SLE4442_WRITE": {
+        "Localized": "Zapisz dane do karty (wymaga odblokowania)",
+        "EN_US": "Write data to card (requires unlock)"
+    },
+    "T_HELP_SLE4442_ERASE": {
+        "Localized": "Wymaż dane z zakresu 0x32-0x255 (wymaga odblokowania)",
+        "EN_US": "Erase data from range 0x32-0x255 (requires unlock)"
+    },
+    "T_HELP_SLE4442_PSC": {
+        "Localized": "Zmień Programowalny Kod Bezpieczeństwa (PSC)",
+        "EN_US": "Change Programmable Security Code (PSC)"
+    },
+    "T_HELP_SLE4442_PROTECT": {
+        "Localized": "Zapisz 32-bitową pamięć ochrony (wymaga odblokowania)",
+        "EN_US": "Write 32 bit protection memory (requires unlock)"
+    },
+    "T_HELP_SLE4442_ADDRESS_FLAG": {
+        "Localized": "Flaga adresu zapisu",
+        "EN_US": "Write address flag"
+    },
+    "T_HELP_SLE4442_VALUE_FLAG": {
+        "Localized": "Flaga wartości zapisu",
+        "EN_US": "Write value flag"
+    },
+    "T_HELP_SLE4442_CURRENT_PSC_FLAG": {
+        "Localized": "Flaga aktualnego Programowalnego Kodu Bezpieczeństwa (PSC)",
+        "EN_US": "Current Programmable Security Code (PSC) flag"
+    },
+    "T_HELP_SLE4442_NEW_PSC_FLAG": {
+        "Localized": "Flaga nowego Programowalnego Kodu Bezpieczeństwa (PSC)",
+        "EN_US": "New Programmable Security Code (PSC) flag"
+    },
+    "T_HELP_SLE4442_FILE_FLAG": {
+        "Localized": "Zapisz zrzut pamięci do <nazwy pliku>",
+        "EN_US": "Save dump to <file name>"
+    },
+    "T_HELP_GCMD_W": {
+        "Localized": "wbudowane zasilanie z programowalnym bezpiecznikiem",
+        "EN_US": "onboard power supply with programmable fuse"
+    },
+    "T_HELP_GCMD_W_DISABLE": {
+        "Localized": "Wyłącz wbudowane zasilanie",
+        "EN_US": "Disable onboard power supply"
+    },
+    "T_HELP_GCMD_W_ENABLE": {
+        "Localized": "Włącz wbudowane zasilanie i pokaż menu konfiguracji",
+        "EN_US": "Enable onboard power supply, show configuration menu"
+    },
+    "T_HELP_GCMD_W_VOLTS": {
+        "Localized": "Napięcie, 0,8-5,0 V",
+        "EN_US": "Voltage, 0.8-5.0volts"
+    },
+    "T_HELP_GCMD_W_CURRENT_LIMIT": {
+        "Localized": "Limit prądowy, 0-500 mA",
+        "EN_US": "Current limit, 0-500mA"
+    },
+    "T_HELP_GCMD_P": {
+        "Localized": "Wbudowane rezystory podciągające (pull-up)",
+        "EN_US": "onboard pull-up resistors"
+    },
+    "T_HELP_HELP": {
+        "Localized": "pomoc dla poleceń i trybów Bus Pirate",
+        "EN_US": "help for Bus Pirate commands and modes"
+    },
+    "T_HELP_SYS_COMMAND": {
+        "Localized": "Polecenia dostępu do systemu pomocy",
+        "EN_US": "Commands to access the help system"
+    },
+    "T_HELP_SYS_DISPLAY": {
+        "Localized": "Pokaż pomoc trybów wyświetlania (np. oscyloskop)",
+        "EN_US": "Show display mode help (such as oscilloscope)"
+    },
+    "T_HELP_SYS_MODE": {
+        "Localized": "Pokaż polecenia i pomoc specyficzne dla trybu",
+        "EN_US": "Show mode specific commands and help"
+    },
+    "T_HELP_SYS_HELP": {
+        "Localized": "Jak korzystać z systemu pomocy",
+        "EN_US": "How to use the help system"
+    },
+    "T_HELP_GCMD_SELFTEST": {
+        "Localized": "Uruchom pełny autotest systemu",
+        "EN_US": "run a complete system self-test"
+    },
+    "T_HELP_GCMD_SELFTEST_CMD": {
+        "Localized": "Uruchom autotest",
+        "EN_US": "Run self-test"
+    },
+    "T_HELP_GCMD_SELFTEST_H_FLAG": {
+        "Localized": "Pomoc autotestu",
+        "EN_US": "Self-test help"
+    },
+    "T_HELP_AUXIO": {
+        "Localized": "ustaw stan pinów IO, odczytaj piny wejściowe",
+        "EN_US": "set IO pin state, read input pins"
+    },
+    "T_HELP_AUXIO_LOW": {
+        "Localized": "Wyjście, niski/0. Rezerwuje pin jako wyjście",
+        "EN_US": "Output, low/0. Reserves pin for output"
+    },
+    "T_HELP_AUXIO_HIGH": {
+        "Localized": "Wyjście, wysoki/1. Rezerwuje pin jako wyjście",
+        "EN_US": "Output, high/1. Reserves pin for output"
+    },
+    "T_HELP_AUXIO_INPUT": {
+        "Localized": "Wejście, odczyt stanu. Zwolnij zarezerwowany pin",
+        "EN_US": "Input, read state. Releases reserved pin"
+    },
+    "T_HELP_AUXIO_IO": {
+        "Localized": "Numer pinu wejścia/wyjścia, 0-7",
+        "EN_US": "IO pin number, 0-7"
+    },
+    "T_HELP_DISK_HEX": {
+        "Localized": "Wyświetl zawartość pliku w formacie HEX",
+        "EN_US": "Print file contents in HEX format"
+    },
+    "T_HELP_DISK_HEX_FILE": {
+        "Localized": "Nazwa pliku w formacie 8.3 (example1.bin)",
+        "EN_US": "Name of file in 8.3 format (example1.bin)"
+    },
+    "T_HELP_DISK_HEX_ADDR": {
+        "Localized": "Wyłącz przesunięcie adresu",
+        "EN_US": "Disable address offset"
+    },
+    "T_HELP_DISK_HEX_ASCII": {
+        "Localized": "Wyłącz zrzut ASCII",
+        "EN_US": "Disable ASCII dump"
+    },
+    "T_HELP_DISK_HEX_SIZE": {
+        "Localized": "Ustaw rozmiar linii w bajtach",
+        "EN_US": "Set line size in bytes"
+    },
+    "T_HELP_DISK_HEX_OFF": {
+        "Localized": "Ustaw offset początkowy odczytu pliku (bajty)",
+        "EN_US": "Set file read start offset in bytes"
+    },
+    "T_HELP_DISK_HEX_PAGER_OFF": {
+        "Localized": "Zrzut: wyłącz stronicowanie",
+        "EN_US": "Dump: disable pager"
+    },
+    "T_HELP_DISK_HEX_QUIET": {
+        "Localized": "Zrzut: tryb cichy, bez kolumn adresu i ASCII",
+        "EN_US": "Dump: quiet mode, disable address and ASCII columns"
+    },
+    "T_HELP_DISK_CAT": {
+        "Localized": "Wyświetl zawartość pliku jako tekst",
+        "EN_US": "print file contents as text"
+    },
+    "T_HELP_DISK_CAT_FILE": {
+        "Localized": "Nazwa pliku w formacie 8.3 (example1.txt)",
+        "EN_US": "Name of file in 8.3 format (example1.txt)"
+    },
+    "T_HELP_DISK_MKDIR": {
+        "Localized": "utwórz katalog w pamięci wewnętrznej",
+        "EN_US": "create directory on internal storage"
+    },
+    "T_HELP_DISK_MKDIR_DIR": {
+        "Localized": "Nazwa katalogu, maks. 8 znaków",
+        "EN_US": "Directory name, 8 characters max"
+    },
+    "T_HELP_DISK_CD": {
+        "Localized": "Zmień katalog w pamięci lokalnej",
+        "EN_US": "change to a directory on local storage"
+    },
+    "T_HELP_DISK_CD_DIR": {
+        "Localized": "Nazwa katalogu, maks. 8 znaków",
+        "EN_US": "Directory name, 8 characters max"
+    },
+    "T_HELP_DISK_RM": {
+        "Localized": "Usuń plik lub katalog z pamięci lokalnej",
+        "EN_US": "delete file or directory on local storage"
+    },
+    "T_HELP_DISK_RM_FILE": {
+        "Localized": "Nazwa katalogu do usunięcia, maks. 8 znaków",
+        "EN_US": "Name of file to delete, 8.3 format"
+    },
+    "T_HELP_DISK_RM_DIR": {
+        "Localized": "Wyświetl listę plików i katalogów w pamięci lokalnej",
+        "EN_US": "Name of directory to delete, 8 characters max"
+    },
+    "T_HELP_DISK_LS": {
+        "Localized": "Wyświetl listę plików i katalogów w pamięci lokalnej",
+        "EN_US": "list files and directories on local storage"
+    },
+    "T_HELP_DISK_LS_DIR": {
+        "Localized": "Wyświetl zawartość tego katalogu (opcjonalnie)",
+        "EN_US": "List contents of this directory, optional"
+    },
+    "T_HELP_DISK_FORMAT": {
+        "Localized": "Wymaż i sformatuj pamięć wewnętrzną w formacie FAT16",
+        "EN_US": "erase and format internal storage in FAT16 format"
+    },
+    "T_HELP_DISK_FORMAT_CMD": {
+        "Localized": "Wszystkie dane zostaną utracone, wpisz 'y' dwa razy aby kontynuować",
+        "EN_US": "All data will be lost, answer 'y' twice to continue"
+    },
+    "T_HELP_DISK_LABEL": {
+        "Localized": "pobierz lub ustaw etykietę dysku",
+        "EN_US": "get or set the disk label"
+    },
+    "T_HELP_DISK_LABEL_GET": {
+        "Localized": "zwraca aktualną etykietę dysku",
+        "EN_US": "returns the current label of the disk"
+    },
+    "T_HELP_DISK_LABEL_SET": {
+        "Localized": "ustawia aktualną etykietę dysku",
+        "EN_US": "sets the current label of the disk"
+    },
+    "T_HELP_VADC": {
+        "Localized": "pomiar napięcia na pinach IO",
+        "EN_US": "measure voltage on IO pins"
+    },
+    "T_HELP_VADC_SINGLE": {
+        "Localized": "Pojedynczy pomiar",
+        "EN_US": "Single measurement"
+    },
+    "T_HELP_VADC_CONTINUOUS": {
+        "Localized": "Pomiar ciągły",
+        "EN_US": "Continuous measurement"
+    },
+    "T_HELP_VADC_IO": {
+        "Localized": "Numer pinu Wejścia/Wyjścia, 0-7",
+        "EN_US": "IO pin number, 0-7"
+    },
+    "T_HELP_I2C_SCAN": {
+        "Localized": "Skanuj adresy I2C, opcjonalnie z numerem układu",
+        "EN_US": "scan I2C addresses, with optional part number"
+    },
+    "T_HELP_I2C_SCAN_VERBOSE": {
+        "Localized": "Tryb szczegółowy, wyświetl potencjalne numery układów",
+        "EN_US": "Verbose mode, print potential part numbers"
+    },
+    "T_HELP_FLAG": {
+        "Localized": "Uzyskaj dodatkową pomoc",
+        "EN_US": "Get additional help"
+    },
+    "T_HELP_I2C_SI7021": {
+        "Localized": "Odczytaj temperaturę i wilgotność z czujnika SI7021/HTU21/SHT21",
+        "EN_US": "Read temperature and humidity from SI7021/HTU21/SHT21 sensor"
+    },
+    "T_HELP_I2C_MS5611": {
+        "Localized": "Odczytaj temperaturę i ciśnienie z czujnika MS5611",
+        "EN_US": "Read temperature and pressure from MS5611 sensor"
+    },
+    "T_HELP_I2C_TSL2561": {
+        "Localized": "Odczytaj natężenie światła (LUX) z czujnika TSL2561",
+        "EN_US": "Read light intensity (LUX) from TSL2561 sensor"
+    },
+    "T_HELP_I2C_SHT3X": {
+        "Localized": "Odczytaj temperaturę i wilgotność z czujników SHT3x",
+        "EN_US": "Read temperature and humidity from SHT3x sensors"
+    },
+    "T_HELP_I2C_SHT4X": {
+        "Localized": "Odczytaj temperaturę i wilgotność z czujników SHT4x",
+        "EN_US": "Read temperature and humidity from SHT4x sensors"
+    },
+    "T_HELP_1WIRE_SCAN": {
+        "Localized": "Skanuj urządzenia 1-Wire",
+        "EN_US": "scan for 1-Wire devices"
+    },
+    "T_HELP_1WIRE_DS18B20": {
+        "Localized": "Odczytaj temperaturę z czujnika DS18B20",
+        "EN_US": "Query DS18B20 temperature sensor"
+    },
+    "T_HELP_UART_BRIDGE": {
+        "Localized": "T_HELP_UART_BRIDGE",
+        "EN_US": "open UART with raw data IO, usb to serial bridge mode"
+    },
+    "T_HELP_UART_BRIDGE_EXIT": {
+        "Localized": "Mostek UART. Naciśnij przycisk na Bus Pirat'cie, aby wyjść",
+        "EN_US": "UART bridge. Press Bus Pirate button to exit."
+    },
+    "T_HELP_UART_BRIDGE_TOOLBAR": {
+        "Localized": "Włącz pasek narzędzi podczas pracy mostka (domyślnie: wyłączony)",
+        "EN_US": "ENABLE toolbar while bridge is active (default: disabled)"
+    },
+    "T_HELP_UART_BRIDGE_SUPPRESS_LOCAL_ECHO": {
+        "Localized": "Wyłącz lokalne echo, nie zwracaj wysłanych danych",
+        "EN_US": "Suppress local echo, don't echo back sent data"
+    },
+    "T_HELP_UART_NMEA": {
+        "Localized": "Parsuj dane GPS w formacie NMEA",
+        "EN_US": "parse NMEA GPS data"
+    },
+    "T_HELP_UART_GLITCH_EXIT": {
+        "Localized": "Glitch'er UART. Naciśnij przycisk Bus Pirate, aby wyjść",
+        "EN_US": "UART Glitcher.  Press Bus Pirate button to exit."
+    },
+    "T_HELP_SECTION_SCRIPT": {
+        "Localized": "Uruchamiaj skrypty, makra oraz przypisuj funkcje przyciskowi",
+        "EN_US": "run scripts, macros and assign button functions"
+    },
+    "T_HELP_CMD_SCRIPT": {
+        "Localized": "Uruchom pliki skryptów, automatyzacja",
+        "EN_US": "Run script files, automation"
+    },
+    "T_HELP_CMD_BUTTON": {
+        "Localized": "Przypisz funkcje do przycisku",
+        "EN_US": "Assign button functions"
+    },
+    "T_HELP_CMD_MACRO": {
+        "Localized": "Uruchom makra, wczytaj plik makra",
+        "EN_US": "Run macros, load a macro file"
+    },
+    "T_HELP_CMD_TUTORIAL": {
+        "Localized": "Uruchom pliki samouczków",
+        "EN_US": "Run tutorial files"
+    },
+    "T_HELP_CMD_PAUSE_KEY": {
+        "Localized": "Naciśnij dowolny klawisz, aby kontynuować (domyślnie)",
+        "EN_US": "Press any key to continue (default)"
+    },
+    "T_HELP_CMD_PAUSE_BUTTON": {
+        "Localized": "Naciśnij przycisk Bus Pirate, aby kontynuować",
+        "EN_US": "Press the Bus Pirate button to continue"
+    },
+    "T_HELP_CMD_PAUSE_EXIT": {
+        "Localized": "Klawisz 'x' - wyjście (np. tryb skryptu)",
+        "EN_US": "'x' key to exit (e.g. script mode)"
+    },
+    "T_HELP_BUTTON": {
+        "Localized": "Przypisz plik skryptu do naciśnięcia przycisku",
+        "EN_US": "Assign script file to button press"
+    },
+    "T_HELP_BUTTON_SHORT": {
+        "Localized": "Przypisz plik skryptu do krótkiego naciśnięcia przycisku",
+        "EN_US": "Assign script file to short button press"
+    },
+    "T_HELP_BUTTON_LONG": {
+        "Localized": "Przypisz plik skryptu do długiego naciśnięcia przycisku",
+        "EN_US": "Assign script file to long button press"
+    },
+    "T_HELP_BUTTON_FILE": {
+        "Localized": "Plik skryptu do przypisania do przycisku",
+        "EN_US": "Script file to assign to button press"
+    },
+    "T_HELP_BUTTON_HIDE": {
+        "Localized": "Ukryj komentarze",
+        "EN_US": "Hide comments"
+    },
+    "T_HELP_BUTTON_EXIT": {
+        "Localized": "Zakończ skrypt przy błędzie",
+        "EN_US": "Exit script on error"
+    },
+    "T_HELP_LOGIC": {
+        "Localized": "sterowanie analizatorem logicznym",
+        "EN_US": "logic analyzer control"
+    },
+    "T_HELP_LOGIC_START": {
+        "Localized": "uruchom analizator logiczny",
+        "EN_US": "start logic analyzer"
+    },
+    "T_HELP_LOGIC_STOP": {
+        "Localized": "zatrzymaj analizator logiczny",
+        "EN_US": "stop logic analyzer"
+    },
+    "T_HELP_LOGIC_HIDE": {
+        "Localized": "Ukryj wykres logiczny",
+        "EN_US": "hide logic graph"
+    },
+    "T_HELP_LOGIC_SHOW": {
+        "Localized": "Pokaż wykres logiczny",
+        "EN_US": "show logic graph"
+    },
+    "T_HELP_LOGIC_NAV": {
+        "Localized": "Nawiguj wykres strzałkami, 'x' - wyjście",
+        "EN_US": "navigate logic graph with arrow keys, x to exit"
+    },
+    "T_HELP_LOGIC_INFO": {
+        "Localized": "pokaż informacje o konfiguracji",
+        "EN_US": "show configuration info"
+    },
+    "T_HELP_LOGIC_FREQUENCY": {
+        "Localized": "ustaw częstotliwość próbkowania w Hz",
+        "EN_US": "set sample frequency in Hz"
+    },
+    "T_HELP_LOGIC_OVERSAMPLE": {
+        "Localized": "ustaw współczynnik nadpróbkowania (mnoży częstotliwość próbkowania)",
+        "EN_US": "set oversample rate, multiplies the sample frequency"
+    },
+    "T_HELP_LOGIC_DEBUG": {
+        "Localized": "ustaw poziom debugowania: 0-2",
+        "EN_US": "set debug level: 0-2"
+    },
+    "T_HELP_LOGIC_SAMPLES": {
+        "Localized": "ustaw liczbę próbek",
+        "EN_US": "set number of samples"
+    },
+    "T_HELP_LOGIC_TRIGGER_PIN": {
+        "Localized": "ustaw pin wyzwalania, 0-7",
+        "EN_US": "set trigger pin, 0-7"
+    },
+    "T_HELP_LOGIC_TRIGGER_LEVEL": {
+        "Localized": "ustaw poziom wyzwalania, 0-1",
+        "EN_US": "set trigger level, 0-1"
+    },
+    "T_HELP_LOGIC_LOW_CHAR": {
+        "Localized": "ustaw znak stanu niskiego na wykresie (np. _)",
+        "EN_US": "set character used for low in graph (ex:_)"
+    },
+    "T_HELP_LOGIC_HIGH_CHAR": {
+        "Localized": "Ustaw znak stanu wysokiego na wykresie (np. *)",
+        "EN_US": "set character used for high in graph (ex:*)"
+    },
+    "T_HELP_CMD_CLS": {
+        "Localized": "Wyczyść i zresetuj terminal",
+        "EN_US": "Clear and reset the terminal"
+    },
+    "T_HELP_SECTION_TOOLS": {
+        "Localized": "narzędzia i utilsy",
+        "EN_US": "tools and utilities"
+    },
+    "T_HELP_CMD_LOGIC": {
+        "Localized": "Analizator logiczny",
+        "EN_US": "Logic analyzer"
+    },
+    "T_HELP_CMD_SMPS": {
+        "Localized": "Zasilacz impulsowy (wymagana płytka)",
+        "EN_US": "Switch mode power supply (plank required)"
+    },
+    "T_INFRARED_CMD_TEST": {
+        "Localized": "Test płytki IR RX/TX Toy",
+        "EN_US": "Test IR RX/TX Toy plank"
+    },
+    "T_UART_CMD_TEST": {
+        "Localized": "Test płytki Dual RS232",
+        "EN_US": "Test Dual RS232 plank"
+    },
+    "T_SPI_CMD_SNIFF": {
+        "Localized": "Sniffer SPI",
+        "EN_US": "SPI sniffer"
+    },
+    "T_HELP_UART_GLITCH": {
+        "Localized": "Glitch'er UART",
+        "EN_US": "UART glitcher"
+    },
+    "T_HELP_UART_GLITCH_CONFIG": {
+        "Localized": "Konfiguruj parametry glitch'era UART",
+        "EN_US": "Configure UART glitch parameters"
+    },
+    "T_I2C_SNIFF": {
+        "Localized": "Sniffer I2C",
+        "EN_US": "I2C sniffer"
+    },
+    "T_I2C_SNIFF_QUIET": {
+        "Localized": "Tryb cichy, nie pokazuj ACK",
+        "EN_US": "Quiet mode, don't show ACKs"
+    },
+    "T_HELP_DDR5": {
+        "Localized": "Odczyt, zapis i wykrywanie układów DDR5 SPD",
+        "EN_US": "read, write and probe DDR5 SPD chips"
+    },
+    "T_HELP_DDR5_PROBE": {
+        "Localized": "Pokaż status układu DDR5 SPD oraz NVM/EEPROM",
+        "EN_US": "Show DDR5 SPD chip and NVM/EEPROM status"
+    },
+    "T_HELP_DDR5_DUMP": {
+        "Localized": "Wyświetl zawartość NVM DDR5 SPD",
+        "EN_US": "Display DDR5 SPD NVM contents"
+    },
+    "T_HELP_DDR5_WRITE": {
+        "Localized": "Zapisz plik do NVM DDR5 SPD",
+        "EN_US": "Write file to DDR5 SPD NVM"
+    },
+    "T_HELP_DDR5_READ": {
+        "Localized": "Odczytaj NVM DDR5 SPD do pliku",
+        "EN_US": "Read DDR5 SPD NVM to a file"
+    },
+    "T_HELP_DDR5_VERIFY": {
+        "Localized": "Zweryfikuj NVM DDR5 SPD z plikiem",
+        "EN_US": "Verify DDR5 SPD NVM against file"
+    },
+    "T_HELP_DDR5_LOCK": {
+        "Localized": "Zablokuj blok NVM DDR5 SPD (64 bajty na blok)",
+        "EN_US": "Lock DDR5 SPD NVM block (64 bytes per block)"
+    },
+    "T_HELP_DDR5_UNLOCK": {
+        "Localized": "Odblokuj blok NVM DDR5 SPD",
+        "EN_US": "Unlock DDR5 SPD NVM block"
+    },
+    "T_HELP_DDR5_CRC": {
+        "Localized": "Oblicz/zweryfikuj CRC bloków JEDEC 0-7 w pliku",
+        "EN_US": "Calculate/verify CRC of JEDEC blocks 0-7 in a file"
+    },
+    "T_HELP_DDR5_FILE_FLAG": {
+        "Localized": "Flaga pliku: wybierz plik do zapisu/odczytu/weryfikacji/CRC",
+        "EN_US": "File flag. Speficy a file to write, read, verify or check CRC"
+    },
+    "T_HELP_DDR5_BLOCK_FLAG": {
+        "Localized": "Flaga bloku: wybierz blok NVM DDR5 SPD do blokady/odblokowania (0-15)",
+        "EN_US": "Block flag. Speficy a DDR5 SPD NVM block to lock or unlock (0 - 15)"
     }
 }

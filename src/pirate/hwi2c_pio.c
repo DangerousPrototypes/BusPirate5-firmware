@@ -42,6 +42,7 @@ void pio_i2c_init(uint sda, uint scl, uint dir_sda, uint dir_scl, uint baudrate,
 
 void pio_i2c_cleanup(void) {
     // pio_remove_program_and_unclaim_sm(&i2c_program, pio_config.pio, pio_config.sm, pio_config.offset);
+    pio_sm_set_enabled(pio_config.pio, pio_config.sm, false);
     pio_remove_program(pio_config.pio, pio_config.program, pio_config.offset);
 }
 

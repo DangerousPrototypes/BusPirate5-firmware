@@ -1,3 +1,16 @@
+/**
+ * @file psu.c
+ * @brief Power supply unit (PSU) control implementation.
+ * @details Manages programmable voltage regulator (VREG) and current limiting circuitry.
+ *          Supports both PWM-based (BP5 Rev8/Rev9) and I2C DAC-based (BP5 Rev10+) control.
+ *          Features include:
+ *          - Voltage range: 0.8V to 5.0V with 12-bit resolution
+ *          - Current limiting: 0 to 500mA with overcurrent protection
+ *          - Undervoltage monitoring with configurable threshold
+ *          - Backflow detection
+ *          - Automatic fault detection and shutdown
+ */
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
@@ -140,8 +153,8 @@ void psu_dac_set(uint16_t v_dac, uint16_t i_dac) {
         } 
         //current dac
         const uint8_t i_dac_address = 0xc0;
-        dac[0] == (i_dac >> 8) & 0xF;
-        dac[1] == i_dac & 0xFF;
+        dac[0] = (i_dac >> 8) & 0xF;
+        dac[1] = i_dac & 0xFF;
         if(i2c_write_blocking(BP_I2C_PORT, i_dac_address, dac, 2, false) == PICO_ERROR_GENERIC){
             printf("I2C write error\n");
         }

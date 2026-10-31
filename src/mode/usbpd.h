@@ -1,7 +1,12 @@
+/**
+ * @file usbpd.h
+ * @brief USB Power Delivery mode interface.
+ * @details Provides USB-PD protocol mode for power negotiation.
+ */
+
 uint32_t usbpd_setup(void);
 uint32_t usbpd_setup_exc(void);
 void usbpd_cleanup(void);
-
 void usbpd_help(void);
 void usbpd_settings(void);
 

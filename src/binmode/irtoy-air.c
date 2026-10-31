@@ -3,7 +3,7 @@
 #include <math.h>
 #include "hardware/clocks.h"
 #include "pirate.h"
-#include "queue.h"
+
 #include "usb_rx.h"
 #include "usb_tx.h"
 #include "system_config.h"

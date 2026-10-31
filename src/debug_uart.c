@@ -67,7 +67,3 @@ void debug_uart_init(int uart_number, bool dbrx, bool dbtx, bool terminal_label)
             true, debug_uart[uart_number].rx_pin, BP_PIN_DEBUG, debug_pin_labels[(terminal_label * 2) + 1]);
     }
 }
-
-void rx_uart_disable(void) {
-    // cleanup uart hardware and pin
-}

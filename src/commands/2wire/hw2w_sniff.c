@@ -14,7 +14,8 @@
 #include "ui/ui_help.h"    // Functions to display help in a standardized way
 #include "usb_rx.h"
 #include "usb_tx.h"
-#include "ui/ui_cmdln.h"    // This file is needed for the command line parsing functions
+#include "lib/bp_args/bp_cmd.h"
+#include "ui/ui_format.h"
 
 static const char pin_labels[][5] = {
     "SDA",
@@ -24,23 +25,28 @@ static const char pin_labels[][5] = {
 };
 
 //help variables
-const char* const hw2w_sniff_help[] = {
+static const char* const hw2w_sniff_help[] = {
     "sniff [-q]",
-    "Start the 2WIRE sniffer: sniff",
+    "Start the 2WIRE sniffer:%s sniff",
     "",
     "Sniffs SLE4442 style 8bit I2C-like protocols (no NAK/ACK)",
     "Based on pico-i2c-sniff by @jjsch-dev https://github.com/jjsch-dev/pico_i2c_sniffer",
-    "Max speed: 500kHz",
+    "Max speed:%s 500kHz",
 };
 
-const struct ui_help_options hw2w_sniff_options[] = {
-    { 1, "", T_I2C_SNIFF },
-    { 0, "h", T_HELP_FLAG },
+const bp_command_def_t hw2w_sniff_def = {
+    .name         = "sniff",
+    .description  = T_HW2WIRE_SNIFF,
+    .actions      = NULL,
+    .action_count = 0,
+    .opts         = NULL,
+    .usage        = hw2w_sniff_help,
+    .usage_count  = count_of(hw2w_sniff_help),
 };
 
 void hw2w_sniff(struct command_result* res){ 
     //if -h show help
-    if (ui_help_show(res->help_flag, hw2w_sniff_help, count_of(hw2w_sniff_help), &hw2w_sniff_options[0], count_of(hw2w_sniff_options))) {
+    if (bp_cmd_help_check(&hw2w_sniff_def, res->help_flag)) {
         return;
     }
 
@@ -118,7 +124,9 @@ void hw2w_sniff(struct command_result* res){
             // significant bits correspond to bit 0, and the value 8 bits
             // where (B0 = Bit0 and B7 = Bit7).
             uint32_t ev_code = (val >> 10) & 0x03;
-            uint8_t  data = ((val) & 0xFF);
+            uint32_t  data = ((val) & 0xFF);
+            ui_format_bitorder_manual(&data, 8, system_config.bit_order);
+            
             //printf("val: %x, ev_code: %x, data:%x\r\n", val, ev_code, data);
             if (ev_code == EV_START) {
                 printf("[");

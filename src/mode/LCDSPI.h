@@ -1,3 +1,8 @@
+/**
+ * @file LCDSPI.h
+ * @brief LCD SPI mode interface.
+ * @details Provides SPI-based LCD driver mode supporting HD44780 and ST7735.
+ */
 
 uint32_t LCDSPI_send(uint32_t d);
 uint32_t LCDSPI_read(void);

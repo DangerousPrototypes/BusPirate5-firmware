@@ -6,9 +6,7 @@
 #include "system_config.h"
 #include "command_struct.h"
 #include "bytecode.h"
-#include "mode/hwuart.h"
 #include "pirate/bio.h"
-#include "ui/ui_prompt.h"
 #include "ui/ui_term.h"
 #include "ui/ui_format.h"
 #include "pirate/storage.h"
@@ -21,19 +19,18 @@
 #include "pirate/hwuart_pio.h"
 #include "commands/hdplxuart/bridge.h"
 #include "mode/hwhduart.h"
-static struct _uart_mode_config mode_config;
+#include "lib/bp_args/bp_cmd.h"
+static hduart_mode_config mode_config;
 static struct command_attributes periodic_attributes;
 
 // command configuration
 const struct _mode_command_struct hwhduart_commands[] = { // Function Help
     /*{ .command="sim", 
         .func=&simcard_handler, 
-        .description_text=0x00, 
         .supress_fala_capture=false
     },*/
-    {   .command="bridge", 
-        .func=&hduart_bridge_handler, 
-        .description_text=T_HELP_UART_BRIDGE, 
+    {   .func=&hduart_bridge_handler, 
+        .def=&hduart_bridge_def,
         .supress_fala_capture=true
     },    
 };
@@ -46,62 +43,69 @@ static const char pin_labels[][5] = {
     "RTS",
 };
 
-static const struct prompt_item uart_speed_menu[] = { { T_UART_SPEED_MENU_1 } };
-static const struct prompt_item uart_blocking_menu[] = { { T_UART_BLOCKING_MENU_1 }, { T_UART_BLOCKING_MENU_2 } };
-static const struct prompt_item uart_parity_menu[] = { { T_UART_PARITY_MENU_1 },
-                                                        { T_UART_PARITY_MENU_2 },
-                                                        { T_UART_PARITY_MENU_3 } };
-static const struct prompt_item uart_data_bits_menu[] = { { T_UART_DATA_BITS_MENU_1 } };
-static const struct prompt_item uart_stop_bits_menu[] = { { T_UART_STOP_BITS_MENU_1 },
-                                                            { T_UART_STOP_BITS_MENU_2 } };
-// static const struct prompt_item uart_blocking_menu[]={{T_UART_BLOCKING_MENU_1},{T_UART_BLOCKING_MENU_2}};
+// Baud rate — flag -b / --baud
+static const bp_val_constraint_t hduart_baud_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 1000000, .def = 115200 },
+    .prompt = T_UART_SPEED_MENU,
+    .hint = T_UART_SPEED_MENU_1,
+};
 
-static const struct ui_prompt uart_menu[] = {
-    { .description = T_UART_SPEED_MENU,
-      .menu_items = uart_speed_menu,
-      .menu_items_count = count_of(uart_speed_menu),
-      .prompt_text = T_UART_SPEED_PROMPT,
-      .minval = 1,
-      .maxval = 1000000,
-      .defval = 115200,
-      .menu_action = 0,
-      .config = &prompt_int_cfg },
-    { .description = T_UART_PARITY_MENU,
-      .menu_items = uart_parity_menu,
-      .menu_items_count = count_of(uart_parity_menu),
-      .prompt_text = T_UART_PARITY_PROMPT,
-      .minval = 0,
-      .maxval = 0,
-      .defval = 1,
-      .menu_action = 0,
-      .config = &prompt_list_cfg },
-    { .description = T_UART_DATA_BITS_MENU,
-      .menu_items = uart_data_bits_menu,
-      .menu_items_count = count_of(uart_data_bits_menu),
-      .prompt_text = T_UART_DATA_BITS_PROMPT,
-      .minval = 5,
-      .maxval = 8,
-      .defval = 8,
-      .menu_action = 0,
-      .config = &prompt_int_cfg },
-    { .description = T_UART_STOP_BITS_MENU,
-      .menu_items = uart_stop_bits_menu,
-      .menu_items_count = count_of(uart_stop_bits_menu),
-      .prompt_text = T_UART_STOP_BITS_PROMPT,
-      .minval = 0,
-      .maxval = 0,
-      .defval = 1,
-      .menu_action = 0,
-      .config = &prompt_list_cfg },
-    { .description = T_UART_BLOCKING_MENU,
-      .menu_items = uart_blocking_menu,
-      .menu_items_count = count_of(uart_blocking_menu),
-      .prompt_text = T_UART_BLOCKING_PROMPT,
-      .minval = 0,
-      .maxval = 0,
-      .defval = 1,
-      .menu_action = 0,
-      .config = &prompt_list_cfg }
+// Data bits — flag -d / --databits
+static const bp_val_constraint_t hduart_databits_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 5, .max = 8, .def = 8 },
+    .prompt = T_UART_DATA_BITS_MENU,
+    .hint = T_UART_DATA_BITS_MENU_1,
+};
+
+// Parity — flag -p / --parity
+static const bp_val_choice_t hduart_parity_choices[] = {
+    { "none", "n", T_UART_PARITY_MENU_1, 0 },
+    { "even", "e", T_UART_PARITY_MENU_2, 1 },
+    { "odd",  "o", T_UART_PARITY_MENU_3, 2 },
+};
+static const bp_val_constraint_t hduart_parity_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = hduart_parity_choices, .count = 3, .def = 0 },
+    .prompt = T_UART_PARITY_MENU,
+};
+
+// Stop bits — flag -s / --stopbits
+static const bp_val_choice_t hduart_stopbits_choices[] = {
+    { "1", NULL, T_UART_STOP_BITS_MENU_1, 1 },
+    { "2", NULL, T_UART_STOP_BITS_MENU_2, 2 },
+};
+static const bp_val_constraint_t hduart_stopbits_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = hduart_stopbits_choices, .count = 2, .def = 1 },
+    .prompt = T_UART_STOP_BITS_MENU,
+};
+
+// Bus mode — flag -l / --listen
+static const bp_val_choice_t hduart_listen_choices[] = {
+    { "master", NULL, T_HDUART_LISTEN_MENU_1, 0 },
+    { "listen", NULL, T_HDUART_LISTEN_MENU_2, 1 },
+};
+static const bp_val_constraint_t hduart_listen_choice = {
+    .type = BP_VAL_CHOICE,
+    .choice = { .choices = hduart_listen_choices, .count = 2, .def = 0 },
+    .prompt = T_HDUART_LISTEN_MENU,
+};
+
+static const bp_command_opt_t hduart_setup_opts[] = {
+    { "baud",     'b', BP_ARG_REQUIRED, "1-1000000",       0, &hduart_baud_range },
+    { "databits", 'd', BP_ARG_REQUIRED, "5-8",             0, &hduart_databits_range },
+    { "parity",   'p', BP_ARG_REQUIRED, "none|even|odd",   0, &hduart_parity_choice },
+    { "stopbits", 's', BP_ARG_REQUIRED, "1|2",             0, &hduart_stopbits_choice },
+    { "listen",   'l', BP_ARG_REQUIRED, "master|listen",   0, &hduart_listen_choice },
+    { 0 },
+};
+
+const bp_command_def_t hduart_setup_def = {
+    .name = "hduart",
+    .description = 0,
+    .opts = hduart_setup_opts,
 };
 
 uint32_t hwhduart_setup(void) {
@@ -116,8 +120,6 @@ uint32_t hwhduart_setup(void) {
     periodic_attributes.dot = 0;           // value after .
     periodic_attributes.colon = 0;         // value after :
 
-    prompt_result result;
-
     const char config_file[] = "bphduart.bp";
 
     const mode_config_t config_t[] = {
@@ -126,47 +128,54 @@ uint32_t hwhduart_setup(void) {
         { "$.data_bits", &mode_config.data_bits, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.stop_bits", &mode_config.stop_bits, MODE_CONFIG_FORMAT_DECIMAL },
         { "$.parity", &mode_config.parity, MODE_CONFIG_FORMAT_DECIMAL },
+        { "$.listen", &mode_config.listen, MODE_CONFIG_FORMAT_DECIMAL },
         // clang-format on
     };
 
-    if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-        printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
-        hwhduart_settings();
-        bool user_value;
-        if (!ui_prompt_bool(&result, true, true, true, &user_value)) {
-            return 0;
+    // Detect interactive vs CLI mode by checking the primary flag
+    bp_cmd_status_t st = bp_cmd_flag(&hduart_setup_def, 'b', &mode_config.baudrate);
+    if (st == BP_CMD_INVALID) return 0;
+    bool interactive = (st == BP_CMD_MISSING);
+
+    if (interactive) {
+        if (storage_load_mode(config_file, config_t, count_of(config_t))) {
+            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            hwhduart_settings();
+            int r = bp_cmd_yes_no_exit("");
+            if (r == BP_YN_EXIT) return 0; // exit
+            if (r == BP_YN_YES)  return 1; // use saved settings
         }
-        if (user_value) {
-            return 1; // user said yes, use the saved settings
-        }
-    }
 
-    ui_prompt_uint32(&result, &uart_menu[0], &mode_config.baudrate);
-    if (result.exit) {
-        return 0;
-    }
+        if (bp_cmd_prompt(&hduart_baud_range, &mode_config.baudrate) != BP_CMD_OK) return 0;
 
-    ui_prompt_uint32(&result, &uart_menu[2], &temp);
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.data_bits = (uint8_t)temp;
+        if (bp_cmd_prompt(&hduart_databits_range, &temp) != BP_CMD_OK) return 0;
+        mode_config.data_bits = (uint8_t)temp;
 
-    ui_prompt_uint32(&result, &uart_menu[1], &temp); // could also just subtract one...
-    if (result.exit) {
-        return 0;
-    }
-    mode_config.parity = (uint8_t)temp;
-    // uart_parity_t { UART_PARITY_NONE, UART_PARITY_EVEN, UART_PARITY_ODD }
-    // subtract 1 for actual parity setting
-    mode_config.parity--;
+        if (bp_cmd_prompt(&hduart_parity_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.parity = (uint8_t)temp;
 
-    ui_prompt_uint32(&result, &uart_menu[3], &temp);
-    if (result.exit) {
-        return 0;
+        if (bp_cmd_prompt(&hduart_stopbits_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.stop_bits = (uint8_t)temp;
+
+        if (bp_cmd_prompt(&hduart_listen_choice, &temp) != BP_CMD_OK) return 0;
+        mode_config.listen = temp;
+    } else {
+        st = bp_cmd_flag(&hduart_setup_def, 'd', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.data_bits = (uint8_t)temp;
+
+        st = bp_cmd_flag(&hduart_setup_def, 'p', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.parity = (uint8_t)temp;
+
+        st = bp_cmd_flag(&hduart_setup_def, 's', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.stop_bits = (uint8_t)temp;
+
+        st = bp_cmd_flag(&hduart_setup_def, 'l', &temp);
+        if (st == BP_CMD_INVALID) return 0;
+        mode_config.listen = temp;
     }
-    mode_config.stop_bits = (uint8_t)temp;
-    // block=(ui_prompt_int(UARTBLOCKINGMENU, 1, 2, 2)-1);
 
     storage_save_mode(config_file, config_t, count_of(config_t));
 
@@ -178,8 +187,12 @@ uint32_t hwhduart_setup(void) {
 uint32_t hwhduart_setup_exc(void) {
     // setup peripheral
     // half duplex
-    hwuart_pio_init(mode_config.data_bits, mode_config.parity, mode_config.stop_bits, mode_config.baudrate);
+    hwuart_pio_init(&mode_config);
     system_bio_update_purpose_and_label(true, M_UART_RXTX, BP_PIN_MODE, pin_labels[0]);
+    if (!mode_config.listen) {
+        // Master mode: set buffer to output so TX can drive the line
+        bio_buf_output(M_UART_RXTX);
+    }
     return 1;
 }
 
@@ -276,15 +289,12 @@ void hwhduart_cleanup(void) {
 }
 
 void hwhduart_settings(void) {
-    //printf(" %s: %d %s\r\n", GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD) );
-    ui_prompt_mode_settings_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
-    //printf(" %s: %d\r\n", GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits);
-    ui_prompt_mode_settings_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
-    //printf(" %s: %s\r\n", GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description));
-    ui_prompt_mode_settings_string(GET_T(T_UART_PARITY_MENU), GET_T(uart_parity_menu[mode_config.parity].description), 0x00);
-    //printf(" %s: %d\r\n", GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits);
-    ui_prompt_mode_settings_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
-
+    ui_help_setting_int(GET_T(T_UART_SPEED_MENU), mode_config.baudrate, GET_T(T_UART_BAUD));
+    ui_help_setting_int(GET_T(T_UART_DATA_BITS_MENU), mode_config.data_bits, 0x00);
+    ui_help_setting_string(GET_T(T_UART_PARITY_MENU), GET_T(hduart_parity_choices[mode_config.parity].label), 0x00);
+    ui_help_setting_int(GET_T(T_UART_STOP_BITS_MENU), mode_config.stop_bits, 0x00);
+    ui_help_setting_string(
+        GET_T(T_HDUART_LISTEN_MENU), GET_T(hduart_listen_choices[mode_config.listen].label), 0x00);
 }
 
 void hwhduart_printerror(void) {

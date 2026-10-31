@@ -43,12 +43,29 @@
 #define GOTO_ON_ERROR(x, label, tag, msg) do { ret = (x); if (ret != ESP_OK) { NAND_LOGE(tag, msg); goto label; } } while(0)
 #define GOTO_ON_FALSE(cond, err, label, tag, msg) do { if (!(cond)) { ret = err; NAND_LOGE(tag, msg); goto label; } } while(0)
 
+// Raw READ ID stream captured at several address-byte offsets for the `nand id` diagnostic.
+// Captured without printing so it is safe during early boot (terminal not yet connected).
+#define NAND_ID_DEBUG_ROWS 3
+#define NAND_ID_DEBUG_COLS 6
+static uint8_t nand_read_id_debug[NAND_ID_DEBUG_ROWS][NAND_ID_DEBUG_COLS];
+
+const uint8_t *spi_nand_flash_get_read_id_debug(void)
+{
+    return &nand_read_id_debug[0][0];
+}
+
 static esp_err_t detect_chip(spi_nand_flash_device_t *dev)
 {
+    // Some SPI NAND parts (e.g. Zetta ZD35Q1GC) return garbage to READ ID until a
+    // RESET (FFh) is issued after power-up. Reset and settle before identifying.
+    spi_nand_transaction_t reset_t = { .command = 0xFF };
+    spi_nand_execute_transaction(dev, &reset_t);
+    busy_wait_us_32(2000);
+
     uint8_t manufacturer_id;
     spi_nand_transaction_t t = {
         .command = CMD_READ_ID,
-        .address = 0xff,
+        .address = 0x00,
         .address_bytes = 1,
         .miso_len = 1,
         .miso_data = &manufacturer_id,
@@ -57,8 +74,17 @@ static esp_err_t detect_chip(spi_nand_flash_device_t *dev)
     spi_nand_execute_transaction(dev, &t);
     NAND_LOGD(TAG, "%s: manufacturer_id: %x\n", __func__, manufacturer_id); 
 
-    // Uncomment for early boot debugging (before printf initialized)
-    // printf("Detected SPI NAND Manufacturer ID: 0x%02X\n", manufacturer_id);
+    for (uint8_t ab = 0; ab < NAND_ID_DEBUG_ROWS; ab++) {
+        spi_nand_transaction_t td = {
+            .command = CMD_READ_ID,
+            .address = 0x00,
+            .address_bytes = ab,
+            .miso_len = NAND_ID_DEBUG_COLS,
+            .miso_data = nand_read_id_debug[ab],
+            .flags = SPI_TRANS_USE_RXDATA,
+        };
+        spi_nand_execute_transaction(dev, &td);
+    }
 
     switch (manufacturer_id) {
     case SPI_NAND_FLASH_ALLIANCE_MI:

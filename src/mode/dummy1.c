@@ -202,7 +202,7 @@ uint32_t dummy1_setup(void) {
         // The loaded values are written directly into mode_config.* fields.
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
             // Settings found — show them and ask if the user wants to reuse them.
-            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(),
+            printf("\r\n%s%s%s\r\n", ui_term_color_info(),
                    GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             dummy1_settings(); // Display the loaded values
 

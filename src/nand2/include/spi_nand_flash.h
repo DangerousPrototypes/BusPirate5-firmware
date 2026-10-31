@@ -177,6 +177,12 @@ const char *spi_nand_flash_print_manufacturer(void);
  */
 spi_nand_flash_device_t *spi_nand_flash_get_handle(void);
 
+/** @brief Get the raw READ ID diagnostic capture (3 rows x 6 bytes, address_bytes 0..2).
+ *
+ * @return Pointer to 18 bytes of captured READ ID stream. Valid after a detection attempt.
+ */
+const uint8_t *spi_nand_flash_get_read_id_debug(void);
+
 /** @brief Force a full garbage collection pass on the FTL.
  *
  * Runs garbage collection steps until no further progress is made, then

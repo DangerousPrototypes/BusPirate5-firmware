@@ -3,10 +3,7 @@
 #include "pico/stdlib.h"
 #include "pirate.h"
 #include "command_struct.h"
-#include "ui/ui_cmdln.h"
-#include "ui/ui_help.h"
-#include "ui/ui_prompt.h"
-#include "ui/ui_term.h"
+#include "lib/bp_args/bp_cmd.h"    // Unified command parsing, validation, prompting, help, hints
 #include "system_config.h"
 #include "pirate/button.h"
 #include "commands/global/nand.h"
@@ -16,16 +13,68 @@
 #endif
 
 static const char* const usage[] = {
-    "nand [info|gc|scan|stress|id] [-i <count>] [-n <sectors>] [-y] [-h]",
+    "nand [info|id|raw|regs|gc|scan|stress]\r\n\t[-i(terations) <count>] [-n <sectors>] [-y(es)]",
     "Show FTL info and status:%s nand info",
-    "Dump raw READ ID bytes (works even if detection failed):%s nand id",
+    "Dump captured READ ID bytes (works even if detection failed):%s nand id",
+    "Raw READ ID on the SPI bus, bypassing the driver:%s nand raw",
+    "Dump protect/feature/status registers:%s nand regs",
+    "Dump registers and clear block protection:%s nand regs -y",
     "Force a full garbage collection pass:%s nand gc",
     "Read-only surface scan (verify all sectors readable):%s nand scan",
     "Destructive write/GC/verify stress test (4 cycles):%s nand stress -i 4",
     "Stress test without the confirmation prompt:%s nand stress -y",
 };
 
-static const struct ui_help_options options[] = { 0 };
+enum nand_actions {
+    NAND_INFO = 1, // enum values start at 1 (0 = no action)
+    NAND_ID,
+    NAND_RAW,
+    NAND_REGS,
+    NAND_GC,
+    NAND_SCAN,
+    NAND_STRESS,
+};
+
+static const bp_command_action_t nand_action_defs[] = {
+    { NAND_INFO,   "info",   0 },
+    { NAND_ID,     "id",     0 },
+    { NAND_RAW,    "raw",    0 },
+    { NAND_REGS,   "regs",   0 },
+    { NAND_GC,     "gc",     0 },
+    { NAND_SCAN,   "scan",   0 },
+    { NAND_STRESS, "stress", 0 },
+};
+
+static const bp_val_constraint_t iterations_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 1000, .def = 4 },
+    .prompt = 0,
+    .hint = 0,
+};
+
+static const bp_val_constraint_t sectors_range = {
+    .type = BP_VAL_UINT32,
+    .u = { .min = 1, .max = 65535, .def = 64 },
+    .prompt = 0,
+    .hint = 0,
+};
+
+static const bp_command_opt_t nand_opts[] = {
+    { "iterations", 'i', BP_ARG_REQUIRED, "count",   0, &iterations_range },
+    { "sectors",    'n', BP_ARG_REQUIRED, "sectors", 0, &sectors_range },
+    { "yes",        'y', BP_ARG_NONE,     NULL,      0 },
+    { 0 }, // sentinel
+};
+
+const bp_command_def_t nand_def = {
+    .name = "nand",
+    .description = 0x00,
+    .actions = nand_action_defs,
+    .action_count = count_of(nand_action_defs),
+    .opts = nand_opts,
+    .usage = usage,
+    .usage_count = count_of(usage),
+};
 
 #ifdef BP_HW_STORAGE_NAND
 
@@ -184,23 +233,12 @@ static void nand_cmd_scan(spi_nand_flash_device_t* handle) {
 }
 
 static bool nand_confirm_destructive(void) {
-    uint32_t value = 0;
-    struct prompt_result presult;
-    printf("Stress test DESTROYS all data on the NAND flash and file system.\r\n");
-    printf("Run 'format' afterwards to restore the file system.\r\n");
-    printf("Continue? y/n> ");
-    cmdln_next_buf_pos();
-    while (1) {
-        ui_prompt_vt100_mode(&presult, &value);
-        if (presult.success) {
-            break;
-        }
-    }
-    printf("\r\n");
-    return (value == 'y' || value == 'Y');
+    return bp_cmd_confirm(&nand_def,
+                          "Stress test DESTROYS all data on the NAND flash and file system.\r\n"
+                          "Run 'format' afterwards to restore the file system.");
 }
 
-static void nand_cmd_stress(spi_nand_flash_device_t* handle, uint32_t iterations, uint32_t sectors, bool skip_confirm) {
+static void nand_cmd_stress(spi_nand_flash_device_t* handle, uint32_t iterations, uint32_t sectors) {
     uint32_t total = 0, sector_size = 0;
     if (spi_nand_flash_get_capacity(handle, &total) != ESP_OK ||
         spi_nand_flash_get_sector_size(handle, &sector_size) != ESP_OK) {
@@ -222,7 +260,7 @@ static void nand_cmd_stress(spi_nand_flash_device_t* handle, uint32_t iterations
         iterations = 4;
     }
 
-    if (!skip_confirm && !nand_confirm_destructive()) {
+    if (!nand_confirm_destructive()) {
         printf("Stress test aborted.\r\n");
         return;
     }
@@ -299,7 +337,7 @@ static void nand_cmd_stress(spi_nand_flash_device_t* handle, uint32_t iterations
 #endif // BP_HW_STORAGE_NAND
 
 void nand_handler(struct command_result* res) {
-    if (ui_help_show(res->help_flag, usage, count_of(usage), &options[0], count_of(options))) {
+    if (bp_cmd_help_check(&nand_def, res->help_flag)) {
         return;
     }
 
@@ -307,34 +345,32 @@ void nand_handler(struct command_result* res) {
     printf("This hardware does not have NAND flash storage.\r\n");
     return;
 #else
-    char action[8];
-    if (!cmdln_args_string_by_position(1, sizeof(action), action)) {
-        strcpy(action, "info");
+    uint32_t action = NAND_INFO;
+    if (!bp_cmd_get_action(&nand_def, &action)) {
+        action = NAND_INFO;
     }
 
-    // `nand id` dumps the raw READ ID capture and works even when detection failed.
-    if (strcmp(action, "id") == 0) {
-        const uint8_t* id = spi_nand_flash_get_read_id_debug();
-        for (uint8_t r = 0; r < 3; r++) {
-            printf("READ ID addr_bytes=%u:", r);
-            for (uint8_t c = 0; c < 6; c++) {
-                printf(" %02X", id[r * 6 + c]);
+    // id/raw/regs are hardware diagnostics that work even when detection failed (no handle required).
+    switch (action) {
+        case NAND_ID: {
+            const uint8_t* id = spi_nand_flash_get_read_id_debug();
+            for (uint8_t r = 0; r < 3; r++) {
+                printf("READ ID addr_bytes=%u:", r);
+                for (uint8_t c = 0; c < 6; c++) {
+                    printf(" %02X", id[r * 6 + c]);
+                }
+                printf("\r\n");
             }
-            printf("\r\n");
+            return;
         }
-        return;
-    }
-
-    // `nand raw` bit-bangs READ ID directly on SPI0, bypassing the driver entirely.
-    if (strcmp(action, "raw") == 0) {
-        nand_cmd_raw_id();
-        return;
-    }
-
-    // `nand regs` dumps protect/feature/status registers; `nand regs -y` also clears protection.
-    if (strcmp(action, "regs") == 0) {
-        nand_cmd_regs(cmdln_args_find_flag('y' | 0x20));
-        return;
+        case NAND_RAW:
+            nand_cmd_raw_id();
+            return;
+        case NAND_REGS:
+            nand_cmd_regs(bp_cmd_find_flag(&nand_def, 'y'));
+            return;
+        default:
+            break;
     }
 
     spi_nand_flash_device_t* handle = nand_get_ready_handle();
@@ -342,23 +378,27 @@ void nand_handler(struct command_result* res) {
         return;
     }
 
-    uint32_t iterations = 0, sectors = 0;
-    command_var_t arg;
-    cmdln_args_find_flag_uint32('i', &arg, &iterations);
-    cmdln_args_find_flag_uint32('n', &arg, &sectors);
-    bool skip_confirm = cmdln_args_find_flag('y' | 0x20);
-
-    if (strcmp(action, "info") == 0) {
-        nand_cmd_info(handle);
-    } else if (strcmp(action, "gc") == 0) {
-        nand_cmd_gc(handle);
-    } else if (strcmp(action, "scan") == 0) {
-        nand_cmd_scan(handle);
-    } else if (strcmp(action, "stress") == 0) {
-        nand_cmd_stress(handle, iterations, sectors, skip_confirm);
-    } else {
-        printf("Unknown subcommand '%s'\r\n\r\n", action);
-        ui_help_show(true, usage, count_of(usage), &options[0], count_of(options));
+    switch (action) {
+        case NAND_GC:
+            nand_cmd_gc(handle);
+            break;
+        case NAND_SCAN:
+            nand_cmd_scan(handle);
+            break;
+        case NAND_STRESS: {
+            uint32_t iterations = 4, sectors = 64;
+            if (bp_cmd_flag(&nand_def, 'i', &iterations) == BP_CMD_INVALID ||
+                bp_cmd_flag(&nand_def, 'n', &sectors) == BP_CMD_INVALID) {
+                system_config.error = true;
+                return;
+            }
+            nand_cmd_stress(handle, iterations, sectors);
+            break;
+        }
+        case NAND_INFO:
+        default:
+            nand_cmd_info(handle);
+            break;
     }
 #endif
 }

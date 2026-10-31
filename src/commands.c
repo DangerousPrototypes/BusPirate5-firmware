@@ -159,7 +159,7 @@ const struct _global_command_struct commands[] = {
 { .command="menu_demo", .allow_hiz=true,  .func=&menu_demo_handler,                  .def=&menu_demo_def, .category=CMD_CAT_HIDDEN },
 { .command="txtest",    .allow_hiz=true,  .func=&txtest_handler,                     .def=&txtest_def, .category=CMD_CAT_HIDDEN },
 { .command="#",        .allow_hiz=true,  .func=&hash_handler,                    .def=&hash_def, .category=CMD_CAT_HIDDEN },
-{ .command="nand",      .allow_hiz=true,  .func=&nand_handler,                       .help_text=0x00 }, // NAND FTL GC and stress test
+{ .command="nand",      .allow_hiz=true,  .func=&nand_handler,                       .def=&nand_def, .category=CMD_CAT_HIDDEN }, // NAND FTL GC, stress test, and diagnostics
 // clang-format on
 };
 

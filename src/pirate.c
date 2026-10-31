@@ -645,7 +645,6 @@ static void core0_infinite_loop(void) {
                     button_exec(press_code);         // execute script based on the button press type
                     bp_state = BP_SM_COMMAND_PROMPT; // return to command prompt
                 }
-                #endif
                 break;
             case BP_SM_PROCESS_COMMAND:
                 system_config.error = ui_process_commands();

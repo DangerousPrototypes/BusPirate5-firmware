@@ -87,6 +87,9 @@ DRESULT diskio_read(BYTE drv, BYTE* buff, LBA_t sector, UINT count) {
     if (drv) {
         return STA_NOINIT; /* Supports only drive 0 */
     }
+    if (!initialized || flash == NULL) {
+        return RES_NOTRDY;
+    }
     mutex_enter_blocking(&diskio_mutex);
     // read *count* consecutive sectors
     for (int i = 0; i < count; i++) {
@@ -94,6 +97,7 @@ DRESULT diskio_read(BYTE drv, BYTE* buff, LBA_t sector, UINT count) {
         esp_err_t ret = spi_nand_flash_read_sector(flash, buff, sector);
         if (ret != ESP_OK) {
             // printf("dhara read failed: %d, error: %d", ret, err);
+            mutex_exit(&diskio_mutex);
             return RES_ERROR;
         }
         buff += SPI_NAND_PAGE_SIZE; // sector size == page size
@@ -109,6 +113,9 @@ DRESULT diskio_write(BYTE drv, const BYTE* buff, LBA_t sector, UINT count) {
     if (drv) {
         return STA_NOINIT; /* Supports only drive 0 */
     }
+    if (!initialized || flash == NULL) {
+        return RES_NOTRDY;
+    }
     mutex_enter_blocking(&diskio_mutex);
     // write *count* consecutive sectors
     for (int i = 0; i < count; i++) {  
@@ -116,6 +123,7 @@ DRESULT diskio_write(BYTE drv, const BYTE* buff, LBA_t sector, UINT count) {
         esp_err_t ret = spi_nand_flash_write_sector(flash, buff, sector);
         if (ret!= ESP_OK) {
             // printf("dhara write failed: %d, error: %d", ret, err);
+            mutex_exit(&diskio_mutex);
             return RES_ERROR;
         }
         buff += SPI_NAND_PAGE_SIZE; // sector size == page size
@@ -128,6 +136,9 @@ DRESULT diskio_write(BYTE drv, const BYTE* buff, LBA_t sector, UINT count) {
 DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void* buff) {
     if (drv) {
         return STA_NOINIT; /* Supports only drive 0 */
+    }
+    if (!initialized || flash == NULL) {
+        return RES_NOTRDY;
     }
     switch (cmd) {
         case CTRL_SYNC:;
@@ -168,6 +179,7 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void* buff) {
                 esp_err_t ret = spi_nand_flash_trim(flash, start);
                 if (ret!= ESP_OK) {
                     // printf("dhara trim failed: %d, error: %d", ret, err);
+                    mutex_exit(&diskio_mutex);
                     return RES_ERROR;
                 }
                 start++;

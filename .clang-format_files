@@ -4,6 +4,8 @@ binmode/binio.c
 binmode/binio.h
 binmode/binmodes.c
 binmode/binmodes.h
+binmode/bp3unbrick.c
+binmode/bp3unbrick.h
 binmode/bpio.c
 binmode/bpio.h
 binmode/fala.c
@@ -191,6 +193,8 @@ pirate/mem.c
 pirate/mem.h
 pirate/onewire_library.c
 pirate/onewire_library.h
+pirate/pic24_icsp.c
+pirate/pic24_icsp.h
 pirate/psu.c
 pirate/psu.h
 pirate/pullup.c

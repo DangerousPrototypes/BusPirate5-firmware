@@ -48,6 +48,9 @@ static esp_err_t wait_for_ready(spi_nand_flash_device_t *dev, uint32_t expected_
         busy_wait_us_32(expected_operation_time_us);
     }
 
+    // Bound the poll so a stalled/unresponsive device can never hang the firmware.
+    // Worst-case NAND op (block erase) is ~5ms; 500ms is a safe upper limit.
+    absolute_time_t deadline = make_timeout_time_ms(500);
     while (true) {
         uint8_t status;
         RETURN_ON_ERROR(spi_nand_read_register(dev, REG_STATUS, &status));
@@ -57,6 +60,11 @@ static esp_err_t wait_for_ready(spi_nand_flash_device_t *dev, uint32_t expected_
                 *status_out = status;
             }
             break;
+        }
+
+        if (time_reached(deadline)) {
+            NAND_LOGE(TAG, "wait_for_ready timed out (status=0x%02x)", status);
+            return ESP_ERR_TIMEOUT;
         }
 
         if (expected_operation_time_us >= ROM_WAIT_THRESHOLD_US) {

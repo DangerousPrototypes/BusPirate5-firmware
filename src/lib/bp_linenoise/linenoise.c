@@ -2103,10 +2103,11 @@ void linenoiseEditHistoryNext(struct linenoiseState *l, int dir) {
             int ri = (ring_head + logical_idx) % BP_LINENOISE_HISTORY_MAX;
             strncpy(l->buf, &history_buf[history_ring[ri].offset], l->buflen);
         }
+        l->buf[l->buflen] = '\0'; /* buf holds buflen chars and the terminator */
 #else
         strncpy(l->buf,history[history_len - 1 - l->history_index],l->buflen);
-#endif
         l->buf[l->buflen-1] = '\0';
+#endif
         l->len = l->pos = strlen(l->buf);
         refreshLine(l);
     }

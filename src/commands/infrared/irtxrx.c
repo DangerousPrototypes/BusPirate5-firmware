@@ -20,6 +20,10 @@
 #include "ui/ui_help.h"
 #include "pirate/irio_pio.h"
 #include "usb_rx.h"
+#include "ui/ui_cmdln.h"
+#include "ui/ui_term_linenoise.h"
+#include "lib/bp_linenoise/linenoise.h"
+#include "binmode/irtoy-air.h"
 
 static const char* const usage_tx[] = {
     "irtx [aIR packet] [-f <file>]",
@@ -76,88 +80,41 @@ const bp_command_def_t irrx_def = {
 	.usage_count  = count_of(usage_rx),
 };
 
-//returns true (success) false (failed)
-//TODO: check for cnt overflow! this is a potential buffer overflow
-bool irtx_transmit(char* buffer){
-	//parse the csv formatted values into 16 bit value pairs
-	uint32_t data[128];
-	uint16_t datacnt=0;
-	uint8_t mod_freq=0;
-	uint16_t cnt=0;
+//the error for text that ended before a whole packet
+static int irtx_end_error(air_tx_t *tx){
+	return (tx->state==AIR_TX_IDLE) ? AIR_ERROR_START : (tx->state==AIR_TX_MOD_FREQ) ? AIR_ERROR_MOD_FREQ : AIR_ERROR_DATA;
+}
 
-	while(buffer[cnt]!='$'){
-		if(buffer[cnt]==0x00){
-			printf("Unable to find start of data ($) in AIR packet\r\n");
-			return false;
-		}
-		cnt++;
-
-	}
-	cnt++;
-
-	//parse the ascii into an 8 bit value
-	while(buffer[cnt]!=':'){
-		if(buffer[cnt]==0x00){
-			printf("Unable to find modulation frequency (:) in AIR packet\r\n");
-			return false;
-		}
-		mod_freq*=10;
-		mod_freq+=buffer[cnt]-0x30;
-		cnt++;
-	} 
-	cnt++;
-
-	//parse the ascii values into 16 bit values, shove in a 32bit word
-	//would be much nicer to use pointers here, but it would be a glob of unreadable slop
-	bool mark=true;
-	while(true){
-		uint16_t value=0;
-		while(buffer[cnt]!=','){
-			if(buffer[cnt]==0x00||buffer[cnt]<'0'||buffer[cnt]>'9'){
-				printf("Unable to find end of MARK/SPACE data (,) in AIR packet\r\n");
-				return false;
-			}
-			value*=10;
-			value+=buffer[cnt]-0x30;
-			cnt++;
-		}
-		if(mark){
-			data[datacnt] = (value<<16);//upper 16 bits are the mark
-			mark = false;
-		}else{
-			data[datacnt] |= value;
-			datacnt++;
-			if(datacnt>=count_of(data)){
-				printf("Too many MARK/SPACE pairs in AIR packet, max 127\r\n");
-				return false;
-			}			
-			mark = true;
-		}
-		cnt++; //if 0x00 will be tossed in the next loop
-		if(buffer[cnt]==';'){
-			//found end of AIR packet
-            if(!mark){ //end with a SPACE if not included in AIR packet
-                data[datacnt] |= 0xffff;
-                datacnt++;
-                if(datacnt>=count_of(data)){
-                    printf("Too many MARK/SPACE pairs in AIR packet, max 127\r\n");
-					return false;
-                }                
-            }			
-			break;
-		}
-	}
-
+//show a parsed packet and send it
+static void irtx_send(air_tx_t *tx){
 	//debug: show loaded data packet
 	//printf("Read: %s", buffer);
-	printf("\r\n%s$%u:", ui_term_color_info(), mod_freq);
-	for(uint16_t i=0; i<datacnt; i++){
-		printf("%u,%u,", data[i]>>16, data[i]&0xffff);
+	printf("\r\n%s$%u:", ui_term_color_info(), tx->mod_freq);
+	for(uint16_t i=0; i<tx->pairs; i++){
+		printf("%u,%u,", tx->data[i]>>16, tx->data[i]&0xffff);
 	}
 	printf(";%s\r\n\r\n", ui_term_color_reset());		
-	printf("Parsed AIR packet: modulation frequency %dkHz, %d MARK/SPACE pairs\r\nTransmitting...", mod_freq, datacnt);
-	irio_pio_tx_frame_write((float)(mod_freq*1000), datacnt, data);
+	printf("Parsed AIR packet: modulation frequency %ukHz, %d MARK/SPACE pairs\r\nTransmitting...", tx->mod_freq, tx->pairs);
+	irio_pio_tx_frame_write((float)(tx->mod_freq*1000), tx->pairs, tx->data);
 	printf("done\r\n");
+}
+
+//returns true (success) false (failed)
+bool irtx_transmit(char* buffer){
+	//same parser as AIR mode
+	air_tx_t tx = { .state = AIR_TX_IDLE };
+	int result = AIR_PENDING;
+	for(uint16_t cnt=0; buffer[cnt]!=0x00 && result==AIR_PENDING; cnt++){
+		result = air_rx_char(&tx, buffer[cnt]);
+	}
+	if(result==AIR_PENDING){ //the line ended before the packet did
+		result = irtx_end_error(&tx);
+	}
+	if(result!=AIR_OK){
+		air_tx_error(result);
+		return false;
+	}
+	irtx_send(&tx);
 	return true;
 }
 
@@ -188,18 +145,30 @@ void irtx_handler(struct command_result *res){
 		//result = f_read(&file_handle, buffer, sizeof(buffer), &bytes_read);
 		infrared_cleanup_temp(); //tear down current IR PIO programs
 		irio_pio_tx_init(bio2bufiopin[BIO4], 38000); //setup IR PIO programs, actual freq will be set in irtx_packet
-		while(f_gets(buffer, sizeof(buffer), &file_handle)){
-			/*if(bufptr ==0) {
-				printf("Error reading file %s\r\n", file);
-				res->error = true;
-				return;
-			}*/
-			if(!irtx_transmit(buffer)){
-				printf("Error parsing AIR packet\r\n");
-				res->error = true;
-				break;
+		//one parser for the whole file: a packet can be longer than a read, a line can hold several
+		static air_tx_t tx;
+		tx.state = AIR_TX_IDLE;
+		bool sent = false;
+		while(!res->error && f_gets(buffer, sizeof(buffer), &file_handle)){
+			for(uint16_t i=0; buffer[i]!=0x00; i++){
+				int result = air_rx_char(&tx, buffer[i]);
+				if(result==AIR_OK){
+					irtx_send(&tx);
+					sent = true;
+				}else if(result!=AIR_PENDING){
+					air_tx_error(result);
+					res->error = true;
+					break;
+				}
 			}
-		}	
+		}
+		if(!res->error && (tx.state!=AIR_TX_IDLE || !sent)){ //the file ended inside a packet, or had none
+			air_tx_error(irtx_end_error(&tx));
+			res->error = true;
+		}
+		if(res->error){
+			printf("Error parsing AIR packet\r\n");
+		}
 		irio_pio_tx_deinit(bio2bufiopin[BIO4]); //tear down IR PIO programs
 		infrared_setup_resume(); //reinit IR PIO programs	
 		//close the file
@@ -214,14 +183,35 @@ void irtx_handler(struct command_result *res){
 	
 	}else{
 		//try to parse from the command line
-		if(bp_cmd_get_positional_string(&irtx_def, 1, buffer, sizeof(buffer))){
+		//bp_cmd splits arguments at commas, read the packet as one word
+		if(cmdln_args_string_by_position(1, sizeof(buffer), buffer)){
+			//the command line drops anything typed past its end, the packet may be cut
+			if(ui_term_linenoise_get_len()>=BP_LINENOISE_MAX_LINE){
+				printf("AIR packet too long for the command line, use irtx -f\r\n");
+				res->error = true;
+				return;
+			}
+			//a space or a line break in the packet cuts it too
+			char word[2];
+			if(cmdln_args_string_by_position(2, sizeof(word), word)){
+				printf("No spaces allowed in the AIR packet\r\n");
+				res->error = true;
+				return;
+			}
+			char c;
+			if(!cmdln_try_peek(command_info.endptr+1, &c) || c!=';'){
+				printf("AIR packet must end with ;\r\n");
+				res->error = true;
+				return;
+			}
 			printf("\r\nTransmitting from command line\r\n");
 			//here's the deal: the command line parser is removing the final ';'
 			// as it is a seperation character for multiple commands
 			// so we need to add it back in
-			if(strlen(buffer)<sizeof(buffer)-1){
-				buffer[strlen(buffer)]=';';
-				buffer[strlen(buffer)+1]=0x00;
+			size_t len = strlen(buffer);
+			if(len<sizeof(buffer)-1){
+				buffer[len]=';';
+				buffer[len+1]=0x00;
 			}else{
 				printf("AIR packet too long, max 512 characters\r\n");
 				res->error = true;
@@ -320,7 +310,7 @@ void irrx_handler(struct command_result *res){
 		irio_pio_rxtx_drain_fifo();
 		//display captured packet
 		while(true){
-			if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer)) break;
+			if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer, count_of(buffer))) break;
 			// any key to exit
 			char c;
 		    if (rx_fifo_try_get(&c)) {
@@ -332,16 +322,20 @@ void irrx_handler(struct command_result *res){
 		}
 		uint8_t mod_freq_int = (uint8_t)roundf(mod_freq/1000.0f);
 		uint16_t sn_cnt = snprintf(air_buffer, sizeof(air_buffer), "$%u:", mod_freq_int);
-		for(uint16_t i=0; i<pairs-1; i++){
+		for(uint16_t i=0; i<pairs-1 && sn_cnt<sizeof(air_buffer); i++){
 			sn_cnt+=snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,%u,", (uint16_t)(buffer[i]>>16), (uint16_t)(buffer[i]&0xffff));
 		}
-		sn_cnt += snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,;\r\n", buffer[pairs-1]>>16);
-		if(sn_cnt>sizeof(air_buffer)){
+		if(sn_cnt<sizeof(air_buffer)){
+			sn_cnt += snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,;\r\n", buffer[pairs-1]>>16);
+		}
+		//a cut packet is not shown or saved, it can still be re-transmitted
+		bool too_long = (sn_cnt>=sizeof(air_buffer));
+		if(too_long){
 			printf("AIR packet too long, max 512 characters\r\n");
 			res->error = true;
-			//goto exit_irrx_handler;
+		}else{
+			printf("\r\n%s%s%s\r\n", ui_term_color_info(), air_buffer, ui_term_color_reset());
 		}
-		printf("\r\n%s%s%s\r\n", ui_term_color_info(), air_buffer, ui_term_color_reset());
 
 		//for debugging
 		/*
@@ -353,7 +347,7 @@ void irrx_handler(struct command_result *res){
 		*/
 
 		//display mod_freq, mark/space pairs	
-		printf("Modulation frequency %dkHz, %d MARK/SPACE pairs\r\n\r\n", mod_freq_int, pairs);
+		printf("Modulation frequency %dkHz, %d MARK/SPACE pairs%s\r\n\r\n", mod_freq_int, pairs, (pairs>=count_of(buffer))?", longer signals are cut":"");
 		//s to save (if -f flag), space for next, x to exit
 menu_irrx_handler:
 		printf("%s", ui_term_color_prompt());
@@ -375,6 +369,10 @@ menu_irrx_handler:
 			case 's':
 				if(!save_file){
 					printf("No file specified with the -f flag, cannot save\r\n");
+					goto menu_irrx_handler;
+				}
+				if(too_long){
+					printf("AIR packet too long, max 512 characters\r\n");
 					goto menu_irrx_handler;
 				}
 				//write to file

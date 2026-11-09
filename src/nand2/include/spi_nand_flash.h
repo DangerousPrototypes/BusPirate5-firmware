@@ -177,6 +177,14 @@ const char *spi_nand_flash_print_manufacturer(void);
  */
 spi_nand_flash_device_t *spi_nand_flash_get_handle(void);
 
+/**
+ * @brief Attempt to recover a chip that stopped responding (busy timeout latched).
+ *
+ * Issues RESET, re-applies protection/config registers and clears the fault latch.
+ * No-op if no fault is latched. Caller must hold the disk I/O lock.
+ */
+void spi_nand_flash_recover(spi_nand_flash_device_t *handle);
+
 /** @brief Get the raw READ ID diagnostic capture (3 rows x 6 bytes, address_bytes 0..2).
  *
  * @return Pointer to 18 bytes of captured READ ID stream. Valid after a detection attempt.

@@ -120,6 +120,27 @@ static esp_err_t unprotect_chip(spi_nand_flash_device_t *dev)
     return ret;
 }
 
+// Put the configuration register into the state the FTL relies on: internal ECC on, OTP area not
+// mapped, quad mode off. Other bits (e.g. Winbond BUF) are preserved. ECC_EN/OTP_EN are volatile and
+// survive a RESET (FFh) but not necessarily a glitched SET FEATURES, and OTP_EN=1 silently redirects
+// every page read/program to the 4-page OTP area, which looks exactly like a corrupt journal.
+static esp_err_t configure_chip(spi_nand_flash_device_t *dev)
+{
+    uint8_t cfg;
+    esp_err_t ret = spi_nand_read_register(dev, REG_CONFIG, &cfg);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    uint8_t want = (cfg | CFG_ECC_EN) & (uint8_t)~CFG_OTP_EN;
+    if (dev->chip.has_quad_enable_bit) {
+        want &= (uint8_t)~(1 << dev->chip.quad_enable_bit_pos);
+    }
+    if (want != cfg) {
+        ret = spi_nand_write_register(dev, REG_CONFIG, want);
+    }
+    return ret;
+}
+
 static uint8_t work[2048+4];
 static uint8_t read[2048+4];
 static spi_nand_flash_device_t static_device_handle;
@@ -150,6 +171,7 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
     // printf("Starting NAND chip detection...\r\n");
     GOTO_ON_ERROR(detect_chip(*handle), fail, TAG, "Failed to detect nand chip");
     GOTO_ON_ERROR(unprotect_chip(*handle), fail, TAG, "Failed to clear protection register");
+    GOTO_ON_ERROR(configure_chip(*handle), fail, TAG, "Failed to set configuration register");
     // printf("NAND chip detected and unprotected successfully.\r\n");
     (*handle)->chip.page_size = 1 << (*handle)->chip.log2_page_size;
     (*handle)->chip.block_size = (1 << (*handle)->chip.log2_ppb) * (*handle)->chip.page_size;
@@ -179,6 +201,13 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
         goto fail;
     }
     (*handle)->ops->init(*handle);
+    // The journal scan inside ops->init() tolerates a missing/garbage journal (fresh chip), but if the
+    // chip stopped answering mid-scan the map is incomplete: report failure so the mount is retried later.
+    if ((*handle)->io_fault) {
+        NAND_LOGE(TAG, "NAND timed out during FTL resume");
+        ret = ESP_ERR_TIMEOUT;
+        goto fail;
+    }
 
     return ret;
 
@@ -283,6 +312,20 @@ const char *spi_nand_flash_print_manufacturer(void)
     }
 
     return handle->manufacturer_name;
+}
+
+void spi_nand_flash_recover(spi_nand_flash_device_t *handle)
+{
+    if (handle == NULL || !handle->io_fault) {
+        return;
+    }
+    spi_nand_transaction_t reset_t = { .command = 0xFF };
+    spi_nand_execute_transaction(handle, &reset_t);
+    busy_wait_us_32(2000); // > tRST (500us max)
+    handle->io_fault = false;
+    if (unprotect_chip(handle) != ESP_OK || configure_chip(handle) != ESP_OK) {
+        handle->io_fault = true;
+    }
 }
 
 spi_nand_flash_device_t *spi_nand_flash_get_handle(void)

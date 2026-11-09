@@ -49,6 +49,11 @@ typedef struct spi_nand_transaction_t spi_nand_transaction_t;
 #define REG_CONFIG          0xB0
 #define REG_STATUS          0xC0
 
+// REG_CONFIG (B0h) bits common to all supported vendors (QE position is per-chip, see chip struct)
+#define CFG_OTP_PRT         (1 << 7)
+#define CFG_OTP_EN          (1 << 6)
+#define CFG_ECC_EN          (1 << 4)
+
 #define STAT_BUSY           (1 << 0)
 #define STAT_WRITE_ENABLED  (1 << 1)
 #define STAT_ERASE_FAILED   (1 << 2)

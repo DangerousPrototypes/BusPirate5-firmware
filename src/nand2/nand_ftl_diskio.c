@@ -35,30 +35,35 @@ static spi_nand_flash_device_t *flash;
 
 // public function definitions
 DSTATUS diskio_initialize(BYTE drv) {
-    //printf("diskio_initialize called with drv=%d\r\n", drv);
     if (drv) {
         return STA_NOINIT; /* Supports only drive 0 */
     }
     if (!mutex_is_initialized(&diskio_mutex)) {
         mutex_init(&diskio_mutex);
     }
-    #define SPI_PORT spi0
-    #define PIN_CS   26  // GP17 - Chip Select (directly controlled)
-    // init flash management stack
-    //int ret = spi_nand_init(&dhara_nand_parameters);
+
+    // FatFs calls disk_initialize() on every f_mount(). The NAND driver + FTL (Dhara) must only be
+    // brought up once: re-running the full init (handle memset, chip RESET, journal re-scan) while core1
+    // may be servicing USB MSC reads/writes on the same static state corrupts the FTL and can crash core1.
+    // The in-RAM map stays authoritative for both FatFs (core0) and USB MSC (core1).
+    mutex_enter_blocking(&diskio_mutex);
+    if (initialized && flash != NULL) {
+        // Give a chip that previously timed out one more chance on each remount.
+        spi_nand_flash_recover(flash);
+        mutex_exit(&diskio_mutex);
+        return 0;
+    }
+
     spi_nand_flash_config_t nand_flash_config = {
-        .spi = SPI_PORT,
-        .cs_pin = PIN_CS,
+        .spi = BP_SPI_PORT,
+        .cs_pin = FLASH_STORAGE_CS, // board-specific: GPIO26 on BP5, GPIO31 on BP6/BP7
         .io_mode = SPI_NAND_IO_MODE_SIO,
         .gc_factor = 4, //same as previous NAND driver
     };
-    //printf("Initializing SPI NAND flash on SPI port %p with CS pin %d\r\n", (void*)SPI_PORT, PIN_CS);
-    spi_nand_flash_device_t *nand_flash_device_handle;    
+    spi_nand_flash_device_t *nand_flash_device_handle;
     esp_err_t ret = spi_nand_flash_init_device(&nand_flash_config, &nand_flash_device_handle);
-    //printf("spi_nand_flash_init_device returned %d\r\n", ret);
     if (ret != ESP_OK) {
-        //LOG_E(TAG, "Failed to initialize NAND flash: %d", ret);
-        //*out_handle = NULL;
+        mutex_exit(&diskio_mutex);
         return STA_NOINIT;
     }
 
@@ -66,6 +71,7 @@ DSTATUS diskio_initialize(BYTE drv) {
 
     // TODO: Flag statuses from dhara that do not indicate an empty map
     initialized = true;
+    mutex_exit(&diskio_mutex);
     return 0;
 }
 

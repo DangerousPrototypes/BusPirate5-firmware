@@ -44,9 +44,15 @@
 
 static esp_err_t wait_for_ready(spi_nand_flash_device_t *dev, uint32_t expected_operation_time_us, uint8_t *status_out)
 {
-    if (expected_operation_time_us < ROM_WAIT_THRESHOLD_US) {
-        busy_wait_us_32(expected_operation_time_us);
+    // Once the chip has stopped responding, fail immediately instead of burning the full timeout on
+    // every page; otherwise a journal scan/sync can stall boot or the terminal for minutes.
+    if (dev->io_fault) {
+        return ESP_ERR_TIMEOUT;
     }
+
+    // Always wait before the first poll: some parts (e.g. Zetta) do not raise OIP immediately
+    // after CS# goes high, so an immediate poll could report "ready" while an erase is starting.
+    busy_wait_us_32(MIN(expected_operation_time_us, ROM_WAIT_THRESHOLD_US));
 
     // Bound the poll so a stalled/unresponsive device can never hang the firmware.
     // Worst-case NAND op (block erase) is ~5ms; 500ms is a safe upper limit.
@@ -64,6 +70,7 @@ static esp_err_t wait_for_ready(spi_nand_flash_device_t *dev, uint32_t expected_
 
         if (time_reached(deadline)) {
             NAND_LOGE(TAG, "wait_for_ready timed out (status=0x%02x)", status);
+            dev->io_fault = true;
             return ESP_ERR_TIMEOUT;
         }
 
@@ -159,11 +166,11 @@ esp_err_t nand_mark_bad(spi_nand_flash_device_t *handle, uint32_t block)
         goto fail;
     }
 
-    GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
-
     uint16_t column_addr = get_column_address(handle, block, handle->chip.page_size);
 
+    GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
     GOTO_ON_ERROR(spi_nand_program_load(handle, (const uint8_t *)&bad_block_indicator, column_addr, 1), fail);
+    GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
     GOTO_ON_ERROR(program_execute_and_wait(handle, first_block_page, NULL), fail);
 
     return ret;
@@ -224,8 +231,11 @@ esp_err_t nand_prog(spi_nand_flash_device_t *handle, uint32_t page, const uint8_
     uint16_t column_addr = get_column_address(handle, block, 0);
 
     GOTO_ON_ERROR(read_page_and_wait(handle, page, NULL), fail);
+    // Vendors disagree on ordering: Micron documents WRITE ENABLE before PROGRAM LOAD, Zetta documents it
+    // between PROGRAM LOAD and PROGRAM EXECUTE. Issue it in both places; WREN is idempotent and cheap.
     GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
     GOTO_ON_ERROR(spi_nand_program_load(handle, data, column_addr, handle->chip.page_size), fail);
+    GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
 
     GOTO_ON_ERROR(program_execute_and_wait(handle, page, &status), fail);
 
@@ -354,15 +364,14 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
         return ESP_FAIL;
     }
 
-    GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
     uint32_t src_block = src >> handle->chip.log2_ppb;
     uint32_t dst_block = dst >> handle->chip.log2_ppb;
     uint16_t src_column_addr = get_column_address(handle, src_block, 0);
     uint16_t dst_column_addr = get_column_address(handle, dst_block, 0);
 
-    if (src_column_addr != dst_column_addr) {
-        // In a 2 plane structure of the flash, if the pages are not on the same plane, the data must be copied through RAM. 
-        // Use the device's temp_buffer instead of malloc (temp_buffer size is page_size + 1)
+    if ((src_column_addr != dst_column_addr) || (handle->chip.flags & NAND_FLAG_NO_INTERNAL_COPY)) {
+        // Copy through RAM when the pages are on different planes, or when the chip needs a
+        // PROGRAM LOAD between PAGE READ and PROGRAM EXECUTE (Zetta: 13h, 84h, 06h, 10h).
         copy_buf = handle->read_buffer;
         if (! copy_buf) {
             ret = ESP_ERR_NO_MEM;
@@ -372,8 +381,8 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
         GOTO_ON_ERROR(spi_nand_read(handle, copy_buf, src_column_addr, handle->chip.page_size), fail);
 
         GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
-
         GOTO_ON_ERROR(spi_nand_program_load(handle, copy_buf, dst_column_addr, handle->chip.page_size), fail);
+        GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
 
         GOTO_ON_ERROR(program_execute_and_wait(handle, dst, &status), fail);
 
@@ -383,6 +392,7 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
         }
         copy_buf = NULL;
     } else {
+        GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
         GOTO_ON_ERROR(program_execute_and_wait(handle, dst, &status), fail);
         if ((status & STAT_PROGRAM_FAILED) != 0) {
             NAND_LOGD(TAG, "copy, prog failed");

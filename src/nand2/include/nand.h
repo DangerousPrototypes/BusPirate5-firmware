@@ -21,6 +21,9 @@ extern "C" {
 
 #define NAND_FLAG_HAS_PROG_PLANE_SELECT       (1 << 0)
 #define NAND_FLAG_HAS_READ_PLANE_SELECT       (1 << 1)
+// Chip does not support PAGE READ -> PROGRAM EXECUTE copy-back without an intervening PROGRAM LOAD;
+// copies are routed through RAM (13h, 0Bh, 84h, 06h, 10h) instead.
+#define NAND_FLAG_NO_INTERNAL_COPY            (1 << 2)
 
 #ifndef BIT
 #define BIT(x) (1 << (x))
@@ -82,6 +85,7 @@ struct spi_nand_flash_device_t {
     uint8_t *temp_buffer;
     const char *manufacturer_name;
     mutex_t mutex;
+    bool io_fault; // latched after a busy timeout: chip unresponsive, fail fast until re-init
 };
 
 esp_err_t nand_register_dev(spi_nand_flash_device_t *handle);

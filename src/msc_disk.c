@@ -253,15 +253,15 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
 // Callback invoked when received READ10 command.
 // Copy disk's data to buffer (up to bufsize) and return number of copied bytes.
 int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
-    DRESULT res;
     (void)lun;
     // printf(" READ lba %d +%d siz %d\r\n", lba, offset, bufsize);
 
     if (system_config.storage_available) {
-        if (res = disk_read(0, buffer, lba, (bufsize / BP_FLASH_DISK_BLOCK_SIZE))) // assume no offset
+        // Runs on core1 (tud_task): no printf here, the TX FIFO is core0-only.
+        // Return -1 on error: 0 means "busy" to TinyUSB and would retry forever, starving core1.
+        if (disk_read(0, buffer, lba, (bufsize / BP_FLASH_DISK_BLOCK_SIZE))) // assume no offset
         {
-            printf(" READ ERROR %d \r\n", res);
-            bufsize = 0;
+            return -1;
         }
     } else {
 
@@ -275,16 +275,15 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
 // Callback invoked when received WRITE10 command.
 // Process data in buffer to disk's storage and return number of written bytes
 int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
-    DRESULT res;
     (void)lun;
 
     // printf(" WRITE lba %d +%d siz %d\r\n", lba, offset, bufsize);
 
     if (system_config.storage_available) {
-        if (res = disk_write(0, buffer, lba, (bufsize / BP_FLASH_DISK_BLOCK_SIZE))) // assume no offset
+        // See tud_msc_read10_cb: must not printf on core1 and must not return 0 on error.
+        if (disk_write(0, buffer, lba, (bufsize / BP_FLASH_DISK_BLOCK_SIZE))) // assume no offset
         {
-            printf(" WRITE ERROR %d \r\n", res);
-            bufsize = 0;
+            return -1;
         }
     } else {
 
@@ -357,13 +356,26 @@ bool tud_msc_is_writable_cb(uint8_t lun) {
 // Note that there are busy loop in this function
 // A small sleep value is necessary to insure that
 // the core can still process events. __wfe() will be called by sleep_ms
+// Bounded wait for the host's TEST UNIT READY poll (acknowledged on core1). A host that stops
+// polling (e.g. after storage errors) would otherwise hang core0 here and the terminal never appears.
+// On timeout we carry on; writability is still enforced through tud_msc_is_writable_cb.
+#define MSC_CMD_ACK_TIMEOUT_MS 3000
+static void wait_command_acknowledged(void) {
+    absolute_time_t deadline = make_timeout_time_ms(MSC_CMD_ACK_TIMEOUT_MS);
+    while (!command_acknowledged()) {
+        if (time_reached(deadline)) {
+            PRINT_WARNING("USB MSC: host did not acknowledge eject/insert, continuing\n");
+            return;
+        }
+        sleep_ms(1);
+    }
+}
+
 bool insert_or_eject_usbmsdrive(bool insert) {
     cmd_ack = false;
     if (insert) {
         insert_request = true;
-        while (!command_acknowledged()) {
-            sleep_ms(1);
-        }
+        wait_command_acknowledged();
         insert_request = false;
         // load disk storage
     } else {
@@ -372,9 +384,7 @@ bool insert_or_eject_usbmsdrive(bool insert) {
         }
         // unload disk storage
         eject_request = true;
-        while (!command_acknowledged()) {
-            sleep_ms(1);
-        }
+        wait_command_acknowledged();
         eject_request = false;
     }
     return true;

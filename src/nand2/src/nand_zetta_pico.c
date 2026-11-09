@@ -55,8 +55,11 @@ esp_err_t spi_nand_zetta_init(spi_nand_flash_device_t *dev)
 
     dev->chip.has_quad_enable_bit = 1;
     dev->chip.quad_enable_bit_pos = 0;
-    dev->chip.erase_block_delay_us = 2000;
+    dev->chip.erase_block_delay_us = 3000;  // tBERS typ 3ms (datasheet Table 16-3)
     dev->chip.program_page_delay_us = 400;
+    // Datasheet only documents copy-back as 13h -> 84h -> 06h -> 10h. Dhara's sync padding copies the
+    // last-written sector via copy-back, so a bad copy damages the tail of the last file written.
+    dev->chip.flags |= NAND_FLAG_NO_INTERNAL_COPY;
     NAND_LOGD(TAG, "%s: device_id: %x\n", __func__, device_id);
     switch (device_id) {
     case ZETTA_DI_71:

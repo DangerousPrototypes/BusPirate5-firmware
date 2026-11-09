@@ -248,9 +248,10 @@ int dhara_nand_erase(const struct dhara_nand *n, dhara_block_t b, dhara_error_t 
     spi_nand_flash_device_t *dev_handle = dhara_priv_data->parent_handle;
     esp_err_t ret = nand_erase_block(dev_handle, b);
     if (ret) {
-        if (ret == ESP_ERR_NOT_FINISHED) {
-            dhara_set_error(err, DHARA_E_BAD_BLOCK);
-        }
+        // Every failure must set *err: Dhara reads it unconditionally, and an uninitialized value
+        // that happens to equal DHARA_E_RECOVER makes its retry loops spin forever (core1 hang).
+        // Only a reported E_FAIL is a bad block; I/O failures (timeouts) are fatal, not recoverable.
+        dhara_set_error(err, (ret == ESP_ERR_NOT_FINISHED) ? DHARA_E_BAD_BLOCK : DHARA_E_TOO_BAD);
         return -1;
     }
     return 0;
@@ -262,9 +263,7 @@ int dhara_nand_prog(const struct dhara_nand *n, dhara_page_t p, const uint8_t *d
     spi_nand_flash_device_t *dev_handle = dhara_priv_data->parent_handle;
     esp_err_t ret = nand_prog(dev_handle, p, data);
     if (ret) {
-        if (ret == ESP_ERR_NOT_FINISHED) {
-            dhara_set_error(err, DHARA_E_BAD_BLOCK);
-        }
+        dhara_set_error(err, (ret == ESP_ERR_NOT_FINISHED) ? DHARA_E_BAD_BLOCK : DHARA_E_TOO_BAD);
         return -1;
     }
     return 0;
@@ -290,9 +289,8 @@ int dhara_nand_read(const struct dhara_nand *n, dhara_page_t p, size_t offset, s
     spi_nand_flash_dhara_priv_data_t *dhara_priv_data = __containerof(n, spi_nand_flash_dhara_priv_data_t, dhara_nand);
     spi_nand_flash_device_t *dev_handle = dhara_priv_data->parent_handle;
     if (nand_read(dev_handle, p, offset, length, data)) {
-        if (dev_handle->chip.ecc_data.ecc_corrected_bits_status == STAT_ECC_NOT_CORRECTED) {
-            dhara_set_error(err, DHARA_E_ECC);
-        }
+        // Any read failure (uncorrectable ECC, timeout, bad status) means the page is unreadable.
+        dhara_set_error(err, DHARA_E_ECC);
         return -1;
     }
     return 0;
@@ -304,11 +302,12 @@ int dhara_nand_copy(const struct dhara_nand *n, dhara_page_t src, dhara_page_t d
     spi_nand_flash_device_t *dev_handle = dhara_priv_data->parent_handle;
     esp_err_t ret = nand_copy(dev_handle, src, dst);
     if (ret) {
-        if (dev_handle->chip.ecc_data.ecc_corrected_bits_status == STAT_ECC_NOT_CORRECTED) {
-            dhara_set_error(err, DHARA_E_ECC);
-        }
         if (ret == ESP_ERR_NOT_FINISHED) {
             dhara_set_error(err, DHARA_E_BAD_BLOCK);
+        } else if (ret == ESP_FAIL) {
+            dhara_set_error(err, DHARA_E_ECC); // source page unreadable
+        } else {
+            dhara_set_error(err, DHARA_E_TOO_BAD);
         }
         return -1;
     }

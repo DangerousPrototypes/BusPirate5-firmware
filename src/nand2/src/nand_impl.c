@@ -42,11 +42,22 @@
 #define RETURN_ON_ERROR(x) do { esp_err_t err_rc_ = (x); if (err_rc_ != ESP_OK) return err_rc_; } while(0)
 #define GOTO_ON_ERROR(x, label) do { ret = (x); if (ret != ESP_OK) goto label; } while(0)
 
+void nand_op_begin(spi_nand_flash_device_t *handle)
+{
+    handle->op_deadline = make_timeout_time_ms(NAND_OP_DEADLINE_MS);
+}
+
 static esp_err_t wait_for_ready(spi_nand_flash_device_t *dev, uint32_t expected_operation_time_us, uint8_t *status_out)
 {
     // Once the chip has stopped responding, fail immediately instead of burning the full timeout on
     // every page; otherwise a journal scan/sync can stall boot or the terminal for minutes.
     if (dev->io_fault) {
+        return ESP_ERR_TIMEOUT;
+    }
+    if (!is_nil_time(dev->op_deadline) && time_reached(dev->op_deadline)) {
+        NAND_LOGE(TAG, "FTL operation exceeded %d ms, giving up", NAND_OP_DEADLINE_MS);
+        dev->stats.deadline_hits++;
+        dev->io_fault = true;
         return ESP_ERR_TIMEOUT;
     }
 
@@ -70,6 +81,7 @@ static esp_err_t wait_for_ready(spi_nand_flash_device_t *dev, uint32_t expected_
 
         if (time_reached(deadline)) {
             NAND_LOGE(TAG, "wait_for_ready timed out (status=0x%02x)", status);
+            dev->stats.busy_timeouts++;
             dev->io_fault = true;
             return ESP_ERR_TIMEOUT;
         }
@@ -156,6 +168,7 @@ esp_err_t nand_mark_bad(spi_nand_flash_device_t *handle, uint32_t block)
     uint8_t bad_block_indicator = 0x00;
     uint8_t status;
     NAND_LOGD(TAG, "mark_bad, block=%"PRIu32", page=%"PRIu32",indicator = %02x", block, first_block_page, bad_block_indicator);
+    handle->stats.marked_bad++;
 
     GOTO_ON_ERROR(read_page_and_wait(handle, first_block_page, NULL), fail);
     GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
@@ -207,11 +220,13 @@ esp_err_t nand_erase_block(spi_nand_flash_device_t *handle, uint32_t block)
 
     uint32_t first_block_page = block * (1 << handle->chip.log2_ppb);
 
+    handle->stats.erases++;
     GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
     GOTO_ON_ERROR(spi_nand_erase_block(handle, first_block_page), fail);
     GOTO_ON_ERROR(wait_for_ready(handle, handle->chip.erase_block_delay_us, &status), fail);
 
     if ((status & STAT_ERASE_FAILED) != 0) {
+        handle->stats.erase_fail++;
         ret = ESP_ERR_NOT_FINISHED;
     }
     return ret;
@@ -230,9 +245,10 @@ esp_err_t nand_prog(spi_nand_flash_device_t *handle, uint32_t page, const uint8_
     uint32_t block = page >> handle->chip.log2_ppb;
     uint16_t column_addr = get_column_address(handle, block, 0);
 
+    handle->stats.progs++;
     GOTO_ON_ERROR(read_page_and_wait(handle, page, NULL), fail);
-    // Vendors disagree on ordering: Micron documents WRITE ENABLE before PROGRAM LOAD, Zetta documents it
-    // between PROGRAM LOAD and PROGRAM EXECUTE. Issue it in both places; WREN is idempotent and cheap.
+    // All supported datasheets (Micron, GigaDevice, Zetta) require WRITE ENABLE before PROGRAM LOAD;
+    // repeating it before PROGRAM EXECUTE is harmless and guards parts that drop WEL on the load.
     GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
     GOTO_ON_ERROR(spi_nand_program_load(handle, data, column_addr, handle->chip.page_size), fail);
     GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
@@ -241,6 +257,7 @@ esp_err_t nand_prog(spi_nand_flash_device_t *handle, uint32_t page, const uint8_
 
     if ((status & STAT_PROGRAM_FAILED) != 0) {
         NAND_LOGD(TAG, "prog failed, page=%"PRIu32",", page);
+        handle->stats.prog_fail++;
         return ESP_ERR_NOT_FINISHED;
     }
 
@@ -323,12 +340,18 @@ static bool is_ecc_error(spi_nand_flash_device_t *dev, uint8_t status)
             is_ecc_err = true;
         }
     }
+    if (is_ecc_err) {
+        dev->stats.ecc_uncorrectable++;
+    } else if (bits_corrected_status) {
+        dev->stats.ecc_corrected++;
+    }
     return is_ecc_err;
 }
 
 esp_err_t nand_read(spi_nand_flash_device_t *handle, uint32_t page, size_t offset, size_t length, uint8_t *data)
 {
     NAND_LOGV(TAG, "read, page=%"PRIu32", offset=%zu, length=%zu", page, offset, length);
+    handle->stats.reads++;
     esp_err_t ret = ESP_OK;
     uint8_t status;
 
@@ -357,6 +380,7 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
     uint8_t *copy_buf = NULL;
 
     uint8_t status;
+    handle->stats.copies++;
     GOTO_ON_ERROR(read_page_and_wait(handle, src, &status), fail);
 
     if (is_ecc_error(handle, status)) {
@@ -388,6 +412,7 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
 
         if ((status & STAT_PROGRAM_FAILED) != 0) {
             NAND_LOGD(TAG, "copy, prog failed");
+            handle->stats.prog_fail++;
             return ESP_ERR_NOT_FINISHED;
         }
         copy_buf = NULL;
@@ -396,6 +421,7 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
         GOTO_ON_ERROR(program_execute_and_wait(handle, dst, &status), fail);
         if ((status & STAT_PROGRAM_FAILED) != 0) {
             NAND_LOGD(TAG, "copy, prog failed");
+            handle->stats.prog_fail++;
             return ESP_ERR_NOT_FINISHED;
         }
     }

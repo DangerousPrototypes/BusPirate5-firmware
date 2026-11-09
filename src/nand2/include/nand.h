@@ -75,6 +75,22 @@ typedef struct {
     esp_err_t (*get_capacity)(spi_nand_flash_device_t *handle, uint32_t *number_of_sectors);
 } spi_nand_ops;
 
+// Diagnostic counters, cumulative since init (reported by the 'nand info' command).
+typedef struct {
+    uint32_t reads;
+    uint32_t progs;
+    uint32_t erases;
+    uint32_t copies;
+    uint32_t prog_fail;        // PROGRAM EXECUTE reported P_FAIL
+    uint32_t erase_fail;       // BLOCK ERASE reported E_FAIL
+    uint32_t ecc_corrected;    // reads with corrected bit errors
+    uint32_t ecc_uncorrectable;// reads with uncorrectable ECC errors
+    uint32_t marked_bad;       // blocks marked bad by the FTL
+    uint32_t busy_timeouts;    // OIP never cleared within the busy timeout
+    uint32_t deadline_hits;    // a single FTL operation exceeded NAND_OP_DEADLINE_MS
+    int32_t last_dhara_err;    // last dhara_error_t returned to the FTL layer, -1 if none
+} spi_nand_stats_t;
+
 struct spi_nand_flash_device_t {
     spi_nand_flash_config_t config;
     spi_nand_chip_t chip;
@@ -85,8 +101,17 @@ struct spi_nand_flash_device_t {
     uint8_t *temp_buffer;
     const char *manufacturer_name;
     mutex_t mutex;
-    bool io_fault; // latched after a busy timeout: chip unresponsive, fail fast until re-init
+    bool io_fault; // latched after a busy timeout or deadline: fail fast until recovered
+    // Wall-clock limit for the FTL operation in progress (see nand_op_begin). Dhara's bad-block
+    // recovery retries are bounded per call but can chain across the whole chip; this makes any
+    // single sector read/write/gc give up and report an error instead of appearing to hang.
+    absolute_time_t op_deadline;
+    spi_nand_stats_t stats;
 };
+
+// Maximum wall-clock time one FTL-level operation (sector read/write, gc step, sync, resume) may spend
+// in NAND I/O before io_fault is latched and the operation fails.
+#define NAND_OP_DEADLINE_MS 8000
 
 esp_err_t nand_register_dev(spi_nand_flash_device_t *handle);
 esp_err_t nand_unregister_dev(spi_nand_flash_device_t *handle);

@@ -19,4 +19,9 @@ DRESULT diskio_read(BYTE drv, BYTE* buff, LBA_t sector, UINT count);
 DRESULT diskio_write(BYTE drv, const BYTE* buff, LBA_t sector, UINT count);
 DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void* buff);
 
+// Exclusive access to the NAND/FTL for callers that bypass FatFs (e.g. the 'nand' command).
+// USB MSC on core 1 uses the same lock, so holding it blocks host disk traffic.
+void diskio_lock(void);
+void diskio_unlock(void);
+
 #endif // __NAND_FTL_DISKIO_H

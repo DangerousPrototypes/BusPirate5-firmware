@@ -185,6 +185,21 @@ spi_nand_flash_device_t *spi_nand_flash_get_handle(void);
  */
 void spi_nand_flash_recover(spi_nand_flash_device_t *handle);
 
+/**
+ * @brief Print driver diagnostics (operation/failure counters, fault latch, live registers) to the terminal.
+ * Core 0 only.
+ */
+void spi_nand_flash_print_diag(spi_nand_flash_device_t *handle);
+
+/**
+ * @brief Erase every block that is not marked bad and restart the FTL with an empty journal.
+ *
+ * Destroys all data (including the file system). Factory bad-block marks are preserved.
+ * Caller must hold the disk I/O lock. Counters are optional (may be NULL).
+ */
+esp_err_t spi_nand_flash_wipe(spi_nand_flash_device_t *handle, uint32_t *erased, uint32_t *skipped_bad,
+                              uint32_t *failed);
+
 /** @brief Get the raw READ ID diagnostic capture (3 rows x 6 bytes, address_bytes 0..2).
  *
  * @return Pointer to 18 bytes of captured READ ID stream. Valid after a detection attempt.

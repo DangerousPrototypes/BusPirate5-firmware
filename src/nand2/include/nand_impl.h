@@ -24,6 +24,8 @@ esp_err_t nand_prog(spi_nand_flash_device_t *handle, uint32_t p, const uint8_t *
 esp_err_t nand_is_free(spi_nand_flash_device_t *handle, uint32_t p, bool *is_free_status);
 esp_err_t nand_read(spi_nand_flash_device_t *handle, uint32_t p, size_t offset, size_t length, uint8_t *data);
 esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst);
+// Mark the start of an FTL-level operation: arms the NAND_OP_DEADLINE_MS watchdog.
+void nand_op_begin(spi_nand_flash_device_t *handle);
 esp_err_t nand_get_ecc_status(spi_nand_flash_device_t *handle, uint32_t page);
 
 #ifdef __cplusplus

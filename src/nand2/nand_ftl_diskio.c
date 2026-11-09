@@ -34,6 +34,17 @@ static spi_nand_flash_device_t *flash;
 #define SPI_NAND_PAGE_SIZE                   (1 << SPI_NAND_LOG2_PAGE_SIZE)
 
 // public function definitions
+void diskio_lock(void) {
+    if (!mutex_is_initialized(&diskio_mutex)) {
+        mutex_init(&diskio_mutex);
+    }
+    mutex_enter_blocking(&diskio_mutex);
+}
+
+void diskio_unlock(void) {
+    mutex_exit(&diskio_mutex);
+}
+
 DSTATUS diskio_initialize(BYTE drv) {
     if (drv) {
         return STA_NOINIT; /* Supports only drive 0 */

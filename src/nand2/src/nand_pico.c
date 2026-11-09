@@ -328,6 +328,84 @@ void spi_nand_flash_recover(spi_nand_flash_device_t *handle)
     }
 }
 
+void spi_nand_flash_print_diag(spi_nand_flash_device_t *handle)
+{
+    if (handle == NULL || handle->manufacturer_name == NULL) {
+        printf("NAND: No device initialized\r\n");
+        return;
+    }
+    const spi_nand_stats_t *s = &handle->stats;
+    printf("NAND driver diagnostics:\r\n");
+    printf("  Fault latch: %s\r\n", handle->io_fault ? "SET (operations fail fast)" : "clear");
+    printf("  Ops: %lu reads, %lu progs, %lu erases, %lu copies\r\n", (unsigned long)s->reads,
+           (unsigned long)s->progs, (unsigned long)s->erases, (unsigned long)s->copies);
+    printf("  Failures: %lu P_FAIL, %lu E_FAIL, %lu busy timeouts, %lu deadline hits\r\n",
+           (unsigned long)s->prog_fail, (unsigned long)s->erase_fail, (unsigned long)s->busy_timeouts,
+           (unsigned long)s->deadline_hits);
+    printf("  ECC: %lu corrected, %lu uncorrectable\r\n", (unsigned long)s->ecc_corrected,
+           (unsigned long)s->ecc_uncorrectable);
+    printf("  Blocks marked bad by FTL: %lu\r\n", (unsigned long)s->marked_bad);
+    printf("  Last FTL error: %ld\r\n", (long)s->last_dhara_err);
+
+    uint8_t prot = 0, cfg = 0, stat = 0;
+    spi_nand_read_register(handle, REG_PROTECT, &prot);
+    spi_nand_read_register(handle, REG_CONFIG, &cfg);
+    spi_nand_read_register(handle, REG_STATUS, &stat);
+    printf("  Registers: protect(A0h)=0x%02X config(B0h)=0x%02X status(C0h)=0x%02X\r\n", prot, cfg, stat);
+    if (prot & 0x7E) {
+        printf("  WARNING: block protection active, programs/erases will fail\r\n");
+    }
+    if (!(cfg & CFG_ECC_EN)) {
+        printf("  WARNING: internal ECC disabled\r\n");
+    }
+    if (cfg & CFG_OTP_EN) {
+        printf("  WARNING: OTP area mapped, array access redirected\r\n");
+    }
+}
+
+esp_err_t spi_nand_flash_wipe(spi_nand_flash_device_t *handle, uint32_t *erased, uint32_t *skipped_bad,
+                              uint32_t *failed)
+{
+    if (handle == NULL || handle->ops == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint32_t n_erased = 0, n_bad = 0, n_failed = 0;
+
+    // Start from a clean chip state regardless of any latched fault.
+    handle->io_fault = true;
+    spi_nand_flash_recover(handle);
+    if (handle->io_fault) {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    for (uint32_t blk = 0; blk < handle->chip.num_blocks; blk++) {
+        nand_op_begin(handle);
+        bool is_bad = false;
+        if (nand_is_bad(handle, blk, &is_bad) == ESP_OK && is_bad) {
+            n_bad++;
+            continue;
+        }
+        if (nand_erase_block(handle, blk) == ESP_OK) {
+            n_erased++;
+        } else {
+            n_failed++;
+            if (handle->io_fault) {
+                break;
+            }
+        }
+    }
+
+    // Rebuild the FTL over the now-empty journal.
+    handle->ops->deinit(handle);
+    nand_op_begin(handle);
+    handle->ops->init(handle);
+
+    if (erased) *erased = n_erased;
+    if (skipped_bad) *skipped_bad = n_bad;
+    if (failed) *failed = n_failed;
+    return handle->io_fault ? ESP_ERR_TIMEOUT : ESP_OK;
+}
+
 spi_nand_flash_device_t *spi_nand_flash_get_handle(void)
 {
     // manufacturer_name is only set once a chip has been detected and initialized

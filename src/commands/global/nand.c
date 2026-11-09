@@ -10,11 +10,15 @@
 #ifdef BP_HW_STORAGE_NAND
 #include "hardware/spi.h"
 #include "nand2/include/spi_nand_flash.h"
+#include "fatfs/ff.h"
+#include "fatfs/diskio.h"
+#include "nand2/nand_ftl_diskio.h"
+#include "commands/global/disk.h"
 #endif
 
 static const char* const usage[] = {
-    "nand [info|id|raw|regs|gc|scan|stress]\r\n\t[-i(terations) <count>] [-n <sectors>] [-y(es)]",
-    "Show FTL info and status:%s nand info",
+    "nand [info|id|raw|regs|gc|scan|stress|wipe]\r\n\t[-i(terations) <count>] [-n <sectors>] [-y(es)]",
+    "Show FTL info, driver counters and registers:%s nand info",
     "Dump captured READ ID bytes (works even if detection failed):%s nand id",
     "Raw READ ID on the SPI bus, bypassing the driver:%s nand raw",
     "Dump protect/feature/status registers:%s nand regs",
@@ -23,6 +27,7 @@ static const char* const usage[] = {
     "Read-only surface scan (verify all sectors readable):%s nand scan",
     "Destructive write/GC/verify stress test (4 cycles):%s nand stress -i 4",
     "Stress test without the confirmation prompt:%s nand stress -y",
+    "Erase all good blocks, reset the FTL and format:%s nand wipe",
 };
 
 enum nand_actions {
@@ -33,6 +38,7 @@ enum nand_actions {
     NAND_GC,
     NAND_SCAN,
     NAND_STRESS,
+    NAND_WIPE,
 };
 
 static const bp_command_action_t nand_action_defs[] = {
@@ -43,6 +49,7 @@ static const bp_command_action_t nand_action_defs[] = {
     { NAND_GC,     "gc",     0 },
     { NAND_SCAN,   "scan",   0 },
     { NAND_STRESS, "stress", 0 },
+    { NAND_WIPE,   "wipe",   0 },
 };
 
 static const bp_val_constraint_t iterations_range = {
@@ -95,6 +102,44 @@ static spi_nand_flash_device_t* nand_get_ready_handle(void) {
         printf("Error: NAND flash not initialized. Mount storage first (try 'i').\r\n");
     }
     return handle;
+}
+
+// The FTL is shared with USB MSC on core 1, so every driver call is serialized with the disk lock.
+// The lock must only be held for the duration of one call: core 1 drains the terminal TX FIFO and
+// delivers keyboard input, so holding it across a printf() or a prompt deadlocks both cores as soon as
+// the host touches the drive.
+static esp_err_t nand_locked_write(spi_nand_flash_device_t* handle, const uint8_t* buf, uint32_t sector) {
+    diskio_lock();
+    esp_err_t ret = spi_nand_flash_write_sector(handle, buf, sector);
+    diskio_unlock();
+    return ret;
+}
+
+static esp_err_t nand_locked_read(spi_nand_flash_device_t* handle, uint8_t* buf, uint32_t sector) {
+    diskio_lock();
+    esp_err_t ret = spi_nand_flash_read_sector(handle, buf, sector);
+    diskio_unlock();
+    return ret;
+}
+
+static esp_err_t nand_locked_gc(spi_nand_flash_device_t* handle, uint32_t* steps) {
+    diskio_lock();
+    esp_err_t ret = spi_nand_flash_gc(handle, steps);
+    diskio_unlock();
+    return ret;
+}
+
+static esp_err_t nand_locked_sync(spi_nand_flash_device_t* handle) {
+    diskio_lock();
+    esp_err_t ret = spi_nand_flash_sync(handle);
+    diskio_unlock();
+    return ret;
+}
+
+static void nand_locked_recover(spi_nand_flash_device_t* handle) {
+    diskio_lock();
+    spi_nand_flash_recover(handle);
+    diskio_unlock();
 }
 
 // Driver-independent raw READ ID directly on the shared SPI0 bus (bypasses the NAND driver).
@@ -182,13 +227,38 @@ static void nand_print_stats(spi_nand_flash_device_t* handle) {
 static void nand_cmd_info(spi_nand_flash_device_t* handle) {
     spi_nand_flash_print_info();
     nand_print_stats(handle);
+    spi_nand_flash_print_diag(handle);
+}
+
+static void nand_cmd_wipe(spi_nand_flash_device_t* handle) {
+    if (!bp_cmd_confirm(&nand_def,
+                        "Wipe ERASES every block of the NAND flash (factory bad-block marks are kept),\r\n"
+                        "resets the flash translation layer and formats a new file system.")) {
+        printf("Wipe aborted.\r\n");
+        return;
+    }
+    printf("Erasing %s NAND...\r\n", spi_nand_flash_print_manufacturer());
+    uint32_t erased = 0, bad = 0, failed = 0;
+    // Lock only the erase: disk_format() re-enters the disk layer, which takes the lock itself.
+    diskio_lock();
+    esp_err_t ret = spi_nand_flash_wipe(handle, &erased, &bad, &failed);
+    diskio_unlock();
+    printf("  %lu blocks erased, %lu bad blocks skipped, %lu erase failures\r\n", (unsigned long)erased,
+           (unsigned long)bad, (unsigned long)failed);
+    if (ret != ESP_OK) {
+        printf("Wipe FAILED: error %ld\r\n", (long)ret);
+        spi_nand_flash_print_diag(handle);
+        return;
+    }
+    system_config.storage_available = 0;
+    disk_format();
 }
 
 static void nand_cmd_gc(spi_nand_flash_device_t* handle) {
     uint32_t before = 0, after = 0, steps = 0;
     spi_nand_flash_get_stats(handle, NULL, NULL, &before);
     printf("Forcing garbage collection...\r\n");
-    esp_err_t ret = spi_nand_flash_gc(handle, &steps);
+    esp_err_t ret = nand_locked_gc(handle, &steps);
     if (ret != ESP_OK) {
         printf("Garbage collection FAILED: error %ld\r\n", (long)ret);
         return;
@@ -219,7 +289,7 @@ static void nand_cmd_scan(spi_nand_flash_device_t* handle) {
             printf("\r\nAborted at sector %lu\r\n", (unsigned long)s);
             break;
         }
-        if (spi_nand_flash_read_sector(handle, buf, s) != ESP_OK) {
+        if (nand_locked_read(handle, buf, s) != ESP_OK) {
             read_errors++;
             if (read_errors <= 16) {
                 printf("  Read error at sector %lu\r\n", (unsigned long)s);
@@ -283,20 +353,20 @@ static void nand_cmd_stress(spi_nand_flash_device_t* handle, uint32_t iterations
         // write phase
         for (uint32_t s = 0; s < sectors; s++) {
             nand_fill_pattern(write_buf, sector_size, s, it);
-            if (spi_nand_flash_write_sector(handle, write_buf, s) != ESP_OK) {
+            if (nand_locked_write(handle, write_buf, s) != ESP_OK) {
                 write_errors++;
             }
         }
 
         // force garbage collection between write and verify to exercise page relocation
-        esp_err_t gc_ret = spi_nand_flash_gc(handle, &gc_steps);
+        esp_err_t gc_ret = nand_locked_gc(handle, &gc_steps);
         if (gc_ret != ESP_OK) {
             printf("  Cycle %lu: GC FAILED (error %ld)\r\n", (unsigned long)it, (long)gc_ret);
         }
 
         // verify phase
         for (uint32_t s = 0; s < sectors; s++) {
-            if (spi_nand_flash_read_sector(handle, read_buf, s) != ESP_OK) {
+            if (nand_locked_read(handle, read_buf, s) != ESP_OK) {
                 read_errors++;
                 continue;
             }
@@ -310,7 +380,7 @@ static void nand_cmd_stress(spi_nand_flash_device_t* handle, uint32_t iterations
             }
         }
 
-        spi_nand_flash_sync(handle);
+        nand_locked_sync(handle);
 
         printf("  Cycle %lu: gc %lu steps, %lu write err, %lu read err, %lu mismatch\r\n",
                (unsigned long)it, (unsigned long)gc_steps, (unsigned long)write_errors,
@@ -380,9 +450,11 @@ void nand_handler(struct command_result* res) {
 
     switch (action) {
         case NAND_GC:
+            nand_locked_recover(handle); // clear a latched fault so the test actually runs
             nand_cmd_gc(handle);
             break;
         case NAND_SCAN:
+            nand_locked_recover(handle);
             nand_cmd_scan(handle);
             break;
         case NAND_STRESS: {
@@ -392,9 +464,13 @@ void nand_handler(struct command_result* res) {
                 system_config.error = true;
                 return;
             }
+            nand_locked_recover(handle);
             nand_cmd_stress(handle, iterations, sectors);
             break;
         }
+        case NAND_WIPE:
+            nand_cmd_wipe(handle);
+            break;
         case NAND_INFO:
         default:
             nand_cmd_info(handle);

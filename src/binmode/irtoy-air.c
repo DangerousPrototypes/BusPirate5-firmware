@@ -11,6 +11,7 @@
 // bytecode stuff to a single helper file #include "command_struct.h" //needed for same reason as bytecode and needs same fix
 // #include "modes.h"
 #include "binmode/binmodes.h"
+#include "binmode/irtoy-air.h"
 #include "tusb.h"
 #include "ui/ui_term.h"
 #include "binmode/binio_helpers.h"
@@ -64,108 +65,95 @@ void irtoy_air_cleanup(void) {
 #define HARDWARE_VERSION '3'
 #define FIRMWARE_VERSION_H '1'
 #define FIRMWARE_VERSION_L '0'
-enum {
-    AIR_OK = 0,
-    AIR_ERROR_START = 1,
-    AIR_ERROR_LENGTH = 2,
-    AIR_ERROR_MOD_FREQ,
-    AIR_ERROR_DATA,
-};
-/*
-printf("Unable to find start of data ($) in AIR packet\r\n");
-printf("Unable to find modulation frequency (:) in AIR packet\r\n");
-				printf("Unable to find end of MARK data (,) in AIR packet\r\n");
-*/
-//buffer should be a NULL terminaled string
-static bool air_decode_transmit(char* air_buffer, uint32_t air_len, uint32_t *data, uint32_t data_len){
-	//parse the csv formatted values into 16 bit value pairs
-	uint16_t data_cnt=0;
-	uint8_t mod_freq=0;
-	uint16_t air_cnt=0;
 
-    //search start of frame
-	while(air_buffer[air_cnt]!='$'){
-		if(air_buffer[air_cnt]==0x00) return AIR_ERROR_START; //null terminated
-        air_cnt++;
-		if(air_cnt>=air_len) return AIR_ERROR_START;  //buffer length out of bounds      
-	}
-
-    //skip past the $ character
-	air_cnt++;
-    if(air_cnt>=air_len){
-        return AIR_ERROR_START;
+// $38:900,1800,900,65535,;
+// returns AIR_OK when a whole packet is ready, AIR_PENDING until then, or the error that dropped it
+int air_rx_char(air_tx_t *tx, char c){
+    if(c=='$'){ //beginning of frame
+        int result = (tx->state==AIR_TX_IDLE) ? AIR_PENDING : AIR_ERROR_RESTART; //a packet in progress is dropped
+        tx->state = AIR_TX_MOD_FREQ;
+        tx->mod_freq = 0;
+        tx->digits = false;
+        return result;
     }
 
-	//parse the ascii into an 8 bit value
-	while(air_buffer[air_cnt]!=':'){
-        if(air_buffer[air_cnt]==0x00||air_buffer[air_cnt]<'0'||air_buffer[air_cnt]>'9'){
-            return AIR_ERROR_MOD_FREQ;
-        }
-		mod_freq*=10;
-		mod_freq+=air_buffer[air_cnt]-0x30;
-		air_cnt++;
-        if(air_cnt>=air_len) return AIR_ERROR_MOD_FREQ;
-	} 
-
-    //skip past the : character
-	air_cnt++;
-    if(air_cnt>=air_len){
-        return AIR_ERROR_LENGTH;
+    switch(tx->state){
+        case AIR_TX_MOD_FREQ:
+            if(c==':' && tx->digits){
+                tx->state = AIR_TX_DATA;
+                tx->value = 0;
+                tx->digits = false;
+                tx->mark = true;
+                tx->pairs = 0;
+                return AIR_PENDING;
+            }
+            if(c<'0' || c>'9' || tx->mod_freq>25){
+                tx->state = AIR_TX_IDLE;
+                return AIR_ERROR_MOD_FREQ;
+            }
+            tx->mod_freq = (tx->mod_freq*10) + (c-'0');
+            tx->digits = true;
+            if(tx->mod_freq>0xff){
+                tx->state = AIR_TX_IDLE;
+                return AIR_ERROR_MOD_FREQ;
+            }
+            return AIR_PENDING;
+        case AIR_TX_DATA:
+            if(c>='0' && c<='9' && tx->value<=6553){
+                tx->value = (tx->value*10) + (c-'0');
+                tx->digits = true;
+                if(tx->value<=0xffff){
+                    return AIR_PENDING;
+                }
+            }else if(c==',' && tx->digits){
+                if(tx->mark){
+                    if(tx->pairs>=AIR_TX_MAX_PAIRS){
+                        tx->state = AIR_TX_IDLE;
+                        return AIR_ERROR_LENGTH;
+                    }
+                    tx->data[tx->pairs] = (tx->value<<16); //upper 16 bits are the mark
+                }else{
+                    tx->data[tx->pairs] |= tx->value;
+                    tx->pairs++;
+                }
+                tx->mark = !tx->mark;
+                tx->value = 0;
+                tx->digits = false;
+                return AIR_PENDING;
+            }else if(c==';' && !tx->digits && (tx->pairs || !tx->mark)){
+                //found end of AIR packet
+                if(!tx->mark){ //end with a SPACE if not included in AIR packet
+                    tx->data[tx->pairs] |= 0xffff;
+                    tx->pairs++;
+                }
+                tx->state = AIR_TX_IDLE;
+                return AIR_OK;
+            }
+            tx->state = AIR_TX_IDLE;
+            return AIR_ERROR_DATA;
+        default: //waiting for $
+            return AIR_PENDING;
     }
-    
-    bool mark=true;
-    while(true){
-        uint16_t value=0;
-        while(air_buffer[air_cnt]!=','){
-			if(air_buffer[air_cnt]==0x00||air_buffer[air_cnt]<'0'||air_buffer[air_cnt]>'9'){
-				return AIR_ERROR_DATA;
-			}
-			value*=10;
-			value+=air_buffer[air_cnt]-0x30;
-			air_cnt++;
-            if(air_cnt>=air_len) return AIR_ERROR_DATA;
-		}
-        if(mark){
-            data[data_cnt] = (value<<16);//upper 16 bits are the mark
-            mark = false;
-        }else{
-            data[data_cnt] |= value;
-            data_cnt++;
-            if(data_cnt>=data_len){
-                return AIR_ERROR_DATA;
-            }
-            mark = true;
-        }
-        air_cnt++;
-        if(air_cnt>=air_len) return AIR_ERROR_DATA;
-        if(air_buffer[air_cnt]==';'){
-            //found end of AIR packet
-            if(!mark){
-                data[data_cnt] |= 0xffff;
-                data_cnt++;
-                if(data_cnt>=data_len){
-                    return AIR_ERROR_DATA;
-                }                
-            }
+}
+
+void air_tx_error(int error){
+    switch(error){
+        case AIR_ERROR_START:
+            printf("Unable to find start of data ($) in AIR packet\r\n");
             break;
-        }
+        case AIR_ERROR_MOD_FREQ:
+            printf("Unable to find modulation frequency (:) in AIR packet\r\n");
+            break;
+        case AIR_ERROR_LENGTH:
+            printf("Too many MARK/SPACE pairs in AIR packet, max %d\r\n", AIR_TX_MAX_PAIRS);
+            break;
+        case AIR_ERROR_RESTART:
+            printf("AIR packet dropped, a new one started ($) before its end (;)\r\n");
+            break;
+        default:
+            printf("Unable to find end of MARK/SPACE data (,) in AIR packet\r\n");
+            break;
     }
-
-	//debug: show loaded data packet
-	//printf("Read: %s", buffer);
-	/*
-    printf("\r\n$%u:", mod_freq);
-	for(uint16_t i=0; i<data_cnt; i++){
-		printf("%u,%u,", data[i]>>16, data[i]&0xffff);
-	}
-	printf(";\r\n\r\n");		
-	printf("Parsed AIR packet: modulation frequency %dkHz, %d MARK/SPACE pairs\r\nTransmitting...", mod_freq, data_cnt);
-    */
-    irio_pio_rx_deinit(bio2bufiopin[BIO5]);
-	irio_pio_tx_frame_write((float)(mod_freq*1000), data_cnt, data);
-    irio_pio_rx_init(bio2bufiopin[BIO5]);
-	//printf("done\r\n");
-	return AIR_OK;
 }
 
 typedef struct _IR_PULSE {
@@ -234,10 +222,8 @@ void irtoy_air_service(void){
     uint16_t us;
     uint16_t pairs;
     uint32_t buffer[128];
-    uint8_t air_buffer[512];
-    bool frame_found=false;
-    uint16_t air_cnt;
-    bool send_id;
+    air_tx_t tx = { .state = AIR_TX_IDLE };
+    bool send_id = true; //the host may already have the port open
 
     IR_PULSE pulse;
     pulse.always_LF = '\n';
@@ -257,6 +243,7 @@ void irtoy_air_service(void){
         if (!tud_cdc_n_connected(CDC_INTF)) {
             irio_pio_rxtx_drain_fifo();
             send_id=true;
+            tx.state = AIR_TX_IDLE; //a packet the host didn't finish is dropped
             continue;
         }else if(send_id){
             send_id=false;
@@ -266,7 +253,7 @@ void irtoy_air_service(void){
             }
         }
 
-        if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer) ){
+        if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer, count_of(buffer)) ){
             #if 0
             //create the AIR packet
             uint8_t mod_freq_int = (uint8_t)roundf(mod_freq / 1000.0f);
@@ -294,35 +281,21 @@ void irtoy_air_service(void){
             }
             //ir_rx_pulse_packet(&pulse, true, (uint16_t)(buffer[pairs-1] >> 16)); 
             //have us, want nano seconds
-            us = (us *1000) / 5; //convert to 1ns ticks
-            ir_rx_modulation_packet(&modulation, us);         
+            //no M record if the carrier wasn't measured, AnalysIR then records the signal without one
+            if(us){
+                ir_rx_modulation_packet(&modulation, (us *1000) / 5); //convert to 1ns ticks
+            }
         }
         
         char c;
         while(bin_rx_fifo_try_get(&c)){
-            if(c=='$'){ //beginning of frame
-                frame_found=true;
-                air_cnt=0;
-            }
-            if(frame_found){ 
-                air_buffer[air_cnt]=c;
-                air_cnt++;
-                if(air_cnt>=count_of(air_buffer)){ //overflow buffer
-                    frame_found=false;
-                    air_cnt=0;
-                }
-                if(c==';'){ //end of frame
-                    //send the AIR packet
-                    air_cnt++;
-                    if(air_cnt>=count_of(air_buffer)){ //overflow buffer
-                        frame_found=false;
-                        air_cnt=0;
-                    }      
-                    air_buffer[air_cnt]=0; //null terminate              
-                    air_decode_transmit(air_buffer, count_of(air_buffer), buffer, count_of(buffer));
-                    frame_found=false;
-                    air_cnt=0;
-                }
+            int result = air_rx_char(&tx, c);
+            if(result==AIR_OK){ //send the AIR packet
+                irio_pio_rx_deinit(bio2bufiopin[BIO5]);
+                irio_pio_tx_frame_write((float)(tx.mod_freq*1000), tx.pairs, tx.data);
+                irio_pio_rx_init(bio2bufiopin[BIO5]);
+            }else if(result!=AIR_PENDING){
+                air_tx_error(result);
             }
         }
 

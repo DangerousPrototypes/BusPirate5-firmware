@@ -112,8 +112,8 @@ static const bp_command_opt_t *find_opt_by_long_name(const bp_command_def_t *def
  */
 static bool cmd_scan_flag(const bp_command_def_t *def, char flag,
                           const char **val, size_t *val_len) {
-    const char *p = ln_cmdln_current();
-    const char *end = p + ln_cmdln_remaining();
+    const char *p = ln_cmdln_cmd_current();
+    const char *end = p + ln_cmdln_cmd_remaining();
 
     // Skip command name (first token)
     p = skip_ws(p, end);
@@ -257,8 +257,8 @@ bool bp_cmd_get_action(const bp_command_def_t *def, uint32_t *action) {
     bool has_delegate = (def->action_delegate != NULL);
     if (!has_actions && !has_delegate) return false;
 
-    const char *p = ln_cmdln_current();
-    const char *end = p + ln_cmdln_remaining();
+    const char *p = ln_cmdln_cmd_current();
+    const char *end = p + ln_cmdln_cmd_remaining();
 
     // Skip command name
     p = skip_ws(p, end);
@@ -333,8 +333,8 @@ bool bp_cmd_find_flag(const bp_command_def_t *def, char flag) {
 }
 
 bool bp_cmd_has_help_flag(void) {
-    const char *p = ln_cmdln_current();
-    const char *end = p + ln_cmdln_remaining();
+    const char *p = ln_cmdln_cmd_current();
+    const char *end = p + ln_cmdln_cmd_remaining();
 
     // Skip command name (first token)
     p = skip_ws(p, end);
@@ -433,8 +433,8 @@ bool bp_cmd_get_int32(const bp_command_def_t *def, char flag, int32_t *value) {
  */
 static bool cmd_get_positional_token(const bp_command_def_t *def, uint32_t pos,
                                      const char **tok, size_t *tlen) {
-    const char *p = ln_cmdln_current();
-    const char *end = p + ln_cmdln_remaining();
+    const char *p = ln_cmdln_cmd_current();
+    const char *end = p + ln_cmdln_cmd_remaining();
     uint32_t cur_pos = 0;
 
     // Position 0 is the command name itself
@@ -564,8 +564,8 @@ bool bp_cmd_get_positional_float(const bp_command_def_t *def, uint32_t pos,
 bool bp_cmd_get_remainder(const bp_command_def_t *def,
                           const char **out, size_t *len) {
     (void)def; // reserved for future use
-    const char *p = ln_cmdln_current();
-    const char *end = p + ln_cmdln_remaining();
+    const char *p = ln_cmdln_cmd_current();
+    const char *end = p + ln_cmdln_cmd_remaining();
 
     // Skip leading whitespace
     p = skip_ws(p, end);

@@ -103,7 +103,7 @@ void psucmd_irq_callback(void) {
 // zero return code = success
 uint32_t psucmd_enable(float volts, float current, bool current_limit_override, uint8_t undervoltage_percent) {
     system_config.pin_labels[0] = 0;
-    system_config.pin_changed = 0xff;
+    system_config.pin_changed = 0xffffffff;
     system_pin_update_purpose_and_label(false, BP_VOUT, 0, 0);
 
     uint32_t psu_result = psu_enable(volts, current, current_limit_override, undervoltage_percent);

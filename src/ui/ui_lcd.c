@@ -128,6 +128,12 @@ void lcd_write_background(const unsigned char* image) {
     lcd_write_stop();
 }
 
+static void (*lcd_yield)(void);
+
+void ui_lcd_set_yield(void (*yield)(void)) {
+    lcd_yield = yield;
+}
+
 // Write a string to the LCD
 // TODO: in LCD write string, automaticall toupper/lower depending on the contents of the font and the string
 void lcd_write_string(
@@ -339,6 +345,11 @@ void lcd_write_labels(uint16_t left_margin,
 	lcd_write_start();
     lcd_write_string(font, layout.image->text_background_color, color, c, fill_length);
     lcd_write_stop();
+    // A full redraw writes dozens of strings (~20 ms); yielding after each one,
+    // with the bus released, keeps the caller's other work going in between.
+    if (lcd_yield) {
+        lcd_yield();
+    }
 }
 
 void lcd_clear(void) {

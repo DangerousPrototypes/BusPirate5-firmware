@@ -1,6 +1,9 @@
 void lcd_configure(void);
 void lcd_clear(void);
 void ui_lcd_update(uint32_t update_flags);
+// Sets a function called between strings during LCD redraws, with the SPI bus
+// released, so a long redraw doesn't hold up the caller's other work. NULL for none.
+void ui_lcd_set_yield(void (*yield)(void));
 void lcd_write_background(const unsigned char* image);
 void lcd_screensaver_disable(void);
 void lcd_screensaver_enable(void);

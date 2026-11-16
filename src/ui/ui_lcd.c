@@ -134,10 +134,35 @@ void ui_lcd_set_yield(void (*yield)(void)) {
     lcd_yield = yield;
 }
 
+// Pixels are sent in batches: a spi_write_blocking() call per pixel waits for
+// each 2-byte transfer to finish, leaving the bus idle between pixels.
+#define LCD_PIXEL_BATCH 64
+
+typedef struct {
+    uint8_t buf[LCD_PIXEL_BATCH * 2];
+    uint32_t count;
+} lcd_pixel_batch_t;
+
+static inline void lcd_batch_flush(lcd_pixel_batch_t* batch) {
+    if (batch->count) {
+        spi_write_blocking(BP_SPI_PORT, batch->buf, batch->count * 2);
+        batch->count = 0;
+    }
+}
+
+static inline void lcd_batch_add(lcd_pixel_batch_t* batch, const uint8_t* color) {
+    batch->buf[batch->count * 2] = color[0];
+    batch->buf[batch->count * 2 + 1] = color[1];
+    if (++batch->count == LCD_PIXEL_BATCH) {
+        lcd_batch_flush(batch);
+    }
+}
+
 // Write a string to the LCD
 // TODO: in LCD write string, automaticall toupper/lower depending on the contents of the font and the string
 void lcd_write_string(
     const FONT_INFO* font, const uint8_t* back_color, const uint8_t* text_color, const char* c, uint16_t fill_length) {
+    lcd_pixel_batch_t batch = { .count = 0 };
     uint16_t row;
     uint16_t length = 0;
     uint8_t adjusted_c;
@@ -155,9 +180,9 @@ void lcd_write_string(
 
                 for (uint8_t i = 0; i < 8; i++) {
                     if (bitmap_char & (0b10000000 >> i)) {
-                        spi_write_blocking(BP_SPI_PORT, text_color, 2);
+                        lcd_batch_add(&batch, text_color);
                     } else {
-                        spi_write_blocking(BP_SPI_PORT, back_color, 2);
+                        lcd_batch_add(&batch, back_color);
                     }
 
                     row++;
@@ -174,7 +199,7 @@ void lcd_write_string(
         // this adds a configurable amount of space
         uint16_t needed_padding = (*font).lookup[adjusted_c].height * (*font).right_padding;
         for (uint16_t pad = 0; pad < needed_padding; pad++) {
-            spi_write_blocking(BP_SPI_PORT, back_color, 2);
+            lcd_batch_add(&batch, back_color);
         }
         (c)++;
         length++; // how many characters have we written
@@ -185,9 +210,10 @@ void lcd_write_string(
         uint32_t fill = (fill_length - length) * ((*font).lookup[adjusted_c].height *
                                                   ((*font).right_padding + (*font).lookup[adjusted_c].width));
         for (uint32_t i = 0; i < fill; i++) {
-            spi_write_blocking(BP_SPI_PORT, back_color, 2);
+            lcd_batch_add(&batch, back_color);
         }
     }
+    lcd_batch_flush(&batch);
 }
 
 uint16_t lcd_get_col(const struct display_layout* layout, const FONT_INFO* font, uint8_t col) {

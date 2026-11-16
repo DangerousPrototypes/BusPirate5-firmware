@@ -76,6 +76,28 @@ uint32_t time_start, time_end;
 
 bool bpio_debug = false;
 
+void bpio_check_async_data(flatcc_builder_t* B, uint8_t* buf);
+
+// Forwards received async data (UART bytes) while a request waits on hardware,
+// such as the PSU's settle time during a configuration request. The request's
+// packet buffer and builder are still in use then, so this has its own.
+static flatcc_builder_t wait_builder;
+static uint8_t wait_buf[BPIO_MAX_COBS_SIZE];
+static bool wait_builder_ready;
+
+static void bpio_forward_async_while_waiting(void) {
+    if (!tud_cdc_n_connected(CDC_INTF)) {
+        return;
+    }
+    if (!wait_builder_ready) {
+        if (flatcc_builder_init(&wait_builder) == -1) {
+            return;
+        }
+        wait_builder_ready = true;
+    }
+    bpio_check_async_data(&wait_builder, wait_buf);
+}
+
 typedef bool (*bpio_configure_func_t)(bpio_mode_configuration_t *bpio_mode_config);
 typedef uint32_t (*bpio_handler_func_t)(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read);
 typedef uint32_t (*bpio_async_handler_func_t)(uint8_t *data_read);
@@ -451,7 +473,9 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
 
         if(bpio_debug) printf("[Config Request] PSU Voltage: %f, Current: %f, Override: %s\r\n", (float)voltage_mv/1000.0f, (float)current_ma, current_limit_override?"true":"false");
         
+        psu_set_wait_callback(bpio_forward_async_while_waiting);
         uint8_t psu_error = psucmd_enable((float)voltage_mv/1000.0f, (float)current_ma, current_limit_override, 100);
+        psu_set_wait_callback(NULL);
         if (psu_error) {
             static const char *psu_error_msg = "Power supply initialization failed";
             if(bpio_debug) printf("[Config Request] Error: %s (%d)\r\n", psu_error_msg, psu_error);

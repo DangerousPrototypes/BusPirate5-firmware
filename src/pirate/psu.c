@@ -41,6 +41,12 @@
 
 struct psu_status_t psu_status;
 
+static psu_wait_callback_t psu_wait_callback;
+
+void psu_set_wait_callback(psu_wait_callback_t callback) {
+    psu_wait_callback = callback;
+}
+
 /// @brief Reset the PSU current fuse/trigger
 /// @param  None
 /// @return None
@@ -310,9 +316,11 @@ void psu_disable(void) {
 // PSU and flags the error.
 #define PSU_SETTLE_MS 50
 
-// Waits ms milliseconds. With check_fuse, the fuse is checked every millisecond
-// and the wait ends as soon as it trips, returning false: the fuse latch reports
-// an overload within milliseconds, so a fault needs no full wait.
+// Waits ms milliseconds, running the wait callback (if any) throughout, so the
+// caller's other work continues while psu_enable() waits on the hardware.
+// With check_fuse, the fuse is checked every millisecond and the wait ends as
+// soon as it trips, returning false: the fuse latch reports an overload within
+// milliseconds, so a fault needs no full wait.
 static bool psu_wait_ms(uint32_t ms, bool check_fuse) {
     absolute_time_t end = make_timeout_time_ms(ms);
     absolute_time_t next_fuse_check = get_absolute_time();
@@ -322,6 +330,9 @@ static bool psu_wait_ms(uint32_t ms, bool check_fuse) {
                 return false;
             }
             next_fuse_check = make_timeout_time_ms(1);
+        }
+        if (psu_wait_callback) {
+            psu_wait_callback();
         }
         tight_loop_contents();
     } while (!time_reached(end));
@@ -357,7 +368,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override, uin
     psu_dac_set(psu_status.voltage_dac_value, PWM_TOP);
     psu_fuse_reset();
     psu_vreg_enable(true);
-    busy_wait_ms(10);
+    psu_wait_ms(10, false); // current limit overridden for the inrush; fuse checked once it engages
 
     // after some settling time, engage the current limit system
     if (!current_limit_override) {

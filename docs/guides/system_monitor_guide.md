@@ -154,6 +154,10 @@ pass while the PSU is enabled: it disables the PSU and sets
 `psu_status.error_pending`, so the error is reported asynchronously instead of
 by `psu_enable()`.
 
+`psu_set_wait_callback()` sets a function that runs repeatedly during these
+waits. BPIO uses it to keep forwarding received UART data while a client's
+PSU-enable request waits.
+
 ---
 
 ## Related Documentation

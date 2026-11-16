@@ -302,6 +302,32 @@ void psu_disable(void) {
     psu_fuse_reset(); // reset fuse so it isn't draining current from the opamp    
 }
 
+// How long the output must run with the current limit engaged, without the fuse
+// tripping, before psu_enable() reports success. A clear overload trips the fuse in
+// about 10 ms; a load just above the limit can take tens to hundreds of ms, or longer,
+// and varies run to run. A trip after this window is still handled: once enabled,
+// psu_poll_fuse_vout_error() checks the fuse on every core 1 loop pass, disables the
+// PSU and flags the error.
+#define PSU_SETTLE_MS 50
+
+// Waits ms milliseconds. With check_fuse, the fuse is checked every millisecond
+// and the wait ends as soon as it trips, returning false: the fuse latch reports
+// an overload within milliseconds, so a fault needs no full wait.
+static bool psu_wait_ms(uint32_t ms, bool check_fuse) {
+    absolute_time_t end = make_timeout_time_ms(ms);
+    absolute_time_t next_fuse_check = get_absolute_time();
+    do {
+        if (check_fuse && time_reached(next_fuse_check)) {
+            if (!psu_fuse_ok()) {
+                return false;
+            }
+            next_fuse_check = make_timeout_time_ms(1);
+        }
+        tight_loop_contents();
+    } while (!time_reached(end));
+    return true;
+}
+
 /// @brief Enable and configure the PSU with requested settings
 /// @param  volts                   Requested voltage in volts (float)
 /// @param  current                 Requested current in mA (float)
@@ -337,8 +363,7 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override, uin
     if (!current_limit_override) {
         psu_current_limit_override(false);
         psu_dac_set(psu_status.voltage_dac_value, psu_status.current_dac_value);
-        busy_wait_ms(500);
-        if (!psu_fuse_ok()) { // did the fuse blow?
+        if (!psu_wait_ms(PSU_SETTLE_MS, true) || !psu_fuse_ok()) { // did the fuse blow?
             psu_disable();
             return PSU_ERROR_FUSE_TRIPPED;
         }

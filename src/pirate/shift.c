@@ -16,11 +16,44 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
+#include "hardware/clocks.h"
 #include "pirate.h"
 #include "command_struct.h"
 #include "display/scope.h"
 
 static uint8_t shift_out[2] = { 0, 0 };
+
+// spi_set_baudrate() searches for the clock divider on every call, about 80 us
+// on the RP2040. shift_clear_set() switches the shared SPI bus to the shift
+// register speed and back on every call, four times per channel of the pin
+// voltage sweep, so each rate keeps the divider registers it computed and
+// reapplies them directly. They are recomputed if clk_peri changes.
+typedef struct {
+    uint baudrate;
+    uint32_t freq_in; // clk_peri the registers were computed for, 0 = not yet
+    uint32_t cpsr;
+    uint32_t cr0_scr;
+} spi_rate_t;
+
+static spi_rate_t shift_rate = { .baudrate = BP_SPI_SHIFT_SPEED };
+static spi_rate_t high_rate = { .baudrate = BP_SPI_HIGH_SPEED };
+
+static void spi_apply_rate(spi_inst_t* spi, spi_rate_t* rate) {
+    uint32_t freq_in = clock_get_hz(clk_peri);
+    if (rate->freq_in != freq_in) {
+        spi_set_baudrate(spi, rate->baudrate);
+        rate->cpsr = spi_get_hw(spi)->cpsr;
+        rate->cr0_scr = spi_get_hw(spi)->cr0 & SPI_SSPCR0_SCR_BITS;
+        rate->freq_in = freq_in;
+        return;
+    }
+    // Same register sequence as spi_set_baudrate(), without the divider search.
+    uint32_t enable_mask = spi_get_hw(spi)->cr1 & SPI_SSPCR1_SSE_BITS;
+    hw_clear_bits(&spi_get_hw(spi)->cr1, SPI_SSPCR1_SSE_BITS);
+    spi_get_hw(spi)->cpsr = rate->cpsr;
+    hw_write_masked(&spi_get_hw(spi)->cr0, rate->cr0_scr, SPI_SSPCR0_SCR_BITS);
+    hw_set_bits(&spi_get_hw(spi)->cr1, enable_mask);
+}
 
 void shift_init(void) {
     gpio_set_function(SHIFT_EN, GPIO_FUNC_SIO);
@@ -47,7 +80,7 @@ void shift_clear_set(uint16_t clear_bits, uint16_t set_bits, bool busy_wait) {
     if (busy_wait) {
         spi_busy_wait(true);
     }
-    spi_set_baudrate(BP_SPI_PORT, BP_SPI_SHIFT_SPEED); // 595s can't go full speed at low temperatures
+    spi_apply_rate(BP_SPI_PORT, &shift_rate); // 595s can't go full speed at low temperatures
     shift_out[1] &= ~((uint8_t)clear_bits);
     shift_out[0] &= ~((uint8_t)(clear_bits >> 8));
     shift_out[1] |= (uint8_t)set_bits;
@@ -56,7 +89,7 @@ void shift_clear_set(uint16_t clear_bits, uint16_t set_bits, bool busy_wait) {
     gpio_put(SHIFT_LATCH, 1);
     busy_wait_us(1);
     gpio_put(SHIFT_LATCH, 0);
-    spi_set_baudrate(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
+    spi_apply_rate(BP_SPI_PORT, &high_rate);
     if (busy_wait) {
         spi_busy_wait(false);
     }

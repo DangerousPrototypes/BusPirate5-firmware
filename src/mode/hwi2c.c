@@ -202,6 +202,11 @@ uint32_t hwi2c_setup_exc(void) {
                 bio2bufdirpin[M_I2C_SCL],
                 i2c_mode_config.baudrate,
                 i2c_mode_config.clock_stretch);           
+    // Connecting the PIO to the buffer direction pins briefly drives SDA low while
+    // SCL is released, which a powered target sees as a START, then drives SCL low.
+    // A target left mid-transaction can NACK the next one (an SSD1306 does, every
+    // time), so put the bus back to idle with a STOP.
+    pio_i2c_stop_timeout(0xffff);
     system_bio_update_purpose_and_label(true, M_I2C_SDA, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_I2C_SCL, BP_PIN_MODE, pin_labels[1]);
     i2c_mode_config.start_sent = false;

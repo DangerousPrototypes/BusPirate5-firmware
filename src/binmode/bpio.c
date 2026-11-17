@@ -630,6 +630,10 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
         data_buf_size = request.bytes_write + request.bytes_read;
     }
 
+    // Started before any check that can fail: the error path at data_response_error
+    // adds its message to this table and ends it.
+    bpio_DataResponse_start(B);
+
     if(data_buf_size > BPIO_MAX_READ_SIZE) {
         static const char *data_read_error_msg = "Data read size too large";
         if(bpio_debug) printf("[Data Request] Error: %s (%d bytes)\r\n", data_read_error_msg, data_buf_size);
@@ -650,7 +654,6 @@ uint32_t data_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, ui
     }
  
     //**************TIME END: 40uS
-    bpio_DataResponse_start(B);
     bpio_DataResponse_data_read_start(B);
     uint8_t *data_read = bpio_DataResponse_data_read_extend(B, data_buf_size); // Reserve space for data read
 

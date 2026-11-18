@@ -11,8 +11,9 @@
  * @param data_bits  Data width in bits (4-16)
  * @param cpol       Clock polarity (0=idle low, 1=idle high)
  * @param cpha       Clock phase (0=sample on first edge, 1=sample on second edge)
+ * @param cs_idle    CS level when deselected (true=high); CS is driven to it before SCK
  */
-void hwspi_init(uint8_t data_bits, uint8_t cpol, uint8_t cpha);
+void hwspi_init(uint8_t data_bits, uint8_t cpol, uint8_t cpha, bool cs_idle);
 
 /**
  * @brief Deinitialize hardware SPI and reset pins to safe state.

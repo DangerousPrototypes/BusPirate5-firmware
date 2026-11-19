@@ -284,6 +284,10 @@ uint32_t psu_measure_vout(void) {
 /// @return None
 void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     amux_sweep();
+    psu_measure_from_sweep(vout, isense, vreg, fuse);
+}
+
+void psu_measure_from_sweep(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     *isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000) / 4095));
     *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
     *vout = ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]));

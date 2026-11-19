@@ -87,6 +87,17 @@ void psu_disable(void);
 void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse);
 
 /**
+ * @brief Read the PSU measurements from the last amux_sweep(), without sweeping again.
+ * @details For a caller that has just called amux_sweep() for other readings, so it
+ *          doesn't sweep a second time: a sweep takes milliseconds.
+ * @param[out] vout   VOUT voltage measurement
+ * @param[out] isense Current sense measurement (mA)
+ * @param[out] vreg   VREG voltage measurement
+ * @param[out] fuse   Fuse status (true=OK, false=blown)
+ */
+void psu_measure_from_sweep(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse);
+
+/**
  * @brief Measure VOUT voltage.
  * @return VOUT voltage in scaled format
  */

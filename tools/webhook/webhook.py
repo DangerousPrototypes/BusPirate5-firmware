@@ -90,6 +90,13 @@ class autoBuild:
                 "/root/webhook/ci-buspirate-experimental-",
                 1417, "Here's a fresh compile from 'refactor2026-2':"),
         }
+        for fixed_file in autoBuild.FIXED_FILES:
+            src_path = os.path.join(self.tasks['refs/heads/main']['git_pull_dir'], fixed_file['file'])
+            print(src_path)
+            if os.path.exists(src_path):
+                print("exists")
+            else:
+                print("not exists")
 
     def runTasks(self, ref, push_data):
         if(ref in self.tasks):
@@ -190,12 +197,13 @@ class autoBuild:
                         print(src_path)
             for fixed_file in autoBuild.FIXED_FILES:
                 src_path = os.path.join(task['git_pull_dir'], fixed_file['file'])
+                print(src_path)
                 if os.path.exists(src_path):
                     zip_location = fixed_file['zip_file_location']
                     if zip_location:
-                        zip.write(src_path, os.path.join(zip_location, fixed_file['file']))
+                        zip.write(src_path, os.path.join(zip_location, os.path.basename(fixed_file['file'])))
                     else:
-                        zip.write(src_path, fixed_file['file'])
+                        zip.write(src_path, os.path.basename(fixed_file['file']))
                     print(src_path)
             makelog_file.flush()
             zip.write(os.path.join(log_dir, "git.log"), "git.log")

@@ -221,10 +221,12 @@ set(buspirate_common
         commands/global/image.h
         commands/global/dump.c
         commands/global/dump.h
-        commands/global/ovrclk.c 
-        commands/global/ovrclk.h   
-        commands/global/hex.c     
+        commands/global/ovrclk.c
+        commands/global/ovrclk.h
+        commands/global/hex.c
         commands/global/hex.h
+        commands/global/nand.c
+        commands/global/nand.h
         commands/global/game_engine.c
         commands/global/game_engine.h
         commands/global/life.c
@@ -651,7 +653,40 @@ set(buspirate_common
         commands/i2s/wav.h
         commands/i2s/wav.c
 )
-set(buspirate_nandflash
+
+
+# Define the root of spi_nand_flash component relative to this example
+set(SPI_NAND_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/nand2/)
+
+# Add spi_nand_flash library for PICO
+set(spi_nand_flash
+    ${SPI_NAND_ROOT}nand_ftl_diskio.c
+    ${SPI_NAND_ROOT}nand_ftl_diskio.h
+    ${SPI_NAND_ROOT}src/nand_pico.c
+    ${SPI_NAND_ROOT}src/dhara_glue_pico.c
+    ${SPI_NAND_ROOT}src/nand_impl.c
+    ${SPI_NAND_ROOT}src/spi_nand_oper.c
+    ${SPI_NAND_ROOT}src/nand_winbond_pico.c
+    ${SPI_NAND_ROOT}src/nand_gigadevice_pico.c
+    ${SPI_NAND_ROOT}src/nand_alliance_pico.c
+    ${SPI_NAND_ROOT}src/nand_micron_pico.c
+    ${SPI_NAND_ROOT}src/nand_zetta_pico.c
+    ${SPI_NAND_ROOT}src/nand_xtx_pico.c
+    ${SPI_NAND_ROOT}src/dhara/map.c
+    ${SPI_NAND_ROOT}src/dhara/journal.c
+    ${SPI_NAND_ROOT}src/dhara/error.c    
+    ${SPI_NAND_ROOT}src/dhara/map.h
+    ${SPI_NAND_ROOT}src/dhara/journal.h
+    ${SPI_NAND_ROOT}src/dhara/error.h  
+    ${SPI_NAND_ROOT}include/nand.h 
+    ${SPI_NAND_ROOT}include/spi_nand_flash.h
+    ${SPI_NAND_ROOT}include/nand_impl.h
+    ${SPI_NAND_ROOT}include/spi_nand_oper.h
+    ${SPI_NAND_ROOT}include/nand_private/nand_flash_chip.h        
+    ${SPI_NAND_ROOT}include/nand_private/nand_flash_devices.h  
+)
+
+set(buspirate_nandflash_old
         #nand flash management and dhara
         dhara/bytes.h
         dhara/error.c
@@ -710,7 +745,8 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
 
         add_executable(bus_pirate6
                 ${buspirate_common}
-                ${buspirate_nandflash}
+                #${buspirate_nandflash}
+                ${spi_nand_flash}
                 ${buspirate_rtt}
                 ${rp2350_common}
                 platform/bpi6-rev2.h
@@ -726,7 +762,8 @@ if(${PICO_PLATFORM} MATCHES "rp2350")
 
         add_executable(bus_pirate5_xl
                 ${buspirate_common}
-                ${buspirate_nandflash}
+                #${buspirate_nandflash}
+                ${spi_nand_flash}
                 ${buspirate_rtt}
                 ${rp2350_common}
                 platform/bpi5xl-rev0.h
@@ -750,7 +787,8 @@ else()
 
         add_executable(bus_pirate5_rev10
                 ${buspirate_common}
-                ${buspirate_nandflash}
+                #${buspirate_nandflash}
+                ${spi_nand_flash}
                 ${buspirate_rtt}
                 platform/bpi5-rev10.h
                 platform/bpi5-rev10.c

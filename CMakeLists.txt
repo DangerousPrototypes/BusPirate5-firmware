@@ -23,7 +23,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # initalize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
-#set(PICO_SDK_PATH "C:/pico113/pico-sdk")
+set(PICO_SDK_PATH "~/pico-sdk")
 
 # Add my_pico_w.h
 set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/src/boards ) 

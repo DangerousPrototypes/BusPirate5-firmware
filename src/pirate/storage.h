@@ -22,6 +22,11 @@ void storage_init(void);
 bool storage_detect(void);
 
 /**
+ * @brief Idle-time housekeeping for the storage backend (NAND garbage collection). Call from the core 0 main loop.
+ */
+void storage_idle_service(void);
+
+/**
  * @brief Mount the FAT filesystem.
  * @return FatFS result code (FR_OK on success)
  * @note Updates system_config with mount status and filesystem info.

@@ -1,0 +1,460 @@
+/*
+ * SPDX-FileCopyrightText: 2022 mikkeldamsgaard project
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * SPDX-FileContributor: 2015-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileContributor: Adapted for Raspberry Pi Pico (RP2040)
+ */
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "pirate.h"
+#include "pico/stdlib.h"
+#include "pico/mutex.h"
+#include "../include/spi_nand_flash.h"
+#include "../include/spi_nand_oper.h"
+#include "../include/nand.h"
+#include "../include/nand_impl.h"
+#include "../include/nand_private/nand_flash_devices.h"
+#include "../include/nand_private/nand_flash_chip.h"
+
+#define TAG "nand_flash"
+
+// Logging macros - set NAND_DEBUG_ENABLE to 1 to enable debug output
+#define NAND_DEBUG_ENABLE 0
+
+#if NAND_DEBUG_ENABLE
+#define NAND_LOGD(tag, fmt, ...) printf("[D][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define NAND_LOGI(tag, fmt, ...) printf("[I][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define NAND_LOGW(tag, fmt, ...) printf("[W][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#define NAND_LOGE(tag, fmt, ...) printf("[E][%s] " fmt "\n", tag, ##__VA_ARGS__)
+#else
+#define NAND_LOGD(tag, fmt, ...) ((void)0)
+#define NAND_LOGI(tag, fmt, ...) ((void)0)
+#define NAND_LOGW(tag, fmt, ...) ((void)0)
+#define NAND_LOGE(tag, fmt, ...) ((void)0)
+#endif
+
+// Helper macros
+#define RETURN_ON_ERROR(x) do { esp_err_t err_rc_ = (x); if (err_rc_ != ESP_OK) return err_rc_; } while(0)
+#define RETURN_ON_FALSE(cond, err, tag, msg) do { if (!(cond)) { NAND_LOGE(tag, msg); return err; } } while(0)
+#define GOTO_ON_ERROR(x, label, tag, msg) do { ret = (x); if (ret != ESP_OK) { NAND_LOGE(tag, msg); goto label; } } while(0)
+#define GOTO_ON_FALSE(cond, err, label, tag, msg) do { if (!(cond)) { ret = err; NAND_LOGE(tag, msg); goto label; } } while(0)
+
+// Raw READ ID stream captured at several address-byte offsets for the `nand id` diagnostic.
+// Captured without printing so it is safe during early boot (terminal not yet connected).
+#define NAND_ID_DEBUG_ROWS 3
+#define NAND_ID_DEBUG_COLS 6
+static uint8_t nand_read_id_debug[NAND_ID_DEBUG_ROWS][NAND_ID_DEBUG_COLS];
+
+const uint8_t *spi_nand_flash_get_read_id_debug(void)
+{
+    return &nand_read_id_debug[0][0];
+}
+
+static esp_err_t detect_chip(spi_nand_flash_device_t *dev)
+{
+    // Some SPI NAND parts (e.g. Zetta ZD35Q1GC) return garbage to READ ID until a
+    // RESET (FFh) is issued after power-up. Reset and settle before identifying.
+    spi_nand_transaction_t reset_t = { .command = 0xFF };
+    spi_nand_execute_transaction(dev, &reset_t);
+    busy_wait_us_32(2000);
+
+    uint8_t manufacturer_id;
+    spi_nand_transaction_t t = {
+        .command = CMD_READ_ID,
+        .address = 0x00,
+        .address_bytes = 1,
+        .miso_len = 1,
+        .miso_data = &manufacturer_id,
+        .flags = SPI_TRANS_USE_RXDATA,
+    };
+    spi_nand_execute_transaction(dev, &t);
+    NAND_LOGD(TAG, "%s: manufacturer_id: %x\n", __func__, manufacturer_id); 
+
+    for (uint8_t ab = 0; ab < NAND_ID_DEBUG_ROWS; ab++) {
+        spi_nand_transaction_t td = {
+            .command = CMD_READ_ID,
+            .address = 0x00,
+            .address_bytes = ab,
+            .miso_len = NAND_ID_DEBUG_COLS,
+            .miso_data = nand_read_id_debug[ab],
+            .flags = SPI_TRANS_USE_RXDATA,
+        };
+        spi_nand_execute_transaction(dev, &td);
+    }
+
+    switch (manufacturer_id) {
+    case SPI_NAND_FLASH_ALLIANCE_MI:
+        return spi_nand_alliance_init(dev);
+    case SPI_NAND_FLASH_WINBOND_MI:
+        return spi_nand_winbond_init(dev);
+    case SPI_NAND_FLASH_GIGADEVICE_MI:
+        return spi_nand_gigadevice_init(dev);
+    case SPI_NAND_FLASH_MICRON_MI:
+        return spi_nand_micron_init(dev);
+    case SPI_NAND_FLASH_ZETTA_MI:
+        return spi_nand_zetta_init(dev);
+    case SPI_NAND_FLASH_XTX_MI:
+        return spi_nand_xtx_init(dev);
+    default:
+        NAND_LOGE(TAG, "Unknown manufacturer ID: 0x%02X", manufacturer_id);
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+}
+
+static esp_err_t unprotect_chip(spi_nand_flash_device_t *dev)
+{
+    uint8_t status;
+    esp_err_t ret = spi_nand_read_register(dev, REG_PROTECT, &status);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    if (status != 0x00) {
+        ret = spi_nand_write_register(dev, REG_PROTECT, 0);
+    }
+
+    return ret;
+}
+
+// Put the configuration register into the state the FTL relies on: internal ECC on, OTP area not
+// mapped, quad mode off. Other bits (e.g. Winbond BUF) are preserved. ECC_EN/OTP_EN are volatile and
+// survive a RESET (FFh) but not necessarily a glitched SET FEATURES, and OTP_EN=1 silently redirects
+// every page read/program to the 4-page OTP area, which looks exactly like a corrupt journal.
+static esp_err_t configure_chip(spi_nand_flash_device_t *dev)
+{
+    uint8_t cfg;
+    esp_err_t ret = spi_nand_read_register(dev, REG_CONFIG, &cfg);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    uint8_t want = (cfg | CFG_ECC_EN) & (uint8_t)~CFG_OTP_EN;
+    if (dev->chip.has_quad_enable_bit) {
+        want &= (uint8_t)~(1 << dev->chip.quad_enable_bit_pos);
+    }
+    if (want != cfg) {
+        ret = spi_nand_write_register(dev, REG_CONFIG, want);
+    }
+    return ret;
+}
+
+static uint8_t work[2048+4];
+static uint8_t read[2048+4];
+static spi_nand_flash_device_t static_device_handle;
+
+esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_flash_device_t **handle)
+{
+    RETURN_ON_FALSE(config->spi != NULL, ESP_ERR_INVALID_ARG, TAG, "SPI instance pointer cannot be NULL");
+
+    if (!config->gc_factor) {
+        config->gc_factor = 4;
+    }
+
+    // Use static allocation instead of calloc for embedded system
+    memset(&static_device_handle, 0, sizeof(spi_nand_flash_device_t));
+    *handle = &static_device_handle;
+
+    memcpy(&(*handle)->config, config, sizeof(spi_nand_flash_config_t));
+
+    (*handle)->chip.ecc_data.ecc_status_reg_len_in_bits = 2;
+    (*handle)->chip.ecc_data.ecc_data_refresh_threshold = 4;
+    (*handle)->chip.log2_ppb = 6;         // 64 pages per block is standard
+    (*handle)->chip.log2_page_size = 11;  // 2048 bytes per page is fairly standard
+    (*handle)->chip.num_planes = 1;
+    (*handle)->chip.flags = 0;
+
+    esp_err_t ret = ESP_OK;
+    // Uncomment for early boot debugging (before printf initialized)
+    // printf("Starting NAND chip detection...\r\n");
+    GOTO_ON_ERROR(detect_chip(*handle), fail, TAG, "Failed to detect nand chip");
+    GOTO_ON_ERROR(unprotect_chip(*handle), fail, TAG, "Failed to clear protection register");
+    GOTO_ON_ERROR(configure_chip(*handle), fail, TAG, "Failed to set configuration register");
+    // printf("NAND chip detected and unprotected successfully.\r\n");
+    (*handle)->chip.page_size = 1 << (*handle)->chip.log2_page_size;
+    (*handle)->chip.block_size = (1 << (*handle)->chip.log2_ppb) * (*handle)->chip.page_size;
+
+    // we only support up to 2048 byte page size on PICO due to memory constraints
+    GOTO_ON_FALSE((*handle)->chip.page_size <= 2048, ESP_ERR_NO_MEM, fail, TAG, "nomem");
+
+    #if 1 //make static buffers for PICO
+    (*handle)->work_buffer = work; //this buffer is for dhara internal use
+    (*handle)->read_buffer = read; //this is for passing pages from dhara to nand
+    #else
+    (*handle)->work_buffer = malloc((*handle)->chip.page_size);
+    GOTO_ON_FALSE((*handle)->work_buffer != NULL, ESP_ERR_NO_MEM, fail, TAG, "nomem");
+
+    (*handle)->read_buffer = malloc((*handle)->chip.page_size);
+    GOTO_ON_FALSE((*handle)->read_buffer != NULL, ESP_ERR_NO_MEM, fail, TAG, "nomem");
+
+    (*handle)->temp_buffer = malloc((*handle)->chip.page_size + 1);
+    GOTO_ON_FALSE((*handle)->temp_buffer != NULL, ESP_ERR_NO_MEM, fail, TAG, "nomem");
+    #endif
+
+    GOTO_ON_ERROR(nand_register_dev(*handle), fail, TAG, "Failed to register nand dev");
+
+    if ((*handle)->ops->init == NULL) {
+        NAND_LOGE(TAG, "Failed to initialize spi_nand_ops");
+        ret = ESP_FAIL;
+        goto fail;
+    }
+    (*handle)->ops->init(*handle);
+    // The journal scan inside ops->init() tolerates a missing/garbage journal (fresh chip), but if the
+    // chip stopped answering mid-scan the map is incomplete: report failure so the mount is retried later.
+    if ((*handle)->io_fault) {
+        NAND_LOGE(TAG, "NAND timed out during FTL resume");
+        ret = ESP_ERR_TIMEOUT;
+        goto fail;
+    }
+
+    return ret;
+
+fail:
+    // No free() needed - using static allocation
+    return ret;
+}
+
+esp_err_t spi_nand_erase_chip(spi_nand_flash_device_t *handle)
+{
+    NAND_LOGW(TAG, "Entire chip is being erased");
+    esp_err_t ret = ESP_OK;
+
+    ret = handle->ops->erase_chip(handle);
+    if (ret) {
+        return ret;
+    }
+    handle->ops->deinit(handle);
+
+    return ret;
+}
+
+static bool s_need_data_refresh(spi_nand_flash_device_t *handle)
+{
+    uint8_t min_bits_corrected = 0;
+    bool ret = false;
+    if (handle->chip.ecc_data.ecc_corrected_bits_status == STAT_ECC_1_TO_3_BITS_CORRECTED) {
+        min_bits_corrected = 1;
+    } else if (handle->chip.ecc_data.ecc_corrected_bits_status == STAT_ECC_4_TO_6_BITS_CORRECTED) {
+        min_bits_corrected = 4;
+    } else if (handle->chip.ecc_data.ecc_corrected_bits_status == STAT_ECC_7_8_BITS_CORRECTED) {
+        min_bits_corrected = 7;
+    }
+
+    if (min_bits_corrected >= handle->chip.ecc_data.ecc_data_refresh_threshold) {
+        ret = true;
+    }
+    return ret;
+}
+
+esp_err_t spi_nand_flash_read_sector(spi_nand_flash_device_t *handle, uint8_t *buffer, uint32_t sector_id)
+{
+    esp_err_t ret = ESP_OK;
+
+    ret = handle->ops->read(handle, buffer, sector_id);
+    if (ret == ESP_OK && handle->chip.ecc_data.ecc_corrected_bits_status) {
+        if (s_need_data_refresh(handle)) {
+            ret = handle->ops->write(handle, buffer, sector_id);
+        }
+    }
+
+    return ret;
+}
+
+esp_err_t spi_nand_flash_copy_sector(spi_nand_flash_device_t *handle, uint32_t src_sec, uint32_t dst_sec)
+{
+    esp_err_t ret = ESP_OK;
+
+    ret = handle->ops->copy_sector(handle, src_sec, dst_sec);
+
+    return ret;
+}
+
+esp_err_t spi_nand_flash_write_sector(spi_nand_flash_device_t *handle, const uint8_t *buffer, uint32_t sector_id)
+{
+    esp_err_t ret = ESP_OK;
+
+    ret = handle->ops->write(handle, buffer, sector_id);
+
+    return ret;
+}
+
+esp_err_t spi_nand_flash_trim(spi_nand_flash_device_t *handle, uint32_t sector_id)
+{
+    esp_err_t ret = ESP_OK;
+
+    ret = handle->ops->trim(handle, sector_id);
+
+    return ret;
+}
+
+esp_err_t spi_nand_flash_sync(spi_nand_flash_device_t *handle)
+{
+    esp_err_t ret = ESP_OK;
+
+    ret = handle->ops->sync(handle);
+
+    return ret;
+}
+
+esp_err_t spi_nand_flash_get_capacity(spi_nand_flash_device_t *handle, uint32_t *number_of_sectors)
+{
+    return handle->ops->get_capacity(handle, number_of_sectors);
+}
+
+const char *spi_nand_flash_print_manufacturer(void)
+{
+    spi_nand_flash_device_t *handle = &static_device_handle;
+    
+    if (handle->manufacturer_name == NULL) {
+        return "";
+    }
+
+    return handle->manufacturer_name;
+}
+
+void spi_nand_flash_recover(spi_nand_flash_device_t *handle)
+{
+    if (handle == NULL || !handle->io_fault) {
+        return;
+    }
+    spi_nand_transaction_t reset_t = { .command = 0xFF };
+    spi_nand_execute_transaction(handle, &reset_t);
+    busy_wait_us_32(2000); // > tRST (500us max)
+    handle->io_fault = false;
+    if (unprotect_chip(handle) != ESP_OK || configure_chip(handle) != ESP_OK) {
+        handle->io_fault = true;
+    }
+}
+
+void spi_nand_flash_print_diag(spi_nand_flash_device_t *handle)
+{
+    if (handle == NULL || handle->manufacturer_name == NULL) {
+        printf("NAND: No device initialized\r\n");
+        return;
+    }
+    const spi_nand_stats_t *s = &handle->stats;
+    printf("NAND driver diagnostics:\r\n");
+    printf("  Fault latch: %s\r\n", handle->io_fault ? "SET (operations fail fast)" : "clear");
+    printf("  Ops: %lu reads, %lu progs, %lu erases, %lu copies\r\n", (unsigned long)s->reads,
+           (unsigned long)s->progs, (unsigned long)s->erases, (unsigned long)s->copies);
+    printf("  Failures: %lu P_FAIL, %lu E_FAIL, %lu busy timeouts, %lu deadline hits\r\n",
+           (unsigned long)s->prog_fail, (unsigned long)s->erase_fail, (unsigned long)s->busy_timeouts,
+           (unsigned long)s->deadline_hits);
+    printf("  ECC: %lu corrected, %lu uncorrectable\r\n", (unsigned long)s->ecc_corrected,
+           (unsigned long)s->ecc_uncorrectable);
+    printf("  Blocks marked bad by FTL: %lu\r\n", (unsigned long)s->marked_bad);
+    printf("  Last FTL error: %ld\r\n", (long)s->last_dhara_err);
+
+    uint8_t prot = 0, cfg = 0, stat = 0;
+    spi_nand_read_register(handle, REG_PROTECT, &prot);
+    spi_nand_read_register(handle, REG_CONFIG, &cfg);
+    spi_nand_read_register(handle, REG_STATUS, &stat);
+    printf("  Registers: protect(A0h)=0x%02X config(B0h)=0x%02X status(C0h)=0x%02X\r\n", prot, cfg, stat);
+    if (prot & 0x7E) {
+        printf("  WARNING: block protection active, programs/erases will fail\r\n");
+    }
+    if (!(cfg & CFG_ECC_EN)) {
+        printf("  WARNING: internal ECC disabled\r\n");
+    }
+    if (cfg & CFG_OTP_EN) {
+        printf("  WARNING: OTP area mapped, array access redirected\r\n");
+    }
+}
+
+esp_err_t spi_nand_flash_wipe(spi_nand_flash_device_t *handle, uint32_t *erased, uint32_t *skipped_bad,
+                              uint32_t *failed)
+{
+    if (handle == NULL || handle->ops == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint32_t n_erased = 0, n_bad = 0, n_failed = 0;
+
+    // Start from a clean chip state regardless of any latched fault.
+    handle->io_fault = true;
+    spi_nand_flash_recover(handle);
+    if (handle->io_fault) {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    for (uint32_t blk = 0; blk < handle->chip.num_blocks; blk++) {
+        nand_op_begin(handle);
+        bool is_bad = false;
+        if (nand_is_bad(handle, blk, &is_bad) == ESP_OK && is_bad) {
+            n_bad++;
+            continue;
+        }
+        if (nand_erase_block(handle, blk) == ESP_OK) {
+            n_erased++;
+        } else {
+            n_failed++;
+            if (handle->io_fault) {
+                break;
+            }
+        }
+    }
+
+    // Rebuild the FTL over the now-empty journal.
+    handle->ops->deinit(handle);
+    nand_op_begin(handle);
+    handle->ops->init(handle);
+
+    if (erased) *erased = n_erased;
+    if (skipped_bad) *skipped_bad = n_bad;
+    if (failed) *failed = n_failed;
+    return handle->io_fault ? ESP_ERR_TIMEOUT : ESP_OK;
+}
+
+spi_nand_flash_device_t *spi_nand_flash_get_handle(void)
+{
+    // manufacturer_name is only set once a chip has been detected and initialized
+    if (static_device_handle.manufacturer_name == NULL) {
+        return NULL;
+    }
+    return &static_device_handle;
+}
+
+void spi_nand_flash_print_info(void)
+{
+    spi_nand_flash_device_t *handle = &static_device_handle;
+    
+    if (handle->manufacturer_name == NULL) {
+        printf("NAND: No device initialized\r\n");
+        return;
+    }
+    
+    printf("NAND Flash Information:\r\n");
+    printf("  Manufacturer: %s\r\n", handle->manufacturer_name);
+    printf("  Page size: %lu bytes\r\n", (unsigned long)handle->chip.page_size);
+    printf("  Block size: %lu bytes\r\n", (unsigned long)handle->chip.block_size);
+    printf("  Pages per block: %u\r\n", (1 << handle->chip.log2_ppb));
+    printf("  Total blocks: %lu\r\n", (unsigned long)handle->chip.num_blocks);
+    printf("  Total capacity: %lu KB\r\n", 
+           (unsigned long)((handle->chip.num_blocks * handle->chip.block_size) / 1024));
+}
+
+esp_err_t spi_nand_flash_get_sector_size(spi_nand_flash_device_t *handle, uint32_t *sector_size)
+{
+    *sector_size = handle->chip.page_size;
+    return ESP_OK;
+}
+
+esp_err_t spi_nand_flash_get_block_size(spi_nand_flash_device_t *handle, uint32_t *block_size)
+{
+    *block_size = handle->chip.block_size;
+    return ESP_OK;
+}
+
+esp_err_t spi_nand_flash_get_block_num(spi_nand_flash_device_t *handle, uint32_t *num_blocks)
+{
+    *num_blocks = handle->chip.num_blocks;
+    return ESP_OK;
+}
+
+esp_err_t spi_nand_flash_deinit_device(spi_nand_flash_device_t *handle)
+{
+    nand_unregister_dev(handle);
+    free(handle);
+    return ESP_OK;
+}

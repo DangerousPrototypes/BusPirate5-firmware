@@ -24,6 +24,9 @@
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
 #include "fatfs/diskio.h"
+#ifdef BP_HW_STORAGE_NAND
+#include "nand2/nand_ftl_diskio.h"
+#endif
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -84,12 +87,18 @@ void storage_init(void) {
 
 uint8_t storage_mount(void) {
     FRESULT fr; /* FatFs return code */
+    // The USB host may have modified the volume since we last used it, so any cached sector our FatFs
+    // instance still holds is stale. Discard it: f_mount() would otherwise flush a dirty window back
+    // over the host's changes (sync_window() in ff.c) before re-reading the boot sector.
+    fs.wflag = 0;
+    fs.winsect = (LBA_t)0 - 1;
     fr = f_mount(&fs, "", 1);
     if (fr != FR_OK) {
         system_config.storage_available = 0;
         system_config.storage_mount_error = fr;
     } else {
         system_config.storage_available = 1;
+        system_config.storage_mount_error = 0;  // Clear error on success
         system_config.storage_fat_type = fs.fs_type;
         system_config.storage_size = fs.csize * fs.n_fatent * BP_FLASH_DISK_BLOCK_SIZE * 1E-9; // 2048E-9; //512E-9;
     }
@@ -104,6 +113,12 @@ void storage_unmount(void) {
     system_config.storage_mount_error = 0;
     #ifdef BP_HW_STORAGE_TFCARD
         printf("Storage removed\r\n");
+    #endif
+}
+
+void storage_idle_service(void) {
+    #ifdef BP_HW_STORAGE_NAND
+        diskio_idle_service();
     #endif
 }
 

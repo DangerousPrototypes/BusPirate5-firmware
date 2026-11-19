@@ -335,6 +335,7 @@ static void main_system_initialization(void) {
     }
     spi_set_baudrate(BP_SPI_PORT, BP_SPI_HIGH_SPEED);
 #elif defined(BP_HW_STORAGE_NAND)
+
     BP_DEBUG_PRINT(BP_DEBUG_LEVEL_VERBOSE, BP_DEBUG_CAT_EARLY_BOOT,
         "Init: Mounting SPI Flash\n"
         );
@@ -359,6 +360,7 @@ static void main_system_initialization(void) {
         rgb_set_effect(LED_EFFECT_PARTY_MODE);
         system_config.led_effect = LED_EFFECT_PARTY_MODE;
     }
+
 #else
     #error "Storage device not defined in pirate.c"
 #endif
@@ -485,6 +487,7 @@ static void core0_infinite_loop(void) {
     struct prompt_result result;
     //alarm_id_t screensaver;
     bool has_been_connected = false;
+    absolute_time_t disconnected_since = get_absolute_time();
 
     lcd_screensaver_alarm_reset(); //setup the screensaver timer (if configured)
 
@@ -496,6 +499,7 @@ static void core0_infinite_loop(void) {
         // core 2 handles USB and other sensitive stuff, so it's not critical to co-op multitask
         // but the terminal will not be responsive if the service is blocking
         binmode_service();
+        storage_idle_service(); // incremental NAND garbage collection while idle
 
         //if not connected to a terminal, then check for button presses to allow user to execute button scripts without a terminal connected
         if (!tud_cdc_n_connected(0)|| bp_state <= BP_SM_DISPLAY_MODE_WAIT){
@@ -539,8 +543,12 @@ static void core0_infinite_loop(void) {
             if (has_been_connected) {
                 PRINT_INFO("Terminal disconnected ... ensuring USB storage is writable.\n");
                 has_been_connected = false;
+                // Debounce: some terminal programs drop DTR briefly while (re)opening the port.
+                disconnected_since = get_absolute_time();
             }
-            make_usbmsdrive_writable();
+            if (absolute_time_diff_us(disconnected_since, get_absolute_time()) >= 500 * 1000) {
+                make_usbmsdrive_writable();
+            }
         }
 
         switch (bp_state) {
@@ -850,6 +858,7 @@ static void core1_infinite_loop(void) {
         if (system_config.terminal_usb_enable || system_config.binmode_usb_rx_queue_enable) {
             tud_task(); // tinyusb device task
             tud_cdc_rx_task();
+            msc_disk_core1_service(); // pending USB re-enumeration, if any
         }
 
         // service the terminal TX queue

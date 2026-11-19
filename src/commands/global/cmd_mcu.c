@@ -7,6 +7,7 @@
 #include "msc_disk.h"
 #include "ui/ui_toolbar.h"
 #include "lib/bp_args/bp_cmd.h"
+#include "pirate/rgb.h"
 
 static const char* const reboot_usage[] = {
     "reboot",
@@ -87,6 +88,10 @@ void cmd_mcu_jump_to_bootloader_handler(struct command_result* res) {
     printf("See you on the other side!");
     toolbar_teardown_all();
     eject_usbmsdrive();
+    // LEDs to dim white
+    rgb_irq_enable(false);
+    busy_wait_ms(100);
+    rgb_set_all(0x20, 0x20, 0x20); 
     busy_wait_ms(200);
     cmd_mcu_jump_to_bootloader();
 }

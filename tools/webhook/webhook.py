@@ -36,9 +36,9 @@ args = parser.parse_args()
 
 class autoBuild:
     FIXED_FILES = [
-        {"file": "README.TXT", "zip_file_location": ""},
-        {"file": "WARNING.TXT", "zip_file_location": ""},
-        {"file": "BACKUP!!.TXT", "zip_file_location":""}
+        {"file": "tools/webhook/README.TXT", "zip_file_location": ""},
+        {"file": "tools/webhook/WARNING.TXT", "zip_file_location": ""},
+        {"file": "tools/webhook/BACKUP!!.TXT", "zip_file_location":""}
     ]
 
     # Shared build definitions: rp2040 + rp2350

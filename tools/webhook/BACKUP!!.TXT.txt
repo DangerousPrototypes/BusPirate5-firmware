@@ -1,0 +1,3 @@
+**WARNING**: New NAND flash driver in use. 
+
+It is backwards compatible and has been heavily tested, but **BACKUP THE INTERNAL STORAGE** prior to update if you value the contents.

@@ -313,10 +313,8 @@ fail:
     return ret;
 }
 
-// Normalize the ECC status field (bits start at bit0's position) down to a 0-based value.
-//#define PACK_2BITS_STATUS(status, bit1, bit0)         ((((status) & (bit1)) << 1) | ((status) & (bit0)))
-//#define PACK_3BITS_STATUS(status, bit2, bit1, bit0)   ((((status) & (bit2)) << 2) | (((status) & (bit1)) << 1) | ((status) & (bit0)))
-/*****LLM correction, needs to be manually verified********/
+// Shift the ECCS field (contiguous bits, bit0 lowest) down to a 0-based value matching ecc_status_t.
+// Verified against the Micron MT29F1G01 (3-bit, C0h[6:4]) and Zetta ZD35X1GA (2-bit, C0h[5:4]) datasheets.
 #define PACK_2BITS_STATUS(status, bit1, bit0)         (((status) & ((bit1) | (bit0))) / (bit0))
 #define PACK_3BITS_STATUS(status, bit2, bit1, bit0)   (((status) & ((bit2) | (bit1) | (bit0))) / (bit0))
 

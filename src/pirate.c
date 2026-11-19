@@ -487,6 +487,7 @@ static void core0_infinite_loop(void) {
     struct prompt_result result;
     //alarm_id_t screensaver;
     bool has_been_connected = false;
+    absolute_time_t disconnected_since = get_absolute_time();
 
     lcd_screensaver_alarm_reset(); //setup the screensaver timer (if configured)
 
@@ -542,8 +543,12 @@ static void core0_infinite_loop(void) {
             if (has_been_connected) {
                 PRINT_INFO("Terminal disconnected ... ensuring USB storage is writable.\n");
                 has_been_connected = false;
+                // Debounce: some terminal programs drop DTR briefly while (re)opening the port.
+                disconnected_since = get_absolute_time();
             }
-            make_usbmsdrive_writable();
+            if (absolute_time_diff_us(disconnected_since, get_absolute_time()) >= 500 * 1000) {
+                make_usbmsdrive_writable();
+            }
         }
 
         switch (bp_state) {
@@ -853,6 +858,7 @@ static void core1_infinite_loop(void) {
         if (system_config.terminal_usb_enable || system_config.binmode_usb_rx_queue_enable) {
             tud_task(); // tinyusb device task
             tud_cdc_rx_task();
+            msc_disk_core1_service(); // pending USB re-enumeration, if any
         }
 
         // service the terminal TX queue

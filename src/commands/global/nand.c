@@ -14,6 +14,7 @@
 #include "fatfs/diskio.h"
 #include "nand2/nand_ftl_diskio.h"
 #include "commands/global/disk.h"
+#include "msc_disk.h"
 #endif
 
 static const char* const usage[] = {
@@ -228,6 +229,7 @@ static void nand_cmd_info(spi_nand_flash_device_t* handle) {
     spi_nand_flash_print_info();
     nand_print_stats(handle);
     spi_nand_flash_print_diag(handle);
+    msc_disk_print_diag();
 }
 
 static void nand_cmd_wipe(spi_nand_flash_device_t* handle) {

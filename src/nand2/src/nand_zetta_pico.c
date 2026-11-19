@@ -59,7 +59,7 @@ esp_err_t spi_nand_zetta_init(spi_nand_flash_device_t *dev)
     // tR_ECC typ 45us (max 70us). These are the pre-poll waits; wait_for_ready() polls OIP afterwards.
     dev->chip.erase_block_delay_us = 2000;
     dev->chip.program_page_delay_us = 320;
-    // Datasheet only documents copy-back as 13h -> 84h -> 06h -> 10h. Dhara's sync padding copies the
+    // Datasheet only documents copy-back as 13h -> 06h -> 84h -> 10h. Dhara's sync padding copies the
     // last-written sector via copy-back, so a bad copy damages the tail of the last file written.
     dev->chip.flags |= NAND_FLAG_NO_INTERNAL_COPY;
     NAND_LOGD(TAG, "%s: device_id: %x\n", __func__, device_id);

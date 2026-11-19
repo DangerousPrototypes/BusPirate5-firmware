@@ -87,6 +87,11 @@ void storage_init(void) {
 
 uint8_t storage_mount(void) {
     FRESULT fr; /* FatFs return code */
+    // The USB host may have modified the volume since we last used it, so any cached sector our FatFs
+    // instance still holds is stale. Discard it: f_mount() would otherwise flush a dirty window back
+    // over the host's changes (sync_window() in ff.c) before re-reading the boot sector.
+    fs.wflag = 0;
+    fs.winsect = (LBA_t)0 - 1;
     fr = f_mount(&fs, "", 1);
     if (fr != FR_OK) {
         system_config.storage_available = 0;

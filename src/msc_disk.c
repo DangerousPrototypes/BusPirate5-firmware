@@ -63,6 +63,33 @@ static volatile bool cmd_ack = false;
 static volatile bool writable = true;
 static volatile bool host_ejected = false;
 
+// Optional host traffic counters, shown by 'nand info'. Written on core 1, read on core 0.
+// Costs ~56 bytes of RAM; enable with -DBP_MSC_DISK_STATS=1 when debugging USB MSC behaviour.
+#ifndef BP_MSC_DISK_STATS
+#define BP_MSC_DISK_STATS 0
+#endif
+#if BP_MSC_DISK_STATS
+#define MSC_STAT(expr) do { expr; } while (0)
+static volatile struct {
+    uint32_t tur;
+    uint32_t read10;
+    uint32_t write10;
+    uint32_t write10_errors;      // disk_write() failed
+    uint32_t write_protect_hits;  // WRITE(10) refused because the drive was read-only
+    uint32_t start_stop;
+    uint32_t host_eject;
+    uint32_t prevent_removal;
+    uint32_t sync_cache;
+    uint32_t unknown_scsi;
+    uint8_t last_unknown_opcode;
+    uint32_t inserts;
+    uint32_t ejects;
+    uint32_t reenumerations;
+} msc_stats;
+#else
+#define MSC_STAT(expr) do { } while (0)
+#endif
+
 enum {
     MSC_DEMO_DISK_BLOCK_NUM = 16,  // 8KB is the smallest size that windows allow to mount
     MSC_DEMO_DISK_BLOCK_SIZE = 512 // 512
@@ -161,7 +188,9 @@ static bool command_acknowledged() {
 }
 // This function will be called by core0
 static bool is_ejected() {
-    return medium_state == md_state_not_present;
+    // stage1 counts too: the host has already been told the medium is gone, a further eject request
+    // could never be acknowledged (the state machine only ejects from md_state_ready).
+    return medium_state == md_state_not_present || medium_state == md_state_not_present_stage1;
 }
 // This function will be called by core0
 static bool is_inserted() {
@@ -172,6 +201,7 @@ static bool is_inserted() {
 bool tud_msc_test_unit_ready_cb(uint8_t lun) {
     (void)lun;
     bool return_value = true;
+    MSC_STAT(msc_stats.tur++);
     medium_state = next_medium_state;
     if (host_ejected) {
         medium_state = md_state_not_present;
@@ -179,6 +209,7 @@ bool tud_msc_test_unit_ready_cb(uint8_t lun) {
         host_ejected = false;
     } else if (insert_request && medium_state == md_state_not_present) {
         medium_state = md_state_medium_changed;
+        insert_request = false; // insert is fire-and-forget, completed here
         cmd_ack = true;
     } else if (eject_request && medium_state == md_state_ready) {
         medium_state = md_state_not_present_stage1;
@@ -236,11 +267,13 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
     (void)lun;
     (void)power_condition;
 
+    MSC_STAT(msc_stats.start_stop++);
     if (load_eject) {
         if (start) {
             host_ejected = false;
             // load disk storage
         } else {
+            MSC_STAT(msc_stats.host_eject++);
             host_ejected = true;
             if (writable) {
                 disk_ioctl(0, CTRL_SYNC, 0);
@@ -254,6 +287,7 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
 // Copy disk's data to buffer (up to bufsize) and return number of copied bytes.
 int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
     (void)lun;
+    MSC_STAT(msc_stats.read10++);
     // printf(" READ lba %d +%d siz %d\r\n", lba, offset, bufsize);
 
     if (system_config.storage_available) {
@@ -276,6 +310,7 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
 // Process data in buffer to disk's storage and return number of written bytes
 int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
     (void)lun;
+    MSC_STAT(msc_stats.write10++);
 
     // printf(" WRITE lba %d +%d siz %d\r\n", lba, offset, bufsize);
 
@@ -283,6 +318,7 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
         // See tud_msc_read10_cb: must not printf on core1 and must not return 0 on error.
         if (disk_write(0, buffer, lba, (bufsize / BP_FLASH_DISK_BLOCK_SIZE))) // assume no offset
         {
+            MSC_STAT(msc_stats.write10_errors++);
             return -1;
         }
     } else {
@@ -302,6 +338,9 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
 
 bool tud_msc_prevent_allow_medium_removal_cb(uint8_t lun, uint8_t prohibit_removal, uint8_t control) {
     (void)lun;
+    if (prohibit_removal) {
+        MSC_STAT(msc_stats.prevent_removal++);
+    }
     if (prohibit_removal != 0) {
         tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x24, 0x0);
         return false;
@@ -323,8 +362,24 @@ int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, u
     bool in_xfer = true;
 
     switch (scsi_cmd[0]) {
+        case 0x35: // SYNCHRONIZE CACHE(10)
+        case 0x91: // SYNCHRONIZE CACHE(16)
+            // Hosts flush before dismount and after metadata updates; the FTL is log-structured, so a
+            // real sync matters. Rejecting this as "illegal request" makes Windows treat flushes as
+            // failed, which it swallows silently (e.g. a delete that never lands).
+            MSC_STAT(msc_stats.sync_cache++);
+            if (system_config.storage_available && writable) {
+                if (disk_ioctl(0, CTRL_SYNC, 0) != RES_OK) {
+                    tud_msc_set_sense(lun, SCSI_SENSE_MEDIUM_ERROR, 0x03, 0x00);
+                    return -1;
+                }
+            }
+            resplen = 0;
+            break;
 
         default:
+            MSC_STAT(msc_stats.unknown_scsi++);
+            MSC_STAT(msc_stats.last_unknown_opcode = scsi_cmd[0]);
             // Set Sense = Invalid Command Operation
             tud_msc_set_sense(lun, SCSI_SENSE_ILLEGAL_REQUEST, 0x20, 0x00);
 
@@ -349,7 +404,33 @@ int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, u
     return resplen;
 }
 
+#if BP_MSC_DISK_STATS
+void msc_disk_print_diag(void) {
+    printf("USB MSC host traffic:\r\n");
+    printf("  Medium: %s, %s, host_ejected=%u\r\n",
+           medium_state == md_state_ready ? "ready" : (medium_state == md_state_not_present ? "not present" : "changing"),
+           writable ? "read/write" : "read-only", host_ejected);
+    printf("  TUR polls: %lu, inserts: %lu, ejects: %lu, USB re-enumerations: %lu\r\n", (unsigned long)msc_stats.tur,
+           (unsigned long)msc_stats.inserts, (unsigned long)msc_stats.ejects, (unsigned long)msc_stats.reenumerations);
+    printf("  READ(10): %lu  WRITE(10): %lu (%lu failed, %lu refused read-only)\r\n",
+           (unsigned long)msc_stats.read10, (unsigned long)msc_stats.write10,
+           (unsigned long)msc_stats.write10_errors, (unsigned long)msc_stats.write_protect_hits);
+    printf("  START/STOP: %lu (host eject %lu), PREVENT REMOVAL: %lu, SYNC CACHE: %lu\r\n",
+           (unsigned long)msc_stats.start_stop, (unsigned long)msc_stats.host_eject,
+           (unsigned long)msc_stats.prevent_removal, (unsigned long)msc_stats.sync_cache);
+    printf("  Unknown SCSI commands: %lu (last opcode 0x%02X)\r\n", (unsigned long)msc_stats.unknown_scsi,
+           msc_stats.last_unknown_opcode);
+}
+#else
+void msc_disk_print_diag(void) {
+    printf("USB MSC host traffic counters disabled (build with -DBP_MSC_DISK_STATS=1)\r\n");
+}
+#endif
+
 bool tud_msc_is_writable_cb(uint8_t lun) {
+    if (!writable) {
+        MSC_STAT(msc_stats.write_protect_hits++);
+    }
     return writable;
 }
 
@@ -374,15 +455,18 @@ static void wait_command_acknowledged(void) {
 bool insert_or_eject_usbmsdrive(bool insert) {
     cmd_ack = false;
     if (insert) {
+        // Fire-and-forget: the TEST UNIT READY handler announces the medium on the host's next poll.
+        // Nothing on core 0 depends on the host having seen it.
+        MSC_STAT(msc_stats.inserts++);
         insert_request = true;
-        wait_command_acknowledged();
-        insert_request = false;
-        // load disk storage
     } else {
         if (is_ejected()) {
+            // Already out (possibly with an insert still pending): the pending insert, if any, keeps
+            // the request flag and will re-announce the medium on the host's next poll.
             return true;
         }
         // unload disk storage
+        MSC_STAT(msc_stats.ejects++);
         eject_request = true;
         wait_command_acknowledged();
         eject_request = false;
@@ -419,16 +503,50 @@ void prepare_usbmsdrive_readonly(void) {
     disk_ioctl(0, CTRL_SYNC, 0);
     writable = false;
 }
+// USB re-enumeration (same effect as unplug/replug), executed on core 1 which owns the TinyUSB stack.
+static volatile bool reenumerate_request = false;
+static absolute_time_t reenumerate_reconnect_at;
+#define MSC_REENUMERATE_DISCONNECT_MS 500
+
+void msc_disk_core1_service(void) {
+    if (reenumerate_request) {
+        reenumerate_request = false;
+        MSC_STAT(msc_stats.reenumerations++);
+        tud_disconnect();
+        reenumerate_reconnect_at = make_timeout_time_ms(MSC_REENUMERATE_DISCONNECT_MS);
+    } else if (!is_nil_time(reenumerate_reconnect_at) && time_reached(reenumerate_reconnect_at)) {
+        reenumerate_reconnect_at = nil_time;
+        tud_connect();
+    }
+}
+
 void make_usbmsdrive_writable(void) {
     if (writable) {
         return;
     }
-    // eject the usb drive
-    eject_usbmsdrive();
-    // make sure the storage is synced
-    disk_ioctl(0, CTRL_SYNC, 0);
+    // A mounted volume that turns write-protected and back confuses the Windows shell: it caches the
+    // volume's read-only attribute, after which delete/rename from Explorer silently do nothing until the
+    // device is physically re-attached (creates and cmd.exe still work). Nothing short of a fresh
+    // enumeration reliably clears that, and the terminal that forced read-only mode is gone, so unless a
+    // binmode client is still attached on the second CDC port we re-enumerate instead of eject/insert.
+    if (!tud_cdc_n_connected(1)) {
+        writable = true;
+        disk_ioctl(0, CTRL_SYNC, 0);
+        medium_state = md_state_ready;
+        next_medium_state = md_state_ready;
+        insert_request = false;
+        eject_request = false;
+        reenumerate_request = true;
+        return;
+    }
+    // Allow writes *before* ejecting: when the medium disappears the host dismounts the volume, and a
+    // FAT dismount writes metadata (clean-shutdown bit, cached directory/FAT updates). If those writes
+    // are refused with DATA PROTECT the host carries a half-dismounted volume state into the next mount
+    // (same volume serial), after which operations on existing entries (delete/rename) silently fail
+    // until the device is physically re-attached. Core 0 is no longer touching the file system here.
     writable = true;
-    // insert the drive back
+    eject_usbmsdrive();
+    disk_ioctl(0, CTRL_SYNC, 0);
     insert_usbmsdrive();
 }
 

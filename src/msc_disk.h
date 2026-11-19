@@ -53,3 +53,14 @@ void make_usbmsdrive_writable(void);
  * @brief Eject USB MSC drive before bootloader jump.
  */
 void eject_usbmsdrive(void);
+
+/**
+ * @brief Print USB MSC host-traffic counters (SCSI commands seen since boot) to the terminal. Core 0 only.
+ * Counters exist only when built with BP_MSC_DISK_STATS=1; otherwise prints a one-line notice.
+ */
+void msc_disk_print_diag(void);
+
+/**
+ * @brief Core 1 housekeeping for the MSC layer: performs a requested USB re-enumeration. Call from the core 1 loop.
+ */
+void msc_disk_core1_service(void);

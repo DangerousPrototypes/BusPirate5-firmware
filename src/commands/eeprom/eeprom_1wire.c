@@ -386,7 +386,7 @@ void onewire_eeprom_handler(struct command_result* res) {
     if (bp_cmd_help_check(&eeprom_1wire_def, res->help_flag)) {
         return;
     }
-    struct eeprom_info eeprom;
+    struct eeprom_info eeprom={0};
     // bus specific arguments (action, protect blocks, etc)
     if(eeprom_get_args(&eeprom)) { 
         return;

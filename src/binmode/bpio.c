@@ -313,6 +313,14 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, 
         #endif
     }
 
+    // The PSU readings and the pin voltages come from one sweep of the analog mux.
+    // A sweep takes milliseconds, and nothing is forwarded to the host while it runs.
+    const uint32_t sweep_flags =
+        (1u << bpio_StatusRequestTypes_PSU) | (1u << bpio_StatusRequestTypes_ADC) | (1u << bpio_StatusRequestTypes_All);
+    if (query_flags & sweep_flags) {
+        amux_sweep();
+    }
+
     // PSU status
     if(query_flags & (1u << bpio_StatusRequestTypes_PSU) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
         if(bpio_debug) printf("[Status Request] PSU status requested\r\n");
@@ -321,7 +329,7 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, 
         bpio_StatusResponse_psu_set_ma_add(B, psu_status.current_actual_int/ 10000);
         uint32_t vout, isense, vreg;
         bool fuse;
-        psu_measure(&vout, &isense, &vreg, &fuse);
+        psu_measure_from_sweep(&vout, &isense, &vreg, &fuse);
         bpio_StatusResponse_psu_measured_mv_add(B, vout);
         bpio_StatusResponse_psu_measured_ma_add(B, isense/1000);
         bpio_StatusResponse_psu_current_error_add(B, psu_status.error_overcurrent||psu_status.error_undervoltage);
@@ -330,7 +338,6 @@ uint32_t status_request(bpio_RequestPacket_table_t packet, flatcc_builder_t *B, 
     //ADC status, return the voltage on IO0...IO7
     if(query_flags & (1u << bpio_StatusRequestTypes_ADC) || query_flags & (1u << bpio_StatusRequestTypes_All)) {
         if(bpio_debug) printf("[Status Request] ADC status requested\r\n");
-        amux_sweep();
         bpio_StatusResponse_adc_mv_start(B);
         for (uint8_t i = 1; i < 9; i++) {
             bpio_StatusResponse_adc_mv_push(B, hw_pin_voltage_ordered[i]);

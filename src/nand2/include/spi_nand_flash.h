@@ -186,6 +186,18 @@ spi_nand_flash_device_t *spi_nand_flash_get_handle(void);
 void spi_nand_flash_recover(spi_nand_flash_device_t *handle);
 
 /**
+ * @brief Estimate of reclaimable (stale) journal pages: journal size minus live sectors.
+ */
+uint32_t spi_nand_flash_garbage_pages(spi_nand_flash_device_t *handle);
+
+/**
+ * @brief Perform one incremental garbage-collection step (processes one journal tail page).
+ *
+ * Cheap enough (~1-5 ms) to call from an idle loop. Caller must hold the disk I/O lock.
+ */
+esp_err_t spi_nand_flash_gc_step(spi_nand_flash_device_t *handle);
+
+/**
  * @brief Print driver diagnostics (operation/failure counters, fault latch, live registers) to the terminal.
  * Core 0 only.
  */

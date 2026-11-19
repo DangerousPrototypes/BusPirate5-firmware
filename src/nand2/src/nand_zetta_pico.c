@@ -55,8 +55,10 @@ esp_err_t spi_nand_zetta_init(spi_nand_flash_device_t *dev)
 
     dev->chip.has_quad_enable_bit = 1;
     dev->chip.quad_enable_bit_pos = 0;
-    dev->chip.erase_block_delay_us = 3000;  // tBERS typ 3ms (datasheet Table 16-3)
-    dev->chip.program_page_delay_us = 400;
+    // ZD35X1GA datasheet Table 4.6: tBERS typ 2ms (max 10ms), tPROG_ECC typ 320us (max 700us),
+    // tR_ECC typ 45us (max 70us). These are the pre-poll waits; wait_for_ready() polls OIP afterwards.
+    dev->chip.erase_block_delay_us = 2000;
+    dev->chip.program_page_delay_us = 320;
     // Datasheet only documents copy-back as 13h -> 84h -> 06h -> 10h. Dhara's sync padding copies the
     // last-written sector via copy-back, so a bad copy damages the tail of the last file written.
     dev->chip.flags |= NAND_FLAG_NO_INTERNAL_COPY;
@@ -64,7 +66,7 @@ esp_err_t spi_nand_zetta_init(spi_nand_flash_device_t *dev)
     switch (device_id) {
     case ZETTA_DI_71:
         dev->chip.num_blocks = 1024;
-        dev->chip.read_page_delay_us = 250;
+        dev->chip.read_page_delay_us = 45;
         break;
     default:
         return ESP_ERR_INVALID_RESPONSE;

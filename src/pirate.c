@@ -498,6 +498,7 @@ static void core0_infinite_loop(void) {
         // core 2 handles USB and other sensitive stuff, so it's not critical to co-op multitask
         // but the terminal will not be responsive if the service is blocking
         binmode_service();
+        storage_idle_service(); // incremental NAND garbage collection while idle
 
         //if not connected to a terminal, then check for button presses to allow user to execute button scripts without a terminal connected
         if (!tud_cdc_n_connected(0)|| bp_state <= BP_SM_DISPLAY_MODE_WAIT){

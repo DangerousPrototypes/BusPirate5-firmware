@@ -24,4 +24,8 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void* buff);
 void diskio_lock(void);
 void diskio_unlock(void);
 
+// Call from the core 0 idle loop: performs one incremental FTL garbage-collection step when the disk
+// has been idle and there is a backlog of stale pages. Never blocks on the disk lock.
+void diskio_idle_service(void);
+
 #endif // __NAND_FTL_DISKIO_H

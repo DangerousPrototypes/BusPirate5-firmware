@@ -27,6 +27,12 @@ static bool initialized = false;
 //static struct dhara_nand dhara_nand_parameters = {};
 static mutex_t diskio_mutex;
 static spi_nand_flash_device_t *flash;
+static absolute_time_t last_io_time; // last FatFs/USB MSC access, used to detect an idle disk
+
+// Background garbage collection: only when the disk has been idle this long, and only while there is a
+// meaningful backlog, so steady-state operation does not churn live pages.
+#define IDLE_GC_DELAY_US        (250 * 1000)
+#define IDLE_GC_MIN_GARBAGE     512
 
 #define SPI_NAND_LOG2_PAGE_SIZE              (  11)
 #define SPI_NAND_LOG2_PAGES_PER_ERASE_BLOCK  (   6)
@@ -42,6 +48,23 @@ void diskio_lock(void) {
 }
 
 void diskio_unlock(void) {
+    mutex_exit(&diskio_mutex);
+}
+
+void diskio_idle_service(void) {
+    if (!initialized || flash == NULL) {
+        return;
+    }
+    if (absolute_time_diff_us(last_io_time, get_absolute_time()) < IDLE_GC_DELAY_US) {
+        return;
+    }
+    if (spi_nand_flash_garbage_pages(flash) < IDLE_GC_MIN_GARBAGE) {
+        return;
+    }
+    if (!mutex_try_enter(&diskio_mutex, NULL)) {
+        return; // core 1 is busy with the disk; try again next loop
+    }
+    spi_nand_flash_gc_step(flash);
     mutex_exit(&diskio_mutex);
 }
 
@@ -108,6 +131,7 @@ DRESULT diskio_read(BYTE drv, BYTE* buff, LBA_t sector, UINT count) {
         return RES_NOTRDY;
     }
     mutex_enter_blocking(&diskio_mutex);
+    last_io_time = get_absolute_time();
     // read *count* consecutive sectors
     for (int i = 0; i < count; i++) {
         //int ret = dhara_map_read(&map, sector, buff, &err);
@@ -134,6 +158,7 @@ DRESULT diskio_write(BYTE drv, const BYTE* buff, LBA_t sector, UINT count) {
         return RES_NOTRDY;
     }
     mutex_enter_blocking(&diskio_mutex);
+    last_io_time = get_absolute_time();
     // write *count* consecutive sectors
     for (int i = 0; i < count; i++) {  
         //int ret = dhara_map_write(&map, sector, buff, &err);
@@ -161,6 +186,7 @@ DRESULT diskio_ioctl(BYTE drv, BYTE cmd, void* buff) {
         case CTRL_SYNC:;
             ;
             mutex_enter_blocking(&diskio_mutex);
+            last_io_time = get_absolute_time();
             //int ret = dhara_map_sync(&map, &err);
             esp_err_t ret = spi_nand_flash_sync(flash);
             mutex_exit(&diskio_mutex);

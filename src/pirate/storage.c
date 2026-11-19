@@ -24,6 +24,9 @@
 #include "hardware/timer.h"
 #include "fatfs/ff.h"
 #include "fatfs/diskio.h"
+#ifdef BP_HW_STORAGE_NAND
+#include "nand2/nand_ftl_diskio.h"
+#endif
 #include "pirate/bio.h"
 #include "ui/ui_prompt.h"
 #include "ui/ui_parse.h"
@@ -105,6 +108,12 @@ void storage_unmount(void) {
     system_config.storage_mount_error = 0;
     #ifdef BP_HW_STORAGE_TFCARD
         printf("Storage removed\r\n");
+    #endif
+}
+
+void storage_idle_service(void) {
+    #ifdef BP_HW_STORAGE_NAND
+        diskio_idle_service();
     #endif
 }
 

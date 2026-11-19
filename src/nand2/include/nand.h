@@ -111,7 +111,7 @@ struct spi_nand_flash_device_t {
 
 // Maximum wall-clock time one FTL-level operation (sector read/write, gc step, sync, resume) may spend
 // in NAND I/O before io_fault is latched and the operation fails.
-#define NAND_OP_DEADLINE_MS 8000
+#define NAND_OP_DEADLINE_MS 20000
 
 esp_err_t nand_register_dev(spi_nand_flash_device_t *handle);
 esp_err_t nand_unregister_dev(spi_nand_flash_device_t *handle);

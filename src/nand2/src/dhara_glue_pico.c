@@ -78,11 +78,28 @@ static esp_err_t dhara_read(spi_nand_flash_device_t *handle, uint8_t *buffer, dh
     return ESP_OK;
 }
 
+static uint32_t garbage_pages(struct dhara_map *map)
+{
+    uint32_t journal = dhara_journal_size(&map->journal);
+    uint32_t live = dhara_map_size(map);
+    return (journal > live) ? (journal - live) : 0;
+}
+
+// Dhara itself only collects garbage once the journal is nearly full, and dhara_map_sync() (every
+// f_close) must then walk every stale page at the tail. Keep garbage bounded during heavy host
+// writes by paying for one tail page per sector written once the backlog gets large.
+#define WRITE_GC_GARBAGE_THRESHOLD 4096
+
 static esp_err_t dhara_write(spi_nand_flash_device_t *handle, const uint8_t *buffer, dhara_sector_t sector_id)
 {
     spi_nand_flash_dhara_priv_data_t *dhara_priv_data = (spi_nand_flash_dhara_priv_data_t *)handle->ops_priv_data;
     dhara_error_t err = DHARA_E_NONE;
     nand_op_begin(handle);
+    if (garbage_pages(&dhara_priv_data->dhara_map) > WRITE_GC_GARBAGE_THRESHOLD) {
+        if (dhara_map_gc(&dhara_priv_data->dhara_map, &err) < 0) {
+            return dhara_fail(handle, err);
+        }
+    }
     if (dhara_map_write(&dhara_priv_data->dhara_map, sector_id, buffer, &err)) {
         return dhara_fail(handle, err);
     }
@@ -166,6 +183,29 @@ esp_err_t nand_unregister_dev(spi_nand_flash_device_t *handle)
 {
     free(handle->ops_priv_data);
     handle->ops = NULL;
+    return ESP_OK;
+}
+
+uint32_t spi_nand_flash_garbage_pages(spi_nand_flash_device_t *handle)
+{
+    if (handle == NULL || handle->ops_priv_data == NULL || handle->io_fault) {
+        return 0;
+    }
+    spi_nand_flash_dhara_priv_data_t *dhara_priv_data = (spi_nand_flash_dhara_priv_data_t *)handle->ops_priv_data;
+    return garbage_pages(&dhara_priv_data->dhara_map);
+}
+
+esp_err_t spi_nand_flash_gc_step(spi_nand_flash_device_t *handle)
+{
+    if (handle == NULL || handle->ops_priv_data == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    spi_nand_flash_dhara_priv_data_t *dhara_priv_data = (spi_nand_flash_dhara_priv_data_t *)handle->ops_priv_data;
+    dhara_error_t err = DHARA_E_NONE;
+    nand_op_begin(handle);
+    if (dhara_map_gc(&dhara_priv_data->dhara_map, &err) < 0) {
+        return dhara_fail(handle, err);
+    }
     return ESP_OK;
 }
 

@@ -64,7 +64,9 @@ table ModeConfiguration {
   chip_select_idle:bool=true; // Chip select idle (0=idle low, 1=idle high) for SPI and 3-wire modes.
   submode:uint8; // Submode for LED and INFRARED modes (e.g., "RGB", "IR TX", "IR RX").
   tx_modulation:uint32; // TX modulation for INFRARED mode 
-  rx_sensor:uint8; // RX sensor for INFRARED mode 
+  rx_sensor:uint8; // RX sensor for INFRARED mode
+  pin_tx:uint8=255; // TX pin (BIO number 0-7, 255 = use mode default)
+  pin_rx:uint8=255; // RX pin (BIO number 0-7, 255 = use mode default)
 }
 
 table ConfigurationRequest {

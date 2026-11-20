@@ -10,6 +10,9 @@
 #include "bpio_reader.h"
 #include "bpio_transactions.h"
 
+// From mode/hwuart.c. hwuart.h is not self-contained (needs the bytecode/command headers), so declare directly.
+extern bool hwuart_is_pio_mode(void);
+
 // Maximum bytes to read in async handler
 #define BPIO_MAX_READ_SIZE 512
 
@@ -18,6 +21,34 @@
 uint32_t bpio_hwuart_transaction(struct bpio_data_request_t *request, flatbuffers_uint8_vec_t data_write, uint8_t *data_read) {
     if(request->debug) printf("[UART] Performing transaction\r\n");
 
+    if (hwuart_is_pio_mode()) {
+        // PIO path
+        if(request->bytes_write > 0) {
+            if(request->debug) printf("[UART-PIO] Writing %d bytes\r\n", request->bytes_write);
+            for(uint32_t i = 0; i < request->bytes_write; i++) {
+                hwuart_pio_fullduplex_write(flatbuffers_uint8_vec_at(data_write, i));
+            }
+        }
+        if(request->bytes_read > 0) {
+            if(request->debug) printf("[UART-PIO] Reading %d bytes\r\n", request->bytes_read);
+            for(uint32_t i = 0; i < request->bytes_read; i++) {
+                uint32_t raw;
+                uint8_t cooked;
+                uint32_t timeout = 1000000;
+                while (!hwuart_pio_fullduplex_read(&raw, &cooked)) {
+                    timeout--;
+                    if (!timeout) {
+                        if(request->debug) printf("[UART-PIO] Read timeout at byte %d\r\n", i);
+                        return true;
+                    }
+                }
+                data_read[i] = cooked;
+            }
+        }
+        return false;
+    }
+
+    // Hardware UART path
     // Transmit bytes if requested
     if(request->bytes_write > 0) {
         if(request->debug) printf("[UART] Writing %d bytes\r\n", request->bytes_write);
@@ -47,15 +78,31 @@ uint32_t bpio_hwuart_transaction(struct bpio_data_request_t *request, flatbuffer
 // Returns number of bytes read (0 if no data available)
 //TODO: UART is dispatched to multiple processes!!!
 uint32_t bpio_hwuart_async_handler(uint8_t *data_read) {
+    if (hwuart_is_pio_mode()) {
+        // PIO path
+        uint32_t raw;
+        uint8_t cooked;
+        if (!hwuart_pio_fullduplex_read(&raw, &cooked)) {
+            return 0;
+        }
+        data_read[0] = cooked;
+        uint32_t bytes_read = 1;
+        while (hwuart_pio_fullduplex_read(&raw, &cooked) && bytes_read < BPIO_MAX_READ_SIZE) {
+            data_read[bytes_read++] = cooked;
+        }
+        return bytes_read;
+    }
+
+    // Hardware UART path
     // Check if UART has data available
     if(!uart_is_readable(M_UART_PORT)) {
         return 0;
     }
-    
+
     // Read first byte
     data_read[0] = (uint8_t)uart_getc(M_UART_PORT);
     uint32_t bytes_read = 1;
-    
+
     // Wait up to 200us for more data to arrive and batch into single packet
     // Returns immediately if data arrives sooner, improving responsiveness
     // At 115200 baud: ~87us per byte, so typically captures 2-3 bytes
@@ -69,6 +116,6 @@ uint32_t bpio_hwuart_async_handler(uint8_t *data_read) {
     while(uart_is_readable(M_UART_PORT) && bytes_read < BPIO_MAX_READ_SIZE) {
         data_read[bytes_read++] = (uint8_t)uart_getc(M_UART_PORT);
     }
-    
+
     return bytes_read;
 }

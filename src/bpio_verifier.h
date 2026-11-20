@@ -177,6 +177,8 @@ static int bpio_ModeConfiguration_verify_table(flatcc_table_verifier_descriptor_
     if ((ret = flatcc_verify_field(td, 10, 1, 1) /* submode */)) return ret;
     if ((ret = flatcc_verify_field(td, 11, 4, 4) /* tx_modulation */)) return ret;
     if ((ret = flatcc_verify_field(td, 12, 1, 1) /* rx_sensor */)) return ret;
+    if ((ret = flatcc_verify_field(td, 13, 1, 1) /* pin_tx */)) return ret;
+    if ((ret = flatcc_verify_field(td, 14, 1, 1) /* pin_rx */)) return ret;
     return flatcc_verify_ok;
 }
 

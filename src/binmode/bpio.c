@@ -160,8 +160,12 @@ bool mode_change_new(const char *mode_name, bpio_mode_configuration_t *mode_conf
             system_config.mode = i;
             if(bpio_mode_handlers[system_config.mode].bpio_configure==NULL) {
                 if(bpio_debug) printf("[Mode Change] Protocol %s does not support BPIO configuration\r\n", mode_name);
-            }else{
-                bpio_mode_handlers[system_config.mode].bpio_configure(mode_config);
+            }else if(!bpio_mode_handlers[system_config.mode].bpio_configure(mode_config)) {
+                // Rejected configuration: the old mode is already torn down, fall back to HiZ
+                if(bpio_debug) printf("[Mode Change] Invalid configuration for %s, falling back to HiZ\r\n", mode_name);
+                system_config.mode = HIZ;
+                modes[HIZ].protocol_setup_exc();
+                return true;
             }
             modes[system_config.mode].protocol_setup_exc();
             return false;
@@ -387,10 +391,12 @@ uint32_t configuration_request(bpio_RequestPacket_table_t packet, flatcc_builder
         mode_config_data.submode = bpio_ModeConfiguration_submode_get(mode_config);
         mode_config_data.tx_modulation = bpio_ModeConfiguration_tx_modulation_get(mode_config);
         mode_config_data.rx_sensor = bpio_ModeConfiguration_rx_sensor_get(mode_config);
+        mode_config_data.pin_tx = bpio_ModeConfiguration_pin_tx_get(mode_config);
+        mode_config_data.pin_rx = bpio_ModeConfiguration_pin_rx_get(mode_config);
         mode_config_data.debug = bpio_debug;
         
         if (mode_change_new(mode_str, &mode_config_data)) {
-            static const char *mode_error_msg = "Invalid mode name";
+            static const char *mode_error_msg = "Invalid mode name or configuration";
             if(bpio_debug) printf("[Config Request] Error: %s '%s'\r\n", mode_error_msg, mode_str);
             error = mode_error_msg;
             goto config_response_error;

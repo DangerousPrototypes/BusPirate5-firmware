@@ -10,6 +10,8 @@
 #ifdef BP_HW_STORAGE_NAND
 #include "hardware/spi.h"
 #include "nand2/include/spi_nand_flash.h"
+#include "nand2/include/nand.h"
+#include "nand2/include/nand_impl.h"
 #include "fatfs/ff.h"
 #include "fatfs/diskio.h"
 #include "nand2/nand_ftl_diskio.h"
@@ -18,7 +20,7 @@
 #endif
 
 static const char* const usage[] = {
-    "nand [info|id|raw|regs|gc|scan|stress|wipe]\r\n\t[-i(terations) <count>] [-n <sectors>] [-y(es)]",
+    "nand [info|id|raw|regs|gc|scan|stress|move|wipe]\r\n\t[-i(terations) <count>] [-n <sectors>] [-y(es)]",
     "Show FTL info, driver counters and registers:%s nand info",
     "Dump captured READ ID bytes (works even if detection failed):%s nand id",
     "Raw READ ID on the SPI bus, bypassing the driver:%s nand raw",
@@ -28,6 +30,8 @@ static const char* const usage[] = {
     "Read-only surface scan (verify all sectors readable):%s nand scan",
     "Destructive write/GC/verify stress test (4 cycles):%s nand stress -i 4",
     "Stress test without the confirmation prompt:%s nand stress -y",
+    "Test raw page moves with and without RANDOM PROGRAM LOAD:%s nand move",
+    "Page-move test without the confirmation prompt:%s nand move -y",
     "Erase all good blocks, reset the FTL and format:%s nand wipe",
 };
 
@@ -39,6 +43,7 @@ enum nand_actions {
     NAND_GC,
     NAND_SCAN,
     NAND_STRESS,
+    NAND_MOVE,
     NAND_WIPE,
 };
 
@@ -50,6 +55,7 @@ static const bp_command_action_t nand_action_defs[] = {
     { NAND_GC,     "gc",     0 },
     { NAND_SCAN,   "scan",   0 },
     { NAND_STRESS, "stress", 0 },
+    { NAND_MOVE,   "move",   0 },
     { NAND_WIPE,   "wipe",   0 },
 };
 
@@ -406,6 +412,133 @@ static void nand_cmd_stress(spi_nand_flash_device_t* handle, uint32_t iterations
     system_config.storage_available = 0;
 }
 
+typedef struct {
+    const char* stage;
+    esp_err_t result;
+} nand_move_case_result_t;
+
+static nand_move_case_result_t nand_run_move_case(spi_nand_flash_device_t* handle,
+                                                  uint32_t src,
+                                                  uint32_t dst,
+                                                  bool require_program_load,
+                                                  uint8_t* write_buf,
+                                                  uint8_t* read_buf) {
+    uint32_t original_flags = handle->chip.flags;
+    nand_move_case_result_t result = { "program source", ESP_OK };
+
+    if (require_program_load) {
+        handle->chip.flags |= NAND_FLAG_COPY_REQUIRES_PROGRAM_LOAD;
+    } else {
+        handle->chip.flags &= ~NAND_FLAG_COPY_REQUIRES_PROGRAM_LOAD;
+    }
+
+    nand_fill_pattern(write_buf, handle->chip.page_size, src, 0);
+    result.result = nand_prog(handle, src, write_buf);
+    if (result.result != ESP_OK) {
+        goto done;
+    }
+
+    result.stage = "copy";
+    result.result = nand_copy(handle, src, dst);
+    if (result.result != ESP_OK) {
+        goto done;
+    }
+
+    result.stage = "read destination";
+    result.result = nand_read(handle, dst, 0, handle->chip.page_size, read_buf);
+    if (result.result != ESP_OK) {
+        goto done;
+    }
+
+    result.stage = "verify";
+    if (memcmp(write_buf, read_buf, handle->chip.page_size) != 0) {
+        result.result = ESP_FAIL;
+    }
+
+done:
+    handle->chip.flags = original_flags;
+    return result;
+}
+
+static void nand_cmd_move_test(spi_nand_flash_device_t* handle) {
+    if (!bp_cmd_confirm(&nand_def,
+                        "Raw page move test ERASES a physical NAND block and bypasses the file system.\r\n"
+                        "Its data is destroyed. Run 'nand wipe' or 'format' afterwards.")) {
+        printf("Move test aborted.\r\n");
+        return;
+    }
+
+    if (handle->chip.page_size > 2048) {
+        printf("Move test FAILED: page size %lu exceeds test buffers\r\n", (unsigned long)handle->chip.page_size);
+        return;
+    }
+
+    uint8_t* write_buf = handle->work_buffer;
+    uint8_t* read_buf = handle->read_buffer;
+    uint32_t block = 0;
+    bool found_block = false;
+    bool block_erased = false;
+    nand_move_case_result_t direct = { "erase", ESP_OK };
+    nand_move_case_result_t random_load = { "not run", ESP_ERR_NOT_SUPPORTED };
+    uint32_t original_flags = handle->chip.flags;
+    uint32_t pages_per_block = 1u << handle->chip.log2_ppb;
+
+    printf("Testing internal page moves on block near the end of the NAND.\r\n");
+    diskio_lock();
+    for (uint32_t candidate = handle->chip.num_blocks; candidate > 0;) {
+        candidate--;
+        bool is_bad = false;
+        direct.result = nand_is_bad(handle, candidate, &is_bad);
+        if (direct.result == ESP_OK && !is_bad) {
+            block = candidate;
+            found_block = true;
+            break;
+        }
+    }
+
+    if (!found_block) {
+        direct.stage = "find good block";
+        direct.result = ESP_ERR_NOT_FOUND;
+        goto done;
+    }
+
+    direct.stage = "erase";
+    direct.result = nand_erase_block(handle, block);
+    if (direct.result != ESP_OK) {
+        goto done;
+    }
+    block_erased = true;
+
+    uint32_t first_page = block << handle->chip.log2_ppb;
+    direct = nand_run_move_case(handle, first_page, first_page + 1, false, write_buf, read_buf);
+    random_load =
+        nand_run_move_case(handle, first_page + pages_per_block / 2, first_page + pages_per_block / 2 + 1,
+                           true, write_buf, read_buf);
+
+done:
+    handle->chip.flags = original_flags;
+    diskio_unlock();
+
+    printf("  Direct 13h -> 10h: %s (%s, error %ld)\r\n",
+           direct.result == ESP_OK ? "PASS" : "FAIL",
+           direct.stage,
+           (long)direct.result);
+    printf("  Forced 84h random load: %s (%s, error %ld)\r\n",
+           random_load.result == ESP_OK ? "PASS" : "FAIL",
+           random_load.stage,
+           (long)random_load.result);
+    printf("  Original copy flag: %s\r\n",
+           (original_flags & NAND_FLAG_COPY_REQUIRES_PROGRAM_LOAD) ? "set" : "clear");
+    printf("  RESULT: %s\r\n", direct.result == ESP_OK && random_load.result == ESP_OK
+                               ? "PASS - both paths preserved the page"
+                               : "FAIL - inspect chip timing/cache requirements");
+    if (block_erased) {
+        printf("Physical block %lu was erased. Run 'format' or 'nand wipe' before using storage.\r\n",
+               (unsigned long)block);
+        system_config.storage_available = 0;
+    }
+}
+
 #endif // BP_HW_STORAGE_NAND
 
 void nand_handler(struct command_result* res) {
@@ -470,6 +603,10 @@ void nand_handler(struct command_result* res) {
             nand_cmd_stress(handle, iterations, sectors);
             break;
         }
+        case NAND_MOVE:
+            nand_locked_recover(handle);
+            nand_cmd_move_test(handle);
+            break;
         case NAND_WIPE:
             nand_cmd_wipe(handle);
             break;

@@ -6,6 +6,7 @@
  * SPDX-FileContributor: 2015-2024 Espressif Systems (Shanghai) CO LTD
  * SPDX-FileContributor: Adapted for Raspberry Pi Pico (RP2040)
  * SPDX-FileContributor: Documented GigaDevice M7 3-bit ECC status support
+ * SPDX-FileContributor: Modified by Bus Pirate contributors
  */
 
 #include <string.h>
@@ -393,9 +394,9 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
     uint16_t src_column_addr = get_column_address(handle, src_block, 0);
     uint16_t dst_column_addr = get_column_address(handle, dst_block, 0);
 
-    if ((src_column_addr != dst_column_addr) || (handle->chip.flags & NAND_FLAG_NO_INTERNAL_COPY)) {
-        // Copy through RAM when the pages are on different planes, or when the chip needs a
-        // PROGRAM LOAD between PAGE READ and PROGRAM EXECUTE (Zetta: 13h, 84h, 06h, 10h).
+    if (src_column_addr != dst_column_addr) {
+        // A single internal data move is only valid when the source and destination use the same
+        // cache plane. Cross-plane copies must pass through RAM.
         copy_buf = handle->read_buffer;
         if (! copy_buf) {
             ret = ESP_ERR_NO_MEM;
@@ -415,8 +416,17 @@ esp_err_t nand_copy(spi_nand_flash_device_t *handle, uint32_t src, uint32_t dst)
             handle->stats.prog_fail++;
             return ESP_ERR_NOT_FINISHED;
         }
-        copy_buf = NULL;
     } else {
+        if (handle->chip.flags & NAND_FLAG_COPY_REQUIRES_PROGRAM_LOAD) {
+            // These datasheets document copy-back with a RANDOM PROGRAM LOAD between PAGE READ
+            // and PROGRAM EXECUTE. Reload one unchanged cache byte to preserve the full page
+            // in the chip while following the documented command sequence.
+            uint8_t unchanged_byte;
+            GOTO_ON_ERROR(spi_nand_read(handle, &unchanged_byte, src_column_addr, sizeof(unchanged_byte)), fail);
+            GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
+            GOTO_ON_ERROR(spi_nand_program_load(handle, &unchanged_byte, src_column_addr, sizeof(unchanged_byte)), fail);
+        }
+
         GOTO_ON_ERROR(spi_nand_write_enable(handle), fail);
         GOTO_ON_ERROR(program_execute_and_wait(handle, dst, &status), fail);
         if ((status & STAT_PROGRAM_FAILED) != 0) {

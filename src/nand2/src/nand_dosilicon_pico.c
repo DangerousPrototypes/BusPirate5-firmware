@@ -2,6 +2,8 @@
  * SPDX-FileCopyrightText: 2026 Bus Pirate contributors
  *
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * SPDX-FileContributor: Modified by Bus Pirate contributors
  */
 
 #include <stdio.h>
@@ -46,8 +48,7 @@ esp_err_t spi_nand_dosilicon_init(spi_nand_flash_device_t *dev)
     dev->chip.read_page_delay_us = 60;
     dev->chip.erase_block_delay_us = 2000;
     dev->chip.program_page_delay_us = 320;
-    dev->chip.flags |= NAND_FLAG_NO_INTERNAL_COPY;
-
+    dev->chip.flags |= NAND_FLAG_COPY_REQUIRES_PROGRAM_LOAD;
     NAND_LOGD(TAG, "%s: device_id: %02x%02x", __func__, device_id[0], device_id[1]);
     if (device_id[0] != SPI_NAND_FLASH_DOSILICON_MI || device_id[1] != DOSILICON_DI_71) {
         return ESP_ERR_INVALID_RESPONSE;

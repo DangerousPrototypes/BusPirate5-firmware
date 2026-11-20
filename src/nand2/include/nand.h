@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * SPDX-FileContributor: Adapted for Raspberry Pi Pico (RP2040)
+ * SPDX-FileContributor: Modified by Bus Pirate contributors
  */
 
 #pragma once
@@ -21,9 +22,7 @@ extern "C" {
 
 #define NAND_FLAG_HAS_PROG_PLANE_SELECT       (1 << 0)
 #define NAND_FLAG_HAS_READ_PLANE_SELECT       (1 << 1)
-// Chip does not support PAGE READ -> PROGRAM EXECUTE copy-back without an intervening PROGRAM LOAD;
-// copies are routed through RAM (13h, 0Bh, 84h, 06h, 10h) instead.
-#define NAND_FLAG_NO_INTERNAL_COPY            (1 << 2)
+#define NAND_FLAG_COPY_REQUIRES_PROGRAM_LOAD  (1 << 2)
 
 #ifndef BIT
 #define BIT(x) (1 << (x))

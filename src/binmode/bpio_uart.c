@@ -56,7 +56,7 @@ static void bpio_hwuart_rx_irq_handler(void) {
 // BPIO mode change or reconfigure, so the hardware mask is the armed state.
 // Returns false if another handler owns this UART's interrupt (for example the
 // terminal on this UART); callers then read the FIFO directly.
-static bool bpio_hwuart_rx_irq_arm(void) {
+bool bpio_hwuart_rx_irq_arm(void) {
     const uint irq = UART_IRQ_NUM(M_UART_PORT);
     irq_handler_t handler = irq_get_exclusive_handler(irq);
     if (irq_has_shared_handler(irq) || (handler != NULL && handler != bpio_hwuart_rx_irq_handler)) {

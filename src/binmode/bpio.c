@@ -186,6 +186,13 @@ bool mode_change_new(const char *mode_name, bpio_mode_configuration_t *mode_conf
                 bpio_mode_handlers[system_config.mode].bpio_configure(mode_config);
             }
             modes[system_config.mode].protocol_setup_exc();
+            if (system_config.mode == HWUART) {
+                // Queue received bytes from here on. The rest of the request can
+                // block for milliseconds before anything reads them (a PSU enable
+                // busy-waits 3 ms first), and the UART's 32-byte FIFO is full
+                // after 2.8 ms at 115200 baud.
+                bpio_hwuart_rx_irq_arm();
+            }
             return false;
         }
     }

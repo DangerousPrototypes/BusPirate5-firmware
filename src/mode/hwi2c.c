@@ -174,7 +174,7 @@ uint32_t hwi2c_setup(void) {
 
     if (interactive) {
         if (storage_load_mode(config_file, config_t, count_of(config_t))) {
-            printf("\r\n\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
+            printf("\r\n%s%s%s\r\n", ui_term_color_info(), GET_T(T_USE_PREVIOUS_SETTINGS), ui_term_color_reset());
             hwi2c_settings();
             int r = bp_cmd_yes_no_exit("");
             if (r == BP_YN_EXIT) return 0; // exit

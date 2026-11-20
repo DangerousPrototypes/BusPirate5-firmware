@@ -14,6 +14,7 @@
 #include "pirate/hwspi.h"
 #include "usb_rx.h"
 #include "pirate/psu.h"
+#include "commands/global/w_psu.h"
 #include "commands/global/p_pullups.h"
 #include "pirate/mem.h"
 #include "lib/bp_args/bp_cmd.h"
@@ -28,6 +29,9 @@ Copyright (c) 2022, Alex Taradov <alex@taradov.com>. All rights reserved.
 
 https://github.com/therealdreg/pico-usb-sniffer-lite
 
+The keylogger's report handling comes from okhi, the Open Keylogger Hardware Implant:
+https://github.com/therealdreg/okhi
+
 Copyright (c) [2025] by David Reguera Garcia aka Dreg
 https://www.rootkit.es
 X @therealdreg
@@ -37,32 +41,24 @@ WARNING: DREG'S BULLSHIT CODE X-)
 ---------------------------------------------------------------------------
 */
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "hardware/clocks.h"
-#include "hardware/irq.h"
+#include "hardware/dma.h"
 #include "hardware/pio.h"
-#include "hardware/pll.h"
 #include "hardware/structs/clocks.h"
-#include "hardware/structs/pll.h"
 #include "hardware/timer.h"
-#include "hardware/watchdog.h"
-#include "pico/bootrom.h"
-#include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "pico_usb_sniffer_lite.pio.h"
-#include "tusb.h"
-
-#define BP() __asm("bkpt #1");
-
-#define FVER 5
 
 #define BIO_TRIGGER_INDEX BIO0
 #define BIO_DP_INDEX BIO1
 #define BIO_DM_INDEX BIO2
 #define BIO_START_INDEX BIO3
 
+// The sampler reads D+, D- and START as consecutive pins from one IN base (PIN 0, 1 and 2).
 #define TRIGGER_INDEX (BIO_TRIGGER_INDEX + 8)
 #define DP_INDEX (BIO_DP_INDEX + 8)
 #define DM_INDEX (BIO_DM_INDEX + 8)
@@ -90,13 +86,8 @@ WARNING: DREG'S BULLSHIT CODE X-)
 #define MAX_PACKET_DELTA 10000
 
 #define BUFFER_SIZE (128 * 1024)
-
-typedef enum
-{
-    PIN_STATE_LOW = 0,
-    PIN_STATE_HIGH,
-    PIN_STATE_FLOATING
-} pin_state_t;
+// g_buffer is indexed in words: every bound below is in words, never in bytes
+#define BUFFER_WORDS (BUFFER_SIZE / (int)sizeof(uint32_t))
 
 enum
 {
@@ -186,8 +177,6 @@ typedef struct
 
 static volatile uint32_t* g_buffer;
 static volatile buffer_info_t g_buffer_info;
-
-extern char __flash_binary_end;
 
 static volatile int g_capture_speed = CaptureSpeed_Low;
 static volatile int g_capture_trigger = CaptureTrigger_Disabled;
@@ -282,6 +271,22 @@ static const char *display_fold_str[DisplayFoldCount] = {
     [DisplayFold_Disabled] = "Disabled",
 };
 
+// True when 'p' (stop capture) is waiting in the terminal.
+static bool stop_requested(void)
+{
+    char c;
+
+    while (rx_fifo_try_get(&c))
+    {
+        if (c == 'p' || c == 'P')
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static bool wait_for_trigger(void)
 {
     if (!g_buffer_info.trigger)
@@ -289,18 +294,19 @@ static bool wait_for_trigger(void)
         return true;
     }
 
-    printf("Waiting for a trigger (waiting for a LOW)\r\n");
+    printf("Waiting for a trigger (waiting for a LOW), 'p' to stop\r\n");
 
-    while (1)
+    while (gpio_get(TRIGGER_INDEX))
     {
-        if (gpio_get(TRIGGER_INDEX) == 0)
+        if (stop_requested())
         {
-            printf("Triggered!\r\n");
-            return true;
+            printf("capture stopped\r\n");
+            return false;
         }
     }
 
-    return false;
+    printf("Triggered!\r\n");
+    return true;
 }
 
 static int capture_limit_value(void)
@@ -481,7 +487,7 @@ static void print_data(char *pid, uint8_t *data, int size)
 {
     size -= 4;
 
-    printf(pid);
+    printf("%s", pid);
 
     if (size == 0)
     {
@@ -530,10 +536,12 @@ static bool print_packet(void)
     uint8_t *payload = (uint8_t *)&g_buffer[g_display_ptr + 2];
     int pid = payload[1] & 0x0f;
 
+    // The bus goes quiet while nothing is attached, during a detach or while the host suspends it,
+    // and the timestamps are real, so a long gap is the bus, not a broken buffer: show it and go on.
+    // It used to end the display there, right before the enumeration of a keyboard plugged in.
     if (g_check_delta && delta > MAX_PACKET_DELTA)
     {
-        printf("Time delta between packets is too large, possible buffer corruption.\r\n");
-        return false;
+        printf("   ... : %d us without traffic\r\n", delta);
     }
 
     g_display_ptr += (((size + 3) / 4) + 2);
@@ -709,7 +717,7 @@ static void display_buffer(void)
            g_buffer_info.frames, g_buffer_info.folded);
 }
 
-static uint16_t crc16_usb(uint8_t *data, int size)
+static uint16_t crc16_usb(const uint8_t *data, int size)
 {
     uint16_t crc = 0xffff;
 
@@ -721,7 +729,7 @@ static uint16_t crc16_usb(uint8_t *data, int size)
     return crc;
 }
 
-static uint8_t crc5_usb(uint8_t *data, int size)
+static uint8_t crc5_usb(const uint8_t *data, int size)
 {
     uint8_t crc = 0xff;
 
@@ -733,17 +741,11 @@ static uint8_t crc5_usb(uint8_t *data, int size)
     return crc;
 }
 
-static void set_error(bool error)
-{
-    return;
-}
-
 static void handle_folding(int pid, uint32_t error)
 {
     if (error)
     {
         g_buffer_info.errors++;
-        set_error(true);
     }
 
     if (pid == Pid_Sof)
@@ -770,26 +772,37 @@ static void handle_folding(int pid, uint32_t error)
     }
 }
 
-static void process_packet(int size)
+// NRZI-decode and unstuff nbits line samples into bytes. The sampler packs 31 samples to a word, the
+// first one in bit 30; at most in_words words are read and out_max bytes written. Returns the
+// CAPTURE_ERROR_* flags with the byte count in the low 16 bits. The output may overlap the input
+// as long as it stays behind it, which process_packet() relies on.
+static uint32_t decode_samples(const volatile uint32_t *in, int in_words, int nbits, uint8_t *out, int out_max)
 {
-    uint8_t *out_data = (uint8_t *)&g_buffer[g_wr_ptr];
     uint32_t v = 0x80000000;
     uint32_t error = 0;
     int out_size = 0;
     int out_bit = 0;
     int out_byte = 0;
     int stuff_count = 0;
-    int pid, npid;
+    int n = 0;
 
-    while (size)
+    while (nbits)
     {
-        uint32_t w = g_buffer[g_rd_ptr++];
+        // A sample count that asks for more words than the packet has (a corrupt size word) stops
+        // here, flagged, instead of reading into the next packet or past the buffer.
+        if (n >= in_words)
+        {
+            error |= CAPTURE_ERROR_SIZE;
+            break;
+        }
+
+        uint32_t w = in[n++];
         int bit_count;
 
-        if (size < 31)
+        if (nbits < 31)
         {
-            w <<= (30 - size);
-            bit_count = size;
+            w <<= (30 - nbits);
+            bit_count = nbits;
         }
         else
         {
@@ -828,13 +841,21 @@ static void process_packet(int size)
 
             if (out_bit == 8)
             {
-                out_data[out_size++] = out_byte;
+                if (out_size < out_max)
+                {
+                    out[out_size++] = out_byte;
+                }
+                else
+                {
+                    error |= CAPTURE_ERROR_SIZE;
+                }
+
                 out_byte = 0;
                 out_bit = 0;
             }
         }
 
-        size -= bit_count;
+        nbits -= bit_count;
     }
 
     if (out_bit)
@@ -842,25 +863,31 @@ static void process_packet(int size)
         error |= CAPTURE_ERROR_NBIT;
     }
 
+    return error | (uint32_t)out_size;
+}
+
+// SYNC, PID and CRC checks of a decoded packet, as CAPTURE_ERROR_* flags.
+static uint32_t check_packet(const uint8_t *out, int out_size, bool fs)
+{
+    uint32_t error = 0;
+
     if (out_size < 1)
     {
-        error |= CAPTURE_ERROR_SIZE;
-        return;
+        return CAPTURE_ERROR_SIZE;
     }
 
-    if (out_data[0] != (g_buffer_info.fs ? 0x80 : 0x81))
+    if (out[0] != (fs ? 0x80 : 0x81))
     {
         error |= CAPTURE_ERROR_SYNC;
     }
 
     if (out_size < 2)
     {
-        error |= CAPTURE_ERROR_SIZE;
-        return;
+        return error | CAPTURE_ERROR_SIZE;
     }
 
-    pid = out_data[1] & 0x0f;
-    npid = (~out_data[1] >> 4) & 0x0f;
+    int pid = out[1] & 0x0f;
+    int npid = (~out[1] >> 4) & 0x0f;
 
     if ((pid != npid) || (pid == Pid_Reserved))
     {
@@ -873,7 +900,7 @@ static void process_packet(int size)
         {
             error |= CAPTURE_ERROR_SIZE;
         }
-        else if (crc5_usb(&out_data[2], out_size - 2) != 0x09)
+        else if (crc5_usb(&out[2], out_size - 2) != 0x09)
         {
             error |= CAPTURE_ERROR_CRC;
         }
@@ -884,13 +911,26 @@ static void process_packet(int size)
         {
             error |= CAPTURE_ERROR_SIZE;
         }
-        else if (crc16_usb(&out_data[2], out_size - 2) != 0xb001)
+        else if (crc16_usb(&out[2], out_size - 2) != 0xb001)
         {
             error |= CAPTURE_ERROR_CRC;
         }
     }
 
-    handle_folding(pid, error);
+    return error;
+}
+
+// Decode the packet at g_rd_ptr in place. Every exit leaves a well formed record (flags | byte count)
+// behind: an early return used to leave the header word stale, and the reader skipped over the rest
+// of the buffer by whatever count was left in it.
+static void process_packet(int size)
+{
+    uint8_t *out_data = (uint8_t *)&g_buffer[g_wr_ptr];
+    uint32_t r = decode_samples(&g_buffer[g_rd_ptr], BUFFER_WORDS - g_rd_ptr, size, out_data, 0xffff);
+    int out_size = r & CAPTURE_SIZE_MASK;
+    uint32_t error = (r & ~CAPTURE_SIZE_MASK) | check_packet(out_data, out_size, g_buffer_info.fs);
+
+    handle_folding(out_size >= 2 ? (out_data[1] & 0x0f) : -1, error);
 
     g_buffer[g_wr_ptr - 2] = error | out_size;
     g_wr_ptr += (out_size + 3) / 4;
@@ -925,13 +965,23 @@ static void process_buffer(void)
 
     for (int i = 0; i < g_buffer_info.count; i++)
     {
+        if (g_rd_ptr + 2 > BUFFER_WORDS)
+        {
+            printf("Synchronization error after %d packets, the buffer ended.\r\n", out_count);
+            break;
+        }
+
         uint32_t size = g_buffer[g_rd_ptr];
         uint32_t time = start_time(g_buffer[g_rd_ptr + 1], size);
 
-        if (size > 0xffff)
+        // Everything decoded so far is intact (it was compacted behind the read pointer): keep it
+        // and lose only the rest of the buffer. Clearing the count threw away every packet. A size
+        // that runs past the buffer is just as wrong.
+        if (size > 0xffff || g_rd_ptr + 2 + (int)(size / 31) + 1 > BUFFER_WORDS)
         {
-            printf("Synchronization error. Check your speed setting.\r\n");
-            out_count = 0;
+            printf("Synchronization error after %d packets, the rest of the buffer is lost. Check your speed "
+                   "setting.\r\n",
+                   out_count);
             break;
         }
 
@@ -963,35 +1013,328 @@ static void process_buffer(void)
         }
         else
         {
-            process_packet(size - 1);
+            // The sampler pushes a word every 31 samples and one more at the EOP: size / 31 + 1 words,
+            // whatever the decoder managed to read.
+            int next = g_rd_ptr + (int)(size / 31) + 1;
 
-            if (size % 31 <= 1)
-            {
-                g_rd_ptr++;
-            }
+            process_packet(size - 1);
+            g_rd_ptr = next;
         }
     }
 
     g_buffer_info.count = out_count;
 }
 
-static void free_all_pio_state_machines(PIO pio)
+// ---- Clock -------------------------------------------------------------------------------------
+//
+// The sampler runs 10 PIO cycles per bit: 15 MHz for low speed, 120 MHz for full speed, from an
+// integer divider of clk_sys. The RP2350 default of 150 MHz already divides to 15 MHz exactly; the
+// RP2040 default of 125 MHz does not, so clk_sys goes to 120 MHz for the capture and comes back
+// after it. set_sys_clock_khz() also moves clk_peri to the 48 MHz USB PLL, while the display, the
+// flash and any UART were set up for the clk_peri they had (clk_sys from boot, the USB PLL after an
+// overclock), so that source is saved and put back after every clk_sys change.
+
+static uint32_t usb_clock_restore_khz;
+static uint32_t usb_peri_auxsrc;
+static uint32_t usb_peri_hz;
+
+static void usb_clock_set(uint32_t khz)
 {
-    for (int sm = 0; sm < 4; sm++)
+    set_sys_clock_khz(khz, true);
+    clock_configure_undivided(clk_peri, 0, usb_peri_auxsrc,
+                              usb_peri_auxsrc == CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS ? khz * 1000 : usb_peri_hz);
+}
+
+static void usb_clock_begin(bool fs)
+{
+    uint32_t sys_hz = clock_get_hz(clk_sys);
+    uint32_t pio_hz = fs ? 120000000u : 15000000u;
+
+    usb_clock_restore_khz = 0;
+
+    if (sys_hz % pio_hz == 0)
     {
-        if (pio_sm_is_claimed(pio, sm))
-        {
-            pio_sm_unclaim(pio, sm);
-        }
+        return;
+    }
+
+    usb_clock_restore_khz = sys_hz / 1000;
+    usb_peri_auxsrc = (clocks_hw->clk[clk_peri].ctrl & CLOCKS_CLK_PERI_CTRL_AUXSRC_BITS) >> CLOCKS_CLK_PERI_CTRL_AUXSRC_LSB;
+    usb_peri_hz = clock_get_hz(clk_peri);
+    usb_clock_set(120000);
+}
+
+static void usb_clock_end(void)
+{
+    if (usb_clock_restore_khz)
+    {
+        usb_clock_set(usb_clock_restore_khz);
+        usb_clock_restore_khz = 0;
     }
 }
 
-static void pio_destroy(void)
+// ---- What is attached --------------------------------------------------------------------------
+//
+// Read from the idle level of D+ and D- (USB 2.0 7.1.5): a low speed device pulls D- up, a full
+// speed one D+; with nothing attached, or a high speed device past its chirp (400 mV, under the logic
+// threshold), both read low, so those two cannot be told apart. Traffic leaves the idle level over
+// 90% of the time, so a majority of 230 of 256 samples taken 1 ms apart, confirmed by two windows in
+// a row, ignores packets, resets and plug-in bounces. Taken from okhi's usb_bus.h, to tell people
+// when the keyboard they plugged in cannot be sniffed.
+#define USB_BUS_SAMPLE_US 1000
+#define USB_BUS_WINDOW 256
+#define USB_BUS_MAJORITY 230
+
+enum
 {
-    free_all_pio_state_machines(pio0);
-    free_all_pio_state_machines(pio1);
-    pio_clear_instruction_memory(pio0);
-    pio_clear_instruction_memory(pio1);
+    UsbBus_Unknown,
+    UsbBus_Low,
+    UsbBus_Full,
+    UsbBus_None,
+    UsbBus_Invalid,
+};
+
+static struct
+{
+    uint32_t sampled_at;
+    uint16_t counts[4];
+    uint16_t samples;
+    uint8_t candidate;
+    uint8_t state;
+} usb_bus;
+
+// Sample once per ms; true when a new state was confirmed.
+static bool usb_bus_watch(void)
+{
+    static const uint8_t verdict_by_lines[4] = { UsbBus_None, UsbBus_Full, UsbBus_Low, UsbBus_Invalid };
+    uint32_t now = time_us_32();
+
+    if (now - usb_bus.sampled_at < USB_BUS_SAMPLE_US)
+    {
+        return false;
+    }
+
+    usb_bus.sampled_at = now;
+
+    uint32_t pads = gpio_get_all();
+    usb_bus.counts[((pads >> DP_INDEX) & 1u) | (((pads >> DM_INDEX) & 1u) << 1)]++;
+
+    if (++usb_bus.samples < USB_BUS_WINDOW)
+    {
+        return false;
+    }
+
+    uint8_t verdict = UsbBus_Unknown;
+
+    for (int lines = 0; lines < 4; lines++)
+    {
+        if (usb_bus.counts[lines] >= USB_BUS_MAJORITY)
+        {
+            verdict = verdict_by_lines[lines];
+        }
+    }
+
+    memset(usb_bus.counts, 0, sizeof(usb_bus.counts));
+    usb_bus.samples = 0;
+
+    bool changed = verdict != UsbBus_Unknown && verdict == usb_bus.candidate && verdict != usb_bus.state;
+
+    if (changed)
+    {
+        usb_bus.state = verdict;
+    }
+
+    usb_bus.candidate = verdict;
+    return changed;
+}
+
+// The state, with a warning when it is not what a capture at this speed can decode.
+static void usb_bus_print(bool fs)
+{
+    switch (usb_bus.state)
+    {
+        case UsbBus_Low:
+            if (fs)
+            {
+                printf("%susb bus: low speed device, set the capture speed (e) to Low%s\r\n", ui_term_color_warning(),
+                       ui_term_color_reset());
+            }
+            else
+            {
+                printf("usb bus: low speed device\r\n");
+            }
+            break;
+        case UsbBus_Full:
+            if (fs)
+            {
+                printf("usb bus: full speed device\r\n");
+            }
+            else
+            {
+                printf("%susb bus: full speed device, the keylogger reads only low speed (1.5 Mbit/s)\r\n"
+                       "usb bus: set the capture speed (e) to Full to capture its packets with s%s\r\n",
+                       ui_term_color_warning(), ui_term_color_reset());
+            }
+            break;
+        case UsbBus_None:
+            printf("%susb bus: nothing attached, or a high speed device, which cannot be sniffed%s\r\n",
+                   ui_term_color_warning(), ui_term_color_reset());
+            break;
+        case UsbBus_Invalid:
+            printf("%susb bus: invalid line state, D+ and D- both high: check the plank and the cables%s\r\n",
+                   ui_term_color_warning(), ui_term_color_reset());
+            break;
+        default:
+            printf("usb bus: unknown, the lines keep changing\r\n");
+            break;
+    }
+}
+
+// Two windows from scratch, about 0.5 s, then print what is attached.
+static void usb_bus_check(bool fs)
+{
+    memset(&usb_bus, 0, sizeof(usb_bus));
+    usb_bus.sampled_at = time_us_32() - USB_BUS_SAMPLE_US;
+
+    for (uint32_t start = time_us_32(); time_us_32() - start < 3 * USB_BUS_WINDOW * USB_BUS_SAMPLE_US;)
+    {
+        if (usb_bus_watch())
+        {
+            break;
+        }
+    }
+
+    usb_bus_print(fs);
+}
+
+// ---- PIO ---------------------------------------------------------------------------------------
+//
+// The sampler (tar_pio0) is exactly 32 instructions, entered at 31 and wrapping at 30, so it takes
+// a whole instruction memory: the mode's PIO block. The START synchroniser (tar_pio1) goes into
+// pio0 beside the logic analyzer and, on the Bus Pirate 5, the RGB LEDs (PIO_RGB_LED_PIO), on a state
+// machine neither of them uses (they run on 0 and 1 without claiming them). Only these two programs
+// are added and removed: clearing both blocks also wiped the LED program.
+
+#define USB_SAMPLER_PIO PIO_MODE_PIO
+#define USB_START_PIO pio0
+
+static uint16_t usb_sampler_instructions[32];
+static struct pio_program usb_sampler_program;
+static int usb_sampler_sm = -1;
+static int usb_start_sm = -1;
+static uint usb_start_offset;
+
+static void usb_pio_stop(void)
+{
+    if (usb_sampler_sm >= 0)
+    {
+        pio_sm_set_enabled(USB_SAMPLER_PIO, usb_sampler_sm, false);
+        pio_sm_unclaim(USB_SAMPLER_PIO, usb_sampler_sm);
+        pio_remove_program(USB_SAMPLER_PIO, &usb_sampler_program, 0);
+        usb_sampler_sm = -1;
+    }
+
+    if (usb_start_sm >= 0)
+    {
+        pio_sm_set_enabled(USB_START_PIO, usb_start_sm, false);
+        pio_sm_unclaim(USB_START_PIO, usb_start_sm);
+        pio_remove_program(USB_START_PIO, &tar_pio1_program, usb_start_offset);
+        usb_start_sm = -1;
+        gpio_set_function(START_INDEX, GPIO_FUNC_SIO);
+    }
+
+    bio_input(BIO_START_INDEX);
+}
+
+// Load and configure both state machines, stopped. False (with the reason printed) if a PIO is busy.
+static bool usb_pio_load(bool fs)
+{
+    float div = (float)clock_get_hz(clk_sys) / (fs ? 120000000.0f : 15000000.0f);
+    const uint16_t *speed = fs ? usb_full_speed_template_program_instructions
+                               : usb_low_speed_template_program_instructions;
+
+    memcpy(usb_sampler_instructions, tar_pio0_program_instructions, sizeof(usb_sampler_instructions));
+    usb_sampler_instructions[1] = speed[0];
+    usb_sampler_instructions[2] = speed[1];
+    usb_sampler_program = tar_pio0_program;
+    usb_sampler_program.instructions = usb_sampler_instructions;
+
+    // The mode's PIO belongs to the active mode: clear whatever an earlier one left in it.
+    for (int sm = 0; sm < 4; sm++)
+    {
+        if (pio_sm_is_claimed(USB_SAMPLER_PIO, sm))
+        {
+            pio_sm_set_enabled(USB_SAMPLER_PIO, sm, false);
+            pio_sm_unclaim(USB_SAMPLER_PIO, sm);
+        }
+    }
+    pio_clear_instruction_memory(USB_SAMPLER_PIO);
+#if PICO_PIO_USE_GPIO_BASE
+    pio_set_gpio_base(USB_SAMPLER_PIO, 0);
+#endif
+
+    int start_sm = !pio_sm_is_claimed(USB_START_PIO, 3) ? 3 : !pio_sm_is_claimed(USB_START_PIO, 2) ? 2 : -1;
+
+    if (start_sm < 0 || !pio_can_add_program(USB_START_PIO, &tar_pio1_program))
+    {
+        printf("pio0 has no free state machine or no room for the start program\r\n");
+        return false;
+    }
+
+    pio_add_program_at_offset(USB_SAMPLER_PIO, &usb_sampler_program, 0);
+    usb_sampler_sm = pio_claim_unused_sm(USB_SAMPLER_PIO, true);
+    usb_start_offset = pio_add_program(USB_START_PIO, &tar_pio1_program);
+    pio_sm_claim(USB_START_PIO, start_sm);
+    usb_start_sm = start_sm;
+
+    bio_input(BIO_DP_INDEX);
+    bio_input(BIO_DM_INDEX);
+    bio_input(BIO_TRIGGER_INDEX);
+    bio_output(BIO_START_INDEX);
+    bio_put(BIO_START_INDEX, false);
+
+    // A PIO keeps driving the level it last wrote: START stays high from the previous capture and
+    // would release the sampler before the synchroniser looks for an SE0.
+    pio_sm_set_pins_with_mask(USB_START_PIO, usb_start_sm, 0, 1u << START_INDEX);
+    pio_gpio_init(USB_START_PIO, START_INDEX);
+    pio_sm_set_consecutive_pindirs(USB_START_PIO, usb_start_sm, START_INDEX, 1, true);
+    pio_sm_set_consecutive_pindirs(USB_START_PIO, usb_start_sm, DP_INDEX, 2, false);
+    pio_sm_config c1 = tar_pio1_program_get_default_config(usb_start_offset);
+    sm_config_set_set_pins(&c1, START_INDEX, 1);
+    sm_config_set_in_shift(&c1, false, false, 0);
+    sm_config_set_out_shift(&c1, false, false, 0);
+    sm_config_set_in_pins(&c1, DP_INDEX);
+    sm_config_set_clkdiv(&c1, div);
+    pio_sm_init(USB_START_PIO, usb_start_sm, usb_start_offset, &c1);
+    pio_sm_set_enabled(USB_START_PIO, usb_start_sm, false);
+    pio_sm_clear_fifos(USB_START_PIO, usb_start_sm);
+    pio_sm_restart(USB_START_PIO, usb_start_sm);
+    pio_sm_clkdiv_restart(USB_START_PIO, usb_start_sm);
+
+    pio_sm_set_consecutive_pindirs(USB_SAMPLER_PIO, usb_sampler_sm, DP_INDEX, 3, false);
+    pio_sm_config c0 = tar_pio0_program_get_default_config(0);
+    sm_config_set_in_pins(&c0, DP_INDEX);
+    sm_config_set_jmp_pin(&c0, fs ? DP_INDEX : DM_INDEX);
+    sm_config_set_in_shift(&c0, false, true, 31);
+    sm_config_set_out_shift(&c0, false, false, 32);
+    sm_config_set_fifo_join(&c0, PIO_FIFO_JOIN_RX);
+    sm_config_set_clkdiv(&c0, div);
+    pio_sm_init(USB_SAMPLER_PIO, usb_sampler_sm, 0, &c0);
+    pio_sm_set_enabled(USB_SAMPLER_PIO, usb_sampler_sm, false);
+    pio_sm_clear_fifos(USB_SAMPLER_PIO, usb_sampler_sm);
+    pio_sm_restart(USB_SAMPLER_PIO, usb_sampler_sm);
+    pio_sm_clkdiv_restart(USB_SAMPLER_PIO, usb_sampler_sm);
+
+    return true;
+}
+
+// The sampler waits at its entry point (31) for START, which the synchroniser raises on a clean SE0.
+static void usb_pio_run(void)
+{
+    pio_sm_exec(USB_SAMPLER_PIO, usb_sampler_sm, pio_encode_jmp(31));
+    pio_sm_set_enabled(USB_SAMPLER_PIO, usb_sampler_sm, true);
+    pio_sm_exec(USB_SAMPLER_PIO, usb_sampler_sm, pio_encode_jmp(31));
+    pio_sm_clear_fifos(USB_SAMPLER_PIO, usb_sampler_sm);
+    pio_sm_set_enabled(USB_START_PIO, usb_start_sm, true);
 }
 
 static void change_setting(char *name, int *value, int count, const char *str[])
@@ -1037,143 +1380,79 @@ static void print_help(void)
            display_fold_str[g_display_fold]);
 }
 
-void usb_pio1_irq(void)
+static void cap(void)
 {
-    bio_put(BIO_START_INDEX, true);
-    printf("PIO1 IRQ!\r\n");
-    if (pio1_hw->irq & 1)
-    {
-        printf("    IRQ 1 !\r\n");
-        pio1_hw->irq = 1;
-    }
-    else if (pio1_hw->irq & 2)
-    {
-        printf("    IRQ 2 !\r\n");
-        pio1_hw->irq = 2;
-    }
-}
+    bool fs = (g_capture_speed == CaptureSpeed_Full);
 
-static volatile bool keylog_active;
-static void keylog_drain_fifo(void);
+    usb_clock_begin(fs);
 
-void usb_pio0_irq(void)
-{
-    if (keylog_active)
+    // a failure leaves the previous capture as it was, for 'b'
+    if (!usb_pio_load(fs))
     {
-        keylog_drain_fifo();
+        usb_pio_stop();
+        usb_clock_end();
         return;
     }
-    printf("PIO0 IRQ!\r\n");
-    if (pio0_hw->irq & 1)
-    {
-        printf("    IRQ 1 !\r\n");
-        pio0_hw->irq = 1;
-    }
-    else if (pio0_hw->irq & 2)
-    {
-        printf("    IRQ 1 !\r\n");
-        pio0_hw->irq = 2;
-    }
-}
 
-void cap()
-{
-    g_buffer_info.fs = (g_capture_speed == CaptureSpeed_Full);
+    g_buffer_info.fs = fs;
     g_buffer_info.trigger = (g_capture_trigger == CaptureTrigger_Enabled);
     g_buffer_info.limit = capture_limit_value();
-
-    uint16_t tar_pio0_program_instructions_current[32] = {0};
-    struct pio_program tar_pio0_program_current = {0};
-
-    memcpy(&tar_pio0_program_current, &tar_pio0_program, sizeof(tar_pio0_program_current));
-    tar_pio0_program_current.instructions = tar_pio0_program_instructions_current,
-    memcpy(tar_pio0_program_instructions_current, tar_pio0_program_instructions,
-            tar_pio0_program.length * sizeof(uint16_t));
-
-    pio_destroy();
-
-    const uint16_t *instructions = g_buffer_info.fs ? usb_full_speed_template_program_instructions
-                                                    : usb_low_speed_template_program_instructions;
-    pio_add_program(pio0,
-                    g_buffer_info.fs ? &usb_full_speed_template_program : &usb_low_speed_template_program);
-    tar_pio0_program_instructions_current[1] = instructions[0];
-    tar_pio0_program_instructions_current[2] = instructions[1];
-
-    float target_frequency_hz = g_buffer_info.fs ? 120000000.0f : 15000000.0f;
-    float sys_clk_hz = (float)clock_get_hz(clk_sys);
-    float div = sys_clk_hz / target_frequency_hz;
-
-    uint jmp_pin = g_buffer_info.fs ? DP_INDEX : DM_INDEX;
-
-    pio_destroy();
-
-    bio_input(BIO_DP_INDEX);
-    bio_input(BIO_DM_INDEX);
-    bio_input(BIO_TRIGGER_INDEX);
-    bio_output(BIO_START_INDEX);
-    bio_put(BIO_START_INDEX, false);
-
-    pio_gpio_init(pio1, START_INDEX);
-    pio_set_irq0_source_mask_enabled(pio1, 0x0F00, true);
-    irq_set_exclusive_handler(PIO1_IRQ_0, usb_pio1_irq);
-    irq_set_enabled(PIO1_IRQ_0, true);
-    int pio1_sm = pio_claim_unused_sm(pio1, true);
-    uint offset_pio1 = pio_add_program(pio1, &tar_pio1_program);
-    pio_sm_set_consecutive_pindirs(pio1, pio1_sm, START_INDEX, 1, true);
-    pio_sm_set_consecutive_pindirs(pio1, pio1_sm, DP_INDEX, 2, false);
-    pio_sm_config c_pio1 = tar_pio1_program_get_default_config(offset_pio1);
-    sm_config_set_set_pins(&c_pio1, START_INDEX, 1);
-    sm_config_set_in_shift(&c_pio1, false, false, 0);
-    sm_config_set_out_shift(&c_pio1, false, false, 0);
-    sm_config_set_in_pins(&c_pio1, DP_INDEX);
-    sm_config_set_clkdiv(&c_pio1, div);
-    pio_sm_init(pio1, pio1_sm, offset_pio1, &c_pio1);
-    pio_sm_set_enabled(pio1, pio1_sm, false);
-    pio_sm_clear_fifos(pio1, pio1_sm);
-    pio_sm_restart(pio1, pio1_sm);
-    pio_sm_clkdiv_restart(pio1, pio1_sm);
-
-    pio_set_irq0_source_mask_enabled(pio0, 0x0F00, true);
-    irq_set_exclusive_handler(PIO0_IRQ_0, usb_pio0_irq);
-    irq_set_enabled(PIO0_IRQ_0, true);
-    int pio0_sm = pio_claim_unused_sm(pio0, true);
-    uint offset_pio0 = pio_add_program(pio0, &tar_pio0_program_current);
-    pio_sm_set_consecutive_pindirs(pio0, pio0_sm, DP_INDEX, 3, false);
-    pio_sm_config c_pio0 = tar_pio0_program_get_default_config(offset_pio0);
-    sm_config_set_in_pins(&c_pio0, DP_INDEX);
-    sm_config_set_jmp_pin(&c_pio0, jmp_pin);
-    sm_config_set_in_shift(&c_pio0, false, true, 31);
-    sm_config_set_out_shift(&c_pio0, false, false, 32);
-    sm_config_set_fifo_join(&c_pio0, PIO_FIFO_JOIN_RX);
-    sm_config_set_clkdiv(&c_pio0, div);
-    pio_sm_init(pio0, pio0_sm, offset_pio0, &c_pio0);
-    pio_sm_set_enabled(pio0, pio0_sm, false);
-    pio_sm_clear_fifos(pio0, pio0_sm);
-    pio_sm_restart(pio0, pio0_sm);
-    pio_sm_clkdiv_restart(pio0, pio0_sm);
-
-    int index = 0;
-    int packet = 0;
-
-    index = 2;
-    packet = 0;
     g_buffer_info.count = 0;
+
+    int index = 2;
+    int packet = 0;
+    uint8_t expected = fs ? UsbBus_Full : UsbBus_Low;
+    uint8_t known = usb_bus.state;
+
     memset((void *)g_buffer, 0, BUFFER_SIZE);
 
-    set_error(false);
+    // Nothing to capture at this speed, as far as the last look at the bus says: a full speed bus
+    // never gives the start synchroniser the long SE0 a low speed capture waits for, so the capture
+    // stays empty until 'p'. Say why before it starts.
+    if (known != UsbBus_Unknown && known != expected)
+    {
+        usb_bus_print(fs);
+    }
 
-    wait_for_trigger();
+    if (!wait_for_trigger())
+    {
+        usb_pio_stop();
+        usb_clock_end();
+        return;
+    }
 
-    pio_sm_exec(pio0, pio0_sm, pio_encode_jmp(31));
-    pio_sm_set_enabled(pio0, pio0_sm, true);
-    pio_sm_exec(pio0, pio0_sm, pio_encode_jmp(31));
-    pio_sm_clear_fifos(pio0, pio0_sm);
-    pio_sm_set_enabled(pio1, pio1_sm, true);
+    usb_pio_run();
 
     uint32_t base_time = 0;
+    uint32_t idle = 0;
+
+    // a fresh window, the last state kept for the next capture
+    memset(usb_bus.counts, 0, sizeof(usb_bus.counts));
+    usb_bus.samples = 0;
+    usb_bus.candidate = UsbBus_Unknown;
+
     while (1)
     {
-        uint32_t v = pio_sm_get_blocking(pio0, pio0_sm);
+        // A quiet bus (nothing attached, a suspended host) never fills the buffer: 'p' ends the capture.
+        if (pio_sm_is_rx_fifo_empty(USB_SAMPLER_PIO, usb_sampler_sm))
+        {
+            usb_bus_watch(); // only samples; printing here could overrun the PIO FIFO
+
+            if (++idle >= 4096)
+            {
+                idle = 0;
+
+                if (stop_requested())
+                {
+                    printf("capture stopped\r\n");
+                    break;
+                }
+            }
+
+            continue;
+        }
+
+        uint32_t v = pio_sm_get(USB_SAMPLER_PIO, usb_sampler_sm);
 
         if (v & 0x80000000)
         {
@@ -1191,7 +1470,9 @@ void cap()
         }
         else
         {
-            if (index < (BUFFER_SIZE - 4))
+            // in words: comparing the word index with BUFFER_SIZE (bytes) let a busy bus write up to
+            // 384 KB past the end of the 128 KB buffer
+            if (index < (BUFFER_WORDS - 4))
             {
                 g_buffer[index++] = v;
             }
@@ -1201,12 +1482,50 @@ void cap()
             }
         }
     }
+
+    usb_pio_stop();
+    usb_clock_end();
     process_buffer();
+
+    if (usb_bus.state != UsbBus_Unknown && usb_bus.state != expected && usb_bus.state != known)
+    {
+        usb_bus_print(fs);
+    }
 }
 
-#define KEYLOG_BATCH_PACKETS 256
-#define KEYLOG_TOTAL_WORDS (BUFFER_SIZE / (int)sizeof(uint32_t))
-#define KEYLOG_HALF_WORDS (KEYLOG_TOTAL_WORDS / 2)
+// ---- Keylogger ---------------------------------------------------------------------------------
+//
+// okhi drains the sampler with one core and decodes with the other. Here the Bus Pirate keeps core
+// 1, so a DMA channel drains the sampler's RX FIFO into a ring in the big buffer and the CPU decodes
+// the ring at its own pace, printing included: nothing in the capture path waits for the CPU. The
+// ring is 8192 words, about 2.5 s of a keyboard polled on two endpoints every 8 ms (about 3300
+// words a second: a keep-alive every ms, an IN and its NAK or DATA and ACK per poll).
+//
+// The ring is decoded as a stream. Data words (bit 31 clear) gather until a size word (bit 31 set)
+// closes the packet, which must bring exactly size / 31 + 1 data words: a lost word fails that check
+// instead of shifting the packets after it. The IN that addresses a report and the report itself are
+// paired across the whole stream: the old keylogger decoded batches of 256 packets with the pairing
+// reset at each one, and lost the report whenever its IN ended a batch (4 of 1175 reports on the
+// bench, 2026-11-03).
+
+#define KL_RING_BITS 15 // the largest ring a DMA channel can wrap: 32 KB
+#define KL_RING_BYTES (1u << KL_RING_BITS)
+#define KL_RING_WORDS (KL_RING_BYTES / 4)
+#define KL_RING_MARGIN 1024 // resynchronise this far before the DMA could overwrite unread words
+#define KL_PKT_WORDS 40     // the longest packet decoded; a low speed packet takes 5
+#define KL_PKT_BYTES ((KL_PKT_WORDS * 31) / 8 + 1)
+
+#if PICO_RP2350
+// re-triggers itself at the end of the count: the channel never stops
+#define KL_DMA_COUNT_BITS DMA_CH0_TRANS_COUNT_COUNT_BITS
+#define KL_DMA_COUNT                                                                                                   \
+    ((DMA_CH0_TRANS_COUNT_MODE_VALUE_TRIGGER_SELF << DMA_CH0_TRANS_COUNT_MODE_LSB) | DMA_CH0_TRANS_COUNT_COUNT_BITS)
+#else
+// 2^32 - 1 words, weeks of traffic; the main loop re-arms the channel if it ever stops
+#define KL_DMA_COUNT_BITS 0xffffffffu
+#define KL_DMA_COUNT 0xffffffffu
+#endif
+
 #define KEYLOG_HID_MAX 0x68
 #define KEYLOG_TRACKER_SIZE 320
 
@@ -1246,59 +1565,48 @@ static const char *const keylog_hid_names[KEYLOG_HID_MAX] = {
     [0x52] = "<UP>", [0x53] = "<NUM>", [0x58] = "<KPENTER>", [0x65] = "<APPS>",
 };
 
-static volatile uint32_t *keylog_fill = NULL;
-static volatile uint32_t *keylog_half0 = NULL;
-static volatile uint32_t *keylog_half1 = NULL;
-static volatile int keylog_index = 0;
-static volatile int keylog_packet = 0;
-static volatile int keylog_count = 0;
-static volatile bool keylog_ready = false;
-static volatile int keylog_sm = 0;
-static volatile uint32_t keylog_base_time = 0;
-static volatile unsigned int keylog_dropped = 0;
+// Per endpoint: the last report seen (repeats are held back) and the keys of the last report that
+// was a keyboard report (a key is new only against these). One shared state read the empty report a
+// second interface sends at every change of the first as "all keys up", and typed every overlapped
+// key twice ("abcd" gave 8 characters with okhi-kbd's two-interface format, 2026-11-03).
+typedef struct
+{
+    bool seen;
+    uint8_t addr;
+    uint8_t last[8];
+    uint8_t held[6];
+} keylog_ep_t;
 
-static uint8_t keylog_prev_report[8];
+static struct
+{
+    volatile uint32_t *ring;
+    int dma;
+    uint64_t base;      // words the DMA wrote in completed counts
+    uint32_t last_left; // transfer count at the previous look
+    uint64_t read;      // words decoded
+    uint32_t pkt[KL_PKT_WORDS];
+    int pkt_words;
+    bool resync; // drop words until the next size word
+    bool in_pending;
+    uint8_t in_addr;
+    uint8_t in_ep;
+    keylog_ep_t eps[16];
+    bool caps;
+    unsigned int reports;
+    unsigned int repeats;
+    unsigned int ep0;
+    unsigned int ignored;
+    unsigned int packets;
+    unsigned int resets;
+    unsigned int errors;
+    unsigned int error_kinds[6]; // by the highest CAPTURE_ERROR_* bit: stuffing, CRC, PID, SYNC, bit count, length
+    unsigned int framing;
+    unsigned int peak;
+    unsigned int lost;
+} kl;
+
 static unsigned char keylog_tracker[KEYLOG_TRACKER_SIZE];
 static unsigned int keylog_tracker_index = 0;
-static unsigned int keylog_reports = 0;
-static bool keylog_caps = false;
-
-static void keylog_drain_fifo(void)
-{
-    while (!pio_sm_is_rx_fifo_empty(pio0, keylog_sm))
-    {
-        uint32_t v = pio_sm_get(pio0, keylog_sm);
-
-        if (keylog_ready)
-        {
-            keylog_dropped++;
-            continue;
-        }
-
-        if (v & 0x80000000)
-        {
-            keylog_fill[keylog_packet + 0] = 0xffffffff - v;
-            keylog_base_time = keylog_base_time ? keylog_base_time : timer_hw->timelr;
-            keylog_fill[keylog_packet + 1] = timer_hw->timelr - keylog_base_time;
-            keylog_count++;
-            keylog_packet = keylog_index;
-            keylog_index += 2;
-
-            if (keylog_count >= KEYLOG_BATCH_PACKETS)
-            {
-                keylog_ready = true;
-            }
-        }
-        else if (keylog_index < (KEYLOG_HALF_WORDS - 4))
-        {
-            keylog_fill[keylog_index++] = v;
-        }
-        else
-        {
-            keylog_ready = true;
-        }
-    }
-}
 
 static void keylog_print_tracker(void)
 {
@@ -1313,40 +1621,96 @@ static void keylog_emit(char c)
     keylog_print_tracker();
 }
 
-static void keylog_report(const uint8_t *report)
+// A boot keyboard report: the reserved byte is 0, no error code (1 rollover, 2 POST fail, 3 undefined),
+// no modifier usage in the key array, no key twice. Holes between keys are fine: plenty of keyboards
+// keep a key in a fixed slot. Anything else is another interface or the phantom state, and decoding
+// it would emit keys nobody pressed.
+static bool keylog_plausible(const uint8_t *b)
 {
-    bool shift = (report[0] & 0x22) != 0;
+    if (b[1] != 0)
+    {
+        return false;
+    }
 
-    printf("[0x%04X] IN: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\r\n", keylog_reports, report[0],
-           report[1], report[2], report[3], report[4], report[5], report[6], report[7]);
-    keylog_reports++;
+    for (int i = 2; i < 8; i++)
+    {
+        if (b[i] == 0)
+        {
+            continue;
+        }
+
+        if (b[i] < 0x04 || b[i] >= 0xE0)
+        {
+            return false;
+        }
+
+        for (int j = 2; j < i; j++)
+        {
+            if (b[j] == b[i])
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+// One report of an interrupt endpoint. Returns true if it printed (the DMA moved on meanwhile).
+static bool keylog_report(uint8_t addr, uint8_t ep, const uint8_t *report)
+{
+    // Endpoint 0 carries the enumeration, 8 bytes at a time, never a keystroke: decoded, one
+    // re-enumeration put 41 characters of descriptors in the tracker (2026-11-03).
+    if (ep == 0)
+    {
+        kl.ep0++;
+        return false;
+    }
+
+    keylog_ep_t *e = &kl.eps[ep & 0x0f];
+
+    if (e->seen && e->addr != addr)
+    {
+        memset(e->held, 0, sizeof(e->held));
+    }
+    else if (e->seen && memcmp(e->last, report, 8) == 0)
+    {
+        // an idle rate repeat, or a resend after a lost ACK: no keystroke in it
+        kl.repeats++;
+        return false;
+    }
+
+    e->seen = true;
+    e->addr = addr;
+    memcpy(e->last, report, 8);
+
+    printf("[0x%04X] IN 0x%02X/%X: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X", kl.reports, addr, ep,
+           report[0], report[1], report[2], report[3], report[4], report[5], report[6], report[7]);
+    kl.reports++;
+
+    if (!keylog_plausible(report))
+    {
+        kl.ignored++;
+        printf(" %s\r\n-----------\r\n", report[2] == 0x01 ? "<ROLLOVER>" : "<IGNORED>");
+        return true;
+    }
+
+    printf("\r\n");
+
+    bool shift = (report[0] & 0x22) != 0;
 
     for (int i = 2; i < 8; i++)
     {
         uint8_t k = report[i];
 
-        if (k < 4 || k >= KEYLOG_HID_MAX)
-        {
-            continue;
-        }
-
-        bool held = false;
-        for (int j = 2; j < 8; j++)
-        {
-            if (keylog_prev_report[j] == k)
-            {
-                held = true;
-                break;
-            }
-        }
-        if (held)
+        if (k < 4 || k >= KEYLOG_HID_MAX || memchr(e->held, k, sizeof(e->held)))
         {
             continue;
         }
 
         if (k == 0x39)
         {
-            keylog_caps = !keylog_caps;
+            kl.caps = !kl.caps;
             printf("<CAPS>");
             continue;
         }
@@ -1355,7 +1719,7 @@ static void keylog_report(const uint8_t *report)
 
         if (c >= 'a' && c <= 'z')
         {
-            if (shift != keylog_caps)
+            if (shift != kl.caps)
             {
                 c = (char)(c - 32);
             }
@@ -1381,207 +1745,242 @@ static void keylog_report(const uint8_t *report)
 
     printf("-----------\r\n");
 
-    memcpy(keylog_prev_report, report, 8);
+    memcpy(e->held, &report[2], sizeof(e->held));
+    return true;
 }
 
-static void keylog_scan_buffer(void)
+// One word of the stream. Returns true if a report was printed.
+static bool keylog_word(uint32_t w)
 {
-    int ptr = 0;
-    bool last_in = false;
-
-    for (int i = 0; i < g_buffer_info.count; i++)
+    if (!(w & 0x80000000))
     {
-        uint32_t flags = g_buffer[ptr];
-        int size = flags & CAPTURE_SIZE_MASK;
-        const uint8_t *payload = (const uint8_t *)&g_buffer[ptr + 2];
-        int pid = payload[1] & 0x0f;
-
-        ptr += (((size + 3) / 4) + 2);
-
-        if (flags & (CAPTURE_ERROR_MASK | CAPTURE_RESET | CAPTURE_LS_SOF))
+        if (kl.pkt_words < KL_PKT_WORDS)
         {
+            kl.pkt[kl.pkt_words] = w;
+        }
+
+        kl.pkt_words++;
+        return false;
+    }
+
+    uint32_t size = 0xffffffff - w;
+    int words = kl.pkt_words;
+
+    kl.pkt_words = 0;
+
+    if (kl.resync)
+    {
+        // the end of a packet whose first words were lost
+        kl.resync = false;
+        return false;
+    }
+
+    kl.packets++;
+
+    if (size == 0)
+    {
+        // a bus reset: a sustained SE0 with no samples
+        kl.resets++;
+        kl.in_pending = false;
+        if (words)
+        {
+            kl.framing++;
+        }
+        return false;
+    }
+
+    if (size > 0xffff || words > KL_PKT_WORDS || words != (int)(size / 31) + 1)
+    {
+        kl.framing++;
+        kl.in_pending = false;
+        return false;
+    }
+
+    if (size == 1)
+    {
+        // a low speed keep-alive
+        return false;
+    }
+
+    uint8_t out[KL_PKT_BYTES];
+    uint32_t r = decode_samples(kl.pkt, words, size - 1, out, sizeof(out));
+    int n = r & CAPTURE_SIZE_MASK;
+
+    uint32_t error = (r & ~CAPTURE_SIZE_MASK) | check_packet(out, n, false);
+
+    if (error)
+    {
+        // as in okhi: a damaged packet leaves the pairing alone, an IN still waits for its DATA
+        kl.errors++;
+        kl.error_kinds[__builtin_clz(error)]++;
+        return false;
+    }
+
+    int pid = out[1] & 0x0f;
+
+    if (pid == Pid_In)
+    {
+        int v = (out[3] << 8) | out[2];
+        kl.in_addr = v & 0x7f;
+        kl.in_ep = (v >> 7) & 0x0f;
+        kl.in_pending = true;
+        return false;
+    }
+
+    bool in_pending = kl.in_pending;
+    kl.in_pending = false;
+
+    if (in_pending && (pid == Pid_Data0 || pid == Pid_Data1) && n - 4 == 8)
+    {
+        return keylog_report(kl.in_addr, kl.in_ep, &out[2]);
+    }
+
+    return false;
+}
+
+// Words the DMA has written since the keylogger started.
+static uint64_t keylog_written(void)
+{
+    uint32_t left = dma_hw->ch[kl.dma].transfer_count & KL_DMA_COUNT_BITS;
+
+    if (left > kl.last_left)
+    {
+        // the count started again: the channel re-triggered (RP2350) or was re-armed (RP2040)
+        kl.base += KL_DMA_COUNT_BITS;
+    }
+
+    kl.last_left = left;
+    return kl.base + (KL_DMA_COUNT_BITS - left);
+}
+
+static void keylog_drain(void)
+{
+    uint64_t written = keylog_written();
+
+    while (kl.read < written)
+    {
+        uint64_t lag = written - kl.read;
+
+        if (lag > kl.peak)
+        {
+            kl.peak = (unsigned int)lag;
+        }
+
+        if (lag > KL_RING_WORDS - KL_RING_MARGIN)
+        {
+            // printing fell behind by most of the ring: skip ahead and lose words, not the ring
+            uint64_t to = written - KL_RING_WORDS / 2;
+            kl.lost += (unsigned int)(to - kl.read);
+            kl.read = to;
+            kl.pkt_words = 0;
+            kl.resync = true;
+            kl.in_pending = false;
             continue;
         }
 
-        if (pid == Pid_In)
+        uint32_t w = kl.ring[kl.read & (KL_RING_WORDS - 1)];
+        kl.read++;
+
+        if (keylog_word(w))
         {
-            last_in = true;
-        }
-        else
-        {
-            if (last_in && (pid == Pid_Data0 || pid == Pid_Data1) && (size - 4) == 8)
-            {
-                keylog_report(&payload[2]);
-            }
-            last_in = false;
+            written = keylog_written();
         }
     }
-}
 
-static int keylog_pio_start(int *out_pio1_sm)
-{
-    uint16_t tar_pio0_program_instructions_current[32] = {0};
-    struct pio_program tar_pio0_program_current = {0};
-
-    memcpy(&tar_pio0_program_current, &tar_pio0_program, sizeof(tar_pio0_program_current));
-    tar_pio0_program_current.instructions = tar_pio0_program_instructions_current,
-    memcpy(tar_pio0_program_instructions_current, tar_pio0_program_instructions,
-           tar_pio0_program.length * sizeof(uint16_t));
-
-    pio_destroy();
-
-    const uint16_t *instructions = usb_low_speed_template_program_instructions;
-    pio_add_program(pio0, &usb_low_speed_template_program);
-    tar_pio0_program_instructions_current[1] = instructions[0];
-    tar_pio0_program_instructions_current[2] = instructions[1];
-
-    float div = (float)clock_get_hz(clk_sys) / 15000000.0f;
-
-    pio_destroy();
-
-    bio_input(BIO_DP_INDEX);
-    bio_input(BIO_DM_INDEX);
-    bio_input(BIO_TRIGGER_INDEX);
-    bio_output(BIO_START_INDEX);
-    bio_put(BIO_START_INDEX, false);
-
-    pio_gpio_init(pio1, START_INDEX);
-    int pio1_sm = pio_claim_unused_sm(pio1, true);
-    uint offset_pio1 = pio_add_program(pio1, &tar_pio1_program);
-    pio_sm_set_consecutive_pindirs(pio1, pio1_sm, START_INDEX, 1, true);
-    pio_sm_set_consecutive_pindirs(pio1, pio1_sm, DP_INDEX, 2, false);
-    pio_sm_config c_pio1 = tar_pio1_program_get_default_config(offset_pio1);
-    sm_config_set_set_pins(&c_pio1, START_INDEX, 1);
-    sm_config_set_in_shift(&c_pio1, false, false, 0);
-    sm_config_set_out_shift(&c_pio1, false, false, 0);
-    sm_config_set_in_pins(&c_pio1, DP_INDEX);
-    sm_config_set_clkdiv(&c_pio1, div);
-    pio_sm_init(pio1, pio1_sm, offset_pio1, &c_pio1);
-    pio_sm_set_enabled(pio1, pio1_sm, false);
-    pio_sm_clear_fifos(pio1, pio1_sm);
-    pio_sm_restart(pio1, pio1_sm);
-    pio_sm_clkdiv_restart(pio1, pio1_sm);
-
-    int pio0_sm = pio_claim_unused_sm(pio0, true);
-    uint offset_pio0 = pio_add_program(pio0, &tar_pio0_program_current);
-    pio_sm_set_consecutive_pindirs(pio0, pio0_sm, DP_INDEX, 3, false);
-    pio_sm_config c_pio0 = tar_pio0_program_get_default_config(offset_pio0);
-    sm_config_set_in_pins(&c_pio0, DP_INDEX);
-    sm_config_set_jmp_pin(&c_pio0, DM_INDEX);
-    sm_config_set_in_shift(&c_pio0, false, true, 31);
-    sm_config_set_out_shift(&c_pio0, false, false, 32);
-    sm_config_set_fifo_join(&c_pio0, PIO_FIFO_JOIN_RX);
-    sm_config_set_clkdiv(&c_pio0, div);
-    pio_sm_init(pio0, pio0_sm, offset_pio0, &c_pio0);
-    pio_sm_set_enabled(pio0, pio0_sm, false);
-    pio_sm_clear_fifos(pio0, pio0_sm);
-    pio_sm_restart(pio0, pio0_sm);
-    pio_sm_clkdiv_restart(pio0, pio0_sm);
-
-    *out_pio1_sm = pio1_sm;
-    return pio0_sm;
+#if !PICO_RP2350
+    if (!dma_channel_is_busy(kl.dma))
+    {
+        dma_channel_set_trans_count(kl.dma, KL_DMA_COUNT, true);
+    }
+#endif
 }
 
 static void keylog_run(void)
 {
-    volatile uint32_t *g_buffer_base = g_buffer;
-    bool saved_fs = g_buffer_info.fs;
-    int pio1_sm = 0;
-
     printf("\r\nUSB low speed keylogger started, press 'q' to exit\r\n"
            "only USB 1.1 low speed boot protocol keyboards are decoded\r\n\r\n");
 
-    keylog_half0 = g_buffer_base;
-    keylog_half1 = g_buffer_base + KEYLOG_HALF_WORDS;
-
-    memset(keylog_prev_report, 0, sizeof(keylog_prev_report));
+    memset(&kl, 0, sizeof(kl));
+    memset(&usb_bus, 0, sizeof(usb_bus));
     memset(keylog_tracker, 0, sizeof(keylog_tracker));
     keylog_tracker_index = 0;
-    keylog_reports = 0;
-    keylog_caps = false;
-    keylog_dropped = 0;
 
-    keylog_fill = keylog_half0;
-    keylog_index = 2;
-    keylog_packet = 0;
-    keylog_count = 0;
-    keylog_ready = false;
-    keylog_base_time = 0;
+    // the ring: the 32 KB aligned block inside the 128 KB big buffer (a DMA ring wraps on its size)
+    kl.ring = (volatile uint32_t *)(((uintptr_t)g_buffer + KL_RING_BYTES - 1) & ~(uintptr_t)(KL_RING_BYTES - 1));
+    kl.dma = dma_claim_unused_channel(false);
 
+    if (kl.dma < 0)
+    {
+        printf("no free DMA channel\r\n");
+        return;
+    }
+
+    usb_clock_begin(false);
+
+    if (!usb_pio_load(false))
+    {
+        usb_pio_stop();
+        usb_clock_end();
+        dma_channel_unclaim(kl.dma);
+        return;
+    }
+
+    // the ring overwrites the buffer of the last 's' capture
     g_buffer_info.fs = false;
+    g_buffer_info.count = 0;
 
-    int pio0_sm = keylog_pio_start(&pio1_sm);
-    keylog_sm = pio0_sm;
+    dma_channel_config c = dma_channel_get_default_config(kl.dma);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+    channel_config_set_read_increment(&c, false);
+    channel_config_set_write_increment(&c, true);
+    channel_config_set_ring(&c, true, KL_RING_BITS);
+    channel_config_set_dreq(&c, pio_get_dreq(USB_SAMPLER_PIO, usb_sampler_sm, false));
+    channel_config_set_high_priority(&c, true);
+    kl.last_left = KL_DMA_COUNT_BITS;
+    dma_channel_configure(kl.dma, &c, kl.ring, &USB_SAMPLER_PIO->rxf[usb_sampler_sm], KL_DMA_COUNT, true);
 
-    pio_set_irq0_source_mask_enabled(pio0, 0x0F00, false);
-    pio_set_irq0_source_mask_enabled(pio1, 0x0F00, false);
-    irq_set_enabled(PIO1_IRQ_0, false);
-    pio0_hw->irq = 0x0f;
-    pio1_hw->irq = 0x0f;
-
-    irq_set_exclusive_handler(PIO0_IRQ_0, usb_pio0_irq);
-    irq_set_enabled(PIO0_IRQ_0, true);
-
-    keylog_active = true;
-
-    pio_sm_exec(pio0, pio0_sm, pio_encode_jmp(31));
-    pio_sm_set_enabled(pio0, pio0_sm, true);
-    pio_sm_exec(pio0, pio0_sm, pio_encode_jmp(31));
-    pio_sm_clear_fifos(pio0, pio0_sm);
-    pio_set_irq0_source_enabled(pio0, (enum pio_interrupt_source)(pis_sm0_rx_fifo_not_empty + pio0_sm), true);
-    pio_sm_set_enabled(pio1, pio1_sm, true);
+    usb_pio_run();
 
     char cmd = '\0';
     while (1)
     {
-        if (keylog_ready)
+        keylog_drain();
+
+        if (usb_bus_watch())
         {
-            uint32_t irq_state = save_and_disable_interrupts();
-            volatile uint32_t *done = keylog_fill;
-            int count = keylog_count;
-
-            keylog_fill = (done == keylog_half0) ? keylog_half1 : keylog_half0;
-            keylog_index = 2;
-            keylog_packet = 0;
-            keylog_count = 0;
-            keylog_base_time = 0;
-            keylog_ready = false;
-            restore_interrupts(irq_state);
-
-            if (count > 0)
-            {
-                g_buffer = done;
-                g_buffer_info.count = count;
-                process_buffer();
-                keylog_scan_buffer();
-            }
+            usb_bus_print(false);
         }
 
-        if (rx_fifo_try_get(&cmd))
+        if (rx_fifo_try_get(&cmd) && (cmd == 'q' || cmd == 'Q'))
         {
-            if (cmd == 'q' || cmd == 'Q')
-            {
-                break;
-            }
+            break;
         }
     }
 
-    keylog_active = false;
-    pio_set_irq0_source_enabled(pio0, (enum pio_interrupt_source)(pis_sm0_rx_fifo_not_empty + pio0_sm), false);
-    irq_set_enabled(PIO0_IRQ_0, false);
-    pio_sm_set_enabled(pio0, pio0_sm, false);
-    pio_sm_set_enabled(pio1, pio1_sm, false);
-    pio_destroy();
-
-    g_buffer = g_buffer_base;
-    g_buffer_info.count = 0;
-    g_buffer_info.fs = saved_fs;
+    usb_pio_stop();
+    // clears EN before the abort, the sequence erratum RP2350-E5 asks for: a self-triggering
+    // channel aborted with EN set may trigger again. Not seen with a plain abort either (three 's'
+    // captures after 'k', no error, 2026-11-03), but it would steal the sampler's FIFO words.
+    dma_channel_cleanup(kl.dma);
+    dma_channel_unclaim(kl.dma);
+    usb_clock_end();
 
     printf("\r\n\r\nkeys captured: %s\r\n", keylog_tracker);
-    if (keylog_dropped)
+    printf("reports: %u\r\n", kl.reports);
+    printf("repeats held back: %u\r\n", kl.repeats);
+    printf("endpoint 0 data: %u\r\n", kl.ep0);
+    printf("reports ignored: %u\r\n", kl.ignored);
+    printf("packets: %u\r\n", kl.packets);
+    printf("bus resets: %u\r\n", kl.resets);
+    printf("packet errors: %u\r\n", kl.errors);
+    if (kl.errors)
     {
-        printf("words dropped while decoding: %u\r\n", keylog_dropped);
+        printf("  stuffing %u, crc %u, pid %u, sync %u, bit count %u, length %u\r\n", kl.error_kinds[0],
+               kl.error_kinds[1], kl.error_kinds[2], kl.error_kinds[3], kl.error_kinds[4], kl.error_kinds[5]);
     }
+    printf("framing errors: %u\r\n", kl.framing);
+    printf("ring peak backlog (words): %u\r\n", kl.peak);
+    printf("words lost: %u\r\n", kl.lost);
     printf("keylogger stopped\r\n");
 }
 
@@ -1592,28 +1991,23 @@ void usb_handler(struct command_result* res) {
         return;
     }
 
-    bool success = set_sys_clock_khz(120000, true);
-    stdio_init_all();
-    sleep_ms(500);
+    // psucmd_enable() also labels the VOUT pin, which psu_enable() alone left at OFF with 3.3 V on it.
+    // The buffers must run at 3.3 V: at 5 V their input high threshold is above a USB high.
+    uint32_t result = PSU_OK;
 
-    uint32_t result = psu_enable(3.33f, 400.0f, false, 100);
+    if (!psu_status.enabled || fabsf(psu_status.voltage_requested_float - 3.33f) > 0.05f)
+    {
+        result = psucmd_enable(3.33f, 400.0f, false, 100);
+    }
 
     if (result) {
             printf("\r\nPSU ERROR CODE %d\r\n", result);
     } else {
             printf("\r\nPSU 3V3 Enabled\r\n");
-        }
-
-    if (success)
-    {
-        printf("Clock successfully set to 120 MHz\r\n");
-    }
-    else
-    {
-        printf("Failed to set the clock\r\n");
     }
 
     print_help();
+    usb_bus_check(g_capture_speed == CaptureSpeed_Full);
 
     char cmd = '\0';
     do
@@ -1638,13 +2032,13 @@ void usb_handler(struct command_result* res) {
 
         if (cmd == 's')
         {
-            printf("capture start!\r\n");
+            printf("capture start! 'p' to stop\r\n");
             cap();
             printf("capture end!, press 'b' to show the buffer\r\n");
         }
         else if (cmd == 'p')
         {
-            printf("capture stop is not implemented yet!\r\n");
+            printf("no capture running\r\n");
         }
         else if (cmd == 'b')
         {
@@ -1734,6 +2128,8 @@ uint32_t usb_setup_exc(void) {
 }
 
 void usb_cleanup(void) {
+    usb_pio_stop();
+
     if (g_buffer)
     {
         mem_free((uint8_t*)g_buffer);
@@ -1749,9 +2145,7 @@ void usb_cleanup(void) {
     system_bio_update_purpose_and_label(false, M_SPI_CS, BP_PIN_MODE, 0);
     bio_init();
 
-    psu_disable();
-
-    pio_destroy();
+    psucmd_disable();
 }
 
 bool usb_preflight_sanity_check(void){

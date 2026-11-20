@@ -154,11 +154,20 @@ void irio_pio_rx_deinit(uint pin_num){
     pio_sm_restart(pio_config_rx_space.pio, pio_config_rx_space.sm);
 }
 
+//wait up to timeout_us for the transmitter to send everything in its FIFO
+static bool irio_pio_tx_wait_us(uint32_t timeout_us){
+    absolute_time_t end = make_timeout_time_us(timeout_us);
+    while(!pio_sm_check_idle(pio_config_tx.pio, pio_config_tx.sm)){
+        if(time_reached(end)) return false;
+    }
+    return true;
+}
+
 //wait for end of transmission
 bool irio_pio_tx_wait_idle(void){
     if(!tx_loaded) return true;
-    //wait for end of transmission
-    if(pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff)){
+    //wait for end of transmission, a pair in the FIFO can take up to 131ms
+    if(irio_pio_tx_wait_us(2000000)){
         if(rx_loaded){
             pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
             pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
@@ -206,11 +215,13 @@ void irio_pio_tx_frame_write(float mod_freq, uint16_t pairs, uint32_t *buffer){
     irio_pio_tx_set_mod_freq(mod_freq);
 
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
-    for(uint8_t i=0; i<pairs; i++){
+    uint32_t frame_us = 0;
+    for(uint16_t i=0; i<pairs; i++){
         pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, buffer[i]);
+        frame_us += (buffer[i]>>16) + (buffer[i]&0xffff) + 4; //each count is 1us
     }    
-    //wait for end of transmission
-    if(!pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff)){
+    //wait for end of transmission, the FIFO can still hold several long pairs
+    if(!irio_pio_tx_wait_us(frame_us + 1000)){
         printf("PIO TX timeout\r\n");
     }
     return;

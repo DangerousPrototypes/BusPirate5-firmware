@@ -18,6 +18,9 @@ static struct _pio_config pio_config_rx_mod_freq;
 static struct _pio_config pio_config_tx;
 static struct _pio_config pio_config_tx_carrier;
 static bool rx_loaded = false; //the three receiver programs are in PIO memory
+//receiver started or FIFOs drained: a frame in progress is gone, the frame functions start over
+static bool rx_frame_buf_restart = false;
+static bool rx_frame_printf_restart = false;
 
 void _irio_pio_tx_init(uint pin_tx, float desired_period_us, float mod_freq){
     #define INSTRUCTIONS_PER_CYCLE 2
@@ -100,6 +103,8 @@ int _irio_pio_rx_init(uint pin_demod, uint pin_pio2pio, uint pin_learner, float 
     measure_mod_freq_program_init(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm, pio_config_rx_mod_freq.offset, pin_learner, divider);
     irio_pio_rx_reset_mod_freq();
     rx_loaded = true;
+    rx_frame_buf_restart = true;
+    rx_frame_printf_restart = true;
     return 1;
 }
 
@@ -134,6 +139,8 @@ bool irio_pio_tx_wait_idle(void){
         if(rx_loaded){
             pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
             pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
+            rx_frame_buf_restart = true;
+            rx_frame_printf_restart = true;
         }
         return true;
     }
@@ -145,6 +152,8 @@ void irio_pio_rxtx_drain_fifo(void){
     if(!rx_loaded) return;
     pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
     pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
+    rx_frame_buf_restart = true;
+    rx_frame_printf_restart = true;
     return;
 }
 
@@ -269,6 +278,11 @@ bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint3
 
     if(!rx_loaded) return false; //no receiver, nothing to read
 
+    if(rx_frame_buf_restart){
+        rx_frame_buf_restart = false;
+        state = AIR_RESET;
+    }
+
     switch(state){
         case AIR_RESET:
             irio_pio_rx_reset_mod_freq();
@@ -356,6 +370,11 @@ ir_rx_status_t irio_pio_rx_frame_printf(uint32_t *rx_frame) {
     static uint8_t state = AIR_RESET;
 
     if(!rx_loaded) return IR_RX_NO_FRAME; //no receiver, nothing to read
+
+    if(rx_frame_printf_restart){
+        rx_frame_printf_restart = false;
+        state = AIR_RESET;
+    }
 
     switch(state){
         case AIR_RESET:

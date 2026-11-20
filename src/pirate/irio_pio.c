@@ -203,6 +203,7 @@ void irio_pio_tx_write(uint32_t *data){
 void irio_pio_tx_set_mod_freq(float mod_freq){
     if(mod_freq==0.0f) mod_freq=38000.0f; //no carrier was measured, use the common 38kHz
     float div = clock_get_hz(clk_sys) / (2 * (float)mod_freq); 
+    if(div > 65535.0f) div = 65535.0f; //the slowest the PIO can go, a lower carrier would wrap
     pio_sm_set_clkdiv(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm, div);
     busy_wait_us(1);//takes effect in 3 cycles...
 }

@@ -17,6 +17,7 @@ static struct _pio_config pio_config_rx_space;
 static struct _pio_config pio_config_rx_mod_freq;
 static struct _pio_config pio_config_tx;
 static struct _pio_config pio_config_tx_carrier;
+static bool rx_loaded = false; //the three receiver programs are in PIO memory
 
 void _irio_pio_tx_init(uint pin_tx, float desired_period_us, float mod_freq){
     #define INSTRUCTIONS_PER_CYCLE 2
@@ -57,7 +58,7 @@ void irio_pio_tx_deinit(uint pin_num){
     pio_sm_restart(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm);
 }
 
-void _irio_pio_rx_init(uint pin_demod, uint pin_pio2pio, uint pin_learner, float desired_period_us){
+int _irio_pio_rx_init(uint pin_demod, uint pin_pio2pio, uint pin_learner, float desired_period_us){
     // bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&i2c_program, &pio_config.pio, &pio_config.sm,
     // &pio_config.offset, dir_sda, 10, true); hard_assert(success);
     #define INSTRUCTIONS_PER_CYCLE 2
@@ -67,16 +68,27 @@ void _irio_pio_rx_init(uint pin_demod, uint pin_pio2pio, uint pin_learner, float
     // Calculate the divider
     float divider = (float)clock_freq_hz * desired_period_us / (1000000.0f*INSTRUCTIONS_PER_CYCLE);
 
+    //load all three programs or none, pio_add_program() returns an error code when the PIO is full
+    int mark_offset = pio_add_program(PIO_MODE_PIO, &ir_in_low_counter_program);
+    int space_offset = pio_add_program(PIO_MODE_PIO, &ir_in_high_counter_program);
+    int mod_freq_offset = pio_add_program(PIO_LOGIC_ANALYZER_PIO, &measure_mod_freq_program);
+    if(mark_offset < 0 || space_offset < 0 || mod_freq_offset < 0){
+        if(mark_offset >= 0) pio_remove_program(PIO_MODE_PIO, &ir_in_low_counter_program, mark_offset);
+        if(space_offset >= 0) pio_remove_program(PIO_MODE_PIO, &ir_in_high_counter_program, space_offset);
+        if(mod_freq_offset >= 0) pio_remove_program(PIO_LOGIC_ANALYZER_PIO, &measure_mod_freq_program, mod_freq_offset);
+        return (mark_offset < 0) ? mark_offset : (space_offset < 0) ? space_offset : mod_freq_offset;
+    }
+
     pio_config_rx_mark.pio = PIO_MODE_PIO;
     pio_config_rx_mark.sm = 0;
     pio_config_rx_mark.program = &ir_in_low_counter_program;
-    pio_config_rx_mark.offset = pio_add_program(pio_config_rx_mark.pio, pio_config_rx_mark.program);
+    pio_config_rx_mark.offset = mark_offset;
     ir_in_low_counter_program_init(pio_config_rx_mark.pio, pio_config_rx_mark.sm, pio_config_rx_mark.offset, pin_demod, pin_pio2pio, divider);
 
     pio_config_rx_space.pio = PIO_MODE_PIO;
     pio_config_rx_space.sm = 1;
     pio_config_rx_space.program = &ir_in_high_counter_program;
-    pio_config_rx_space.offset = pio_add_program(pio_config_rx_space.pio, pio_config_rx_space.program);
+    pio_config_rx_space.offset = space_offset;
     ir_in_high_counter_program_init(pio_config_rx_space.pio, pio_config_rx_space.sm, pio_config_rx_space.offset, pin_pio2pio, divider);
     //printf("Divider: %f\r\n", divider);
     divider = (float)clock_freq_hz * 0.2f / (1000000.0f*INSTRUCTIONS_PER_CYCLE);
@@ -84,10 +96,11 @@ void _irio_pio_rx_init(uint pin_demod, uint pin_pio2pio, uint pin_learner, float
     pio_config_rx_mod_freq.pio = PIO_LOGIC_ANALYZER_PIO;
     pio_config_rx_mod_freq.sm = 2;
     pio_config_rx_mod_freq.program = &measure_mod_freq_program;
-    pio_config_rx_mod_freq.offset = pio_add_program(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.program);
+    pio_config_rx_mod_freq.offset = mod_freq_offset;
     measure_mod_freq_program_init(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm, pio_config_rx_mod_freq.offset, pin_learner, divider);
     irio_pio_rx_reset_mod_freq();
-
+    rx_loaded = true;
+    return 1;
 }
 
 //helper function to load for Bus Pirate INFRARED mode
@@ -95,13 +108,19 @@ int irio_pio_rx_init(uint pin_num){
     bio_buf_output(BIO0); //inter statemachine communication pin
     // Desired period in microseconds
     float desired_period_us = 1.0f;
-    _irio_pio_rx_init(pin_num, bio2bufiopin[BIO0], bio2bufiopin[BIO1], desired_period_us);   
-    return 1;
+    return _irio_pio_rx_init(pin_num, bio2bufiopin[BIO0], bio2bufiopin[BIO1], desired_period_us);
 }
 
 void irio_pio_rx_deinit(uint pin_num){
+    if(!rx_loaded) return;
+    rx_loaded = false;
+    //stop the state machines before their programs are freed
+    pio_sm_set_enabled(pio_config_rx_mark.pio, pio_config_rx_mark.sm, false);
+    pio_sm_set_enabled(pio_config_rx_space.pio, pio_config_rx_space.sm, false);
+    pio_sm_set_enabled(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm, false);
     pio_remove_program(pio_config_rx_mark.pio, pio_config_rx_mark.program, pio_config_rx_mark.offset);
     pio_remove_program(pio_config_rx_space.pio, pio_config_rx_space.program, pio_config_rx_space.offset);
+    pio_remove_program(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.program, pio_config_rx_mod_freq.offset);
     pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
     pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
     pio_sm_restart(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
@@ -112,8 +131,10 @@ void irio_pio_rx_deinit(uint pin_num){
 bool irio_pio_tx_wait_idle(void){
     //wait for end of transmission
     if(pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff)){
-        pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
-        pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
+        if(rx_loaded){
+            pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
+            pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
+        }
         return true;
     }
     return false;
@@ -121,6 +142,7 @@ bool irio_pio_tx_wait_idle(void){
 
 //drain both RX FIFOs for sync
 void irio_pio_rxtx_drain_fifo(void){
+    if(!rx_loaded) return;
     pio_sm_clear_fifos(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
     pio_sm_clear_fifos(pio_config_rx_space.pio, pio_config_rx_space.sm);
     return;
@@ -245,6 +267,8 @@ bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint3
     static uint8_t state = AIR_RESET;
     uint16_t temp;
 
+    if(!rx_loaded) return false; //no receiver, nothing to read
+
     switch(state){
         case AIR_RESET:
             irio_pio_rx_reset_mod_freq();
@@ -330,6 +354,8 @@ ir_rx_status_t irio_pio_rx_frame_printf(uint32_t *rx_frame) {
     
     uint16_t low, high;
     static uint8_t state = AIR_RESET;
+
+    if(!rx_loaded) return IR_RX_NO_FRAME; //no receiver, nothing to read
 
     switch(state){
         case AIR_RESET:

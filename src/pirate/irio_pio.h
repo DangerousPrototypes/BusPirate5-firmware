@@ -7,7 +7,7 @@
 /**
  * @brief Initialize IR receiver PIO.
  * @param pin_demod  Demodulator input pin
- * @return           PIO offset or error code
+ * @return           1, or a negative error code if the programs don't fit
  */
 int irio_pio_rx_init(uint pin_demod);
 

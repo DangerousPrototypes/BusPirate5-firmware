@@ -41,6 +41,7 @@
 #include "pirate.h"
 #include "system_config.h"
 #include "command_struct.h"
+#include "modes.h"
 #include "lib/bp_args/bp_cmd.h"
 #include "commands/global/w_psu.h"
 #include "commands/global/p_pullups.h"
@@ -616,6 +617,10 @@ static void leave_binmode(void) {
 }
 
 void bp3unbrick_setup(void) {
+    // Leave the mode but not the supply or the pull-ups: io_reference() checks the supply and turns
+    // the pull-ups off itself, and a supply turned off here could still be falling when it reads VOUT.
+    modes[system_config.mode].protocol_cleanup();
+    system_config.mode = HIZ;
     pins_claimed = false;
     psu_ours = false;
     psu_feeds_vout = false;

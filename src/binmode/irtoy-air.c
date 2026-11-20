@@ -266,7 +266,7 @@ void irtoy_air_service(void){
             }
         }
 
-        if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer) ){
+        if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer, count_of(buffer)) ){
             #if 0
             //create the AIR packet
             uint8_t mod_freq_int = (uint8_t)roundf(mod_freq / 1000.0f);

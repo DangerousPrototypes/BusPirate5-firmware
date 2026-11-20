@@ -75,9 +75,10 @@ void irio_pio_tx_frame_write(float mod_freq, uint16_t pairs, uint32_t *buffer);
  * @param us        Output microseconds
  * @param pairs     Output number of pairs
  * @param buffer    Frame data buffer
+ * @param max_pairs Size of buffer in pairs, longer signals are cut
  * @return          true on success
  */
-bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint32_t *buffer);
+bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint32_t *buffer, uint16_t max_pairs);
 
 /**
  * @brief Reset receiver modulation frequency detection.

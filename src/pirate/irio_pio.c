@@ -230,12 +230,14 @@ bool irio_pio_get_freq_mod(float *mod_freq, uint16_t *us){
 //however there is no such issue during a normal transition
 //so only reincrement on timeout
 // returns true if a frame is ready, false if no frame is ready
-bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint32_t *buffer) {
+// a signal longer than max_pairs is cut to max_pairs, the rest is dropped until the signal ends
+bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint32_t *buffer, uint16_t max_pairs) {
     enum {
         AIR_RESET,
         AIR_IDLE,
         AIR_MARK,
-        AIR_SPACE
+        AIR_SPACE,
+        AIR_FULL
     };
     
     static uint8_t state = AIR_RESET;
@@ -268,7 +270,7 @@ bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint3
                     temp=(uint16_t)(0xffff-temp); 
                     buffer[*pairs] |= temp;
                     (*pairs)++;
-                    state = AIR_MARK;
+                    state = (*pairs < max_pairs) ? AIR_MARK : AIR_FULL;
                 }else{
                     buffer[*pairs] |= temp;
                     (*pairs)++;
@@ -277,6 +279,21 @@ bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint3
                     return true;
                 } 
             }          
+            break;
+        case AIR_FULL:
+            //buffer full, drop the rest of the signal until the space timeout ends it
+            if(!pio_sm_is_rx_fifo_empty(pio_config_rx_mark.pio, pio_config_rx_mark.sm)){
+                pio_sm_get(pio_config_rx_mark.pio, pio_config_rx_mark.sm);
+            }
+            if(!pio_sm_is_rx_fifo_empty(pio_config_rx_space.pio, pio_config_rx_space.sm)){
+                temp = (uint16_t)pio_sm_get(pio_config_rx_space.pio, pio_config_rx_space.sm);
+                if(temp==0xffff){
+                    buffer[(*pairs)-1] |= 0xffff; //end the cut frame with the timeout space, like any other
+                    irio_pio_get_freq_mod(mod_freq, us);
+                    state = AIR_RESET;
+                    return true;
+                }
+            }
             break;
         case AIR_MARK:
             //last was space, if another space, end of sequence

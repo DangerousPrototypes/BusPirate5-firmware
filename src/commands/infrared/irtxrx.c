@@ -320,7 +320,7 @@ void irrx_handler(struct command_result *res){
 		irio_pio_rxtx_drain_fifo();
 		//display captured packet
 		while(true){
-			if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer)) break;
+			if(irio_pio_rx_frame_buf(&mod_freq, &us, &pairs, buffer, count_of(buffer))) break;
 			// any key to exit
 			char c;
 		    if (rx_fifo_try_get(&c)) {
@@ -353,7 +353,7 @@ void irrx_handler(struct command_result *res){
 		*/
 
 		//display mod_freq, mark/space pairs	
-		printf("Modulation frequency %dkHz, %d MARK/SPACE pairs\r\n\r\n", mod_freq_int, pairs);
+		printf("Modulation frequency %dkHz, %d MARK/SPACE pairs%s\r\n\r\n", mod_freq_int, pairs, (pairs>=count_of(buffer))?", longer signals are cut":"");
 		//s to save (if -f flag), space for next, x to exit
 menu_irrx_handler:
 		printf("%s", ui_term_color_prompt());

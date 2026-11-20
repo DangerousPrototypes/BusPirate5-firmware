@@ -162,7 +162,7 @@ void ui_mode_enable_args(struct command_result* res) {
         if (!mode_interactive_prompt(&mode)) return;
     }
 
-    printf("\r\n%s%s:%s %s",
+    printf("\r\n%s%s:%s %s\r\n",
         ui_term_color_info(),
         GET_T(T_MODE_MODE),
         ui_term_color_reset(),

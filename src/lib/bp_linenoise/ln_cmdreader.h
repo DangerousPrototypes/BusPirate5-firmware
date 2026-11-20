@@ -77,6 +77,34 @@ size_t ln_cmdln_remaining(void);
  */
 void ln_cmdln_advance_to(const char *p);
 
+/**
+ * @brief Limit the bp_cmd reads to one command of a chained line.
+ * @details On "cmd1 -x; cmd2", cmd1 must not see the arguments of cmd2 and the
+ *          other way round. ln_cmdln_init() and ln_cmdln_clear_command() lift it.
+ * @param start  Offset of the command in the buffer
+ * @param end    Offset just past its last character
+ */
+void ln_cmdln_set_command(size_t start, size_t end);
+
+/**
+ * @brief Read the whole line again with ln_cmdln_cmd_current().
+ */
+void ln_cmdln_clear_command(void);
+
+/**
+ * @brief Like ln_cmdln_current(), but at the start of the command set with
+ *        ln_cmdln_set_command() if there is one.
+ * @return Pointer to the first character to read
+ */
+const char *ln_cmdln_cmd_current(void);
+
+/**
+ * @brief Like ln_cmdln_remaining(), but only to the end of the command set with
+ *        ln_cmdln_set_command() if there is one.
+ * @return Characters left to read
+ */
+size_t ln_cmdln_cmd_remaining(void);
+
 /*
  * =============================================================================
  * Compatibility Macros

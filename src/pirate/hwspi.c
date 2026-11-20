@@ -20,7 +20,13 @@
 #include "pirate/bio.h"
 #include "pirate/hwspi.h"
 
-void hwspi_init(uint8_t data_bits, uint8_t cpol, uint8_t cpha) {
+void hwspi_init(uint8_t data_bits, uint8_t cpol, uint8_t cpha, bool cs_idle) {
+    // CS first, at its idle level. Until now the pins have floated, which can select a
+    // target with no pull-up on CS; with CPOL=1 the step of SCK to its idle level below
+    // would then be a rising edge the target clocks in.
+    bio_set_function(M_SPI_CS, GPIO_FUNC_SIO);
+    bio_put(M_SPI_CS, cs_idle);
+    bio_output(M_SPI_CS);
     // set buffers to correct position
     bio_buf_output(M_SPI_CLK); // sck
     bio_buf_output(M_SPI_CDO); // tx
@@ -30,10 +36,6 @@ void hwspi_init(uint8_t data_bits, uint8_t cpol, uint8_t cpha) {
     bio_set_function(M_SPI_CLK, GPIO_FUNC_SPI); // sck
     bio_set_function(M_SPI_CDO, GPIO_FUNC_SPI); // tx
     bio_set_function(M_SPI_CDI, GPIO_FUNC_SPI); // rx
-    // cs
-    bio_set_function(M_SPI_CS, GPIO_FUNC_SIO);
-    bio_output(M_SPI_CS);
-    hwspi_deselect();
 }
 
 void hwspi_deinit(void) {

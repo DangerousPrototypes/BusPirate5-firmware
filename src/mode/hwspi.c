@@ -213,7 +213,7 @@ uint32_t spi_setup_exc(void) {
     // setup spi
     mode_config.read_with_write = false;
     mode_config.baudrate_actual = spi_init(M_SPI_PORT, mode_config.baudrate);
-    hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase);
+    hwspi_init(mode_config.data_bits, mode_config.clock_polarity, mode_config.clock_phase, mode_config.cs_idle);
     system_bio_update_purpose_and_label(true, M_SPI_CLK, BP_PIN_MODE, pin_labels[0]);
     system_bio_update_purpose_and_label(true, M_SPI_CDO, BP_PIN_MODE, pin_labels[1]);
     system_bio_update_purpose_and_label(true, M_SPI_CDI, BP_PIN_MODE, pin_labels[2]);

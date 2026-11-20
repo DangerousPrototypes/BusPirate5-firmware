@@ -74,7 +74,7 @@
 #ifdef BP_USE_PS2
 #include "mode/ps2.h"
 #endif
-#ifdef BP_USE_USB
+#ifdef BP_USE_USBKB
 #include "mode/usb.h"
 #endif
 
@@ -578,8 +578,8 @@ struct _mode modes[] = {
         .protocol_preflight_sanity_check = ps2_preflight_sanity_check,      // sanity check before executing syntax
     },
 #endif
-#ifdef BP_USE_USB
-    [USB] = {
+#ifdef BP_USE_USBKB
+    [USBKB] = {
         .protocol_name = "USB",                          // friendly name (promptname)
         .protocol_start = nullfunc1_temp,                // start
         .protocol_start_alt = nullfunc1_temp,            // start with read

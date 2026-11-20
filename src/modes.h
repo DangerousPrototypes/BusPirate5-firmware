@@ -57,8 +57,8 @@ enum {
 #ifdef BP_USE_PS2
     PS2,      /**< PS/2 keyboard/mouse sniffer */
 #endif
-#ifdef BP_USE_USB
-    USB,      /**< USB low/full-speed sniffer */
+#ifdef BP_USE_USBKB
+    USBKB,      /**< USB low/full-speed sniffer */
 #endif
 #ifdef BP_USE_I2S
     I2S,      /**< I2S audio */

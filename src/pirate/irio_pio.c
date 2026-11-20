@@ -137,6 +137,7 @@ void irio_pio_tx_write(uint32_t *data){
 
 //change the modulation frequency of the TX carrier without resetting the PIO
 void irio_pio_tx_set_mod_freq(float mod_freq){
+    if(mod_freq==0.0f) mod_freq=38000.0f; //no carrier was measured, use the common 38kHz
     float div = clock_get_hz(clk_sys) / (2 * (float)mod_freq); 
     pio_sm_set_clkdiv(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm, div);
     busy_wait_us(1);//takes effect in 3 cycles...
@@ -164,8 +165,10 @@ void irio_pio_rx_reset_mod_freq(void){
     pio_interrupt_clear(pio_config_rx_mod_freq.pio, 0);
 }
 
-//false = no interrupt, true = interrupt
+//false = no carrier measurement, mod_freq and us are then 0
 bool irio_pio_get_freq_mod(float *mod_freq, uint16_t *us){
+    *mod_freq = 0.0f;
+    *us = 0;
     if(!pio_interrupt_get(pio_config_rx_mod_freq.pio, 0)) return false;
 
     typedef enum _transition_state{
@@ -218,11 +221,10 @@ bool irio_pio_get_freq_mod(float *mod_freq, uint16_t *us){
     }
 
     if(state!=DONE){ //there was an error
-        *mod_freq=0.0f;
-    }else{
-        *us = (mark+space);
-        *mod_freq = 1000000.0f/((float)(mark+space)/5.0f);
+        return false;
     }
+    *us = (mark+space);
+    *mod_freq = 1000000.0f/((float)(mark+space)/5.0f);
     return true;        
 }
 

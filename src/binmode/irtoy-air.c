@@ -294,8 +294,10 @@ void irtoy_air_service(void){
             }
             //ir_rx_pulse_packet(&pulse, true, (uint16_t)(buffer[pairs-1] >> 16)); 
             //have us, want nano seconds
-            us = (us *1000) / 5; //convert to 1ns ticks
-            ir_rx_modulation_packet(&modulation, us);         
+            //no M record if the carrier wasn't measured, AnalysIR then records the signal without one
+            if(us){
+                ir_rx_modulation_packet(&modulation, (us *1000) / 5); //convert to 1ns ticks
+            }
         }
         
         char c;

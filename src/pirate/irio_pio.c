@@ -18,6 +18,7 @@ static struct _pio_config pio_config_rx_mod_freq;
 static struct _pio_config pio_config_tx;
 static struct _pio_config pio_config_tx_carrier;
 static bool rx_loaded = false; //the three receiver programs are in PIO memory
+static bool tx_loaded = false; //the two transmitter programs are in PIO memory
 //receiver started or FIFOs drained: a frame in progress is gone, the frame functions start over
 static bool rx_frame_buf_restart = false;
 static bool rx_frame_printf_restart = false;
@@ -25,7 +26,7 @@ static bool rx_frame_printf_restart = false;
 static bool mod_freq_waiting = false;
 static absolute_time_t mod_freq_since;
 
-void _irio_pio_tx_init(uint pin_tx, float desired_period_us, float mod_freq){
+int _irio_pio_tx_init(uint pin_tx, float desired_period_us, float mod_freq){
     #define INSTRUCTIONS_PER_CYCLE 2
     // Get the system clock frequency in Hz
     uint32_t clock_freq_hz = clock_get_hz(clk_sys);
@@ -33,11 +34,20 @@ void _irio_pio_tx_init(uint pin_tx, float desired_period_us, float mod_freq){
     // Calculate the divider
     float divider = (float)clock_freq_hz * desired_period_us / (1000000.0f*INSTRUCTIONS_PER_CYCLE);
 
+    //load both programs or none, pio_add_program() returns an error code when the PIO is full
+    int tx_offset = pio_add_program(PIO_MODE_PIO, &ir_out_program);
+    int carrier_offset = pio_add_program(PIO_MODE_PIO, &ir_out_carrier_program);
+    if(tx_offset < 0 || carrier_offset < 0){
+        if(tx_offset >= 0) pio_remove_program(PIO_MODE_PIO, &ir_out_program, tx_offset);
+        if(carrier_offset >= 0) pio_remove_program(PIO_MODE_PIO, &ir_out_carrier_program, carrier_offset);
+        return (tx_offset < 0) ? tx_offset : carrier_offset;
+    }
+
     //bio_buf_output(BIO2);
     pio_config_tx.pio = PIO_MODE_PIO;
     pio_config_tx.sm = 2;
     pio_config_tx.program = &ir_out_program;
-    pio_config_tx.offset = pio_add_program(pio_config_tx.pio, pio_config_tx.program);   
+    pio_config_tx.offset = tx_offset;   
     ir_out_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset, pin_tx, divider);
 
     //configure the PWM for the desired frequency
@@ -45,17 +55,26 @@ void _irio_pio_tx_init(uint pin_tx, float desired_period_us, float mod_freq){
     pio_config_tx_carrier.pio = PIO_MODE_PIO;
     pio_config_tx_carrier.sm = 3;
     pio_config_tx_carrier.program = &ir_out_carrier_program;
-    pio_config_tx_carrier.offset = pio_add_program(pio_config_tx_carrier.pio, pio_config_tx_carrier.program);
+    pio_config_tx_carrier.offset = carrier_offset;
     ir_out_carrier_program_init(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm, pio_config_tx_carrier.offset, pin_tx, mod_freq);    
+    tx_loaded = true;
+    return 1;
 }
 
 int irio_pio_tx_init(uint pin_num, uint32_t mod_freq){
     // Desired period in microseconds
     float desired_period_us = 1.0f;
-    _irio_pio_tx_init(pin_num, desired_period_us, (float)mod_freq);
+    return _irio_pio_tx_init(pin_num, desired_period_us, (float)mod_freq);
 }
 
 void irio_pio_tx_deinit(uint pin_num){
+    if(!tx_loaded) return;
+    tx_loaded = false;
+    //stop the state machines before their programs are freed
+    pio_sm_set_enabled(pio_config_tx.pio, pio_config_tx.sm, false);
+    pio_sm_set_enabled(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm, false);
+    //the carrier can stop with the IR LED pin high, leave it low for the next mode on the pin
+    pio_sm_exec(pio_config_tx_carrier.pio, pio_config_tx_carrier.sm, pio_encode_set(pio_pins, 0));
     pio_remove_program(pio_config_tx.pio, pio_config_tx.program, pio_config_tx.offset);
     pio_remove_program(pio_config_tx_carrier.pio, pio_config_tx_carrier.program, pio_config_tx_carrier.offset);
     pio_sm_clear_fifos(pio_config_tx.pio, pio_config_tx.sm);
@@ -137,6 +156,7 @@ void irio_pio_rx_deinit(uint pin_num){
 
 //wait for end of transmission
 bool irio_pio_tx_wait_idle(void){
+    if(!tx_loaded) return true;
     //wait for end of transmission
     if(pio_sm_wait_idle(pio_config_tx.pio, pio_config_tx.sm, 0xfffff)){
         if(rx_loaded){
@@ -162,6 +182,7 @@ void irio_pio_rxtx_drain_fifo(void){
 
 //push a single 16bit MARK and 16bit SPACE to the FIFO
 void irio_pio_tx_write(uint32_t *data){
+    if(!tx_loaded) return;
     uint16_t mark = (*data)>>16;
     uint16_t space = (*data)&0xffff;
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
@@ -180,6 +201,7 @@ void irio_pio_tx_set_mod_freq(float mod_freq){
 //sends raw array of 32bit values. 
 //upper 16 bits are the mark, lower 16 bits are the space
 void irio_pio_tx_frame_write(float mod_freq, uint16_t pairs, uint32_t *buffer){
+    if(!tx_loaded) return;
     //configure the PWM for the desired frequency
     irio_pio_tx_set_mod_freq(mod_freq);
 

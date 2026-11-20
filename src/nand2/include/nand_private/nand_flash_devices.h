@@ -2,6 +2,7 @@
  * SPDX-FileCopyrightText: 2015-2023 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileContributor: Added Dosilicon DS35Q1GA support
  */
 
 #pragma once
@@ -13,6 +14,7 @@
 #define SPI_NAND_FLASH_MICRON_MI      0x2C
 #define SPI_NAND_FLASH_ZETTA_MI       0xBA
 #define SPI_NAND_FLASH_XTX_MI         0x0B
+#define SPI_NAND_FLASH_DOSILICON_MI   0xE5
 
 // Device ID (DI) for supported nand flash devices
 
@@ -57,3 +59,5 @@
 #define ZETTA_DI_71                   0x71
 
 #define XTX_DI_37                     0x37
+
+#define DOSILICON_DI_71               0x71

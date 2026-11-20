@@ -2,6 +2,7 @@
  * SPDX-FileCopyrightText: 2015-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileContributor: Added Dosilicon DS35Q1GA support
  */
 
 #pragma once
@@ -19,6 +20,7 @@ esp_err_t spi_nand_gigadevice_init(spi_nand_flash_device_t *dev);
 esp_err_t spi_nand_micron_init(spi_nand_flash_device_t *dev);
 esp_err_t spi_nand_zetta_init(spi_nand_flash_device_t *dev);
 esp_err_t spi_nand_xtx_init(spi_nand_flash_device_t *dev);
+esp_err_t spi_nand_dosilicon_init(spi_nand_flash_device_t *dev);
 
 #ifdef __cplusplus
 }

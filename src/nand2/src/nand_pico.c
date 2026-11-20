@@ -5,6 +5,7 @@
  *
  * SPDX-FileContributor: 2015-2024 Espressif Systems (Shanghai) CO LTD
  * SPDX-FileContributor: Adapted for Raspberry Pi Pico (RP2040)
+ * SPDX-FileContributor: Added Dosilicon DS35Q1GA support
  */
 
 #include <string.h>
@@ -99,6 +100,8 @@ static esp_err_t detect_chip(spi_nand_flash_device_t *dev)
         return spi_nand_zetta_init(dev);
     case SPI_NAND_FLASH_XTX_MI:
         return spi_nand_xtx_init(dev);
+    case SPI_NAND_FLASH_DOSILICON_MI:
+        return spi_nand_dosilicon_init(dev);
     default:
         NAND_LOGE(TAG, "Unknown manufacturer ID: 0x%02X", manufacturer_id);
         return ESP_ERR_INVALID_RESPONSE;

@@ -41,6 +41,12 @@
 
 struct psu_status_t psu_status;
 
+static psu_wait_callback_t psu_wait_callback;
+
+void psu_set_wait_callback(psu_wait_callback_t callback) {
+    psu_wait_callback = callback;
+}
+
 /// @brief Reset the PSU current fuse/trigger
 /// @param  None
 /// @return None
@@ -284,6 +290,10 @@ uint32_t psu_measure_vout(void) {
 /// @return None
 void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     amux_sweep();
+    psu_measure_from_sweep(vout, isense, vreg, fuse);
+}
+
+void psu_measure_from_sweep(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse) {
     *isense = ((hw_adc_raw[HW_ADC_CURRENT_SENSE]) * ((500 * 1000) / 4095));
     *vreg = ((hw_adc_voltage[HW_ADC_MUX_VREG_OUT]));
     *vout = ((hw_adc_voltage[HW_ADC_MUX_VREF_VOUT]));
@@ -300,6 +310,37 @@ void psu_disable(void) {
     psu_current_limit_override(false);
     busy_wait_ms(1);
     psu_fuse_reset(); // reset fuse so it isn't draining current from the opamp    
+}
+
+// How long the output must run with the current limit engaged, without the fuse
+// tripping, before psu_enable() reports success. A clear overload trips the fuse in
+// about 10 ms; a load just above the limit can take tens to hundreds of ms, or longer,
+// and varies run to run. A trip after this window is still handled: once enabled,
+// psu_poll_fuse_vout_error() checks the fuse on every core 1 loop pass, disables the
+// PSU and flags the error.
+#define PSU_SETTLE_MS 50
+
+// Waits ms milliseconds, running the wait callback (if any) throughout, so the
+// caller's other work continues while psu_enable() waits on the hardware.
+// With check_fuse, the fuse is checked every millisecond and the wait ends as
+// soon as it trips, returning false: the fuse latch reports an overload within
+// milliseconds, so a fault needs no full wait.
+static bool psu_wait_ms(uint32_t ms, bool check_fuse) {
+    absolute_time_t end = make_timeout_time_ms(ms);
+    absolute_time_t next_fuse_check = get_absolute_time();
+    do {
+        if (check_fuse && time_reached(next_fuse_check)) {
+            if (!psu_fuse_ok()) {
+                return false;
+            }
+            next_fuse_check = make_timeout_time_ms(1);
+        }
+        if (psu_wait_callback) {
+            psu_wait_callback();
+        }
+        tight_loop_contents();
+    } while (!time_reached(end));
+    return true;
 }
 
 /// @brief Enable and configure the PSU with requested settings
@@ -331,14 +372,13 @@ uint32_t psu_enable(float volts, float current, bool current_limit_override, uin
     psu_dac_set(psu_status.voltage_dac_value, PWM_TOP);
     psu_fuse_reset();
     psu_vreg_enable(true);
-    busy_wait_ms(10);
+    psu_wait_ms(10, false); // current limit overridden for the inrush; fuse checked once it engages
 
     // after some settling time, engage the current limit system
     if (!current_limit_override) {
         psu_current_limit_override(false);
         psu_dac_set(psu_status.voltage_dac_value, psu_status.current_dac_value);
-        busy_wait_ms(500);
-        if (!psu_fuse_ok()) { // did the fuse blow?
+        if (!psu_wait_ms(PSU_SETTLE_MS, true) || !psu_fuse_ok()) { // did the fuse blow?
             psu_disable();
             return PSU_ERROR_FUSE_TRIPPED;
         }

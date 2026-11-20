@@ -78,6 +78,18 @@ uint32_t psu_enable(float volts, float current, bool current_limit_enabled, uint
 void psu_disable(void);
 
 /**
+ * @brief Function run repeatedly while psu_enable() waits for the output to settle.
+ */
+typedef void (*psu_wait_callback_t)(void);
+
+/**
+ * @brief Set the callback run during psu_enable()'s waits, or NULL for none.
+ * @details psu_enable() blocks for its inrush and settle times. A caller that has other
+ *          time-critical work, such as forwarding received data, can keep it going here.
+ */
+void psu_set_wait_callback(psu_wait_callback_t callback);
+
+/**
  * @brief Read all PSU measurements in a single ADC sweep.
  * @param[out] vout   VOUT voltage measurement
  * @param[out] isense Current sense measurement (mA)
@@ -85,6 +97,17 @@ void psu_disable(void);
  * @param[out] fuse   Fuse status (true=OK, false=blown)
  */
 void psu_measure(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse);
+
+/**
+ * @brief Read the PSU measurements from the last amux_sweep(), without sweeping again.
+ * @details For a caller that has just called amux_sweep() for other readings, so it
+ *          doesn't sweep a second time: a sweep takes milliseconds.
+ * @param[out] vout   VOUT voltage measurement
+ * @param[out] isense Current sense measurement (mA)
+ * @param[out] vreg   VREG voltage measurement
+ * @param[out] fuse   Fuse status (true=OK, false=blown)
+ */
+void psu_measure_from_sweep(uint32_t* vout, uint32_t* isense, uint32_t* vreg, bool* fuse);
 
 /**
  * @brief Measure VOUT voltage.

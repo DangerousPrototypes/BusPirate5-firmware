@@ -763,6 +763,15 @@ bool lcd_update_request = false;
 bool lcd_update_force = false;
 
 // begin of code execution for the second core (core1)
+// Called by the LCD code between strings of a redraw (see ui_lcd_set_yield()),
+// so USB keeps being serviced during long redraws. Only on core 1: TinyUSB runs
+// there, and the LCD code is also called from core 0.
+static void core1_lcd_yield(void) {
+    if (get_core_num() == 1 && (system_config.terminal_usb_enable || system_config.binmode_usb_rx_queue_enable)) {
+        tud_task();
+    }
+}
+
 static void core1_initialization(void) {
 
     // //////////////////////////////////////////////////////////////////////
@@ -793,6 +802,7 @@ static void core1_initialization(void) {
             "Init: Core1: tusb_init()\n"
             );
         tusb_init();
+        ui_lcd_set_yield(core1_lcd_yield);
     } else {
         BP_DEBUG_PRINT(BP_DEBUG_LEVEL_WARNING, BP_DEBUG_CAT_EARLY_BOOT,
             "Init: Core1: USB ***DISABLED*** by config\n"
@@ -878,6 +888,11 @@ static void core1_infinite_loop(void) {
 
         if (lcd_update_request) {
             monitor(); // TODO: fix monitor to return bool up_volts and up_current
+            // Service USB between the voltage sweep and the display update, so USB
+            // waits for one of them at a time rather than both.
+            if (system_config.terminal_usb_enable || system_config.binmode_usb_rx_queue_enable) {
+                tud_task();
+            }
             uint32_t update_flags = 0;//core0_requested_update_flags;
             //core0_requested_update_flags = 0;
             if (lcd_update_force) {

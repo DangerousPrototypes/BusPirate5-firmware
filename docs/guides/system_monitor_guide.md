@@ -137,6 +137,27 @@ PSU API (from `src/pirate/psu.h`):
 - Current limiting
 - Over-current protection
 
+### Enable sequence and fault reporting
+
+`psu_enable()` blocks while it brings the output up:
+
+| Step | Time | Notes |
+|------|------|-------|
+| Inrush | 10 ms | Current limit overridden so inrush doesn't trip the fuse |
+| Settle | up to `PSU_SETTLE_MS` (50 ms) | Current limit engaged; the fuse is checked every millisecond and a trip returns `PSU_ERROR_FUSE_TRIPPED` at once |
+| Checks | - | Undervoltage and backflow, then `psu_status.enabled = true` |
+
+The fuse is a hardware latch: it cuts the output by itself on an overload. A
+load just above the current limit can trip it after the settle window. That
+is caught by `psu_poll_fuse_vout_error()`, which core 1 runs on every loop
+pass while the PSU is enabled: it disables the PSU and sets
+`psu_status.error_pending`, so the error is reported asynchronously instead of
+by `psu_enable()`.
+
+`psu_set_wait_callback()` sets a function that runs repeatedly during these
+waits. BPIO uses it to keep forwarding received UART data while a client's
+PSU-enable request waits.
+
 ---
 
 ## Related Documentation

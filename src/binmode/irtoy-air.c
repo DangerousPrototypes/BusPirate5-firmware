@@ -237,7 +237,7 @@ void irtoy_air_service(void){
     uint8_t air_buffer[512];
     bool frame_found=false;
     uint16_t air_cnt;
-    bool send_id;
+    bool send_id = true; //the host may already have the port open
 
     IR_PULSE pulse;
     pulse.always_LF = '\n';

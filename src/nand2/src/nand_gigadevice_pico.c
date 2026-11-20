@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * SPDX-FileContributor: Adapted for Raspberry Pi Pico (RP2040)
+ * SPDX-FileContributor: Added GD5F1GM7 and M7-family ECC status support
  */
 
 #include <string.h>
@@ -66,21 +67,35 @@ esp_err_t spi_nand_gigadevice_init(spi_nand_flash_device_t *dev)
     case GIGADEVICE_DI_21:
         dev->chip.num_blocks = 1024;
         break;
+    case GIGADEVICE_DI_91:
+    case GIGADEVICE_DI_81:
+        dev->chip.num_blocks = 1024;
+        // GD5F1GM7 reports 8-bit ECC capability through a 3-bit ECCS field in C0h[6:4].
+        dev->chip.ecc_data.ecc_status_reg_len_in_bits = 3;
+        break;
     case GIGADEVICE_DI_52:
     case GIGADEVICE_DI_42:
     case GIGADEVICE_DI_32:
     case GIGADEVICE_DI_22:
+        dev->chip.num_blocks = 2048;
+        break;
     case GIGADEVICE_DI_92:
     case GIGADEVICE_DI_82:
         dev->chip.num_blocks = 2048;
+        // GD5F2GM7 also uses the 3-bit ECCS encoding used by GD5F1GM7.
+        dev->chip.ecc_data.ecc_status_reg_len_in_bits = 3;
         break;
     case GIGADEVICE_DI_55:
     case GIGADEVICE_DI_45:
     case GIGADEVICE_DI_35:
     case GIGADEVICE_DI_25:
+        dev->chip.num_blocks = 4096;
+        break;
     case GIGADEVICE_DI_95:
     case GIGADEVICE_DI_85:
         dev->chip.num_blocks = 4096;
+        // Keep the 4-Gbit 9x/8x M7-family ECC handling consistent with the 1/2-Gbit variants.
+        dev->chip.ecc_data.ecc_status_reg_len_in_bits = 3;
         break;
     default:
         return ESP_ERR_INVALID_RESPONSE;

@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  * SPDX-FileContributor: Added Dosilicon DS35Q1GA support
+ * SPDX-FileContributor: Added GigaDevice GD5F1GM7 support
  */
 
 #pragma once
@@ -30,6 +31,8 @@
 #define GIGADEVICE_DI_45              0x45
 #define GIGADEVICE_DI_35              0x35
 #define GIGADEVICE_DI_25              0x25
+#define GIGADEVICE_DI_91              0x91
+#define GIGADEVICE_DI_81              0x81
 #define GIGADEVICE_DI_95              0x95
 #define GIGADEVICE_DI_85              0x85
 #define GIGADEVICE_DI_92              0x92

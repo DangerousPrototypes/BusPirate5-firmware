@@ -6,6 +6,7 @@
  * SPDX-FileContributor: 2015-2024 Espressif Systems (Shanghai) CO LTD
  * SPDX-FileContributor: Adapted for Raspberry Pi Pico (RP2040)
  * SPDX-FileContributor: Added Dosilicon DS35Q1GA support
+ * SPDX-FileContributor: Documented manufacturer-specific ECC status widths
  */
 
 #include <string.h>
@@ -162,6 +163,7 @@ esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_f
 
     memcpy(&(*handle)->config, config, sizeof(spi_nand_flash_config_t));
 
+    // Default for legacy 2-bit ECCS devices; manufacturer-specific init overrides this for 3-bit parts.
     (*handle)->chip.ecc_data.ecc_status_reg_len_in_bits = 2;
     (*handle)->chip.ecc_data.ecc_data_refresh_threshold = 4;
     (*handle)->chip.log2_ppb = 6;         // 64 pages per block is standard

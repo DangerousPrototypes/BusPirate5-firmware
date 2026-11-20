@@ -270,6 +270,31 @@ void irtx_handler(struct command_result *res){
 	bp_cmd_help_show(&irtx_def);
 }
 
+//one piece of an aIR packet, to the terminal or to the file
+static bool irrx_put(FIL *file, const char *text){
+	if(!file){
+		printf("%s", text);
+		return true;
+	}
+	UINT len = strlen(text), bytes_written;
+	return f_write(file, text, len, &bytes_written)==FR_OK && bytes_written==len;
+}
+
+//a received signal as an aIR packet, written a pair at a time:
+//128 pairs make up to 1.5K characters, more than a buffer on the stack should hold
+static bool irrx_write_packet(FIL *file, uint8_t mod_freq_int, uint16_t pairs, const uint32_t *buffer){
+	char text[16]; //the longest piece is "65535,65535,"
+	snprintf(text, sizeof(text), "$%u:", mod_freq_int);
+	if(!irrx_put(file, text)) return false;
+	for(uint16_t i=0; i<pairs-1; i++){
+		snprintf(text, sizeof(text), "%u,%u,", (uint16_t)(buffer[i]>>16), (uint16_t)(buffer[i]&0xffff));
+		if(!irrx_put(file, text)) return false;
+	}
+	//the last space is the timeout, aIR leaves it out
+	snprintf(text, sizeof(text), "%u,;\r\n", (uint16_t)(buffer[pairs-1]>>16));
+	return irrx_put(file, text);
+}
+
 void irrx_handler(struct command_result *res){
 	if (bp_cmd_help_check(&irrx_def, res->help_flag)) {
         return;
@@ -337,7 +362,6 @@ void irrx_handler(struct command_result *res){
 		uint16_t pairs=0;
 		float mod_freq;
 		uint16_t us;
-		char air_buffer[512];
 		//wait for complete IR packet from irio_pio
 		printf("\r\nListening for IR packets (x to exit)...\r\n");
 		//drain the FIFO so we can sync and not get garbage
@@ -355,17 +379,10 @@ void irrx_handler(struct command_result *res){
 			}
 		}
 		uint8_t mod_freq_int = (uint8_t)roundf(mod_freq/1000.0f);
-		uint16_t sn_cnt = snprintf(air_buffer, sizeof(air_buffer), "$%u:", mod_freq_int);
-		for(uint16_t i=0; i<pairs-1; i++){
-			sn_cnt+=snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,%u,", (uint16_t)(buffer[i]>>16), (uint16_t)(buffer[i]&0xffff));
-		}
-		sn_cnt += snprintf(&air_buffer[sn_cnt], sizeof(air_buffer)-sn_cnt, "%u,;\r\n", buffer[pairs-1]>>16);
-		if(sn_cnt>sizeof(air_buffer)){
-			printf("AIR packet too long, max 512 characters\r\n");
-			res->error = true;
-			//goto exit_irrx_handler;
-		}
-		printf("\r\n%s%s%s\r\n", ui_term_color_info(), air_buffer, ui_term_color_reset());
+		//printed from the pairs: frames joined by gaps under 65ms show whole too
+		printf("\r\n%s", ui_term_color_info());
+		irrx_write_packet(NULL, mod_freq_int, pairs, buffer);
+		printf("%s\r\n", ui_term_color_reset());
 
 		//for debugging
 		/*
@@ -403,10 +420,7 @@ menu_irrx_handler:
 				}
 				//write to file
 				printf("Saving to file %s\r\n", file);
-				//write the data to the file
-				UINT bytes_written; // somewhere to store the number of bytes written
-				result = f_write(&file_handle, air_buffer, strlen(air_buffer), &bytes_written); // write the data to the file
-				if (result != FR_OK) {
+				if(!irrx_write_packet(&file_handle, mod_freq_int, pairs, buffer)){
 					printf("Error writing to file %s\r\n", file);
 					res->error = true; // set the error flag
 					goto exit_irrx_handler;

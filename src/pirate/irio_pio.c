@@ -21,6 +21,9 @@ static bool rx_loaded = false; //the three receiver programs are in PIO memory
 //receiver started or FIFOs drained: a frame in progress is gone, the frame functions start over
 static bool rx_frame_buf_restart = false;
 static bool rx_frame_printf_restart = false;
+//a finished carrier measurement waits for a frame since mod_freq_since
+static bool mod_freq_waiting = false;
+static absolute_time_t mod_freq_since;
 
 void _irio_pio_tx_init(uint pin_tx, float desired_period_us, float mod_freq){
     #define INSTRUCTIONS_PER_CYCLE 2
@@ -194,6 +197,22 @@ void irio_pio_tx_frame_write(float mod_freq, uint16_t pairs, uint32_t *buffer){
 void irio_pio_rx_reset_mod_freq(void){
     pio_sm_clear_fifos(pio_config_rx_mod_freq.pio, pio_config_rx_mod_freq.sm);
     pio_interrupt_clear(pio_config_rx_mod_freq.pio, 0);
+    mod_freq_waiting = false;
+}
+
+//the learner sees IR the demodulator doesn't (noise, other carriers): a measurement
+//no frame has used for 20ms is not from the next frame, measure again
+static void irio_pio_rx_drop_stale_mod_freq(void){
+    if(!pio_interrupt_get(pio_config_rx_mod_freq.pio, 0)){
+        mod_freq_waiting = false;
+        return;
+    }
+    if(!mod_freq_waiting){
+        mod_freq_waiting = true;
+        mod_freq_since = get_absolute_time();
+    }else if(absolute_time_diff_us(mod_freq_since, get_absolute_time()) > 20000){
+        irio_pio_rx_reset_mod_freq();
+    }
 }
 
 //false = no carrier measurement, mod_freq and us are then 0
@@ -301,6 +320,8 @@ bool irio_pio_rx_frame_buf(float *mod_freq, uint16_t *us, uint16_t *pairs, uint3
                 buffer[*pairs] = temp<<16; 
                 //*mod_freq=36000.0f; //todo: actual frequency measurement
                 state = AIR_SPACE;
+            }else{
+                irio_pio_rx_drop_stale_mod_freq(); //no frame has started yet
             }
             break;
         case AIR_SPACE:
@@ -393,6 +414,8 @@ ir_rx_status_t irio_pio_rx_frame_printf(uint32_t *rx_frame) {
                 uint8_t mod_freq_int=(uint8_t)roundf(mod_freq/1000.0f);
                 printf("$%u:%u,", mod_freq_int, low);
                 state = AIR_SPACE;
+            }else{
+                irio_pio_rx_drop_stale_mod_freq(); //no frame has started yet
             }
             break;
         case AIR_SPACE:

@@ -183,7 +183,7 @@ const binmode_t binmodes[] = {
         // runs once from the binmode command (setup message), then the default binmode comes back
         .lock_terminal = false,
         .can_save_config = false,
-        .reset_to_hiz = true,
+        .reset_to_hiz = false, // bp3unbrick_setup() leaves the mode, io_reference() checks the supply
         .pullup_enabled = false,
         .psu_en_voltage = 0,
         .psu_en_current = 0,
@@ -206,8 +206,8 @@ inline void binmode_setup(void) {
     // optional reset to HiZ
     if(binmodes[system_config.binmode_select].reset_to_hiz) {
         modes[system_config.mode].protocol_cleanup();
-        system_config.mode = 0;
-        modes[system_config.mode].protocol_setup();
+        system_config.mode = HIZ;
+        modes[HIZ].protocol_setup_exc(); // disables power supply, pull-ups etc.
     }
 
     //voltage and current 
@@ -238,8 +238,8 @@ inline void binmode_service(void) {
             binmode_cleanup();
             system_config.binmode_select = 0;
             binmode_setup();
-            system_config.mode = 0;
-            modes[system_config.mode].protocol_setup();
+            system_config.mode = HIZ;
+            modes[HIZ].protocol_setup_exc();
             return;
         }
     }

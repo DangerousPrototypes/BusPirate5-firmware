@@ -194,8 +194,11 @@ void irio_pio_tx_write(uint32_t *data){
     if(!tx_loaded) return;
     uint16_t mark = (*data)>>16;
     uint16_t space = (*data)&0xffff;
+    //the PIO adds one to each count, a 0 would become 65535
+    if(mark) mark--;
+    if(space) space--;
     //push the data to the FIFO, in pairs to prevent the transmitter from sticking 'on'
-    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, (mark-1)<<16|(space-1));
+    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, ((uint32_t)mark<<16)|space);
     return;
 }
 

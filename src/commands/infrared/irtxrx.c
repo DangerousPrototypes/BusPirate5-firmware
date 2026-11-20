@@ -20,6 +20,9 @@
 #include "ui/ui_help.h"
 #include "pirate/irio_pio.h"
 #include "usb_rx.h"
+#include "ui/ui_cmdln.h"
+#include "ui/ui_term_linenoise.h"
+#include "lib/bp_linenoise/linenoise.h"
 
 static const char* const usage_tx[] = {
     "irtx [aIR packet] [-f <file>]",
@@ -214,14 +217,35 @@ void irtx_handler(struct command_result *res){
 	
 	}else{
 		//try to parse from the command line
-		if(bp_cmd_get_positional_string(&irtx_def, 1, buffer, sizeof(buffer))){
+		//bp_cmd splits arguments at commas, read the packet as one word
+		if(cmdln_args_string_by_position(1, sizeof(buffer), buffer)){
+			//the command line drops anything typed past its end, the packet may be cut
+			if(ui_term_linenoise_get_len()>=BP_LINENOISE_MAX_LINE){
+				printf("AIR packet too long for the command line, use irtx -f\r\n");
+				res->error = true;
+				return;
+			}
+			//a space or a line break in the packet cuts it too
+			char word[2];
+			if(cmdln_args_string_by_position(2, sizeof(word), word)){
+				printf("No spaces allowed in the AIR packet\r\n");
+				res->error = true;
+				return;
+			}
+			char c;
+			if(!cmdln_try_peek(command_info.endptr+1, &c) || c!=';'){
+				printf("AIR packet must end with ;\r\n");
+				res->error = true;
+				return;
+			}
 			printf("\r\nTransmitting from command line\r\n");
 			//here's the deal: the command line parser is removing the final ';'
 			// as it is a seperation character for multiple commands
 			// so we need to add it back in
-			if(strlen(buffer)<sizeof(buffer)-1){
-				buffer[strlen(buffer)]=';';
-				buffer[strlen(buffer)+1]=0x00;
+			size_t len = strlen(buffer);
+			if(len<sizeof(buffer)-1){
+				buffer[len]=';';
+				buffer[len+1]=0x00;
 			}else{
 				printf("AIR packet too long, max 512 characters\r\n");
 				res->error = true;

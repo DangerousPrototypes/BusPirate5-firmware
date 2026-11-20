@@ -165,13 +165,13 @@ def reset_device(bpio, terminal):
     terminal.reconnect()
 ```
 
-Or, for a lighter-weight reset that doesn't require re-enumeration, send `m 1` (HiZ mode) via the terminal:
+Or, for a lighter-weight reset that doesn't require re-enumeration, send `m hiz` (HiZ mode) via the terminal:
 
 ```python
 @pytest.fixture(autouse=True)
 def soft_reset(terminal):
     yield
-    terminal.send_command("m 1")  # return to HiZ
+    terminal.send_command("m hiz")  # return to HiZ
     terminal.read_until_prompt()
 ```
 
@@ -424,7 +424,7 @@ def terminal(flash_firmware):
 def soft_reset(terminal):
     """Reset to HiZ mode between tests (no reboot needed)."""
     yield
-    terminal.send_command("m 1")
+    terminal.send_command("m hiz")
     terminal.read_until_prompt()
 ```
 
@@ -471,7 +471,7 @@ Test Host                          Bus Pirate                   USB Bus
     │  assert results                   │                           │
     │                                   │                           │
     │── Stage 6: Reset between tests ──→│                           │
-    │  CDC0: "m 1\r" (soft reset)       │                           │
+    │  CDC0: "m hiz\r" (soft reset)     │                           │
     │  ←── "HiZ> "                      │                           │
     │                                   │                           │
     │  [repeat Stage 5-6 per test]      │                           │
@@ -559,7 +559,7 @@ def test_no_statusbar_corruption_under_load(terminal, bpio):
     
     # Trigger continuous output (e.g., SPI read loop)
     bpio.send_configuration(mode="SPI")
-    terminal.send_command("m 6")  # enter SPI mode via terminal
+    terminal.send_command("m spi")  # enter SPI mode via terminal
     terminal.read_until_prompt()
     
     # Rapid-fire commands while statusbar is updating

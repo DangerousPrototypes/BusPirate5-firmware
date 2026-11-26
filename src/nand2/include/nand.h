@@ -99,6 +99,7 @@ struct spi_nand_flash_device_t {
     uint8_t *read_buffer;
     uint8_t *temp_buffer;
     const char *manufacturer_name;
+    const char *model_name;
     mutex_t mutex;
     bool io_fault; // latched after a busy timeout or deadline: fail fast until recovered
     // Wall-clock limit for the FTL operation in progress (see nand_op_begin). Dhara's bad-block

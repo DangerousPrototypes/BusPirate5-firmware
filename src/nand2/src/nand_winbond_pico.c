@@ -36,6 +36,7 @@ static const char MANUFACTURER_NAME[] = "Winbond";
 
 esp_err_t spi_nand_winbond_init(spi_nand_flash_device_t *dev)
 {
+    dev->manufacturer_name = MANUFACTURER_NAME;
     esp_err_t ret = ESP_OK;
     uint8_t device_id_buf[2] = {0};
     spi_nand_transaction_t t = {
@@ -78,5 +79,6 @@ esp_err_t spi_nand_winbond_init(spi_nand_flash_device_t *dev)
     default:
         return ESP_ERR_INVALID_RESPONSE;
     }
+    dev->model_name = spi_nand_flash_model_name(SPI_NAND_FLASH_WINBOND_MI, device_id);
     return ESP_OK;
 }

@@ -55,5 +55,6 @@ esp_err_t spi_nand_dosilicon_init(spi_nand_flash_device_t *dev)
     }
 
     dev->chip.num_blocks = 1024;
+    dev->model_name = spi_nand_flash_model_name(SPI_NAND_FLASH_DOSILICON_MI, device_id[1]);
     return ESP_OK;
 }

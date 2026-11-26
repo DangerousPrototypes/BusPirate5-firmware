@@ -171,6 +171,12 @@ void spi_nand_flash_print_info(void);
  */
 const char *spi_nand_flash_print_manufacturer(void);
 
+/** @brief Get the detected NAND flash model name.
+ *
+ * @return Pointer to the model name, or empty string if no device is initialized.
+ */
+const char *spi_nand_flash_print_model(void);
+
 /** @brief Get the internal static device handle.
  *
  * @return Pointer to the initialized device handle, or NULL if no device has been initialized.

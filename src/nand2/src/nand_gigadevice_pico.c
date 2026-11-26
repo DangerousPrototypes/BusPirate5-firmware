@@ -100,5 +100,6 @@ esp_err_t spi_nand_gigadevice_init(spi_nand_flash_device_t *dev)
     default:
         return ESP_ERR_INVALID_RESPONSE;
     }
+    dev->model_name = spi_nand_flash_model_name(SPI_NAND_FLASH_GIGADEVICE_MI, device_id);
     return ESP_OK;
 }

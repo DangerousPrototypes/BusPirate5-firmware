@@ -224,6 +224,7 @@ static void nand_print_stats(spi_nand_flash_device_t* handle) {
         return;
     }
     printf("  Manufacturer: %s\r\n", spi_nand_flash_print_manufacturer());
+    printf("  Model: %s\r\n", spi_nand_flash_print_model());
     printf("  FTL sectors used: %lu / %lu\r\n", (unsigned long)used, (unsigned long)total);
     printf("  Journal size: %lu pages\r\n", (unsigned long)journal);
     if (total) {

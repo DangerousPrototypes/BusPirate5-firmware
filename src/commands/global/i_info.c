@@ -116,15 +116,18 @@ void i_info_handler(struct command_result* res) {
     if (system_config.storage_available) {
 #ifdef BP_HW_STORAGE_NAND
         const char* storage_manufacturer = spi_nand_flash_print_manufacturer();
+        const char* storage_model = spi_nand_flash_print_model();
 #else
         const char* storage_manufacturer = "";
+        const char* storage_model = "";
 #endif
-        printf("%s: %s%1.2fGB%s %s (%s %s)\r\n",
+        printf("%s: %s%1.2fGB%s %s %s (%s %s)\r\n",
                GET_T(T_INFO_TF_CARD),
                ui_term_color_num_float(),
                system_config.storage_size,
                ui_term_color_reset(),
                storage_manufacturer,
+               storage_model,
                storage_fat_type_labels[system_config.storage_fat_type - 1],
                GET_T(T_INFO_FILE_SYSTEM));
         //spi_nand_flash_print_info();

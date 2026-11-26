@@ -148,6 +148,17 @@ static esp_err_t configure_chip(spi_nand_flash_device_t *dev)
 static uint8_t work[2048+4];
 static uint8_t read[2048+4];
 static spi_nand_flash_device_t static_device_handle;
+static const spi_nand_flash_device_info_t flash_device_table[] = SPI_NAND_FLASH_DEVICE_TABLE;
+
+const char *spi_nand_flash_model_name(uint8_t manufacturer_id, uint16_t device_id)
+{
+    for (size_t i = 0; i < sizeof(flash_device_table) / sizeof(flash_device_table[0]); i++) {
+        if (flash_device_table[i].manufacturer_id == manufacturer_id && flash_device_table[i].device_id == device_id) {
+            return flash_device_table[i].model_name;
+        }
+    }
+    return "";
+}
 
 esp_err_t spi_nand_flash_init_device(spi_nand_flash_config_t *config, spi_nand_flash_device_t **handle)
 {
@@ -319,6 +330,17 @@ const char *spi_nand_flash_print_manufacturer(void)
     return handle->manufacturer_name;
 }
 
+const char *spi_nand_flash_print_model(void)
+{
+    spi_nand_flash_device_t *handle = &static_device_handle;
+
+    if (handle->model_name == NULL) {
+        return "";
+    }
+
+    return handle->model_name;
+}
+
 void spi_nand_flash_recover(spi_nand_flash_device_t *handle)
 {
     if (handle == NULL || !handle->io_fault) {
@@ -431,6 +453,7 @@ void spi_nand_flash_print_info(void)
     
     printf("NAND Flash Information:\r\n");
     printf("  Manufacturer: %s\r\n", handle->manufacturer_name);
+    printf("  Model: %s\r\n", handle->model_name);
     printf("  Page size: %lu bytes\r\n", (unsigned long)handle->chip.page_size);
     printf("  Block size: %lu bytes\r\n", (unsigned long)handle->chip.block_size);
     printf("  Pages per block: %u\r\n", (1 << handle->chip.log2_ppb));

@@ -17,6 +17,11 @@
 #include "nand2/nand_ftl_diskio.h"
 #include "commands/global/disk.h"
 #include "msc_disk.h"
+#include "stall_diag.h"
+#endif
+
+#ifndef BP_GLOBAL_NAND_MOVE_ENABLE
+#define BP_GLOBAL_NAND_MOVE_ENABLE 0
 #endif
 
 static const char* const usage[] = {
@@ -30,8 +35,10 @@ static const char* const usage[] = {
     "Read-only surface scan (verify all sectors readable):%s nand scan",
     "Destructive write/GC/verify stress test (4 cycles):%s nand stress -i 4",
     "Stress test without the confirmation prompt:%s nand stress -y",
+#if BP_GLOBAL_NAND_MOVE_ENABLE
     "Test raw page moves with and without RANDOM PROGRAM LOAD:%s nand move",
     "Page-move test without the confirmation prompt:%s nand move -y",
+#endif
     "Erase all good blocks, reset the FTL and format:%s nand wipe",
 };
 
@@ -43,7 +50,9 @@ enum nand_actions {
     NAND_GC,
     NAND_SCAN,
     NAND_STRESS,
+#if BP_GLOBAL_NAND_MOVE_ENABLE
     NAND_MOVE,
+#endif
     NAND_WIPE,
 };
 
@@ -55,7 +64,9 @@ static const bp_command_action_t nand_action_defs[] = {
     { NAND_GC,     "gc",     0 },
     { NAND_SCAN,   "scan",   0 },
     { NAND_STRESS, "stress", 0 },
+#if BP_GLOBAL_NAND_MOVE_ENABLE
     { NAND_MOVE,   "move",   0 },
+#endif
     { NAND_WIPE,   "wipe",   0 },
 };
 
@@ -237,6 +248,7 @@ static void nand_cmd_info(spi_nand_flash_device_t* handle) {
     nand_print_stats(handle);
     spi_nand_flash_print_diag(handle);
     msc_disk_print_diag();
+    stall_diag_print();
 }
 
 static void nand_cmd_wipe(spi_nand_flash_device_t* handle) {
@@ -413,6 +425,7 @@ static void nand_cmd_stress(spi_nand_flash_device_t* handle, uint32_t iterations
     system_config.storage_available = 0;
 }
 
+#if BP_GLOBAL_NAND_MOVE_ENABLE
 typedef struct {
     const char* stage;
     esp_err_t result;
@@ -559,6 +572,7 @@ done:
         system_config.storage_available = 0;
     }
 }
+#endif // BP_GLOBAL_NAND_MOVE_ENABLE
 
 #endif // BP_HW_STORAGE_NAND
 
@@ -624,10 +638,12 @@ void nand_handler(struct command_result* res) {
             nand_cmd_stress(handle, iterations, sectors);
             break;
         }
+#if BP_GLOBAL_NAND_MOVE_ENABLE     
         case NAND_MOVE:
             nand_locked_recover(handle);
             nand_cmd_move_test(handle);
             break;
+#endif
         case NAND_WIPE:
             nand_cmd_wipe(handle);
             break;

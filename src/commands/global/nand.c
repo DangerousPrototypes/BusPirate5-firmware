@@ -17,7 +17,7 @@
 #include "nand2/nand_ftl_diskio.h"
 #include "commands/global/disk.h"
 #include "msc_disk.h"
-#include "stall_diag.h"
+//#include "stall_diag.h"
 #endif
 
 #ifndef BP_GLOBAL_NAND_MOVE_ENABLE
@@ -248,7 +248,7 @@ static void nand_cmd_info(spi_nand_flash_device_t* handle) {
     nand_print_stats(handle);
     spi_nand_flash_print_diag(handle);
     msc_disk_print_diag();
-    stall_diag_print();
+    //stall_diag_print();
 }
 
 static void nand_cmd_wipe(spi_nand_flash_device_t* handle) {

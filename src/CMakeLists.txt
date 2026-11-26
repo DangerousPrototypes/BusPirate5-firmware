@@ -639,6 +639,8 @@ set(buspirate_common
 
         msc_disk.c
         msc_disk.h
+        #stall_diag.c
+        #stall_diag.h
         usb_descriptors.c
 
 	# USBPD 
@@ -672,6 +674,7 @@ set(spi_nand_flash
     ${SPI_NAND_ROOT}src/nand_micron_pico.c
     ${SPI_NAND_ROOT}src/nand_zetta_pico.c
     ${SPI_NAND_ROOT}src/nand_xtx_pico.c
+    ${SPI_NAND_ROOT}src/nand_dosilicon_pico.c
     ${SPI_NAND_ROOT}src/dhara/map.c
     ${SPI_NAND_ROOT}src/dhara/journal.c
     ${SPI_NAND_ROOT}src/dhara/error.c    

@@ -433,6 +433,7 @@ static nand_move_case_result_t nand_run_move_case(spi_nand_flash_device_t* handl
         handle->chip.flags &= ~NAND_FLAG_COPY_REQUIRES_PROGRAM_LOAD;
     }
 
+    nand_op_begin(handle);
     nand_fill_pattern(write_buf, handle->chip.page_size, src, 0);
     result.result = nand_prog(handle, src, write_buf);
     if (result.result != ESP_OK) {
@@ -458,6 +459,9 @@ static nand_move_case_result_t nand_run_move_case(spi_nand_flash_device_t* handl
 
 done:
     handle->chip.flags = original_flags;
+    if (handle->io_fault) {
+        spi_nand_flash_recover(handle);
+    }
     return result;
 }
 
@@ -483,14 +487,27 @@ static void nand_cmd_move_test(spi_nand_flash_device_t* handle) {
     nand_move_case_result_t random_load = { "not run", ESP_ERR_NOT_SUPPORTED };
     uint32_t original_flags = handle->chip.flags;
     uint32_t pages_per_block = 1u << handle->chip.log2_ppb;
+    uint32_t scan_errors = 0;
+    uint32_t scan_bad = 0;
 
     printf("Testing internal page moves on block near the end of the NAND.\r\n");
     diskio_lock();
     for (uint32_t candidate = handle->chip.num_blocks; candidate > 0;) {
         candidate--;
         bool is_bad = false;
+        nand_op_begin(handle);
         direct.result = nand_is_bad(handle, candidate, &is_bad);
-        if (direct.result == ESP_OK && !is_bad) {
+        if (direct.result != ESP_OK) {
+            scan_errors++;
+            direct.stage = "find good block";
+            if (handle->io_fault) {
+                spi_nand_flash_recover(handle);
+            }
+            goto done;
+        }
+        if (is_bad) {
+            scan_bad++;
+        } else {
             block = candidate;
             found_block = true;
             break;
@@ -504,6 +521,7 @@ static void nand_cmd_move_test(spi_nand_flash_device_t* handle) {
     }
 
     direct.stage = "erase";
+    nand_op_begin(handle);
     direct.result = nand_erase_block(handle, block);
     if (direct.result != ESP_OK) {
         goto done;
@@ -530,6 +548,8 @@ done:
            (long)random_load.result);
     printf("  Original copy flag: %s\r\n",
            (original_flags & NAND_FLAG_COPY_REQUIRES_PROGRAM_LOAD) ? "set" : "clear");
+    printf("  Block scan: %lu bad, %lu I/O errors before selection\r\n",
+           (unsigned long)scan_bad, (unsigned long)scan_errors);
     printf("  RESULT: %s\r\n", direct.result == ESP_OK && random_load.result == ESP_OK
                                ? "PASS - both paths preserved the page"
                                : "FAIL - inspect chip timing/cache requirements");

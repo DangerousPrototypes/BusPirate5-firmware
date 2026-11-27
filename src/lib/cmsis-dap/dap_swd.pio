@@ -1,0 +1,92 @@
+;
+; SWD for the CMSIS-DAP binmode
+;
+; The MIT License (MIT)
+;
+; Copyright (c) 2021-2023 Raspberry Pi (Trading) Ltd.
+;
+; Permission is hereby granted, free of charge, to any person obtaining a copy
+; of this software and associated documentation files (the "Software"), to deal
+; in the Software without restriction, including without limitation the rights
+; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+; copies of the Software, and to permit persons to whom the Software is
+; furnished to do so, subject to the following conditions:
+;
+; The above copyright notice and this permission notice shall be included in
+; all copies or substantial portions of the Software.
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+; THE SOFTWARE.
+;
+; SPDX-License-Identifier: MIT
+;
+; Taken from src/probe.pio of the Raspberry Pi debugprobe
+; (https://github.com/raspberrypi/debugprobe): write_cmd and read_cmd are
+; unchanged, get_next_cmd is the same without the SWDIO direction bit.
+;
+; Modified by Daniel Schaefer 2026: SWDIO direction moved out of get_next_cmd
+; into dir_out_cmd/dir_in_cmd, which also turn the Bus Pirate SWDIO level
+; shifter (BUFDIR5); hold_pins for DAP_SWJ_Pins; command word layout below.
+;
+; Pins:
+;   side-set 0  SWCLK (BUFIO6)
+;   OUT/IN 0    SWDIO (BUFIO5), pindir follows the command
+;   SET 0       SWDIO level shifter direction (BUFDIR5): 1 drives the target
+;
+; The CPU sends command words (OSR shifts right):
+;   [7:0]   bit count - 1     (write/read)
+;   [12:8]  routine address   (absolute, offset added by the CPU)
+;   [13]    SWDIO output enable (dir_out/dir_in)
+; write_cmd is followed by one data word, sent LSB first; bits after the 32nd are 0.
+; read_cmd pushes one word with the bits in [31:32-n], first bit lowest.
+;
+; SWCLK idles low. Every bit takes 4 PIO cycles: SWCLK = clk_sys / (4 * clkdiv).
+; The host changes SWDIO on the falling edge and samples it just before the rising
+; edge; the target samples on the rising edge and changes SWDIO after it.
+
+.program dap_swd
+.side_set 1 opt
+
+public write_cmd:
+    pull
+write_bitloop:
+    out pins, 1             [1] side 0
+    jmp x-- write_bitloop   [1] side 1
+
+.wrap_target
+public get_next_cmd:
+    pull                        side 0
+cmd_decode:
+    out x, 8
+    out pc, 5
+
+read_bitloop:
+    nop
+public read_cmd:
+    in pins, 1              [1] side 1
+    jmp x-- read_bitloop        side 0
+    push
+    jmp get_next_cmd
+
+; Turning SWDIO around never lets the RP2xxx and the level shifter drive the
+; same node: the shifter turns towards the target before the pin drives, and the
+; pin lets go before the shifter turns back.
+public dir_out_cmd:
+    set pins, 1
+    out pindirs, 1
+    jmp get_next_cmd
+public dir_in_cmd:
+    out pindirs, 1
+    set pins, 0
+.wrap
+
+; Entered after DAP_SWJ_Pins set SWCLK/SWDIO: keep SWCLK where the host put it until
+; the next command arrives, then return it low before clocking.
+public hold_pins:
+    pull
+    jmp cmd_decode              side 0

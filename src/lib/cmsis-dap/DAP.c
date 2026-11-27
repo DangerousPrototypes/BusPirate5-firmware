@@ -23,6 +23,8 @@
  * Project:      CMSIS-DAP Source
  * Title:        DAP.c CMSIS-DAP Commands
  *
+ * Modified by Daniel Schaefer 2026: PORT_SWJ_CLOCK hook for the PIO SWCLK.
+ *
  *---------------------------------------------------------------------------*/
 
 #include <string.h>
@@ -377,6 +379,10 @@ static uint32_t DAP_SWJ_Clock(const uint8_t *request, uint8_t *response) {
     *response = DAP_ERROR;
     return ((4U << 16) | 1U);
   }
+
+#ifdef PORT_SWJ_CLOCK
+  PORT_SWJ_CLOCK(clock);
+#endif
 
   if (clock >= MAX_SWJ_CLOCK(DELAY_FAST_CYCLES)) {
     DAP_Data.fast_clock  = 1U;

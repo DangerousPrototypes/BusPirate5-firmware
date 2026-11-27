@@ -23,6 +23,9 @@
  * Project:      CMSIS-DAP Source
  * Title:        SW_DP.c CMSIS-DAP SW DP I/O
  *
+ * Modified by Daniel Schaefer 2026: renamed to *_GPIO, SW_DP_PIO.c dispatches to
+ * these when SWD does not run through PIO.
+ *
  *---------------------------------------------------------------------------*/
 
 #include "DAP_config.h"
@@ -62,7 +65,7 @@
 //   data:   pointer to sequence bit data
 //   return: none
 #if ((DAP_SWD != 0) || (DAP_JTAG != 0))
-void SWJ_Sequence (uint32_t count, const uint8_t *data) {
+void SWJ_Sequence_GPIO (uint32_t count, const uint8_t *data) {
   uint32_t val;
   uint32_t n;
 
@@ -92,7 +95,7 @@ void SWJ_Sequence (uint32_t count, const uint8_t *data) {
 //   swdi:   pointer to SWDIO captured data
 //   return: none
 #if (DAP_SWD != 0)
-void SWD_Sequence (uint32_t info, const uint8_t *swdo, uint8_t *swdi) {
+void SWD_Sequence_GPIO (uint32_t info, const uint8_t *swdo, uint8_t *swdi) {
   uint32_t val;
   uint32_t bit;
   uint32_t n, k;
@@ -274,7 +277,7 @@ SWD_TransferFunction(Slow)
 //   request: A[3:2] RnW APnDP
 //   data:    DATA[31:0]
 //   return:  ACK[2:0]
-uint8_t  SWD_Transfer(uint32_t request, uint32_t *data) {
+uint8_t  SWD_Transfer_GPIO(uint32_t request, uint32_t *data) {
   if (DAP_Data.fast_clock) {
     return SWD_TransferFast(request, data);
   } else {

@@ -598,6 +598,7 @@ set(buspirate_common
         lib/cmsis-dap/DAP_vendor.c
         lib/cmsis-dap/JTAG_DP.c
         lib/cmsis-dap/SW_DP.c
+        lib/cmsis-dap/SW_DP_PIO.c
 
         #toolbars
         toolbars/logic_bar.c
@@ -874,6 +875,7 @@ foreach(revision ${revisions})
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hw1wire.pio) 
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/hwuart.pio)  
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/pirate/spisnif.pio)  
+        pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/cmsis-dap/dap_swd.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/binmode/logicanalyzer.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_burst.pio)
         pico_generate_pio_header(${revision} ${CMAKE_CURRENT_LIST_DIR}/lib/pico_ir_nec/nec_carrier_control.pio)

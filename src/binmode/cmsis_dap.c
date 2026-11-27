@@ -248,6 +248,7 @@ void cmsis_dap_service(void) {
 void cmsis_dap_cleanup(void) {
     dap_active = false;
     PORT_OFF();
+    dap_swd_pio_release();
     for (uint8_t i = 0; i < count_of(pin_bios); i++) {
         system_bio_update_purpose_and_label(false, pin_bios[i], BP_PIN_MODE, 0);
     }

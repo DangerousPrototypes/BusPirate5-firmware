@@ -20,7 +20,7 @@
  * Project:      CMSIS-DAP Configuration
  * Title:        DAP_config.h CMSIS-DAP Configuration File
  *
- * Modified by Daniel Schaefer 2026: Bus Pirate buffered IO pin mapping.
+ * Modified by Daniel Schaefer 2026: Bus Pirate buffered IO pin mapping, SWD through PIO.
  *
  *---------------------------------------------------------------------------*/
 
@@ -55,6 +55,23 @@
 #define DAP_TDI_BIO BIO7
 #define DAP_TDI_IO BUFIO7
 #define DAP_TDI_DIR BUFDIR7
+
+// SWD through PIO (SW_DP_PIO.c). While active, the PIO owns SWCLK, SWDIO and the
+// SWDIO shifter direction; JTAG and the fallback use the bit-banged SW_DP.c.
+extern bool dap_swd_pio_active;
+void dap_swd_pio_start(void);
+void dap_swd_pio_stop(void);
+void dap_swd_pio_release(void);
+void dap_swd_pio_set_clock(uint32_t hz);
+void dap_swd_pio_swdio_dir(uint32_t out);
+void dap_swd_pio_set_pin(uint32_t pin, uint32_t value);
+void dap_swd_pio_flush(void);
+void SWJ_Sequence_GPIO(uint32_t count, const uint8_t* data);
+void SWD_Sequence_GPIO(uint32_t info, const uint8_t* swdo, uint8_t* swdi);
+uint8_t SWD_Transfer_GPIO(uint32_t request, uint32_t* data);
+
+/// Tell the PIO about DAP_SWJ_Clock requests (DAP.c)
+#define PORT_SWJ_CLOCK(hz) dap_swd_pio_set_clock(hz)
 
 /// Processor Clock of the Cortex-M MCU used in the Debug Unit.
 #define CPU_CLOCK clock_get_hz(clk_sys)
@@ -143,6 +160,7 @@ __STATIC_FORCEINLINE void dap_pin_open_drain(uint32_t io, uint32_t dir, uint32_t
  - TDO to input mode.
 */
 __STATIC_INLINE void PORT_JTAG_SETUP(void) {
+    dap_swd_pio_stop();
     gpio_put(DAP_TCK_IO, 1);
     gpio_put(DAP_TMS_IO, 1);
     gpio_put(DAP_TDI_IO, 1);
@@ -167,12 +185,14 @@ __STATIC_INLINE void PORT_SWD_SETUP(void) {
     dap_pin_input(DAP_TDO_IO, DAP_TDO_DIR);
     dap_pin_input(DAP_NTRST_IO, DAP_NTRST_DIR);
     dap_pin_input(DAP_NRESET_IO, DAP_NRESET_DIR);
+    dap_swd_pio_start();
 }
 
 /** Disable JTAG/SWD I/O Pins.
  - TCK/SWCLK, TMS/SWDIO, TDI, TDO, nTRST, nRESET to High-Z mode.
 */
 __STATIC_INLINE void PORT_OFF(void) {
+    dap_swd_pio_stop();
     dap_pin_input(DAP_TCK_IO, DAP_TCK_DIR);
     dap_pin_input(DAP_TMS_IO, DAP_TMS_DIR);
     dap_pin_input(DAP_TDI_IO, DAP_TDI_DIR);
@@ -188,10 +208,18 @@ __STATIC_FORCEINLINE uint32_t PIN_SWCLK_TCK_IN(void) {
 }
 
 __STATIC_FORCEINLINE void PIN_SWCLK_TCK_SET(void) {
+    if (dap_swd_pio_active) {
+        dap_swd_pio_set_pin(DAP_TCK_IO, 1);
+        return;
+    }
     gpio_put(DAP_TCK_IO, 1);
 }
 
 __STATIC_FORCEINLINE void PIN_SWCLK_TCK_CLR(void) {
+    if (dap_swd_pio_active) {
+        dap_swd_pio_set_pin(DAP_TCK_IO, 0);
+        return;
+    }
     gpio_put(DAP_TCK_IO, 0);
 }
 
@@ -202,10 +230,18 @@ __STATIC_FORCEINLINE uint32_t PIN_SWDIO_TMS_IN(void) {
 }
 
 __STATIC_FORCEINLINE void PIN_SWDIO_TMS_SET(void) {
+    if (dap_swd_pio_active) {
+        dap_swd_pio_set_pin(DAP_TMS_IO, 1);
+        return;
+    }
     gpio_put(DAP_TMS_IO, 1);
 }
 
 __STATIC_FORCEINLINE void PIN_SWDIO_TMS_CLR(void) {
+    if (dap_swd_pio_active) {
+        dap_swd_pio_set_pin(DAP_TMS_IO, 0);
+        return;
+    }
     gpio_put(DAP_TMS_IO, 0);
 }
 
@@ -218,10 +254,18 @@ __STATIC_FORCEINLINE void PIN_SWDIO_OUT(uint32_t bit) {
 }
 
 __STATIC_FORCEINLINE void PIN_SWDIO_OUT_ENABLE(void) {
+    if (dap_swd_pio_active) {
+        dap_swd_pio_swdio_dir(1);
+        return;
+    }
     dap_pin_output(DAP_TMS_IO, DAP_TMS_DIR);
 }
 
 __STATIC_FORCEINLINE void PIN_SWDIO_OUT_DISABLE(void) {
+    if (dap_swd_pio_active) {
+        dap_swd_pio_swdio_dir(0);
+        return;
+    }
     dap_pin_input(DAP_TMS_IO, DAP_TMS_DIR);
 }
 
@@ -248,6 +292,7 @@ __STATIC_FORCEINLINE uint32_t PIN_nTRST_IN(void) {
 }
 
 __STATIC_FORCEINLINE void PIN_nTRST_OUT(uint32_t bit) {
+    dap_swd_pio_flush();
     dap_pin_open_drain(DAP_NTRST_IO, DAP_NTRST_DIR, bit);
 }
 
@@ -258,6 +303,7 @@ __STATIC_FORCEINLINE uint32_t PIN_nRESET_IN(void) {
 }
 
 __STATIC_FORCEINLINE void PIN_nRESET_OUT(uint32_t bit) {
+    dap_swd_pio_flush();
     dap_pin_open_drain(DAP_NRESET_IO, DAP_NRESET_DIR, bit);
 }
 
@@ -283,6 +329,7 @@ __STATIC_INLINE uint32_t TIMESTAMP_GET(void) {
  - all I/O pins: input buffer enabled, output pins are set to HighZ mode.
 */
 __STATIC_INLINE void DAP_SETUP(void) {
+    dap_swd_pio_set_clock(DAP_DEFAULT_SWJ_CLOCK);
     PORT_OFF();
 }
 

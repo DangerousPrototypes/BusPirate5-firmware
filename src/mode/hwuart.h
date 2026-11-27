@@ -21,6 +21,9 @@ typedef struct _uart_mode_config {
     uint32_t flow_control;     ///< Hardware flow control (0=disabled, 1=RTS/CTS)
     uint32_t invert;           ///< Signal inversion (0=normal, 1=inverted)
     uint32_t listen;           ///< Listen mode (0=master/drive line, 1=listen/passive)
+    bool use_pio;              ///< true = PIO backend (arbitrary pins), false = hardware UART
+    uint8_t pio_tx_pin;        ///< BIO pin for TX when using PIO
+    uint8_t pio_rx_pin;        ///< BIO pin for RX when using PIO
 } _uart_mode_config;
 
 /**
@@ -128,3 +131,4 @@ extern const uint32_t hwuart_commands_count;
 extern const struct bp_command_def uart_setup_def;
 
 bool bpio_hwuart_configure(bpio_mode_configuration_t *bpio_mode_config);
+bool hwuart_is_pio_mode(void);

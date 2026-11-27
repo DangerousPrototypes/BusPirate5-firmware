@@ -37,6 +37,13 @@ static struct _pio_config pio_config_rx;
 static struct _pio_config pio_config_tx;
 static const hduart_mode_config *cfg;
 
+// Internal state for full-duplex mode (independent of hduart_mode_config)
+static struct {
+    uint8_t data_bits;
+    uint8_t stop_bits;
+    uint8_t parity;
+} fd_state;
+
 void hwuart_pio_init(const hduart_mode_config *mode_cfg) {
     cfg = mode_cfg;
 
@@ -183,3 +190,85 @@ void hwuart_pio_write(uint32_t data) {
 
     pio_sm_set_enabled(pio_config_rx.pio, pio_config_rx.sm, true);
 }
+
+void hwuart_pio_fullduplex_init(uint8_t tx_pin, uint8_t rx_pin,
+                                uint8_t data_bits, uint8_t stop_bits,
+                                uint8_t parity, uint32_t baudrate) {
+    fd_state.data_bits = data_bits;
+    fd_state.stop_bits = stop_bits;
+    fd_state.parity = parity;
+
+    uint8_t bits = data_bits;
+    if (parity != UART_PARITY_NONE) {
+        bits++;
+    }
+    if (stop_bits == 2) {
+        bits++;
+    }
+    bits--;
+
+    // RX on SM0
+    pio_config_rx.pio = PIO_MODE_PIO;
+    pio_config_rx.sm = 0;
+    pio_config_rx.program = &uart_rx_program;
+    pio_config_rx.offset = pio_add_program(pio_config_rx.pio, pio_config_rx.program);
+    uart_rx_program_init(pio_config_rx.pio, pio_config_rx.sm, pio_config_rx.offset,
+                         bio2bufiopin[rx_pin], bits, baudrate);
+
+    // TX on SM1
+    pio_config_tx.pio = PIO_MODE_PIO;
+    pio_config_tx.sm = 1;
+    pio_config_tx.program = &uart_tx_program;
+    pio_config_tx.offset = pio_add_program(pio_config_tx.pio, pio_config_tx.program);
+    uart_tx_program_init(pio_config_tx.pio, pio_config_tx.sm, pio_config_tx.offset,
+                         bio2bufiopin[tx_pin], bits, baudrate);
+
+    // uart_tx_program_init sets GPIO_OVERRIDE_INVERT on the TX pin. This is needed for
+    // the half-duplex open-drain bus but WRONG for full-duplex: the PIO program uses
+    // side 1 = idle/stop, side 0 = start bit. With inversion, idle becomes LOW on the wire,
+    // but standard UART idle is HIGH. Clear the inversion so TX outputs standard UART levels.
+    gpio_set_outover(bio2bufiopin[tx_pin], GPIO_OVERRIDE_NORMAL);
+}
+
+void hwuart_pio_fullduplex_write(uint32_t data) {
+    uint8_t bits = fd_state.data_bits;
+    if (fd_state.parity == UART_PARITY_ODD) {
+        if (!getParity(data)) {
+            data |= (0b1 << bits);
+        }
+        bits++;
+    } else if (fd_state.parity == UART_PARITY_EVEN) {
+        if (getParity(data)) {
+            data |= (0b1 << bits);
+        }
+        bits++;
+    }
+    if (fd_state.stop_bits == 2) {
+        data |= (0b1 << bits);
+    }
+
+    pio_sm_put_blocking(pio_config_tx.pio, pio_config_tx.sm, data);
+    pio_hwuart_wait_idle(pio_config_tx.pio, pio_config_tx.sm);
+}
+
+bool hwuart_pio_fullduplex_read(uint32_t* raw, uint8_t* cooked) {
+    if (pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
+        return false;
+    }
+    (*raw) = pio_config_rx.pio->rxf[pio_config_rx.sm];
+    uint8_t total_bits = fd_state.data_bits;
+    if (fd_state.parity != UART_PARITY_NONE) {
+        total_bits++;
+    }
+    if (fd_state.stop_bits == 2) {
+        total_bits++;
+    }
+    (*cooked) = (uint8_t)((*raw) >> (32 - total_bits));
+    return true;
+}
+
+void hwuart_pio_fullduplex_flush_rx(void) {
+    while (!pio_sm_is_rx_fifo_empty(pio_config_rx.pio, pio_config_rx.sm)) {
+        (void)pio_sm_get(pio_config_rx.pio, pio_config_rx.sm);
+    }
+}

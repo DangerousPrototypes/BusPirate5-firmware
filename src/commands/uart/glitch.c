@@ -53,6 +53,7 @@
 #include "lib/bp_args/bp_cmd.h"
 #include "bytecode.h"
 #include "pirate/button.h"
+#include "mode/hwuart.h"
 
 #include "hardware/pio.h"
 #include "pio_config.h"
@@ -403,6 +404,11 @@ void uart_glitch_handler(struct command_result* res) {
     PRINT_INFO("glitch::Starting main glitch handler\r\n");
 
     if (bp_cmd_help_check(&uart_glitch_def, res->help_flag)) {
+        return;
+    }
+
+    if (hwuart_is_pio_mode()) {
+        printf("Error: not available with UART on PIO pins (--tx/--rx)\r\n");
         return;
     }
 

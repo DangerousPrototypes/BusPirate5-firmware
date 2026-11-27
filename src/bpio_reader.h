@@ -279,6 +279,8 @@ __flatbuffers_define_scalar_field(9, bpio_ModeConfiguration, chip_select_idle, f
 __flatbuffers_define_scalar_field(10, bpio_ModeConfiguration, submode, flatbuffers_uint8, uint8_t, UINT8_C(0))
 __flatbuffers_define_scalar_field(11, bpio_ModeConfiguration, tx_modulation, flatbuffers_uint32, uint32_t, UINT32_C(0))
 __flatbuffers_define_scalar_field(12, bpio_ModeConfiguration, rx_sensor, flatbuffers_uint8, uint8_t, UINT8_C(0))
+__flatbuffers_define_scalar_field(13, bpio_ModeConfiguration, pin_tx, flatbuffers_uint8, uint8_t, UINT8_C(255))
+__flatbuffers_define_scalar_field(14, bpio_ModeConfiguration, pin_rx, flatbuffers_uint8, uint8_t, UINT8_C(255))
 
 struct bpio_ConfigurationRequest_table { uint8_t unused__; };
 

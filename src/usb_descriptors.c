@@ -37,7 +37,8 @@
  * The firmware is hard-coded to use the first of these.
  */
 
-#define USB_BCD 0x0200
+// USB 2.1 so Windows asks for the BOS descriptor, which binds WinUSB to the CMSIS-DAP interface
+#define USB_BCD 0x0210
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -58,7 +59,7 @@ tusb_desc_device_t const desc_device = {
 
     .idVendor           = USB_VID,
     .idProduct          = USB_PID,
-    .bcdDevice          = 0x0101,
+    .bcdDevice          = 0x0102,
 
     .iManufacturer      = 0x01,
     .iProduct           = 0x02,
@@ -91,6 +92,7 @@ enum {
     ITF_NUM_CDC_1_DATA,
     ITF_NUM_MSC,
 #endif
+    ITF_NUM_DAP,
     ITF_NUM_TOTAL
 };
 
@@ -149,10 +151,15 @@ enum {
 
 #endif
 
+// CMSIS-DAP v2 bulk endpoints
+#define EPNUM_DAP_OUT 0x06
+#define EPNUM_DAP_IN 0x86
+
 #ifndef USB_TEST
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN)
+#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN + TUD_VENDOR_DESC_LEN)
 #else
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN)
+#define CONFIG_TOTAL_LEN                                                                                               \
+    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_CDC_DESC_LEN + TUD_MSC_DESC_LEN + TUD_VENDOR_DESC_LEN)
 #endif
 
 // full speed configuration
@@ -172,6 +179,9 @@ uint8_t const desc_fs_configuration[] = {
 #endif
     // Interface number, string index, EP Out & EP In address, EP size
     TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
+
+    // CMSIS-DAP v2: Interface number, string index, EP Out & EP In address, EP size
+    TUD_VENDOR_DESCRIPTOR(ITF_NUM_DAP, 7, EPNUM_DAP_OUT, EPNUM_DAP_IN, 64),
 };
 
 #if TUD_OPT_HIGH_SPEED
@@ -275,7 +285,8 @@ char const* string_desc_arr[] = {
 #endif
     "Bus Pirate CDC",             // 4: CDC Interface
     "Bus Pirate MSC",             // 5: MSC Interface
-    "Bus Pirate BIN"              // 6: Binary CDC Interface
+    "Bus Pirate BIN",             // 6: Binary CDC Interface
+    "Bus Pirate CMSIS-DAP"        // 7: CMSIS-DAP Interface (hosts look for "CMSIS-DAP")
 };
 // automatically update if an additional string is later added to the table
 #define STRING_DESC_ARR_ELEMENT_COUNT (sizeof(string_desc_arr) / sizeof(string_desc_arr[0]))
@@ -337,4 +348,77 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     _desc_str[0] = (TUSB_DESC_STRING << 8) | (2 * chr_count + 2);
 
     return _desc_str;
+}
+
+//--------------------------------------------------------------------+
+// BOS Descriptor
+//--------------------------------------------------------------------+
+
+// Microsoft OS 2.0 descriptors: Windows binds WinUSB to the CMSIS-DAP interface without an INF.
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-os-2-0-descriptors-specification
+#define VENDOR_REQUEST_MICROSOFT 1
+#define MS_OS_FEATURE_DESC_LEN 0xA0
+#define MS_OS_20_DESC_LEN (0x0A + 0x08 + MS_OS_FEATURE_DESC_LEN)
+
+#define BOS_TOTAL_LEN (TUD_BOS_DESC_LEN + TUD_BOS_MICROSOFT_OS_DESC_LEN)
+
+uint8_t const desc_bos[] = {
+    // total length, number of device caps
+    TUD_BOS_DESCRIPTOR(BOS_TOTAL_LEN, 1),
+
+    // Microsoft OS 2.0 descriptor
+    TUD_BOS_MS_OS_20_DESCRIPTOR(MS_OS_20_DESC_LEN, VENDOR_REQUEST_MICROSOFT)
+};
+
+uint8_t const desc_ms_os_20[] = {
+    // clang-format off
+    // Set header: length, type, windows version, total length
+    U16_TO_U8S_LE(0x000A), U16_TO_U8S_LE(MS_OS_20_SET_HEADER_DESCRIPTOR), U32_TO_U8S_LE(0x06030000), U16_TO_U8S_LE(MS_OS_20_DESC_LEN),
+
+    // Configuration subset header: length, type, configuration index, reserved, configuration total length
+    U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_CONFIGURATION), 0, 0, U16_TO_U8S_LE(MS_OS_20_DESC_LEN - 0x0A),
+
+    // Function Subset header: length, type, first interface, reserved, subset length
+    U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_FUNCTION), ITF_NUM_DAP, 0, U16_TO_U8S_LE(MS_OS_FEATURE_DESC_LEN),
+
+    // MS OS 2.0 Compatible ID descriptor: length, type, compatible ID, sub compatible ID
+    U16_TO_U8S_LE(0x0014), U16_TO_U8S_LE(MS_OS_20_FEATURE_COMPATBLE_ID), 'W', 'I', 'N', 'U', 'S', 'B', 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // sub-compatible
+
+    // MS OS 2.0 Registry property descriptor: length, type
+    U16_TO_U8S_LE(MS_OS_FEATURE_DESC_LEN - 0x08 - 0x14), U16_TO_U8S_LE(MS_OS_20_FEATURE_REG_PROPERTY),
+    // wPropertyDataType, wPropertyNameLength and PropertyName "DeviceInterfaceGUIDs\0" in UTF-16
+    U16_TO_U8S_LE(0x0007), U16_TO_U8S_LE(0x002A),
+    'D', 0x00, 'e', 0x00, 'v', 0x00, 'i', 0x00, 'c', 0x00, 'e', 0x00, 'I', 0x00, 'n', 0x00, 't', 0x00, 'e', 0x00,
+    'r', 0x00, 'f', 0x00, 'a', 0x00, 'c', 0x00, 'e', 0x00, 'G', 0x00, 'U', 0x00, 'I', 0x00, 'D', 0x00, 's', 0x00, 0x00, 0x00,
+    U16_TO_U8S_LE(0x0050), // wPropertyDataLength
+    // bPropertyData: the CMSIS-DAP v2 interface GUID "{CDB3B5AD-293B-4663-AA36-1AAE46463776}" as a UTF-16 multi-string
+    '{', 0x00, 'C', 0x00, 'D', 0x00, 'B', 0x00, '3', 0x00, 'B', 0x00, '5', 0x00, 'A', 0x00, 'D', 0x00, '-', 0x00,
+    '2', 0x00, '9', 0x00, '3', 0x00, 'B', 0x00, '-', 0x00, '4', 0x00, '6', 0x00, '6', 0x00, '3', 0x00, '-', 0x00,
+    'A', 0x00, 'A', 0x00, '3', 0x00, '6', 0x00, '-', 0x00, '1', 0x00, 'A', 0x00, 'A', 0x00, 'E', 0x00, '4', 0x00,
+    '6', 0x00, '4', 0x00, '6', 0x00, '3', 0x00, '7', 0x00, '7', 0x00, '6', 0x00, '}', 0x00, 0x00, 0x00, 0x00, 0x00,
+    // clang-format on
+};
+
+TU_VERIFY_STATIC(sizeof(desc_ms_os_20) == MS_OS_20_DESC_LEN, "Incorrect size");
+
+// Invoked when received GET BOS DESCRIPTOR request
+uint8_t const* tud_descriptor_bos_cb(void) {
+    return desc_bos;
+}
+
+// Invoked when a control transfer occurred on an interface of this class
+bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const* request) {
+    // nothing to do with DATA & ACK stage
+    if (stage != CONTROL_STAGE_SETUP) {
+        return true;
+    }
+
+    if (request->bRequest == VENDOR_REQUEST_MICROSOFT && request->wIndex == 7) {
+        // Get Microsoft OS 2.0 compatible descriptor
+        return tud_control_xfer(rhport, request, (void*)(uintptr_t)desc_ms_os_20, sizeof(desc_ms_os_20));
+    }
+
+    // stall unknown request
+    return false;
 }

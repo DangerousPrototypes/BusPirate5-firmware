@@ -20,6 +20,8 @@ All the people listed below hold copyrights to code in this project:
 * Copyright (c) 2024 Lior Shalmay <liorshalmay1@gmail.com>
 * Copyright (c) 2019 Ha Thach (tinyusb.org)
 * Copyright (c) 2020-2021 Raspberry Pi (Trading) Ltd.
+* Copyright (c) 2021-2023 Raspberry Pi (Trading) Ltd. (debugprobe)
+* Copyright (c) 2022 Raspberry Pi Ltd (debugprobe)
 * Copyright (c) 2021 Stefan Althöfer
 * Copyright (c) 2013 Daniel Beer <dlbeer@gmail.com>
 * Copyright (c) 2023 Paul Campbell, Moonbase Otago  paul@taniwha.com
@@ -32,6 +34,7 @@ All the people listed below hold copyrights to code in this project:
 * Copyright (c) 2018-2020 Cesanta Software Limited
 * Copyright (c) 2021 Jaroslav Kysela <perex@perex.cz>
 * Copyright (c) 2014-2019 Marco Paland (info@paland.com), PALANDesign Hannover, Germany
+* Copyright (c) 2013-2017 ARM Limited. All rights reserved.
 * Copyright (c) 2017,2019 Two Blue Cubes Ltd. All rights reserved.
 
 
@@ -80,6 +83,24 @@ This license is completely compatible with our MIT license. So BSD components ha
     - `hwuart.pio`
     - `ws2812.pio`
 
+## Apache 2.0
+Apache 2.0 components have been directly incorporated into this project. Their files keep the original license header,
+and modifications are marked in the file header.
 
-
-
+### Used libraries
+#### [CMSIS-DAP](https://github.com/ARM-software/CMSIS_5/tree/develop/CMSIS/DAP/Firmware)
+Taken from the copy in [debugprobe](https://github.com/raspberrypi/debugprobe).
+##### Files that are being used from the project
+- `lib/cmsis-dap/`
+    - `DAP.c`
+    - `DAP.h`
+    - `DAP_config.h` (modified: Bus Pirate pin mapping)
+    - `DAP_vendor.c`
+    - `JTAG_DP.c`
+    - `SW_DP.c` (modified: renamed to `*_GPIO`)
+    - `SW_DP_PIO.c` (new, follows `SW_DP.c` and debugprobe's `src/sw_dp_pio.c`)
+##### Source Files that use this library
+- `binmode/cmsis_dap.c`
+##### copyright notice
+Copyright (c) 2013-2017 ARM Limited. All rights reserved.
+Copyright (c) 2022 Raspberry Pi Ltd (`SW_DP_PIO.c`, after debugprobe's `src/sw_dp_pio.c`)

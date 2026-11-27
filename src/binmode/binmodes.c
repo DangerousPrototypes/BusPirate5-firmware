@@ -35,6 +35,7 @@
 #include "binmode/irtoy-irman.h"
 #include "binmode/irtoy-air.h"
 #include "binmode/bp3unbrick.h"
+#include "binmode/cmsis_dap.h"
 #include "lib/arduino-ch32v003-swio/arduino_ch32v003.h"
 #include "pirate/storage.h" // File system related
 #include "usb_rx.h"
@@ -193,6 +194,20 @@ const binmode_t binmodes[] = {
         .binmode_setup_message = bp3unbrick_run,
         .binmode_service = binmode_null_func_void,
         .binmode_cleanup = bp3unbrick_cleanup,
+    },
+    {
+        .lock_terminal = true,
+        .can_save_config = false,
+        .reset_to_hiz = true,
+        .pullup_enabled = false,
+        .psu_en_voltage = 0,
+        .psu_en_current = 0,
+        .button_to_exit = true,
+        .binmode_name = cmsis_dap_name,
+        .binmode_setup = cmsis_dap_setup,
+        .binmode_setup_message = cmsis_dap_setup_message,
+        .binmode_service = cmsis_dap_service,
+        .binmode_cleanup = cmsis_dap_cleanup,
     },
 };
 
